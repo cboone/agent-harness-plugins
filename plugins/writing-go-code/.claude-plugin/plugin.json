@@ -2,7 +2,7 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Go code style review guide based on Google Go Style Guide, Effective Go, and Code Review Comments.",
+  "description": "Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments.",
   "homepage": "https://github.com/cboone/cboone-cc-plugins",
   "keywords": ["code-review", "go", "golang", "style"],
   "license": "MIT",

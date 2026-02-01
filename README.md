@@ -45,9 +45,9 @@ Or you can run more direct commands, either from within `claude`:
 ```bash
 /plugin marketplace add cboone/cboone-cc-plugins
 
-/plugin plugin install writing-go-code@cboone/cboone-cc-plugins
-/plugin plugin install notify@cboone/cboone-cc-plugins
-/plugin plugin install writing-shell-scripts@cboone/cboone-cc-plugins
+/plugin install writing-go-code@cboone/cboone-cc-plugins
+/plugin install notify@cboone/cboone-cc-plugins
+/plugin install writing-shell-scripts@cboone/cboone-cc-plugins
 ```
 
 Or from the command line:
