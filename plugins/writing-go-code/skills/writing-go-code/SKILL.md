@@ -1,6 +1,11 @@
 ---
 name: writing-go-code
-description: Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments. Use when: (1) writing new Go code, (2) reviewing Go code for style compliance, (3) refactoring existing Go code, (4) conducting code reviews. Covers naming, error handling, concurrency, testing, data types, functions, interfaces, and code organization.
+description: >-
+  Go code style guide based on Google Go Style Guide, Effective Go, and Code
+  Review Comments. Use when: (1) writing new Go code, (2) reviewing Go code for
+  style compliance, (3) refactoring existing Go code, (4) conducting code
+  reviews. Covers naming, error handling, concurrency, testing, data types,
+  functions, interfaces, and code organization.
 ---
 
 # Writing Go Code
