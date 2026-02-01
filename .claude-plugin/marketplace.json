@@ -28,6 +28,20 @@
         "name": "Christopher Boone"
       },
       "category": "code-quality",
+      "description": "Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["code-review", "go", "golang", "style"],
+      "license": "MIT",
+      "name": "writing-go-code",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/writing-go-code",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
       "description": "Applies Bash style conventions when creating or editing shell scripts.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["bash", "format", "scripts", "shell", "style"],
