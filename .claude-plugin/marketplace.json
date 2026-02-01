@@ -1,8 +1,8 @@
 {
-  "description": "Claude Code skills and hooks from Christopher Boone (cboone.github.io)",
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code skills and hooks from Christopher Boone (cboone.github.io)",
-    "version": "1.0.2"
+    "version": "1.0.3"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -11,36 +11,44 @@
   "plugins": [
     {
       "author": {
-        "name": "Christopher Boone",
-        "url": "https://cboone.github.io"
+        "name": "Christopher Boone"
       },
       "category": "productivity",
       "description": "Notifies you when Claude finishes a task or needs your attention.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "hooks": "./hooks/hooks.json",
-      "keywords": ["notifications", "alerts", "macos"],
+      "keywords": ["alerts", "macos", "notifications"],
       "license": "MIT",
       "name": "notify",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/notify",
-      "tags": ["notifications", "alerts", "macos"],
       "version": "1.0.2"
     },
     {
       "author": {
-        "name": "Christopher Boone",
-        "url": "https://cboone.github.io"
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["code-review", "go", "golang", "style"],
+      "license": "MIT",
+      "name": "writing-go-code",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/writing-go-code",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
       },
       "category": "code-quality",
       "description": "Applies Bash style conventions when creating or editing shell scripts.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["bash", "shell", "scripts", "format", "style"],
+      "keywords": ["bash", "format", "scripts", "shell", "style"],
       "license": "MIT",
       "name": "writing-shell-scripts",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
-      "skills": "./",
       "source": "./plugins/writing-shell-scripts",
-      "tags": ["bash", "shell", "scripts", "format", "style"],
       "version": "1.0.2"
     }
   ]

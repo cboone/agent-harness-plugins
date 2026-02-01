@@ -2,6 +2,18 @@
 
 A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), from [Christopher Boone](https://cboone.github.io).
 
+## Writing Go Code
+
+**Type**: Skills / Commands
+
+Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments. Claude Code should automatically use it when writing, reviewing, or refactoring Go code.
+
+You can trigger it directly via `/writing-go-code`.
+
+The style guides are organized into:
+- Essential checklist for quick reviews
+- Comprehensive references by topic (naming, errors, concurrency, testing, code organization, data types, functions, interfaces)
+
 ## Notify
 
 **Type**: Hooks
@@ -33,8 +45,9 @@ Or you can run more direct commands, either from within `claude`:
 ```bash
 /plugin marketplace add cboone/cboone-cc-plugins
 
-/plugin plugin install notify@cboone/cboone-cc-plugins
-/plugin plugin install writing-shell-scripts@cboone/cboone-cc-plugins
+/plugin install writing-go-code@cboone/cboone-cc-plugins
+/plugin install notify@cboone/cboone-cc-plugins
+/plugin install writing-shell-scripts@cboone/cboone-cc-plugins
 ```
 
 Or from the command line:
@@ -42,6 +55,7 @@ Or from the command line:
 ```bash
 claude plugin marketplace add cboone/cboone-cc-plugins
 
+claude plugin install writing-go-code@cboone/cboone-cc-plugins
 claude plugin install notify@cboone/cboone-cc-plugins
 claude plugin install writing-shell-scripts@cboone/cboone-cc-plugins
 ```

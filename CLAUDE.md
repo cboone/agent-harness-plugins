@@ -11,19 +11,39 @@ cboone-cc-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json            # Plugin registry for this repository
 └── plugins/
+    ├── writing-go-code/            # Go style guide skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── writing-go-code/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── comprehensive/
+    │               │   ├── code-organization.md
+    │               │   ├── concurrency.md
+    │               │   ├── data-types.md
+    │               │   ├── errors.md
+    │               │   ├── functions.md
+    │               │   ├── interfaces.md
+    │               │   ├── naming.md
+    │               │   └── testing.md
+    │               └── essential/
+    │                   └── checklist.md
     ├── notify/                     # Notification hooks plugin
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── hooks/
     │   │   └── hooks.json
     │   └── scripts/
-    │           └── notify
+    │       └── notify
     └── writing-shell-scripts/      # Bash style guide skill
         ├── .claude-plugin/
         │   └── plugin.json
-        ├── SKILL.md
-        └── references/
-            └── BASH.md
+        └── skills/
+            └── writing-shell-scripts/
+                ├── SKILL.md
+                └── references/
+                    └── BASH.md
 ```
 
 ## Development

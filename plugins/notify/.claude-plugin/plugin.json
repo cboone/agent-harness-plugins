@@ -1,11 +1,11 @@
 {
   "author": {
-    "name": "Christopher Boone",
-    "url": "https://cboone.github.io"
+    "name": "Christopher Boone"
   },
   "description": "Notifies you when Claude finishes a task or needs your attention.",
   "homepage": "https://github.com/cboone/cboone-cc-plugins",
-  "keywords": ["notifications", "alerts", "macos"],
+  "hooks": "./hooks/hooks.json",
+  "keywords": ["alerts", "macos", "notifications"],
   "license": "MIT",
   "name": "notify",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
