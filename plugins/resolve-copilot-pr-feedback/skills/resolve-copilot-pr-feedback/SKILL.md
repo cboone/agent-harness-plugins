@@ -124,9 +124,11 @@ Reserve for repo-wide conventions that apply to all file types:
 
 ## Core Workflow
 
-### 1. Fetch Unresolved Copilot Threads
+### 1. Fetch ALL Unresolved Copilot Threads
 
 Query review threads using GraphQL.
+
+**CRITICAL:** `reviewThreads(first: 100)` is paginated. You MUST fetch every page (`hasNextPage`) so no unresolved Copilot threads are missed.
 
 **IMPORTANT:** Use inline values, NOT `$variable` syntax. The `$` character causes shell escaping issues.
 
@@ -137,10 +139,20 @@ query {
   repository(owner: "OWNER", name: "REPO") {
     pullRequest(number: PR_NUMBER) {
       reviewThreads(first: 100) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
         nodes {
           id
           isResolved
-          comments(first: 10) {
+          isOutdated
+          path
+          line
+          originalLine
+          startLine
+          originalStartLine
+          comments(first: 20) {
             nodes {
               author { login }
               body
@@ -153,7 +165,30 @@ query {
 }'
 ```
 
-**Filter for:** `isResolved: false` AND author is Copilot (github-actions bot or copilot signature)
+For additional pages, run the same query with `after: "END_CURSOR_FROM_PREVIOUS_PAGE"`:
+
+```bash
+gh api graphql -f query='
+query {
+  repository(owner: "OWNER", name: "REPO") {
+    pullRequest(number: PR_NUMBER) {
+      reviewThreads(first: 100, after: "END_CURSOR_FROM_PREVIOUS_PAGE") {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          id
+        }
+      }
+    }
+  }
+}'
+```
+
+**Filter for:** `isResolved: false` AND author is Copilot (github-actions bot or copilot signature).
+
+**File:Line extraction rule:** Use `path` and the first non-null of `line`, `originalLine`, `startLine`, `originalStartLine`. If all line fields are null, report `path:(no-line)`.
 
 ### 2. Categorize Each Comment
 
@@ -250,7 +285,7 @@ mutation {
 ### 5. Verify Completion
 
 1. **Push any changes:** `git push`
-2. Re-query PR to confirm ALL Copilot threads resolved
+2. Re-query PR (with pagination) to confirm ALL Copilot threads resolved
 3. Report summary of actions taken
 
 ## Reply Templates
