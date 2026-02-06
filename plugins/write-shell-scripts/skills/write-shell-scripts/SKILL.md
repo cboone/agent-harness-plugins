@@ -1,5 +1,5 @@
 ---
-name: writing-shell-scripts
+name: write-shell-scripts
 description: >-
   Applies Bash style conventions when creating or editing shell scripts.
   Use when: (1) creating new shell scripts, (2) editing existing scripts in /bin/,

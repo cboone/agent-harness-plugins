@@ -11,11 +11,11 @@ cboone-cc-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json            # Plugin registry for this repository
 └── plugins/
-    ├── writing-go-code/            # Go style guide skill
+    ├── write-go-code/              # Go style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   └── skills/
-    │       └── writing-go-code/
+    │       └── write-go-code/
     │           ├── SKILL.md
     │           └── references/
     │               ├── comprehensive/
@@ -42,11 +42,11 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── resolve-copilot-pr-feedback/
     │           └── SKILL.md
-    └── writing-shell-scripts/      # Bash style guide skill
+    └── write-shell-scripts/        # Bash style guide skill
         ├── .claude-plugin/
         │   └── plugin.json
         └── skills/
-            └── writing-shell-scripts/
+            └── write-shell-scripts/
                 ├── SKILL.md
                 └── references/
                     └── BASH.md
