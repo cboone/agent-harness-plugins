@@ -12,7 +12,7 @@ New executable bash script (755) following the `plugins/notify/scripts/notify` p
 
 **Subcommands:**
 
-- **`fetch <owner> <repo> <pr_number>`** -- Fetches all unresolved Copilot-authored review threads. Uses `gh api graphql --paginate --slurp` to handle pagination automatically, pipes through `jq` to filter for unresolved + Copilot-authored threads, and outputs a clean JSON array:
+- **`fetch <owner> <repo> <pr_number>`** -- Fetches all unresolved Copilot-authored review threads. Uses `gh api graphql --paginate --slurp` with a cursor-aware query (`$endCursor`, `after: $endCursor`, `pageInfo { hasNextPage endCursor }`), pipes through `jq` to filter for unresolved + Copilot-authored threads, and outputs a clean JSON array:
   ```json
   [
     {
@@ -27,15 +27,15 @@ New executable bash script (755) following the `plugins/notify/scripts/notify` p
 
 - **`resolve <thread_id>`** -- Resolves a thread via `resolveReviewThread` GraphQL mutation. Uses proper `-F` variable binding (no shell escaping issues). Outputs `true` on success.
 
-- **`reply <thread_id> <body>`** -- Replies to a thread via `addPullRequestReviewThreadReply`. Outputs the comment ID.
+- **`reply <thread_id> [--body-file <path>]`** -- Replies to a thread via `addPullRequestReviewThreadReply`. Reads body from `--body-file` or stdin (for multiline-safe input without shell escaping issues). Outputs the comment ID.
 
-- **`reply-and-resolve <thread_id> <body>`** -- Combines reply + resolve.
+- **`reply-and-resolve <thread_id> [--body-file <path>]`** -- Combines reply + resolve, with reply body read from `--body-file` or stdin.
 
 Key design choices:
 - Uses `-F`/`-f` for GraphQL variables instead of string interpolation (eliminates the `$variable` shell escaping bugs the current SKILL.md warns about)
-- `--paginate --slurp` handles pagination internally (no manual cursor loop)
-- `jq` filters for `isResolved == false` and Copilot author login
-- Computes the `location` field (first non-null of `line`, `originalLine`, `startLine`, `originalStartLine`)
+- Uses `--paginate --slurp` with an explicit cursor-aware query shape (`$endCursor`, `after: $endCursor`, `pageInfo { hasNextPage endCursor }`)
+- `jq` filters for `isResolved == false` and explicit Copilot identities/signatures (`github-copilot[bot]`, `github-actions[bot]`, and Copilot body signatures)
+- Computes the `location` field as the first non-null of `line`, `originalLine`, `startLine`, `originalStartLine`; fallback is `path:(no-line)`
 
 ### 2. Update SKILL.md
 
@@ -51,7 +51,7 @@ Remove the two large GraphQL query blocks and manual pagination instructions. Re
 Remove both GraphQL mutation blocks. Replace with `"${SCRIPT}" resolve THREAD_ID`.
 
 **Replace the reply mutation in section 4 (Handle Each Category):**
-Remove the `addPullRequestReviewThreadReply` GraphQL block. Replace with `"${SCRIPT}" reply` and `"${SCRIPT}" reply-and-resolve`.
+Remove the `addPullRequestReviewThreadReply` GraphQL block. Replace with `"${SCRIPT}" reply` and `"${SCRIPT}" reply-and-resolve`, showing stdin/`--body-file` usage for multiline-safe reply bodies.
 
 **Remove all three `$variable` shell escaping warnings:**
 No longer needed since the script uses proper `-F` variable binding.
@@ -91,5 +91,6 @@ Replace "re-query PR with pagination" with `"${SCRIPT}" fetch OWNER REPO PR_NUMB
 
 1. `bash -n` and `shellcheck` on the new script
 2. Run `./scripts/resolve-copilot-threads --help` to verify usage output
-3. Dry-run `fetch` against a real PR with Copilot comments to verify JSON output
-4. Verify the SKILL.md reads coherently with script references replacing raw GraphQL
+3. Verify dependency and auth handling (`gh`, `jq`, GitHub auth); confirm expected non-zero exits with actionable errors when unavailable
+4. Dry-run `fetch` against a real PR with Copilot comments to verify JSON output and pagination coverage
+5. Verify the SKILL.md reads coherently with script references replacing raw GraphQL and preserving behavior notes (including `path:(no-line)` fallback)
