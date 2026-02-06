@@ -1,5 +1,5 @@
 ---
-name: writing-go-code
+name: write-go-code
 description: >-
   Go code style guide based on Google Go Style Guide, Effective Go, and Code
   Review Comments. Use when: (1) writing new Go code, (2) reviewing Go code for
@@ -8,7 +8,7 @@ description: >-
   functions, interfaces, and code organization.
 ---
 
-# Writing Go Code
+# Write Go Code
 
 ## Core Principles
 

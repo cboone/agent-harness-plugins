@@ -23,16 +23,16 @@ Update the plugins marketplace to conform to current Claude Code standards (Janu
 
 ## Implementation
 
-### Phase 1: Restructure writing-shell-scripts Plugin
+### Phase 1: Restructure write-shell-scripts Plugin
 
 Create proper skills directory structure:
 
 ```
-plugins/writing-shell-scripts/
+plugins/write-shell-scripts/
 ├── .claude-plugin/
 │   └── plugin.json
 └── skills/
-    └── writing-shell-scripts/
+    └── write-shell-scripts/
         ├── SKILL.md
         └── references/
             └── BASH.md
@@ -40,9 +40,9 @@ plugins/writing-shell-scripts/
 
 **Commands:**
 ```bash
-mkdir -p plugins/writing-shell-scripts/skills/writing-shell-scripts
-mv plugins/writing-shell-scripts/SKILL.md plugins/writing-shell-scripts/skills/writing-shell-scripts/
-mv plugins/writing-shell-scripts/references plugins/writing-shell-scripts/skills/writing-shell-scripts/
+mkdir -p plugins/write-shell-scripts/skills/write-shell-scripts
+mv plugins/write-shell-scripts/SKILL.md plugins/write-shell-scripts/skills/write-shell-scripts/
+mv plugins/write-shell-scripts/references plugins/write-shell-scripts/skills/write-shell-scripts/
 ```
 
 ### Phase 2: Update plugin.json Files
@@ -51,7 +51,7 @@ mv plugins/writing-shell-scripts/references plugins/writing-shell-scripts/skills
 - Remove `author.url`
 - Alphabetize `keywords`: `["alerts", "macos", "notifications"]`
 
-**File:** `plugins/writing-shell-scripts/.claude-plugin/plugin.json`
+**File:** `plugins/write-shell-scripts/.claude-plugin/plugin.json`
 - Remove `author.url`
 - Alphabetize `keywords`: `["bash", "format", "scripts", "shell", "style"]`
 
@@ -64,7 +64,7 @@ Changes:
 2. Remove root-level `description` (keep only in `metadata`)
 3. Remove `author.url` from plugin entries
 4. Remove `hooks` field from notify plugin (auto-discovered)
-5. Remove `skills` field from writing-shell-scripts plugin (auto-discovered)
+5. Remove `skills` field from write-shell-scripts plugin (auto-discovered)
 6. Remove `tags` arrays (redundant with `keywords`)
 7. Alphabetize `keywords` arrays
 8. Bump `metadata.version` to `1.0.3`
@@ -101,9 +101,9 @@ Changes:
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["bash", "format", "scripts", "shell", "style"],
       "license": "MIT",
-      "name": "writing-shell-scripts",
+      "name": "write-shell-scripts",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
-      "source": "./plugins/writing-shell-scripts",
+      "source": "./plugins/write-shell-scripts",
       "version": "1.0.2"
     }
   ]
@@ -120,10 +120,10 @@ Update the structure section to reflect new skills directory layout.
 
 | File | Action |
 |------|--------|
-| `plugins/writing-shell-scripts/SKILL.md` | Move to `skills/writing-shell-scripts/` |
-| `plugins/writing-shell-scripts/references/` | Move to `skills/writing-shell-scripts/` |
+| `plugins/write-shell-scripts/SKILL.md` | Move to `skills/write-shell-scripts/` |
+| `plugins/write-shell-scripts/references/` | Move to `skills/write-shell-scripts/` |
 | `plugins/notify/.claude-plugin/plugin.json` | Remove `author.url`, alphabetize keywords |
-| `plugins/writing-shell-scripts/.claude-plugin/plugin.json` | Remove `author.url`, alphabetize keywords |
+| `plugins/write-shell-scripts/.claude-plugin/plugin.json` | Remove `author.url`, alphabetize keywords |
 | `.claude-plugin/marketplace.json` | Schema fixes, remove redundant fields |
 | `CLAUDE.md` | Update structure documentation |
 
@@ -138,12 +138,12 @@ Update the structure section to reflect new skills directory layout.
    ```
    /plugin marketplace add ./
    /plugin install notify@cboone-cc-plugins
-   /plugin install writing-shell-scripts@cboone-cc-plugins
+   /plugin install write-shell-scripts@cboone-cc-plugins
    ```
 
 3. Test skill invocation:
    ```
-   /writing-shell-scripts
+   /write-shell-scripts
    ```
 
 ## Sources
