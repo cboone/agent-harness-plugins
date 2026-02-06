@@ -57,47 +57,64 @@ mutation {
 
 **You MUST call this mutation for EVERY thread you address.**
 
-### YOU MUST UPDATE COPILOT-INSTRUCTIONS.MD FOR INCORRECT FEEDBACK
+### YOU MUST UPDATE COPILOT INSTRUCTIONS FOR INCORRECT FEEDBACK
 
 **When Copilot feedback is categorized as INCORRECT (conflicts with project conventions/patterns), you MUST:**
 
-1. **Update `.github/copilot-instructions.md`** to document the correct pattern
+1. **Update the project's Copilot instructions** to document the correct pattern
 2. This prevents Copilot from flagging the same or similar things in future PRs
 3. The update should be concise and explain why the pattern is intentional
 
-**Failure to update copilot-instructions.md = INCOMPLETE WORK for Incorrect category feedback.**
+**Failure to update Copilot instructions = INCOMPLETE WORK for Incorrect category feedback.**
 
-#### CRITICAL: File Structure Requirements
+#### Instructions File Strategy
 
-**Copilot only reads the first ~4000 characters for PR reviews.** Therefore:
+Copilot supports two types of instruction files in the `.github/` directory:
 
-1. **Review instructions MUST go at the TOP** of the file, in a dedicated section
-2. **Use a specific review-targeted section** like `## PR Review Checklist (CRITICAL)` as the first section
-3. **Keep the review section under 4000 characters** - measure with `head -c 4000 .github/copilot-instructions.md | wc -c`
-4. **If exceeding 4000 chars, COMPRESS the section:**
-   - Remove redundant words
-   - Use terse bullet points
-   - Combine related items
-   - Move non-review guidance below the 4000 char threshold
+- **`copilot-instructions.md`**: General instructions for the whole repository
+- **`*.instructions.md`** (path-specific): Targeted instructions with `applyTo` frontmatter
 
-Example structure:
+**Prefer path-specific instructions files** when the incorrect feedback applies to a specific language or file pattern. Use `copilot-instructions.md` only for repo-wide conventions.
+
+#### CRITICAL: Keep Instructions Concise
+
+Copilot's PR review may not read the full instructions file. Long files risk having instructions truncated or ignored. To maximize effectiveness:
+
+1. **Keep each instructions file under ~1,000 lines**
+2. **Put the most important review rules first** in each file
+3. **Start with 10-20 specific, actionable instructions** per file
+4. **Split by concern**: use path-specific files instead of one large file
+5. **Be specific**: clear, concrete instructions work better than vague directives
+
+#### Path-Specific Instructions File Format
+
+```markdown
+---
+applyTo: "**/*.go"
+---
+
+- **Pattern X**: Intentional in this project, do not flag
+- **Pattern Y**: Required for Z reason
+```
+
+Use the `applyTo` glob to target specific languages or paths. Use `excludeAgent` to limit which Copilot agent reads the file (e.g., `excludeAgent: copilot-coding-agent` to target only code review).
+
+#### General Instructions File (`copilot-instructions.md`)
+
+Reserve for repo-wide conventions that apply to all file types:
 
 ```markdown
 # GitHub Copilot Instructions
 
-## PR Review Checklist (CRITICAL)
-
-<!-- KEEP THIS SECTION UNDER 4000 CHARS - Copilot only reads first ~4000 -->
+## PR Review
 
 - **Pattern X**: Intentional, do not flag
-- **Pattern Y**: Required for Z reason
+- **Convention Y**: Required for Z reason
 
 ## Code Style
 
-<!-- Less critical sections go below -->
+- General conventions here
 ```
-
-**After updating, verify:** `head -c 4000 .github/copilot-instructions.md | tail -5` should show content from the review section, not unrelated sections.
 
 ---
 
@@ -146,7 +163,7 @@ For each unresolved Copilot comment:
 | ------------- | ------------------------------------ | --------------------------------------------------------------- |
 | **Nitpick**   | Contains `[nitpick]` prefix          | Auto-resolve immediately                                        |
 | **Outdated**  | Refers to code that no longer exists | Reply with explanation, resolve                                 |
-| **Incorrect** | Misunderstands project conventions   | Reply with explanation, resolve, update copilot-instructions.md |
+| **Incorrect** | Misunderstands project conventions   | Reply with explanation, resolve, update Copilot instructions    |
 | **Valid**     | Current, actionable concern          | Delegate to coder agent to fix                                  |
 | **Deferred**  | Valid but out of scope for this PR   | Track in PROJECT.md, reply, resolve                             |
 
@@ -204,9 +221,10 @@ mutation {
    - Outdated: "This comment refers to code refactored in commit abc123. The issue is no longer applicable."
    - Incorrect: "This conflicts with our {convention name} convention. {Brief explanation}. See {reference file} for project guidelines."
 2. Resolve the thread using the mutation from section 3
-3. **Update `.github/copilot-instructions.md`** to prevent recurrence:
-   - Add to "## Code Reviews" section
-   - Example: "- Do not suggest removing `.sr-only` classes - required accessibility utilities"
+3. **Update Copilot instructions** to prevent recurrence:
+   - **Prefer a path-specific file** (e.g., `.github/css.instructions.md` with `applyTo: "**/*.css"`) when the feedback targets a specific language or file pattern
+   - **Use `copilot-instructions.md`** only for repo-wide conventions
+   - Example: `- Do not suggest removing .sr-only classes - required accessibility utilities`
    - **If symlink:** Follow it and edit target file
 
 #### Valid Concerns
@@ -255,7 +273,7 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 
 1. All code changes pushed to the PR branch
 2. **EVERY addressed thread resolved via GraphQL mutation** (not just code fixed!)
-3. **For INCORRECT feedback: `.github/copilot-instructions.md` updated** to prevent recurrence
+3. **For INCORRECT feedback: Copilot instructions updated** (path-specific `*.instructions.md` preferred, or `copilot-instructions.md` for repo-wide conventions)
 4. **For DEFERRED feedback: Task tracked** (GitHub issue, PROJECT.md, or similar)
 5. Re-query confirms `isResolved: true` for all processed threads
 6. Output summary table (see format below)
