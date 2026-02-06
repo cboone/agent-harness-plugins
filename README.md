@@ -14,6 +14,14 @@ The style guides are organized into:
 - Essential checklist for quick reviews
 - Comprehensive references by topic (naming, errors, concurrency, testing, code organization, data types, functions, interfaces)
 
+## Resolve Copilot PR Feedback
+
+**Type**: Skills / Commands
+
+Process and resolve GitHub Copilot automated PR review comments. Fetches unresolved Copilot threads via GraphQL, categorizes them (nitpick, outdated, incorrect, valid, deferred), resolves threads, and updates `.github/copilot-instructions.md` when Copilot feedback is incorrect.
+
+You can trigger it directly via `/resolve-copilot-pr-feedback`.
+
 ## Notify
 
 **Type**: Hooks
@@ -47,6 +55,7 @@ Or you can run more direct commands, either from within `claude`:
 
 /plugin install writing-go-code@cboone/cboone-cc-plugins
 /plugin install notify@cboone/cboone-cc-plugins
+/plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
 /plugin install writing-shell-scripts@cboone/cboone-cc-plugins
 ```
 
@@ -57,6 +66,7 @@ claude plugin marketplace add cboone/cboone-cc-plugins
 
 claude plugin install writing-go-code@cboone/cboone-cc-plugins
 claude plugin install notify@cboone/cboone-cc-plugins
+claude plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
 claude plugin install writing-shell-scripts@cboone/cboone-cc-plugins
 ```
 
