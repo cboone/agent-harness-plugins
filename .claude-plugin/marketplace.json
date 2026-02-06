@@ -42,6 +42,20 @@
         "name": "Christopher Boone"
       },
       "category": "code-quality",
+      "description": "Process and resolve GitHub Copilot automated PR review comments.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["code-review", "copilot", "github", "pull-requests"],
+      "license": "MIT",
+      "name": "resolve-copilot-pr-feedback",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/resolve-copilot-pr-feedback",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
       "description": "Applies Bash style conventions when creating or editing shell scripts.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["bash", "format", "scripts", "shell", "style"],

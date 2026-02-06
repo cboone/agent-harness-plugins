@@ -36,6 +36,12 @@ cboone-cc-plugins/
     │   │   └── hooks.json
     │   └── scripts/
     │       └── notify
+    ├── resolve-copilot-pr-feedback/ # Copilot PR feedback resolver skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── resolve-copilot-pr-feedback/
+    │           └── SKILL.md
     └── writing-shell-scripts/      # Bash style guide skill
         ├── .claude-plugin/
         │   └── plugin.json
