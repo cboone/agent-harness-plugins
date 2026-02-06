@@ -18,7 +18,7 @@ The style guides are organized into:
 
 **Type**: Skills / Commands
 
-Process and resolve GitHub Copilot automated PR review comments. Fetches unresolved Copilot threads via GraphQL, categorizes them (nitpick, outdated, incorrect, valid, deferred), resolves threads, and updates `.github/copilot-instructions.md` when Copilot feedback is incorrect.
+Process and resolve GitHub Copilot automated PR review comments. Fetches unresolved Copilot threads via GraphQL, categorizes them (nitpick, outdated, incorrect, valid, deferred), resolves threads, and updates Copilot instruction files under `.github/` (repo-wide `copilot-instructions.md` or path-specific `*.instructions.md`) when Copilot feedback is incorrect.
 
 You can trigger it directly via `/resolve-copilot-pr-feedback`.
 

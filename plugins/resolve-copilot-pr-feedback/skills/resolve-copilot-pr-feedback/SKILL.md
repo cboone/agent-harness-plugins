@@ -179,6 +179,19 @@ query {
         }
         nodes {
           id
+          isResolved
+          isOutdated
+          path
+          line
+          originalLine
+          startLine
+          originalStartLine
+          comments(first: 20) {
+            nodes {
+              author { login }
+              body
+            }
+          }
         }
       }
     }
