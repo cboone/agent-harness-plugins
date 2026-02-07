@@ -291,11 +291,11 @@ function do_resolve() {
   local is_resolved
   is_resolved="$(jq -r '.data.resolveReviewThread.thread.isResolved' <<<"${response}")"
 
-  echo "${is_resolved}"
-
   if [[ "${is_resolved}" != "true" ]]; then
     die "Failed to resolve review thread ${thread_id}: isResolved=${is_resolved}"
   fi
+
+  echo "${is_resolved}"
 }
 
 # Replies to a review thread via GraphQL mutation.
