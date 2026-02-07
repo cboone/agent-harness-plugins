@@ -325,12 +325,25 @@ function main() {
     exit 0
   fi
 
-  check_dependencies
-
   local command="${1:-}"
   if [[ $# -gt 0 ]]; then
     shift
   fi
+
+  # Validate command before checking dependencies so that missing/unknown
+  # commands show usage errors rather than confusing dependency failures.
+  case "${command}" in
+    fetch|resolve|reply|reply-and-resolve)
+      check_dependencies
+      ;;
+    "")
+      usage
+      exit 1
+      ;;
+    *)
+      die "Unknown command: ${command}. Use '${SCRIPT_NAME} --help' for usage."
+      ;;
+  esac
 
   case "${command}" in
     fetch)
@@ -348,13 +361,6 @@ function main() {
     reply-and-resolve)
       [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply-and-resolve <thread_id> [--body-file <path>]"
       do_reply_and_resolve "$@"
-      ;;
-    "")
-      usage
-      exit 1
-      ;;
-    *)
-      die "Unknown command: ${command}. Use '${SCRIPT_NAME} --help' for usage."
       ;;
   esac
 }
