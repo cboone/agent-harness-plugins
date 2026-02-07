@@ -25,7 +25,7 @@ New executable bash script (755) following the `plugins/notify/scripts/notify` p
   ]
   ```
 
-- **`resolve <thread_id>`** -- Resolves a thread via `resolveReviewThread` GraphQL mutation. Uses proper `-F` variable binding (no shell escaping issues). Outputs `true` on success.
+- **`resolve <thread_id>`** -- Resolves a thread via `resolveReviewThread` GraphQL mutation. Uses `-f` string variable binding (no shell escaping issues). Outputs `true` on success.
 
 - **`reply <thread_id> [--body-file <path>]`** -- Replies to a thread via `addPullRequestReviewThreadReply`. Reads body from `--body-file` or stdin (for multiline-safe input without shell escaping issues). Outputs the comment ID.
 

@@ -111,7 +111,7 @@ function send_reply() {
   # $variables in the query are GraphQL references, not shell variables
   gh api graphql \
     -f threadId="${thread_id}" \
-    -f body="${body}" \
+    --raw-field body="${body}" \
     -f query='
       mutation($threadId: ID!, $body: String!) {
         addPullRequestReviewThreadReply(input: {
@@ -281,19 +281,19 @@ function main() {
 
   case "${command}" in
     fetch)
-      [[ $# -lt 3 ]] && die "Usage: ${SCRIPT_NAME} fetch <owner> <repo> <pr_number>"
-      do_fetch "$@"
+      [[ $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} fetch <owner> <repo> <pr_number>"
+      do_fetch "$1" "$2" "$3"
       ;;
     resolve)
-      [[ $# -lt 1 ]] && die "Usage: ${SCRIPT_NAME} resolve <thread_id>"
-      do_resolve "$@"
+      [[ $# -ne 1 ]] && die "Usage: ${SCRIPT_NAME} resolve <thread_id>"
+      do_resolve "$1"
       ;;
     reply)
-      [[ $# -lt 1 ]] && die "Usage: ${SCRIPT_NAME} reply <thread_id> [--body-file <path>]"
+      [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply <thread_id> [--body-file <path>]"
       do_reply "$@"
       ;;
     reply-and-resolve)
-      [[ $# -lt 1 ]] && die "Usage: ${SCRIPT_NAME} reply-and-resolve <thread_id> [--body-file <path>]"
+      [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply-and-resolve <thread_id> [--body-file <path>]"
       do_reply_and_resolve "$@"
       ;;
     "")
