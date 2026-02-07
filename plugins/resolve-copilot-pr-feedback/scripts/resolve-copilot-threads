@@ -188,7 +188,7 @@ function do_fetch() {
           | .comments.nodes[0] as $first
           | ($first.author.login? // "") as $login
           | select(
-              ($login | IN($direct_logins[]))
+              ($direct_logins | any(. == $login))
               or (
                 $login == $actions_login
                 and (($first.body? // "") | test($severity_pattern; "i"))
@@ -200,7 +200,7 @@ function do_fetch() {
               path: .path,
               location: (.path + ":" + (if $ln then ($ln | tostring) else "(no-line)" end)),
               isOutdated: .isOutdated,
-              comments: [.comments.nodes[] | {author: .author.login, body: .body}]
+              comments: [.comments.nodes[] | {author: (.author.login? // ""), body: .body}]
             }
         ]
       '

@@ -24,8 +24,10 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 
 **Permitted operations:**
 
+- Fetch unresolved Copilot threads using the script's `fetch` command
 - Reply to EXISTING Copilot threads using the script's `reply` command
 - Resolve Copilot threads using the script's `resolve` command
+- Reply and resolve in one step using the script's `reply-and-resolve` command
 
 ## Script Setup
 
