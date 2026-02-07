@@ -107,22 +107,39 @@ function send_reply() {
   local thread_id="${1}"
   local body="${2}"
 
+  local response
+  local comment_id
+
   # shellcheck disable=SC2016
   # $variables in the query are GraphQL references, not shell variables
-  gh api graphql \
-    -f threadId="${thread_id}" \
-    --raw-field body="${body}" \
-    -f query='
-      mutation($threadId: ID!, $body: String!) {
-        addPullRequestReviewThreadReply(input: {
-          pullRequestReviewThreadId: $threadId,
-          body: $body
-        }) {
-          comment { id }
+  response="$(
+    gh api graphql \
+      -f threadId="${thread_id}" \
+      --raw-field body="${body}" \
+      -f query='
+        mutation($threadId: ID!, $body: String!) {
+          addPullRequestReviewThreadReply(input: {
+            pullRequestReviewThreadId: $threadId,
+            body: $body
+          }) {
+            comment { id }
+          }
         }
-      }
-    ' \
-    | jq -r '.data.addPullRequestReviewThreadReply.comment.id'
+      '
+  )"
+
+  if jq -e '.errors and (.errors | length > 0)' >/dev/null <<<"${response}"; then
+    local error_message
+    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<<"${response}")"
+    die "Failed to send reply: ${error_message}"
+  fi
+
+  comment_id="$(jq -r '.data.addPullRequestReviewThreadReply.comment.id // empty' <<<"${response}")"
+  if [[ -z "${comment_id}" || "${comment_id}" == "null" ]]; then
+    die "Failed to send reply: missing comment id in GraphQL response"
+  fi
+
+  printf '%s\n' "${comment_id}"
 }
 
 # Fetches all unresolved Copilot-authored review threads for a PR.
