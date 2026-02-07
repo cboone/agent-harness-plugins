@@ -157,42 +157,58 @@ function do_fetch() {
 
   # shellcheck disable=SC2016
   # $variables in the query are GraphQL references, not shell variables
-  gh api graphql \
-    --paginate \
-    --slurp \
-    -f owner="${owner}" \
-    -f repo="${repo}" \
-    -F pr_number="${pr_number}" \
-    -f query='
-      query($owner: String!, $repo: String!, $pr_number: Int!, $endCursor: String) {
-        repository(owner: $owner, name: $repo) {
-          pullRequest(number: $pr_number) {
-            reviewThreads(first: 100, after: $endCursor) {
-              pageInfo {
-                hasNextPage
-                endCursor
-              }
-              nodes {
-                id
-                isResolved
-                isOutdated
-                path
-                line
-                originalLine
-                startLine
-                originalStartLine
-                comments(first: 20) {
-                  nodes {
-                    author { login }
-                    body
+  local response
+  response="$(
+    gh api graphql \
+      --paginate \
+      --slurp \
+      -f owner="${owner}" \
+      -f repo="${repo}" \
+      -F pr_number="${pr_number}" \
+      -f query='
+        query($owner: String!, $repo: String!, $pr_number: Int!, $endCursor: String) {
+          repository(owner: $owner, name: $repo) {
+            pullRequest(number: $pr_number) {
+              reviewThreads(first: 100, after: $endCursor) {
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+                nodes {
+                  id
+                  isResolved
+                  isOutdated
+                  path
+                  line
+                  originalLine
+                  startLine
+                  originalStartLine
+                  comments(first: 20) {
+                    nodes {
+                      author { login }
+                      body
+                    }
                   }
                 }
               }
             }
           }
         }
-      }
-    ' \
+      '
+  )"
+
+  # Check for GraphQL errors before running the normalization filter
+  local graphql_error
+  graphql_error="$(
+    printf '%s' "${response}" \
+      | jq -r 'map(.errors? // []) | add | .[0].message? // empty'
+  )"
+
+  if [[ -n "${graphql_error}" ]]; then
+    die "GraphQL error while fetching threads: ${graphql_error}"
+  fi
+
+  printf '%s' "${response}" \
     | jq \
       --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" \
       --arg actions_login "${COPILOT_ACTIONS_LOGIN}" \
@@ -233,8 +249,8 @@ function do_resolve() {
 
   # shellcheck disable=SC2016
   # $variables in the query are GraphQL references, not shell variables
-  local is_resolved
-  is_resolved="$(
+  local response
+  response="$(
     gh api graphql \
       -f threadId="${thread_id}" \
       -f query='
@@ -243,9 +259,18 @@ function do_resolve() {
             thread { isResolved }
           }
         }
-      ' \
-      | jq -r '.data.resolveReviewThread.thread.isResolved'
+      '
   )"
+
+  # Check for GraphQL errors before extracting the result
+  if jq -e '.errors and (.errors | length > 0)' >/dev/null <<<"${response}"; then
+    local error_message
+    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<<"${response}")"
+    die "Failed to resolve review thread ${thread_id}: ${error_message}"
+  fi
+
+  local is_resolved
+  is_resolved="$(jq -r '.data.resolveReviewThread.thread.isResolved' <<<"${response}")"
 
   echo "${is_resolved}"
 
