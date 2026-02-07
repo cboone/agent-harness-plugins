@@ -271,12 +271,8 @@ function do_reply_and_resolve() {
   local comment_id
   comment_id=$(send_reply "${thread_id}" "${body}")
 
-  # Resolve after successful reply; verify resolve result
-  local resolve_result
-  resolve_result=$(do_resolve "${thread_id}")
-  if [[ "${resolve_result}" != "true" ]]; then
-    die "Reply created (comment ${comment_id}) but failed to resolve thread ${thread_id}: resolve mutation returned '${resolve_result}'"
-  fi
+  # Resolve after successful reply; do_resolve handles error reporting
+  do_resolve "${thread_id}" > /dev/null
 
   echo "${comment_id}"
 }
