@@ -24,8 +24,27 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 
 **Permitted operations:**
 
-- Reply to EXISTING Copilot threads using `addPullRequestReviewThreadReply`
-- Resolve Copilot threads using `resolveReviewThread`
+- Fetch unresolved Copilot threads using the script's `fetch` command
+- Reply to EXISTING Copilot threads using the script's `reply` command
+- Resolve Copilot threads using the script's `resolve` command
+- Reply and resolve in one step using the script's `reply-and-resolve` command
+
+## Script Setup
+
+All GraphQL operations use a dedicated script that handles pagination, variable binding, and Copilot author filtering automatically.
+
+**Locate the script at the start of your session:**
+
+```bash
+SCRIPT=$(find . -path '**/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads' -type f -print -quit 2>/dev/null)
+
+if [[ -z "${SCRIPT}" || ! -x "${SCRIPT}" ]]; then
+  echo "Could not locate executable resolve-copilot-threads script. Search for **/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads and set SCRIPT." >&2
+  exit 1
+fi
+```
+
+Store the result in `SCRIPT` and use `"${SCRIPT}"` for all commands below.
 
 ## CRITICAL REQUIREMENTS
 
@@ -34,28 +53,23 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 **After fixing any Copilot feedback, you MUST:**
 
 1. **Push the code changes** (`git push`)
-2. **Resolve EACH thread** using the GraphQL mutation (see below)
-3. **Verify resolution** by re-querying the PR
+2. **Resolve EACH thread** using the script (see below)
+3. **Verify resolution** by re-fetching the PR threads
 
 **Addressing feedback without resolving the thread is INCOMPLETE WORK.**
 
 The thread resolution is NOT optional - it's the primary deliverable of this skill. Code changes alone are insufficient.
 
-### Thread Resolution Mutation (USE THIS!)
-
-**IMPORTANT:** Use inline values, NOT `$variable` syntax. The `$` character causes shell escaping issues (`Expected VAR_SIGN, actual: UNKNOWN_CHAR`).
+### Thread Resolution Command (USE THIS!)
 
 ```bash
 # Replace THREAD_ID with actual thread ID (e.g., PRRT_kwDONZ...)
-gh api graphql -f query='
-mutation {
-  resolveReviewThread(input: {threadId: "THREAD_ID"}) {
-    thread { isResolved }
-  }
-}'
+"${SCRIPT}" resolve THREAD_ID
 ```
 
-**You MUST call this mutation for EVERY thread you address.**
+Outputs `true` on success.
+
+**You MUST call this for EVERY thread you address.**
 
 ### YOU MUST UPDATE COPILOT INSTRUCTIONS FOR INCORRECT FEEDBACK
 
@@ -126,82 +140,30 @@ Reserve for repo-wide conventions that apply to all file types:
 
 ### 1. Fetch ALL Unresolved Copilot Threads
 
-Query review threads using GraphQL.
-
-**CRITICAL:** `reviewThreads(first: 100)` is paginated. You MUST fetch every page (`hasNextPage`) so no unresolved Copilot threads are missed.
-
-**IMPORTANT:** Use inline values, NOT `$variable` syntax. The `$` character causes shell escaping issues.
-
 ```bash
-# Replace OWNER, REPO, PR_NUMBER with actual values
-gh api graphql -f query='
-query {
-  repository(owner: "OWNER", name: "REPO") {
-    pullRequest(number: PR_NUMBER) {
-      reviewThreads(first: 100) {
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        nodes {
-          id
-          isResolved
-          isOutdated
-          path
-          line
-          originalLine
-          startLine
-          originalStartLine
-          comments(first: 20) {
-            nodes {
-              author { login }
-              body
-            }
-          }
-        }
-      }
-    }
-  }
-}'
+"${SCRIPT}" fetch OWNER REPO PR_NUMBER
 ```
 
-For additional pages, run the same query with `after: "END_CURSOR_FROM_PREVIOUS_PAGE"`:
+The script automatically handles pagination and filters for unresolved Copilot-authored threads.
 
-```bash
-gh api graphql -f query='
-query {
-  repository(owner: "OWNER", name: "REPO") {
-    pullRequest(number: PR_NUMBER) {
-      reviewThreads(first: 100, after: "END_CURSOR_FROM_PREVIOUS_PAGE") {
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        nodes {
-          id
-          isResolved
-          isOutdated
-          path
-          line
-          originalLine
-          startLine
-          originalStartLine
-          comments(first: 20) {
-            nodes {
-              author { login }
-              body
-            }
-          }
-        }
-      }
-    }
+**Output format** (JSON array):
+
+```json
+[
+  {
+    "id": "PRRT_kwDONZ...",
+    "path": "src/foo.ts",
+    "location": "src/foo.ts:42",
+    "isOutdated": false,
+    "comments": [{"author": "copilot", "body": "[nitpick] Consider..."}]
   }
-}'
+]
 ```
 
-**Filter for:** `isResolved: false` AND author is Copilot (github-actions bot or copilot signature).
+- **`location`**: Uses the first non-null of `line`, `originalLine`, `startLine`, `originalStartLine`. If all line fields are null, reports `path:(no-line)`.
+- **Copilot detection**: Matches author logins `copilot`, `github-copilot[bot]`, and `github-actions[bot]` (with severity tag verification for the latter).
 
-**File:Line extraction rule:** Use `path` and the first non-null of `line`, `originalLine`, `startLine`, `originalStartLine`. If all line fields are null, report `path:(no-line)`.
+An empty array `[]` means no unresolved Copilot threads remain.
 
 ### 2. Categorize Each Comment
 
@@ -217,18 +179,8 @@ For each unresolved Copilot comment:
 
 ### 3. Resolve Threads
 
-Use GraphQL mutation to resolve.
-
-**IMPORTANT:** Use inline values, NOT `$variable` syntax.
-
 ```bash
-# Replace THREAD_ID with actual thread ID (e.g., PRRT_kwDONZ...)
-gh api graphql -f query='
-mutation {
-  resolveReviewThread(input: {threadId: "THREAD_ID"}) {
-    thread { isResolved }
-  }
-}'
+"${SCRIPT}" resolve THREAD_ID
 ```
 
 ### 4. Handle Each Category
@@ -242,21 +194,17 @@ mutation {
 
 **CRITICAL: Reply directly to the Copilot review thread, NOT to the PR.**
 
-Use GraphQL to add a reply to the specific Copilot thread.
-
-**IMPORTANT:** Use inline values, NOT `$variable` syntax.
+Use the script to reply to the specific Copilot thread:
 
 ```bash
-# Replace THREAD_ID and message with actual values
-gh api graphql -f query='
-mutation {
-  addPullRequestReviewThreadReply(input: {
-    pullRequestReviewThreadId: "PRRT_xxx",
-    body: "Your explanation here"
-  }) {
-    comment { id }
-  }
-}'
+# Reply from a file (recommended for multiline bodies):
+"${SCRIPT}" reply THREAD_ID --body-file response.md
+
+# Reply from stdin:
+echo "Your explanation here" | "${SCRIPT}" reply THREAD_ID
+
+# Reply and resolve in one step:
+"${SCRIPT}" reply-and-resolve THREAD_ID --body-file response.md
 ```
 
 **FORBIDDEN COMMANDS - NEVER USE:**
@@ -268,7 +216,7 @@ mutation {
 1. Reply to the thread with professional explanation:
    - Outdated: "This comment refers to code refactored in commit abc123. The issue is no longer applicable."
    - Incorrect: "This conflicts with our {convention name} convention. {Brief explanation}. See {reference file} for project guidelines."
-2. Resolve the thread using the mutation from section 3
+2. Resolve the thread using `"${SCRIPT}" resolve THREAD_ID`
 3. **Update Copilot instructions** to prevent recurrence:
    - **Prefer a path-specific file** (e.g., `.github/css.instructions.md` with `applyTo: "**/*.css"`) when the feedback targets a specific language or file pattern
    - **Use `copilot-instructions.md`** only for repo-wide conventions
@@ -298,7 +246,11 @@ mutation {
 ### 5. Verify Completion
 
 1. **Push any changes:** `git push`
-2. Re-query PR (with pagination) to confirm ALL Copilot threads resolved
+2. Re-fetch to confirm all Copilot threads resolved:
+   ```bash
+   "${SCRIPT}" fetch OWNER REPO PR_NUMBER
+   ```
+   Expected output: `[]` (empty array)
 3. Report summary of actions taken
 
 ## Reply Templates
@@ -320,10 +272,10 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 **Task is INCOMPLETE until ALL of these are done:**
 
 1. All code changes pushed to the PR branch
-2. **EVERY addressed thread resolved via GraphQL mutation** (not just code fixed!)
+2. **EVERY addressed thread resolved via the script** (not just code fixed!)
 3. **For INCORRECT feedback: Copilot instructions updated** (path-specific `*.instructions.md` preferred, or `copilot-instructions.md` for repo-wide conventions)
 4. **For DEFERRED feedback: Task tracked** (GitHub issue, PROJECT.md, or similar)
-5. Re-query confirms `isResolved: true` for all processed threads
+5. Re-fetch confirms empty array `[]` for all processed threads
 6. Output summary table (see format below)
 
 ### Required Output: Thread Summary Table
@@ -347,7 +299,7 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 - **Action Taken**: Brief description of resolution (10 words max)
 - **Status**: Resolved, Failed, or Pending
 
-**Common failure mode:** Fixing code but forgetting to resolve the threads. This leaves the PR with unresolved conversations even though the issues are fixed. ALWAYS run the resolution mutation after pushing code.
+**Common failure mode:** Fixing code but forgetting to resolve the threads. This leaves the PR with unresolved conversations even though the issues are fixed. ALWAYS run the resolution command after pushing code.
 
 ## Error Handling
 

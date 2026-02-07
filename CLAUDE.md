@@ -39,6 +39,8 @@ cboone-cc-plugins/
     ├── resolve-copilot-pr-feedback/ # Copilot PR feedback resolver skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── scripts/
+    │   │   └── resolve-copilot-threads
     │   └── skills/
     │       └── resolve-copilot-pr-feedback/
     │           └── SKILL.md
