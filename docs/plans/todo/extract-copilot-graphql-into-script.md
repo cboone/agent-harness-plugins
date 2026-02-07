@@ -92,7 +92,7 @@ Replace "re-query PR with pagination" with `"${SCRIPT}" fetch OWNER REPO PR_NUMB
 ## Verification
 
 1. `bash -n` and `shellcheck` on the new script
-2. Run `./scripts/resolve-copilot-threads --help` to verify usage output
+2. Run `plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads --help` to verify usage output
 3. Verify dependency checks: run with `gh` or `jq` absent from `PATH` and confirm non-zero exit with actionable stderr message; run without GitHub auth and confirm similar behavior
 4. Dry-run `fetch` against a real PR with Copilot comments to verify JSON output shape and pagination coverage
 5. Dry-run `resolve`, `reply`, and `reply-and-resolve` against a real PR to verify mutations work end-to-end (use a test PR or already-resolved threads to avoid side effects)

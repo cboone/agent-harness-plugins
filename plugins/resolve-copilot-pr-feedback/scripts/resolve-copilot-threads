@@ -184,12 +184,14 @@ function do_fetch() {
         [
           .[].data.repository.pullRequest.reviewThreads.nodes[]
           | select(.isResolved == false)
+          | select(.comments.nodes | length > 0)
           | .comments.nodes[0] as $first
+          | ($first.author.login? // "") as $login
           | select(
-              ($first.author.login | IN($direct_logins[]))
+              ($login | IN($direct_logins[]))
               or (
-                $first.author.login == $actions_login
-                and ($first.body | test($severity_pattern; "i"))
+                $login == $actions_login
+                and (($first.body? // "") | test($severity_pattern; "i"))
               )
             )
           | (.line // .originalLine // .startLine // .originalStartLine) as $ln
