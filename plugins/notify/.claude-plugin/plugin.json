@@ -4,7 +4,6 @@
   },
   "description": "Notifies you when Claude finishes a task or needs your attention.",
   "homepage": "https://github.com/cboone/cboone-cc-plugins",
-  "hooks": "./hooks/hooks.json",
   "keywords": ["alerts", "macos", "notifications"],
   "license": "MIT",
   "name": "notify",
