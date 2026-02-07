@@ -214,16 +214,25 @@ function do_resolve() {
 
   # shellcheck disable=SC2016
   # $variables in the query are GraphQL references, not shell variables
-  gh api graphql \
-    -f threadId="${thread_id}" \
-    -f query='
-      mutation($threadId: ID!) {
-        resolveReviewThread(input: {threadId: $threadId}) {
-          thread { isResolved }
+  local is_resolved
+  is_resolved="$(
+    gh api graphql \
+      -f threadId="${thread_id}" \
+      -f query='
+        mutation($threadId: ID!) {
+          resolveReviewThread(input: {threadId: $threadId}) {
+            thread { isResolved }
+          }
         }
-      }
-    ' \
-    | jq -r '.data.resolveReviewThread.thread.isResolved'
+      ' \
+      | jq -r '.data.resolveReviewThread.thread.isResolved'
+  )"
+
+  echo "${is_resolved}"
+
+  if [[ "${is_resolved}" != "true" ]]; then
+    die "Failed to resolve review thread ${thread_id}: isResolved=${is_resolved}"
+  fi
 }
 
 # Replies to a review thread via GraphQL mutation.
@@ -260,8 +269,12 @@ function do_reply_and_resolve() {
   local comment_id
   comment_id=$(send_reply "${thread_id}" "${body}")
 
-  # Resolve after successful reply; discard resolve output
-  do_resolve "${thread_id}" >/dev/null
+  # Resolve after successful reply; verify resolve result
+  local resolve_result
+  resolve_result=$(do_resolve "${thread_id}")
+  if [[ "${resolve_result}" != "true" ]]; then
+    die "Reply created (comment ${comment_id}) but failed to resolve thread ${thread_id}: resolve mutation returned '${resolve_result}'"
+  fi
 
   echo "${comment_id}"
 }
