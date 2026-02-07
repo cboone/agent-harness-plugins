@@ -35,6 +35,11 @@ All GraphQL operations use a dedicated script that handles pagination, variable 
 
 ```bash
 SCRIPT=$(find . -path '**/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads' -type f 2>/dev/null | head -1)
+
+if [[ -z "${SCRIPT}" || ! -x "${SCRIPT}" ]]; then
+  echo "Could not locate executable resolve-copilot-threads script. Search for **/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads and set SCRIPT." >&2
+  exit 1
+fi
 ```
 
 Store the result in `SCRIPT` and use `"${SCRIPT}"` for all commands below.
