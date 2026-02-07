@@ -24,8 +24,8 @@ readonly COPILOT_ACTIONS_LOGIN="github-actions[bot]"
 readonly COPILOT_SEVERITY_PATTERN="^\\s*\\[(nitpick|suggestion|important|critical|note)\\]"
 
 function usage() {
-  cat <<'USAGE_TEXT'
-Usage: resolve-copilot-threads <command> [arguments]
+  cat <<USAGE_TEXT
+Usage: ${SCRIPT_NAME} <command> [arguments]
 
 Manage GitHub Copilot PR review threads via GraphQL.
 
@@ -42,11 +42,11 @@ The reply and reply-and-resolve commands read the reply body from --body-file
 or stdin if --body-file is not specified.
 
 Examples:
-  resolve-copilot-threads fetch octocat hello-world 42
-  resolve-copilot-threads resolve PRRT_kwDONZ...
-  echo "Explanation here" | resolve-copilot-threads reply PRRT_kwDONZ...
-  resolve-copilot-threads reply PRRT_kwDONZ... --body-file response.md
-  resolve-copilot-threads reply-and-resolve PRRT_kwDONZ... --body-file response.md
+  ${SCRIPT_NAME} fetch octocat hello-world 42
+  ${SCRIPT_NAME} resolve PRRT_kwDONZ...
+  echo "Explanation here" | ${SCRIPT_NAME} reply PRRT_kwDONZ...
+  ${SCRIPT_NAME} reply PRRT_kwDONZ... --body-file response.md
+  ${SCRIPT_NAME} reply-and-resolve PRRT_kwDONZ... --body-file response.md
 USAGE_TEXT
 }
 
@@ -206,6 +206,25 @@ function do_fetch() {
 
   if [[ -n "${graphql_error}" ]]; then
     die "GraphQL error while fetching threads: ${graphql_error}"
+  fi
+
+  # Validate that the response contains the expected data shape.
+  # Invalid owner/repo/PR number can return null data without GraphQL errors.
+  local null_path
+  null_path="$(
+    printf '%s' "${response}" \
+      | jq -r '
+          [.[] | .data as $d |
+            if $d.repository == null then "repository"
+            elif $d.repository.pullRequest == null then "pullRequest"
+            else empty
+            end
+          ] | first // empty
+        '
+  )"
+
+  if [[ -n "${null_path}" ]]; then
+    die "Invalid response: ${null_path} is null. Verify the owner, repo, and PR number are correct."
   fi
 
   printf '%s' "${response}" \
