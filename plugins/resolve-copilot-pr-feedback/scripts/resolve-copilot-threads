@@ -75,17 +75,26 @@ function check_dependencies() {
 # Outputs:
 #   Reply body text to stdout
 function read_body() {
-  if [[ "${1:-}" == "--body-file" ]]; then
-    if [[ -z "${2:-}" ]]; then
-      die "Missing path after --body-file"
-    fi
-    if [[ ! -f "${2}" ]]; then
-      die "File not found: ${2}"
-    fi
-    cat "${2}"
-  else
-    cat
-  fi
+  case "$#" in
+    0)
+      cat
+      ;;
+    2)
+      if [[ "$1" != "--body-file" ]]; then
+        die "Invalid argument '$1'. Expected '--body-file <path>' or no arguments."
+      fi
+      if [[ -z "${2:-}" ]]; then
+        die "Missing path after --body-file"
+      fi
+      if [[ ! -f "$2" ]]; then
+        die "File not found: $2"
+      fi
+      cat -- "$2"
+      ;;
+    *)
+      die "Invalid arguments to read_body. Expected no arguments or '--body-file <path>'."
+      ;;
+  esac
 }
 
 # Sends a reply to a review thread via GraphQL mutation.
