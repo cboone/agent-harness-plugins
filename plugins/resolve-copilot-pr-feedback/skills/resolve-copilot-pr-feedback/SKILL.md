@@ -161,7 +161,7 @@ The script automatically handles pagination and filters for unresolved Copilot-a
 ```
 
 - **`location`**: Uses the first non-null of `line`, `originalLine`, `startLine`, `originalStartLine`. If all line fields are null, reports `path:(no-line)`.
-- **Copilot detection**: Matches author logins `copilot`, `github-copilot[bot]`, and `github-actions[bot]` (with severity tag verification for the latter).
+- **Copilot detection**: Matches author logins `copilot-pull-request-reviewer`, `copilot`, `github-copilot[bot]`, and `github-actions[bot]` (with severity tag verification for the latter).
 
 An empty array `[]` means no unresolved Copilot threads remain.
 
