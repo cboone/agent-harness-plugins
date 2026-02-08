@@ -33,18 +33,9 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 
 All GraphQL operations use a dedicated script that handles pagination, variable binding, and Copilot author filtering automatically.
 
-**Locate the script at the start of your session:**
+**At the start of your session**, locate the script by searching for `**/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads`. Note the absolute path and use it directly in all subsequent commands. Do not use a shell variable, since shell state does not persist between commands.
 
-```bash
-SCRIPT=$(find . -path '**/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads' -type f -print -quit 2>/dev/null)
-
-if [[ -z "${SCRIPT}" || ! -x "${SCRIPT}" ]]; then
-  echo "Could not locate executable resolve-copilot-threads script. Search for **/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads and set SCRIPT." >&2
-  exit 1
-fi
-```
-
-Store the result in `SCRIPT` and use `"${SCRIPT}"` for all commands below.
+In the examples below, `resolve-copilot-threads` is a placeholder for the full resolved path to the script.
 
 ## CRITICAL REQUIREMENTS
 
@@ -64,7 +55,7 @@ The thread resolution is NOT optional - it's the primary deliverable of this ski
 
 ```bash
 # Replace THREAD_ID with actual thread ID (e.g., PRRT_kwDONZ...)
-"${SCRIPT}" resolve THREAD_ID
+resolve-copilot-threads resolve THREAD_ID
 ```
 
 Outputs `true` on success.
@@ -141,7 +132,7 @@ Reserve for repo-wide conventions that apply to all file types:
 ### 1. Fetch ALL Unresolved Copilot Threads
 
 ```bash
-"${SCRIPT}" fetch OWNER REPO PR_NUMBER
+resolve-copilot-threads fetch OWNER REPO PR_NUMBER
 ```
 
 The script automatically handles pagination and filters for unresolved Copilot-authored threads.
@@ -180,7 +171,7 @@ For each unresolved Copilot comment:
 ### 3. Resolve Threads
 
 ```bash
-"${SCRIPT}" resolve THREAD_ID
+resolve-copilot-threads resolve THREAD_ID
 ```
 
 ### 4. Handle Each Category
@@ -198,13 +189,13 @@ Use the script to reply to the specific Copilot thread:
 
 ```bash
 # Reply from a file (recommended for multiline bodies):
-"${SCRIPT}" reply THREAD_ID --body-file response.md
+resolve-copilot-threads reply THREAD_ID --body-file response.md
 
 # Reply from stdin:
-echo "Your explanation here" | "${SCRIPT}" reply THREAD_ID
+echo "Your explanation here" | resolve-copilot-threads reply THREAD_ID
 
 # Reply and resolve in one step:
-"${SCRIPT}" reply-and-resolve THREAD_ID --body-file response.md
+resolve-copilot-threads reply-and-resolve THREAD_ID --body-file response.md
 ```
 
 **FORBIDDEN COMMANDS - NEVER USE:**
@@ -216,7 +207,7 @@ echo "Your explanation here" | "${SCRIPT}" reply THREAD_ID
 1. Reply to the thread with professional explanation:
    - Outdated: "This comment refers to code refactored in commit abc123. The issue is no longer applicable."
    - Incorrect: "This conflicts with our {convention name} convention. {Brief explanation}. See {reference file} for project guidelines."
-2. Resolve the thread using `"${SCRIPT}" resolve THREAD_ID`
+2. Resolve the thread using `resolve-copilot-threads resolve THREAD_ID`
 3. **Update Copilot instructions** to prevent recurrence:
    - **Prefer a path-specific file** (e.g., `.github/css.instructions.md` with `applyTo: "**/*.css"`) when the feedback targets a specific language or file pattern
    - **Use `copilot-instructions.md`** only for repo-wide conventions
@@ -248,7 +239,7 @@ echo "Your explanation here" | "${SCRIPT}" reply THREAD_ID
 1. **Push any changes:** `git push`
 2. Re-fetch to confirm all Copilot threads resolved:
    ```bash
-   "${SCRIPT}" fetch OWNER REPO PR_NUMBER
+   resolve-copilot-threads fetch OWNER REPO PR_NUMBER
    ```
    Expected output: `[]` (empty array)
 3. Report summary of actions taken
