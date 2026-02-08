@@ -11,7 +11,8 @@ readonly SCRIPT_NAME
 # Copilot author detection heuristics
 # =============================================================================
 # Author logins matched unconditionally:
-#   - copilot: Current GitHub Copilot code review login
+#   - copilot-pull-request-reviewer: Copilot code review bot (primary)
+#   - copilot: Legacy/alternative Copilot login
 #   - github-copilot[bot]: GitHub Copilot bot account
 #
 # Author logins matched with body signature verification:
@@ -19,7 +20,7 @@ readonly SCRIPT_NAME
 #     matched only when the comment body starts with a severity tag
 #     (e.g., [nitpick], [suggestion], [important], [critical], [note])
 # =============================================================================
-readonly COPILOT_DIRECT_LOGINS='["copilot", "github-copilot[bot]"]'
+readonly COPILOT_DIRECT_LOGINS='["copilot-pull-request-reviewer", "copilot", "github-copilot[bot]"]'
 readonly COPILOT_ACTIONS_LOGIN="github-actions[bot]"
 readonly COPILOT_SEVERITY_PATTERN="^\\s*\\[(nitpick|suggestion|important|critical|note)\\]"
 
