@@ -35,7 +35,7 @@ All GraphQL operations use a dedicated script that handles pagination, variable 
 
 **At the start of your session**, locate the script by searching for `**/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads`. Note the absolute path and use it directly in all subsequent commands. Do not use a shell variable, since shell state does not persist between commands.
 
-In the examples below, `resolve-copilot-threads` is a placeholder for the full resolved path to the script.
+In the examples below, `resolve-copilot-threads` is a placeholder for the script's **quoted absolute path** (e.g., `"/absolute/path/to/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads"`). Always substitute the full quoted path when running the commands.
 
 ## CRITICAL REQUIREMENTS
 
