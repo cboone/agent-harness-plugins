@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Smart, context-aware git commits with conventional commit messages and plan awareness.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["commit", "conventional-commits", "git", "plans"],
+  "license": "MIT",
+  "name": "commit",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

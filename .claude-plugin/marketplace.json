@@ -14,6 +14,20 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
+      "description": "Smart, context-aware git commits with conventional commit messages and plan awareness.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["commit", "conventional-commits", "git", "plans"],
+      "license": "MIT",
+      "name": "commit",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/commit",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
       "description": "Notifies you when Claude finishes a task or needs your attention.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["alerts", "macos", "notifications"],
@@ -105,6 +119,20 @@
       "name": "suggest-next-issue",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/suggest-next-issue",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
+      "description": "Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, Copilot, and OpenCode.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["agents", "codex", "config", "copilot", "opencode", "settings"],
+      "license": "MIT",
+      "name": "clean-up-agent-config",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/clean-up-agent-config",
       "version": "1.0.0"
     }
   ]
