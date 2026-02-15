@@ -22,7 +22,7 @@ The user provides either an issue number or descriptive text.
 **By number:**
 
 ```bash
-gh issue view NUMBER --json number,title,labels,body
+gh issue view NUMBER --json number,title,labels,body,state
 ```
 
 **By text (fuzzy search):**
@@ -37,13 +37,13 @@ If no results, try broadening the search or ask the user to refine their query.
 
 ### 2. Determine the Base Branch
 
-Check the current branch:
+Determine the repo's default branch:
 
 ```bash
-git branch --show-current
+gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
 ```
 
-Use the current branch as the base. If on `main` (or the repo's default branch), that's the base. If on any other branch, use that branch as the base instead -- the user likely wants to branch off their current work.
+Use the repo's default branch (usually `main`) as the base. This is the safest default since the user is typically starting fresh work from a stable baseline, even if they happen to be on another branch when they invoke the skill.
 
 ### 3. Build the Branch Name
 
@@ -64,7 +64,7 @@ Before creating the worktree, confirm the plan:
 
 - Issue: #NUMBER - TITLE
 - Branch: `TYPE/SLUG`
-- Base: CURRENT_BRANCH (show explicitly so the user can verify)
+- Base: DEFAULT_BRANCH (show explicitly so the user can verify or override)
 
 Ask the user if this looks correct. Allow them to adjust the branch name or base branch.
 
