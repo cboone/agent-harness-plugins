@@ -2,7 +2,7 @@
 
 A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), from [Christopher Boone](https://cboone.github.io).
 
-**Skills:** [Commit](#commit) | [Create Worktree from Issue](#create-worktree-from-issue) | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback) | [Suggest Next Issue](#suggest-next-issue) | [Write Go Code](#write-go-code) | [Write Shell Scripts](#write-shell-scripts)<br>
+**Skills:** [Commit](#commit) | [Create Worktree from Issue](#create-worktree-from-issue) | [Merge Main](#merge-main) | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback) | [Suggest Next Issue](#suggest-next-issue) | [Write Go Code](#write-go-code) | [Write Shell Scripts](#write-shell-scripts)<br>
 **Hooks:** [Notify](#notify-macos)
 
 ## Installation
@@ -16,6 +16,7 @@ Or you can run more direct commands from within `claude`:
 
 /plugin install commit@cboone/cboone-cc-plugins
 /plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
+/plugin install merge-main@cboone/cboone-cc-plugins
 /plugin install notify@cboone/cboone-cc-plugins
 /plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
 /plugin install suggest-next-issue@cboone/cboone-cc-plugins
@@ -30,6 +31,14 @@ Or you can run more direct commands from within `claude`:
 Smart, context-aware git commits with conventional commit messages and plan awareness. Analyzes your diff to generate well-structured commit messages, handles staged-only vs. all changes, supports commit-and-push workflows, and can detect and handle plan files separately.
 
 You can trigger it directly via `/commit`.
+
+### Merge Main
+
+Fetch and merge the repository's base branch (usually `main`) into the current feature branch. Automatically detects the default branch, handles uncommitted changes, resolves merge conflicts, and optionally pushes after a successful merge.
+
+You can trigger it directly via `/merge-main`.
+
+Requires [`gh`](https://cli.github.com/) to be installed (falls back to `git remote show origin` if unavailable).
 
 ### Create Worktree from Issue
 

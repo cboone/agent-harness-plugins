@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Fetch and merge the base branch into the current feature branch with automatic conflict resolution.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["branch", "conflicts", "git", "merge"],
+  "license": "MIT",
+  "name": "merge-main",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
