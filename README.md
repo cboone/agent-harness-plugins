@@ -11,6 +11,7 @@ Or you can run more direct commands, either from within `claude`:
 ```bash
 /plugin marketplace add cboone/cboone-cc-plugins
 
+/plugin install clean-up-agent-config@cboone/cboone-cc-plugins
 /plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
 /plugin install notify@cboone/cboone-cc-plugins
 /plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
@@ -23,6 +24,7 @@ Or from the command line:
 ```bash
 claude plugin marketplace add cboone/cboone-cc-plugins
 
+claude plugin install clean-up-agent-config@cboone/cboone-cc-plugins
 claude plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
 claude plugin install notify@cboone/cboone-cc-plugins
 claude plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
@@ -31,6 +33,14 @@ claude plugin install write-shell-scripts@cboone/cboone-cc-plugins
 ```
 
 ## Skills
+
+### Clean Up Agent Config
+
+Review and reorganize AI coding agent configuration and instruction files across Claude Code, OpenAI Codex, GitHub Copilot (CLI and code review), and OpenCode. Audits existing files (CLAUDE.md, AGENTS.md, `.claude/settings.json`, `.github/copilot-instructions.md`, etc.), identifies duplications and misplaced settings, and proposes a consolidated structure. Handles the `settings.json` vs `settings.local.json` split, sets up AGENTS.md as the single source of truth with CLAUDE.md as a symlink, and takes advantage of tool-specific features like Copilot's path-scoped `.instructions.md` files.
+
+You can trigger it directly via `/clean-up-agent-config`.
+
+Includes comprehensive reference documentation on all agent instruction and configuration file formats.
 
 ### Create Worktree from Issue
 

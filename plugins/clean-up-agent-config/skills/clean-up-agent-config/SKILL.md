@@ -1,0 +1,407 @@
+---
+name: clean-up-agent-config
+description: >-
+  Review and reorganize AI coding agent configuration and instruction files
+  across Claude Code, Codex, Copilot, and OpenCode. Use when the user says
+  "clean up agent config", "organize agent files", "standardize agent
+  instructions", "set up agent config", "review agent config", "consolidate
+  agent files", or mentions reorganizing CLAUDE.md, AGENTS.md,
+  settings.json, or copilot-instructions.md. Also use when the user wants
+  to deduplicate or rationalize agent instruction files across tools.
+---
+
+# Agent Config Cleanup
+
+Review, consolidate, and organize AI coding agent configuration and instruction files across four tools: Claude Code, OpenAI Codex, GitHub Copilot (CLI agent and code review), and OpenCode.
+
+## Reference Documents
+
+Consult the reference files in this skill's `references/` directory for detailed information about each tool's file formats, precedence rules, and unique capabilities:
+
+- `references/agent-instruction-files.md` -- CLAUDE.md, AGENTS.md, copilot-instructions.md, SKILL.md comparison
+- `references/agent-config-files.md` -- settings.json, config.toml, opencode.json, VS Code settings comparison
+
+Read these references before starting work. They contain tool-specific details about file precedence, loading behavior, and cross-tool compatibility that inform every decision in this workflow.
+
+---
+
+## Target Structure
+
+The goal is a hub-and-spoke model: shared instructions in one canonical file, tool-specific configuration in each tool's hidden directory.
+
+### Instruction files (the hub)
+
+```text
+repo/
++-- AGENTS.md                              # Single source of truth (all tools)
++-- CLAUDE.md -> AGENTS.md                 # Symlink for Claude Code
++-- .claude/
+|   +-- rules/
+|       +-- *.md                           # Claude-specific rules (auto-loaded)
++-- .github/
+    +-- copilot-instructions.md            # Copilot repo-wide review rules
+    +-- instructions/
+        +-- *.instructions.md              # Copilot path-scoped rules
+```
+
+### Config files (the spokes)
+
+```text
+repo/
++-- .mcp.json                              # Shared MCP servers (Claude Code, OpenCode)
++-- opencode.json                          # OpenCode project config (if used)
++-- .claude/
+|   +-- settings.json                      # Team-shared: permissions, hooks, env vars
+|   +-- settings.local.json                # Personal: model, telemetry (gitignored)
++-- .codex/
+    +-- config.toml                        # Codex project config (if used)
+```
+
+### What goes where
+
+| Content type | Location | Reason |
+|---|---|---|
+| Project overview, tech stack, commands | `AGENTS.md` | Read by all four tools |
+| Directory-scoped conventions | Subdirectory `AGENTS.md` | Scoped by directory in Codex, Copilot, Claude |
+| Claude-specific (MCP hints, subagent patterns) | `.claude/rules/*.md` | Auto-loaded, Claude-only |
+| Copilot code review rules | `.github/copilot-instructions.md` | Copilot code review agent |
+| File-type-specific review rules | `.github/instructions/*.instructions.md` | Copilot's `applyTo` glob scoping |
+| Team permissions and hooks | `.claude/settings.json` | Committed, shared with team |
+| Personal model/telemetry/privacy | `.claude/settings.local.json` | Gitignored, personal |
+| MCP servers (team) | `.mcp.json` at project root | Committed, shared |
+| MCP servers (personal) | `.claude/settings.local.json` | Gitignored |
+| Codex sandbox/approval policy | `.codex/config.toml` | Codex-specific |
+| OpenCode model/instruction paths | `opencode.json` | OpenCode-specific |
+
+---
+
+## Workflow
+
+### Phase 1: Audit
+
+Scan the repository for all known agent-related files.
+
+#### Instruction files to check
+
+- `AGENTS.md` (root and subdirectories)
+- `AGENTS.override.md` (root and subdirectories)
+- `CLAUDE.md` (root and subdirectories)
+- `.claude/CLAUDE.md`
+- `.claude/rules/*.md`
+- `.github/copilot-instructions.md`
+- `.github/instructions/*.instructions.md`
+- `.github/prompts/*.prompt.md`
+- `.github/chatmodes/*.chatmode.md`
+- `.github/agents/*.agent.md`
+
+#### Config files to check
+
+- `.claude/settings.json`
+- `.claude/settings.local.json`
+- `.mcp.json`
+- `.codex/config.toml`
+- `opencode.json`
+
+#### Also check
+
+- **Symlinks:** Run `ls -la CLAUDE.md AGENTS.md` to detect symlinks and their targets.
+- **Gitignore:** Verify `.claude/settings.local.json` is gitignored (Claude Code does this automatically, but confirm).
+- **Project characteristics:** Note the primary languages, directory structure, build tools, and monorepo indicators. These inform AGENTS.md content and Copilot path-scoped instructions.
+
+Report which files exist, which are missing, which are symlinks, and what each file contains at a high level.
+
+### Phase 2: Analyze
+
+Read each found file and categorize its contents into:
+
+1. **Shared instructions** -- project overview, tech stack, commands, coding conventions that all tools should know
+2. **Claude-specific instructions** -- MCP server usage hints, subagent patterns, `@import` references, Claude-only tool restrictions
+3. **Copilot-specific instructions** -- code review rules, PR description conventions, `excludeAgent` scoping
+4. **Tool config** -- permissions, hooks, model settings, environment variables, sandbox policies
+5. **Personal config** -- settings that belong in gitignored files, not shared config
+6. **Duplicated content** -- instructions repeated across multiple files
+7. **Misplaced content** -- team settings in personal files or personal settings in team files
+
+#### Settings split analysis (Claude Code)
+
+For `.claude/settings.json` and `.claude/settings.local.json`, specifically classify each setting:
+
+**Belongs in settings.json (team-shared, committed):**
+
+- `$schema` reference
+- `permissions.allow` rules for team-standard tool patterns
+- `permissions.deny` rules for protecting sensitive paths
+- `hooks` definitions (pre/post tool use enforcement)
+- `env` vars for team conventions (`attribution`, survey suppression, etc.)
+- `attribution` settings
+
+**Belongs in settings.local.json (personal, gitignored):**
+
+- Model override env vars (`ANTHROPIC_MODEL`, `CLAUDE_CODE_MAX_TURNS`)
+- Telemetry/privacy env vars (`DISABLE_TELEMETRY`, `DISABLE_ERROR_REPORTING`)
+- Personal MCP servers in `mcpServers`
+- Personal permission overrides
+- `spinnerTipsEnabled` and similar personal preferences
+- Experimental settings being tested before proposing to the team
+
+Note: Claude Code writes to `settings.local.json` by default when users change settings interactively. This means team-appropriate settings often end up in the local file and need to be moved to `settings.json`.
+
+### Phase 3: Propose Changes
+
+Present the user with a concrete plan before making any changes:
+
+1. **New files** -- what will be created, with a summary of contents
+2. **Content moves** -- what content is moving between files, with before/after locations
+3. **Consolidations** -- duplicated content being merged into one location
+4. **Symlinks** -- what symlinks will be created or updated
+5. **Deletions** -- files being replaced by symlinks or removed
+6. **Config split** -- settings moving between settings.json and settings.local.json
+
+Show the proposed final file tree and get explicit user approval before proceeding.
+
+#### Symlink strategy
+
+Recommend `CLAUDE.md -> AGENTS.md` (AGENTS.md is the real file) when:
+
+- AGENTS.md already exists, or
+- Starting fresh (AGENTS.md is the cross-tool standard), or
+- The team uses multiple AI tools
+
+Recommend keeping CLAUDE.md as the real file (no symlink) when:
+
+- The team exclusively uses Claude Code and the user prefers the CLAUDE.md name
+- CLAUDE.md has extensive Claude-specific `@import` references that other tools wouldn't understand
+
+In either case, ask the user for their preference.
+
+### Phase 4: Implement
+
+Execute the approved plan in this order:
+
+#### 4a. AGENTS.md
+
+Create or update AGENTS.md with shared instructions consolidated from all sources. Structure with clear headings:
+
+```markdown
+# Project Name
+
+## Overview
+Brief project description and key architectural decisions.
+
+## Development Environment
+- Package manager and runtime versions
+- Key commands: build, test, lint, dev server
+
+## Code Conventions
+- Language-specific patterns and preferences
+- Error handling approach
+- Testing conventions and location
+
+## Git Workflow
+- Branch naming and commit format
+- Pre-commit requirements
+```
+
+**Keep it under 200 lines.** If more detail is needed, keep it in `.claude/rules/` files (Claude) or reference supporting docs.
+
+**Do not include** code style rules that linters enforce (formatting, indentation). Those belong in `.editorconfig`, `.prettierrc`, etc.
+
+#### 4b. CLAUDE.md symlink
+
+```bash
+# If AGENTS.md is the source of truth:
+ln -sf AGENTS.md CLAUDE.md
+```
+
+If CLAUDE.md previously had Claude-specific content, extract those sections to `.claude/rules/` files before replacing with the symlink.
+
+#### 4c. .claude/rules/ (Claude-specific)
+
+Move Claude-specific instructions to focused rule files:
+
+```text
+.claude/rules/
++-- mcp-servers.md     # How to use project MCP servers
++-- testing.md         # Claude-specific test runner patterns
++-- security.md        # Paths to protect, secrets handling
+```
+
+Each file is auto-loaded alongside CLAUDE.md. Keep files focused on one topic.
+
+Only create these if there are genuine Claude-specific instructions. Do not create empty rule files.
+
+#### 4d. .claude/settings.json (team-shared)
+
+Create or update with team-appropriate settings:
+
+```json
+{
+  "$schema": "https://cdn.claude.ai/claude-code/settings.schema.json",
+  "permissions": {
+    "allow": [],
+    "deny": []
+  }
+}
+```
+
+Move team settings here from settings.local.json. Remove personal settings to settings.local.json.
+
+#### 4e. .claude/settings.local.json (personal)
+
+Move personal settings here from settings.json. Verify it is gitignored.
+
+If settings.local.json does not exist and there are no personal settings to move, do not create an empty file.
+
+#### 4f. .github/copilot-instructions.md
+
+Create or update with Copilot-specific content. This file should NOT duplicate AGENTS.md. Instead:
+
+```markdown
+# Copilot Instructions
+
+For full project conventions, see AGENTS.md in the repository root.
+
+## Code Review
+
+- [Project-specific code review rules]
+- [Patterns that Copilot commonly flags incorrectly in this project]
+```
+
+**Keep concise.** Copilot may not read the full file. Put the most important review rules first. Start with 10-20 specific, actionable instructions.
+
+#### 4g. .github/instructions/*.instructions.md (path-scoped)
+
+Create path-scoped instruction files only when the project structure warrants them. Use Copilot's `applyTo` glob for file-type or directory scoping:
+
+```markdown
+---
+applyTo: "src/frontend/**/*.tsx"
+---
+
+Use functional React components with hooks.
+Prefer named exports over default exports.
+```
+
+Good candidates for path-scoped files:
+
+- Distinct frontend/backend directories in a monorepo
+- Multiple languages in the same repo (Go backend, TypeScript frontend)
+- Test files with different conventions than source files
+- Generated code directories that should be treated differently
+
+Use `excludeAgent` to control whether instructions apply to the coding agent, code review, or both:
+
+- `excludeAgent: copilot-code-review` -- coding agent only
+- `excludeAgent: copilot-coding-agent` -- code review only
+- Omit `excludeAgent` -- both
+
+Do not create path-scoped files if the project has a flat structure or uniform conventions.
+
+#### 4h. .codex/config.toml (if applicable)
+
+Only create if the team uses Codex. Include team-appropriate defaults:
+
+```toml
+#:schema https://developers.openai.com/codex/config-schema.json
+
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+project_doc_fallback_filenames = ["CLAUDE.md"]
+```
+
+The `project_doc_fallback_filenames` line ensures Codex reads CLAUDE.md (or the symlink) in addition to AGENTS.md.
+
+#### 4i. opencode.json (if applicable)
+
+Only create if the team uses OpenCode. Reference the instruction files:
+
+```json
+{
+  "instructions": ["AGENTS.md"]
+}
+```
+
+Add glob patterns for subdirectory AGENTS.md files in monorepos:
+
+```json
+{
+  "instructions": ["AGENTS.md", "packages/*/AGENTS.md"]
+}
+```
+
+### Phase 5: Verify
+
+1. **Symlinks resolve correctly:**
+   ```bash
+   ls -la CLAUDE.md
+   readlink CLAUDE.md
+   ```
+
+2. **No duplicated instructions** across AGENTS.md, copilot-instructions.md, and .claude/rules/
+
+3. **Settings split is clean:**
+   - settings.json has no personal/local settings
+   - settings.local.json has no team-shared settings
+
+4. **Gitignore** covers .claude/settings.local.json
+
+5. **Show final file tree** of all agent-related files with a brief note on each file's purpose
+
+6. **Report summary** as a table:
+
+| File | Action | Notes |
+|---|---|---|
+| `AGENTS.md` | Created/Updated | Consolidated from X sources |
+| `CLAUDE.md` | Symlinked | Points to AGENTS.md |
+| `.claude/settings.json` | Updated | Moved N settings from local |
+| ... | ... | ... |
+
+---
+
+## Tool-Specific Behavior Reference
+
+### Claude Code
+
+- **Instruction precedence:** enterprise managed > user `~/.claude/CLAUDE.md` > project `CLAUDE.md` + `.claude/rules/*.md` > subdirectory `CLAUDE.md`
+- **Config precedence:** managed > user settings > project shared settings > project local settings > CLI flags
+- **@imports:** CLAUDE.md supports `@path/to/file` syntax to pull in other files without copying content
+- **.claude/rules/**: All `.md` files auto-loaded alongside CLAUDE.md. Use for Claude-specific instructions that shouldn't pollute the cross-tool AGENTS.md.
+- **settings.local.json**: Auto-gitignored by Claude Code. Claude writes here by default when users change settings interactively.
+
+### OpenAI Codex
+
+- **Instruction loading:** Walks from project root down to cwd, reading AGENTS.md at each directory level, concatenating them in order
+- **AGENTS.override.md:** Temporary overrides in any directory without modifying the base file. Unique to Codex.
+- **Fallback filenames:** `project_doc_fallback_filenames` in config.toml makes Codex read CLAUDE.md or other files as instruction sources
+- **32 KiB limit:** Combined AGENTS.md content is capped at `project_doc_max_bytes` (default 32 KiB). Raise in config.toml if needed.
+- **Profiles:** Named config profiles (`[profiles.name]`) for switching between careful review and fast iteration. Unique to Codex.
+- **Trust model:** Project .codex/config.toml only loads if the project is trusted.
+
+### GitHub Copilot
+
+- **Two agents:** The coding agent (CLI, VS Code) and the code review agent (PR reviews) both read .github/ files but can be targeted separately with `excludeAgent`.
+- **Path-scoping:** `.github/instructions/*.instructions.md` with `applyTo` globs offers file-type-level granularity that no other tool matches. This is Copilot's strongest unique feature.
+- **Also reads:** AGENTS.md (root + subdirs) and CLAUDE.md (root) as fallbacks. If both AGENTS.md and copilot-instructions.md exist, Copilot uses both.
+- **Keep short:** Copilot's review may not read full instruction files. Put critical rules first. Keep each file under ~1,000 lines.
+- **Zero root footprint:** Everything lives in .github/, which already exists in most GitHub repos.
+
+### OpenCode
+
+- **Reads AGENTS.md natively.** If both AGENTS.md and CLAUDE.md exist, only AGENTS.md is used.
+- **Custom paths:** `instructions` array in opencode.json supports glob patterns (e.g., `packages/*/AGENTS.md`).
+- **MCP servers:** Configured in opencode.json under `mcpServers`, same format as Claude Code's .mcp.json.
+- **Provider-agnostic:** Supports Claude, OpenAI, Gemini, and local models. Model config is always personal, not team-shared.
+
+---
+
+## Error Handling
+
+- **No agent config files exist at all:** Start fresh with the recommended structure. Analyze the project characteristics (languages, build tools, directory structure) to populate AGENTS.md.
+- **CLAUDE.md and AGENTS.md both exist with different content:** Merge them and ask the user which filename becomes the real file (recommend AGENTS.md). The other becomes a symlink.
+- **settings.local.json has team settings:** Propose moving them to settings.json with a clear before/after diff.
+- **settings.json has personal settings:** Propose moving them to settings.local.json.
+- **Symlinks point to wrong targets:** Fix them after confirming with the user.
+- **.github/ does not exist:** Only create it if the repo is hosted on GitHub. Check for `.git/config` remote URLs or ask the user.
+- **Monorepo detected:** Suggest subdirectory AGENTS.md files and Copilot path-scoped instructions for each major package/module.
+- **Large existing CLAUDE.md (over 200 lines):** Propose splitting into AGENTS.md (shared core) + .claude/rules/ (Claude-specific) + tool-specific files.
