@@ -62,14 +62,23 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── suggest-next-issue/
     │           └── SKILL.md
-    └── write-shell-scripts/        # Bash style guide skill
+    ├── write-shell-scripts/        # Bash style guide skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── write-shell-scripts/
+    │           ├── SKILL.md
+    │           └── references/
+    │               └── BASH.md
+    └── clean-up-agent-config/      # Agent config cleanup skill
         ├── .claude-plugin/
         │   └── plugin.json
         └── skills/
-            └── write-shell-scripts/
+            └── clean-up-agent-config/
                 ├── SKILL.md
                 └── references/
-                    └── BASH.md
+                    ├── agent-instruction-files.md
+                    └── agent-config-files.md
 ```
 
 ## Development
