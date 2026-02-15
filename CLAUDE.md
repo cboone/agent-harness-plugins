@@ -117,19 +117,27 @@ When adding new plugins:
 
 ### README ToC Format
 
-The README table of contents uses **one entry per line** to prevent merge conflicts when multiple branches add plugins simultaneously. Each link is on its own line, with ` |` (space-pipe) at the end of every line except the last in each group:
+The README table of contents uses **one entry per line** to prevent merge conflicts when multiple branches add plugins simultaneously. Skills are organized into subcategories (Agents, Workflow, Languages). Each continuation link starts with `| ` (pipe-space) at the beginning of the line:
 
 ```markdown
-**Skills:**
-[Skill A](#skill-a) |
-[Skill B](#skill-b) |
+**Skills**
+<br>_Agents_
+[Skill A](#skill-a)
+| [Skill B](#skill-b)
+<br>_Workflow_
 [Skill C](#skill-c)
-<br>
-**Hooks:**
+| [Skill D](#skill-d)
+<br>_Languages_
+[Skill E](#skill-e)
+<br>**Hooks**
 [Hook A](#hook-a)
 ```
 
-Never put multiple links on the same line.
+Rules:
+- Never put multiple links on the same line.
+- The first link in each subcategory has no leading pipe; subsequent links start with `| `.
+- Subcategory labels use `<br>_Name_` format.
+- Labels have no trailing colons.
 
 ## License
 
