@@ -50,21 +50,45 @@ Examples:
 - Issue "Login fails with special chars" with label "bug" -> `fix/login-fails-with-special-chars`
 - Issue "Update README" with no labels -> `feature/update-readme`
 
-### 3. Create the Worktree
+### 3. Compose the Issue Prompt
+
+Build a prompt from the issue data retrieved in step 1. Format:
+
+```
+Work on issue #NUMBER: TITLE
+
+Labels: LABEL1, LABEL2
+
+BODY_CONTENT
+```
+
+- If the issue body exceeds approximately 2000 characters, truncate it at the nearest paragraph or sentence boundary and append: "(Issue body truncated. Run `gh issue view NUMBER` for full details.)"
+- If the issue body is empty, omit it.
+- If there are no labels, omit the labels line.
+
+### 4. Create the Worktree
+
+Write the prompt to a temporary file and pass it via `-P` to avoid shell escaping issues with arbitrary issue body content:
 
 ```bash
-workmux add BRANCH_NAME --open-if-exists
+PROMPT_FILE=$(mktemp)
+cat > "$PROMPT_FILE" << 'PROMPT'
+[composed prompt from step 3]
+PROMPT
+workmux add BRANCH_NAME --open-if-exists -P "$PROMPT_FILE"
+rm "$PROMPT_FILE"
 ```
 
 Do not specify a `--base` branch. Let `workmux` use its default.
 
-### 4. Report Success
+### 5. Report Success
 
 After `workmux add` completes, report:
 
 - The issue number and title
 - The branch name created
 - The tmux window name (to help the user switch to it)
+- A note that the issue context was injected into the new session
 
 ## Error Handling
 
