@@ -31,6 +31,8 @@ gh issue view NUMBER --json number,title,labels,body,state
 gh issue list --search "USER_TEXT" --state all --json number,title,labels,state --limit 10
 ```
 
+If the search returns exactly one result, proceed automatically with that issue without asking for additional confirmation.
+
 If the search returns multiple results, present them to the user and ask which one to use.
 
 If no results, try broadening the search or ask the user to refine their query.
@@ -51,7 +53,7 @@ Examples:
 ### 3. Create the Worktree
 
 ```bash
-workmux add BRANCH_NAME
+workmux add BRANCH_NAME --open-if-exists
 ```
 
 Do not specify a `--base` branch. Let `workmux` use its default.
@@ -68,5 +70,4 @@ After `workmux add` completes, report:
 
 - If `gh` is not authenticated, instruct the user to run `gh auth login`
 - If `workmux` is not installed, inform the user
-- If the branch already exists, use `workmux add --open-if-exists` to open the existing worktree instead
 - If the issue is closed, warn the user and ask if they want to proceed anyway
