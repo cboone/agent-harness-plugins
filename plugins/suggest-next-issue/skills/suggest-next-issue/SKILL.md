@@ -90,9 +90,10 @@ For each recommendation, include:
 
 1. Issue number and title (as a link: `#N - Title`)
 2. Labels and age
-3. Why it's recommended (1-2 sentences with specific reasoning)
-4. Suggested first steps or approach (1 sentence)
-5. Blockers or considerations, if any
+3. What it is: a brief summary of the issue (1-2 sentences distilled from the issue body, so the user understands the scope and substance without having to open the issue)
+4. Why it's recommended (1-2 sentences with specific reasoning)
+5. Suggested first steps or approach (1 sentence)
+6. Blockers or considerations, if any
 
 ### 5. Summarize In-Progress Work
 
@@ -113,25 +114,30 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
 
 ### Quick Wins
 1. **#23 - Fix typo in help output** (bug, 2 days old)
+   The `--version` flag prints "verison" instead of "version" in the CLI help text.
    Small fix, keeps the issue count tidy.
    Start: Check the help string in the CLI entry point.
 
 ### High Impact
 2. **#18 - Add dark mode support** (enhancement, 12 days old, 4 comments)
+   Add a system-preference-aware dark color scheme with a manual toggle in the settings panel.
    Most-requested feature. Pairs well with the theme work done in #15.
    Start: Add CSS variables for color scheme, then add a toggle component.
 
 3. **#11 - Add manage-plan skill** (enhancement, 1 day old)
+   Create a skill that can list, rename, archive, and delete saved plans from within a session.
    High-frequency workflow pattern from session analysis.
    Start: Review existing plan-related commands and design the skill interface.
 
 ### Unblocks Others
 4. **#7 - Refactor config loading** (enhancement, 20 days old)
+   Replace the ad-hoc JSON parsing with a centralized, schema-validated config module that supports defaults and env overrides.
    Issues #8 and #9 both depend on the new config system.
    Start: Extract config into a dedicated module with typed schema.
 
 ### Overdue
 5. **#3 - Update installation docs** (documentation, 45 days old)
+   The install guide still references the old `curl | bash` method; needs updating for the new package manager install flow.
    Open since v0.2. Quick update needed for current install process.
    Start: Compare current docs against actual install steps.
 
