@@ -68,7 +68,9 @@ BODY_CONTENT
 
 ### 4. Create the Worktree
 
-Write the prompt to a temporary file and pass it via `-P` to avoid shell escaping issues with arbitrary issue body content:
+Write the prompt to a temporary file and pass it via `-P` to avoid shell escaping issues with arbitrary issue body content.
+
+**Important:** The `workmux add` command must run outside the sandbox (use `dangerouslyDisableSandbox: true` on the Bash tool call). It interacts with tmux to create windows and sessions, which hangs indefinitely inside the sandbox.
 
 ```bash
 PROMPT_FILE=$(mktemp)

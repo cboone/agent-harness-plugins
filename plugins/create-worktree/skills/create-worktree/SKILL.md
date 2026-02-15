@@ -49,6 +49,8 @@ If the user provided only a branch name with no description, derive a human-read
 
 ### 3. Create the Worktree
 
+**Important:** The `workmux add` command must run outside the sandbox (use `dangerouslyDisableSandbox: true` on the Bash tool call). It interacts with tmux to create windows and sessions, which hangs indefinitely inside the sandbox.
+
 ```bash
 workmux add BRANCH_NAME --open-if-exists -p "PROMPT_TEXT"
 ```
