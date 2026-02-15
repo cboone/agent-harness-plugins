@@ -2,7 +2,7 @@
 
 A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), from [Christopher Boone](https://cboone.github.io).
 
-**Skills:** [Clean Up Agent Config](#clean-up-agent-config) | [Create Worktree from Issue](#create-worktree-from-issue) | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback) | [Suggest Next Issue](#suggest-next-issue) | [Write Go Code](#write-go-code) | [Write Shell Scripts](#write-shell-scripts)<br>
+**Skills:** [Clean Up Agent Config](#clean-up-agent-config) | [Commit](#commit) | [Create Worktree from Issue](#create-worktree-from-issue) | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback) | [Suggest Next Issue](#suggest-next-issue) | [Write Go Code](#write-go-code) | [Write Shell Scripts](#write-shell-scripts)<br>
 **Hooks:** [Notify](#notify-macos)
 
 ## Installation
@@ -15,6 +15,7 @@ Or you can run more direct commands from within `claude`:
 /plugin marketplace add cboone/cboone-cc-plugins
 
 /plugin install clean-up-agent-config@cboone/cboone-cc-plugins
+/plugin install commit@cboone/cboone-cc-plugins
 /plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
 /plugin install notify@cboone/cboone-cc-plugins
 /plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
@@ -32,6 +33,12 @@ Review and reorganize AI coding agent configuration and instruction files across
 You can trigger it directly via `/clean-up-agent-config`.
 
 Includes comprehensive reference documentation on all agent instruction and configuration file formats.
+
+### Commit
+
+Smart, context-aware git commits with conventional commit messages and plan awareness. Analyzes your diff to generate well-structured commit messages, handles staged-only vs. all changes, supports commit-and-push workflows, and can detect and handle plan files separately.
+
+You can trigger it directly via `/commit`.
 
 ### Create Worktree from Issue
 

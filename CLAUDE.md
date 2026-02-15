@@ -11,6 +11,12 @@ cboone-cc-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json            # Plugin registry for this repository
 └── plugins/
+    ├── commit/                      # Smart git commit skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── commit/
+    │           └── SKILL.md
     ├── create-worktree-from-issue/  # Issue-to-worktree skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
