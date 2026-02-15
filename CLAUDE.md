@@ -17,6 +17,12 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── commit/
     │           └── SKILL.md
+    ├── create-worktree/              # General worktree creation skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── create-worktree/
+    │           └── SKILL.md
     ├── create-worktree-from-issue/  # Issue-to-worktree skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
