@@ -2,7 +2,7 @@
 
 A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), from [Christopher Boone](https://cboone.github.io).
 
-**Skills:** [Clean Up Agent Config](#clean-up-agent-config) | [Commit](#commit) | [Create Worktree](#create-worktree) | [Create Worktree from Issue](#create-worktree-from-issue) | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback) | [Suggest Next Issue](#suggest-next-issue) | [Write Go Code](#write-go-code) | [Write Shell Scripts](#write-shell-scripts)<br>
+**Skills:** [Clean Up Agent Config](#clean-up-agent-config) | [Commit](#commit) | [Create Worktree](#create-worktree) | [Create Worktree from Issue](#create-worktree-from-issue) | [Merge Main](#merge-main) | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback) | [Suggest Next Issue](#suggest-next-issue) | [Write Go Code](#write-go-code) | [Write Shell Scripts](#write-shell-scripts)<br>
 **Hooks:** [Notify](#notify-macos)
 
 ## Installation
@@ -18,6 +18,7 @@ Or you can run more direct commands from within `claude`:
 /plugin install commit@cboone/cboone-cc-plugins
 /plugin install create-worktree@cboone/cboone-cc-plugins
 /plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
+/plugin install merge-main@cboone/cboone-cc-plugins
 /plugin install notify@cboone/cboone-cc-plugins
 /plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
 /plugin install suggest-next-issue@cboone/cboone-cc-plugins
@@ -56,6 +57,14 @@ Find a GitHub issue in the current repository (by number or fuzzy text search) a
 You can trigger it directly via `/create-worktree-from-issue`.
 
 Requires [`gh`](https://cli.github.com/) and [`workmux`](https://github.com/paiml/workmux) to be installed.
+
+### Merge Main
+
+Fetch and merge the repository's base branch (usually `main`) into the current feature branch. Automatically detects the default branch, handles uncommitted changes, resolves merge conflicts, and optionally pushes after a successful merge.
+
+You can trigger it directly via `/merge-main`.
+
+Requires [`gh`](https://cli.github.com/) to be installed (falls back to `git remote show origin` if unavailable).
 
 ### Resolve Copilot PR Feedback
 
