@@ -50,6 +50,12 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── resolve-copilot-pr-feedback/
     │           └── SKILL.md
+    ├── suggest-next-issue/         # Issue prioritization skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── suggest-next-issue/
+    │           └── SKILL.md
     └── write-shell-scripts/        # Bash style guide skill
         ├── .claude-plugin/
         │   └── plugin.json

@@ -1,0 +1,149 @@
+---
+name: suggest-next-issue
+description: >-
+  Review all open GitHub issues in the current repository, analyze them in
+  context (current branch state, recent work, project goals, dependencies), and
+  recommend what to work on next with prioritized reasoning. Use when the user
+  says "suggest next issue", "what should I work on next", "which issue should I
+  tackle", "prioritize issues", "review open issues", "suggest an issue",
+  "triage issues", or asks for help choosing between open issues. Requires the
+  gh CLI to be installed and authenticated.
+---
+
+# Suggest Next Issue
+
+Analyze open GitHub issues and recommend what to work on next.
+
+## Options
+
+The user may provide these options inline:
+
+- **label filter**: Focus on issues with a specific label (e.g., "suggest next bug" or "suggest next issue --label enhancement")
+- **milestone filter**: Focus on issues in a specific milestone
+- **limit**: Number of recommendations (default: 5)
+- **include PRs**: Also consider open PRs needing attention (reviews, conflicts, CI failures)
+
+## Workflow
+
+### 1. Gather Context
+
+Run these commands to build a complete picture:
+
+```bash
+# Open issues (with details for analysis)
+gh issue list --state open --json number,title,labels,assignees,createdAt,updatedAt,comments,milestone,body --limit 100
+
+# Recently closed issues (understand momentum)
+gh issue list --state closed --json number,title,labels,closedAt --limit 10 --sort updated
+
+# Current branches/worktrees (what's already in progress)
+git worktree list
+git branch --list --format='%(refname:short)'
+
+# Project context
+gh repo view --json description,defaultBranchRef
+```
+
+If the user specified `--label` or `--milestone`, add the corresponding `--label` or `--milestone` flag to `gh issue list`.
+
+If the user specified `--include-prs`:
+
+```bash
+gh pr list --state open --json number,title,labels,createdAt,updatedAt,isDraft,reviewDecision,statusCheckRollup
+```
+
+Also read the repo's README and any roadmap or project documentation to understand project goals.
+
+### 2. Identify In-Progress Work
+
+Cross-reference open issues against existing branches and worktrees. Exclude issues that already have a corresponding branch (matching issue number in branch name) from recommendations, but note them in the output as "already in progress."
+
+### 3. Analyze Each Issue
+
+Evaluate each open issue (that is not already in progress) on these signals:
+
+| Signal | Source | Weight |
+|--------|--------|--------|
+| **Priority labels** | Labels containing "bug", "critical", "urgent", "security" | High |
+| **Dependencies** | Issue body references to other issues (#N, "depends on", "blocked by") | High |
+| **Age** | `createdAt` field | Medium |
+| **Activity** | Number of comments, `updatedAt` recency | Medium |
+| **Effort** | Issue body length/complexity, scope described | Low |
+| **Momentum fit** | Similarity to recently closed issues | Low |
+
+Dependency analysis: scan each issue body for references to other issues (`#N`, "depends on #N", "blocked by #N", "after #N"). Build a dependency graph to identify:
+- Issues that **unblock** other open issues (high value)
+- Issues that are **blocked** by other open issues (note the blocker)
+
+### 4. Generate Recommendations
+
+Present the top N issues (default 5) organized by category:
+
+**Categories** (use whichever apply, skip empty categories):
+
+- **Quick Wins**: Small, well-defined issues that can be resolved quickly
+- **High Impact**: Important features, critical bugs, or heavily requested items
+- **Unblocks Others**: Issues that other open issues depend on
+- **Overdue**: Old issues that have been neglected (use judgment based on repo's typical issue age)
+
+For each recommendation, include:
+
+1. Issue number and title (as a link: `#N - Title`)
+2. Labels and age
+3. Why it's recommended (1-2 sentences with specific reasoning)
+4. Suggested first steps or approach (1 sentence)
+5. Blockers or considerations, if any
+
+### 5. Summarize In-Progress Work
+
+After recommendations, briefly list issues that appear to already have worktrees or branches, so the user has a complete picture.
+
+### 6. Offer to Start Work
+
+End with an offer to create a worktree for the chosen issue via the `create-worktree-from-issue` skill. Example:
+
+```
+Ready to start on one of these? Just say "start issue #N" or pick a number from the list.
+```
+
+## Example Output
+
+```
+## Suggested Next Issues
+
+### Quick Wins
+1. **#23 - Fix typo in help output** (bug, 2 days old)
+   Small fix, keeps the issue count tidy.
+   Start: Check the help string in the CLI entry point.
+
+### High Impact
+2. **#18 - Add dark mode support** (enhancement, 12 days old, 4 comments)
+   Most-requested feature. Pairs well with the theme work done in #15.
+   Start: Add CSS variables for color scheme, then add a toggle component.
+
+3. **#11 - Add manage-plan skill** (enhancement, 1 day old)
+   High-frequency workflow pattern from session analysis.
+   Start: Review existing plan-related commands and design the skill interface.
+
+### Unblocks Others
+4. **#7 - Refactor config loading** (enhancement, 20 days old)
+   Issues #8 and #9 both depend on the new config system.
+   Start: Extract config into a dedicated module with typed schema.
+
+### Overdue
+5. **#3 - Update installation docs** (documentation, 45 days old)
+   Open since v0.2. Quick update needed for current install process.
+   Start: Compare current docs against actual install steps.
+
+---
+
+**Already in progress:** #14 (feature/improve-notifications), #16 (fix/search-pagination)
+
+Ready to start on one of these? Just say "start issue #N".
+```
+
+## Error Handling
+
+- If `gh` is not authenticated, instruct the user to run `gh auth login`
+- If no open issues exist, report that and suggest checking closed issues or creating new ones
+- If all open issues are already in progress, report that and congratulate the user
