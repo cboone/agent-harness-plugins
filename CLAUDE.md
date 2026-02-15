@@ -17,6 +17,19 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── commit/
     │           └── SKILL.md
+    ├── create-plugin/               # Plugin creation guide skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── create-plugin/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── hooks-json.md
+    │               ├── marketplace-json.md
+    │               ├── plugin-json.md
+    │               ├── readme-updates.md
+    │               ├── scripts.md
+    │               └── skill-md.md
     ├── create-worktree/              # General worktree creation skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -101,6 +114,22 @@ When adding new plugins:
 2. Add a `.claude-plugin/plugin.json` with metadata
 3. Register the plugin in `.claude-plugin/marketplace.json`
 4. Update README.md with the new plugin description
+
+### README ToC Format
+
+The README table of contents uses **one entry per line** to prevent merge conflicts when multiple branches add plugins simultaneously. Each link is on its own line, with ` |` (space-pipe) at the end of every line except the last in each group:
+
+```markdown
+**Skills:**
+[Skill A](#skill-a) |
+[Skill B](#skill-b) |
+[Skill C](#skill-c)
+<br>
+**Hooks:**
+[Hook A](#hook-a)
+```
+
+Never put multiple links on the same line.
 
 ## License
 

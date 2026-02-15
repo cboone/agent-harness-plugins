@@ -5,6 +5,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 **Skills:**
 [Clean Up Agent Config](#clean-up-agent-config) |
 [Commit](#commit) |
+[Create Plugin](#create-plugin) |
 [Create Worktree](#create-worktree) |
 [Create Worktree from Issue](#create-worktree-from-issue) |
 [Merge Main](#merge-main) |
@@ -27,6 +28,7 @@ Or you can run more direct commands from within `claude`:
 
 /plugin install clean-up-agent-config@cboone/cboone-cc-plugins
 /plugin install commit@cboone/cboone-cc-plugins
+/plugin install create-plugin@cboone/cboone-cc-plugins
 /plugin install create-worktree@cboone/cboone-cc-plugins
 /plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
 /plugin install merge-main@cboone/cboone-cc-plugins
@@ -52,6 +54,12 @@ Includes comprehensive reference documentation on all agent instruction and conf
 Smart, context-aware git commits with conventional commit messages and plan awareness. Analyzes your diff to generate well-structured commit messages, handles staged-only vs. all changes, supports commit-and-push workflows, and can detect and handle plan files separately.
 
 You can trigger it directly via `/commit`.
+
+### Create Plugin
+
+Guide for creating new plugins in this repository with consistent structure and conventions. Walks through the full process: choosing a plugin type (skill, hook, or both), scaffolding the directory structure, writing all required files, and registering the plugin in the marketplace.
+
+You can trigger it directly via `/create-plugin`.
 
 ### Create Worktree
 
