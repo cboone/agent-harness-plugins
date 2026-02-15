@@ -4,33 +4,38 @@ When adding a new plugin, update three sections in the root `README.md`: the tab
 
 ## Table of Contents
 
-The ToC is at the top of the file, organized by type. Each entry is on its own line to prevent merge conflicts when multiple branches add plugins simultaneously:
+The ToC is at the top of the file, organized by type and subcategory. Each entry is on its own line to prevent merge conflicts when multiple branches add plugins simultaneously:
 
 ```markdown
-**Skills:**
-[Skill A](#skill-a) |
-[Skill B](#skill-b) |
+**Skills**
+<br>_Agents_
+[Skill A](#skill-a)
+| [Skill B](#skill-b)
+<br>_Workflow_
 [Skill C](#skill-c)
-<br>
-**Hooks:**
+| [Skill D](#skill-d)
+<br>_Languages_
+[Skill E](#skill-e)
+<br>**Hooks**
 [Hook A](#hook-a)
 ```
 
 Format rules:
 - **One entry per line.** This is critical for avoiding merge conflicts.
-- The label (`**Skills:**` or `**Hooks:**`) is on its own line.
-- Each link line ends with ` |` (space-pipe) except the last entry in the group.
-- `<br>` goes on its own line between the Skills and Hooks groups.
-- Skills and hooks are listed alphabetically within their respective groups.
+- `**Skills**` and `**Hooks**` labels have no trailing colons.
+- Skills are grouped into subcategories: _Agents_, _Workflow_, _Languages_.
+- Subcategory labels use `<br>_Name_` format on their own line.
+- The first link in each subcategory has no leading pipe; subsequent links start with `| ` (pipe-space).
+- Skills and hooks are listed alphabetically within their respective groups/subcategories.
 - Anchor links use the kebab-case H3 heading (e.g., `#create-worktree-from-issue`).
 
 ### Adding a New Skill
 
-Insert a new line with the skill link in alphabetical order within the **Skills** group. Add ` |` to the end of the preceding entry if it was previously the last one.
+Insert a new line with `| [Skill Name](#skill-name)` in alphabetical order within the appropriate subcategory (_Agents_, _Workflow_, or _Languages_). If the new entry is the first in its subcategory, omit the leading `| `.
 
 ### Adding a New Hook
 
-Insert a new line with the hook link in alphabetical order within the **Hooks** group. Add ` |` to the end of the preceding entry if it was previously the last one.
+Insert a new line with `| [Hook Name](#hook-name)` in alphabetical order within the **Hooks** group. If the new entry is the first hook, omit the leading `| `.
 
 ## Installation Commands
 
