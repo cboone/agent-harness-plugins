@@ -32,14 +32,6 @@ Smart, context-aware git commits with conventional commit messages and plan awar
 
 You can trigger it directly via `/commit`.
 
-### Merge Main
-
-Fetch and merge the repository's base branch (usually `main`) into the current feature branch. Automatically detects the default branch, handles uncommitted changes, resolves merge conflicts, and optionally pushes after a successful merge.
-
-You can trigger it directly via `/merge-main`.
-
-Requires [`gh`](https://cli.github.com/) to be installed (falls back to `git remote show origin` if unavailable).
-
 ### Create Worktree from Issue
 
 Find a GitHub issue in the current repository (by number or fuzzy text search) and create a dedicated worktree, branch, and tmux window for working on it using [workmux](https://github.com/paiml/workmux). Derives the branch name from the issue title and labels (e.g., `feature/add-dark-mode-support` or `fix/login-fails-with-special-chars`).
@@ -47,6 +39,14 @@ Find a GitHub issue in the current repository (by number or fuzzy text search) a
 You can trigger it directly via `/create-worktree-from-issue`.
 
 Requires [`gh`](https://cli.github.com/) and [`workmux`](https://github.com/paiml/workmux) to be installed.
+
+### Merge Main
+
+Fetch and merge the repository's base branch (usually `main`) into the current feature branch. Automatically detects the default branch, handles uncommitted changes, resolves merge conflicts, and optionally pushes after a successful merge.
+
+You can trigger it directly via `/merge-main`.
+
+Requires [`gh`](https://cli.github.com/) to be installed (falls back to `git remote show origin` if unavailable).
 
 ### Resolve Copilot PR Feedback
 
