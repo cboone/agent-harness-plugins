@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Find a GitHub issue and create a worktree, branch, and tmux window for working on it.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["git", "github", "issues", "tmux", "workmux", "worktree"],
+  "license": "MIT",
+  "name": "create-worktree-from-issue",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

@@ -11,6 +11,12 @@ cboone-cc-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json            # Plugin registry for this repository
 └── plugins/
+    ├── create-worktree-from-issue/  # Issue-to-worktree skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── create-worktree-from-issue/
+    │           └── SKILL.md
     ├── write-go-code/              # Go style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
