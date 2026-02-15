@@ -84,6 +84,20 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
+      "description": "Review open GitHub issues and recommend what to work on next with prioritized reasoning.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["github", "issues", "planning", "prioritization", "triage"],
+      "license": "MIT",
+      "name": "suggest-next-issue",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/suggest-next-issue",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
       "description": "Review and reorganize AI coding agent configuration files across Claude Code, Codex, Copilot, and OpenCode.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["agents", "codex", "config", "copilot", "opencode", "settings"],
