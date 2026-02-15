@@ -56,28 +56,14 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
-      "description": "Create a git worktree, branch, and tmux window with a task prompt using workmux.",
-      "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["git", "tmux", "workmux", "worktree"],
-      "license": "MIT",
-      "name": "create-worktree",
-      "repository": "https://github.com/cboone/cboone-cc-plugins",
-      "source": "./plugins/create-worktree",
-      "version": "1.0.0"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "productivity",
-      "description": "Find a GitHub issue and create a worktree, branch, and tmux window for working on it, with issue context injected as a task prompt.",
+      "description": "Find a GitHub issue and prepare a workmux command to create a worktree, branch, and tmux window for working on it, with issue context injected as a task prompt.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["git", "github", "issues", "tmux", "workmux", "worktree"],
       "license": "MIT",
       "name": "create-worktree-from-issue",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-worktree-from-issue",
-      "version": "1.1.0"
+      "version": "2.0.0"
     },
     {
       "author": {

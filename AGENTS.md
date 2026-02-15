@@ -30,12 +30,6 @@ cboone-cc-plugins/
     │               ├── readme-updates.md
     │               ├── scripts.md
     │               └── skill-md.md
-    ├── create-worktree/              # General worktree creation skill
-    │   ├── .claude-plugin/
-    │   │   └── plugin.json
-    │   └── skills/
-    │       └── create-worktree/
-    │           └── SKILL.md
     ├── create-worktree-from-issue/  # Issue-to-worktree skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
