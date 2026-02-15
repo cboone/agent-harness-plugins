@@ -2,7 +2,7 @@
 
 A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), from [Christopher Boone](https://cboone.github.io).
 
-**Skills:** [Commit](#commit) | [Create Plugin](#create-plugin) | [Create Worktree from Issue](#create-worktree-from-issue) | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback) | [Suggest Next Issue](#suggest-next-issue) | [Write Go Code](#write-go-code) | [Write Shell Scripts](#write-shell-scripts)<br>
+**Skills:** [Clean Up Agent Config](#clean-up-agent-config) | [Commit](#commit) | [Create Plugin](#create-plugin) | [Create Worktree from Issue](#create-worktree-from-issue) | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback) | [Suggest Next Issue](#suggest-next-issue) | [Write Go Code](#write-go-code) | [Write Shell Scripts](#write-shell-scripts)<br>
 **Hooks:** [Notify](#notify-macos)
 
 ## Installation
@@ -14,6 +14,7 @@ Or you can run more direct commands from within `claude`:
 ```bash
 /plugin marketplace add cboone/cboone-cc-plugins
 
+/plugin install clean-up-agent-config@cboone/cboone-cc-plugins
 /plugin install commit@cboone/cboone-cc-plugins
 /plugin install create-plugin@cboone/cboone-cc-plugins
 /plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
@@ -25,6 +26,14 @@ Or you can run more direct commands from within `claude`:
 ```
 
 ## Skills
+
+### Clean Up Agent Config
+
+Review and reorganize AI coding agent configuration and instruction files across Claude Code, OpenAI Codex, GitHub Copilot (CLI and code review), and OpenCode. Audits existing files (CLAUDE.md, AGENTS.md, `.claude/settings.json`, `.github/copilot-instructions.md`, etc.), identifies duplications and misplaced settings, and proposes a consolidated structure. Handles the `settings.json` vs `settings.local.json` split, sets up AGENTS.md as the single source of truth with CLAUDE.md as a symlink, and takes advantage of tool-specific features like Copilot's path-scoped `.instructions.md` files.
+
+You can trigger it directly via `/clean-up-agent-config`.
+
+Includes comprehensive reference documentation on all agent instruction and configuration file formats.
 
 ### Commit
 
