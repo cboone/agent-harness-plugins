@@ -14,6 +14,7 @@ Or you can run more direct commands, either from within `claude`:
 /plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
 /plugin install notify@cboone/cboone-cc-plugins
 /plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
+/plugin install suggest-next-issue@cboone/cboone-cc-plugins
 /plugin install write-go-code@cboone/cboone-cc-plugins
 /plugin install write-shell-scripts@cboone/cboone-cc-plugins
 ```
@@ -26,6 +27,7 @@ claude plugin marketplace add cboone/cboone-cc-plugins
 claude plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
 claude plugin install notify@cboone/cboone-cc-plugins
 claude plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
+claude plugin install suggest-next-issue@cboone/cboone-cc-plugins
 claude plugin install write-go-code@cboone/cboone-cc-plugins
 claude plugin install write-shell-scripts@cboone/cboone-cc-plugins
 ```
@@ -56,6 +58,14 @@ The style guides are organized into:
 
 - Essential checklist for quick reviews
 - Comprehensive references by topic (naming, errors, concurrency, testing, code organization, data types, functions, interfaces)
+
+### Suggest Next Issue
+
+Review all open GitHub issues in the current repository, analyze them in context (current branches, recent work, project goals, dependencies), and recommend what to work on next with prioritized reasoning. Issues are categorized as quick wins, high impact, unblocks others, or overdue, with specific reasoning for each recommendation.
+
+You can trigger it directly via `/suggest-next-issue`.
+
+Requires [`gh`](https://cli.github.com/) to be installed.
 
 ### Write Shell Scripts
 
