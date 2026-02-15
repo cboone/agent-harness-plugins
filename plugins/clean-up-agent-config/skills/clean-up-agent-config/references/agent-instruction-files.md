@@ -32,7 +32,7 @@ Every major AI coding agent reads some form of Markdown instruction file from yo
 
 ### CLAUDE.md (Anthropic -- Claude Code)
 
-This is Claude Code's native instruction file. It's read as part of the system prompt with high priority -- Claude Code treats its contents as authoritative system rules that take precedence over ad-hoc user prompts. The hierarchy is: enterprise policy, then project `CLAUDE.md`, then `.claude/rules/*.md` (all auto-loaded), then user `~/.claude/CLAUDE.md`.
+This is Claude Code's native instruction file. It's read as part of the system prompt with high priority -- Claude Code treats its contents as authoritative system rules that take precedence over ad-hoc user prompts. The hierarchy is: enterprise policy, then project root `CLAUDE.md`, then subdirectory `CLAUDE.md` files (scoped to that directory), then `.claude/rules/*.md` (all auto-loaded), then user `~/.claude/CLAUDE.md`.
 
 Key strengths: the `@path/to/file` import syntax lets you keep the root file lean while referencing detailed docs elsewhere, and the `.claude/rules/` directory lets you split rules into focused topic files that all load automatically. Skills (see SKILL.md below) extend this further with on-demand loading.
 

@@ -310,7 +310,8 @@ sandbox_mode = "workspace-write"
 project_doc_fallback_filenames = ["CLAUDE.md"]
 ```
 
-The `project_doc_fallback_filenames` line ensures Codex reads CLAUDE.md (or the symlink) in addition to AGENTS.md.
+The `project_doc_fallback_filenames` line lets Codex fall back to CLAUDE.md when AGENTS.md is not present.
+If CLAUDE.md is a symlink to AGENTS.md, omit `project_doc_fallback_filenames` to avoid Codex ingesting the same instructions twice.
 
 #### 4i. opencode.json (if applicable)
 

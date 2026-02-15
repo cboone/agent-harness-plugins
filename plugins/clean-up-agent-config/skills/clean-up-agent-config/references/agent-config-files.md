@@ -241,7 +241,7 @@ The `#:schema` comment at the top enables autocomplete in editors with the "Even
 #### Notable unique features
 
 - **Profiles** -- define named config profiles (`[profiles.<name>]`) and switch with `codex --profile deep-review`. Excellent for having a "fast and loose" profile vs. a "careful review" profile.
-- **`project_doc_fallback_filenames`** -- tells Codex to also read `CLAUDE.md`, `TEAM_GUIDE.md`, or any other filename as an instruction file. This is how you get Codex to read your existing CLAUDE.md without symlinks.
+- **`project_doc_fallback_filenames`** -- lets Codex treat other filenames (e.g., `CLAUDE.md`, `TEAM_GUIDE.md`) as instruction files when `AGENTS.md` is not present. Use this when you don't want a `CLAUDE.md -> AGENTS.md` symlink; if `CLAUDE.md` is already a symlink to `AGENTS.md`, omit it here to avoid redundant reads.
 - **`requirements.toml`** -- admin-enforced constraints that users can't override. Deployed to system directories by IT.
 - **Trust model** -- project-scoped `.codex/config.toml` is only loaded when the project is trusted. If untrusted, Codex falls back to user/system defaults only.
 - **Sandbox granularity** -- `[sandbox_workspace_write]` allows fine-grained control: specific writable roots, network access toggle, tmpdir exclusion.
