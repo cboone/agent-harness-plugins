@@ -109,6 +109,22 @@ When adding new plugins:
 3. Register the plugin in `.claude-plugin/marketplace.json`
 4. Update README.md with the new plugin description
 
+### README ToC Format
+
+The README table of contents uses **one entry per line** to prevent merge conflicts when multiple branches add plugins simultaneously. Each link is on its own line, with ` |` (space-pipe) at the end of every line except the last in each group:
+
+```markdown
+**Skills:**
+[Skill A](#skill-a) |
+[Skill B](#skill-b) |
+[Skill C](#skill-c)
+<br>
+**Hooks:**
+[Hook A](#hook-a)
+```
+
+Never put multiple links on the same line.
+
 ## License
 
 MIT License - see LICENSE file for details.

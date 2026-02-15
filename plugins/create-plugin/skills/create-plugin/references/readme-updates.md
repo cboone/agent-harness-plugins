@@ -4,25 +4,33 @@ When adding a new plugin, update three sections in the root `README.md`: the tab
 
 ## Table of Contents
 
-The ToC is at the top of the file, organized by type:
+The ToC is at the top of the file, organized by type. Each entry is on its own line to prevent merge conflicts when multiple branches add plugins simultaneously:
 
 ```markdown
-**Skills:** [Skill A](#skill-a) | [Skill B](#skill-b)<br>
-**Hooks:** [Hook A](#hook-a)
+**Skills:**
+[Skill A](#skill-a) |
+[Skill B](#skill-b) |
+[Skill C](#skill-c)
+<br>
+**Hooks:**
+[Hook A](#hook-a)
 ```
 
-- Skills and hooks are listed alphabetically within their respective lines.
-- Separators are ` | ` (space-pipe-space).
-- The Skills line ends with `<br>` to separate it from the Hooks line.
+Format rules:
+- **One entry per line.** This is critical for avoiding merge conflicts.
+- The label (`**Skills:**` or `**Hooks:**`) is on its own line.
+- Each link line ends with ` |` (space-pipe) except the last entry in the group.
+- `<br>` goes on its own line between the Skills and Hooks groups.
+- Skills and hooks are listed alphabetically within their respective groups.
 - Anchor links use the kebab-case H3 heading (e.g., `#create-worktree-from-issue`).
 
 ### Adding a New Skill
 
-Insert the new skill link alphabetically in the **Skills** line.
+Insert a new line with the skill link in alphabetical order within the **Skills** group. Add ` |` to the end of the preceding entry if it was previously the last one.
 
 ### Adding a New Hook
 
-Insert the new hook link alphabetically in the **Hooks** line.
+Insert a new line with the hook link in alphabetical order within the **Hooks** group. Add ` |` to the end of the preceding entry if it was previously the last one.
 
 ## Installation Commands
 
