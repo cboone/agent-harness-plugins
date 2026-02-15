@@ -28,7 +28,7 @@ gh issue view NUMBER --json number,title,labels,body,state
 **By text (fuzzy search):**
 
 ```bash
-gh issue list --search "USER_TEXT" --json number,title,labels --limit 10
+gh issue list --search "USER_TEXT" --state all --json number,title,labels,state --limit 10
 ```
 
 If the search returns multiple results, present them to the user and ask which one to use. If it returns exactly one, confirm with the user before proceeding.
