@@ -89,15 +89,15 @@ Skills in this repository use these sections as applicable:
 
 Number steps with `### N. Step Name` under a `## Workflow` section. Include bash code blocks where commands are needed:
 
-```markdown
+````markdown
 ### 1. Gather Context
 
 Run these commands to build a complete picture:
 
-\`\`\`bash
+```bash
 gh issue list --state open --json number,title,labels
-\`\`\`
 ```
+````
 
 ### Reference File Pointers
 

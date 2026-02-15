@@ -62,17 +62,17 @@ Key patterns:
 
 Each hook gets an H3 subsection under `## Hooks`:
 
-```markdown
+````markdown
 ### Hook Name
 
 Description of what the hook does and when it fires.
 
 Requires [`dependency`](URL). Installation instructions:
 
-\`\`\`bash
+```bash
 install command
-\`\`\`
 ```
+````
 
 ## Notes
 
