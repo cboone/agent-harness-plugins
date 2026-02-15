@@ -22,6 +22,16 @@ Process and resolve GitHub Copilot automated PR review comments. Fetches unresol
 
 You can trigger it directly via `/resolve-copilot-pr-feedback`.
 
+## Create Worktree from Issue
+
+**Type**: Skills / Commands
+
+Find a GitHub issue in the current repository (by number or fuzzy text search) and create a dedicated worktree, branch, and tmux window for working on it using [workmux](https://github.com/paiml/workmux). Derives the branch name from the issue title and labels (e.g., `feature/add-dark-mode-support` or `fix/login-fails-with-special-chars`).
+
+You can trigger it directly via `/create-worktree-from-issue`.
+
+Requires [`gh`](https://cli.github.com/) and [`workmux`](https://github.com/paiml/workmux) to be installed.
+
 ## Notify
 
 **Type**: Hooks
@@ -53,6 +63,7 @@ Or you can run more direct commands, either from within `claude`:
 ```bash
 /plugin marketplace add cboone/cboone-cc-plugins
 
+/plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
 /plugin install write-go-code@cboone/cboone-cc-plugins
 /plugin install notify@cboone/cboone-cc-plugins
 /plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
@@ -64,6 +75,7 @@ Or from the command line:
 ```bash
 claude plugin marketplace add cboone/cboone-cc-plugins
 
+claude plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
 claude plugin install write-go-code@cboone/cboone-cc-plugins
 claude plugin install notify@cboone/cboone-cc-plugins
 claude plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
