@@ -62,7 +62,7 @@ repo/
 | Content type | Location | Reason |
 |---|---|---|
 | Project overview, tech stack, commands | `AGENTS.md` | Read by all four tools |
-| Directory-scoped conventions | Subdirectory `AGENTS.md` | Scoped by directory in Codex, Copilot, Claude |
+| Directory-scoped conventions | Subdirectory `AGENTS.md` (Codex, Copilot) and `CLAUDE.md` or symlink per subdir (Claude) | Scoped by directory; Claude requires `CLAUDE.md` in each scoped directory |
 | Claude-specific (MCP hints, subagent patterns) | `.claude/rules/*.md` | Auto-loaded, Claude-only |
 | Copilot code review rules | `.github/copilot-instructions.md` | Copilot code review agent |
 | File-type-specific review rules | `.github/instructions/*.instructions.md` | Copilot's `applyTo` glob scoping |
@@ -210,7 +210,7 @@ Brief project description and key architectural decisions.
 
 ```bash
 # If AGENTS.md is the source of truth:
-ln -sf AGENTS.md CLAUDE.md
+ln -sfn AGENTS.md CLAUDE.md
 ```
 
 If CLAUDE.md previously had Claude-specific content, extract those sections to `.claude/rules/` files before replacing with the symlink.
@@ -363,7 +363,7 @@ Add glob patterns for subdirectory AGENTS.md files in monorepos:
 
 ### Claude Code
 
-- **Instruction precedence:** enterprise managed > user `~/.claude/CLAUDE.md` > project `CLAUDE.md` + `.claude/rules/*.md` > subdirectory `CLAUDE.md`
+- **Instruction precedence:** enterprise managed > project `CLAUDE.md` > `.claude/rules/*.md` > user `~/.claude/CLAUDE.md` > subdirectory `CLAUDE.md`
 - **Config precedence:** managed > user settings > project shared settings > project local settings > CLI flags
 - **@imports:** CLAUDE.md supports `@path/to/file` syntax to pull in other files without copying content
 - **.claude/rules/**: All `.md` files auto-loaded alongside CLAUDE.md. Use for Claude-specific instructions that shouldn't pollute the cross-tool AGENTS.md.

@@ -98,7 +98,7 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
-      "description": "Review and reorganize AI coding agent configuration files across Claude Code, Codex, Copilot, and OpenCode.",
+      "description": "Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, Copilot, and OpenCode.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["agents", "codex", "config", "copilot", "opencode", "settings"],
       "license": "MIT",
