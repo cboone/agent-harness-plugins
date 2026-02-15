@@ -72,7 +72,7 @@ Categories currently used in this repository:
 
 ## Insertion Order
 
-The `plugins` array is not strictly alphabetized (entries were added chronologically). When adding a new plugin, insert it in a position that makes sense contextually, but alphabetical insertion is preferred for new additions.
+When adding a new plugin, insert its entry into the `plugins` array in alphabetical order by the `name` field.
 
 ## Notes
 

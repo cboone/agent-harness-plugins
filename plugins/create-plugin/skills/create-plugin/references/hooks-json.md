@@ -65,7 +65,7 @@ Use `${CLAUDE_PLUGIN_ROOT}` to reference scripts relative to the plugin root dir
 
 ## Example: Notification Hooks
 
-From the existing `notify` plugin:
+Simplified example based on the `notify` plugin (see `plugins/notify/hooks/hooks.json` for the full version):
 
 ```json
 {
@@ -74,7 +74,7 @@ From the existing `notify` plugin:
       {
         "hooks": [
           {
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify 'Claude Code' '' 'Waiting for input...' Ping",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify 'Claude Code' '' 'Waiting for input\u2026' Ping",
             "type": "command"
           }
         ],
