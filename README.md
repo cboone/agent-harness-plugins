@@ -1,12 +1,15 @@
 # Claude Code Plugins
 
-A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), from [Christopher Boone](https://cboone.github.io). Includes skills (slash commands) and hooks (automatic behaviors).
+A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), from [Christopher Boone](https://cboone.github.io).
+
+**Skills:** [Create Worktree from Issue](#create-worktree-from-issue) | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback) | [Write Go Code](#write-go-code) | [Write Shell Scripts](#write-shell-scripts)<br>
+**Hooks:** [Notify](#notify-macos)
 
 ## Installation
 
 Install plugins from this repository using Claude Code. The simplest way is open the plugins manager via `/plugin`, then `tab` to `Marketplace`, and hit `enter` to `Add Marketplace`. Type `cboone/cboone-cc-plugins`, then choose which plugins you would like to install.
 
-Or you can run more direct commands, either from within `claude`:
+Or you can run more direct commands from within `claude`:
 
 ```bash
 /plugin marketplace add cboone/cboone-cc-plugins
@@ -17,19 +20,6 @@ Or you can run more direct commands, either from within `claude`:
 /plugin install suggest-next-issue@cboone/cboone-cc-plugins
 /plugin install write-go-code@cboone/cboone-cc-plugins
 /plugin install write-shell-scripts@cboone/cboone-cc-plugins
-```
-
-Or from the command line:
-
-```bash
-claude plugin marketplace add cboone/cboone-cc-plugins
-
-claude plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
-claude plugin install notify@cboone/cboone-cc-plugins
-claude plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
-claude plugin install suggest-next-issue@cboone/cboone-cc-plugins
-claude plugin install write-go-code@cboone/cboone-cc-plugins
-claude plugin install write-shell-scripts@cboone/cboone-cc-plugins
 ```
 
 ## Skills
