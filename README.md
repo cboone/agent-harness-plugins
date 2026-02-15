@@ -2,7 +2,7 @@
 
 A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), from [Christopher Boone](https://cboone.github.io).
 
-**Skills:** [Create Worktree from Issue](#create-worktree-from-issue) | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback) | [Suggest Next Issue](#suggest-next-issue) | [Write Go Code](#write-go-code) | [Write Shell Scripts](#write-shell-scripts)<br>
+**Skills:** [Create Plugin](#create-plugin) | [Create Worktree from Issue](#create-worktree-from-issue) | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback) | [Suggest Next Issue](#suggest-next-issue) | [Write Go Code](#write-go-code) | [Write Shell Scripts](#write-shell-scripts)<br>
 **Hooks:** [Notify](#notify-macos)
 
 ## Installation
@@ -14,6 +14,7 @@ Or you can run more direct commands from within `claude`:
 ```bash
 /plugin marketplace add cboone/cboone-cc-plugins
 
+/plugin install create-plugin@cboone/cboone-cc-plugins
 /plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
 /plugin install notify@cboone/cboone-cc-plugins
 /plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
@@ -23,6 +24,12 @@ Or you can run more direct commands from within `claude`:
 ```
 
 ## Skills
+
+### Create Plugin
+
+Guide for creating new plugins in this repository with consistent structure and conventions. Walks through the full process: choosing a plugin type (skill, hook, or both), scaffolding the directory structure, writing all required files, and registering the plugin in the marketplace.
+
+You can trigger it directly via `/create-plugin`.
 
 ### Create Worktree from Issue
 

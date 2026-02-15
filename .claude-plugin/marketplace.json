@@ -14,6 +14,20 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
+      "description": "Guide for creating new plugins in this repository with consistent structure and conventions.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["claude-code", "hooks", "plugins", "scaffolding", "skills"],
+      "license": "MIT",
+      "name": "create-plugin",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/create-plugin",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
       "description": "Notifies you when Claude finishes a task or needs your attention.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["alerts", "macos", "notifications"],

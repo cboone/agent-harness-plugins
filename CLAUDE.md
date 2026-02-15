@@ -11,6 +11,19 @@ cboone-cc-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json            # Plugin registry for this repository
 └── plugins/
+    ├── create-plugin/               # Plugin creation guide skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── create-plugin/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── hooks-json.md
+    │               ├── marketplace-json.md
+    │               ├── plugin-json.md
+    │               ├── readme-updates.md
+    │               ├── scripts.md
+    │               └── skill-md.md
     ├── create-worktree-from-issue/  # Issue-to-worktree skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

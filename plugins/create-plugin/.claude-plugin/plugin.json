@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Guide for creating new plugins in this repository with consistent structure and conventions.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["claude-code", "hooks", "plugins", "scaffolding", "skills"],
+  "license": "MIT",
+  "name": "create-plugin",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
