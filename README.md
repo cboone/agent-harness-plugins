@@ -2,7 +2,7 @@
 
 A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), from [Christopher Boone](https://cboone.github.io).
 
-**Skills:** [Create Worktree from Issue](#create-worktree-from-issue) | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback) | [Write Go Code](#write-go-code) | [Write Shell Scripts](#write-shell-scripts)<br>
+**Skills:** [Create Worktree from Issue](#create-worktree-from-issue) | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback) | [Suggest Next Issue](#suggest-next-issue) | [Write Go Code](#write-go-code) | [Write Shell Scripts](#write-shell-scripts)<br>
 **Hooks:** [Notify](#notify-macos)
 
 ## Installation
@@ -38,6 +38,14 @@ Process and resolve GitHub Copilot automated PR review comments. Fetches unresol
 
 You can trigger it directly via `/resolve-copilot-pr-feedback`.
 
+### Suggest Next Issue
+
+Review all open GitHub issues in the current repository, analyze them in context (current branches, recent work, project goals, dependencies), and recommend what to work on next with prioritized reasoning. Issues are categorized as quick wins, high impact, unblocks others, or overdue, with specific reasoning for each recommendation.
+
+You can trigger it directly via `/suggest-next-issue`.
+
+Requires [`gh`](https://cli.github.com/) to be installed.
+
 ### Write Go Code
 
 Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments. Claude Code should automatically use it when writing, reviewing, or refactoring Go code.
@@ -48,14 +56,6 @@ The style guides are organized into:
 
 - Essential checklist for quick reviews
 - Comprehensive references by topic (naming, errors, concurrency, testing, code organization, data types, functions, interfaces)
-
-### Suggest Next Issue
-
-Review all open GitHub issues in the current repository, analyze them in context (current branches, recent work, project goals, dependencies), and recommend what to work on next with prioritized reasoning. Issues are categorized as quick wins, high impact, unblocks others, or overdue, with specific reasoning for each recommendation.
-
-You can trigger it directly via `/suggest-next-issue`.
-
-Requires [`gh`](https://cli.github.com/) to be installed.
 
 ### Write Shell Scripts
 
