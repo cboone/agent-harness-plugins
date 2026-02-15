@@ -1,3 +1,5 @@
 {
-  "enabledPlugins": {}
+  "enabledPlugins": {
+    "create-plugin@cboone-cc-plugins": true
+  }
 }
