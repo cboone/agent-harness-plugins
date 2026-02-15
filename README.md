@@ -53,6 +53,7 @@ Go code style guide based on Google Go Style Guide, Effective Go, and Code Revie
 You can trigger it directly via `/write-go-code`.
 
 The style guides are organized into:
+
 - Essential checklist for quick reviews
 - Comprehensive references by topic (naming, errors, concurrency, testing, code organization, data types, functions, interfaces)
 
@@ -76,4 +77,4 @@ brew install terminal-notifier
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+[MIT License](./LICENSE). TL;DR: Do whatever you want with this software, just keep the copyright notice included. The authors aren't liable if something goes wrong.
