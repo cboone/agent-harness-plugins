@@ -14,6 +14,20 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
+      "description": "Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, Copilot, and OpenCode.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["agents", "codex", "config", "copilot", "opencode", "settings"],
+      "license": "MIT",
+      "name": "clean-up-agent-config",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/clean-up-agent-config",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
       "description": "Smart, context-aware git commits with conventional commit messages and plan awareness.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["commit", "conventional-commits", "git", "plans"],
@@ -36,48 +50,6 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-plugin",
       "version": "1.0.0"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "productivity",
-      "description": "Notifies you when Claude finishes a task or needs your attention.",
-      "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["alerts", "macos", "notifications"],
-      "license": "MIT",
-      "name": "notify",
-      "repository": "https://github.com/cboone/cboone-cc-plugins",
-      "source": "./plugins/notify",
-      "version": "1.0.3"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "code-quality",
-      "description": "Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments.",
-      "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["code-review", "go", "golang", "style"],
-      "license": "MIT",
-      "name": "write-go-code",
-      "repository": "https://github.com/cboone/cboone-cc-plugins",
-      "source": "./plugins/write-go-code",
-      "version": "1.0.2"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "code-quality",
-      "description": "Process and resolve GitHub Copilot automated PR review comments.",
-      "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["code-review", "copilot", "github", "pull-requests"],
-      "license": "MIT",
-      "name": "resolve-copilot-pr-feedback",
-      "repository": "https://github.com/cboone/cboone-cc-plugins",
-      "source": "./plugins/resolve-copilot-pr-feedback",
-      "version": "1.1.4"
     },
     {
       "author": {
@@ -111,15 +83,29 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "code-quality",
-      "description": "Applies Bash style conventions when creating or editing shell scripts.",
+      "category": "productivity",
+      "description": "Notifies you when Claude finishes a task or needs your attention.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["bash", "format", "scripts", "shell", "style"],
+      "keywords": ["alerts", "macos", "notifications"],
       "license": "MIT",
-      "name": "write-shell-scripts",
+      "name": "notify",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
-      "source": "./plugins/write-shell-scripts",
-      "version": "1.0.4"
+      "source": "./plugins/notify",
+      "version": "1.0.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Process and resolve GitHub Copilot automated PR review comments.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["code-review", "copilot", "github", "pull-requests"],
+      "license": "MIT",
+      "name": "resolve-copilot-pr-feedback",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/resolve-copilot-pr-feedback",
+      "version": "1.1.4"
     },
     {
       "author": {
@@ -139,15 +125,29 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
-      "description": "Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, Copilot, and OpenCode.",
+      "category": "code-quality",
+      "description": "Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["agents", "codex", "config", "copilot", "opencode", "settings"],
+      "keywords": ["code-review", "go", "golang", "style"],
       "license": "MIT",
-      "name": "clean-up-agent-config",
+      "name": "write-go-code",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
-      "source": "./plugins/clean-up-agent-config",
-      "version": "1.0.0"
+      "source": "./plugins/write-go-code",
+      "version": "1.0.2"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Applies Bash style conventions when creating or editing shell scripts.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["bash", "format", "scripts", "shell", "style"],
+      "license": "MIT",
+      "name": "write-shell-scripts",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/write-shell-scripts",
+      "version": "1.0.4"
     }
   ]
 }
