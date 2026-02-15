@@ -2,13 +2,27 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code skills and hooks from Christopher Boone (cboone.github.io)",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
     "name": "Christopher Boone"
   },
   "plugins": [
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
+      "description": "Smart, context-aware git commits with conventional commit messages and plan awareness.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["commit", "conventional-commits", "git", "plans"],
+      "license": "MIT",
+      "name": "commit",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/commit",
+      "version": "1.0.0"
+    },
     {
       "author": {
         "name": "Christopher Boone"

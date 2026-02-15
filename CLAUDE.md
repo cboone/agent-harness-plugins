@@ -11,6 +11,12 @@ cboone-cc-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json            # Plugin registry for this repository
 └── plugins/
+    ├── commit/                      # Smart git commit skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── commit/
+    │           └── SKILL.md
     ├── create-plugin/               # Plugin creation guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
