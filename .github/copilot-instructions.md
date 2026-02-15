@@ -1,5 +1,7 @@
 # GitHub Copilot Instructions
 
+For full project conventions, see AGENTS.md in the repository root.
+
 ## PR Review
 
 - **Version bumps are selective**: Only plugins with actual code changes get version bumps. Do not flag missing version bumps on unchanged plugins.
