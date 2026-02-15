@@ -42,6 +42,12 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── create-worktree-from-issue/
     │           └── SKILL.md
+    ├── merge-main/                  # Base branch merge skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── merge-main/
+    │           └── SKILL.md
     ├── write-go-code/              # Go style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
