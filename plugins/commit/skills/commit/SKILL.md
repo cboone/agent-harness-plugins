@@ -49,10 +49,10 @@ Follow these rules in order:
 
 1. **If `--staged` was specified**: Commit only what is already staged. If nothing is staged, report that and stop.
 2. **If `--plan` was specified**: See the [Plan-Aware Commits](#plan-aware-commits) section.
-3. **If `--all` was specified**: Stage everything (`git add -A`) and commit.
-4. **If there are staged changes and no unstaged changes**: Commit the staged changes.
-5. **If there are only unstaged changes (and/or untracked files)**: Stage and commit all of them.
-6. **If there are both staged and unstaged changes**: Ask the user whether to commit only staged changes or stage and commit everything.
+3. **If `--all` was specified**: Stage and commit all changes, but still exclude likely secret files (see below).
+4. **If there are staged changes and no unstaged changes or untracked files**: Commit the staged changes.
+5. **If there are only unstaged changes and/or untracked files**: Stage and commit all of them.
+6. **If there are both staged changes and either unstaged changes or untracked files**: Ask the user whether to commit only staged changes or stage and commit everything.
 
 Never stage files that likely contain secrets (`.env`, `credentials.json`, `*.pem`, `*.key`, etc.). If such files are detected among untracked or unstaged changes, warn the user and exclude them.
 
