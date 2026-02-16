@@ -15,7 +15,7 @@ The root `.claude-plugin/marketplace.json` is the plugin registry for this repos
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code skills and hooks from Christopher Boone (cboone.github.io)",
-    "version": "1.1.0"
+    "version": "1.3.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -25,7 +25,12 @@ The root `.claude-plugin/marketplace.json` is the plugin registry for this repos
 }
 ```
 
-The `metadata.version` is for the registry itself, not individual plugins. It does not need to be bumped when adding new plugins.
+## Marketplace Versioning
+
+The `metadata.version` tracks changes to the plugin catalog itself — bump it when the set of plugins changes, not when individual plugin content changes.
+
+- Bump **minor** when adding or removing a plugin (e.g., `1.3.0` -> `1.4.0`)
+- Do NOT bump for changes to existing plugin content (those are tracked by each plugin's own version)
 
 ## Plugin Entry Fields
 
