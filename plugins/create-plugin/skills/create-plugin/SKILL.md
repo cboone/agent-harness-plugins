@@ -15,11 +15,13 @@ Create a new plugin for this repository following established conventions.
 
 ### 1. Determine Plugin Type
 
-Ask the user what their plugin will provide:
+Infer the plugin type from the user's request:
 
 - **Skills plugin**: Provides instructions and workflows that Claude Code follows (e.g., style guides, multi-step procedures). Most plugins are this type.
 - **Hooks plugin**: Provides event-driven shell commands that run automatically in response to Claude Code lifecycle events (e.g., notifications on task completion).
 - **Both**: A plugin can provide both skills and hooks.
+
+If the request doesn't imply a type (e.g., just "create a plugin"), ask. If ambiguous, default to a skills plugin.
 
 ### 2. Choose a Name
 
@@ -30,7 +32,7 @@ The plugin name must be:
 - **Descriptive** of what the plugin does
 - **Unique** within the `plugins/` directory
 
-Confirm the name with the user before proceeding.
+If the user provided a name, use it. Otherwise, generate a descriptive name from the plugin's purpose and proceed.
 
 ### 3. Create Directory Structure
 

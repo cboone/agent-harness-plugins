@@ -21,7 +21,7 @@
       "name": "clean-up-agent-config",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/clean-up-agent-config",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     {
       "author": {
@@ -35,7 +35,7 @@
       "name": "commit",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/commit",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     {
       "author": {
@@ -49,7 +49,7 @@
       "name": "create-plugin",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-plugin",
-      "version": "1.1.0"
+      "version": "1.1.1"
     },
     {
       "author": {
