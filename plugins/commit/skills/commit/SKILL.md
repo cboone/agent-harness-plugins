@@ -154,4 +154,3 @@ When the user gives compound instructions like "commit, then push" or "commit an
 - **Nothing to commit**: Report cleanly, do not create an empty commit.
 - **Pre-commit hook failure**: Read the hook output, fix the issue if possible, re-stage, and create a new commit (never amend).
 - **Push failure**: Report the error. If it's a rejected push due to remote changes, suggest `git pull --rebase` first. Never force push unless the user explicitly requests it.
-- **Merge conflicts in staged files**: Report the conflicted files and ask the user to resolve them before committing.

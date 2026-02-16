@@ -172,7 +172,7 @@ Recommend keeping CLAUDE.md as the real file (no symlink) when:
 - The team exclusively uses Claude Code and the user prefers the CLAUDE.md name
 - CLAUDE.md has extensive Claude-specific `@import` references that other tools wouldn't understand
 
-In either case, ask the user for their preference.
+Follow whichever recommendation applies. The Phase 3 plan approval gives the user a chance to override the choice.
 
 ### Phase 4: Implement
 
@@ -403,6 +403,6 @@ Add glob patterns for subdirectory AGENTS.md files in monorepos:
 - **settings.local.json has team settings:** Propose moving them to settings.json with a clear before/after diff.
 - **settings.json has personal settings:** Propose moving them to settings.local.json.
 - **Symlinks point to wrong targets:** Fix them after confirming with the user.
-- **.github/ does not exist:** Only create it if the repo is hosted on GitHub. Check for `.git/config` remote URLs or ask the user.
+- **.github/ does not exist:** Create it. Assume the repository is hosted on GitHub.
 - **Monorepo detected:** Suggest subdirectory AGENTS.md files and Copilot path-scoped instructions for each major package/module.
 - **Large existing CLAUDE.md (over 200 lines):** Propose splitting into AGENTS.md (shared core) + .claude/rules/ (Claude-specific) + tool-specific files.
