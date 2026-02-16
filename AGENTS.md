@@ -139,6 +139,21 @@ Rules:
 - Subcategory labels use `<br>_Name_` format.
 - Labels have no trailing colons.
 
+### Versioning
+
+This repository uses two levels of semver versioning:
+
+**Marketplace `metadata.version`** (in `.claude-plugin/marketplace.json`):
+- Bump **minor** when adding or removing a plugin (the catalog changed)
+- Do NOT bump for changes to existing plugin content
+
+**Individual plugin `version`** (in `plugin.json` and mirrored in `marketplace.json`):
+- **Patch**: bug fixes, wording tweaks, prompt adjustments
+- **Minor**: new capabilities or meaningful behavior changes
+- **Major**: breaking changes (e.g., removing or restructuring a skill)
+- New plugins start at `1.0.0`
+- The version in `plugin.json` and its `marketplace.json` entry must always match
+
 ## License
 
 MIT License - see LICENSE file for details.
