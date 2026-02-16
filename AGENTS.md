@@ -66,6 +66,12 @@ cboone-cc-plugins/
     │               │   └── testing.md
     │               └── essential/
     │                   └── checklist.md
+    ├── pr/                          # Commit, push, and create PR skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── pr/
+    │           └── SKILL.md
     ├── notify/                     # Notification hooks plugin
     │   ├── .claude-plugin/
     │   │   └── plugin.json
