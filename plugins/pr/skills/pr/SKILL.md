@@ -16,7 +16,21 @@ Commit, push, and create a pull request in one automated step. Never prompt the 
 
 ### 1. Gather Context
 
-Run these commands in parallel to understand the current state:
+First, detect the repository's base branch:
+
+```bash
+gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
+```
+
+If `gh` is not available or the command fails, fall back to:
+
+```bash
+git remote show origin | grep 'HEAD branch' | sed 's/.*: //'
+```
+
+Use the detected value as `<base-branch>` in all subsequent commands.
+
+Then run these commands in parallel to understand the current state:
 
 ```bash
 # Current branch and changed files
@@ -32,22 +46,14 @@ git diff
 git log --oneline -10
 
 # Full diff of this branch against the base branch
-git diff main...HEAD
+git diff <base-branch>...HEAD
 
-# Commit history of this branch since diverging from main
-git log main..HEAD --oneline
+# Commit history of this branch since diverging from the base branch
+git log <base-branch>..HEAD --oneline
 
 # Check remote tracking status
 git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "no upstream"
 ```
-
-Determine the base branch by running:
-
-```bash
-gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
-```
-
-Use this as the base branch instead of hardcoding `main`. Fall back to `main` if the command fails.
 
 ### 2. Validate Preconditions
 
@@ -97,7 +103,7 @@ If the push is rejected because the remote has diverged, report the error and st
 
 ### 5. Create the Pull Request
 
-Analyze all commits on the branch (from `git log main..HEAD` and `git diff main...HEAD`) to generate the PR title and body.
+Analyze all commits on the branch (from `git log <base-branch>..HEAD` and `git diff <base-branch>...HEAD`) to generate the PR title and body.
 
 #### Title
 

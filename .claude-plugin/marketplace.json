@@ -98,20 +98,6 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
-      "description": "Commit, push, and create a pull request in one step with no prompts.",
-      "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["git", "github", "pull-requests", "workflow"],
-      "license": "MIT",
-      "name": "pr",
-      "repository": "https://github.com/cboone/cboone-cc-plugins",
-      "source": "./plugins/pr",
-      "version": "1.0.0"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "productivity",
       "description": "Notifies you when Claude finishes a task or needs your attention.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["alerts", "macos", "notifications"],
@@ -120,6 +106,20 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/notify",
       "version": "1.0.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
+      "description": "Commit, push, and create a pull request in one step with no prompts.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["git", "github", "pull-requests", "workflow"],
+      "license": "MIT",
+      "name": "pr",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/pr",
+      "version": "1.0.1"
     },
     {
       "author": {
