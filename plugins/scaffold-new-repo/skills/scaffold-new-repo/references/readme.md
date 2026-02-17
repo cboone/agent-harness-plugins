@@ -22,65 +22,53 @@ TODO
 
 ## Installation Placeholders by Project Type
 
-Use the appropriate placeholder based on the project type:
+Replace `INSTALLATION-PLACEHOLDER` with the body content below (the `## Installation` heading is already in the base template).
 
 ### Go CLI
 
-```markdown
-## Installation
-
+````markdown
 ```bash
 go install github.com/cboone/PROJECT-NAME@latest
 ```
-```
+````
 
 ### Go Library
 
-```markdown
-## Installation
-
+````markdown
 ```bash
 go get github.com/cboone/PROJECT-NAME
 ```
-```
+````
 
 ### Shell
 
-```markdown
-## Installation
-
+````markdown
 Clone the repository:
 
 ```bash
 git clone https://github.com/cboone/PROJECT-NAME.git
 ```
-```
+````
 
 ### JavaScript
 
-```markdown
-## Installation
-
+````markdown
 ```bash
 npm install PROJECT-NAME
 ```
-```
+````
 
 ### Ruby
 
-```markdown
-## Installation
-
+````markdown
 ```bash
 gem install PROJECT-NAME
 ```
-```
+````
 
 ### Generic
 
 ```markdown
-## Installation
-
 TODO
 ```
 
