@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Parse a review document for actionable feedback, work through items systematically, and track resolution progress.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["code-review", "feedback", "markdown", "review", "workflow"],
+  "license": "MIT",
+  "name": "address-review",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
