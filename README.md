@@ -97,7 +97,7 @@ Process and resolve GitHub Copilot automated PR review comments. Fetches unresol
 
 Summarize all work done on the current branch compared to the base branch. Groups changes by area/concern, lists new/modified/deleted files, and highlights notable changes (new dependencies, config changes, schema changes, API changes). Optionally compares progress against a plan document, reporting completed, in-progress, and remaining items with a completion percentage.
 
-Supports custom base references (`--since <tag>`), plan comparison (`--plan <path>`), and brief mode (`--brief`).
+Supports custom base references (`--since <ref>`), plan comparison (`--plan <path>`), and brief mode (`--brief`).
 
 > **Trigger:** `/review-branch`
 

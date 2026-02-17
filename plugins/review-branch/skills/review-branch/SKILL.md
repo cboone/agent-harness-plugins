@@ -41,10 +41,10 @@ git rev-parse --verify <ref>
 gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
 ```
 
-If `gh` is not available or the command fails, fall back to:
+If `gh` is not available or the command fails, fall back to a purely local query of the remote HEAD ref:
 
 ```bash
-git remote show origin | grep 'HEAD branch' | sed 's/.*: //'
+git rev-parse --abbrev-ref origin/HEAD | sed 's@^origin/@@'
 ```
 
 3. **Find the merge base** between the base reference and HEAD:
@@ -66,10 +66,10 @@ Run these commands in parallel:
 git log --oneline <merge-base>..HEAD
 
 # File-level summary (insertions, deletions, renames)
-git diff <merge-base>...HEAD --stat
+git diff <merge-base>..HEAD --stat
 
 # Full diff for detailed analysis
-git diff <merge-base>...HEAD
+git diff <merge-base>..HEAD
 
 # Current branch name
 git branch --show-current
@@ -196,7 +196,7 @@ Structure the final output with clear sections:
 
 Base: <base-ref> (merge base: <short-hash>)
 Commits: <count>
-Files changed: <count> (<added> added, <modified> modified, <deleted> deleted)
+Files changed: <count> (<added> added, <modified> modified, <deleted> deleted, <renamed> renamed)
 
 ### Summary
 <high-level summary>
