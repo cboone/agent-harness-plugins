@@ -87,6 +87,17 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── resolve-copilot-pr-feedback/
     │           └── SKILL.md
+    ├── scaffold-new-repo/          # New repository scaffolding skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── scaffold-new-repo/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── claude-md.md
+    │               ├── gitignore.md
+    │               ├── license.md
+    │               └── readme.md
     ├── suggest-next-issue/         # Issue prioritization skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

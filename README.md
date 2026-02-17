@@ -13,6 +13,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 | [Merge Main](#merge-main)
 | [PR](#pr)
 | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
+| [Scaffold New Repo](#scaffold-new-repo)
 | [Suggest Next Issue](#suggest-next-issue)
 <br>_Languages_
 [Write Go Code](#write-go-code)
@@ -38,6 +39,7 @@ Or you can run more direct commands from within `claude`:
 /plugin install notify@cboone/cboone-cc-plugins
 /plugin install pr@cboone/cboone-cc-plugins
 /plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
+/plugin install scaffold-new-repo@cboone/cboone-cc-plugins
 /plugin install suggest-next-issue@cboone/cboone-cc-plugins
 /plugin install write-go-code@cboone/cboone-cc-plugins
 /plugin install write-shell-scripts@cboone/cboone-cc-plugins
@@ -102,6 +104,12 @@ Requires [`gh`](https://cli.github.com/) to be installed.
 Process and resolve GitHub Copilot automated PR review comments. Fetches unresolved Copilot threads via GraphQL, categorizes them (nitpick, outdated, incorrect, valid, deferred), resolves threads, and updates Copilot instruction files under `.github/` (repo-wide `copilot-instructions.md` or path-specific `*.instructions.md`) when Copilot feedback is incorrect.
 
 You can trigger it directly via `/resolve-copilot-pr-feedback`.
+
+### Scaffold New Repo
+
+Scaffold the universal boilerplate for any new repository, regardless of language. Generates LICENSE (MIT), README.md, and a project-type-specific .gitignore, with optional CLAUDE.md and docs/plans/ directory. Supports Go CLI, Go library, Shell, JavaScript, Ruby, and generic project types.
+
+You can trigger it directly via `/scaffold-new-repo`.
 
 ### Suggest Next Issue
 
