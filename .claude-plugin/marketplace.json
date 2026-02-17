@@ -63,7 +63,7 @@
       "name": "create-plugin",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-plugin",
-      "version": "1.1.1"
+      "version": "1.1.2"
     },
     {
       "author": {
