@@ -13,6 +13,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Merge Main](#merge-main)
 ∙ [PR](#pr)
 ∙ [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
+∙ [Review Branch](#review-branch)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
 ∙ [Suggest Next Issue](#suggest-next-issue)
 <br>Languages:
@@ -91,6 +92,14 @@ Commit all changes, push to remote, and create a GitHub pull request in one auto
 Process and resolve GitHub Copilot automated PR review comments. Fetches unresolved Copilot threads via GraphQL, categorizes them (nitpick, outdated, incorrect, valid, deferred), resolves threads, and updates Copilot instruction files under `.github/` (repo-wide `copilot-instructions.md` or path-specific `*.instructions.md`) when Copilot feedback is incorrect.
 
 > **Trigger:** `/resolve-copilot-pr-feedback`
+
+### Review Branch
+
+Summarize all work done on the current branch compared to the base branch. Groups changes by area/concern, lists new/modified/deleted files, and highlights notable changes (new dependencies, config changes, schema changes, API changes). Optionally compares progress against a plan document, reporting completed, in-progress, and remaining items with a completion percentage.
+
+Supports custom base references (`--since <tag>`), plan comparison (`--plan <path>`), and brief mode (`--brief`).
+
+> **Trigger:** `/review-branch`
 
 ### Scaffold New Repo
 

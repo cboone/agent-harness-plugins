@@ -86,6 +86,12 @@ cboone-cc-plugins/
     │   │   └── hooks.json
     │   └── scripts/
     │       └── notify
+    ├── review-branch/               # Branch work summarizer skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── review-branch/
+    │           └── SKILL.md
     ├── resolve-copilot-pr-feedback/ # Copilot PR feedback resolver skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
