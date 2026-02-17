@@ -94,7 +94,7 @@ cboone-cc-plugins/
     │       └── scaffold-new-repo/
     │           ├── SKILL.md
     │           └── references/
-    │               ├── claude-md.md
+    │               ├── agents-md.md
     │               ├── gitignore.md
     │               ├── license.md
     │               └── readme.md

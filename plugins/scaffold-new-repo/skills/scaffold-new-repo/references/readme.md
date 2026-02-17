@@ -17,7 +17,7 @@ TODO
 
 ## License
 
-[MIT](LICENSE)
+[MIT License](./LICENSE). TL;DR: Do whatever you want with this software, just keep the copyright notice included. The authors aren't liable if something goes wrong.
 ````
 
 ## Installation Placeholders by Project Type
@@ -88,4 +88,4 @@ TODO
 
 - The heading uses the project name in title case (e.g., `my-cool-tool` becomes `My Cool Tool`).
 - The description is a single sentence, not wrapped in a section header.
-- The License section always links to the `LICENSE` file.
+- The License section always uses the full blurb with the `[MIT License](./LICENSE)` link.

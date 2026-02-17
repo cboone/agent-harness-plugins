@@ -107,7 +107,7 @@ You can trigger it directly via `/resolve-copilot-pr-feedback`.
 
 ### Scaffold New Repo
 
-Scaffold the universal boilerplate for any new repository, regardless of language. Generates LICENSE (MIT), README.md, and a project-type-specific .gitignore, with optional CLAUDE.md and docs/plans/ directory. Supports Go CLI, Go library, Shell, JavaScript, Ruby, and generic project types.
+Scaffold the universal boilerplate for any new repository, regardless of language. Generates LICENSE (MIT), README.md, a project-type-specific .gitignore, agent config files (AGENTS.md, CLAUDE.md symlink, `.claude/settings.json`, `.github/copilot-instructions.md`), and a `docs/plans/` directory. Infers the project type from an existing .gitignore when possible. Supports Go CLI, Go library, Shell, JavaScript, Ruby, and generic project types.
 
 You can trigger it directly via `/scaffold-new-repo`.
 
