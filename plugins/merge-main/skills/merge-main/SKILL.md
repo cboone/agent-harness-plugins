@@ -2,7 +2,7 @@
 name: merge-main
 description: >-
   Fetch and merge the base branch (usually main) into the current feature
-  branch, handling conflicts and optionally pushing. Use when the user says
+  branch, handling conflicts and pushing. Use when the user says
   "merge main", "merge in main", "merge base branch", "update from main",
   "pull in main", "sync with main", "merge main into this branch",
   "update branch from main", or any variant involving merging the default
@@ -17,8 +17,6 @@ Fetch and merge the repository's base branch into the current feature branch.
 
 The user may provide these options inline:
 
-- **--push**: Push to remote after a successful merge
-- **--no-push**: Do not push after merge (this is the default)
 - **--base `<branch>`**: Override the auto-detected base branch (e.g., `--base develop`)
 
 ## Workflow
@@ -132,7 +130,7 @@ After a successful merge (with or without conflict resolution):
    - `Cargo.lock` -> `cargo build`
    - `composer.lock` -> `composer install`
 
-2. **Push** (if `--push` was specified or the user asked to push):
+2. **Push**:
 
 ```bash
 git push
