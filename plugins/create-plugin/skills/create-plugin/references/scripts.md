@@ -127,6 +127,23 @@ When a script is called from `hooks.json`, use `${CLAUDE_PLUGIN_ROOT}` to refere
 }
 ```
 
+Hook commands are executed by the hooks system directly, so the script path can be used as the command.
+
+## Skill Integration
+
+When a SKILL.md instructs Claude to run a script via the Bash tool, always use `bash` as the command prefix:
+
+```bash
+bash "/absolute/path/to/scripts/script-name" arg1 arg2
+```
+
+**Why:** Claude Code's Bash tool permission allowlist matches on the command token (the first word of the command). If the script path is used directly, the resolved absolute path — including version-specific segments like `.../1.2.0/scripts/...` — becomes the command token. This breaks allowlist entries whenever the plugin version changes. Using `bash` as the prefix makes the command token stable: users add `Bash(bash:*)` once and it covers all script invocations permanently.
+
+In SKILL.md files, instruct Claude to:
+
+1. Locate the script path at the start of the session (e.g., by globbing for `**/plugin-name/scripts/script-name`)
+2. Invoke it with `bash` followed by the **quoted absolute path** and arguments
+
 ## Notes
 
 - Not all plugins need scripts. Skills that only provide guidance (style guides, workflow instructions) typically have no scripts.
