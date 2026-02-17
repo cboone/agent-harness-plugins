@@ -18,7 +18,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 [Write Go Code](#write-go-code)
 | [Write Shell Scripts](#write-shell-scripts)
 <br>**Hooks**
-[Notify](#notify-macos)
+[Block rm -rf](#block-rm-rf)
+| [Notify](#notify-macos)
 
 ## Installation
 
@@ -29,6 +30,7 @@ Or you can run more direct commands from within `claude`:
 ```bash
 /plugin marketplace add cboone/cboone-cc-plugins
 
+/plugin install block-rm-rf@cboone/cboone-cc-plugins
 /plugin install clean-up-agent-config@cboone/cboone-cc-plugins
 /plugin install commit@cboone/cboone-cc-plugins
 /plugin install create-plugin@cboone/cboone-cc-plugins
@@ -129,6 +131,16 @@ Applies Bash style conventions when creating or editing shell scripts. Claude Co
 You can trigger it directly via `/write-shell-scripts`.
 
 ## Hooks
+
+### Block rm -rf
+
+Blocks recursive `rm` commands (`rm -rf`, `rm -r`, `rm -R`, `rm --recursive`, and variants) before they execute. When triggered, it rejects the command and suggests using `trash` instead, which moves files to the system Trash instead of permanently deleting them.
+
+Requires [`trash`](https://hasseg.org/trash/). The easiest installation method is via [Homebrew](https://brew.sh):
+
+```bash
+brew install trash
+```
 
 ### Notify (macOS)
 
