@@ -70,25 +70,36 @@ BODY_CONTENT
 
 Write the prompt to a temporary file and pass it via `-P` to avoid shell escaping issues with arbitrary issue body content.
 
-**Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. Use `nohup ... &` to run it in the background, wait briefly for `workmux` to read the prompt file, then clean up.
+**Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. Use `nohup ... &` to run it in the background.
+
+**Important:** Do not delete the prompt file immediately after launching. `workmux` runs asynchronously and may not read the file for several seconds. Instead, redirect output to a log file, wait, then verify success before cleaning up.
 
 ```bash
-PROMPT_FILE=$(mktemp)
+PROMPT_FILE="/tmp/workmux-prompt-BRANCH_NAME.md"
+LOG_FILE="/tmp/workmux-BRANCH_NAME.log"
 cat > "$PROMPT_FILE" << 'PROMPT'
 [composed prompt from step 3]
 PROMPT
-nohup workmux add BRANCH_NAME --open-if-exists -P "$PROMPT_FILE" > /dev/null 2>&1 &
-sleep 2
-rm "$PROMPT_FILE"
+nohup workmux add BRANCH_NAME --open-if-exists -P "$PROMPT_FILE" > "$LOG_FILE" 2>&1 &
 ```
 
 Do not specify a `--base` branch. Let `workmux` use its default.
 
-After launching, verify the worktree was created:
+After launching, wait for `workmux` to finish, then verify:
 
 ```bash
+sleep 8
+cat "$LOG_FILE"
 git worktree list
 ```
+
+If the log shows success and the worktree appears in the list, clean up:
+
+```bash
+rm -f "$PROMPT_FILE" "$LOG_FILE"
+```
+
+If the log shows an error (e.g., "Failed to read prompt file"), the prompt file was deleted too early or another issue occurred. Check the log for details.
 
 ### 5. Report Success
 

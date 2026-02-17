@@ -11,6 +11,13 @@ cboone-cc-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json            # Plugin registry for this repository
 └── plugins/
+    ├── block-rm-rf/                 # Recursive rm blocker hook
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── hooks/
+    │   │   └── hooks.json
+    │   └── scripts/
+    │       └── check-rm
     ├── commit/                      # Smart git commit skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -87,6 +94,17 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── resolve-copilot-pr-feedback/
     │           └── SKILL.md
+    ├── scaffold-new-repo/          # New repository scaffolding skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── scaffold-new-repo/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── agents-md.md
+    │               ├── gitignore.md
+    │               ├── license.md
+    │               └── readme.md
     ├── suggest-next-issue/         # Issue prioritization skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

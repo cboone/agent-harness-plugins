@@ -2,13 +2,27 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code skills and hooks from Christopher Boone (cboone.github.io)",
-    "version": "1.5.0"
+    "version": "1.6.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
     "name": "Christopher Boone"
   },
   "plugins": [
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Blocks recursive rm commands and suggests using trash instead.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["guard", "safety", "trash"],
+      "license": "MIT",
+      "name": "block-rm-rf",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/block-rm-rf",
+      "version": "1.0.0"
+    },
     {
       "author": {
         "name": "Christopher Boone"
@@ -49,7 +63,7 @@
       "name": "create-plugin",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-plugin",
-      "version": "1.1.1"
+      "version": "1.1.2"
     },
     {
       "author": {
@@ -63,7 +77,7 @@
       "name": "create-worktree",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-worktree",
-      "version": "1.0.2"
+      "version": "1.0.3"
     },
     {
       "author": {
@@ -77,7 +91,7 @@
       "name": "create-worktree-from-issue",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-worktree-from-issue",
-      "version": "1.1.2"
+      "version": "1.1.3"
     },
     {
       "author": {
@@ -134,6 +148,20 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/resolve-copilot-pr-feedback",
       "version": "1.1.4"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
+      "description": "Scaffold the universal boilerplate for a new repository: LICENSE, README, .gitignore, agent config files, and a plans directory.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["boilerplate", "git", "project", "repo", "scaffolding"],
+      "license": "MIT",
+      "name": "scaffold-new-repo",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/scaffold-new-repo",
+      "version": "1.0.0"
     },
     {
       "author": {
