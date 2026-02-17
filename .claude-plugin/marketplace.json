@@ -154,6 +154,20 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
+      "description": "Scaffold the universal boilerplate for a new repository: LICENSE, README, .gitignore, agent config files, and a plans directory.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["boilerplate", "git", "project", "repo", "scaffolding"],
+      "license": "MIT",
+      "name": "scaffold-new-repo",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/scaffold-new-repo",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
       "description": "Review open GitHub issues and recommend what to work on next with prioritized reasoning.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["github", "issues", "planning", "prioritization", "triage"],

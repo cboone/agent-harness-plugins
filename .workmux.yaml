@@ -1,0 +1,8 @@
+# workmux project configuration
+# For global settings, edit ~/.config/workmux/config.yaml
+
+panes:
+  - command: claude
+    focus: true
+  - split: vertical
+    percentage: 50

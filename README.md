@@ -13,6 +13,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 | [Merge Main](#merge-main)
 | [PR](#pr)
 | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
+| [Scaffold New Repo](#scaffold-new-repo)
 | [Suggest Next Issue](#suggest-next-issue)
 <br>_Languages_
 [Write Go Code](#write-go-code)
@@ -86,6 +87,12 @@ Commit all changes, push to remote, and create a GitHub pull request in one auto
 Process and resolve GitHub Copilot automated PR review comments. Fetches unresolved Copilot threads via GraphQL, categorizes them (nitpick, outdated, incorrect, valid, deferred), resolves threads, and updates Copilot instruction files under `.github/` (repo-wide `copilot-instructions.md` or path-specific `*.instructions.md`) when Copilot feedback is incorrect.
 
 > **Trigger:** `/resolve-copilot-pr-feedback`
+
+### Scaffold New Repo
+
+Scaffold the universal boilerplate for any new repository, regardless of language. Generates LICENSE (MIT), README.md, a project-type-specific .gitignore, agent config files (AGENTS.md, CLAUDE.md symlink, `.claude/settings.json`, `.github/copilot-instructions.md`), and a `docs/plans/` directory. Infers the project type from an existing .gitignore when possible. Supports Go CLI, Go library, Shell, JavaScript, Ruby, and generic project types.
+
+> **Trigger:** `/scaffold-new-repo`
 
 ### Suggest Next Issue
 
