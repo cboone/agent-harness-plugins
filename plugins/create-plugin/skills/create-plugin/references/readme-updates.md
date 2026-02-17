@@ -37,21 +37,15 @@ Insert a new line with `| [Skill Name](#skill-name)` in alphabetical order withi
 
 Insert a new line with `| [Hook Name](#hook-name)` in alphabetical order within the **Hooks** group. If the new entry is the first hook, omit the leading `| `.
 
-## Installation Commands
+## Installation Section
 
-The installation section lists one command per plugin, alphabetically:
-
-```markdown
-/plugin install PLUGIN-NAME@cboone/cboone-cc-plugins
-```
-
-Insert the new plugin's install command in alphabetical order.
+The installation section directs users to add the marketplace and browse plugins from there. It does not list individual install commands — users select plugins interactively after adding the marketplace.
 
 ## Plugin Description Sections
 
 ### Skills Section
 
-Each skill gets an H3 subsection under `## Skills`, in alphabetical order:
+Each skill gets an H3 subsection under `## Skills`, in alphabetical order. The description is followed by a blockquote metadata block with the trigger command and any external dependencies:
 
 ```markdown
 ### Skill Name
@@ -59,33 +53,29 @@ Each skill gets an H3 subsection under `## Skills`, in alphabetical order:
 One-paragraph description of what the skill does, what it creates or produces,
 and any notable behavior.
 
-You can trigger it directly via `/skill-name`.
-
-Requires [`dependency`](URL) to be installed.
+> **Trigger:** `/skill-name`
+> **Requires:** [`dependency`](URL)
 ```
 
 Key patterns:
 - The H3 heading is title case (e.g., "Create Worktree from Issue")
 - The description paragraph is 1-3 sentences
-- Include the `/skill-name` trigger line
-- Include dependency requirements with links (only if the skill has external dependencies)
-- Style guide skills note that "Claude Code should automatically use it when..." instead of listing trigger phrases
+- The blockquote metadata block goes at the end of each section
+- Always include the `> **Trigger:**` line
+- Include `> **Requires:**` only if the skill has external dependencies
+- When a skill also activates automatically, note it parenthetically: `> **Trigger:** `/skill-name` (also activates automatically)`
 
 ### Hooks Section
 
-Each hook gets an H3 subsection under `## Hooks`:
+Each hook gets an H3 subsection under `## Hooks`. The description is followed by a blockquote with any dependency requirements:
 
-````markdown
+```markdown
 ### Hook Name
 
 Description of what the hook does and when it fires.
 
-Requires [`dependency`](URL). Installation instructions:
-
-```bash
-install command
+> **Requires:** [`dependency`](URL) — install via [Homebrew](https://brew.sh): `install command`
 ```
-````
 
 ## Notes
 
