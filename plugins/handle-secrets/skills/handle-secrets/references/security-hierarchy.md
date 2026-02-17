@@ -37,7 +37,7 @@ Environment variables are significantly safer than CLI arguments:
 - **Child process inheritance**: All exported environment variables propagate to subprocesses
 - **Container inspection**: `docker inspect` exposes all environment variables
 - **Core dumps**: Can contain environment data
-- **Inline expansion trap**: `TOKEN=secret curl -H "Authorization: Bearer $TOKEN"` expands `$TOKEN` into `curl`'s argv, making it visible via `ps`
+- **Shell expansion trap**: Expanding secrets via `$VAR` into command arguments (e.g., `curl -H "Authorization: Bearer $TOKEN"`) puts the value into the process's argv, visible via `ps`. Have the tool read the environment variable internally instead
 
 ### Best practice
 

@@ -49,7 +49,7 @@ std::io::stdin().is_terminal()  // Rust 1.70+
 | Package | Purpose |
 |---------|---------|
 | `golang.org/x/term` | `term.ReadPassword()` disables echo by manipulating terminal flags |
-| `github.com/awnuber/memguard` | mlock'd memory enclaves with guard pages (note: Go GC introduces caveats) |
+| `github.com/awnumar/memguard` | mlock'd memory enclaves with guard pages (note: Go GC introduces caveats) |
 
 ### Example: custom SecretString type
 

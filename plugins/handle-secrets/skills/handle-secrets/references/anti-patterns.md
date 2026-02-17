@@ -55,20 +55,30 @@ echo "secret" | curl -d @- https://api.example.com
 
 The dangerous version expands stdin contents into `curl`'s argv, making the secret visible to every user on the system. The safe version uses `@-` to read the request body directly from stdin.
 
-## The inline environment variable trap
+## Shell expansion of secrets into command arguments
+
+Any time a secret is expanded via `$VAR` or `${VAR}` into a command's argument list, the shell performs the expansion **before** launching the process. The expanded value becomes part of the process's argv, visible via `ps` and `/proc/<pid>/cmdline`.
 
 ```bash
-# DANGEROUS: $TOKEN expands into curl's argv, visible via ps
-TOKEN=secret curl -H "Authorization: Bearer $TOKEN" https://api.example.com
-```
-
-```bash
-# SAFE: export separately, then use in a subshell or read from env in code
+# DANGEROUS: shell expands $TOKEN into curl's argv, visible via ps
 export TOKEN=secret
 curl -H "Authorization: Bearer ${TOKEN}" https://api.example.com
 ```
 
-With inline variable assignment, the shell expands `$TOKEN` into the argument list of the `curl` process, making the value visible in `/proc/<pid>/cmdline`.
+```bash
+# ALSO DANGEROUS (and misleading): with inline assignment, $TOKEN is expanded
+# BEFORE the assignment takes effect — so $TOKEN uses its previous value
+# (or empty if unset), not "secret"
+TOKEN=secret curl -H "Authorization: Bearer $TOKEN" https://api.example.com
+```
+
+```bash
+# SAFE: tool reads the environment variable internally, no shell expansion
+export API_TOKEN=secret
+my-cli-tool --token-env API_TOKEN    # Tool calls os.Getenv("API_TOKEN") internally
+```
+
+**The safe pattern:** Pass the **name** of the environment variable to the tool (or rely on a well-known variable name convention), and have the tool read the value from its own process environment. This keeps the secret out of argv entirely.
 
 ## The create-then-chmod race condition
 
