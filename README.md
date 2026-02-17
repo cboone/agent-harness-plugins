@@ -16,6 +16,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
 ∙ [Review Branch](#review-branch)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
+∙ [Setup Gitleaks](#setup-gitleaks)
 ∙ [Suggest Next Issue](#suggest-next-issue)
 <br>Languages:
 [Write Go Code](#write-go-code)
@@ -113,6 +114,12 @@ Supports custom base references (`--since <ref>`), plan comparison (`--plan <pat
 Scaffold the universal boilerplate for any new repository, regardless of language. Generates LICENSE (MIT), README.md, a project-type-specific .gitignore, agent config files (AGENTS.md, CLAUDE.md symlink, `.claude/settings.json`, `.github/copilot-instructions.md`), and a `docs/plans/` directory. Infers the project type from an existing .gitignore when possible. Supports Go CLI, Go library, Shell, JavaScript, Ruby, and generic project types.
 
 > **Trigger:** `/scaffold-new-repo`
+
+### Setup Gitleaks
+
+Set up [gitleaks](https://github.com/gitleaks/gitleaks) secret scanning in a repository with a GitHub Actions workflow and optional `.gitleaks.toml` configuration. Detects whether the repository is organization-owned (requires a gitleaks license secret) or personal, and generates the appropriate workflow. Optionally creates a starter `.gitleaks.toml` with sensible defaults and example allowlist entries.
+
+> **Trigger:** `/setup-gitleaks`
 
 ### Suggest Next Issue
 
