@@ -49,10 +49,12 @@ If the user provided only a branch name with no description, derive a human-read
 
 ### 3. Create the Worktree
 
-**Important:** The `workmux add` command must run outside the sandbox (use `dangerouslyDisableSandbox: true` on the Bash tool call). It interacts with tmux to create windows and sessions, which hangs indefinitely inside the sandbox.
+**Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. Use `nohup ... &` to run it in the background, then clean up.
+
+For simple prompts:
 
 ```bash
-workmux add BRANCH_NAME --open-if-exists -p "PROMPT_TEXT"
+nohup workmux add BRANCH_NAME --open-if-exists -p "PROMPT_TEXT" > /dev/null 2>&1 &
 ```
 
 Do not specify `--base`. Let workmux use its default. Only pass `--base BRANCH` if the user explicitly requests a specific base branch.
@@ -64,13 +66,20 @@ PROMPT_FILE=$(mktemp)
 cat > "$PROMPT_FILE" << 'PROMPT'
 [prompt content]
 PROMPT
-workmux add BRANCH_NAME --open-if-exists -P "$PROMPT_FILE"
+nohup workmux add BRANCH_NAME --open-if-exists -P "$PROMPT_FILE" > /dev/null 2>&1 &
+sleep 2
 rm "$PROMPT_FILE"
+```
+
+After launching, verify the worktree was created:
+
+```bash
+git worktree list
 ```
 
 ### 4. Report Success
 
-After `workmux add` completes, report:
+After confirming the worktree exists in `git worktree list`, report:
 
 - The branch name created
 - The tmux window name (to help the user switch to it)

@@ -70,22 +70,29 @@ BODY_CONTENT
 
 Write the prompt to a temporary file and pass it via `-P` to avoid shell escaping issues with arbitrary issue body content.
 
-**Important:** The `workmux add` command must run outside the sandbox (use `dangerouslyDisableSandbox: true` on the Bash tool call). It interacts with tmux to create windows and sessions, which hangs indefinitely inside the sandbox.
+**Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. Use `nohup ... &` to run it in the background, wait briefly for `workmux` to read the prompt file, then clean up.
 
 ```bash
 PROMPT_FILE=$(mktemp)
 cat > "$PROMPT_FILE" << 'PROMPT'
 [composed prompt from step 3]
 PROMPT
-workmux add BRANCH_NAME --open-if-exists -P "$PROMPT_FILE"
+nohup workmux add BRANCH_NAME --open-if-exists -P "$PROMPT_FILE" > /dev/null 2>&1 &
+sleep 2
 rm "$PROMPT_FILE"
 ```
 
 Do not specify a `--base` branch. Let `workmux` use its default.
 
+After launching, verify the worktree was created:
+
+```bash
+git worktree list
+```
+
 ### 5. Report Success
 
-After `workmux add` completes, report:
+After confirming the worktree exists in `git worktree list`, report:
 
 - The issue number and title
 - The branch name created
