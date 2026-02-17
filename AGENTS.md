@@ -93,6 +93,14 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── suggest-next-issue/
     │           └── SKILL.md
+    ├── write-markdown/              # Markdown style guide skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── write-markdown/
+    │           ├── SKILL.md
+    │           └── references/
+    │               └── MARKDOWN.md
     ├── write-shell-scripts/        # Bash style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

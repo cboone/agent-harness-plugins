@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Applies Markdown style conventions when creating or editing Markdown files.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["documentation", "format", "markdown", "style"],
+  "license": "MIT",
+  "name": "write-markdown",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

@@ -16,6 +16,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 | [Suggest Next Issue](#suggest-next-issue)
 <br>_Languages_
 [Write Go Code](#write-go-code)
+| [Write Markdown](#write-markdown)
 | [Write Shell Scripts](#write-shell-scripts)
 <br>**Hooks**
 [Notify](#notify-macos)
@@ -40,6 +41,7 @@ Or you can run more direct commands from within `claude`:
 /plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
 /plugin install suggest-next-issue@cboone/cboone-cc-plugins
 /plugin install write-go-code@cboone/cboone-cc-plugins
+/plugin install write-markdown@cboone/cboone-cc-plugins
 /plugin install write-shell-scripts@cboone/cboone-cc-plugins
 ```
 
@@ -121,6 +123,12 @@ The style guides are organized into:
 
 - Essential checklist for quick reviews
 - Comprehensive references by topic (naming, errors, concurrency, testing, code organization, data types, functions, interfaces)
+
+### Write Markdown
+
+Applies Markdown style conventions when creating or editing Markdown files. Claude Code should automatically use it when creating, editing, or reviewing Markdown files.
+
+You can trigger it directly via `/write-markdown`.
 
 ### Write Shell Scripts
 
