@@ -5,7 +5,7 @@ Use this exact template. Replace `YEAR` with the current year (from `date +%Y`).
 ```text
 MIT License
 
-Copyright (c) YEAR Christopher Boone
+Copyright (c) YEAR COPYRIGHT-HOLDER
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,6 @@ SOFTWARE.
 
 ## Notes
 
-- The copyright holder is always **Christopher Boone** -- do not change this.
-- The year is always the current year at the time of generation.
-- This is the standard MIT license text with no modifications.
+- Replace `COPYRIGHT-HOLDER` with the user's full name (from `git config user.name`)
+- The year is always the current year at the time of generation
+- This is the standard MIT license text with no modifications

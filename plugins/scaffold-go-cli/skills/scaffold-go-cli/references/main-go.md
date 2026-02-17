@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cboone/PROJECT-NAME/cmd"
+	"github.com/GITHUB-USERNAME/PROJECT-NAME/cmd"
 )
 
 var version = "dev"

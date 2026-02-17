@@ -28,7 +28,7 @@ Replace `INSTALLATION-PLACEHOLDER` with the body content below (the `## Installa
 
 ````markdown
 ```bash
-go install github.com/cboone/PROJECT-NAME@latest
+go install github.com/GITHUB-USERNAME/PROJECT-NAME@latest
 ```
 ````
 
@@ -36,7 +36,7 @@ go install github.com/cboone/PROJECT-NAME@latest
 
 ````markdown
 ```bash
-go get github.com/cboone/PROJECT-NAME
+go get github.com/GITHUB-USERNAME/PROJECT-NAME
 ```
 ````
 
@@ -46,7 +46,7 @@ go get github.com/cboone/PROJECT-NAME
 Clone the repository:
 
 ```bash
-git clone https://github.com/cboone/PROJECT-NAME.git
+git clone https://github.com/GITHUB-USERNAME/PROJECT-NAME.git
 ```
 ````
 

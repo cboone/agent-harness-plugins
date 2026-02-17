@@ -46,11 +46,11 @@ changelog:
 
 brews:
   - repository:
-      owner: cboone
+      owner: GITHUB-USERNAME
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
-    homepage: "https://github.com/cboone/PROJECT-NAME"
+    homepage: "https://github.com/GITHUB-USERNAME/PROJECT-NAME"
     description: "PROJECT-DESCRIPTION"
     license: MIT
     test: |
@@ -65,6 +65,6 @@ brews:
 - `-X main.version={{.Version}}` injects the release version at build time
 - Builds for Linux, macOS, and Windows on both amd64 and arm64
 - Windows archives use zip; everything else uses tar.gz
-- Homebrew tap publishes to `cboone/homebrew-tap` using `HOMEBREW_TAP_TOKEN`
+- Homebrew tap publishes to `GITHUB-USERNAME/homebrew-tap` using `HOMEBREW_TAP_TOKEN`
 - `prerelease: auto` marks pre-release tags (e.g., `v1.0.0-rc1`) correctly on GitHub
 - The `{{` and `}}` delimiters are GoReleaser template syntax, not Go templates

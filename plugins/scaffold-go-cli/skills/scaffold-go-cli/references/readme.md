@@ -12,23 +12,23 @@ PROJECT-DESCRIPTION
 ### Homebrew
 
 ```sh
-brew install cboone/tap/PROJECT-NAME
+brew install GITHUB-USERNAME/tap/PROJECT-NAME
 ```
 
 ### From source
 
 ```sh
-go install github.com/cboone/PROJECT-NAME@latest
+go install github.com/GITHUB-USERNAME/PROJECT-NAME@latest
 ```
 
 ### From release
 
-Download a binary from the [releases page](https://github.com/cboone/PROJECT-NAME/releases).
+Download a binary from the [releases page](https://github.com/GITHUB-USERNAME/PROJECT-NAME/releases).
 
 ### Build locally
 
 ```sh
-git clone https://github.com/cboone/PROJECT-NAME.git
+git clone https://github.com/GITHUB-USERNAME/PROJECT-NAME.git
 cd PROJECT-NAME
 make build
 ./bin/PROJECT-NAME
@@ -51,4 +51,4 @@ PROJECT-NAME
 - The one-liner description matches what was provided for `go.mod` and GoReleaser
 - Installation section covers all four install methods: Homebrew, `go install`, release binary, and local build
 - Usage section is a placeholder for the user to fill in
-- License section uses the standard wording from other cboone repos
+- License section uses the standard MIT license wording
