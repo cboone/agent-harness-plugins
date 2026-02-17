@@ -7,7 +7,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 [Clean Up Agent Config](#clean-up-agent-config)
 ∙ [Create Plugin](#create-plugin)
 <br>Workflow:
-[Commit](#commit)
+[Address Review](#address-review)
+∙ [Commit](#commit)
 ∙ [Create Worktree](#create-worktree)
 ∙ [Create Worktree from Issue](#create-worktree-from-issue)
 ∙ [Merge Main](#merge-main)
@@ -37,6 +38,12 @@ Or, from within `claude`, run:
 ```
 
 ## Skills
+
+### Address Review
+
+Parse a review document (typically in `docs/reviews/` or similar) for actionable feedback items, work through them systematically, and track resolution progress. Extracts items from checkboxes, bullets, numbered lists, and headings. Categorizes each item by type (code change, documentation, question, style), presents a summary for confirmation, then resolves items one by one. Commits fixes in logical groups by default, or per-item with `--commit-per-item`. Supports `--dry-run` to preview items without making changes and `--skip` to exclude specific items.
+
+> **Trigger:** `/address-review <path>`
 
 ### Clean Up Agent Config
 

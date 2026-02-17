@@ -2,13 +2,27 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code skills and hooks from Christopher Boone (cboone.github.io)",
-    "version": "1.6.0"
+    "version": "1.7.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
     "name": "Christopher Boone"
   },
   "plugins": [
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
+      "description": "Parse a review document for actionable feedback, work through items systematically, and track resolution progress.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["code-review", "feedback", "markdown", "review", "workflow"],
+      "license": "MIT",
+      "name": "address-review",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/address-review",
+      "version": "1.0.0"
+    },
     {
       "author": {
         "name": "Christopher Boone"
@@ -91,7 +105,7 @@
       "name": "create-worktree-from-issue",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-worktree-from-issue",
-      "version": "1.1.5"
+      "version": "1.2.1"
     },
     {
       "author": {
@@ -175,7 +189,7 @@
       "name": "suggest-next-issue",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/suggest-next-issue",
-      "version": "1.0.1"
+      "version": "1.1.0"
     },
     {
       "author": {

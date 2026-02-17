@@ -37,7 +37,27 @@ If the search returns multiple results, present them to the user and ask which o
 
 If no results, try broadening the search or ask the user to refine their query.
 
-### 2. Build the Branch Name
+### 2. Mark Issue In Progress
+
+If the issue is open, signal that work is starting. Skip this step for closed issues.
+
+**Self-assign:**
+
+```bash
+gh issue edit NUMBER --add-assignee @me
+```
+
+**Add label:**
+
+```bash
+gh issue edit NUMBER --add-label "in progress"
+```
+
+Both commands are idempotent — safe to re-run if the assignee or label already exists. If the "in progress" label does not exist in the repository, `gh` creates it automatically.
+
+If either command fails, warn the user but continue with worktree creation. Status marking is best-effort and must never block the primary workflow.
+
+### 3. Build the Branch Name
 
 Construct a branch name in the format `TYPE/SLUG` where:
 
@@ -50,7 +70,7 @@ Examples:
 - Issue "Login fails with special chars" with label "bug" -> `fix/login-fails-with-special-chars`
 - Issue "Update README" with no labels -> `feature/update-readme`
 
-### 3. Compose the Issue Prompt
+### 4. Compose the Issue Prompt
 
 Build a prompt from the issue data retrieved in step 1. Format:
 
@@ -66,9 +86,9 @@ BODY_CONTENT
 - If the issue body is empty, omit it.
 - If there are no labels, omit the labels line.
 
-### 4. Create the Worktree
+### 5. Create the Worktree
 
-Use the Write tool to create a temporary prompt file at `/tmp/workmux-prompt-BRANCH_NAME.md` with the composed prompt from step 3. Using the Write tool avoids shell escaping issues with arbitrary issue body content.
+Use the Write tool to create a temporary prompt file at `/tmp/workmux-prompt-BRANCH_NAME.md` with the composed prompt from step 4. Using the Write tool avoids shell escaping issues with arbitrary issue body content.
 
 **Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. The `launch-workmux` script handles backgrounding, detaching, waiting, and outputting the log.
 
@@ -98,7 +118,7 @@ rm -f /tmp/workmux-prompt-BRANCH_NAME.md
 
 If the log shows an error (e.g., "Failed to read prompt file"), the prompt file may have been deleted too early or another issue occurred. Check the log output for details.
 
-### 5. Report Success
+### 6. Report Success
 
 After confirming the worktree exists in `git worktree list`, report:
 
@@ -106,9 +126,11 @@ After confirming the worktree exists in `git worktree list`, report:
 - The branch name created
 - The tmux window name (to help the user switch to it)
 - A note that the issue context was injected into the new session
+- Whether the issue was marked in progress (assigned and labeled), or if status marking was skipped/failed
 
 ## Error Handling
 
 - If `gh` is not authenticated, instruct the user to run `gh auth login`
 - If `workmux` is not installed, inform the user
 - If the issue is closed, warn the user and ask if they want to proceed anyway
+- If status marking fails (assignment or labeling), warn the user but continue with worktree creation — status marking is best-effort

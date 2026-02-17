@@ -40,6 +40,9 @@ gh issue list --state closed --json number,title,labels,closedAt --limit 10 --so
 git worktree list
 git branch --list --format='%(refname:short)'
 
+# Current authenticated user (for assignment detection)
+gh api user --jq '.login'
+
 # Project context
 gh repo view --json description,defaultBranchRef
 ```
@@ -56,7 +59,13 @@ Also read the repo's README and any roadmap or project documentation to understa
 
 ### 2. Identify In-Progress Work
 
-Cross-reference open issues against existing branches and worktrees. Exclude issues that already have a corresponding branch (matching issue number in branch name) from recommendations, but note them in the output as "already in progress."
+An issue is considered in progress if **any** of the following are true:
+
+1. **Branch or worktree match**: A branch or worktree name contains the issue number (existing behavior)
+2. **"in progress" label**: The issue has a label named "in progress" (case-insensitive match on the `labels` data already fetched in step 1)
+3. **Assigned to current user**: The issue's `assignees` list (already fetched in step 1) includes the authenticated username from `gh api user`
+
+Exclude in-progress issues from recommendations, but note them in the output as "already in progress" along with how each was detected (branch, label, assignment, or a combination).
 
 ### 3. Analyze Each Issue
 
@@ -97,7 +106,7 @@ For each recommendation, include:
 
 ### 5. Summarize In-Progress Work
 
-After recommendations, briefly list issues that appear to already have worktrees or branches, so the user has a complete picture.
+After recommendations, briefly list issues detected as in progress. For each, note how it was detected: branch/worktree, "in progress" label, assignment to current user, or a combination. This gives the user a complete picture of active work.
 
 ### 6. Offer to Start Work
 
@@ -143,7 +152,11 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
 
 ---
 
-**Already in progress:** #14 (feature/improve-notifications), #16 (fix/search-pagination)
+**Already in progress:**
+- #14 — feature/improve-notifications (branch)
+- #16 — fix/search-pagination (branch, assigned)
+- #21 — Add export feature (label: "in progress")
+- #25 — Fix auth timeout (assigned)
 
 Ready to start on one of these? Just say "start issue #N".
 ```
