@@ -64,7 +64,13 @@ Do not specify `--base`. Let workmux use its default. Only pass `--base BRANCH` 
 Then launch the worktree:
 
 ```bash
-bash SCRIPTS_DIR/launch-workmux BRANCH_NAME /tmp/workmux-prompt-BRANCH_NAME.md
+bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" "/tmp/workmux-prompt-BRANCH_NAME.md"
+```
+
+If the user requested a specific base branch:
+
+```bash
+bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" "/tmp/workmux-prompt-BRANCH_NAME.md" --base "BASE_BRANCH"
 ```
 
 The script outputs the workmux log directly and cleans up its own log file. Verify success:

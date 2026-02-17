@@ -101,7 +101,7 @@ In the example below, `SCRIPTS_DIR/launch-workmux` is a placeholder for the scri
 Do not specify a `--base` branch. Let `workmux` use its default.
 
 ```bash
-bash SCRIPTS_DIR/launch-workmux BRANCH_NAME /tmp/workmux-prompt-BRANCH_NAME.md
+bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" "/tmp/workmux-prompt-BRANCH_NAME.md"
 ```
 
 The script outputs the workmux log directly and cleans up its own log file. Verify success:

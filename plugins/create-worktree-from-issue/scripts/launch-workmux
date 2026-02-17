@@ -1,15 +1,58 @@
 #!/usr/bin/env bash
-# launch-workmux — Create a worktree + tmux window via workmux, fully detached.
-# Usage: launch-workmux <branch-name> <prompt-file>
+# launch-workmux -- Create a worktree + tmux window via workmux, fully detached.
 set -euo pipefail
 
-branch="${1:?Usage: launch-workmux <branch> <prompt-file>}"
-prompt_file="${2:?Usage: launch-workmux <branch> <prompt-file>}"
-log="$(mktemp "/tmp/workmux-${branch}.XXXXXX.log")"
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
 
-workmux add "$branch" --open-if-exists -P "$prompt_file" > "$log" 2>&1 &
-disown
-sleep 8
+function usage() {
+  cat <<'USAGE_TEXT'
+Usage: launch-workmux <branch-name> <prompt-file>
 
-cat "$log"
-rm -f "$log"
+Create a worktree and tmux window via workmux, fully detached from the
+calling process. Waits briefly for workmux to initialize, then outputs
+the log and cleans up.
+
+Arguments:
+  branch-name   Name of the git branch to create/open
+  prompt-file   Path to the workmux prompt file
+
+Options:
+  -h, --help    Show this help
+USAGE_TEXT
+}
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function do_launch() {
+  local branch="${1}"
+  local prompt_file="${2}"
+  local log
+  log="$(mktemp "/tmp/workmux-${branch}.XXXXXX.log")"
+
+  workmux add "${branch}" --open-if-exists -P "${prompt_file}" > "${log}" 2>&1 &
+  disown
+  sleep 8
+
+  cat "${log}"
+  rm -f "${log}"
+}
+
+function main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
+  if [[ $# -ne 2 ]]; then
+    usage >&2
+    die "expected 2 arguments (branch-name, prompt-file), got $#"
+  fi
+
+  do_launch "${1}" "${2}"
+}
+
+main "$@"

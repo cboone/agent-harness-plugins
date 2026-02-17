@@ -1,15 +1,84 @@
 #!/usr/bin/env bash
-# launch-workmux — Create a worktree + tmux window via workmux, fully detached.
-# Usage: launch-workmux <branch-name> <prompt-file>
+# launch-workmux -- Create a worktree + tmux window via workmux, fully detached.
 set -euo pipefail
 
-branch="${1:?Usage: launch-workmux <branch> <prompt-file>}"
-prompt_file="${2:?Usage: launch-workmux <branch> <prompt-file>}"
-log="$(mktemp "/tmp/workmux-${branch}.XXXXXX.log")"
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
 
-workmux add "$branch" --open-if-exists -P "$prompt_file" > "$log" 2>&1 &
-disown
-sleep 8
+function usage() {
+  cat <<'USAGE_TEXT'
+Usage: launch-workmux <branch-name> <prompt-file> [--base <branch>]
 
-cat "$log"
-rm -f "$log"
+Create a worktree and tmux window via workmux, fully detached from the
+calling process. Waits briefly for workmux to initialize, then outputs
+the log and cleans up.
+
+Arguments:
+  branch-name      Name of the git branch to create/open
+  prompt-file      Path to the workmux prompt file
+
+Options:
+  --base <branch>  Specify the base branch for the worktree
+  -h, --help       Show this help
+USAGE_TEXT
+}
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function do_launch() {
+  local branch="${1}"
+  local prompt_file="${2}"
+  local base_branch="${3:-}"
+  local log
+  log="$(mktemp "/tmp/workmux-${branch}.XXXXXX.log")"
+
+  local -a cmd=(workmux add "${branch}" --open-if-exists -P "${prompt_file}")
+  if [[ -n "${base_branch}" ]]; then
+    cmd+=(--base "${base_branch}")
+  fi
+
+  "${cmd[@]}" > "${log}" 2>&1 &
+  disown
+  sleep 8
+
+  cat "${log}"
+  rm -f "${log}"
+}
+
+function main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
+  local base_branch=""
+  local -a positional=()
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --base)
+        base_branch="${2:?--base requires a branch name}"
+        shift 2
+        ;;
+      -*)
+        die "unknown option: ${1}"
+        ;;
+      *)
+        positional+=("${1}")
+        shift
+        ;;
+    esac
+  done
+
+  if [[ ${#positional[@]} -ne 2 ]]; then
+    usage >&2
+    die "expected 2 arguments (branch-name, prompt-file), got ${#positional[@]}"
+  fi
+
+  do_launch "${positional[0]}" "${positional[1]}" "${base_branch}"
+}
+
+main "$@"
