@@ -51,7 +51,7 @@ git init
 
 Create a `LICENSE` file using the MIT license template from `./references/license.md`.
 
-- Set the year to the current year (use `date +%Y`)
+- Set the year to the current year
 - Copyright holder is always **Christopher Boone**
 
 ### 5. Generate README.md
@@ -111,10 +111,7 @@ For full project conventions, see AGENTS.md in the repository root.
 
 ### 8. Create docs/plans/
 
-```bash
-mkdir -p docs/plans
-touch docs/plans/.gitkeep
-```
+Use the Write tool to create an empty `docs/plans/.gitkeep` file. The Write tool creates parent directories automatically.
 
 ### 9. Create Initial Commit
 

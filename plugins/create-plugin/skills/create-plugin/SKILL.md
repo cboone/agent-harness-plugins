@@ -36,25 +36,27 @@ If the user provided a name, use it. Otherwise, generate a descriptive name from
 
 ### 3. Create Directory Structure
 
+No manual `mkdir` is needed — the Write tool creates parent directories automatically when writing files. The directories below are created implicitly when their first file is written in the subsequent steps.
+
 #### Skills Plugin
 
-```bash
-mkdir -p plugins/PLUGIN-NAME/.claude-plugin
-mkdir -p plugins/PLUGIN-NAME/skills/PLUGIN-NAME
+```
+plugins/PLUGIN-NAME/.claude-plugin/
+plugins/PLUGIN-NAME/skills/PLUGIN-NAME/
 ```
 
-Add a `references/` directory if the skill needs supplementary documentation:
+Add a `references/` subdirectory if the skill needs supplementary documentation:
 
-```bash
-mkdir -p plugins/PLUGIN-NAME/skills/PLUGIN-NAME/references
+```
+plugins/PLUGIN-NAME/skills/PLUGIN-NAME/references/
 ```
 
 #### Hooks Plugin
 
-```bash
-mkdir -p plugins/PLUGIN-NAME/.claude-plugin
-mkdir -p plugins/PLUGIN-NAME/hooks
-mkdir -p plugins/PLUGIN-NAME/scripts
+```
+plugins/PLUGIN-NAME/.claude-plugin/
+plugins/PLUGIN-NAME/hooks/
+plugins/PLUGIN-NAME/scripts/
 ```
 
 #### Both

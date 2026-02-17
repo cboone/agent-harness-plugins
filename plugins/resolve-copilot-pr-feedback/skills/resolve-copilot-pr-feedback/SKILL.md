@@ -33,9 +33,9 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 
 All GraphQL operations use a dedicated script that handles pagination, variable binding, and Copilot author filtering automatically.
 
-**At the start of your session**, locate the script by searching for `**/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads`. Note the absolute path and use it directly in all subsequent commands. Do not use a shell variable, since shell state does not persist between commands.
+**At the start of your session**, locate the script by searching for `**/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads`. Note the absolute path and use it with `bash` as the command prefix in all subsequent invocations. Do not use a shell variable, since shell state does not persist between commands.
 
-In the examples below, `resolve-copilot-threads` is a placeholder for the script's **quoted absolute path** (e.g., `"/absolute/path/to/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads"`). Always substitute the full quoted path when running the commands.
+In the examples below, `resolve-copilot-threads` is a placeholder for the script's **quoted absolute path** (e.g., `"/absolute/path/to/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads"`). Always invoke via `bash` followed by the quoted path, e.g., `bash "/absolute/path/to/scripts/resolve-copilot-threads" fetch ...`. This ensures the command token is `bash`, which matches stable allowlist patterns regardless of the plugin's installed path or version.
 
 ## CRITICAL REQUIREMENTS
 
@@ -55,7 +55,7 @@ The thread resolution is NOT optional - it's the primary deliverable of this ski
 
 ```bash
 # Replace THREAD_ID with actual thread ID (e.g., PRRT_kwDONZ...)
-resolve-copilot-threads resolve THREAD_ID
+bash resolve-copilot-threads resolve THREAD_ID
 ```
 
 Outputs `true` on success.
@@ -132,7 +132,7 @@ Reserve for repo-wide conventions that apply to all file types:
 ### 1. Fetch ALL Unresolved Copilot Threads
 
 ```bash
-resolve-copilot-threads fetch OWNER REPO PR_NUMBER
+bash resolve-copilot-threads fetch OWNER REPO PR_NUMBER
 ```
 
 The script automatically handles pagination and filters for unresolved Copilot-authored threads.
@@ -171,7 +171,7 @@ For each unresolved Copilot comment:
 ### 3. Resolve Threads
 
 ```bash
-resolve-copilot-threads resolve THREAD_ID
+bash resolve-copilot-threads resolve THREAD_ID
 ```
 
 ### 4. Handle Each Category
@@ -189,13 +189,13 @@ Use the script to reply to the specific Copilot thread:
 
 ```bash
 # Reply from a file (recommended for multiline bodies):
-resolve-copilot-threads reply THREAD_ID --body-file response.md
+bash resolve-copilot-threads reply THREAD_ID --body-file response.md
 
 # Reply from stdin:
-echo "Your explanation here" | resolve-copilot-threads reply THREAD_ID
+echo "Your explanation here" | bash resolve-copilot-threads reply THREAD_ID
 
 # Reply and resolve in one step:
-resolve-copilot-threads reply-and-resolve THREAD_ID --body-file response.md
+bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file response.md
 ```
 
 **FORBIDDEN COMMANDS - NEVER USE:**
@@ -207,7 +207,7 @@ resolve-copilot-threads reply-and-resolve THREAD_ID --body-file response.md
 1. Reply to the thread with professional explanation:
    - Outdated: "This comment refers to code refactored in commit abc123. The issue is no longer applicable."
    - Incorrect: "This conflicts with our {convention name} convention. {Brief explanation}. See {reference file} for project guidelines."
-2. Resolve the thread using `resolve-copilot-threads resolve THREAD_ID`
+2. Resolve the thread using `bash resolve-copilot-threads resolve THREAD_ID`
 3. **Update Copilot instructions** to prevent recurrence:
    - **Prefer a path-specific file** (e.g., `.github/css.instructions.md` with `applyTo: "**/*.css"`) when the feedback targets a specific language or file pattern
    - **Use `copilot-instructions.md`** only for repo-wide conventions
@@ -239,7 +239,7 @@ resolve-copilot-threads reply-and-resolve THREAD_ID --body-file response.md
 1. **Push any changes:** `git push`
 2. Re-fetch to confirm all Copilot threads resolved:
    ```bash
-   resolve-copilot-threads fetch OWNER REPO PR_NUMBER
+   bash resolve-copilot-threads fetch OWNER REPO PR_NUMBER
    ```
    Expected output: `[]` (empty array)
 3. Report summary of actions taken

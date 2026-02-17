@@ -68,38 +68,31 @@ BODY_CONTENT
 
 ### 4. Create the Worktree
 
-Write the prompt to a temporary file and pass it via `-P` to avoid shell escaping issues with arbitrary issue body content.
+Use the Write tool to create a temporary prompt file at `/tmp/workmux-prompt-BRANCH_NAME.md` with the composed prompt from step 3. Using the Write tool avoids shell escaping issues with arbitrary issue body content.
 
-**Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. Use `nohup ... &` to run it in the background.
+**Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. Background the command with `& disown` so it survives shell exit.
 
-**Important:** Do not delete the prompt file immediately after launching. `workmux` runs asynchronously and may not read the file for several seconds. Instead, redirect output to a log file, wait, then verify success before cleaning up.
+**Important:** Do not delete the prompt file immediately after launching. `workmux` runs asynchronously and may not read the file for several seconds. Wait and verify success before cleaning up.
 
 ```bash
-PROMPT_FILE="/tmp/workmux-prompt-BRANCH_NAME.md"
-LOG_FILE="/tmp/workmux-BRANCH_NAME.log"
-cat > "$PROMPT_FILE" << 'PROMPT'
-[composed prompt from step 3]
-PROMPT
-nohup workmux add BRANCH_NAME --open-if-exists -P "$PROMPT_FILE" > "$LOG_FILE" 2>&1 &
+workmux add BRANCH_NAME --open-if-exists -P /tmp/workmux-prompt-BRANCH_NAME.md > /tmp/workmux-BRANCH_NAME.log 2>&1 & disown; sleep 8
 ```
 
 Do not specify a `--base` branch. Let `workmux` use its default.
 
-After launching, wait for `workmux` to finish, then verify:
+After launching, use the Read tool to check `/tmp/workmux-BRANCH_NAME.log`, then verify:
 
 ```bash
-sleep 8
-cat "$LOG_FILE"
 git worktree list
 ```
 
 If the log shows success and the worktree appears in the list, clean up:
 
 ```bash
-rm -f "$PROMPT_FILE" "$LOG_FILE"
+rm -f /tmp/workmux-prompt-BRANCH_NAME.md /tmp/workmux-BRANCH_NAME.log
 ```
 
-If the log shows an error (e.g., "Failed to read prompt file"), the prompt file was deleted too early or another issue occurred. Check the log for details.
+If the log shows an error (e.g., "Failed to read prompt file"), the prompt file may have been deleted too early or another issue occurred. Use the Read tool to check the log for details.
 
 ### 5. Report Success
 

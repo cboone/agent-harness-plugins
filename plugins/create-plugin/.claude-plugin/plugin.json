@@ -9,5 +9,5 @@
   "name": "create-plugin",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "skills": "./skills",
-  "version": "1.1.2"
+  "version": "1.1.4"
 }
