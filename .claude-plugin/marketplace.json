@@ -105,7 +105,7 @@
       "name": "create-worktree-from-issue",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-worktree-from-issue",
-      "version": "1.1.4"
+      "version": "1.2.0"
     },
     {
       "author": {
@@ -189,7 +189,7 @@
       "name": "suggest-next-issue",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/suggest-next-issue",
-      "version": "1.0.1"
+      "version": "1.1.0"
     },
     {
       "author": {
