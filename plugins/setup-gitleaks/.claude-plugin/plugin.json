@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Set up gitleaks secret scanning with a GitHub Actions workflow and optional configuration.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["gitleaks", "github-actions", "scanning", "secrets", "security"],
+  "license": "MIT",
+  "name": "setup-gitleaks",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

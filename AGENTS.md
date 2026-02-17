@@ -141,6 +141,15 @@ cboone-cc-plugins/
     │               ├── release-workflow.md
     │               ├── root-go-viper.md
     │               └── root-go.md
+    ├── setup-gitleaks/             # Gitleaks secret scanning setup skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── setup-gitleaks/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── config.md
+    │               └── workflow.md
     ├── suggest-next-issue/         # Issue prioritization skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
