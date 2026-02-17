@@ -15,6 +15,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [PR](#pr)
 ∙ [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
 ∙ [Review Branch](#review-branch)
+∙ [Scaffold Go CLI](#scaffold-go-cli)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
 ∙ [Suggest Next Issue](#suggest-next-issue)
 <br>Languages:
@@ -107,6 +108,12 @@ Summarize all work done on the current branch compared to the base branch. Group
 Supports custom base references (`--since <ref>`), plan comparison (`--plan <path>`), and brief mode (`--brief`).
 
 > **Trigger:** `/review-branch`
+
+### Scaffold Go CLI
+
+Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions CI/CD, and Homebrew tap support. Generates main.go, cmd/root.go, go.mod, Makefile, .gitignore, .goreleaser.yml, CI and release workflows, LICENSE, README, and directory stubs. Supports optional Viper config management and Charmbracelet TUI dependencies.
+
+> **Trigger:** `/scaffold-go-cli`
 
 ### Scaffold New Repo
 

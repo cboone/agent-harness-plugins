@@ -117,6 +117,24 @@ cboone-cc-plugins/
     │               ├── gitignore.md
     │               ├── license.md
     │               └── readme.md
+    ├── scaffold-go-cli/            # Go CLI project scaffolding skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── scaffold-go-cli/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── ci-workflow.md
+    │               ├── gitignore.md
+    │               ├── go-mod.md
+    │               ├── goreleaser.md
+    │               ├── license.md
+    │               ├── main-go.md
+    │               ├── makefile.md
+    │               ├── readme.md
+    │               ├── release-workflow.md
+    │               ├── root-go-viper.md
+    │               └── root-go.md
     ├── suggest-next-issue/         # Issue prioritization skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
