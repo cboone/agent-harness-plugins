@@ -17,6 +17,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Suggest Next Issue](#suggest-next-issue)
 <br>Languages:
 [Write Go Code](#write-go-code)
+∙ [Write Markdown](#write-markdown)
 ∙ [Write Shell Scripts](#write-shell-scripts)
 
 **Hooks**
@@ -111,6 +112,12 @@ Go code style guide based on Google Go Style Guide, Effective Go, and Code Revie
 Organized into an essential checklist for quick reviews and comprehensive references by topic (naming, errors, concurrency, testing, code organization, data types, functions, interfaces).
 
 > **Trigger:** `/write-go-code` (also activates automatically)
+
+### Write Markdown
+
+Markdown style conventions for creating and editing Markdown files. Targets GitHub Flavored Markdown (GFM) and aligns with markdownlint-cli2 rules. Activates automatically when creating, editing, or reviewing Markdown files.
+
+> **Trigger:** `/write-markdown` (also activates automatically)
 
 ### Write Shell Scripts
 
