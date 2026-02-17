@@ -2,7 +2,7 @@
 
 Use this template for the project `README.md`. Replace `PROJECT-NAME` (kebab-case), `PROJECT-TITLE` (title case), and `PROJECT-DESCRIPTION` with the actual values.
 
-```markdown
+````markdown
 # PROJECT-TITLE
 
 PROJECT-DESCRIPTION
@@ -43,7 +43,7 @@ PROJECT-NAME
 ## License
 
 [MIT License](./LICENSE). TL;DR: Do whatever you want with this software, just keep the copyright notice included. The authors aren't liable if something goes wrong.
-```
+````
 
 ## Notes
 

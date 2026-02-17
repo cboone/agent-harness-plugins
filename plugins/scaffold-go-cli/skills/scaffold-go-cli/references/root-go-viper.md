@@ -6,7 +6,7 @@ Use this template when the user **does** want Viper config management. Replace `
 package cmd
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -54,10 +54,9 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
-		var notFound viper.ConfigFileNotFoundError
-		if !errors.As(err, &notFound) {
-			// Only surface unexpected errors; missing config is fine.
-			_ = err
+		// Missing config file is fine; surface unexpected errors (e.g., syntax).
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			fmt.Fprintf(os.Stderr, "Warning: config file error: %v\n", err)
 		}
 	}
 }
