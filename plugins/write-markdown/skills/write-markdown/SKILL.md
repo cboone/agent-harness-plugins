@@ -39,6 +39,12 @@ Read `./references/MARKDOWN.md` for the complete guide. Summary:
 - Indent nested lists consistently
 - Blank line before and after a list block (MD032)
 
+### Tables
+
+- Pad cells so pipe characters align vertically across all rows (MD060)
+- Leading and trailing pipes on every row (MD055)
+- Consistent column count across all rows (MD056)
+
 ### Code
 
 - Fenced code blocks with language identifier: ` ```js ` (MD040)
