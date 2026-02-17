@@ -4,5 +4,9 @@
     "plugin-dev@claude-plugins-official": true,
     "hookify@claude-plugins-official": true,
     "create-plugin@cboone-cc-plugins": true
+  },
+  "permissions": {
+    "allow": [],
+    "deny": []
   }
 }

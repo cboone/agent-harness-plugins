@@ -11,11 +11,14 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Commit](#commit)
 ∙ [Create Worktree](#create-worktree)
 ∙ [Create Worktree from Issue](#create-worktree-from-issue)
+∙ [Lint and Fix](#lint-and-fix)
 ∙ [Merge Main](#merge-main)
 ∙ [PR](#pr)
 ∙ [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
 ∙ [Review Branch](#review-branch)
+∙ [Scaffold Go CLI](#scaffold-go-cli)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
+∙ [Setup Gitleaks](#setup-gitleaks)
 ∙ [Suggest Next Issue](#suggest-next-issue)
 <br>Languages:
 [Write Go Code](#write-go-code)
@@ -80,6 +83,12 @@ Find a GitHub issue in the current repository (by number or fuzzy text search) a
 > **Trigger:** `/create-worktree-from-issue`
 > **Requires:** [`gh`](https://cli.github.com/), [`workmux`](https://github.com/paiml/workmux)
 
+### Lint and Fix
+
+Detect available linters and formatters in the project by checking for configuration files (ESLint, Prettier, markdownlint, ShellCheck, shfmt, Knip, and project-specific lint scripts). Run each detected tool with auto-fix flags, report what was fixed and what remains, then attempt to manually resolve remaining issues. Supports `--check` for dry runs, `--tool <name>` to target a single tool, and `--commit` / `--no-commit` to control post-fix commit behavior.
+
+> **Trigger:** `/lint-and-fix`
+
 ### Merge Main
 
 Fetch and merge the repository's base branch (usually `main`) into the current feature branch. Automatically detects the default branch, handles uncommitted changes, resolves merge conflicts, and optionally pushes after a successful merge.
@@ -108,11 +117,23 @@ Supports custom base references (`--since <ref>`), plan comparison (`--plan <pat
 
 > **Trigger:** `/review-branch`
 
+### Scaffold Go CLI
+
+Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions CI/CD, and Homebrew tap support. Generates main.go, cmd/root.go, go.mod, Makefile, .gitignore, .goreleaser.yml, CI and release workflows, LICENSE, README, and directory stubs. Supports optional Viper config management and Charmbracelet TUI dependencies.
+
+> **Trigger:** `/scaffold-go-cli`
+
 ### Scaffold New Repo
 
 Scaffold the universal boilerplate for any new repository, regardless of language. Generates LICENSE (MIT), README.md, a project-type-specific .gitignore, agent config files (AGENTS.md, CLAUDE.md symlink, `.claude/settings.json`, `.github/copilot-instructions.md`), and a `docs/plans/` directory. Infers the project type from an existing .gitignore when possible. Supports Go CLI, Go library, Shell, JavaScript, Ruby, and generic project types.
 
 > **Trigger:** `/scaffold-new-repo`
+
+### Setup Gitleaks
+
+Set up [gitleaks](https://github.com/gitleaks/gitleaks) secret scanning in a repository with a GitHub Actions workflow and optional `.gitleaks.toml` configuration. Detects whether the repository is organization-owned (requires a gitleaks license secret) or personal, and generates the appropriate workflow. Optionally creates a starter `.gitleaks.toml` with sensible defaults and example allowlist entries.
+
+> **Trigger:** `/setup-gitleaks`
 
 ### Suggest Next Issue
 

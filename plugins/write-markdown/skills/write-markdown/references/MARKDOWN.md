@@ -522,7 +522,29 @@ Use pipes and hyphens for tables. Surround tables with blank lines. Ensure consi
 | retries | number | 3       |
 ```
 
-Aligning columns in the source improves readability but is not required when the table is maintained programmatically.
+---
+
+### Table column alignment (MD060)
+
+Pad cell content so that pipe characters align vertically across all rows. Fill the delimiter row with hyphens to match the column width. This is the `aligned` style in markdownlint's MD060 rule and matches Prettier's default table formatting.
+
+```markdown
+<!-- Use: aligned columns -->
+
+| Name    | Type   | Default |
+| ------- | ------ | ------- |
+| timeout | number | 30      |
+| retries | number | 3       |
+```
+
+```markdown
+<!-- Avoid: ragged columns -->
+
+| Name | Type | Default |
+| --- | --- | --- |
+| timeout | number | 30 |
+| retries | number | 3 |
+```
 
 ---
 
@@ -670,4 +692,5 @@ Use headings to create a navigable outline. Do not use headings solely for visua
 Compiled by [Christopher Boone](https://cboone.github.io). Based on:
 
 - [markdownlint rules](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md) via [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2)
+- [Prettier Markdown support](https://prettier.io/blog/2017/11/07/1.8.0.html) (table alignment, prose wrapping)
 - [GitHub Flavored Markdown Spec](https://github.github.com/gfm/)
