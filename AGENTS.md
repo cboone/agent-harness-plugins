@@ -11,6 +11,12 @@ cboone-cc-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json            # Plugin registry for this repository
 └── plugins/
+    ├── address-review/              # Review feedback resolver skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── address-review/
+    │           └── SKILL.md
     ├── block-rm-rf/                 # Recursive rm blocker hook
     │   ├── .claude-plugin/
     │   │   └── plugin.json
