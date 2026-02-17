@@ -147,7 +147,7 @@
       "name": "suggest-next-issue",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/suggest-next-issue",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     {
       "author": {
