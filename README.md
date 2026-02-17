@@ -18,7 +18,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 [Write Go Code](#write-go-code)
 | [Write Shell Scripts](#write-shell-scripts)
 <br>**Hooks**
-[Block rm -rf](#block-rm-rf)
+[Block rm -rf](#block-rm--rf)
 | [Notify](#notify-macos)
 
 ## Installation
