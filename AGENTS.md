@@ -141,27 +141,32 @@ When adding new plugins:
 
 ### README ToC Format
 
-The README table of contents uses **one entry per line** to prevent merge conflicts when multiple branches add plugins simultaneously. Skills are organized into subcategories (Agents, Workflow, Languages). Each continuation link starts with `| ` (pipe-space) at the beginning of the line:
+The README table of contents uses **one entry per line** to prevent merge conflicts when multiple branches add plugins simultaneously. Skills are organized into subcategories (Agents, Workflow, Languages). Hooks are organized into subcategories (Security, Workflow). Each continuation link starts with `∙ ` (middle dot, space) at the beginning of the line:
 
 ```markdown
 **Skills**
-<br>_Agents_
+<br>Agents:
 [Skill A](#skill-a)
-| [Skill B](#skill-b)
-<br>_Workflow_
+∙ [Skill B](#skill-b)
+<br>Workflow:
 [Skill C](#skill-c)
-| [Skill D](#skill-d)
-<br>_Languages_
+∙ [Skill D](#skill-d)
+<br>Languages:
 [Skill E](#skill-e)
-<br>**Hooks**
+
+**Hooks**
+<br>Security:
 [Hook A](#hook-a)
+<br>Workflow:
+[Hook B](#hook-b)
 ```
 
 Rules:
 - Never put multiple links on the same line.
-- The first link in each subcategory has no leading pipe; subsequent links start with `| `.
-- Subcategory labels use `<br>_Name_` format.
-- Labels have no trailing colons.
+- The first link in each subcategory has no leading `∙`; subsequent links start with `∙ `.
+- Subcategory labels use `<br>Name:` format (plain text with trailing colon).
+- **Skills** and **Hooks** are separated by a blank line.
+- Hooks have their own subcategories (Security, Workflow).
 
 ### Versioning
 

@@ -3,24 +3,27 @@
 A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), from [Christopher Boone](https://cboone.github.io).
 
 **Skills**
-<br>_Agents_
+<br>Agents:
 [Clean Up Agent Config](#clean-up-agent-config)
-| [Create Plugin](#create-plugin)
-<br>_Workflow_
+∙ [Create Plugin](#create-plugin)
+<br>Workflow:
 [Commit](#commit)
-| [Create Worktree](#create-worktree)
-| [Create Worktree from Issue](#create-worktree-from-issue)
-| [Merge Main](#merge-main)
-| [PR](#pr)
-| [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
-| [Scaffold New Repo](#scaffold-new-repo)
-| [Suggest Next Issue](#suggest-next-issue)
-<br>_Languages_
+∙ [Create Worktree](#create-worktree)
+∙ [Create Worktree from Issue](#create-worktree-from-issue)
+∙ [Merge Main](#merge-main)
+∙ [PR](#pr)
+∙ [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
+∙ [Scaffold New Repo](#scaffold-new-repo)
+∙ [Suggest Next Issue](#suggest-next-issue)
+<br>Languages:
 [Write Go Code](#write-go-code)
-| [Write Shell Scripts](#write-shell-scripts)
-<br>**Hooks**
+∙ [Write Shell Scripts](#write-shell-scripts)
+
+**Hooks**
+<br>Security:
 [Block rm -rf](#block-rm--rf)
-| [Notify](#notify-macos)
+<br>Workflow:
+[Notify](#notify-macos)
 
 ## Installation
 
