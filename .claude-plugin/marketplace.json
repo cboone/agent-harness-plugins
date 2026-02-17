@@ -21,7 +21,7 @@
       "name": "clean-up-agent-config",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/clean-up-agent-config",
-      "version": "1.0.1"
+      "version": "1.0.2"
     },
     {
       "author": {

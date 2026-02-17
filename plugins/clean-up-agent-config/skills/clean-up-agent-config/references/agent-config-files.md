@@ -78,7 +78,7 @@ The `settings.json` files accept these key settings:
 
 ```json
 {
-  "$schema": "https://cdn.claude.ai/claude-code/settings.schema.json",
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": ["Read", "Grep", "Bash(npm test*)"],
     "deny": ["Edit(/secrets/*)"]

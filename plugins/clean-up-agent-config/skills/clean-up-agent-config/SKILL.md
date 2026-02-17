@@ -236,7 +236,7 @@ Create or update with team-appropriate settings:
 
 ```json
 {
-  "$schema": "https://cdn.claude.ai/claude-code/settings.schema.json",
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [],
     "deny": []
