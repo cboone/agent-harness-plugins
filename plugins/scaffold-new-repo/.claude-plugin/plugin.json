@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Scaffold the universal boilerplate for a new repository: LICENSE, README, .gitignore, agent config files, and a plans directory.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["boilerplate", "git", "project", "repo", "scaffolding"],
+  "license": "MIT",
+  "name": "scaffold-new-repo",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
