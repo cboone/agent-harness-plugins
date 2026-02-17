@@ -47,15 +47,18 @@ If the issue is open, signal that work is starting. Skip this step for closed is
 gh issue edit NUMBER --add-assignee @me
 ```
 
-**Add label:**
+**Ensure the label exists, then add it:**
 
 ```bash
+gh label create "in progress" --description "Work is actively being done" --color FBCA04 2>/dev/null || true
 gh issue edit NUMBER --add-label "in progress"
 ```
 
-Both commands are idempotent — safe to re-run if the assignee or label already exists. If the "in progress" label does not exist in the repository, `gh` creates it automatically.
+The `gh label create` command is safe to run even if the label already exists — `2>/dev/null` suppresses the "already exists" error and `|| true` ensures a zero exit code so the subsequent command always runs. This ensures the label is available before `gh issue edit --add-label` attempts to use it, since `gh` does **not** auto-create labels.
 
-If either command fails, warn the user but continue with worktree creation. Status marking is best-effort and must never block the primary workflow.
+Self-assignment is idempotent — safe to re-run if the assignee already exists.
+
+If any command fails, warn the user but continue with worktree creation. Status marking is best-effort and must never block the primary workflow.
 
 ### 3. Build the Branch Name
 

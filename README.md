@@ -11,9 +11,12 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Commit](#commit)
 ∙ [Create Worktree](#create-worktree)
 ∙ [Create Worktree from Issue](#create-worktree-from-issue)
+∙ [Lint and Fix](#lint-and-fix)
 ∙ [Merge Main](#merge-main)
 ∙ [PR](#pr)
 ∙ [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
+∙ [Review Branch](#review-branch)
+∙ [Scaffold Go CLI](#scaffold-go-cli)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
 ∙ [Suggest Next Issue](#suggest-next-issue)
 <br>Languages:
@@ -79,6 +82,12 @@ Find a GitHub issue in the current repository (by number or fuzzy text search) a
 > **Trigger:** `/create-worktree-from-issue`
 > **Requires:** [`gh`](https://cli.github.com/), [`workmux`](https://github.com/paiml/workmux)
 
+### Lint and Fix
+
+Detect available linters and formatters in the project by checking for configuration files (ESLint, Prettier, markdownlint, ShellCheck, shfmt, Knip, and project-specific lint scripts). Run each detected tool with auto-fix flags, report what was fixed and what remains, then attempt to manually resolve remaining issues. Supports `--check` for dry runs, `--tool <name>` to target a single tool, and `--commit` / `--no-commit` to control post-fix commit behavior.
+
+> **Trigger:** `/lint-and-fix`
+
 ### Merge Main
 
 Fetch and merge the repository's base branch (usually `main`) into the current feature branch. Automatically detects the default branch, handles uncommitted changes, resolves merge conflicts, and optionally pushes after a successful merge.
@@ -98,6 +107,20 @@ Commit all changes, push to remote, and create a GitHub pull request in one auto
 Process and resolve GitHub Copilot automated PR review comments. Fetches unresolved Copilot threads via GraphQL, categorizes them (nitpick, outdated, incorrect, valid, deferred), resolves threads, and updates Copilot instruction files under `.github/` (repo-wide `copilot-instructions.md` or path-specific `*.instructions.md`) when Copilot feedback is incorrect.
 
 > **Trigger:** `/resolve-copilot-pr-feedback`
+
+### Review Branch
+
+Summarize all work done on the current branch compared to the base branch. Groups changes by area/concern, lists new/modified/deleted files, and highlights notable changes (new dependencies, config changes, schema changes, API changes). Optionally compares progress against a plan document, reporting completed, in-progress, and remaining items with a completion percentage.
+
+Supports custom base references (`--since <ref>`), plan comparison (`--plan <path>`), and brief mode (`--brief`).
+
+> **Trigger:** `/review-branch`
+
+### Scaffold Go CLI
+
+Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions CI/CD, and Homebrew tap support. Generates main.go, cmd/root.go, go.mod, Makefile, .gitignore, .goreleaser.yml, CI and release workflows, LICENSE, README, and directory stubs. Supports optional Viper config management and Charmbracelet TUI dependencies.
+
+> **Trigger:** `/scaffold-go-cli`
 
 ### Scaffold New Repo
 
