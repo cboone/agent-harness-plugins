@@ -1,17 +1,20 @@
 # Markdown Style Guide
 
-[Document structure](#document-structure) · [Headings](#headings) · [Paragraphs](#paragraphs) · [Line length](#line-length) · [Emphasis](#emphasis) · [Links](#links) · [Images](#images) · [Lists](#lists) · [Code](#code) · [Block quotes](#block-quotes) · [Tables](#tables) · [Horizontal rules](#horizontal-rules) · [HTML](#html) · [Whitespace](#whitespace) · [File naming](#file-naming) · [Accessibility](#accessibility)
+[Document structure](#document-structure) · [Headings](#headings) · [Paragraphs](#paragraphs) · [Emphasis](#emphasis) · [Links](#links) · [Images](#images) · [Lists](#lists) · [Code](#code) · [Block quotes](#block-quotes) · [Tables](#tables) · [Horizontal rules](#horizontal-rules) · [HTML](#html) · [Whitespace](#whitespace) · [File naming](#file-naming) · [Accessibility](#accessibility)
+
+This guide targets GitHub Flavored Markdown (GFM) and aligns with markdownlint-cli2 rules. Rule IDs (MD001, MD003, etc.) are noted for cross-reference with markdownlint configuration.
 
 ---
 
 ## Document structure
 
-### Single top-level heading
+### Single top-level heading (MD025)
 
 Use exactly one `#` heading per document. It serves as the document title.
 
 ```markdown
 <!-- Use -->
+
 # Project README
 
 ## Installation
@@ -21,12 +24,15 @@ Use exactly one `#` heading per document. It serves as the document title.
 
 ```markdown
 <!-- Avoid: multiple top-level headings -->
+
 # Project README
 
 # Installation
 
 # Usage
 ```
+
+When using YAML front matter with a `title` field (e.g., in Hugo or Jekyll), the front matter title can satisfy this rule. Configure MD041 with `front_matter_title` accordingly.
 
 ---
 
@@ -45,7 +51,7 @@ date: 2025-01-15
 
 ---
 
-### Trailing newline
+### Trailing newline (MD047)
 
 End every file with exactly one newline character. Most editors and linters enforce this.
 
@@ -53,33 +59,34 @@ End every file with exactly one newline character. Most editors and linters enfo
 
 ## Headings
 
-### ATX-style headings
+### ATX-style headings (MD003)
 
 Use ATX-style (`#`) headings. Never use Setext-style (underline) headings.
 
-| Use           | Avoid                         |
-| ------------- | ----------------------------- |
-| `# Heading`   | `Heading`<br>`=======`        |
-| `## Heading`  | `Heading`<br>`-------`        |
+| Use          | Avoid                  |
+| ------------ | ---------------------- |
+| `# Heading`  | `Heading`<br>`=======` |
+| `## Heading` | `Heading`<br>`-------` |
 
 ---
 
-### Heading spacing
+### Heading spacing (MD018, MD019)
 
-Include a space after the `#` characters.
+Include exactly one space after the `#` characters.
 
-| Use          | Avoid     |
-| ------------ | --------- |
+| Use          | Avoid       |
+| ------------ | ----------- |
 | `## Heading` | `##Heading` |
 
 ---
 
-### Blank lines around headings
+### Blank lines around headings (MD022)
 
 Add a blank line before and after every heading.
 
 ```markdown
 <!-- Use -->
+
 Some paragraph text.
 
 ## Next Section
@@ -89,6 +96,7 @@ More text here.
 
 ```markdown
 <!-- Avoid -->
+
 Some paragraph text.
 ## Next Section
 More text here.
@@ -96,25 +104,25 @@ More text here.
 
 ---
 
-### Do not skip heading levels
+### Do not skip heading levels (MD001)
 
 Heading levels should increment by one. Do not skip from `##` to `####`.
 
-| Use                              | Avoid                              |
-| -------------------------------- | ---------------------------------- |
-| `##` then `###` then `####`      | `##` then `####`                   |
+| Use                         | Avoid            |
+| --------------------------- | ---------------- |
+| `##` then `###` then `####` | `##` then `####` |
 
 ---
 
-### No trailing punctuation
+### No trailing punctuation (MD026)
 
 Do not end headings with periods or colons. Question marks and exclamation marks are acceptable when they are part of the heading's meaning.
 
-| Use                | Avoid                |
-| ------------------ | -------------------- |
-| `## Installation`  | `## Installation.`   |
-| `## Installation`  | `## Installation:`   |
-| `## Why Markdown?` | (acceptable)         |
+| Use                | Avoid              |
+| ------------------ | ------------------ |
+| `## Installation`  | `## Installation.` |
+| `## Installation`  | `## Installation:` |
+| `## Why Markdown?` | (acceptable)       |
 
 ---
 
@@ -122,15 +130,37 @@ Do not end headings with periods or colons. Question marks and exclamation marks
 
 Do not make an entire heading inline code. Use inline code only for identifiers within headings.
 
-| Use                          | Avoid               |
-| ---------------------------- | -------------------- |
-| `## The \`config\` object`   | `` ## `config` ``    |
+| Use                        | Avoid             |
+| -------------------------- | ----------------- |
+| `## The \`config\` object` | `` ## `config` `` |
 
 ---
 
-### Unique headings
+### Sibling heading uniqueness (MD024)
 
-Each heading within a document should be unique. Duplicate headings produce conflicting anchor links.
+Headings should be unique among their siblings (headings at the same level under the same parent). The same heading text may appear in different sections.
+
+```markdown
+<!-- Acceptable: same heading text under different parents -->
+
+## Setup
+
+### Prerequisites
+
+## Deployment
+
+### Prerequisites
+```
+
+```markdown
+<!-- Avoid: duplicate siblings under the same parent -->
+
+## Setup
+
+### Step One
+
+### Step One
+```
 
 ---
 
@@ -142,6 +172,7 @@ Separate paragraphs with a single blank line.
 
 ```markdown
 <!-- Use -->
+
 First paragraph.
 
 Second paragraph.
@@ -149,80 +180,54 @@ Second paragraph.
 
 ```markdown
 <!-- Avoid -->
+
 First paragraph.
 Second paragraph.
 ```
 
 ---
 
-### No indented paragraphs
+### No indented paragraphs (MD023)
 
 Do not indent the first line of a paragraph. Indented text can be interpreted as a code block.
 
-| Use                | Avoid                    |
-| ------------------ | ------------------------ |
-| `Regular text.`    | `    Indented text.`     |
-
----
-
-## Line length
-
-### Wrap long lines
-
-Wrap prose lines at a consistent length (80-100 characters) when the project enforces it. This improves readability in terminals and diff views.
-
----
-
-### Sentence-per-line
-
-In version-controlled documents, one sentence per line is an acceptable alternative. It produces cleaner diffs when sentences are added, removed, or reworded.
-
-```markdown
-<!-- Sentence per line -->
-Markdown is a lightweight markup language.
-It was created by John Gruber in 2004.
-The goal was readability in plain text form.
-```
-
----
-
-### Do not break within a sentence
-
-Whichever wrapping style is used, do not break in the middle of a sentence at arbitrary points. Break at sentence boundaries or at the line length limit.
+| Use             | Avoid                |
+| --------------- | -------------------- |
+| `Regular text.` | `    Indented text.` |
 
 ---
 
 ## Emphasis
 
-### Bold and italic markers
+### Bold and italic markers (MD049, MD050)
 
 Use `**` for bold and `_` for italic. This convention avoids ambiguity with `*` and `__`.
 
-| Use              | Avoid            |
-| ---------------- | ---------------- |
-| `**bold text**`  | `__bold text__`  |
-| `_italic text_`  | `*italic text*`  |
+| Use             | Avoid           |
+| --------------- | --------------- |
+| `**bold text**` | `__bold text__` |
+| `_italic text_` | `*italic text*` |
 
 ---
 
-### No emphasis in headings
+### No emphasis in headings (MD036)
 
-Avoid emphasis markers inside headings. The heading level already provides visual distinction.
+Avoid emphasis markers inside headings. The heading level already provides visual distinction. Do not use bold text as a substitute for headings.
 
-| Use             | Avoid               |
-| --------------- | -------------------- |
-| `## Overview`   | `## **Overview**`    |
+| Use           | Avoid             |
+| ------------- | ----------------- |
+| `## Overview` | `## **Overview**` |
 
 ---
 
-### No empty emphasis
+### No empty emphasis (MD037)
 
 Do not use emphasis markers around whitespace or empty strings.
 
-| Use            | Avoid  |
-| -------------- | ------ |
-| (omit)         | `** **` |
-| (omit)         | `____`  |
+| Use    | Avoid   |
+| ------ | ------- |
+| (omit) | `** **` |
+| (omit) | `____`  |
 
 ---
 
@@ -257,37 +262,39 @@ Place reference link definitions at the end of the document or at the end of the
 
 ---
 
+### Defined reference links (MD052, MD053)
+
+Every reference link must have a corresponding definition, and every definition should be used. Unused definitions are dead weight; undefined references break links silently.
+
+---
+
 ### Meaningful link text
 
 Use descriptive link text. Avoid "click here", "here", "this", or bare URLs as link text.
 
-| Use                                             | Avoid                                        |
-| ------------------------------------------------ | -------------------------------------------- |
-| `See the [installation guide](url).`             | `Click [here](url) to install.`              |
-| `Read the [API reference](url) for details.`     | `Details: [https://example.com/api](url)`     |
+| Use                                          | Avoid                                     |
+| -------------------------------------------- | ----------------------------------------- |
+| `See the [installation guide](url).`         | `Click [here](url) to install.`           |
+| `Read the [API reference](url) for details.` | `Details: [https://example.com/api](url)` |
 
 ---
 
-### Angle bracket autolinks
+### No empty links (MD042)
 
-Use angle brackets for literal URLs that should be clickable.
-
-| Use                          | Avoid                    |
-| ---------------------------- | ------------------------ |
-| `<https://example.com>`      | `https://example.com`    |
+Every link must have both a URL and link text.
 
 ---
 
 ## Images
 
-### Alt text
+### Alt text (MD045)
 
 Always include descriptive alt text for images.
 
-| Use                                    | Avoid                  |
-| -------------------------------------- | ---------------------- |
-| `![Diagram of auth flow](auth.png)`    | `![](auth.png)`        |
-| `![Screenshot of dashboard](dash.png)` | `![image](dash.png)`   |
+| Use                                    | Avoid                |
+| -------------------------------------- | -------------------- |
+| `![Diagram of auth flow](auth.png)`    | `![](auth.png)`      |
+| `![Screenshot of dashboard](dash.png)` | `![image](dash.png)` |
 
 ---
 
@@ -303,23 +310,24 @@ To make an image clickable, wrap the image syntax in a link.
 
 ## Lists
 
-### Unordered list markers
+### Unordered list markers (MD004)
 
 Use `-` (hyphen) for unordered list items. Be consistent throughout the document.
 
-| Use         | Avoid       |
-| ----------- | ----------- |
-| `- Item`    | `* Item`    |
-| `- Item`    | `+ Item`    |
+| Use      | Avoid    |
+| -------- | -------- |
+| `- Item` | `* Item` |
+| `- Item` | `+ Item` |
 
 ---
 
-### Ordered list numbering
+### Ordered list numbering (MD029)
 
 Use `1.` for every item in ordered lists. The renderer handles the numbering, and this avoids renumbering when items are added or removed.
 
 ```markdown
 <!-- Use -->
+
 1. First item
 1. Second item
 1. Third item
@@ -327,6 +335,7 @@ Use `1.` for every item in ordered lists. The renderer handles the numbering, an
 
 ```markdown
 <!-- Avoid: manual numbering -->
+
 1. First item
 2. Second item
 3. Third item
@@ -334,7 +343,7 @@ Use `1.` for every item in ordered lists. The renderer handles the numbering, an
 
 ---
 
-### List indentation
+### List indentation (MD005, MD007)
 
 Indent nested lists consistently, using the same number of spaces throughout the document (2 or 4 spaces).
 
@@ -346,12 +355,13 @@ Indent nested lists consistently, using the same number of spaces throughout the
 
 ---
 
-### Blank lines around lists
+### Blank lines around lists (MD032)
 
 Add a blank line before and after a list block.
 
 ```markdown
 <!-- Use -->
+
 Introductory text.
 
 - First item
@@ -362,6 +372,7 @@ Following paragraph.
 
 ```markdown
 <!-- Avoid -->
+
 Introductory text.
 - First item
 - Second item
@@ -386,7 +397,7 @@ When list items contain multiple paragraphs or complex content, add blank lines 
 
 ### Task lists
 
-Use `- [ ]` and `- [x]` for task lists. Keep a space inside the brackets for unchecked items.
+Use `- [ ]` and `- [x]` for task lists. Keep a space inside the brackets for unchecked items. This is a GFM extension.
 
 ```markdown
 - [x] Write the introduction
@@ -398,48 +409,56 @@ Use `- [ ]` and `- [x]` for task lists. Keep a space inside the brackets for unc
 
 ## Code
 
-### Inline code
+### Inline code (MD038)
 
-Use backticks for inline code: commands, function names, variable names, file paths, and short expressions.
+Use backticks for inline code: commands, function names, variable names, file paths, and short expressions. Do not pad with spaces inside the backticks.
 
-| Use                       | Avoid                  |
-| ------------------------- | ---------------------- |
-| `Run \`npm install\``     | `Run "npm install"`    |
-| `The \`config\` object`   | `The config object`    |
+| Use                     | Avoid               |
+| ----------------------- | ------------------- |
+| `Run \`npm install\``   | `Run "npm install"` |
+| `The \`config\` object` | `The config object` |
 
 ---
 
-### Fenced code blocks
+### Fenced code blocks (MD046, MD031)
 
-Use triple-backtick fenced code blocks, not indented code blocks. Always specify a language identifier.
+Use triple-backtick fenced code blocks, not indented code blocks. Surround them with blank lines. Always specify a language identifier.
 
 ````markdown
 <!-- Use -->
+
 ```python
 def hello():
     print("Hello, world!")
 ```
 ````
 
-````markdown
+```markdown
 <!-- Avoid: indented code block, no language -->
+
     def hello():
         print("Hello, world!")
-````
+```
 
 ---
 
-### Language identifiers
+### Language identifiers (MD040)
 
 Always include a language identifier on fenced code blocks for syntax highlighting and tooling.
 
-| Use               | Avoid    |
-| ----------------- | -------- |
-| ` ```javascript ` | ` ``` `  |
-| ` ```bash `       | ` ``` `  |
-| ` ```text `       | ` ``` `  |
+| Use               | Avoid   |
+| ----------------- | ------- |
+| ` ```javascript ` | ` ``` ` |
+| ` ```bash `       | ` ``` ` |
+| ` ```text `       | ` ``` ` |
 
 Use `text` when no syntax highlighting applies.
+
+---
+
+### Code fence style (MD048)
+
+Use backtick fences (` ``` `), not tilde fences (`~~~`). Be consistent throughout the document.
 
 ---
 
@@ -459,17 +478,11 @@ All tests passed.
 
 ---
 
-### No code blocks inside headings
-
-Do not place fenced code blocks inside headings.
-
----
-
 ## Block quotes
 
-### Block quote markers
+### Block quote markers (MD027)
 
-Use `>` followed by a space for block quotes.
+Use `>` followed by a single space for block quotes.
 
 ```markdown
 > This is a block quote.
@@ -498,9 +511,9 @@ Nest block quotes with additional `>` markers. Limit nesting depth to maintain r
 
 ## Tables
 
-### Table alignment
+### Table syntax (MD055, MD056, MD058)
 
-Use pipes and hyphens for tables. Align columns for readability in the source, but do not obsess over exact alignment when the table is maintained programmatically.
+Use pipes and hyphens for tables. Surround tables with blank lines. Ensure consistent column counts across rows.
 
 ```markdown
 | Name    | Type   | Default |
@@ -508,6 +521,8 @@ Use pipes and hyphens for tables. Align columns for readability in the source, b
 | timeout | number | 30      |
 | retries | number | 3       |
 ```
+
+Aligning columns in the source improves readability but is not required when the table is maintained programmatically.
 
 ---
 
@@ -521,18 +536,20 @@ Always include a header row and separator row.
 
 Keep tables simple. If a table requires complex formatting or embedded code blocks, consider using a list or definition structure instead.
 
+Tables are a GFM extension.
+
 ---
 
 ## Horizontal rules
 
-### Horizontal rule syntax
+### Horizontal rule syntax (MD035)
 
 Use `---` (three hyphens) for horizontal rules. Be consistent throughout the document.
 
-| Use   | Avoid   |
-| ----- | ------- |
-| `---` | `***`   |
-| `---` | `___`   |
+| Use   | Avoid |
+| ----- | ----- |
+| `---` | `***` |
+| `---` | `___` |
 
 ---
 
@@ -544,47 +561,56 @@ Add a blank line before and after horizontal rules to prevent them from being in
 
 ## HTML
 
-### Avoid raw HTML
+### Prefer Markdown syntax
 
-Avoid inline HTML in Markdown files. Use Markdown syntax wherever possible.
+When Markdown has equivalent syntax, prefer it over HTML.
 
-| Use                   | Avoid                    |
-| --------------------- | ------------------------ |
-| `**bold**`            | `<strong>bold</strong>`  |
-| `[link](url)`         | `<a href="url">link</a>` |
+| Use           | Avoid                   |
+| ------------- | ----------------------- |
+| `**bold**`    | `<strong>bold</strong>` |
+| `[link](url)` | `<a href="url">link</a>` |
 
 ---
 
-### Acceptable HTML
+### HTML for features Markdown lacks
 
-Some HTML is acceptable when Markdown has no equivalent: `<details>`, `<summary>`, `<kbd>`, `<br>`, `<sub>`, `<sup>`, and definition lists (`<dl>`, `<dt>`, `<dd>`).
+HTML is acceptable and often necessary when Markdown has no equivalent. Common uses include:
+
+- `<details>` and `<summary>` for collapsible sections
+- `<kbd>` for keyboard shortcuts
+- `<br>` for line breaks (especially in table cells and ToC formatting)
+- `<sub>` and `<sup>` for subscript and superscript
+- `<dl>`, `<dt>`, `<dd>` for definition lists
+- `<picture>` and `<source>` for responsive images
+
+Projects that use HTML in Markdown should disable MD033 in their markdownlint configuration.
 
 ---
 
 ## Whitespace
 
-### No trailing whitespace
+### No trailing whitespace (MD009)
 
 Remove trailing whitespace from all lines. Configure your editor to strip trailing whitespace on save.
 
 Exception: In Markdown, two trailing spaces create a hard line break. Prefer a backslash (`\`) or a blank line instead, as trailing spaces are invisible and fragile.
 
-| Use               | Avoid                         |
-| ----------------- | ----------------------------- |
-| `line one\`       | `line one  ` (two spaces)     |
-| (blank line)      | `line one  ` (two spaces)     |
+| Use          | Avoid                     |
+| ------------ | ------------------------- |
+| `line one\`  | `line one  ` (two spaces) |
+| (blank line) | `line one  ` (two spaces) |
 
 ---
 
-### No multiple consecutive blank lines
-
-Use at most one blank line to separate elements.
-
----
-
-### Consistent indentation
+### No hard tabs (MD010)
 
 Use spaces, not tabs, for indentation in Markdown content. Match the project's indentation width (commonly 2 or 4 spaces).
+
+---
+
+### No multiple consecutive blank lines (MD012)
+
+Use at most one blank line to separate elements.
 
 ---
 
@@ -594,10 +620,10 @@ Use spaces, not tabs, for indentation in Markdown content. Match the project's i
 
 Name Markdown files in lowercase with hyphens as word separators.
 
-| Use                      | Avoid                       |
-| ------------------------ | --------------------------- |
-| `getting-started.md`     | `Getting Started.md`        |
-| `api-reference.md`       | `API_Reference.md`          |
+| Use                  | Avoid                |
+| -------------------- | -------------------- |
+| `getting-started.md` | `Getting Started.md` |
+| `api-reference.md`   | `API_Reference.md`   |
 
 Exception: conventional filenames like `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, and `LICENSE.md` remain uppercase.
 
@@ -607,10 +633,10 @@ Exception: conventional filenames like `README.md`, `CHANGELOG.md`, `CONTRIBUTIN
 
 Use the `.md` extension, not `.markdown` or `.mdown`.
 
-| Use              | Avoid                  |
-| ---------------- | ---------------------- |
-| `readme.md`      | `readme.markdown`      |
-| `guide.md`       | `guide.mdown`          |
+| Use         | Avoid             |
+| ----------- | ----------------- |
+| `readme.md` | `readme.markdown` |
+| `guide.md`  | `guide.mdown`     |
 
 ---
 
@@ -620,10 +646,10 @@ Use the `.md` extension, not `.markdown` or `.mdown`.
 
 Screen readers often present links out of context. Write link text that makes sense in isolation.
 
-| Use                                        | Avoid                            |
-| ------------------------------------------ | -------------------------------- |
-| `See the [style guide](url).`              | `[Click here](url) for style.`  |
-| `Read [Effective Go](url) for guidance.`   | `Read about it [here](url).`    |
+| Use                                      | Avoid                          |
+| ---------------------------------------- | ------------------------------ |
+| `See the [style guide](url).`            | `[Click here](url) for style.` |
+| `Read [Effective Go](url) for guidance.` | `Read about it [here](url).`   |
 
 ---
 
@@ -641,9 +667,7 @@ Use headings to create a navigable outline. Do not use headings solely for visua
 
 ## Sources
 
-Compiled by [Christopher Boone](https://cboone.github.io). Based on some of each of the following:
+Compiled by [Christopher Boone](https://cboone.github.io). Based on:
 
-- [Google Markdown Style Guide](https://google.github.io/styleguide/docguide/style.html)
-- [Cirosantilli Markdown Style Guide](https://cirosantilli.com/markdown-style-guide)
-- [markdownlint Rules](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md)
-- [CommonMark Spec](https://spec.commonmark.org/)
+- [markdownlint rules](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md) via [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2)
+- [GitHub Flavored Markdown Spec](https://github.github.com/gfm/)
