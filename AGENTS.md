@@ -227,7 +227,7 @@ This repository uses two levels of semver versioning:
 - New plugins start at `1.0.0`
 - The version in `plugin.json` and its `marketplace.json` entry must always match
 
-**Version checks on branch operations**: After merging, rebasing, or before creating a PR, always review `plugin.json` and `marketplace.json` for version conflicts or missed bumps. Another branch may have already incremented a version, so verify that all version numbers are correct and consistent.
+**Version checks on branch operations**: After merging, rebasing, or before creating a PR, read and follow the procedure in `.claude/skills/check-versions.md` to verify version correctness. Another branch may have already incremented a version, so always check.
 
 ## License
 
