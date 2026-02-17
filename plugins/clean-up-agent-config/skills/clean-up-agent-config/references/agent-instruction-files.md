@@ -127,7 +127,7 @@ Brief description: what this is, what it does, key architectural decisions.
 
 ## Git Workflow
 - Conventional commits; one issue per PR
-- Run `pnpm lint && pnpm test` before committing
+- Run `pnpm lint` and `pnpm test` before committing
 ```
 
 Keep it under 200 lines. If you need more detail, use references or skills.
