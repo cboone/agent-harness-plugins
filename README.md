@@ -23,6 +23,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 [Write Go Code](#write-go-code)
 ∙ [Write Markdown](#write-markdown)
 ∙ [Write Shell Scripts](#write-shell-scripts)
+<br>Security:
+[Handle Secrets](#handle-secrets)
 
 **Hooks**
 <br>Security:
@@ -81,6 +83,14 @@ Find a GitHub issue in the current repository (by number or fuzzy text search) a
 
 > **Trigger:** `/create-worktree-from-issue`
 > **Requires:** [`gh`](https://cli.github.com/), [`workmux`](https://github.com/paiml/workmux)
+
+### Handle Secrets
+
+Best practices for handling secrets that users pass to your CLI tool (API keys, tokens, passwords). Covers the full security hierarchy of input methods (from OS keychains down to the never-use-CLI-arguments rule), credential storage patterns, secret masking in output, and the credential resolution fallback chain. Activates automatically when building CLI tools that accept credentials.
+
+Organized into an actionable checklist for quick reviews and comprehensive references by topic (security hierarchy, design patterns, anti-patterns, language-specific libraries for Rust, Go, Python, Node.js, and Ruby).
+
+> **Trigger:** `/handle-secrets` (also activates automatically)
 
 ### Lint and Fix
 
