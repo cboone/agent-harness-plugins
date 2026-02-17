@@ -5,18 +5,43 @@ Choose the template matching the project type. Every template includes the commo
 ## Common (included in all templates)
 
 ```gitignore
+# System
 .DS_Store
-.env
+
+# Agent config
 .claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
 ```
 
 ## Go CLI
 
 ```gitignore
-# Common
+# System
 .DS_Store
-.env
+
+# Agent config
 .claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
 
 # Go
 *.exe
@@ -32,10 +57,22 @@ dist/
 ## Go Library
 
 ```gitignore
-# Common
+# System
 .DS_Store
-.env
+
+# Agent config
 .claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
 
 # Go
 *.exe
@@ -49,19 +86,44 @@ go.work.sum
 ## Shell
 
 ```gitignore
-# Common
+# System
 .DS_Store
-.env
+
+# Agent config
 .claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
 ```
 
 ## JavaScript
 
 ```gitignore
-# Common
+# System
 .DS_Store
-.env
+
+# Agent config
 .claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
+.npmrc
 
 # JavaScript
 node_modules/
@@ -71,10 +133,24 @@ node_modules/
 ## Ruby
 
 ```gitignore
-# Common
+# System
 .DS_Store
-.env
+
+# Agent config
 .claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
+config/master.key
+config/credentials/*.key
 
 # Ruby
 *.code-workspace
@@ -83,14 +159,30 @@ node_modules/
 ## Generic
 
 ```gitignore
-# Common
+# System
 .DS_Store
-.env
+
+# Agent config
 .claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
 ```
 
 ## Notes
 
 - Templates are intentionally minimal -- add project-specific entries as needed.
 - The common entries appear in every template and should not be removed.
+- The secrets block covers environment files, cryptographic keys, and service credentials.
+- `.env.*` catches variants like `.env.local`, `.env.production`, `.env.staging`, etc. The `!.env.example` and `!.env.sample` negations allow committing safe template env files.
+- JavaScript adds `.npmrc` because it can contain registry auth tokens.
+- Ruby adds `config/master.key` and `config/credentials/*.key` for Rails encrypted credentials.
 - Go CLI includes `bin/` and `dist/` for build outputs; Go library omits them.
