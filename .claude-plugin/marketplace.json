@@ -111,6 +111,20 @@
       "author": {
         "name": "Christopher Boone"
       },
+      "category": "code-quality",
+      "description": "Detect project linters and formatters, run them with auto-fix, and resolve remaining issues.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["eslint", "formatting", "linting", "prettier", "shellcheck", "shfmt"],
+      "license": "MIT",
+      "name": "lint-and-fix",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/lint-and-fix",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
       "category": "productivity",
       "description": "Fetch and merge the base branch into the current feature branch with automatic conflict resolution.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",

@@ -55,6 +55,12 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── create-worktree-from-issue/
     │           └── SKILL.md
+    ├── lint-and-fix/                # Lint and format auto-fixer skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── lint-and-fix/
+    │           └── SKILL.md
     ├── merge-main/                  # Base branch merge skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
