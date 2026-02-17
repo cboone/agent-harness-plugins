@@ -11,6 +11,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 | [Create Worktree](#create-worktree)
 | [Create Worktree from Issue](#create-worktree-from-issue)
 | [Merge Main](#merge-main)
+| [PR](#pr)
 | [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
 | [Suggest Next Issue](#suggest-next-issue)
 <br>_Languages_
@@ -35,6 +36,7 @@ Or you can run more direct commands from within `claude`:
 /plugin install create-worktree-from-issue@cboone/cboone-cc-plugins
 /plugin install merge-main@cboone/cboone-cc-plugins
 /plugin install notify@cboone/cboone-cc-plugins
+/plugin install pr@cboone/cboone-cc-plugins
 /plugin install resolve-copilot-pr-feedback@cboone/cboone-cc-plugins
 /plugin install suggest-next-issue@cboone/cboone-cc-plugins
 /plugin install write-go-code@cboone/cboone-cc-plugins
@@ -86,6 +88,14 @@ Fetch and merge the repository's base branch (usually `main`) into the current f
 You can trigger it directly via `/merge-main`.
 
 Requires [`gh`](https://cli.github.com/) to be installed (falls back to `git remote show origin` if unavailable).
+
+### PR
+
+Commit all changes, push to remote, and create a GitHub pull request in one automated step with no prompts. Stages everything, generates a conventional commit message from the diff, pushes the branch, and opens a PR with an auto-generated title and summary. Handles branches with no upstream, skips the commit step when the working tree is clean, and detects when a PR already exists.
+
+You can trigger it directly via `/pr`.
+
+Requires [`gh`](https://cli.github.com/) to be installed.
 
 ### Resolve Copilot PR Feedback
 

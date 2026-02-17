@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Commit, push, and create a pull request in one step with no prompts.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["git", "github", "pull-requests", "workflow"],
+  "license": "MIT",
+  "name": "pr",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.1"
+}
