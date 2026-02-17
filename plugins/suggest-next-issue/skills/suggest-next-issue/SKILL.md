@@ -88,7 +88,7 @@ Present the top N issues (default 5) organized by category:
 
 For each recommendation, include:
 
-1. Issue number and title (as a link: `#N - Title`)
+1. Issue number and title text (e.g., `#23 - Fix typo in help output`). Use the `title` field from the JSON, not the issue URL.
 2. Labels and age
 3. What it is: a brief summary of the issue (1-2 sentences distilled from the issue body, so the user understands the scope and substance without having to open the issue)
 4. Why it's recommended (1-2 sentences with specific reasoning)
