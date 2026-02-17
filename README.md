@@ -11,6 +11,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Commit](#commit)
 ∙ [Create Worktree](#create-worktree)
 ∙ [Create Worktree from Issue](#create-worktree-from-issue)
+∙ [Lint and Fix](#lint-and-fix)
 ∙ [Merge Main](#merge-main)
 ∙ [PR](#pr)
 ∙ [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
@@ -78,6 +79,12 @@ Find a GitHub issue in the current repository (by number or fuzzy text search) a
 
 > **Trigger:** `/create-worktree-from-issue`
 > **Requires:** [`gh`](https://cli.github.com/), [`workmux`](https://github.com/paiml/workmux)
+
+### Lint and Fix
+
+Detect available linters and formatters in the project by checking for configuration files (ESLint, Prettier, markdownlint, ShellCheck, shfmt, Knip, and project-specific lint scripts). Run each detected tool with auto-fix flags, report what was fixed and what remains, then attempt to manually resolve remaining issues. Supports `--check` for dry runs, `--tool <name>` to target a single tool, and `--commit` / `--no-commit` to control post-fix commit behavior.
+
+> **Trigger:** `/lint-and-fix`
 
 ### Merge Main
 
