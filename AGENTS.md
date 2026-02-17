@@ -120,6 +120,7 @@ cboone-cc-plugins/
     │           ├── SKILL.md
     │           └── references/
     │               ├── agents-md.md
+    │               ├── copilot-instructions-md.md
     │               ├── gitignore.md
     │               ├── license.md
     │               └── readme.md

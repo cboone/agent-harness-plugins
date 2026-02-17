@@ -254,20 +254,31 @@ If settings.local.json does not exist and there are no personal settings to move
 
 #### 4f. .github/copilot-instructions.md
 
-Create or update with Copilot-specific content. This file should NOT duplicate AGENTS.md. Instead:
+Create or update with Copilot-specific content. This file should NOT duplicate AGENTS.md. Instead, use the pointer pattern: a cross-reference to AGENTS.md plus Copilot-specific PR review rules.
 
 ```markdown
-# Copilot Instructions
+# GitHub Copilot Instructions
 
 For full project conventions, see AGENTS.md in the repository root.
 
-## Code Review
+## PR Review
 
-- [Project-specific code review rules]
-- [Patterns that Copilot commonly flags incorrectly in this project]
+When reviewing pull requests, do not flag the following patterns as issues.
+Each is an intentional project convention:
+
+- **Convention name**: Brief explanation of why this is intentional.
 ```
 
-**Keep concise.** Copilot may not read the full file. Put the most important review rules first. Start with 10-20 specific, actionable instructions.
+**Keep concise.** GitHub recommends keeping instruction files short and putting the most important rules first. Start with a focused set of review rules and add more iteratively.
+
+**The "do not flag" pattern.** The PR Review section documents project conventions that Copilot commonly misidentifies as issues during PR reviews. Each item uses the bold-key format (`**Convention name**: explanation`). To populate this section for an existing project:
+
+1. Check the project's PR history for recurring false-positive Copilot review comments
+2. Review AGENTS.md, CLAUDE.md, and any existing code review documentation for conventions that an external reviewer might question
+3. Look for intentional patterns that deviate from common defaults (e.g., non-standard error handling, unconventional file locations, domain-specific naming)
+4. Start with 3-5 items and add more as Copilot flags new false positives over time
+
+**Section heading.** Use `## PR Review` as the heading. Some repos use `## PR Review Checklist (CRITICAL)` or `## Code Review` -- all are acceptable. The key requirement is that PR review rules appear early in the file.
 
 #### 4g. .github/instructions/*.instructions.md (path-scoped)
 
