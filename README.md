@@ -110,7 +110,7 @@ Supports custom base references (`--since <ref>`), plan comparison (`--plan <pat
 
 ### Scaffold New Repo
 
-Scaffold the universal boilerplate for any new repository, regardless of language. Generates LICENSE (MIT), README.md, a project-type-specific .gitignore, agent config files (AGENTS.md, CLAUDE.md symlink, `.claude/settings.json`, `.github/copilot-instructions.md`), and a `docs/plans/` directory. Infers the project type from an existing .gitignore when possible. Supports Go CLI, Go library, Shell, JavaScript, Ruby, and generic project types.
+Scaffold the universal boilerplate for any new repository, regardless of language. Generates LICENSE (MIT), README.md, a project-type-specific .gitignore, agent config files (AGENTS.md, CLAUDE.md symlink, `.claude/settings.json`, `.github/copilot-instructions.md`), and a `docs/plans/` directory. Infers the project type from an existing .gitignore when possible. Supports Go CLI, Go library, JavaScript, Pascal, Python, Ruby, Rust, Shell, Swift, and generic project types, with a GitHub fallback for unlisted languages.
 
 > **Trigger:** `/scaffold-new-repo`
 

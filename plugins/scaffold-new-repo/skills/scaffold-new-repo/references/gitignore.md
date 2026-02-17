@@ -66,6 +66,12 @@ go.work.sum
 # JavaScript
 node_modules/
 *.tgz
+*.tsbuildinfo
+coverage/
+dist/
+.next
+.nuxt
+*.log
 ```
 
 ## Ruby
@@ -77,7 +83,89 @@ node_modules/
 .claude/settings.local.json
 
 # Ruby
-*.code-workspace
+*.gem
+*.rbc
+.bundle/
+vendor/bundle
+pkg/
+coverage/
+spec/reports/
+.byebug_history
+```
+
+## Pascal
+
+```gitignore
+# Common
+.DS_Store
+.env
+.claude/settings.local.json
+
+# Pascal
+*.o
+*.ppu
+*.compiled
+*.exe
+*.dll
+*.so
+lib/
+backup/
+*.lps
+*.bak
+```
+
+## Python
+
+```gitignore
+# Common
+.DS_Store
+.env
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+*.egg
+.coverage
+htmlcov/
+```
+
+## Rust
+
+```gitignore
+# Common
+.DS_Store
+.env
+.claude/settings.local.json
+
+# Rust
+target/
+*.pdb
+**/*.rs.bk
+```
+
+## Swift
+
+```gitignore
+# Common
+.DS_Store
+.env
+.claude/settings.local.json
+
+# Swift
+xcuserdata/
+.build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+Carthage/Build/
+Package.resolved
 ```
 
 ## Generic
@@ -94,3 +182,4 @@ node_modules/
 - Templates are intentionally minimal -- add project-specific entries as needed.
 - The common entries appear in every template and should not be removed.
 - Go CLI includes `bin/` and `dist/` for build outputs; Go library omits them.
+- For project types not listed above, the skill attempts to fetch a template from GitHub's gitignore repository.
