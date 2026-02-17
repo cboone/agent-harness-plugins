@@ -49,27 +49,23 @@ If the user provided only a branch name with no description, derive a human-read
 
 ### 3. Create the Worktree
 
-**Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. Background the command with `& disown` so it survives shell exit.
+**Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. The `launch-workmux` script handles backgrounding, detaching, waiting, and outputting the log.
 
-For simple prompts:
+**Locating the script:** The `launch-workmux` script is in the `scripts` directory, which is a sibling of the `skills` directory within this plugin. From the base directory provided in the system message, the script path is `../../scripts/launch-workmux` (relative to the base directory).
 
-```bash
-workmux add BRANCH_NAME --open-if-exists -p "PROMPT_TEXT" > /tmp/workmux-BRANCH_NAME.log 2>&1 & disown; sleep 8
-```
-
-Do not specify `--base`. Let workmux use its default. Only pass `--base BRANCH` if the user explicitly requests a specific base branch.
-
-**Shell escaping:** If the prompt text contains characters that are difficult to escape inline (backticks, dollar signs, nested quotes), use the Write tool to create a temporary prompt file and pass it with `-P`. Using the Write tool avoids shell escaping issues entirely.
+First, use the Write tool to create a temporary prompt file at `/tmp/workmux-prompt-BRANCH_NAME.md` with the composed prompt from step 2. Using the Write tool avoids shell escaping issues with special characters in the prompt text.
 
 **Important:** Do not delete the prompt file immediately after launching. `workmux` runs asynchronously and may not read the file for several seconds. Wait and verify success before cleaning up.
 
-After creating `/tmp/workmux-prompt-BRANCH_NAME.md` with the Write tool:
+Do not specify `--base`. Let workmux use its default. Only pass `--base BRANCH` if the user explicitly requests a specific base branch.
+
+Then launch the worktree:
 
 ```bash
-workmux add BRANCH_NAME --open-if-exists -P /tmp/workmux-prompt-BRANCH_NAME.md > /tmp/workmux-BRANCH_NAME.log 2>&1 & disown; sleep 8
+bash SCRIPTS_DIR/launch-workmux BRANCH_NAME /tmp/workmux-prompt-BRANCH_NAME.md
 ```
 
-After launching, use the Read tool to check `/tmp/workmux-BRANCH_NAME.log`, then verify:
+The script outputs the workmux log directly. Verify success:
 
 ```bash
 git worktree list
