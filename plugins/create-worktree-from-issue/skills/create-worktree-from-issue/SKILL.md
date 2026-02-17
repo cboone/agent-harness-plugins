@@ -72,7 +72,9 @@ Use the Write tool to create a temporary prompt file at `/tmp/workmux-prompt-BRA
 
 **Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. The `launch-workmux` script handles backgrounding, detaching, waiting, and outputting the log.
 
-**Locating the script:** The `launch-workmux` script is in the `scripts` directory, which is a sibling of the `skills` directory within this plugin. From the base directory provided in the system message, the script path is `../../scripts/launch-workmux` (relative to the base directory).
+**Locating the script:** At the start of your session, locate the script by searching for `**/create-worktree-from-issue/scripts/launch-workmux`. Note the absolute path and use it with `bash` as the command prefix in all subsequent invocations. Do not use a shell variable, since shell state does not persist between commands.
+
+In the example below, `SCRIPTS_DIR/launch-workmux` is a placeholder for the script's **quoted absolute path** (e.g., `"/absolute/path/to/plugins/create-worktree-from-issue/scripts/launch-workmux"`). Always invoke via `bash` followed by the quoted path. This ensures the command token is `bash`, which matches stable allowlist patterns regardless of the plugin's installed path or version.
 
 **Important:** Do not delete the prompt file immediately after launching. `workmux` runs asynchronously and may not read the file for several seconds. Wait and verify success before cleaning up.
 
@@ -82,16 +84,16 @@ Do not specify a `--base` branch. Let `workmux` use its default.
 bash SCRIPTS_DIR/launch-workmux BRANCH_NAME /tmp/workmux-prompt-BRANCH_NAME.md
 ```
 
-The script outputs the workmux log directly. Verify success:
+The script outputs the workmux log directly and cleans up its own log file. Verify success:
 
 ```bash
 git worktree list
 ```
 
-If the log shows success and the worktree appears in the list, clean up:
+If the log shows success and the worktree appears in the list, clean up the prompt file:
 
 ```bash
-rm -f /tmp/workmux-prompt-BRANCH_NAME.md /tmp/workmux-BRANCH_NAME.log
+rm -f /tmp/workmux-prompt-BRANCH_NAME.md
 ```
 
 If the log shows an error (e.g., "Failed to read prompt file"), the prompt file may have been deleted too early or another issue occurred. Check the log output for details.
