@@ -11,6 +11,13 @@ cboone-cc-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json            # Plugin registry for this repository
 └── plugins/
+    ├── block-rm-rf/                 # Recursive rm blocker hook
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── hooks/
+    │   │   └── hooks.json
+    │   └── scripts/
+    │       └── check-rm
     ├── commit/                      # Smart git commit skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
