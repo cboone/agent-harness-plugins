@@ -38,8 +38,8 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 | Shell scripts in project | shellcheck | _(no auto-fix)_ | `shellcheck <files>` |
 | Shell scripts in project | shfmt | `shfmt -w <files>` | `shfmt -d <files>` |
 | `knip.json`, `knip.config.*`, `knip.ts` | knip | _(no auto-fix)_ | `npx knip` |
-| `package.json` has `lint` script | npm lint | `npm run lint -- --fix` | `npm run lint` |
-| `package.json` has `format` script | npm format | `npm run format` | `npm run format -- --check` |
+| `package.json` has `lint` script | npm lint | Try `npm run lint -- --fix`, fall back to `npm run lint` | `npm run lint` |
+| `package.json` has `format` script | npm format | `npm run format` | Try `npm run format -- --check`, fall back to `npm run format` |
 | `bin/lint`, `scripts/lint`, `script/lint` | Project script | Try `<script> --fix` first | `<script>` |
 
 #### Detection Steps
