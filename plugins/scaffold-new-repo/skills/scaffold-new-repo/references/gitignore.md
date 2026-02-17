@@ -14,6 +14,8 @@ Choose the template matching the project type. Every template includes the commo
 # Secrets
 .env
 .env.*
+!.env.example
+!.env.sample
 *.pem
 *.key
 *.p12
@@ -33,6 +35,8 @@ token.json
 # Secrets
 .env
 .env.*
+!.env.example
+!.env.sample
 *.pem
 *.key
 *.p12
@@ -62,6 +66,8 @@ dist/
 # Secrets
 .env
 .env.*
+!.env.example
+!.env.sample
 *.pem
 *.key
 *.p12
@@ -89,6 +95,8 @@ go.work.sum
 # Secrets
 .env
 .env.*
+!.env.example
+!.env.sample
 *.pem
 *.key
 *.p12
@@ -108,6 +116,8 @@ token.json
 # Secrets
 .env
 .env.*
+!.env.example
+!.env.sample
 *.pem
 *.key
 *.p12
@@ -132,6 +142,8 @@ node_modules/
 # Secrets
 .env
 .env.*
+!.env.example
+!.env.sample
 *.pem
 *.key
 *.p12
@@ -156,6 +168,8 @@ config/credentials/*.key
 # Secrets
 .env
 .env.*
+!.env.example
+!.env.sample
 *.pem
 *.key
 *.p12
@@ -168,7 +182,7 @@ token.json
 - Templates are intentionally minimal -- add project-specific entries as needed.
 - The common entries appear in every template and should not be removed.
 - The secrets block covers environment files, cryptographic keys, and service credentials.
-- `.env.*` catches variants like `.env.local`, `.env.production`, `.env.staging`, etc.
+- `.env.*` catches variants like `.env.local`, `.env.production`, `.env.staging`, etc. The `!.env.example` and `!.env.sample` negations allow committing safe template env files.
 - JavaScript adds `.npmrc` because it can contain registry auth tokens.
 - Ruby adds `config/master.key` and `config/credentials/*.key` for Rails encrypted credentials.
 - Go CLI includes `bin/` and `dist/` for build outputs; Go library omits them.
