@@ -146,7 +146,7 @@ The script automatically handles pagination and filters for unresolved Copilot-a
     "path": "src/foo.ts",
     "location": "src/foo.ts:42",
     "isOutdated": false,
-    "comments": [{"author": "copilot", "body": "[nitpick] Consider..."}]
+    "comments": [{ "author": "copilot", "body": "[nitpick] Consider..." }]
   }
 ]
 ```
@@ -160,13 +160,13 @@ An empty array `[]` means no unresolved Copilot threads remain.
 
 For each unresolved Copilot comment:
 
-| Category      | Indicator                            | Action                                                          |
-| ------------- | ------------------------------------ | --------------------------------------------------------------- |
-| **Nitpick**   | Contains `[nitpick]` prefix          | Auto-resolve immediately                                        |
-| **Outdated**  | Refers to code that no longer exists | Reply with explanation, resolve                                 |
-| **Incorrect** | Misunderstands project conventions   | Reply with explanation, resolve, update Copilot instructions    |
-| **Valid**     | Current, actionable concern          | Delegate to coder agent to fix                                  |
-| **Deferred**  | Valid but out of scope for this PR   | Track in PROJECT.md, reply, resolve                             |
+| Category      | Indicator                            | Action                                                       |
+| ------------- | ------------------------------------ | ------------------------------------------------------------ |
+| **Nitpick**   | Contains `[nitpick]` prefix          | Auto-resolve immediately                                     |
+| **Outdated**  | Refers to code that no longer exists | Reply with explanation, resolve                              |
+| **Incorrect** | Misunderstands project conventions   | Reply with explanation, resolve, update Copilot instructions |
+| **Valid**     | Current, actionable concern          | Delegate to coder agent to fix                               |
+| **Deferred**  | Valid but out of scope for this PR   | Track in PROJECT.md, reply, resolve                          |
 
 ### 3. Resolve Threads
 
@@ -244,6 +244,7 @@ bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file response.md
    ```
 
    Expected output: `[]` (empty array)
+
 1. Report summary of actions taken
 
 ## Reply Templates
