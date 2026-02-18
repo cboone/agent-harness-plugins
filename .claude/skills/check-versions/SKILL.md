@@ -1,10 +1,15 @@
+---
+name: check-versions
+description: >-
+  Verify that plugin versions and marketplace.json are correct and consistent
+  after changes on the current branch. Use when the user says "check versions",
+  "verify versions", "are the versions correct", "review version bumps", or any
+  similar variant. Also use after merging, rebasing, or before creating a PR.
+---
+
 # Check Versions
 
 Verify that plugin versions and marketplace.json are correct and consistent after changes on the current branch.
-
-## When to Run
-
-After merging, rebasing, or before creating a PR. When the user says "check versions", "verify versions", "are the versions correct", "review version bumps", or any similar variant.
 
 ## Workflow
 
