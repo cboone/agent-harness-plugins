@@ -30,17 +30,17 @@ Format rules:
 - Skills are grouped into subcategories: Agents, Workflow, Languages.
 - Hooks are grouped into subcategories: Security, Workflow.
 - Subcategory labels use `<br>Name:` format (plain text with trailing colon) on their own line.
-- The first link in each subcategory has no leading middle dot; subsequent links start with `∙ ` (middle dot, space).
+- The first link in each subcategory has no leading middle dot; subsequent links start with `∙` (middle dot, space).
 - Skills and hooks are listed alphabetically within their respective groups/subcategories.
 - Anchor links use the kebab-case H3 heading (e.g., `#create-worktree-from-issue`).
 
 ### Adding a New Skill
 
-Insert a new line with `∙ [Skill Name](#skill-name)` in alphabetical order within the appropriate subcategory (Agents, Workflow, or Languages). If the new entry is the first in its subcategory, omit the leading `∙ `.
+Insert a new line with `∙ [Skill Name](#skill-name)` in alphabetical order within the appropriate subcategory (Agents, Workflow, or Languages). If the new entry is the first in its subcategory, omit the leading `∙`.
 
 ### Adding a New Hook
 
-Insert a new line with `∙ [Hook Name](#hook-name)` in alphabetical order within the appropriate subcategory (Security or Workflow). If the new entry is the first in its subcategory, omit the leading `∙ `.
+Insert a new line with `∙ [Hook Name](#hook-name)` in alphabetical order within the appropriate subcategory (Security or Workflow). If the new entry is the first in its subcategory, omit the leading `∙`.
 
 ## Installation Section
 

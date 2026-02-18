@@ -191,9 +191,9 @@ Second paragraph.
 
 Do not indent the first line of a paragraph. Indented text can be interpreted as a code block.
 
-| Use             | Avoid                |
-| --------------- | -------------------- |
-| `Regular text.` | `    Indented text.` |
+| Use             | Avoid              |
+| --------------- | ------------------ |
+| `Regular text.` | `Indented text.`   |
 
 ---
 
@@ -587,10 +587,10 @@ Add a blank line before and after horizontal rules to prevent them from being in
 
 When Markdown has equivalent syntax, prefer it over HTML.
 
-| Use           | Avoid                   |
-| ------------- | ----------------------- |
-| `**bold**`    | `<strong>bold</strong>` |
-| `[link](url)` | `<a href="url">link</a>` |
+| Use           | Avoid                      |
+| ------------- | -------------------------- |
+| `**bold**`    | `<strong>bold</strong>`    |
+| `[link](url)` | `<a href="url">link</a>`   |
 
 ---
 
@@ -617,10 +617,10 @@ Remove trailing whitespace from all lines. Configure your editor to strip traili
 
 Exception: In Markdown, two trailing spaces create a hard line break. Prefer a backslash (`\`) or a blank line instead, as trailing spaces are invisible and fragile.
 
-| Use          | Avoid                     |
-| ------------ | ------------------------- |
-| `line one\`  | `line one  ` (two spaces) |
-| (blank line) | `line one  ` (two spaces) |
+| Use          | Avoid                   |
+| ------------ | ----------------------- |
+| `line one\`  | `line one` (two spaces) |
+| (blank line) | `line one` (two spaces) |
 
 ---
 

@@ -7,18 +7,21 @@ Update the plugins marketplace to conform to current Claude Code standards (Janu
 ## Issues Found
 
 ### marketplace.json
+
 1. Duplicate `description` at root level and in `metadata`
-2. Plugin entries contain `author.url` (not in official schema)
-3. Plugin entries have `hooks` and `skills` fields (should be auto-discovered)
-4. Duplicate data in `tags` and `keywords` arrays
-5. Missing `$schema` field
-6. Keywords not alphabetized
+1. Plugin entries contain `author.url` (not in official schema)
+1. Plugin entries have `hooks` and `skills` fields (should be auto-discovered)
+1. Duplicate data in `tags` and `keywords` arrays
+1. Missing `$schema` field
+1. Keywords not alphabetized
 
 ### plugin.json files
+
 1. Both contain `author.url` (not in official schema)
-2. Keywords not alphabetized
+1. Keywords not alphabetized
 
 ### Skill structure
+
 1. `SKILL.md` at plugin root level should be in `skills/<skill-name>/SKILL.md`
 
 ## Implementation
@@ -27,7 +30,7 @@ Update the plugins marketplace to conform to current Claude Code standards (Janu
 
 Create proper skills directory structure:
 
-```
+```text
 plugins/write-shell-scripts/
 ├── .claude-plugin/
 │   └── plugin.json
@@ -39,6 +42,7 @@ plugins/write-shell-scripts/
 ```
 
 **Commands:**
+
 ```bash
 mkdir -p plugins/write-shell-scripts/skills/write-shell-scripts
 mv plugins/write-shell-scripts/SKILL.md plugins/write-shell-scripts/skills/write-shell-scripts/
@@ -48,10 +52,12 @@ mv plugins/write-shell-scripts/references plugins/write-shell-scripts/skills/wri
 ### Phase 2: Update plugin.json Files
 
 **File:** `plugins/notify/.claude-plugin/plugin.json`
+
 - Remove `author.url`
 - Alphabetize `keywords`: `["alerts", "macos", "notifications"]`
 
 **File:** `plugins/write-shell-scripts/.claude-plugin/plugin.json`
+
 - Remove `author.url`
 - Alphabetize `keywords`: `["bash", "format", "scripts", "shell", "style"]`
 
@@ -60,16 +66,18 @@ mv plugins/write-shell-scripts/references plugins/write-shell-scripts/skills/wri
 **File:** `.claude-plugin/marketplace.json`
 
 Changes:
+
 1. Add `$schema` field
-2. Remove root-level `description` (keep only in `metadata`)
-3. Remove `author.url` from plugin entries
-4. Remove `hooks` field from notify plugin (auto-discovered)
-5. Remove `skills` field from write-shell-scripts plugin (auto-discovered)
-6. Remove `tags` arrays (redundant with `keywords`)
-7. Alphabetize `keywords` arrays
-8. Bump `metadata.version` to `1.0.3`
+1. Remove root-level `description` (keep only in `metadata`)
+1. Remove `author.url` from plugin entries
+1. Remove `hooks` field from notify plugin (auto-discovered)
+1. Remove `skills` field from write-shell-scripts plugin (auto-discovered)
+1. Remove `tags` arrays (redundant with `keywords`)
+1. Alphabetize `keywords` arrays
+1. Bump `metadata.version` to `1.0.3`
 
 **Target structure:**
+
 ```json
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
@@ -118,31 +126,34 @@ Update the structure section to reflect new skills directory layout.
 
 ## Files to Modify
 
-| File | Action |
-|------|--------|
-| `plugins/write-shell-scripts/SKILL.md` | Move to `skills/write-shell-scripts/` |
-| `plugins/write-shell-scripts/references/` | Move to `skills/write-shell-scripts/` |
-| `plugins/notify/.claude-plugin/plugin.json` | Remove `author.url`, alphabetize keywords |
+| File                                                     | Action                                    |
+| -------------------------------------------------------- | ----------------------------------------- |
+| `plugins/write-shell-scripts/SKILL.md`                   | Move to `skills/write-shell-scripts/`     |
+| `plugins/write-shell-scripts/references/`                | Move to `skills/write-shell-scripts/`     |
+| `plugins/notify/.claude-plugin/plugin.json`              | Remove `author.url`, alphabetize keywords |
 | `plugins/write-shell-scripts/.claude-plugin/plugin.json` | Remove `author.url`, alphabetize keywords |
-| `.claude-plugin/marketplace.json` | Schema fixes, remove redundant fields |
-| `CLAUDE.md` | Update structure documentation |
+| `.claude-plugin/marketplace.json`                        | Schema fixes, remove redundant fields     |
+| `CLAUDE.md`                                              | Update structure documentation            |
 
 ## Verification
 
 1. Validate the marketplace:
+
    ```bash
    claude plugin validate .
    ```
 
-2. Test plugin installation:
-   ```
+1. Test plugin installation:
+
+   ```text
    /plugin marketplace add ./
    /plugin install notify@cboone-cc-plugins
    /plugin install write-shell-scripts@cboone-cc-plugins
    ```
 
-3. Test skill invocation:
-   ```
+1. Test skill invocation:
+
+   ```text
    /write-shell-scripts
    ```
 

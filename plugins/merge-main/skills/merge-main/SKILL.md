@@ -51,7 +51,7 @@ git remote show origin | grep 'HEAD branch' | sed 's/.*: //'
 If `git status` shows uncommitted changes (staged or unstaged):
 
 1. Warn the user that there are uncommitted changes.
-2. Ask whether to:
+1. Ask whether to:
    - **Stash**: Run `git stash` before proceeding, then `git stash pop` after the merge completes.
    - **Commit first**: Invoke the `/commit` skill, then continue with the merge.
    - **Abort**: Stop without doing anything.
@@ -72,7 +72,7 @@ Where `<base-branch>` is the detected or overridden base branch name.
 If the merge completes without conflicts:
 
 1. Report success.
-2. Show a summary of what was merged:
+1. Show a summary of what was merged:
 
 ```bash
 git log HEAD@{1}..HEAD --oneline
@@ -96,19 +96,19 @@ When merge conflicts occur:
 git diff --name-only --diff-filter=U
 ```
 
-2. **Resolve each conflicted file**:
+1. **Resolve each conflicted file**:
    - Read the file and examine the conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
    - Use the surrounding code context, the intent of both sides, and the project's conventions to determine the correct resolution.
    - For trivial conflicts (whitespace, import ordering, adjacent non-overlapping changes), resolve automatically.
    - For non-trivial conflicts where the correct resolution is ambiguous, show the user both sides and ask which to keep or how to combine them.
 
-3. **Stage resolved files**:
+1. **Stage resolved files**:
 
 ```bash
 git add <resolved-file>
 ```
 
-4. **Complete the merge commit** (GPG signed):
+1. **Complete the merge commit** (GPG signed):
 
 ```bash
 git commit -S --no-edit
@@ -130,7 +130,7 @@ After a successful merge (with or without conflict resolution):
    - `Cargo.lock` -> `cargo build`
    - `composer.lock` -> `composer install`
 
-2. **Push**:
+1. **Push**:
 
 ```bash
 git push

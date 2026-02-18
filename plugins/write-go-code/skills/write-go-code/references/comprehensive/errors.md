@@ -134,6 +134,7 @@ func Lookup(key string) (int, error) {
 ## Panic
 
 **Don't use for normal errors.** Reserved for:
+
 - Truly unrecoverable situations
 - Programming errors (impossible states)
 - Initialization failures in `init()`

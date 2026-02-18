@@ -31,10 +31,10 @@ Standard plugin manifest:
 The skill workflow:
 
 1. **Check prerequisites** -- Verify the repo has a `.github/` directory (or create it). Check if a gitleaks workflow already exists.
-2. **Ask about license** -- Gitleaks Action v2 requires a `GITLEAKS_LICENSE` secret for organization-owned repos. Ask the user whether this is an org repo (needs license) or personal (no license needed).
-3. **Generate the workflow** -- Write `.github/workflows/gitleaks.yml` using the template from `./references/workflow.md`. Adjust based on whether a license is needed.
-4. **Optionally generate config** -- Ask if the user wants a `.gitleaks.toml`. If yes, write it using the template from `./references/config.md`.
-5. **Summary** -- Print what was created and next steps (e.g., adding the `GITLEAKS_LICENSE` secret if needed).
+1. **Ask about license** -- Gitleaks Action v2 requires a `GITLEAKS_LICENSE` secret for organization-owned repos. Ask the user whether this is an org repo (needs license) or personal (no license needed).
+1. **Generate the workflow** -- Write `.github/workflows/gitleaks.yml` using the template from `./references/workflow.md`. Adjust based on whether a license is needed.
+1. **Optionally generate config** -- Ask if the user wants a `.gitleaks.toml`. If yes, write it using the template from `./references/config.md`.
+1. **Summary** -- Print what was created and next steps (e.g., adding the `GITLEAKS_LICENSE` secret if needed).
 
 Trigger phrases: "set up gitleaks", "add gitleaks", "add secret scanning", "set up secret scanning", "gitleaks scanning", "setup gitleaks".
 
@@ -46,6 +46,7 @@ Two workflow templates:
 - **Organization repo** (license needed) -- includes `GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}`
 
 Both templates include:
+
 - Triggers: `push`, `pull_request`, `workflow_dispatch`, `schedule` (daily at 4 AM UTC)
 - `actions/checkout@v4` with `fetch-depth: 0`
 - `gitleaks/gitleaks-action@v2`
@@ -54,6 +55,7 @@ Both templates include:
 ### 4. `plugins/setup-gitleaks/skills/setup-gitleaks/references/config.md`
 
 A starter `.gitleaks.toml` template with:
+
 - `[extend]` section using default rules
 - Example custom `[[rules]]` (commented out)
 - Example `[allowlist]` for common false positives (paths like `go.sum`, `package-lock.json`, test fixtures)
@@ -70,11 +72,13 @@ A starter `.gitleaks.toml` template with:
 ### 6. `README.md`
 
 **ToC**: Add under Skills > Workflow (alphabetically between `Scaffold New Repo` and `Suggest Next Issue`):
-```
+
+```markdown
 ∙ [Setup Gitleaks](#setup-gitleaks)
 ```
 
 **Description section**: Add between Scaffold New Repo and Suggest Next Issue:
+
 ```markdown
 ### Setup Gitleaks
 
@@ -94,8 +98,8 @@ Add `setup-gitleaks/` to the directory structure tree (alphabetically between `s
 ## Verification
 
 1. Validate JSON: Ensure `plugin.json` and updated `marketplace.json` are valid JSON
-2. Version sync: Confirm `plugin.json` version (`1.0.0`) matches the marketplace entry
-3. Marketplace version: Confirm `metadata.version` bumped to `1.8.0`
-4. README ordering: Confirm ToC and description sections are alphabetically correct
-5. CLAUDE.md structure: Confirm the new entry matches the existing directory tree format
-6. Skill description: Confirm SKILL.md frontmatter `description` matches `plugin.json` and `marketplace.json` descriptions
+1. Version sync: Confirm `plugin.json` version (`1.0.0`) matches the marketplace entry
+1. Marketplace version: Confirm `metadata.version` bumped to `1.8.0`
+1. README ordering: Confirm ToC and description sections are alphabetically correct
+1. CLAUDE.md structure: Confirm the new entry matches the existing directory tree format
+1. Skill description: Confirm SKILL.md frontmatter `description` matches `plugin.json` and `marketplace.json` descriptions

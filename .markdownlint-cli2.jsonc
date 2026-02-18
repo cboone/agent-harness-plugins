@@ -1,0 +1,77 @@
+{
+  // https://github.com/DavidAnson/markdownlint-cli2#markdownlint-cli2jsonc
+  "$schema": "https://raw.githubusercontent.com/DavidAnson/markdownlint-cli2/main/schema/markdownlint-cli2-config-schema.json",
+
+  "config": {
+    // MD003 - Heading style
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md003.md
+    "MD003": { "style": "atx" },
+
+    // MD004 - Unordered list style
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md004.md
+    "MD004": { "style": "dash" },
+
+    // MD010 - Hard tabs
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md010.md
+    "MD010": { "code_blocks": false },
+
+    // MD013 - Line length
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md013.md
+    "MD013": false,
+
+    // MD014 - Dollar signs used before commands without showing output
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md014.md
+    "MD014": false,
+
+    // MD024 - Multiple headings with the same content
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md024.md
+    "MD024": { "siblings_only": true },
+
+    // MD029 - Ordered list item prefix
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md029.md
+    "MD029": { "style": "one" },
+
+    // MD033 - No inline HTML
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md033.md
+    "MD033": false,
+
+    // MD034 - Bare URLs
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md034.md
+    "MD034": false,
+
+    // MD035 - Horizontal rule style
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md035.md
+    "MD035": { "style": "---" },
+
+    // MD046 - Code block style
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md046.md
+    "MD046": { "style": "fenced" },
+
+    // MD048 - Code fence style
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md048.md
+    "MD048": { "style": "backtick" },
+
+    // MD049 - Emphasis style
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md049.md
+    "MD049": { "style": "underscore" },
+
+    // MD050 - Strong style
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md050.md
+    "MD050": { "style": "asterisk" },
+  },
+
+  "ignores": ["node_modules/"],
+
+  "customRules": [
+    "@github/markdownlint-github",
+    "markdownlint-rule-force-align-table-columns",
+    "markdownlint-rule-relative-links",
+  ],
+
+  // "fix": true,
+
+  "outputFormatters": [
+    // https://github.com/DavidAnson/markdownlint-cli2/blob/main/formatter-summarize/README.md
+    ["markdownlint-cli2-formatter-summarize", { "byFileByRule": true }],
+  ],
+}

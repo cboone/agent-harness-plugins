@@ -3,6 +3,7 @@
 ## Formatting
 
 **Always use `gofmt`** - no exceptions. It handles:
+
 - Indentation (tabs)
 - Alignment
 - Spacing
@@ -77,6 +78,7 @@ package config
 ```
 
 For `package main`:
+
 ```go
 // Command bopca runs Claude Code in containers.
 package main
@@ -87,14 +89,14 @@ package main
 Typical order within a file:
 
 1. Package comment and clause
-2. Imports
-3. Constants
-4. Package-level variables
-5. Types
-6. Constructor functions (`New...`)
-7. Methods (grouped by receiver type)
-8. Helper functions
-9. `init()` function (if needed)
+1. Imports
+1. Constants
+1. Package-level variables
+1. Types
+1. Constructor functions (`New...`)
+1. Methods (grouped by receiver type)
+1. Helper functions
+1. `init()` function (if needed)
 
 ## Nil Slices
 
@@ -113,6 +115,7 @@ Exception: JSON encoding (nil becomes `null`, empty becomes `[]`).
 ## Pass Values vs Pointers
 
 **Pass values** for small, immutable data:
+
 ```go
 // Good - strings are small
 func greet(name string) string
@@ -122,6 +125,7 @@ func distance(p1, p2 Point) float64
 ```
 
 **Pass pointers** when:
+
 - Function needs to modify the value
 - Value is large (benchmark if unsure)
 - Value contains sync primitives
@@ -174,6 +178,7 @@ func NewHTTPClient() Client
 ## Line Length
 
 No rigid limit. Guidelines:
+
 - Don't break lines arbitrarily to stay under N characters
 - Break at semantic boundaries
 - Long lines often indicate need for refactoring
@@ -191,6 +196,7 @@ result, err := client.FetchUserData(ctx, userID, opts)
 ## Semicolons
 
 Go inserts semicolons automatically. Key rule:
+
 - Opening brace must be on same line as control statement
 
 ```go

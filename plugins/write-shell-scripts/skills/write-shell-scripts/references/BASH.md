@@ -86,10 +86,10 @@ Use `${var}`, not `$var`. Braces prevent ambiguity in concatenation.
 
 Use parameter expansions instead of external commands for simple string operations.
 
-| Use          | Avoid                               |
-| ------------ | ----------------------------------- |
-| `${var%.*}`  | `echo "$var" \| sed 's/\.[^.]*$//'` |
-| `${var##*/}` | `basename "$var"`                   |
+| Use          | Avoid                                      |
+| ------------ | ------------------------------------------ |
+| `${var%.*}`  | `echo "$var" &#124; sed 's/\.[^.]*$//'`    |
+| `${var##*/}` | `basename "$var"`                          |
 
 ---
 
@@ -680,9 +680,9 @@ fi
 
 Use `|| true` to allow commands to fail without triggering `set -e`.
 
-| Use                           | Avoid               |
-| ----------------------------- | ------------------- |
-| `grep pattern file \|\| true` | `grep pattern file` |
+| Use                                   | Avoid               |
+| ------------------------------------- | ------------------- |
+| `grep pattern file &#124;&#124; true` | `grep pattern file` |
 
 ---
 
@@ -798,9 +798,9 @@ Use no extension for executables; use `.sh` or `.bash` for sourced libraries.
 
 Use `sudo tee` to write to files requiring root permissions. Redirection happens before `sudo`, in the unprivileged shell.
 
-| Use                              | Avoid                       |
-| -------------------------------- | --------------------------- |
-| `echo "x" \| sudo tee /etc/file` | `sudo echo "x" > /etc/file` |
+| Use                                  | Avoid                       |
+| ------------------------------------ | --------------------------- |
+| `echo "x" &#124; sudo tee /etc/file` | `sudo echo "x" > /etc/file` |
 
 ---
 
@@ -868,10 +868,10 @@ done
 
 Pass files directly to commands or use redirection.
 
-| Use                   | Avoid                      |
-| --------------------- | -------------------------- |
-| `grep pattern < file` | `cat file \| grep pattern` |
-| `grep pattern file`   | `cat file \| grep pattern` |
+| Use                   | Avoid                          |
+| --------------------- | ------------------------------ |
+| `grep pattern < file` | `cat file &#124; grep pattern` |
+| `grep pattern file`   | `cat file &#124; grep pattern` |
 
 ---
 

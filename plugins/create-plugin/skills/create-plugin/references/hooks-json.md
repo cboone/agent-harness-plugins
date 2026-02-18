@@ -4,7 +4,7 @@ Hooks plugins use a `hooks/hooks.json` file to declare event-driven behaviors th
 
 ## File Location
 
-```
+```text
 plugins/PLUGIN-NAME/hooks/hooks.json
 ```
 
@@ -32,25 +32,25 @@ plugins/PLUGIN-NAME/hooks/hooks.json
 
 Categories correspond to Claude Code lifecycle events:
 
-| Category | When it fires |
-|----------|---------------|
+| Category       | When it fires                                                              |
+| -------------- | -------------------------------------------------------------------------- |
 | `Notification` | User attention needed (idle prompt, permission prompt, elicitation dialog) |
-| `PreCompact` | Before automatic context compaction |
-| `PreToolUse` | Before a tool call executes (can block it by exiting with code 2) |
-| `Stop` | When Claude Code finishes a task |
+| `PreCompact`   | Before automatic context compaction                                        |
+| `PreToolUse`   | Before a tool call executes (can block it by exiting with code 2)          |
+| `Stop`         | When Claude Code finishes a task                                           |
 
 ## Matchers
 
 Matchers within a category specify which specific events trigger the hook:
 
-| Matcher | Category | Triggers when |
-|---------|----------|---------------|
-| `idle_prompt` | Notification | Claude is waiting for user input |
-| `elicitation_dialog` | Notification | Claude is asking a question |
-| `permission_prompt` | Notification | Claude needs permission to proceed |
-| `auto` | PreCompact | Automatic compaction is triggered |
-| Tool name (e.g., `Bash`) | PreToolUse | When the specified tool is about to be called |
-| *(none)* | Stop | No matcher needed; fires on any stop |
+| Matcher                  | Category     | Triggers when                                 |
+| ------------------------ | ------------ | --------------------------------------------- |
+| `idle_prompt`            | Notification | Claude is waiting for user input              |
+| `elicitation_dialog`     | Notification | Claude is asking a question                   |
+| `permission_prompt`      | Notification | Claude needs permission to proceed            |
+| `auto`                   | PreCompact   | Automatic compaction is triggered             |
+| Tool name (e.g., `Bash`) | PreToolUse   | When the specified tool is about to be called |
+| _(none)_                 | Stop         | No matcher needed; fires on any stop          |
 
 Not all hook entries need a matcher. The Stop category in the existing notify plugin has no matcher field. PreToolUse matchers use the tool name (e.g., `Bash`, `Write`, `Edit`) to filter which tool calls trigger the hook.
 

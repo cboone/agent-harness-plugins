@@ -9,11 +9,13 @@ Use channels to pass data between goroutines rather than shared variables with l
 ## Context
 
 **Always pass as first parameter:**
+
 ```go
 func DoSomething(ctx context.Context, arg string) error
 ```
 
 **Never store in structs:**
+
 ```go
 // Bad
 type Server struct {
@@ -25,6 +27,7 @@ func (s *Server) Handle(ctx context.Context, req *Request) error
 ```
 
 **Create base contexts only in main or tests:**
+
 ```go
 func main() {
     ctx := context.Background()
@@ -35,6 +38,7 @@ func main() {
 ## Goroutines
 
 **Prefix function call with `go`:**
+
 ```go
 go processRequest(req)
 
@@ -46,6 +50,7 @@ go func() {
 ```
 
 **Closures capture variables by reference:**
+
 ```go
 // Bug - all goroutines see final value of i
 for i := 0; i < 10; i++ {
@@ -93,16 +98,19 @@ func worker(ctx context.Context, requests <-chan Request) {
 ## Channels
 
 **Unbuffered** - synchronizes sender and receiver:
+
 ```go
 ch := make(chan int)
 ```
 
 **Buffered** - sender blocks only when full:
+
 ```go
 ch := make(chan int, 100)
 ```
 
 **Signal completion:**
+
 ```go
 done := make(chan struct{})
 go func() {
@@ -113,6 +121,7 @@ go func() {
 ```
 
 **Range over channel:**
+
 ```go
 for msg := range messages {
     process(msg)

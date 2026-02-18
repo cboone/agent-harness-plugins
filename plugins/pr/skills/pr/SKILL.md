@@ -116,12 +116,12 @@ Stop and report an error if any of these are true:
 If there are staged changes, unstaged changes, or untracked files:
 
 1. **Stage everything** — run `git add -A`. Never stage selectively; the goal is a clean working tree. Exception: never stage files that likely contain secrets (`.env`, `credentials.json`, `*.pem`, `*.key`, etc.). If such files are detected, warn the user and exclude them.
-2. **Analyze the diff** to generate a commit message:
+1. **Analyze the diff** to generate a commit message:
    - Examine `git log --oneline -10` output to match the repository's commit message style.
    - Determine the commit type (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `style`) based on the changes.
    - Write a concise description (under 72 characters) focused on _why_ the change was made.
    - Reference connected issues detected in step 2. For `fix/*` branches, use `fixes #N`; for other branch types, use `closes #N`. If no connected issues were detected, omit issue references from the commit message.
-3. **Create the commit** — GPG signed, using a HEREDOC:
+1. **Create the commit** — GPG signed, using a HEREDOC:
 
 ```bash
 git commit -S -m "$(cat <<'EOF'
@@ -217,10 +217,10 @@ Do not pass `--base` unless the base branch is not the repository default. Do no
 After the PR is created, report:
 
 1. The PR URL (returned by `gh pr create`).
-2. The PR title.
-3. The commit hash(es) included.
-4. A brief summary of what was committed and pushed.
-5. Connected issues (if any) and the closing keywords used.
+1. The PR title.
+1. The commit hash(es) included.
+1. A brief summary of what was committed and pushed.
+1. Connected issues (if any) and the closing keywords used.
 
 ## Error Handling
 

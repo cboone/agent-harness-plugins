@@ -4,7 +4,7 @@ Some plugins include shell scripts under a `scripts/` directory. These scripts a
 
 ## File Location
 
-```
+```text
 plugins/PLUGIN-NAME/scripts/SCRIPT-NAME
 ```
 
@@ -93,12 +93,14 @@ main "$@"
 ### Error Handling
 
 - Use a `die` function for error exits:
+
   ```bash
   function die() {
     echo "Error: ${1}" >&2
     exit "${2:-1}"
   }
   ```
+
 - Send error messages to stderr
 - Check dependencies before running commands
 
@@ -142,7 +144,7 @@ bash "/absolute/path/to/scripts/script-name" arg1 arg2
 In SKILL.md files, instruct Claude to:
 
 1. Locate the script path at the start of the session (e.g., by globbing for `**/plugin-name/scripts/script-name`)
-2. Invoke it with `bash` followed by the **quoted absolute path** and arguments
+1. Invoke it with `bash` followed by the **quoted absolute path** and arguments
 
 ## Notes
 

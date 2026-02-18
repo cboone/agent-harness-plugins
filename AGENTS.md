@@ -201,13 +201,13 @@ cboone-cc-plugins/
 When adding new plugins:
 
 1. Create the plugin directory under `plugins/`
-2. Add a `.claude-plugin/plugin.json` with metadata
-3. Register the plugin in `.claude-plugin/marketplace.json`
-4. Update README.md with the new plugin description
+1. Add a `.claude-plugin/plugin.json` with metadata
+1. Register the plugin in `.claude-plugin/marketplace.json`
+1. Update README.md with the new plugin description
 
 ### README ToC Format
 
-The README table of contents uses **one entry per line** to prevent merge conflicts when multiple branches add plugins simultaneously. Skills are organized into subcategories (Agents, Workflow, Languages). Hooks are organized into subcategories (Security, Workflow). Each continuation link starts with `∙ ` (middle dot, space) at the beginning of the line:
+The README table of contents uses **one entry per line** to prevent merge conflicts when multiple branches add plugins simultaneously. Skills are organized into subcategories (Agents, Workflow, Languages). Hooks are organized into subcategories (Security, Workflow). Each continuation link starts with `∙` (middle dot, space) at the beginning of the line:
 
 ```markdown
 **Skills**
@@ -228,8 +228,9 @@ The README table of contents uses **one entry per line** to prevent merge confli
 ```
 
 Rules:
+
 - Never put multiple links on the same line.
-- The first link in each subcategory has no leading `∙`; subsequent links start with `∙ `.
+- The first link in each subcategory has no leading `∙`; subsequent links start with `∙`.
 - Subcategory labels use `<br>Name:` format (plain text with trailing colon).
 - **Skills** and **Hooks** are separated by a blank line.
 - Hooks have their own subcategories (Security, Workflow).
@@ -239,10 +240,12 @@ Rules:
 This repository uses two levels of semver versioning:
 
 **Marketplace `metadata.version`** (in `.claude-plugin/marketplace.json`):
+
 - Bump **minor** when adding or removing a plugin (the catalog changed)
 - Do NOT bump for changes to existing plugin content
 
 **Individual plugin `version`** (in `plugin.json` and mirrored in `marketplace.json`):
+
 - **Patch**: bug fixes, wording tweaks, prompt adjustments
 - **Minor**: new capabilities or meaningful behavior changes
 - **Major**: breaking changes (e.g., removing or restructuring a skill)

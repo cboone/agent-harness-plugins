@@ -41,13 +41,13 @@ Extract every actionable item from the review document. Items may appear as:
 
 For each extracted item, record:
 
-| Field | Description |
-|-------|-------------|
-| **Number** | Sequential index (1, 2, 3, ...) |
-| **Summary** | One-line description of the item |
-| **Type** | `code-change`, `documentation`, `question`, or `style` |
+| Field          | Description                                               |
+| -------------- | --------------------------------------------------------- |
+| **Number**     | Sequential index (1, 2, 3, ...)                           |
+| **Summary**    | One-line description of the item                          |
+| **Type**       | `code-change`, `documentation`, `question`, or `style`    |
 | **File hints** | Any file paths, function names, or line numbers mentioned |
-| **Context** | The full original text from the review document |
+| **Context**    | The full original text from the review document           |
 
 **Type classification rules:**
 
@@ -99,8 +99,8 @@ Type: <type> | Files: <file hints>
 Use the file hints from the review item to find the relevant code:
 
 1. If the item references specific files or line numbers, read those files directly
-2. If the item references function or variable names, search the codebase for them
-3. If the item is vague, search for keywords from the item's context
+1. If the item references function or variable names, search the codebase for them
+1. If the item is vague, search for keywords from the item's context
 
 #### 4c. Make the Changes
 
@@ -140,8 +140,8 @@ fix: <description of the change>
 After all items are addressed, group the changes into logical commits:
 
 1. **Group by relatedness**: Changes to the same file or feature area go together
-2. **Separate concerns**: Code changes, documentation updates, and style fixes get separate commits when they are independent
-3. **Keep commits atomic**: Each commit should be a self-contained, reviewable unit
+1. **Separate concerns**: Code changes, documentation updates, and style fixes get separate commits when they are independent
+1. **Keep commits atomic**: Each commit should be a self-contained, reviewable unit
 
 For each commit group, generate a conventional commit message:
 

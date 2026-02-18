@@ -7,6 +7,7 @@
 - **Base of source directory**: `encoding/base64` imports as `base64`
 - **Avoid meaningless names**: `util`, `common`, `misc`, `api`, `types`, `interfaces`
 - **No stuttering**: Contents use package name as context
+
   ```go
   // Good: bufio.Reader
   // Bad: bufio.BufReader
@@ -22,12 +23,14 @@
 ## Initialisms
 
 Maintain consistent case throughout:
+
 - `URL` or `url`, never `Url`
 - `HTTP` or `http`, never `Http`
 - `ID` or `id`, never `Id`
 - `API` or `api`, never `Api`
 
 Examples:
+
 ```go
 ServeHTTP       // not ServeHttp
 XMLHTTPRequest  // not XmlHttpRequest or XMLHttpRequest
@@ -38,6 +41,7 @@ appID           // not appId
 ## Variables
 
 **Length proportional to scope:**
+
 - Loop index: `i`, `j`
 - Reader: `r`
 - Buffer: `b`, `buf`
@@ -45,6 +49,7 @@ appID           // not appId
 - Larger scope: more descriptive (`lineCount` not `c`)
 
 **Avoid type in name:**
+
 ```go
 // Good
 var users []User

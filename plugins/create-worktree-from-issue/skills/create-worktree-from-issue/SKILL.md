@@ -77,7 +77,7 @@ Examples:
 
 Build a prompt from the issue data retrieved in step 1. Format:
 
-```
+```text
 Work on issue #NUMBER: TITLE
 
 Labels: LABEL1, LABEL2

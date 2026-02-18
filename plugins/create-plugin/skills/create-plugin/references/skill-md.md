@@ -4,7 +4,7 @@ Each skill has a `SKILL.md` file that defines how Claude Code should behave when
 
 ## File Location
 
-```
+```text
 plugins/PLUGIN-NAME/skills/SKILL-NAME/SKILL.md
 ```
 
@@ -35,12 +35,13 @@ description: >-
 The description serves as the skill's trigger mechanism. It should include:
 
 1. **What the skill does** (first sentence)
-2. **When to use it** -- list trigger phrases the user might say (e.g., "create a plugin", "add a new skill")
-3. **Prerequisites** if any (e.g., "Requires the gh CLI to be installed")
+1. **When to use it** -- list trigger phrases the user might say (e.g., "create a plugin", "add a new skill")
+1. **Prerequisites** if any (e.g., "Requires the gh CLI to be installed")
 
 #### Examples from Existing Skills
 
 **Workflow skill:**
+
 ```yaml
 description: >-
   Find a GitHub issue in the current repository and create a new git worktree,
@@ -52,6 +53,7 @@ description: >-
 ```
 
 **Style guide skill:**
+
 ```yaml
 description: >-
   Applies Bash style conventions when creating or editing shell scripts.
@@ -75,15 +77,15 @@ One sentence summarizing the skill's purpose.
 
 Skills in this repository use these sections as applicable:
 
-| Section | Purpose | Used by |
-|---------|---------|---------|
-| `## Options` | User-configurable parameters | suggest-next-issue |
-| `## Workflow` | Step-by-step numbered process (`### 1. Step Name`) | All workflow skills |
-| `## Key Conventions` | Summary of rules (for style guide skills) | write-shell-scripts, write-go-code |
-| `## Reference Navigation` | Pointers to reference files by topic | write-go-code |
-| `## Example Output` | Sample output in a code block | suggest-next-issue |
-| `## Error Handling` | Bullet list of failure modes and recovery | All skills |
-| `## Sources` | Attribution links | write-go-code, write-shell-scripts |
+| Section                   | Purpose                                            | Used by                            |
+| ------------------------- | -------------------------------------------------- | ---------------------------------- |
+| `## Options`              | User-configurable parameters                       | suggest-next-issue                 |
+| `## Workflow`             | Step-by-step numbered process (`### 1. Step Name`) | All workflow skills                |
+| `## Key Conventions`      | Summary of rules (for style guide skills)          | write-shell-scripts, write-go-code |
+| `## Reference Navigation` | Pointers to reference files by topic               | write-go-code                      |
+| `## Example Output`       | Sample output in a code block                      | suggest-next-issue                 |
+| `## Error Handling`       | Bullet list of failure modes and recovery          | All skills                         |
+| `## Sources`              | Attribution links                                  | write-go-code, write-shell-scripts |
 
 ### Workflow Steps
 

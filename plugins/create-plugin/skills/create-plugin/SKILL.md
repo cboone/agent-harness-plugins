@@ -40,20 +40,20 @@ No manual `mkdir` is needed — the Write tool creates parent directories automa
 
 #### Skills Plugin
 
-```
+```text
 plugins/PLUGIN-NAME/.claude-plugin/
 plugins/PLUGIN-NAME/skills/PLUGIN-NAME/
 ```
 
 Add a `references/` subdirectory if the skill needs supplementary documentation:
 
-```
+```text
 plugins/PLUGIN-NAME/skills/PLUGIN-NAME/references/
 ```
 
 #### Hooks Plugin
 
-```
+```text
 plugins/PLUGIN-NAME/.claude-plugin/
 plugins/PLUGIN-NAME/hooks/
 plugins/PLUGIN-NAME/scripts/
@@ -68,6 +68,7 @@ Combine both structures under the same plugin directory.
 Create `.claude-plugin/plugin.json` with alphabetized fields. See `./references/plugin-json.md` for the full field list, versioning rules, and templates for each plugin type.
 
 Key points:
+
 - New plugins start at version `1.0.0`
 - Include `"skills": "./skills"` only if the plugin provides skills
 - The `name` field must match the directory name
@@ -79,6 +80,7 @@ Key points:
 Create `skills/PLUGIN-NAME/SKILL.md`. See `./references/skill-md.md` for the frontmatter format, description formula, common sections, and examples.
 
 Key points:
+
 - Frontmatter has exactly two fields: `name` and `description`
 - The `description` includes trigger phrases for automatic activation
 - Use `>-` (folded block scalar) for multi-line descriptions
@@ -89,6 +91,7 @@ Key points:
 Create `hooks/hooks.json`. See `./references/hooks-json.md` for the JSON schema, hook categories, matchers, and examples.
 
 Key points:
+
 - Use `${CLAUDE_PLUGIN_ROOT}` to reference scripts
 - Each hook entry has `"type": "command"`
 
@@ -97,6 +100,7 @@ Key points:
 If the plugin needs executable scripts, create them under `scripts/`. See `./references/scripts.md` for the required structure, conventions, and patterns.
 
 Key points:
+
 - No file extension for executables
 - Must be `chmod +x`
 - Follow the Bash conventions (shebang, strict mode, main function pattern)
@@ -116,6 +120,7 @@ Reference files are plain Markdown. Point to them from SKILL.md with relative pa
 Add a new entry to the `plugins` array in `.claude-plugin/marketplace.json`. See `./references/marketplace-json.md` for the entry format, valid categories, and insertion conventions.
 
 Key points:
+
 - Insert alphabetically by plugin name
 - Include `category` and `source` fields (not present in `plugin.json`)
 - All shared fields must match `plugin.json` exactly
@@ -125,8 +130,8 @@ Key points:
 Add the new plugin to three places in `README.md`. See `./references/readme-updates.md` for the exact format of each section.
 
 1. **Table of Contents**: Add link alphabetically in the Skills or Hooks line
-2. **Installation**: Add `/plugin install` command alphabetically
-3. **Description section**: Add H3 subsection alphabetically under Skills or Hooks
+1. **Installation**: Add `/plugin install` command alphabetically
+1. **Description section**: Add H3 subsection alphabetically under Skills or Hooks
 
 ### 10. Update CLAUDE.md
 

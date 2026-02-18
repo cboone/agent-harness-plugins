@@ -19,9 +19,9 @@ Standard plugin metadata. Name: `create-worktree`, version `1.0.0`, category `pr
 General-purpose worktree creation skill. Workflow:
 
 1. **Determine branch name** -- user provides explicit name or a task description to slugify (same `TYPE/SLUG` convention: `feature/` default, `fix/` for bug-related)
-2. **Compose task prompt** -- build a short prompt from the user's description and branch context
-3. **Create worktree** -- `workmux add BRANCH_NAME -p "PROMPT" --open-if-exists`. Do not specify `--base`; let workmux use its default. Only pass `--base` if the user explicitly requests a specific base branch.
-4. **Report success** -- branch name, tmux window, note that prompt was injected
+1. **Compose task prompt** -- build a short prompt from the user's description and branch context
+1. **Create worktree** -- `workmux add BRANCH_NAME -p "PROMPT" --open-if-exists`. Do not specify `--base`; let workmux use its default. Only pass `--base` if the user explicitly requests a specific base branch.
+1. **Report success** -- branch name, tmux window, note that prompt was injected
 
 Trigger phrases: "create worktree", "new worktree", "start working on", "spin up a worktree".
 
@@ -34,10 +34,10 @@ Shell escaping note: instruct Claude to write the prompt to a temp file and use 
 Add prompt injection between current steps 2 and 3. New workflow:
 
 1. Find the Issue (unchanged)
-2. Build the Branch Name (unchanged)
-3. **Compose the Issue Prompt** (new) -- build prompt from issue number, title, labels, and body. Truncate body at ~2000 chars at a paragraph/sentence boundary if needed, with a note to run `gh issue view` for full details. Use `-P` (temp file) to avoid shell escaping issues with arbitrary issue body content.
-4. **Create the Worktree** (updated) -- `workmux add BRANCH_NAME --open-if-exists -P PROMPT_FILE`
-5. Report Success (updated) -- mention that issue context was injected
+1. Build the Branch Name (unchanged)
+1. **Compose the Issue Prompt** (new) -- build prompt from issue number, title, labels, and body. Truncate body at ~2000 chars at a paragraph/sentence boundary if needed, with a note to run `gh issue view` for full details. Use `-P` (temp file) to avoid shell escaping issues with arbitrary issue body content.
+1. **Create the Worktree** (updated) -- `workmux add BRANCH_NAME --open-if-exists -P PROMPT_FILE`
+1. Report Success (updated) -- mention that issue context was injected
 
 ### 4. `plugins/create-worktree-from-issue/.claude-plugin/plugin.json`
 

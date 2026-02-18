@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "description": "Lint tooling for cboone-cc-plugins",
+  "devDependencies": {
+    "@github/markdownlint-github": "^0.8.0",
+    "markdownlint-cli2": "^0.20.0",
+    "markdownlint-cli2-formatter-summarize": "^0.0.8",
+    "markdownlint-rule-force-align-table-columns": "^0.1.1",
+    "markdownlint-rule-relative-links": "^4.2.0"
+  }
+}
