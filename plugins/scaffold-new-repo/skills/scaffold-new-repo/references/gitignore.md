@@ -128,6 +128,12 @@ token.json
 # JavaScript
 node_modules/
 *.tgz
+*.tsbuildinfo
+coverage/
+dist/
+.next/
+.nuxt/
+*.log
 ```
 
 ## Ruby
@@ -153,7 +159,137 @@ config/master.key
 config/credentials/*.key
 
 # Ruby
-*.code-workspace
+*.gem
+*.rbc
+.bundle/
+vendor/bundle
+pkg/
+coverage/
+spec/reports/
+.byebug_history
+```
+
+## Pascal
+
+```gitignore
+# System
+.DS_Store
+
+# Agent config
+.claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
+
+# Pascal
+*.o
+*.ppu
+*.compiled
+*.exe
+*.dll
+*.so
+lib/
+backup/
+*.lps
+*.bak
+```
+
+## Python
+
+```gitignore
+# System
+.DS_Store
+
+# Agent config
+.claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+*.egg
+.coverage
+htmlcov/
+```
+
+## Rust
+
+```gitignore
+# System
+.DS_Store
+
+# Agent config
+.claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
+
+# Rust
+target/
+*.pdb
+**/*.rs.bk
+```
+
+## Swift
+
+```gitignore
+# System
+.DS_Store
+
+# Agent config
+.claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
+
+# Swift
+xcuserdata/
+.build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+Carthage/Build/
+Package.resolved
 ```
 
 ## Generic
@@ -186,3 +322,4 @@ token.json
 - JavaScript adds `.npmrc` because it can contain registry auth tokens.
 - Ruby adds `config/master.key` and `config/credentials/*.key` for Rails encrypted credentials.
 - Go CLI includes `bin/` and `dist/` for build outputs; Go library omits them.
+- For project types not listed above, the skill attempts to fetch a template from GitHub's gitignore repository.
