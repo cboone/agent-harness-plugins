@@ -55,6 +55,24 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── create-worktree-from-issue/
     │           └── SKILL.md
+    ├── handle-secrets/              # User secret handling best practices skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── handle-secrets/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── anti-patterns.md
+    │               ├── checklist.md
+    │               ├── design-patterns.md
+    │               ├── language-libraries.md
+    │               └── security-hierarchy.md
+    ├── lint-and-fix/                # Lint and format auto-fixer skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── lint-and-fix/
+    │           └── SKILL.md
     ├── merge-main/                  # Base branch merge skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -114,9 +132,37 @@ cboone-cc-plugins/
     │           ├── SKILL.md
     │           └── references/
     │               ├── agents-md.md
+    │               ├── copilot-instructions-md.md
     │               ├── gitignore.md
     │               ├── license.md
     │               └── readme.md
+    ├── scaffold-go-cli/            # Go CLI project scaffolding skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── scaffold-go-cli/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── ci-workflow.md
+    │               ├── gitignore.md
+    │               ├── go-mod.md
+    │               ├── goreleaser.md
+    │               ├── license.md
+    │               ├── main-go.md
+    │               ├── makefile.md
+    │               ├── readme.md
+    │               ├── release-workflow.md
+    │               ├── root-go-viper.md
+    │               └── root-go.md
+    ├── setup-gitleaks/             # Gitleaks secret scanning setup skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── setup-gitleaks/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── config.md
+    │               └── workflow.md
     ├── suggest-next-issue/         # Issue prioritization skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -203,7 +249,7 @@ This repository uses two levels of semver versioning:
 - New plugins start at `1.0.0`
 - The version in `plugin.json` and its `marketplace.json` entry must always match
 
-**Version checks on branch operations**: After merging, rebasing, or before creating a PR, always review `plugin.json` and `marketplace.json` for version conflicts or missed bumps. Another branch may have already incremented a version, so verify that all version numbers are correct and consistent.
+**Version checks on branch operations**: After merging, rebasing, or before creating a PR, read and follow the procedure in `.claude/skills/check-versions.md` to verify version correctness. Another branch may have already incremented a version, so always check.
 
 ## License
 
