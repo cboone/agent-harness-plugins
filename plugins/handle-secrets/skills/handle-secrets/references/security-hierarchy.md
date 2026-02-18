@@ -7,12 +7,12 @@ Input methods ranked from most to least dangerous, with concrete technical reaso
 Arguments passed to a process are visible to **every user on the system** through three distinct attack surfaces:
 
 1. **`ps aux`** reads from `/proc/<pid>/cmdline`, which is **world-readable** regardless of file permissions
-2. **Shell history** records commands to persistent files (`~/.bash_history`, `~/.zsh_history`)
-3. **Audit logs** and monitoring tools often capture full command lines
+1. **Shell history** records commands to persistent files (`~/.bash_history`, `~/.zsh_history`)
+1. **Audit logs** and monitoring tools often capture full command lines
 
 ### Real CVEs
 
-- **CVE-2022-45868** (H2 Database): Accepted `-webAdminPassword` as a CLI argument. The vendor's response: *"Passwords should never be passed on the command line and every qualified DBA or system administrator is expected to know that."*
+- **CVE-2022-45868** (H2 Database): Accepted `-webAdminPassword` as a CLI argument. The vendor's response: _"Passwords should never be passed on the command line and every qualified DBA or system administrator is expected to know that."_
 - **CVE-2006-5659** (PAM_extern): Sent passwords as CLI arguments, letting local users harvest them via `ps`
 - **FreeRDP Issue #3639**: Accepted `/p:<password>`, then attempted to overwrite it with asterisks in `argv`, but a race condition left the password visible
 
@@ -51,7 +51,7 @@ Storing credentials in files works when permissions are correct.
 
 - **Create credential files with 0600 permissions from the start** using atomic file creation (e.g., `os.open()` with explicit mode bits)
 - **Never create-then-chmod** — this introduces a race condition where the file briefly has insecure permissions
-- **Refuse to use files with insecure permissions** (SSH's model: *"Permissions 0644 for '/home/user/.ssh/id_rsa' are too open."*)
+- **Refuse to use files with insecure permissions** (SSH's model: _"Permissions 0644 for '/home/user/.ssh/id_rsa' are too open."_)
 
 ### Separate config from credentials
 
@@ -119,11 +119,11 @@ OS-level keychains offer encrypted storage with access control and biometric aut
 
 ### Platform keystores
 
-| Platform | Keystore | CLI access |
-|----------|----------|-----------|
-| macOS | Keychain | `security` command |
-| Linux | Secret Service API (D-Bus) | GNOME Keyring, KDE Wallet, KeePassXC |
-| Windows | Credential Manager | `cmdkey`, WinCred API |
+| Platform | Keystore                   | CLI access                           |
+| -------- | -------------------------- | ------------------------------------ |
+| macOS    | Keychain                   | `security` command                   |
+| Linux    | Secret Service API (D-Bus) | GNOME Keyring, KDE Wallet, KeePassXC |
+| Windows  | Credential Manager         | `cmdkey`, WinCred API                |
 
 ### Git's credential helper protocol
 
@@ -136,11 +136,11 @@ The seminal pattern adopted by Docker, `gh`, and others:
 
 ## How major CLI tools handle credentials
 
-| Tool | Storage method | Default location | Auth flow |
-|------|---------------|-----------------|-----------|
-| **gh** | OS keyring (since v2.24) | `~/.config/gh/hosts.yml` (fallback) | OAuth device flow |
-| **AWS CLI** | INI file (plaintext) | `~/.aws/credentials` | `aws configure` / SSO |
-| **Docker** | Base64 in JSON (not encryption) | `~/.docker/config.json` | `docker login --password-stdin` |
-| **kubectl** | YAML (plaintext tokens) | `~/.kube/config` | Exec credential plugins |
-| **git** | Credential helper protocol | Varies by helper | Helper-dependent |
-| **1Password** | Encrypted vault | N/A | `op://` URIs |
+| Tool          | Storage method                  | Default location                    | Auth flow                       |
+| ------------- | ------------------------------- | ----------------------------------- | ------------------------------- |
+| **gh**        | OS keyring (since v2.24)        | `~/.config/gh/hosts.yml` (fallback) | OAuth device flow               |
+| **AWS CLI**   | INI file (plaintext)            | `~/.aws/credentials`                | `aws configure` / SSO           |
+| **Docker**    | Base64 in JSON (not encryption) | `~/.docker/config.json`             | `docker login --password-stdin` |
+| **kubectl**   | YAML (plaintext tokens)         | `~/.kube/config`                    | Exec credential plugins         |
+| **git**       | Credential helper protocol      | Varies by helper                    | Helper-dependent                |
+| **1Password** | Encrypted vault                 | N/A                                 | `op://` URIs                    |
