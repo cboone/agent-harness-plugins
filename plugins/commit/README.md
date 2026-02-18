@@ -19,12 +19,12 @@ Analyzes your diff to generate well-structured conventional commit messages that
 /commit --all
 ```
 
-| Option | Description |
-| --------- | ------------------------------------------------------- |
-| `--push` | Push to remote after committing |
-| `--staged` | Commit only staged changes, ignoring unstaged changes |
-| `--plan` | Commit only the plan file(s) |
-| `--all` | Stage and commit all changes including untracked files |
+| Option     | Description                                            |
+| ---------- | ------------------------------------------------------ |
+| `--push`   | Push to remote after committing                        |
+| `--staged` | Commit only staged changes, ignoring unstaged changes  |
+| `--plan`   | Commit only the plan file(s)                           |
+| `--all`    | Stage and commit all changes including untracked files |
 
 ## Examples
 
