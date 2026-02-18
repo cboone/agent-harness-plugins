@@ -118,17 +118,7 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 ```
 
-**Add a macOS dependency** to the brew formula:
-
-```yaml
-brews:
-  - # ... (keep other fields)
-    dependencies:
-      - name: macos
-        type: optional
-```
-
-Or add a `custom_block` to enforce macOS:
+**Add a macOS requirement** to the brew formula using `custom_block`:
 
 ```yaml
 brews:
