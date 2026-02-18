@@ -22,7 +22,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Write Markdown](#write-markdown)
 ∙ [Write Shell Scripts](#write-shell-scripts)
 <br>Scaffolding:
-[Scaffold Go CLI](#scaffold-go-cli)
+[Add GoReleaser Homebrew](#add-goreleaser-homebrew)
+∙ [Scaffold Go CLI](#scaffold-go-cli)
 ∙ [Scaffold Go Library](#scaffold-go-library)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
 ∙ [Setup Gitleaks](#setup-gitleaks)
@@ -170,6 +171,12 @@ Bash style conventions for creating and editing shell scripts. Activates automat
 ### Scaffolding
 
 Bootstrap new projects with consistent structure. Generate boilerplate, CI/CD pipelines, and security scanning from templates.
+
+#### Add GoReleaser Homebrew
+
+Add GoReleaser configuration and a GitHub Actions release workflow to an existing Go CLI project with Homebrew tap publishing to `cboone/homebrew-tap`. Detects project features (shell completions, man page generation, macOS-only constraints) and generates appropriate configuration with conventional commit changelog grouping. Optionally adds a `release-dry-run` Makefile target.
+
+> **Trigger:** `/add-goreleaser-homebrew`
 
 #### Scaffold Go CLI
 
