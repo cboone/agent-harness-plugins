@@ -59,8 +59,8 @@ Also detect new plugins (directories at HEAD that did not exist at the base) and
 For each plugin with content changes:
 
 1. Read the current version from `plugins/<name>/.claude-plugin/plugin.json`
-2. Read the base version: `git show <base>:plugins/<name>/.claude-plugin/plugin.json`
-3. Compare:
+1. Read the base version: `git show <base>:plugins/<name>/.claude-plugin/plugin.json`
+1. Compare:
    - New plugin (file absent at base) — version should be `1.0.0`
    - Content files changed but version unchanged — **flag as missing version bump**
    - Version changed — verify the bump direction is forward, not a regression
