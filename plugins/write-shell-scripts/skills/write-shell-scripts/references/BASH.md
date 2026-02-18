@@ -86,10 +86,10 @@ Use `${var}`, not `$var`. Braces prevent ambiguity in concatenation.
 
 Use parameter expansions instead of external commands for simple string operations.
 
-| Use          | Avoid                                      |
-| ------------ | ------------------------------------------ |
-| `${var%.*}`  | `echo "$var" &#124; sed 's/\.[^.]*$//'`    |
-| `${var##*/}` | `basename "$var"`                          |
+| Use          | Avoid                                   |
+| ------------ | --------------------------------------- |
+| `${var%.*}`  | `echo "$var" &#124; sed 's/\.[^.]*$//'` |
+| `${var##*/}` | `basename "$var"`                       |
 
 ---
 
