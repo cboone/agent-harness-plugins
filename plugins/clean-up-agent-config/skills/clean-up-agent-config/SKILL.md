@@ -59,19 +59,19 @@ repo/
 
 ### What goes where
 
-| Content type | Location | Reason |
-|---|---|---|
-| Project overview, tech stack, commands | `AGENTS.md` | Read by all four tools |
-| Directory-scoped conventions | Subdirectory `AGENTS.md` (Codex, Copilot) and `CLAUDE.md` or symlink per subdir (Claude) | Scoped by directory; Claude requires `CLAUDE.md` in each scoped directory |
-| Claude-specific (MCP hints, subagent patterns) | `.claude/rules/*.md` | Auto-loaded, Claude-only |
-| Copilot code review rules | `.github/copilot-instructions.md` | Copilot code review agent |
-| File-type-specific review rules | `.github/instructions/*.instructions.md` | Copilot's `applyTo` glob scoping |
-| Team permissions and hooks | `.claude/settings.json` | Committed, shared with team |
-| Personal model/telemetry/privacy | `.claude/settings.local.json` | Gitignored, personal |
-| MCP servers (team) | `.mcp.json` at project root | Committed, shared |
-| MCP servers (personal) | `.claude/settings.local.json` | Gitignored |
-| Codex sandbox/approval policy | `.codex/config.toml` | Codex-specific |
-| OpenCode model/instruction paths | `opencode.json` | OpenCode-specific |
+| Content type                                   | Location                                                                                 | Reason                                                                    |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Project overview, tech stack, commands         | `AGENTS.md`                                                                              | Read by all four tools                                                    |
+| Directory-scoped conventions                   | Subdirectory `AGENTS.md` (Codex, Copilot) and `CLAUDE.md` or symlink per subdir (Claude) | Scoped by directory; Claude requires `CLAUDE.md` in each scoped directory |
+| Claude-specific (MCP hints, subagent patterns) | `.claude/rules/*.md`                                                                     | Auto-loaded, Claude-only                                                  |
+| Copilot code review rules                      | `.github/copilot-instructions.md`                                                        | Copilot code review agent                                                 |
+| File-type-specific review rules                | `.github/instructions/*.instructions.md`                                                 | Copilot's `applyTo` glob scoping                                          |
+| Team permissions and hooks                     | `.claude/settings.json`                                                                  | Committed, shared with team                                               |
+| Personal model/telemetry/privacy               | `.claude/settings.local.json`                                                            | Gitignored, personal                                                      |
+| MCP servers (team)                             | `.mcp.json` at project root                                                              | Committed, shared                                                         |
+| MCP servers (personal)                         | `.claude/settings.local.json`                                                            | Gitignored                                                                |
+| Codex sandbox/approval policy                  | `.codex/config.toml`                                                                     | Codex-specific                                                            |
+| OpenCode model/instruction paths               | `opencode.json`                                                                          | OpenCode-specific                                                         |
 
 ---
 
@@ -115,12 +115,12 @@ Report which files exist, which are missing, which are symlinks, and what each f
 Read each found file and categorize its contents into:
 
 1. **Shared instructions** -- project overview, tech stack, commands, coding conventions that all tools should know
-2. **Claude-specific instructions** -- MCP server usage hints, subagent patterns, `@import` references, Claude-only tool restrictions
-3. **Copilot-specific instructions** -- code review rules, PR description conventions, `excludeAgent` scoping
-4. **Tool config** -- permissions, hooks, model settings, environment variables, sandbox policies
-5. **Personal config** -- settings that belong in gitignored files, not shared config
-6. **Duplicated content** -- instructions repeated across multiple files
-7. **Misplaced content** -- team settings in personal files or personal settings in team files
+1. **Claude-specific instructions** -- MCP server usage hints, subagent patterns, `@import` references, Claude-only tool restrictions
+1. **Copilot-specific instructions** -- code review rules, PR description conventions, `excludeAgent` scoping
+1. **Tool config** -- permissions, hooks, model settings, environment variables, sandbox policies
+1. **Personal config** -- settings that belong in gitignored files, not shared config
+1. **Duplicated content** -- instructions repeated across multiple files
+1. **Misplaced content** -- team settings in personal files or personal settings in team files
 
 #### Settings split analysis (Claude Code)
 
@@ -151,11 +151,11 @@ Note: Claude Code writes to `settings.local.json` by default when users change s
 Present the user with a concrete plan before making any changes:
 
 1. **New files** -- what will be created, with a summary of contents
-2. **Content moves** -- what content is moving between files, with before/after locations
-3. **Consolidations** -- duplicated content being merged into one location
-4. **Symlinks** -- what symlinks will be created or updated
-5. **Deletions** -- files being replaced by symlinks or removed
-6. **Config split** -- settings moving between settings.json and settings.local.json
+1. **Content moves** -- what content is moving between files, with before/after locations
+1. **Consolidations** -- duplicated content being merged into one location
+1. **Symlinks** -- what symlinks will be created or updated
+1. **Deletions** -- files being replaced by symlinks or removed
+1. **Config split** -- settings moving between settings.json and settings.local.json
 
 Show the proposed final file tree and get explicit user approval before proceeding.
 
@@ -345,29 +345,30 @@ Add glob patterns for subdirectory AGENTS.md files in monorepos:
 ### Phase 5: Verify
 
 1. **Symlinks resolve correctly:**
+
    ```bash
    ls -la CLAUDE.md
    readlink CLAUDE.md
    ```
 
-2. **No duplicated instructions** across AGENTS.md, copilot-instructions.md, and .claude/rules/
+1. **No duplicated instructions** across AGENTS.md, copilot-instructions.md, and .claude/rules/
 
-3. **Settings split is clean:**
+1. **Settings split is clean:**
    - settings.json has no personal/local settings
    - settings.local.json has no team-shared settings
 
-4. **Gitignore** covers .claude/settings.local.json
+1. **Gitignore** covers .claude/settings.local.json
 
-5. **Show final file tree** of all agent-related files with a brief note on each file's purpose
+1. **Show final file tree** of all agent-related files with a brief note on each file's purpose
 
-6. **Report summary** as a table:
+1. **Report summary** as a table:
 
-| File | Action | Notes |
-|---|---|---|
-| `AGENTS.md` | Created/Updated | Consolidated from X sources |
-| `CLAUDE.md` | Symlinked | Points to AGENTS.md |
-| `.claude/settings.json` | Updated | Moved N settings from local |
-| ... | ... | ... |
+| File                    | Action          | Notes                       |
+| ----------------------- | --------------- | --------------------------- |
+| `AGENTS.md`             | Created/Updated | Consolidated from X sources |
+| `CLAUDE.md`             | Symlinked       | Points to AGENTS.md         |
+| `.claude/settings.json` | Updated         | Moved N settings from local |
+| ...                     | ...             | ...                         |
 
 ---
 

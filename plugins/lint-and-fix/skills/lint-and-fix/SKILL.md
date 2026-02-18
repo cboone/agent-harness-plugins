@@ -29,26 +29,26 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 
 #### Detection Table
 
-| Config file(s) | Tool | Fix command | Check command |
-|----------------|------|-------------|---------------|
-| `eslint.config.*`, `.eslintrc.*` | eslint | `npx eslint --fix .` | `npx eslint .` |
-| `.prettierrc*`, `prettier.config.*` | prettier | `npx prettier --write .` | `npx prettier --check .` |
-| `.markdownlint.json`, `.markdownlint.yaml` | markdownlint | `npx markdownlint-cli2 --fix "**/*.md"` | `npx markdownlint-cli2 "**/*.md"` |
-| `.markdownlint-cli2.*` | markdownlint-cli2 | `npx markdownlint-cli2 --fix "**/*.md"` | `npx markdownlint-cli2 "**/*.md"` |
-| Shell scripts in project | shellcheck | _(no auto-fix)_ | `shellcheck <files>` |
-| Shell scripts in project | shfmt | `shfmt -w <files>` | `shfmt -d <files>` |
-| `knip.json`, `knip.config.*`, `knip.ts` | knip | _(no auto-fix)_ | `npx knip` |
-| `package.json` has `lint` script | npm lint | Try `npm run lint -- --fix`, fall back to `npm run lint` | `npm run lint` |
-| `package.json` has `format` script | npm format | `npm run format` | Try `npm run format -- --check`, fall back to `npm run format` |
-| `bin/lint`, `scripts/lint`, `script/lint` | Project script | Try `<script> --fix` first | `<script>` |
+| Config file(s)                             | Tool              | Fix command                                              | Check command                                                  |
+| ------------------------------------------ | ----------------- | -------------------------------------------------------- | -------------------------------------------------------------- |
+| `eslint.config.*`, `.eslintrc.*`           | eslint            | `npx eslint --fix .`                                     | `npx eslint .`                                                 |
+| `.prettierrc*`, `prettier.config.*`        | prettier          | `npx prettier --write .`                                 | `npx prettier --check .`                                       |
+| `.markdownlint.json`, `.markdownlint.yaml` | markdownlint      | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
+| `.markdownlint-cli2.*`                     | markdownlint-cli2 | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
+| Shell scripts in project                   | shellcheck        | _(no auto-fix)_                                          | `shellcheck <files>`                                           |
+| Shell scripts in project                   | shfmt             | `shfmt -w <files>`                                       | `shfmt -d <files>`                                             |
+| `knip.json`, `knip.config.*`, `knip.ts`    | knip              | _(no auto-fix)_                                          | `npx knip`                                                     |
+| `package.json` has `lint` script           | npm lint          | Try `npm run lint -- --fix`, fall back to `npm run lint` | `npm run lint`                                                 |
+| `package.json` has `format` script         | npm format        | `npm run format`                                         | Try `npm run format -- --check`, fall back to `npm run format` |
+| `bin/lint`, `scripts/lint`, `script/lint`  | Project script    | Try `<script> --fix` first                               | `<script>`                                                     |
 
 #### Detection Steps
 
 1. **Config files**: Use Glob to check for each config pattern in the project root.
-2. **Package.json scripts**: Read `package.json` and check for `lint`, `format`, or `check` scripts.
-3. **Shell scripts**: Use Glob to find `**/*.sh`, `bin/*`, `scripts/*`, `script/*`. If shell scripts are present, shellcheck and shfmt apply.
-4. **Project lint scripts**: Check for `bin/lint`, `scripts/lint`, `script/lint`.
-5. **Tool availability**: Verify detected tools are installed (check `npx`, `which`, or `package.json` devDependencies).
+1. **Package.json scripts**: Read `package.json` and check for `lint`, `format`, or `check` scripts.
+1. **Shell scripts**: Use Glob to find `**/*.sh`, `bin/*`, `scripts/*`, `script/*`. If shell scripts are present, shellcheck and shfmt apply.
+1. **Project lint scripts**: Check for `bin/lint`, `scripts/lint`, `script/lint`.
+1. **Tool availability**: Verify detected tools are installed (check `npx`, `which`, or `package.json` devDependencies).
 
 If **--tool <name>** was specified, filter the detected list to only that tool. If the specified tool was not detected, report that and stop.
 
@@ -122,13 +122,13 @@ If all tools passed with zero remaining issues, skip to step 6.
 For each remaining issue that auto-fix could not resolve:
 
 1. **Read the tool output** to identify the specific error, file, and line number.
-2. **Read the relevant file** at the indicated location.
-3. **Apply the fix** based on the error type:
+1. **Read the relevant file** at the indicated location.
+1. **Apply the fix** based on the error type:
    - **ESLint**: Read the rule from the error code (e.g., `no-unused-vars`), edit the code to comply.
    - **ShellCheck**: Read the SC code (e.g., SC2086), apply the recommended fix (quoting variables, using arrays, etc.).
    - **Markdownlint**: Fix heading levels, line lengths, trailing whitespace, etc.
    - **Knip**: Remove unused exports or dependencies after confirming they are truly unused.
-4. **Re-run the tool** on the specific file to verify the fix.
+1. **Re-run the tool** on the specific file to verify the fix.
 
 If a remaining issue is ambiguous or risky to fix automatically (e.g., removing a dependency that might be used dynamically, or a lint rule that conflicts with project intent), skip it and report:
 
@@ -161,7 +161,7 @@ Re-run all detected tools one final time in check mode to confirm a clean state:
 When committing:
 
 1. Stage all files modified by the lint and format fixes.
-2. Generate a conventional commit message:
+1. Generate a conventional commit message:
    - Use `style:` for pure formatting and linting fixes.
    - Use `fix:` if linting changes corrected actual bugs (e.g., unused variables removed, error handling added).
    - Include which tools ran and a brief summary of manual fixes in the commit body.

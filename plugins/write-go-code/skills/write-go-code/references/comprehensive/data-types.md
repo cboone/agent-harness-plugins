@@ -3,11 +3,13 @@
 ## new vs make
 
 **`new(T)`** - Allocates zeroed memory, returns `*T`:
+
 ```go
 p := new(Config)  // *Config, all fields zero-valued
 ```
 
 **`make(T, args)`** - Initializes slices, maps, channels only:
+
 ```go
 s := make([]int, 10)        // []int, length 10, capacity 10
 s := make([]int, 0, 100)    // []int, length 0, capacity 100
@@ -36,6 +38,7 @@ buf.WriteString("hello")
 ## Arrays vs Slices
 
 **Arrays** are values (copied on assignment):
+
 ```go
 var a [3]int          // Array of 3 ints
 b := a                // Copies entire array
@@ -43,6 +46,7 @@ func f(arr [3]int)    // Receives copy
 ```
 
 **Slices** are references (preferred for most uses):
+
 ```go
 var s []int           // Nil slice
 s := make([]int, 10)  // Slice of 10 ints
@@ -53,6 +57,7 @@ func f(s []int)       // Receives slice header (ptr, len, cap)
 ## Slice Declaration
 
 Prefer nil slice:
+
 ```go
 // Good - nil slice
 var items []string
@@ -65,6 +70,7 @@ items := []string{}
 ## Composite Literals
 
 **With field names** (preferred - resilient to field reordering):
+
 ```go
 return &Config{
     Host:    "localhost",
@@ -74,12 +80,14 @@ return &Config{
 ```
 
 **Without field names** (fragile):
+
 ```go
 // Breaks if fields reordered
 return &Config{"localhost", 8080, 30 * time.Second}
 ```
 
 **Empty literal equals new:**
+
 ```go
 cfg := &Config{}    // Same as new(Config)
 ```
@@ -87,6 +95,7 @@ cfg := &Config{}    // Same as new(Config)
 ## Maps
 
 **Declaration and initialization:**
+
 ```go
 // Nil map - reads return zero value, writes panic
 var m map[string]int
@@ -100,6 +109,7 @@ m := map[string]int{
 ```
 
 **Comma-ok idiom** - distinguish missing from zero:
+
 ```go
 // Bad - can't tell if key missing or value is 0
 count := m["key"]
@@ -117,6 +127,7 @@ if count, ok := m["key"]; ok {
 ```
 
 **Delete:**
+
 ```go
 delete(m, "key")  // Safe even if key doesn't exist
 ```
@@ -132,6 +143,7 @@ s[:]     // [0, 1, 2, 3, 4] (copy of slice header)
 ```
 
 **Slicing shares underlying array:**
+
 ```go
 a := []int{1, 2, 3, 4, 5}
 b := a[1:3]  // [2, 3]
@@ -141,6 +153,7 @@ b[0] = 99    // a is now [1, 99, 3, 4, 5]
 ## Append
 
 Always reassign result:
+
 ```go
 s = append(s, item)
 s = append(s, items...)  // Append another slice
@@ -149,6 +162,7 @@ s = append(s, items...)  // Append another slice
 ## Two-Dimensional Slices
 
 **Variable row lengths:**
+
 ```go
 rows := make([][]int, height)
 for i := range rows {
@@ -157,6 +171,7 @@ for i := range rows {
 ```
 
 **Single allocation (fixed dimensions):**
+
 ```go
 rows := make([][]int, height)
 data := make([]int, height*width)
@@ -168,6 +183,7 @@ for i := range rows {
 ## Copying Structs
 
 **Safe to copy** - simple value types:
+
 ```go
 type Point struct {
     X, Y int
@@ -177,6 +193,7 @@ p2 := p1  // OK - independent copy
 ```
 
 **Don't copy** - types with pointer methods or sync primitives:
+
 ```go
 type Counter struct {
     mu    sync.Mutex
@@ -195,6 +212,7 @@ func increment(c *Counter) {
 ## Type Conversions
 
 Explicit conversions required:
+
 ```go
 var i int = 42
 var f float64 = float64(i)
@@ -202,6 +220,7 @@ var u uint = uint(f)
 ```
 
 Between defined types:
+
 ```go
 type Celsius float64
 type Fahrenheit float64

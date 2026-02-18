@@ -32,6 +32,7 @@ if val, ok := Lookup("key"); ok {
 ## Named Return Parameters
 
 **Use when:**
+
 - Multiple parameters of same type
 - Meaning not clear from context
 - Documentation benefit
@@ -45,6 +46,7 @@ func Split(path string) (dir, file string)
 ```
 
 **Avoid when:**
+
 - Creates repetition with function name
 - Single return or obvious meaning
 
@@ -96,6 +98,7 @@ func ReadFile(path string) ([]byte, error) {
 **Key behaviors:**
 
 1. Arguments evaluated immediately:
+
 ```go
 func trace(msg string) {
     fmt.Println("enter:", msg)
@@ -110,7 +113,8 @@ func foo() {
 }
 ```
 
-2. LIFO order:
+1. LIFO order:
+
 ```go
 defer fmt.Println("first")
 defer fmt.Println("second")
@@ -118,7 +122,8 @@ defer fmt.Println("third")
 // Output: third, second, first
 ```
 
-3. Can modify named return values:
+1. Can modify named return values:
+
 ```go
 func double(x int) (result int) {
     defer func() { result *= 2 }()
@@ -129,6 +134,7 @@ func double(x int) (result int) {
 ## Defer for Cleanup
 
 **Mutex unlock:**
+
 ```go
 func (c *Counter) Increment() {
     c.mu.Lock()
@@ -138,6 +144,7 @@ func (c *Counter) Increment() {
 ```
 
 **Close resources:**
+
 ```go
 resp, err := http.Get(url)
 if err != nil {
@@ -147,6 +154,7 @@ defer resp.Body.Close()
 ```
 
 **Cleanup in loops** - be careful:
+
 ```go
 // Bad - defers accumulate until function returns
 for _, path := range paths {
@@ -215,6 +223,7 @@ c()  // 2
 ```
 
 **Watch for loop variable capture:**
+
 ```go
 // Bug - all closures share same i
 for i := 0; i < 3; i++ {
@@ -241,11 +250,13 @@ func Connect(addr string) (*Client, error)
 ```
 
 Use methods when:
+
 - Operation is on a specific type
 - Need to satisfy an interface
 - State modification needed
 
 Use functions when:
+
 - No associated type
 - Constructor (`NewXxx`)
 - Utility operations

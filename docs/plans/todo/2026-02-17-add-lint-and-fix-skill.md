@@ -22,12 +22,12 @@ The main deliverable. Structured as:
 - **Options section**: `--commit`/`--no-commit`, `--tool <name>`, `--check`
 - **Workflow** (7 steps):
   1. **Detect available tools** — Check for config files (eslint, prettier, markdownlint, shellcheck, shfmt, knip, package.json scripts, project lint scripts). Build a tool list with detection table mapping config files → tool → fix command → check command.
-  2. **Present detected tools** — Show table before running.
-  3. **Run each tool** — Execute sequentially with auto-fix flags. Tool-specific exit code handling. Record results.
-  4. **Report results** — Summary table (tool, status, fixed count, remaining count).
-  5. **Fix remaining issues** — Read errors, understand the specific rule, edit code to comply, re-run tool to verify.
-  6. **Final verification** — Re-run all tools in check mode to confirm clean state.
-  7. **Commit (optional)** — Controlled by `--commit`/`--no-commit` flags, or ask. Uses `style:` conventional commit type.
+  1. **Present detected tools** — Show table before running.
+  1. **Run each tool** — Execute sequentially with auto-fix flags. Tool-specific exit code handling. Record results.
+  1. **Report results** — Summary table (tool, status, fixed count, remaining count).
+  1. **Fix remaining issues** — Read errors, understand the specific rule, edit code to comply, re-run tool to verify.
+  1. **Final verification** — Re-run all tools in check mode to confirm clean state.
+  1. **Commit (optional)** — Controlled by `--commit`/`--no-commit` flags, or ask. Uses `style:` conventional commit type.
 - **Error Handling**: No tools detected, tool not installed, execution failures, conflicting tools (package.json scripts vs standalone configs).
 
 ## Files to Modify
@@ -50,10 +50,10 @@ The main deliverable. Structured as:
 ## Verification
 
 1. Confirm `plugin.json` fields are alphabetized and `name` matches directory name
-2. Confirm `marketplace.json` entry matches `plugin.json` on all shared fields
-3. Confirm `marketplace.json` metadata version is `1.8.0`
-4. Confirm SKILL.md frontmatter has exactly `name` and `description`
-5. Confirm README ToC follows one-link-per-line format with `∙ ` prefix
-6. Confirm README description section is in alphabetical order
-7. Confirm CLAUDE.md tree entry uses correct indentation and is alphabetical
-8. Validate marketplace.json is valid JSON
+1. Confirm `marketplace.json` entry matches `plugin.json` on all shared fields
+1. Confirm `marketplace.json` metadata version is `1.8.0`
+1. Confirm SKILL.md frontmatter has exactly `name` and `description`
+1. Confirm README ToC follows one-link-per-line format with `∙` prefix
+1. Confirm README description section is in alphabetical order
+1. Confirm CLAUDE.md tree entry uses correct indentation and is alphabetical
+1. Validate marketplace.json is valid JSON

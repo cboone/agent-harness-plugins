@@ -8,11 +8,11 @@ This enhancement adds a multi-strategy issue detection step to the PR skill so t
 
 ## Files to modify
 
-| File | Change |
-|------|--------|
-| `plugins/pr/skills/pr/SKILL.md` | Add issue detection step, update PR body template, update commit/report steps, add error handling |
-| `plugins/pr/.claude-plugin/plugin.json` | Bump version `1.0.1` → `1.1.0` |
-| `.claude-plugin/marketplace.json` | Mirror version bump for PR plugin entry |
+| File                                    | Change                                                                                            |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `plugins/pr/skills/pr/SKILL.md`         | Add issue detection step, update PR body template, update commit/report steps, add error handling |
+| `plugins/pr/.claude-plugin/plugin.json` | Bump version `1.0.1` → `1.1.0`                                                                    |
+| `.claude-plugin/marketplace.json`       | Mirror version bump for PR plugin entry                                                           |
 
 ## Plan
 
@@ -22,6 +22,7 @@ Insert a new sub-step after the existing context-gathering commands (after line 
 
 **Strategy 1 — Issue numbers in the branch name:**
 Parse the current branch name for issue numbers in patterns like:
+
 - `TYPE/N-description` (e.g., `fix/42-login-bug` → #42)
 - `TYPE/description-N` (e.g., `feature/login-bug-42` → #42)
 - `TYPE/issue-N-description` (e.g., `fix/issue-42` → #42)
@@ -83,7 +84,7 @@ Add connected issues and closing keywords to the post-creation report.
 ## Verification
 
 1. Test with a branch containing an issue number (e.g., `fix/42-something`) — should detect #42 from branch name
-2. Test with a branch created via `create-worktree-from-issue` (e.g., `feature/add-dark-mode-support`) — should find the issue via slug search
-3. Test with a branch that has `#N` references in commit messages — should detect from commits
-4. Test with a branch that has no connected issues — should produce a PR body with no `## Closes` section
-5. Verify `plugin.json` and `marketplace.json` versions match at `1.1.0`
+1. Test with a branch created via `create-worktree-from-issue` (e.g., `feature/add-dark-mode-support`) — should find the issue via slug search
+1. Test with a branch that has `#N` references in commit messages — should detect from commits
+1. Test with a branch that has no connected issues — should produce a PR body with no `## Closes` section
+1. Verify `plugin.json` and `marketplace.json` versions match at `1.1.0`

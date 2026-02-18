@@ -143,7 +143,7 @@ assert.Equal(t, want, got)
 
 Use `testdata` directory (ignored by Go tools):
 
-```
+```text
 package/
   foo.go
   foo_test.go

@@ -62,8 +62,8 @@ Also read the repo's README and any roadmap or project documentation to understa
 An issue is considered in progress if **any** of the following are true:
 
 1. **Branch or worktree match**: A branch or worktree name contains the issue number (existing behavior)
-2. **"in progress" label**: The issue has a label named "in progress" (case-insensitive match on the `labels` data already fetched in step 1)
-3. **Assigned to current user**: The issue's `assignees` list (already fetched in step 1) includes the authenticated username from `gh api user`
+1. **"in progress" label**: The issue has a label named "in progress" (case-insensitive match on the `labels` data already fetched in step 1)
+1. **Assigned to current user**: The issue's `assignees` list (already fetched in step 1) includes the authenticated username from `gh api user`
 
 Exclude in-progress issues from recommendations, but note them in the output as "already in progress" along with how each was detected (branch, label, assignment, or a combination).
 
@@ -71,16 +71,17 @@ Exclude in-progress issues from recommendations, but note them in the output as 
 
 Evaluate each open issue (that is not already in progress) on these signals:
 
-| Signal | Source | Weight |
-|--------|--------|--------|
-| **Priority labels** | Labels containing "bug", "critical", "urgent", "security" | High |
-| **Dependencies** | Issue body references to other issues (#N, "depends on", "blocked by") | High |
-| **Age** | `createdAt` field | Medium |
-| **Activity** | Number of comments, `updatedAt` recency | Medium |
-| **Effort** | Issue body length/complexity, scope described | Low |
-| **Momentum fit** | Similarity to recently closed issues | Low |
+| Signal              | Source                                                                 | Weight |
+| ------------------- | ---------------------------------------------------------------------- | ------ |
+| **Priority labels** | Labels containing "bug", "critical", "urgent", "security"              | High   |
+| **Dependencies**    | Issue body references to other issues (#N, "depends on", "blocked by") | High   |
+| **Age**             | `createdAt` field                                                      | Medium |
+| **Activity**        | Number of comments, `updatedAt` recency                                | Medium |
+| **Effort**          | Issue body length/complexity, scope described                          | Low    |
+| **Momentum fit**    | Similarity to recently closed issues                                   | Low    |
 
 Dependency analysis: scan each issue body for references to other issues (`#N`, "depends on #N", "blocked by #N", "after #N"). Build a dependency graph to identify:
+
 - Issues that **unblock** other open issues (high value)
 - Issues that are **blocked** by other open issues (note the blocker)
 
@@ -98,11 +99,11 @@ Present the top N issues (default 5) organized by category:
 For each recommendation, include:
 
 1. Issue number and title text (e.g., `#23 - Fix typo in help output`). Use the `title` field from the JSON, not the issue URL.
-2. Labels and age
-3. What it is: a brief summary of the issue (1-2 sentences distilled from the issue body, so the user understands the scope and substance without having to open the issue)
-4. Why it's recommended (1-2 sentences with specific reasoning)
-5. Suggested first steps or approach (1 sentence)
-6. Blockers or considerations, if any
+1. Labels and age
+1. What it is: a brief summary of the issue (1-2 sentences distilled from the issue body, so the user understands the scope and substance without having to open the issue)
+1. Why it's recommended (1-2 sentences with specific reasoning)
+1. Suggested first steps or approach (1 sentence)
+1. Blockers or considerations, if any
 
 ### 5. Summarize In-Progress Work
 
@@ -112,13 +113,13 @@ After recommendations, briefly list issues detected as in progress. For each, no
 
 End with an offer to create a worktree for the chosen issue via the `create-worktree-from-issue` skill. Example:
 
-```
+```text
 Ready to start on one of these? Just say "start issue #N" or pick a number from the list.
 ```
 
 ## Example Output
 
-```
+```markdown
 ## Suggested Next Issues
 
 ### Quick Wins

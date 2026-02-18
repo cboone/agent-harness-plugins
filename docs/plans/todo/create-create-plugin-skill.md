@@ -6,7 +6,7 @@ This repository has six plugins following consistent patterns, but the conventio
 
 ## Files to Create
 
-```
+```text
 plugins/create-plugin/
 ├── .claude-plugin/
 │   └── plugin.json
@@ -32,7 +32,7 @@ plugins/create-plugin/
 
 ### 1. Create directory structure
 
-```
+```bash
 mkdir -p plugins/create-plugin/.claude-plugin
 mkdir -p plugins/create-plugin/skills/create-plugin/references
 ```
@@ -55,31 +55,32 @@ Both `plugin.json` and `marketplace.json` include a `version` field. The version
 
 Each reference file documents one artifact type with exact formats, field descriptions, and templates derived from existing plugins:
 
-| File | Covers | Key content |
-|------|--------|-------------|
-| `plugin-json.md` | `.claude-plugin/plugin.json` | Field list, skill vs hooks difference (`skills` field), versioning rules, templates for each type |
-| `marketplace-json.md` | `.claude-plugin/marketplace.json` | Extra fields (`category`, `source`), valid categories, versioning rules, entry template |
-| `skill-md.md` | `skills/*/SKILL.md` | Frontmatter format, description formula, common sections, examples from existing skills |
-| `hooks-json.md` | `hooks/hooks.json` | JSON schema, hook categories, matchers, `${CLAUDE_PLUGIN_ROOT}` usage |
-| `scripts.md` | Bash scripts in `scripts/` | Header, strict mode, function patterns, `main "$@"`, shellcheck directives |
-| `readme-updates.md` | `README.md` | ToC format, Skills/Hooks section format, install command placement |
+| File                  | Covers                            | Key content                                                                                       |
+| --------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `plugin-json.md`      | `.claude-plugin/plugin.json`      | Field list, skill vs hooks difference (`skills` field), versioning rules, templates for each type |
+| `marketplace-json.md` | `.claude-plugin/marketplace.json` | Extra fields (`category`, `source`), valid categories, versioning rules, entry template           |
+| `skill-md.md`         | `skills/*/SKILL.md`               | Frontmatter format, description formula, common sections, examples from existing skills           |
+| `hooks-json.md`       | `hooks/hooks.json`                | JSON schema, hook categories, matchers, `${CLAUDE_PLUGIN_ROOT}` usage                             |
+| `scripts.md`          | Bash scripts in `scripts/`        | Header, strict mode, function patterns, `main "$@"`, shellcheck directives                        |
+| `readme-updates.md`   | `README.md`                       | ToC format, Skills/Hooks section format, install command placement                                |
 
 ### 4. Write `plugins/create-plugin/skills/create-plugin/SKILL.md`
 
 The main skill file with:
+
 - Frontmatter: `name: create-plugin`, `description` with trigger phrases ("create a plugin", "add a new skill", "add a new hook", "new plugin", "scaffold plugin")
 - Workflow steps:
   1. Determine plugin type (skill vs hooks)
-  2. Choose a name (kebab-case, verb-noun preferred)
-  3. Create directory structure (with templates for each type)
-  4. Write plugin.json with correct version (points to `references/plugin-json.md`)
-  5. Write SKILL.md or hooks.json (points to `references/skill-md.md` or `references/hooks-json.md`)
-  6. Add scripts if needed (points to `references/scripts.md`)
-  7. Add reference files if needed (skills only, flat vs categorized patterns)
-  8. Register in marketplace.json (points to `references/marketplace-json.md`)
-  9. Update README.md (points to `references/readme-updates.md`)
-  10. Update CLAUDE.md directory tree
-  11. Verification checklist
+  1. Choose a name (kebab-case, verb-noun preferred)
+  1. Create directory structure (with templates for each type)
+  1. Write plugin.json with correct version (points to `references/plugin-json.md`)
+  1. Write SKILL.md or hooks.json (points to `references/skill-md.md` or `references/hooks-json.md`)
+  1. Add scripts if needed (points to `references/scripts.md`)
+  1. Add reference files if needed (skills only, flat vs categorized patterns)
+  1. Register in marketplace.json (points to `references/marketplace-json.md`)
+  1. Update README.md (points to `references/readme-updates.md`)
+  1. Update CLAUDE.md directory tree
+  1. Verification checklist
 - Error handling section
 
 ### 5. Update `marketplace.json`

@@ -37,7 +37,7 @@ Examples:
 
 Build a prompt string that gives the new agent context about its task:
 
-```
+```text
 Work on: [user's task description]
 
 Branch: [BRANCH_NAME]

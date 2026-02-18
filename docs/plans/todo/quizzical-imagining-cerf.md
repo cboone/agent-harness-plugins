@@ -8,14 +8,14 @@ This plan adds lightweight, universally-compatible status management using self-
 
 ## Skills Reviewed
 
-| Skill | Interacts with issues? | Needs changes? |
-|-------|----------------------|----------------|
-| create-worktree-from-issue | Yes — finds and starts work on issues | **Yes** — add status transitions |
-| suggest-next-issue | Yes — lists and recommends issues | **Yes** — enhance in-progress detection |
-| pr | Yes — references issues in PR body | No — GitHub handles close-on-merge via "Closes #N" |
-| commit | Yes — references issues from branch name | No — no status management needed |
-| resolve-copilot-pr-feedback | No — operates at PR level | No |
-| create-worktree | No — general task worktrees | No |
+| Skill                       | Interacts with issues?                   | Needs changes?                                     |
+| --------------------------- | ---------------------------------------- | -------------------------------------------------- |
+| create-worktree-from-issue  | Yes — finds and starts work on issues    | **Yes** — add status transitions                   |
+| suggest-next-issue          | Yes — lists and recommends issues        | **Yes** — enhance in-progress detection            |
+| pr                          | Yes — references issues in PR body       | No — GitHub handles close-on-merge via "Closes #N" |
+| commit                      | Yes — references issues from branch name | No — no status management needed                   |
+| resolve-copilot-pr-feedback | No — operates at PR level                | No                                                 |
+| create-worktree             | No — general task worktrees              | No                                                 |
 
 ## Changes
 
@@ -44,8 +44,8 @@ Insert a new **step 2** between the current "1. Find the Issue" and "2. Build th
 **Enhance step 2 (Identify In-Progress Work):** Expand the definition of "in progress" from just branch/worktree matching to include:
 
 1. Has a corresponding branch or worktree (existing behavior)
-2. Has an "in progress" label (new)
-3. Is assigned to the current user (new — use `gh api user --jq '.login'` to get username)
+1. Has an "in progress" label (new)
+1. Is assigned to the current user (new — use `gh api user --jq '.login'` to get username)
 
 Note: The `gh issue list` command in step 1 already fetches `labels` and `assignees` fields, so no extra API call is needed for those. Only one new call: `gh api user --jq '.login'`.
 
@@ -57,22 +57,22 @@ Note: The `gh issue list` command in step 1 already fetches `labels` and `assign
 
 These are additive enhancements (new behavior layered onto existing workflows), warranting **patch** bumps:
 
-| File | Field | Old | New |
-|------|-------|-----|-----|
-| `plugins/create-worktree-from-issue/.claude-plugin/plugin.json` | version | 1.1.4 | 1.1.5 |
-| `plugins/suggest-next-issue/.claude-plugin/plugin.json` | version | 1.0.1 | 1.0.2 |
-| `.claude-plugin/marketplace.json` line 94 | version (create-worktree-from-issue) | 1.1.4 | 1.1.5 |
-| `.claude-plugin/marketplace.json` line 178 | version (suggest-next-issue) | 1.0.1 | 1.0.2 |
+| File                                                            | Field                                | Old   | New   |
+| --------------------------------------------------------------- | ------------------------------------ | ----- | ----- |
+| `plugins/create-worktree-from-issue/.claude-plugin/plugin.json` | version                              | 1.1.4 | 1.1.5 |
+| `plugins/suggest-next-issue/.claude-plugin/plugin.json`         | version                              | 1.0.1 | 1.0.2 |
+| `.claude-plugin/marketplace.json` line 94                       | version (create-worktree-from-issue) | 1.1.4 | 1.1.5 |
+| `.claude-plugin/marketplace.json` line 178                      | version (suggest-next-issue)         | 1.0.1 | 1.0.2 |
 
 Marketplace `metadata.version` stays at `1.6.0` (no plugins added or removed).
 
 ## Files Modified (6 total)
 
 1. `plugins/create-worktree-from-issue/skills/create-worktree-from-issue/SKILL.md`
-2. `plugins/suggest-next-issue/skills/suggest-next-issue/SKILL.md`
-3. `plugins/create-worktree-from-issue/.claude-plugin/plugin.json`
-4. `plugins/suggest-next-issue/.claude-plugin/plugin.json`
-5. `.claude-plugin/marketplace.json`
+1. `plugins/suggest-next-issue/skills/suggest-next-issue/SKILL.md`
+1. `plugins/create-worktree-from-issue/.claude-plugin/plugin.json`
+1. `plugins/suggest-next-issue/.claude-plugin/plugin.json`
+1. `.claude-plugin/marketplace.json`
 
 ## Verification
 

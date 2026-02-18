@@ -13,6 +13,7 @@ New executable bash script (755) following the `plugins/notify/scripts/notify` p
 **Subcommands:**
 
 - **`fetch <owner> <repo> <pr_number>`** -- Fetches all unresolved Copilot-authored review threads. Uses `gh api graphql --paginate --slurp` which automatically manages cursor-based pagination (the query must declare `$endCursor: String` and use `after: $endCursor` plus `pageInfo { hasNextPage endCursor }` so `gh` can auto-inject cursor values across pages). Pipes the slurped JSON array through `jq` to filter for unresolved + Copilot-authored threads, and outputs a clean JSON array:
+
   ```json
   [
     {
@@ -32,6 +33,7 @@ New executable bash script (755) following the `plugins/notify/scripts/notify` p
 - **`reply-and-resolve <thread_id> [--body-file <path>]`** -- Combines reply + resolve, with reply body read from `--body-file` or stdin.
 
 Key design choices:
+
 - Uses `-F`/`-f` for GraphQL variables instead of string interpolation (eliminates the `$variable` shell escaping bugs the current SKILL.md warns about in four places)
 - Pagination is fully automatic: `gh --paginate` handles cursor injection when the query declares `$endCursor: String` and includes the required `pageInfo` shape -- the script does NOT manually loop or pass cursors
 - `jq` filters for `isResolved == false` and explicit Copilot identities/signatures; the script documents which author logins it matches (`github-copilot[bot]`, `github-actions[bot]`) and which body signatures it checks, so future maintainers understand the heuristics
@@ -62,6 +64,7 @@ No longer needed since the script uses proper `-F` variable binding.
 Replace "re-query PR with pagination" with `"${SCRIPT}" fetch OWNER REPO PR_NUMBER` expecting `[]`.
 
 **Sections that stay unchanged:**
+
 - Frontmatter
 - PR Comments Prohibition
 - Copilot instructions update requirements + file strategy + format guidance
@@ -81,19 +84,19 @@ Replace "re-query PR with pagination" with `"${SCRIPT}" fetch OWNER REPO PR_NUMB
 
 ## Files to modify
 
-| File | Action |
-|------|--------|
-| `plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads` | Create (new) |
-| `plugins/resolve-copilot-pr-feedback/skills/resolve-copilot-pr-feedback/SKILL.md` | Edit |
-| `plugins/resolve-copilot-pr-feedback/.claude-plugin/plugin.json` | Edit (version bump) |
-| `.claude-plugin/marketplace.json` | Edit (version bumps) |
-| `CLAUDE.md` | Edit (directory tree) |
+| File                                                                              | Action                |
+| --------------------------------------------------------------------------------- | --------------------- |
+| `plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads`             | Create (new)          |
+| `plugins/resolve-copilot-pr-feedback/skills/resolve-copilot-pr-feedback/SKILL.md` | Edit                  |
+| `plugins/resolve-copilot-pr-feedback/.claude-plugin/plugin.json`                  | Edit (version bump)   |
+| `.claude-plugin/marketplace.json`                                                 | Edit (version bumps)  |
+| `CLAUDE.md`                                                                       | Edit (directory tree) |
 
 ## Verification
 
 1. `bash -n` and `shellcheck` on the new script
-2. Run `plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads --help` to verify usage output
-3. Verify dependency checks: run with `gh` or `jq` absent from `PATH` and confirm non-zero exit with actionable stderr message; run without GitHub auth and confirm similar behavior
-4. Dry-run `fetch` against a real PR with Copilot comments to verify JSON output shape and pagination coverage
-5. Dry-run `resolve`, `reply`, and `reply-and-resolve` against a real PR to verify mutations work end-to-end (use a test PR or already-resolved threads to avoid side effects)
-6. Verify the SKILL.md reads coherently with script references replacing raw GraphQL and preserving behavior notes (including `path:(no-line)` fallback)
+1. Run `plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads --help` to verify usage output
+1. Verify dependency checks: run with `gh` or `jq` absent from `PATH` and confirm non-zero exit with actionable stderr message; run without GitHub auth and confirm similar behavior
+1. Dry-run `fetch` against a real PR with Copilot comments to verify JSON output shape and pagination coverage
+1. Dry-run `resolve`, `reply`, and `reply-and-resolve` against a real PR to verify mutations work end-to-end (use a test PR or already-resolved threads to avoid side effects)
+1. Verify the SKILL.md reads coherently with script references replacing raw GraphQL and preserving behavior notes (including `path:(no-line)` fallback)

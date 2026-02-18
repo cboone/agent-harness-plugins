@@ -13,22 +13,24 @@ description: >-
 ## Core Principles
 
 1. **Clarity over cleverness** - Code should be obvious to readers
-2. **Simplicity** - Accomplish goals in the most straightforward way
-3. **Consistency** - Match surrounding code and project conventions
-4. **Minimal indentation** - Handle errors early, keep happy path unindented
+1. **Simplicity** - Accomplish goals in the most straightforward way
+1. **Consistency** - Match surrounding code and project conventions
+1. **Minimal indentation** - Handle errors early, keep happy path unindented
 
 ## Workflow
 
 1. Run automated checks (`make lint`, `make fmt` or `gofmt`, `goimports`)
-2. Review against essential checklist: `references/essential/checklist.md`
-3. For specific questions, consult: `references/comprehensive/{topic}.md`
+1. Review against essential checklist: `references/essential/checklist.md`
+1. For specific questions, consult: `references/comprehensive/{topic}.md`
 
 ## Reference Navigation
 
 **Quick reviews (default):**
+
 - `references/essential/checklist.md` - Condensed, actionable rules
 
 **Deep dives by topic:**
+
 - `references/comprehensive/naming.md` - Package names, identifiers, receivers
 - `references/comprehensive/errors.md` - Error handling, panic/recover
 - `references/comprehensive/concurrency.md` - Goroutines, channels, context

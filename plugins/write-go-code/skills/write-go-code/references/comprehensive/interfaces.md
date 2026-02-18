@@ -15,6 +15,7 @@ type Writer interface {
 ```
 
 **Implicit satisfaction** - no `implements` keyword:
+
 ```go
 type MyReader struct{}
 
@@ -27,6 +28,7 @@ func (r *MyReader) Read(p []byte) (n int, err error) {
 ## Interface Naming
 
 **Single-method interfaces**: method name + `-er` suffix:
+
 - `Reader` (has `Read`)
 - `Writer` (has `Write`)
 - `Closer` (has `Close`)
@@ -34,6 +36,7 @@ func (r *MyReader) Read(p []byte) (n int, err error) {
 - `Formatter` (has `Format`)
 
 **Multi-method interfaces**: descriptive noun:
+
 - `ReadWriter`
 - `ReadWriteCloser`
 - `FileSystem`
@@ -161,6 +164,7 @@ br.Read(p)
 ```
 
 **Embedding is not inheritance:**
+
 - Embedded type's methods receive embedded type as receiver
 - Outer type can override by defining same method
 - Access embedded type directly: `br.Reader.Read(p)`
@@ -213,6 +217,7 @@ w == nil               // false - interface holds type info
 ```
 
 **Nil interface vs nil concrete value:**
+
 ```go
 func returnsWriter() io.Writer {
     var f *os.File = nil
@@ -258,6 +263,7 @@ Small interfaces are easier to implement, mock, and compose.
 ## Accept Interfaces, Return Structs
 
 General guideline:
+
 - Functions should accept interfaces (flexible)
 - Functions should return concrete types (informative)
 

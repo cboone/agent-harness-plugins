@@ -4,7 +4,7 @@ The root `.claude-plugin/marketplace.json` is the plugin registry for this repos
 
 ## File Location
 
-```
+```text
 .claude-plugin/marketplace.json
 ```
 
@@ -36,18 +36,18 @@ The `metadata.version` tracks changes to the plugin catalog itself — bump it w
 
 Each entry in the `plugins` array has these fields, alphabetized:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `author` | object | `{ "name": "Christopher Boone" }` |
-| `category` | string | One of the valid categories listed below. |
-| `description` | string | One-sentence summary. Must match `plugin.json`. |
-| `homepage` | string | `"https://github.com/cboone/cboone-cc-plugins"` |
-| `keywords` | array | Must match `plugin.json`. |
-| `license` | string | `"MIT"` |
-| `name` | string | Plugin name. Must match `plugin.json`. |
-| `repository` | string | `"https://github.com/cboone/cboone-cc-plugins"` |
-| `source` | string | Relative path to the plugin directory (e.g., `"./plugins/my-plugin"`). |
-| `version` | string | Must match `plugin.json`. |
+| Field         | Type   | Description                                                            |
+| ------------- | ------ | ---------------------------------------------------------------------- |
+| `author`      | object | `{ "name": "Christopher Boone" }`                                      |
+| `category`    | string | One of the valid categories listed below.                              |
+| `description` | string | One-sentence summary. Must match `plugin.json`.                        |
+| `homepage`    | string | `"https://github.com/cboone/cboone-cc-plugins"`                        |
+| `keywords`    | array  | Must match `plugin.json`.                                              |
+| `license`     | string | `"MIT"`                                                                |
+| `name`        | string | Plugin name. Must match `plugin.json`.                                 |
+| `repository`  | string | `"https://github.com/cboone/cboone-cc-plugins"`                        |
+| `source`      | string | Relative path to the plugin directory (e.g., `"./plugins/my-plugin"`). |
+| `version`     | string | Must match `plugin.json`.                                              |
 
 ## Valid Categories
 

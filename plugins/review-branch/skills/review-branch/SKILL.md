@@ -35,7 +35,7 @@ Identify the base to diff against:
 git rev-parse --verify <ref>
 ```
 
-2. **Otherwise**, detect the repository's default branch:
+1. **Otherwise**, detect the repository's default branch:
 
 ```bash
 gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
@@ -47,7 +47,7 @@ If `gh` is not available or the command fails, fall back to a purely local query
 git rev-parse --abbrev-ref origin/HEAD | sed 's@^origin/@@'
 ```
 
-3. **Find the merge base** between the base reference and HEAD:
+1. **Find the merge base** between the base reference and HEAD:
 
 ```bash
 git merge-base <base-ref> HEAD
@@ -151,9 +151,9 @@ ls docs/plans/in-progress/ 2>/dev/null
 ls docs/plans/ 2>/dev/null
 ```
 
-2. Search for plan files whose name matches the current branch name (with type prefixes and hyphens/underscores normalized). For example, branch `feature/add-dark-mode` would match a plan named `add-dark-mode.md`.
+1. Search for plan files whose name matches the current branch name (with type prefixes and hyphens/underscores normalized). For example, branch `feature/add-dark-mode` would match a plan named `add-dark-mode.md`.
 
-3. If exactly one plan matches, use it. If multiple plans match, list them and ask the user which to use. If no plans match, skip the plan comparison entirely.
+1. If exactly one plan matches, use it. If multiple plans match, list them and ask the user which to use. If no plans match, skip the plan comparison entirely.
 
 #### 4b. Parse the Plan
 
@@ -181,9 +181,9 @@ Use the commit messages, file changes, and diff content to make these determinat
 Present the comparison as a progress report:
 
 1. **Overall progress**: A fraction and percentage (e.g., "7/12 items completed (58%)")
-2. **Completed items**: List each with a brief note about which changes implement it
-3. **In-progress items**: List each with what has been done and what remains
-4. **Remaining items**: List items not yet started
+1. **Completed items**: List each with a brief note about which changes implement it
+1. **In-progress items**: List each with what has been done and what remains
+1. **Remaining items**: List items not yet started
 
 If the plan uses phases or sections, preserve that grouping in the report.
 
@@ -191,7 +191,7 @@ If the plan uses phases or sections, preserve that grouping in the report.
 
 Structure the final output with clear sections:
 
-```
+```markdown
 ## Branch Review: <branch-name>
 
 Base: <base-ref> (merge base: <short-hash>)

@@ -44,8 +44,8 @@ In the examples below, `resolve-copilot-threads` is a placeholder for the script
 **After fixing any Copilot feedback, you MUST:**
 
 1. **Push the code changes** (`git push`)
-2. **Resolve EACH thread** using the script (see below)
-3. **Verify resolution** by re-fetching the PR threads
+1. **Resolve EACH thread** using the script (see below)
+1. **Verify resolution** by re-fetching the PR threads
 
 **Addressing feedback without resolving the thread is INCOMPLETE WORK.**
 
@@ -67,8 +67,8 @@ Outputs `true` on success.
 **When Copilot feedback is categorized as INCORRECT (conflicts with project conventions/patterns), you MUST:**
 
 1. **Update the project's Copilot instructions** to document the correct pattern
-2. This prevents Copilot from flagging the same or similar things in future PRs
-3. The update should be concise and explain why the pattern is intentional
+1. This prevents Copilot from flagging the same or similar things in future PRs
+1. The update should be concise and explain why the pattern is intentional
 
 **Failure to update Copilot instructions = INCOMPLETE WORK for Incorrect category feedback.**
 
@@ -86,10 +86,10 @@ Copilot supports two types of instruction files in the `.github/` directory:
 Copilot's PR review may not read the full instructions file. Long files risk having instructions truncated or ignored. To maximize effectiveness:
 
 1. **Keep each instructions file under ~1,000 lines**
-2. **Put the most important review rules first** in each file
-3. **Start with 10-20 specific, actionable instructions** per file
-4. **Split by concern**: use path-specific files instead of one large file
-5. **Be specific**: clear, concrete instructions work better than vague directives
+1. **Put the most important review rules first** in each file
+1. **Start with 10-20 specific, actionable instructions** per file
+1. **Split by concern**: use path-specific files instead of one large file
+1. **Be specific**: clear, concrete instructions work better than vague directives
 
 #### Path-Specific Instructions File Format
 
@@ -207,8 +207,8 @@ bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file response.md
 1. Reply to the thread with professional explanation:
    - Outdated: "This comment refers to code refactored in commit abc123. The issue is no longer applicable."
    - Incorrect: "This conflicts with our {convention name} convention. {Brief explanation}. See {reference file} for project guidelines."
-2. Resolve the thread using `bash resolve-copilot-threads resolve THREAD_ID`
-3. **Update Copilot instructions** to prevent recurrence:
+1. Resolve the thread using `bash resolve-copilot-threads resolve THREAD_ID`
+1. **Update Copilot instructions** to prevent recurrence:
    - **Prefer a path-specific file** (e.g., `.github/css.instructions.md` with `applyTo: "**/*.css"`) when the feedback targets a specific language or file pattern
    - **Use `copilot-instructions.md`** only for repo-wide conventions
    - Example: `- Do not suggest removing .sr-only classes - required accessibility utilities`
@@ -221,28 +221,30 @@ bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file response.md
    - File and line number
    - Copilot comment text
    - Thread ID for resolution after fix
-2. Ensure coder pushes changes and resolves thread
+1. Ensure coder pushes changes and resolves thread
 
 #### Deferred (Out of Scope)
 
 **When feedback is valid but out of scope for the current PR:**
 
 1. **Track the follow-up work** in the project's task tracking (e.g., GitHub issue, PROJECT.md, or similar)
-2. **Reply to the thread** explaining the deferral:
+1. **Reply to the thread** explaining the deferral:
    - "Valid suggestion. Tracked as follow-up task for a future PR."
-3. **Resolve the thread**
+1. **Resolve the thread**
 
 **CRITICAL:** Never defer feedback without tracking it. "Acknowledged for follow-up" without creating a trackable task is INCOMPLETE WORK.
 
 ### 5. Verify Completion
 
 1. **Push any changes:** `git push`
-2. Re-fetch to confirm all Copilot threads resolved:
+1. Re-fetch to confirm all Copilot threads resolved:
+
    ```bash
    bash resolve-copilot-threads fetch OWNER REPO PR_NUMBER
    ```
+
    Expected output: `[]` (empty array)
-3. Report summary of actions taken
+1. Report summary of actions taken
 
 ## Reply Templates
 
@@ -263,11 +265,11 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 **Task is INCOMPLETE until ALL of these are done:**
 
 1. All code changes pushed to the PR branch
-2. **EVERY addressed thread resolved via the script** (not just code fixed!)
-3. **For INCORRECT feedback: Copilot instructions updated** (path-specific `*.instructions.md` preferred, or `copilot-instructions.md` for repo-wide conventions)
-4. **For DEFERRED feedback: Task tracked** (GitHub issue, PROJECT.md, or similar)
-5. Re-fetch confirms empty array `[]` for all processed threads
-6. Output summary table (see format below)
+1. **EVERY addressed thread resolved via the script** (not just code fixed!)
+1. **For INCORRECT feedback: Copilot instructions updated** (path-specific `*.instructions.md` preferred, or `copilot-instructions.md` for repo-wide conventions)
+1. **For DEFERRED feedback: Task tracked** (GitHub issue, PROJECT.md, or similar)
+1. Re-fetch confirms empty array `[]` for all processed threads
+1. Output summary table (see format below)
 
 ### Required Output: Thread Summary Table
 

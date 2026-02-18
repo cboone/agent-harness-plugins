@@ -6,17 +6,17 @@ Every plugin has a `.claude-plugin/plugin.json` file that declares metadata and 
 
 All fields are alphabetized in the JSON file.
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `author` | object | Yes | `{ "name": "Christopher Boone" }` |
-| `description` | string | Yes | One-sentence summary of what the plugin does. Start with a verb or noun phrase. |
-| `homepage` | string | Yes | `"https://github.com/cboone/cboone-cc-plugins"` |
-| `keywords` | array | Yes | Lowercase, alphabetized tags for discoverability. |
-| `license` | string | Yes | `"MIT"` |
-| `name` | string | Yes | Plugin directory name, kebab-case. Must match the directory name under `plugins/`. |
-| `repository` | string | Yes | `"https://github.com/cboone/cboone-cc-plugins"` |
-| `skills` | string | Conditional | `"./skills"` -- include only if the plugin provides skills. |
-| `version` | string | Yes | Semver version. See versioning rules below. |
+| Field         | Type   | Required    | Description                                                                        |
+| ------------- | ------ | ----------- | ---------------------------------------------------------------------------------- |
+| `author`      | object | Yes         | `{ "name": "Christopher Boone" }`                                                  |
+| `description` | string | Yes         | One-sentence summary of what the plugin does. Start with a verb or noun phrase.    |
+| `homepage`    | string | Yes         | `"https://github.com/cboone/cboone-cc-plugins"`                                    |
+| `keywords`    | array  | Yes         | Lowercase, alphabetized tags for discoverability.                                  |
+| `license`     | string | Yes         | `"MIT"`                                                                            |
+| `name`        | string | Yes         | Plugin directory name, kebab-case. Must match the directory name under `plugins/`. |
+| `repository`  | string | Yes         | `"https://github.com/cboone/cboone-cc-plugins"`                                    |
+| `skills`      | string | Conditional | `"./skills"` -- include only if the plugin provides skills.                        |
+| `version`     | string | Yes         | Semver version. See versioning rules below.                                        |
 
 ## Versioning Rules
 
