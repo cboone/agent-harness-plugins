@@ -95,18 +95,20 @@ If no `.gitignore` exists, create one using the appropriate template based on th
 When the user explicitly specifies a project type that is NOT in the curated list above:
 
 1. Attempt to fetch the template from GitHub's gitignore repository using WebFetch:
-   ```
+
+   ```text
    https://raw.githubusercontent.com/github/gitignore/main/{TemplateName}.gitignore
    ```
+
    Derive `{TemplateName}` from the user-specified language using these candidates, tried in order until one succeeds:
    - Title-cased with spaces removed (e.g., `visual studio` → `VisualStudio`)
    - Title-cased with spaces replaced by `-` (e.g., `objective c` → `Objective-C`)
    - The user's input as-is (e.g., `C++`)
-   URL-encode special characters in the URL (e.g., `C++` → `C%2B%2B`). Stop at the first successful (non-404) response.
+     URL-encode special characters in the URL (e.g., `C++` → `C%2B%2B`). Stop at the first successful (non-404) response.
 
-2. **If any fetch succeeds**: merge the fetched entries with the common entries (`.DS_Store`, `.env`, `.claude/settings.local.json`), avoiding duplicates. Use the combined result as the `.gitignore`.
+1. **If any fetch succeeds**: merge the fetched entries with the common entries (`.DS_Store`, `.env`, `.claude/settings.local.json`), avoiding duplicates. Use the combined result as the `.gitignore`.
 
-3. **If all candidate fetches fail** (404 or network error): fall back to the Generic template and inform the user that no template was found for that language.
+1. **If all candidate fetches fail** (404 or network error): fall back to the Generic template and inform the user that no template was found for that language.
 
 This fallback is ONLY used when the user explicitly specifies a type not in the curated list. It is never used during auto-detection from an existing `.gitignore`.
 

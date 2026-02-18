@@ -1,8 +1,0 @@
-{
-  "extends": "../../../../.markdownlint.jsonc",
-
-  // Legacy scaffold docs intentionally relax these structure checks
-  "MD029": false,
-  "MD031": false,
-  "MD040": false,
-}

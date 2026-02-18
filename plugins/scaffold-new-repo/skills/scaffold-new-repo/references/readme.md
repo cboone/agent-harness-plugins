@@ -2,7 +2,7 @@
 
 Replace `PROJECT-NAME` with the project name in title case, `SHORT-DESCRIPTION` with the one-sentence description, and `GITHUB-USERNAME` with the user's GitHub username.
 
-````markdown
+```markdown
 # PROJECT-NAME
 
 SHORT-DESCRIPTION
@@ -18,7 +18,7 @@ TODO
 ## License
 
 [MIT License](./LICENSE). TL;DR: Do whatever you want with this software, just keep the copyright notice included. The authors aren't liable if something goes wrong.
-````
+```
 
 ## Installation Placeholders by Project Type
 
