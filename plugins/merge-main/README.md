@@ -17,8 +17,8 @@ Automatically detects the default branch, handles uncommitted changes (stash, co
 /merge-main --base develop
 ```
 
-| Option | Description |
-| ------------------- | ----------------------------------------------- |
+| Option            | Description                            |
+| ----------------- | -------------------------------------- |
 | `--base <branch>` | Override the auto-detected base branch |
 
 ## Examples

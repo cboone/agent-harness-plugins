@@ -1,7 +1,6 @@
 node_modules/
 
 # Legacy markdown not yet normalized for Prettier
-plugins/merge-main/README.md
 plugins/resolve-copilot-pr-feedback/skills/resolve-copilot-pr-feedback/SKILL.md
 plugins/review-branch/README.md
 plugins/review-branch/skills/review-branch/SKILL.md
