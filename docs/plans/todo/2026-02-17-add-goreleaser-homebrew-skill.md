@@ -6,7 +6,7 @@ Issue #27 requests a new skill that adds GoReleaser configuration and a GitHub A
 
 The skill introduces one new pattern not present in any reference repo or in `scaffold-go-cli`: **conventional commit changelog grouping** (using `changelog.groups` instead of simple `sort+filters`).
 
-## Files to Create (7 new files)
+## Files to Create (6 new files)
 
 ### 1. `plugins/add-goreleaser-homebrew/.claude-plugin/plugin.json`
 
@@ -45,7 +45,7 @@ Base `.goreleaser.yml` template (GoReleaser v2). Key contents:
   - Features (feat), Bug Fixes (fix), Performance (perf), Refactoring (refactor), Documentation (docs), Build (build/ci), Other (catch-all order 999)
   - Filters excluding `chore:`, `test:`, `style:`
 - `brews:` with `GITHUB-USERNAME/homebrew-tap`, `HOMEBREW_TAP_TOKEN`, `Formula` directory, basic version test
-- Placeholders: `PROJECT-NAME`, `PROJECT-DESCRIPTION`, `GITHUB-USERNAME`, `MODULE-PATH`
+- Placeholders: `PROJECT-NAME`, `PROJECT-DESCRIPTION`, `GITHUB-USERNAME`
 - `## Notes` section explaining each design decision (following `scaffold-go-cli/references/goreleaser.md` convention)
 
 ### 4. `plugins/add-goreleaser-homebrew/skills/add-goreleaser-homebrew/references/release-workflow.md`

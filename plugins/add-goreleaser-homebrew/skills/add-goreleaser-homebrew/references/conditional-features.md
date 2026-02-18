@@ -127,7 +127,7 @@ brews:
       depends_on :macos
 ```
 
-### release-workflow.yml Modifications
+### .github/workflows/release.yml Modifications
 
 Change the runner to `macos-latest`:
 
