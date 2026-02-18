@@ -1,6 +1,6 @@
 # .goreleaser.yml Template
 
-Use this template for GoReleaser configuration. Replace `PROJECT-NAME` and `PROJECT-DESCRIPTION` with the actual values.
+Use this template for GoReleaser configuration. Replace `PROJECT-NAME`, `PROJECT-DESCRIPTION`, and `GITHUB-USERNAME` with the actual values.
 
 ```yaml
 version: 2

@@ -1,6 +1,6 @@
 # LICENSE Template
 
-Use this exact template. Replace `YEAR` with the current year (from `date +%Y`).
+Use this exact template. Replace `YEAR` with the current year (from `date +%Y`) and `COPYRIGHT-HOLDER` with the user's full name.
 
 ```text
 MIT License

@@ -1,6 +1,6 @@
 # README.md Template
 
-Use this template for the project `README.md`. Replace `PROJECT-NAME` (kebab-case), `PROJECT-TITLE` (title case), and `PROJECT-DESCRIPTION` with the actual values.
+Use this template for the project `README.md`. Replace `PROJECT-NAME` (kebab-case), `PROJECT-TITLE` (title case), `PROJECT-DESCRIPTION`, and `GITHUB-USERNAME` with the actual values.
 
 ````markdown
 # PROJECT-TITLE

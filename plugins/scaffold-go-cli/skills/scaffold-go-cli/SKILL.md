@@ -38,7 +38,7 @@ gh api user -q .login
 git config user.name
 ```
 
-If either command fails, ask the user to provide the value. Use the GitHub username wherever templates reference `GITHUB-USERNAME` and the full name wherever they reference `COPYRIGHT-HOLDER`.
+If either command fails or produces no output, ask the user to provide the value. Use the GitHub username wherever templates reference `GITHUB-USERNAME` and the full name wherever they reference `COPYRIGHT-HOLDER`.
 
 ### 3. Verify the Target Directory
 

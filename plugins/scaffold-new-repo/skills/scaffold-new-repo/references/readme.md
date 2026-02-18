@@ -1,6 +1,6 @@
 # README.md Template
 
-Replace `PROJECT-NAME` with the project name in title case and `SHORT-DESCRIPTION` with the one-sentence description.
+Replace `PROJECT-NAME` with the project name in title case, `SHORT-DESCRIPTION` with the one-sentence description, and `GITHUB-USERNAME` with the user's GitHub username.
 
 ````markdown
 # PROJECT-NAME
