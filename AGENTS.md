@@ -55,6 +55,18 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── create-worktree-from-issue/
     │           └── SKILL.md
+    ├── handle-secrets/              # User secret handling best practices skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── handle-secrets/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── anti-patterns.md
+    │               ├── checklist.md
+    │               ├── design-patterns.md
+    │               ├── language-libraries.md
+    │               └── security-hierarchy.md
     ├── lint-and-fix/                # Lint and format auto-fixer skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

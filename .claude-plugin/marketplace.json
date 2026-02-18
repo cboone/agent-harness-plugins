@@ -112,6 +112,20 @@
         "name": "Christopher Boone"
       },
       "category": "code-quality",
+      "description": "Best practices for handling user-provided secrets in CLI tools: secure input methods, credential storage, secret masking, and language-specific libraries.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cli", "credentials", "keychain", "secrets", "security"],
+      "license": "MIT",
+      "name": "handle-secrets",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/handle-secrets",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
       "description": "Detect project linters and formatters, run them with auto-fix, and resolve remaining issues.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["eslint", "formatting", "linting", "prettier", "shellcheck", "shfmt"],
