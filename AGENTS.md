@@ -154,6 +154,25 @@ cboone-cc-plugins/
     │               ├── release-workflow.md
     │               ├── root-go-viper.md
     │               └── root-go.md
+    ├── scaffold-go-library/        # Go library project scaffolding skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── scaffold-go-library/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── ci-workflow.md
+    │               ├── doc-go.md
+    │               ├── editorconfig.md
+    │               ├── gitignore.md
+    │               ├── go-mod.md
+    │               ├── golangci.md
+    │               ├── goreleaser.md
+    │               ├── license.md
+    │               ├── makefile.md
+    │               ├── package-go.md
+    │               ├── readme.md
+    │               └── release-workflow.md
     ├── setup-gitleaks/             # Gitleaks secret scanning setup skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
