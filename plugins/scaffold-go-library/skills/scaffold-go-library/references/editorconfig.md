@@ -3,7 +3,7 @@
 Use this template for `.editorconfig`. No replacements needed.
 
 ```ini
-# EditorConfig for PROJECT-NAME
+# EditorConfig
 # https://editorconfig.org
 
 root = true
