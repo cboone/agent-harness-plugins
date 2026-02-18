@@ -199,18 +199,23 @@ Commits: <count>
 Files changed: <count> (<added> added, <modified> modified, <deleted> deleted, <renamed> renamed)
 
 ### Summary
+
 <high-level summary>
 
 ### Changes by Area
+
 <grouped changes>
 
 ### File Inventory
+
 <new/modified/deleted/renamed files>
 
 ### Notable Changes
+
 <highlighted items>
 
 ### Plan Progress
+
 <plan comparison, if applicable>
 ```
 

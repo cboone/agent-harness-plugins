@@ -18,11 +18,11 @@ Groups changes by area/concern, lists new/modified/deleted files, and highlights
 /review-branch --brief
 ```
 
-| Option | Description |
-| ------------------- | --------------------------------------------------------- |
-| `--plan <path>` | Compare progress against a plan document |
+| Option          | Description                                       |
+| --------------- | ------------------------------------------------- |
+| `--plan <path>` | Compare progress against a plan document          |
 | `--since <ref>` | Use a specific tag, branch, or commit as the base |
-| `--brief` | Output only a high-level summary |
+| `--brief`       | Output only a high-level summary                  |
 
 ## Examples
 
