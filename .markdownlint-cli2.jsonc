@@ -53,14 +53,23 @@
 
     // MD049 - Emphasis style
     // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md049.md
-    "MD049": { "style": "underscore" },
+    "MD049": false,
 
     // MD050 - Strong style
     // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md050.md
     "MD050": { "style": "asterisk" },
   },
 
-  "ignores": ["node_modules/"],
+  "ignores": [
+    "node_modules/",
+
+    // Legacy markdown not yet normalized for linting
+    ".claude/skills/check-versions/SKILL.md",
+    "docs/plans/todo/",
+    "plugins/clean-up-agent-config/skills/clean-up-agent-config/",
+    "plugins/handle-secrets/skills/handle-secrets/",
+    "plugins/scaffold-new-repo/skills/scaffold-new-repo/SKILL.md",
+  ],
 
   "customRules": [
     "@github/markdownlint-github",

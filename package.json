@@ -2,14 +2,20 @@
   "private": true,
   "description": "Lint tooling for cboone-cc-plugins",
   "scripts": {
-    "lint": "markdownlint-cli2 \"**/*.md\"",
-    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\""
+    "format": "prettier --write \"**/*.{json,jsonc,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{json,jsonc,md,yaml,yml}\"",
+    "lint": "yarn lint:md && yarn lint:prettier",
+    "lint:fix": "yarn lint:md:fix && yarn format",
+    "lint:md": "markdownlint-cli2 \"**/*.md\"",
+    "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\"",
+    "lint:prettier": "prettier --check \"**/*.{json,jsonc,md,yaml,yml}\""
   },
   "devDependencies": {
     "@github/markdownlint-github": "^0.8.0",
     "markdownlint-cli2": "^0.20.0",
     "markdownlint-cli2-formatter-summarize": "^0.0.8",
     "markdownlint-rule-force-align-table-columns": "^0.1.1",
-    "markdownlint-rule-relative-links": "^4.2.0"
+    "markdownlint-rule-relative-links": "^4.2.0",
+    "prettier": "^3.8.1"
   }
 }
