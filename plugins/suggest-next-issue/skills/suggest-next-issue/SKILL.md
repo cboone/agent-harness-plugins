@@ -123,12 +123,14 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
 ## Suggested Next Issues
 
 ### Quick Wins
+
 1. **#23 - Fix typo in help output** (bug, 2 days old)
    The `--version` flag prints "verison" instead of "version" in the CLI help text.
    Small fix, keeps the issue count tidy.
    Start: Check the help string in the CLI entry point.
 
 ### High Impact
+
 2. **#18 - Add dark mode support** (enhancement, 12 days old, 4 comments)
    Add a system-preference-aware dark color scheme with a manual toggle in the settings panel.
    Most-requested feature. Pairs well with the theme work done in #15.
@@ -140,12 +142,14 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
    Start: Review existing plan-related commands and design the skill interface.
 
 ### Unblocks Others
+
 4. **#7 - Refactor config loading** (enhancement, 20 days old)
    Replace the ad-hoc JSON parsing with a centralized, schema-validated config module that supports defaults and env overrides.
    Issues #8 and #9 both depend on the new config system.
    Start: Extract config into a dedicated module with typed schema.
 
 ### Overdue
+
 5. **#3 - Update installation docs** (documentation, 45 days old)
    The install guide still references the old `curl | bash` method; needs updating for the new package manager install flow.
    Open since v0.2. Quick update needed for current install process.
@@ -154,6 +158,7 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
 ---
 
 **Already in progress:**
+
 - #14 — feature/improve-notifications (branch)
 - #16 — fix/search-pagination (branch, assigned)
 - #21 — Add export feature (label: "in progress")
