@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with conditional support for completions, man pages, and macOS-only builds.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["github-actions", "go", "golang", "goreleaser", "homebrew"],
+  "license": "MIT",
+  "name": "add-goreleaser-homebrew",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

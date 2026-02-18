@@ -11,6 +11,17 @@ cboone-cc-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json            # Plugin registry for this repository
 └── plugins/
+    ├── add-goreleaser-homebrew/     # GoReleaser + Homebrew tap setup skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── add-goreleaser-homebrew/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── conditional-features.md
+    │               ├── goreleaser.md
+    │               ├── makefile-target.md
+    │               └── release-workflow.md
     ├── address-review/              # Review feedback resolver skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
