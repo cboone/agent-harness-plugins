@@ -1,6 +1,10 @@
 {
   "private": true,
   "description": "Lint tooling for cboone-cc-plugins",
+  "scripts": {
+    "lint": "markdownlint-cli2 \"**/*.md\"",
+    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\""
+  },
   "devDependencies": {
     "@github/markdownlint-github": "^0.8.0",
     "markdownlint-cli2": "^0.20.0",

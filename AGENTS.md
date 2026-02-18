@@ -14,12 +14,14 @@ cboone-cc-plugins/
     ├── address-review/              # Review feedback resolver skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── address-review/
     │           └── SKILL.md
     ├── block-rm-rf/                 # Recursive rm blocker hook
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   ├── hooks/
     │   │   └── hooks.json
     │   └── scripts/
@@ -27,12 +29,14 @@ cboone-cc-plugins/
     ├── commit/                      # Smart git commit skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── commit/
     │           └── SKILL.md
     ├── create-plugin/               # Plugin creation guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── create-plugin/
     │           ├── SKILL.md
@@ -46,12 +50,14 @@ cboone-cc-plugins/
     ├── create-worktree/              # General worktree creation skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── create-worktree/
     │           └── SKILL.md
     ├── create-worktree-from-issue/  # Issue-to-worktree skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── create-worktree-from-issue/
     │           └── SKILL.md
@@ -70,18 +76,21 @@ cboone-cc-plugins/
     ├── lint-and-fix/                # Lint and format auto-fixer skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── lint-and-fix/
     │           └── SKILL.md
     ├── merge-main/                  # Base branch merge skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── merge-main/
     │           └── SKILL.md
     ├── write-go-code/              # Go style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── write-go-code/
     │           ├── SKILL.md
@@ -100,12 +109,14 @@ cboone-cc-plugins/
     ├── pr/                          # Commit, push, and create PR skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── pr/
     │           └── SKILL.md
     ├── notify/                     # Notification hooks plugin
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   ├── hooks/
     │   │   └── hooks.json
     │   └── scripts/
@@ -113,12 +124,14 @@ cboone-cc-plugins/
     ├── review-branch/               # Branch work summarizer skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── review-branch/
     │           └── SKILL.md
     ├── resolve-copilot-pr-feedback/ # Copilot PR feedback resolver skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   ├── scripts/
     │   │   └── resolve-copilot-threads
     │   └── skills/
@@ -127,6 +140,7 @@ cboone-cc-plugins/
     ├── scaffold-new-repo/          # New repository scaffolding skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── scaffold-new-repo/
     │           ├── SKILL.md
@@ -139,6 +153,7 @@ cboone-cc-plugins/
     ├── scaffold-go-cli/            # Go CLI project scaffolding skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── scaffold-go-cli/
     │           ├── SKILL.md
@@ -157,6 +172,7 @@ cboone-cc-plugins/
     ├── scaffold-go-library/        # Go library project scaffolding skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── scaffold-go-library/
     │           ├── SKILL.md
@@ -176,6 +192,7 @@ cboone-cc-plugins/
     ├── setup-gitleaks/             # Gitleaks secret scanning setup skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── setup-gitleaks/
     │           ├── SKILL.md
@@ -185,12 +202,14 @@ cboone-cc-plugins/
     ├── suggest-next-issue/         # Issue prioritization skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── suggest-next-issue/
     │           └── SKILL.md
     ├── write-markdown/              # Markdown style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── write-markdown/
     │           ├── SKILL.md
@@ -199,6 +218,7 @@ cboone-cc-plugins/
     ├── write-shell-scripts/        # Bash style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── README.md
     │   └── skills/
     │       └── write-shell-scripts/
     │           ├── SKILL.md
@@ -207,6 +227,7 @@ cboone-cc-plugins/
     └── clean-up-agent-config/      # Agent config cleanup skill
         ├── .claude-plugin/
         │   └── plugin.json
+        ├── README.md
         └── skills/
             └── clean-up-agent-config/
                 ├── SKILL.md
@@ -222,22 +243,28 @@ When adding new plugins:
 1. Create the plugin directory under `plugins/`
 1. Add a `.claude-plugin/plugin.json` with metadata
 1. Register the plugin in `.claude-plugin/marketplace.json`
-1. Update README.md with the new plugin description
+1. Create a per-plugin `README.md` in the plugin directory
+1. Update the root `README.md` with the new plugin description and details link
 
 ### README ToC Format
 
-The README table of contents uses **one entry per line** to prevent merge conflicts when multiple branches add plugins simultaneously. Skills are organized into subcategories (Agents, Workflow, Languages). Hooks are organized into subcategories (Security, Workflow). Each continuation link starts with `∙` (middle dot, space) at the beginning of the line:
+The README table of contents uses **one entry per line** to prevent merge conflicts when multiple branches add plugins simultaneously. Skills are organized into subcategories (Git, Issues and Worktrees, Code Review, Code Quality, Scaffolding, Agents). Hooks are organized into subcategories (Security, Workflow). Each continuation link starts with `∙` (middle dot, space) at the beginning of the line:
 
 ```markdown
 **Skills**
-<br>Agents:
+<br>Git:
 [Skill A](#skill-a)
 ∙ [Skill B](#skill-b)
-<br>Workflow:
+<br>Issues and Worktrees:
 [Skill C](#skill-c)
-∙ [Skill D](#skill-d)
-<br>Languages:
+<br>Code Review:
+[Skill D](#skill-d)
+<br>Code Quality:
 [Skill E](#skill-e)
+<br>Scaffolding:
+[Skill F](#skill-f)
+<br>Agents:
+[Skill G](#skill-g)
 
 **Hooks**
 <br>Security:

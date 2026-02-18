@@ -20,7 +20,7 @@ Known mistakes in secret handling with real-world examples.
 
 Docker's canonical anti-pattern: storing `base64(username:password)` in `~/.docker/config.json`. Base64 is **encoding, not encryption** — it decodes trivially — yet it creates a false sense of security.
 
-**Rule:** If you store plaintext, tell users it's plaintext. Docker now warns: *"WARNING! Your password will be stored unencrypted."*
+**Rule:** If you store plaintext, tell users it's plaintext. Docker now warns: _"WARNING! Your password will be stored unencrypted."_
 
 ## Leaking credentials into command output
 
