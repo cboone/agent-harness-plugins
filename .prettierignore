@@ -1,7 +1,6 @@
 node_modules/
 
 # Legacy markdown not yet normalized for Prettier
-docs/plans/todo/
 plugins/address-review/README.md
 plugins/clean-up-agent-config/skills/clean-up-agent-config/
 plugins/commit/README.md
