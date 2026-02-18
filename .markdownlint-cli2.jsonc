@@ -60,10 +60,12 @@
     "MD050": { "style": "asterisk" },
   },
 
+  "ignores": ["node_modules/"],
+
   "customRules": [
-    "/opt/homebrew/lib/node_modules/@github/markdownlint-github",
-    "/opt/homebrew/lib/node_modules/markdownlint-rule-force-align-table-columns",
-    "/opt/homebrew/lib/node_modules/markdownlint-rule-relative-links",
+    "@github/markdownlint-github",
+    "markdownlint-rule-force-align-table-columns",
+    "markdownlint-rule-relative-links",
   ],
 
   // "fix": true,
