@@ -18,11 +18,11 @@ Extracts items from checkboxes, bullets, numbered lists, and headings in a revie
 /address-review docs/reviews/my-review.md --skip 2,5,8
 ```
 
-| Option | Description |
-| --------------------- | ----------------------------------------------------------- |
-| `--dry-run` | Parse and list items without making changes |
+| Option              | Description                                              |
+| ------------------- | -------------------------------------------------------- |
+| `--dry-run`         | Parse and list items without making changes              |
 | `--commit-per-item` | Commit after each item instead of grouping related fixes |
-| `--skip <numbers>` | Skip specific item numbers (comma-separated) |
+| `--skip <numbers>`  | Skip specific item numbers (comma-separated)             |
 
 ## Examples
 
