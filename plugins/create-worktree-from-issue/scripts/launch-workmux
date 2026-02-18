@@ -30,8 +30,9 @@ function die() {
 function do_launch() {
   local branch="${1}"
   local prompt_file="${2}"
+  local safe_name="${branch//\//-}"
   local log
-  log="$(mktemp "/tmp/workmux-${branch}.XXXXXX.log")"
+  log="$(mktemp "/tmp/workmux-${safe_name}.XXXXXX.log")"
 
   workmux add "${branch}" --open-if-exists -P "${prompt_file}" > "${log}" 2>&1 &
   disown
