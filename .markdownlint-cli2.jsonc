@@ -1,0 +1,41 @@
+{
+  // https://github.com/DavidAnson/markdownlint-cli2#markdownlint-cli2jsonc
+  "$schema": "https://raw.githubusercontent.com/DavidAnson/markdownlint-cli2/main/schema/markdownlint-cli2-config-schema.json",
+
+  "config": {
+    // MD013 - Line length
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md013.md
+    "MD013": false,
+
+    // MD014 - Dollar signs used before commands without showing output
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md014.md
+    "MD014": false,
+
+    // MD024 - Multiple headings with the same content
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md024.md
+    "MD024": {
+      "siblings_only": true,
+    },
+
+    // MD033 - No inline HTML
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md033.md
+    "MD033": false,
+
+    // MD034 - Bare URLs
+    // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md034.md
+    "MD034": false,
+  },
+
+  "customRules": [
+    "/opt/homebrew/lib/node_modules/@github/markdownlint-github",
+    "/opt/homebrew/lib/node_modules/markdownlint-rule-force-align-table-columns",
+    "/opt/homebrew/lib/node_modules/markdownlint-rule-relative-links",
+  ],
+
+  // "fix": true,
+
+  "outputFormatters": [
+    // https://github.com/DavidAnson/markdownlint-cli2/blob/main/formatter-summarize/README.md
+    ["markdownlint-cli2-formatter-summarize", { "byFileByRule": true }],
+  ],
+}
