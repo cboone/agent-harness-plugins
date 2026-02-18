@@ -38,5 +38,5 @@ The skill also activates automatically when Claude Code detects work involving u
 ## See Also
 
 - [Write Go Code](../write-go-code/README.md): Go-specific libraries for credential handling
-- [Setup Gitleaks](../setup-gitleaks/README.md): prevent secrets from being committed to repositories origin/main
+- [Setup Gitleaks](../setup-gitleaks/README.md): prevent secrets from being committed to repositories
 - [All plugins](../../README.md)
