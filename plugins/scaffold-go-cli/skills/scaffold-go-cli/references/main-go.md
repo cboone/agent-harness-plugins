@@ -1,6 +1,6 @@
 # main.go Template
 
-Use this template for the root `main.go` file. Replace `PROJECT-NAME` with the actual project name.
+Use this template for the root `main.go` file. Replace `PROJECT-NAME` with the actual project name and `GITHUB-USERNAME` with the user's GitHub username.
 
 ```go
 package main
@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cboone/PROJECT-NAME/cmd"
+	"github.com/GITHUB-USERNAME/PROJECT-NAME/cmd"
 )
 
 var version = "dev"
