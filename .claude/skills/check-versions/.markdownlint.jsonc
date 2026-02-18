@@ -1,0 +1,6 @@
+{
+  "extends": "../../../.markdownlint.jsonc",
+
+  // Legacy plans use non-sequential ordered list numbering
+  "MD029": false,
+}

@@ -1,0 +1,6 @@
+{
+  "extends": "../../../../.markdownlint.jsonc",
+
+  // Legacy skill docs use manual ordered list numbering
+  "MD029": false,
+}
