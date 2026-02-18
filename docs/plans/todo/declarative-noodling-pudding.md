@@ -6,11 +6,11 @@ The root README and per-plugin READMEs need three improvements:
 
 1. **Group blurbs in root README**: The skills section lists 18 plugins as flat H3 entries with no group-level context. The ToC already organizes plugins into subcategories (Git, Issues and Worktrees, Code Review, Code Quality, Scaffolding, Agents), but the content section does not mirror this grouping. Adding H3 group headers with workflow blurbs, and demoting plugin entries to H4, gives readers orientation before diving into individual plugins.
 
-2. **Em dash removal**: 142 em dashes across README files (root + 20 per-plugin). The user preference forbids em dashes. Replace with colons, commas, periods, or rephrasing.
+1. **Em dash removal**: 142 em dashes across README files (root + 20 per-plugin). The user preference forbids em dashes. Replace with colons, commas, periods, or rephrasing.
 
-3. **Plugin installation instructions**: No per-plugin README explains how to install the plugin. Each needs a short Installation section pointing to the marketplace.
+1. **Plugin installation instructions**: No per-plugin README explains how to install the plugin. Each needs a short Installation section pointing to the marketplace.
 
-4. **Missing content**: The `handle-secrets` plugin has no README at all. It is also missing from the root README's ToC and skills listing.
+1. **Missing content**: The `handle-secrets` plugin has no README at all. It is also missing from the root README's ToC and skills listing.
 
 ## Changes
 
@@ -18,7 +18,7 @@ The root README and per-plugin READMEs need three improvements:
 
 **Structure change**: Add H3 group headers with blurbs, demote plugin entries to H4.
 
-```
+```text
 ## Skills                        (stays H2)
 ### Git                          (new H3 with blurb)
 #### Commit                      (was H3, now H4)
@@ -58,7 +58,7 @@ For all 20 existing READMEs, plus creating `handle-secrets/README.md`:
 
 **Add Installation section** after the Type/Trigger/Requires metadata block, before "What It Does":
 
-```markdown
+````markdown
 ## Installation
 
 Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
@@ -68,16 +68,16 @@ Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins
 ```
 
 Then select **Plugin Name** from the available plugins.
-```
+````
 
 **Remove em dashes** with these substitutions:
 
-| Pattern | Replacement |
-| --- | --- |
-| `"command" — description` (Examples) | `"command": description` |
-| `[Link](url) — description` (See Also) | `[Link](url): description` |
-| `— install via` (Requires) | `. Install via` |
-| Prose em dashes | Rewrite with colons, commas, or separate sentences |
+| Pattern                                | Replacement                                        |
+| -------------------------------------- | -------------------------------------------------- |
+| `"command" — description` (Examples)   | `"command": description`                           |
+| `[Link](url) — description` (See Also) | `[Link](url): description`                         |
+| `— install via` (Requires)             | `. Install via`                                    |
+| Prose em dashes                        | Rewrite with colons, commas, or separate sentences |
 
 **Create `plugins/handle-secrets/README.md`** following the existing per-plugin template:
 
@@ -136,7 +136,7 @@ Total: 23 files (22 edits + 1 new)
 ## Verification
 
 1. Grep for em dashes across all README files: `rg '—' --glob '*/README.md'` should return zero matches
-2. Verify no broken links: each See Also link should resolve
-3. Verify ToC anchors still work: each `#anchor` in the ToC should match an H3 or H4 heading
-4. Run `markdownlint-cli2` on all modified files
-5. Verify handle-secrets appears in root README ToC and content
+1. Verify no broken links: each See Also link should resolve
+1. Verify ToC anchors still work: each `#anchor` in the ToC should match an H3 or H4 heading
+1. Run `markdownlint-cli2` on all modified files
+1. Verify handle-secrets appears in root README ToC and content
