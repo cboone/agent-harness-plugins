@@ -10,21 +10,21 @@ This plan creates per-plugin READMEs with richer user-facing documentation, simp
 
 **Skills:**
 
-| Subcategory | Plugins | Rationale |
-|---|---|---|
-| **Git** | commit, merge-main, pr, review-branch | The core commit-to-PR pipeline |
-| **Issues and Worktrees** | create-worktree, create-worktree-from-issue, suggest-next-issue | Multi-agent and issue-driven work |
-| **Code Review** | address-review, resolve-copilot-pr-feedback | Responding to external feedback |
-| **Code Quality** | lint-and-fix, write-go-code, write-markdown, write-shell-scripts | Proactive style and lint enforcement |
-| **Scaffolding** | scaffold-go-cli, scaffold-new-repo, setup-gitleaks | Project and repo setup |
-| **Agents** | clean-up-agent-config, create-plugin | Meta-tools for the agent ecosystem |
+| Subcategory              | Plugins                                                          | Rationale                            |
+| ------------------------ | ---------------------------------------------------------------- | ------------------------------------ |
+| **Git**                  | commit, merge-main, pr, review-branch                            | The core commit-to-PR pipeline       |
+| **Issues and Worktrees** | create-worktree, create-worktree-from-issue, suggest-next-issue  | Multi-agent and issue-driven work    |
+| **Code Review**          | address-review, resolve-copilot-pr-feedback                      | Responding to external feedback      |
+| **Code Quality**         | lint-and-fix, write-go-code, write-markdown, write-shell-scripts | Proactive style and lint enforcement |
+| **Scaffolding**          | scaffold-go-cli, scaffold-new-repo, setup-gitleaks               | Project and repo setup               |
+| **Agents**               | clean-up-agent-config, create-plugin                             | Meta-tools for the agent ecosystem   |
 
 **Hooks** (unchanged):
 
-| Subcategory | Plugins |
-|---|---|
+| Subcategory  | Plugins     |
+| ------------ | ----------- |
 | **Security** | block-rm-rf |
-| **Workflow** | notify |
+| **Workflow** | notify      |
 
 ## Per-Plugin README Template
 
@@ -64,6 +64,7 @@ Trigger phrases or usage scenarios.
 ```
 
 Variations:
+
 - **Hooks** (block-rm-rf, notify): No trigger/options. "Usage" becomes "When It Fires".
 - **Style guides** (write-go-code, write-markdown, write-shell-scripts): Note automatic activation. Mention the reference structure.
 - **Simple skills** with no options: Omit the options from Usage.
@@ -71,9 +72,9 @@ Variations:
 ## Root README Changes
 
 1. **ToC** — New subcategories replacing Agents/Workflow/Languages
-2. **Descriptions** — Shrink from 3-8 sentences to 1-2 sentences
-3. **Details links** — Each entry gets a link to its per-plugin README
-4. **Structure** — Keep Installation section as-is; keep License as-is
+1. **Descriptions** — Shrink from 3-8 sentences to 1-2 sentences
+1. **Details links** — Each entry gets a link to its per-plugin README
+1. **Structure** — Keep Installation section as-is; keep License as-is
 
 Each plugin entry in the root README becomes:
 
@@ -119,9 +120,9 @@ One-to-two sentence summary.
 ## Implementation Order
 
 1. Write all 20 per-plugin READMEs (parallelizable — these are independent)
-2. Rewrite root `README.md` with new groupings and condensed descriptions
-3. Update `create-plugin` reference (`readme-updates.md`) with new template and subcategories
-4. Update `CLAUDE.md` with new ToC format and directory tree
+1. Rewrite root `README.md` with new groupings and condensed descriptions
+1. Update `create-plugin` reference (`readme-updates.md`) with new template and subcategories
+1. Update `CLAUDE.md` with new ToC format and directory tree
 
 ## Verification
 

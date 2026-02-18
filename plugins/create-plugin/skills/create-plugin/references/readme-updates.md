@@ -93,7 +93,7 @@ Key patterns:
 - Always include the `> **Trigger:**` line
 - Include `> **Requires:**` only if the skill has external dependencies
 - Always include the `> **Details:**` line linking to the per-plugin README
-- When a skill also activates automatically, note it parenthetically: `> **Trigger:** `/skill-name` (also activates automatically)`
+- When a skill also activates automatically, note it parenthetically: `> **Trigger:**`/skill-name`(also activates automatically)`
 
 ### Hooks Section
 

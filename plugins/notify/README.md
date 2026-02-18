@@ -11,13 +11,13 @@ Delivers native macOS notifications so you can work in other apps while Claude r
 
 ## When It Fires
 
-| Event | Notification |
-| --------------------- | ------------------------------- |
-| `Notification` (idle) | "Waiting for input..." |
-| `Notification` (question) | "Needs input..." |
-| `Notification` (permission) | "Needs permission..." |
-| `PreCompact` (auto) | "Auto-compacting..." |
-| `Stop` | Task completed notification |
+| Event                       | Notification                |
+| --------------------------- | --------------------------- |
+| `Notification` (idle)       | "Waiting for input..."      |
+| `Notification` (question)   | "Needs input..."            |
+| `Notification` (permission) | "Needs permission..."       |
+| `PreCompact` (auto)         | "Auto-compacting..."        |
+| `Stop`                      | Task completed notification |
 
 ## See Also
 
