@@ -19,12 +19,12 @@ Checks for configuration files to detect ESLint, Prettier, markdownlint, ShellCh
 /lint-and-fix --no-commit
 ```
 
-| Option | Description |
-| ------------------- | --------------------------------------------------------- |
-| `--check` | Report issues without fixing (dry run) |
-| `--tool <name>` | Run only a specific tool |
-| `--commit` | Commit fixes automatically |
-| `--no-commit` | Do not commit fixes |
+| Option          | Description                            |
+| --------------- | -------------------------------------- |
+| `--check`       | Report issues without fixing (dry run) |
+| `--tool <name>` | Run only a specific tool               |
+| `--commit`      | Commit fixes automatically             |
+| `--no-commit`   | Do not commit fixes                    |
 
 ## Examples
 
