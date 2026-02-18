@@ -2,13 +2,27 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code skills and hooks from Christopher Boone (cboone.github.io)",
-    "version": "1.9.0"
+    "version": "1.10.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
     "name": "Christopher Boone"
   },
   "plugins": [
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
+      "description": "Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with conditional support for completions, man pages, and macOS-only builds.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["github-actions", "go", "golang", "goreleaser", "homebrew"],
+      "license": "MIT",
+      "name": "add-goreleaser-homebrew",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/add-goreleaser-homebrew",
+      "version": "1.0.0"
+    },
     {
       "author": {
         "name": "Christopher Boone"

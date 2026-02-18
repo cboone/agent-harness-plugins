@@ -7,7 +7,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 [Clean Up Agent Config](#clean-up-agent-config)
 ∙ [Create Plugin](#create-plugin)
 <br>Workflow:
-[Address Review](#address-review)
+[Add GoReleaser Homebrew](#add-goreleaser-homebrew)
+∙ [Address Review](#address-review)
 ∙ [Commit](#commit)
 ∙ [Create Worktree](#create-worktree)
 ∙ [Create Worktree from Issue](#create-worktree-from-issue)
@@ -44,6 +45,12 @@ Or, from within `claude`, run:
 ```
 
 ## Skills
+
+### Add GoReleaser Homebrew
+
+Add GoReleaser configuration and a GitHub Actions release workflow to an existing Go CLI project with Homebrew tap publishing to `cboone/homebrew-tap`. Detects project features (shell completions, man page generation, macOS-only constraints) and generates appropriate configuration with conventional commit changelog grouping. Optionally adds a `release-dry-run` Makefile target.
+
+> **Trigger:** `/add-goreleaser-homebrew`
 
 ### Address Review
 
