@@ -69,8 +69,8 @@ node_modules/
 *.tsbuildinfo
 coverage/
 dist/
-.next
-.nuxt
+.next/
+.nuxt/
 *.log
 ```
 
