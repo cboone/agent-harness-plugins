@@ -3,7 +3,17 @@
 Blocks recursive `rm` commands before they execute.
 
 **Type:** Hook
-**Requires:** [`trash`](https://hasseg.org/trash/) — install via [Homebrew](https://brew.sh): `brew install trash`
+**Requires:** [`trash`](https://hasseg.org/trash/). Install via [Homebrew](https://brew.sh): `brew install trash`
+
+## Installation
+
+Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
+
+```text
+/plugin marketplace add cboone/cboone-cc-plugins
+```
+
+Then select **Block rm -rf** from the available plugins.
 
 ## What It Does
 
