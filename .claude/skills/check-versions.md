@@ -28,10 +28,10 @@ Find the merge base between the default branch and HEAD:
 git merge-base <default-branch> HEAD
 ```
 
-If HEAD equals the merge base (on the default branch or no divergent commits), compare against the state before the most recent merge instead — use the merge commit's first parent (`<merge-commit>^1`):
+If HEAD equals the merge base (on the default branch or no divergent commits), compare against the state before the most recent merge instead — use the most recent merge commit's first parent as the comparison base:
 
 ```bash
-git log --merges -1 --format='%H' HEAD
+git rev-parse "$(git log --merges -1 --format='%H' HEAD)^1"
 ```
 
 ### 2. Identify Changed Plugins
