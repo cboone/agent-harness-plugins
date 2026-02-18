@@ -7,9 +7,9 @@ Patterns that push users toward security by making the secure path the default.
 The core design pattern for CLI tools. Resolve credentials in this order:
 
 1. **Environment variable** (serves CI/CD — systems like GitHub Actions and Kubernetes inject secrets this way)
-2. **Credential helper / OS keychain** (serves interactive users with persistent, encrypted storage)
-3. **Config file** with 0600 permissions (fallback when keychains are unavailable)
-4. **Interactive TTY prompt** (safest default for humans — echo-suppressed, never stored)
+1. **Credential helper / OS keychain** (serves interactive users with persistent, encrypted storage)
+1. **Config file** with 0600 permissions (fallback when keychains are unavailable)
+1. **Interactive TTY prompt** (safest default for humans — echo-suppressed, never stored)
 
 Never fall through to accepting `--password <value>` as a command-line argument.
 
@@ -18,9 +18,9 @@ Never fall through to accepting `--password <value>` as a command-line argument.
 The modern standard for CLI login flows that eliminates password handling entirely:
 
 1. The CLI displays a URL and a one-time code
-2. The user authenticates in their browser
-3. The CLI receives tokens without ever handling a password
-4. Tokens are stored in the OS keychain with automatic refresh
+1. The user authenticates in their browser
+1. The CLI receives tokens without ever handling a password
+1. Tokens are stored in the OS keychain with automatic refresh
 
 ### Adopters
 
@@ -37,9 +37,9 @@ Stripe CLI exemplifies this: `stripe login` generates a **restricted API key** (
 When tokens have an expiration, the CLI should:
 
 1. Check expiry before each request
-2. Refresh automatically using a refresh token
-3. Store the refreshed token back to the credential store
-4. Prompt for re-authentication only when refresh fails
+1. Refresh automatically using a refresh token
+1. Store the refreshed token back to the credential store
+1. Prompt for re-authentication only when refresh fails
 
 ## Warn loudly about insecure behavior
 
@@ -86,10 +86,10 @@ Rust's `secrecy` crate prints `[[REDACTED]]` via `Debug` and `Display`, making a
 
 ### Separate config from credentials
 
-| File | Contains | Version-controllable |
-|------|----------|---------------------|
-| `~/.config/<app>/config` | Region, output format, preferences | Yes |
-| `~/.local/share/<app>/credentials` | API keys, tokens, passwords | **No** |
+| File                               | Contains                           | Version-controllable |
+| ---------------------------------- | ---------------------------------- | -------------------- |
+| `~/.config/<app>/config`           | Region, output format, preferences | Yes                  |
+| `~/.local/share/<app>/credentials` | API keys, tokens, passwords        | **No**               |
 
 ### Atomic file creation with correct permissions
 
@@ -134,6 +134,6 @@ SOPS (a CNCF project) encrypts only values while preserving structure, supportin
 A `logout` command should:
 
 1. **Revoke** the token server-side (if supported)
-2. **Delete** stored credentials from keychain and config files
-3. **Zero** any in-memory copies
-4. Confirm to the user what was cleaned up
+1. **Delete** stored credentials from keychain and config files
+1. **Zero** any in-memory copies
+1. Confirm to the user what was cleaned up
