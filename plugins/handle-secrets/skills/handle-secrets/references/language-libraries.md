@@ -8,12 +8,12 @@ Rust's type system makes it uniquely suited for secret handling.
 
 ### Key libraries
 
-| Crate | Purpose |
-|-------|---------|
-| `secrecy` | `SecretString` / `SecretBox<T>` wrappers that print `[[REDACTED]]` on `Debug` and require `expose_secret()` to access |
-| `zeroize` | Guarantees memory zeroing via `core::ptr::write_volatile` and atomic fences |
-| `rpassword` | Echo-suppressed password prompts |
-| `clap` | `hide_env_values(true)` prevents env var values from leaking into `--help` |
+| Crate       | Purpose                                                                                                               |
+| ----------- | --------------------------------------------------------------------------------------------------------------------- |
+| `secrecy`   | `SecretString` / `SecretBox<T>` wrappers that print `[[REDACTED]]` on `Debug` and require `expose_secret()` to access |
+| `zeroize`   | Guarantees memory zeroing via `core::ptr::write_volatile` and atomic fences                                           |
+| `rpassword` | Echo-suppressed password prompts                                                                                      |
+| `clap`      | `hide_env_values(true)` prevents env var values from leaking into `--help`                                            |
 
 ### Example
 
@@ -46,9 +46,9 @@ std::io::stdin().is_terminal()  // Rust 1.70+
 
 ### Key libraries
 
-| Package | Purpose |
-|---------|---------|
-| `golang.org/x/term` | `term.ReadPassword()` disables echo by manipulating terminal flags |
+| Package                       | Purpose                                                                   |
+| ----------------------------- | ------------------------------------------------------------------------- |
+| `golang.org/x/term`           | `term.ReadPassword()` disables echo by manipulating terminal flags        |
 | `github.com/awnumar/memguard` | mlock'd memory enclaves with guard pages (note: Go GC introduces caveats) |
 
 ### Example: custom SecretString type
@@ -98,12 +98,12 @@ defer f.Close()
 
 ### Key libraries
 
-| Library | Purpose |
-|---------|---------|
-| `keyring` | Cross-platform keychain access (macOS Keychain, Windows Credential Locker, Linux Secret Service) |
-| `click` | `password_option()` combines echo suppression with confirmation prompting |
-| `getpass` | Standard library echo-suppressed prompts (Python 3.13 added `echo_char` for asterisks) |
-| `pydantic` | `SecretStr` type that redacts on repr |
+| Library    | Purpose                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------ |
+| `keyring`  | Cross-platform keychain access (macOS Keychain, Windows Credential Locker, Linux Secret Service) |
+| `click`    | `password_option()` combines echo suppression with confirmation prompting                        |
+| `getpass`  | Standard library echo-suppressed prompts (Python 3.13 added `echo_char` for asterisks)           |
+| `pydantic` | `SecretStr` type that redacts on repr                                                            |
 
 ### Example: Click with keyring
 
@@ -139,25 +139,25 @@ sys.stdin.isatty()
 
 ### Key libraries
 
-| Package | Purpose |
-|---------|---------|
-| `@inquirer/prompts` | Interactive password input with masking |
-| `keytar` (deprecated) / `@anthropic/node-keytar` | Native keychain access |
+| Package                                          | Purpose                                 |
+| ------------------------------------------------ | --------------------------------------- |
+| `@inquirer/prompts`                              | Interactive password input with masking |
+| `keytar` (deprecated) / `@anthropic/node-keytar` | Native keychain access                  |
 
 ### TTY detection
 
 ```javascript
-process.stdin.isTTY
+process.stdin.isTTY;
 ```
 
 ## Ruby
 
 ### Key libraries
 
-| Library | Purpose |
-|---------|---------|
+| Library       | Purpose                                                      |
+| ------------- | ------------------------------------------------------------ |
 | `IO::console` | Standard library: `$stdin.getpass` for echo-suppressed input |
-| `tty-prompt` | Rich interactive prompts with customizable mask characters |
+| `tty-prompt`  | Rich interactive prompts with customizable mask characters   |
 
 ### TTY detection
 
@@ -167,10 +167,10 @@ $stdin.tty?
 
 ## Cross-language TTY detection summary
 
-| Language | TTY check |
-|----------|-----------|
-| Rust | `std::io::stdin().is_terminal()` (1.70+) |
-| Go | `term.IsTerminal(int(os.Stdin.Fd()))` |
-| Python | `sys.stdin.isatty()` |
-| Node.js | `process.stdin.isTTY` |
-| Ruby | `$stdin.tty?` |
+| Language | TTY check                                |
+| -------- | ---------------------------------------- |
+| Rust     | `std::io::stdin().is_terminal()` (1.70+) |
+| Go       | `term.IsTerminal(int(os.Stdin.Fd()))`    |
+| Python   | `sys.stdin.isatty()`                     |
+| Node.js  | `process.stdin.isTTY`                    |
+| Ruby     | `$stdin.tty?`                            |

@@ -1,9 +1,0 @@
-{
-  "extends": "../../../../.markdownlint.jsonc",
-
-  // Legacy reference docs have intentional list/table formatting variance
-  "MD029": false,
-  "MD032": false,
-  "MD060": false,
-  "MD060A": false,
-}
