@@ -67,7 +67,7 @@ Use this guide to determine which subcategory a new plugin belongs to:
 
 ## Installation Section
 
-The installation section directs users to add the marketplace and browse plugins from there. It does not list individual install commands — users select plugins interactively after adding the marketplace.
+The installation section directs users to add the marketplace and browse plugins from there. It does not list individual install commands; users select plugins interactively after adding the marketplace.
 
 ## Plugin Description Sections
 
@@ -104,7 +104,7 @@ Each hook gets an H3 subsection under `## Hooks`. The description is 1-2 sentenc
 
 Description of what the hook does and when it fires.
 
-> **Requires:** [`dependency`](URL) — install via [Homebrew](https://brew.sh): `install command`
+> **Requires:** [`dependency`](URL). Install via [Homebrew](https://brew.sh): `install command`
 > **Details:** [README](./plugins/hook-name/README.md)
 ```
 
@@ -122,6 +122,16 @@ One-sentence description.
 **Type:** Skill
 **Trigger:** `/plugin-name` [(also activates automatically)]
 
+## Installation
+
+Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
+
+` ```text `
+/plugin marketplace add cboone/cboone-cc-plugins
+` ``` `
+
+Then select **Plugin Name** from the available plugins.
+
 ## What It Does
 
 2-4 sentences describing the outcome for the user. Focus on what the user
@@ -131,7 +141,7 @@ gets, not internal agent workflow.
 
 (Only if external dependencies exist.)
 
-- [`dependency`](URL) — install via Homebrew: `brew install dependency`
+- [`dependency`](URL). Install via Homebrew: `brew install dependency`
 
 ## Usage
 
@@ -143,7 +153,7 @@ Trigger phrases or usage scenarios.
 
 ## See Also
 
-- [Related Plugin](../related-plugin/README.md) — brief reason
+- [Related Plugin](../related-plugin/README.md): brief reason
 - [All plugins](../../README.md)
 ```
 
@@ -155,7 +165,17 @@ Trigger phrases or usage scenarios.
 One-sentence description.
 
 **Type:** Hook
-**Requires:** [`dependency`](URL) — install via [Homebrew](https://brew.sh): `brew install dependency`
+**Requires:** [`dependency`](URL). Install via [Homebrew](https://brew.sh): `brew install dependency`
+
+## Installation
+
+Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
+
+` ```text `
+/plugin marketplace add cboone/cboone-cc-plugins
+` ``` `
+
+Then select **Hook Name** from the available plugins.
 
 ## What It Does
 
