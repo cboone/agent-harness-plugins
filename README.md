@@ -24,6 +24,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 <br>Scaffolding:
 [Add GoReleaser Homebrew](#add-goreleaser-homebrew)
 ∙ [Scaffold Go CLI](#scaffold-go-cli)
+∙ [Scaffold Go Library](#scaffold-go-library)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
 ∙ [Setup Gitleaks](#setup-gitleaks)
 <br>Agents:
@@ -183,6 +184,13 @@ Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions CI/CD,
 
 > **Trigger:** `/scaffold-go-cli`
 > **Details:** [README](./plugins/scaffold-go-cli/README.md)
+
+#### Scaffold Go Library
+
+Scaffold a Go library project with GoReleaser changelog-only releases, golangci-lint, GitHub Actions CI/CD (multi-version Go matrix), and Makefile. Generates the package source file, doc.go, go.mod, Makefile, .gitignore, .goreleaser.yml, .golangci.yml, .editorconfig, CI and release workflows, LICENSE, README, and a plans directory. Optionally generates example tests.
+
+> **Trigger:** `/scaffold-go-library`
+> **Details:** [README](./plugins/scaffold-go-library/README.md)
 
 #### Scaffold New Repo
 
