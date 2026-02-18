@@ -5,7 +5,7 @@ Do not write `go.mod` manually. Initialize it with `go mod init`, then add depen
 ## Initialize
 
 ```bash
-go mod init github.com/cboone/PROJECT-NAME
+go mod init github.com/GITHUB-USERNAME/PROJECT-NAME
 ```
 
 ## Add Core Dependencies
@@ -46,7 +46,7 @@ go mod tidy
 
 ## Notes
 
-- The module path is always `github.com/cboone/PROJECT-NAME`
+- The module path is always `github.com/GITHUB-USERNAME/PROJECT-NAME`
 - Use `@latest` to get the most recent stable version
 - `go mod tidy` removes unused dependencies and adds missing ones
 - The Go version in `go.mod` is set automatically by `go mod init` based on the installed Go toolchain

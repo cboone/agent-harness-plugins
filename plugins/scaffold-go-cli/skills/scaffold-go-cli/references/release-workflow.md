@@ -40,5 +40,5 @@ jobs:
 - `fetch-depth: 0` fetches full git history (required for GoReleaser changelog generation)
 - `version: "~> v2"` uses the latest GoReleaser v2.x release
 - `GITHUB_TOKEN` is provided automatically by GitHub Actions
-- `HOMEBREW_TAP_TOKEN` must be added as a repository secret (a PAT with repo scope on `cboone/homebrew-tap`)
+- `HOMEBREW_TAP_TOKEN` must be added as a repository secret (a PAT with repo scope on the user's `homebrew-tap` repository)
 - `--clean` removes previous build artifacts before releasing
