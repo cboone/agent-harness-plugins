@@ -114,19 +114,23 @@ Put your core project instructions in `AGENTS.md` at the repo root. This is the 
 # AGENTS.md
 
 ## Project Overview
+
 Brief description: what this is, what it does, key architectural decisions.
 
 ## Dev Environment
+
 - Package manager: pnpm (not npm, not yarn)
 - Runtime: Node 22+ / Rust nightly
 - Key commands: `pnpm dev`, `pnpm test`, `cargo test`
 
 ## Code Conventions
+
 - TypeScript strict mode; no `any` types
 - Error handling: use Result<T, E> pattern, not exceptions
 - Tests: colocate with source files as `*.test.ts`
 
 ## Git Workflow
+
 - Conventional commits; one issue per PR
 - Run `pnpm lint` and `pnpm test` before committing
 ```
@@ -194,10 +198,7 @@ OpenCode reads `AGENTS.md` natively. If you want it to also pull in docs from el
 
 ```json
 {
-  "instructions": [
-    "docs/development-standards.md",
-    "packages/*/AGENTS.md"
-  ]
+  "instructions": ["docs/development-standards.md", "packages/*/AGENTS.md"]
 }
 ```
 

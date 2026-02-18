@@ -279,13 +279,8 @@ Copilot's tool behavior is configured through VS Code's settings framework, not 
 ```json
 {
   "github.copilot.chat.codeGeneration.useInstructionFiles": true,
-  "github.copilot.chat.reviewSelection.instructions": [
-    { "file": "guidance/backend-review-guidelines.md" },
-    { "file": "guidance/frontend-review-guidelines.md" }
-  ],
-  "github.copilot.chat.pullRequestDescriptionGeneration.instructions": [
-    { "text": "Always include a list of key changes." }
-  ]
+  "github.copilot.chat.reviewSelection.instructions": [{ "file": "guidance/backend-review-guidelines.md" }, { "file": "guidance/frontend-review-guidelines.md" }],
+  "github.copilot.chat.pullRequestDescriptionGeneration.instructions": [{ "text": "Always include a list of key changes." }]
 }
 ```
 
@@ -306,6 +301,7 @@ Copilot also reads `AGENTS.md` (at root and subdirectories) and `CLAUDE.md` at r
 applyTo: "src/**/*.tsx"
 excludeAgent: copilot-code-review
 ---
+
 Use functional React components with hooks.
 Always use TypeScript strict mode.
 ```
@@ -347,11 +343,7 @@ your-project/
 
 ```json
 {
-  "instructions": [
-    "docs/development-standards.md",
-    "test/testing-guidelines.md",
-    "packages/*/AGENTS.md"
-  ],
+  "instructions": ["docs/development-standards.md", "test/testing-guidelines.md", "packages/*/AGENTS.md"],
   "provider": "anthropic",
   "model": "claude-sonnet-4.5",
   "mcpServers": {
