@@ -1,13 +1,25 @@
 # Handle Secrets
 
-Best practices for handling user-provided secrets in CLI tools: secure input methods, credential storage, secret masking, and language-specific libraries.
+Best practices for handling user-provided secrets in CLI tools.
 
 **Type:** Skill
 **Trigger:** `/handle-secrets`
 
+## Installation
+
+Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
+
+```text
+/plugin marketplace add cboone/cboone-cc-plugins
+```
+
+Then select **Handle Secrets** from the available plugins.
+
 ## What It Does
 
-Provides a security hierarchy of input methods (OS keychain, stdin, TTY prompts, config files, environment variables) ranked from safest to most dangerous, with design patterns for credential fallback chains, secret masking, and language-specific libraries for Rust, Go, Python, Node.js, and Ruby.
+Provides security best practices for accepting secrets (API keys, tokens, passwords) from users in CLI tools. Covers the security hierarchy of input methods, credential storage patterns with OS keychains and config files, secret masking in output, and language-specific libraries for Rust, Go, Python, Node.js, and Ruby.
+
+Organized into a quick-review checklist and deep-dive references by topic.
 
 ## Usage
 
@@ -15,13 +27,16 @@ Provides a security hierarchy of input methods (OS keychain, stdin, TTY prompts,
 /handle-secrets
 ```
 
+The skill also activates automatically when Claude Code detects work involving user-provided secrets in CLI tools.
+
 ## Examples
 
-- "handle secrets" — loads the full security hierarchy and checklist
-- "review this CLI's secret handling" — audits existing code against best practices
-- "how should I accept an API key from users?" — recommends the safest input method
+- Building a CLI that accepts an API key: the skill provides the secure input hierarchy
+- "review this code for secret handling": checks against the security checklist
+- "/handle-secrets": loads the full best practices guide explicitly
 
 ## See Also
 
-- [Setup Gitleaks](../setup-gitleaks/README.md) — secret scanning for repositories
+- [Write Go Code](../write-go-code/README.md): Go-specific libraries for credential handling
+- [Setup Gitleaks](../setup-gitleaks/README.md): prevent secrets from being committed to repositories origin/main
 - [All plugins](../../README.md)
