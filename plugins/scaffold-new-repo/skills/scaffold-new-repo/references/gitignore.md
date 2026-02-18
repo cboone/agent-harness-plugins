@@ -172,10 +172,22 @@ spec/reports/
 ## Pascal
 
 ```gitignore
-# Common
+# System
 .DS_Store
-.env
+
+# Agent config
 .claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
 
 # Pascal
 *.o
@@ -193,10 +205,22 @@ backup/
 ## Python
 
 ```gitignore
-# Common
+# System
 .DS_Store
-.env
+
+# Agent config
 .claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
 
 # Python
 __pycache__/
@@ -215,10 +239,22 @@ htmlcov/
 ## Rust
 
 ```gitignore
-# Common
+# System
 .DS_Store
-.env
+
+# Agent config
 .claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
 
 # Rust
 target/
@@ -229,10 +265,22 @@ target/
 ## Swift
 
 ```gitignore
-# Common
+# System
 .DS_Store
-.env
+
+# Agent config
 .claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
 
 # Swift
 xcuserdata/

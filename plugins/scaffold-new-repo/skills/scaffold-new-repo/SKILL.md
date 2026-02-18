@@ -27,7 +27,7 @@ Derive what you can automatically, then ask for only what's missing:
   - `__pycache__/` or `*.pyc` → Python
   - `*.gem` or `.bundle/` → Ruby
   - `*.ppu` or `*.compiled` → Pascal
-  - `xcuserdata/`, or `.build/` combined with `*.ipa` → Swift
+  - `xcuserdata/` alone, or both `.build/` and `*.ipa` together → Swift
   - `target/` with no other language markers matched → Rust
   - Minimal or macOS-only entries → Shell or Generic
   - Only ask the user for the project type if the `.gitignore` does not make it clear.
