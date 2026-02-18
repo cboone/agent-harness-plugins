@@ -1,5 +1,4 @@
 node_modules/
 
 # Legacy markdown not yet normalized for Prettier
-plugins/write-markdown/skills/write-markdown/references/MARKDOWN.md
 plugins/write-shell-scripts/skills/write-shell-scripts/references/BASH.md

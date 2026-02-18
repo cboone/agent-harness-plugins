@@ -98,7 +98,9 @@ More text here.
 <!-- Avoid -->
 
 Some paragraph text.
+
 ## Next Section
+
 More text here.
 ```
 
@@ -191,9 +193,9 @@ Second paragraph.
 
 Do not indent the first line of a paragraph. Indented text can be interpreted as a code block.
 
-| Use             | Avoid              |
-| --------------- | ------------------ |
-| `Regular text.` | `Indented text.`   |
+| Use             | Avoid            |
+| --------------- | ---------------- |
+| `Regular text.` | `Indented text.` |
 
 ---
 
@@ -374,9 +376,10 @@ Following paragraph.
 <!-- Avoid -->
 
 Introductory text.
+
 - First item
 - Second item
-Following paragraph.
+  Following paragraph.
 ```
 
 ---
@@ -540,10 +543,10 @@ Pad cell content so that pipe characters align vertically across all rows. Fill 
 ```markdown
 <!-- Avoid: ragged columns -->
 
-| Name | Type | Default |
-| --- | --- | --- |
-| timeout | number | 30 |
-| retries | number | 3 |
+| Name    | Type   | Default |
+| ------- | ------ | ------- |
+| timeout | number | 30      |
+| retries | number | 3       |
 ```
 
 ---
@@ -587,10 +590,10 @@ Add a blank line before and after horizontal rules to prevent them from being in
 
 When Markdown has equivalent syntax, prefer it over HTML.
 
-| Use           | Avoid                      |
-| ------------- | -------------------------- |
-| `**bold**`    | `<strong>bold</strong>`    |
-| `[link](url)` | `<a href="url">link</a>`   |
+| Use           | Avoid                    |
+| ------------- | ------------------------ |
+| `**bold**`    | `<strong>bold</strong>`  |
+| `[link](url)` | `<a href="url">link</a>` |
 
 ---
 
