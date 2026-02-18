@@ -231,7 +231,7 @@
       "name": "scaffold-new-repo",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-new-repo",
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "author": {
