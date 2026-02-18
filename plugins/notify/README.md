@@ -3,7 +3,17 @@
 Sends macOS notifications when Claude finishes a task or needs your attention.
 
 **Type:** Hook
-**Requires:** [`terminal-notifier`](https://github.com/julienXX/terminal-notifier) — install via [Homebrew](https://brew.sh): `brew install terminal-notifier`
+**Requires:** [`terminal-notifier`](https://github.com/julienXX/terminal-notifier). Install via [Homebrew](https://brew.sh): `brew install terminal-notifier`
+
+## Installation
+
+Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
+
+```text
+/plugin marketplace add cboone/cboone-cc-plugins
+```
+
+Then select **Notify** from the available plugins.
 
 ## What It Does
 
