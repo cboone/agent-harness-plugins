@@ -22,7 +22,9 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Write Markdown](#write-markdown)
 ∙ [Write Shell Scripts](#write-shell-scripts)
 <br>Scaffolding:
-[Scaffold Go CLI](#scaffold-go-cli)
+[Add GoReleaser Homebrew](#add-goreleaser-homebrew)
+∙ [Scaffold Go CLI](#scaffold-go-cli)
+∙ [Scaffold Go Library](#scaffold-go-library)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
 ∙ [Setup Gitleaks](#setup-gitleaks)
 <br>Agents:
@@ -170,12 +172,25 @@ Bash style conventions for creating and editing shell scripts. Activates automat
 
 Bootstrap new projects with consistent structure. Generate boilerplate, CI/CD pipelines, and security scanning from templates.
 
+#### Add GoReleaser Homebrew
+
+Add GoReleaser configuration and a GitHub Actions release workflow to an existing Go CLI project with Homebrew tap publishing to `cboone/homebrew-tap`. Detects project features (shell completions, man page generation, macOS-only constraints) and generates appropriate configuration with conventional commit changelog grouping. Optionally adds a `release-dry-run` Makefile target.
+
+> **Trigger:** `/add-goreleaser-homebrew`
+
 #### Scaffold Go CLI
 
 Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions CI/CD, and Homebrew tap support. Generates all project files and supports optional Viper and Charmbracelet dependencies.
 
 > **Trigger:** `/scaffold-go-cli`
 > **Details:** [README](./plugins/scaffold-go-cli/README.md)
+
+#### Scaffold Go Library
+
+Scaffold a Go library project with GoReleaser changelog-only releases, golangci-lint, GitHub Actions CI/CD (multi-version Go matrix), and Makefile. Generates the package source file, doc.go, go.mod, Makefile, .gitignore, .goreleaser.yml, .golangci.yml, .editorconfig, CI and release workflows, LICENSE, README, and a plans directory. Optionally generates example tests.
+
+> **Trigger:** `/scaffold-go-library`
+> **Details:** [README](./plugins/scaffold-go-library/README.md)
 
 #### Scaffold New Repo
 

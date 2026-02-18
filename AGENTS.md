@@ -11,6 +11,17 @@ cboone-cc-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json            # Plugin registry for this repository
 └── plugins/
+    ├── add-goreleaser-homebrew/     # GoReleaser + Homebrew tap setup skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   └── skills/
+    │       └── add-goreleaser-homebrew/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── conditional-features.md
+    │               ├── goreleaser.md
+    │               ├── makefile-target.md
+    │               └── release-workflow.md
     ├── address-review/              # Review feedback resolver skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -169,6 +180,26 @@ cboone-cc-plugins/
     │               ├── release-workflow.md
     │               ├── root-go-viper.md
     │               └── root-go.md
+    ├── scaffold-go-library/        # Go library project scaffolding skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── scaffold-go-library/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── ci-workflow.md
+    │               ├── doc-go.md
+    │               ├── editorconfig.md
+    │               ├── gitignore.md
+    │               ├── go-mod.md
+    │               ├── golangci.md
+    │               ├── goreleaser.md
+    │               ├── license.md
+    │               ├── makefile.md
+    │               ├── package-go.md
+    │               ├── readme.md
+    │               └── release-workflow.md
     ├── setup-gitleaks/             # Gitleaks secret scanning setup skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
