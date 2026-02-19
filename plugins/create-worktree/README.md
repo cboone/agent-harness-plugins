@@ -6,6 +6,16 @@ Create a new git worktree, branch, and tmux window with a task prompt injected i
 **Trigger:** `/create-worktree`
 **Requires:** [`workmux`](https://github.com/paiml/workmux)
 
+## Installation
+
+Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
+
+```text
+/plugin marketplace add cboone/cboone-cc-plugins
+```
+
+Then select **Create Worktree** from the available plugins.
+
 ## What It Does
 
 Derives a branch name from your task description (e.g., `feature/add-dark-mode-support` or `fix/auth-timeout`), or accepts an explicit branch name. Creates the worktree via `workmux add` and injects a task prompt so the new agent session knows what to work on.
@@ -21,11 +31,11 @@ Provide either a task description (branch name is derived automatically) or an e
 
 ## Examples
 
-- "create worktree for adding dark mode" — creates `feature/adding-dark-mode`
-- "spin up a worktree to fix the auth timeout" — creates `fix/auth-timeout`
-- "new worktree feature/refactor-config" — uses the branch name as-is
+- "create worktree for adding dark mode": creates `feature/adding-dark-mode`
+- "spin up a worktree to fix the auth timeout": creates `fix/auth-timeout`
+- "new worktree feature/refactor-config": uses the branch name as-is
 
 ## See Also
 
-- [Create Worktree from Issue](../create-worktree-from-issue/README.md) — create a worktree tied to a GitHub issue
+- [Create Worktree from Issue](../create-worktree-from-issue/README.md): create a worktree tied to a GitHub issue
 - [All plugins](../../README.md)

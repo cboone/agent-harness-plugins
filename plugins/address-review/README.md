@@ -5,6 +5,16 @@ Parse a review document for actionable feedback items, work through them systema
 **Type:** Skill
 **Trigger:** `/address-review <path>`
 
+## Installation
+
+Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
+
+```text
+/plugin marketplace add cboone/cboone-cc-plugins
+```
+
+Then select **Address Review** from the available plugins.
+
 ## What It Does
 
 Extracts items from checkboxes, bullets, numbered lists, and headings in a review document. Categorizes each item by type (code change, documentation, question, style), presents a summary for confirmation, then resolves items one by one. Commits fixes in logical groups by default, or per-item on request.
@@ -26,10 +36,10 @@ Extracts items from checkboxes, bullets, numbered lists, and headings in a revie
 
 ## Examples
 
-- "address review @docs/reviews/pr-feedback.md" — works through all items
-- "address the review --dry-run" — previews items without making changes
+- "address review @docs/reviews/pr-feedback.md": works through all items
+- "address the review --dry-run": previews items without making changes
 
 ## See Also
 
-- [Resolve Copilot PR Feedback](../resolve-copilot-pr-feedback/README.md) — resolve automated Copilot review comments
+- [Resolve Copilot PR Feedback](../resolve-copilot-pr-feedback/README.md): resolve automated Copilot review comments
 - [All plugins](../../README.md)

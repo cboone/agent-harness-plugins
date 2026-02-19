@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Lint and validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "yarn"
+      - run: yarn install --immutable
+      - name: Lint Markdown
+        run: yarn lint
+      - name: ShellCheck
+        run: shellcheck -S warning plugins/*/scripts/*
+      - name: Validate JSON syntax
+        run: bin/validate-json
+      - name: Validate plugin structure
+        run: bin/validate-plugins

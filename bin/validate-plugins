@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# Validates plugin structure and marketplace consistency.
+set -euo pipefail
+
+MARKETPLACE=".claude-plugin/marketplace.json"
+readonly MARKETPLACE
+
+errors=0
+
+function error() {
+  echo "::error::$1"
+  errors=$((errors + 1))
+}
+
+# ─── 1. Every plugin directory has plugin.json ───────────────────────────────
+
+for dir in plugins/*/; do
+  local_name="$(basename "${dir}")"
+  if [[ ! -f "${dir}.claude-plugin/plugin.json" ]]; then
+    error "Plugin '${local_name}' is missing .claude-plugin/plugin.json"
+  fi
+done
+
+# ─── 2. Every plugin directory has README.md ─────────────────────────────────
+
+for dir in plugins/*/; do
+  local_name="$(basename "${dir}")"
+  if [[ ! -f "${dir}README.md" ]]; then
+    error "Plugin '${local_name}' is missing README.md"
+  fi
+done
+
+# ─── 3. plugin.json name matches directory name ─────────────────────────────
+
+for dir in plugins/*/; do
+  local_name="$(basename "${dir}")"
+  local_json="${dir}.claude-plugin/plugin.json"
+  if [[ ! -f "${local_json}" ]]; then
+    continue
+  fi
+
+  json_name="$(jq -r '.name' "${local_json}")"
+  if [[ "${json_name}" != "${local_name}" ]]; then
+    error "Plugin '${local_name}': plugin.json name '${json_name}' does not match directory name"
+  fi
+done
+
+# ─── 4. Required fields in plugin.json ───────────────────────────────────────
+
+PLUGIN_REQUIRED_FIELDS=("author" "description" "homepage" "keywords" "license" "name" "repository" "version")
+readonly PLUGIN_REQUIRED_FIELDS
+
+for dir in plugins/*/; do
+  local_name="$(basename "${dir}")"
+  local_json="${dir}.claude-plugin/plugin.json"
+  if [[ ! -f "${local_json}" ]]; then
+    continue
+  fi
+
+  for field in "${PLUGIN_REQUIRED_FIELDS[@]}"; do
+    value="$(jq -r ".${field} // empty" "${local_json}")"
+    if [[ -z "${value}" ]]; then
+      error "Plugin '${local_name}': plugin.json missing required field '${field}'"
+    fi
+  done
+done
+
+# ─── 5. Every plugin directory is registered in marketplace.json ─────────────
+
+for dir in plugins/*/; do
+  local_name="$(basename "${dir}")"
+  match="$(jq -r --arg name "${local_name}" '.plugins[] | select(.name == $name) | .name' "${MARKETPLACE}")"
+  if [[ -z "${match}" ]]; then
+    error "Plugin '${local_name}' is not registered in marketplace.json"
+  fi
+done
+
+# ─── 6. Every marketplace entry points to an existing directory ──────────────
+
+marketplace_count="$(jq '.plugins | length' "${MARKETPLACE}")"
+for ((i = 0; i < marketplace_count; i++)); do
+  entry_name="$(jq -r ".plugins[${i}].name" "${MARKETPLACE}")"
+  entry_source="$(jq -r ".plugins[${i}].source" "${MARKETPLACE}")"
+  if [[ ! -d "${entry_source}" ]]; then
+    error "Marketplace entry '${entry_name}': source '${entry_source}' does not exist"
+  fi
+done
+
+# ─── 7. Required fields in marketplace entries ───────────────────────────────
+
+MARKETPLACE_REQUIRED_FIELDS=("author" "category" "description" "homepage" "keywords" "license" "name" "repository" "source" "version")
+readonly MARKETPLACE_REQUIRED_FIELDS
+
+for ((i = 0; i < marketplace_count; i++)); do
+  entry_name="$(jq -r ".plugins[${i}].name" "${MARKETPLACE}")"
+  for field in "${MARKETPLACE_REQUIRED_FIELDS[@]}"; do
+    value="$(jq -r ".plugins[${i}].${field} // empty" "${MARKETPLACE}")"
+    if [[ -z "${value}" ]]; then
+      error "Marketplace entry '${entry_name}': missing required field '${field}'"
+    fi
+  done
+done
+
+# ─── 8. Version in plugin.json matches marketplace entry ────────────────────
+
+for dir in plugins/*/; do
+  local_name="$(basename "${dir}")"
+  local_json="${dir}.claude-plugin/plugin.json"
+  if [[ ! -f "${local_json}" ]]; then
+    continue
+  fi
+
+  plugin_version="$(jq -r '.version' "${local_json}")"
+  marketplace_version="$(jq -r --arg name "${local_name}" '.plugins[] | select(.name == $name) | .version' "${MARKETPLACE}")"
+
+  if [[ -z "${marketplace_version}" ]]; then
+    continue
+  fi
+
+  if [[ "${plugin_version}" != "${marketplace_version}" ]]; then
+    error "Plugin '${local_name}': plugin.json version '${plugin_version}' does not match marketplace version '${marketplace_version}'"
+  fi
+done
+
+# ─── 9. Marketplace plugins array is in alphabetical order ──────────────────
+
+sorted="$(jq -r '.plugins[].name' "${MARKETPLACE}" | sort)"
+actual="$(jq -r '.plugins[].name' "${MARKETPLACE}")"
+
+if [[ "${sorted}" != "${actual}" ]]; then
+  error "Marketplace plugins array is not in alphabetical order by name"
+fi
+
+# ─── Summary ────────────────────────────────────────────────────────────────
+
+if [[ ${errors} -gt 0 ]]; then
+  echo "${errors} plugin validation error(s) found."
+  exit 1
+fi
+
+echo "All plugin validations passed."

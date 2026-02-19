@@ -6,6 +6,16 @@ Fetch and merge the repository's base branch into the current feature branch.
 **Trigger:** `/merge-main`
 **Requires:** [`gh`](https://cli.github.com/) (falls back to `git remote show origin` if unavailable)
 
+## Installation
+
+Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
+
+```text
+/plugin marketplace add cboone/cboone-cc-plugins
+```
+
+Then select **Merge Main** from the available plugins.
+
 ## What It Does
 
 Automatically detects the default branch, handles uncommitted changes (stash, commit, or abort), resolves merge conflicts, and pushes after a successful merge. Suggests running install commands when lockfiles change.
@@ -23,11 +33,11 @@ Automatically detects the default branch, handles uncommitted changes (stash, co
 
 ## Examples
 
-- "merge main" — fetches and merges the default branch
-- "merge main --base develop" — merges the `develop` branch instead
-- "sync with main" — same as "merge main"
+- "merge main": fetches and merges the default branch
+- "merge main --base develop": merges the `develop` branch instead
+- "sync with main": same as "merge main"
 
 ## See Also
 
-- [Review Branch](../review-branch/README.md) — summarize what changed on the current branch
+- [Review Branch](../review-branch/README.md): summarize what changed on the current branch
 - [All plugins](../../README.md)

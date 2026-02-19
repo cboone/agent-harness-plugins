@@ -5,6 +5,16 @@ Smart, context-aware git commits with conventional commit messages and plan awar
 **Type:** Skill
 **Trigger:** `/commit`
 
+## Installation
+
+Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
+
+```text
+/plugin marketplace add cboone/cboone-cc-plugins
+```
+
+Then select **Commit** from the available plugins.
+
 ## What It Does
 
 Analyzes your diff to generate well-structured conventional commit messages that match your repository's existing style. Handles staged-only vs. all changes, supports commit-and-push workflows, and can detect plan files for separate commits.
@@ -28,12 +38,12 @@ Analyzes your diff to generate well-structured conventional commit messages that
 
 ## Examples
 
-- "commit" — stages and commits with an auto-generated message
-- "commit and push" — commits then pushes to remote
-- "commit the plan, then the changes" — creates two sequential commits
-- "give the plan a meaningful name and commit" — renames and commits the plan file
+- "commit": stages and commits with an auto-generated message
+- "commit and push": commits then pushes to remote
+- "commit the plan, then the changes": creates two sequential commits
+- "give the plan a meaningful name and commit": renames and commits the plan file
 
 ## See Also
 
-- [PR](../pr/README.md) — commit, push, and open a pull request in one step
+- [PR](../pr/README.md): commit, push, and open a pull request in one step
 - [All plugins](../../README.md)

@@ -1,5 +1,6 @@
 {
   "private": true,
+  "packageManager": "yarn@4.12.0",
   "description": "Lint tooling for cboone-cc-plugins",
   "scripts": {
     "format": "prettier --write .",
@@ -8,7 +9,8 @@
     "lint:fix": "yarn lint:md:fix && yarn format",
     "lint:md": "markdownlint-cli2 \"**/*.md\"",
     "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\"",
-    "lint:prettier": "prettier --check ."
+    "lint:prettier": "prettier --check .",
+    "validate": "bin/validate-plugins"
   },
   "devDependencies": {
     "@github/markdownlint-github": "^0.8.0",
