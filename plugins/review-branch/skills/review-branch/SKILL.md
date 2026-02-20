@@ -1,19 +1,18 @@
 ---
 name: review-branch
 description: >-
-  Summarize all work done on the current branch compared to the base branch,
-  grouping changes by area and highlighting notable modifications. Optionally
-  compare progress against a plan document. Use when the user says
-  "review branch", "review the work done on this branch",
+  Review and evaluate all work done on the current branch: summarize changes,
+  rigorously assess plan compliance, and independently evaluate code quality.
+  Use when the user says "review branch", "review the work done on this branch",
   "summarize this branch", "where are we on this branch",
   "what's been done on this branch", "branch summary",
-  "compare branch to plan", or any variant involving reviewing or
-  summarizing the work on the current branch.
+  "compare branch to plan", "evaluate this branch", or any variant involving
+  reviewing, summarizing, or evaluating the work on the current branch.
 ---
 
 # Review Branch
 
-Summarize all work done on the current branch, optionally comparing progress against a plan document.
+Review and evaluate all work done on the current branch: summarize changes, assess plan compliance, and evaluate code quality on its own merits.
 
 ## Options
 
@@ -132,15 +131,15 @@ If there are no notable changes worth highlighting, skip this section.
 
 #### 3e. Brief Mode
 
-If **--brief** was specified, output only the high-level summary (3a) and the file inventory counts (3c, counts only — not the full file lists). Skip sections 3b, 3d, and the plan comparison (step 4).
+If **--brief** was specified, output only the high-level summary (3a) and the file inventory counts (3c, counts only, not the full file lists). Skip sections 3b and 3d. For plan compliance (step 4), include only the compliance verdict and overall progress fraction. For code quality (step 5), include only the assessment verdict. Skip the detailed breakdowns in both evaluation steps.
 
-### 4. Compare Against Plan (if provided)
+### 4. Evaluate Plan Compliance
 
-This step only runs if the user specified `--plan <path>` or if a plan was auto-detected.
+This step runs when a plan is available (user-specified or auto-detected). Plan compliance is a rigorous evaluation, not a passive checklist. Scrutinize the implementation against the plan's intent, not just its task list.
 
-#### 4a. Auto-Detection
+#### 4a. Find the Plan
 
-If no `--plan` was specified, attempt to find a relevant plan:
+If the user specified `--plan <path>`, use that file. Otherwise, auto-detect:
 
 1. Look for plan directories commonly used in projects:
 
@@ -153,41 +152,108 @@ ls docs/plans/ 2> /dev/null
 
 1. Search for plan files whose name matches the current branch name (with type prefixes and hyphens/underscores normalized). For example, branch `feature/add-dark-mode` would match a plan named `add-dark-mode.md`.
 
-1. If exactly one plan matches, use it. If multiple plans match, list them and ask the user which to use. If no plans match, skip the plan comparison entirely.
+1. If exactly one plan matches, use it. If multiple plans match, list them and ask the user which to use. If no plans match, skip the plan evaluation entirely.
 
 #### 4b. Parse the Plan
 
-Read the plan document and identify actionable items. Plans may use various formats:
+Read the plan document and extract every actionable item, preserving hierarchy (phase/section grouping). Plans may use:
 
 - **Checkboxes**: `- [ ]` (incomplete) and `- [x]` (complete)
 - **Numbered lists**: Sequential steps or phases
 - **Headings as phases**: `## Phase 1`, `### Step 1`, etc.
 - **Bullet points**: Unnumbered task lists
 
-Extract every actionable item from the plan, preserving its hierarchy (phase/section grouping).
+Also identify the plan's stated goals, constraints, design decisions, and any specified approaches or technologies. These contextual elements are as important as the task list items when evaluating compliance.
 
 #### 4c. Match Work to Plan Items
 
 For each plan item, determine its status based on the branch's changes:
 
-- **Completed**: The diff clearly implements this item. Changes in the diff directly address the described work.
-- **In progress**: Some related changes exist but the item is not fully implemented.
+- **Done**: The diff clearly and fully implements this item. Changes directly address the described work with no gaps.
+- **Partially done**: Some related changes exist but the item is not fully implemented. Note specifically what is missing.
 - **Not started**: No changes in the diff relate to this item.
 
-Use the commit messages, file changes, and diff content to make these determinations. Be conservative — only mark an item as "Completed" when the evidence is clear.
+**Be strict.** Only mark an item as "Done" when the implementation is thorough and complete. If an item asks for error handling and the code adds only the happy path, that is "Partially done," not "Done." If the plan says to add tests and there are no tests, it is "Not started" regardless of how complete the feature code is.
 
-#### 4d. Report Plan Progress
+#### 4d. Identify Deviations
 
-Present the comparison as a progress report:
+Look for discrepancies between the plan and the actual implementation:
 
-1. **Overall progress**: A fraction and percentage (e.g., "7/12 items completed (58%)")
-1. **Completed items**: List each with a brief note about which changes implement it
-1. **In-progress items**: List each with what has been done and what remains
-1. **Remaining items**: List items not yet started
+- **Approach deviations**: The plan specified one approach but the implementation uses a different one (e.g., plan says "use a map" but code uses a slice; plan says "add a middleware" but code modifies the handler directly).
+- **Scope additions**: Work done on the branch that the plan does not mention. This is not necessarily bad, but it must be called out explicitly. Was this extra work justified, or is it scope creep?
+- **Scope omissions**: Plan items that appear to have been intentionally skipped, not just "not yet started." Look for evidence that the implementer chose to skip something.
+- **Ordering violations**: If the plan specifies an order of operations and the implementation did things in a different sequence, note whether this matters.
+
+#### 4e. Assess Implementation Fidelity
+
+Go beyond "was it done?" to ask "was it done well relative to what the plan intended?"
+
+For each item marked "Done" or "Partially done":
+
+- Does the implementation match the spirit of the plan, or only the letter?
+- If the plan described a specific design, does the code follow that design?
+- If the plan mentioned quality expectations (e.g., "robust error handling," "comprehensive tests"), does the implementation meet those expectations?
+- Are there shortcuts or simplifications that undermine the plan's intent?
+
+#### 4f. Report Plan Compliance
+
+Present a thorough compliance report:
+
+1. **Compliance verdict**: A clear, direct assessment. Is the branch in good compliance with the plan, partial compliance, or poor compliance? Do not hedge. Be specific about why.
+1. **Overall progress**: A fraction and percentage (e.g., "7/12 items done (58%)")
+1. **Done items**: List each with a brief note about which changes implement it, and any caveats about implementation quality
+1. **Partially done items**: List each with what has been done and what specifically remains
+1. **Not started items**: List items not yet started
+1. **Deviations**: List every deviation found in 4d, with an assessment of whether each deviation is reasonable or problematic
+1. **Fidelity concerns**: List any concerns from 4e where the implementation does not match the plan's intent
 
 If the plan uses phases or sections, preserve that grouping in the report.
 
-### 5. Output the Review
+### 5. Assess Code Quality
+
+This step always runs, regardless of whether a plan exists. Evaluate the branch's changes on their own merits, independent of any plan. Read the diff critically, as a reviewer would.
+
+#### 5a. Code Quality
+
+Examine the diff for:
+
+- **Readability**: Is the code clear and understandable? Are names descriptive? Is the logic easy to follow?
+- **Maintainability**: Will this code be easy to modify in the future? Are there hard-coded values, magic numbers, or tightly coupled components that will cause problems later?
+- **Patterns and consistency**: Does the new code follow the same patterns as the surrounding codebase? Are there inconsistencies in style, naming, or structure compared to the existing code?
+- **Duplication**: Is there meaningful code duplication that should be addressed?
+
+#### 5b. Potential Issues
+
+Look actively for problems:
+
+- **Bugs**: Logic errors, off-by-one errors, nil/null pointer risks, race conditions, resource leaks
+- **Edge cases**: Unhandled boundary conditions, empty inputs, error paths
+- **Error handling**: Are errors handled appropriately? Are there silent failures, swallowed errors, or overly broad catch blocks?
+- **Security**: Input validation gaps, injection risks, authentication/authorization issues, secrets in code
+- **Performance**: Obvious performance problems such as unnecessary allocations, N+1 queries, unbounded growth, or missing pagination
+
+Do not invent hypothetical problems. Flag only issues that are visible in the diff or strongly implied by it.
+
+#### 5c. Completeness
+
+Assess whether the work on this branch feels finished:
+
+- Are there TODO, FIXME, HACK, or XXX comments in the new code?
+- Are there stub implementations, placeholder values, or commented-out code?
+- If new features were added, are there corresponding tests?
+- If APIs were changed, is documentation updated?
+- Are there loose ends visible in the diff: partial implementations, unfinished refactors, half-migrated patterns?
+
+#### 5d. Assessment Verdict
+
+Provide a clear, direct overall assessment of the code quality. Do not just list observations: synthesize them into a verdict.
+
+1. **Overall quality**: Is this code ready to merge, or does it need more work? Be direct.
+1. **Strengths**: What is done well? Be specific.
+1. **Issues to address**: What needs to be fixed or improved before merging? Prioritize by severity.
+1. **Suggestions**: Optional improvements that are not blocking but would make the code better.
+
+### 6. Output the Review
 
 Structure the final output with clear sections:
 
@@ -214,12 +280,16 @@ Files changed: <count> (<added> added, <modified> modified, <deleted> deleted, <
 
 <highlighted items>
 
-### Plan Progress
+### Plan Compliance
 
-<plan comparison, if applicable>
+<plan evaluation, if applicable>
+
+### Code Quality Assessment
+
+<independent code evaluation>
 ```
 
-Adjust section headers and content to fit what is actually present. Omit empty sections.
+Adjust section headers and content to fit what is actually present. Omit empty sections. The **Plan Compliance** and **Code Quality Assessment** sections are the most important outputs of this review: make them thorough, specific, and direct.
 
 ## Error Handling
 
