@@ -186,18 +186,22 @@ Create or update AGENTS.md with shared instructions consolidated from all source
 # Project Name
 
 ## Overview
+
 Brief project description and key architectural decisions.
 
 ## Development Environment
+
 - Package manager and runtime versions
 - Key commands: build, test, lint, dev server
 
 ## Code Conventions
+
 - Language-specific patterns and preferences
 - Error handling approach
 - Testing conventions and location
 
 ## Git Workflow
+
 - Branch naming and commit format
 - Pre-commit requirements
 ```
@@ -280,7 +284,7 @@ Each is an intentional project convention:
 
 **Section heading.** Use `## PR Review` as the heading. Some repos use `## PR Review Checklist (CRITICAL)` or `## Code Review` -- all are acceptable. The key requirement is that PR review rules appear early in the file.
 
-#### 4g. .github/instructions/*.instructions.md (path-scoped)
+#### 4g. .github/instructions/\*.instructions.md (path-scoped)
 
 Create path-scoped instruction files only when the project structure warrants them. Use Copilot's `applyTo` glob for file-type or directory scoping:
 

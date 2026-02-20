@@ -44,14 +44,14 @@ Format rules:
 
 Use this guide to determine which subcategory a new plugin belongs to:
 
-| Subcategory | Covers | Examples |
-| ----------------------- | ----------------------------------------- | ---------------------------------------- |
-| **Git** | Commit-to-PR pipeline | commit, merge-main, pr, review-branch |
-| **Issues and Worktrees** | Multi-agent and issue-driven work | create-worktree, suggest-next-issue |
-| **Code Review** | Responding to external feedback | address-review, resolve-copilot-pr-feedback |
-| **Code Quality** | Style guides, linting, formatting | lint-and-fix, write-go-code |
-| **Scaffolding** | Project and repo setup | scaffold-go-cli, setup-gitleaks |
-| **Agents** | Meta-tools for the agent ecosystem | clean-up-agent-config, create-plugin |
+| Subcategory              | Covers                             | Examples                                    |
+| ------------------------ | ---------------------------------- | ------------------------------------------- |
+| **Git**                  | Commit-to-PR pipeline              | commit, merge-main, pr, review-branch       |
+| **Issues and Worktrees** | Multi-agent and issue-driven work  | create-worktree, suggest-next-issue         |
+| **Code Review**          | Responding to external feedback    | address-review, resolve-copilot-pr-feedback |
+| **Code Quality**         | Style guides, linting, formatting  | lint-and-fix, write-go-code                 |
+| **Scaffolding**          | Project and repo setup             | scaffold-go-cli, setup-gitleaks             |
+| **Agents**               | Meta-tools for the agent ecosystem | clean-up-agent-config, create-plugin        |
 
 ### Adding a New Skill
 
@@ -93,7 +93,7 @@ Key patterns:
 - Always include the `> **Trigger:**` line
 - Include `> **Requires:**` only if the skill has external dependencies
 - Always include the `> **Details:**` line linking to the per-plugin README
-- When a skill also activates automatically, note it parenthetically: `` > **Trigger:** `/skill-name` (also activates automatically) ``
+- When a skill also activates automatically, note it parenthetically: ``> **Trigger:** `/skill-name` (also activates automatically)``
 
 ### Hooks Section
 
@@ -114,7 +114,7 @@ Every plugin has a `README.md` in its plugin directory (`plugins/<name>/README.m
 
 ### Template for Skills
 
-```markdown
+````markdown
 # Plugin Name
 
 One-sentence description.
@@ -155,11 +155,11 @@ Trigger phrases or usage scenarios.
 
 - [Related Plugin](../related-plugin/README.md): brief reason
 - [All plugins](../../README.md)
-```
+````
 
 ### Template for Hooks
 
-```markdown
+````markdown
 # Hook Name
 
 One-sentence description.
@@ -188,7 +188,7 @@ Describe what events trigger the hook and what happens.
 ## See Also
 
 - [All plugins](../../README.md)
-```
+````
 
 ### Variations
 

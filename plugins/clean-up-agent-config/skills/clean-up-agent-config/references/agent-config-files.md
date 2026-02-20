@@ -306,6 +306,7 @@ Copilot also reads `AGENTS.md` (at root and subdirectories) and `CLAUDE.md` at r
 applyTo: "src/**/*.tsx"
 excludeAgent: copilot-code-review
 ---
+
 Use functional React components with hooks.
 Always use TypeScript strict mode.
 ```
@@ -473,9 +474,9 @@ For personal preferences that span all projects and all tools, maintain a dotfil
 ```bash
 # In your dotfiles repo:
 agents/
-+-- AGENTS.md                  # Global instructions (all tools)
-+-- claude-settings.json       # symlinked to ~/.claude/settings.json
-+-- codex-config.toml          # symlinked to ~/.codex/config.toml
++-- AGENTS.md            # Global instructions (all tools)
++-- claude-settings.json # symlinked to ~/.claude/settings.json
++-- codex-config.toml    # symlinked to ~/.codex/config.toml
 
 # Install script:
 mkdir -p ~/.claude ~/.codex ~/.config/opencode

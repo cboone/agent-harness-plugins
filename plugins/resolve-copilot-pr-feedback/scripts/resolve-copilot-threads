@@ -25,7 +25,7 @@ readonly COPILOT_ACTIONS_LOGIN="github-actions[bot]"
 readonly COPILOT_SEVERITY_PATTERN="^\\s*\\[(nitpick|suggestion|important|critical|note)\\]"
 
 function usage() {
-  cat <<USAGE_TEXT
+  cat << USAGE_TEXT
 Usage: ${SCRIPT_NAME} <command> [arguments]
 
 Manage GitHub Copilot PR review threads via GraphQL.
@@ -57,15 +57,15 @@ function die() {
 }
 
 function check_dependencies() {
-  if ! command -v gh >/dev/null 2>&1; then
+  if ! command -v gh > /dev/null 2>&1; then
     die "gh (GitHub CLI) is required but not found. Install it: https://cli.github.com"
   fi
 
-  if ! command -v jq >/dev/null 2>&1; then
+  if ! command -v jq > /dev/null 2>&1; then
     die "jq is required but not found. Install it: https://jqlang.github.io/jq/download/"
   fi
 
-  if ! gh auth status >/dev/null 2>&1; then
+  if ! gh auth status > /dev/null 2>&1; then
     die "Not authenticated with GitHub. Run: gh auth login"
   fi
 }
@@ -129,13 +129,13 @@ function send_reply() {
       '
   )"
 
-  if jq -e '.errors and (.errors | length > 0)' >/dev/null <<<"${response}"; then
+  if jq -e '.errors and (.errors | length > 0)' > /dev/null <<< "${response}"; then
     local error_message
-    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<<"${response}")"
+    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<< "${response}")"
     die "Failed to send reply: ${error_message}"
   fi
 
-  comment_id="$(jq -r '.data.addPullRequestReviewThreadReply.comment.id // empty' <<<"${response}")"
+  comment_id="$(jq -r '.data.addPullRequestReviewThreadReply.comment.id // empty' <<< "${response}")"
   if [[ -z "${comment_id}" || "${comment_id}" == "null" ]]; then
     die "Failed to send reply: missing comment id in GraphQL response"
   fi
@@ -283,14 +283,14 @@ function do_resolve() {
   )"
 
   # Check for GraphQL errors before extracting the result
-  if jq -e '.errors and (.errors | length > 0)' >/dev/null <<<"${response}"; then
+  if jq -e '.errors and (.errors | length > 0)' > /dev/null <<< "${response}"; then
     local error_message
-    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<<"${response}")"
+    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<< "${response}")"
     die "Failed to resolve review thread ${thread_id}: ${error_message}"
   fi
 
   local is_resolved
-  is_resolved="$(jq -r '.data.resolveReviewThread.thread.isResolved' <<<"${response}")"
+  is_resolved="$(jq -r '.data.resolveReviewThread.thread.isResolved' <<< "${response}")"
 
   if [[ "${is_resolved}" != "true" ]]; then
     die "Failed to resolve review thread ${thread_id}: isResolved=${is_resolved}"
@@ -353,7 +353,7 @@ function main() {
   # Validate command before checking dependencies so that missing/unknown
   # commands show usage errors rather than confusing dependency failures.
   case "${command}" in
-    fetch|resolve|reply|reply-and-resolve)
+    fetch | resolve | reply | reply-and-resolve)
       check_dependencies
       ;;
     "")

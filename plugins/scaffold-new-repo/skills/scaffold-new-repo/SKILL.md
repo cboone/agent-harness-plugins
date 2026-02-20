@@ -104,7 +104,7 @@ When the user explicitly specifies a project type that is NOT in the curated lis
    - Title-cased with spaces removed (e.g., `visual studio` → `VisualStudio`)
    - Title-cased with spaces replaced by `-` (e.g., `objective c` → `Objective-C`)
    - The user's input as-is (e.g., `C++`)
-   URL-encode special characters in the URL (e.g., `C++` → `C%2B%2B`). Stop at the first successful (non-404) response.
+     URL-encode special characters in the URL (e.g., `C++` → `C%2B%2B`). Stop at the first successful (non-404) response.
 
 1. **If any fetch succeeds**: merge the fetched entries with the common entries (`.DS_Store`, `.env`, `.claude/settings.local.json`), avoiding duplicates. Use the combined result as the `.gitignore`.
 

@@ -50,7 +50,7 @@ gh issue edit NUMBER --add-assignee @me
 **Ensure the label exists, then add it:**
 
 ```bash
-gh label create "in progress" --description "Work is actively being done" --color FBCA04 2>/dev/null || true
+gh label create "in progress" --description "Work is actively being done" --color FBCA04 2> /dev/null || true
 gh issue edit NUMBER --add-label "in progress"
 ```
 

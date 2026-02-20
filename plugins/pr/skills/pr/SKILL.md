@@ -46,13 +46,13 @@ git diff
 git log --oneline -10
 
 # Full diff of this branch against the base branch
-git diff <base-branch>...HEAD
+git diff < base-branch > ...HEAD
 
 # Commit history of this branch since diverging from the base branch
-git log <base-branch>..HEAD --oneline
+git log --oneline < base-branch > ..HEAD
 
 # Check remote tracking status
-git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "no upstream"
+git rev-parse --abbrev-ref --symbolic-full-name @{u} 2> /dev/null || echo "no upstream"
 ```
 
 ### 2. Detect Connected Issues
@@ -71,7 +71,7 @@ Extract the current branch name. Look for issue numbers in patterns like:
 For each candidate number, verify it refers to an existing issue:
 
 ```bash
-gh issue view NUMBER --json number,title,state --jq '.number' 2>/dev/null
+gh issue view NUMBER --json number,title,state --jq '.number' 2> /dev/null
 ```
 
 Only include it if the command succeeds (the issue exists).
@@ -81,7 +81,7 @@ Only include it if the command succeeds (the issue exists).
 Scan the `git log <base-branch>..HEAD` output (already gathered in step 1) for `#N` references. Collect all unique issue numbers. For each, verify it refers to an actual issue:
 
 ```bash
-gh issue view NUMBER --json number,title,state --jq '.number' 2>/dev/null
+gh issue view NUMBER --json number,title,state --jq '.number' 2> /dev/null
 ```
 
 #### Strategy 3 — GitHub issue search by branch slug
@@ -124,7 +124,8 @@ If there are staged changes, unstaged changes, or untracked files:
 1. **Create the commit** — GPG signed, using a HEREDOC:
 
 ```bash
-git commit -S -m "$(cat <<'EOF'
+git commit -S -m "$(
+  cat << 'EOF'
 type: description here
 EOF
 )"
@@ -193,7 +194,8 @@ If no connected issues were detected, omit the `## Closes` section entirely.
 #### Create the PR
 
 ```bash
-gh pr create --title "the pr title" --body "$(cat <<'EOF'
+gh pr create --title "the pr title" --body "$(
+  cat << 'EOF'
 ## Summary
 
 - Key change 1

@@ -147,7 +147,7 @@ sys.stdin.isatty()
 ### TTY detection
 
 ```javascript
-process.stdin.isTTY
+process.stdin.isTTY;
 ```
 
 ## Ruby

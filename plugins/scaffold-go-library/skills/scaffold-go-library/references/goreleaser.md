@@ -2,7 +2,7 @@
 
 Use this template for `.goreleaser.yml`. Replace `PROJECT-NAME`, `PROJECT-DESCRIPTION`, and `GITHUB-USERNAME` with the actual values.
 
-```yaml
+````yaml
 # goreleaser configuration for PROJECT-NAME
 # https://goreleaser.com
 
@@ -56,7 +56,7 @@ release:
     ```
   footer: |
     **Full Changelog**: https://github.com/GITHUB-USERNAME/PROJECT-NAME/compare/{{ .PreviousTag }}...{{ .Tag }}
-```
+````
 
 ## Notes
 

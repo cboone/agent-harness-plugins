@@ -87,7 +87,8 @@ Analyze the diff to generate a commit message:
 All commits must be GPG signed. Use a HEREDOC for the commit message to ensure proper formatting:
 
 ```bash
-git commit -S -m "$(cat <<'EOF'
+git commit -S -m "$(
+  cat << 'EOF'
 type: description here
 EOF
 )"

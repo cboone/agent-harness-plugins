@@ -23,7 +23,7 @@ SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
 function usage() {
-  cat <<'USAGE_TEXT'
+  cat << 'USAGE_TEXT'
 Usage: script-name <command> [options]
 
 Description of what the script does.

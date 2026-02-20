@@ -21,7 +21,7 @@ New executable bash script (755) following the `plugins/notify/scripts/notify` p
       "path": "src/foo.ts",
       "location": "src/foo.ts:42",
       "isOutdated": false,
-      "comments": [{"author": "copilot", "body": "[nitpick] Consider..."}]
+      "comments": [{ "author": "copilot", "body": "[nitpick] Consider..." }]
     }
   ]
   ```
