@@ -85,7 +85,7 @@ op read "op://vault/item/field" | mytool --password-file /dev/stdin
 **`--password-fd` pattern** (pioneered by GnuPG):
 
 ```bash
-gpg --passphrase-fd 3 3< passphrase-file --decrypt file.gpg
+gpg --passphrase-fd 3 --decrypt file.gpg 3< passphrase-file
 ```
 
 **Interactive prompts** with echo suppression:

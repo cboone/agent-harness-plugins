@@ -45,7 +45,7 @@ A debug mode that dumps `Authorization: Bearer sk_live_xxxxx` to a log file crea
 
 ```bash
 # DANGEROUS: $(</dev/stdin) expands into curl's argument list, visible via ps
-echo "secret" | curl -d "$(</dev/stdin)" https://api.example.com
+echo "secret" | curl -d "$(< /dev/stdin)" https://api.example.com
 ```
 
 ```bash
@@ -75,7 +75,7 @@ TOKEN=secret curl -H "Authorization: Bearer $TOKEN" https://api.example.com
 ```bash
 # SAFE: tool reads the environment variable internally, no shell expansion
 export API_TOKEN=secret
-my-cli-tool --token-env API_TOKEN    # Tool calls os.Getenv("API_TOKEN") internally
+my-cli-tool --token-env API_TOKEN # Tool calls os.Getenv("API_TOKEN") internally
 ```
 
 **The safe pattern:** Pass the **name** of the environment variable to the tool (or rely on a well-known variable name convention), and have the tool read the value from its own process environment. This keeps the secret out of argv entirely.

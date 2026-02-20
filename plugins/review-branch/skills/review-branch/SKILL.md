@@ -50,7 +50,7 @@ git rev-parse --abbrev-ref origin/HEAD | sed 's@^origin/@@'
 1. **Find the merge base** between the base reference and HEAD:
 
 ```bash
-git merge-base <base-ref> HEAD
+git merge-base < base-ref > HEAD
 ```
 
 Use this merge base as the actual comparison point for all subsequent commands. This ensures the diff only includes changes made on this branch, not changes made on the base branch since diverging.
@@ -63,13 +63,13 @@ Run these commands in parallel:
 
 ```bash
 # Commit history on this branch
-git log --oneline <merge-base>..HEAD
+git log --oneline < merge-base > ..HEAD
 
 # File-level summary (insertions, deletions, renames)
-git diff <merge-base>..HEAD --stat
+git diff --stat < merge-base > ..HEAD
 
 # Full diff for detailed analysis
-git diff <merge-base>..HEAD
+git diff < merge-base > ..HEAD
 
 # Current branch name
 git branch --show-current
@@ -78,7 +78,7 @@ git branch --show-current
 Also read the commit messages in detail to understand the intent behind each change:
 
 ```bash
-git log <merge-base>..HEAD --format='%h %s%n%n%b' --no-merges
+git log --format='%h %s%n%n%b' --no-merges < merge-base > ..HEAD
 ```
 
 ### 3. Summarize the Work
@@ -146,9 +146,9 @@ If no `--plan` was specified, attempt to find a relevant plan:
 
 ```bash
 # Check common plan directory locations
-ls docs/plans/todo/ 2>/dev/null
-ls docs/plans/in-progress/ 2>/dev/null
-ls docs/plans/ 2>/dev/null
+ls docs/plans/todo/ 2> /dev/null
+ls docs/plans/in-progress/ 2> /dev/null
+ls docs/plans/ 2> /dev/null
 ```
 
 1. Search for plan files whose name matches the current branch name (with type prefixes and hyphens/underscores normalized). For example, branch `feature/add-dark-mode` would match a plan named `add-dark-mode.md`.

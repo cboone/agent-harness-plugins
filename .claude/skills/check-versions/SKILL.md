@@ -30,7 +30,7 @@ git rev-parse --abbrev-ref origin/HEAD | sed 's@^origin/@@'
 Find the merge base between the default branch and HEAD:
 
 ```bash
-git merge-base <default-branch> HEAD
+git merge-base < default-branch > HEAD
 ```
 
 If HEAD equals the merge base (on the default branch or no divergent commits), compare against the state before the most recent merge instead — use the most recent merge commit's first parent as the comparison base:
@@ -44,7 +44,7 @@ git rev-parse "$(git log --merges -1 --format='%H' HEAD)^1"
 List files changed since the comparison base and group them by plugin directory:
 
 ```bash
-git diff --name-only <base>..HEAD
+git diff --name-only < base > ..HEAD
 ```
 
 A file belongs to plugin `foo` if its path starts with `plugins/foo/`. For each plugin, track:
