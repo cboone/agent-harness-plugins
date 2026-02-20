@@ -532,7 +532,7 @@ When a test case is not self-explanatory, add a brief description between the he
 Verifies that configuration files with non-ASCII characters are parsed correctly.
 
 ```scrut
-$ cd "$(mktemp -d)" && printf 'name: "cafe"' > .config.yaml && "${TOOL_BIN}" config display | grep name
-name: cafe
+$ cd "$(mktemp -d)" && printf 'name: "café"' > .config.yaml && "${TOOL_BIN}" config display | grep name
+name: café
 ```
 ````

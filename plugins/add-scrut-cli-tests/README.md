@@ -38,5 +38,6 @@ The skill detects the binary name and build configuration from the existing Make
 
 - [Scaffold Go CLI](../scaffold-go-cli/README.md): scaffold a new Go CLI project (includes build targets this skill depends on)
 - [Write Go Code](../write-go-code/README.md): Go style guide for the CLI source code
+- [Write Scrut Tests](../write-scrut-tests/README.md): style conventions for writing scrut test files
 - [Lint and Fix](../lint-and-fix/README.md): run linters and formatters
 - [All plugins](../../README.md)
