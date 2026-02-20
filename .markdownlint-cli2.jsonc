@@ -6,7 +6,7 @@
     "extends": ".markdownlint.jsonc",
   },
 
-  "ignores": ["node_modules/"],
+  "ignores": [".workmux/", "node_modules/"],
 
   "customRules": [
     "@github/markdownlint-github",

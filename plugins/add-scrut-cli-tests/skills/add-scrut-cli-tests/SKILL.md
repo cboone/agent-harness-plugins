@@ -100,11 +100,18 @@ Build the binary and run the scrut tests to verify the setup:
 make test-scrut
 ```
 
-If `scrut` is not installed locally, inform the user to install via the official install script:
+If `scrut` is not installed locally, inform the user to install from the facebookincubator/scrut GitHub releases:
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://facebookincubator.github.io/scrut/install.sh | sh
+mkdir -p ~/.local/bin
+gh release download --repo facebookincubator/scrut --pattern 'scrut-*-PLATFORM.tar.gz' --dir /tmp
+tar -xzf /tmp/scrut-*-PLATFORM.tar.gz -C /tmp
+cp /tmp/scrut-PLATFORM/scrut ~/.local/bin/
 ```
+
+Replace `PLATFORM` with the appropriate identifier (e.g., `macos-aarch64`, `linux-x86_64`).
+
+Ensure `~/.local/bin` is on `PATH`. If it is not already, add it to your shell profile (e.g., `export PATH="$HOME/.local/bin:$PATH"` in `~/.zshrc` or `~/.bashrc`).
 
 If tests fail because the expected output does not match, update the snapshots:
 
