@@ -103,12 +103,15 @@ make test-scrut
 If `scrut` is not installed locally, inform the user to install from the facebookincubator/scrut GitHub releases:
 
 ```bash
+mkdir -p ~/.local/bin
 gh release download --repo facebookincubator/scrut --pattern 'scrut-*-PLATFORM.tar.gz' --dir /tmp
 tar -xzf /tmp/scrut-*-PLATFORM.tar.gz -C /tmp
 cp /tmp/scrut-PLATFORM/scrut ~/.local/bin/
 ```
 
 Replace `PLATFORM` with the appropriate identifier (e.g., `macos-aarch64`, `linux-x86_64`).
+
+Ensure `~/.local/bin` is on `PATH`. If it is not already, add it to your shell profile (e.g., `export PATH="$HOME/.local/bin:$PATH"` in `~/.zshrc` or `~/.bashrc`).
 
 If tests fail because the expected output does not match, update the snapshots:
 
