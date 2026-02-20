@@ -103,7 +103,7 @@ make test-scrut
 If `scrut` is not installed locally, inform the user to install via the official install script:
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://facebookincubator.github.io/scrut/install.sh | sh
+SCRUT_RELEASE_REPO=facebookincubator/scrut curl --proto '=https' --tlsv1.2 -sSf https://facebookincubator.github.io/scrut/install.sh | sh
 ```
 
 If tests fail because the expected output does not match, update the snapshots:
