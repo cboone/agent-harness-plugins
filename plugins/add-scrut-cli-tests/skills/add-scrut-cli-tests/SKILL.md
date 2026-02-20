@@ -87,6 +87,7 @@ If found, add a `test-scrut` job using the template from `./references/ci-job.md
 
 - Detect the Go version from the existing workflow's `go-version` field and use the same value
 - Detect the runner OS from the existing workflow (e.g., `ubuntu-latest`, `macos-latest`) and use the same value
+- Determine the latest scrut release tag for `SCRUT_VERSION` (run `gh release list --repo facebookincubator/scrut --limit 1`)
 - Place the new job after existing test jobs
 - If the workflow uses job dependencies (`needs`), set up appropriate dependencies for the new job
 
@@ -100,16 +101,16 @@ Build the binary and run the scrut tests to verify the setup:
 make test-scrut
 ```
 
-If `scrut` is not installed locally, inform the user to install from the facebookincubator/scrut GitHub releases:
+If `scrut` is not installed locally, inform the user to install from the facebookincubator/scrut GitHub releases. Determine the latest release tag (run `gh release list --repo facebookincubator/scrut --limit 1`):
 
 ```bash
 mkdir -p ~/.local/bin
-gh release download --repo facebookincubator/scrut --pattern 'scrut-*-PLATFORM.tar.gz' --dir /tmp
-tar -xzf /tmp/scrut-*-PLATFORM.tar.gz -C /tmp
+gh release download VERSION --repo facebookincubator/scrut --pattern 'scrut-VERSION-PLATFORM.tar.gz' --dir /tmp
+tar -xzf /tmp/scrut-VERSION-PLATFORM.tar.gz -C /tmp
 cp /tmp/scrut-PLATFORM/scrut ~/.local/bin/
 ```
 
-Replace `PLATFORM` with the appropriate identifier (e.g., `macos-aarch64`, `linux-x86_64`).
+Replace `VERSION` with the pinned release tag (e.g., `v0.4.3`) and `PLATFORM` with the appropriate identifier (e.g., `macos-aarch64`, `linux-x86_64`).
 
 Ensure `~/.local/bin` is on `PATH`. If it is not already, add it to your shell profile (e.g., `export PATH="$HOME/.local/bin:$PATH"` in `~/.zshrc` or `~/.bashrc`).
 
