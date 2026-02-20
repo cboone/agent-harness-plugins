@@ -9,7 +9,7 @@ Scrut test targets to add to the project Makefile.
 test-scrut: build
 	@echo "Running scrut CLI tests..."
 	@if ! command -v scrut >/dev/null 2>&1; then \
-		echo "scrut not installed. Install via: brew install scrut"; \
+		echo "scrut not installed. Install from https://github.com/facebookincubator/scrut"; \
 		exit 1; \
 	fi
 	TOOL_BIN="BINARY_PATH" scrut test TESTS_DIR
