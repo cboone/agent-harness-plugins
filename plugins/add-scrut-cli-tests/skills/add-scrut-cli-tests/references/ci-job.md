@@ -34,10 +34,10 @@ test-scrut:
 
 ## Placeholders
 
-| Placeholder      | Description                                  | Example                         |
-| ---------------- | -------------------------------------------- | ------------------------------- |
-| `RUNNER_OS`      | GitHub Actions runner OS                     | `macos-latest`, `ubuntu-latest` |
-| `GO_VERSION`     | Go version matching the rest of the workflow | `1.25`                          |
+| Placeholder      | Description                                   | Example                         |
+| ---------------- | --------------------------------------------- | ------------------------------- |
+| `RUNNER_OS`      | GitHub Actions runner OS                      | `macos-latest`, `ubuntu-latest` |
+| `GO_VERSION`     | Go version matching the rest of the workflow  | `1.25`                          |
 | `SCRUT_PLATFORM` | Platform identifier from scrut release assets | `macos-aarch64`, `linux-x86_64` |
 
 ## Notes
