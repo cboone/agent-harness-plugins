@@ -20,9 +20,13 @@ test-scrut:
 
     - name: Install scrut
       env:
-        SCRUT_RELEASE_REPO: facebookincubator/scrut
+        GH_TOKEN: ${{ github.token }}
       run: |
-        curl --proto '=https' --tlsv1.2 -sSf https://facebookincubator.github.io/scrut/install.sh | sh
+        mkdir -p "${HOME}/.local/bin"
+        echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+        gh release download --repo facebookincubator/scrut --pattern 'scrut-*-SCRUT_PLATFORM.tar.gz' --dir /tmp
+        tar -xzf /tmp/scrut-*-SCRUT_PLATFORM.tar.gz -C /tmp
+        cp /tmp/scrut-SCRUT_PLATFORM/scrut "${HOME}/.local/bin/"
 
     - name: Run scrut CLI tests
       run: make test-scrut
@@ -30,15 +34,16 @@ test-scrut:
 
 ## Placeholders
 
-| Placeholder  | Description                                  | Example                         |
-| ------------ | -------------------------------------------- | ------------------------------- |
-| `RUNNER_OS`  | GitHub Actions runner OS                     | `macos-latest`, `ubuntu-latest` |
-| `GO_VERSION` | Go version matching the rest of the workflow | `1.25`                          |
+| Placeholder      | Description                                  | Example                         |
+| ---------------- | -------------------------------------------- | ------------------------------- |
+| `RUNNER_OS`      | GitHub Actions runner OS                     | `macos-latest`, `ubuntu-latest` |
+| `GO_VERSION`     | Go version matching the rest of the workflow | `1.25`                          |
+| `SCRUT_PLATFORM` | Platform identifier from scrut release assets | `macos-aarch64`, `linux-x86_64` |
 
 ## Notes
 
-- Scrut is installed via its official install script, which downloads a pre-built binary. No Rust toolchain is required.
-- `SCRUT_RELEASE_REPO` must be set to `facebookincubator/scrut` because the install script defaults to `ukautz/scrut`, which has release tags that break the download URL.
+- Scrut is installed via `gh release download` from `facebookincubator/scrut`. The upstream install script is not used because its `get_latest_version()` function hardcodes `ukautz/scrut`, and it installs to a directory not in `PATH` on GitHub Actions runners.
+- The `SCRUT_PLATFORM` value must match the runner OS: use `macos-aarch64` for `macos-latest` and `linux-x86_64` for `ubuntu-latest`.
 - The job relies on `make test-scrut`, which handles building the binary and running tests.
 - Match the `go-version` and `runs-on` values to the project's existing CI configuration.
 - Place this job alongside other test jobs in the workflow. If the workflow uses job dependencies, this job typically depends on the lint job (if any).
