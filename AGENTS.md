@@ -22,6 +22,19 @@ cboone-cc-plugins/
     │               ├── goreleaser.md
     │               ├── makefile-target.md
     │               └── release-workflow.md
+    ├── add-scrut-cli-tests/         # Scrut CLI integration testing skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── add-scrut-cli-tests/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── ci-job.md
+    │               ├── help-test.md
+    │               ├── makefile-targets.md
+    │               ├── test-format.md
+    │               └── version-test.md
     ├── address-review/              # Review feedback resolver skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
