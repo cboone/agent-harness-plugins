@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Set up scrut snapshot-based CLI integration testing for a Go CLI project.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["cli", "go", "golang", "scrut", "testing"],
+  "license": "MIT",
+  "name": "add-scrut-cli-tests",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.1"
+}

@@ -16,10 +16,12 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 [Address Review](#address-review)
 ∙ [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
 <br>Code Quality:
-[Handle Secrets](#handle-secrets)
+[Add Scrut CLI Tests](#add-scrut-cli-tests)
+∙ [Handle Secrets](#handle-secrets)
 ∙ [Lint and Fix](#lint-and-fix)
 ∙ [Write Go Code](#write-go-code)
 ∙ [Write Markdown](#write-markdown)
+∙ [Write Scrut Tests](#write-scrut-tests)
 ∙ [Write Shell Scripts](#write-shell-scripts)
 <br>Scaffolding:
 [Add GoReleaser Homebrew](#add-goreleaser-homebrew)
@@ -133,6 +135,14 @@ Process and resolve GitHub Copilot automated PR review comments. Categorizes thr
 
 Style guides, linters, and security practices. These skills activate automatically when working with their target languages and file types.
 
+#### Add Scrut CLI Tests
+
+Set up scrut snapshot-based CLI integration testing for a Go CLI project. Creates starter test files, adds Makefile targets, and configures CI to run scrut tests.
+
+> **Trigger:** `/add-scrut-cli-tests`
+> **Requires:** [`scrut`](https://github.com/facebookincubator/scrut) (Makefile checks for availability and provides install instructions)
+> **Details:** [README](./plugins/add-scrut-cli-tests/README.md)
+
 #### Handle Secrets
 
 Best practices for handling user-provided secrets in CLI tools. Covers secure input methods, credential storage, secret masking, and language-specific libraries.
@@ -160,6 +170,13 @@ Markdown style conventions targeting GitHub Flavored Markdown (GFM), aligned wit
 
 > **Trigger:** `/write-markdown` (also activates automatically)
 > **Details:** [README](./plugins/write-markdown/README.md)
+
+#### Write Scrut Tests
+
+Scrut test style conventions for writing and maintaining snapshot-based CLI test files. Activates automatically when creating or editing scrut test files.
+
+> **Trigger:** `/write-scrut-tests` (also activates automatically)
+> **Details:** [README](./plugins/write-scrut-tests/README.md)
 
 #### Write Shell Scripts
 
