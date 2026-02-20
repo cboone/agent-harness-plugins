@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Applies scrut test style conventions when creating or editing scrut CLI test files.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["cli", "go", "golang", "scrut", "style", "testing"],
+  "license": "MIT",
+  "name": "write-scrut-tests",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

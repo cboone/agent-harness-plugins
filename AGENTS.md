@@ -239,6 +239,15 @@ cboone-cc-plugins/
     │           ├── SKILL.md
     │           └── references/
     │               └── MARKDOWN.md
+    ├── write-scrut-tests/           # Scrut test style guide skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── write-scrut-tests/
+    │           ├── SKILL.md
+    │           └── references/
+    │               └── SCRUT.md
     ├── write-shell-scripts/        # Bash style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

@@ -21,6 +21,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Lint and Fix](#lint-and-fix)
 ∙ [Write Go Code](#write-go-code)
 ∙ [Write Markdown](#write-markdown)
+∙ [Write Scrut Tests](#write-scrut-tests)
 ∙ [Write Shell Scripts](#write-shell-scripts)
 <br>Scaffolding:
 [Add GoReleaser Homebrew](#add-goreleaser-homebrew)
@@ -169,6 +170,13 @@ Markdown style conventions targeting GitHub Flavored Markdown (GFM), aligned wit
 
 > **Trigger:** `/write-markdown` (also activates automatically)
 > **Details:** [README](./plugins/write-markdown/README.md)
+
+#### Write Scrut Tests
+
+Scrut test style conventions for writing and maintaining snapshot-based CLI test files. Activates automatically when creating or editing scrut test files.
+
+> **Trigger:** `/write-scrut-tests` (also activates automatically)
+> **Details:** [README](./plugins/write-scrut-tests/README.md)
 
 #### Write Shell Scripts
 
