@@ -1,6 +1,6 @@
 # Review Branch
 
-Summarize all work done on the current branch compared to the base branch.
+Review and evaluate all work done on the current branch compared to the base branch.
 
 **Type:** Skill
 **Trigger:** `/review-branch`
@@ -17,7 +17,10 @@ Then select **Review Branch** from the available plugins.
 
 ## What It Does
 
-Groups changes by area/concern, lists new/modified/deleted files, and highlights notable changes (new dependencies, config changes, schema changes, API changes). Optionally compares progress against a plan document, reporting completed, in-progress, and remaining items with a completion percentage.
+Summarizes changes by area/concern, lists new/modified/deleted files, and highlights notable changes. Then goes further with two evaluations:
+
+- **Plan compliance**: When a plan document is available (auto-detected or specified), rigorously evaluates whether the implementation matches the plan's intent. Checks for deviations, scope additions and omissions, and assesses implementation fidelity, not just task completion.
+- **Code quality assessment**: Always runs, regardless of whether a plan exists. Examines the diff for readability, maintainability, potential bugs, edge cases, error handling, security issues, and completeness. Delivers a direct verdict on merge readiness.
 
 ## Usage
 

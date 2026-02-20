@@ -224,14 +224,14 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
-      "description": "Summarize all work done on the current branch, optionally comparing progress against a plan document.",
+      "description": "Review and evaluate all work done on the current branch: summarize changes, assess plan compliance, and evaluate code quality.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["branch", "diff", "git", "plans", "review", "summary"],
+      "keywords": ["branch", "code-review", "diff", "git", "plans", "review", "summary"],
       "license": "MIT",
       "name": "review-branch",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/review-branch",
-      "version": "1.0.1"
+      "version": "1.1.0"
     },
     {
       "author": {
