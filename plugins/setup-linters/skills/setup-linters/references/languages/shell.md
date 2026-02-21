@@ -19,11 +19,21 @@ brew install shellcheck shfmt
 Create `.shellcheckrc` in the project root:
 
 ```ini
-# Default shell dialect
-shell=bash
+# Optional checks that align with the write-shell-scripts style guide
+enable=add-default-case
+enable=avoid-negated-conditions
+enable=avoid-nullary-conditions
+enable=check-extra-masked-returns
+enable=check-set-e-suppressed
+enable=check-unassigned-uppercase
+enable=deprecate-which
+enable=quote-safe-variables
+enable=require-double-brackets
+enable=require-variable-braces
+enable=useless-use-of-cat
 
-# Disable "not following" warnings for sourced files
-disable=SC1091
+# Follow source directives for cross-file analysis
+external-sources=true
 ```
 
 ### shfmt
@@ -68,5 +78,6 @@ Adjust the file patterns (`scripts/*.sh`, `bin/*`) to match the project's shell 
 
 - ShellCheck has no auto-fix mode. All issues must be resolved manually (or by reading the SC code and applying the recommended fix).
 - `shfmt` respects `.editorconfig` settings for indent style and size, so it integrates naturally with the EditorConfig setup.
-- ShellCheck supports `bash`, `sh`, `dash`, and `ksh`. The `shell=bash` default in `.shellcheckrc` can be overridden per-file with a shebang line.
-- Common ShellCheck codes: SC2086 (unquoted variable), SC2046 (unquoted command substitution), SC2034 (unused variable).
+- The optional checks enforce the `write-shell-scripts` style guide: `require-double-brackets` and `require-variable-braces` catch syntax style, `check-extra-masked-returns` catches the `local var=$(cmd)` anti-pattern, and `deprecate-which` enforces `command -v`.
+- `external-sources=true` tells ShellCheck to follow `source`/`.` directives for cross-file analysis, rather than silently ignoring them.
+- No `shell=bash` is set globally; ShellCheck detects the dialect from each file's shebang line (`#!/usr/bin/env bash`).
