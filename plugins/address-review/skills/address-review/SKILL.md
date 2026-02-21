@@ -137,11 +137,12 @@ fix: <description of the change>
 
 **If `--commit-per-item` was NOT specified** (the default behavior):
 
-After all items are addressed, group the changes into logical commits:
+After all items are addressed, group the changes into the smallest logical commits that are appropriate. Each commit should represent a single coherent change:
 
 1. **Group by relatedness**: Changes to the same file or feature area go together
 1. **Separate concerns**: Code changes, documentation updates, and style fixes get separate commits when they are independent
 1. **Keep commits atomic**: Each commit should be a self-contained, reviewable unit
+1. **Prefer smaller over larger**: When in doubt, split into more commits rather than fewer. A bug fix mixed with an unrelated refactor should be two commits, not one
 
 For each commit group, generate a conventional commit message:
 
