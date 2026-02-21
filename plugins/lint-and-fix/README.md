@@ -1,6 +1,6 @@
 # Lint and Fix
 
-Detect available linters and formatters in the project, run them with auto-fix, and resolve remaining issues.
+Detect available linters and formatters in the project, run them with auto-fix, resolve remaining issues, then commit and push the fixes.
 
 **Type:** Skill
 **Trigger:** `/lint-and-fix`
@@ -17,7 +17,7 @@ Then select **Lint and Fix** from the available plugins.
 
 ## What It Does
 
-Checks for configuration files to detect ESLint, Prettier, markdownlint, ShellCheck, shfmt, Knip, and project-specific lint scripts. Runs each detected tool with auto-fix flags, reports what was fixed and what remains, then attempts to manually resolve remaining issues.
+Checks for configuration files to detect ESLint, Prettier, markdownlint, ShellCheck, shfmt, Knip, and project-specific lint scripts. Runs each detected tool with auto-fix flags, reports what was fixed and what remains, attempts to manually resolve remaining issues, then commits and pushes the fixes.
 
 ## Usage
 
@@ -25,16 +25,16 @@ Checks for configuration files to detect ESLint, Prettier, markdownlint, ShellCh
 /lint-and-fix
 /lint-and-fix --check
 /lint-and-fix --tool eslint
-/lint-and-fix --commit
 /lint-and-fix --no-commit
+/lint-and-fix --no-push
 ```
 
-| Option          | Description                            |
-| --------------- | -------------------------------------- |
-| `--check`       | Report issues without fixing (dry run) |
-| `--tool <name>` | Run only a specific tool               |
-| `--commit`      | Commit fixes automatically             |
-| `--no-commit`   | Do not commit fixes                    |
+| Option          | Description                                           |
+| --------------- | ----------------------------------------------------- |
+| `--check`       | Report issues without fixing (dry run)                |
+| `--tool <name>` | Run only a specific tool                              |
+| `--no-commit`   | Skip committing and pushing                           |
+| `--no-push`     | Commit but do not push (default: commit and push)     |
 
 ## Examples
 

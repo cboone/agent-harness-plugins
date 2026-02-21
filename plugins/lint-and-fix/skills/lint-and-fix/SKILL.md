@@ -2,11 +2,11 @@
 name: lint-and-fix
 description: >-
   Detect available linters and formatters in the project, run them with
-  auto-fix flags, report results, and manually resolve remaining issues.
-  Use when the user says "lint and fix", "run the linter", "run linters",
-  "fix lint errors", "format the code", "lint this project", "check and fix",
-  "run eslint", "run prettier", or any variant involving running project
-  linters or formatters.
+  auto-fix flags, report results, manually resolve remaining issues, then
+  commit and push the fixes. Use when the user says "lint and fix", "run the
+  linter", "run linters", "fix lint errors", "format the code", "lint this
+  project", "check and fix", "run eslint", "run prettier", or any variant
+  involving running project linters or formatters.
 ---
 
 # Lint and Fix
@@ -17,7 +17,8 @@ Detect project linters and formatters, run them with auto-fix, and resolve remai
 
 The user may provide these options inline:
 
-- **--commit** / **--no-commit**: Control whether to commit fixes (default: ask after fixing)
+- **--no-commit**: Skip committing and pushing (default: commit and push after fixing)
+- **--no-push**: Commit but do not push (default: push after committing)
 - **--tool <name>**: Run only a specific tool (e.g., `--tool eslint`, `--tool prettier`)
 - **--check**: Run in check-only mode (report issues without fixing)
 
@@ -150,21 +151,26 @@ Re-run all detected tools one final time in check mode to confirm a clean state:
 | shellcheck | Pass (1 advisory skipped) |
 ```
 
-### 7. Commit (Optional)
+### 7. Commit and Push
 
 **If --no-commit was specified**: Stop here.
 
-**If --commit was specified**: Commit immediately.
+**If --check was specified**: Stop here (no changes were made).
 
-**Otherwise**: Ask the user whether to commit the fixes.
-
-When committing:
+Otherwise, commit the fixes:
 
 1. Stage all files modified by the lint and format fixes.
 1. Generate a conventional commit message:
    - Use `style:` for pure formatting and linting fixes.
    - Use `fix:` if linting changes corrected actual bugs (e.g., unused variables removed, error handling added).
    - Include which tools ran and a brief summary of manual fixes in the commit body.
+
+**If --no-push was specified**: Stop after committing.
+
+Otherwise, push the commit to the remote:
+
+1. Push to the current branch's upstream remote.
+1. If no upstream is set, push with `-u` to set it.
 
 ## Error Handling
 
