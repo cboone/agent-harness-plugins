@@ -34,7 +34,7 @@ plugins/create-tmux-plugin/
 
 ### 1. Create `plugins/create-tmux-plugin/.claude-plugin/plugin.json`
 
-Standard skills plugin metadata. Keywords: `bash`, `plugin`, `scaffolding`, `tmux`, `tpm`. Category: `productivity`. Version: `1.0.0`.
+Standard skills plugin metadata. Keywords: `bash`, `plugin`, `scaffolding`, `tmux`, `tpm`. Category: `productivity`. Version: `1.0.1`.
 
 ### 2. Create SKILL.md
 

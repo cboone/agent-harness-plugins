@@ -47,7 +47,7 @@ Add this line to your `tmux.conf`:
 run-shell ~/.tmux/plugins/PLUGIN-NAME/PLUGIN-NAME.tmux
 ```
 
-Then reload tmux: `tmux source-file ~/.tmux.conf`
+Then reload your tmux config (e.g., `tmux source-file ~/.tmux.conf` or `tmux source-file ~/.config/tmux/tmux.conf`).
 
 ### TPM (deprecated)
 
