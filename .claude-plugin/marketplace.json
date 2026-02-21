@@ -161,7 +161,7 @@
       "name": "lint-and-fix",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/lint-and-fix",
-      "version": "1.0.1"
+      "version": "1.1.0"
     },
     {
       "author": {
@@ -301,7 +301,7 @@
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     {
       "author": {
@@ -371,7 +371,7 @@
       "name": "write-shell-scripts",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/write-shell-scripts",
-      "version": "1.0.5"
+      "version": "1.0.6"
     }
   ]
 }

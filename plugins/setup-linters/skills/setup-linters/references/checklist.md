@@ -4,15 +4,15 @@ Quick-reference lookup table for the setup-linters skill. Each row maps a projec
 
 ## Language-Specific Linters
 
-| Language      | Tools                             | Install Command                                         | Config Files                           | Scripts / Targets            | Reference                   |
-| ------------- | --------------------------------- | ------------------------------------------------------- | -------------------------------------- | ---------------------------- | --------------------------- |
-| JavaScript/TS | ESLint + Prettier                 | `npm install -D eslint prettier eslint-config-prettier` | `eslint.config.js`, `.prettierrc.json` | `lint`, `format`, `lint:fix` | `./languages/javascript.md` |
-| JavaScript/TS | Biome (alternative)               | `npm install -D --exact @biomejs/biome`                 | `biome.json`                           | `lint`, `format`, `check`    | `./languages/javascript.md` |
-| Go            | golangci-lint + gofmt + goimports | `brew install golangci-lint`                            | `.golangci.yml`                        | `lint`, `fmt`, `vet`         | `./languages/go.md`         |
-| Python        | Ruff                              | `uv add --dev ruff`                                     | `pyproject.toml` `[tool.ruff]`         | `lint`, `format`             | `./languages/python.md`     |
-| Rust          | clippy + rustfmt                  | _(built-in, no install)_                                | `rustfmt.toml`                         | `cargo clippy`, `cargo fmt`  | `./languages/rust.md`       |
-| Ruby          | RuboCop                           | `bundle add rubocop --group development`                | `.rubocop.yml`                         | `rubocop`, `rubocop -a`      | `./languages/ruby.md`       |
-| Shell         | ShellCheck + shfmt                | `brew install shellcheck shfmt`                         | `.shellcheckrc`                        | `lint`, `fmt`                | `./languages/shell.md`      |
+| Language      | Tools                                      | Install Command                                         | Config Files                           | Scripts / Targets            | Reference                   |
+| ------------- | ------------------------------------------ | ------------------------------------------------------- | -------------------------------------- | ---------------------------- | --------------------------- |
+| JavaScript/TS | ESLint + Prettier                          | `npm install -D eslint prettier eslint-config-prettier` | `eslint.config.js`, `.prettierrc.json` | `lint`, `format`, `lint:fix` | `./languages/javascript.md` |
+| JavaScript/TS | Biome (alternative)                        | `npm install -D --exact @biomejs/biome`                 | `biome.json`                           | `lint`, `format`, `check`    | `./languages/javascript.md` |
+| Go            | golangci-lint + gofmt + goimports          | `brew install golangci-lint`                            | `.golangci.yml`                        | `lint`, `fmt`, `vet`         | `./languages/go.md`         |
+| Python        | Ruff                                       | `uv add --dev ruff`                                     | `pyproject.toml` `[tool.ruff]`         | `lint`, `format`             | `./languages/python.md`     |
+| Rust          | clippy + rustfmt                           | _(built-in, no install)_                                | `rustfmt.toml`                         | `cargo clippy`, `cargo fmt`  | `./languages/rust.md`       |
+| Ruby          | RuboCop                                    | `bundle add rubocop --group development`                | `.rubocop.yml`                         | `rubocop`, `rubocop -a`      | `./languages/ruby.md`       |
+| Shell         | ShellCheck + shfmt (or prettier-plugin-sh) | `brew install shellcheck shfmt`                         | `.shellcheckrc`                        | `lint`, `fmt`                | `./languages/shell.md`      |
 
 ## Cross-Language and File-Type Tools
 

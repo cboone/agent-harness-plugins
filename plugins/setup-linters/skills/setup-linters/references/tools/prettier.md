@@ -109,7 +109,7 @@ When using Biome instead, Prettier is not needed for JS/TS files. Prettier is st
 For specialized file types, Prettier has plugins:
 
 - `prettier-plugin-toml`: Format TOML files
-- `prettier-plugin-sh`: Format shell scripts (alternative to shfmt)
+- `prettier-plugin-sh`: Format shell scripts (alternative to shfmt). If using this plugin, do NOT also configure shfmt. They produce conflicting formatting output. See `../languages/shell.md` for details on choosing between them.
 - `prettier-plugin-go-template`: Format Go templates
 
 Install plugins as dev dependencies and Prettier auto-discovers them.

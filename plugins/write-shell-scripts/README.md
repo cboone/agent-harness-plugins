@@ -37,5 +37,5 @@ The skill also activates automatically when Claude Code detects shell script wor
 
 ## See Also
 
-- [Lint and Fix](../lint-and-fix/README.md): run ShellCheck and shfmt across the project
+- [Lint and Fix](../lint-and-fix/README.md): run ShellCheck and shfmt (or prettier-plugin-sh) across the project
 - [All plugins](../../README.md)

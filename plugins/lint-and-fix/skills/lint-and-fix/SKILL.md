@@ -36,17 +36,19 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 | `.markdownlint.json`, `.markdownlint.yaml` | markdownlint      | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
 | `.markdownlint-cli2.*`                     | markdownlint-cli2 | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
 | Shell scripts in project                   | shellcheck        | _(no auto-fix)_                                          | `shellcheck <files>`                                           |
-| Shell scripts in project                   | shfmt             | `shfmt -w <files>`                                       | `shfmt -d <files>`                                             |
+| Shell scripts in project                   | shfmt (\*)        | `shfmt -w <files>`                                       | `shfmt -d <files>`                                             |
 | `knip.json`, `knip.config.*`, `knip.ts`    | knip              | _(no auto-fix)_                                          | `npx knip`                                                     |
 | `package.json` has `lint` script           | npm lint          | Try `npm run lint -- --fix`, fall back to `npm run lint` | `npm run lint`                                                 |
 | `package.json` has `format` script         | npm format        | `npm run format`                                         | Try `npm run format -- --check`, fall back to `npm run format` |
 | `bin/lint`, `scripts/lint`, `script/lint`  | Project script    | Try `<script> --fix` first                               | `<script>`                                                     |
 
+(\*) **shfmt conflict rule**: Skip shfmt if the project uses `prettier-plugin-sh`. To detect this, check `package.json` devDependencies or dependencies for `prettier-plugin-sh`. When present, Prettier already handles shell formatting and running shfmt would produce conflicting output.
+
 #### Detection Steps
 
 1. **Config files**: Use Glob to check for each config pattern in the project root.
 1. **Package.json scripts**: Read `package.json` and check for `lint`, `format`, or `check` scripts.
-1. **Shell scripts**: Use Glob to find `**/*.sh`, `bin/*`, `scripts/*`, `script/*`. If shell scripts are present, shellcheck and shfmt apply.
+1. **Shell scripts**: Use Glob to find `**/*.sh`, `bin/*`, `scripts/*`, `script/*`. If shell scripts are present, shellcheck applies. For shfmt, also check whether `prettier-plugin-sh` is in the project's dependencies; if so, skip shfmt (see footnote in detection table).
 1. **Project lint scripts**: Check for `bin/lint`, `scripts/lint`, `script/lint`.
 1. **Tool availability**: Verify detected tools are installed (check `npx`, `which`, or `package.json` devDependencies).
 
@@ -172,5 +174,5 @@ When committing:
 - **Tool not installed**: If a config file exists but the tool is not available, report which tool is missing and suggest installation (e.g., `npm install -D eslint`).
 - **Execution failure**: Report the error output, then continue with the next tool rather than aborting.
 - **Permission errors on project scripts**: Report the error, suggest `chmod +x <script>`.
-- **Conflicting tools**: If both a `package.json` lint script and a standalone config (e.g., eslint) are detected, prefer the `package.json` script (it may have project-specific flags). Note the overlap to the user.
+- **Conflicting tools**: If both a `package.json` lint script and a standalone config (e.g., eslint) are detected, prefer the `package.json` script (it may have project-specific flags). Note the overlap to the user. Similarly, if `prettier-plugin-sh` is detected alongside shfmt, skip shfmt and inform the user that Prettier is handling shell formatting.
 - **Pre-commit hook failure on commit**: Fix the issue, re-stage, and create a new commit (never amend).
