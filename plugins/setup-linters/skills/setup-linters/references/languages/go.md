@@ -44,15 +44,27 @@ linters:
     - errcheck
     - gocritic
     - gocyclo
+    - govet
     - ineffassign
+    - misspell
     - nilerr
     - revive
     - staticcheck
+    - unconvert
+    - unparam
     - unused
     # Style
     - godot
 
   settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+
     gocyclo:
       min-complexity: 15
 
@@ -79,6 +91,10 @@ linters:
         - name: unexported-return
         - name: var-declaration
         - name: var-naming
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
 ```
 
 ## Makefile Targets
@@ -100,7 +116,10 @@ vet: ## Run go vet
 
 - Uses golangci-lint v2 configuration format (`version: "2"`).
 - `goimports` local-prefixes ensures project imports are grouped separately from third-party imports.
-- Quality linters catch real bugs: `errcheck` (unchecked errors), `nilerr` (nil error returns), `bodyclose` (unclosed HTTP bodies), `staticcheck` (comprehensive static analysis).
-- Style linters enforce consistency: `godot` (comment periods), `revive` (comprehensive style rules).
+- Quality linters catch real bugs: `errcheck` (unchecked errors), `nilerr` (nil error returns), `bodyclose` (unclosed HTTP bodies), `staticcheck` (comprehensive static analysis), `govet` (shadows, printf args), `unconvert` (unnecessary type conversions), `unparam` (unused parameters).
+- `gocritic` is enabled with all five tag categories (diagnostic, experimental, opinionated, performance, style) for maximum coverage.
+- `misspell` catches spelling mistakes in comments and strings.
+- Style linters enforce consistency: `godot` (comment periods), `revive` (comprehensive style rules with 17 configured checks).
 - `gocyclo` threshold of 15 is reasonable for most projects.
+- `issues` block with `max-issues-per-linter: 0` and `max-same-issues: 0` ensures all findings are reported, not truncated.
 - `goimports` is a superset of `gofmt` that also manages imports. In v2, both are configured under `formatters`.
