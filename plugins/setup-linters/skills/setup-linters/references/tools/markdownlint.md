@@ -27,19 +27,29 @@ Create `.markdownlint-cli2.jsonc` in the project root:
 ```jsonc
 {
   "config": {
-    // Allow multiple top-level headings (common in changelogs, multi-section docs)
-    "MD025": false,
+    // Line length: disabled (Prettier handles wrapping)
+    "MD013": false,
+
+    // Allow duplicate headings in different sections (e.g., ## Install / ## Notes)
+    "MD024": { "siblings_only": true },
 
     // Allow inline HTML (needed for <br>, <details>, <kbd>, etc.)
     "MD033": false,
 
-    // Line length: disabled (Prettier handles wrapping)
-    "MD013": false
+    // Allow bare URLs without angle brackets
+    "MD034": false
   },
 
   // Files to ignore
   "ignores": ["node_modules/", "vendor/", ".venv/", "CHANGELOG.md"]
 }
+```
+
+For projects using scrut CLI tests, also add:
+
+```jsonc
+    // Allow dollar signs before commands (scrut test format)
+    "MD014": false
 ```
 
 ### .markdownlintignore (optional)
@@ -78,13 +88,14 @@ npx markdownlint-cli2 --fix "**/*.md"
 
 ## Common Rule Customizations
 
-| Rule  | Description                    | Default  | Common Override        |
-| ----- | ------------------------------ | -------- | ---------------------- |
-| MD013 | Line length                    | 80 chars | `false` (disable)      |
-| MD025 | Single top-level heading       | Enabled  | `false` (changelogs)   |
-| MD033 | Inline HTML                    | Enabled  | `false` (GFM features) |
-| MD024 | No duplicate sibling headings  | Enabled  | Keep enabled           |
-| MD041 | First line must be top heading | Enabled  | `false` (frontmatter)  |
+| Rule  | Description                    | Default  | Recommended Override                    |
+| ----- | ------------------------------ | -------- | --------------------------------------- |
+| MD013 | Line length                    | 80 chars | `false` (disable; Prettier handles it)  |
+| MD014 | Dollar signs before commands   | Enabled  | `false` (for scrut test projects)       |
+| MD024 | No duplicate sibling headings  | Enabled  | `{ "siblings_only": true }`             |
+| MD033 | Inline HTML                    | Enabled  | `false` (GFM features)                  |
+| MD034 | Bare URLs                      | Enabled  | `false` (allow bare URLs)               |
+| MD041 | First line must be top heading | Enabled  | `false` (frontmatter or partial files)  |
 
 ## Notes
 
