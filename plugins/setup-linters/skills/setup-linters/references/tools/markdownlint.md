@@ -34,11 +34,11 @@ Create `.markdownlint-cli2.jsonc` in the project root:
     "MD033": false,
 
     // Line length: disabled (Prettier handles wrapping)
-    "MD013": false
+    "MD013": false,
   },
 
   // Files to ignore
-  "ignores": ["node_modules/", "vendor/", ".venv/", "CHANGELOG.md"]
+  "ignores": ["node_modules/", "vendor/", ".venv/", "CHANGELOG.md"],
 }
 ```
 
