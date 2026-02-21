@@ -87,6 +87,7 @@ If found, add a `test-scrut` job using the template from `./references/ci-job.md
 
 - Detect the Go version from the existing workflow's `go-version` field and use the same value
 - Detect the runner OS from the existing workflow (e.g., `ubuntu-latest`, `macos-latest`) and use the same value
+- Determine the latest scrut release tag for `SCRUT_VERSION` (run `gh release list --repo facebookincubator/scrut --limit 1 --json tagName --jq '.[0].tagName'`)
 - Place the new job after existing test jobs
 - If the workflow uses job dependencies (`needs`), set up appropriate dependencies for the new job
 
@@ -100,16 +101,18 @@ Build the binary and run the scrut tests to verify the setup:
 make test-scrut
 ```
 
-If `scrut` is not installed locally, inform the user to install from the facebookincubator/scrut GitHub releases:
+If `scrut` is not installed locally, inform the user to install from the facebookincubator/scrut GitHub releases. Determine the latest release tag (run `gh release list --repo facebookincubator/scrut --limit 1 --json tagName --jq '.[0].tagName'`):
 
 ```bash
 mkdir -p ~/.local/bin
-gh release download --repo facebookincubator/scrut --pattern 'scrut-*-PLATFORM.tar.gz' --dir /tmp
-tar -xzf /tmp/scrut-*-PLATFORM.tar.gz -C /tmp
-cp /tmp/scrut-PLATFORM/scrut ~/.local/bin/
+gh release download SCRUT_VERSION --repo facebookincubator/scrut --pattern 'scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz' --dir /tmp
+tar -xzf /tmp/scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz -C /tmp
+cp /tmp/scrut-SCRUT_PLATFORM/scrut ~/.local/bin/
 ```
 
-Replace `PLATFORM` with the appropriate identifier (e.g., `macos-aarch64`, `linux-x86_64`).
+Replace `SCRUT_VERSION` with the pinned release tag (e.g., `v0.4.3`) and `SCRUT_PLATFORM` with the appropriate identifier (e.g., `macos-aarch64`, `linux-x86_64`).
+
+Scrut does not currently publish checksums or signatures with its releases, so integrity verification is not yet possible. If checksums become available in the future, add a verification step after the download, mirroring the guidance in `./references/ci-job.md`.
 
 Ensure `~/.local/bin` is on `PATH`. If it is not already, add it to your shell profile (e.g., `export PATH="$HOME/.local/bin:$PATH"` in `~/.zshrc` or `~/.bashrc`).
 
