@@ -223,6 +223,33 @@ cboone-cc-plugins/
     │           └── references/
     │               ├── config.md
     │               └── workflow.md
+    ├── setup-linters/              # Linter and formatter setup skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── setup-linters/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── checklist.md
+    │               ├── languages/
+    │               │   ├── go.md
+    │               │   ├── javascript.md
+    │               │   ├── python.md
+    │               │   ├── ruby.md
+    │               │   ├── rust.md
+    │               │   └── shell.md
+    │               └── tools/
+    │                   ├── actionlint.md
+    │                   ├── editorconfig.md
+    │                   ├── github-actions-ci.md
+    │                   ├── hadolint.md
+    │                   ├── knip.md
+    │                   ├── markdownlint.md
+    │                   ├── prettier.md
+    │                   ├── stylelint.md
+    │                   ├── taplo.md
+    │                   └── yamllint.md
     ├── suggest-next-issue/         # Issue prioritization skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

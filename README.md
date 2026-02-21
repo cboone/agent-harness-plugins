@@ -29,6 +29,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Scaffold Go Library](#scaffold-go-library)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
 ∙ [Setup Gitleaks](#setup-gitleaks)
+∙ [Setup Linters](#setup-linters)
 <br>Agents:
 [Clean Up Agent Config](#clean-up-agent-config)
 ∙ [Create Plugin](#create-plugin)
@@ -222,6 +223,13 @@ Set up gitleaks secret scanning with a GitHub Actions workflow and optional conf
 
 > **Trigger:** `/setup-gitleaks`
 > **Details:** [README](./plugins/setup-gitleaks/README.md)
+
+#### Setup Linters
+
+Detect project languages and file types, recommend appropriate linters and formatters, install them, and generate config files. Supports JavaScript/TypeScript (ESLint + Prettier), Go, Python, Rust, Ruby, Shell, and cross-language tools (EditorConfig, markdownlint, Stylelint, Hadolint, Actionlint, and more).
+
+> **Trigger:** `/setup-linters`
+> **Details:** [README](./plugins/setup-linters/README.md)
 
 ### Agents
 

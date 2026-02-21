@@ -156,9 +156,10 @@ function do_fetch() {
   local repo="${2}"
   local pr_number="${3}"
 
+  local response
+
   # shellcheck disable=SC2016
   # $variables in the query are GraphQL references, not shell variables
-  local response
   response="$(
     gh api graphql \
       --paginate \
@@ -267,9 +268,10 @@ function do_fetch() {
 function do_resolve() {
   local thread_id="${1}"
 
+  local response
+
   # shellcheck disable=SC2016
   # $variables in the query are GraphQL references, not shell variables
-  local response
   response="$(
     gh api graphql \
       -f threadId="${thread_id}" \
@@ -381,6 +383,9 @@ function main() {
     reply-and-resolve)
       [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply-and-resolve <thread_id> [--body-file <path>]"
       do_reply_and_resolve "$@"
+      ;;
+    *)
+      die "Unknown command: ${command}"
       ;;
   esac
 }

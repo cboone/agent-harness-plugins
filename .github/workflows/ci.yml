@@ -24,6 +24,8 @@ jobs:
         run: yarn lint
       - name: ShellCheck
         run: shellcheck -S warning plugins/*/scripts/*
+      - name: Actionlint
+        uses: raven-actions/actionlint@v2
       - name: Validate JSON syntax
         run: bin/validate-json
       - name: Validate plugin structure
