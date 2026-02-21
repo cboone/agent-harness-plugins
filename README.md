@@ -25,6 +25,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Write Shell Scripts](#write-shell-scripts)
 <br>Scaffolding:
 [Add GoReleaser Homebrew](#add-goreleaser-homebrew)
+∙ [Create Tmux Plugin](#create-tmux-plugin)
 ∙ [Scaffold Go CLI](#scaffold-go-cli)
 ∙ [Scaffold Go Library](#scaffold-go-library)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
@@ -194,6 +195,13 @@ Bootstrap new projects with consistent structure. Generate boilerplate, CI/CD pi
 Add GoReleaser configuration and a GitHub Actions release workflow to an existing Go CLI project with Homebrew tap publishing to `cboone/homebrew-tap`. Detects project features (shell completions, man page generation, macOS-only constraints) and generates appropriate configuration with conventional commit changelog grouping. Optionally adds a `release-dry-run` Makefile target.
 
 > **Trigger:** `/add-goreleaser-homebrew`
+
+#### Create Tmux Plugin
+
+Scaffold a tmux plugin with TPM Redux conventions: entry point, helpers, scripts directory, and README with install sections. Supports optional scrut test skeleton, GitHub Actions CI, and workmux layout.
+
+> **Trigger:** `/create-tmux-plugin`
+> **Details:** [README](./plugins/create-tmux-plugin/README.md)
 
 #### Scaffold Go CLI
 

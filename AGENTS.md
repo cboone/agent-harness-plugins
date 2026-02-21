@@ -71,6 +71,19 @@ cboone-cc-plugins/
     │               ├── readme-updates.md
     │               ├── scripts.md
     │               └── skill-md.md
+    ├── create-tmux-plugin/           # Tmux plugin scaffolding skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── create-tmux-plugin/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── entry-point.md
+    │               ├── helpers.md
+    │               ├── license.md
+    │               ├── main-script.md
+    │               └── readme.md
     ├── create-worktree/              # General worktree creation skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Scaffold a tmux plugin with TPM Redux conventions: entry point, helpers, scripts directory, and README with install sections.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["bash", "plugin", "scaffolding", "tmux", "tpm"],
+  "license": "MIT",
+  "name": "create-tmux-plugin",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
