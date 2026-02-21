@@ -2,7 +2,7 @@
 
 Generate `PLUGIN-NAME.tmux` in the project root. This is the file that TPM sources when the plugin loads.
 
-Replace `PLUGIN-NAME` with the actual plugin name (kebab-case). Replace `OPTION-NAME` and `OPTION-DEFAULT` with each configurable option and its default value.
+Replace `PLUGIN-NAME` with the actual plugin name (kebab-case). Replace `OPTION-NAME` with the logical option name (e.g., `enabled`) and `OPTION-DEFAULT` with its default value. The template includes the `@PLUGIN-NAME-` prefix so the full tmux option key is constructed automatically.
 
 Mark the file executable after creating it: `chmod +x PLUGIN-NAME.tmux`.
 
@@ -17,7 +17,7 @@ source "${CURRENT_DIR}/scripts/helpers.sh"
 
 main() {
   local option_value
-  option_value="$(get_tmux_option "OPTION-NAME" "OPTION-DEFAULT")"
+  option_value="$(get_tmux_option "@PLUGIN-NAME-OPTION-NAME" "OPTION-DEFAULT")"
 
   # TODO: Use option_value to configure plugin behavior.
 

@@ -19,7 +19,7 @@ Ask the user for these parameters:
 
 - **Plugin name** -- kebab-case, `tmux-` prefix suggested but not required (e.g., `tmux-my-plugin`)
 - **Short description** -- one sentence, used in the README heading area
-- **Configurable options** -- a list of tmux option names, their defaults, and a brief description of what each controls
+- **Configurable options** -- a list of logical option names (without the `@PLUGIN-NAME-` prefix), their defaults, and a brief description of what each controls. The skill constructs the full tmux option key as `@PLUGIN-NAME-<option>` automatically.
 
 If the user already provided some or all of these in their initial request, do not re-ask. Derive what you can from context.
 
@@ -60,7 +60,7 @@ git init
 Create `PLUGIN-NAME.tmux` in the project root using the template from `./references/entry-point.md`.
 
 - Replace `PLUGIN-NAME` with the plugin name
-- Replace `OPTION-NAME` and `OPTION-DEFAULT` with the first configurable option (or the generated example option)
+- Replace `OPTION-NAME` and `OPTION-DEFAULT` with the first configurable option's logical name and default value (or the generated example option). The template's `@PLUGIN-NAME-OPTION-NAME` placeholder produces the full tmux option key.
 
 Mark the file executable:
 
