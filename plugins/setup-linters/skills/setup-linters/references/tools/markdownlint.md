@@ -37,11 +37,11 @@ Create `.markdownlint-cli2.jsonc` in the project root:
     "MD033": false,
 
     // Allow bare URLs without angle brackets
-    "MD034": false
+    "MD034": false,
   },
 
   // Files to ignore
-  "ignores": ["node_modules/", "vendor/", ".venv/", "CHANGELOG.md"]
+  "ignores": ["node_modules/", "vendor/", ".venv/", "CHANGELOG.md"],
 }
 ```
 
@@ -88,14 +88,14 @@ npx markdownlint-cli2 --fix "**/*.md"
 
 ## Common Rule Customizations
 
-| Rule  | Description                    | Default  | Recommended Override                    |
-| ----- | ------------------------------ | -------- | --------------------------------------- |
-| MD013 | Line length                    | 80 chars | `false` (disable; Prettier handles it)  |
-| MD014 | Dollar signs before commands   | Enabled  | `false` (for scrut test projects)       |
-| MD024 | No duplicate sibling headings  | Enabled  | `{ "siblings_only": true }`             |
-| MD033 | Inline HTML                    | Enabled  | `false` (GFM features)                  |
-| MD034 | Bare URLs                      | Enabled  | `false` (allow bare URLs)               |
-| MD041 | First line must be top heading | Enabled  | `false` (frontmatter or partial files)  |
+| Rule  | Description                    | Default  | Recommended Override                   |
+| ----- | ------------------------------ | -------- | -------------------------------------- |
+| MD013 | Line length                    | 80 chars | `false` (disable; Prettier handles it) |
+| MD014 | Dollar signs before commands   | Enabled  | `false` (for scrut test projects)      |
+| MD024 | No duplicate sibling headings  | Enabled  | `{ "siblings_only": true }`            |
+| MD033 | Inline HTML                    | Enabled  | `false` (GFM features)                 |
+| MD034 | Bare URLs                      | Enabled  | `false` (allow bare URLs)              |
+| MD041 | First line must be top heading | Enabled  | `false` (frontmatter or partial files) |
 
 ## Notes
 

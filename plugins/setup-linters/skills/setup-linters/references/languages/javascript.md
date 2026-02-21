@@ -9,14 +9,14 @@
 
 After detecting a JavaScript or TypeScript project, check for frameworks and environments to determine which additional plugins to install:
 
-| Marker | Framework | Additional Plugins |
-| --- | --- | --- |
-| `react` or `react-dom` in package.json deps | React | react, react-hooks, react-refresh, jsx-a11y |
-| `next` in package.json deps, or `next.config.*` | Next.js | Same as React, plus config overrides |
-| `astro` in package.json deps, or `astro.config.*` | Astro | (future: eslint-plugin-astro) |
-| `svelte` in package.json deps, or `svelte.config.*` | Svelte | (future: eslint-plugin-svelte) |
-| `vue` in package.json deps | Vue | (future: eslint-plugin-vue) |
-| `express`, `fastify`, `koa`, or `hapi` in deps; or `server.*`, `api/`, `bin/` dirs; or `@types/node` in devDeps | Node.js | eslint-plugin-n |
+| Marker                                                                                                          | Framework | Additional Plugins                          |
+| --------------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------- |
+| `react` or `react-dom` in package.json deps                                                                     | React     | react, react-hooks, react-refresh, jsx-a11y |
+| `next` in package.json deps, or `next.config.*`                                                                 | Next.js   | Same as React, plus config overrides        |
+| `astro` in package.json deps, or `astro.config.*`                                                               | Astro     | (future: eslint-plugin-astro)               |
+| `svelte` in package.json deps, or `svelte.config.*`                                                             | Svelte    | (future: eslint-plugin-svelte)              |
+| `vue` in package.json deps                                                                                      | Vue       | (future: eslint-plugin-vue)                 |
+| `express`, `fastify`, `koa`, or `hapi` in deps; or `server.*`, `api/`, `bin/` dirs; or `@types/node` in devDeps | Node.js   | eslint-plugin-n                             |
 
 ## Install
 
@@ -168,28 +168,18 @@ const sharedRules = {
   ...security.configs.recommended.rules,
   ...unicornRules,
   "capitalized-comments": "off",
-  complexity: ["error", { max: 25 }],
+  "complexity": ["error", { max: 25 }],
   "default-case": ["error", { commentPattern: "^no default$" }],
-  eqeqeq: ["error", "smart"],
+  "eqeqeq": ["error", "smart"],
   "func-names": ["error", "as-needed"],
   "func-style": "off",
   "grouped-accessor-pairs": ["error", "getBeforeSet"],
   "id-length": ["error", { exceptions: ["_"] }],
   "init-declarations": "off",
-  "logical-assignment-operators": [
-    "error",
-    "always",
-    { enforceForIfStatements: true },
-  ],
+  "logical-assignment-operators": ["error", "always", { enforceForIfStatements: true }],
   "max-depth": ["error", { max: 6 }],
-  "max-lines": [
-    "error",
-    { max: 500, skipBlankLines: true, skipComments: true },
-  ],
-  "max-lines-per-function": [
-    "error",
-    { max: 100, skipBlankLines: true, skipComments: true },
-  ],
+  "max-lines": ["error", { max: 500, skipBlankLines: true, skipComments: true }],
+  "max-lines-per-function": ["error", { max: 100, skipBlankLines: true, skipComments: true }],
   "max-params": "off",
   "max-statements": "off",
   "no-continue": "off",
@@ -207,8 +197,7 @@ const sharedRules = {
   "no-restricted-syntax": [
     "error",
     {
-      message:
-        "Use export { } at the end of the file instead of inline export",
+      message: "Use export { } at the end of the file instead of inline export",
       selector: "ExportNamedDeclaration[declaration]",
     },
   ],
@@ -223,17 +212,11 @@ const sharedRules = {
       varsIgnorePattern: "^_",
     },
   ],
-  "no-use-before-define": [
-    "error",
-    { classes: true, functions: false, variables: true },
-  ],
+  "no-use-before-define": ["error", { classes: true, functions: false, variables: true }],
   "one-var": ["error", "never"],
   "operator-assignment": ["error", "always"],
   "prefer-destructuring": ["error", { array: false, object: true }],
-  "sort-imports": [
-    "error",
-    { ignoreDeclarationSort: true, ignoreMemberSort: false },
-  ],
+  "sort-imports": ["error", { ignoreDeclarationSort: true, ignoreMemberSort: false }],
 };
 
 // eslint-disable-next-line import/no-default-export -- ESLint requires default export
@@ -245,12 +228,7 @@ export default [
   },
 
   {
-    ignores: [
-      ".claude/**",
-      ".worktrees/**",
-      "dist/**",
-      "node_modules/**",
-    ],
+    ignores: [".claude/**", ".worktrees/**", "dist/**", "node_modules/**"],
   },
 
   // JSON (strict)
@@ -315,16 +293,17 @@ For TypeScript projects, make these changes to the base config:
 import tseslint from "typescript-eslint";
 ```
 
-2. Wrap the export with `tseslint.config()`:
+1. Wrap the export with `tseslint.config()`:
 
 ```js
 // eslint-disable-next-line import/no-default-export -- ESLint requires default export
-export default tseslint.config(
+export default tseslint
+  .config
   // ... all config objects from the JavaScript version ...
-);
+  ();
 ```
 
-3. Spread `tseslint.configs.strictTypeChecked` after the ignores block, and add parser options:
+1. Spread `tseslint.configs.strictTypeChecked` after the ignores block, and add parser options:
 
 ```js
   ...tseslint.configs.strictTypeChecked,
@@ -338,7 +317,7 @@ export default tseslint.config(
   },
 ```
 
-4. Add a TypeScript-specific rule block (before the `prettier` entry):
+1. Add a TypeScript-specific rule block (before the `prettier` entry):
 
 ```js
   {
@@ -377,13 +356,13 @@ export default tseslint.config(
   },
 ```
 
-5. Extend the JS file pattern and curly override to include TypeScript extensions:
+1. Extend the JS file pattern and curly override to include TypeScript extensions:
 
 ```js
   files: ["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"],
 ```
 
-6. Add `tsconfig.json` to the JSONC files list:
+1. Add `tsconfig.json` to the JSONC files list:
 
 ```js
   files: ["**/*.jsonc", ".vscode/*.json", "jsconfig.json", "tsconfig.json"],
@@ -417,10 +396,7 @@ const reactRules = {
 
   ...reactHooksPlugin.configs.flat["recommended-latest"].rules,
 
-  "react-refresh/only-export-components": [
-    "error",
-    { allowConstantExport: true },
-  ],
+  "react-refresh/only-export-components": ["error", { allowConstantExport: true }],
 };
 
 const jsxA11yRules = {
@@ -564,14 +540,14 @@ For files where `console` usage is intentional (loggers, CLI output), add after 
 
 Add to the `ignores` array based on the project:
 
-| Framework | Additional Ignores |
-| --- | --- |
-| Next.js | `.next/**` |
-| Astro | `.astro/**` |
-| Remix | `build/**` |
-| Vite | `dist/**` (already included) |
-| Yarn PnP | `.pnp.cjs`, `.pnp.loader.mjs`, `.yarn/**` |
-| Netlify | `.netlify/**` |
+| Framework | Additional Ignores                        |
+| --------- | ----------------------------------------- |
+| Next.js   | `.next/**`                                |
+| Astro     | `.astro/**`                               |
+| Remix     | `build/**`                                |
+| Vite      | `dist/**` (already included)              |
+| Yarn PnP  | `.pnp.cjs`, `.pnp.loader.mjs`, `.yarn/**` |
+| Netlify   | `.netlify/**`                             |
 
 ## package.json Scripts
 

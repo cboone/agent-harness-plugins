@@ -116,9 +116,7 @@ Add a parser override to `.prettierrc.json`:
 
 ```json
 {
-  "overrides": [
-    { "files": ["*.html"], "options": { "parser": "go-template" } }
-  ],
+  "overrides": [{ "files": ["*.html"], "options": { "parser": "go-template" } }],
   "plugins": ["prettier-plugin-go-template"]
 }
 ```

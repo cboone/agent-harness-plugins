@@ -178,8 +178,8 @@ jobs:
 ### Markdown
 
 ```yaml
-      - name: markdownlint
-        run: npx markdownlint-cli2 "**/*.md"
+- name: markdownlint
+  run: npx markdownlint-cli2 "**/*.md"
 ```
 
 ## Cross-Language Steps
@@ -189,52 +189,52 @@ These steps can be added to any language workflow:
 ### Actionlint
 
 ```yaml
-      - name: Actionlint
-        uses: raven-actions/actionlint@v2
+- name: Actionlint
+  uses: raven-actions/actionlint@v2
 ```
 
 ### Hadolint
 
 ```yaml
-      - name: Hadolint
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: Dockerfile
+- name: Hadolint
+  uses: hadolint/hadolint-action@v3.1.0
+  with:
+    dockerfile: Dockerfile
 ```
 
 ### Knip (JS/TS projects)
 
 ```yaml
-      - name: Knip
-        run: npx knip
+- name: Knip
+  run: npx knip
 ```
 
 ### Prettier (non-JS projects)
 
 ```yaml
-      - name: Prettier
-        run: npx prettier --check .
+- name: Prettier
+  run: npx prettier --check .
 ```
 
 ### Stylelint
 
 ```yaml
-      - name: Stylelint
-        run: npx stylelint "**/*.{css,scss,less}"
+- name: Stylelint
+  run: npx stylelint "**/*.{css,scss,less}"
 ```
 
 ### Taplo
 
 ```yaml
-      - name: Taplo
-        run: npx @taplo/cli fmt --check
+- name: Taplo
+  run: npx @taplo/cli fmt --check
 ```
 
 ### yamllint
 
 ```yaml
-      - name: yamllint
-        run: pipx run yamllint .
+- name: yamllint
+  run: pipx run yamllint .
 ```
 
 ## Combined Multi-Language Workflow

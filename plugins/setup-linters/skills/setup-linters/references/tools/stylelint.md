@@ -66,10 +66,7 @@ bun add -D stylelint stylelint-config-standard-scss
 
 ```json
 {
-  "extends": [
-    "@dreamsicle.io/stylelint-config-tailwindcss",
-    "stylelint-config-standard"
-  ],
+  "extends": ["@dreamsicle.io/stylelint-config-tailwindcss", "stylelint-config-standard"],
   "rules": {
     "alpha-value-notation": null,
     "at-rule-empty-line-before": null,
