@@ -4,6 +4,9 @@ set -euo pipefail
 
 errors=0
 
+# shellcheck disable=SC2312
+# find in process substitution masks its exit code; acceptable here since
+# find is only walking local directories and failure is effectively impossible.
 while IFS= read -r -d '' file; do
   if ! jq empty "${file}" 2> /dev/null; then
     echo "::error file=${file}::Invalid JSON syntax"
