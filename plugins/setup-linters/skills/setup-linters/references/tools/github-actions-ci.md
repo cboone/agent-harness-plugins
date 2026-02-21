@@ -169,10 +169,11 @@ jobs:
         with:
           scandir: scripts
 
+      - name: Set up shfmt
+        uses: mfinelli/setup-shfmt@v4
+
       - name: shfmt
-        uses: mvdan/sh@v0.10
-        with:
-          sh-args: "-d ."
+        run: shfmt -d .
 ```
 
 ### Markdown
