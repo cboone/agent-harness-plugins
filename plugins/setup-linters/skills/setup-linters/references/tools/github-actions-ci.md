@@ -202,11 +202,39 @@ These steps can be added to any language workflow:
           dockerfile: Dockerfile
 ```
 
+### Knip (JS/TS projects)
+
+```yaml
+      - name: Knip
+        run: npx knip
+```
+
 ### Prettier (non-JS projects)
 
 ```yaml
       - name: Prettier
         run: npx prettier --check .
+```
+
+### Stylelint
+
+```yaml
+      - name: Stylelint
+        run: npx stylelint "**/*.{css,scss,less}"
+```
+
+### Taplo
+
+```yaml
+      - name: Taplo
+        run: npx @taplo/cli fmt --check
+```
+
+### yamllint
+
+```yaml
+      - name: yamllint
+        run: pipx run yamllint .
 ```
 
 ## Combined Multi-Language Workflow
