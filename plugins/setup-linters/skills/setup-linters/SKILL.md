@@ -16,7 +16,9 @@ Detect the project type, recommend appropriate linters and formatters, install t
 
 ### 1. Detect Project Type
 
-Scan for language and file-type markers using Glob. Use both files and directories as signals:
+Scan for language and file-type markers using Glob. **Exclude `node_modules/`, `.yarn/`, and other dependency directories from all searches** to avoid false positives from vendored code.
+
+Use both files and directories as signals:
 
 | Marker(s)                                                                                   | Language/Type         |
 | ------------------------------------------------------------------------------------------- | --------------------- |
@@ -33,10 +35,12 @@ Scan for language and file-type markers using Glob. Use both files and directori
 | `*.yaml`, `*.yml` (many files)                                                              | YAML                  |
 | `*.md`                                                                                      | Markdown (always)     |
 
-For Node.js projects, detect the package manager from lockfiles:
+**Source file verification**: When `package.json` is detected, verify that actual JavaScript or TypeScript source files exist (`*.js`, `*.ts`, `*.jsx`, `*.tsx`, `*.mjs`, `*.mts`, excluding `node_modules/` and config files like `eslint.config.js`). A `package.json` used only for devDependencies (e.g., markdownlint tooling) does not make the project a JavaScript project. If no source files are found, skip JavaScript-specific tools (ESLint, Knip) and only recommend tools the project actually needs.
+
+For Node.js projects, detect the package manager from lockfiles and config files:
 
 - `package-lock.json` -- npm
-- `yarn.lock` -- yarn
+- `yarn.lock` or `.yarnrc.yml` -- yarn
 - `pnpm-lock.yaml` -- pnpm
 - `bun.lock` -- bun
 
@@ -68,6 +72,8 @@ Check for existing linter configs using these patterns (aligned with the `lint-a
 | `.yamllint.yml`, `.yamllint.yaml`                                  | yamllint      |
 | `taplo.toml`, `.taplo.toml`                                        | Taplo         |
 
+**CI workflow scanning**: Also scan `.github/workflows/*.yml` for tools running without config files. For example, a CI step like `shellcheck -S warning scripts/*` means ShellCheck is already in use even without a `.shellcheckrc`. Mark these tools as "Partial" (running in CI but missing local config). A partial tool should still appear in recommendations, but suggest adding the config file for local/CI parity rather than a full setup.
+
 For each already-configured tool, mark it as "Existing" and skip it in recommendations. If everything is already set up, inform the user and stop.
 
 ### 3. Recommend Linter Stack
@@ -79,8 +85,8 @@ Based on detected languages and file types, recommend the appropriate tool stack
 - **EditorConfig** (for all projects)
 - **markdownlint-cli2** (if Markdown files detected)
 - **File-type-specific tools** based on detection:
-  - **Stylelint** when CSS/SCSS/Less files detected
-  - **Knip** when `package.json` detected
+  - **Stylelint** when CSS/SCSS/Less files detected (excluding `node_modules/`)
+  - **Knip** when `package.json` detected **and** JS/TS source files exist (skip for devDependencies-only projects)
   - **Hadolint** when Dockerfile detected
   - **Actionlint** when `.github/workflows/` detected
   - **Taplo** when `*.toml` files detected (beyond `Cargo.toml`)
@@ -88,13 +94,17 @@ Based on detected languages and file types, recommend the appropriate tool stack
 
 Read the appropriate reference files for details on each tool.
 
-Present recommendations in a table:
+Present recommendations in a table using three status levels:
+
+- **Existing**: Config file found and tool is fully set up. Skip in recommendations.
+- **Partial**: Tool runs in CI but has no local config file. Recommend adding the config for local/CI parity.
+- **New**: Tool is not set up at all. Recommend full setup.
 
 ```text
 | Category     | Tools                          | Status   |
 | ------------ | ------------------------------ | -------- |
 | JavaScript   | ESLint + Prettier              | New      |
-| Shell        | ShellCheck, shfmt              | New      |
+| Shell        | ShellCheck, shfmt              | Partial  |
 | Formatting   | Prettier, EditorConfig         | New      |
 | Markdown     | markdownlint-cli2              | Existing |
 | Docker       | Hadolint                       | New      |

@@ -4,7 +4,7 @@ Detects unused files, dependencies, and exports in JavaScript/TypeScript project
 
 ## When to Offer
 
-When `package.json` is detected (JavaScript/TypeScript projects only).
+When `package.json` is detected **and** JavaScript/TypeScript source files exist (`*.js`, `*.ts`, `*.jsx`, `*.tsx`, `*.mjs`, `*.mts`, excluding `node_modules/` and config files). Projects that use `package.json` only for devDependencies tooling (e.g., markdownlint, Prettier) do not benefit from Knip.
 
 ## Install
 
