@@ -20,8 +20,8 @@ Python projects are detected by:
 # uv (preferred)
 uv add --dev ruff
 
-# pip (alternative)
-pip install ruff
+# uv pip (alternative, when not using a uv project)
+uv pip install ruff
 ```
 
 ## Config
@@ -30,7 +30,7 @@ Add to `pyproject.toml`:
 
 ```toml
 [tool.ruff]
-target-version = "py312"
+target-version = "py313"
 line-length = 88
 
 [tool.ruff.lint]
@@ -68,5 +68,5 @@ format: ## Format Python code
 - Ruff is a single tool that replaces an entire ecosystem (black, isort, flake8, and dozens of flake8 plugins).
 - The `select` list above is a sensible starting set. Ruff supports 800+ rules from 50+ plugins.
 - `ruff check --fix` applies safe auto-fixes. `ruff format` handles code formatting.
-- Always use `uv` to install when available, per project conventions.
+- Always use `uv` to install. Use `uv add --dev` for uv-managed projects, or `uv pip install` otherwise.
 - Ruff reads config from `pyproject.toml`, `ruff.toml`, or `.ruff.toml`.

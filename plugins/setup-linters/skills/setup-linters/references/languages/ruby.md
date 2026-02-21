@@ -29,7 +29,7 @@ Create `.rubocop.yml` in the project root:
 ```yaml
 AllCops:
   NewCops: enable
-  TargetRubyVersion: 3.3
+  TargetRubyVersion: 3.4
   SuggestExtensions: false
 
 Style/FrozenStringLiteralComment:

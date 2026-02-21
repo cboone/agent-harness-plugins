@@ -21,7 +21,7 @@ rustup component add rustfmt
 Create `rustfmt.toml` in the project root:
 
 ```toml
-edition = "2021"
+edition = "2024"
 max_width = 100
 use_small_heuristics = "Default"
 ```
