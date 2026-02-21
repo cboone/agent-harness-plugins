@@ -113,15 +113,32 @@ Stop and report an error if any of these are true:
 
 ### 4. Commit Changes (if needed)
 
-If there are staged changes, unstaged changes, or untracked files:
+If there are no staged changes, unstaged changes, or untracked files, skip this step.
 
-1. **Stage everything** — run `git add -A`. Never stage selectively; the goal is a clean working tree. Exception: never stage files that likely contain secrets (`.env`, `credentials.json`, `*.pem`, `*.key`, etc.). If such files are detected, warn the user and exclude them.
+Never stage files that likely contain secrets (`.env`, `credentials.json`, `*.pem`, `*.key`, etc.). If such files are detected, warn the user and exclude them.
+
+#### Identify logical chunks
+
+Review all uncommitted changes and group them into the smallest logical chunks. Each chunk should be a self-contained, coherent change that makes sense on its own:
+
+1. **Examine the diff**: Look at all changed and untracked files and understand what each change accomplishes.
+1. **Group by purpose**: Changes that serve the same purpose belong together. A new function and its tests are one chunk, but an unrelated formatting fix is a separate chunk.
+1. **Check for independence**: If a change can be committed on its own without leaving the codebase in a broken or inconsistent state, it is a candidate for its own chunk.
+1. **Respect dependencies**: If change B depends on change A, commit A first.
+
+If all changes form a single logical chunk, create one commit. If they form multiple chunks, create a commit for each, processing them sequentially.
+
+#### Create each commit
+
+For each chunk:
+
+1. **Stage only the files belonging to the current chunk** using `git add` with specific file paths.
 1. **Analyze the diff** to generate a commit message:
    - Examine `git log --oneline -10` output to match the repository's commit message style.
    - Determine the commit type (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `style`) based on the changes.
    - Write a concise description (under 72 characters) focused on _why_ the change was made.
-   - Reference connected issues detected in step 2. For `fix/*` branches, use `fixes #N`; for other branch types, use `closes #N`. If no connected issues were detected, omit issue references from the commit message.
-1. **Create the commit** — GPG signed, using a HEREDOC:
+   - Reference connected issues detected in step 2. For `fix/*` branches, use `fixes #N`; for other branch types, use `closes #N`. If no connected issues were detected, omit issue references from the commit message. Only reference issues in the commit that most directly addresses them.
+1. **Create the commit** using GPG signing and a HEREDOC:
 
 ```bash
 git commit -S -m "$(
@@ -132,8 +149,6 @@ EOF
 ```
 
 CRITICAL: Never use `git commit --amend`. Always create a new commit. If a pre-commit hook fails, fix the issue, re-stage, and create a new commit.
-
-If there are no uncommitted changes, skip this step.
 
 ### 5. Push to Remote
 
