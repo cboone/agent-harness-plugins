@@ -1,1 +1,5 @@
 node_modules/
+
+# Shell scripts (formatted by shfmt, not prettier)
+bin/*
+plugins/*/scripts/*
