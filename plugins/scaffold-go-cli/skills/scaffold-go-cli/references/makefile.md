@@ -51,3 +51,4 @@ help: ## Show this help
 - Binary output goes to `bin/` to keep the project root clean
 - `fmt` target checks formatting without modifying files (CI-friendly)
 - `lint` assumes `golangci-lint` is installed (`brew install golangci-lint`)
+- `vuln` assumes `govulncheck` is installed (`go install golang.org/x/vuln/cmd/govulncheck@latest`)
