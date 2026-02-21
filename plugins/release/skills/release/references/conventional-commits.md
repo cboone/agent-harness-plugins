@@ -24,11 +24,11 @@ A commit is a breaking change if either:
 
 ## Bump Classification
 
-| Condition | Bump level |
-| --------- | ---------- |
-| Any breaking change | Major |
-| `feat` type | Minor |
-| Everything else (`fix`, `chore`, `docs`, `refactor`, `perf`, `test`, `style`, `ci`, `build`, `revert`) | Patch |
+| Condition                                                                                              | Bump level |
+| ------------------------------------------------------------------------------------------------------ | ---------- |
+| Any breaking change                                                                                    | Major      |
+| `feat` type                                                                                            | Minor      |
+| Everything else (`fix`, `chore`, `docs`, `refactor`, `perf`, `test`, `style`, `ci`, `build`, `revert`) | Patch      |
 
 The overall bump is the highest individual level found across all commits since the last release. Priority: major > minor > patch.
 
@@ -38,19 +38,19 @@ Map commit types to Keep a Changelog categories:
 
 | Commit type | Changelog category |
 | ----------- | ------------------ |
-| `feat` | Added |
-| `fix` | Fixed |
-| `refactor` | Changed |
-| `perf` | Changed |
-| `revert` | Removed |
-| `docs` | Changed |
-| `style` | Changed |
-| `chore` | Changed |
-| `ci` | Changed |
-| `build` | Changed |
-| `test` | Changed |
+| `feat`      | Added              |
+| `fix`       | Fixed              |
+| `refactor`  | Changed            |
+| `perf`      | Changed            |
+| `revert`    | Removed            |
+| `docs`      | Changed            |
+| `style`     | Changed            |
+| `chore`     | Changed            |
+| `ci`        | Changed            |
+| `build`     | Changed            |
+| `test`      | Changed            |
 
-Breaking changes get a `**BREAKING:** ` prefix in their changelog entry regardless of their type, and appear first in their respective category.
+Breaking changes get a `**BREAKING:**` prefix in their changelog entry regardless of their type, and appear first in their respective category.
 
 ## Non-Conventional Commits
 
@@ -68,12 +68,14 @@ Exclude merge commits from analysis. Use `--no-merges` when running `git log`.
 
 To get the commit list for analysis:
 
+<!-- prettier-ignore -->
 ```bash
 git log <LAST-TAG>..HEAD --format='%H %s' --no-merges
 ```
 
 For commits with bodies (needed for `BREAKING CHANGE:` footer detection):
 
+<!-- prettier-ignore -->
 ```bash
 git log <LAST-TAG>..HEAD --format='%H%n%s%n%b%n---END---' --no-merges
 ```

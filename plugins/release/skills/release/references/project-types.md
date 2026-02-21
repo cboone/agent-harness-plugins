@@ -35,13 +35,13 @@ Detect the project type to determine where version numbers live and how to updat
 
 **Version files:** Check for these ecosystem files and their version keys:
 
-| File | Version location |
-| ---- | ---------------- |
-| `package.json` | `"version": "X.Y.Z"` |
-| `pyproject.toml` | `[project]` section, `version = "X.Y.Z"` |
-| `Cargo.toml` | `[package]` section, `version = "X.Y.Z"` |
-| `setup.py` | `version="X.Y.Z"` argument |
-| `VERSION` or `VERSION.txt` | Plain text, entire file content |
-| `version.txt` | Plain text, entire file content |
+| File                       | Version location                         |
+| -------------------------- | ---------------------------------------- |
+| `package.json`             | `"version": "X.Y.Z"`                     |
+| `pyproject.toml`           | `[project]` section, `version = "X.Y.Z"` |
+| `Cargo.toml`               | `[package]` section, `version = "X.Y.Z"` |
+| `setup.py`                 | `version="X.Y.Z"` argument               |
+| `VERSION` or `VERSION.txt` | Plain text, entire file content          |
+| `version.txt`              | Plain text, entire file content          |
 
 If multiple files match, update all of them to keep versions consistent. If none match, skip source file version updates and rely solely on the git tag.

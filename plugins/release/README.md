@@ -29,11 +29,11 @@ Detects your project type (Go CLI, Go library, or generic), analyzes conventiona
 /release --dry-run
 ```
 
-| Option      | Description                                                        |
-| ----------- | ------------------------------------------------------------------ |
-| `--major`   | Force a major version bump regardless of commit analysis           |
-| `--minor`   | Force a minor version bump regardless of commit analysis           |
-| `--patch`   | Force a patch version bump regardless of commit analysis           |
+| Option      | Description                                                         |
+| ----------- | ------------------------------------------------------------------- |
+| `--major`   | Force a major version bump regardless of commit analysis            |
+| `--minor`   | Force a minor version bump regardless of commit analysis            |
+| `--patch`   | Force a patch version bump regardless of commit analysis            |
 | `--dry-run` | Preview all changes without modifying files, committing, or tagging |
 
 ## Examples

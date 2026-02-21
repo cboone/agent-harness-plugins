@@ -71,6 +71,7 @@ Parse the tag as `v<MAJOR>.<MINOR>.<PATCH>`. If no tags exist, this is the first
 
 Get all commits since the last release tag:
 
+<!-- prettier-ignore -->
 ```bash
 git log <LAST-TAG>..HEAD --format='%H %s' --no-merges
 ```

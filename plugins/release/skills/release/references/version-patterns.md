@@ -20,16 +20,16 @@ Exclude from search:
 
 Look for the old version string in these common formats:
 
-| Pattern | Example |
-| ------- | ------- |
-| Literal version with `v` prefix | `v1.2.3` |
-| Literal version without prefix | `1.2.3` |
-| Badge URLs | `badge/v1.2.3-blue` |
-| Download URLs | `/releases/download/v1.2.3/` |
-| Install commands with `@` | `tool@v1.2.3`, `package@1.2.3` |
-| Install commands with `==` | `package==1.2.3` |
-| Go install refs | `go install example.com/tool@v1.2.3` |
-| Homebrew cask version | `version "1.2.3"` |
+| Pattern                         | Example                              |
+| ------------------------------- | ------------------------------------ |
+| Literal version with `v` prefix | `v1.2.3`                             |
+| Literal version without prefix  | `1.2.3`                              |
+| Badge URLs                      | `badge/v1.2.3-blue`                  |
+| Download URLs                   | `/releases/download/v1.2.3/`         |
+| Install commands with `@`       | `tool@v1.2.3`, `package@1.2.3`       |
+| Install commands with `==`      | `package==1.2.3`                     |
+| Go install refs                 | `go install example.com/tool@v1.2.3` |
+| Homebrew cask version           | `version "1.2.3"`                    |
 
 ## Replacement Rules
 

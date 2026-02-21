@@ -4,16 +4,16 @@ Map commit types to documentation that may need manual review. Present relevant 
 
 ## Commit-Type-to-Documentation Mapping
 
-| Change type | Docs to review |
-| ----------- | -------------- |
-| Breaking changes | Migration guide, upgrade instructions, API notes |
-| `feat:` | README features section, API docs, usage examples, man pages |
-| Removed features | README, deprecation notices |
-| Dependency changes | Install instructions, compatibility matrix |
-| Security fixes | Security policy, advisories |
-| CLI changes | README usage section, `--help` text in docs, man pages |
-| Config changes | Config reference, example configs |
-| `perf:` | Benchmarks, performance docs |
+| Change type        | Docs to review                                               |
+| ------------------ | ------------------------------------------------------------ |
+| Breaking changes   | Migration guide, upgrade instructions, API notes             |
+| `feat:`            | README features section, API docs, usage examples, man pages |
+| Removed features   | README, deprecation notices                                  |
+| Dependency changes | Install instructions, compatibility matrix                   |
+| Security fixes     | Security policy, advisories                                  |
+| CLI changes        | README usage section, `--help` text in docs, man pages       |
+| Config changes     | Config reference, example configs                            |
+| `perf:`            | Benchmarks, performance docs                                 |
 
 ## Skip Conditions
 
