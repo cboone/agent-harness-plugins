@@ -77,17 +77,17 @@ OPTIONS-TABLE
 Generate a Markdown table with one row per configurable option:
 
 ```markdown
-| Option | Default | Description |
-| --- | --- | --- |
+| Option                | Default   | Description                |
+| --------------------- | --------- | -------------------------- |
 | `@PLUGIN-NAME-option` | `default` | What this option controls. |
 ```
 
 If the user did not specify any options, generate a single example option:
 
 ```markdown
-| Option | Default | Description |
-| --- | --- | --- |
-| `@PLUGIN-NAME-enabled` | `on` | Enable or disable the plugin. Set to `off` to disable. |
+| Option                 | Default | Description                                            |
+| ---------------------- | ------- | ------------------------------------------------------ |
+| `@PLUGIN-NAME-enabled` | `on`    | Enable or disable the plugin. Set to `off` to disable. |
 ```
 
 ## Notes

@@ -41,18 +41,18 @@ Standard skills plugin metadata. Keywords: `bash`, `plugin`, `scaffolding`, `tmu
 Workflow-style skill (modeled on `scaffold-go-cli`) with these steps:
 
 1. **Gather Project Information**: plugin name (kebab-case, `tmux-` prefix suggested), short description, list of configurable options with defaults. Generate a single example option if none specified.
-2. **Detect User Identity**: `gh api user -q .login` and `git config user.name`, with fallback to asking.
-3. **Verify Target Directory**: use current dir if named after plugin and empty, else create subdirectory. Warn if `.tmux` files exist.
-4. **Initialize Git**: `git init` (skip if already a repo).
-5. **Generate Entry Point**: `PLUGIN-NAME.tmux` from `./references/entry-point.md`, `chmod +x`.
-6. **Generate helpers.sh**: `scripts/helpers.sh` from `./references/helpers.md` (identical across all tmux plugins).
-7. **Generate Main Script**: `scripts/PLUGIN-NAME.sh` from `./references/main-script.md`, `chmod +x`.
-8. **Generate LICENSE**: from `./references/license.md` with YEAR and COPYRIGHT-HOLDER.
-9. **Generate README.md**: from `./references/readme.md` with plugin name, description, GitHub username, and configurable options.
-10. **Ask About Optional Features**: scrut test skeleton, GitHub Actions CI, workmux layout.
-11. **Generate Optional Files**: Makefile + tests dir (scrut), `.github/workflows/scrut.yml` (CI, implies scrut), `.workmux.yaml` (workmux).
-12. **Create Initial Commit**: `git add -A && git commit -S -m "feat: scaffold tmux plugin"`.
-13. **Summary**: list files, show options table, note next steps.
+1. **Detect User Identity**: `gh api user -q .login` and `git config user.name`, with fallback to asking.
+1. **Verify Target Directory**: use current dir if named after plugin and empty, else create subdirectory. Warn if `.tmux` files exist.
+1. **Initialize Git**: `git init` (skip if already a repo).
+1. **Generate Entry Point**: `PLUGIN-NAME.tmux` from `./references/entry-point.md`, `chmod +x`.
+1. **Generate helpers.sh**: `scripts/helpers.sh` from `./references/helpers.md` (identical across all tmux plugins).
+1. **Generate Main Script**: `scripts/PLUGIN-NAME.sh` from `./references/main-script.md`, `chmod +x`.
+1. **Generate LICENSE**: from `./references/license.md` with YEAR and COPYRIGHT-HOLDER.
+1. **Generate README.md**: from `./references/readme.md` with plugin name, description, GitHub username, and configurable options.
+1. **Ask About Optional Features**: scrut test skeleton, GitHub Actions CI, workmux layout.
+1. **Generate Optional Files**: Makefile + tests dir (scrut), `.github/workflows/scrut.yml` (CI, implies scrut), `.workmux.yaml` (workmux).
+1. **Create Initial Commit**: `git add -A && git commit -S -m "feat: scaffold tmux plugin"`.
+1. **Summary**: list files, show options table, note next steps.
 
 ### 3. Create 5 reference files
 
@@ -96,7 +96,7 @@ Verify version correctness and consistency.
 ## Verification
 
 1. Confirm all new files are created with correct structure
-2. Run `check-versions` to verify marketplace.json and plugin.json are in sync
-3. Verify root README.md ToC and description section have the new entry in correct alphabetical order
-4. Verify CLAUDE.md directory tree has the new entry
-5. Read through SKILL.md to confirm workflow steps are clear and reference file paths are correct
+1. Run `check-versions` to verify marketplace.json and plugin.json are in sync
+1. Verify root README.md ToC and description section have the new entry in correct alphabetical order
+1. Verify CLAUDE.md directory tree has the new entry
+1. Read through SKILL.md to confirm workflow steps are clear and reference file paths are correct
