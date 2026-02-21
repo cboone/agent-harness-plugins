@@ -209,6 +209,20 @@
       "author": {
         "name": "Christopher Boone"
       },
+      "category": "productivity",
+      "description": "Prepare a versioned release: analyze commits, update versions and changelog, create a release commit, and tag locally.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["changelog", "conventional-commits", "git", "release", "semver", "tags", "versioning"],
+      "license": "MIT",
+      "name": "release",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/release",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
       "category": "code-quality",
       "description": "Process and resolve GitHub Copilot automated PR review comments.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",

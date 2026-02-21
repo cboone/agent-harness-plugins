@@ -7,6 +7,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 [Commit](#commit)
 ∙ [Merge Main](#merge-main)
 ∙ [PR](#pr)
+∙ [Release](#release)
 ∙ [Review Branch](#review-branch)
 <br>Issues and Worktrees:
 [Create Worktree](#create-worktree)
@@ -78,6 +79,13 @@ Commit all changes, push to remote, and create a GitHub pull request in one auto
 > **Trigger:** `/pr`
 > **Requires:** [`gh`](https://cli.github.com/)
 > **Details:** [README](./plugins/pr/README.md)
+
+#### Release
+
+Prepare a versioned release by analyzing conventional commits, recommending a version bump, updating version references in project files and documentation, managing `CHANGELOG.md` in Keep a Changelog format, creating a release commit, and tagging locally. Detects project type automatically (Go CLI, Go library, or generic).
+
+> **Trigger:** `/release`
+> **Details:** [README](./plugins/release/README.md)
 
 #### Review Branch
 
