@@ -128,7 +128,13 @@ Then re-run to confirm:
 make test-scrut
 ```
 
-### 8. Summary
+### 8. Update markdownlint Config
+
+If a markdownlint config exists (`.markdownlint-cli2.jsonc`, `.markdownlint.jsonc`, `.markdownlint.yaml`, or `.markdownlint.json`), add `"MD014": false` to disable the "dollar signs used before commands" rule. Scrut test files use `$ command` notation that triggers this rule.
+
+If no markdownlint config exists, skip this step.
+
+### 9. Summary
 
 Print a summary of what was created and modified:
 
