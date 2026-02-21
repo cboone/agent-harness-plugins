@@ -9,7 +9,7 @@ OUTDIR  := bin
 
 LDFLAGS := -ldflags "-X main.version=$(VERSION)"
 
-.PHONY: build test lint vet fmt clean cover tidy help
+.PHONY: build test lint vet fmt vuln clean cover tidy help
 
 build: ## Build the binary
 	mkdir -p $(OUTDIR)
@@ -26,6 +26,9 @@ vet: ## Run go vet
 
 fmt: ## Check formatting (exits non-zero if files need formatting)
 	@test -z "$$(gofmt -l .)" || { gofmt -l . && exit 1; }
+
+vuln: ## Run govulncheck
+	govulncheck ./...
 
 clean: ## Remove build artifacts
 	rm -rf $(OUTDIR) dist coverage.out
