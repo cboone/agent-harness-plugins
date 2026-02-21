@@ -106,13 +106,24 @@ When using ESLint + Prettier together, install `eslint-config-prettier` to disab
 
 ## Prettier Plugins
 
-For specialized file types, Prettier has plugins:
+For Hugo or Go template projects, `prettier-plugin-go-template` formats `*.html` template files. No other formatter handles Go template syntax.
 
-- `prettier-plugin-toml`: Format TOML files
-- `prettier-plugin-sh`: Format shell scripts (alternative to shfmt)
-- `prettier-plugin-go-template`: Format Go templates
+```bash
+npm install -D prettier-plugin-go-template
+```
 
-Install plugins as dev dependencies and Prettier auto-discovers them.
+Add a parser override to `.prettierrc.json`:
+
+```json
+{
+  "overrides": [
+    { "files": ["*.html"], "options": { "parser": "go-template" } }
+  ],
+  "plugins": ["prettier-plugin-go-template"]
+}
+```
+
+Install plugins as dev dependencies and Prettier auto-discovers them. Avoid `prettier-plugin-sh` and `prettier-plugin-toml` as the dedicated tools (shfmt and Taplo) are faster and more capable.
 
 ## package.json Scripts
 
