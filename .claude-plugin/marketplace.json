@@ -371,7 +371,7 @@
       "name": "write-shell-scripts",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/write-shell-scripts",
-      "version": "1.0.6"
+      "version": "1.1.0"
     }
   ]
 }

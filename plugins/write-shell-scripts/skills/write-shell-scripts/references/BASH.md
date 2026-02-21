@@ -128,9 +128,9 @@ Prepend `\` to invoke the original command, bypassing aliases and builtins.
 
 Quote heredoc tags to prevent variable interpolation.
 
-| Use       | Avoid   |
-| --------- | ------- |
-| `<<'EOF'` | `<<EOF` |
+| Use        | Avoid    |
+| ---------- | -------- |
+| `<< 'EOF'` | `<< EOF` |
 
 ---
 
@@ -138,9 +138,9 @@ Quote heredoc tags to prevent variable interpolation.
 
 Use descriptive heredoc tags instead of generic `EOF`.
 
-| Use             | Avoid     |
-| --------------- | --------- |
-| `<<'SQL_QUERY'` | `<<'EOF'` |
+| Use              | Avoid      |
+| ---------------- | ---------- |
+| `<< 'SQL_QUERY'` | `<< 'EOF'` |
 
 ---
 
@@ -693,6 +693,33 @@ Use `&&`/`||` for simple one-line conditionals.
 | Use                                | Avoid                                        |
 | ---------------------------------- | -------------------------------------------- |
 | `[[ -f "${f}" ]] && source "${f}"` | `if [[ -f "${f}" ]]; then source "${f}"; fi` |
+
+---
+
+### Multi-line continuation
+
+When a pipeline or logical expression spans multiple lines, place the operator at the start of the continuation line, not at the end of the previous line.
+
+```bash
+# Use: operator at start of continuation line
+result="$(
+  generate_data \
+    | filter \
+    | transform
+)"
+```
+
+<!-- prettier-ignore -->
+```bash
+# Avoid: operator at end of line
+result="$(
+  generate_data |
+    filter |
+    transform
+)"
+```
+
+This applies to `|`, `&&`, and `||`. Short expressions that fit on a single line do not need to be broken up.
 
 ---
 
