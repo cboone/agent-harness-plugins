@@ -42,6 +42,8 @@ For Node.js projects, detect the package manager from lockfiles:
 
 For CSS/SCSS projects, check whether Tailwind CSS is in use by looking for `tailwindcss` or `@tailwindcss/*` in `package.json` dependencies/devDependencies, or a `tailwind.config.*` file.
 
+For JavaScript/TypeScript projects, perform framework sub-detection to determine which ESLint plugins to install. Check `package.json` dependencies for `react`/`react-dom` (React), `next` (Next.js), `express`/`fastify`/`koa`/`hapi` (Node.js), and look for server-side directory markers (`server.*`, `api/`, `bin/`). See `./references/languages/javascript.md` for the full detection table.
+
 If multiple languages are detected, present all of them (monorepo scenario).
 
 ### 2. Detect Existing Linters

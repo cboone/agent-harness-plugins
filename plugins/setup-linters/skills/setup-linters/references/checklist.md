@@ -6,7 +6,7 @@ Quick-reference lookup table for the setup-linters skill. Each row maps a projec
 
 | Language      | Tools                             | Install Command                                         | Config Files                           | Scripts / Targets            | Reference                   |
 | ------------- | --------------------------------- | ------------------------------------------------------- | -------------------------------------- | ---------------------------- | --------------------------- |
-| JavaScript/TS | ESLint + Prettier                 | `npm install -D eslint prettier eslint-config-prettier` | `eslint.config.js`, `.prettierrc.json` | `lint`, `format`, `lint:fix` | `./languages/javascript.md` |
+| JavaScript/TS | ESLint + Prettier + plugins       | `npm install -D eslint @eslint/js @eslint/json eslint-config-prettier eslint-plugin-import eslint-plugin-unicorn eslint-plugin-promise eslint-plugin-regexp eslint-plugin-security globals` | `eslint.config.js`, `.prettierrc.json` | `lint`, `format`, `lint:fix` | `./languages/javascript.md` |
 | Go            | golangci-lint + gofmt + goimports | `brew install golangci-lint`                            | `.golangci.yml`                        | `lint`, `fmt`, `vet`         | `./languages/go.md`         |
 | Python        | Ruff                              | `uv add --dev ruff`                                     | `pyproject.toml` `[tool.ruff]`         | `lint`, `format`             | `./languages/python.md`     |
 | Rust          | clippy + rustfmt                  | _(built-in, no install)_                                | `rustfmt.toml`                         | `cargo clippy`, `cargo fmt`  | `./languages/rust.md`       |
