@@ -12,6 +12,31 @@ description: >-
 
 Create smart, context-aware git commits with conventional commit messages.
 
+## Core Principle: Small Logical Chunks
+
+Always prefer committing in the smallest logical chunks that are appropriate. Each commit should represent a single coherent change: one bug fix, one new function, one refactor, one documentation update, etc. Do not batch unrelated changes into a single commit.
+
+**Why this matters:**
+
+- Small commits are easier to review, revert, cherry-pick, and bisect.
+- Each commit tells a clear story about _one_ thing that changed and why.
+- When something breaks, small commits make it straightforward to identify the cause.
+
+**What constitutes a "logical chunk":**
+
+- A single bug fix (even if it touches multiple files)
+- A single new feature or capability
+- A refactor that moves or renames code without changing behavior
+- A documentation update
+- A configuration or tooling change
+- Test additions or updates for a specific feature
+
+**What does NOT belong in the same commit:**
+
+- A bug fix mixed with an unrelated refactor
+- A new feature combined with formatting changes to unrelated files
+- Documentation updates bundled with code changes they do not describe
+
 ## Options
 
 The user may provide these options inline:
@@ -45,18 +70,40 @@ If there are no changes at all (no staged, unstaged, or untracked files), report
 
 ### 2. Determine What to Commit
 
-Follow these rules in order:
+First, resolve which files are in scope using these rules in order:
 
-1. **If `--staged` was specified**: Commit only what is already staged. If nothing is staged, report that and stop.
+1. **If `--staged` was specified**: Only staged files are in scope. If nothing is staged, report that and stop.
 1. **If `--plan` was specified**: See the [Plan-Aware Commits](#plan-aware-commits) section.
-1. **If `--all` was specified**: Stage and commit all changes, but still exclude likely secret files (see below).
-1. **If there are staged changes and no unstaged changes or untracked files**: Commit the staged changes.
-1. **If there are only unstaged changes and/or untracked files**: Stage and commit all of them.
-1. **If there are both staged changes and either unstaged changes or untracked files**: Ask the user whether to commit only staged changes or stage and commit everything.
+1. **If `--all` was specified**: All changes (staged, unstaged, and untracked) are in scope, but still exclude likely secret files (see below).
+1. **If there are staged changes and no unstaged changes or untracked files**: Staged files are in scope.
+1. **If there are only unstaged changes and/or untracked files**: All of them are in scope.
+1. **If there are both staged changes and either unstaged changes or untracked files**: Ask the user whether to use only staged changes or include everything.
 
 Never stage files that likely contain secrets (`.env`, `credentials.json`, `*.pem`, `*.key`, etc.). If such files are detected among untracked or unstaged changes, warn the user and exclude them.
 
-### 3. Analyze Recent Commit Style
+### 3. Analyze Changes and Identify Logical Chunks
+
+Review the in-scope changes and group them into the smallest logical chunks. Each chunk should be a self-contained, coherent change that makes sense on its own.
+
+**How to identify chunks:**
+
+1. **Examine the diff**: Look at all in-scope file changes and understand what each change accomplishes.
+1. **Group by purpose**: Changes that serve the same purpose belong together. For example, a new function and its tests are one chunk, but an unrelated formatting fix is a separate chunk.
+1. **Check for independence**: If a change can be committed on its own without leaving the codebase in a broken or inconsistent state, it is a candidate for its own chunk.
+1. **Respect dependencies**: If change B depends on change A, commit A first. They may still be separate chunks if they represent distinct logical steps.
+
+**Common chunk patterns:**
+
+- Adding a new file and updating an index or registry that references it: one chunk.
+- Fixing a bug in one module and reformatting an unrelated module: two chunks.
+- Renaming a function across multiple call sites: one chunk.
+- Adding a feature, adding its tests, and updating documentation: one to three chunks depending on whether the docs describe only the new feature or also cover unrelated material.
+
+**When there is only one logical chunk**: Proceed directly to step 4 with all in-scope changes.
+
+**When there are multiple logical chunks**: Process each chunk sequentially, repeating steps 4 through 6 for each one. Stage only the files belonging to the current chunk before committing. Report the plan (number of commits and a brief description of each) before creating the first commit.
+
+### 4. Analyze Recent Commit Style
 
 Before generating a message, examine the output from `git log --oneline -10` to understand the repository's commit message conventions:
 
@@ -67,7 +114,7 @@ Before generating a message, examine the output from `git log --oneline -10` to 
 
 Match the repository's existing style. If there is no clear convention, default to conventional commits format.
 
-### 4. Generate Commit Message
+### 5. Generate Commit Message
 
 Analyze the diff to generate a commit message:
 
@@ -82,7 +129,7 @@ Analyze the diff to generate a commit message:
 1. **Write the description**: A concise summary (under 72 characters) focused on _why_ the change was made, not _what_ files changed.
 1. **Add context when relevant**: Reference issue numbers if they appear in branch names (e.g., branch `fix/issue-42-login-bug` suggests `fixes #42`).
 
-### 5. Create the Commit
+### 6. Create the Commit
 
 All commits must be GPG signed. Use a HEREDOC for the commit message to ensure proper formatting:
 
@@ -96,7 +143,7 @@ EOF
 
 CRITICAL: Never use `git commit --amend`. Always create a new commit. If a pre-commit hook fails, fix the issue, re-stage, and create a new commit.
 
-### 6. Post-Commit
+### 7. Post-Commit
 
 After a successful commit:
 
