@@ -690,6 +690,24 @@ Use headings to create a navigable outline. Do not use headings solely for visua
 
 ---
 
+## Custom markdownlint rules
+
+In addition to the standard markdownlint rules referenced throughout this guide, the following custom rules are enforced via markdownlint-cli2:
+
+### @github/markdownlint-github
+
+GitHub-specific Markdown rules including accessible image requirements, no generic link text (e.g., avoid bare "click here"), and other GitHub Flavored Markdown best practices.
+
+### markdownlint-rule-force-align-table-columns
+
+Enforces the aligned table column style described in the [Table column alignment](#table-column-alignment-md060) section above. This rule ensures pipe characters align vertically across all rows.
+
+### markdownlint-rule-relative-links
+
+Validates that relative links in Markdown files (e.g., `[text](./other-file.md)`) point to files that actually exist. Catches broken cross-references.
+
+---
+
 ## Sources
 
 Compiled by [Christopher Boone](https://cboone.github.io). Based on:

@@ -49,7 +49,7 @@
 
   // MD049 - Emphasis style
   // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md049.md
-  "MD049": false,
+  "MD049": { "style": "underscore" },
 
   // MD050 - Strong style
   // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md050.md
