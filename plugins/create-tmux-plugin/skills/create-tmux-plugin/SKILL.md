@@ -117,12 +117,12 @@ Based on the user's choices in step 10:
 
 **Scrut test skeleton** (or implied by GitHub Actions CI):
 
-- Create `Makefile` with `test` and `test-update` targets that run scrut
-- Create `tests/` directory with a starter `help.md` test file
+- Create `Makefile` with `test-scrut` and `test-scrut-update` targets that run scrut
+- Create `tests/scrut/` directory with a starter `help.md` test file
 
 **GitHub Actions CI**:
 
-- Create `.github/workflows/scrut.yml` with a workflow that installs scrut and runs `make test`
+- Create `.github/workflows/scrut.yml` with a workflow that installs scrut and runs `make test-scrut`
 
 **Workmux layout**:
 
