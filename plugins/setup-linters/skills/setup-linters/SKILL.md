@@ -40,6 +40,8 @@ For Node.js projects, detect the package manager from lockfiles:
 - `pnpm-lock.yaml` -- pnpm
 - `bun.lock` -- bun
 
+For CSS/SCSS projects, check whether Tailwind CSS is in use by looking for `tailwindcss` or `@tailwindcss/*` in `package.json` dependencies/devDependencies, or a `tailwind.config.*` file.
+
 If multiple languages are detected, present all of them (monorepo scenario).
 
 ### 2. Detect Existing Linters
