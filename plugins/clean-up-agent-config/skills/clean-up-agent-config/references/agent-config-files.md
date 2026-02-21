@@ -279,13 +279,8 @@ Copilot's tool behavior is configured through VS Code's settings framework, not 
 ```json
 {
   "github.copilot.chat.codeGeneration.useInstructionFiles": true,
-  "github.copilot.chat.reviewSelection.instructions": [
-    { "file": "guidance/backend-review-guidelines.md" },
-    { "file": "guidance/frontend-review-guidelines.md" }
-  ],
-  "github.copilot.chat.pullRequestDescriptionGeneration.instructions": [
-    { "text": "Always include a list of key changes." }
-  ]
+  "github.copilot.chat.reviewSelection.instructions": [{ "file": "guidance/backend-review-guidelines.md" }, { "file": "guidance/frontend-review-guidelines.md" }],
+  "github.copilot.chat.pullRequestDescriptionGeneration.instructions": [{ "text": "Always include a list of key changes." }]
 }
 ```
 
@@ -348,11 +343,7 @@ your-project/
 
 ```json
 {
-  "instructions": [
-    "docs/development-standards.md",
-    "test/testing-guidelines.md",
-    "packages/*/AGENTS.md"
-  ],
+  "instructions": ["docs/development-standards.md", "test/testing-guidelines.md", "packages/*/AGENTS.md"],
   "provider": "anthropic",
   "model": "claude-sonnet-4.5",
   "mcpServers": {

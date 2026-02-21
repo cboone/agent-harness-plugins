@@ -43,8 +43,7 @@ Create `.prettierrc.json` in the project root:
   "semi": true,
   "singleQuote": false,
   "tabWidth": 2,
-  "trailingComma": "all",
-  "printWidth": 80
+  "trailingComma": "all"
 }
 ```
 
@@ -52,8 +51,7 @@ For non-JS projects that only use Prettier for Markdown, JSON, and YAML, a minim
 
 ```json
 {
-  "tabWidth": 2,
-  "printWidth": 80
+  "tabWidth": 2
 }
 ```
 

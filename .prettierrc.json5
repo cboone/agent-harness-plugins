@@ -29,6 +29,5 @@
   ],
 
   plugins: ["prettier-plugin-sh"],
-  printWidth: 100,
   quoteProps: "consistent",
 }
