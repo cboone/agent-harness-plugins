@@ -2,7 +2,7 @@
 
 ## Tools
 
-- **golangci-lint**: Meta-linter that runs multiple Go linters in parallel (govet, errcheck, staticcheck, unused, gosimple, and more).
+- **golangci-lint**: Meta-linter that runs multiple Go linters in parallel. Uses v2 configuration format.
 - **gofmt**: Built-in Go formatter. No install needed.
 - **goimports**: Formats code and manages import statements. Part of `golang.org/x/tools`.
 
@@ -14,32 +14,71 @@ brew install golangci-lint
 
 # Go install (alternative)
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
-# goimports
-go install golang.org/x/tools/cmd/goimports@latest
 ```
 
 ## Config
 
-Create `.golangci.yml` in the project root:
+Create `.golangci.yml` in the project root. Replace `GITHUB-USERNAME` and `PROJECT-NAME` with the actual values:
 
 ```yaml
+version: "2"
+
+run:
+  timeout: 5m
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/GITHUB-USERNAME/PROJECT-NAME
+
 linters:
   enable:
+    # Quality
+    - bodyclose
+    - durationcheck
     - errcheck
-    - govet
-    - gosimple
+    - gocritic
+    - gocyclo
     - ineffassign
+    - nilerr
+    - revive
     - staticcheck
     - unused
+    # Style
+    - godot
 
-linters-settings:
-  errcheck:
-    check-type-assertions: true
+  settings:
+    gocyclo:
+      min-complexity: 15
 
-issues:
-  max-issues-per-linter: 0
-  max-same-issues: 0
+    godot:
+      capital: false
+      scope: declarations
+
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: exported
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: var-declaration
+        - name: var-naming
 ```
 
 ## Makefile Targets
@@ -51,8 +90,7 @@ lint: ## Run golangci-lint
 	golangci-lint run ./...
 
 fmt: ## Format Go code
-	gofmt -w .
-	goimports -w .
+	golangci-lint fmt ./...
 
 vet: ## Run go vet
 	go vet ./...
@@ -60,7 +98,9 @@ vet: ## Run go vet
 
 ## Notes
 
-- `gofmt` enforces tabs for indentation. This is non-negotiable in Go.
-- `golangci-lint` replaces running individual linters manually. It handles caching and parallel execution.
-- The config above enables the default set of linters. Add more as needed (e.g., `gocritic`, `revive`, `misspell`).
-- `goimports` is a superset of `gofmt` that also manages imports.
+- Uses golangci-lint v2 configuration format (`version: "2"`).
+- `goimports` local-prefixes ensures project imports are grouped separately from third-party imports.
+- Quality linters catch real bugs: `errcheck` (unchecked errors), `nilerr` (nil error returns), `bodyclose` (unclosed HTTP bodies), `staticcheck` (comprehensive static analysis).
+- Style linters enforce consistency: `godot` (comment periods), `revive` (comprehensive style rules).
+- `gocyclo` threshold of 15 is reasonable for most projects.
+- `goimports` is a superset of `gofmt` that also manages imports. In v2, both are configured under `formatters`.
