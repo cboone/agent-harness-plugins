@@ -27,8 +27,8 @@ For full project conventions, see AGENTS.md in the repository root.
   When reviewing pull requests, do not flag the following patterns as issues.
   Each is an intentional project convention:
 
-  - **Bare TODO in template files**: These are placeholder tokens meant to be
-    replaced during scaffolding, not incomplete work.
+  - **Bare TODO in template files**: These are intentional placeholders for
+    the repo owner to fill in later, not incomplete work.
   ```
 
 - **Keep concise:** GitHub recommends keeping instruction files short and
