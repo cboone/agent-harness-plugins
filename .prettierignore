@@ -3,3 +3,7 @@ node_modules/
 
 # Package manager lockfiles
 yarn.lock
+
+# Shell scripts (formatted by shfmt, not prettier)
+bin/*
+plugins/*/scripts/*
