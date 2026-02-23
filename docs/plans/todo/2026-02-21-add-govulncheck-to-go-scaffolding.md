@@ -11,8 +11,8 @@ The `govulncheck` tool from the Go team (`golang.org/x/vuln/cmd/govulncheck`) sc
 Three options were evaluated:
 
 1. **golang/govulncheck-action** (official, v1.0.4): Extensive configuration, SARIF output support, but adds a third-party composite action to templates that currently use only `actions/checkout` and `actions/setup-go`.
-2. **imjasonh/govulncheck-action** (community, v0.1): Nice PR annotations, but pre-1.0 and community-maintained.
-3. **DIY**: `go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...`. No action dependency. Same scanning engine as option 1. Consistent with the existing pattern of running tools directly.
+1. **imjasonh/govulncheck-action** (community, v0.1): Nice PR annotations, but pre-1.0 and community-maintained.
+1. **DIY**: `go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...`. No action dependency. Same scanning engine as option 1. Consistent with the existing pattern of running tools directly.
 
 The DIY approach wins because:
 
@@ -107,23 +107,23 @@ Update the Notes section to reflect the new structure (three parallel jobs, expl
 Add a `vulncheck` job following the library template's conventions (explicit step names, `"MINIMUM-GO-VERSION"` for non-matrix jobs):
 
 ```yaml
-  vulncheck:
-    name: Vulnerability check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+vulncheck:
+  name: Vulnerability check
+  runs-on: ubuntu-latest
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "MINIMUM-GO-VERSION"
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: "MINIMUM-GO-VERSION"
 
-      - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+    - name: Install govulncheck
+      run: go install golang.org/x/vuln/cmd/govulncheck@latest
 
-      - name: Run govulncheck
-        run: govulncheck ./...
+    - name: Run govulncheck
+      run: govulncheck ./...
 ```
 
 Update the Notes section: "Four parallel jobs" becomes "Five parallel jobs".
@@ -180,8 +180,8 @@ Verify all version numbers are correct and consistent.
 ## Verification
 
 1. Read back all modified files and confirm the YAML is valid and follows each template's conventions
-2. Run `check-versions` to verify version consistency
-3. Visually confirm:
+1. Run `check-versions` to verify version consistency
+1. Visually confirm:
    - CLI template: three parallel jobs (test, lint, vulncheck), `permissions: contents: read`, explicit step names, `go-version-file: go.mod`
    - Library template: five parallel jobs (test, lint, build, format, vulncheck), `permissions: contents: read`, explicit step names
    - CLI Makefile: `vuln` target present, listed in `.PHONY` and `help`
