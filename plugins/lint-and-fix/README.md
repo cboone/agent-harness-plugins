@@ -29,12 +29,12 @@ Checks for configuration files to detect ESLint, Prettier, markdownlint, ShellCh
 /lint-and-fix --no-push
 ```
 
-| Option          | Description                                           |
-| --------------- | ----------------------------------------------------- |
-| `--check`       | Report issues without fixing (dry run)                |
-| `--tool <name>` | Run only a specific tool                              |
-| `--no-commit`   | Skip committing and pushing                           |
-| `--no-push`     | Commit but do not push (default: commit and push)     |
+| Option          | Description                                       |
+| --------------- | ------------------------------------------------- |
+| `--check`       | Report issues without fixing (dry run)            |
+| `--tool <name>` | Run only a specific tool                          |
+| `--no-commit`   | Skip committing and pushing                       |
+| `--no-push`     | Commit but do not push (default: commit and push) |
 
 ## Examples
 
