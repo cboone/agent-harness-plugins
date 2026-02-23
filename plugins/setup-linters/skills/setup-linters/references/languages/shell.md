@@ -38,13 +38,30 @@ external-sources=true
 
 ### shfmt
 
-`shfmt` reads `.editorconfig` for indent style and size. No separate config file is needed when `.editorconfig` is present with a `[*.sh]` section (or when the default `[*]` section applies).
+`shfmt` reads `.editorconfig` for all formatting preferences. No separate config file is needed. Add these properties to the `[*]` section (they are shfmt-specific and ignored by other tools):
+
+```ini
+# shfmt formatting
+binary_next_line = true
+space_redirects = true
+switch_case_indent = true
+```
+
+| `.editorconfig` property | CLI flag | Effect                                         |
+| ------------------------ | -------- | ---------------------------------------------- |
+| `indent_size`            | `-i`     | Number of spaces for indentation               |
+| `indent_style`           | `-i 0`   | `tab` uses tabs (flag value 0 means tabs)      |
+| `binary_next_line`       | `-bn`    | Place binary operators at start of next line   |
+| `space_redirects`        | `-sr`    | Add space after redirect operators (`> file`)  |
+| `switch_case_indent`     | `-ci`    | Indent `case` patterns one level inside `case` |
+
+The `switch_case_indent` property aligns with the write-shell-scripts style guide, which shows case patterns indented under `case`.
 
 If `.editorconfig` is not present, pass formatting flags directly:
 
 ```bash
-# 2-space indent, binary ops start of line, space after redirects
-shfmt -i 2 -bn -sr -w .
+# 2-space indent, binary ops start of line, space after redirects, case indent
+shfmt -i 2 -bn -sr -ci -w .
 ```
 
 ## Commands
@@ -77,7 +94,7 @@ Adjust the file patterns (`scripts/*.sh`, `bin/*`) to match the project's shell 
 ## Notes
 
 - ShellCheck has no auto-fix mode. All issues must be resolved manually (or by reading the SC code and applying the recommended fix).
-- `shfmt` respects `.editorconfig` settings for indent style and size, so it integrates naturally with the EditorConfig setup.
+- `shfmt` reads all its formatting preferences from `.editorconfig` (indent style, indent size, and the extended properties documented above), so it integrates naturally with the EditorConfig setup.
 - The optional checks enforce the `write-shell-scripts` style guide: `require-double-brackets` and `require-variable-braces` catch syntax style, `check-extra-masked-returns` catches the `local var=$(cmd)` anti-pattern, and `deprecate-which` enforces `command -v`.
 - `external-sources=true` tells ShellCheck to follow `source`/`.` directives for cross-file analysis, rather than silently ignoring them.
 - No `shell=bash` is set globally; ShellCheck detects the dialect from each file's shebang line (`#!/usr/bin/env bash`).

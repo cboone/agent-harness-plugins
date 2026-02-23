@@ -11,5 +11,10 @@ indent_style = space
 insert_final_newline = true
 trim_trailing_whitespace = true
 
+# shfmt formatting (these properties are shfmt-specific, ignored by other tools)
+binary_next_line = true
+space_redirects = true
+switch_case_indent = true
+
 [*.md]
 trim_trailing_whitespace = false

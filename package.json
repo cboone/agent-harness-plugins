@@ -18,7 +18,6 @@
     "markdownlint-cli2-formatter-summarize": "^0.0.8",
     "markdownlint-rule-force-align-table-columns": "^0.1.1",
     "markdownlint-rule-relative-links": "^4.2.0",
-    "prettier": "^3.8.1",
-    "prettier-plugin-sh": "^0.18.0"
+    "prettier": "^3.8.1"
   }
 }

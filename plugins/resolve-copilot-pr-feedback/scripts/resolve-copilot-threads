@@ -25,7 +25,7 @@ readonly COPILOT_ACTIONS_LOGIN="github-actions[bot]"
 readonly COPILOT_SEVERITY_PATTERN="^\\s*\\[(nitpick|suggestion|important|critical|note)\\]"
 
 function usage() {
-  cat <<USAGE_TEXT
+  cat << USAGE_TEXT
 Usage: ${SCRIPT_NAME} <command> [arguments]
 
 Manage GitHub Copilot PR review threads via GraphQL.
@@ -57,15 +57,15 @@ function die() {
 }
 
 function check_dependencies() {
-  if ! command -v gh >/dev/null 2>&1; then
+  if ! command -v gh > /dev/null 2>&1; then
     die "gh (GitHub CLI) is required but not found. Install it: https://cli.github.com"
   fi
 
-  if ! command -v jq >/dev/null 2>&1; then
+  if ! command -v jq > /dev/null 2>&1; then
     die "jq is required but not found. Install it: https://jqlang.github.io/jq/download/"
   fi
 
-  if ! gh auth status >/dev/null 2>&1; then
+  if ! gh auth status > /dev/null 2>&1; then
     die "Not authenticated with GitHub. Run: gh auth login"
   fi
 }
@@ -77,24 +77,24 @@ function check_dependencies() {
 #   Reply body text to stdout
 function read_body() {
   case "$#" in
-  0)
-    cat
-    ;;
-  2)
-    if [[ "$1" != "--body-file" ]]; then
-      die "Invalid argument '$1'. Expected '--body-file <path>' or no arguments."
-    fi
-    if [[ -z "${2:-}" ]]; then
-      die "Missing path after --body-file"
-    fi
-    if [[ ! -f "$2" ]]; then
-      die "File not found: $2"
-    fi
-    cat -- "$2"
-    ;;
-  *)
-    die "Invalid arguments to read_body. Expected no arguments or '--body-file <path>'."
-    ;;
+    0)
+      cat
+      ;;
+    2)
+      if [[ "$1" != "--body-file" ]]; then
+        die "Invalid argument '$1'. Expected '--body-file <path>' or no arguments."
+      fi
+      if [[ -z "${2:-}" ]]; then
+        die "Missing path after --body-file"
+      fi
+      if [[ ! -f "$2" ]]; then
+        die "File not found: $2"
+      fi
+      cat -- "$2"
+      ;;
+    *)
+      die "Invalid arguments to read_body. Expected no arguments or '--body-file <path>'."
+      ;;
   esac
 }
 
@@ -129,13 +129,13 @@ function send_reply() {
       '
   )"
 
-  if jq -e '.errors and (.errors | length > 0)' >/dev/null <<<"${response}"; then
+  if jq -e '.errors and (.errors | length > 0)' > /dev/null <<< "${response}"; then
     local error_message
-    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<<"${response}")"
+    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<< "${response}")"
     die "Failed to send reply: ${error_message}"
   fi
 
-  comment_id="$(jq -r '.data.addPullRequestReviewThreadReply.comment.id // empty' <<<"${response}")"
+  comment_id="$(jq -r '.data.addPullRequestReviewThreadReply.comment.id // empty' <<< "${response}")"
   if [[ -z "${comment_id}" || "${comment_id}" == "null" ]]; then
     die "Failed to send reply: missing comment id in GraphQL response"
   fi
@@ -202,8 +202,8 @@ function do_fetch() {
   # Check for GraphQL errors before running the normalization filter
   local graphql_error
   graphql_error="$(
-    printf '%s' "${response}" |
-      jq -r 'map(.errors? // []) | add | .[0].message? // empty'
+    printf '%s' "${response}" \
+      | jq -r 'map(.errors? // []) | add | .[0].message? // empty'
   )"
 
   if [[ -n "${graphql_error}" ]]; then
@@ -214,8 +214,8 @@ function do_fetch() {
   # Invalid owner/repo/PR number can return null data without GraphQL errors.
   local null_path
   null_path="$(
-    printf '%s' "${response}" |
-      jq -r '
+    printf '%s' "${response}" \
+      | jq -r '
           [.[] | .data as $d |
             if $d.repository == null then "repository"
             elif $d.repository.pullRequest == null then "pullRequest"
@@ -229,8 +229,8 @@ function do_fetch() {
     die "Invalid response: ${null_path} is null. Verify the owner, repo, and PR number are correct."
   fi
 
-  printf '%s' "${response}" |
-    jq \
+  printf '%s' "${response}" \
+    | jq \
       --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" \
       --arg actions_login "${COPILOT_ACTIONS_LOGIN}" \
       --arg severity_pattern "${COPILOT_SEVERITY_PATTERN}" \
@@ -285,14 +285,14 @@ function do_resolve() {
   )"
 
   # Check for GraphQL errors before extracting the result
-  if jq -e '.errors and (.errors | length > 0)' >/dev/null <<<"${response}"; then
+  if jq -e '.errors and (.errors | length > 0)' > /dev/null <<< "${response}"; then
     local error_message
-    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<<"${response}")"
+    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<< "${response}")"
     die "Failed to resolve review thread ${thread_id}: ${error_message}"
   fi
 
   local is_resolved
-  is_resolved="$(jq -r '.data.resolveReviewThread.thread.isResolved' <<<"${response}")"
+  is_resolved="$(jq -r '.data.resolveReviewThread.thread.isResolved' <<< "${response}")"
 
   if [[ "${is_resolved}" != "true" ]]; then
     die "Failed to resolve review thread ${thread_id}: isResolved=${is_resolved}"
@@ -336,7 +336,7 @@ function do_reply_and_resolve() {
   comment_id=$(send_reply "${thread_id}" "${body}")
 
   # Resolve after successful reply; do_resolve handles error reporting
-  do_resolve "${thread_id}" >/dev/null
+  do_resolve "${thread_id}" > /dev/null
 
   echo "${comment_id}"
 }
@@ -355,38 +355,38 @@ function main() {
   # Validate command before checking dependencies so that missing/unknown
   # commands show usage errors rather than confusing dependency failures.
   case "${command}" in
-  fetch | resolve | reply | reply-and-resolve)
-    check_dependencies
-    ;;
-  "")
-    usage
-    exit 1
-    ;;
-  *)
-    die "Unknown command: ${command}. Use '${SCRIPT_NAME} --help' for usage."
-    ;;
+    fetch | resolve | reply | reply-and-resolve)
+      check_dependencies
+      ;;
+    "")
+      usage
+      exit 1
+      ;;
+    *)
+      die "Unknown command: ${command}. Use '${SCRIPT_NAME} --help' for usage."
+      ;;
   esac
 
   case "${command}" in
-  fetch)
-    [[ $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} fetch <owner> <repo> <pr_number>"
-    do_fetch "$1" "$2" "$3"
-    ;;
-  resolve)
-    [[ $# -ne 1 ]] && die "Usage: ${SCRIPT_NAME} resolve <thread_id>"
-    do_resolve "$1"
-    ;;
-  reply)
-    [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply <thread_id> [--body-file <path>]"
-    do_reply "$@"
-    ;;
-  reply-and-resolve)
-    [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply-and-resolve <thread_id> [--body-file <path>]"
-    do_reply_and_resolve "$@"
-    ;;
-  *)
-    die "Unknown command: ${command}"
-    ;;
+    fetch)
+      [[ $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} fetch <owner> <repo> <pr_number>"
+      do_fetch "$1" "$2" "$3"
+      ;;
+    resolve)
+      [[ $# -ne 1 ]] && die "Usage: ${SCRIPT_NAME} resolve <thread_id>"
+      do_resolve "$1"
+      ;;
+    reply)
+      [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply <thread_id> [--body-file <path>]"
+      do_reply "$@"
+      ;;
+    reply-and-resolve)
+      [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply-and-resolve <thread_id> [--body-file <path>]"
+      do_reply_and_resolve "$@"
+      ;;
+    *)
+      die "Unknown command: ${command}"
+      ;;
   esac
 }
 

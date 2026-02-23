@@ -168,9 +168,9 @@ const sharedRules = {
   ...security.configs.recommended.rules,
   ...unicornRules,
   "capitalized-comments": "off",
-  "complexity": ["error", { max: 25 }],
+  complexity: ["error", { max: 25 }],
   "default-case": ["error", { commentPattern: "^no default$" }],
-  "eqeqeq": ["error", "smart"],
+  eqeqeq: ["error", "smart"],
   "func-names": ["error", "as-needed"],
   "func-style": "off",
   "grouped-accessor-pairs": ["error", "getBeforeSet"],
@@ -452,11 +452,7 @@ Add this rule block:
 ```js
 const nodeRules = {
   ...nodePlugin.configs["flat/all"].rules,
-  "n/file-extension-in-import": [
-    "error",
-    "always",
-    { ".cjs": "never", ".js": "never", ".jsx": "never", ".mjs": "never" },
-  ],
+  "n/file-extension-in-import": ["error", "always", { ".cjs": "never", ".js": "never", ".jsx": "never", ".mjs": "never" }],
   "n/hashbang": "off",
   "n/no-process-env": "off",
   "n/no-sync": "off",
