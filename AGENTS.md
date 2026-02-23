@@ -373,6 +373,22 @@ This repository uses two levels of semver versioning:
 
 **Version checks on branch operations**: After merging, rebasing, or before creating a PR, use the `check-versions` skill to verify version correctness. Another branch may have already incremented a version, so always check.
 
+### GitHub Actions Versions
+
+Several plugins contain GitHub Actions workflow templates in their `references/` directories. When writing or editing these templates, always use the **latest major version** of each action. Do not copy version pins from other files without verifying they are current.
+
+Before writing any `uses:` line in a workflow template, look up the action's latest major version tag (e.g., via web search or the action's GitHub releases page). Common actions referenced in this repository:
+
+- `actions/checkout`
+- `actions/setup-go`
+- `actions/setup-node`
+- `astral-sh/setup-uv`
+- `golangci/golangci-lint-action`
+- `goreleaser/goreleaser-action`
+- `raven-actions/actionlint`
+
+When updating a version, search the full repository for other occurrences of the same action and update them all to avoid drift.
+
 ## License
 
 MIT License - see LICENSE file for details.
