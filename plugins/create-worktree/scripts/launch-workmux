@@ -6,7 +6,7 @@ SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
 function usage() {
-  cat << 'USAGE_TEXT'
+  cat <<'USAGE_TEXT'
 Usage: launch-workmux <branch-name> <prompt-file> [--base <branch>]
 
 Create a worktree and tmux window via workmux, fully detached from the
@@ -41,7 +41,7 @@ function do_launch() {
     cmd+=(--base "${base_branch}")
   fi
 
-  "${cmd[@]}" > "${log}" 2>&1 &
+  "${cmd[@]}" >"${log}" 2>&1 &
   disown
   sleep 8
 
@@ -60,17 +60,17 @@ function main() {
 
   while [[ $# -gt 0 ]]; do
     case "${1}" in
-      --base)
-        base_branch="${2:?--base requires a branch name}"
-        shift 2
-        ;;
-      -*)
-        die "unknown option: ${1}"
-        ;;
-      *)
-        positional+=("${1}")
-        shift
-        ;;
+    --base)
+      base_branch="${2:?--base requires a branch name}"
+      shift 2
+      ;;
+    -*)
+      die "unknown option: ${1}"
+      ;;
+    *)
+      positional+=("${1}")
+      shift
+      ;;
     esac
   done
 

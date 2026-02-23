@@ -137,6 +137,19 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── pr/
     │           └── SKILL.md
+    ├── release/                     # Versioned release preparation skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── release/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── changelog-format.md
+    │               ├── conventional-commits.md
+    │               ├── doc-checklist.md
+    │               ├── project-types.md
+    │               └── version-patterns.md
     ├── notify/                     # Notification hooks plugin
     │   ├── .claude-plugin/
     │   │   └── plugin.json

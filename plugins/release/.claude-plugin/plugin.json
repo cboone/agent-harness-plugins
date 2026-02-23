@@ -1,0 +1,21 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Prepare a versioned release: analyze commits, update versions and changelog, create a release commit, and tag locally.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": [
+    "changelog",
+    "conventional-commits",
+    "git",
+    "release",
+    "semver",
+    "tags",
+    "versioning"
+  ],
+  "license": "MIT",
+  "name": "release",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
