@@ -301,7 +301,7 @@
       "name": "setup-gitleaks",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-gitleaks",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     {
       "author": {
@@ -315,7 +315,7 @@
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.2.1"
+      "version": "1.2.2"
     },
     {
       "author": {

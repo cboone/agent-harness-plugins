@@ -9,5 +9,5 @@
   "name": "setup-linters",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "skills": "./skills",
-  "version": "1.2.1"
+  "version": "1.2.2"
 }
