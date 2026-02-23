@@ -84,13 +84,32 @@ jobs:
             gofmt -l .
             exit 1
           fi
+
+  vulncheck:
+    name: Vulnerability check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "MINIMUM-GO-VERSION"
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck
+        run: govulncheck ./...
 ```
 
 ## Notes
 
-- Four parallel jobs: test, lint, build, format
+- Five parallel jobs: test, lint, build, format, vulncheck
 - The test job uses a Go version matrix (`MINIMUM-GO-VERSION` + `stable`) to verify compatibility across versions
 - The lint job uses the official golangci-lint GitHub Action for consistent results
 - The format job checks that all files pass `gofmt` (fails CI if not)
+- The vulncheck job uses `govulncheck` from the Go team to detect known vulnerabilities in dependencies
 - `permissions: contents: read` follows the principle of least privilege
 - Libraries benefit from multi-version testing more than CLIs because consumers may use older Go versions

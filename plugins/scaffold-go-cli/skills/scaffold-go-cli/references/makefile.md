@@ -9,7 +9,7 @@ OUTDIR  := bin
 
 LDFLAGS := -ldflags "-X main.version=$(VERSION)"
 
-.PHONY: build test lint vet fmt clean cover tidy help
+.PHONY: build test lint vet fmt vuln clean cover tidy help
 
 build: ## Build the binary
 	mkdir -p $(OUTDIR)
@@ -26,6 +26,9 @@ vet: ## Run go vet
 
 fmt: ## Check formatting (exits non-zero if files need formatting)
 	@test -z "$$(gofmt -l .)" || { gofmt -l . && exit 1; }
+
+vuln: ## Run govulncheck
+	govulncheck ./...
 
 clean: ## Remove build artifacts
 	rm -rf $(OUTDIR) dist coverage.out
@@ -48,3 +51,4 @@ help: ## Show this help
 - Binary output goes to `bin/` to keep the project root clean
 - `fmt` target checks formatting without modifying files (CI-friendly)
 - `lint` assumes `golangci-lint` is installed (`brew install golangci-lint`)
+- `vuln` assumes `govulncheck` is installed (`go install golang.org/x/vuln/cmd/govulncheck@latest`)
