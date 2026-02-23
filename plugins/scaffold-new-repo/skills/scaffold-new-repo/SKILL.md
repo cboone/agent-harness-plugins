@@ -148,9 +148,7 @@ Create a minimal team-shared settings scaffold:
 Create a Copilot instructions file using the template from `./references/copilot-instructions-md.md`.
 
 - Replace the heading with the project name in title case
-- The file cross-references AGENTS.md and includes a placeholder PR Review section
-
-At scaffold time the PR Review section will have only a placeholder entry. Real "do not flag" items accumulate over time as Copilot incorrectly flags patterns during PR reviews.
+- The file cross-references AGENTS.md for full project conventions
 
 ### 9. Create docs/plans/
 
