@@ -4,13 +4,13 @@ This is the single source of truth for all AI coding agents (Claude Code, Codex,
 
 Replace `PROJECT-NAME` with the project name in title case and `SHORT-DESCRIPTION` with the one-sentence description.
 
-````markdown
+```markdown
 # PROJECT-NAME
 
 ## Overview
 
 SHORT-DESCRIPTION
-````
+```
 
 ## Notes
 
