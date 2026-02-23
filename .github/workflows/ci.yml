@@ -23,7 +23,11 @@ jobs:
       - name: Lint Markdown
         run: yarn lint
       - name: ShellCheck
-        run: shellcheck -S warning plugins/*/scripts/*
+        run: shellcheck -S warning bin/* plugins/*/scripts/*
+      - name: Set up shfmt
+        uses: mfinelli/setup-shfmt@v4
+      - name: shfmt
+        run: shfmt -d bin/* plugins/*/scripts/*
       - name: Actionlint
         uses: raven-actions/actionlint@v2
       - name: Validate JSON syntax
