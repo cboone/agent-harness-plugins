@@ -16,7 +16,7 @@ readonly SCRIPT_NAME
 # =============================================================================
 
 function usage() {
-  cat <<'USAGE_TEXT'
+  cat << 'USAGE_TEXT'
 Usage: bin/notify [command] [options]
 
 Sends macOS notifications via terminal-notifier.
@@ -59,7 +59,7 @@ function extract_last_user_message() {
   # Search for last user message (type: human)
   # Read failures are intentionally ignored (notification script)
   # shellcheck disable=SC2312
-  tac "${transcript_path}" 2>/dev/null | while read -r line; do
+  tac "${transcript_path}" 2> /dev/null | while read -r line; do
     local msg_type
     msg_type=$(echo "${line}" | jq -r '.type // empty')
     if [[ "${msg_type}" = "human" ]]; then
@@ -100,7 +100,7 @@ function do_stop() {
   local project
   project=$(basename "${PWD}")
   local branch
-  branch=$(git branch --show-current 2>/dev/null || echo "unknown")
+  branch=$(git branch --show-current 2> /dev/null || echo "unknown")
 
   # Get last user message from transcript
   local task
@@ -125,22 +125,22 @@ function main() {
 
   # If first argument is a known command
   case "${1:-}" in
-  stop)
-    do_stop
-    ;;
-  send)
-    shift
-    do_send "$@"
-    ;;
-  -*)
-    echo "Error: unknown option: $1" >&2
-    echo "Use '${SCRIPT_NAME} --help' to see available options." >&2
-    exit 1
-    ;;
-  *)
-    # Default behavior: treat arguments as send
-    do_send "$@"
-    ;;
+    stop)
+      do_stop
+      ;;
+    send)
+      shift
+      do_send "$@"
+      ;;
+    -*)
+      echo "Error: unknown option: $1" >&2
+      echo "Use '${SCRIPT_NAME} --help' to see available options." >&2
+      exit 1
+      ;;
+    *)
+      # Default behavior: treat arguments as send
+      do_send "$@"
+      ;;
   esac
 }
 
