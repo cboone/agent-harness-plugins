@@ -187,10 +187,11 @@ If the filename already has a datestamp prefix and a meaningful description, lea
 When committing code changes alongside a plan file, or when all the work described in a plan is being committed:
 
 1. Check whether the plan's work is complete. Indicators: the branch is being finalized, the user says the work is done, or the commit represents the last piece of the plan.
-1. If the work is complete, move the plan file to `docs/plans/done/` (creating the directory if it does not exist).
+1. If the work is complete, apply [Plan Name Cleanup](#plan-name-cleanup) first (if needed), so any rename happens before the move.
+1. Move the (possibly renamed) plan file to `docs/plans/done/` (creating the directory if it does not exist). If both a rename and a move apply, perform a single `git mv` from the original path directly to the final destination (e.g., `docs/plans/done/YYYY-MM-DD-slug.md`).
 1. If the plan is currently in `docs/plans/todo/`, the move goes from `todo/` to `done/`.
 1. If the plan is in the `docs/plans/` root, the move goes from there to `done/`.
-1. Stage the file move as part of the commit.
+1. Stage the rename (if any) and the file move together as part of the commit.
 
 Do not move a plan to `done/` if the work is only partially complete. Plans for work still in progress should stay in `docs/plans/todo/` or the `docs/plans/` root.
 
@@ -199,20 +200,20 @@ Do not move a plan to `done/` if the work is only partially complete. Plans for 
 Commit only the plan file(s):
 
 1. Apply [Plan Name Cleanup](#plan-name-cleanup) first.
-1. Stage only the plan file(s).
+1. Apply [Moving Completed Plans](#moving-completed-plans) if the plan's work is fully complete.
+1. Stage only the plan file(s), including any renames or moves.
 1. Generate a message like `docs: add plan for <meaningful-description>` where the description is derived from the plan's content or title.
 
 ### "Give the plan a meaningful name and commit"
 
-1. Apply [Plan Name Cleanup](#plan-name-cleanup) (this request explicitly calls for it).
-1. Stage both the deletion of the old file and the addition of the renamed file.
+1. Apply [Plan Name Cleanup](#plan-name-cleanup) (this request explicitly calls for it; the cleanup procedure handles staging).
 1. Commit with an appropriate message.
 
 ### "Commit the plan as one commit, then the changes as another"
 
 Create two sequential commits:
 
-1. First commit: Apply [Plan Name Cleanup](#plan-name-cleanup) and [Moving Completed Plans](#moving-completed-plans), then stage and commit the plan file with a `docs:` message.
+1. First commit: Apply [Plan Name Cleanup](#plan-name-cleanup) and [Moving Completed Plans](#moving-completed-plans). If both apply to the same plan file, perform a single `git mv` from the original path directly to the final `done/` destination (e.g., `docs/plans/done/YYYY-MM-DD-slug.md`). Stage and commit the plan file with a `docs:` message.
 1. Second commit: Stage and commit the remaining changes with an appropriate message.
 
 ## Compound Commands
