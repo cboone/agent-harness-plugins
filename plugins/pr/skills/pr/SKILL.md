@@ -2,10 +2,11 @@
 name: pr
 description: >-
   Commit all changes (if needed), push to remote, and create a GitHub pull
-  request in one automated step with no prompts. Use when the user says "pr",
-  "create a pr", "open a pr", "submit a pr", "push and create pr", "commit and
-  create pr", or any variant involving creating a pull request from the current
-  branch. Requires the gh CLI to be installed.
+  request in one automated step with no prompts. Handles plan files
+  automatically (renaming, moving completed plans to done). Use when the user
+  says "pr", "create a pr", "open a pr", "submit a pr", "push and create pr",
+  "commit and create pr", or any variant involving creating a pull request from
+  the current branch. Requires the gh CLI to be installed.
 ---
 
 # PR
@@ -117,9 +118,15 @@ If there are no staged changes, unstaged changes, or untracked files, skip this 
 
 Never stage files that likely contain secrets (`.env`, `credentials.json`, `*.pem`, `*.key`, etc.). If such files are detected, warn the user and exclude them.
 
+#### Handle plan files
+
+Before identifying logical chunks, check for plan files among the uncommitted changes. Plan files live under `docs/plans/` and its subdirectories (`todo/`, `done/`). If any Markdown files in these directories are among the changed or untracked files, apply [Plan-Aware Commits](#plan-aware-commits) rules to them.
+
+Plan files always form their own logical chunk, committed separately from code changes. Process the plan file chunk first, then proceed with the remaining changes.
+
 #### Identify logical chunks
 
-Review all uncommitted changes and group them into the smallest logical chunks. Each chunk should be a self-contained, coherent change that makes sense on its own:
+Review all uncommitted changes (excluding any plan files already handled above) and group them into the smallest logical chunks. Each chunk should be a self-contained, coherent change that makes sense on its own:
 
 1. **Examine the diff**: Look at all changed and untracked files and understand what each change accomplishes.
 1. **Group by purpose**: Changes that serve the same purpose belong together. A new function and its tests are one chunk, but an unrelated formatting fix is a separate chunk.
@@ -238,6 +245,44 @@ After the PR is created, report:
 1. The commit hash(es) included.
 1. A brief summary of what was committed and pushed.
 1. Connected issues (if any) and the closing keywords used.
+
+## Plan-Aware Commits
+
+When plan files are detected among uncommitted changes, apply the rules in this section during step 4.
+
+### Detecting Plan Files
+
+Plan files live under `docs/plans/` and its subdirectories (`todo/`, `done/`). Look for Markdown files in these directories among the changed or untracked files.
+
+### Plan Name Cleanup
+
+Well-named plans follow the pattern `YYYY-MM-DD-meaningful-description.md`. Auto-generated names use nonsensical word combinations (e.g., `ethereal-booping-sunbeam.md`, `quizzical-imagining-cerf.md`).
+
+**Every time a plan file is part of a commit, check its filename.** If the name lacks a datestamp prefix or uses a nonsensical auto-generated name:
+
+1. Read the plan file to understand its content.
+1. Choose a meaningful slug derived from the plan's title or purpose (e.g., `consolidate-ci-workflows`, `add-user-authentication`).
+1. Rename the file to `YYYY-MM-DD-<slug>.md`, using the current date for new plans or the date from the plan's title/content if one is stated.
+1. Stage both the deletion of the old path and the addition of the new path.
+
+If the filename already has a datestamp prefix and a meaningful description, leave it as-is.
+
+### Moving Completed Plans
+
+Creating a PR typically means the work described in a plan is complete. When plan files are detected among the changes:
+
+1. Check whether the plan's work is complete. Indicators: all the code changes on the branch correspond to the plan, or the user confirms the work is done.
+1. If the work is complete, apply [Plan Name Cleanup](#plan-name-cleanup) first (if needed), so any rename happens before the move.
+1. Move the (possibly renamed) plan file to `docs/plans/done/` (creating the directory if it does not exist). If both a rename and a move apply, perform a single `git mv` from the original path directly to the final destination (e.g., `docs/plans/done/YYYY-MM-DD-slug.md`).
+1. If the plan is currently in `docs/plans/todo/`, the move goes from `todo/` to `done/`.
+1. If the plan is in the `docs/plans/` root, the move goes from there to `done/`.
+1. Stage the rename (if any) and the file move together as part of the plan commit.
+
+Do not move a plan to `done/` if the work is only partially complete. Plans for work still in progress should stay in `docs/plans/todo/` or the `docs/plans/` root.
+
+### Plan Commit Message
+
+When committing plan files, use a message like `docs: add plan for <meaningful-description>` for new plans, or `docs: move plan to done for <meaningful-description>` when moving a completed plan.
 
 ## Error Handling
 
