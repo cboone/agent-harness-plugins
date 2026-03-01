@@ -159,9 +159,9 @@ Re-run all detected tools one final time in check mode to confirm a clean state:
 
 Otherwise, check for file changes and commit:
 
-1. Run `git status` to check whether any files were modified by the fix commands.
-1. **If no files were modified**: Report "No changes needed, all files were already clean." and stop.
-1. **If files were modified**: Stage all files modified by the lint and format fixes.
+1. Run `git status --porcelain` and check whether its output is empty.
+1. **If no files were modified** (i.e., `git status --porcelain` produced no output): Report "No changes needed, all files were already clean." and stop.
+1. **If files were modified** (i.e., `git status --porcelain` produced any output): Stage all files modified by the lint and format fixes.
 1. Generate a conventional commit message:
    - Use `style:` for pure formatting and linting fixes.
    - Use `fix:` if linting changes corrected actual bugs (e.g., unused variables removed, error handling added).
