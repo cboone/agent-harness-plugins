@@ -163,23 +163,48 @@ git push -u origin HEAD
 
 ## Plan-Aware Commits
 
-When the user mentions "commit the plan" or `--plan` is specified, or when plan files are detected in the changes:
+When the user mentions "commit the plan" or `--plan` is specified, or when plan files are detected among the changes, apply the rules in this section.
 
 ### Detecting Plan Files
 
-Plan files are typically found in `docs/plans/` or similar directories. Look for markdown files in plan-related directories among the changed files.
+Plan files live under `docs/plans/` and its subdirectories (`todo/`, `done/`). Look for Markdown files in these directories among the changed or untracked files.
+
+### Plan Name Cleanup
+
+Well-named plans follow the pattern `YYYY-MM-DD-meaningful-description.md`. Auto-generated names use nonsensical word combinations (e.g., `ethereal-booping-sunbeam.md`, `quizzical-imagining-cerf.md`).
+
+**Every time a plan file is part of a commit, check its filename.** If the name lacks a datestamp prefix or uses a nonsensical auto-generated name:
+
+1. Read the plan file to understand its content.
+1. Choose a meaningful slug derived from the plan's title or purpose (e.g., `consolidate-ci-workflows`, `add-user-authentication`).
+1. Rename the file to `YYYY-MM-DD-<slug>.md`, using the current date for new plans or the date from the plan's title/content if one is stated.
+1. Stage both the deletion of the old path and the addition of the new path.
+
+If the filename already has a datestamp prefix and a meaningful description, leave it as-is.
+
+### Moving Completed Plans
+
+When committing code changes alongside a plan file, or when all the work described in a plan is being committed:
+
+1. Check whether the plan's work is complete. Indicators: the branch is being finalized, the user says the work is done, or the commit represents the last piece of the plan.
+1. If the work is complete, move the plan file to `docs/plans/done/` (creating the directory if it does not exist).
+1. If the plan is currently in `docs/plans/todo/`, the move goes from `todo/` to `done/`.
+1. If the plan is in the `docs/plans/` root, the move goes from there to `done/`.
+1. Stage the file move as part of the commit.
+
+Do not move a plan to `done/` if the work is only partially complete. Plans for work still in progress should stay in `docs/plans/todo/` or the `docs/plans/` root.
 
 ### "Commit the plan"
 
 Commit only the plan file(s):
 
+1. Apply [Plan Name Cleanup](#plan-name-cleanup) first.
 1. Stage only the plan file(s).
 1. Generate a message like `docs: add plan for <meaningful-description>` where the description is derived from the plan's content or title.
 
 ### "Give the plan a meaningful name and commit"
 
-1. Read the plan file to understand its content.
-1. Rename the plan file to a descriptive name based on its content (e.g., `docs/plans/add-user-authentication.md`).
+1. Apply [Plan Name Cleanup](#plan-name-cleanup) (this request explicitly calls for it).
 1. Stage both the deletion of the old file and the addition of the renamed file.
 1. Commit with an appropriate message.
 
@@ -187,7 +212,7 @@ Commit only the plan file(s):
 
 Create two sequential commits:
 
-1. First commit: Stage and commit only plan file(s) with a `docs:` message.
+1. First commit: Apply [Plan Name Cleanup](#plan-name-cleanup) and [Moving Completed Plans](#moving-completed-plans), then stage and commit the plan file with a `docs:` message.
 1. Second commit: Stage and commit the remaining changes with an appropriate message.
 
 ## Compound Commands
