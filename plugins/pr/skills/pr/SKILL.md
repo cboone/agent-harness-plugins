@@ -208,26 +208,24 @@ If no connected issues were detected, omit the `## Closes` section entirely.
 
 #### Create the PR
 
+First, write the PR body to a temporary file using the Write tool:
+
+- File path: `/tmp/pr-body.md`
+- Content: the full PR body (Summary, Test plan, and Closes sections)
+
+Then create the PR with `--body-file`:
+
 ```bash
-gh pr create --title "the pr title" --body "$(
-  cat << 'EOF'
-## Summary
-
-- Key change 1
-- Key change 2
-
-## Test plan
-
-- [ ] Verify change works as expected
-
-## Closes
-
-Closes #42
-EOF
-)"
+gh pr create --title "the pr title" --body-file /tmp/pr-body.md
 ```
 
 Do not pass `--base` unless the base branch is not the repository default. Do not pass `--draft`. Do not add labels or reviewers.
+
+After the PR is created, clean up the temp file:
+
+```bash
+rm /tmp/pr-body.md
+```
 
 ### 7. Report Results
 
