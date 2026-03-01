@@ -186,6 +186,12 @@ cboone-cc-plugins/
     │   ├── README.md
     │   └── commands/
     │       └── scaffold-go-library.md
+    ├── setup-ci/                   # GitHub Actions CI setup command
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── commands/
+    │       └── setup-ci.md
     ├── setup-gitleaks/             # Gitleaks secret scanning setup command
     │   ├── .claude-plugin/
     │   │   └── plugin.json

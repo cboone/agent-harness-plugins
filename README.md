@@ -37,6 +37,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Scaffold Go CLI](#scaffold-go-cli)
 ∙ [Scaffold Go Library](#scaffold-go-library)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
+∙ [Setup CI](#setup-ci)
 ∙ [Setup Gitleaks](#setup-gitleaks)
 ∙ [Setup Installers](#setup-installers)
 
@@ -268,6 +269,13 @@ Scaffold the universal boilerplate for any new repository: LICENSE, README, .git
 
 > **Trigger:** `/scaffold-new-repo`
 > **Details:** [README](./plugins/scaffold-new-repo/README.md)
+
+#### Setup CI
+
+Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets. Detects the project language (Go, JavaScript/TypeScript, Python, Rust, Ruby, Shell) and generates appropriate parallel CI jobs and Makefile targets.
+
+> **Trigger:** `/setup-ci`
+> **Details:** [README](./plugins/setup-ci/README.md)
 
 #### Setup Gitleaks
 
