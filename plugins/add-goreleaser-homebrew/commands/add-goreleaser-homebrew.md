@@ -32,7 +32,14 @@ If the command fails or produces no output, ask the user to provide their GitHub
 
 Collect the following, inferring from existing files where possible:
 
-- **Project name**: derive from the binary name in the Makefile, the directory name, or the last segment of the module path in `go.mod`
+- **Project name**: determine in this precedence order:
+  1. If a Makefile defines a binary name (for example via a `BINARY`/`TOOL_BIN` variable or the target passed to `go build -o`), use that name.
+  1. Otherwise, use the last segment of the module path in `go.mod`.
+  1. Otherwise, try `git remote get-url origin`: strip any trailing `.git` from the URL and take the last path segment. If the command exits non-zero, returns empty output, or the URL cannot be parsed into a repo name, treat this as "no remote" and continue to step 4.
+  1. If none of the above yield a name, ask the user for the project name.
+
+  Do not derive the project name from the directory or branch name, which are often misleading.
+
 - **Short description**: check the README for a one-line description; if not found, ask the user
 - **Homebrew dependencies**: ask whether the tool has any runtime dependencies to declare in the formula (e.g., `gh`, `docker`)
 

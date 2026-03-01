@@ -365,15 +365,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"markdownlint-cli2-formatter-summarize@npm:^0.0.8":
-  version: 0.0.8
-  resolution: "markdownlint-cli2-formatter-summarize@npm:0.0.8"
-  peerDependencies:
-    markdownlint-cli2: ">=0.0.4"
-  checksum: 10c0/084abe448de3095952c4b3f73fde347fb459ace8418c44f844c9818586c3037ff475ff2db715032c122bc689e09c19fcfe3fb468cbda776df38201163c760b4a
-  languageName: node
-  linkType: hard
-
 "markdownlint-cli2@npm:^0.20.0":
   version: 0.20.0
   resolution: "markdownlint-cli2@npm:0.20.0"
@@ -817,7 +808,6 @@ __metadata:
   dependencies:
     "@github/markdownlint-github": "npm:^0.8.0"
     markdownlint-cli2: "npm:^0.20.0"
-    markdownlint-cli2-formatter-summarize: "npm:^0.0.8"
     markdownlint-rule-force-align-table-columns: "npm:^0.1.1"
     markdownlint-rule-relative-links: "npm:^4.2.0"
     prettier: "npm:^3.8.1"
