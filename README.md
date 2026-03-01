@@ -17,23 +17,27 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 [Address Review](#address-review)
 ∙ [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
 <br>Code Quality:
-[Add Scrut CLI Tests](#add-scrut-cli-tests)
-∙ [Handle Secrets](#handle-secrets)
+[Handle Secrets](#handle-secrets)
 ∙ [Lint and Fix](#lint-and-fix)
+∙ [Setup Linters](#setup-linters)
 ∙ [Write Go Code](#write-go-code)
 ∙ [Write Markdown](#write-markdown)
 ∙ [Write Scrut Tests](#write-scrut-tests)
 ∙ [Write Shell Scripts](#write-shell-scripts)
+<br>Agents:
+[Clean Up Agent Config](#clean-up-agent-config)
+∙ [Create Plugin](#create-plugin)
+
+**Commands**
+<br>Code Quality:
+[Add Scrut CLI Tests](#add-scrut-cli-tests)
 <br>Scaffolding:
 [Add GoReleaser Homebrew](#add-goreleaser-homebrew)
 ∙ [Scaffold Go CLI](#scaffold-go-cli)
 ∙ [Scaffold Go Library](#scaffold-go-library)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
 ∙ [Setup Gitleaks](#setup-gitleaks)
-∙ [Setup Linters](#setup-linters)
-<br>Agents:
-[Clean Up Agent Config](#clean-up-agent-config)
-∙ [Create Plugin](#create-plugin)
+∙ [Setup Installers](#setup-installers)
 
 **Hooks**
 <br>Security:
@@ -144,14 +148,6 @@ Process and resolve GitHub Copilot automated PR review comments. Categorizes thr
 
 Style guides, linters, and security practices. These skills activate automatically when working with their target languages and file types.
 
-#### Add Scrut CLI Tests
-
-Set up scrut snapshot-based CLI integration testing for a Go CLI project. Creates starter test files, adds Makefile targets, and configures CI to run scrut tests.
-
-> **Trigger:** `/add-scrut-cli-tests`
-> **Requires:** [`scrut`](https://github.com/facebookincubator/scrut) (Makefile checks for availability and provides install instructions)
-> **Details:** [README](./plugins/add-scrut-cli-tests/README.md)
-
 #### Handle Secrets
 
 Best practices for handling user-provided secrets in CLI tools. Covers secure input methods, credential storage, secret masking, and language-specific libraries.
@@ -194,6 +190,45 @@ Bash style conventions for creating and editing shell scripts. Activates automat
 > **Trigger:** `/write-shell-scripts` (also activates automatically)
 > **Details:** [README](./plugins/write-shell-scripts/README.md)
 
+#### Setup Linters
+
+Detect project languages and file types, recommend appropriate linters and formatters, install them, and generate config files. Supports JavaScript/TypeScript (ESLint + Prettier), Go, Python, Rust, Ruby, Shell, and cross-language tools (EditorConfig, markdownlint, Stylelint, Hadolint, Actionlint, and more).
+
+> **Trigger:** `/setup-linters`
+> **Details:** [README](./plugins/setup-linters/README.md)
+
+### Agents
+
+Meta-tools for the agent ecosystem. Audit agent configuration files and create new plugins.
+
+#### Clean Up Agent Config
+
+Review and reorganize AI coding agent configuration files across Claude Code, OpenAI Codex, GitHub Copilot, and OpenCode. Identifies duplications, proposes a consolidated structure, and includes comprehensive reference documentation.
+
+> **Trigger:** `/clean-up-agent-config`
+> **Details:** [README](./plugins/clean-up-agent-config/README.md)
+
+#### Create Plugin
+
+Guide for creating new plugins in this repository with consistent structure and conventions. Walks through the full process from choosing a plugin type to registering in the marketplace.
+
+> **Trigger:** `/create-plugin`
+> **Details:** [README](./plugins/create-plugin/README.md)
+
+## Commands
+
+Commands are invoked explicitly via `/command-name` and are not loaded into the system prompt. Use these for one-time setup tasks.
+
+### Code Quality
+
+#### Add Scrut CLI Tests
+
+Set up scrut snapshot-based CLI integration testing for a CLI project. Detects the project language, creates starter test files, adds Makefile targets, and configures CI to run scrut tests.
+
+> **Trigger:** `/add-scrut-cli-tests`
+> **Requires:** [`scrut`](https://github.com/facebookincubator/scrut) (Makefile checks for availability and provides install instructions)
+> **Details:** [README](./plugins/add-scrut-cli-tests/README.md)
+
 ### Scaffolding
 
 Bootstrap new projects with consistent structure. Generate boilerplate, CI/CD pipelines, and security scanning from templates.
@@ -232,30 +267,12 @@ Set up gitleaks secret scanning with a GitHub Actions workflow and optional conf
 > **Trigger:** `/setup-gitleaks`
 > **Details:** [README](./plugins/setup-gitleaks/README.md)
 
-#### Setup Linters
+#### Setup Installers
 
-Detect project languages and file types, recommend appropriate linters and formatters, install them, and generate config files. Supports JavaScript/TypeScript (ESLint + Prettier), Go, Python, Rust, Ruby, Shell, and cross-language tools (EditorConfig, markdownlint, Stylelint, Hadolint, Actionlint, and more).
+Set up installer and distribution methods for projects: Homebrew tap formula, shell install script with OS/arch detection, and go install compatibility. Detects existing release infrastructure and generates appropriate files.
 
-> **Trigger:** `/setup-linters`
-> **Details:** [README](./plugins/setup-linters/README.md)
-
-### Agents
-
-Meta-tools for the agent ecosystem. Audit agent configuration files and create new plugins.
-
-#### Clean Up Agent Config
-
-Review and reorganize AI coding agent configuration files across Claude Code, OpenAI Codex, GitHub Copilot, and OpenCode. Identifies duplications, proposes a consolidated structure, and includes comprehensive reference documentation.
-
-> **Trigger:** `/clean-up-agent-config`
-> **Details:** [README](./plugins/clean-up-agent-config/README.md)
-
-#### Create Plugin
-
-Guide for creating new plugins in this repository with consistent structure and conventions. Walks through the full process from choosing a plugin type to registering in the marketplace.
-
-> **Trigger:** `/create-plugin`
-> **Details:** [README](./plugins/create-plugin/README.md)
+> **Trigger:** `/setup-installers`
+> **Details:** [README](./plugins/setup-installers/README.md)
 
 ## Hooks
 

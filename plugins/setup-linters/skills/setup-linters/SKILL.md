@@ -2,10 +2,7 @@
 name: setup-linters
 description: >-
   Detect project languages, recommend appropriate linters and formatters,
-  install them, and generate config files. Use when the user says "set up
-  linters", "add linting", "set up eslint", "add prettier", "set up ruff",
-  "add formatting", "configure linters", "add code quality
-  tools", "setup linters", or asks to add linting or formatting to a project.
+  install them, and generate config files.
 ---
 
 # Setup Linters

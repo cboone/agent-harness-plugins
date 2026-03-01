@@ -35,6 +35,5 @@ The skill also activates automatically when creating or editing `.md` files in `
 
 ## See Also
 
-- [Add Scrut CLI Tests](../add-scrut-cli-tests/README.md): set up scrut testing infrastructure in a Go CLI project
-- [Write Go Code](../write-go-code/README.md): Go style guide for the CLI source code
+- [Add Scrut CLI Tests](../add-scrut-cli-tests/README.md): set up scrut testing infrastructure in a CLI project
 - [All plugins](../../README.md)

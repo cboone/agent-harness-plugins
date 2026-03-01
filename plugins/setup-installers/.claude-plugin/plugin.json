@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "commands": "./commands",
+  "description": "Set up installer and distribution methods for projects: Homebrew tap, shell install script, and go install compatibility.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["distribution", "go", "golang", "homebrew", "install"],
+  "license": "MIT",
+  "name": "setup-installers",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "version": "1.0.0"
+}

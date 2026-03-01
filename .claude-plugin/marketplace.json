@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code skills and hooks from Christopher Boone (cboone.github.io)",
-    "version": "1.14.0"
+    "version": "1.15.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -21,21 +21,21 @@
       "name": "add-goreleaser-homebrew",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/add-goreleaser-homebrew",
-      "version": "1.0.1"
+      "version": "1.1.0"
     },
     {
       "author": {
         "name": "Christopher Boone"
       },
       "category": "code-quality",
-      "description": "Set up scrut snapshot-based CLI integration testing for a Go CLI project.",
+      "description": "Set up scrut snapshot-based CLI integration testing for a CLI project.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["cli", "go", "golang", "scrut", "testing"],
+      "keywords": ["cli", "scrut", "testing"],
       "license": "MIT",
       "name": "add-scrut-cli-tests",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/add-scrut-cli-tests",
-      "version": "1.1.0"
+      "version": "1.3.0"
     },
     {
       "author": {
@@ -91,7 +91,7 @@
       "name": "commit",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/commit",
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "author": {
@@ -259,7 +259,7 @@
       "name": "scaffold-go-cli",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-cli",
-      "version": "1.2.0"
+      "version": "1.3.1"
     },
     {
       "author": {
@@ -273,7 +273,7 @@
       "name": "scaffold-go-library",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-library",
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "author": {
@@ -287,7 +287,7 @@
       "name": "scaffold-new-repo",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-new-repo",
-      "version": "1.3.3"
+      "version": "1.4.0"
     },
     {
       "author": {
@@ -301,6 +301,20 @@
       "name": "setup-gitleaks",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-gitleaks",
+      "version": "1.1.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
+      "description": "Set up installer and distribution methods for projects: Homebrew tap, shell install script, and go install compatibility.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["distribution", "go", "golang", "homebrew", "install"],
+      "license": "MIT",
+      "name": "setup-installers",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/setup-installers",
       "version": "1.0.0"
     },
     {
@@ -315,7 +329,7 @@
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.2.1"
+      "version": "1.2.2"
     },
     {
       "author": {
@@ -366,12 +380,12 @@
       "category": "code-quality",
       "description": "Applies scrut test style conventions when creating or editing scrut CLI test files.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["cli", "go", "golang", "scrut", "style", "testing"],
+      "keywords": ["cli", "scrut", "style", "testing"],
       "license": "MIT",
       "name": "write-scrut-tests",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/write-scrut-tests",
-      "version": "1.0.1"
+      "version": "1.0.2"
     },
     {
       "author": {
