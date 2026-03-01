@@ -87,9 +87,9 @@ go get github.com/spf13/viper@latest
 If Charmbracelet TUI was selected:
 
 ```bash
-go get github.com/charmbracelet/bubbletea@latest
-go get github.com/charmbracelet/lipgloss@latest
-go get github.com/charmbracelet/bubbles@latest
+go get charm.land/bubbletea/v2@latest
+go get charm.land/lipgloss/v2@latest
+go get charm.land/bubbles/v2@latest
 ```
 
 Then tidy:
@@ -377,9 +377,9 @@ go get github.com/spf13/viper@latest
 Only add if the user requested TUI dependencies:
 
 ```bash
-go get github.com/charmbracelet/bubbletea@latest
-go get github.com/charmbracelet/lipgloss@latest
-go get github.com/charmbracelet/bubbles@latest
+go get charm.land/bubbletea/v2@latest
+go get charm.land/lipgloss/v2@latest
+go get charm.land/bubbles/v2@latest
 ```
 
 ### Tidy
