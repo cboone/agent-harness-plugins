@@ -2,10 +2,7 @@
 name: setup-gitleaks
 description: >-
   Set up gitleaks secret scanning with a GitHub Actions workflow and optional
-  configuration. Use when the user says "set up gitleaks", "add gitleaks",
-  "add secret scanning", "set up secret scanning", "gitleaks scanning",
-  "setup gitleaks", or asks to add secret detection to a repository's CI
-  pipeline.
+  configuration.
 ---
 
 # Setup Gitleaks

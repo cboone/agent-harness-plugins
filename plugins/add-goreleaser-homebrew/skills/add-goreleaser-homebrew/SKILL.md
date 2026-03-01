@@ -2,11 +2,7 @@
 name: add-goreleaser-homebrew
 description: >-
   Add GoReleaser configuration and a GitHub Actions release workflow to an
-  existing Go CLI project with Homebrew tap publishing. Use when the user says
-  "add goreleaser", "add homebrew", "add release workflow", "set up goreleaser",
-  "set up homebrew tap", "add goreleaser homebrew", "configure releases",
-  "add release pipeline", or asks to add automated releases or Homebrew
-  distribution to an existing Go project.
+  existing Go CLI project with Homebrew tap publishing.
 ---
 
 # Add GoReleaser Homebrew

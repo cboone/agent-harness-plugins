@@ -1,10 +1,8 @@
 ---
 name: scaffold-go-library
 description: >-
-  Scaffold a Go library project with GoReleaser changelog releases, golangci-lint,
-  GitHub Actions CI/CD, and Makefile. Use when the user says "scaffold go library",
-  "new go library", "create go library", "scaffold go package", "new go package",
-  "start a go library", or asks to generate boilerplate for a Go library or package.
+  Scaffold a Go library project with GoReleaser changelog releases,
+  golangci-lint, GitHub Actions CI/CD, and Makefile.
 ---
 
 # Scaffold Go Library

@@ -1,10 +1,8 @@
 ---
 name: scaffold-go-cli
 description: >-
-  Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions CI/CD,
-  Homebrew tap, and Makefile. Use when the user says "scaffold go cli", "new go cli",
-  "create go cli", "scaffold go project", "new go project", "start a go cli", or asks
-  to generate boilerplate for a Go command-line tool.
+  Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions
+  CI/CD, Homebrew tap, and Makefile.
 ---
 
 # Scaffold Go CLI

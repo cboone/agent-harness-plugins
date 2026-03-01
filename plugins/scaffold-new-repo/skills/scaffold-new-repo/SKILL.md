@@ -2,10 +2,7 @@
 name: scaffold-new-repo
 description: >-
   Scaffold the universal boilerplate for a new repository: LICENSE, README,
-  .gitignore, agent config files, and a plans directory. Use when the user says
-  "scaffold a new repo", "new repo", "start a new project", "create a repo",
-  "initialize a project", "set up a new repository", or asks to generate the
-  standard boilerplate files for a fresh project.
+  .gitignore, agent config files, and a plans directory.
 ---
 
 # Scaffold New Repo

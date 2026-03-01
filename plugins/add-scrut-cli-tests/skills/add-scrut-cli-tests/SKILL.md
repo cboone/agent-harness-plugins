@@ -2,10 +2,6 @@
 name: add-scrut-cli-tests
 description: >-
   Set up scrut snapshot-based CLI integration testing for a CLI project.
-  Use when the user says "add scrut tests", "add CLI tests", "set up scrut",
-  "add e2e tests", "add integration tests", "scrut cli tests",
-  "add snapshot tests", or asks to set up CLI integration testing with scrut
-  for any CLI project.
 ---
 
 # Add Scrut CLI Tests
