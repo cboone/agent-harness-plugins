@@ -69,4 +69,4 @@ Check current versions before bumping, then use `/check-versions` to verify.
    - The CHANGELOG step is correctly placed after README generation
    - The template content matches the release skill's format
    - All cross-references to step numbers in error handling or notes are updated
-2. Run `/check-versions` to verify version consistency
+1. Run `/check-versions` to verify version consistency
