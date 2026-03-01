@@ -1,0 +1,296 @@
+---
+description: Set up installer and distribution methods for projects
+disable-model-invocation: true
+argument-hint: "[homebrew|shell|go-install]"
+---
+
+# Setup Installers
+
+Set up installer and distribution methods for a project. Supports three installer types:
+
+- **Homebrew**: a Homebrew tap formula for `brew install`
+- **Shell install script**: a portable `install.sh` that downloads from GitHub Releases
+- **go install**: compatibility and README instructions for `go install`
+
+## Workflow
+
+### 1. Detect Project Type
+
+Scan the project to understand its structure:
+
+- Check for `go.mod` (Go project)
+- Check for `.goreleaser.yml` or `.goreleaser.yaml` (GoReleaser already configured)
+- Check for a `Makefile`
+- Run `gh repo view --json owner,name,description` to get GitHub repo info
+
+If this is not a Go project, only the shell install script is applicable. Note this when presenting options.
+
+### 2. Detect Existing Installers
+
+Check for installers that are already set up:
+
+- **Homebrew**: look for a `brews:` section in `.goreleaser.yml`, or a standalone `Formula/` directory
+- **Shell install script**: look for `install.sh` in the repo root or a `scripts/` directory
+- **go install**: grep the README for `go install` instructions
+
+Report any existing installers to the user before proceeding. Existing installers can be updated or skipped.
+
+### 3. Select Installer Types
+
+If `$ARGUMENTS` is provided (e.g., `homebrew`, `shell`, `go-install`, or a comma-separated combination), use that selection.
+
+Otherwise, ask the user which installer types to set up. Present all three options with notes about which are already detected and which are applicable to the project type.
+
+### 4. Gather Project Information
+
+Collect the following, inferring from existing files where possible. Do not re-ask for information the user already provided:
+
+- **Binary name**: from Makefile, `.goreleaser.yml`, or the last segment of the Go module path
+- **Project description**: from the README or `gh repo view`
+- **GitHub owner/repo**: from `gh repo view` or the Go module path
+- **Latest tag**: run `git describe --tags --abbrev=0 2>/dev/null` (may not exist yet)
+
+### 5. Set Up Homebrew
+
+Skip this section if the user did not select Homebrew.
+
+**If GoReleaser exists with a `brews:` section**: Homebrew is already handled by GoReleaser. Tell the user and skip.
+
+**If GoReleaser exists without a `brews:` section**: suggest using `/add-goreleaser-homebrew` to add Homebrew support through GoReleaser, which is the preferred approach for Go projects with GoReleaser. Skip creating a standalone formula.
+
+**If no GoReleaser exists**: create a standalone Homebrew formula. Generate `Formula/PROJECT-NAME.rb`:
+
+```ruby
+class ProjectName < Formula
+  desc "PROJECT-DESCRIPTION"
+  homepage "https://github.com/OWNER/REPO"
+  url "https://github.com/OWNER/REPO/releases/download/v#{version}/PROJECT-NAME-#{version}-#{os}-#{arch}.tar.gz"
+  license "MIT"
+
+  def install
+    bin.install "PROJECT-NAME"
+  end
+
+  def os
+    if OS.mac?
+      "darwin"
+    elsif OS.linux?
+      "linux"
+    end
+  end
+
+  def arch
+    if Hardware::CPU.arm?
+      "arm64"
+    else
+      "amd64"
+    end
+  end
+
+  test do
+    system bin/"PROJECT-NAME", "--version"
+  end
+end
+```
+
+Adjust the license field based on the project's actual license file. Add instructions for publishing to a Homebrew tap repository.
+
+### 6. Set Up Shell Install Script
+
+Skip this section if the user did not select the shell install script.
+
+Generate `install.sh` in the repo root:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Install PROJECT-NAME from GitHub Releases.
+#
+# Usage:
+#   curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/install.sh | bash -s -- --version v1.0.0
+
+REPO="OWNER/REPO"
+BINARY="PROJECT-NAME"
+INSTALL_DIR="${INSTALL_DIR:-${HOME}/.local/bin}"
+
+# Parse arguments.
+VERSION=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --version)
+      VERSION="$2"
+      shift 2
+      ;;
+    *)
+      printf 'Unknown argument: %s\n' "$1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+# Determine the latest version if not specified.
+if [[ -z "${VERSION}" ]]; then
+  VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')"
+  if [[ -z "${VERSION}" ]]; then
+    printf 'Error: could not determine latest version.\n' >&2
+    exit 1
+  fi
+fi
+
+# Detect OS.
+OS="$(uname -s)"
+case "${OS}" in
+  Linux)  OS="linux" ;;
+  Darwin) OS="darwin" ;;
+  *)
+    printf 'Unsupported OS: %s\n' "${OS}" >&2
+    exit 1
+    ;;
+esac
+
+# Detect architecture.
+ARCH="$(uname -m)"
+case "${ARCH}" in
+  x86_64)  ARCH="amd64" ;;
+  aarch64) ARCH="arm64" ;;
+  arm64)   ARCH="arm64" ;;
+  *)
+    printf 'Unsupported architecture: %s\n' "${ARCH}" >&2
+    exit 1
+    ;;
+esac
+
+# Download.
+TARBALL="${BINARY}-${VERSION#v}-${OS}-${ARCH}.tar.gz"
+URL="https://github.com/${REPO}/releases/download/${VERSION}/${TARBALL}"
+
+TMPDIR="$(mktemp -d)"
+trap 'rm -rf "${TMPDIR}"' EXIT
+
+printf 'Downloading %s %s for %s/%s...\n' "${BINARY}" "${VERSION}" "${OS}" "${ARCH}"
+curl -fsSL -o "${TMPDIR}/${TARBALL}" "${URL}"
+
+# Verify checksum if checksums file exists.
+CHECKSUMS_URL="https://github.com/${REPO}/releases/download/${VERSION}/checksums.txt"
+if curl -fsSL -o "${TMPDIR}/checksums.txt" "${CHECKSUMS_URL}" 2>/dev/null; then
+  printf 'Verifying checksum...\n'
+  EXPECTED="$(grep "${TARBALL}" "${TMPDIR}/checksums.txt" | awk '{ print $1 }')"
+  if [[ -n "${EXPECTED}" ]]; then
+    if command -v sha256sum >/dev/null 2>&1; then
+      ACTUAL="$(sha256sum "${TMPDIR}/${TARBALL}" | awk '{ print $1 }')"
+    elif command -v shasum >/dev/null 2>&1; then
+      ACTUAL="$(shasum -a 256 "${TMPDIR}/${TARBALL}" | awk '{ print $1 }')"
+    else
+      printf 'Warning: no sha256 tool found, skipping checksum verification.\n' >&2
+      ACTUAL="${EXPECTED}"
+    fi
+    if [[ "${ACTUAL}" != "${EXPECTED}" ]]; then
+      printf 'Checksum mismatch: expected %s, got %s\n' "${EXPECTED}" "${ACTUAL}" >&2
+      exit 1
+    fi
+    printf 'Checksum verified.\n'
+  fi
+fi
+
+# Extract and install.
+tar -xzf "${TMPDIR}/${TARBALL}" -C "${TMPDIR}"
+mkdir -p "${INSTALL_DIR}"
+install -m 755 "${TMPDIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
+
+printf 'Installed %s to %s/%s\n' "${BINARY}" "${INSTALL_DIR}" "${BINARY}"
+
+# Check if INSTALL_DIR is in PATH.
+case ":${PATH}:" in
+  *":${INSTALL_DIR}:"*) ;;
+  *)
+    printf '\nNote: %s is not in your PATH.\n' "${INSTALL_DIR}"
+    printf 'Add it with: export PATH="%s:${PATH}"\n' "${INSTALL_DIR}"
+    ;;
+esac
+```
+
+Replace `OWNER`, `REPO`, and `PROJECT-NAME` with the actual values.
+
+If the project uses GoReleaser, adjust the tarball naming pattern to match GoReleaser's output format (typically `PROJECT-NAME_VERSION_OS_ARCH.tar.gz` with underscores and no `v` prefix on the version).
+
+Make the script executable:
+
+```bash
+chmod +x install.sh
+```
+
+### 7. Set Up go install
+
+Skip this section if the user did not select go install, or if this is not a Go project.
+
+Check compatibility:
+
+1. Read `go.mod` for any `replace` directives. If present, warn the user that `go install` does not work with `replace` directives in the module root. Suggest either removing the directives or skipping `go install` instructions.
+1. Determine the install path:
+   - If `main.go` is in the repo root: `go install github.com/OWNER/REPO@latest`
+   - If `main.go` is in a subdirectory (e.g., `cmd/PROJECT-NAME/`): `go install github.com/OWNER/REPO/cmd/PROJECT-NAME@latest`
+1. Verify the module path is a valid import path (starts with a domain name).
+
+Do not create any files for this installer type. The output is README content only.
+
+### 8. Update README
+
+Add or merge an **Installation** section in the README. If an Installation section already exists, merge the new methods into it without removing existing content.
+
+Use this structure (including only the methods that were set up):
+
+````markdown
+## Installation
+
+### Homebrew
+
+```bash
+brew install OWNER/tap/PROJECT-NAME
+```
+
+### Shell script
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/install.sh | bash
+```
+
+To install a specific version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/install.sh | bash -s -- --version v1.0.0
+```
+
+### go install
+
+Requires Go 1.21 or later:
+
+```bash
+go install github.com/OWNER/REPO@latest
+```
+````
+
+Adjust the Go version requirement based on the minimum version in `go.mod`.
+
+If the README already has installation instructions, integrate the new methods into the existing section rather than creating a duplicate.
+
+### 9. Print Summary
+
+After completing all selected installer types, print a summary:
+
+- **Files created**: list each new file with its path
+- **Files modified**: list each modified file with what changed
+- **Skipped installers**: note any installers that were skipped and why (e.g., "Homebrew: already configured via GoReleaser")
+- **Next steps**: note any required follow-up actions:
+  - For Homebrew standalone formula: create the tap repository and push the formula
+  - For shell install script: the script expects GitHub Releases with tarballs in the naming format described above
+  - For go install: ensure the module has no `replace` directives and is tagged with a version
+
+## Error Handling
+
+- If not in a git repository, abort with a message
+- If `gh` is not installed, fall back to inferring owner/repo from `git remote` or `go.mod`
+- If no GitHub Releases exist yet, note that installers depend on tagged releases
+- If `go.mod` has `replace` directives, warn about go install incompatibility
+- If the README does not exist, create one with just the Installation section
