@@ -50,7 +50,7 @@ help: ## Show this help
 
 ## Notes
 
-- The `all` target is the default goal and runs the full quality pipeline: format, vet, lint, vuln, test, build
+- The `all` target is the default goal and runs the full quality pipeline: fmt (format check), vet, lint, vuln, test, build
 - Self-documenting: each target has a `## Comment` that `make help` displays
 - Version is derived from git tags, falling back to `"dev"`
 - Binary output goes to `bin/` to keep the project root clean
