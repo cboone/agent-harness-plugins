@@ -148,7 +148,24 @@ Create `README.md` using the template from the README Template section below.
 - Replace `PROJECT-DESCRIPTION` with the short description
 - Replace `GITHUB-USERNAME` with the detected GitHub username
 
-### 15. Create Directory Stubs
+### 15. Generate CHANGELOG.md
+
+Create `CHANGELOG.md` with the initial changelog template:
+
+```markdown
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+```
+
+No replacements needed. The `release` skill will populate version sections and comparison links on the first release.
+
+### 16. Create Directory Stubs
 
 Create stub directories for the standard project layout:
 
@@ -166,7 +183,7 @@ mkdir -p tests
 touch tests/.gitkeep
 ```
 
-### 16. Verify the Build
+### 17. Verify the Build
 
 Run a quick build to confirm everything compiles:
 
@@ -176,7 +193,7 @@ go build ./...
 
 If the build fails, diagnose and fix the issue before continuing.
 
-### 17. Create Initial Commit
+### 18. Create Initial Commit
 
 Stage all generated files and create the initial commit:
 
@@ -185,7 +202,7 @@ git add -A
 git commit -S -m "feat: scaffold Go CLI project"
 ```
 
-### 18. Summary
+### 19. Summary
 
 Print a summary of what was created:
 

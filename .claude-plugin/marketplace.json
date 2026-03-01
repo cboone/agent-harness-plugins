@@ -273,7 +273,7 @@
       "name": "scaffold-go-cli",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-cli",
-      "version": "1.3.1"
+      "version": "1.3.2"
     },
     {
       "author": {
@@ -287,21 +287,21 @@
       "name": "scaffold-go-library",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-library",
-      "version": "1.2.0"
+      "version": "1.2.1"
     },
     {
       "author": {
         "name": "Christopher Boone"
       },
       "category": "productivity",
-      "description": "Scaffold the universal boilerplate for a new repository: LICENSE, README, .gitignore, agent config files, and a plans directory.",
+      "description": "Scaffold the universal boilerplate for a new repository: LICENSE, README, CHANGELOG, .gitignore, agent config files, and a plans directory.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["boilerplate", "git", "project", "repo", "scaffolding"],
       "license": "MIT",
       "name": "scaffold-new-repo",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-new-repo",
-      "version": "1.4.0"
+      "version": "1.4.1"
     },
     {
       "author": {
