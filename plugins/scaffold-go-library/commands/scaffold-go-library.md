@@ -154,7 +154,24 @@ Create `README.md` using the template from the README Template section below.
 - Replace `GITHUB-USERNAME` with the detected GitHub username
 - Replace `PACKAGE-NAME` with the derived package name
 
-### 18. Create Directory Stubs
+### 18. Generate CHANGELOG.md
+
+Create `CHANGELOG.md` with the initial changelog template:
+
+```markdown
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+```
+
+No replacements needed. The `release` skill will populate version sections and comparison links on the first release.
+
+### 19. Create Directory Stubs
 
 Create stub directories for the standard library layout:
 
@@ -166,13 +183,13 @@ touch docs/plans/.gitkeep
 
 Libraries keep tests alongside source files, so no `tests/` directory. No `internal/` directory -- add it when needed.
 
-### 19. Tidy Modules
+### 20. Tidy Modules
 
 ```bash
 go mod tidy
 ```
 
-### 20. Verify the Build
+### 21. Verify the Build
 
 Run a quick build to confirm everything compiles:
 
@@ -182,7 +199,7 @@ go build ./...
 
 If the build fails, diagnose and fix the issue before continuing.
 
-### 21. Create Initial Commit
+### 22. Create Initial Commit
 
 Stage all generated files and create the initial commit:
 
@@ -191,7 +208,7 @@ git add -A
 git commit -S -m "feat: scaffold Go library project"
 ```
 
-### 22. Summary
+### 23. Summary
 
 Print a summary of what was created:
 
