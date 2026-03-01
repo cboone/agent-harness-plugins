@@ -158,6 +158,6 @@ description: >-
 ## Verification
 
 1. Run `git diff` to confirm only the 7 SKILL.md frontmatter `description` fields changed
-2. Verify each trimmed description ends with a period and reads as a complete sentence
-3. Start a new Claude Code session and confirm the 7 skills still appear in the skills listing with their shortened descriptions
-4. Invoke one skill (e.g., `/setup-gitleaks`) to confirm it still loads and works correctly
+1. Verify each trimmed description ends with a period and reads as a complete sentence
+1. Start a new Claude Code session and confirm the 7 skills still appear in the skills listing with their shortened descriptions
+1. Invoke one skill (e.g., `/setup-gitleaks`) to confirm it still loads and works correctly
