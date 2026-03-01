@@ -9,7 +9,11 @@ OUTDIR  := bin
 
 LDFLAGS := -ldflags "-X main.version=$(VERSION)"
 
-.PHONY: build test lint vet fmt vuln clean cover tidy help
+.DEFAULT_GOAL := all
+
+.PHONY: all build test lint vet fmt vuln clean cover tidy help
+
+all: fmt vet lint vuln test build ## Run all checks and build
 
 build: ## Build the binary
 	mkdir -p $(OUTDIR)
@@ -46,6 +50,7 @@ help: ## Show this help
 
 ## Notes
 
+- The `all` target is the default goal and runs the full quality pipeline: format, vet, lint, vuln, test, build
 - Self-documenting: each target has a `## Comment` that `make help` displays
 - Version is derived from git tags, falling back to `"dev"`
 - Binary output goes to `bin/` to keep the project root clean
