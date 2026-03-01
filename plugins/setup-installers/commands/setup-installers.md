@@ -64,27 +64,35 @@ Skip this section if the user did not select Homebrew.
 class ProjectName < Formula
   desc "PROJECT-DESCRIPTION"
   homepage "https://github.com/OWNER/REPO"
-  url "https://github.com/OWNER/REPO/releases/download/v#{version}/PROJECT-NAME-#{version}-#{os}-#{arch}.tar.gz"
+  version "0.1.0"
   license "MIT"
+
+  on_macos do
+    on_intel do
+      url "https://github.com/OWNER/REPO/releases/download/v0.1.0/PROJECT-NAME-0.1.0-darwin-amd64.tar.gz"
+      sha256 "SHA256_FOR_DARWIN_AMD64"
+    end
+
+    on_arm do
+      url "https://github.com/OWNER/REPO/releases/download/v0.1.0/PROJECT-NAME-0.1.0-darwin-arm64.tar.gz"
+      sha256 "SHA256_FOR_DARWIN_ARM64"
+    end
+  end
+
+  on_linux do
+    on_intel do
+      url "https://github.com/OWNER/REPO/releases/download/v0.1.0/PROJECT-NAME-0.1.0-linux-amd64.tar.gz"
+      sha256 "SHA256_FOR_LINUX_AMD64"
+    end
+
+    on_arm do
+      url "https://github.com/OWNER/REPO/releases/download/v0.1.0/PROJECT-NAME-0.1.0-linux-arm64.tar.gz"
+      sha256 "SHA256_FOR_LINUX_ARM64"
+    end
+  end
 
   def install
     bin.install "PROJECT-NAME"
-  end
-
-  def os
-    if OS.mac?
-      "darwin"
-    elsif OS.linux?
-      "linux"
-    end
-  end
-
-  def arch
-    if Hardware::CPU.arm?
-      "arm64"
-    else
-      "amd64"
-    end
   end
 
   test do
@@ -132,7 +140,7 @@ done
 
 # Determine the latest version if not specified.
 if [[ -z "${VERSION}" ]]; then
-  VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')"
+  VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/' || true)"
   if [[ -z "${VERSION}" ]]; then
     printf 'Error: could not determine latest version.\n' >&2
     exit 1
@@ -176,7 +184,7 @@ curl -fsSL -o "${TMPDIR}/${TARBALL}" "${URL}"
 CHECKSUMS_URL="https://github.com/${REPO}/releases/download/${VERSION}/checksums.txt"
 if curl -fsSL -o "${TMPDIR}/checksums.txt" "${CHECKSUMS_URL}" 2>/dev/null; then
   printf 'Verifying checksum...\n'
-  EXPECTED="$(grep "${TARBALL}" "${TMPDIR}/checksums.txt" | awk '{ print $1 }')"
+  EXPECTED="$(awk -v t="${TARBALL}" '$0 ~ t { print $1 }' "${TMPDIR}/checksums.txt")"
   if [[ -n "${EXPECTED}" ]]; then
     if command -v sha256sum >/dev/null 2>&1; then
       ACTUAL="$(sha256sum "${TMPDIR}/${TARBALL}" | awk '{ print $1 }')"
@@ -195,9 +203,15 @@ if curl -fsSL -o "${TMPDIR}/checksums.txt" "${CHECKSUMS_URL}" 2>/dev/null; then
 fi
 
 # Extract and install.
-tar -xzf "${TMPDIR}/${TARBALL}" -C "${TMPDIR}"
+if tar -tzf "${TMPDIR}/${TARBALL}" | grep -qE '(^/|(^|/)\.\\.(/|$))'; then
+  printf 'Error: archive contains unsafe paths, refusing to install.\n' >&2
+  exit 1
+fi
+EXTRACT_DIR="${TMPDIR}/extract"
+mkdir -p "${EXTRACT_DIR}"
+tar -xzf "${TMPDIR}/${TARBALL}" -C "${EXTRACT_DIR}"
 mkdir -p "${INSTALL_DIR}"
-install -m 755 "${TMPDIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
+install -m 755 "${EXTRACT_DIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
 
 printf 'Installed %s to %s/%s\n' "${BINARY}" "${INSTALL_DIR}" "${BINARY}"
 
