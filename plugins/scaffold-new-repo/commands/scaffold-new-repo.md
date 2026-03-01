@@ -13,7 +13,10 @@ Generate the language-agnostic foundation files that every new repository starts
 
 Derive what you can automatically, then ask for only what's missing:
 
-- **Project name** -- read from the current directory name (kebab-case). Do not ask for it.
+- **Project name** -- derive from the git remote URL or `README.md` h1 heading, not from the directory or branch name (those are often misleading, e.g. worktree paths). Detection order:
+  1. `git remote get-url origin` -- extract the repo name from the URL (strip the trailing `.git` if present, take the last path segment). If the command exits non-zero, returns empty output, or the URL cannot be parsed into a repo name, treat this as "no remote" and continue to step 2.
+  1. If there is no usable remote, check for an existing `README.md` and use its h1 heading (converted to kebab-case)
+  1. Only if both the remote and README detection fail, ask the user for the project name
 - **Short description** -- ask the user for a one-sentence description.
 - **Project type** -- check the existing `.gitignore` first (GitHub often generates one when creating the repo). Infer the project type from its contents:
   Check heuristics in the order listed below. The first match wins.
