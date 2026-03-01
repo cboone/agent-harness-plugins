@@ -1,6 +1,6 @@
 # Scrut Test Style Guide
 
-Conventions for writing and maintaining [scrut](https://github.com/facebookincubator/scrut) CLI test files. These conventions are derived from established patterns in production Go CLI repositories and scrut's official documentation.
+Conventions for writing and maintaining [scrut](https://github.com/facebookincubator/scrut) CLI test files. These conventions are derived from established patterns in production CLI repositories and scrut's official documentation.
 
 ## File Organization
 
@@ -334,7 +334,7 @@ The `2>&1` redirect approach is simpler for one-off cases. Use `{output_stream: 
 
 ### Test Only the Relevant Error Output
 
-Error messages from Cobra-based CLIs often include usage text after the error line. Pipe through `head -1` or `head -n N` to test only the meaningful part:
+Error messages from CLI frameworks (e.g., Cobra for Go, Swift Argument Parser, clap for Rust) often include usage text after the error line. Pipe through `head -1` or `head -n N` to test only the meaningful part:
 
 ```scrut
 $ "${TOOL_BIN}" nonexistent 2>&1 | head -1
