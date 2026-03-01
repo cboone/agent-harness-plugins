@@ -12,8 +12,7 @@
 
   // "fix": true,
 
-  "outputFormatters": [
-    // https://github.com/DavidAnson/markdownlint-cli2/blob/main/formatter-summarize/README.md
-    ["markdownlint-cli2-formatter-summarize", { "byFileByRule": true }],
-  ],
+  // The default formatter outputs `file:line rule description`, which is
+  // easier for automated tools (like Claude Code) to parse and fix.
+  // https://github.com/DavidAnson/markdownlint-cli2/blob/main/formatter-default/README.md
 }
