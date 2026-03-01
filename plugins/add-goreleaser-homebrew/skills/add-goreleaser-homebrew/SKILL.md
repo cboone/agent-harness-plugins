@@ -38,7 +38,7 @@ If the command fails or produces no output, ask the user to provide their GitHub
 
 Collect the following, inferring from existing files where possible:
 
-- **Project name**: derive from the binary name in the Makefile, the last segment of the module path in `go.mod`, or the git remote URL (not from the directory or branch name, which are often misleading)
+- **Project name**: derive from the binary name in the Makefile, the last segment of the module path in `go.mod`, or the git remote URL (run `git remote get-url origin`, strip trailing `.git`, take the last path segment). Do not derive from the directory or branch name, which are often misleading.
 - **Short description**: check the README for a one-line description; if not found, ask the user
 - **Homebrew dependencies**: ask whether the tool has any runtime dependencies to declare in the formula (e.g., `gh`, `docker`)
 
