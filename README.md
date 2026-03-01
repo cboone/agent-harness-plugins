@@ -30,6 +30,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Scaffold Go Library](#scaffold-go-library)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
 ∙ [Setup Gitleaks](#setup-gitleaks)
+∙ [Setup Installers](#setup-installers)
 ∙ [Setup Linters](#setup-linters)
 <br>Agents:
 [Clean Up Agent Config](#clean-up-agent-config)
@@ -231,6 +232,13 @@ Set up gitleaks secret scanning with a GitHub Actions workflow and optional conf
 
 > **Trigger:** `/setup-gitleaks`
 > **Details:** [README](./plugins/setup-gitleaks/README.md)
+
+#### Setup Installers
+
+Set up installer and distribution methods for projects: Homebrew tap formula, shell install script with OS/arch detection, and go install compatibility. Detects existing release infrastructure and generates appropriate files.
+
+> **Trigger:** `/setup-installers`
+> **Details:** [README](./plugins/setup-installers/README.md)
 
 #### Setup Linters
 

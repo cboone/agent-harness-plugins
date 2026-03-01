@@ -236,6 +236,12 @@ cboone-cc-plugins/
     │           └── references/
     │               ├── config.md
     │               └── workflow.md
+    ├── setup-installers/           # Installer/distribution setup command
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── commands/
+    │       └── setup-installers.md
     ├── setup-linters/              # Linter and formatter setup skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
