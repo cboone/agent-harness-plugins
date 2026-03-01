@@ -116,7 +116,7 @@ After all tools run, display a summary:
 
 If **--check** was specified, show results and stop here.
 
-If all tools passed with zero remaining issues, skip to step 6.
+If all tools passed with zero remaining issues (auto-fix resolved everything), skip to step 6. Note: even though there are zero remaining issues, the auto-fix commands may have modified files on disk, which will need to be committed in step 7.
 
 ### 5. Fix Remaining Issues
 
@@ -157,9 +157,11 @@ Re-run all detected tools one final time in check mode to confirm a clean state:
 
 **If --check was specified**: Stop here (no changes were made).
 
-Otherwise, commit the fixes:
+Otherwise, check for file changes and commit:
 
-1. Stage all files modified by the lint and format fixes.
+1. Run `git status` to check whether any files were modified by the fix commands.
+1. **If no files were modified**: Report "No changes needed, all files were already clean." and stop.
+1. **If files were modified**: Stage all files modified by the lint and format fixes.
 1. Generate a conventional commit message:
    - Use `style:` for pure formatting and linting fixes.
    - Use `fix:` if linting changes corrected actual bugs (e.g., unused variables removed, error handling added).
