@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Create GitHub issues using tmpfiles to avoid permission prompts from large multiline Bash arguments.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["gh", "github", "issues", "workflow"],
+  "license": "MIT",
+  "name": "create-issue",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

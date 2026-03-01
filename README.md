@@ -10,7 +10,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Release](#release)
 ∙ [Review Branch](#review-branch)
 <br>Issues and Worktrees:
-[Create Worktree](#create-worktree)
+[Create Issue](#create-issue)
+∙ [Create Worktree](#create-worktree)
 ∙ [Create Worktree from Issue](#create-worktree-from-issue)
 ∙ [Suggest Next Issue](#suggest-next-issue)
 <br>Code Review:
@@ -101,6 +102,14 @@ Summarize all work done on the current branch compared to the base branch. Group
 ### Issues and Worktrees
 
 Parallel development with git worktrees. Pick an issue, spin up an isolated worktree with its own agent session, and let each agent work independently.
+
+#### Create Issue
+
+Create GitHub issues by writing the body to a tmpfile and passing `--body-file` to `gh`, avoiding permission prompts from large multiline Bash arguments. Supports labels, assignees, milestones, and cross-repo issue creation.
+
+> **Trigger:** `/create-issue`
+> **Requires:** [`gh`](https://cli.github.com/)
+> **Details:** [README](./plugins/create-issue/README.md)
 
 #### Create Worktree
 
