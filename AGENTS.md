@@ -44,6 +44,13 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── commit/
     │           └── SKILL.md
+    ├── create-issue/                # GitHub issue creation skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── create-issue/
+    │           └── SKILL.md
     ├── create-plugin/               # Plugin creation guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
