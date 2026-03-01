@@ -11,30 +11,17 @@ cboone-cc-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json            # Plugin registry for this repository
 └── plugins/
-    ├── add-goreleaser-homebrew/     # GoReleaser + Homebrew tap setup skill
+    ├── add-goreleaser-homebrew/     # GoReleaser + Homebrew tap setup command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
-    │   └── skills/
-    │       └── add-goreleaser-homebrew/
-    │           ├── SKILL.md
-    │           └── references/
-    │               ├── conditional-features.md
-    │               ├── goreleaser.md
-    │               ├── makefile-target.md
-    │               └── release-workflow.md
-    ├── add-scrut-cli-tests/         # Scrut CLI integration testing skill
+    │   └── commands/
+    │       └── add-goreleaser-homebrew.md
+    ├── add-scrut-cli-tests/         # Scrut CLI integration testing command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── skills/
-    │       └── add-scrut-cli-tests/
-    │           ├── SKILL.md
-    │           └── references/
-    │               ├── ci-job.md
-    │               ├── help-test.md
-    │               ├── makefile-targets.md
-    │               ├── test-format.md
-    │               └── version-test.md
+    │   └── commands/
+    │       └── add-scrut-cli-tests.md
     ├── address-review/              # Review feedback resolver skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -174,68 +161,30 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── resolve-copilot-pr-feedback/
     │           └── SKILL.md
-    ├── scaffold-new-repo/          # New repository scaffolding skill
+    ├── scaffold-new-repo/          # New repository scaffolding command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── skills/
-    │       └── scaffold-new-repo/
-    │           ├── SKILL.md
-    │           └── references/
-    │               ├── agents-md.md
-    │               ├── copilot-instructions-md.md
-    │               ├── gitignore.md
-    │               ├── license.md
-    │               └── readme.md
-    ├── scaffold-go-cli/            # Go CLI project scaffolding skill
+    │   └── commands/
+    │       └── scaffold-new-repo.md
+    ├── scaffold-go-cli/            # Go CLI project scaffolding command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── skills/
-    │       └── scaffold-go-cli/
-    │           ├── SKILL.md
-    │           └── references/
-    │               ├── ci-workflow.md
-    │               ├── gitignore.md
-    │               ├── go-mod.md
-    │               ├── goreleaser.md
-    │               ├── license.md
-    │               ├── main-go.md
-    │               ├── makefile.md
-    │               ├── readme.md
-    │               ├── release-workflow.md
-    │               ├── root-go-viper.md
-    │               └── root-go.md
-    ├── scaffold-go-library/        # Go library project scaffolding skill
+    │   └── commands/
+    │       └── scaffold-go-cli.md
+    ├── scaffold-go-library/        # Go library project scaffolding command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── skills/
-    │       └── scaffold-go-library/
-    │           ├── SKILL.md
-    │           └── references/
-    │               ├── ci-workflow.md
-    │               ├── doc-go.md
-    │               ├── editorconfig.md
-    │               ├── gitignore.md
-    │               ├── go-mod.md
-    │               ├── golangci.md
-    │               ├── goreleaser.md
-    │               ├── license.md
-    │               ├── makefile.md
-    │               ├── package-go.md
-    │               ├── readme.md
-    │               └── release-workflow.md
-    ├── setup-gitleaks/             # Gitleaks secret scanning setup skill
+    │   └── commands/
+    │       └── scaffold-go-library.md
+    ├── setup-gitleaks/             # Gitleaks secret scanning setup command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── skills/
-    │       └── setup-gitleaks/
-    │           ├── SKILL.md
-    │           └── references/
-    │               ├── config.md
-    │               └── workflow.md
+    │   └── commands/
+    │       └── setup-gitleaks.md
     ├── setup-installers/           # Installer/distribution setup command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
