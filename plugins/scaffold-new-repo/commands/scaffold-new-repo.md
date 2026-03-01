@@ -177,7 +177,7 @@ Print a summary of what was created:
 - If the target directory already contains a `LICENSE` or `README.md`, ask the user before overwriting
 - If a `.gitignore` already exists, merge new entries rather than overwriting
 - If `git init` fails, continue generating files but warn the user
-- If the user provides an unrecognized project type, attempt the GitHub fallback (see Step 6). If that also fails, fall back to Generic and mention it
+- If the user provides an unrecognized project type, attempt the GitHub fallback (see Step 8). If that also fails, fall back to Generic and mention it
 
 ---
 
