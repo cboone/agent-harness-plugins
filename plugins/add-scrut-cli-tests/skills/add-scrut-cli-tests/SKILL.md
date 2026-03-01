@@ -1,39 +1,59 @@
 ---
 name: add-scrut-cli-tests
 description: >-
-  Set up scrut snapshot-based CLI integration testing for a Go CLI project.
+  Set up scrut snapshot-based CLI integration testing for a CLI project.
   Use when the user says "add scrut tests", "add CLI tests", "set up scrut",
   "add e2e tests", "add integration tests", "scrut cli tests",
   "add snapshot tests", or asks to set up CLI integration testing with scrut
-  for a Go project.
+  for any CLI project.
 ---
 
 # Add Scrut CLI Tests
 
-Set up [scrut](https://github.com/facebookincubator/scrut) snapshot-based CLI integration testing for a Go CLI project with Makefile targets and CI workflow integration.
+Set up [scrut](https://github.com/facebookincubator/scrut) snapshot-based CLI integration testing for a CLI project with Makefile targets and CI workflow integration.
 
 ## Prerequisites
 
-- A Go CLI project with a `Makefile` and a `build` target that produces a binary
-- A `.github/workflows/ci.yml` workflow (or equivalent CI workflow file)
+- A CLI project that produces a binary or has an executable entry point
+- A `.github/workflows/ci.yml` workflow (or equivalent CI workflow file) is recommended for CI integration
 
 ## Workflow
 
-### 1. Verify the Project
+### 1. Detect the Project Type
 
-Confirm the current directory is a Go CLI project with a build pipeline:
+Identify the project language by checking for manifest files:
 
-- Check that `go.mod` exists (required; abort if missing)
-- Check that a `Makefile` exists with a `build` target (required; abort if missing)
-- Check for an existing `tests/scrut/` directory; if present, warn and ask whether to add to it or abort
+| Marker(s)                        | Language |
+| -------------------------------- | -------- |
+| `go.mod`                         | Go       |
+| `Package.swift`                  | Swift    |
+| `Cargo.toml`                     | Rust     |
+| `pyproject.toml`, `setup.py`     | Python   |
+| `Gemfile`, `*.gemspec`           | Ruby     |
+| Executable scripts (no manifest) | Shell    |
+
+If no manifest is found and executable shell scripts exist in the root, `bin/`, or `scripts/`, treat the project as a shell script CLI.
+
+If the project type cannot be determined, ask the user what language the project uses and where the binary or executable is located.
+
+Check for an existing `tests/scrut/` directory; if present, warn and ask whether to add to it or abort.
 
 ### 2. Gather Project Information
 
 Collect the following, inferring from existing files where possible:
 
-- **Binary name**: check the Makefile `build` target for the output binary name (look for `-o bin/NAME` or `-o NAME`), or derive from the last segment of the module path in `go.mod`
-- **Binary path**: determine the full path used in the Makefile build target (typically `bin/NAME` or `$(CURDIR)/bin/NAME`)
+- **Binary name**: determine by project type:
+  - **Go**: check the Makefile `build` target for the output binary name (look for `-o bin/NAME` or `-o NAME`), or derive from the last segment of the module path in `go.mod`
+  - **Swift**: check `Package.swift` for executable target names, or check the Makefile `build` target
+  - **Rust**: check `Cargo.toml` for `[[bin]]` entries or the `name` field under `[package]`
+  - **Python**: check `pyproject.toml` for `[project.scripts]` entries
+  - **Ruby**: check the gemspec for `executables` or look in `bin/` or `exe/`
+  - **Shell**: use the script filename as the binary name
+- **Binary path**: determine the full path used to run the binary:
+  - **Compiled languages** (Go, Swift, Rust): typically `bin/NAME` or a build output directory (e.g., `$(CURDIR)/bin/NAME`)
+  - **Interpreted languages** (Python, Ruby, Shell): the script path itself (e.g., `bin/NAME`, `./NAME`)
 - **Environment variable name**: derive from the binary name, uppercased with hyphens replaced by underscores, suffixed with `_BIN` (e.g., `bopca` becomes `BOPCA_BIN`, `my-tool` becomes `MY_TOOL_BIN`)
+- **Build required**: whether a build step is needed before running tests (yes for compiled languages, no for interpreted languages)
 
 If the user already provided some or all of these in their initial request, do not re-ask.
 
@@ -63,13 +83,19 @@ If `scrut` is not installed locally, write the test files with placeholder outpu
 
 ### 5. Add Makefile Targets
 
-Check the existing Makefile for any of these targets: `test-scrut`, `test-scrut-update`, `test-all`. If any exist, warn and ask before overwriting.
+If no `Makefile` exists:
+
+- For **compiled languages** (Go, Swift, Rust): ask the user to create one or offer to generate a minimal Makefile with `build` and `test-scrut` targets appropriate to the language
+- For **interpreted languages** (Python, Ruby, Shell): create a minimal Makefile with just the scrut targets (no build dependency needed)
+
+If a `Makefile` exists, check for any of these targets: `test-scrut`, `test-scrut-update`, `test-all`. If any exist, warn and ask before overwriting.
 
 Add the Makefile targets from `./references/makefile-targets.md`:
 
 - Replace `TOOL_BIN` with the environment variable name
-- Replace `BINARY_PATH` with the path to the built binary (e.g., `$(CURDIR)/bin/NAME`)
+- Replace `BINARY_PATH` with the path to the built binary or executable script
 - Replace `TESTS_DIR` with `tests/scrut/`
+- **If the project does not require a build step** (shell scripts, interpreted languages), remove the `build` dependency from `test-scrut` and `test-scrut-update` targets
 
 Append `test-scrut test-scrut-update test-all` to the `.PHONY` declaration (or create one if it does not exist).
 
@@ -85,7 +111,7 @@ ls .github/workflows/ci.yml .github/workflows/ci.yaml
 
 If found, add a `test-scrut` job using the template from `./references/ci-job.md`:
 
-- Detect the Go version from the existing workflow's `go-version` field and use the same value
+- **Copy the language setup step(s)** from the existing CI workflow (e.g., `actions/setup-go`, Swift toolchain setup, `actions/setup-python`, Rust toolchain setup). If the workflow has multiple language setup steps, include only the ones needed to build the project binary. For shell script projects, no language setup step is needed.
 - Detect the runner OS from the existing workflow (e.g., `ubuntu-latest`, `macos-latest`) and use the same value
 - Determine the latest scrut release tag for `SCRUT_VERSION` (run `gh release list --repo facebookincubator/scrut --limit 1 --json tagName --jq '.[0].tagName'`)
 - Place the new job after existing test jobs
@@ -95,7 +121,7 @@ If no CI workflow exists, skip this step and note that the user should add CI wo
 
 ### 7. Build and Run Tests
 
-Build the binary and run the scrut tests to verify the setup:
+Build the binary (if applicable) and run the scrut tests to verify the setup:
 
 ```bash
 make test-scrut
@@ -157,10 +183,11 @@ Print a summary of what was created and modified:
 
 ## Error Handling
 
-- If `go.mod` does not exist, abort with a message that this skill requires an existing Go project
-- If no `Makefile` exists, abort and suggest creating one first (or use the `scaffold-go-cli` skill)
+- If no recognized project manifest is found and no executable scripts exist, ask the user what language the project uses and where the binary or executable is located
+- If no `Makefile` exists and the project is a compiled language, warn that a build step is needed and offer to create a minimal Makefile, or suggest the relevant scaffolding skill (e.g., `scaffold-go-cli` for Go projects)
+- If no `Makefile` exists and the project is an interpreted language, offer to create a minimal Makefile with just the scrut test targets
 - If `tests/scrut/` already exists, ask before adding or overwriting files
 - If `scrut` is not installed locally, write test files with placeholder output and explain how to install scrut and update snapshots
-- If the Makefile does not have a `build` target, ask the user which target builds the binary
+- If the Makefile does not have a `build` target and the project requires one, ask the user which target builds the binary
 - If no CI workflow exists, skip the CI step and inform the user
 - If `make test-scrut` fails, check the output and attempt to fix; if the issue is stale snapshots, run `make test-scrut-update`

@@ -146,7 +146,7 @@ Style guides, linters, and security practices. These skills activate automatical
 
 #### Add Scrut CLI Tests
 
-Set up scrut snapshot-based CLI integration testing for a Go CLI project. Creates starter test files, adds Makefile targets, and configures CI to run scrut tests.
+Set up scrut snapshot-based CLI integration testing for a CLI project. Detects the project language, creates starter test files, adds Makefile targets, and configures CI to run scrut tests.
 
 > **Trigger:** `/add-scrut-cli-tests`
 > **Requires:** [`scrut`](https://github.com/facebookincubator/scrut) (Makefile checks for availability and provides install instructions)

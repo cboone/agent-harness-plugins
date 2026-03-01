@@ -32,7 +32,7 @@ test-all: test test-scrut
 
 ## Notes
 
-- `test-scrut` depends on `build` so the binary is compiled before tests run.
+- `test-scrut` depends on `build` so the binary is compiled before tests run. For interpreted languages (shell scripts, Python, Ruby) where no build step is needed, remove the `: build` dependency from `test-scrut` and `test-scrut-update`. The binary path points directly to the executable script.
 - The presence check (`command -v scrut`) gives a clear error message if scrut is not installed.
 - `test-scrut-update` uses `--replace` to overwrite the original files and `--assume-yes` to skip confirmation prompts.
 - `test-all` chains both unit tests (`test`) and scrut tests (`test-scrut`).
