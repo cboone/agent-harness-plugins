@@ -26,14 +26,14 @@ Conventions for running git and GitHub CLI (`gh`) commands in Claude Code. These
 
 ## Quick Decision Table
 
-| Scenario                        | Pattern                  | Reason                                     |
-| ------------------------------- | ------------------------ | ------------------------------------------ |
-| Commit messages                 | HEREDOC                  | Short, predictable length                  |
-| PR bodies (`gh pr create`)      | Tmpfile + `--body-file`  | Can be long; HEREDOC triggers prompts      |
-| Issue bodies (`gh issue create`)| Tmpfile + `--body-file`  | Can be long                                |
-| Review replies                  | Tmpfile + `--body-file`  | Variable length                            |
-| Worktree prompts                | Write tool to `/tmp/`    | Avoids shell escaping                      |
-| Tag messages                    | Inline `-m`              | Typically one line                         |
+| Scenario                         | Pattern                 | Reason                                |
+| -------------------------------- | ----------------------- | ------------------------------------- |
+| Commit messages                  | HEREDOC                 | Short, predictable length             |
+| PR bodies (`gh pr create`)       | Tmpfile + `--body-file` | Can be long; HEREDOC triggers prompts |
+| Issue bodies (`gh issue create`) | Tmpfile + `--body-file` | Can be long                           |
+| Review replies                   | Tmpfile + `--body-file` | Variable length                       |
+| Worktree prompts                 | Write tool to `/tmp/`   | Avoids shell escaping                 |
+| Tag messages                     | Inline `-m`             | Typically one line                    |
 
 ## Workflow
 

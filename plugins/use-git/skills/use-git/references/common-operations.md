@@ -54,15 +54,15 @@ Keep the subject line under 72 characters. Use imperative mood ("add", not "adde
 
 ### Types
 
-| Type       | Use for                                        |
-| ---------- | ---------------------------------------------- |
-| `feat`     | New functionality                              |
-| `fix`      | Bug fix                                        |
-| `docs`     | Documentation changes only                     |
-| `refactor` | Code restructuring without behavior change     |
-| `test`     | Adding or updating tests                       |
-| `chore`    | Build, tooling, or maintenance changes         |
-| `style`    | Formatting, whitespace, or cosmetic changes    |
+| Type       | Use for                                     |
+| ---------- | ------------------------------------------- |
+| `feat`     | New functionality                           |
+| `fix`      | Bug fix                                     |
+| `docs`     | Documentation changes only                  |
+| `refactor` | Code restructuring without behavior change  |
+| `test`     | Adding or updating tests                    |
+| `chore`    | Build, tooling, or maintenance changes      |
+| `style`    | Formatting, whitespace, or cosmetic changes |
 
 ### Issue References
 
@@ -73,14 +73,14 @@ Keep the subject line under 72 characters. Use imperative mood ("add", not "adde
 
 Use `TYPE/SLUG` format:
 
-| Prefix      | Use for                  |
-| ----------- | ------------------------ |
-| `feat/`     | New features             |
-| `fix/`      | Bug fixes                |
-| `docs/`     | Documentation changes    |
-| `refactor/` | Code restructuring       |
-| `chore/`    | Maintenance tasks        |
-| `feature/`  | Alternative to `feat/`   |
+| Prefix      | Use for                |
+| ----------- | ---------------------- |
+| `feat/`     | New features           |
+| `fix/`      | Bug fixes              |
+| `docs/`     | Documentation changes  |
+| `refactor/` | Code restructuring     |
+| `chore/`    | Maintenance tasks      |
+| `feature/`  | Alternative to `feat/` |
 
 The slug should be a lowercase, hyphen-separated description (e.g., `fix/login-timeout`, `feat/add-retry-logic`).
 

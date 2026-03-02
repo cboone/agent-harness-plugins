@@ -49,12 +49,12 @@ The first line is the subject. A blank line separates the subject from the body.
 
 ## Common Commit Types
 
-| Type       | Use for                                        |
-| ---------- | ---------------------------------------------- |
-| `feat`     | New functionality                              |
-| `fix`      | Bug fix                                        |
-| `docs`     | Documentation changes only                     |
-| `refactor` | Code restructuring without behavior change     |
-| `test`     | Adding or updating tests                       |
-| `chore`    | Build, tooling, or maintenance changes         |
-| `style`    | Formatting, whitespace, or cosmetic changes    |
+| Type       | Use for                                     |
+| ---------- | ------------------------------------------- |
+| `feat`     | New functionality                           |
+| `fix`      | Bug fix                                     |
+| `docs`     | Documentation changes only                  |
+| `refactor` | Code restructuring without behavior change  |
+| `test`     | Adding or updating tests                    |
+| `chore`    | Build, tooling, or maintenance changes      |
+| `style`    | Formatting, whitespace, or cosmetic changes |

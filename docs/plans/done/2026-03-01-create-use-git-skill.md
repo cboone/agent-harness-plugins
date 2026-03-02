@@ -24,23 +24,23 @@ Auto-activating style guide. Structure follows `handle-secrets` pattern:
 Core principles to cover:
 
 1. **Tmpfiles for long content**: Write long strings (PR bodies, issue bodies, review replies) to a tmpfile via the Write tool, then pass `--body-file`. Keeps Bash commands short.
-2. **HEREDOCs for short content**: Commit messages use `$(cat << 'EOF' ... EOF)`.
-3. **GPG sign every commit**: Always `git commit -S`. Sandbox cannot access GPG keys, so resort immediately to unsandboxed command.
-4. **Never amend**: Always create new commits. Pre-commit hook failures mean the commit did not happen, so `--amend` would modify the wrong commit.
-5. **Never use `--force`**: Never use `git push --force` or `git push -f`. If the user explicitly requests a force push, use `--force-with-lease --force-if-includes` instead, which protects against overwriting others' work. Never use `--no-verify` or other override flags without explicit user instruction.
-6. **Parallel tool calls over chained commands**: Separate Bash tool calls for independent commands instead of `;` or `&&`, which trigger permission prompts.
-7. **Exclude secret files from staging**: Never stage `.env`, `credentials.json`, `*.pem`, `*.key`.
+1. **HEREDOCs for short content**: Commit messages use `$(cat << 'EOF' ... EOF)`.
+1. **GPG sign every commit**: Always `git commit -S`. Sandbox cannot access GPG keys, so resort immediately to unsandboxed command.
+1. **Never amend**: Always create new commits. Pre-commit hook failures mean the commit did not happen, so `--amend` would modify the wrong commit.
+1. **Never use `--force`**: Never use `git push --force` or `git push -f`. If the user explicitly requests a force push, use `--force-with-lease --force-if-includes` instead, which protects against overwriting others' work. Never use `--no-verify` or other override flags without explicit user instruction.
+1. **Parallel tool calls over chained commands**: Separate Bash tool calls for independent commands instead of `;` or `&&`, which trigger permission prompts.
+1. **Exclude secret files from staging**: Never stage `.env`, `credentials.json`, `*.pem`, `*.key`.
 
 Decision table:
 
-| Scenario | Pattern | Reason |
-|----------|---------|--------|
-| Commit messages | HEREDOC | Short, predictable length |
-| PR bodies (`gh pr create`) | Tmpfile + `--body-file` | Can be long; HEREDOC triggers prompts |
-| Issue bodies (`gh issue create`) | Tmpfile + `--body-file` | Can be long |
-| Review replies | Tmpfile + `--body-file` | Variable length |
-| Worktree prompts | Write tool to `/tmp/` | Avoids shell escaping |
-| Tag messages | Inline `-m` | Typically one line |
+| Scenario                         | Pattern                 | Reason                                |
+| -------------------------------- | ----------------------- | ------------------------------------- |
+| Commit messages                  | HEREDOC                 | Short, predictable length             |
+| PR bodies (`gh pr create`)       | Tmpfile + `--body-file` | Can be long; HEREDOC triggers prompts |
+| Issue bodies (`gh issue create`) | Tmpfile + `--body-file` | Can be long                           |
+| Review replies                   | Tmpfile + `--body-file` | Variable length                       |
+| Worktree prompts                 | Write tool to `/tmp/`   | Avoids shell escaping                 |
+| Tag messages                     | Inline `-m`             | Typically one line                    |
 
 ### 3. `plugins/use-git/skills/use-git/references/tmpfile-pattern.md`
 
@@ -122,9 +122,9 @@ Per-plugin README following the standard template. Trigger: `/use-git` (also act
 ## Verification
 
 1. Check that `plugin.json` version matches `marketplace.json` version (`1.0.0`)
-2. Check that `marketplace.json` metadata version bumped to `1.17.0`
-3. Check that README ToC entry follows one-per-line format
-4. Check that CLAUDE.md structure tree is alphabetically correct
-5. Run `/check-versions` to verify version consistency
-6. Install the plugin and verify `/use-git` loads the skill correctly
-7. Verify auto-activation triggers when running git commands
+1. Check that `marketplace.json` metadata version bumped to `1.17.0`
+1. Check that README ToC entry follows one-per-line format
+1. Check that CLAUDE.md structure tree is alphabetically correct
+1. Run `/check-versions` to verify version consistency
+1. Install the plugin and verify `/use-git` loads the skill correctly
+1. Verify auto-activation triggers when running git commands
