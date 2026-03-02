@@ -310,12 +310,12 @@ jobs:
 
 Use this template for JavaScript or TypeScript projects. Replace `PACKAGE-MANAGER`, `INSTALL-COMMAND`, and `RUN-PREFIX` with the values from the table below.
 
-| Package Manager | `INSTALL-COMMAND`                    | `RUN-PREFIX` |
-| --------------- | ------------------------------------ | ------------ |
-| npm             | `npm ci`                             | `npx`        |
-| yarn            | `yarn install --immutable`           | `yarn`       |
-| pnpm            | `pnpm install --frozen-lockfile`     | `pnpm exec`  |
-| bun             | `bun install --frozen-lockfile`      | `bunx`       |
+| Package Manager | `INSTALL-COMMAND`                | `RUN-PREFIX` |
+| --------------- | -------------------------------- | ------------ |
+| npm             | `npm ci`                         | `npx`        |
+| yarn            | `yarn install --immutable`       | `yarn`       |
+| pnpm            | `pnpm install --frozen-lockfile` | `pnpm exec`  |
+| bun             | `bun install --frozen-lockfile`  | `bunx`       |
 
 If the project has a `tsconfig.json`, include the optional typecheck job.
 
