@@ -47,32 +47,34 @@ rm -f /tmp/gh-pr-body-XXXXXX.md
 
 ```bash
 mktemp /tmp/gh-issue-body-XXXXXX.md
+# Returns: /tmp/gh-issue-body-a1b2c3.md
 ```
 
-Write body content via the Write tool, then:
+Write body content via the Write tool to the returned path, then:
 
 ```bash
-gh issue create --title "Fix login timeout" --body-file /tmp/gh-issue-body-abc123.md --label "bug"
+gh issue create --title "Fix login timeout" --body-file /tmp/gh-issue-body-a1b2c3.md --label "bug"
 ```
 
 ```bash
-rm -f /tmp/gh-issue-body-abc123.md
+rm -f /tmp/gh-issue-body-a1b2c3.md
 ```
 
 ### Pull request
 
 ```bash
 mktemp /tmp/gh-pr-body-XXXXXX.md
+# Returns: /tmp/gh-pr-body-x4y5z6.md
 ```
 
-Write PR body via the Write tool, then:
+Write PR body via the Write tool to the returned path, then:
 
 ```bash
-gh pr create --title "Add retry logic to API client" --body-file /tmp/gh-pr-body-def456.md
+gh pr create --title "Add retry logic to API client" --body-file /tmp/gh-pr-body-x4y5z6.md
 ```
 
 ```bash
-rm -f /tmp/gh-pr-body-def456.md
+rm -f /tmp/gh-pr-body-x4y5z6.md
 ```
 
 ### Review reply
