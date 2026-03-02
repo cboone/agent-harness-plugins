@@ -26,6 +26,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Write Markdown](#write-markdown)
 ∙ [Write Scrut Tests](#write-scrut-tests)
 ∙ [Write Shell Scripts](#write-shell-scripts)
+<br>Scaffolding:
+[Bootstrap Project](#bootstrap-project)
 <br>Agents:
 [Clean Up Agent Config](#clean-up-agent-config)
 ∙ [Create Plugin](#create-plugin)
@@ -214,6 +216,17 @@ Detect project languages and file types, recommend appropriate linters and forma
 
 > **Trigger:** `/setup-linters`
 > **Details:** [README](./plugins/setup-linters/README.md)
+
+### Scaffolding
+
+Orchestrate project setup. Assess what is needed and run all applicable scaffolding and setup tools in the correct order.
+
+#### Bootstrap Project
+
+Assess a repository, determine what scaffolding and setup tools are needed, present a plan, and execute them in the correct order. Detects the project type, checks for existing infrastructure, resolves overlap between tools, and runs everything from foundational boilerplate to CI, linters, secret scanning, and installer setup.
+
+> **Trigger:** `/bootstrap-project`
+> **Details:** [README](./plugins/bootstrap-project/README.md)
 
 ### Agents
 
