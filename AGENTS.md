@@ -37,6 +37,15 @@ cboone-cc-plugins/
     │   │   └── hooks.json
     │   └── scripts/
     │       └── check-rm
+    ├── bootstrap-project/           # Full project bootstrap skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── bootstrap-project/
+    │           ├── SKILL.md
+    │           └── references/
+    │               └── overlap-rules.md
     ├── commit/                      # Smart git commit skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
