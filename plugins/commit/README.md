@@ -43,16 +43,7 @@ This skill runs git commands that trigger permission prompts. To allow them auto
 ```json
 {
   "permissions": {
-    "allow": [
-      "Bash(git status*)",
-      "Bash(git diff*)",
-      "Bash(git log *)",
-      "Bash(git add *)",
-      "Bash(git commit *)",
-      "Bash(git push*)",
-      "Bash(git branch *)",
-      "Bash(git mv *)"
-    ]
+    "allow": ["Bash(git status*)", "Bash(git diff*)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git branch *)", "Bash(git mv *)"]
   }
 }
 ```

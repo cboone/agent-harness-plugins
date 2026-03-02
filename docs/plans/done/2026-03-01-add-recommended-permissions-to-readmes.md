@@ -165,24 +165,24 @@ This gives users an immediately useful, copy-paste solution for eliminating perm
 
 Add a "Recommended Permissions" section after "Usage" and before "Examples" in each plugin's README:
 
-```markdown
+````markdown
 ## Recommended Permissions
 
 This skill runs Bash commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
 ` ```json `
 {
-  "permissions": {
-    "allow": [
-      "Bash(command pattern 1)",
-      "Bash(command pattern 2)"
-    ]
-  }
+"permissions": {
+"allow": [
+"Bash(command pattern 1)",
+"Bash(command pattern 2)"
+]
+}
 }
 ` ``` `
 
 If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
-```
+````
 
 ## Implementation Steps
 
@@ -204,18 +204,18 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 1. **Bump patch versions** for each updated plugin (in both `plugin.json` and `marketplace.json`):
 
-   | Plugin                       | Current | New   |
-   | ---------------------------- | ------- | ----- |
-   | lint-and-fix                 | 1.1.0   | 1.1.1 |
-   | commit                       | 1.2.0   | 1.2.1 |
-   | pr                           | 1.3.1   | 1.3.2 |
-   | merge-main                   | 1.1.1   | 1.1.2 |
-   | release                      | 1.0.0   | 1.0.1 |
-   | create-worktree              | 1.0.6   | 1.0.7 |
-   | create-worktree-from-issue   | 1.2.3   | 1.2.4 |
-   | resolve-copilot-pr-feedback  | 1.1.7   | 1.1.8 |
-   | create-issue                 | 1.0.0   | 1.0.1 |
-   | suggest-next-issue           | 1.1.1   | 1.1.2 |
+   | Plugin                      | Current | New   |
+   | --------------------------- | ------- | ----- |
+   | lint-and-fix                | 1.1.0   | 1.1.1 |
+   | commit                      | 1.2.0   | 1.2.1 |
+   | pr                          | 1.3.1   | 1.3.2 |
+   | merge-main                  | 1.1.1   | 1.1.2 |
+   | release                     | 1.0.0   | 1.0.1 |
+   | create-worktree             | 1.0.6   | 1.0.7 |
+   | create-worktree-from-issue  | 1.2.3   | 1.2.4 |
+   | resolve-copilot-pr-feedback | 1.1.7   | 1.1.8 |
+   | create-issue                | 1.0.0   | 1.0.1 |
+   | suggest-next-issue          | 1.1.1   | 1.1.2 |
 
 1. **Run `check-versions`** again to verify consistency.
 

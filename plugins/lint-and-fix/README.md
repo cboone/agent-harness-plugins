@@ -43,24 +43,7 @@ This skill runs linters, formatters, and git commands that trigger permission pr
 ```json
 {
   "permissions": {
-    "allow": [
-      "Bash(npx eslint *)",
-      "Bash(npx prettier *)",
-      "Bash(npx markdownlint-cli2 *)",
-      "Bash(shellcheck *)",
-      "Bash(shfmt *)",
-      "Bash(npx knip*)",
-      "Bash(npm run lint*)",
-      "Bash(npm run format*)",
-      "Bash(npm run check*)",
-      "Bash(bin/lint*)",
-      "Bash(scripts/lint*)",
-      "Bash(script/lint*)",
-      "Bash(git status --porcelain)",
-      "Bash(git add *)",
-      "Bash(git commit *)",
-      "Bash(git push*)"
-    ]
+    "allow": ["Bash(npx eslint *)", "Bash(npx prettier *)", "Bash(npx markdownlint-cli2 *)", "Bash(shellcheck *)", "Bash(shfmt *)", "Bash(npx knip*)", "Bash(npm run lint*)", "Bash(npm run format*)", "Bash(npm run check*)", "Bash(bin/lint*)", "Bash(scripts/lint*)", "Bash(script/lint*)", "Bash(git status --porcelain)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)"]
   }
 }
 ```

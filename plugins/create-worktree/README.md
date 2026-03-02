@@ -36,11 +36,7 @@ This skill runs workmux and git commands that trigger permission prompts. To all
 ```json
 {
   "permissions": {
-    "allow": [
-      "Bash(bash */launch-workmux *)",
-      "Bash(git worktree list*)",
-      "Bash(rm -f /tmp/workmux-prompt-*)"
-    ]
+    "allow": ["Bash(bash */launch-workmux *)", "Bash(git worktree list*)", "Bash(rm -f /tmp/workmux-prompt-*)"]
   }
 }
 ```

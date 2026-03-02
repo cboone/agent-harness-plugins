@@ -40,11 +40,7 @@ This skill runs GitHub CLI commands that trigger permission prompts. To allow th
 ```json
 {
   "permissions": {
-    "allow": [
-      "Bash(gh issue create *)",
-      "Bash(mktemp /tmp/gh-issue-body-*)",
-      "Bash(rm -f /tmp/gh-issue-body-*)"
-    ]
+    "allow": ["Bash(gh issue create *)", "Bash(mktemp /tmp/gh-issue-body-*)", "Bash(rm -f /tmp/gh-issue-body-*)"]
   }
 }
 ```
