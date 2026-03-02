@@ -55,7 +55,7 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 
 #### CI Workflow Detection
 
-Scan `.github/workflows/*.yml` files to discover repo-specific linting and validation steps that go beyond standard tooling.
+Scan `.github/workflows/*.yml` and `.github/workflows/*.yaml` files to discover repo-specific linting and validation steps that go beyond standard tooling.
 
 1. **Find workflow files**: Use Glob to find `.github/workflows/*.yml` and `.github/workflows/*.yaml`.
 1. **Identify lint/validation jobs**: Read each workflow file. Look for jobs or steps whose `name` suggests linting, validation, or code quality (keywords: "lint", "check", "validate", "format", "style", "quality", "verify").
