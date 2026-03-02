@@ -44,13 +44,13 @@ This produces output like `branch: Created from develop`, `branch: Created from 
 If a source branch name was extracted, verify it is a valid base for the PR. Run these checks in order, stopping at the first failure:
 
 1. **Not the current branch**: The source branch must differ from the current branch.
-2. **Exists on the remote**: Note that `git ls-remote` always exits 0 regardless of whether the branch exists, so check for non-empty output:
+1. **Exists on the remote**: Note that `git ls-remote` always exits 0 regardless of whether the branch exists, so check for non-empty output:
 
    ```bash
    git ls-remote --heads origin <source-branch> | grep -q .
    ```
 
-3. **Not already merged into the default branch**: The source branch may have been merged into the default branch since this branch was created (e.g., a parent feature branch that has since landed). Check whether the source branch is an ancestor of the default branch:
+1. **Not already merged into the default branch**: The source branch may have been merged into the default branch since this branch was created (e.g., a parent feature branch that has since landed). Check whether the source branch is an ancestor of the default branch:
 
    ```bash
    git fetch origin <default-branch> <source-branch> --quiet
