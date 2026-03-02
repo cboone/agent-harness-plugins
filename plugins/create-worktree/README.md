@@ -29,6 +29,24 @@ Derives a branch name from your task description (e.g., `feature/add-dark-mode-s
 
 Provide either a task description (branch name is derived automatically) or an explicit branch name.
 
+## Recommended Permissions
+
+This skill runs workmux and git commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash */launch-workmux *)",
+      "Bash(git worktree list*)",
+      "Bash(rm -f /tmp/workmux-prompt-*)"
+    ]
+  }
+}
+```
+
+If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+
 ## Examples
 
 - "create worktree for adding dark mode": creates `feature/adding-dark-mode`

@@ -33,6 +33,24 @@ Ask Claude to create an issue:
 
 Or invoke directly with `/create-issue`.
 
+## Recommended Permissions
+
+This skill runs GitHub CLI commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh issue create *)",
+      "Bash(mktemp /tmp/gh-issue-body-*)",
+      "Bash(rm -f /tmp/gh-issue-body-*)"
+    ]
+  }
+}
+```
+
+If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+
 ## See Also
 
 - [Create Worktree from Issue](../create-worktree-from-issue/README.md): Start working on an existing issue in an isolated worktree

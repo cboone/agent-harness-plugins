@@ -36,6 +36,37 @@ Checks for configuration files to detect ESLint, Prettier, markdownlint, ShellCh
 | `--no-commit`   | Skip committing and pushing                       |
 | `--no-push`     | Commit but do not push (default: commit and push) |
 
+## Recommended Permissions
+
+This skill runs linters, formatters, and git commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx eslint *)",
+      "Bash(npx prettier *)",
+      "Bash(npx markdownlint-cli2 *)",
+      "Bash(shellcheck *)",
+      "Bash(shfmt *)",
+      "Bash(npx knip*)",
+      "Bash(npm run lint*)",
+      "Bash(npm run format*)",
+      "Bash(npm run check*)",
+      "Bash(bin/lint*)",
+      "Bash(scripts/lint*)",
+      "Bash(script/lint*)",
+      "Bash(git status --porcelain)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push*)"
+    ]
+  }
+}
+```
+
+If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+
 ## Examples
 
 - "lint and fix": detects and runs all available linters with auto-fix

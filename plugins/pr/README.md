@@ -28,6 +28,38 @@ Stages everything, generates a conventional commit message from the diff, pushes
 
 No options. The skill makes opinionated decisions at every step with no prompts.
 
+## Recommended Permissions
+
+This skill runs git and GitHub CLI commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push*)",
+      "Bash(git branch *)",
+      "Bash(git rev-parse *)",
+      "Bash(git remote *)",
+      "Bash(git mv *)",
+      "Bash(gh repo view *)",
+      "Bash(gh issue view *)",
+      "Bash(gh issue list *)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr view *)",
+      "Bash(mktemp /tmp/pr-body-*)",
+      "Bash(rm -f /tmp/pr-body-*)"
+    ]
+  }
+}
+```
+
+If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+
 ## Examples
 
 - "pr": commits, pushes, and creates a pull request
