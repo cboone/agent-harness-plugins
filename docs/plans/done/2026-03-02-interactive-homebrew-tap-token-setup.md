@@ -13,10 +13,10 @@ Three plugins generate GoReleaser configs and release workflows that reference `
 Write a reference section with these sub-steps:
 
 1. **Check for the homebrew-tap repo** via `gh repo view GITHUB-USERNAME/homebrew-tap`; offer to create it if missing
-2. **Check for the existing secret** via `gh secret list | grep HOMEBREW_TAP_TOKEN`; skip to verification if found
-3. **Walk through fine-grained PAT creation**: link to `https://github.com/settings/personal-access-tokens/new`, specify exact settings (scope to `GITHUB-USERNAME/homebrew-tap`, Contents: Read and write), explain why it's needed
-4. **Offer to set the secret** via `gh secret set HOMEBREW_TAP_TOKEN` (reads from stdin, no echo)
-5. **Verify** by re-running `gh secret list | grep HOMEBREW_TAP_TOKEN`
+1. **Check for the existing secret** via `gh secret list | grep HOMEBREW_TAP_TOKEN`; skip to verification if found
+1. **Walk through fine-grained PAT creation**: link to `https://github.com/settings/personal-access-tokens/new`, specify exact settings (scope to `GITHUB-USERNAME/homebrew-tap`, Contents: Read and write), explain why it's needed
+1. **Offer to set the secret** via `gh secret set HOMEBREW_TAP_TOKEN` (reads from stdin, no echo)
+1. **Verify** by re-running `gh secret list | grep HOMEBREW_TAP_TOKEN`
 
 Include a note about the no-remote case (new repos without a GitHub remote yet) and a note that classic PATs with `repo` scope also work but are broader than necessary.
 
@@ -55,11 +55,11 @@ No full reference section needed in this file since it delegates to `/add-gorele
 
 ### 5. Bump versions
 
-| Plugin | Current | New | Reason |
-|---|---|---|---|
-| `add-goreleaser-homebrew` | 1.1.0 | 1.2.0 | New interactive capability |
-| `scaffold-go-cli` | 1.3.3 | 1.4.0 | New interactive capability |
-| `setup-installers` | 1.0.0 | 1.1.0 | New token detection behavior |
+| Plugin                    | Current | New   | Reason                       |
+| ------------------------- | ------- | ----- | ---------------------------- |
+| `add-goreleaser-homebrew` | 1.1.0   | 1.2.0 | New interactive capability   |
+| `scaffold-go-cli`         | 1.3.3   | 1.4.0 | New interactive capability   |
+| `setup-installers`        | 1.0.0   | 1.1.0 | New token detection behavior |
 
 Update in both `plugin.json` and `.claude-plugin/marketplace.json` for each. No marketplace `metadata.version` bump (no plugins added or removed).
 
@@ -76,7 +76,7 @@ Update in both `plugin.json` and `.claude-plugin/marketplace.json` for each. No 
 ## Verification
 
 1. Read each modified command file and confirm the new step is correctly placed, numbered, and references the appended section
-2. Confirm the reference section content is identical in both `add-goreleaser-homebrew.md` and `scaffold-go-cli.md`
-3. Confirm the old summary reminders have been replaced with conditional notes
-4. Confirm version numbers match between each `plugin.json` and its `marketplace.json` entry
-5. Run `check-versions` skill to validate version consistency
+1. Confirm the reference section content is identical in both `add-goreleaser-homebrew.md` and `scaffold-go-cli.md`
+1. Confirm the old summary reminders have been replaced with conditional notes
+1. Confirm version numbers match between each `plugin.json` and its `marketplace.json` entry
+1. Run `check-versions` skill to validate version consistency
