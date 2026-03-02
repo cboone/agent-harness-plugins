@@ -223,18 +223,18 @@ mktemp /tmp/pr-body-XXXXXX.md
 
 Then use the **Write** tool to write the full PR body (Summary, Test plan, and Closes sections) to the path returned by `mktemp`.
 
-Then create the PR with `--body-file`:
+Then create the PR with `--body-file`, using the actual path returned by `mktemp`:
 
 ```bash
-gh pr create --title "the pr title" --body-file /tmp/pr-body-XXXXXX.md
+gh pr create --title "the pr title" --body-file TMPFILE_PATH
 ```
 
 Do not pass `--base` unless the base branch is not the repository default. Do not pass `--draft`. Do not add labels or reviewers.
 
-Always remove the tmpfile after the PR creation attempt, regardless of whether it succeeded or failed:
+Always remove the tmpfile after the PR creation attempt, regardless of whether it succeeded or failed. Use the same path returned by `mktemp`:
 
 ```bash
-rm -f /tmp/pr-body-XXXXXX.md
+rm -f TMPFILE_PATH
 ```
 
 ### 7. Report Results
