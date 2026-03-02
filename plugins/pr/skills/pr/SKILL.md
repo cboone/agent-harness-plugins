@@ -208,23 +208,26 @@ If no connected issues were detected, omit the `## Closes` section entirely.
 
 #### Create the PR
 
-First, write the PR body to a temporary file using the Write tool:
+First, generate a unique temporary file path using `mktemp`:
 
-- File path: `/tmp/pr-body.md`
-- Content: the full PR body (Summary, Test plan, and Closes sections)
+```bash
+mktemp /tmp/pr-body-XXXXXX.md
+```
+
+Then use the **Write** tool to write the full PR body (Summary, Test plan, and Closes sections) to the path returned by `mktemp`.
 
 Then create the PR with `--body-file`:
 
 ```bash
-gh pr create --title "the pr title" --body-file /tmp/pr-body.md
+gh pr create --title "the pr title" --body-file /tmp/pr-body-XXXXXX.md
 ```
 
 Do not pass `--base` unless the base branch is not the repository default. Do not pass `--draft`. Do not add labels or reviewers.
 
-After the PR is created, clean up the temp file:
+Always remove the tmpfile after the PR creation attempt, regardless of whether it succeeded or failed:
 
 ```bash
-rm /tmp/pr-body.md
+rm -f /tmp/pr-body-XXXXXX.md
 ```
 
 ### 7. Report Results
