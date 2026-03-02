@@ -17,7 +17,7 @@ Then select **Use Git** from the available plugins.
 
 ## What It Does
 
-Provides conventions for running git and `gh` CLI commands in Claude Code. Covers when to use tmpfiles vs HEREDOCs for passing content, GPG signing, safe push practices, secret file exclusion, and parallel tool call patterns.
+Provides conventions for running git and `gh` CLI commands in Claude Code. Covers when to use tmpfiles vs HEREDOCs for passing content, GPG signing, safe push practices, secret file exclusion, parallel tool call patterns, and clean diff output formatting.
 
 The core problem: long string arguments in Bash commands (PR bodies, issue bodies, review replies) trigger Claude Code permission prompts. This skill standardizes the patterns that avoid those prompts while keeping operations safe.
 

@@ -247,6 +247,7 @@ cboone-cc-plugins/
     │           ├── SKILL.md
     │           └── references/
     │               ├── common-operations.md
+    │               ├── diff-output.md
     │               ├── heredoc-pattern.md
     │               ├── safety-rules.md
     │               └── tmpfile-pattern.md

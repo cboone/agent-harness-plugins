@@ -23,6 +23,7 @@ Conventions for running git and GitHub CLI (`gh`) commands in Claude Code. These
 1. **Never use force or override flags**: Never use `git push --force`, `git push -f`, `--no-verify`, or similar override flags without explicit user instruction. If the user explicitly requests a force push, use `git push --force-with-lease` (add `--force-if-includes` when the installed Git version supports it, v2.30+). Investigate root causes rather than forcing through.
 1. **Parallel tool calls over chained commands**: Use separate Bash tool calls for independent commands instead of chaining with `;` or `&&`, which trigger permission prompts.
 1. **Exclude secret files from staging**: Never stage `.env`, `credentials.json`, `*.pem`, `*.key`, or similar secret files.
+1. **Use clean diff output**: Always pass `--no-ext-diff --no-color` (and `--no-pager` before the subcommand) on diff-producing commands (`git diff`, `git log -p`, `git show`). User configs may route diffs through external tools like difftastic, producing output that is harder to parse. These flags ensure standard unified diff format.
 
 ## Quick Decision Table
 
@@ -42,6 +43,7 @@ Conventions for running git and GitHub CLI (`gh`) commands in Claude Code. These
 1. **HEREDOC details:** Read `references/heredoc-pattern.md`
 1. **Safety rules:** Read `references/safety-rules.md`
 1. **Common operations:** Read `references/common-operations.md`
+1. **Diff output:** Read `references/diff-output.md`
 
 ## Reference Navigation
 
@@ -55,3 +57,4 @@ Conventions for running git and GitHub CLI (`gh`) commands in Claude Code. These
 - `references/heredoc-pattern.md` - When and how to use HEREDOCs for commit messages
 - `references/safety-rules.md` - GPG signing, never amend, never force, secret exclusion, parallel calls
 - `references/common-operations.md` - Base branch detection, push with upstream fallback, conventional commits, branch naming
+- `references/diff-output.md` - Clean diff output flags for bypassing external diff tools, colors, and pagers
