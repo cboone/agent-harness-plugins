@@ -39,13 +39,13 @@ git --no-pager diff --no-ext-diff --no-color --cached
 git --no-pager diff --no-ext-diff --no-color <base-branch>...HEAD
 
 # Stat summary only
-git --no-pager diff --no-ext-diff --no-color --stat <base-branch>..HEAD
+git --no-pager diff --no-ext-diff --no-color --stat <base-branch>...HEAD
 
 # Changed file names only
-git --no-pager diff --no-ext-diff --no-color --name-only <base-branch>..HEAD
+git --no-pager diff --no-ext-diff --no-color --name-only <base-branch>...HEAD
 
 # Changed file names with status (added, modified, deleted)
-git --no-pager diff --no-ext-diff --no-color --name-status <base-branch>..HEAD
+git --no-pager diff --no-ext-diff --no-color --name-status <base-branch>...HEAD
 ```
 
 ### git log (with patches)
