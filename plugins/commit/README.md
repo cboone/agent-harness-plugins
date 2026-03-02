@@ -36,6 +36,20 @@ Analyzes your diff to generate well-structured conventional commit messages that
 | `--plan`   | Commit only the plan file(s)                           |
 | `--all`    | Stage and commit all changes including untracked files |
 
+## Recommended Permissions
+
+This skill runs git commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(git status*)", "Bash(git diff*)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git branch *)", "Bash(git mv *)"]
+  }
+}
+```
+
+If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+
 ## Examples
 
 - "commit": stages and commits with an auto-generated message

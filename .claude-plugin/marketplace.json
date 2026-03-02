@@ -91,7 +91,7 @@
       "name": "commit",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/commit",
-      "version": "1.2.0"
+      "version": "1.2.1"
     },
     {
       "author": {
@@ -105,7 +105,7 @@
       "name": "create-issue",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-issue",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     {
       "author": {
@@ -119,7 +119,7 @@
       "name": "create-plugin",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-plugin",
-      "version": "1.1.5"
+      "version": "1.1.6"
     },
     {
       "author": {
@@ -133,7 +133,7 @@
       "name": "create-worktree",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-worktree",
-      "version": "1.0.6"
+      "version": "1.0.7"
     },
     {
       "author": {
@@ -147,7 +147,7 @@
       "name": "create-worktree-from-issue",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-worktree-from-issue",
-      "version": "1.2.3"
+      "version": "1.2.4"
     },
     {
       "author": {
@@ -175,7 +175,7 @@
       "name": "lint-and-fix",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/lint-and-fix",
-      "version": "1.2.0"
+      "version": "1.2.1"
     },
     {
       "author": {
@@ -189,7 +189,7 @@
       "name": "merge-main",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/merge-main",
-      "version": "1.1.1"
+      "version": "1.1.2"
     },
     {
       "author": {
@@ -217,7 +217,7 @@
       "name": "pr",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/pr",
-      "version": "1.4.0"
+      "version": "1.4.1"
     },
     {
       "author": {
@@ -231,7 +231,7 @@
       "name": "release",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/release",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     {
       "author": {
@@ -245,7 +245,7 @@
       "name": "resolve-copilot-pr-feedback",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/resolve-copilot-pr-feedback",
-      "version": "1.1.7"
+      "version": "1.1.8"
     },
     {
       "author": {
@@ -371,7 +371,7 @@
       "name": "suggest-next-issue",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/suggest-next-issue",
-      "version": "1.1.1"
+      "version": "1.1.2"
     },
     {
       "author": {

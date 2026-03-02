@@ -29,6 +29,20 @@ Finds a GitHub issue by number or fuzzy text search, derives a branch name from 
 
 Provide either an issue number or descriptive text to search for.
 
+## Recommended Permissions
+
+This skill runs GitHub CLI, workmux, and git commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(gh issue view *)", "Bash(gh issue list *)", "Bash(gh issue edit *)", "Bash(gh label create *)", "Bash(bash */launch-workmux *)", "Bash(git worktree list*)", "Bash(rm -f /tmp/workmux-prompt-*)"]
+  }
+}
+```
+
+If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+
 ## Examples
 
 - "start issue #42": looks up issue 42 and creates a worktree for it

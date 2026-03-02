@@ -126,9 +126,9 @@ One-sentence description.
 
 Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
 
-` ```text `
+```text
 /plugin marketplace add cboone/cboone-cc-plugins
-` ``` `
+```
 
 Then select **Plugin Name** from the available plugins.
 
@@ -146,6 +146,25 @@ gets, not internal agent workflow.
 ## Usage
 
 The trigger command and any flags/options.
+
+## Recommended Permissions
+
+(Only if the skill runs Bash commands that trigger permission prompts.)
+
+This skill runs [brief description of command types] that trigger permission
+prompts. To allow them automatically, add these rules to your
+`.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(command pattern 1)", "Bash(command pattern 2)"]
+  }
+}
+```
+
+If you already have a `permissions.allow` array, merge these entries into it.
+Review and adjust the rules to match your security preferences.
 
 ## Examples
 
@@ -171,9 +190,9 @@ One-sentence description.
 
 Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
 
-` ```text `
+```text
 /plugin marketplace add cboone/cboone-cc-plugins
-` ``` `
+```
 
 Then select **Hook Name** from the available plugins.
 
@@ -195,6 +214,7 @@ Describe what events trigger the hook and what happens.
 - **Style guides** (write-go-code, write-markdown, write-shell-scripts): Note automatic activation in the trigger line. Mention the reference structure.
 - **Simple skills** with no options: Omit the options table from Usage.
 - **Hooks** with no dependencies: Omit the Requires line.
+- **Skills that run Bash commands**: Include the Recommended Permissions section with specific `Bash(pattern)` rules derived from the SKILL.md commands. Omit this section for skills that only use Read/Glob/Grep tools.
 
 ## Notes
 

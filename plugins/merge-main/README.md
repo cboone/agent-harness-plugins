@@ -31,6 +31,20 @@ Automatically detects the default branch, handles uncommitted changes (stash, co
 | ----------------- | -------------------------------------- |
 | `--base <branch>` | Override the auto-detected base branch |
 
+## Recommended Permissions
+
+This skill runs git and GitHub CLI commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(git status*)", "Bash(git branch *)", "Bash(git fetch *)", "Bash(git merge *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git stash*)", "Bash(git log *)", "Bash(git diff*)", "Bash(git add *)", "Bash(git remote *)", "Bash(gh repo view *)"]
+  }
+}
+```
+
+If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+
 ## Examples
 
 - "merge main": fetches and merges the default branch
