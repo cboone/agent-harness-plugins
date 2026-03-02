@@ -240,7 +240,7 @@ bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file /tmp/copilo
 
 This step prevents CI failures from lint issues introduced while resolving feedback.
 
-1. **Check for code changes**: If no code files were modified during steps 2-4 (only nitpicks auto-resolved or threads replied to), skip this step.
+1. **Check for changes**: If no files were modified during steps 2-4 (only nitpicks auto-resolved or threads replied to), skip this step. Run `git status --porcelain` to verify: empty output means a clean working tree and you may skip; any output means files were changed and you should continue.
 1. **Invoke the `lint-and-fix` skill** using the Skill tool with `--no-push`:
 
    ```text
@@ -287,7 +287,7 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 1. **EVERY addressed thread resolved via the script** (not just code fixed!)
 1. **For INCORRECT feedback: Copilot instructions updated** (path-specific `*.instructions.md` preferred, or `copilot-instructions.md` for repo-wide conventions)
 1. **For DEFERRED feedback: Task tracked** (GitHub issue, PROJECT.md, or similar)
-1. **Linters and formatters pass** (via `lint-and-fix` skill, if code was changed)
+1. **Linters and formatters pass** (via `lint-and-fix` skill, if any files were changed while addressing feedback)
 1. Re-fetch confirms empty array `[]` for all processed threads
 1. Output summary table (see format below)
 
