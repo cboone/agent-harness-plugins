@@ -175,8 +175,8 @@ mkdir -p internal
 touch internal/.gitkeep
 
 # plans directory
-mkdir -p docs/plans
-touch docs/plans/.gitkeep
+mkdir -p docs/plans/todo docs/plans/done
+touch docs/plans/todo/.gitkeep docs/plans/done/.gitkeep
 
 # tests directory
 mkdir -p tests

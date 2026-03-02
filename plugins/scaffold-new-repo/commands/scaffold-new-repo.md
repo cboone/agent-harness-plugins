@@ -156,7 +156,12 @@ Create a Copilot instructions file using the template from the Copilot Instructi
 
 ### 10. Create docs/plans/
 
-Use the Write tool to create an empty `docs/plans/.gitkeep` file. The Write tool creates parent directories automatically.
+Use the Write tool to create empty `.gitkeep` files in both subdirectories:
+
+- `docs/plans/todo/.gitkeep`
+- `docs/plans/done/.gitkeep`
+
+The Write tool creates parent directories automatically. The `todo/` subdirectory holds active plans; `done/` holds completed plans preserved for reference.
 
 ### 11. Create Initial Commit
 
@@ -718,6 +723,10 @@ Replace `PROJECT-NAME` with the project name in title case.
 # GitHub Copilot Instructions for PROJECT-NAME
 
 For full project conventions, see AGENTS.md in the repository root.
+
+## PR Review
+
+- **Done plans are historical records**: Files in `docs/plans/done/` are completed plan documents preserved for reference. They may not match the final implementation. Do not flag discrepancies between done plan content and the actual codebase.
 ```
 
 ### Notes
@@ -725,20 +734,9 @@ For full project conventions, see AGENTS.md in the repository root.
 - **Pointer pattern:** This template uses the "pointer" strategy, a brief
   cross-reference to AGENTS.md. This avoids duplicating conventions that
   already live in AGENTS.md.
-- **Adding PR Review rules:** When Copilot incorrectly flags a project
-  convention during PR review, add a `## PR Review` section with the
-  bold-key pattern (`**Convention name**: explanation`). Example:
-
-  ```markdown
-  ## PR Review
-
-  When reviewing pull requests, do not flag the following patterns as issues.
-  Each is an intentional project convention:
-
-  - **Bare TODO in template files**: These are intentional placeholders for
-    the repo owner to fill in later, not incomplete work.
-  ```
-
+- **PR Review section included by default:** The template ships with a
+  `## PR Review` section containing the done-plans rule. Add more rules
+  using the bold-key pattern (`**Convention name**: explanation`) as needed.
 - **Keep concise:** GitHub recommends keeping instruction files short and
   putting the most important rules first. Start with a focused set of review
   rules and add more iteratively.
