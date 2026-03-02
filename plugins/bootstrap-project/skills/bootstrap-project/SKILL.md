@@ -17,16 +17,16 @@ Works for both brand-new and existing repositories.
 
 Scan for language and framework markers using Glob. Exclude `node_modules/`, `.yarn/`, `vendor/`, and other dependency directories from all searches.
 
-| Marker(s)                                            | Project type          |
-| ---------------------------------------------------- | --------------------- |
-| `go.mod` + (`main.go` or `cmd/`)                     | Go CLI                |
-| `go.mod` without `main.go` or `cmd/`                 | Go library            |
-| `package.json` + JS/TS source files                  | JavaScript/TypeScript |
-| `pyproject.toml`, `setup.py`, `requirements.txt`     | Python                |
-| `Cargo.toml`                                         | Rust                  |
-| `Gemfile`, `*.gemspec`                                | Ruby                  |
-| `*.sh`, `bin/*`, `scripts/*`                         | Shell                 |
-| No recognizable files                                | New/empty repo        |
+| Marker(s)                                        | Project type          |
+| ------------------------------------------------ | --------------------- |
+| `go.mod` + (`main.go` or `cmd/`)                 | Go CLI                |
+| `go.mod` without `main.go` or `cmd/`             | Go library            |
+| `package.json` + JS/TS source files              | JavaScript/TypeScript |
+| `pyproject.toml`, `setup.py`, `requirements.txt` | Python                |
+| `Cargo.toml`                                     | Rust                  |
+| `Gemfile`, `*.gemspec`                           | Ruby                  |
+| `*.sh`, `bin/*`, `scripts/*`                     | Shell                 |
+| No recognizable files                            | New/empty repo        |
 
 If no recognizable files are found, ask the user what type of project they intend to create.
 
@@ -36,20 +36,20 @@ If multiple types are detected (monorepo), note all of them.
 
 Check for files and directories that indicate what is already set up:
 
-| Check                                | Indicates                | Typically provided by              |
-| ------------------------------------ | ------------------------ | ---------------------------------- |
-| `LICENSE`                            | License exists           | `scaffold-new-repo`                |
-| `README.md`                          | README exists            | `scaffold-new-repo`                |
-| `CHANGELOG.md`                       | Changelog exists         | `scaffold-new-repo`                |
-| `AGENTS.md` or `CLAUDE.md`          | Agent config exists      | `scaffold-new-repo`                |
-| `.github/workflows/ci.yml`          | CI exists                | `setup-ci` / `scaffold-go-*`      |
-| `.github/workflows/release.yml`     | Release workflow exists  | `scaffold-go-*` / `add-goreleaser-homebrew` |
-| `.github/workflows/gitleaks.yml`    | Gitleaks exists          | `setup-gitleaks`                   |
-| `.goreleaser.yml`                    | GoReleaser exists        | `scaffold-go-cli` / `add-goreleaser-homebrew` |
-| `Makefile`                           | Build targets exist      | `scaffold-go-*` / `setup-ci`      |
-| Linter config files                 | Linters exist            | `setup-linters` / `scaffold-go-*` |
-| `tests/scrut/`                      | Scrut tests exist        | `add-scrut-cli-tests`              |
-| `install.sh` or `Formula/`          | Installers exist         | `setup-installers`                 |
+| Check                            | Indicates               | Typically provided by                         |
+| -------------------------------- | ----------------------- | --------------------------------------------- |
+| `LICENSE`                        | License exists          | `scaffold-new-repo`                           |
+| `README.md`                      | README exists           | `scaffold-new-repo`                           |
+| `CHANGELOG.md`                   | Changelog exists        | `scaffold-new-repo`                           |
+| `AGENTS.md` or `CLAUDE.md`       | Agent config exists     | `scaffold-new-repo`                           |
+| `.github/workflows/ci.yml`       | CI exists               | `setup-ci` / `scaffold-go-*`                  |
+| `.github/workflows/release.yml`  | Release workflow exists | `scaffold-go-*` / `add-goreleaser-homebrew`   |
+| `.github/workflows/gitleaks.yml` | Gitleaks exists         | `setup-gitleaks`                              |
+| `.goreleaser.yml`                | GoReleaser exists       | `scaffold-go-cli` / `add-goreleaser-homebrew` |
+| `Makefile`                       | Build targets exist     | `scaffold-go-*` / `setup-ci`                  |
+| Linter config files              | Linters exist           | `setup-linters` / `scaffold-go-*`             |
+| `tests/scrut/`                   | Scrut tests exist       | `add-scrut-cli-tests`                         |
+| `install.sh` or `Formula/`       | Installers exist        | `setup-installers`                            |
 
 ### 3. Build the Plan
 
@@ -66,25 +66,25 @@ Key overlap rules:
 Execution order (dependencies flow downward):
 
 1. `scaffold-new-repo` (foundation: LICENSE, README, .gitignore, agent config)
-2. `scaffold-go-cli` OR `scaffold-go-library` (language-specific scaffolding, if applicable)
-3. `setup-ci` (if not already covered by step 2)
-4. `setup-linters` (cross-language tools, or full setup if no Go scaffolder ran)
-5. `setup-gitleaks` (secret scanning)
-6. `add-goreleaser-homebrew` (if Go CLI and not already covered by step 2)
-7. `setup-installers` (if CLI project)
-8. `add-scrut-cli-tests` (if CLI project)
+1. `scaffold-go-cli` OR `scaffold-go-library` (language-specific scaffolding, if applicable)
+1. `setup-ci` (if not already covered by step 2)
+1. `setup-linters` (cross-language tools, or full setup if no Go scaffolder ran)
+1. `setup-gitleaks` (secret scanning)
+1. `add-goreleaser-homebrew` (if Go CLI and not already covered by step 2)
+1. `setup-installers` (if CLI project)
+1. `add-scrut-cli-tests` (if CLI project)
 
 ### 4. Present the Plan
 
 Show the user a table with each tool and its status. Use these status values:
 
-| Status           | Meaning                                                   |
-| ---------------- | --------------------------------------------------------- |
-| Will run         | Tool is needed and will be invoked                        |
-| Scoped down      | Tool will run with a reduced scope (see overlap rules)    |
-| Already set up   | Infrastructure already exists; nothing to do              |
-| Skipped          | Another tool covers this functionality                    |
-| Not applicable   | Tool does not apply to this project type                  |
+| Status         | Meaning                                                |
+| -------------- | ------------------------------------------------------ |
+| Will run       | Tool is needed and will be invoked                     |
+| Scoped down    | Tool will run with a reduced scope (see overlap rules) |
+| Already set up | Infrastructure already exists; nothing to do           |
+| Skipped        | Another tool covers this functionality                 |
+| Not applicable | Tool does not apply to this project type               |
 
 Example output:
 
@@ -115,7 +115,7 @@ Invoke each confirmed tool in order using the Skill tool. Each tool is registere
 Between each invocation:
 
 1. Verify the tool completed successfully.
-2. If a tool fails, report the error to the user and ask whether to continue with the remaining tools or stop.
+1. If a tool fails, report the error to the user and ask whether to continue with the remaining tools or stop.
 
 When invoking `setup-linters` in scoped-down mode, tell it to skip language-specific linters that the Go scaffolder already configured and only set up cross-language tools.
 

@@ -27,35 +27,35 @@ The main skill file. Frontmatter with trigger phrases like "bootstrap this proje
 
 Scan for language markers (reuse the detection table from `setup-ci` and `setup-linters`):
 
-| Marker | Type |
-|---|---|
-| `go.mod` + (`main.go` or `cmd/`) | Go CLI |
-| `go.mod` without main.go/cmd/ | Go library |
-| `package.json` + JS/TS source files | JavaScript/TypeScript |
-| `pyproject.toml`, `setup.py`, `requirements.txt` | Python |
-| `Cargo.toml` | Rust |
-| `Gemfile`, `*.gemspec` | Ruby |
-| `*.sh`, `bin/*`, `scripts/*` | Shell |
-| No recognizable files | New/empty repo (ask user for intended type) |
+| Marker                                           | Type                                        |
+| ------------------------------------------------ | ------------------------------------------- |
+| `go.mod` + (`main.go` or `cmd/`)                 | Go CLI                                      |
+| `go.mod` without main.go/cmd/                    | Go library                                  |
+| `package.json` + JS/TS source files              | JavaScript/TypeScript                       |
+| `pyproject.toml`, `setup.py`, `requirements.txt` | Python                                      |
+| `Cargo.toml`                                     | Rust                                        |
+| `Gemfile`, `*.gemspec`                           | Ruby                                        |
+| `*.sh`, `bin/*`, `scripts/*`                     | Shell                                       |
+| No recognizable files                            | New/empty repo (ask user for intended type) |
 
 #### Step 2: Detect existing infrastructure
 
 Check for files/directories that indicate what is already set up:
 
-| Check | Indicates | Provided by |
-|---|---|---|
-| `LICENSE` | License exists | scaffold-new-repo |
-| `README.md` | README exists | scaffold-new-repo |
-| `CHANGELOG.md` | Changelog exists | scaffold-new-repo |
-| `AGENTS.md` or `CLAUDE.md` | Agent config exists | scaffold-new-repo |
-| `.github/workflows/ci.yml` | CI exists | setup-ci / scaffold-go-* |
-| `.github/workflows/release.yml` | Release workflow exists | scaffold-go-* / add-goreleaser-homebrew |
-| `.github/workflows/gitleaks.yml` | Gitleaks exists | setup-gitleaks |
-| `.goreleaser.yml` | GoReleaser exists | scaffold-go-cli / add-goreleaser-homebrew |
-| `Makefile` | Build targets exist | scaffold-go-* / setup-ci |
-| Linter config files | Linters exist | setup-linters / scaffold-go-library |
-| `tests/scrut/` | Scrut tests exist | add-scrut-cli-tests |
-| `install.sh` or `Formula/` | Installers exist | setup-installers |
+| Check                            | Indicates               | Provided by                               |
+| -------------------------------- | ----------------------- | ----------------------------------------- |
+| `LICENSE`                        | License exists          | scaffold-new-repo                         |
+| `README.md`                      | README exists           | scaffold-new-repo                         |
+| `CHANGELOG.md`                   | Changelog exists        | scaffold-new-repo                         |
+| `AGENTS.md` or `CLAUDE.md`       | Agent config exists     | scaffold-new-repo                         |
+| `.github/workflows/ci.yml`       | CI exists               | setup-ci / scaffold-go-\*                 |
+| `.github/workflows/release.yml`  | Release workflow exists | scaffold-go-\* / add-goreleaser-homebrew  |
+| `.github/workflows/gitleaks.yml` | Gitleaks exists         | setup-gitleaks                            |
+| `.goreleaser.yml`                | GoReleaser exists       | scaffold-go-cli / add-goreleaser-homebrew |
+| `Makefile`                       | Build targets exist     | scaffold-go-\* / setup-ci                 |
+| Linter config files              | Linters exist           | setup-linters / scaffold-go-library       |
+| `tests/scrut/`                   | Scrut tests exist       | add-scrut-cli-tests                       |
+| `install.sh` or `Formula/`       | Installers exist        | setup-installers                          |
 
 #### Step 3: Build the plan
 
@@ -70,13 +70,13 @@ Using overlap rules from `references/overlap-rules.md`, determine which tools to
 Execution order (dependencies flow downward):
 
 1. `scaffold-new-repo` (foundation: LICENSE, README, .gitignore, agent config)
-2. `scaffold-go-cli` OR `scaffold-go-library` (language-specific scaffolding, if applicable)
-3. `setup-ci` (if not already covered by step 2)
-4. `setup-linters` (cross-language tools, or full setup if no Go scaffolder ran)
-5. `setup-gitleaks` (secret scanning)
-6. `add-goreleaser-homebrew` (if Go CLI and not already covered by step 2)
-7. `setup-installers` (if CLI project)
-8. `add-scrut-cli-tests` (if CLI project)
+1. `scaffold-go-cli` OR `scaffold-go-library` (language-specific scaffolding, if applicable)
+1. `setup-ci` (if not already covered by step 2)
+1. `setup-linters` (cross-language tools, or full setup if no Go scaffolder ran)
+1. `setup-gitleaks` (secret scanning)
+1. `add-goreleaser-homebrew` (if Go CLI and not already covered by step 2)
+1. `setup-installers` (if CLI project)
+1. `add-scrut-cli-tests` (if CLI project)
 
 #### Step 4: Present the plan to user
 
@@ -122,7 +122,7 @@ Standard per-plugin README following the existing pattern (Type, Trigger, Instal
 ## Verification
 
 1. Check that `plugin.json` version matches `marketplace.json` entry
-2. Verify the skill triggers on `/bootstrap-project` and on phrases like "bootstrap this project"
-3. Test against a brand-new empty repo: should offer the full pipeline
-4. Test against an existing Go CLI project with CI already set up: should skip `setup-ci` and `scaffold-go-cli`, offer only the missing pieces
-5. Run `/check-versions` to verify version consistency
+1. Verify the skill triggers on `/bootstrap-project` and on phrases like "bootstrap this project"
+1. Test against a brand-new empty repo: should offer the full pipeline
+1. Test against an existing Go CLI project with CI already set up: should skip `setup-ci` and `scaffold-go-cli`, offer only the missing pieces
+1. Run `/check-versions` to verify version consistency

@@ -6,18 +6,18 @@ When multiple scaffolding and setup tools apply to the same project, some includ
 
 Each row reads as: "If **Tool A** will run, then apply **Action** to **Tool B**, because **Reason**."
 
-| Tool A              | Tool B                   | Action    | Reason                                                               |
-| ------------------- | ------------------------ | --------- | -------------------------------------------------------------------- |
-| `scaffold-go-cli`   | `setup-ci`               | Skip      | `scaffold-go-cli` generates `.github/workflows/ci.yml` and Makefile  |
-| `scaffold-go-cli`   | `add-goreleaser-homebrew` | Skip      | `scaffold-go-cli` generates `.goreleaser.yml` and release workflow   |
-| `scaffold-go-cli`   | `setup-linters`          | Scope down | Go-specific linters are configured; only add cross-language tools    |
-| `scaffold-go-cli`   | `scaffold-new-repo`      | Skip      | `scaffold-go-cli` generates LICENSE, README, .gitignore, agent files |
-| `scaffold-go-library` | `setup-ci`             | Skip      | `scaffold-go-library` generates CI workflow and Makefile             |
-| `scaffold-go-library` | `add-goreleaser-homebrew` | N/A    | Libraries do not produce binaries; GoReleaser is not applicable      |
-| `scaffold-go-library` | `setup-installers`     | N/A       | Libraries do not produce binaries; installers are not applicable     |
-| `scaffold-go-library` | `add-scrut-cli-tests`  | N/A       | Libraries do not produce a CLI; scrut tests are not applicable       |
-| `scaffold-go-library` | `setup-linters`        | Scope down | Go-specific linters are configured; only add cross-language tools    |
-| `scaffold-go-library` | `scaffold-new-repo`    | Skip      | `scaffold-go-library` generates LICENSE, README, .gitignore          |
+| Tool A                | Tool B                    | Action     | Reason                                                               |
+| --------------------- | ------------------------- | ---------- | -------------------------------------------------------------------- |
+| `scaffold-go-cli`     | `setup-ci`                | Skip       | `scaffold-go-cli` generates `.github/workflows/ci.yml` and Makefile  |
+| `scaffold-go-cli`     | `add-goreleaser-homebrew` | Skip       | `scaffold-go-cli` generates `.goreleaser.yml` and release workflow   |
+| `scaffold-go-cli`     | `setup-linters`           | Scope down | Go-specific linters are configured; only add cross-language tools    |
+| `scaffold-go-cli`     | `scaffold-new-repo`       | Skip       | `scaffold-go-cli` generates LICENSE, README, .gitignore, agent files |
+| `scaffold-go-library` | `setup-ci`                | Skip       | `scaffold-go-library` generates CI workflow and Makefile             |
+| `scaffold-go-library` | `add-goreleaser-homebrew` | N/A        | Libraries do not produce binaries; GoReleaser is not applicable      |
+| `scaffold-go-library` | `setup-installers`        | N/A        | Libraries do not produce binaries; installers are not applicable     |
+| `scaffold-go-library` | `add-scrut-cli-tests`     | N/A        | Libraries do not produce a CLI; scrut tests are not applicable       |
+| `scaffold-go-library` | `setup-linters`           | Scope down | Go-specific linters are configured; only add cross-language tools    |
+| `scaffold-go-library` | `scaffold-new-repo`       | Skip       | `scaffold-go-library` generates LICENSE, README, .gitignore          |
 
 ## Independent Tools
 
@@ -38,14 +38,14 @@ When `setup-linters` is scoped down because a Go scaffolder already ran, skip Go
 
 Some tools only apply to certain project types:
 
-| Tool                     | Applicable when                                |
-| ------------------------ | ---------------------------------------------- |
-| `scaffold-go-cli`        | Go CLI project (go.mod + main.go or cmd/)      |
-| `scaffold-go-library`    | Go library project (go.mod, no main.go or cmd/) |
-| `add-goreleaser-homebrew` | Go CLI project without existing GoReleaser     |
-| `setup-installers`       | Project produces a distributable binary (CLI)  |
-| `add-scrut-cli-tests`    | Project produces a CLI binary                  |
-| `setup-ci`               | Any project without existing CI workflow        |
-| `setup-linters`          | Any project                                    |
-| `setup-gitleaks`         | Any project                                    |
-| `scaffold-new-repo`      | Any project missing foundational files          |
+| Tool                      | Applicable when                                 |
+| ------------------------- | ----------------------------------------------- |
+| `scaffold-go-cli`         | Go CLI project (go.mod + main.go or cmd/)       |
+| `scaffold-go-library`     | Go library project (go.mod, no main.go or cmd/) |
+| `add-goreleaser-homebrew` | Go CLI project without existing GoReleaser      |
+| `setup-installers`        | Project produces a distributable binary (CLI)   |
+| `add-scrut-cli-tests`     | Project produces a CLI binary                   |
+| `setup-ci`                | Any project without existing CI workflow        |
+| `setup-linters`           | Any project                                     |
+| `setup-gitleaks`          | Any project                                     |
+| `scaffold-new-repo`       | Any project missing foundational files          |
