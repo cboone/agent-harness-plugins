@@ -73,5 +73,5 @@ Add the done plans rule to the existing PR Review section so this repo also bene
 ## Verification
 
 1. Read each modified file to confirm the directory creation steps and templates are correct
-2. Run `check-versions` skill to verify version consistency
-3. Grep for `docs/plans` across the codebase to confirm no references were missed
+1. Run `check-versions` skill to verify version consistency
+1. Grep for `docs/plans` across the codebase to confirm no references were missed
