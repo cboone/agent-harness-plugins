@@ -177,8 +177,8 @@ Create stub directories for the standard library layout:
 
 ```bash
 # plans directory
-mkdir -p docs/plans
-touch docs/plans/.gitkeep
+mkdir -p docs/plans/todo docs/plans/done
+touch docs/plans/todo/.gitkeep docs/plans/done/.gitkeep
 ```
 
 Libraries keep tests alongside source files, so no `tests/` directory. No `internal/` directory -- add it when needed.
