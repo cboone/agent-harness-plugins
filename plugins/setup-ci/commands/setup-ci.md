@@ -64,7 +64,7 @@ grep -E '^(test|lint|fmt|vet|vuln|build|cover|coverage|tidy|tools|all):' Makefil
 
 Report which targets already exist and which will be added. Only add targets that do not already exist. Ask before modifying any existing target.
 
-If no `Makefile` exists, offer to create one. If the user declines, note that CI will fail without the targets the workflow references.
+If no `Makefile` exists, offer to create one with the appropriate language-specific template from the Reference sections below. The Makefile provides standard targets for local development (`test`, `lint`, `fmt`, `vuln`, etc.) and may also be referenced by CI workflows (e.g., Go CLI templates use `make test` and `make vet`). If the user declines, note that CI may fail for language templates whose workflows reference `make` targets.
 
 ### 4. Create CI Workflow
 
@@ -81,7 +81,7 @@ For multi-language projects, combine language-specific jobs into a single workfl
 
 ### 5. Create or Update Makefile Targets
 
-Add missing targets that the CI workflow references. Use the appropriate Makefile template from the Reference sections below.
+Add missing targets from the appropriate Makefile template in the Reference sections below. Include both targets that the CI workflow references directly (e.g., `make test`, `make vet`) and standard local-development targets (`test`, `lint`, `fmt`, `vuln`, etc.) even when the CI workflow runs equivalent commands directly rather than via `make`.
 
 Rules:
 
@@ -106,7 +106,7 @@ Print a summary of what was created or modified:
 - **Not a git repo**: Warn the user, suggest `git init`, then continue (CI workflow files do not require a git repo to create, but will not trigger without one)
 - **No language detected**: Offer a generic workflow with checkout + `make test` / `make lint` targets
 - **Existing CI**: Ask before overwriting (covered in step 2)
-- **Missing Makefile**: Offer to create one; if the user declines, note that CI will fail without the targets the workflow references
+- **Missing Makefile**: Offer to create one; if the user declines, note that CI may fail for language templates whose workflows reference `make` targets
 
 ---
 
@@ -302,14 +302,29 @@ jobs:
 - Libraries benefit from multi-version testing more than CLIs because consumers may use older Go versions
 - The lint job uses the official golangci-lint GitHub Action for consistent results
 - The format job checks that all files pass `gofmt` (fails CI if not)
+- **SHA pinning**: `golangci/golangci-lint-action@v9` is a third-party action pinned to a mutable version tag. When generating an actual CI workflow, look up the latest commit SHA for the `v9` tag and pin to it with a version comment (e.g., `golangci/golangci-lint-action@<sha> # v9`). This mitigates supply-chain risk from tag retargeting.
 
 ---
 
 ## Reference: JavaScript/TypeScript CI Workflow
 
-Use this template for JavaScript or TypeScript projects. Replace `PACKAGE-MANAGER` with the detected package manager (`npm`, `yarn`, `pnpm`, or `bun`). Replace `INSTALL-COMMAND` with the appropriate install command (`npm ci`, `yarn install --frozen-lockfile`, `pnpm install --frozen-lockfile`, or `bun install --frozen-lockfile`). Replace `RUN-PREFIX` with the appropriate run prefix (`npx`, `yarn`, `pnpm exec`, or `bunx`).
+Use this template for JavaScript or TypeScript projects. Replace `PACKAGE-MANAGER`, `INSTALL-COMMAND`, and `RUN-PREFIX` with the values from the table below.
+
+| Package Manager | `INSTALL-COMMAND`                    | `RUN-PREFIX` |
+| --------------- | ------------------------------------ | ------------ |
+| npm             | `npm ci`                             | `npx`        |
+| yarn            | `yarn install --immutable`           | `yarn`       |
+| pnpm            | `pnpm install --frozen-lockfile`     | `pnpm exec`  |
+| bun             | `bun install --frozen-lockfile`      | `bunx`       |
 
 If the project has a `tsconfig.json`, include the optional typecheck job.
+
+**Package manager setup variations:**
+
+- **npm**: Use `actions/setup-node@v4` with `cache: "npm"`. No extra setup needed.
+- **yarn** (detected via `.yarnrc.yml` or `yarn.lock`): Add a `run: corepack enable` step before `actions/setup-node@v4`. Use `cache: "yarn"`.
+- **pnpm** (detected via `pnpm-lock.yaml`): Add a `run: corepack enable` step before `actions/setup-node@v4`. Use `cache: "pnpm"`.
+- **bun** (detected via `bun.lock`): Replace the `actions/setup-node@v4` step entirely with `oven-sh/setup-bun@v2` (omit the `cache` and `node-version` parameters; Bun manages its own caching). The `actions/setup-node` `cache` option does not support Bun.
 
 ```yaml
 name: CI
@@ -408,7 +423,9 @@ jobs:
 - If `package.json` has a `test` script, use `npm test` (or equivalent) instead of calling the runner directly
 - If `package.json` has `lint` or `format` scripts, prefer those over direct tool invocation
 - Only include the typecheck job if `tsconfig.json` exists
-- The `cache` option in `actions/setup-node` should match the detected package manager
+- The template above shows the npm setup; see "Package manager setup variations" above for yarn, pnpm, and bun differences
+- For **yarn** and **pnpm**: add `run: corepack enable` as a step before `actions/setup-node` so the correct package manager shim is available for caching and installation
+- For **bun**: replace `actions/setup-node@v4` with `oven-sh/setup-bun@v2` and remove `node-version` and `cache` parameters
 
 ---
 
@@ -571,6 +588,7 @@ jobs:
 - `Swatinem/rust-cache@v2` caches Cargo dependencies and build artifacts
 - Clippy runs with `-D warnings` to fail on any warning
 - The format job uses `cargo fmt -- --check` (check mode, no modifications)
+- **SHA pinning**: `dtolnay/rust-toolchain` and `Swatinem/rust-cache` are third-party actions pinned to mutable references (a branch and a major version tag). When generating an actual CI workflow, look up the latest commit SHAs and pin to them with version comments (e.g., `dtolnay/rust-toolchain@<sha> # stable`, `Swatinem/rust-cache@<sha> # v2`). This mitigates supply-chain risk from reference retargeting.
 
 ---
 
@@ -680,6 +698,7 @@ jobs:
 - The `scandir` value should match where shell scripts live in the project
 - If scripts are in multiple directories, use the repository root (`.`) for `scandir`
 - `shfmt -d .` checks formatting without modifying files (diff mode)
+- **SHA pinning**: `ludeeus/action-shellcheck` and `mfinelli/setup-shfmt` are third-party actions pinned to mutable references. When generating an actual CI workflow, look up the latest commit SHAs and pin to them with version comments (e.g., `ludeeus/action-shellcheck@<sha> # master`, `mfinelli/setup-shfmt@<sha> # v4`). This mitigates supply-chain risk from reference retargeting.
 
 ---
 
