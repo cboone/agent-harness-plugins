@@ -24,6 +24,7 @@ Use both files and directories as signals:
 | `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt`, `Pipfile`, `.venv/`, `venv/` | Python                |
 | `Cargo.toml`, `Cargo.lock`                                                                  | Rust                  |
 | `Gemfile`, `*.gemspec`, `.ruby-version`                                                     | Ruby                  |
+| `Package.swift`, `*.xcodeproj`, `*.xcworkspace`                                             | Swift                 |
 | `*.sh`, `bin/*`, `scripts/*`                                                                | Shell                 |
 | `*.css`, `*.scss`, `*.less`                                                                 | CSS/SCSS              |
 | `Dockerfile`, `*.dockerfile`, `docker-compose.yml`                                          | Docker                |
@@ -140,6 +141,18 @@ Add `lint`, `format`, and/or `lint:fix` scripts to `package.json`, `Makefile`, o
 Ask whether to create a GitHub Actions workflow. If yes, read `./references/tools/github-actions-ci.md` for templates.
 
 If a CI workflow already exists, offer to add lint steps to it rather than creating a new file.
+
+**Tool dependency verification**: For every tool referenced in Makefile targets, confirm the CI workflow includes a corresponding setup/install step. Common tool-to-action mappings:
+
+| Tool         | CI Setup                                                              |
+| ------------ | --------------------------------------------------------------------- |
+| shfmt        | `mfinelli/setup-shfmt@v4` or `go install mvdan.cc/sh/v3/cmd/shfmt@latest` |
+| shellcheck   | `ludeeus/action-shellcheck@master`                                    |
+| golangci-lint | `golangci/golangci-lint-action@v9`                                   |
+| swiftlint    | `brew install swiftlint` (macOS runner)                               |
+| swiftformat  | `brew install swiftformat` (macOS runner)                             |
+| hadolint     | `hadolint/hadolint-action@v3.1.0`                                     |
+| actionlint   | `raven-actions/actionlint@v2`                                         |
 
 ### 9. Run Initial Lint (Optional)
 

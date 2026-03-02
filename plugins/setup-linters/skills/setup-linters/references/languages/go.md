@@ -123,3 +123,4 @@ vet: ## Run go vet
 - `gocyclo` threshold of 15 is reasonable for most projects.
 - `issues` block with `max-issues-per-linter: 0` and `max-same-issues: 0` ensures all findings are reported, not truncated.
 - `goimports` is a superset of `gofmt` that also manages imports. In v2, both are configured under `formatters`.
+- The `fmt` subcommand (`golangci-lint fmt`) and the `formatters` config section are golangci-lint v2 features. The CI action `golangci/golangci-lint-action@v9` natively supports v2.
