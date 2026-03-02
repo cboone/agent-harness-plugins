@@ -27,7 +27,7 @@ File: `plugins/setup-linters/skills/setup-linters/SKILL.md`
 
 Add Swift row to the detection table (Step 1):
 
-```
+```text
 | `Package.swift`, `*.xcodeproj`, `*.xcworkspace` | Swift |
 ```
 
@@ -37,7 +37,7 @@ File: `plugins/setup-linters/skills/setup-linters/references/checklist.md`
 
 Add Swift row to the Language-Specific Linters table:
 
-```
+```text
 | Swift | SwiftLint + SwiftFormat | `brew install swiftlint swiftformat` | `.swiftlint.yml`, `.swiftformat` | `lint`, `fmt`, `lint-fix` | `./languages/swift.md` |
 ```
 
@@ -83,15 +83,15 @@ Add a verification sub-step to Step 8 ("Set Up CI"):
 
 > **Tool dependency verification**: For every tool referenced in Makefile targets, confirm the CI workflow includes a corresponding setup/install step. Common tool-to-action mappings:
 >
-> | Tool | CI Setup |
-> |------|----------|
-> | shfmt | `mfinelli/setup-shfmt@v4` or `go install mvdan.cc/sh/v3/cmd/shfmt@latest` |
-> | shellcheck | `ludeeus/action-shellcheck@master` |
-> | golangci-lint | `golangci/golangci-lint-action@v9` |
-> | swiftlint | `brew install swiftlint` (macOS runner) |
-> | swiftformat | `brew install swiftformat` (macOS runner) |
-> | hadolint | `hadolint/hadolint-action@v3.1.0` |
-> | actionlint | `raven-actions/actionlint@v2` |
+> | Tool          | CI Setup                                                                  |
+> | ------------- | ------------------------------------------------------------------------- |
+> | shfmt         | `mfinelli/setup-shfmt@v4` or `go install mvdan.cc/sh/v3/cmd/shfmt@latest` |
+> | shellcheck    | `ludeeus/action-shellcheck@master`                                        |
+> | golangci-lint | `golangci/golangci-lint-action@v9`                                        |
+> | swiftlint     | `brew install swiftlint` (macOS runner)                                   |
+> | swiftformat   | `brew install swiftformat` (macOS runner)                                 |
+> | hadolint      | `hadolint/hadolint-action@v3.1.0`                                         |
+> | actionlint    | `raven-actions/actionlint@v2`                                             |
 
 ### 8. Add Swift CI template (#125)
 
@@ -136,19 +136,19 @@ Add Swift to the Caching Strategies table (no caching needed, or note that SPM c
 ## Files to modify
 
 1. **New**: `plugins/setup-linters/skills/setup-linters/references/languages/swift.md`
-2. `plugins/setup-linters/skills/setup-linters/SKILL.md` (detection table + Step 8 verification)
-3. `plugins/setup-linters/skills/setup-linters/references/checklist.md` (Swift row)
-4. `plugins/setup-linters/skills/setup-linters/references/tools/github-actions-ci.md` (golangci-lint v9, Swift template, pinned npx versions)
-5. `plugins/setup-linters/skills/setup-linters/references/languages/go.md` (v2 note)
-6. `plugins/setup-linters/skills/setup-linters/references/tools/prettier.md` (Makefile targets section)
-7. `plugins/setup-linters/.claude-plugin/plugin.json` (version bump)
-8. `.claude-plugin/marketplace.json` (version bump)
+1. `plugins/setup-linters/skills/setup-linters/SKILL.md` (detection table + Step 8 verification)
+1. `plugins/setup-linters/skills/setup-linters/references/checklist.md` (Swift row)
+1. `plugins/setup-linters/skills/setup-linters/references/tools/github-actions-ci.md` (golangci-lint v9, Swift template, pinned npx versions)
+1. `plugins/setup-linters/skills/setup-linters/references/languages/go.md` (v2 note)
+1. `plugins/setup-linters/skills/setup-linters/references/tools/prettier.md` (Makefile targets section)
+1. `plugins/setup-linters/.claude-plugin/plugin.json` (version bump)
+1. `.claude-plugin/marketplace.json` (version bump)
 
 ## Verification
 
 1. Read all modified files end-to-end to confirm consistency
-2. Run `check-versions` skill to verify plugin version matches marketplace version
-3. Confirm every issue's specific concern is addressed:
+1. Run `check-versions` skill to verify plugin version matches marketplace version
+1. Confirm every issue's specific concern is addressed:
    - #117: Go CI template uses `golangci-lint-action@v9`, go.md notes v2
    - #125: Swift reference exists with SwiftLint + SwiftFormat, detection table and checklist updated, CI template added
    - #126: `.swiftlint.yml` template includes `trailing_comma: mandatory_comma: true`
