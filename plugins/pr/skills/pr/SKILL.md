@@ -120,7 +120,7 @@ Never stage files that likely contain secrets (`.env`, `credentials.json`, `*.pe
 
 #### Handle plan files
 
-Before identifying logical chunks, check for plan files among the uncommitted changes. Plan files live under `docs/plans/` and its subdirectories (`todo/`, `done/`). If any Markdown files in these directories are among the changed or untracked files, apply [Plan-Aware Commits](#plan-aware-commits) rules to them.
+Before identifying logical chunks, check for plan files among the uncommitted changes. Plan files live under `docs/plans/` and its subdirectories (`todo/`, `done/`). If any Markdown files in these directories are among the staged, unstaged, or untracked files, apply [Plan-Aware Commits](#plan-aware-commits) rules to them.
 
 Plan files always form their own logical chunk, committed separately from code changes. Process the plan file chunk first, then proceed with the remaining changes.
 
@@ -271,7 +271,7 @@ If the filename already has a datestamp prefix and a meaningful description, lea
 
 Creating a PR typically means the work described in a plan is complete. When plan files are detected among the changes:
 
-1. Check whether the plan's work is complete. Indicators: all the code changes on the branch correspond to the plan, or the user confirms the work is done.
+1. Check whether the plan's work is complete. Indicators: all the code changes on the branch correspond to the plan, or the user has already stated that the work is done.
 1. If the work is complete, apply [Plan Name Cleanup](#plan-name-cleanup) first (if needed), so any rename happens before the move.
 1. Move the (possibly renamed) plan file to `docs/plans/done/` (creating the directory if it does not exist). If both a rename and a move apply, perform a single `git mv` from the original path directly to the final destination (e.g., `docs/plans/done/YYYY-MM-DD-slug.md`).
 1. If the plan is currently in `docs/plans/todo/`, the move goes from `todo/` to `done/`.
