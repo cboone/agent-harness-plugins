@@ -32,10 +32,11 @@ Never use these flags without explicit user instruction:
 **When the user explicitly requests a force push**, use the safer alternative:
 
 ```bash
+# --force-if-includes requires Git 2.30+; omit it on older versions
 git push --force-with-lease --force-if-includes
 ```
 
-This protects against overwriting commits that others have pushed since your last fetch.
+`--force-with-lease` protects against overwriting commits that others have pushed since your last fetch. `--force-if-includes` adds an extra check that your local ref includes the remote tip, but is only available in Git 2.30 and later. If the command fails on an older Git, fall back to `--force-with-lease` alone.
 
 **When a push is rejected**, suggest rebasing instead of forcing:
 
