@@ -36,6 +36,20 @@ Detects your project type (Go CLI, Go library, or generic), analyzes conventiona
 | `--patch`   | Force a patch version bump regardless of commit analysis            |
 | `--dry-run` | Preview all changes without modifying files, committing, or tagging |
 
+## Recommended Permissions
+
+This skill runs git commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(git status --porcelain)", "Bash(git branch --show-current)", "Bash(git tag *)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git remote get-url *)", "Bash(date *)"]
+  }
+}
+```
+
+If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+
 ## Examples
 
 - "release": analyzes commits, recommends a bump, updates files, commits, and tags
