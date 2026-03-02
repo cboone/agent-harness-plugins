@@ -175,7 +175,7 @@
       "name": "lint-and-fix",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/lint-and-fix",
-      "version": "1.1.0"
+      "version": "1.1.1"
     },
     {
       "author": {

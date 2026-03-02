@@ -116,7 +116,7 @@ After all tools run, display a summary:
 
 If **--check** was specified, show results and stop here.
 
-If all tools passed with zero remaining issues (auto-fix resolved everything), skip to step 6. Note: even though there are zero remaining issues, the auto-fix commands may have modified files on disk, which will need to be committed in step 7.
+If all tools passed with zero remaining issues (auto-fix resolved everything), skip step 5 and go directly to step 6. **Auto-fix commands modify files on disk even when they resolve all issues. You must still verify in step 6 and commit in step 7.**
 
 ### 5. Fix Remaining Issues
 
@@ -151,26 +151,30 @@ Re-run all detected tools one final time in check mode to confirm a clean state:
 | shellcheck | Pass (1 advisory skipped) |
 ```
 
+**After verification, always proceed to step 7.** Tools that auto-fixed files will have modified files on disk that need to be committed.
+
 ### 7. Commit and Push
 
-**If --no-commit was specified**: Stop here.
+**This step is required unless --no-commit or --check was specified.** Linters and formatters modify files on disk when they auto-fix. Those changes must be committed even if every tool now reports a clean state.
 
-**If --check was specified**: Stop here (no changes were made).
+Skip this step only if:
 
-Otherwise, check for file changes and commit:
+- **--no-commit** was specified, OR
+- **--check** was specified (no changes were made)
+
+Check for file changes and commit:
 
 1. Run `git status --porcelain` and check whether its output is empty.
 1. **If no files were modified** (i.e., `git status --porcelain` produced no output): Report "No changes needed, all files were already clean." and stop.
-1. **If files were modified** (i.e., `git status --porcelain` produced any output): Stage all files modified by the lint and format fixes.
+1. **If files were modified** (i.e., `git status --porcelain` produced any output): Stage all modified files and commit them.
 1. Generate a conventional commit message:
    - Use `style:` for pure formatting and linting fixes.
    - Use `fix:` if linting changes corrected actual bugs (e.g., unused variables removed, error handling added).
    - Include which tools ran and a brief summary of manual fixes in the commit body.
 
-**If --no-push was specified**: Stop after committing.
+After committing, push to the remote:
 
-Otherwise, push the commit to the remote:
-
+1. **If --no-push was specified**: Stop after committing.
 1. Push to the current branch's upstream remote.
 1. If no upstream is set, push with `-u` to set it.
 
