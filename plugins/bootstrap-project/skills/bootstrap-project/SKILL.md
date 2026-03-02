@@ -2,7 +2,10 @@
 name: bootstrap-project
 description: >-
   Assess a repository, determine what scaffolding and setup tools are needed,
-  present a plan, and execute them in the correct order.
+  present a plan, and execute them in the correct order. Use when the user says
+  "bootstrap this project", "set up everything", "scaffold everything", "full
+  project setup", or any variant involving bootstrapping or scaffolding an
+  entire project.
 ---
 
 # Bootstrap Project
