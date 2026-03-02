@@ -226,6 +226,7 @@ case ":${PATH}:" in
   *":${INSTALL_DIR}:"*) ;;
   *)
     printf '\nNote: %s is not in your PATH.\n' "${INSTALL_DIR}"
+    # shellcheck disable=SC2016
     printf 'Add it with: export PATH="%s:${PATH}"\n' "${INSTALL_DIR}"
     ;;
 esac
@@ -240,6 +241,24 @@ Make the script executable:
 ```bash
 chmod +x install.sh
 ```
+
+After generating install.sh, validate it with ShellCheck if available:
+
+```bash
+command -v shellcheck >/dev/null 2>&1 && shellcheck install.sh
+```
+
+If ShellCheck reports any issues, fix or suppress them before proceeding. If ShellCheck is not installed, skip validation and note in the summary that the user can install it with `brew install shellcheck`.
+
+After creating install.sh, check if `.prettierignore` exists. If it does and does not already contain `*.sh`, append `*.sh` to it. Prettier has no parser for shell scripts, so any `.sh` file will cause `prettier --check .` to fail.
+
+```bash
+if [ -f .prettierignore ]; then
+  grep -q '^\*\.sh$' .prettierignore || echo '*.sh' >> .prettierignore
+fi
+```
+
+If `.prettierignore` does not exist, skip this step.
 
 ### 7. Set Up go install
 
