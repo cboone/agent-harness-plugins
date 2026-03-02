@@ -307,20 +307,6 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "code-quality",
-      "description": "Set up gitleaks secret scanning with a GitHub Actions workflow and optional configuration.",
-      "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["gitleaks", "github-actions", "scanning", "secrets", "security"],
-      "license": "MIT",
-      "name": "setup-gitleaks",
-      "repository": "https://github.com/cboone/cboone-cc-plugins",
-      "source": "./plugins/setup-gitleaks",
-      "version": "1.1.0"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
       "category": "productivity",
       "description": "Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
@@ -330,6 +316,20 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-ci",
       "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Set up gitleaks secret scanning with a GitHub Actions workflow and optional configuration.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["gitleaks", "github-actions", "scanning", "secrets", "security"],
+      "license": "MIT",
+      "name": "setup-gitleaks",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/setup-gitleaks",
+      "version": "1.1.0"
     },
     {
       "author": {
