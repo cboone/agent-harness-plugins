@@ -157,12 +157,9 @@ prompts. To allow them automatically, add these rules to your
 
 ```json
 {
-"permissions": {
-"allow": [
-"Bash(command pattern 1)",
-"Bash(command pattern 2)"
-]
-}
+  "permissions": {
+    "allow": ["Bash(command pattern 1)", "Bash(command pattern 2)"]
+  }
 }
 ```
 
