@@ -147,7 +147,7 @@ If a CI workflow already exists, offer to add lint steps to it rather than creat
 | Tool          | CI Setup                                                                  |
 | ------------- | ------------------------------------------------------------------------- |
 | shfmt         | `mfinelli/setup-shfmt@v4` or `go install mvdan.cc/sh/v3/cmd/shfmt@latest` |
-| shellcheck    | `ludeeus/action-shellcheck@master`                                        |
+| shellcheck    | `ludeeus/action-shellcheck@2.0.0`                                         |
 | golangci-lint | `golangci/golangci-lint-action@v9`                                        |
 | swiftlint     | `brew install swiftlint` (macOS runner)                                   |
 | swiftformat   | `brew install swiftformat` (macOS runner)                                 |

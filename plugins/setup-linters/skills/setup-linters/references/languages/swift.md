@@ -112,5 +112,5 @@ fmt: ## Format Swift code
 - **Lint-fix verification pattern**: The `lint-fix` target runs `swiftlint lint --fix` followed by `swiftlint lint --strict`. The first pass auto-corrects fixable violations; the second pass verifies that no unfixable violations remain. Without the verification pass, unfixable lint errors would go unnoticed.
 - SwiftLint uses `--strict` to treat warnings as errors, ensuring CI catches all violations.
 - SwiftFormat handles all formatting concerns (indentation, braces, whitespace), while SwiftLint focuses on style rules and code quality checks.
-- The `.swift-version` file is read by both SwiftLint and SwiftFormat to determine the target Swift language version.
+- The `.swift-version` file is used by SwiftFormat and Swift toolchain managers (such as `swiftenv`) to determine the Swift language version. SwiftLint does not read `.swift-version`; configure its Swift version explicitly via the `swift_version` setting in `.swiftlint.yml` or the `--swift-version` CLI flag if needed.
 - Excluded directories (`.build`, `Packages`, `DerivedData`) should be configured in both tools to avoid linting generated or cached code.
