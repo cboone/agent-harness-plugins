@@ -61,7 +61,7 @@ jobs:
           go-version-file: go.mod
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
 
       - name: Check formatting
         run: test -z "$(gofmt -l .)"
@@ -165,7 +165,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: ShellCheck
-        uses: ludeeus/action-shellcheck@master
+        uses: ludeeus/action-shellcheck@2.0.0
         with:
           scandir: scripts
 
@@ -176,11 +176,38 @@ jobs:
         run: shfmt -d .
 ```
 
+### Swift
+
+```yaml
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: brew install swiftlint swiftformat
+
+      - name: SwiftLint
+        run: swiftlint lint --strict
+
+      - name: SwiftFormat
+        run: swiftformat --lint .
+```
+
 ### Markdown
 
 ```yaml
 - name: markdownlint
-  run: npx markdownlint-cli2 "**/*.md"
+  run: npx markdownlint-cli2@0.21.0 "**/*.md"
 ```
 
 ## Cross-Language Steps
@@ -207,28 +234,28 @@ These steps can be added to any language workflow:
 
 ```yaml
 - name: Knip
-  run: npx knip
+  run: npx knip@5.85.0
 ```
 
 ### Prettier (non-JS projects)
 
 ```yaml
 - name: Prettier
-  run: npx prettier --check .
+  run: npx prettier@3.8.1 --check .
 ```
 
 ### Stylelint
 
 ```yaml
 - name: Stylelint
-  run: npx stylelint "**/*.{css,scss,less}"
+  run: npx stylelint@17.3.0 "**/*.{css,scss,less}"
 ```
 
 ### Taplo
 
 ```yaml
 - name: Taplo
-  run: npx @taplo/cli fmt --check
+  run: npx @taplo/cli@0.7.0 fmt --check
 ```
 
 ### yamllint
@@ -271,7 +298,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - uses: golangci/golangci-lint-action@v6
+      - uses: golangci/golangci-lint-action@v9
 ```
 
 ## Caching Strategies
@@ -283,6 +310,7 @@ jobs:
 | Python   | `astral-sh/setup-uv` (built-in)     | `uv.lock`           |
 | Rust     | `Swatinem/rust-cache@v2`            | `Cargo.lock`        |
 | Ruby     | `ruby/setup-ruby` `bundler-cache`   | `Gemfile.lock`      |
+| Swift    | _(none needed for lint-only CI)_    | _(N/A)_             |
 
 ## Notes
 
@@ -291,3 +319,4 @@ jobs:
 - All templates use `actions/checkout@v4` and the latest stable setup actions.
 - For Node.js projects, adjust the `cache` option to match the detected package manager (`npm`, `yarn`, `pnpm`).
 - `ubuntu-latest` is the default runner. macOS or Windows runners are only needed for platform-specific linting.
+- Pin all `npx` tool versions to exact versions (e.g., `npx tool@X.Y.Z`) for CI reproducibility. Update versions periodically. This applies to tools invoked via `npx` without a prior `npm ci` step; tools installed as project dependencies (after `npm ci`) use the locked version automatically.

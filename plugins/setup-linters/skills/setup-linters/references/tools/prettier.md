@@ -123,6 +123,22 @@ Add a parser override to `.prettierrc.json`:
 
 Install plugins as dev dependencies and Prettier auto-discovers them. Avoid `prettier-plugin-sh` and `prettier-plugin-toml` as the dedicated tools (shfmt and Taplo) are faster and more capable.
 
+## Makefile Targets
+
+For non-Node projects (or projects using a Makefile instead of package.json scripts):
+
+```makefile
+.PHONY: format format-check
+
+format: ## Format with Prettier
+	prettier --write .
+
+format-check: ## Check formatting with Prettier
+	prettier --check .
+```
+
+Prefer `prettier --write .` over explicit glob patterns (e.g., `**/*.md **/*.yml`) in Makefile targets. Explicit patterns error when no files match. The `.prettierignore` file already handles exclusions, and Prettier respects `.gitignore` by default.
+
 ## package.json Scripts
 
 ```json
