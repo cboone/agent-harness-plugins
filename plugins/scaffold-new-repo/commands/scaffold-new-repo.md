@@ -715,7 +715,7 @@ SHORT-DESCRIPTION
 
 This file gives GitHub Copilot repo-wide context. It should NOT duplicate
 AGENTS.md. Instead, it cross-references AGENTS.md for full conventions.
-PR review rules can be added later as needed (see Notes).
+A default PR review rule is included; more can be added as needed (see Notes).
 
 Replace `PROJECT-NAME` with the project name in title case.
 
