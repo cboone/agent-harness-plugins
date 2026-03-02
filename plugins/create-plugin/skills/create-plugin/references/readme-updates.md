@@ -126,9 +126,9 @@ One-sentence description.
 
 Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
 
-` ```text `
+```text
 /plugin marketplace add cboone/cboone-cc-plugins
-` ``` `
+```
 
 Then select **Plugin Name** from the available plugins.
 
@@ -155,7 +155,7 @@ This skill runs [brief description of command types] that trigger permission
 prompts. To allow them automatically, add these rules to your
 `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
-` ```json `
+```json
 {
 "permissions": {
 "allow": [
@@ -164,7 +164,7 @@ prompts. To allow them automatically, add these rules to your
 ]
 }
 }
-` ``` `
+```
 
 If you already have a `permissions.allow` array, merge these entries into it.
 Review and adjust the rules to match your security preferences.
@@ -193,9 +193,9 @@ One-sentence description.
 
 Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
 
-` ```text `
+```text
 /plugin marketplace add cboone/cboone-cc-plugins
-` ``` `
+```
 
 Then select **Hook Name** from the available plugins.
 
