@@ -39,15 +39,15 @@ The current branch may have been created from a non-default branch (e.g., for st
 git reflog show $(git branch --show-current) --format='%gs' | tail -1
 ```
 
-This produces output like `branch: Created from develop` or `branch: Created from refs/heads/feature/parent`. If the last entry matches `branch: Created from <name>`, extract `<name>` and strip any `refs/heads/` prefix.
+This produces output like `branch: Created from develop`, `branch: Created from origin/develop`, or `branch: Created from refs/heads/feature/parent`. If the last entry matches `branch: Created from <name>`, extract `<name>` and normalize it by stripping any `refs/heads/`, `refs/remotes/origin/`, or leading `origin/` prefix.
 
-If a source branch name was extracted, verify it exists on the remote and is not the current branch:
+If a source branch name was extracted, verify it exists on the remote and is not the current branch. Note that `git ls-remote` always exits 0 regardless of whether the branch exists, so check for non-empty output:
 
 ```bash
-git ls-remote --heads origin <source-branch>
+git ls-remote --heads origin <source-branch> | grep -q .
 ```
 
-If the source branch exists on the remote and is not the current branch, use it as `<base-branch>`. Otherwise, use `<default-branch>` as `<base-branch>`.
+If the command produces output (branch exists on the remote) and the branch is not the current branch, use it as `<base-branch>`. Otherwise, use `<default-branch>` as `<base-branch>`.
 
 Then run these commands in parallel to understand the current state:
 
