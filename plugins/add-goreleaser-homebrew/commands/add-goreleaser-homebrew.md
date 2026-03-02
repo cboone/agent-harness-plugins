@@ -131,16 +131,22 @@ If the check fails, review the error and fix the configuration.
 
 If `goreleaser` is not installed, skip validation and note that the user can install it with `brew install goreleaser` to validate locally.
 
-### 11. Summary
+### 11. Set Up HOMEBREW_TAP_TOKEN
+
+The release workflow requires a `HOMEBREW_TAP_TOKEN` repository secret to publish Homebrew formulas. Follow the steps in the "Reference: HOMEBREW_TAP_TOKEN Setup" section at the bottom of this file.
+
+Ask the user whether they want to set up the token now or defer it to later. If they defer, note in the summary that the token must be configured before the first release.
+
+### 12. Summary
 
 Print a summary of what was created and modified:
 
 - List every file generated or modified
 - Note which conditional features were applied (completions, man pages, macOS-only)
 - Remind the user to:
-  - Add `HOMEBREW_TAP_TOKEN` as a repository secret in Settings > Secrets and variables > Actions (a PAT with repo scope on the `homebrew-tap` repository)
   - Tag a release to trigger the workflow: `git tag v0.1.0 && git push origin v0.1.0`
   - Test locally first with `goreleaser release --snapshot --clean` (or `make release-dry-run` if the Makefile was updated)
+- If `HOMEBREW_TAP_TOKEN` setup was deferred in step 11: remind the user to add it as a repository secret before the first release (see "Reference: HOMEBREW_TAP_TOKEN Setup")
 
 ## Error Handling
 
@@ -245,7 +251,7 @@ brews:
 - Changelog uses **conventional commit grouping** instead of simple sort-and-filter, organizing entries under headings (Features, Bug Fixes, Refactoring, etc.) for clearer release notes
 - The `Other` group with `order: 999` acts as a catch-all for commits that do not match any specific type
 - Commits prefixed with `chore:`, `test:`, or `style:` are excluded from the changelog entirely
-- Homebrew tap publishes to `GITHUB-USERNAME/homebrew-tap` using `HOMEBREW_TAP_TOKEN` (a PAT with repo scope on the homebrew-tap repository)
+- Homebrew tap publishes to `GITHUB-USERNAME/homebrew-tap` using `HOMEBREW_TAP_TOKEN` (see "Reference: HOMEBREW_TAP_TOKEN Setup" for creation and configuration)
 - The `{{` and `}}` delimiters are GoReleaser template syntax, not Go templates
 
 ---
@@ -305,7 +311,7 @@ This ensures the build environment matches the target platform, which matters fo
 - `go-version-file: go.mod` reads the Go version from `go.mod` rather than hardcoding it, so the workflow stays in sync with the project automatically
 - `version: "~> v2"` uses the latest GoReleaser v2.x release
 - `GITHUB_TOKEN` is provided automatically by GitHub Actions
-- `HOMEBREW_TAP_TOKEN` must be added as a repository secret (a PAT with repo scope on the user's `homebrew-tap` repository)
+- `HOMEBREW_TAP_TOKEN` must be added as a repository secret (see "Reference: HOMEBREW_TAP_TOKEN Setup" for creation and configuration)
 - `--clean` removes previous build artifacts before releasing
 
 ---
@@ -567,3 +573,75 @@ Note: When macOS-only, remove the Windows format override from archives and chan
 - `man1.install Dir["man/man1/*"]` is a Homebrew helper that installs man pages into the correct system location
 - The `before.hooks` section runs before each build; `go mod tidy` ensures dependencies are clean
 - When combining man pages with macOS-only, the `files` section in archives still works (man pages are included in the macOS archives)
+
+---
+
+## Reference: HOMEBREW_TAP_TOKEN Setup
+
+<!-- sync: this section is duplicated in plugins/scaffold-go-cli/commands/scaffold-go-cli.md -->
+
+The release workflow needs a `HOMEBREW_TAP_TOKEN` repository secret so GoReleaser can push formula updates to the Homebrew tap repository. This section walks through creating the token and setting the secret.
+
+### 1. Check for the Homebrew Tap Repository
+
+Verify the tap repository exists:
+
+```bash
+gh repo view GITHUB-USERNAME/homebrew-tap
+```
+
+If the repository does not exist, offer to create it:
+
+```bash
+gh repo create GITHUB-USERNAME/homebrew-tap --public --description "Homebrew tap for GITHUB-USERNAME's tools"
+```
+
+Replace `GITHUB-USERNAME` with the user's actual GitHub username throughout this section.
+
+### 2. Check for an Existing Secret
+
+Check whether the secret is already configured:
+
+```bash
+gh secret list | grep HOMEBREW_TAP_TOKEN || true
+```
+
+If the secret already exists, skip to step 5 (Verify) to confirm it is still configured.
+
+### 3. Create a Fine-Grained Personal Access Token
+
+Direct the user to create a fine-grained PAT:
+
+1. Open <https://github.com/settings/personal-access-tokens/new>
+1. **Token name**: something descriptive, e.g., `homebrew-tap-token`
+1. **Expiration**: choose an appropriate duration (90 days, 1 year, or custom)
+1. **Repository access**: select "Only select repositories", then choose `GITHUB-USERNAME/homebrew-tap`
+1. **Permissions**: under "Repository permissions", set **Contents** to **Read and write**; leave everything else at the defaults
+1. Click "Generate token" and copy the token value
+
+Explain that this token allows GoReleaser to push formula updates to the tap repository during releases. The fine-grained PAT is preferred because it limits access to a single repository with minimal permissions.
+
+### 4. Set the Repository Secret
+
+Offer to set the secret using the `gh` CLI:
+
+```bash
+gh secret set HOMEBREW_TAP_TOKEN
+```
+
+This command reads the token from stdin (no echo), so the user can paste the token value securely. The secret is set on the current repository.
+
+### 5. Verify
+
+Confirm the secret is configured:
+
+```bash
+gh secret list | grep HOMEBREW_TAP_TOKEN || true
+```
+
+If the secret appears in the output, the setup is complete. If not, re-run step 4.
+
+### Notes
+
+- **No remote yet?** If the repository has not been pushed to GitHub yet (common for brand-new projects), `gh secret` commands (`gh secret set`, `gh secret list`) will fail because there is no associated GitHub repository. In that case, note the token value securely and set/verify the secret after creating the GitHub remote and pushing for the first time.
+- **Classic PATs also work.** A classic personal access token with `repo` scope can be used instead of a fine-grained PAT, but classic tokens grant broader access than necessary. Fine-grained PATs scoped to the single tap repository are the recommended approach.

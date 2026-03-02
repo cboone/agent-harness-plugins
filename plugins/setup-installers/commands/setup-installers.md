@@ -54,9 +54,15 @@ Collect the following, inferring from existing files where possible. Do not re-a
 
 Skip this section if the user did not select Homebrew.
 
-**If GoReleaser exists with a `brews:` section**: Homebrew is already handled by GoReleaser. Tell the user and skip.
+**If GoReleaser exists with a `brews:` section**: Homebrew is already handled by GoReleaser. Tell the user and check for the `HOMEBREW_TAP_TOKEN` secret:
 
-**If GoReleaser exists without a `brews:` section**: suggest using `/add-goreleaser-homebrew` to add Homebrew support through GoReleaser, which is the preferred approach for Go projects with GoReleaser. Skip creating a standalone formula.
+```bash
+gh secret list | grep HOMEBREW_TAP_TOKEN || true
+```
+
+If the secret is missing, warn the user that releases will fail without it. Suggest running `/add-goreleaser-homebrew` for a guided setup that includes interactive token configuration, or manually adding the secret (see the HOMEBREW_TAP_TOKEN Setup reference section in `add-goreleaser-homebrew`).
+
+**If GoReleaser exists without a `brews:` section**: suggest using `/add-goreleaser-homebrew` to add Homebrew support through GoReleaser, which is the preferred approach for Go projects with GoReleaser. That command includes interactive `HOMEBREW_TAP_TOKEN` setup. Skip creating a standalone formula.
 
 **If no GoReleaser exists**: create a standalone Homebrew formula. Generate `Formula/PROJECT-NAME.rb`:
 
@@ -300,6 +306,7 @@ After completing all selected installer types, print a summary:
   - For Homebrew standalone formula: create the tap repository and push the formula
   - For shell install script: the script expects GitHub Releases with tarballs in the naming format described above
   - For go install: ensure the module has no `replace` directives and is tagged with a version
+  - If `HOMEBREW_TAP_TOKEN` was found to be missing during step 5: remind the user to configure it before the first release, either by running `/add-goreleaser-homebrew` for guided setup or by manually creating a fine-grained PAT and adding it as a repository secret
 
 ## Error Handling
 
