@@ -35,7 +35,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git status*)", "Bash(git diff*)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git branch *)", "Bash(git rev-parse *)", "Bash(git remote *)", "Bash(git mv *)", "Bash(gh repo view *)", "Bash(gh issue view *)", "Bash(gh issue list *)", "Bash(gh pr create *)", "Bash(gh pr view *)", "Bash(mktemp /tmp/pr-body-*)", "Bash(rm -f /tmp/pr-body-*)"]
+    "allow": ["Bash(git status*)", "Bash(git diff*)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git branch *)", "Bash(git reflog show *)", "Bash(git ls-remote --heads *)", "Bash(git rev-parse *)", "Bash(git remote *)", "Bash(git mv *)", "Bash(gh repo view *)", "Bash(gh issue view *)", "Bash(gh issue list *)", "Bash(gh pr create *)", "Bash(gh pr view *)", "Bash(mktemp /tmp/pr-body-*)", "Bash(rm -f /tmp/pr-body-*)"]
   }
 }
 ```
