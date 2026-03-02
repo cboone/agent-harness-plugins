@@ -208,7 +208,7 @@ The release workflow requires a `HOMEBREW_TAP_TOKEN` repository secret to publis
 
 Ask the user whether they want to set up the token now or defer it to later. If they defer, note in the summary that the token must be configured before the first release.
 
-Note: for brand-new projects that have not been pushed to GitHub yet, `gh secret set` will not work until a remote exists. See the "No remote yet?" note in the reference section.
+Note: for brand-new projects that have not been pushed to GitHub yet, `gh secret` commands (including `gh secret set` and `gh secret list`) will not work until a GitHub remote exists. See the "No remote yet?" note in the reference section.
 
 ### 20. Summary
 
@@ -874,5 +874,5 @@ If the secret appears in the output, the setup is complete. If not, re-run step 
 
 ### Notes
 
-- **No remote yet?** If the repository has not been pushed to GitHub yet (common for brand-new projects), `gh secret set` will fail. In that case, note the token value securely and set the secret after creating the GitHub remote and pushing for the first time.
+- **No remote yet?** If the repository has not been pushed to GitHub yet (common for brand-new projects), `gh secret` commands (`gh secret set`, `gh secret list`) will fail because there is no associated GitHub repository. In that case, note the token value securely and set/verify the secret after creating the GitHub remote and pushing for the first time.
 - **Classic PATs also work.** A classic personal access token with `repo` scope can be used instead of a fine-grained PAT, but classic tokens grant broader access than necessary. Fine-grained PATs scoped to the single tap repository are the recommended approach.
