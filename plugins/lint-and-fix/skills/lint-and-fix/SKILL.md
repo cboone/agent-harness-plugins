@@ -30,18 +30,19 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 
 #### Detection Table
 
-| Config file(s)                             | Tool              | Fix command                                              | Check command                                                  |
-| ------------------------------------------ | ----------------- | -------------------------------------------------------- | -------------------------------------------------------------- |
-| `eslint.config.*`, `.eslintrc.*`           | eslint            | `npx eslint --fix .`                                     | `npx eslint .`                                                 |
-| `.prettierrc*`, `prettier.config.*`        | prettier          | `npx prettier --write .`                                 | `npx prettier --check .`                                       |
-| `.markdownlint.json`, `.markdownlint.yaml` | markdownlint      | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
-| `.markdownlint-cli2.*`                     | markdownlint-cli2 | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
-| Shell scripts in project                   | shellcheck        | _(no auto-fix)_                                          | `shellcheck <files>`                                           |
-| Shell scripts in project                   | shfmt             | `shfmt -w <files>`                                       | `shfmt -d <files>`                                             |
-| `knip.json`, `knip.config.*`, `knip.ts`    | knip              | _(no auto-fix)_                                          | `npx knip`                                                     |
-| `package.json` has `lint` script           | npm lint          | Try `npm run lint -- --fix`, fall back to `npm run lint` | `npm run lint`                                                 |
-| `package.json` has `format` script         | npm format        | `npm run format`                                         | Try `npm run format -- --check`, fall back to `npm run format` |
-| `bin/lint`, `scripts/lint`, `script/lint`  | Project script    | Try `<script> --fix` first                               | `<script>`                                                     |
+| Config file(s)                                                     | Tool               | Fix command                                              | Check command                                                  |
+| ------------------------------------------------------------------ | ------------------ | -------------------------------------------------------- | -------------------------------------------------------------- |
+| `eslint.config.*`, `.eslintrc.*`                                   | eslint             | `npx eslint --fix .`                                     | `npx eslint .`                                                 |
+| `.prettierrc*`, `prettier.config.*`                                | prettier           | `npx prettier --write .`                                 | `npx prettier --check .`                                       |
+| `.markdownlint.json`, `.markdownlint.yaml`                         | markdownlint       | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
+| `.markdownlint-cli2.*`                                             | markdownlint-cli2  | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
+| Shell scripts in project                                           | shellcheck         | _(no auto-fix)_                                          | `shellcheck <files>`                                           |
+| Shell scripts in project                                           | shfmt              | `shfmt -w <files>`                                       | `shfmt -d <files>`                                             |
+| `knip.json`, `knip.config.*`, `knip.ts`                            | knip               | _(no auto-fix)_                                          | `npx knip`                                                     |
+| `package.json` has `lint` script                                   | npm lint           | Try `npm run lint -- --fix`, fall back to `npm run lint` | `npm run lint`                                                 |
+| `package.json` has `format` script                                 | npm format         | `npm run format`                                         | Try `npm run format -- --check`, fall back to `npm run format` |
+| `bin/lint`, `scripts/lint`, `script/lint`                          | Project script     | Try `<script> --fix` first                               | `<script>`                                                     |
+| `.github/workflows/*.yml`, `.github/workflows/*.yaml` `run:` steps | CI workflow script | Run detected command                                     | Run detected command                                           |
 
 #### Detection Steps
 
@@ -49,7 +50,35 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 1. **Package.json scripts**: Read `package.json` and check for `lint`, `format`, or `check` scripts.
 1. **Shell scripts**: Use Glob to find `**/*.sh`, `bin/*`, `scripts/*`, `script/*`. If shell scripts are present, shellcheck and shfmt apply.
 1. **Project lint scripts**: Check for `bin/lint`, `scripts/lint`, `script/lint`.
+1. **CI workflow scripts**: Scan CI workflow files for repo-specific linting and validation steps not already covered by other detection methods. See [CI Workflow Detection](#ci-workflow-detection) below.
 1. **Tool availability**: Verify detected tools are installed (check `npx`, `which`, or `package.json` devDependencies).
+
+#### CI Workflow Detection
+
+Scan `.github/workflows/*.yml` and `.github/workflows/*.yaml` files to discover repo-specific linting and validation steps that go beyond standard tooling.
+
+1. **Find workflow files**: Use Glob to find `.github/workflows/*.yml` and `.github/workflows/*.yaml`.
+1. **Identify lint/validation jobs**: Read each workflow file. Look for jobs or steps whose `name` suggests linting, validation, or code quality (keywords: "lint", "check", "validate", "format", "style", "quality", "verify").
+1. **Extract `run:` commands**: From matching jobs and steps, collect all `run:` values.
+1. **Filter for repo-specific scripts**: Keep commands that invoke project scripts (paths starting with `bin/`, `scripts/`, `script/`, `./bin/`, `./scripts/`, or `./script/`). These are repo-specific validation tools. Also keep commands that invoke standalone tools not already covered by the detection table (e.g., `actionlint`, `taplo check`).
+1. **Deduplicate**: Exclude any commands already covered by earlier detection steps. For example, if `shellcheck` was already detected from shell scripts in the project, do not add a duplicate entry from the CI workflow. Similarly, if `bin/lint` was already detected as a project lint script, skip it.
+1. **Add as tools**: Register each remaining command as a CI workflow script in the detected tools list. Use the script's basename or the tool name as the tool identifier. If two scripts share the same basename (e.g., `bin/check` and `scripts/check`), use the relative path as the identifier to avoid collisions. These scripts typically have no auto-fix mode, so use the same command for both fix and check.
+
+**Example**: A CI workflow containing these steps:
+
+```yaml
+- name: Validate JSON syntax
+  run: bin/validate-json
+- name: Validate plugin structure
+  run: bin/validate-plugins
+```
+
+Would produce two additional detected tools:
+
+| Tool             | Config                       | Command                |
+| ---------------- | ---------------------------- | ---------------------- |
+| validate-json    | CI workflow (ci.yml, step 6) | `bin/validate-json`    |
+| validate-plugins | CI workflow (ci.yml, step 7) | `bin/validate-plugins` |
 
 If **--tool <name>** was specified, filter the detected list to only that tool. If the specified tool was not detected, report that and stop.
 
@@ -89,6 +118,7 @@ Run the fix command (or check command if **--check** was specified). Capture std
 - **knip**: No auto-fix. Reports unused files, dependencies, and exports.
 - **npm scripts**: Exit codes depend on the underlying tool.
 - **Project scripts**: Try with `--fix` first. If the script does not recognize `--fix`, run without it.
+- **CI workflow scripts**: Run exactly as specified in the workflow. These are typically check-only (no auto-fix). Exit code 0 = pass, non-zero = issues found.
 
 #### 3b. Record Results
 
@@ -181,4 +211,6 @@ Otherwise, push the commit to the remote:
 - **Execution failure**: Report the error output, then continue with the next tool rather than aborting.
 - **Permission errors on project scripts**: Report the error, suggest `chmod +x <script>`.
 - **Conflicting tools**: If both a `package.json` lint script and a standalone config (e.g., eslint) are detected, prefer the `package.json` script (it may have project-specific flags). Note the overlap to the user.
+- **CI workflow tool requires setup**: Some CI workflow steps depend on GitHub Actions that install a tool (e.g., `mfinelli/setup-shfmt`). If the tool is not locally available, report the missing tool and suggest installation.
+- **CI workflow command uses CI-only syntax**: Some `run:` commands use GitHub Actions expressions (`${{ }}`) or environment variables only available in CI. Skip these commands and note them as CI-only.
 - **Pre-commit hook failure on commit**: Fix the issue, re-stage, and create a new commit (never amend).
