@@ -302,7 +302,7 @@ jobs:
 - Libraries benefit from multi-version testing more than CLIs because consumers may use older Go versions
 - The lint job uses the official golangci-lint GitHub Action for consistent results
 - The format job checks that all files pass `gofmt` (fails CI if not)
-- **SHA pinning**: `golangci/golangci-lint-action@v9` is a third-party action pinned to a mutable version tag. When generating an actual CI workflow, look up the latest commit SHA for the `v9` tag and pin to it with a version comment (e.g., `golangci/golangci-lint-action@<sha> # v9`). This mitigates supply-chain risk from tag retargeting.
+- **Action version pinning**: `golangci/golangci-lint-action@v9` is pinned to the `v9` version tag, matching this project's convention of using version tags or branch refs (not commit SHAs) for GitHub Actions. When updating this workflow, bump the tag (for example, to `v10`) only after verifying compatibility with the new action version.
 
 ---
 
@@ -588,7 +588,7 @@ jobs:
 - `Swatinem/rust-cache@v2` caches Cargo dependencies and build artifacts
 - Clippy runs with `-D warnings` to fail on any warning
 - The format job uses `cargo fmt -- --check` (check mode, no modifications)
-- **SHA pinning**: `dtolnay/rust-toolchain` and `Swatinem/rust-cache` are third-party actions pinned to mutable references (a branch and a major version tag). When generating an actual CI workflow, look up the latest commit SHAs and pin to them with version comments (e.g., `dtolnay/rust-toolchain@<sha> # stable`, `Swatinem/rust-cache@<sha> # v2`). This mitigates supply-chain risk from reference retargeting.
+- **Action pinning**: `dtolnay/rust-toolchain@stable` and `Swatinem/rust-cache@v2` follow this project's convention of pinning third-party actions to upstream-maintained tags and branch references rather than commit SHAs. Generated workflows should keep these references as shown.
 
 ---
 
@@ -698,7 +698,7 @@ jobs:
 - The `scandir` value should match where shell scripts live in the project
 - If scripts are in multiple directories, use the repository root (`.`) for `scandir`
 - `shfmt -d .` checks formatting without modifying files (diff mode)
-- **SHA pinning**: `ludeeus/action-shellcheck` and `mfinelli/setup-shfmt` are third-party actions pinned to mutable references. When generating an actual CI workflow, look up the latest commit SHAs and pin to them with version comments (e.g., `ludeeus/action-shellcheck@<sha> # master`, `mfinelli/setup-shfmt@<sha> # v4`). This mitigates supply-chain risk from reference retargeting.
+- **Action versioning**: `ludeeus/action-shellcheck` and `mfinelli/setup-shfmt` are third-party actions. Generated workflows should follow the project convention of pinning them to upstream version tags or branch refs (e.g., `ludeeus/action-shellcheck@master`, `mfinelli/setup-shfmt@v4`) rather than commit SHAs.
 
 ---
 
