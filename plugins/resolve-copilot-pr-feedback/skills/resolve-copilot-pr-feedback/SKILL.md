@@ -248,6 +248,7 @@ This step prevents CI failures from lint issues introduced while resolving feedb
    ```
 
    This runs all detected project linters and formatters, fixes issues, and commits the fixes without pushing.
+
 1. If lint-and-fix finds and fixes issues, the fixes are committed automatically. Proceed to step 6.
 
 ### 6. Verify Completion
