@@ -114,10 +114,26 @@ Wait for explicit approval before proceeding.
 
 ### 5. Execute
 
-Invoke each confirmed tool in order using the Skill tool. Each tool is registered as a slash command (e.g., `/scaffold-new-repo`, `/setup-ci`).
+The tools referenced in this plan are a mix of **skills** and **commands**. They require different invocation methods:
 
-Between each invocation:
+- **Skills** (have a `skills/` directory): Invoke using the Skill tool.
+  - `setup-linters`
+- **Commands** (have a `commands/` directory): Read the command's Markdown file from its plugin directory using the Read tool, then follow the workflow instructions in that file directly.
+  - `scaffold-new-repo` (read `plugins/scaffold-new-repo/commands/scaffold-new-repo.md`)
+  - `scaffold-go-cli` (read `plugins/scaffold-go-cli/commands/scaffold-go-cli.md`)
+  - `scaffold-go-library` (read `plugins/scaffold-go-library/commands/scaffold-go-library.md`)
+  - `setup-ci` (read `plugins/setup-ci/commands/setup-ci.md`)
+  - `setup-gitleaks` (read `plugins/setup-gitleaks/commands/setup-gitleaks.md`)
+  - `add-goreleaser-homebrew` (read `plugins/add-goreleaser-homebrew/commands/add-goreleaser-homebrew.md`)
+  - `setup-installers` (read `plugins/setup-installers/commands/setup-installers.md`)
+  - `add-scrut-cli-tests` (read `plugins/add-scrut-cli-tests/commands/add-scrut-cli-tests.md`)
 
+The command file paths above are relative to the `cboone-cc-plugins` plugin repository root. To resolve the absolute path, use Glob to search for the command file (e.g., `**/commands/scaffold-new-repo.md`).
+
+For each confirmed tool, in execution order:
+
+1. If it is a **skill**, invoke it via the Skill tool.
+1. If it is a **command**, read its `.md` file and follow the workflow instructions directly.
 1. Verify the tool completed successfully.
 1. If a tool fails, report the error to the user and ask whether to continue with the remaining tools or stop.
 
