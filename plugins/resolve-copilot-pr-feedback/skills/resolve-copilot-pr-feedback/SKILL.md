@@ -234,7 +234,24 @@ bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file /tmp/copilo
 
 **CRITICAL:** Never defer feedback without tracking it. "Acknowledged for follow-up" without creating a trackable task is INCOMPLETE WORK.
 
-### 5. Verify Completion
+### 5. Lint and Fix
+
+**After all code changes are made (from Valid or Incorrect categories), run the `lint-and-fix` skill to catch lint errors before pushing.**
+
+This step prevents CI failures from lint issues introduced while resolving feedback.
+
+1. **Check for changes**: If no files were modified during steps 2-4 (only nitpicks auto-resolved or threads replied to), skip this step. Run `git status --porcelain` to verify: empty output means a clean working tree and you may skip; any output means files were changed and you should continue.
+1. **Invoke the `lint-and-fix` skill** using the Skill tool with `--no-push`:
+
+   ```text
+   lint-and-fix --no-push
+   ```
+
+   This runs all detected project linters and formatters, fixes issues, and commits the fixes without pushing.
+
+1. If lint-and-fix finds and fixes issues, the fixes are committed automatically. Proceed to step 6.
+
+### 6. Verify Completion
 
 1. **Push any changes:** `git push`
 1. Re-fetch to confirm all Copilot threads resolved:
@@ -271,6 +288,7 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 1. **EVERY addressed thread resolved via the script** (not just code fixed!)
 1. **For INCORRECT feedback: Copilot instructions updated** (path-specific `*.instructions.md` preferred, or `copilot-instructions.md` for repo-wide conventions)
 1. **For DEFERRED feedback: Task tracked** (GitHub issue, PROJECT.md, or similar)
+1. **Linters and formatters pass** (via `lint-and-fix` skill, if any files were changed while addressing feedback)
 1. Re-fetch confirms empty array `[]` for all processed threads
 1. Output summary table (see format below)
 
