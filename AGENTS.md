@@ -186,6 +186,12 @@ cboone-cc-plugins/
     │   ├── README.md
     │   └── commands/
     │       └── scaffold-go-library.md
+    ├── setup-ci/                   # GitHub Actions CI setup command
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── commands/
+    │       └── setup-ci.md
     ├── setup-gitleaks/             # Gitleaks secret scanning setup command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -232,6 +238,18 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── suggest-next-issue/
     │           └── SKILL.md
+    ├── use-git/                     # Git and gh CLI conventions skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── use-git/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── common-operations.md
+    │               ├── heredoc-pattern.md
+    │               ├── safety-rules.md
+    │               └── tmpfile-pattern.md
     ├── write-markdown/              # Markdown style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

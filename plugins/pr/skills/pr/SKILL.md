@@ -29,7 +29,25 @@ If `gh` is not available or the command fails, fall back to:
 git remote show origin | grep 'HEAD branch' | sed 's/.*: //'
 ```
 
-Use the detected value as `<base-branch>` in all subsequent commands.
+Use the detected value as `<default-branch>`.
+
+#### Detect the PR base branch
+
+The current branch may have been created from a non-default branch (e.g., for stacked PRs). Check the reflog for the branch creation point:
+
+```bash
+git reflog show $(git branch --show-current) --format='%gs' | tail -1
+```
+
+This produces output like `branch: Created from develop`, `branch: Created from origin/develop`, or `branch: Created from refs/heads/feature/parent`. If the last entry matches `branch: Created from <name>`, extract `<name>` and normalize it by stripping any `refs/heads/`, `refs/remotes/origin/`, or leading `origin/` prefix.
+
+If a source branch name was extracted, verify it exists on the remote and is not the current branch. Note that `git ls-remote` always exits 0 regardless of whether the branch exists, so check for non-empty output:
+
+```bash
+git ls-remote --heads origin <source-branch> | grep -q .
+```
+
+If the command produces output (branch exists on the remote) and the branch is not the current branch, use it as `<base-branch>`. Otherwise, use `<default-branch>` as `<base-branch>`.
 
 Then run these commands in parallel to understand the current state:
 
@@ -229,7 +247,7 @@ Then create the PR with `--body-file`, using the actual path returned by `mktemp
 gh pr create --title "the pr title" --body-file TMPFILE_PATH
 ```
 
-Do not pass `--base` unless the base branch is not the repository default. Do not pass `--draft`. Do not add labels or reviewers.
+Pass `--base <base-branch>` if `<base-branch>` differs from `<default-branch>`. Do not pass `--draft`. Do not add labels or reviewers.
 
 Always remove the tmpfile after the PR creation attempt, regardless of whether it succeeded or failed. Use the same path returned by `mktemp`:
 

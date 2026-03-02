@@ -9,6 +9,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [PR](#pr)
 ∙ [Release](#release)
 ∙ [Review Branch](#review-branch)
+∙ [Use Git](#use-git)
 <br>Issues and Worktrees:
 [Create Issue](#create-issue)
 ∙ [Create Worktree](#create-worktree)
@@ -37,6 +38,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Scaffold Go CLI](#scaffold-go-cli)
 ∙ [Scaffold Go Library](#scaffold-go-library)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
+∙ [Setup CI](#setup-ci)
 ∙ [Setup Gitleaks](#setup-gitleaks)
 ∙ [Setup Installers](#setup-installers)
 
@@ -98,6 +100,13 @@ Summarize all work done on the current branch compared to the base branch. Group
 
 > **Trigger:** `/review-branch`
 > **Details:** [README](./plugins/review-branch/README.md)
+
+#### Use Git
+
+Git and GitHub CLI conventions for Claude Code. Covers when to use tmpfiles vs HEREDOCs for passing content, GPG signing, safe push practices, secret file exclusion, and parallel tool call patterns to avoid permission prompts.
+
+> **Trigger:** `/use-git` (also activates automatically)
+> **Details:** [README](./plugins/use-git/README.md)
 
 ### Issues and Worktrees
 
@@ -268,6 +277,13 @@ Scaffold the universal boilerplate for any new repository: LICENSE, README, .git
 
 > **Trigger:** `/scaffold-new-repo`
 > **Details:** [README](./plugins/scaffold-new-repo/README.md)
+
+#### Setup CI
+
+Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets. Detects the project language (Go, JavaScript/TypeScript, Python, Rust, Ruby, Shell) and generates appropriate parallel CI jobs and Makefile targets.
+
+> **Trigger:** `/setup-ci`
+> **Details:** [README](./plugins/setup-ci/README.md)
 
 #### Setup Gitleaks
 
