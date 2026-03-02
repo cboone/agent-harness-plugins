@@ -603,10 +603,10 @@ Replace `GITHUB-USERNAME` with the user's actual GitHub username throughout this
 Check whether the secret is already configured:
 
 ```bash
-gh secret list | grep HOMEBREW_TAP_TOKEN
+gh secret list | grep HOMEBREW_TAP_TOKEN || true
 ```
 
-If the secret already exists, skip to step 5 (Verify) to confirm it works.
+If the secret already exists, skip to step 5 (Verify) to confirm it is still configured.
 
 ### 3. Create a Fine-Grained Personal Access Token
 
@@ -636,10 +636,10 @@ This command reads the token from stdin (no echo), so the user can paste the tok
 Confirm the secret is configured:
 
 ```bash
-gh secret list | grep HOMEBREW_TAP_TOKEN
+gh secret list | grep HOMEBREW_TAP_TOKEN || true
 ```
 
-If the secret appears in the output, the setup is complete.
+If the secret appears in the output, the setup is complete. If not, re-run step 4.
 
 ### Notes
 

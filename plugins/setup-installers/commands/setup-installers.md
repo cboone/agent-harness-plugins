@@ -57,7 +57,7 @@ Skip this section if the user did not select Homebrew.
 **If GoReleaser exists with a `brews:` section**: Homebrew is already handled by GoReleaser. Tell the user and check for the `HOMEBREW_TAP_TOKEN` secret:
 
 ```bash
-gh secret list | grep HOMEBREW_TAP_TOKEN
+gh secret list | grep HOMEBREW_TAP_TOKEN || true
 ```
 
 If the secret is missing, warn the user that releases will fail without it. Suggest running `/add-goreleaser-homebrew` for a guided setup that includes interactive token configuration, or manually adding the secret (see the HOMEBREW_TAP_TOKEN Setup reference section in `add-goreleaser-homebrew`).
