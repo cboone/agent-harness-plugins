@@ -185,18 +185,18 @@ bash resolve-copilot-threads resolve THREAD_ID
 
 **CRITICAL: Reply directly to the Copilot review thread, NOT to the PR.**
 
-Use the script to reply to the specific Copilot thread:
+**CRITICAL: Always use `--body-file` to pass reply bodies.** Write the response to a temp file first using the Write tool, then reference it with `--body-file`. This keeps the Bash command short and avoids permission prompts from long inline strings.
 
 ```bash
-# Reply from a file (recommended for multiline bodies):
-bash resolve-copilot-threads reply THREAD_ID --body-file response.md
-
-# Reply from stdin:
-echo "Your explanation here" | bash resolve-copilot-threads reply THREAD_ID
+# Step 1: Write the response body using the Write tool (NOT shown here as bash)
+# Step 2: Pass it to the script:
+bash resolve-copilot-threads reply THREAD_ID --body-file /tmp/copilot-reply.md
 
 # Reply and resolve in one step:
-bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file response.md
+bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file /tmp/copilot-reply.md
 ```
+
+**NEVER pass the reply body inline** (e.g., via `echo "..." |` or heredocs). Always use the Write tool + `--body-file` pattern.
 
 **FORBIDDEN COMMANDS - NEVER USE:**
 
@@ -248,6 +248,8 @@ bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file response.md
 1. Report summary of actions taken
 
 ## Reply Templates
+
+Write these to `/tmp/copilot-reply.md` using the Write tool, then pass via `--body-file`.
 
 **For outdated comments:**
 
