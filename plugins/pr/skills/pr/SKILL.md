@@ -53,7 +53,7 @@ If a source branch name was extracted, verify it is a valid base for the PR. Run
 3. **Not already merged into the default branch**: The source branch may have been merged into the default branch since this branch was created (e.g., a parent feature branch that has since landed). Check whether the source branch is an ancestor of the default branch:
 
    ```bash
-   git fetch origin <default-branch> --quiet
+   git fetch origin <default-branch> <source-branch> --quiet
    git merge-base --is-ancestor origin/<source-branch> origin/<default-branch>
    ```
 
