@@ -33,7 +33,7 @@ This skill runs GitHub CLI and git commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh issue list *)", "Bash(gh label list *)", "Bash(gh api *)", "Bash(gh repo view *)", "Bash(gh pr list *)", "Bash(git worktree list*)", "Bash(git branch *)"]
+    "allow": ["Bash(gh issue list *)", "Bash(gh api *)", "Bash(gh repo view *)", "Bash(gh pr list *)", "Bash(git worktree list*)", "Bash(git branch *)"]
   }
 }
 ```
