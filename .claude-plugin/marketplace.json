@@ -231,7 +231,7 @@
       "name": "pr",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/pr",
-      "version": "1.4.1"
+      "version": "1.4.2"
     },
     {
       "author": {

@@ -41,13 +41,25 @@ git reflog show $(git branch --show-current) --format='%gs' | tail -1
 
 This produces output like `branch: Created from develop`, `branch: Created from origin/develop`, or `branch: Created from refs/heads/feature/parent`. If the last entry matches `branch: Created from <name>`, extract `<name>` and normalize it by stripping any `refs/heads/`, `refs/remotes/origin/`, or leading `origin/` prefix.
 
-If a source branch name was extracted, verify it exists on the remote and is not the current branch. Note that `git ls-remote` always exits 0 regardless of whether the branch exists, so check for non-empty output:
+If a source branch name was extracted, verify it is a valid base for the PR. Run these checks in order, stopping at the first failure:
 
-```bash
-git ls-remote --heads origin <source-branch> | grep -q .
-```
+1. **Not the current branch**: The source branch must differ from the current branch.
+2. **Exists on the remote**: Note that `git ls-remote` always exits 0 regardless of whether the branch exists, so check for non-empty output:
 
-If the command produces output (branch exists on the remote) and the branch is not the current branch, use it as `<base-branch>`. Otherwise, use `<default-branch>` as `<base-branch>`.
+   ```bash
+   git ls-remote --heads origin <source-branch> | grep -q .
+   ```
+
+3. **Not already merged into the default branch**: The source branch may have been merged into the default branch since this branch was created (e.g., a parent feature branch that has since landed). Check whether the source branch is an ancestor of the default branch:
+
+   ```bash
+   git fetch origin <default-branch> --quiet
+   git merge-base --is-ancestor origin/<source-branch> origin/<default-branch>
+   ```
+
+   If the exit code is 0, the source branch has been fully merged into the default branch. Skip it and use `<default-branch>` as `<base-branch>` instead.
+
+If all three checks pass, use the source branch as `<base-branch>`. If any check fails, use `<default-branch>` as `<base-branch>`.
 
 Then run these commands in parallel to understand the current state:
 
