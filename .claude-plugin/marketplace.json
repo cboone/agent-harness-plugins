@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "1.16.0"
+    "version": "1.17.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -302,6 +302,20 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-new-repo",
       "version": "1.4.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
+      "description": "Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["ci", "github-actions", "makefile", "testing", "workflow"],
+      "license": "MIT",
+      "name": "setup-ci",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/setup-ci",
+      "version": "1.0.0"
     },
     {
       "author": {
