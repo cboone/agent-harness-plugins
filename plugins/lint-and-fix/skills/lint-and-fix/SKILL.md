@@ -42,7 +42,7 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 | `package.json` has `lint` script           | npm lint          | Try `npm run lint -- --fix`, fall back to `npm run lint` | `npm run lint`                                                 |
 | `package.json` has `format` script         | npm format        | `npm run format`                                         | Try `npm run format -- --check`, fall back to `npm run format` |
 | `bin/lint`, `scripts/lint`, `script/lint`  | Project script    | Try `<script> --fix` first                               | `<script>`                                                     |
-| `.github/workflows/*.yml` `run:` steps     | CI workflow script | Run detected command                                     | Run detected command                                           |
+| `.github/workflows/*.yml`, `.github/workflows/*.yaml` `run:` steps | CI workflow script | Run detected command                                     | Run detected command                                           |
 
 #### Detection Steps
 
@@ -62,7 +62,7 @@ Scan `.github/workflows/*.yml` files to discover repo-specific linting and valid
 1. **Extract `run:` commands**: From matching jobs and steps, collect all `run:` values.
 1. **Filter for repo-specific scripts**: Keep commands that invoke project scripts (paths starting with `bin/`, `scripts/`, `script/`, `./bin/`, `./scripts/`, or `./script/`). These are repo-specific validation tools. Also keep commands that invoke standalone tools not already covered by the detection table (e.g., `actionlint`, `taplo check`).
 1. **Deduplicate**: Exclude any commands already covered by earlier detection steps. For example, if `shellcheck` was already detected from shell scripts in the project, do not add a duplicate entry from the CI workflow. Similarly, if `bin/lint` was already detected as a project lint script, skip it.
-1. **Add as tools**: Register each remaining command as a CI workflow script in the detected tools list. Use the script's basename or the tool name as the tool identifier. These scripts typically have no auto-fix mode, so use the same command for both fix and check.
+1. **Add as tools**: Register each remaining command as a CI workflow script in the detected tools list. Use the script's basename or the tool name as the tool identifier. If two scripts share the same basename (e.g., `bin/check` and `scripts/check`), use the relative path as the identifier to avoid collisions. These scripts typically have no auto-fix mode, so use the same command for both fix and check.
 
 **Example**: A CI workflow containing these steps:
 
