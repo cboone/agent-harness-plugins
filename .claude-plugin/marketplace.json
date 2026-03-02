@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "1.16.0"
+    "version": "1.17.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -358,6 +358,20 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/suggest-next-issue",
       "version": "1.1.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Git and GitHub CLI conventions for Claude Code: tmpfile patterns, HEREDOC commits, GPG signing, safe push practices, and permission-prompt avoidance.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cli", "conventions", "gh", "git", "github", "permissions"],
+      "license": "MIT",
+      "name": "use-git",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/use-git",
+      "version": "1.0.0"
     },
     {
       "author": {

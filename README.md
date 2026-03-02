@@ -9,6 +9,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [PR](#pr)
 ∙ [Release](#release)
 ∙ [Review Branch](#review-branch)
+∙ [Use Git](#use-git)
 <br>Issues and Worktrees:
 [Create Issue](#create-issue)
 ∙ [Create Worktree](#create-worktree)
@@ -98,6 +99,13 @@ Summarize all work done on the current branch compared to the base branch. Group
 
 > **Trigger:** `/review-branch`
 > **Details:** [README](./plugins/review-branch/README.md)
+
+#### Use Git
+
+Git and GitHub CLI conventions for Claude Code. Covers when to use tmpfiles vs HEREDOCs for passing content, GPG signing, safe push practices, secret file exclusion, and parallel tool call patterns to avoid permission prompts.
+
+> **Trigger:** `/use-git` (also activates automatically)
+> **Details:** [README](./plugins/use-git/README.md)
 
 ### Issues and Worktrees
 
