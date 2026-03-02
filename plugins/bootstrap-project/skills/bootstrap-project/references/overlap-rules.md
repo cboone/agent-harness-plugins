@@ -13,11 +13,10 @@ Each row reads as: "If **Tool A** will run, then apply **Action** to **Tool B**,
 | `scaffold-go-cli`     | `setup-linters`           | Scope down | Makefile lint target exists; add `.golangci.yml` and cross-language tools                     |
 | `scaffold-go-cli`     | `scaffold-new-repo`       | Scope down | `scaffold-go-cli` generates LICENSE, README, .gitignore; still run for agent config files     |
 | `scaffold-go-library` | `setup-ci`                | Skip       | `scaffold-go-library` generates CI workflow and Makefile                                      |
-| `scaffold-go-library` | `add-goreleaser-homebrew` | N/A        | Libraries do not produce binaries; GoReleaser is not applicable                               |
-| `scaffold-go-library` | `setup-installers`        | N/A        | Libraries do not produce binaries; installers are not applicable                              |
-| `scaffold-go-library` | `add-scrut-cli-tests`     | N/A        | Libraries do not produce a CLI; scrut tests are not applicable                                |
 | `scaffold-go-library` | `setup-linters`           | Scope down | `.golangci.yml` is configured; only add cross-language tools                                  |
 | `scaffold-go-library` | `scaffold-new-repo`       | Scope down | `scaffold-go-library` generates LICENSE, README, .gitignore; still run for agent config files |
+
+Tool applicability (e.g., CLI-only tools not running on libraries) is defined in the **Applicability Rules** section below.
 
 ## Independent Tools
 
