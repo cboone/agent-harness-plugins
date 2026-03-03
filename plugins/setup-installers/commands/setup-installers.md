@@ -178,7 +178,44 @@ class ProjectName < Formula
 end
 ```
 
-Adjust the license field based on the project's actual license file. Add instructions for publishing to a Homebrew tap repository.
+Adjust the license field based on the project's actual license file.
+
+#### Create Issue on Homebrew Tap Repository
+
+After generating the standalone formula, detect the user's homebrew-tap repository:
+
+```bash
+OWNER=$(gh repo view --json owner -q .owner.login)
+gh repo view "${OWNER}/homebrew-tap" --json name -q .name 2>/dev/null
+```
+
+**If the tap repo exists**, offer to create an issue there with the formula and setup instructions. Write the issue body to a temp file and use `gh issue create`:
+
+```bash
+gh issue create --repo "${OWNER}/homebrew-tap" \
+  --title "Add PROJECT-NAME formula" \
+  --body-file /tmp/homebrew-formula-issue.md
+```
+
+The issue body should contain:
+
+1. A brief description of the project
+2. The complete formula content in a Ruby code block
+3. The tarball naming convention used by the release workflow (e.g., `PROJECT-NAME-VERSION-OS-ARCH.tar.gz`)
+4. Instructions for computing SHA256 values after the first release:
+   - Download the release tarballs from the GitHub Release page
+   - Run `shasum -a 256 *.tar.gz`
+   - Replace the placeholder `SHA256_FOR_*` values in the formula
+5. A note that this formula should be added after the first tagged release produces artifacts
+6. For macOS-only projects: note the `depends_on :macos` requirement
+
+**If the tap repo does not exist**, tell the user and suggest creating it:
+
+```bash
+gh repo create "${OWNER}/homebrew-tap" --public --description "Homebrew tap for ${OWNER}'s tools"
+```
+
+Then offer to create the issue after the repo is created.
 
 ### 6. Set Up Shell Install Script
 
@@ -705,7 +742,7 @@ After completing all selected installer types, print a summary:
 - **Files modified**: list each modified file with what changed (including `.prettierignore` if updated)
 - **Skipped installers**: note any installers that were skipped and why (e.g., "Homebrew: already configured via GoReleaser", "Release workflow: GoReleaser handles releases")
 - **Next steps**: note any required follow-up actions:
-  - For Homebrew standalone formula: create the tap repository and push the formula
+  - For Homebrew standalone formula: if an issue was created on the tap repo, note the issue URL; otherwise, remind the user to create the tap repository and push the formula
   - For shell install script: the script expects GitHub Releases with tarballs in the naming format described above
   - For go install: ensure the module has no `replace` directives and is tagged with a version
   - For cargo install: ensure the crate is published to crates.io (if applicable)
