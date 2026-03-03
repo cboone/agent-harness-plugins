@@ -61,5 +61,5 @@ Some tools only apply to certain project types:
 | `add-scrut-cli-tests`     | Project produces a CLI binary                   |
 | `setup-ci`                | Any project without existing CI workflow        |
 | `setup-linters`           | Any project                                     |
-| `setup-secret-scanning`          | Any project                                     |
+| `setup-secret-scanning`   | Any project                                     |
 | `scaffold-new-repo`       | Any project missing foundational files          |

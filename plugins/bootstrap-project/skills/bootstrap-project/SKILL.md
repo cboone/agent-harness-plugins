@@ -39,21 +39,21 @@ If multiple types are detected (monorepo), note all of them.
 
 Check for files and directories that indicate what is already set up:
 
-| Check                            | Indicates               | Typically provided by                         |
-| -------------------------------- | ----------------------- | --------------------------------------------- |
-| `LICENSE`                        | License exists          | `scaffold-new-repo`                           |
-| `README.md`                      | README exists           | `scaffold-new-repo`                           |
-| `CHANGELOG.md`                   | Changelog exists        | `scaffold-new-repo`                           |
-| `AGENTS.md` or `CLAUDE.md`       | Agent config exists     | `scaffold-new-repo`                           |
-| `.github/workflows/ci.yml`       | CI exists               | `setup-ci` / `scaffold-go-*`                  |
-| `.github/workflows/release.yml`  | Release workflow exists | `scaffold-go-*` / `add-goreleaser-homebrew`   |
-| `.github/workflows/gitleaks.yml` | Gitleaks exists         | `setup-secret-scanning`                       |
-| `.github/workflows/trufflehog.yml` | TruffleHog exists    | `setup-secret-scanning`                       |
-| `.goreleaser.yml`                | GoReleaser exists       | `scaffold-go-cli` / `add-goreleaser-homebrew` |
-| `Makefile`                       | Build targets exist     | `scaffold-go-*` / `setup-ci`                  |
-| Linter config files              | Linters exist           | `setup-linters` / `scaffold-go-*`             |
-| `tests/scrut/`                   | Scrut tests exist       | `add-scrut-cli-tests`                         |
-| `install.sh` or `Formula/`       | Installers exist        | `setup-installers`                            |
+| Check                              | Indicates               | Typically provided by                         |
+| ---------------------------------- | ----------------------- | --------------------------------------------- |
+| `LICENSE`                          | License exists          | `scaffold-new-repo`                           |
+| `README.md`                        | README exists           | `scaffold-new-repo`                           |
+| `CHANGELOG.md`                     | Changelog exists        | `scaffold-new-repo`                           |
+| `AGENTS.md` or `CLAUDE.md`         | Agent config exists     | `scaffold-new-repo`                           |
+| `.github/workflows/ci.yml`         | CI exists               | `setup-ci` / `scaffold-go-*`                  |
+| `.github/workflows/release.yml`    | Release workflow exists | `scaffold-go-*` / `add-goreleaser-homebrew`   |
+| `.github/workflows/gitleaks.yml`   | Gitleaks exists         | `setup-secret-scanning`                       |
+| `.github/workflows/trufflehog.yml` | TruffleHog exists       | `setup-secret-scanning`                       |
+| `.goreleaser.yml`                  | GoReleaser exists       | `scaffold-go-cli` / `add-goreleaser-homebrew` |
+| `Makefile`                         | Build targets exist     | `scaffold-go-*` / `setup-ci`                  |
+| Linter config files                | Linters exist           | `setup-linters` / `scaffold-go-*`             |
+| `tests/scrut/`                     | Scrut tests exist       | `add-scrut-cli-tests`                         |
+| `install.sh` or `Formula/`         | Installers exist        | `setup-installers`                            |
 
 ### 3. Build the Plan
 

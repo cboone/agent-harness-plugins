@@ -24,10 +24,10 @@ Rename `setup-gitleaks` to `setup-secret-scanning`. The trigger changes from `/s
 
 Two separate workflow files (not one combined), matching the existing pattern of one CI concern per file:
 
-| Tool | Workflow file | Push | PR | Schedule | Dispatch |
-|------|--------------|------|-----|----------|----------|
-| Gitleaks | `gitleaks.yml` | All branches | Yes | Daily 4 AM UTC | Yes |
-| TruffleHog | `trufflehog.yml` | `main` only | No | Weekly Sat 4 AM UTC | Yes |
+| Tool       | Workflow file    | Push         | PR  | Schedule            | Dispatch |
+| ---------- | ---------------- | ------------ | --- | ------------------- | -------- |
+| Gitleaks   | `gitleaks.yml`   | All branches | Yes | Daily 4 AM UTC      | Yes      |
+| TruffleHog | `trufflehog.yml` | `main` only  | No  | Weekly Sat 4 AM UTC | Yes      |
 
 Gitleaks templates get a permissions fix (issue #163) but are otherwise unchanged (personal vs org variants). TruffleHog needs only a single template (no license distinction).
 
@@ -60,6 +60,7 @@ jobs:
 ```
 
 Key design decisions:
+
 - `trufflesecurity/trufflehog@v3` (stable major version tag, not `@main`)
 - `--results=verified,unknown` reports confirmed-active and unknown-status secrets, filters out confirmed false positives
 - Minimal permissions block (`contents: read` for repository access)
@@ -71,12 +72,12 @@ Key design decisions:
 Follows the existing detect-ask-generate-summarize pattern, expanded for two tools:
 
 1. **Check for existing setup**: scan for `gitleaks.yml`, `trufflehog.yml`, and `.gitleaks.toml`
-2. **Choose scanning tools**: ask user to pick both (recommended), gitleaks only, or TruffleHog only
-3. **Determine repository ownership**: only if gitleaks selected (personal vs org for license)
-4. **Generate gitleaks workflow**: if selected, using existing templates
-5. **Generate TruffleHog workflow**: if selected, using new template
-6. **Optionally generate gitleaks config**: if gitleaks selected, same `.gitleaks.toml` as before
-7. **Summary**: list files, note trigger coverage for each tool, remind about license if org
+1. **Choose scanning tools**: ask user to pick both (recommended), gitleaks only, or TruffleHog only
+1. **Determine repository ownership**: only if gitleaks selected (personal vs org for license)
+1. **Generate gitleaks workflow**: if selected, using existing templates
+1. **Generate TruffleHog workflow**: if selected, using new template
+1. **Optionally generate gitleaks config**: if gitleaks selected, same `.gitleaks.toml` as before
+1. **Summary**: list files, note trigger coverage for each tool, remind about license if org
 
 ## Changes
 
@@ -91,15 +92,16 @@ Rename via `git mv`, then commit. Doing this in a separate commit helps git trac
 
 Rewrite all three files in `plugins/setup-secret-scanning/`:
 
-| File | Changes |
-|------|---------|
-| `.claude-plugin/plugin.json` | name, description, keywords (+trufflehog), version to 2.0.0 |
+| File                                | Changes                                                                                                                                                                                       |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.claude-plugin/plugin.json`        | name, description, keywords (+trufflehog), version to 2.0.0                                                                                                                                   |
 | `commands/setup-secret-scanning.md` | Full rewrite with dual-tool workflow, TruffleHog template, expanded steps. Also fix gitleaks templates: add `permissions` block with `contents: read` and `pull-requests: read` (issue #163). |
-| `README.md` | New name, trigger, description covering both tools |
+| `README.md`                         | New name, trigger, description covering both tools                                                                                                                                            |
 
 ### Phase 3: Update marketplace registry
 
 `.claude-plugin/marketplace.json`:
+
 - Replace `setup-gitleaks` entry with `setup-secret-scanning` (name, description, keywords, source, version 2.0.0)
 - Bump `metadata.version` from 1.18.0 to 1.19.0
 
@@ -108,16 +110,19 @@ Rewrite all three files in `plugins/setup-secret-scanning/`:
 14 files reference `setup-gitleaks`. All need `setup-gitleaks` replaced with `setup-secret-scanning`:
 
 **Repo-level docs:**
+
 - `README.md`: ToC entry and description section
 - `CLAUDE.md`: directory tree (2 spots)
 - `AGENTS.md`: directory tree
 
 **Other plugins (functional references, patch version bumps needed):**
+
 - `plugins/bootstrap-project/skills/bootstrap-project/SKILL.md`: detection table, execution order, task table, reference path (5 edits). Also add TruffleHog to detection table.
 - `plugins/bootstrap-project/skills/bootstrap-project/references/overlap-rules.md`: independent tool listing, applicability table
 - `plugins/bootstrap-project/README.md`: orchestrated tools list
 
 **Other plugins (See Also / suggestion links):**
+
 - `plugins/setup-ci/commands/setup-ci.md`: suggestion text
 - `plugins/setup-ci/README.md`: See Also link
 - `plugins/scaffold-new-repo/README.md`: See Also link
@@ -126,16 +131,17 @@ Rewrite all three files in `plugins/setup-secret-scanning/`:
 - `plugins/create-plugin/skills/create-plugin/references/readme-updates.md`: example in table
 
 **Outside repo:**
+
 - `~/.claude/CLAUDE.md`: "When adding secret scanning, use `setup-secret-scanning`"
 
 ### Phase 5: Version bumps for affected plugins
 
-| Plugin | Current | New | Reason |
-|--------|---------|-----|--------|
-| setup-secret-scanning | 1.1.0 | 2.0.0 | Breaking rename + new capability |
-| marketplace metadata | 1.18.0 | 1.19.0 | Catalog changed |
-| bootstrap-project | (check) | patch +1 | SKILL.md and references change |
-| setup-ci | (check) | patch +1 | Command suggestion text changed |
+| Plugin                | Current | New      | Reason                           |
+| --------------------- | ------- | -------- | -------------------------------- |
+| setup-secret-scanning | 1.1.0   | 2.0.0    | Breaking rename + new capability |
+| marketplace metadata  | 1.18.0  | 1.19.0   | Catalog changed                  |
+| bootstrap-project     | (check) | patch +1 | SKILL.md and references change   |
+| setup-ci              | (check) | patch +1 | Command suggestion text changed  |
 
 README-only See Also link changes in scaffold-new-repo, handle-secrets, setup-linters, and create-plugin: patch bump each if the project convention warrants it, or skip if pure link updates are considered cosmetic. Check with `check-versions` skill before PR.
 
@@ -146,8 +152,8 @@ README-only See Also link changes in scaffold-new-repo, handle-secrets, setup-li
 ## Verification
 
 1. Run `git diff main...HEAD` to confirm all `setup-gitleaks` references are updated (except historical plan files in `docs/plans/done/`)
-2. Grep for any remaining `setup-gitleaks` references outside `docs/plans/done/`
-3. Verify `plugin.json` version matches `marketplace.json` entry for the renamed plugin
-4. Run `check-versions` skill to validate version consistency
-5. Test the command trigger by starting a new session and running `/setup-secret-scanning`
-6. Verify the generated gitleaks and TruffleHog workflow YAML is valid
+1. Grep for any remaining `setup-gitleaks` references outside `docs/plans/done/`
+1. Verify `plugin.json` version matches `marketplace.json` entry for the renamed plugin
+1. Run `check-versions` skill to validate version consistency
+1. Test the command trigger by starting a new session and running `/setup-secret-scanning`
+1. Verify the generated gitleaks and TruffleHog workflow YAML is valid
