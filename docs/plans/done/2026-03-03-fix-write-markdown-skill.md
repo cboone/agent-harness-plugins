@@ -13,10 +13,10 @@ Claude frequently writes markdown that fails markdownlint and Prettier checks, r
 The "avoid" example for table column alignment is character-for-character identical to the "use" example. Both show perfectly aligned pipes. Replace the "avoid" example with actually ragged/compact pipes:
 
 ```markdown
-| Name | Type | Default |
-| --- | --- | --- |
-| timeout | number | 30 |
-| retries | number | 3 |
+| Name    | Type   | Default |
+| ------- | ------ | ------- |
+| timeout | number | 30      |
+| retries | number | 3       |
 ```
 
 This lives inside a fenced code block, so it will not trigger lint violations.
