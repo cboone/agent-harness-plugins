@@ -118,7 +118,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -147,7 +147,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -166,7 +166,7 @@ jobs:
 - `workflow_dispatch` allows manual triggering from the GitHub Actions UI.
 - `GITHUB_TOKEN` is automatically provided by GitHub and enables PR comments when secrets are detected.
 - `GITLEAKS_LICENSE` is required for organization-owned repositories. Free licenses are available at [gitleaks.io](https://gitleaks.io). Personal account repositories do not need a license.
-- `permissions` grants `contents: read` for repository access and `pull-requests: read` for PR context. Without explicit permissions, repos with restricted default permissions will get 403 errors.
+- `permissions` grants `contents: read` for repository access and `pull-requests: write` for PR comment creation. Without explicit permissions, repos with restricted default permissions will get 403 errors. The `write` scope is required because gitleaks-action posts inline PR comments when it detects secrets.
 
 ---
 
