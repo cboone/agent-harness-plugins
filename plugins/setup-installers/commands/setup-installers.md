@@ -37,10 +37,10 @@ Additional checks regardless of language:
 **Swift platform detection**: Check for macOS-only constraints:
 
 1. Grep source files for AppKit, Cocoa, or macOS-specific framework imports
-1. Check `Package.swift` for `.macOS` platform requirements without `.linux` targets
+1. Look for conditional compilation or macOS-only availability checks (for example `#if os(macOS)`, `canImport(AppKit)`)
 1. If inconclusive, ask the user whether the project is macOS-only or cross-platform
 
-**Rust binary detection**: Check `Cargo.toml` for `[[bin]]` sections or a `src/main.rs` file to confirm this is a binary crate (not a library).
+**Rust binary detection**: Check `Cargo.toml` for `[[bin]]` sections, a `src/main.rs` file, or binaries under `src/bin/` (for example, `src/bin/*.rs`) to confirm this is a binary crate (not a library).
 
 If none of the above markers are found, inform the user that only the shell install script is applicable as a generic binary distribution method.
 
@@ -410,8 +410,11 @@ Skip this section if the user did not select cargo install, or if this is not a 
 Check compatibility:
 
 1. Read `Cargo.toml` for `path` dependencies. If present, warn the user that `cargo install` may not work with local path dependencies.
-1. Check for `[[bin]]` sections in `Cargo.toml` to confirm binary target names.
-1. Determine the install command:
+1. Use the broader Rust binary detection logic (the same used for other Rust installers) to determine available binary targets. This must handle:
+   - Explicit `[[bin]]` sections in `Cargo.toml`
+   - The default binary from `src/main.rs` when no `[[bin]]` is present
+   - Additional binaries under `src/bin/*.rs`
+1. Determine the install command using the detected crate/binary name:
    - If the crate is published to crates.io: `cargo install PROJECT-NAME`
    - If not published: `cargo install --git https://github.com/OWNER/REPO`
 
