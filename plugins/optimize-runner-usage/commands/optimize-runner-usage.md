@@ -27,16 +27,16 @@ If no workflow files are found, abort with:
 
 Read each workflow file and classify it based on its `on:` triggers:
 
-| Trigger pattern                                                  | Classification  |
-| ---------------------------------------------------------------- | --------------- |
-| `pull_request:` (any configuration)                              | CI              |
-| `push:` with `branches:` (optionally plus `pull_request:`)      | CI              |
-| `push:` with `tags:` only (no `branches:` or `pull_request:`)   | Release         |
-| `push:` with both `branches:` and `tags:`                        | Mixed           |
-| `schedule:` / `workflow_dispatch:` only                          | Scheduled       |
-| Bare `push:` with no filters                                     | Broad push      |
-| Workflow name or filename contains secret scanning keyword       | Secret scanning |
-| `workflow_call:` trigger                                         | Reusable        |
+| Trigger pattern                                               | Classification  |
+| ------------------------------------------------------------- | --------------- |
+| `pull_request:` (any configuration)                           | CI              |
+| `push:` with `branches:` (optionally plus `pull_request:`)    | CI              |
+| `push:` with `tags:` only (no `branches:` or `pull_request:`) | Release         |
+| `push:` with both `branches:` and `tags:`                     | Mixed           |
+| `schedule:` / `workflow_dispatch:` only                       | Scheduled       |
+| Bare `push:` with no filters                                  | Broad push      |
+| Workflow name or filename contains secret scanning keyword    | Secret scanning |
+| `workflow_call:` trigger                                      | Reusable        |
 
 Secret scanning keywords: "gitleaks", "trufflehog", "secret", "scan" (case-insensitive).
 
