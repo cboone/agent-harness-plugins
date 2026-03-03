@@ -325,7 +325,7 @@ Use `-` (hyphen) for unordered list items. Be consistent throughout the document
 
 ### Ordered list numbering (MD029)
 
-Use `1.` for every item in ordered lists. The renderer handles the numbering, and this avoids renumbering when items are added or removed.
+Use `1.` as the prefix for every item in ordered lists. Never use `2.`, `3.`, `4.`, etc. The renderer handles the numbering, and this avoids renumbering when items are added or removed. This applies to all ordered lists, including nested ones.
 
 ```markdown
 <!-- Use -->
@@ -447,7 +447,7 @@ def hello():
 
 ### Language identifiers (MD040)
 
-Always include a language identifier on fenced code blocks for syntax highlighting and tooling.
+Every fenced code block must include a language identifier. Never leave the opening fence bare.
 
 | Use               | Avoid   |
 | ----------------- | ------- |
@@ -456,6 +456,8 @@ Always include a language identifier on fenced code blocks for syntax highlighti
 | ` ```text `       | ` ``` ` |
 
 Use `text` when no syntax highlighting applies.
+
+Common language identifiers: `bash`, `console`, `css`, `diff`, `go`, `html`, `javascript`, `json`, `jsonc`, `markdown`, `python`, `text`, `toml`, `typescript`, `yaml`.
 
 ---
 
@@ -540,14 +542,25 @@ Pad cell content so that pipe characters align vertically across all rows. Fill 
 | retries | number | 3       |
 ```
 
+<!-- prettier-ignore -->
 ```markdown
 <!-- Avoid: ragged columns -->
 
-| Name    | Type   | Default |
-| ------- | ------ | ------- |
-| timeout | number | 30      |
-| retries | number | 3       |
+| Name | Type | Default |
+| --- | --- | --- |
+| timeout | number | 30 |
+| retries | number | 3 |
 ```
+
+To align a table:
+
+1. Write all rows with their content
+1. Find the longest content in each column (including header text)
+1. Pad every cell to match the longest content's width with trailing spaces
+1. Fill delimiter row hyphens to match the column width
+1. Verify all pipes are in the same column positions across every row
+
+Prettier reformats tables to aligned style automatically and can serve as a safety net, but write aligned tables from the start to keep diffs clean.
 
 ---
 
