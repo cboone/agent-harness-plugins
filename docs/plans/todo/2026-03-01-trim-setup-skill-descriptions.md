@@ -113,26 +113,9 @@ description: >-
   Set up scrut snapshot-based CLI integration testing for a CLI project.
 ```
 
-### 6. `plugins/setup-gitleaks/skills/setup-gitleaks/SKILL.md`
+### 6. `plugins/setup-secret-scanning/commands/setup-secret-scanning.md`
 
-**Before:**
-
-```yaml
-description: >-
-  Set up gitleaks secret scanning with a GitHub Actions workflow and optional
-  configuration. Use when the user says "set up gitleaks", "add gitleaks",
-  "add secret scanning", "set up secret scanning", "gitleaks scanning",
-  "setup gitleaks", or asks to add secret detection to a repository's CI
-  pipeline.
-```
-
-**After:**
-
-```yaml
-description: >-
-  Set up gitleaks secret scanning with a GitHub Actions workflow and optional
-  configuration.
-```
+**Note:** This plugin was renamed from `setup-gitleaks` to `setup-secret-scanning` and is now a command (not a skill). The description was updated as part of that rename.
 
 ### 7. `plugins/setup-linters/skills/setup-linters/SKILL.md`
 
@@ -160,4 +143,4 @@ description: >-
 1. Run `git diff` to confirm only the 7 SKILL.md frontmatter `description` fields changed
 1. Verify each trimmed description ends with a period and reads as a complete sentence
 1. Start a new Claude Code session and confirm the 7 skills still appear in the skills listing with their shortened descriptions
-1. Invoke one skill (e.g., `/setup-gitleaks`) to confirm it still loads and works correctly
+1. Invoke one skill (e.g., `/setup-secret-scanning`) to confirm it still loads and works correctly

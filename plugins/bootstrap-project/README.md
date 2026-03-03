@@ -25,7 +25,7 @@ Orchestrates these tools:
 - `scaffold-go-cli` / `scaffold-go-library`: language-specific project structure
 - `setup-ci`: GitHub Actions CI workflow and Makefile targets
 - `setup-linters`: linters and formatters
-- `setup-gitleaks`: secret scanning workflow
+- `setup-secret-scanning`: secret scanning workflows
 - `add-goreleaser-homebrew`: GoReleaser and Homebrew tap publishing
 - `setup-installers`: Homebrew formula, install script
 - `add-scrut-cli-tests`: scrut CLI integration tests
