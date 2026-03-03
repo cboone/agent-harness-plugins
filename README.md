@@ -36,6 +36,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 **Commands**
 <br>Code Quality:
 [Add Scrut CLI Tests](#add-scrut-cli-tests)
+<br>CI Optimization:
+[Optimize Runner Usage](#optimize-runner-usage)
 <br>Scaffolding:
 [Add GoReleaser Homebrew](#add-goreleaser-homebrew)
 ∙ [Scaffold Go CLI](#scaffold-go-cli)
@@ -267,6 +269,17 @@ Set up scrut snapshot-based CLI integration testing for a CLI project. Detects t
 > **Trigger:** `/add-scrut-cli-tests`
 > **Requires:** [`scrut`](https://github.com/facebookincubator/scrut) (Makefile checks for availability and provides install instructions)
 > **Details:** [README](./plugins/add-scrut-cli-tests/README.md)
+
+### CI Optimization
+
+Reduce wasted GitHub Actions minutes on existing workflows.
+
+#### Optimize Runner Usage
+
+Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows. Scans all workflow files, classifies each by trigger pattern, and applies only the optimizations appropriate for each workflow type.
+
+> **Trigger:** `/optimize-runner-usage`
+> **Details:** [README](./plugins/optimize-runner-usage/README.md)
 
 ### Scaffolding
 

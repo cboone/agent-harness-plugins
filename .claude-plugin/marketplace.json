@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "1.19.0"
+    "version": "1.20.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -232,6 +232,20 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/notify",
       "version": "1.0.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
+      "description": "Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["ci", "concurrency", "github-actions", "optimization", "timeout", "workflow"],
+      "license": "MIT",
+      "name": "optimize-runner-usage",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/optimize-runner-usage",
+      "version": "1.0.0"
     },
     {
       "author": {
