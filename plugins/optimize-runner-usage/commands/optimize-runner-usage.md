@@ -25,7 +25,22 @@ If no workflow files are found, abort with:
 
 ### 2. Classify Each Workflow
 
-Read each workflow file and classify it based on its `on:` triggers:
+Read each workflow file and classify it based on its `on:` triggers.
+
+GitHub Actions allows `on:` in multiple forms:
+
+- Mapping form: `on: { push: ..., pull_request: ... }` (or multi-line equivalents)
+- Single-event shorthand: `on: push`
+- Multi-event shorthand: `on: [push, pull_request]`
+
+Before classifying, normalize shorthand forms to mapping shape:
+
+- `on: push` becomes `on: { push: {} }`
+- `on: [push, pull_request]` becomes `on: { push: {}, pull_request: {} }`
+
+If applying edits would require rewriting `on:` from shorthand into a mapping (for example, to add `paths-ignore` under `push:`), perform the rewrite explicitly, updating `on:` to a mapping while preserving existing semantics.
+
+Then classify workflows using the normalized `on:` structure:
 
 | Trigger pattern                                               | Classification  |
 | ------------------------------------------------------------- | --------------- |
@@ -48,7 +63,7 @@ For the secret scanning keyword check, inspect in this order:
 1. The workflow filename (without directory path) as a fallback
 1. Optionally, job-level `name:` values as additional signals
 
-Mixed workflows (both `branches:` and `tags:` on push) are treated as CI for `paths-ignore` eligibility and Release for concurrency (`cancel-in-progress: false`).
+Mixed workflows (both `branches:` and `tags:` on push) are not eligible for `paths-ignore` because it cannot be scoped to branch pushes only. They use `cancel-in-progress: false` for concurrency.
 
 ### 3. Analyze Each Workflow for Missing Optimizations
 
@@ -56,9 +71,9 @@ For each workflow file, check which of the three optimizations are already prese
 
 #### paths-ignore
 
-**Eligible**: CI workflows only (including the CI portion of Mixed workflows).
+**Eligible**: CI workflows only.
 
-**Not eligible**: Release, Scheduled, Secret scanning, Broad push, or Reusable workflows. Also not eligible if the trigger already has a `paths:` (positive filter), since `paths` and `paths-ignore` are mutually exclusive in GitHub Actions.
+**Not eligible**: Release, Mixed, Scheduled, Secret scanning, Broad push, or Reusable workflows. Also not eligible if the trigger already has a `paths:` (positive filter), since `paths` and `paths-ignore` are mutually exclusive in GitHub Actions. Mixed workflows are excluded because `paths-ignore` under `push:` applies to both branch and tag pushes and cannot be scoped to branches only.
 
 Standard `paths-ignore` list:
 
@@ -158,7 +173,7 @@ Print a final summary:
 
 - **`paths:` already present**: Do not add `paths-ignore` (mutually exclusive in GitHub Actions). Note in the summary.
 - **Existing non-standard concurrency group**: Do not overwrite. Flag for the user to review manually.
-- **Mixed triggers (branches + tags on push)**: Add `paths-ignore` to the `push:` `branches:` trigger only. Use `cancel-in-progress: false` for concurrency.
+- **Mixed triggers (branches + tags on push)**: Do not add `paths-ignore` (cannot be scoped to branches only without splitting the workflow). Add concurrency with `cancel-in-progress: false` and `timeout-minutes` as normal.
 - **Already fully optimized**: Skip with a note that no changes are needed.
 - **Reusable workflows (`workflow_call:`)**: Skip `paths-ignore`. Add concurrency and timeouts normally.
 - **Markdown as source code**: User-confirmed. Remove `"*.md"` from the `paths-ignore` list.
