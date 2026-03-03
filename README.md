@@ -307,7 +307,7 @@ Set up gitleaks secret scanning with a GitHub Actions workflow and optional conf
 
 #### Setup Installers
 
-Set up installer and distribution methods for projects: Homebrew tap formula, shell install script with OS/arch detection, and go install compatibility. Detects existing release infrastructure and generates appropriate files.
+Set up installer and distribution methods for Go, Swift, and Rust projects: Homebrew tap formula, shell install script, go/cargo install, release workflow generation, and homebrew-tap issue creation. Detects existing release infrastructure and generates appropriate files.
 
 > **Trigger:** `/setup-installers`
 > **Details:** [README](./plugins/setup-installers/README.md)
