@@ -18,7 +18,7 @@ Then select **PR** from the available plugins.
 
 ## What It Does
 
-Stages everything, generates a conventional commit message from the diff, pushes the branch, and opens a PR with an auto-generated title and summary. Detects connected GitHub issues from branch names and commit messages, and adds closing references automatically. Handles branches with no upstream, skips the commit step when the working tree is clean, and detects when a PR already exists.
+Stages everything, generates a conventional commit message from the diff, runs project linters to catch issues before pushing, pushes the branch, and opens a PR with an auto-generated title and summary. Detects connected GitHub issues from branch names and commit messages, and adds closing references automatically. Handles branches with no upstream, skips the commit step when the working tree is clean, and detects when a PR already exists.
 
 ## Usage
 
