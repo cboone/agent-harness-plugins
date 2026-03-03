@@ -9,5 +9,5 @@
   "name": "scaffold-go-library",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "commands": "./commands",
-  "version": "1.2.3"
+  "version": "1.2.4"
 }
