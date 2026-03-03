@@ -632,8 +632,28 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".editorconfig"
+      - ".claude/**"
+      - "**/CLAUDE.md"
+      - "**/AGENTS.md"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".editorconfig"
+      - ".claude/**"
+      - "**/CLAUDE.md"
+      - "**/AGENTS.md"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -642,6 +662,7 @@ jobs:
   test:
     name: Test (Go ${{ matrix.go-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         go-version: ["MINIMUM-GO-VERSION", "stable"]
@@ -660,6 +681,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -675,6 +697,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -690,6 +713,7 @@ jobs:
   format:
     name: Format
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -710,6 +734,7 @@ jobs:
   vulncheck:
     name: Vulnerability check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -728,6 +753,8 @@ jobs:
 
 ### Notes
 
+- `paths-ignore` skips CI for documentation and agent configuration changes; remove `*.md` if Markdown is source code (e.g., Scrut CLI tests in `tests/scrut/` are nested and NOT ignored)
+- Concurrency groups cancel in-progress runs when new commits are pushed to the same branch/PR
 - Five parallel jobs: test, lint, build, format, vulncheck
 - The test job uses a Go version matrix (`MINIMUM-GO-VERSION` + `stable`) to verify compatibility across versions
 - The lint job uses the official golangci-lint GitHub Action for consistent results
@@ -748,6 +775,10 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -755,6 +786,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -779,6 +811,7 @@ jobs:
 ### Notes
 
 - Triggers on version tags (e.g., `v0.1.0`, `v1.0.0`)
+- Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
 - Uses `fetch-depth: 0` to get full git history for changelog generation
 - Only needs `GITHUB_TOKEN` (no `HOMEBREW_TAP_TOKEN` since libraries have no Homebrew formula)
 - `permissions: contents: write` is required for GoReleaser to create the GitHub release

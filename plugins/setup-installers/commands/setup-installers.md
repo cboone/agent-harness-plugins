@@ -452,12 +452,17 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         include:
@@ -496,6 +501,7 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -517,6 +523,7 @@ jobs:
 
 Notes:
 
+- Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
 - Adjust the `-X main.version` ldflags path if the version variable is in a different package
 - For projects with `main.go` in a subdirectory (e.g., `cmd/PROJECT-NAME/`), adjust the `go build` path accordingly
 - `CGO_ENABLED=0` produces static binaries for maximum portability
@@ -533,12 +540,18 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
 jobs:
   build:
+    # macOS runner required for Swift compilation
     runs-on: macos-15
+    timeout-minutes: 30
     strategy:
       matrix:
         arch: [arm64, x86_64]
@@ -569,6 +582,7 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -590,6 +604,7 @@ jobs:
 
 Notes:
 
+- Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
 - The build step maps `x86_64` to `amd64` in the tarball name to match the `install.sh` convention
 - The binary path varies between Swift versions; the template tries `.build/apple/Products/Release/` first, then falls back to `--show-bin-path`
 - Swift cross-compilation to Linux is not supported in this template; add Linux targets manually if needed
@@ -606,12 +621,17 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
 jobs:
   build:
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
     strategy:
       matrix:
         include:
@@ -623,6 +643,8 @@ jobs:
             runner: ubuntu-latest
             os: linux
             arch: arm64
+          # macOS runners cost 10x Linux. For cost optimization, consider
+          # cargo-zigbuild to cross-compile darwin targets on Linux.
           - target: x86_64-apple-darwin
             runner: macos-latest
             os: darwin
@@ -662,6 +684,7 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -683,6 +706,7 @@ jobs:
 
 Notes:
 
+- Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
 - For macOS-only Rust projects, remove the two Linux matrix entries
 - `aarch64-unknown-linux-gnu` cross-compilation requires `gcc-aarch64-linux-gnu` on Ubuntu runners
 - For Rust workspace projects, adjust the `cargo build` command to target the specific binary

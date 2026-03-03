@@ -268,12 +268,17 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -299,6 +304,7 @@ For projects that only target macOS, change the runner:
 ```yaml
 jobs:
   goreleaser:
+    # macOS runner required for platform-specific builds
     runs-on: macos-latest
 ```
 
@@ -306,6 +312,7 @@ This ensures the build environment matches the target platform, which matters fo
 
 ### Notes
 
+- Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
 - Triggers on version tags (`v*` matches `v1.0.0`, `v0.1.0-rc1`, etc.)
 - `fetch-depth: 0` fetches full git history (required for GoReleaser changelog generation)
 - `go-version-file: go.mod` reads the Go version from `go.mod` rather than hardcoding it, so the workflow stays in sync with the project automatically
