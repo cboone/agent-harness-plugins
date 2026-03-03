@@ -41,7 +41,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Scaffold Go Library](#scaffold-go-library)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
 ∙ [Setup CI](#setup-ci)
-∙ [Setup Gitleaks](#setup-gitleaks)
+∙ [Setup Secret Scanning](#setup-secret-scanning)
 ∙ [Setup Installers](#setup-installers)
 
 **Hooks**
@@ -298,12 +298,12 @@ Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, 
 > **Trigger:** `/setup-ci`
 > **Details:** [README](./plugins/setup-ci/README.md)
 
-#### Setup Gitleaks
+#### Setup Secret Scanning
 
-Set up gitleaks secret scanning with a GitHub Actions workflow and optional configuration. Detects organization vs. personal repositories and generates the appropriate workflow.
+Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration. Gitleaks provides fast pattern matching on every push and PR; TruffleHog adds deeper verification-based scanning on pushes to main.
 
-> **Trigger:** `/setup-gitleaks`
-> **Details:** [README](./plugins/setup-gitleaks/README.md)
+> **Trigger:** `/setup-secret-scanning`
+> **Details:** [README](./plugins/setup-secret-scanning/README.md)
 
 #### Setup Installers
 

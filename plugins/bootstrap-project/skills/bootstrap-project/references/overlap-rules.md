@@ -22,7 +22,7 @@ Tool applicability (e.g., CLI-only tools not running on libraries) is defined in
 
 These tools have no overlap with any other tool and always run when applicable:
 
-- **`setup-gitleaks`**: Secret scanning workflow is unique to this tool.
+- **`setup-secret-scanning`**: Secret scanning workflows are unique to this tool.
 
 ## Scope-Down Details
 
@@ -61,5 +61,5 @@ Some tools only apply to certain project types:
 | `add-scrut-cli-tests`     | Project produces a CLI binary                   |
 | `setup-ci`                | Any project without existing CI workflow        |
 | `setup-linters`           | Any project                                     |
-| `setup-gitleaks`          | Any project                                     |
+| `setup-secret-scanning`          | Any project                                     |
 | `scaffold-new-repo`       | Any project missing foundational files          |

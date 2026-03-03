@@ -35,7 +35,7 @@ Supported languages: Go (CLI and library), JavaScript/TypeScript, Python, Rust, 
 
 ## See Also
 
-- [Setup Gitleaks](../setup-gitleaks/README.md): add secret scanning to CI
+- [Setup Secret Scanning](../setup-secret-scanning/README.md): add secret scanning to CI
 - [Setup Linters](../setup-linters/README.md): configure linter and formatter tools
 - [Scaffold Go CLI](../scaffold-go-cli/README.md): scaffold a full Go CLI project (includes CI)
 - [Scaffold Go Library](../scaffold-go-library/README.md): scaffold a Go library project (includes CI)

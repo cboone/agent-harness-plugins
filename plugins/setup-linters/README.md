@@ -35,5 +35,5 @@ Scans the project for language markers and file types, checks for existing linte
 ## See Also
 
 - [Lint and Fix](../lint-and-fix/README.md): run existing linters with auto-fix (use after setup)
-- [Setup Gitleaks](../setup-gitleaks/README.md): set up secret scanning
+- [Setup Secret Scanning](../setup-secret-scanning/README.md): set up secret scanning
 - [All plugins](../../README.md)

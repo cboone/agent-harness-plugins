@@ -36,5 +36,5 @@ The skill prompts for project name, description, and type during setup.
 ## See Also
 
 - [Scaffold Go CLI](../scaffold-go-cli/README.md): Go CLI-specific scaffolding (includes this boilerplate)
-- [Setup Gitleaks](../setup-gitleaks/README.md): add secret scanning after scaffolding
+- [Setup Secret Scanning](../setup-secret-scanning/README.md): add secret scanning after scaffolding
 - [All plugins](../../README.md)
