@@ -2,12 +2,12 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Set up gitleaks secret scanning with a GitHub Actions workflow and optional configuration.",
+  "description": "Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration.",
   "homepage": "https://github.com/cboone/cboone-cc-plugins",
-  "keywords": ["gitleaks", "github-actions", "scanning", "secrets", "security"],
+  "keywords": ["gitleaks", "github-actions", "scanning", "secrets", "security", "trufflehog"],
   "license": "MIT",
-  "name": "setup-gitleaks",
+  "name": "setup-secret-scanning",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "commands": "./commands",
-  "version": "1.1.0"
+  "version": "2.0.0"
 }

@@ -1,9 +1,9 @@
-# Setup Gitleaks
+# Setup Secret Scanning
 
-Set up gitleaks secret scanning in a repository with a GitHub Actions workflow and optional configuration.
+Set up secret scanning in a repository with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration.
 
-**Type:** Skill
-**Trigger:** `/setup-gitleaks`
+**Type:** Command
+**Trigger:** `/setup-secret-scanning`
 
 ## Installation
 
@@ -13,25 +13,27 @@ Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins
 /plugin marketplace add cboone/cboone-cc-plugins
 ```
 
-Then select **Setup Gitleaks** from the available plugins.
+Then select **Setup Secret Scanning** from the available plugins.
 
 ## What It Does
 
-Detects whether the repository is organization-owned (requires a gitleaks license secret) or personal, and generates the appropriate GitHub Actions workflow. Optionally creates a starter `.gitleaks.toml` with sensible defaults and example allowlist entries.
+Sets up complementary secret scanning with two tools: gitleaks for fast pattern matching on every push and PR (with daily scheduled scans), and TruffleHog for deeper verification-based scanning on pushes to main (with weekly scheduled scans). Lets you choose both tools (recommended), gitleaks only, or TruffleHog only. For gitleaks, detects organization vs. personal repositories and optionally creates a starter `.gitleaks.toml`.
 
 ## Usage
 
 ```text
-/setup-gitleaks
+/setup-secret-scanning
 ```
 
 ## Examples
 
-- "set up gitleaks": generates the workflow and optional config
+- "set up secret scanning": generates workflow(s) and optional config
 - "add secret scanning": same behavior
-- "setup gitleaks": same behavior
+- "setup gitleaks and trufflehog": same behavior
+- "add trufflehog": same behavior
 
 ## See Also
 
-- [Scaffold New Repo](../scaffold-new-repo/README.md): scaffold a full repo (then add gitleaks)
+- [Scaffold New Repo](../scaffold-new-repo/README.md): scaffold a full repo (then add secret scanning)
+- [Handle Secrets](../handle-secrets/README.md): best practices for handling secrets in CLI tools
 - [All plugins](../../README.md)
