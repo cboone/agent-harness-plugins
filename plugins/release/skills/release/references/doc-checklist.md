@@ -1,6 +1,6 @@
 # Documentation Checklist
 
-Map commit types to documentation that may need manual review. Present relevant items as an informational checklist after analyzing commits. This checklist is advisory, not blocking.
+Map commit types to documentation that may need manual review. Present relevant items as part of the pre-tag review gate (Step 8) so the user can evaluate documentation needs before approving the release commit and tag.
 
 ## Commit-Type-to-Documentation Mapping
 
@@ -39,4 +39,4 @@ Documentation review checklist:
 - [ ] Migration guide (breaking changes detected)
 ```
 
-The user decides which items to address before or after the release. Do not block the release workflow on this checklist.
+The user must explicitly approve before the release commit and tag are created.
