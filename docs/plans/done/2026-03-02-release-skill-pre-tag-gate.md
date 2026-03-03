@@ -63,9 +63,9 @@ This is a meaningful behavior change (previously non-blocking step becomes block
 ## Files to Modify
 
 1. `plugins/release/skills/release/SKILL.md` (primary: restructure Steps 8-11 into Steps 8-10)
-2. `plugins/release/skills/release/references/doc-checklist.md` (update advisory language)
-3. `plugins/release/.claude-plugin/plugin.json` (version bump)
-4. `.claude-plugin/marketplace.json` (mirror version bump)
+1. `plugins/release/skills/release/references/doc-checklist.md` (update advisory language)
+1. `plugins/release/.claude-plugin/plugin.json` (version bump)
+1. `.claude-plugin/marketplace.json` (mirror version bump)
 
 ## Verification
 
@@ -74,5 +74,5 @@ This is a meaningful behavior change (previously non-blocking step becomes block
    - New Step 8 includes doc checklist, change summary, and explicit confirmation gate
    - Steps 9-10 (commit and tag) only proceed after Step 8 approval
    - `--dry-run` exits cleanly at Step 8b without prompting
-2. Read doc-checklist.md and verify no "advisory only" or "do not block" language remains
-3. Run `check-versions` skill to verify plugin.json and marketplace.json versions match
+1. Read doc-checklist.md and verify no "advisory only" or "do not block" language remains
+1. Run `check-versions` skill to verify plugin.json and marketplace.json versions match
