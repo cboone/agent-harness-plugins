@@ -17,9 +17,10 @@ Generate a unique path with `mktemp`:
 
 ```bash
 mktemp /tmp/gh-pr-body-XXXXXX.md
+# Returns a unique path, e.g.: /tmp/gh-pr-body-x4y5z6.md
 ```
 
-Use a descriptive prefix that reflects the purpose (`gh-pr-body`, `gh-issue-body`, `copilot-reply`, etc.).
+Use a descriptive prefix that reflects the purpose (`gh-pr-body`, `gh-issue-body`, `copilot-reply`, etc.). The `XXXXXX` in the template is replaced by `mktemp` with random characters. Always capture the returned path and use it in subsequent commands.
 
 ### 2. Write content with the Write tool
 
@@ -27,10 +28,10 @@ Use the Write tool (not `echo` or `cat`) to write the full content to the path r
 
 ### 3. Pass `--body-file` to the command
 
-Run the `gh` command with `--body-file` pointing to the tmpfile:
+Run the `gh` command with `--body-file` pointing to the path returned by `mktemp` (shown as `TMPFILE` below):
 
 ```bash
-gh pr create --title "Add user authentication" --body-file /tmp/gh-pr-body-XXXXXX.md
+gh pr create --title "Add user authentication" --body-file TMPFILE
 ```
 
 ## Cleanup
@@ -38,7 +39,7 @@ gh pr create --title "Add user authentication" --body-file /tmp/gh-pr-body-XXXXX
 Always remove the tmpfile after the command completes, regardless of success or failure:
 
 ```bash
-rm -f /tmp/gh-pr-body-XXXXXX.md
+rm -f TMPFILE
 ```
 
 ## Examples
@@ -81,9 +82,10 @@ rm -f /tmp/gh-pr-body-x4y5z6.md
 
 ```bash
 mktemp /tmp/copilot-reply-XXXXXX.md
+# Returns a unique path, e.g.: /tmp/copilot-reply-r7s8t9.md
 ```
 
-Write reply via the Write tool, then pass to the reply command with `--body-file`.
+Write reply via the Write tool to the returned path, then pass to the reply command with `--body-file`.
 
 ## Anti-Patterns
 
