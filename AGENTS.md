@@ -11,6 +11,18 @@ cboone-cc-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json            # Plugin registry for this repository
 └── plugins/
+    ├── add-community-files/          # Community files skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── add-community-files/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── code-of-conduct.md
+    │               ├── contributing.md
+    │               ├── pr-template.md
+    │               └── security.md
     ├── add-goreleaser-homebrew/     # GoReleaser + Homebrew tap setup command
     │   ├── .claude-plugin/
     │   │   └── plugin.json

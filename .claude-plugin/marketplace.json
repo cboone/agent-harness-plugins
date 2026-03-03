@@ -14,6 +14,20 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
+      "description": "Add standard community files to a project: CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, and PR template",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["code-of-conduct", "community", "contributing", "open-source", "security"],
+      "license": "MIT",
+      "name": "add-community-files",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/add-community-files",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
       "description": "Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with conditional support for completions, man pages, and macOS-only builds.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["github-actions", "go", "golang", "goreleaser", "homebrew"],
@@ -287,7 +301,7 @@
       "name": "scaffold-go-cli",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-cli",
-      "version": "1.4.0"
+      "version": "1.4.1"
     },
     {
       "author": {
@@ -301,7 +315,7 @@
       "name": "scaffold-go-library",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-library",
-      "version": "1.2.2"
+      "version": "1.2.3"
     },
     {
       "author": {
