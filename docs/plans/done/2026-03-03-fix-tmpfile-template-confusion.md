@@ -57,12 +57,12 @@ For each plugin above, bump the patch version in both:
 - `plugins/<name>/.claude-plugin/plugin.json`
 - `.claude-plugin/marketplace.json` (matching entry)
 
-| Plugin | Current | New |
-| --- | --- | --- |
-| use-git | 1.1.0 | 1.1.1 |
-| create-issue | 1.0.1 | 1.0.2 |
-| resolve-copilot-pr-feedback | 1.2.0 | 1.2.1 |
-| pr | 1.4.2 | 1.4.3 |
+| Plugin                      | Current | New   |
+| --------------------------- | ------- | ----- |
+| use-git                     | 1.1.0   | 1.1.1 |
+| create-issue                | 1.0.1   | 1.0.2 |
+| resolve-copilot-pr-feedback | 1.2.0   | 1.2.1 |
+| pr                          | 1.4.2   | 1.4.3 |
 
 Marketplace metadata version stays at 1.19.0 (no plugins added or removed).
 
@@ -71,15 +71,15 @@ Marketplace metadata version stays at 1.19.0 (no plugins added or removed).
 One commit per plugin, smallest logical chunks:
 
 1. `fix: clarify tmpfile template pattern in use-git reference doc`
-2. `fix: replace literal tmpfile template with placeholder in create-issue skill`
-3. `fix: add mktemp pattern to resolve-copilot-pr-feedback skill`
-4. `fix: add returns comment to mktemp example in pr skill`
+1. `fix: replace literal tmpfile template with placeholder in create-issue skill`
+1. `fix: add mktemp pattern to resolve-copilot-pr-feedback skill`
+1. `fix: add returns comment to mktemp example in pr skill`
 
 ## Verification
 
 After making the changes:
 
 1. Search all SKILL.md and reference .md files for `/tmp/.*XXXXXX` appearing in non-mktemp commands (should only appear in `mktemp` lines, never in `--body-file`, `rm -f`, or similar)
-2. Search for any remaining hardcoded `/tmp/copilot-reply.md` references
-3. Verify all four `plugin.json` versions match their `marketplace.json` entries
-4. Read each modified file to confirm placeholders and comments read naturally
+1. Search for any remaining hardcoded `/tmp/copilot-reply.md` references
+1. Verify all four `plugin.json` versions match their `marketplace.json` entries
+1. Read each modified file to confirm placeholders and comments read naturally
