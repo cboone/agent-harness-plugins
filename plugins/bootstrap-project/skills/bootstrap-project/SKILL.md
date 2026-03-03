@@ -39,21 +39,22 @@ If multiple types are detected (monorepo), note all of them.
 
 Check for files and directories that indicate what is already set up:
 
-| Check                            | Indicates               | Typically provided by                         |
-| -------------------------------- | ----------------------- | --------------------------------------------- |
-| `LICENSE`                        | License exists          | `scaffold-new-repo`                           |
-| `README.md`                      | README exists           | `scaffold-new-repo`                           |
-| `CHANGELOG.md`                   | Changelog exists        | `scaffold-new-repo`                           |
-| `AGENTS.md` or `CLAUDE.md`       | Agent config exists     | `scaffold-new-repo`                           |
-| `.github/workflows/ci.yml`       | CI exists               | `setup-ci` / `scaffold-go-*`                  |
-| `.github/workflows/release.yml`  | Release workflow exists | `scaffold-go-*` / `add-goreleaser-homebrew`   |
-| `.github/workflows/gitleaks.yml` | Gitleaks exists         | `setup-gitleaks`                              |
-| `.goreleaser.yml`                | GoReleaser exists       | `scaffold-go-cli` / `add-goreleaser-homebrew` |
-| `Makefile`                       | Build targets exist     | `scaffold-go-*` / `setup-ci`                  |
-| Linter config files              | Linters exist           | `setup-linters` / `scaffold-go-*`             |
-| `tests/scrut/`                   | Scrut tests exist       | `add-scrut-cli-tests`                         |
-| `install.sh` or `Formula/`       | Installers exist        | `setup-installers`                            |
-| `CONTRIBUTING.md`                | Community files exist   | `add-community-files`                         |
+| Check                              | Indicates               | Typically provided by                         |
+| ---------------------------------- | ----------------------- | --------------------------------------------- |
+| `LICENSE`                          | License exists          | `scaffold-new-repo`                           |
+| `README.md`                        | README exists           | `scaffold-new-repo`                           |
+| `CHANGELOG.md`                     | Changelog exists        | `scaffold-new-repo`                           |
+| `AGENTS.md` or `CLAUDE.md`         | Agent config exists     | `scaffold-new-repo`                           |
+| `.github/workflows/ci.yml`         | CI exists               | `setup-ci` / `scaffold-go-*`                  |
+| `.github/workflows/release.yml`    | Release workflow exists | `scaffold-go-*` / `add-goreleaser-homebrew`   |
+| `.github/workflows/gitleaks.yml`   | Gitleaks exists         | `setup-secret-scanning`                       |
+| `.github/workflows/trufflehog.yml` | TruffleHog exists       | `setup-secret-scanning`                       |
+| `.goreleaser.yml`                  | GoReleaser exists       | `scaffold-go-cli` / `add-goreleaser-homebrew` |
+| `Makefile`                         | Build targets exist     | `scaffold-go-*` / `setup-ci`                  |
+| Linter config files                | Linters exist           | `setup-linters` / `scaffold-go-*`             |
+| `tests/scrut/`                     | Scrut tests exist       | `add-scrut-cli-tests`                         |
+| `install.sh` or `Formula/`         | Installers exist        | `setup-installers`                            |
+| `CONTRIBUTING.md`                  | Community files exist   | `add-community-files`                         |
 
 ### 3. Build the Plan
 
@@ -65,7 +66,7 @@ Key overlap rules:
 - If `scaffold-go-library` will run: skip `setup-ci` (included). Scope down `scaffold-new-repo` to only generate agent config files. `add-goreleaser-homebrew` and `setup-installers` are not applicable for libraries.
 - If `scaffold-go-library` will run: still run `setup-linters` but only for cross-language tools (Prettier, EditorConfig, markdownlint) since `.golangci.yml` is already configured.
 - If `scaffold-go-cli` will run: still run `setup-linters` for `.golangci.yml` configuration and cross-language tools (the Makefile lint target exists but no golangci config).
-- `setup-gitleaks` is always independent (no overlap with other tools).
+- `setup-secret-scanning` is always independent (no overlap with other tools).
 - `add-scrut-cli-tests` is applicable only if the project produces a CLI binary.
 
 Execution order (dependencies flow downward):
@@ -74,7 +75,7 @@ Execution order (dependencies flow downward):
 1. `scaffold-go-cli` OR `scaffold-go-library` (language-specific scaffolding, if applicable)
 1. `setup-ci` (if not already covered by step 2)
 1. `setup-linters` (cross-language tools, or full setup if no Go scaffolder ran)
-1. `setup-gitleaks` (secret scanning)
+1. `setup-secret-scanning` (secret scanning)
 1. `add-goreleaser-homebrew` (if Go CLI and not already covered by step 2)
 1. `add-community-files` (community files: CONTRIBUTING, CoC, SECURITY, PR template)
 1. `setup-installers` (if CLI project)
@@ -101,7 +102,7 @@ Example output:
 | 2   | scaffold-go-cli          | Already set up | Go CLI project structure, CI, GoReleaser    |
 | 3   | setup-ci                 | Skipped        | Covered by scaffold-go-cli                  |
 | 4   | setup-linters            | Scoped down    | Cross-language tools only (Prettier, etc.)  |
-| 5   | setup-gitleaks           | Will run       | Gitleaks secret scanning workflow           |
+| 5   | setup-secret-scanning    | Will run       | Gitleaks + TruffleHog secret scanning       |
 | 6   | add-goreleaser-homebrew  | Skipped        | Covered by scaffold-go-cli                  |
 | 7   | add-community-files      | Will run       | CONTRIBUTING, CoC, SECURITY, PR template    |
 | 8   | setup-installers         | Will run       | Homebrew formula, install.sh                |
@@ -127,7 +128,7 @@ The tools referenced in this plan are a mix of **skills** and **commands**. They
   - `scaffold-go-cli` (read `plugins/scaffold-go-cli/commands/scaffold-go-cli.md`)
   - `scaffold-go-library` (read `plugins/scaffold-go-library/commands/scaffold-go-library.md`)
   - `setup-ci` (read `plugins/setup-ci/commands/setup-ci.md`)
-  - `setup-gitleaks` (read `plugins/setup-gitleaks/commands/setup-gitleaks.md`)
+  - `setup-secret-scanning` (read `plugins/setup-secret-scanning/commands/setup-secret-scanning.md`)
   - `add-goreleaser-homebrew` (read `plugins/add-goreleaser-homebrew/commands/add-goreleaser-homebrew.md`)
   - `setup-installers` (read `plugins/setup-installers/commands/setup-installers.md`)
   - `add-scrut-cli-tests` (read `plugins/add-scrut-cli-tests/commands/add-scrut-cli-tests.md`)
