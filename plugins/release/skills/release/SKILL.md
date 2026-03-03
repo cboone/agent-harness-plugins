@@ -110,7 +110,9 @@ Recommended bump: minor (vX.Y.Z -> vX.Y+1.0)
 
 If `--major`, `--minor`, or `--patch` was specified, use that bump level instead of the recommendation.
 
-**Confirm the version with the user.** This is the one required confirmation point. Present the recommended (or forced) version and wait for approval before proceeding.
+**Confirm the version with the user.** Present the recommended (or forced) version and wait for approval before proceeding.
+
+**Dry-run gate:** If `--dry-run` was specified, skip steps 5-7 entirely. Do not create or modify any files. Instead, describe what changes _would_ be made (which files would be updated, what the CHANGELOG entry would look like). Then proceed directly to step 8b.
 
 ### 5. Update Version in Project Files
 
@@ -151,29 +153,51 @@ Follow the rules in `./references/version-patterns.md`:
 1. Propose all changes to the user before applying them.
 1. Apply confirmed changes.
 
-### 8. Smart Documentation Checklist
+### 8. Pre-Tag Review
+
+This is the final gate before the irreversible commit and tag. Build a combined review and wait for explicit user approval.
+
+#### 8a. Documentation checklist
 
 Follow the rules in `./references/doc-checklist.md`:
 
 1. Map the commits in this release to documentation areas that may need review.
 1. Skip the checklist if all commits are `chore:`, `test:`, `style:`, `ci:`, or `build:`.
-1. Present the filtered checklist as informational items.
-1. Do NOT block the release on checklist items. This is advisory only.
 
-### 9. Review Changes
+#### 8b. Combined review
 
-Show a summary of all files modified during steps 5-7:
+Present a single review block:
 
 ```text
+Pre-tag review for vVERSION:
+
 Files modified:
   - CHANGELOG.md (updated)
   - package.json (version bumped)
   - README.md (version references updated)
+
+Documentation areas to review:
+  - [ ] README features section (new feat: commits detected)
+  - [ ] Migration guide (breaking changes detected)
+
+Tags are immutable. Proceed with commit and tag?
 ```
 
-If `--dry-run` was specified, report what would have been done and stop here. Do not modify any files, commit, or create a tag.
+Omit the "Documentation areas to review" section if the checklist was skipped (all housekeeping commits).
 
-### 10. Create Release Commit
+If `--dry-run` was specified (steps 5-7 were skipped), present the review block as a proposed plan and stop here. Do not prompt for confirmation, stage changes, commit, or create a tag.
+
+#### 8c. Wait for confirmation
+
+Ask the user to confirm before proceeding. If the user declines:
+
+1. Stop the release.
+1. Inform the user that their changes are in the working tree (unstaged).
+1. Explain their options: make changes and re-run the release skill, or discard all changes:
+   - To discard modifications to tracked files: `git checkout .`
+   - To also remove newly created untracked files (e.g., a new `CHANGELOG.md`): review with `git clean -n`, then remove with `git clean -f`
+
+### 9. Create Release Commit
 
 Stage all modified files and create a GPG-signed commit:
 
@@ -189,7 +213,7 @@ The commit message is `release: vVERSION` (e.g., `release: v1.2.0`).
 
 CRITICAL: Never use `git commit --amend`. Always create a new commit. If a pre-commit hook fails, fix the issue, re-stage, and create a new commit.
 
-### 11. Create Annotated Git Tag
+### 10. Create Annotated Git Tag
 
 Create a GPG-signed annotated tag:
 
