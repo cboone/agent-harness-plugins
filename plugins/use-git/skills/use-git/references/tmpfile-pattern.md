@@ -16,10 +16,11 @@ Use tmpfiles when passing long content to git or `gh` CLI commands. This keeps B
 Generate a unique path with `mktemp`:
 
 ```bash
-mktemp /tmp/gh-pr-body-XXXXXX.md
+mktemp /tmp/gh-pr-body-XXXXXX
+# Returns a unique path, e.g.: /tmp/gh-pr-body-x4y5z6
 ```
 
-Use a descriptive prefix that reflects the purpose (`gh-pr-body`, `gh-issue-body`, `copilot-reply`, etc.).
+Use a descriptive prefix that reflects the purpose (`gh-pr-body`, `gh-issue-body`, `copilot-reply`, etc.). On macOS/BSD, `mktemp` only replaces trailing `X` characters, so the template must end with the `XXXXXX` run (do not add suffixes like `.md` after it). That trailing `XXXXXX` is replaced by `mktemp` with random characters. Always capture the returned path and use it in subsequent commands.
 
 ### 2. Write content with the Write tool
 
@@ -27,10 +28,10 @@ Use the Write tool (not `echo` or `cat`) to write the full content to the path r
 
 ### 3. Pass `--body-file` to the command
 
-Run the `gh` command with `--body-file` pointing to the tmpfile:
+Run the `gh` command with `--body-file` pointing to the path returned by `mktemp` (shown as `TMPFILE` below):
 
 ```bash
-gh pr create --title "Add user authentication" --body-file /tmp/gh-pr-body-XXXXXX.md
+gh pr create --title "Add user authentication" --body-file TMPFILE
 ```
 
 ## Cleanup
@@ -38,7 +39,7 @@ gh pr create --title "Add user authentication" --body-file /tmp/gh-pr-body-XXXXX
 Always remove the tmpfile after the command completes, regardless of success or failure:
 
 ```bash
-rm -f /tmp/gh-pr-body-XXXXXX.md
+rm -f TMPFILE
 ```
 
 ## Examples
@@ -46,44 +47,45 @@ rm -f /tmp/gh-pr-body-XXXXXX.md
 ### GitHub issue
 
 ```bash
-mktemp /tmp/gh-issue-body-XXXXXX.md
-# Returns: /tmp/gh-issue-body-a1b2c3.md
+mktemp /tmp/gh-issue-body-XXXXXX
+# Returns: /tmp/gh-issue-body-a1b2c3
 ```
 
 Write body content via the Write tool to the returned path, then:
 
 ```bash
-gh issue create --title "Fix login timeout" --body-file /tmp/gh-issue-body-a1b2c3.md --label "bug"
+gh issue create --title "Fix login timeout" --body-file /tmp/gh-issue-body-a1b2c3 --label "bug"
 ```
 
 ```bash
-rm -f /tmp/gh-issue-body-a1b2c3.md
+rm -f /tmp/gh-issue-body-a1b2c3
 ```
 
 ### Pull request
 
 ```bash
-mktemp /tmp/gh-pr-body-XXXXXX.md
-# Returns: /tmp/gh-pr-body-x4y5z6.md
+mktemp /tmp/gh-pr-body-XXXXXX
+# Returns: /tmp/gh-pr-body-x4y5z6
 ```
 
 Write PR body via the Write tool to the returned path, then:
 
 ```bash
-gh pr create --title "Add retry logic to API client" --body-file /tmp/gh-pr-body-x4y5z6.md
+gh pr create --title "Add retry logic to API client" --body-file /tmp/gh-pr-body-x4y5z6
 ```
 
 ```bash
-rm -f /tmp/gh-pr-body-x4y5z6.md
+rm -f /tmp/gh-pr-body-x4y5z6
 ```
 
 ### Review reply
 
 ```bash
-mktemp /tmp/copilot-reply-XXXXXX.md
+mktemp /tmp/copilot-reply-XXXXXX
+# Returns a unique path, e.g.: /tmp/copilot-reply-r7s8t9
 ```
 
-Write reply via the Write tool, then pass to the reply command with `--body-file`.
+Write reply via the Write tool to the returned path, then pass to the reply command with `--body-file`.
 
 ## Anti-Patterns
 

@@ -42,10 +42,11 @@ If the user specifies a repository (e.g., "file an issue on org/repo"), use the 
 First, generate a unique temporary file path using `mktemp`:
 
 ```bash
-mktemp /tmp/gh-issue-body-XXXXXX.md
+mktemp /tmp/gh-issue-body-XXXXXX
+# Returns a unique path, e.g.: /tmp/gh-issue-body-a1b2c3
 ```
 
-Then use the **Write** tool to write the full issue body in Markdown format to the path returned by `mktemp`.
+Then use the **Write** tool to write the full issue body in Markdown format to the exact path returned by `mktemp`. In the examples below, `TMPFILE` is a placeholder for that path.
 
 This is the critical step that avoids permission prompts: the Write tool handles multiline content natively, keeping the subsequent Bash command short and simple.
 
@@ -54,19 +55,19 @@ This is the critical step that avoids permission prompts: the Write tool handles
 Run a single, short `gh issue create` command using the tmpfile path from step 3:
 
 ```bash
-gh issue create --title "Issue title here" --body-file /tmp/gh-issue-body-XXXXXX.md
+gh issue create --title "Issue title here" --body-file TMPFILE
 ```
 
 Add optional flags as needed:
 
 ```bash
-gh issue create --title "Issue title here" --body-file /tmp/gh-issue-body-XXXXXX.md --label "bug" --label "enhancement" --assignee "@me"
+gh issue create --title "Issue title here" --body-file TMPFILE --label "bug" --label "enhancement" --assignee "@me"
 ```
 
 For a different repository:
 
 ```bash
-gh issue create --repo owner/repo --title "Issue title here" --body-file /tmp/gh-issue-body-XXXXXX.md
+gh issue create --repo owner/repo --title "Issue title here" --body-file TMPFILE
 ```
 
 ### 5. Clean Up
@@ -74,7 +75,7 @@ gh issue create --repo owner/repo --title "Issue title here" --body-file /tmp/gh
 Always remove the tmpfile after the issue creation attempt, regardless of whether it succeeded or failed:
 
 ```bash
-rm -f /tmp/gh-issue-body-XXXXXX.md
+rm -f TMPFILE
 ```
 
 ### 6. Report the Result
