@@ -200,8 +200,8 @@ Run the `lint-and-fix` skill to catch lint and formatting errors before pushing.
    This runs all detected project linters and formatters, auto-fixes what it can, manually resolves remaining issues, and commits the fixes without pushing.
 
 1. **If no linters are detected**: Proceed to step 6. The absence of linters is not an error.
-1. **If all linters pass** (with or without auto-fixes): Proceed to step 6. Any fix commits created by `lint-and-fix` will be included in the push.
-1. **If linting issues remain after auto-fix and manual fix attempts**: Stop and report the unresolved lint errors. Do not push or create the PR. The user must resolve the remaining issues before retrying.
+1. **If all linters pass** (with or without auto-fixes) **and no issues remain unresolved or skipped**: Proceed to step 6. Any fix commits created by `lint-and-fix` will be included in the push.
+1. **If any linting issues remain unresolved, any items are skipped, or a required linter cannot run**: Stop and report the unresolved lint errors. Do not push or create the PR. The user must resolve the remaining issues before retrying.
 
 ### 6. Push to Remote
 
@@ -337,7 +337,7 @@ When committing plan files, use a message like `docs: add plan for <meaningful-d
 - **On the base branch**: Report that PRs cannot be created from the base branch. Suggest creating a feature branch first.
 - **Nothing to commit and no commits ahead**: Report there is nothing to create a PR for.
 - **Pre-commit hook failure**: Fix the issue, re-stage, and create a new commit (never amend).
-- **Lint issues unresolved**: If the `lint-and-fix` skill reports unresolved issues after auto-fix and manual fix, stop before pushing. Report the remaining lint errors and suggest the user fix them manually before retrying `/pr`.
+- **Lint issues unresolved**: If the `lint-and-fix` skill reports unresolved issues, skipped items, or a required linter that cannot run, stop before pushing. Report the remaining lint errors and suggest the user fix them manually before retrying `/pr`.
 - **Push rejected**: Report the error. Suggest `git pull --rebase` if the remote has diverged. Never force push.
 - **PR already exists**: If `gh pr create` fails because a PR already exists for this branch, run `gh pr view --web` to open the existing PR and report it to the user.
 - **No gh CLI**: Report that the `gh` CLI is required and link to https://cli.github.com/.

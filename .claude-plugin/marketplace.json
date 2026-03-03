@@ -252,14 +252,14 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
-      "description": "Commit, push, and create a pull request in one step with no prompts.",
+      "description": "Lint, commit, push, and create a pull request in one step with no prompts.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["git", "github", "plans", "pull-requests", "workflow"],
       "license": "MIT",
       "name": "pr",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/pr",
-      "version": "1.5.0"
+      "version": "1.5.1"
     },
     {
       "author": {
