@@ -112,6 +112,8 @@ If `--major`, `--minor`, or `--patch` was specified, use that bump level instead
 
 **Confirm the version with the user.** Present the recommended (or forced) version and wait for approval before proceeding.
 
+**Dry-run gate:** If `--dry-run` was specified, skip steps 5-7 entirely. Do not create or modify any files. Instead, describe what changes _would_ be made (which files would be updated, what the CHANGELOG entry would look like). Then proceed directly to step 8b.
+
 ### 5. Update Version in Project Files
 
 Based on the project type detected in step 2, update version strings in the appropriate files using the rules in `./references/project-types.md`:
@@ -183,7 +185,7 @@ Tags are immutable. Proceed with commit and tag?
 
 Omit the "Documentation areas to review" section if the checklist was skipped (all housekeeping commits).
 
-If `--dry-run` was specified, show the review block and stop here. Do not prompt for confirmation, modify any files, commit, or create a tag.
+If `--dry-run` was specified (steps 5-7 were skipped), present the review block as a proposed plan and stop here. Do not prompt for confirmation, stage changes, commit, or create a tag.
 
 #### 8c. Wait for confirmation
 
@@ -191,7 +193,9 @@ Ask the user to confirm before proceeding. If the user declines:
 
 1. Stop the release.
 1. Inform the user that their changes are in the working tree (unstaged).
-1. Explain their options: make changes and re-run the release skill, or discard changes with `git checkout .`.
+1. Explain their options: make changes and re-run the release skill, or discard all changes:
+   - To discard modifications to tracked files: `git checkout .`
+   - To also remove newly created untracked files (e.g., a new `CHANGELOG.md`): review with `git clean -n`, then remove with `git clean -f`
 
 ### 9. Create Release Commit
 
