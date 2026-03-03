@@ -1,29 +1,48 @@
 ---
-description: Set up installer and distribution methods for projects
+description: Set up installer and distribution methods for Go, Swift, and Rust projects
 disable-model-invocation: true
-argument-hint: "[homebrew|shell|go-install]"
+argument-hint: "[homebrew|shell|go-install|cargo-install]"
 ---
 
 # Setup Installers
 
-Set up installer and distribution methods for a project. Supports three installer types:
+Set up installer and distribution methods for a project. Supports Go, Swift, and Rust projects.
+
+Installer types:
 
 - **Homebrew**: a Homebrew tap formula for `brew install`
 - **Shell install script**: a portable `install.sh` that downloads from GitHub Releases
-- **go install**: compatibility and README instructions for `go install`
+- **go install**: compatibility and README instructions for `go install` (Go only)
+- **cargo install**: compatibility and README instructions for `cargo install` (Rust only)
 
 ## Workflow
 
 ### 1. Detect Project Type
 
-Scan the project to understand its structure:
+Scan the project to determine its language and structure:
 
-- Check for `go.mod` (Go project)
-- Check for `.goreleaser.yml` or `.goreleaser.yaml` (GoReleaser already configured)
+| Marker | Language | Notes |
+| --- | --- | --- |
+| `go.mod` | Go | Also check for `.goreleaser.yml`/`.goreleaser.yaml` |
+| `Package.swift` | Swift | Check for macOS-only constraints |
+| `Cargo.toml` | Rust | Check for binary targets |
+
+Additional checks regardless of language:
+
 - Check for a `Makefile`
 - Run `gh repo view --json owner,name,description` to get GitHub repo info
 
-If this is not a Go project, only the shell install script is applicable. Note this when presenting options.
+**Go sub-detection**: If `.goreleaser.yml` or `.goreleaser.yaml` exists, note that GoReleaser is already configured (this affects Homebrew and release workflow steps).
+
+**Swift platform detection**: Check for macOS-only constraints:
+
+1. Grep source files for AppKit, Cocoa, or macOS-specific framework imports
+2. Check `Package.swift` for `.macOS` platform requirements without `.linux` targets
+3. If inconclusive, ask the user whether the project is macOS-only or cross-platform
+
+**Rust binary detection**: Check `Cargo.toml` for `[[bin]]` sections or a `src/main.rs` file to confirm this is a binary crate (not a library).
+
+If none of the above markers are found, inform the user that only the shell install script is applicable as a generic binary distribution method.
 
 ### 2. Detect Existing Installers
 
@@ -31,24 +50,39 @@ Check for installers that are already set up:
 
 - **Homebrew**: look for a `brews:` section in `.goreleaser.yml`, or a standalone `Formula/` directory
 - **Shell install script**: look for `install.sh` in the repo root or a `scripts/` directory
-- **go install**: grep the README for `go install` instructions
+- **go install**: grep the README for `go install` instructions (Go only)
+- **cargo install**: grep the README for `cargo install` instructions (Rust only)
+- **Release workflow**: look for `.github/workflows/release.yml` or `.github/workflows/release.yaml`
 
 Report any existing installers to the user before proceeding. Existing installers can be updated or skipped.
 
 ### 3. Select Installer Types
 
-If `$ARGUMENTS` is provided (e.g., `homebrew`, `shell`, `go-install`, or a comma-separated combination), use that selection.
+If `$ARGUMENTS` is provided (e.g., `homebrew`, `shell`, `go-install`, `cargo-install`, or a comma-separated combination), use that selection.
 
-Otherwise, ask the user which installer types to set up. Present all three options with notes about which are already detected and which are applicable to the project type.
+Otherwise, ask the user which installer types to set up. Present applicable options based on the detected language:
+
+| Installer | Go | Swift | Rust | Other |
+| --- | --- | --- | --- | --- |
+| Homebrew | Yes | Yes | Yes | No |
+| Shell install script | Yes | Yes | Yes | Yes |
+| go install | Yes | No | No | No |
+| cargo install | No | No | Yes | No |
+
+Include notes about which installers are already detected and which are not applicable to the project type.
 
 ### 4. Gather Project Information
 
 Collect the following, inferring from existing files where possible. Do not re-ask for information the user already provided:
 
-- **Binary name**: from Makefile, `.goreleaser.yml`, or the last segment of the Go module path
+- **Binary name**:
+  - Go: from Makefile, `.goreleaser.yml`, or the last segment of the Go module path
+  - Swift: from `Package.swift` executable target name, or the package name
+  - Rust: from `Cargo.toml` `[[bin]]` name, `package.name`, or the directory name
 - **Project description**: from the README or `gh repo view`
-- **GitHub owner/repo**: from `gh repo view` or the Go module path
+- **GitHub owner/repo**: from `gh repo view`, the Go module path, or `git remote`
 - **Latest tag**: run `git describe --tags --abbrev=0 2>/dev/null` (may not exist yet)
+- **Platform constraints**: macOS-only or cross-platform (from step 1 detection)
 
 ### 5. Set Up Homebrew
 
@@ -64,7 +98,11 @@ If the secret is missing, warn the user that releases will fail without it. Sugg
 
 **If GoReleaser exists without a `brews:` section**: suggest using `/add-goreleaser-homebrew` to add Homebrew support through GoReleaser, which is the preferred approach for Go projects with GoReleaser. That command includes interactive `HOMEBREW_TAP_TOKEN` setup. Skip creating a standalone formula.
 
-**If no GoReleaser exists**: create a standalone Homebrew formula. Generate `Formula/PROJECT-NAME.rb`:
+**If no GoReleaser exists**: create a standalone Homebrew formula. Choose the appropriate template based on platform constraints.
+
+#### Cross-Platform Homebrew Formula
+
+For projects that support both macOS and Linux (most Go and Rust projects), generate `Formula/PROJECT-NAME.rb`:
 
 ```ruby
 class ProjectName < Formula
@@ -107,13 +145,46 @@ class ProjectName < Formula
 end
 ```
 
+#### macOS-Only Homebrew Formula
+
+For macOS-only projects (e.g., Swift apps using AppKit), generate `Formula/PROJECT-NAME.rb` with a macOS dependency and no Linux blocks:
+
+```ruby
+class ProjectName < Formula
+  desc "PROJECT-DESCRIPTION"
+  homepage "https://github.com/OWNER/REPO"
+  version "0.1.0"
+  license "MIT"
+
+  depends_on :macos
+
+  on_intel do
+    url "https://github.com/OWNER/REPO/releases/download/v0.1.0/PROJECT-NAME-0.1.0-darwin-amd64.tar.gz"
+    sha256 "SHA256_FOR_DARWIN_AMD64"
+  end
+
+  on_arm do
+    url "https://github.com/OWNER/REPO/releases/download/v0.1.0/PROJECT-NAME-0.1.0-darwin-arm64.tar.gz"
+    sha256 "SHA256_FOR_DARWIN_ARM64"
+  end
+
+  def install
+    bin.install "PROJECT-NAME"
+  end
+
+  test do
+    system bin/"PROJECT-NAME", "--version"
+  end
+end
+```
+
 Adjust the license field based on the project's actual license file. Add instructions for publishing to a Homebrew tap repository.
 
 ### 6. Set Up Shell Install Script
 
 Skip this section if the user did not select the shell install script.
 
-Generate `install.sh` in the repo root:
+Generate `install.sh` in the repo root. For macOS-only projects, add the platform guard shown in the "macOS-only variant" note below.
 
 ```bash
 #!/usr/bin/env bash
@@ -234,7 +305,21 @@ esac
 
 Replace `OWNER`, `REPO`, and `PROJECT-NAME` with the actual values.
 
-If the project uses GoReleaser, adjust the tarball naming pattern to match GoReleaser's output format (typically `PROJECT-NAME_VERSION_OS_ARCH.tar.gz` with underscores and no `v` prefix on the version).
+**macOS-only variant**: For macOS-only projects, add a platform guard after `set -euo pipefail` and remove the Linux case from OS detection:
+
+```bash
+# This tool is macOS-only.
+if [[ "$(uname -s)" != "Darwin" ]]; then
+  printf 'Error: %s is only available for macOS.\n' "PROJECT-NAME" >&2
+  exit 1
+fi
+
+OS="darwin"
+```
+
+This replaces the full OS detection `case` statement. Keep the architecture detection as-is.
+
+**GoReleaser naming**: If the project uses GoReleaser, adjust the tarball naming pattern to match GoReleaser's output format (typically `PROJECT-NAME_VERSION_OS_ARCH.tar.gz` with underscores and no `v` prefix on the version).
 
 Make the script executable:
 
@@ -260,7 +345,9 @@ fi
 
 If `.prettierignore` does not exist, skip this step.
 
-### 7. Set Up go install
+### 7. Set Up Language-Specific Install Method
+
+#### go install (Go projects only)
 
 Skip this section if the user did not select go install, or if this is not a Go project.
 
@@ -271,6 +358,20 @@ Check compatibility:
    - If `main.go` is in the repo root: `go install github.com/OWNER/REPO@latest`
    - If `main.go` is in a subdirectory (e.g., `cmd/PROJECT-NAME/`): `go install github.com/OWNER/REPO/cmd/PROJECT-NAME@latest`
 1. Verify the module path is a valid import path (starts with a domain name).
+
+Do not create any files for this installer type. The output is README content only.
+
+#### cargo install (Rust projects only)
+
+Skip this section if the user did not select cargo install, or if this is not a Rust project.
+
+Check compatibility:
+
+1. Read `Cargo.toml` for `path` dependencies. If present, warn the user that `cargo install` may not work with local path dependencies.
+1. Check for `[[bin]]` sections in `Cargo.toml` to confirm binary target names.
+1. Determine the install command:
+   - If the crate is published to crates.io: `cargo install PROJECT-NAME`
+   - If not published: `cargo install --git https://github.com/OWNER/REPO`
 
 Do not create any files for this installer type. The output is README content only.
 
@@ -308,9 +409,23 @@ Requires Go 1.21 or later:
 ```bash
 go install github.com/OWNER/REPO@latest
 ```
+
+### cargo install
+
+Requires Rust 1.XX or later:
+
+```bash
+cargo install PROJECT-NAME
+```
+
+Or install from source:
+
+```bash
+cargo install --git https://github.com/OWNER/REPO
+```
 ````
 
-Adjust the Go version requirement based on the minimum version in `go.mod`.
+Adjust the Go version requirement based on the minimum version in `go.mod`. Adjust the Rust version requirement based on `rust-version` in `Cargo.toml` or the MSRV.
 
 If the README already has installation instructions, integrate the new methods into the existing section rather than creating a duplicate.
 
@@ -325,12 +440,17 @@ After completing all selected installer types, print a summary:
   - For Homebrew standalone formula: create the tap repository and push the formula
   - For shell install script: the script expects GitHub Releases with tarballs in the naming format described above
   - For go install: ensure the module has no `replace` directives and is tagged with a version
+  - For cargo install: ensure the crate is published to crates.io (if applicable)
   - If `HOMEBREW_TAP_TOKEN` was found to be missing during step 5: remind the user to configure it before the first release, either by running `/add-goreleaser-homebrew` for guided setup or by manually creating a fine-grained PAT and adding it as a repository secret
 
 ## Error Handling
 
 - If not in a git repository, abort with a message
-- If `gh` is not installed, fall back to inferring owner/repo from `git remote` or `go.mod`
+- If `gh` is not installed, fall back to inferring owner/repo from `git remote`, `go.mod`, or `Cargo.toml`
 - If no GitHub Releases exist yet, note that installers depend on tagged releases
 - If `go.mod` has `replace` directives, warn about go install incompatibility
+- If `Cargo.toml` has `path` dependencies, warn about cargo install incompatibility
+- If `Package.swift` has no executable targets, warn that the project may be a library (installer setup is for binary distributions)
+- If `Cargo.toml` has no `[[bin]]` section and no `src/main.rs`, warn that the project may be a library
 - If the README does not exist, create one with just the Installation section
+- If ShellCheck is not installed, skip validation and note in the summary
