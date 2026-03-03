@@ -375,7 +375,275 @@ Check compatibility:
 
 Do not create any files for this installer type. The output is README content only.
 
-### 8. Update README
+### 8. Set Up Release Workflow
+
+If the user selected Homebrew or shell install script, the generated files depend on GitHub Releases with tarballs in a specific naming format. Offer to generate a release workflow.
+
+**If GoReleaser exists**: Skip this step. GoReleaser handles releases. Note this in the summary.
+
+**If a release workflow already exists** at `.github/workflows/release.yml` or `.github/workflows/release.yaml`: present its content and ask whether to overwrite, skip, or merge.
+
+**Otherwise**: Generate `.github/workflows/release.yml` from the appropriate language template below. The `.github/workflows/` directory will be created automatically if it does not exist.
+
+All release workflow templates share:
+
+- Trigger: push tags matching `v*`
+- `permissions: contents: write` (needed to create releases)
+- Build matrix producing tarballs in the format `BINARY-VERSION-OS-ARCH.tar.gz`
+- A `publish` job that downloads all artifacts, generates `checksums.txt`, and creates a GitHub Release via `softprops/action-gh-release@v2`
+- `generate_release_notes: true` for auto-generated release notes
+
+Replace `PROJECT-NAME` with the actual binary name in all templates.
+
+#### Reference: Go Release Workflow (without GoReleaser)
+
+Use when the project has `go.mod` but no GoReleaser configuration. Cross-compiles for linux/darwin on amd64/arm64.
+
+```yaml
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          BINARY="PROJECT-NAME"
+          go build -ldflags "-s -w -X main.version=${VERSION}" -o "${BINARY}" .
+          tar -czf "${BINARY}-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" "${BINARY}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: "*.tar.gz"
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: sha256sum *.tar.gz > checksums.txt
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.tar.gz
+            checksums.txt
+          generate_release_notes: true
+```
+
+Notes:
+
+- Adjust the `-X main.version` ldflags path if the version variable is in a different package
+- For projects with `main.go` in a subdirectory (e.g., `cmd/PROJECT-NAME/`), adjust the `go build` path accordingly
+- `CGO_ENABLED=0` produces static binaries for maximum portability
+
+#### Reference: Swift Release Workflow
+
+Use for Swift projects. Builds on `macos-15` runner. For macOS-only projects (the common case), builds `arm64` and `x86_64` for Darwin only.
+
+```yaml
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    strategy:
+      matrix:
+        arch: [arm64, x86_64]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          BINARY="PROJECT-NAME"
+          swift build -c release --arch ${{ matrix.arch }}
+          BUILT=".build/apple/Products/Release/${BINARY}"
+          if [ ! -f "${BUILT}" ]; then
+            BUILT="$(swift build -c release --arch ${{ matrix.arch }} --show-bin-path)/${BINARY}"
+          fi
+          ARCH="${{ matrix.arch }}"
+          if [ "${ARCH}" = "x86_64" ]; then
+            ARCH="amd64"
+          fi
+          tar -czf "${BINARY}-${VERSION}-darwin-${ARCH}.tar.gz" -C "$(dirname "${BUILT}")" "${BINARY}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-darwin-${{ matrix.arch }}
+          path: "*.tar.gz"
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: sha256sum *.tar.gz > checksums.txt
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.tar.gz
+            checksums.txt
+          generate_release_notes: true
+```
+
+Notes:
+
+- The build step maps `x86_64` to `amd64` in the tarball name to match the `install.sh` convention
+- The binary path varies between Swift versions; the template tries `.build/apple/Products/Release/` first, then falls back to `--show-bin-path`
+- Swift cross-compilation to Linux is not supported in this template; add Linux targets manually if needed
+
+#### Reference: Rust Release Workflow
+
+Use for Rust projects. Cross-compiles for linux/darwin on amd64/arm64.
+
+```yaml
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-latest
+            os: linux
+            arch: amd64
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-latest
+            os: linux
+            arch: arm64
+          - target: x86_64-apple-darwin
+            runner: macos-latest
+            os: darwin
+            arch: amd64
+          - target: aarch64-apple-darwin
+            runner: macos-latest
+            os: darwin
+            arch: arm64
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          BINARY="PROJECT-NAME"
+          cargo build --release --target ${{ matrix.target }}
+          tar -czf "${BINARY}-${VERSION}-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" \
+            -C "target/${{ matrix.target }}/release" "${BINARY}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.os }}-${{ matrix.arch }}
+          path: "*.tar.gz"
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: sha256sum *.tar.gz > checksums.txt
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.tar.gz
+            checksums.txt
+          generate_release_notes: true
+```
+
+Notes:
+
+- For macOS-only Rust projects, remove the two Linux matrix entries
+- `aarch64-unknown-linux-gnu` cross-compilation requires `gcc-aarch64-linux-gnu` on Ubuntu runners
+- For Rust workspace projects, adjust the `cargo build` command to target the specific binary
+- **Action pinning**: `dtolnay/rust-toolchain@stable` and `softprops/action-gh-release@v2` follow this project's convention of pinning to version tags
+
+### 9. Update README
 
 Add or merge an **Installation** section in the README. If an Installation section already exists, merge the new methods into it without removing existing content.
 
@@ -429,19 +697,21 @@ Adjust the Go version requirement based on the minimum version in `go.mod`. Adju
 
 If the README already has installation instructions, integrate the new methods into the existing section rather than creating a duplicate.
 
-### 9. Print Summary
+### 10. Print Summary
 
 After completing all selected installer types, print a summary:
 
-- **Files created**: list each new file with its path
-- **Files modified**: list each modified file with what changed
-- **Skipped installers**: note any installers that were skipped and why (e.g., "Homebrew: already configured via GoReleaser")
+- **Files created**: list each new file with its path (including release workflow if generated)
+- **Files modified**: list each modified file with what changed (including `.prettierignore` if updated)
+- **Skipped installers**: note any installers that were skipped and why (e.g., "Homebrew: already configured via GoReleaser", "Release workflow: GoReleaser handles releases")
 - **Next steps**: note any required follow-up actions:
   - For Homebrew standalone formula: create the tap repository and push the formula
   - For shell install script: the script expects GitHub Releases with tarballs in the naming format described above
   - For go install: ensure the module has no `replace` directives and is tagged with a version
   - For cargo install: ensure the crate is published to crates.io (if applicable)
+  - For release workflow: tag a release to trigger the workflow (e.g., `git tag v0.1.0 && git push origin v0.1.0`)
   - If `HOMEBREW_TAP_TOKEN` was found to be missing during step 5: remind the user to configure it before the first release, either by running `/add-goreleaser-homebrew` for guided setup or by manually creating a fine-grained PAT and adding it as a repository secret
+  - If ShellCheck was not available: note that the user can install it with `brew install shellcheck`
 
 ## Error Handling
 
@@ -454,3 +724,5 @@ After completing all selected installer types, print a summary:
 - If `Cargo.toml` has no `[[bin]]` section and no `src/main.rs`, warn that the project may be a library
 - If the README does not exist, create one with just the Installation section
 - If ShellCheck is not installed, skip validation and note in the summary
+- If the release workflow already exists, ask before overwriting
+- If the homebrew-tap repo cannot be accessed, fall back to providing formula content inline
