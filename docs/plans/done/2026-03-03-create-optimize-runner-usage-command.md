@@ -38,15 +38,15 @@ The command file. Frontmatter with `disable-model-invocation: true`. Structured 
 
 **Step 2: Classify each workflow** by reading its `on:` triggers:
 
-| Trigger pattern | Classification |
-| --- | --- |
-| `push:` with `branches:` and/or `pull_request:` | CI |
-| `push:` with `tags:` only (no `branches:`) | Release |
-| `push:` with both `branches:` and `tags:` | Mixed (treat as CI for paths-ignore, Release for concurrency) |
-| `schedule:` / `workflow_dispatch:` only | Scheduled |
-| Bare `push:` with no filters | Broad push |
-| Name contains "gitleaks", "trufflehog", "secret", "scan" | Secret scanning (subset of Broad push) |
-| `workflow_call:` trigger | Reusable workflow |
+| Trigger pattern                                          | Classification                                                |
+| -------------------------------------------------------- | ------------------------------------------------------------- |
+| `push:` with `branches:` and/or `pull_request:`          | CI                                                            |
+| `push:` with `tags:` only (no `branches:`)               | Release                                                       |
+| `push:` with both `branches:` and `tags:`                | Mixed (treat as CI for paths-ignore, Release for concurrency) |
+| `schedule:` / `workflow_dispatch:` only                  | Scheduled                                                     |
+| Bare `push:` with no filters                             | Broad push                                                    |
+| Name contains "gitleaks", "trufflehog", "secret", "scan" | Secret scanning (subset of Broad push)                        |
+| `workflow_call:` trigger                                 | Reusable workflow                                             |
 
 **Step 3: Analyze each workflow for missing optimizations.** For each file, check which of the three optimizations are already present and which are needed.
 
@@ -70,17 +70,17 @@ Eligibility rules:
   ```yaml
   concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true  # or false for release/mixed
+    cancel-in-progress: true # or false for release/mixed
   ```
 
 - **Timeout-minutes**: All jobs that lack it. Values by heuristic:
 
-  | Job indicator | Timeout |
-  | --- | --- |
-  | Release/publish/deploy jobs | 30 min |
-  | Rust build (steps contain `cargo`) | 20 min |
-  | Vuln check, shellcheck, shell lint | 10 min |
-  | All other CI jobs | 15 min |
+  | Job indicator                      | Timeout |
+  | ---------------------------------- | ------- |
+  | Release/publish/deploy jobs        | 30 min  |
+  | Rust build (steps contain `cargo`) | 20 min  |
+  | Vuln check, shellcheck, shell lint | 10 min  |
+  | All other CI jobs                  | 15 min  |
 
 **Step 4: Present summary and confirm.** Show a table of all workflows with classifications and proposed changes. Then, before applying paths-ignore to any workflow, ask once whether the project treats Markdown files as source code (if yes, remove `*.md` from the paths-ignore list). Confirm each workflow individually (apply all / review changes / skip / abort).
 
@@ -135,17 +135,17 @@ Standard plugin README following the pattern from setup-ci. Type: Command. Trigg
 ## Implementation Order
 
 1. Create `plugins/optimize-runner-usage/.claude-plugin/plugin.json`
-2. Create `plugins/optimize-runner-usage/commands/optimize-runner-usage.md`
-3. Create `plugins/optimize-runner-usage/README.md`
-4. Update `.claude-plugin/marketplace.json`
-5. Update root `README.md`
-6. Run `check-versions` skill
-7. Run linters
+1. Create `plugins/optimize-runner-usage/commands/optimize-runner-usage.md`
+1. Create `plugins/optimize-runner-usage/README.md`
+1. Update `.claude-plugin/marketplace.json`
+1. Update root `README.md`
+1. Run `check-versions` skill
+1. Run linters
 
 ## Verification
 
 1. Run `bin/validate-json` and `bin/validate-plugins` to check JSON and plugin consistency
-2. Run `check-versions` skill to verify version alignment
-3. Run the repo's linters (`yarn lint` or equivalent) to check markdown and JSON formatting
-4. Visually confirm README ToC follows one-entry-per-line convention
-5. Verify YAML code blocks in the command file are syntactically correct
+1. Run `check-versions` skill to verify version alignment
+1. Run the repo's linters (`yarn lint` or equivalent) to check markdown and JSON formatting
+1. Visually confirm README ToC follows one-entry-per-line convention
+1. Verify YAML code blocks in the command file are syntactically correct
