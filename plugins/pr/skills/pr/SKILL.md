@@ -88,7 +88,7 @@ git rev-parse --abbrev-ref --symbolic-full-name @{u} 2> /dev/null || echo "no up
 
 ### 2. Detect Connected Issues
 
-Search for GitHub issues that this branch addresses. Combine results from the strategies below, deduplicate by issue number, and record the final list for use in the commit message (step 4) and PR body (step 6).
+Search for GitHub issues that this branch addresses. Combine results from the strategies below, deduplicate by issue number, and record the final list for use in the commit message (step 4) and PR body (step 7).
 
 #### Strategy 1 — Issue numbers in the branch name
 
@@ -187,7 +187,23 @@ EOF
 
 CRITICAL: Never use `git commit --amend`. Always create a new commit. If a pre-commit hook fails, fix the issue, re-stage, and create a new commit.
 
-### 5. Push to Remote
+### 5. Lint and Fix
+
+Run the `lint-and-fix` skill to catch lint and formatting errors before pushing. This prevents CI failures from code that does not pass project linters.
+
+1. **Invoke the `lint-and-fix` skill** using the Skill tool with `--no-push`:
+
+   ```text
+   lint-and-fix --no-push
+   ```
+
+   This runs all detected project linters and formatters, auto-fixes what it can, manually resolves remaining issues, and commits the fixes without pushing.
+
+1. **If no linters are detected**: Proceed to step 6. The absence of linters is not an error.
+1. **If all linters pass** (with or without auto-fixes): Proceed to step 6. Any fix commits created by `lint-and-fix` will be included in the push.
+1. **If linting issues remain after auto-fix and manual fix attempts**: Stop and report the unresolved lint errors. Do not push or create the PR. The user must resolve the remaining issues before retrying.
+
+### 6. Push to Remote
 
 Push the branch to the remote:
 
@@ -203,7 +219,7 @@ git push -u origin HEAD
 
 If the push is rejected because the remote has diverged, report the error and stop. Never force push.
 
-### 6. Create the Pull Request
+### 7. Create the Pull Request
 
 Analyze all commits on the branch (from `git log <base-branch>..HEAD` and `git diff <base-branch>...HEAD`) to generate the PR title and body.
 
@@ -268,7 +284,7 @@ Always remove the tmpfile after the PR creation attempt, regardless of whether i
 rm -f TMPFILE
 ```
 
-### 7. Report Results
+### 8. Report Results
 
 After the PR is created, report:
 
@@ -321,6 +337,7 @@ When committing plan files, use a message like `docs: add plan for <meaningful-d
 - **On the base branch**: Report that PRs cannot be created from the base branch. Suggest creating a feature branch first.
 - **Nothing to commit and no commits ahead**: Report there is nothing to create a PR for.
 - **Pre-commit hook failure**: Fix the issue, re-stage, and create a new commit (never amend).
+- **Lint issues unresolved**: If the `lint-and-fix` skill reports unresolved issues after auto-fix and manual fix, stop before pushing. Report the remaining lint errors and suggest the user fix them manually before retrying `/pr`.
 - **Push rejected**: Report the error. Suggest `git pull --rebase` if the remote has diverged. Never force push.
 - **PR already exists**: If `gh pr create` fails because a PR already exists for this branch, run `gh pr view --web` to open the existing PR and report it to the user.
 - **No gh CLI**: Report that the `gh` CLI is required and link to https://cli.github.com/.
