@@ -20,7 +20,7 @@ mktemp /tmp/gh-pr-body-XXXXXX
 # Returns a unique path, e.g.: /tmp/gh-pr-body-x4y5z6
 ```
 
-Use a descriptive prefix that reflects the purpose (`gh-pr-body`, `gh-issue-body`, `copilot-reply`, etc.). The `XXXXXX` in the template is replaced by `mktemp` with random characters. Always capture the returned path and use it in subsequent commands.
+Use a descriptive prefix that reflects the purpose (`gh-pr-body`, `gh-issue-body`, `copilot-reply`, etc.). On macOS/BSD, `mktemp` only replaces trailing `X` characters, so the template must end with the `XXXXXX` run (do not add suffixes like `.md` after it). That trailing `XXXXXX` is replaced by `mktemp` with random characters. Always capture the returned path and use it in subsequent commands.
 
 ### 2. Write content with the Write tool
 
