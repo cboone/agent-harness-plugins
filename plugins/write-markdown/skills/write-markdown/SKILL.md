@@ -10,6 +10,73 @@ description: >-
 
 Apply the Markdown conventions from `./references/MARKDOWN.md` when creating or editing Markdown files. This guide targets GitHub Flavored Markdown (GFM) and aligns with markdownlint-cli2 rules.
 
+## Common Mistakes
+
+These three issues cause the most lint failures. Check every Markdown file for them.
+
+### Tables: align all pipes vertically
+
+```markdown
+<!-- Correct: pipes aligned, cells padded -->
+
+| Name    | Type   | Default |
+| ------- | ------ | ------- |
+| timeout | number | 30      |
+| retries | number | 3       |
+```
+
+<!-- prettier-ignore -->
+```markdown
+<!-- Wrong: ragged pipes, no padding -->
+
+| Name | Type | Default |
+| --- | --- | --- |
+| timeout | number | 30 |
+| retries | number | 3 |
+```
+
+Procedure: write all rows, find the longest content per column, pad every cell to that width, fill delimiter hyphens to match, then verify all pipes line up.
+
+### Ordered lists: use `1.` for every item
+
+```markdown
+<!-- Correct -->
+
+1. First item
+1. Second item
+1. Third item
+```
+
+```markdown
+<!-- Wrong -->
+
+1. First item
+2. Second item
+3. Third item
+```
+
+Never use `2.`, `3.`, `4.`, etc. This applies to nested ordered lists too.
+
+### Code blocks: always include a language identifier
+
+````markdown
+<!-- Correct -->
+
+```bash
+echo "hello"
+```
+````
+
+````markdown
+<!-- Wrong: bare fence -->
+
+```
+echo "hello"
+```
+````
+
+Use `text` when no syntax highlighting applies. Never leave the opening fence bare.
+
 ## Key Conventions
 
 Read `./references/MARKDOWN.md` for the complete guide. Summary:
@@ -35,19 +102,19 @@ Read `./references/MARKDOWN.md` for the complete guide. Summary:
 
 ### Lists
 
-- Consistent markers: `-` for unordered (MD004), `1.` for all ordered items (MD029)
+- Consistent markers: `-` for unordered (MD004), `1.` for every ordered list item, never `2.`, `3.`, etc. (MD029)
 - Indent nested lists consistently
 - Blank line before and after a list block (MD032)
 
 ### Tables
 
-- Pad cells so pipe characters align vertically across all rows (MD060)
+- Pad every cell so all pipe characters align vertically; pad delimiter hyphens to match (MD060)
 - Leading and trailing pipes on every row (MD055)
 - Consistent column count across all rows (MD056)
 
 ### Code
 
-- Fenced code blocks with language identifier: ` ```js ` (MD040)
+- Fenced code blocks must have a language identifier, use `text` if none applies (MD040)
 - Backtick fences, not tilde fences (MD048)
 - Inline code for identifiers, commands, and short expressions
 
@@ -58,4 +125,8 @@ Read `./references/MARKDOWN.md` for the complete guide. Summary:
 
 ## Validation
 
-Whenever possible, validate Markdown before finishing. Prefer using a project-specific validation script, if available. Common locations include declarations in `package.json` and scripts stored in `bin/`. If those are not present, `markdownlint-cli2` is a commonly available linter for Markdown files.
+After creating or editing Markdown files, run the project's lint-fix command to auto-correct table alignment, list numbering, and other formatting issues. This is a required final step, not optional.
+
+Check `package.json` for project-specific scripts (e.g., `yarn lint:fix`, `yarn lint:md:fix`, `npm run lint:fix`). Also check `Makefile` targets and scripts in `bin/`. Run the linter in fix mode so it corrects what it can automatically.
+
+If no project-specific lint script is available, use `markdownlint-cli2` directly as a fallback.
