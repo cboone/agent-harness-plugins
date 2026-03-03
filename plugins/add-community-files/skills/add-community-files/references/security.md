@@ -40,12 +40,8 @@ Instead, please report them via GitHub's private vulnerability reporting:
 
 ## Notes
 
-This template contains the following placeholders for substitution:
-
-| Placeholder                 | Replace with                |
-| --------------------------- | --------------------------- |
-| `PROJECT-NAME`              | Repository/project name     |
-| `GITHUB-OWNER/PROJECT-NAME` | Full GitHub owner/repo path |
+This template has no placeholders. It is intentionally generic so it works
+without project-specific substitution.
 
 The "What Qualifies" section is intentionally generic. The SKILL.md workflow
 may add project-specific entries (e.g., "container escape vulnerabilities" for

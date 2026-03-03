@@ -179,7 +179,7 @@ Print a summary of what was created:
 - List every file generated
 - Note the project type used for `.gitignore`
 - Note the agent config files and symlink
-- Suggest running `/add-community-files` to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, and a PR template
+- Suggest running `/add-community-files` to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
 
 ## Error Handling
 

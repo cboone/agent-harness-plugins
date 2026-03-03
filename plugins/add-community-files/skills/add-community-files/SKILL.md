@@ -27,7 +27,11 @@ Add standard community files to a project preparing for public release. Detects 
 
 #### Auto-detect project identity
 
-1. Run `git remote get-url origin` to extract owner and project name from the remote URL (strip `.git` suffix, take last two path segments).
+1. Run `git remote get-url origin` to get the remote URL.
+1. Normalize the remote and extract owner/repo:
+   - Strip any trailing `.git` suffix.
+   - If the remote is SSH-style (e.g., `git@github.com:owner/repo`), convert the `host:` prefix to an HTTPS-style URL (e.g., `https://github.com/owner/repo`).
+   - From the normalized URL, take the last two path segments as `GITHUB-OWNER/PROJECT-NAME`.
 1. If no remote exists, fall back to the README.md H1 heading, then the directory name.
 1. Store `PROJECT-NAME` and `GITHUB-OWNER/PROJECT-NAME` for placeholder substitution.
 
@@ -44,14 +48,14 @@ Add standard community files to a project preparing for public release. Detects 
 
 Scan for build system markers using Glob. Use the first match:
 
-| Marker           | Build system | Install           | Build            | Test                    | Lint                  | Format               |
-| ---------------- | ------------ | ----------------- | ---------------- | ----------------------- | --------------------- | -------------------- |
-| `Makefile`       | Make         | (check targets)   | `make build`     | `make test`             | `make lint`           | `make fmt`           |
-| `package.json`   | Node.js      | `npm install`     | `npm run build`  | `npm test`              | `npm run lint`        | `npm run format`     |
-| `Cargo.toml`     | Cargo        | (none)            | `cargo build`    | `cargo test`            | `cargo clippy`        | `cargo fmt`          |
-| `pyproject.toml` | Python (uv)  | `uv sync`         | (none)           | `uv run pytest`         | `uv run ruff check`   | `uv run ruff format` |
-| `go.mod`         | Go           | `go mod download` | `go build ./...` | `go test ./...`         | `golangci-lint run`   | `gofmt -w .`         |
-| `Gemfile`        | Ruby         | `bundle install`  | (none)           | `bundle exec rake test` | `bundle exec rubocop` | (same as lint)       |
+| Marker           | Build system | Install           | Build            | Test                    | Lint                  | Format                   |
+| ---------------- | ------------ | ----------------- | ---------------- | ----------------------- | --------------------- | ------------------------ |
+| `Makefile`       | Make         | (check targets)   | `make build`     | `make test`             | `make lint`           | `make fmt`               |
+| `package.json`   | Node.js      | `npm install`     | `npm run build`  | `npm test`              | `npm run lint`        | `npm run format`         |
+| `Cargo.toml`     | Cargo        | (none)            | `cargo build`    | `cargo test`            | `cargo clippy`        | `cargo fmt`              |
+| `pyproject.toml` | Python (uv)  | `uv sync`         | (none)           | `uv run pytest`         | `uv run ruff check`   | `uv run ruff format`     |
+| `go.mod`         | Go           | `go mod download` | `go build ./...` | `go test ./...`         | `golangci-lint run`   | `gofmt -w .`             |
+| `Gemfile`        | Ruby         | `bundle install`  | (none)           | `bundle exec rake test` | `bundle exec rubocop` | `bundle exec rubocop -A` |
 
 If a Makefile is present, read it and parse available target names. Use Makefile targets when they exist (they often wrap the underlying tool). For example, if both `go.mod` and a Makefile with `test` and `lint` targets exist, prefer `make test` and `make lint`.
 
@@ -117,7 +121,6 @@ Report findings to the user before proceeding.
 ### 5. Generate .github/SECURITY.md
 
 1. Read `./references/security.md`.
-1. Substitute `PROJECT-NAME` and `GITHUB-OWNER/PROJECT-NAME`.
 1. Optionally adapt the "What Qualifies" section based on project type (e.g., add "container escape vulnerabilities" for container tools, "credential exposure" for CLI tools that handle secrets).
 1. Remove the `## Notes` section.
 1. Write to `./.github/SECURITY.md`.

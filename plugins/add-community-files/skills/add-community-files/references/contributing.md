@@ -1,4 +1,4 @@
-<!-- markdownlint-disable relative-links -->
+<!-- markdownlint-disable relative-links MD041 -->
 <!-- This is a template file; relative links target the destination project. -->
 
 # Contributing to PROJECT-NAME
