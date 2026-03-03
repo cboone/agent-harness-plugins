@@ -27,7 +27,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Write Scrut Tests](#write-scrut-tests)
 ∙ [Write Shell Scripts](#write-shell-scripts)
 <br>Scaffolding:
-[Bootstrap Project](#bootstrap-project)
+[Add Community Files](#add-community-files)
+∙ [Bootstrap Project](#bootstrap-project)
 <br>Agents:
 [Clean Up Agent Config](#clean-up-agent-config)
 ∙ [Create Plugin](#create-plugin)
@@ -220,6 +221,13 @@ Detect project languages and file types, recommend appropriate linters and forma
 ### Scaffolding
 
 Orchestrate project setup. Assess what is needed and run all applicable scaffolding and setup tools in the correct order.
+
+#### Add Community Files
+
+Add standard community files to a project preparing for public release: CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and a pull request template. Detects the project's build system and tooling to populate contribution guidelines with relevant setup, test, and lint commands.
+
+> **Trigger:** `/add-community-files`
+> **Details:** [README](./plugins/add-community-files/README.md)
 
 #### Bootstrap Project
 
