@@ -94,25 +94,38 @@ Add `paths-ignore` under each eligible trigger (`push:` and `pull_request:`).
 
 **Eligible**: All workflow types.
 
-Standard concurrency group:
+Two concurrency group patterns are used, depending on classification:
+
+**Ref-scoped pattern** (CI, Scheduled, Broad push, Mixed, Secret scanning, Reusable):
 
 ```yaml
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: true # or false, per table below
 ```
+
+**Workflow-scoped pattern** (Release only):
+
+```yaml
+concurrency:
+  group: ${{ github.repository }}-${{ github.workflow }}
+  cancel-in-progress: false
+```
+
+Release workflows use the workflow-scoped pattern because each tag push produces a unique `github.ref` (e.g., `refs/tags/v1.0.0`), so including it in the group never deduplicates concurrent runs. The workflow-scoped pattern serializes all runs of the same release workflow regardless of which tag triggered them.
 
 `cancel-in-progress` values by classification:
 
-| Classification                  | `cancel-in-progress` |
-| ------------------------------- | -------------------- |
-| CI, Scheduled, Broad push       | `true`               |
-| Release, Mixed, Secret scanning | `false`              |
-| Reusable                        | `true`               |
+| Classification            | `cancel-in-progress` | Concurrency pattern |
+| ------------------------- | -------------------- | ------------------- |
+| CI, Scheduled, Broad push | `true`               | Ref-scoped          |
+| Mixed, Secret scanning    | `false`              | Ref-scoped          |
+| Release                   | `false`              | Workflow-scoped     |
+| Reusable                  | `true`               | Ref-scoped          |
 
-If an existing concurrency group is present but uses a different `group:` expression than `${{ github.workflow }}-${{ github.ref }}`, flag it for user review. Do not overwrite non-standard concurrency groups automatically.
+If an existing concurrency group is present but uses a different `group:` expression than the expected pattern for that classification, flag it for user review. Do not overwrite non-standard concurrency groups automatically.
 
-If an existing concurrency group matches the standard pattern, check only whether `cancel-in-progress` needs updating.
+If an existing concurrency group matches the expected pattern for that classification, check only whether `cancel-in-progress` needs updating.
 
 #### timeout-minutes
 
@@ -172,7 +185,8 @@ Print a final summary:
 ## Edge Cases
 
 - **`paths:` already present**: Do not add `paths-ignore` (mutually exclusive in GitHub Actions). Note in the summary.
-- **Existing non-standard concurrency group**: Do not overwrite. Flag for the user to review manually.
+- **Existing non-standard concurrency group**: Do not overwrite. Flag for the user to review manually. The expected pattern depends on classification: workflow-scoped for Release, ref-scoped for all others.
+- **Tag-triggered workflows (Release)**: Use the workflow-scoped concurrency pattern (`${{ github.repository }}-${{ github.workflow }}`) instead of the ref-scoped pattern, because each tag produces a unique `github.ref` that never deduplicates. Always use `cancel-in-progress: false`.
 - **Mixed triggers (branches + tags on push)**: Do not add `paths-ignore` (cannot be scoped to branches only without splitting the workflow). Add concurrency with `cancel-in-progress: false` and `timeout-minutes` as normal.
 - **Already fully optimized**: Skip with a note that no changes are needed.
 - **Reusable workflows (`workflow_call:`)**: Skip `paths-ignore`. Add concurrency and timeouts normally.
