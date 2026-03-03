@@ -45,6 +45,7 @@ Add an edge case entry for Release workflows:
 ### 3. Bump the plugin version
 
 **Files**:
+
 - `plugins/optimize-runner-usage/.claude-plugin/plugin.json` (line 12): `1.0.0` -> `1.1.0`
 - `.claude-plugin/marketplace.json`: update the `optimize-runner-usage` entry version to `1.1.0`
 
@@ -56,4 +57,4 @@ This is a minor bump: new capability (tag-scoped concurrency detection), no brea
    - Release workflows get `group: ${{ github.repository }}-${{ github.workflow }}` with `cancel-in-progress: false`
    - All other classifications still get `group: ${{ github.workflow }}-${{ github.ref }}` with their existing `cancel-in-progress` values
    - The existing concurrency group check recognizes both patterns as standard (per classification)
-2. Run the `check-versions` skill to verify version consistency between `plugin.json` and `marketplace.json`
+1. Run the `check-versions` skill to verify version consistency between `plugin.json` and `marketplace.json`

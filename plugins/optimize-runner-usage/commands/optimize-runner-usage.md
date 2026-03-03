@@ -101,7 +101,7 @@ Two concurrency group patterns are used, depending on classification:
 ```yaml
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true  # or false, per table below
+  cancel-in-progress: true # or false, per table below
 ```
 
 **Tag-scoped pattern** (Release only):
@@ -116,12 +116,12 @@ Release workflows use the tag-scoped pattern because each tag push produces a un
 
 `cancel-in-progress` values by classification:
 
-| Classification                  | `cancel-in-progress` | Concurrency pattern |
-| ------------------------------- | -------------------- | ------------------- |
-| CI, Scheduled, Broad push       | `true`               | Ref-scoped          |
-| Mixed, Secret scanning          | `false`              | Ref-scoped          |
-| Release                         | `false`              | Tag-scoped          |
-| Reusable                        | `true`               | Ref-scoped          |
+| Classification            | `cancel-in-progress` | Concurrency pattern |
+| ------------------------- | -------------------- | ------------------- |
+| CI, Scheduled, Broad push | `true`               | Ref-scoped          |
+| Mixed, Secret scanning    | `false`              | Ref-scoped          |
+| Release                   | `false`              | Tag-scoped          |
+| Reusable                  | `true`               | Ref-scoped          |
 
 If an existing concurrency group is present but uses a different `group:` expression than the expected pattern for that classification, flag it for user review. Do not overwrite non-standard concurrency groups automatically.
 
