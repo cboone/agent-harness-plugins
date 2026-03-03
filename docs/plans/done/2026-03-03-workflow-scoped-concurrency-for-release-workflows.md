@@ -1,4 +1,4 @@
-# Tag-Scoped Concurrency for Release Workflows
+# Workflow-Scoped Concurrency for Release Workflows
 
 ## Context
 
@@ -22,15 +22,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true  # or false, per classification table
 
-# Tag-scoped pattern (Release only):
+# Workflow-scoped pattern (Release only):
 concurrency:
   group: ${{ github.repository }}-${{ github.workflow }}
   cancel-in-progress: false
 ```
 
-Explain why: each tag push has a unique `github.ref`, so including it in the group never deduplicates. The tag-scoped pattern serializes all runs of the same release workflow.
+Explain why: each tag push has a unique `github.ref`, so including it in the group never deduplicates. The workflow-scoped pattern serializes all runs of the same release workflow.
 
-**b)** Update the `cancel-in-progress` table to note that Release workflows use the tag-scoped pattern. The value remains `false` (unchanged).
+**b)** Update the `cancel-in-progress` table to note that Release workflows use the workflow-scoped pattern. The value remains `false` (unchanged).
 
 **c)** Update the "existing concurrency group" check (lines 113-115): the command should recognize both patterns as "standard" depending on classification. For Release workflows, the expected standard is `${{ github.repository }}-${{ github.workflow }}`. For all others, it remains `${{ github.workflow }}-${{ github.ref }}`. If an existing group matches the expected standard for that classification, check only `cancel-in-progress`. If it matches neither, flag for manual review.
 
@@ -49,7 +49,7 @@ Add an edge case entry for Release workflows:
 - `plugins/optimize-runner-usage/.claude-plugin/plugin.json` (line 12): `1.0.0` -> `1.1.0`
 - `.claude-plugin/marketplace.json`: update the `optimize-runner-usage` entry version to `1.1.0`
 
-This is a minor bump: new capability (tag-scoped concurrency detection), no breaking changes.
+This is a minor bump: new capability (workflow-scoped concurrency detection), no breaking changes.
 
 ## Verification
 
