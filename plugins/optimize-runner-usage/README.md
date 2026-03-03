@@ -19,7 +19,7 @@ Then select **Optimize Runner Usage** from the available plugins.
 
 Scans all workflow files in `.github/workflows/`, classifies each one by its trigger pattern (CI, Release, Secret scanning, etc.), and adds missing optimizations:
 
-- **paths-ignore**: Skip CI runs for documentation-only changes (Markdown, docs, LICENSE, agent config files)
+- **paths-ignore**: Skip CI runs for documentation-only changes (root-level `*.md`, `docs/**`, LICENSE, agent config files)
 - **Concurrency groups**: Cancel in-progress runs when new commits are pushed to the same branch
 - **timeout-minutes**: Prevent runaway jobs from consuming unlimited minutes
 

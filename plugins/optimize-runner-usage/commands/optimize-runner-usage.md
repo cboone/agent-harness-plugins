@@ -27,17 +27,26 @@ If no workflow files are found, abort with:
 
 Read each workflow file and classify it based on its `on:` triggers:
 
-| Trigger pattern                                             | Classification  |
-| ----------------------------------------------------------- | --------------- |
-| `push:` with `branches:` and/or `pull_request:`             | CI              |
-| `push:` with `tags:` only (no `branches:`)                  | Release         |
-| `push:` with both `branches:` and `tags:`                   | Mixed           |
-| `schedule:` / `workflow_dispatch:` only                     | Scheduled       |
-| Bare `push:` with no filters                                | Broad push      |
-| Name contains "gitleaks", "trufflehog", "secret", or "scan" | Secret scanning |
-| `workflow_call:` trigger                                    | Reusable        |
+| Trigger pattern                                                  | Classification  |
+| ---------------------------------------------------------------- | --------------- |
+| `pull_request:` (any configuration)                              | CI              |
+| `push:` with `branches:` (optionally plus `pull_request:`)      | CI              |
+| `push:` with `tags:` only (no `branches:` or `pull_request:`)   | Release         |
+| `push:` with both `branches:` and `tags:`                        | Mixed           |
+| `schedule:` / `workflow_dispatch:` only                          | Scheduled       |
+| Bare `push:` with no filters                                     | Broad push      |
+| Workflow name or filename contains secret scanning keyword       | Secret scanning |
+| `workflow_call:` trigger                                         | Reusable        |
 
-Secret scanning is a subset of Broad push: if a workflow has a bare `push:` and its name matches one of the secret scanning keywords, classify it as Secret scanning rather than Broad push.
+Secret scanning keywords: "gitleaks", "trufflehog", "secret", "scan" (case-insensitive).
+
+Secret scanning is a subset of Broad push: if a workflow has a bare `push:` and matches a secret scanning keyword, classify it as Secret scanning rather than Broad push.
+
+For the secret scanning keyword check, inspect in this order:
+
+1. The workflow-level `name:` field (if present)
+1. The workflow filename (without directory path) as a fallback
+1. Optionally, job-level `name:` values as additional signals
 
 Mixed workflows (both `branches:` and `tags:` on push) are treated as CI for `paths-ignore` eligibility and Release for concurrency (`cancel-in-progress: false`).
 
@@ -130,7 +139,7 @@ Use `+` for additions, `skip` for not applicable, and a checkmark or note for al
 Use the Edit tool to apply changes. Order within each file:
 
 1. **paths-ignore** first (under each eligible trigger)
-1. **Concurrency group** second (top-level, after the `on:` block and before `permissions:` or `jobs:`)
+1. **Concurrency group** second (top-level, after the `on:` block and before the next top-level key)
 1. **timeout-minutes** third (on each job, after `runs-on:`)
 
 Preserve existing YAML structure, indentation, and comments. Do not reformat or reorder existing content.
