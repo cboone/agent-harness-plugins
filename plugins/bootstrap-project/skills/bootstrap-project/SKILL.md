@@ -53,6 +53,7 @@ Check for files and directories that indicate what is already set up:
 | Linter config files              | Linters exist           | `setup-linters` / `scaffold-go-*`             |
 | `tests/scrut/`                   | Scrut tests exist       | `add-scrut-cli-tests`                         |
 | `install.sh` or `Formula/`       | Installers exist        | `setup-installers`                            |
+| `CONTRIBUTING.md`                | Community files exist   | `add-community-files`                         |
 
 ### 3. Build the Plan
 
@@ -75,6 +76,7 @@ Execution order (dependencies flow downward):
 1. `setup-linters` (cross-language tools, or full setup if no Go scaffolder ran)
 1. `setup-gitleaks` (secret scanning)
 1. `add-goreleaser-homebrew` (if Go CLI and not already covered by step 2)
+1. `add-community-files` (community files: CONTRIBUTING, CoC, SECURITY, PR template)
 1. `setup-installers` (if CLI project)
 1. `add-scrut-cli-tests` (if CLI project)
 
@@ -101,8 +103,9 @@ Example output:
 | 4   | setup-linters            | Scoped down    | Cross-language tools only (Prettier, etc.)  |
 | 5   | setup-gitleaks           | Will run       | Gitleaks secret scanning workflow           |
 | 6   | add-goreleaser-homebrew  | Skipped        | Covered by scaffold-go-cli                  |
-| 7   | setup-installers         | Will run       | Homebrew formula, install.sh                |
-| 8   | add-scrut-cli-tests      | Will run       | Scrut CLI integration tests                 |
+| 7   | add-community-files      | Will run       | CONTRIBUTING, CoC, SECURITY, PR template    |
+| 8   | setup-installers         | Will run       | Homebrew formula, install.sh                |
+| 9   | add-scrut-cli-tests      | Will run       | Scrut CLI integration tests                 |
 ```
 
 Ask the user to confirm the plan. They may:
@@ -117,6 +120,7 @@ Wait for explicit approval before proceeding.
 The tools referenced in this plan are a mix of **skills** and **commands**. They require different invocation methods:
 
 - **Skills** (have a `skills/` directory): Invoke using the Skill tool.
+  - `add-community-files`
   - `setup-linters`
 - **Commands** (have a `commands/` directory): Read the command's Markdown file from its plugin directory using the Read tool, then follow the workflow instructions in that file directly.
   - `scaffold-new-repo` (read `plugins/scaffold-new-repo/commands/scaffold-new-repo.md`)

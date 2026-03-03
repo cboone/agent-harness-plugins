@@ -219,6 +219,7 @@ Print a summary of what was created:
 - Remind the user to:
   - Add subcommands under `cmd/` as the CLI grows
   - Run `make help` to see available Makefile targets
+  - Run `/add-community-files` to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, and a PR template
 - If `HOMEBREW_TAP_TOKEN` setup was deferred in step 19: remind the user to add it as a repository secret before the first release (see "Reference: HOMEBREW_TAP_TOKEN Setup")
 
 ## Error Handling
