@@ -189,12 +189,17 @@ OWNER=$(gh repo view --json owner -q .owner.login)
 gh repo view "${OWNER}/homebrew-tap" --json name -q .name 2>/dev/null
 ```
 
-**If the tap repo exists**, offer to create an issue there with the formula and setup instructions. Write the issue body to a temp file and use `gh issue create`:
+**If the tap repo exists**, offer to create an issue there with the formula and setup instructions. Write the issue body to a temp file (using `mktemp`) and use `gh issue create`:
 
 ```bash
+tmp_issue_body="$(mktemp)"
+trap 'rm -f "${tmp_issue_body}"' EXIT
+
+# Write the issue body to "${tmp_issue_body}" here.
+
 gh issue create --repo "${OWNER}/homebrew-tap" \
   --title "Add PROJECT-NAME formula" \
-  --body-file /tmp/homebrew-formula-issue.md
+  --body-file "${tmp_issue_body}"
 ```
 
 The issue body should contain:
@@ -376,7 +381,7 @@ After creating install.sh, check if `.prettierignore` exists. If it does and doe
 
 ```bash
 if [ -f .prettierignore ]; then
-  grep -q '^\*\.sh$' .prettierignore || echo '*.sh' >> .prettierignore
+  grep -q '^\*\.sh$' .prettierignore || printf '\n*.sh\n' >> .prettierignore
 fi
 ```
 
