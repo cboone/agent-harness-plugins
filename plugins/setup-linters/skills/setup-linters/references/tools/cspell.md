@@ -127,4 +127,4 @@ For monorepos with different terminology per package:
 - Built-in dictionaries cover common programming languages, frameworks, and technical terms. Most valid technical words are already recognized.
 - cspell does not conflict with Prettier or any other formatter.
 - For non-Node projects where Node and npm are already available, `npx cspell .` works without adding cspell as a project dependency.
-- The `addWords: true` option on dictionary definitions marks the word list file as writeable by tools that support adding words (for example, the cspell VS Code extension or CLI add-words workflows).
+- The `addWords: true` option on dictionary definitions marks the word list file as writable by tools that support adding words (for example, the cspell VS Code extension or CLI add-words workflows).
