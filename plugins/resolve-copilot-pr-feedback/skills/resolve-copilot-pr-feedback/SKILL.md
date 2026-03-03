@@ -188,13 +188,23 @@ bash resolve-copilot-threads resolve THREAD_ID
 **CRITICAL: Always use `--body-file` to pass reply bodies.** Write the response to a temp file first using the Write tool, then reference it with `--body-file`. This keeps the Bash command short and avoids permission prompts from long inline strings.
 
 ```bash
-# Step 1: Write the response body using the Write tool (NOT shown here as bash)
-# Step 2: Pass it to the script:
-bash resolve-copilot-threads reply THREAD_ID --body-file /tmp/copilot-reply.md
+# Step 1: Generate a unique tmpfile path:
+mktemp /tmp/copilot-reply-XXXXXX.md
+# Returns a unique path, e.g.: /tmp/copilot-reply-r7s8t9.md
 
-# Reply and resolve in one step:
-bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file /tmp/copilot-reply.md
+# Step 2: Write the response body to TMPFILE using the Write tool (not shown here as bash)
+
+# Step 3: Pass TMPFILE to the script:
+bash resolve-copilot-threads reply THREAD_ID --body-file TMPFILE
+
+# Or reply and resolve in one step:
+bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file TMPFILE
+
+# Step 4: Clean up:
+rm -f TMPFILE
 ```
+
+Replace `TMPFILE` with the actual path returned by `mktemp`.
 
 **NEVER pass the reply body inline** (e.g., via `echo "..." |` or heredocs). Always use the Write tool + `--body-file` pattern.
 
@@ -266,7 +276,7 @@ This step prevents CI failures from lint issues introduced while resolving feedb
 
 ## Reply Templates
 
-Write these to `/tmp/copilot-reply.md` using the Write tool, then pass via `--body-file`.
+First, generate a unique tmpfile path with `mktemp /tmp/copilot-reply-XXXXXX.md`. Write these to the returned path using the Write tool, then pass via `--body-file`. Clean up the tmpfile after each reply operation.
 
 **For outdated comments:**
 
