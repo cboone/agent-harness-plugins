@@ -350,14 +350,14 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
-      "description": "Set up installer and distribution methods for projects: Homebrew tap, shell install script, and go install compatibility.",
+      "description": "Set up installer and distribution methods for Go, Swift, and Rust projects: Homebrew tap, shell install script, go/cargo install, and release workflow.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["distribution", "go", "golang", "homebrew", "install"],
+      "keywords": ["cargo", "distribution", "github-actions", "go", "golang", "homebrew", "install", "release", "rust", "swift"],
       "license": "MIT",
       "name": "setup-installers",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-installers",
-      "version": "1.1.0"
+      "version": "1.3.0"
     },
     {
       "author": {
