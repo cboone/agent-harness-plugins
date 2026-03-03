@@ -4,10 +4,10 @@
   },
   "description": "Detect project linters and formatters, run them with auto-fix, resolve remaining issues, then commit and push the fixes.",
   "homepage": "https://github.com/cboone/cboone-cc-plugins",
-  "keywords": ["eslint", "formatting", "linting", "prettier", "shellcheck", "shfmt"],
+  "keywords": ["cspell", "eslint", "formatting", "linting", "prettier", "shellcheck", "shfmt"],
   "license": "MIT",
   "name": "lint-and-fix",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "skills": "./skills",
-  "version": "1.2.1"
+  "version": "1.3.0"
 }

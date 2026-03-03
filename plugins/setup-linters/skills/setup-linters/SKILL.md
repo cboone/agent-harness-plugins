@@ -69,6 +69,7 @@ Check for existing linter configs using these patterns (aligned with the `lint-a
 | `.hadolint.yaml`, `.hadolint.yml`                                  | Hadolint      |
 | `.yamllint.yml`, `.yamllint.yaml`                                  | yamllint      |
 | `taplo.toml`, `.taplo.toml`                                        | Taplo         |
+| `cspell.json`, `.cspell.json`, `cspell.config.*`                   | cspell        |
 
 **CI workflow scanning**: Also scan `.github/workflows/*.yml` for tools running without config files. For example, a CI step like `shellcheck -S warning scripts/*` means ShellCheck is already in use even without a `.shellcheckrc`. Mark these tools as "Partial" (running in CI but missing local config). A partial tool should still appear in recommendations, but suggest adding the config file for local/CI parity rather than a full setup.
 
@@ -89,6 +90,7 @@ Based on detected languages and file types, recommend the appropriate tool stack
   - **Actionlint** when `.github/workflows/` detected
   - **Taplo** when `*.toml` files detected (beyond `Cargo.toml`)
   - **yamllint** when many YAML files detected
+  - **cspell** as a cross-language spell checker (for all projects)
 
 Read the appropriate reference files for details on each tool.
 
@@ -153,6 +155,7 @@ If a CI workflow already exists, offer to add lint steps to it rather than creat
 | swiftformat   | `brew install swiftformat` (macOS runner)                                 |
 | hadolint      | `hadolint/hadolint-action@v3.1.0`                                         |
 | actionlint    | `raven-actions/actionlint@v2`                                             |
+| cspell        | `streetsidesoftware/cspell-action@v6`                                     |
 
 ### 9. Run Initial Lint (Optional)
 

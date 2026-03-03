@@ -198,12 +198,12 @@
       "category": "code-quality",
       "description": "Detect project linters and formatters, run them with auto-fix, resolve remaining issues, then commit and push the fixes.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["eslint", "formatting", "linting", "prettier", "shellcheck", "shfmt"],
+      "keywords": ["cspell", "eslint", "formatting", "linting", "prettier", "shellcheck", "shfmt"],
       "license": "MIT",
       "name": "lint-and-fix",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/lint-and-fix",
-      "version": "1.2.1"
+      "version": "1.3.0"
     },
     {
       "author": {
@@ -366,12 +366,12 @@
       "category": "code-quality",
       "description": "Detect project languages, recommend appropriate linters and formatters, install them, and generate config files.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["eslint", "formatting", "linting", "prettier", "ruff", "setup"],
+      "keywords": ["cspell", "eslint", "formatting", "linting", "prettier", "ruff", "setup"],
       "license": "MIT",
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.3.1"
+      "version": "1.4.0"
     },
     {
       "author": {

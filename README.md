@@ -178,7 +178,7 @@ Best practices for handling user-provided secrets in CLI tools. Covers secure in
 
 #### Lint and Fix
 
-Detect available linters and formatters in the project, run them with auto-fix, and resolve remaining issues. Supports ESLint, Prettier, markdownlint, ShellCheck, shfmt, Knip, and project-specific lint scripts.
+Detect available linters and formatters in the project, run them with auto-fix, and resolve remaining issues. Supports ESLint, Prettier, markdownlint, ShellCheck, shfmt, Knip, cspell, and project-specific lint scripts.
 
 > **Trigger:** `/lint-and-fix`
 > **Details:** [README](./plugins/lint-and-fix/README.md)
@@ -213,7 +213,7 @@ Bash style conventions for creating and editing shell scripts. Activates automat
 
 #### Setup Linters
 
-Detect project languages and file types, recommend appropriate linters and formatters, install them, and generate config files. Supports JavaScript/TypeScript (ESLint + Prettier), Go, Python, Rust, Ruby, Shell, and cross-language tools (EditorConfig, markdownlint, Stylelint, Hadolint, Actionlint, and more).
+Detect project languages and file types, recommend appropriate linters and formatters, install them, and generate config files. Supports JavaScript/TypeScript (ESLint + Prettier), Go, Python, Rust, Ruby, Shell, and cross-language tools (EditorConfig, markdownlint, cspell, Stylelint, Hadolint, Actionlint, and more).
 
 > **Trigger:** `/setup-linters`
 > **Details:** [README](./plugins/setup-linters/README.md)

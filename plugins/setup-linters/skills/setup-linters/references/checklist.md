@@ -27,6 +27,7 @@ Quick-reference lookup table for the setup-linters skill. Each row maps a projec
 | Actionlint        | GitHub Actions workflows        | When `.github/workflows/` detected                            | `brew install actionlint`                            | _(none needed)_                       | `./tools/actionlint.md`   |
 | Taplo             | TOML files                      | When `*.toml` files detected                                  | `brew install taplo`                                 | `taplo.toml` (optional)               | `./tools/taplo.md`        |
 | yamllint          | YAML files                      | When project has many YAML files                              | `uv tool install yamllint`                           | `.yamllint.yml`                       | `./tools/yamllint.md`     |
+| cspell            | Spelling in code/docs           | All projects                                                  | `npm install -D cspell`                              | `cspell.json`                         | `./tools/cspell.md`       |
 
 ## CI Integration
 
