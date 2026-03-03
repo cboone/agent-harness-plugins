@@ -8,13 +8,13 @@ The `setup-installers` command is Go-only. When used on a Swift project (pbcopy2
 
 ## Files to Modify
 
-| File | What Changes |
-|------|-------------|
+| File                                                    | What Changes                                                                                 |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `plugins/setup-installers/commands/setup-installers.md` | All five issues: multi-language detection, release workflow, tap issue, ShellCheck, Prettier |
-| `plugins/setup-installers/.claude-plugin/plugin.json` | Version 1.1.0 to 1.3.0, updated description and keywords |
-| `.claude-plugin/marketplace.json` | Matching version, description, keywords for setup-installers entry |
-| `plugins/setup-installers/README.md` | Rewrite for multi-language support |
-| `README.md` (root) | Update setup-installers description line |
+| `plugins/setup-installers/.claude-plugin/plugin.json`   | Version 1.1.0 to 1.3.0, updated description and keywords                                     |
+| `.claude-plugin/marketplace.json`                       | Matching version, description, keywords for setup-installers entry                           |
+| `plugins/setup-installers/README.md`                    | Rewrite for multi-language support                                                           |
+| `README.md` (root)                                      | Update setup-installers description line                                                     |
 
 ## Implementation
 
@@ -25,11 +25,11 @@ In `setup-installers.md`, Section 6 (Set Up Shell Install Script):
 **ShellCheck (#134)**:
 
 1. Add `# shellcheck disable=SC2016` before the PATH output line in the install.sh template (line 229)
-2. Add a paragraph after `chmod +x install.sh` instructing to run `shellcheck install.sh` if available, fix or suppress any findings, and note if ShellCheck is not installed
+1. Add a paragraph after `chmod +x install.sh` instructing to run `shellcheck install.sh` if available, fix or suppress any findings, and note if ShellCheck is not installed
 
 **Prettier (#133)**:
 
-3. Add a paragraph after the ShellCheck step: if `.prettierignore` exists and does not already contain `*.sh`, append `*.sh` to it. Skip if no `.prettierignore` exists.
+1. Add a paragraph after the ShellCheck step: if `.prettierignore` exists and does not already contain `*.sh`, append `*.sh` to it. Skip if no `.prettierignore` exists.
 
 ### Commit 2: Multi-language detection and templates (#132)
 
@@ -43,11 +43,11 @@ This is the foundational change, touching most sections of `setup-installers.md`
 
 **Section 1 (Detect Project Type)**: Replace Go-only detection with a language detection table:
 
-| Marker | Language | Notes |
-|--------|----------|-------|
-| `go.mod` | Go | Also check for `.goreleaser.yml`/`.goreleaser.yaml` |
-| `Package.swift` | Swift | Check for macOS-only constraints (AppKit/Cocoa imports, `.macOS` platform) |
-| `Cargo.toml` | Rust | Check for `[[bin]]` or `src/main.rs` to confirm binary crate |
+| Marker          | Language | Notes                                                                      |
+| --------------- | -------- | -------------------------------------------------------------------------- |
+| `go.mod`        | Go       | Also check for `.goreleaser.yml`/`.goreleaser.yaml`                        |
+| `Package.swift` | Swift    | Check for macOS-only constraints (AppKit/Cocoa imports, `.macOS` platform) |
+| `Cargo.toml`    | Rust     | Check for `[[bin]]` or `src/main.rs` to confirm binary crate               |
 
 If none found, only the shell install script is applicable as a generic binary distribution method.
 
@@ -55,12 +55,12 @@ If none found, only the shell install script is applicable as a generic binary d
 
 **Section 3 (Select Installer Types)**: Add applicability table:
 
-| Installer | Go | Swift | Rust | Other |
-|-----------|-----|-------|------|-------|
-| Homebrew | Yes | Yes | Yes | No |
-| Shell install script | Yes | Yes | Yes | Yes |
-| go install | Yes | No | No | No |
-| cargo install | No | No | Yes | No |
+| Installer            | Go  | Swift | Rust | Other |
+| -------------------- | --- | ----- | ---- | ----- |
+| Homebrew             | Yes | Yes   | Yes  | No    |
+| Shell install script | Yes | Yes   | Yes  | Yes   |
+| go install           | Yes | No    | No   | No    |
+| cargo install        | No  | No    | Yes  | No    |
 
 **Section 4 (Gather Project Info)**: Expand binary name inference per language (Swift: Package.swift target; Rust: Cargo.toml `[[bin]]` or `package.name`).
 
@@ -78,7 +78,7 @@ If none found, only the shell install script is applicable as a generic binary d
 
 Add a new section between current Sections 7 and 8 (becomes new Section 8, renumbering subsequent sections to 9 and 10).
 
-**Section 8: Set Up Release Workflow**
+#### Section 8: Set Up Release Workflow
 
 - If GoReleaser exists: skip, note in summary
 - If `.github/workflows/release.yml` exists: present contents and ask to overwrite, skip, or merge
@@ -108,11 +108,11 @@ Add to Section 5 (Set Up Homebrew), at the end of the standalone formula logic.
 **If tap repo exists**: Offer to create an issue there using `gh issue create --repo OWNER/homebrew-tap`. Issue body contains:
 
 1. Project description
-2. Complete formula content in a Ruby code block
-3. Tarball naming convention
-4. SHA256 computation instructions (download release tarballs, run `shasum -a 256`)
-5. Note about waiting for the first tagged release
-6. For macOS-only projects: note the `depends_on :macos` requirement
+1. Complete formula content in a Ruby code block
+1. Tarball naming convention
+1. SHA256 computation instructions (download release tarballs, run `shasum -a 256`)
+1. Note about waiting for the first tagged release
+1. For macOS-only projects: note the `depends_on :macos` requirement
 
 **If tap repo does not exist**: Suggest creating it with `gh repo create OWNER/homebrew-tap --public`, then offer to create the issue.
 
@@ -145,7 +145,7 @@ Update the summary to note whether a tap issue was created, with the issue URL.
 ## Verification
 
 1. Read the final `setup-installers.md` end-to-end and confirm all five issues are addressed
-2. Run `check-versions` skill to verify plugin.json and marketplace.json versions match
-3. Verify section numbering is sequential and all cross-references are correct
-4. Confirm tarball naming is consistent across the release workflow templates, install.sh template, and Homebrew formula templates
-5. Check that the root README entry accurately reflects the new capabilities
+1. Run `check-versions` skill to verify plugin.json and marketplace.json versions match
+1. Verify section numbering is sequential and all cross-references are correct
+1. Confirm tarball naming is consistent across the release workflow templates, install.sh template, and Homebrew formula templates
+1. Check that the root README entry accurately reflects the new capabilities

@@ -21,11 +21,11 @@ Installer types:
 
 Scan the project to determine its language and structure:
 
-| Marker | Language | Notes |
-| --- | --- | --- |
-| `go.mod` | Go | Also check for `.goreleaser.yml`/`.goreleaser.yaml` |
-| `Package.swift` | Swift | Check for macOS-only constraints |
-| `Cargo.toml` | Rust | Check for binary targets |
+| Marker          | Language | Notes                                               |
+| --------------- | -------- | --------------------------------------------------- |
+| `go.mod`        | Go       | Also check for `.goreleaser.yml`/`.goreleaser.yaml` |
+| `Package.swift` | Swift    | Check for macOS-only constraints                    |
+| `Cargo.toml`    | Rust     | Check for binary targets                            |
 
 Additional checks regardless of language:
 
@@ -37,8 +37,8 @@ Additional checks regardless of language:
 **Swift platform detection**: Check for macOS-only constraints:
 
 1. Grep source files for AppKit, Cocoa, or macOS-specific framework imports
-2. Check `Package.swift` for `.macOS` platform requirements without `.linux` targets
-3. If inconclusive, ask the user whether the project is macOS-only or cross-platform
+1. Check `Package.swift` for `.macOS` platform requirements without `.linux` targets
+1. If inconclusive, ask the user whether the project is macOS-only or cross-platform
 
 **Rust binary detection**: Check `Cargo.toml` for `[[bin]]` sections or a `src/main.rs` file to confirm this is a binary crate (not a library).
 
@@ -62,12 +62,12 @@ If `$ARGUMENTS` is provided (e.g., `homebrew`, `shell`, `go-install`, `cargo-ins
 
 Otherwise, ask the user which installer types to set up. Present applicable options based on the detected language:
 
-| Installer | Go | Swift | Rust | Other |
-| --- | --- | --- | --- | --- |
-| Homebrew | Yes | Yes | Yes | No |
-| Shell install script | Yes | Yes | Yes | Yes |
-| go install | Yes | No | No | No |
-| cargo install | No | No | Yes | No |
+| Installer            | Go  | Swift | Rust | Other |
+| -------------------- | --- | ----- | ---- | ----- |
+| Homebrew             | Yes | Yes   | Yes  | No    |
+| Shell install script | Yes | Yes   | Yes  | Yes   |
+| go install           | Yes | No    | No   | No    |
+| cargo install        | No  | No    | Yes  | No    |
 
 Include notes about which installers are already detected and which are not applicable to the project type.
 
@@ -205,14 +205,14 @@ gh issue create --repo "${OWNER}/homebrew-tap" \
 The issue body should contain:
 
 1. A brief description of the project
-2. The complete formula content in a Ruby code block
-3. The tarball naming convention used by the release workflow (e.g., `PROJECT-NAME-VERSION-OS-ARCH.tar.gz`)
-4. Instructions for computing SHA256 values after the first release:
+1. The complete formula content in a Ruby code block
+1. The tarball naming convention used by the release workflow (e.g., `PROJECT-NAME-VERSION-OS-ARCH.tar.gz`)
+1. Instructions for computing SHA256 values after the first release:
    - Download the release tarballs from the GitHub Release page
    - Run `shasum -a 256 *.tar.gz`
    - Replace the placeholder `SHA256_FOR_*` values in the formula
-5. A note that this formula should be added after the first tagged release produces artifacts
-6. For macOS-only projects: note the `depends_on :macos` requirement
+1. A note that this formula should be added after the first tagged release produces artifacts
+1. For macOS-only projects: note the `depends_on :macos` requirement
 
 **If the tap repo does not exist**, tell the user and suggest creating it:
 

@@ -17,11 +17,11 @@ Then select **Setup Installers** from the available plugins.
 
 ## Supported Languages
 
-| Language | Homebrew | Shell Script | go install | cargo install | Release Workflow |
-| --- | --- | --- | --- | --- | --- |
-| Go | Yes | Yes | Yes | - | Yes (unless GoReleaser) |
-| Swift | Yes | Yes | - | - | Yes |
-| Rust | Yes | Yes | - | Yes | Yes |
+| Language | Homebrew | Shell Script | go install | cargo install | Release Workflow        |
+| -------- | -------- | ------------ | ---------- | ------------- | ----------------------- |
+| Go       | Yes      | Yes          | Yes        | -             | Yes (unless GoReleaser) |
+| Swift    | Yes      | Yes          | -          | -             | Yes                     |
+| Rust     | Yes      | Yes          | -          | Yes           | Yes                     |
 
 ## What It Does
 
