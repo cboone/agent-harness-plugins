@@ -16,7 +16,7 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 **NEVER leave comments directly on GitHub PRs.** This is strictly forbidden:
 
 - `gh pr review --comment` - FORBIDDEN
-- `gh pr comment` - FORBIDDEN
+- `gh pr comment` - FORBIDDEN (except the single summary comment in step 7)
 - Any GraphQL mutation that creates new reviews or PR-level comments - FORBIDDEN
 - Responding to human review comments - FORBIDDEN
 
@@ -28,6 +28,8 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 - Reply to EXISTING Copilot threads using the script's `reply` command
 - Resolve Copilot threads using the script's `resolve` command
 - Reply and resolve in one step using the script's `reply-and-resolve` command
+
+**Single exception:** Step 7 uses `gh pr comment` with `--body-file` to post a one-time summary of code changes made while resolving feedback. This is the ONLY permitted use of `gh pr comment` in this skill.
 
 ## Script Setup
 
@@ -274,6 +276,51 @@ This step prevents CI failures from lint issues introduced while resolving feedb
 
 1. Report summary of actions taken
 
+### 7. Post PR Summary Comment
+
+**Condition:** Only post if at least one thread was categorized as Valid or Incorrect and resulted in code changes. If all threads were Nitpick, Outdated, or Deferred, skip this step.
+
+Post a summary comment to the PR so reviewers can see what changed at a glance.
+
+**Comment format:**
+
+```markdown
+## Copilot Feedback Resolved
+
+Addressed N Copilot review comment(s) with code changes:
+
+| File            | Category  | Action                                            |
+| --------------- | --------- | ------------------------------------------------- |
+| `src/foo.ts:42` | Valid     | Fixed null check                                  |
+| `lib/util.js:8` | Incorrect | Updated error handling; added Copilot instruction |
+
+M additional comment(s) resolved without code changes (nitpicks, outdated).
+```
+
+- Table includes only threads that resulted in code changes (Valid and Incorrect)
+- Count line for non-code-change threads shown only if any exist
+- Incorrect category notes Copilot instruction additions in the Action column
+- Thread IDs omitted (meaningless to human reviewers)
+
+**Mechanics:**
+
+```bash
+# Step 1: Generate a unique tmpfile path:
+mktemp /tmp/copilot-summary-XXXXXX
+
+# Step 2: Write comment body to TMPFILE using the Write tool (not shown here as bash)
+
+# Step 3: Post the comment:
+gh pr comment PR_NUMBER --body-file TMPFILE
+
+# Step 4: Clean up:
+rm -f TMPFILE
+```
+
+Replace `PR_NUMBER` and `TMPFILE` with actual values.
+
+If the comment fails, log the error but do not fail the workflow. Thread resolution and code changes are the primary deliverables; the summary comment is best-effort.
+
 ## Reply Templates
 
 First, generate a unique tmpfile path with `mktemp /tmp/copilot-reply-XXXXXX`. Write these to the returned path using the Write tool, then pass via `--body-file`. Clean up the tmpfile after each reply operation.
@@ -301,6 +348,7 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 1. **Linters and formatters pass** (via `lint-and-fix` skill, if any files were changed while addressing feedback)
 1. Re-fetch confirms empty array `[]` for all processed threads
 1. Output summary table (see format below)
+1. **If code changes were made**: PR summary comment posted via step 7
 
 ### Required Output: Thread Summary Table
 
@@ -330,4 +378,5 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 - API failures: Retry with proper auth
 - Thread ID issues: Use alternative queries
 - Delegation failures: Attempt simple fixes directly
+- Summary comment failures: Log the error but treat as non-fatal. Thread resolution and code changes are the primary deliverables.
 - Partial resolution is better than none

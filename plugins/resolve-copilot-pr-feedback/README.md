@@ -17,7 +17,7 @@ Then select **Resolve Copilot PR Feedback** from the available plugins.
 
 ## What It Does
 
-Fetches unresolved Copilot review threads via GraphQL, categorizes them (nitpick, outdated, incorrect, valid, deferred), resolves threads, and updates Copilot instruction files under `.github/` when Copilot feedback is incorrect. Helps you quickly triage automated suggestions after opening a PR.
+Fetches unresolved Copilot review threads via GraphQL, categorizes them (nitpick, outdated, incorrect, valid, deferred), resolves threads, and updates Copilot instruction files under `.github/` when Copilot feedback is incorrect. After resolving threads that required code changes, posts a summary comment to the PR so reviewers can see what changed at a glance. Helps you quickly triage automated suggestions after opening a PR.
 
 ## Usage
 
@@ -32,7 +32,7 @@ This skill runs custom scripts and git commands that trigger permission prompts.
 ```json
 {
   "permissions": {
-    "allow": ["Bash(bash */resolve-copilot-threads *)", "Bash(git push*)", "Bash(mktemp /tmp/copilot-reply-*)", "Bash(rm -f /tmp/copilot-reply-*)"]
+    "allow": ["Bash(bash */resolve-copilot-threads *)", "Bash(git push*)", "Bash(mktemp /tmp/copilot-reply-*)", "Bash(rm -f /tmp/copilot-reply-*)", "Bash(gh pr comment *)", "Bash(mktemp /tmp/copilot-summary-*)", "Bash(rm -f /tmp/copilot-summary-*)"]
   }
 }
 ```
