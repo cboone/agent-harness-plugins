@@ -327,6 +327,7 @@ GitHub Actions job template for running scrut CLI tests.
 test-scrut:
   name: Test CLI (Scrut)
   runs-on: RUNNER_OS
+  timeout-minutes: 15
   steps:
     - name: Checkout code
       uses: actions/checkout@v6

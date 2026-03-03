@@ -603,8 +603,28 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".editorconfig"
+      - ".claude/**"
+      - "**/CLAUDE.md"
+      - "**/AGENTS.md"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".editorconfig"
+      - ".claude/**"
+      - "**/CLAUDE.md"
+      - "**/AGENTS.md"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -613,6 +633,7 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -628,6 +649,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -646,6 +668,7 @@ jobs:
   vulncheck:
     name: Vulnerability check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -664,7 +687,8 @@ jobs:
 
 ### Notes
 
-- Triggers on pushes to main and on pull requests targeting main
+- `paths-ignore` skips CI for documentation and agent configuration changes; remove `*.md` if Markdown is source code (e.g., Scrut CLI tests in `tests/scrut/` are nested and NOT ignored)
+- Concurrency groups cancel in-progress runs when new commits are pushed to the same branch/PR
 - `permissions: contents: read` follows the principle of least privilege
 - Uses `go-version-file: go.mod` instead of pinning a Go version (stays current automatically)
 - Test, lint, and vulncheck are separate jobs so they run in parallel
@@ -684,12 +708,17 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -711,6 +740,7 @@ jobs:
 ### Notes
 
 - Triggers on version tags (`v*` matches `v1.0.0`, `v0.1.0-rc1`, etc.)
+- Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
 - `fetch-depth: 0` fetches full git history (required for GoReleaser changelog generation)
 - `version: "~> v2"` uses the latest GoReleaser v2.x release
 - `GITHUB_TOKEN` is provided automatically by GitHub Actions
