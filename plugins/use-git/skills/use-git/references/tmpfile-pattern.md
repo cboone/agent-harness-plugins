@@ -16,8 +16,8 @@ Use tmpfiles when passing long content to git or `gh` CLI commands. This keeps B
 Generate a unique path with `mktemp`:
 
 ```bash
-mktemp /tmp/gh-pr-body-XXXXXX.md
-# Returns a unique path, e.g.: /tmp/gh-pr-body-x4y5z6.md
+mktemp /tmp/gh-pr-body-XXXXXX
+# Returns a unique path, e.g.: /tmp/gh-pr-body-x4y5z6
 ```
 
 Use a descriptive prefix that reflects the purpose (`gh-pr-body`, `gh-issue-body`, `copilot-reply`, etc.). The `XXXXXX` in the template is replaced by `mktemp` with random characters. Always capture the returned path and use it in subsequent commands.
@@ -47,42 +47,42 @@ rm -f TMPFILE
 ### GitHub issue
 
 ```bash
-mktemp /tmp/gh-issue-body-XXXXXX.md
-# Returns: /tmp/gh-issue-body-a1b2c3.md
+mktemp /tmp/gh-issue-body-XXXXXX
+# Returns: /tmp/gh-issue-body-a1b2c3
 ```
 
 Write body content via the Write tool to the returned path, then:
 
 ```bash
-gh issue create --title "Fix login timeout" --body-file /tmp/gh-issue-body-a1b2c3.md --label "bug"
+gh issue create --title "Fix login timeout" --body-file /tmp/gh-issue-body-a1b2c3 --label "bug"
 ```
 
 ```bash
-rm -f /tmp/gh-issue-body-a1b2c3.md
+rm -f /tmp/gh-issue-body-a1b2c3
 ```
 
 ### Pull request
 
 ```bash
-mktemp /tmp/gh-pr-body-XXXXXX.md
-# Returns: /tmp/gh-pr-body-x4y5z6.md
+mktemp /tmp/gh-pr-body-XXXXXX
+# Returns: /tmp/gh-pr-body-x4y5z6
 ```
 
 Write PR body via the Write tool to the returned path, then:
 
 ```bash
-gh pr create --title "Add retry logic to API client" --body-file /tmp/gh-pr-body-x4y5z6.md
+gh pr create --title "Add retry logic to API client" --body-file /tmp/gh-pr-body-x4y5z6
 ```
 
 ```bash
-rm -f /tmp/gh-pr-body-x4y5z6.md
+rm -f /tmp/gh-pr-body-x4y5z6
 ```
 
 ### Review reply
 
 ```bash
-mktemp /tmp/copilot-reply-XXXXXX.md
-# Returns a unique path, e.g.: /tmp/copilot-reply-r7s8t9.md
+mktemp /tmp/copilot-reply-XXXXXX
+# Returns a unique path, e.g.: /tmp/copilot-reply-r7s8t9
 ```
 
 Write reply via the Write tool to the returned path, then pass to the reply command with `--body-file`.

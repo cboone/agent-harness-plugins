@@ -189,8 +189,8 @@ bash resolve-copilot-threads resolve THREAD_ID
 
 ```bash
 # Step 1: Generate a unique tmpfile path:
-mktemp /tmp/copilot-reply-XXXXXX.md
-# Returns a unique path, e.g.: /tmp/copilot-reply-r7s8t9.md
+mktemp /tmp/copilot-reply-XXXXXX
+# Returns a unique path, e.g.: /tmp/copilot-reply-r7s8t9
 
 # Step 2: Write the response body to TMPFILE using the Write tool (not shown here as bash)
 
@@ -276,7 +276,7 @@ This step prevents CI failures from lint issues introduced while resolving feedb
 
 ## Reply Templates
 
-First, generate a unique tmpfile path with `mktemp /tmp/copilot-reply-XXXXXX.md`. Write these to the returned path using the Write tool, then pass via `--body-file`. Clean up the tmpfile after each reply operation.
+First, generate a unique tmpfile path with `mktemp /tmp/copilot-reply-XXXXXX`. Write these to the returned path using the Write tool, then pass via `--body-file`. Clean up the tmpfile after each reply operation.
 
 **For outdated comments:**
 

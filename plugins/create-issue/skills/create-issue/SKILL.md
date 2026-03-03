@@ -42,8 +42,8 @@ If the user specifies a repository (e.g., "file an issue on org/repo"), use the 
 First, generate a unique temporary file path using `mktemp`:
 
 ```bash
-mktemp /tmp/gh-issue-body-XXXXXX.md
-# Returns a unique path, e.g.: /tmp/gh-issue-body-a1b2c3.md
+mktemp /tmp/gh-issue-body-XXXXXX
+# Returns a unique path, e.g.: /tmp/gh-issue-body-a1b2c3
 ```
 
 Then use the **Write** tool to write the full issue body in Markdown format to the exact path returned by `mktemp`. In the examples below, `TMPFILE` is a placeholder for that path.

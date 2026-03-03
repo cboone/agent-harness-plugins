@@ -248,8 +248,8 @@ If no connected issues were detected, omit the `## Closes` section entirely.
 First, generate a unique temporary file path using `mktemp`:
 
 ```bash
-mktemp /tmp/pr-body-XXXXXX.md
-# Returns a unique path, e.g.: /tmp/pr-body-x4y5z6.md
+mktemp /tmp/pr-body-XXXXXX
+# Returns a unique path, e.g.: /tmp/pr-body-x4y5z6
 ```
 
 Then use the **Write** tool to write the full PR body (Summary, Test plan, and Closes sections) to the exact path returned by `mktemp`. In the examples below, `TMPFILE` is a placeholder for that path.

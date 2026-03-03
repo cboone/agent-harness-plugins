@@ -32,7 +32,7 @@ This skill runs custom scripts and git commands that trigger permission prompts.
 ```json
 {
   "permissions": {
-    "allow": ["Bash(bash */resolve-copilot-threads *)", "Bash(git push*)", "Bash(mktemp /tmp/copilot-reply-*)", "Bash(rm -f /tmp/copilot-reply-*)"]
+    "allow": ["Bash(bash */resolve-copilot-threads *)", "Bash(git push*)", "Bash(mktemp /tmp/copilot-reply*)", "Bash(rm -f /tmp/copilot-reply*)"]
   }
 }
 ```
