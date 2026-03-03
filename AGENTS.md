@@ -201,12 +201,12 @@ cboone-cc-plugins/
     │   ├── README.md
     │   └── commands/
     │       └── setup-ci.md
-    ├── setup-gitleaks/             # Gitleaks secret scanning setup command
+    ├── setup-secret-scanning/      # Secret scanning setup command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
     │   └── commands/
-    │       └── setup-gitleaks.md
+    │       └── setup-secret-scanning.md
     ├── setup-installers/           # Installer/distribution setup command
     │   ├── .claude-plugin/
     │   │   └── plugin.json

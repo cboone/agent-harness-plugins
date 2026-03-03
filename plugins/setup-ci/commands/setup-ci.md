@@ -96,7 +96,7 @@ Print a summary of what was created or modified:
 
 - List every file created or modified
 - Suggest complementary plugins:
-  - `/setup-gitleaks` for secret scanning
+  - `/setup-secret-scanning` for secret scanning
   - `/setup-linters` for linter configuration (if no linter configs detected)
   - `/add-scrut-cli-tests` for CLI snapshot testing (if CLI project detected)
   - `/add-goreleaser-homebrew` for release automation (if Go project detected)
