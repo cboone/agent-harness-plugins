@@ -265,6 +265,13 @@ These steps can be added to any language workflow:
   run: pipx run yamllint .
 ```
 
+### cspell
+
+```yaml
+- name: cspell
+  uses: streetsidesoftware/cspell-action@v6
+```
+
 ## Combined Multi-Language Workflow
 
 For monorepos or projects with multiple languages, combine steps into a single workflow with separate jobs:

@@ -17,7 +17,7 @@ Then select **Lint and Fix** from the available plugins.
 
 ## What It Does
 
-Checks for configuration files to detect ESLint, Prettier, markdownlint, ShellCheck, shfmt, Knip, and project-specific lint scripts. Runs each detected tool with auto-fix flags, reports what was fixed and what remains, attempts to manually resolve remaining issues, then commits and pushes the fixes.
+Checks for configuration files to detect ESLint, Prettier, markdownlint, ShellCheck, shfmt, Knip, cspell, and project-specific lint scripts. Runs each detected tool with auto-fix flags, reports what was fixed and what remains, attempts to manually resolve remaining issues, then commits and pushes the fixes.
 
 ## Usage
 
@@ -43,7 +43,7 @@ This skill runs linters, formatters, and git commands that trigger permission pr
 ```json
 {
   "permissions": {
-    "allow": ["Bash(npx eslint *)", "Bash(npx prettier *)", "Bash(npx markdownlint-cli2 *)", "Bash(shellcheck *)", "Bash(shfmt *)", "Bash(npx knip*)", "Bash(npm run lint*)", "Bash(npm run format*)", "Bash(npm run check*)", "Bash(bin/lint*)", "Bash(scripts/lint*)", "Bash(script/lint*)", "Bash(git status --porcelain)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)"]
+    "allow": ["Bash(npx eslint *)", "Bash(npx prettier *)", "Bash(npx markdownlint-cli2 *)", "Bash(shellcheck *)", "Bash(shfmt *)", "Bash(npx knip*)", "Bash(npx cspell*)", "Bash(npm run lint*)", "Bash(npm run format*)", "Bash(npm run check*)", "Bash(bin/lint*)", "Bash(scripts/lint*)", "Bash(script/lint*)", "Bash(git status --porcelain)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)"]
   }
 }
 ```
