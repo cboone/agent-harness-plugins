@@ -54,6 +54,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 [Block rm -rf](#block-rm--rf)
 <br>Workflow:
 [Notify](#notify-macos)
+∙ [Update Docs Reminder](#update-docs-reminder)
 
 ## Installation
 
@@ -372,6 +373,13 @@ Sends macOS notifications when Claude finishes a task or needs your attention.
 
 > **Requires:** [`terminal-notifier`](https://github.com/julienXX/terminal-notifier). Install via [Homebrew](https://brew.sh): `brew install terminal-notifier`
 > **Details:** [README](./plugins/notify/README.md)
+
+#### Update Docs Reminder
+
+Analyzes git commits for changes that typically need documentation updates and provides specific, actionable reminders.
+
+> **Requires:** [`jq`](https://jqlang.github.io/jq/)
+> **Details:** [README](./plugins/update-docs-reminder/README.md)
 
 ## License
 

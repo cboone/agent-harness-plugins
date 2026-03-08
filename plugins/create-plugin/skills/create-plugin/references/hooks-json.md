@@ -35,6 +35,7 @@ Categories correspond to Claude Code lifecycle events:
 | Category       | When it fires                                                              |
 | -------------- | -------------------------------------------------------------------------- |
 | `Notification` | User attention needed (idle prompt, permission prompt, elicitation dialog) |
+| `PostToolUse`  | After a tool call completes (observe only; cannot block)                   |
 | `PreCompact`   | Before automatic context compaction                                        |
 | `PreToolUse`   | Before a tool call executes (can block it by exiting with code 2)          |
 | `Stop`         | When Claude Code finishes a task                                           |
@@ -48,11 +49,12 @@ Matchers within a category specify which specific events trigger the hook:
 | `idle_prompt`            | Notification | Claude is waiting for user input              |
 | `elicitation_dialog`     | Notification | Claude is asking a question                   |
 | `permission_prompt`      | Notification | Claude needs permission to proceed            |
+| Tool name (e.g., `Bash`) | PostToolUse  | After the specified tool call completes       |
 | `auto`                   | PreCompact   | Automatic compaction is triggered             |
 | Tool name (e.g., `Bash`) | PreToolUse   | When the specified tool is about to be called |
 | _(none)_                 | Stop         | No matcher needed; fires on any stop          |
 
-Not all hook entries need a matcher. The Stop category in the existing notify plugin has no matcher field. PreToolUse matchers use the tool name (e.g., `Bash`, `Write`, `Edit`) to filter which tool calls trigger the hook.
+Not all hook entries need a matcher. The Stop category in the existing notify plugin has no matcher field. PreToolUse and PostToolUse matchers use the tool name (e.g., `Bash`, `Write`, `Edit`) to filter which tool calls trigger the hook. PostToolUse hooks are observe-only: they cannot block tool calls and always exit 0.
 
 ## Script References
 
@@ -126,5 +128,6 @@ The script receives the tool input as JSON on stdin. Exit code 0 allows the tool
 - Each hook entry has `"type": "command"` -- this is currently the only supported type.
 - Multiple hooks can fire for the same category with different matchers.
 - PreToolUse hooks receive JSON on stdin with the tool input (e.g., `.input.command` for Bash). Exit 0 to allow, exit 2 to block.
+- PostToolUse hooks receive JSON on stdin with the tool input. They are observe-only (exit code is ignored). Use for logging, analysis, or triggering side effects after a tool completes.
 - Stop hooks receive JSON on stdin containing `transcript_path` and other context.
 - Scripts referenced in hooks should be executable (`chmod +x`).
