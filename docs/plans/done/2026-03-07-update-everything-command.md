@@ -245,12 +245,12 @@ Add `update-everything/` to the directory tree in the project structure section,
 ## Implementation Order
 
 1. Read all command templates to extract current action versions and checklist data
-2. Create `plugins/update-everything/.claude-plugin/plugin.json`
-3. Create `plugins/update-everything/commands/update-everything.md` (main command with inline reference sections)
-4. Create `plugins/update-everything/README.md`
-5. Update `.claude-plugin/marketplace.json`
-6. Update root `README.md` (ToC + description)
-7. Update `CLAUDE.md` (directory tree)
+1. Create `plugins/update-everything/.claude-plugin/plugin.json`
+1. Create `plugins/update-everything/commands/update-everything.md` (main command with inline reference sections)
+1. Create `plugins/update-everything/README.md`
+1. Update `.claude-plugin/marketplace.json`
+1. Update root `README.md` (ToC + description)
+1. Update `CLAUDE.md` (directory tree)
 
 ## Key Files to Reference During Implementation
 
@@ -266,7 +266,7 @@ Add `update-everything/` to the directory tree in the project structure section,
 ## Verification
 
 1. **Structure check**: Run the `/check-versions` skill to verify plugin.json and marketplace.json are consistent
-2. **Dry run**: In a test repo that has been bootstrapped with these plugins, run `/update-everything` and verify it:
+1. **Dry run**: In a test repo that has been bootstrapped with these plugins, run `/update-everything` and verify it:
    - Correctly detects the project type
    - Identifies which tools have been used
    - Runs comparison checklists without errors
@@ -274,7 +274,7 @@ Add `update-everything/` to the directory tree in the project structure section,
    - Respects user selections during confirmation
    - Applies targeted updates correctly
    - Produces a useful summary
-3. **Lint**: Run `/lint-and-fix` on the new files
+1. **Lint**: Run `/lint-and-fix` on the new files
 
 ## Maintenance Consideration
 

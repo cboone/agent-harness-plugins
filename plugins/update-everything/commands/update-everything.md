@@ -125,16 +125,16 @@ For full tool re-runs:
 Process updates in this order (matching the bootstrap-project execution order):
 
 1. `scaffold-new-repo` (foundation files)
-2. `scaffold-go-cli` / `scaffold-go-library` (language scaffold)
-3. `setup-ci` (CI workflow)
-4. `setup-linters` (linter configs)
-5. `setup-secret-scanning` (secret scanning)
-6. `add-goreleaser-homebrew` (release config)
-7. `add-community-files` (community files)
-8. `setup-installers` (distribution)
-9. `add-scrut-cli-tests` (testing)
-10. `optimize-runner-usage` (CI optimization)
-11. `clean-up-agent-config` (agent config)
+1. `scaffold-go-cli` / `scaffold-go-library` (language scaffold)
+1. `setup-ci` (CI workflow)
+1. `setup-linters` (linter configs)
+1. `setup-secret-scanning` (secret scanning)
+1. `add-goreleaser-homebrew` (release config)
+1. `add-community-files` (community files)
+1. `setup-installers` (distribution)
+1. `add-scrut-cli-tests` (testing)
+1. `optimize-runner-usage` (CI optimization)
+1. `clean-up-agent-config` (agent config)
 
 After each update, verify the change was applied correctly. If an update fails, report the error and ask whether to continue with remaining items or stop.
 
