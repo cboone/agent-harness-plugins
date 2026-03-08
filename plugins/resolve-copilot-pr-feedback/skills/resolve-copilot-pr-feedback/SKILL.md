@@ -230,8 +230,7 @@ Replace `TMPFILE` with the actual path returned by `mktemp`.
 
 1. Read the relevant file and understand the context around the flagged line
 1. Fix the issue directly (edit the file, apply the suggested improvement)
-1. Commit the fix
-1. Push the changes (`git push`)
+1. Commit the fix (do NOT push yet; **Step 5: Lint and Fix** runs first)
 1. Resolve the thread using the script
 
 #### Deferred (Out of Scope)
