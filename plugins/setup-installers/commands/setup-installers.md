@@ -48,7 +48,7 @@ If none of the above markers are found, inform the user that only the shell inst
 
 Check for installers that are already set up:
 
-- **Homebrew**: look for a `brews:` section in `.goreleaser.yml`, or a standalone `Formula/` directory
+- **Homebrew**: look for a `homebrew_casks:` or `brews:` section in `.goreleaser.yml` or `.goreleaser.yaml`, or a standalone `Formula/` directory
 - **Shell install script**: look for `install.sh` in the repo root or a `scripts/` directory
 - **go install**: grep the README for `go install` instructions (Go only)
 - **cargo install**: grep the README for `cargo install` instructions (Rust only)
@@ -88,7 +88,7 @@ Collect the following, inferring from existing files where possible. Do not re-a
 
 Skip this section if the user did not select Homebrew.
 
-**If GoReleaser exists with a `brews:` section**: Homebrew is already handled by GoReleaser. Tell the user and check for the `HOMEBREW_TAP_TOKEN` secret:
+**If GoReleaser exists with a `homebrew_casks:` or `brews:` section**: Homebrew is already handled by GoReleaser. Tell the user and check for the `HOMEBREW_TAP_TOKEN` secret:
 
 ```bash
 gh secret list | grep HOMEBREW_TAP_TOKEN || true
@@ -96,7 +96,7 @@ gh secret list | grep HOMEBREW_TAP_TOKEN || true
 
 If the secret is missing, warn the user that releases will fail without it. Suggest running `/add-goreleaser-homebrew` for a guided setup that includes interactive token configuration, or manually adding the secret (see the HOMEBREW_TAP_TOKEN Setup reference section in `add-goreleaser-homebrew`).
 
-**If GoReleaser exists without a `brews:` section**: suggest using `/add-goreleaser-homebrew` to add Homebrew support through GoReleaser, which is the preferred approach for Go projects with GoReleaser. That command includes interactive `HOMEBREW_TAP_TOKEN` setup. Skip creating a standalone formula.
+**If GoReleaser exists without a `homebrew_casks:` or `brews:` section**: suggest using `/add-goreleaser-homebrew` to add Homebrew support through GoReleaser, which is the preferred approach for Go projects with GoReleaser. That command includes interactive `HOMEBREW_TAP_TOKEN` setup. Skip creating a standalone formula.
 
 **If no GoReleaser exists**: create a standalone Homebrew formula. Choose the appropriate template based on platform constraints.
 

@@ -14,7 +14,7 @@ Generate the full boilerplate for a new Go CLI project.
 Ask the user for these parameters:
 
 - **Project name** -- kebab-case, used as the binary name, module path, and directory name (e.g., `my-tool`)
-- **Short description** -- one sentence, used in README, GoReleaser Homebrew formula, and the Cobra root command `Short` field
+- **Short description** -- one sentence, used in README, GoReleaser Homebrew cask, and the Cobra root command `Short` field
 - **Include Viper?** -- whether to add Viper for config file management (adds `--config` flag and `~/.config/<name>/config.yaml` support)
 - **Include Charmbracelet TUI?** -- whether to add bubbletea, lipgloss, and bubbles dependencies
 
@@ -204,7 +204,7 @@ git commit -S -m "feat: scaffold Go CLI project"
 
 ### 19. Set Up HOMEBREW_TAP_TOKEN
 
-The release workflow requires a `HOMEBREW_TAP_TOKEN` repository secret to publish Homebrew formulas. Follow the steps in the "Reference: HOMEBREW_TAP_TOKEN Setup" section at the bottom of this file.
+The release workflow requires a `HOMEBREW_TAP_TOKEN` repository secret to publish Homebrew casks. Follow the steps in the "Reference: HOMEBREW_TAP_TOKEN Setup" section at the bottom of this file.
 
 Ask the user whether they want to set up the token now or defer it to later. If they defer, note in the summary that the token must be configured before the first release.
 
@@ -568,17 +568,20 @@ changelog:
       - "^test:"
       - "^chore:"
 
-brews:
-  - repository:
+homebrew_casks:
+  - binaries:
+      - PROJECT-NAME
+    repository:
       owner: GITHUB-USERNAME
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Formula
     homepage: "https://github.com/GITHUB-USERNAME/PROJECT-NAME"
     description: "PROJECT-DESCRIPTION"
     license: MIT
-    test: |
-      assert_match version.to_s, shell_output("#{bin}/PROJECT-NAME --version")
+    hooks:
+      post:
+        install: |
+          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/PROJECT-NAME"]
 ```
 
 ### Notes
@@ -589,6 +592,11 @@ brews:
 - `-X main.version={{.Version}}` injects the release version at build time
 - Builds for Linux, macOS, and Windows on both amd64 and arm64
 - Windows archives use zip; everything else uses tar.gz
+- Uses `homebrew_casks:` (GoReleaser v2.10+) instead of the deprecated `brews:`. Casks are the correct artifact type for pre-compiled binaries distributed via GoReleaser
+- The `directory` field defaults to `Casks` and is omitted; do not set it to `Formula`
+- `binaries:` lists binary names to install, replacing the formula `install:` block
+- Casks do not support `test:` blocks; version testing is handled differently in the Homebrew cask ecosystem
+- The quarantine removal hook prevents "App is damaged" Gatekeeper errors on macOS for unsigned binaries. The `hooks.post.install` field is a string (not a list)
 - Homebrew tap publishes to `GITHUB-USERNAME/homebrew-tap` using `HOMEBREW_TAP_TOKEN` (see "Reference: HOMEBREW_TAP_TOKEN Setup" for creation and configuration)
 - `prerelease: auto` marks pre-release tags (e.g., `v1.0.0-rc1`) correctly on GitHub
 - The `{{` and `}}` delimiters are GoReleaser template syntax, not Go templates
@@ -842,7 +850,7 @@ PROJECT-NAME
 
 <!-- sync: this section is duplicated in plugins/add-goreleaser-homebrew/commands/add-goreleaser-homebrew.md -->
 
-The release workflow needs a `HOMEBREW_TAP_TOKEN` repository secret so GoReleaser can push formula updates to the Homebrew tap repository. This section walks through creating the token and setting the secret.
+The release workflow needs a `HOMEBREW_TAP_TOKEN` repository secret so GoReleaser can push cask updates to the Homebrew tap repository. This section walks through creating the token and setting the secret.
 
 ### 1. Check for the Homebrew Tap Repository
 
@@ -881,7 +889,7 @@ Direct the user to create a fine-grained PAT:
 1. **Permissions**: under "Repository permissions", set **Contents** to **Read and write**; leave everything else at the defaults
 1. Click "Generate token" and copy the token value
 
-Explain that this token allows GoReleaser to push formula updates to the tap repository during releases. The fine-grained PAT is preferred because it limits access to a single repository with minimal permissions.
+Explain that this token allows GoReleaser to push cask updates to the tap repository during releases. The fine-grained PAT is preferred because it limits access to a single repository with minimal permissions.
 
 ### 4. Set the Repository Secret
 
