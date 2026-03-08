@@ -201,7 +201,18 @@ git add -A
 git commit -S -m "feat: scaffold Go CLI project"
 ```
 
-### 19. Set Up HOMEBREW_TAP_TOKEN
+### 19. Update Copilot Instructions
+
+If `.github/copilot-instructions.md` exists (created by `scaffold-new-repo` when running in the bootstrap flow, or already present in an existing repo), append the following entries to the PR review section. Before appending each entry, check whether the bold key text already exists in the file; skip entries that are already present.
+
+To locate the PR review section: look for an existing heading whose text includes "PR Review" or "Code Review" (e.g., `## PR Review`, `## Code Review`, `## PR Review Checklist (CRITICAL)`). If no matching heading exists, append a new `## PR Review` section at the end of the file and place the entries there.
+
+- **`go-version-file: go.mod` is valid**: The `actions/setup-go` action supports `go-version-file: go.mod` to read the Go version from the module file. This is the preferred approach. Do not suggest replacing it with a hardcoded version.
+- **golangci-lint-action handles its own caching**: The `golangci/golangci-lint-action` manages golangci-lint installation and caching automatically. Do not suggest adding manual cache steps or replacing it with a manual install.
+
+If `.github/copilot-instructions.md` does not exist, skip this step.
+
+### 20. Set Up HOMEBREW_TAP_TOKEN
 
 The release workflow requires a `HOMEBREW_TAP_TOKEN` repository secret to publish Homebrew casks. Follow the steps in the "Reference: HOMEBREW_TAP_TOKEN Setup" section at the bottom of this file.
 
@@ -209,7 +220,7 @@ Ask the user whether they want to set up the token now or defer it to later. If 
 
 Note: for brand-new projects that have not been pushed to GitHub yet, `gh secret` commands (including `gh secret set` and `gh secret list`) will not work until a GitHub remote exists. See the "No remote yet?" note in the reference section.
 
-### 20. Summary
+### 21. Summary
 
 Print a summary of what was created:
 
@@ -219,7 +230,21 @@ Print a summary of what was created:
   - Add subcommands under `cmd/` as the CLI grows
   - Run `make help` to see available Makefile targets
   - Run `/add-community-files` to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
-- If `HOMEBREW_TAP_TOKEN` setup was deferred in step 19: remind the user to add it as a repository secret before the first release (see "Reference: HOMEBREW_TAP_TOKEN Setup")
+- If `HOMEBREW_TAP_TOKEN` setup was deferred in step 20: check whether a GitHub remote exists and is accessible before creating a follow-up issue:
+
+  ```bash
+  if git remote get-url origin >/dev/null 2>&1 && gh repo view >/dev/null 2>&1; then
+    gh issue create \
+      --title "Set up HOMEBREW_TAP_TOKEN repository secret" \
+      --body "The release workflow needs a HOMEBREW_TAP_TOKEN secret so GoReleaser can push Homebrew cask updates to the tap repository.
+
+  See the HOMEBREW_TAP_TOKEN Setup reference in the scaffold-go-cli documentation for step-by-step instructions."
+  fi
+  ```
+
+  If the issue was created successfully, report its URL in the summary.
+
+  If no remote exists or the repo is not accessible via `gh`, print a reminder instead: the user should create the issue manually (or re-run the token setup) after pushing to GitHub for the first time.
 
 ## Error Handling
 

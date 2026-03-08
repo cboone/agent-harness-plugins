@@ -73,6 +73,9 @@ git diff < merge-base > ..HEAD
 
 # Current branch name
 git branch --show-current
+
+# Current HEAD commit (for "Reviewed through" metadata)
+git rev-parse --short HEAD
 ```
 
 Also read the commit messages in detail to understand the intent behind each change:
@@ -261,9 +264,10 @@ Structure the final output with clear sections:
 ```markdown
 ## Branch Review: <branch-name>
 
-Base: <base-ref> (merge base: <short-hash>)
+Base: <base-ref> (merge base: <merge-base-short-hash>)
 Commits: <count>
 Files changed: <count> (<added> added, <modified> modified, <deleted> deleted, <renamed> renamed)
+Reviewed through: <head-short-hash>
 
 ### Summary
 

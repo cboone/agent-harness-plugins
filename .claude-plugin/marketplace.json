@@ -301,7 +301,7 @@
       "name": "review-branch",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/review-branch",
-      "version": "1.2.0"
+      "version": "1.2.1"
     },
     {
       "author": {
@@ -315,7 +315,7 @@
       "name": "scaffold-go-cli",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-cli",
-      "version": "2.1.0"
+      "version": "2.2.0"
     },
     {
       "author": {
@@ -329,7 +329,7 @@
       "name": "scaffold-go-library",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-library",
-      "version": "1.2.4"
+      "version": "1.3.0"
     },
     {
       "author": {
@@ -343,7 +343,7 @@
       "name": "scaffold-new-repo",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-new-repo",
-      "version": "1.4.4"
+      "version": "1.4.5"
     },
     {
       "author": {
@@ -385,7 +385,7 @@
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.4.1"
+      "version": "1.5.0"
     },
     {
       "author": {
@@ -441,6 +441,20 @@
       "name": "update-everything",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/update-everything",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
+      "description": "Find the latest branch review, assess commits made since, and update the review document with a synthesized reassessment.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["branch", "code-review", "diff", "git", "review", "update"],
+      "license": "MIT",
+      "name": "update-review",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/update-review",
       "version": "1.0.0"
     },
     {

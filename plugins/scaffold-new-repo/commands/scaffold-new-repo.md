@@ -745,3 +745,7 @@ For full project conventions, see AGENTS.md in the repository root.
   new repos. Some repos use the shorter `# Copilot Instructions`, both work.
 - The heading uses the exact binary or repository name (e.g., `my-cool-tool`),
   not a titleized version.
+- **Per-skill false positive entries:** Other scaffold and setup tools
+  (`scaffold-go-cli`, `scaffold-go-library`, `setup-linters`) append PR review
+  entries to this file for patterns they generate that Copilot commonly flags.
+  This file serves as the append target for those entries.
