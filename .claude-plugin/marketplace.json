@@ -420,20 +420,6 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
-      "description": "Audit a repository against the latest plugin templates and update anything out of date.",
-      "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["audit", "ci", "linters", "scaffolding", "templates", "update"],
-      "license": "MIT",
-      "name": "update-everything",
-      "repository": "https://github.com/cboone/cboone-cc-plugins",
-      "source": "./plugins/update-everything",
-      "version": "1.0.0"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "productivity",
       "description": "Reminds you to update documentation when a commit includes significant code changes.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["documentation", "git", "hooks", "reminders"],
@@ -441,6 +427,20 @@
       "name": "update-docs-reminder",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/update-docs-reminder",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
+      "description": "Audit a repository against the latest plugin templates and update anything out of date.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["audit", "ci", "linters", "scaffolding", "templates", "update"],
+      "license": "MIT",
+      "name": "update-everything",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/update-everything",
       "version": "1.0.0"
     },
     {
