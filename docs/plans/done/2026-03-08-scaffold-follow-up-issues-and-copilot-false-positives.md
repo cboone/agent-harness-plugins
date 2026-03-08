@@ -8,7 +8,7 @@ After scaffolding a new project, two problems occur:
 
 1. **Lost reminders (#114):** `scaffold-go-cli` prints a reminder about adding `HOMEBREW_TAP_TOKEN` as a repository secret when the user defers setup. This reminder is easy to lose once the conversation ends. The fix is to create a GitHub issue for the deferred item so it becomes trackable.
 
-2. **Copilot false positives (#116):** On the first PR, GitHub Copilot flags several scaffold-generated patterns as issues (golangci-lint v2 config, Prettier `printWidth: 10000`, `go-version-file: go.mod`, golangci-lint-action caching). The fix is to have each scaffold/setup skill append "do not flag" entries to `.github/copilot-instructions.md` for patterns it generates.
+1. **Copilot false positives (#116):** On the first PR, GitHub Copilot flags several scaffold-generated patterns as issues (golangci-lint v2 config, Prettier `printWidth: 10000`, `go-version-file: go.mod`, golangci-lint-action caching). The fix is to have each scaffold/setup skill append "do not flag" entries to `.github/copilot-instructions.md` for patterns it generates.
 
 ## Changes
 
@@ -76,12 +76,12 @@ Add a note to the "Reference: Copilot Instructions Template" Notes section (afte
 
 ### 5. Version bumps
 
-| Plugin | File | Current | New | Reason |
-| --- | --- | --- | --- | --- |
-| `scaffold-go-cli` | `plugins/scaffold-go-cli/.claude-plugin/plugin.json` | 2.1.0 | 2.2.0 | Minor: new follow-up issue creation + copilot entries |
-| `scaffold-go-library` | `plugins/scaffold-go-library/.claude-plugin/plugin.json` | 1.2.4 | 1.3.0 | Minor: new copilot entries step |
-| `setup-linters` | `plugins/setup-linters/.claude-plugin/plugin.json` | 1.4.1 | 1.5.0 | Minor: new copilot entries step |
-| `scaffold-new-repo` | `plugins/scaffold-new-repo/.claude-plugin/plugin.json` | 1.4.4 | 1.4.5 | Patch: documentation note |
+| Plugin                | File                                                     | Current | New   | Reason                                                |
+| --------------------- | -------------------------------------------------------- | ------- | ----- | ----------------------------------------------------- |
+| `scaffold-go-cli`     | `plugins/scaffold-go-cli/.claude-plugin/plugin.json`     | 2.1.0   | 2.2.0 | Minor: new follow-up issue creation + copilot entries |
+| `scaffold-go-library` | `plugins/scaffold-go-library/.claude-plugin/plugin.json` | 1.2.4   | 1.3.0 | Minor: new copilot entries step                       |
+| `setup-linters`       | `plugins/setup-linters/.claude-plugin/plugin.json`       | 1.4.1   | 1.5.0 | Minor: new copilot entries step                       |
+| `scaffold-new-repo`   | `plugins/scaffold-new-repo/.claude-plugin/plugin.json`   | 1.4.4   | 1.4.5 | Patch: documentation note                             |
 
 Mirror each version in `.claude-plugin/marketplace.json`. No marketplace `metadata.version` bump (no plugins added or removed).
 
@@ -90,8 +90,8 @@ Mirror each version in `.claude-plugin/marketplace.json`. No marketplace `metada
 Execution order ensures correctness:
 
 1. `scaffold-new-repo` creates `.github/copilot-instructions.md` (base template with done-plans rule)
-2. `scaffold-go-cli` or `scaffold-go-library` appends its entries (go-version-file, golangci-lint-action, or golangci-lint v2)
-3. `setup-linters` appends its entries (Prettier, golangci-lint v2 if not already present)
+1. `scaffold-go-cli` or `scaffold-go-library` appends its entries (go-version-file, golangci-lint-action, or golangci-lint v2)
+1. `setup-linters` appends its entries (Prettier, golangci-lint v2 if not already present)
 
 Duplicate prevention: each step checks whether the bold key text already exists in the file before appending.
 
@@ -100,16 +100,16 @@ Standalone execution: if `.github/copilot-instructions.md` does not exist, the c
 ## Implementation sequence
 
 1. `scaffold-new-repo` (patch: add documentation note)
-2. `scaffold-go-cli` (minor: add copilot step, modify summary for issue creation, renumber)
-3. `scaffold-go-library` (minor: add copilot step, renumber)
-4. `setup-linters` (minor: add copilot step, renumber)
-5. `.claude-plugin/marketplace.json` (update four version entries)
-6. `plugin.json` files (update four versions)
-7. Run `check-versions` skill to verify consistency
+1. `scaffold-go-cli` (minor: add copilot step, modify summary for issue creation, renumber)
+1. `scaffold-go-library` (minor: add copilot step, renumber)
+1. `setup-linters` (minor: add copilot step, renumber)
+1. `.claude-plugin/marketplace.json` (update four version entries)
+1. `plugin.json` files (update four versions)
+1. Run `check-versions` skill to verify consistency
 
 ## Verification
 
 1. Read each modified file and verify step numbering is consistent
-2. Verify cross-references (e.g., "deferred in step 20") are updated
-3. Run `/check-versions` to confirm plugin.json and marketplace.json versions match
-4. Review the copilot-instructions entries for accuracy against the actual patterns generated by each skill
+1. Verify cross-references (e.g., "deferred in step 20") are updated
+1. Run `/check-versions` to confirm plugin.json and marketplace.json versions match
+1. Review the copilot-instructions entries for accuracy against the actual patterns generated by each skill
