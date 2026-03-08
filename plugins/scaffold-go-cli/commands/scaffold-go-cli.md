@@ -673,7 +673,7 @@ jobs:
         run: make fmt
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v9
 
   vulncheck:
     name: Vulnerability check
