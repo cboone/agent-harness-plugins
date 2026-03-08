@@ -41,7 +41,7 @@ Collect the following, inferring from existing files where possible:
   Do not derive the project name from the directory or branch name, which are often misleading.
 
 - **Short description**: check the README for a one-line description; if not found, ask the user
-- **Homebrew dependencies**: ask whether the tool has any runtime dependencies to declare in the formula (e.g., `gh`, `docker`)
+- **Homebrew dependencies**: ask whether the tool has any runtime dependencies to declare in the cask (e.g., `gh`, `docker`)
 
 If the user already provided some or all of these in their initial request, do not re-ask.
 
@@ -94,9 +94,9 @@ Create `.goreleaser.yml` using the base template from the .goreleaser.yml Templa
 1. Adjust the ldflags `-X` path based on step 5
 1. Adjust the `main` path based on step 6
 1. Apply conditional modifications from the Conditional Features section below:
-   - If completions detected: add custom `install` block with `generate_completions_from_executable`
-   - If man pages detected: add `before.hooks`, archive `files` section, and `man1.install` in the brew formula
-   - If macOS-only: restrict `goos`/`goarch`, remove Windows format override, add `depends_on :macos`
+   - If completions detected: add completion generation to `before.hooks`, include in `archives.files`, and set the `completions:` field
+   - If man pages detected: add `before.hooks`, archive `files` section, and set the `manpages:` field
+   - If macOS-only: restrict `goos`/`goarch`, remove Windows format override
    - If multiple features detected: combine per the "Combining Features" section in the Conditional Features section below
 
 ### 8. Generate Release Workflow
@@ -133,7 +133,7 @@ If `goreleaser` is not installed, skip validation and note that the user can ins
 
 ### 11. Set Up HOMEBREW_TAP_TOKEN
 
-The release workflow requires a `HOMEBREW_TAP_TOKEN` repository secret to publish Homebrew formulas. Follow the steps in the "Reference: HOMEBREW_TAP_TOKEN Setup" section at the bottom of this file.
+The release workflow requires a `HOMEBREW_TAP_TOKEN` repository secret to publish Homebrew casks. Follow the steps in the "Reference: HOMEBREW_TAP_TOKEN Setup" section at the bottom of this file.
 
 Ask the user whether they want to set up the token now or defer it to later. If they defer, note in the summary that the token must be configured before the first release.
 
@@ -226,17 +226,20 @@ changelog:
       - "^test:"
       - "^style:"
 
-brews:
-  - repository:
+homebrew_casks:
+  - binaries:
+      - PROJECT-NAME
+    repository:
       owner: GITHUB-USERNAME
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Formula
     homepage: "https://github.com/GITHUB-USERNAME/PROJECT-NAME"
     description: "PROJECT-DESCRIPTION"
     license: MIT
-    test: |
-      assert_match version.to_s, shell_output("#{bin}/PROJECT-NAME --version")
+    hooks:
+      post:
+        install: |
+          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/PROJECT-NAME"]
 ```
 
 ### Notes
@@ -245,12 +248,17 @@ brews:
 - `CGO_ENABLED=0` produces static binaries (no C library dependency)
 - `-s -w` in ldflags strips debug info and symbol tables (smaller binary)
 - `-X main.version={{.Version}}` injects the release version at build time; adjust the path if the version variable lives in a different package (e.g., `-X github.com/USER/REPO/cmd.version={{.Version}}`)
-- Builds for Linux, macOS, and Windows on both amd64 and arm64 by default; see `conditional-features.md` for macOS-only projects
+- Builds for Linux, macOS, and Windows on both amd64 and arm64 by default; see the Conditional Features section for macOS-only projects
 - Windows archives use zip; everything else uses tar.gz
 - `prerelease: auto` marks pre-release tags (e.g., `v1.0.0-rc1`) correctly on GitHub
 - Changelog uses **conventional commit grouping** instead of simple sort-and-filter, organizing entries under headings (Features, Bug Fixes, Refactoring, etc.) for clearer release notes
 - The `Other` group with `order: 999` acts as a catch-all for commits that do not match any specific type
 - Commits prefixed with `chore:`, `test:`, or `style:` are excluded from the changelog entirely
+- Uses `homebrew_casks:` (GoReleaser v2.10+) instead of the deprecated `brews:`. Casks are the correct artifact type for pre-compiled binaries distributed via GoReleaser
+- The `directory` field defaults to `Casks` and is omitted; do not set it to `Formula`
+- `binaries:` lists binary names to install, replacing the formula `install:` block
+- Casks do not support `test:` blocks; version testing is handled differently in the Homebrew cask ecosystem
+- The quarantine removal hook prevents "App is damaged" Gatekeeper errors on macOS for unsigned binaries. The `hooks.post.install` field is a string (not a list)
 - Homebrew tap publishes to `GITHUB-USERNAME/homebrew-tap` using `HOMEBREW_TAP_TOKEN` (see "Reference: HOMEBREW_TAP_TOKEN Setup" for creation and configuration)
 - The `{{` and `}}` delimiters are GoReleaser template syntax, not Go templates
 
@@ -371,20 +379,40 @@ If any of these succeed, the project has shell completions.
 
 #### goreleaser.yml Modifications
 
-Replace the basic `test` block in `brews` with a custom `install` block that generates completions:
+**Add a `before` hook** to generate completion files during the build:
 
 ```yaml
-brews:
-  - # ... (keep all other fields from the base template)
-    install: |
-      bin.install "PROJECT-NAME"
-
-      generate_completions_from_executable(bin/"PROJECT-NAME", "completion")
-    test: |
-      assert_match version.to_s, shell_output("#{bin}/PROJECT-NAME --version")
+before:
+  hooks:
+    - go mod tidy
+    - mkdir -p completions
+    - go run . completion bash > completions/PROJECT-NAME.bash
+    - go run . completion zsh > completions/PROJECT-NAME.zsh
+    - go run . completion fish > completions/PROJECT-NAME.fish
 ```
 
-The `generate_completions_from_executable` Homebrew helper automatically calls the binary's `completion` subcommand for bash, zsh, and fish, and installs the output files in the correct locations.
+**Add completion files to the archive** by adding a `files` section to `archives`:
+
+```yaml
+archives:
+  - # ... (keep all other fields)
+    files:
+      - src: completions/*
+        dst: completions
+```
+
+**Add completions to the cask config**:
+
+```yaml
+homebrew_casks:
+  - # ... (keep all other fields from the base template)
+    completions:
+      bash: completions/PROJECT-NAME.bash
+      zsh: completions/PROJECT-NAME.zsh
+      fish: completions/PROJECT-NAME.fish
+```
+
+Completion files are pre-generated during the build via `before.hooks`, included in the release archive via `archives.files`, and referenced in the cask via the `completions:` field. This replaces the formula approach of running `generate_completions_from_executable` at install time.
 
 ### Man Pages
 
@@ -426,17 +454,16 @@ archives:
         dst: man/man1
 ```
 
-**Add man page installation to the brew formula** in the `install` block:
+**Add man pages to the cask config**:
 
 ```yaml
-brews:
+homebrew_casks:
   - # ... (keep all other fields)
-    install: |
-      bin.install "PROJECT-NAME"
-      man1.install Dir["man/man1/*"]
-    test: |
-      assert_match version.to_s, shell_output("#{bin}/PROJECT-NAME --version")
+    manpages:
+      - man/man1/PROJECT-NAME.1
 ```
+
+Man page files are pre-generated during the build via `before.hooks`, included in the release archive via `archives.files`, and referenced in the cask via the `manpages:` field. For projects with multiple man pages (e.g., per-subcommand), add an entry for each file.
 
 ### macOS Only
 
@@ -473,15 +500,6 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 ```
 
-**Add a macOS requirement** to the brew formula using `custom_block`:
-
-```yaml
-brews:
-  - # ... (keep other fields)
-    custom_block: |
-      depends_on :macos
-```
-
 #### .github/workflows/release.yml Modifications
 
 Change the runner to `macos-latest`:
@@ -502,8 +520,11 @@ When multiple conditional features are present, combine all applicable modificat
 before:
   hooks:
     - go mod tidy
-    - mkdir -p man/man1
+    - mkdir -p man/man1 completions
     - go run . man man/man1
+    - go run . completion bash > completions/PROJECT-NAME.bash
+    - go run . completion zsh > completions/PROJECT-NAME.zsh
+    - go run . completion fish > completions/PROJECT-NAME.fish
 
 archives:
   - formats:
@@ -516,16 +537,17 @@ archives:
     files:
       - src: man/man1/*
         dst: man/man1
+      - src: completions/*
+        dst: completions
 
-brews:
+homebrew_casks:
   - # ... (keep all other fields)
-    install: |
-      bin.install "PROJECT-NAME"
-      man1.install Dir["man/man1/*"]
-
-      generate_completions_from_executable(bin/"PROJECT-NAME", "completion")
-    test: |
-      assert_match version.to_s, shell_output("#{bin}/PROJECT-NAME --version")
+    manpages:
+      - man/man1/PROJECT-NAME.1
+    completions:
+      bash: completions/PROJECT-NAME.bash
+      zsh: completions/PROJECT-NAME.zsh
+      fish: completions/PROJECT-NAME.fish
 ```
 
 #### Example: Completions + Man Pages + macOS Only
@@ -534,8 +556,11 @@ brews:
 before:
   hooks:
     - go mod tidy
-    - mkdir -p man/man1
+    - mkdir -p man/man1 completions
     - go run . man man/man1
+    - go run . completion bash > completions/PROJECT-NAME.bash
+    - go run . completion zsh > completions/PROJECT-NAME.zsh
+    - go run . completion fish > completions/PROJECT-NAME.fish
 
 builds:
   - main: .
@@ -557,18 +582,17 @@ archives:
     files:
       - src: man/man1/*
         dst: man/man1
+      - src: completions/*
+        dst: completions
 
-brews:
+homebrew_casks:
   - # ... (keep all other fields)
-    install: |
-      bin.install "PROJECT-NAME"
-      man1.install Dir["man/man1/*"]
-
-      generate_completions_from_executable(bin/"PROJECT-NAME", "completion")
-    custom_block: |
-      depends_on :macos
-    test: |
-      assert_match version.to_s, shell_output("#{bin}/PROJECT-NAME --version")
+    manpages:
+      - man/man1/PROJECT-NAME.1
+    completions:
+      bash: completions/PROJECT-NAME.bash
+      zsh: completions/PROJECT-NAME.zsh
+      fish: completions/PROJECT-NAME.fish
 ```
 
 Note: When macOS-only, remove the Windows format override from archives and change the release workflow runner to `macos-latest`.
@@ -576,8 +600,10 @@ Note: When macOS-only, remove the Windows format override from archives and chan
 ### Notes
 
 - The detection steps are heuristics; always present detected features to the user for confirmation before applying
-- `generate_completions_from_executable` is a Homebrew helper that calls the binary's completion subcommand for each shell (bash, zsh, fish) and installs the output
-- `man1.install Dir["man/man1/*"]` is a Homebrew helper that installs man pages into the correct system location
+- Completion files must be pre-generated during build time via `before.hooks` (unlike formulas, which could generate them at install time with `generate_completions_from_executable`)
+- Man pages are referenced via the `manpages:` array, which lists file paths relative to the archive root
+- The `binaries:` array replaces the formula `install:` block for listing binaries to install
+- Casks do not support `test:` blocks; version testing works differently in the Homebrew cask ecosystem
 - The `before.hooks` section runs before each build; `go mod tidy` ensures dependencies are clean
 - When combining man pages with macOS-only, the `files` section in archives still works (man pages are included in the macOS archives)
 
@@ -587,7 +613,7 @@ Note: When macOS-only, remove the Windows format override from archives and chan
 
 <!-- sync: this section is duplicated in plugins/scaffold-go-cli/commands/scaffold-go-cli.md -->
 
-The release workflow needs a `HOMEBREW_TAP_TOKEN` repository secret so GoReleaser can push formula updates to the Homebrew tap repository. This section walks through creating the token and setting the secret.
+The release workflow needs a `HOMEBREW_TAP_TOKEN` repository secret so GoReleaser can push cask updates to the Homebrew tap repository. This section walks through creating the token and setting the secret.
 
 ### 1. Check for the Homebrew Tap Repository
 
@@ -626,7 +652,7 @@ Direct the user to create a fine-grained PAT:
 1. **Permissions**: under "Repository permissions", set **Contents** to **Read and write**; leave everything else at the defaults
 1. Click "Generate token" and copy the token value
 
-Explain that this token allows GoReleaser to push formula updates to the tap repository during releases. The fine-grained PAT is preferred because it limits access to a single repository with minimal permissions.
+Explain that this token allows GoReleaser to push cask updates to the tap repository during releases. The fine-grained PAT is preferred because it limits access to a single repository with minimal permissions.
 
 ### 4. Set the Repository Secret
 
@@ -652,3 +678,43 @@ If the secret appears in the output, the setup is complete. If not, re-run step 
 
 - **No remote yet?** If the repository has not been pushed to GitHub yet (common for brand-new projects), `gh secret` commands (`gh secret set`, `gh secret list`) will fail because there is no associated GitHub repository. In that case, note the token value securely and set/verify the secret after creating the GitHub remote and pushing for the first time.
 - **Classic PATs also work.** A classic personal access token with `repo` scope can be used instead of a fine-grained PAT, but classic tokens grant broader access than necessary. Fine-grained PATs scoped to the single tap repository are the recommended approach.
+
+---
+
+## Reference: Migrating Existing Projects from Formula to Cask
+
+For projects that previously used `brews:` in their `.goreleaser.yml` and want to migrate to `homebrew_casks:`, follow these steps:
+
+### 1. Update `.goreleaser.yml`
+
+Replace the `brews:` section with `homebrew_casks:` per the base template above. Key changes:
+
+- `brews:` becomes `homebrew_casks:`
+- Remove `directory: Formula` (casks default to `Casks/`)
+- Remove the `test:` block (casks do not support it)
+- Remove the `install:` block; add `binaries:` array instead
+- Add the quarantine removal `hooks.post.install` (see the base template)
+- If using completions: switch from `generate_completions_from_executable` to pre-generated files with `before.hooks`, `archives.files`, and `completions:` (see the Shell Completions section)
+- If using man pages: switch from `man1.install` to `manpages:` array (see the Man Pages section)
+
+**Important**: The `hooks.post.install` field must be a **string**, not a YAML list. Using a list causes `yaml: unmarshal errors` and release failures.
+
+### 2. Create `tap_migrations.json`
+
+In the root of the tap repository (e.g., `GITHUB-USERNAME/homebrew-tap`), create a `tap_migrations.json` file so existing formula users automatically migrate to the cask:
+
+```json
+{
+  "PROJECT-NAME": "PROJECT-NAME"
+}
+```
+
+This tells Homebrew to redirect `brew install GITHUB-USERNAME/tap/PROJECT-NAME` from the old formula to the new cask.
+
+### 3. Clean Up the Old Formula
+
+After the first release with `homebrew_casks:` succeeds and the cask is published to the tap repository:
+
+1. Verify the cask works: `brew install GITHUB-USERNAME/tap/PROJECT-NAME`
+1. Delete the old formula file from the tap repository (e.g., `Formula/PROJECT-NAME.rb`)
+1. Keep `tap_migrations.json` permanently so users with the old formula installed can upgrade
