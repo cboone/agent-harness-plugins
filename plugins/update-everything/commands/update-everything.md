@@ -234,7 +234,7 @@ When auditing, treat SHA-pinned references (e.g., `actions/checkout@a5ac7e5...`)
 
 ### Checks for trufflehog.yml
 
-- Uses `trufflesecurity/trufflehog@v3`
+- Uses `trufflesecurity/trufflehog@v3.x.y` (pinned to a specific release tag, not a bare `@v3`)
 - Uses `actions/checkout@v6` with `fetch-depth: 0`
 - Has `--results=verified,unknown` in extra_args
 - Triggers on `push: branches: [main]`
