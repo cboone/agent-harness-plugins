@@ -315,7 +315,7 @@
       "name": "scaffold-go-cli",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-cli",
-      "version": "2.0.0"
+      "version": "2.1.0"
     },
     {
       "author": {
@@ -343,7 +343,7 @@
       "name": "scaffold-new-repo",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-new-repo",
-      "version": "1.4.3"
+      "version": "1.4.4"
     },
     {
       "author": {
