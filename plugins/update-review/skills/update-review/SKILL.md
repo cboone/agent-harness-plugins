@@ -49,7 +49,9 @@ ls docs/reviews/*-<sanitized-branch-name>.md 2>/dev/null
 1. **Select the review file**:
 
 - If exactly one file matches, use it
-- If multiple files match (different date prefixes), sort by filename and use the most recent (highest date prefix)
+- If multiple files match, sort by filename (date prefix) and:
+  - If the matching files have different date prefixes, use the most recent (highest date prefix)
+  - If multiple files share the same date prefix, list them and ask the user which one to update
 - If no files match, report that no review was found for this branch and suggest running `/review-branch` first, then stop
 
 ### 2. Parse the Existing Review
@@ -172,11 +174,11 @@ Produce a single unified document that replaces the old review. Use the same for
 ```markdown
 ## Branch Review: <branch-name>
 
-Base: <base-ref> (merge base: <short-hash>)
+Base: <base-ref> (merge base: <merge-base-short-hash>)
 Commits: <new-total-count>
 Files changed: <new-total-count> (<added> added, <modified> modified, <deleted> deleted, <renamed> renamed)
-Reviewed through: <current-HEAD-short-hash>
-Updated: <today's date> (previous: <original-review-date>)
+Reviewed through: <head-short-hash>
+Updated: <today's date> (previous: <original-review-date or "unknown">)
 
 ### Summary
 
@@ -211,7 +213,7 @@ Updated: <today's date> (previous: <original-review-date>)
 <concise summary of what the new commits added, changed, or fixed>
 ```
 
-The `Updated:` metadata line records the update date and links back to the original review date (extracted from the original filename's date prefix).
+The `Updated:` metadata line records the update date and links back to the original review date (extracted from the original filename's date prefix). If the filename does not start with a `YYYY-MM-DD-` prefix (e.g., when using `--review` with a custom path), use `"unknown"` as the previous date value.
 
 The `Changes Since Last Review` section provides a quick-reference delta so the reader can see what is new without reading the entire document. This section is specific to updated reviews and does not appear in fresh review-branch output.
 

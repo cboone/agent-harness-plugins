@@ -264,10 +264,10 @@ Structure the final output with clear sections:
 ```markdown
 ## Branch Review: <branch-name>
 
-Base: <base-ref> (merge base: <short-hash>)
+Base: <base-ref> (merge base: <merge-base-short-hash>)
 Commits: <count>
 Files changed: <count> (<added> added, <modified> modified, <deleted> deleted, <renamed> renamed)
-Reviewed through: <short-hash>
+Reviewed through: <head-short-hash>
 
 ### Summary
 

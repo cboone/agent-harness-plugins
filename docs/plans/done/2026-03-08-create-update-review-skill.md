@@ -64,33 +64,35 @@ plugins/update-review/
    - If multiple matches (different dates), use the most recent (highest date prefix)
    - If none found, report no review exists and suggest `/review-branch`
 
-2. **Parse the existing review**
+1. **Parse the existing review**
    - Read the file and extract metadata: `Base:`, `Commits:`, `Reviewed through:`, `Files changed:`
    - Extract all section content for context
    - **Legacy fallback:** If no `Reviewed through:` line exists, infer the last reviewed commit using the commit count and merge base: `git log --oneline --reverse <merge-base>..HEAD | sed -n '<count>p'`. Warn about the legacy format.
 
-3. **Gather new changes**
+1. **Gather new changes**
    - Verify the "Reviewed through" hash still exists on the branch:
-     ```
+
+     ```bash
      git rev-parse --verify <hash>
      git merge-base --is-ancestor <hash> HEAD
      ```
+
    - If HEAD equals the "Reviewed through" hash, report the review is already current and stop
    - Gather delta: `git log/diff <reviewed-through>..HEAD`
    - Also gather full picture: `git log/diff <merge-base>..HEAD`
 
-4. **Assess the delta**
+1. **Assess the delta**
    - Analyze new commits specifically: what areas changed, what's new, what feedback was addressed
    - Re-evaluate plan compliance from scratch (merge base to HEAD) if a plan is available
    - Evaluate code quality across the full diff, highlighting changes since last review
 
-5. **Synthesize the updated review**
+1. **Synthesize the updated review**
    - Produce a single unified document in the same format as review-branch output
    - Add `Updated: <today> (previous: <original-date>)` metadata line
    - Add a `### Changes Since Last Review` section at the end with a concise delta summary
    - In the Code Quality Assessment, note: issues from prior review that were addressed, new issues, overall trajectory
 
-6. **Write the updated review**
+1. **Write the updated review**
    - Overwrite the existing file at its original path (preserve the original date prefix)
    - Report: previous review covered N commits through `<old-hash>`, updated covers M commits through `<new-hash>` (K new commits)
    - Include address-review hint
@@ -128,22 +130,22 @@ plugins/update-review/
 ## Implementation order
 
 1. Modify review-branch SKILL.md: add `Reviewed through: <short-hash>` to output template and Step 2
-2. Bump review-branch version to 1.2.1 in plugin.json and marketplace.json
-3. Create `plugins/update-review/` directory structure
-4. Write SKILL.md with full workflow
-5. Write plugin.json and README.md
-6. Register in marketplace.json (new entry + metadata version bump)
-7. Update CLAUDE.md directory tree
-8. Update root README.md (ToC + description section)
-9. Lint and fix
-10. Commit in logical groups
+1. Bump review-branch version to 1.2.1 in plugin.json and marketplace.json
+1. Create `plugins/update-review/` directory structure
+1. Write SKILL.md with full workflow
+1. Write plugin.json and README.md
+1. Register in marketplace.json (new entry + metadata version bump)
+1. Update CLAUDE.md directory tree
+1. Update root README.md (ToC + description section)
+1. Lint and fix
+1. Commit in logical groups
 
 ## Verification
 
 1. Confirm all JSON files are valid: `python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"`
-2. Confirm version consistency: review-branch is 1.2.1 in both plugin.json and marketplace.json; update-review is 1.0.0 in both
-3. Confirm marketplace metadata.version is 1.22.0
-4. Confirm CLAUDE.md tree is alphabetically correct
-5. Confirm README.md ToC links resolve to correct heading anchors
-6. Run `/check-versions` skill to validate
-7. Run linters via `/lint-and-fix`
+1. Confirm version consistency: review-branch is 1.2.1 in both plugin.json and marketplace.json; update-review is 1.0.0 in both
+1. Confirm marketplace metadata.version is 1.22.0
+1. Confirm CLAUDE.md tree is alphabetically correct
+1. Confirm README.md ToC links resolve to correct heading anchors
+1. Run `/check-versions` skill to validate
+1. Run linters via `/lint-and-fix`

@@ -10,7 +10,7 @@ Find the latest branch review, assess commits made since, and update the review 
 Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
 
 ```text
-/install-plugin marketplace cboone/cboone-cc-plugins
+/plugin marketplace add cboone/cboone-cc-plugins
 ```
 
 Then select **Update Review** from the available plugins.
