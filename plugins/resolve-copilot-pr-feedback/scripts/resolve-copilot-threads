@@ -324,7 +324,7 @@ function do_reply() {
 #   $1 - Thread ID
 #   [--body-file <path>] - Read body from file; reads from stdin otherwise
 # Outputs:
-#   Comment ID to stdout
+#   "true" on success to stdout (consistent with do_resolve)
 function do_reply_and_resolve() {
   local thread_id="${1}"
   shift
@@ -332,13 +332,9 @@ function do_reply_and_resolve() {
   local body
   body=$(read_body "$@")
 
-  local comment_id
-  comment_id=$(send_reply "${thread_id}" "${body}")
+  send_reply "${thread_id}" "${body}" > /dev/null
 
-  # Resolve after successful reply; do_resolve handles error reporting
-  do_resolve "${thread_id}" > /dev/null
-
-  echo "${comment_id}"
+  do_resolve "${thread_id}"
 }
 
 function main() {
