@@ -315,12 +315,14 @@ Use the branch name obtained from `git branch --show-current` in step 2. If in d
 - Replace `/` and any other characters that are unsafe in filenames (spaces, colons, backslashes) with `-`
 - Collapse consecutive hyphens into a single hyphen
 - Remove leading and trailing hyphens
+- If the result is empty after these steps, fall back to `branch` as the name
 
 The resulting filename format is `YYYY-MM-DD-sanitized-branch-name.md`. For example:
 
 - Branch `feature/store-reviews` on 2026-03-08 produces `2026-03-08-feature-store-reviews.md`
 - Branch `fix/auth-bug` on 2026-03-08 produces `2026-03-08-fix-auth-bug.md`
 - Detached HEAD on 2026-03-08 produces `2026-03-08-HEAD.md`
+- A branch that sanitizes to empty on 2026-03-08 produces `2026-03-08-branch.md`
 
 #### 7b. Create the Directory
 

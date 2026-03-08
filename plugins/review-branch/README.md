@@ -17,7 +17,7 @@ Then select **Review Branch** from the available plugins.
 
 ## What It Does
 
-Summarizes changes by area/concern, lists new/modified/deleted files, and highlights notable changes. Saves the review to `docs/reviews/` with a datestamp-prefixed filename (e.g., `2026-03-08-feature-store-reviews.md`) for use with the [Address Review](../address-review/README.md) skill. Then goes further with two evaluations:
+Summarizes changes by area/concern, lists new/modified/deleted files, and highlights notable changes. By default, saves the review to `docs/reviews/` with a datestamp-prefixed filename (e.g., `2026-03-08-feature-store-reviews.md`) for use with the [Address Review](../address-review/README.md) skill (saving can be skipped with `--no-save`). Then goes further with two evaluations:
 
 - **Plan compliance**: When a plan document is available (auto-detected or specified), rigorously evaluates whether the implementation matches the plan's intent. Checks for deviations, scope additions and omissions, and assesses implementation fidelity, not just task completion.
 - **Code quality assessment**: Always runs, regardless of whether a plan exists. Examines the diff for readability, maintainability, potential bugs, edge cases, error handling, security issues, and completeness. Delivers a direct verdict on merge readiness.
