@@ -74,7 +74,7 @@ Present a table with all detected tools and their status:
 | 2 | setup-linters           | Up to date     |                                                 | None            |
 | 3 | setup-secret-scanning   | Partially set  | TruffleHog workflow missing                     | Add workflow    |
 | 4 | add-community-files     | Needs update   | CoC is v2.1 (current: v3.0)                     | Update CoC      |
-| 5 | clean-up-agent-config   | Needs update   | CLAUDE.md is regular file, not symlink           | Convert symlink |
+| 5 | clean-up-agent-config   | Needs update   | CLAUDE.md is regular file, not symlink           | Convert to symlink |
 | 6 | optimize-runner-usage   | Up to date     |                                                 | None            |
 | 7 | scaffold-new-repo       | Needs update   | .gitignore missing .claude/settings.local.json   | Update file     |
 | 8 | add-goreleaser-homebrew | Up to date     |                                                 | None            |
@@ -106,16 +106,16 @@ If no items need updating (everything is up to date), congratulate the user and 
 
 For each confirmed update item, choose a strategy based on scope:
 
-| Scenario                                       | Strategy                                                                    |
-| ---------------------------------------------- | --------------------------------------------------------------------------- |
-| Action version outdated                        | **Targeted**: find and replace the version string in the workflow file      |
-| Missing config entry (e.g., .gitignore line)   | **Targeted**: add the missing entry to the appropriate section              |
-| Missing workflow key (e.g., `timeout-minutes`) | **Targeted**: add the key to each job in the workflow file                  |
-| Missing `concurrency:` group                   | **Targeted**: add the concurrency block below the `on:` trigger block       |
-| Missing `permissions:` block                   | **Targeted**: add the permissions block at the workflow level               |
-| CLAUDE.md is regular file, not symlink         | **Targeted**: replace the regular file with a symlink to AGENTS.md          |
-| Community file outdated (e.g., CoC version)    | **Full re-run**: invoke the `add-community-files` skill via the Skill tool  |
-| Missing file from a detected tool              | **Full re-run**: invoke the original skill or read the original command .md |
+| Scenario                                       | Strategy                                                                             |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Action version outdated                        | **Targeted**: find and replace the version string in the workflow file               |
+| Missing config entry (e.g., .gitignore line)   | **Targeted**: add the missing entry to the appropriate section                       |
+| Missing workflow key (e.g., `timeout-minutes`) | **Targeted**: add the key to each job in the workflow file                           |
+| Missing `concurrency:` group                   | **Targeted**: add the concurrency block below the `on:` trigger block                |
+| Missing `permissions:` block                   | **Targeted**: add the permissions block at the workflow level                        |
+| CLAUDE.md is regular file, not symlink         | **Full re-run**: invoke `clean-up-agent-config` to reconcile CLAUDE.md and AGENTS.md |
+| Community file outdated (e.g., CoC version)    | **Full re-run**: invoke the `add-community-files` skill via the Skill tool           |
+| Missing file from a detected tool              | **Full re-run**: invoke the original skill or read the original command .md          |
 
 For full tool re-runs:
 
@@ -157,7 +157,7 @@ Suggest next steps:
 
 ## Reference: Action Versions
 
-The target versions for GitHub Actions that repositories should be updated to. When auditing workflow files, check all `uses:` lines against this table. Note: some plugin generation templates may still reference older versions; this table represents the latest recommended versions.
+The target versions for GitHub Actions that repositories should be updated to. When auditing workflow files, check `uses:` lines against this table. Actions not listed in this table are outside the scope of this audit and should be skipped without flagging. Note: some plugin generation templates may still reference older versions; this table represents the latest recommended versions.
 
 | Action                          | Current version |
 | ------------------------------- | --------------- |
@@ -226,7 +226,7 @@ When auditing, treat SHA-pinned references (e.g., `actions/checkout@a5ac7e5...`)
 - Uses `gitleaks/gitleaks-action@v2`
 - Uses `actions/checkout@v6` with `fetch-depth: 0`
 - Has `permissions:` block with `contents: read` and `pull-requests: write`
-- Has `concurrency:` group with `cancel-in-progress: true`
+- Has `concurrency:` group with `group: ${{ github.workflow }}-${{ github.ref }}` and `cancel-in-progress: true`
 - Has `timeout-minutes:` on all jobs
 - Has `schedule:` trigger (daily cron)
 - Has `workflow_dispatch:` trigger
@@ -239,7 +239,7 @@ When auditing, treat SHA-pinned references (e.g., `actions/checkout@a5ac7e5...`)
 - Has `--results=verified,unknown` in extra_args
 - Triggers on `push: branches: [main]`
 - Has `schedule:` trigger (weekly cron)
-- Has `concurrency:` group
+- Has `concurrency:` group with `group: ${{ github.workflow }}-${{ github.ref }}` and `cancel-in-progress: true`
 - Has `timeout-minutes:` on all jobs
 
 ### Checks for .gitleaks.toml
