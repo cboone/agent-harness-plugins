@@ -138,7 +138,21 @@ Adapt to the project (e.g., TypeScript vs. JavaScript ESLint config, directory s
 
 Add `lint`, `format`, and/or `lint:fix` scripts to `package.json`, `Makefile`, or equivalent. Read the language-specific reference for exact entries.
 
-### 8. Set Up CI (Optional)
+### 8. Update Copilot Instructions
+
+If `.github/copilot-instructions.md` exists, append entries to the `## PR Review` section for the tools just installed. Only add entries for tools that were actually set up (not skipped or already existing). Before appending each entry, check whether the bold key text already exists in the file; skip entries that are already present.
+
+If **Prettier** was installed:
+
+- **Prettier `printWidth: 10000` is intentional**: This project uses a high `printWidth` in `.prettierrc.json` to prevent Prettier from wrapping lines. Combined with `proseWrap: preserve` for Markdown, this preserves author line breaks. Do not suggest reducing printWidth to 80 or 120.
+
+If **golangci-lint** config (`.golangci.yml`) was created:
+
+- **golangci-lint v2 config format is intentional**: This project uses golangci-lint v2 configuration which includes `formatters:` as a top-level key and supports `golangci-lint fmt` as a subcommand. These are correct v2 features. Do not suggest reverting to v1 config format.
+
+If `.github/copilot-instructions.md` does not exist, skip this step.
+
+### 9. Set Up CI (Optional)
 
 Ask whether to create a GitHub Actions workflow. If yes, read `./references/tools/github-actions-ci.md` for templates.
 
@@ -157,11 +171,11 @@ If a CI workflow already exists, offer to add lint steps to it rather than creat
 | actionlint    | `raven-actions/actionlint@v2`                                             |
 | cspell        | `streetsidesoftware/cspell-action@v6`                                     |
 
-### 9. Run Initial Lint (Optional)
+### 10. Run Initial Lint (Optional)
 
 Ask whether to run the newly installed linters. If yes, invoke `lint-and-fix` to fix existing issues.
 
-### 10. Commit (Optional)
+### 11. Commit (Optional)
 
 Ask whether to commit the setup. Suggest `chore: set up <tool list>` as the commit message prefix.
 

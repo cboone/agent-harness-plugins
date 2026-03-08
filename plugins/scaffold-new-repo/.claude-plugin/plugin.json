@@ -9,5 +9,5 @@
   "name": "scaffold-new-repo",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "commands": "./commands",
-  "version": "1.4.4"
+  "version": "1.4.5"
 }

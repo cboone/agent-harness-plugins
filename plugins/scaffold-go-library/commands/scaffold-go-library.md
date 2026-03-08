@@ -208,7 +208,16 @@ git add -A
 git commit -S -m "feat: scaffold Go library project"
 ```
 
-### 23. Summary
+### 23. Update Copilot Instructions
+
+If `.github/copilot-instructions.md` exists (created by `scaffold-new-repo` when running in the bootstrap flow, or already present in an existing repo), append the following entries to the `## PR Review` section. Before appending each entry, check whether the bold key text already exists in the file; skip entries that are already present.
+
+- **golangci-lint v2 config format is intentional**: This project uses golangci-lint v2 configuration which includes `formatters:` as a top-level key and supports `golangci-lint fmt` as a subcommand. These are correct v2 features. Do not suggest reverting to v1 config format.
+- **golangci-lint-action handles its own caching**: The `golangci/golangci-lint-action` manages golangci-lint installation and caching automatically. Do not suggest adding manual cache steps or replacing it with a manual install.
+
+If `.github/copilot-instructions.md` does not exist, skip this step.
+
+### 24. Summary
 
 Print a summary of what was created:
 
