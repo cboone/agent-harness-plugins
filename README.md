@@ -46,6 +46,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Setup CI](#setup-ci)
 ∙ [Setup Secret Scanning](#setup-secret-scanning)
 ∙ [Setup Installers](#setup-installers)
+∙ [Update Everything](#update-everything)
 
 **Hooks**
 <br>Security:
@@ -332,6 +333,13 @@ Set up installer and distribution methods for Go, Swift, and Rust projects: Home
 
 > **Trigger:** `/setup-installers`
 > **Details:** [README](./plugins/setup-installers/README.md)
+
+#### Update Everything
+
+Audit a repository against the latest plugin templates and update anything out of date. The maintenance companion to Bootstrap Project: bootstrap sets things up, this keeps them current. Detects which tools have been used, compares files against current templates, presents a plan, and applies confirmed updates.
+
+> **Trigger:** `/update-everything`
+> **Details:** [README](./plugins/update-everything/README.md)
 
 ## Hooks
 

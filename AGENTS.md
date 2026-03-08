@@ -272,6 +272,12 @@ cboone-cc-plugins/
     │               ├── heredoc-pattern.md
     │               ├── safety-rules.md
     │               └── tmpfile-pattern.md
+    ├── update-everything/           # Audit and update repo against latest templates
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── commands/
+    │       └── update-everything.md
     ├── write-markdown/              # Markdown style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

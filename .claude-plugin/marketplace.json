@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "1.20.0"
+    "version": "1.21.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -428,6 +428,20 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/use-git",
       "version": "1.1.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
+      "description": "Audit a repository against the latest plugin templates and update anything out of date.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["audit", "ci", "linters", "scaffolding", "templates", "update"],
+      "license": "MIT",
+      "name": "update-everything",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/update-everything",
+      "version": "1.0.0"
     },
     {
       "author": {
