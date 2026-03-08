@@ -33,12 +33,14 @@ If the user specified `--review <path>`, use that file. Otherwise, auto-detect:
 git branch --show-current
 ```
 
+If this command returns an empty string (detached HEAD), treat the branch name as `HEAD` before sanitizing.
+
 1. **Sanitize the branch name** for filename matching:
 
 - Replace `/` and any other characters that are unsafe in filenames (spaces, colons, backslashes) with `-`
 - Collapse consecutive hyphens into a single hyphen
 - Remove leading and trailing hyphens
-- If the result is empty after these steps, fall back to `branch` as the name
+- If the result is empty after these steps, fall back to `HEAD` as the name
 
 1. **Search for matching review files**:
 
@@ -129,6 +131,9 @@ git diff <merge-base>..HEAD
 
 # Current HEAD hash
 git rev-parse --short HEAD
+
+# Today's date for the Updated: metadata line
+date +%Y-%m-%d
 ```
 
 ### 4. Assess the Delta
@@ -153,7 +158,13 @@ Are there new notable changes (dependencies, configs, APIs, security) since the 
 
 #### 4e. Plan Compliance
 
-If a plan is available (user-specified via `--plan` or auto-detected using the same logic as the review-branch skill's Step 4a), re-evaluate all plan items from scratch against the full diff (merge base to HEAD). Items that were "Partially done" or "Not started" in the previous review may have progressed. Note the progression explicitly.
+If a plan is available, re-evaluate all plan items from scratch against the full diff (merge base to HEAD). Items that were "Partially done" or "Not started" in the previous review may have progressed. Note the progression explicitly.
+
+**Plan detection**: If the user specified `--plan <path>`, use that file. Otherwise, auto-detect:
+
+1. Look for plan files in common plan directories (`docs/plans/todo/`, `docs/plans/in-progress/`, `docs/plans/`)
+1. Search for plan files whose name matches the current branch name (with type prefixes and hyphens/underscores normalized). For example, branch `feature/add-dark-mode` would match a plan named `add-dark-mode.md`.
+1. If exactly one plan matches, use it. If multiple plans match, list them and ask the user which to use. If no plans match, skip plan evaluation entirely.
 
 #### 4f. Code Quality Assessment
 
@@ -223,10 +234,10 @@ Adjust section headers and content to fit what is actually present. Omit empty s
 
 Overwrite the existing review file at its original path. Do not change the filename (the original date prefix is preserved).
 
-Report the update to the user:
+Report the update to the user, using the actual path of the review file (the resolved `--review` path or the auto-detected path):
 
 ```text
-Review updated: docs/reviews/<filename>
+Review updated: <review-path>
 Previous review covered N commits through <old-hash>
 Updated review covers M commits through <new-hash> (K new commits)
 ```
@@ -234,7 +245,7 @@ Updated review covers M commits through <new-hash> (K new commits)
 Include a hint about the address-review skill:
 
 ```text
-To address the items in this review, run: /address-review docs/reviews/<filename>
+To address the items in this review, run: /address-review <review-path>
 ```
 
 ## Error Handling
