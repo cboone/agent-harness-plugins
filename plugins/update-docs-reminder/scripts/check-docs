@@ -51,7 +51,7 @@ function load_config() {
 
   # Check if plugin is disabled
   local enabled
-  enabled="$(jq -r '.enabled // true' "${config_file}")"
+  enabled="$(jq -r '.enabled // true' "${config_file}" 2> /dev/null)" || return 0
   if [[ "${enabled}" == "false" ]]; then
     exit 0
   fi
@@ -68,7 +68,7 @@ function check_enabled() {
   fi
 
   local enabled
-  enabled="$(jq -r ".checks.${check_name} // true" "${config_file}")"
+  enabled="$(jq -r ".checks.${check_name} // true" "${config_file}" 2> /dev/null)" || return 0
   if [[ "${enabled}" == "false" ]]; then
     return 1
   fi
@@ -89,7 +89,10 @@ function get_skip_prefixes() {
   fi
 
   local prefixes
-  prefixes="$(jq -r '.skip_prefixes // empty' "${config_file}")"
+  prefixes="$(jq -r '.skip_prefixes // empty' "${config_file}" 2> /dev/null)" || {
+    echo "${SKIP_PREFIXES}"
+    return
+  }
   if [[ -z "${prefixes}" ]] || [[ "${prefixes}" == "null" ]]; then
     echo "${SKIP_PREFIXES}"
     return
@@ -97,7 +100,14 @@ function get_skip_prefixes() {
 
   # Convert JSON array to regex
   local prefix_list
-  prefix_list="$(jq -r '.skip_prefixes | join("|")' "${config_file}")"
+  prefix_list="$(jq -r '.skip_prefixes | if type == "array" then join("|") else empty end' "${config_file}" 2> /dev/null)" || {
+    echo "${SKIP_PREFIXES}"
+    return
+  }
+  if [[ -z "${prefix_list}" ]]; then
+    echo "${SKIP_PREFIXES}"
+    return
+  fi
   echo "^(${prefix_list})(\(.+\))?:"
 }
 
@@ -129,9 +139,12 @@ function check_new_directories() {
     return 0
   fi
 
-  # Find new top-level directories from added files
+  # Find new top-level directories from added files (skip root-level files)
   local new_top_dirs
-  new_top_dirs="$(echo "${added_files}" | sed 's|/.*||' | sort -u)"
+  new_top_dirs="$(echo "${added_files}" | grep '/' | sed 's|/.*||' | sort -u)"
+  if [[ -z "${new_top_dirs}" ]]; then
+    return 0
+  fi
 
   local existing_reminder=""
   while IFS= read -r dir; do
@@ -155,7 +168,7 @@ function check_dependency_changes() {
 
   local changed_files="${1}"
   local dep_files
-  dep_files="$(echo "${changed_files}" | grep -E '^(go\.mod|package\.json|Cargo\.toml|requirements\.txt|pyproject\.toml|Gemfile|Pipfile)$' || true)"
+  dep_files="$(echo "${changed_files}" | grep -E '^(go\.(mod|sum)|package(-lock)?\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.(toml|lock)|requirements\.txt|pyproject\.toml|Gemfile(\.lock)?|Pipfile(\.lock)?|poetry\.lock)$' || true)"
 
   if [[ -n "${dep_files}" ]]; then
     local file_list
@@ -198,14 +211,14 @@ function check_new_env_vars() {
   # shellcheck disable=SC2310
   check_enabled "env_vars" || return 0
 
-  local added_files="${1}"
-  if [[ -z "${added_files}" ]]; then
+  local changed_files="${1}"
+  if [[ -z "${changed_files}" ]]; then
     return 0
   fi
 
   # Only check source files, not config/docs
   local source_files
-  source_files="$(echo "${added_files}" | grep -E '\.(go|ts|js|py|rs|rb)$' | head -5 || true)"
+  source_files="$(echo "${changed_files}" | grep -E '\.(go|ts|js|py|rs|rb)$' | head -5 || true)"
   if [[ -z "${source_files}" ]]; then
     return 0
   fi
@@ -218,7 +231,7 @@ function check_new_env_vars() {
 
   # shellcheck disable=SC2016
   if echo "${diff_content}" | grep -qE '(os\.Getenv|process\.env\.|os\.environ|ENV\[|getenv\(|\$ENV\{)'; then
-    REMINDERS+=("New environment variable reference(s) detected in added files: consider updating README.md configuration section")
+    REMINDERS+=("New environment variable reference(s) detected: consider updating README.md configuration section")
   fi
 }
 
@@ -250,14 +263,14 @@ function check_public_api() {
   # shellcheck disable=SC2310
   check_enabled "public_api" || return 0
 
-  local added_files="${1}"
-  if [[ -z "${added_files}" ]]; then
+  local changed_files="${1}"
+  if [[ -z "${changed_files}" ]]; then
     return 0
   fi
 
   # Only check source files
   local source_files
-  source_files="$(echo "${added_files}" | grep -E '\.(go|ts|js|py|rs)$' | head -5 || true)"
+  source_files="$(echo "${changed_files}" | grep -E '\.(go|ts|js|py|rs)$' | head -5 || true)"
   if [[ -z "${source_files}" ]]; then
     return 0
   fi
@@ -269,7 +282,7 @@ function check_public_api() {
   diff_content="$(git diff HEAD~1..HEAD -- "${file_array[@]}" 2> /dev/null | grep '^+' | head -200 || true)"
 
   if echo "${diff_content}" | grep -qE '(^+func [A-Z]|^+export (function|class|const|type|interface) |^+pub fn |^+pub struct |^+pub enum )'; then
-    REMINDERS+=("New public API exports detected in added files: consider updating README.md or API documentation")
+    REMINDERS+=("New public API exports detected: consider updating README.md or API documentation")
   fi
 }
 
@@ -337,9 +350,9 @@ function do_analyze() {
   check_dependency_changes "${changed_files}"
   check_config_changes "${changed_files}"
   check_ci_changes "${changed_files}"
-  check_new_env_vars "${added_files}"
+  check_new_env_vars "${changed_files}"
   check_cli_flags "${changed_files}"
-  check_public_api "${added_files}"
+  check_public_api "${changed_files}"
 
   # Output reminders if any were found
   if [[ ${#REMINDERS[@]} -gt 0 ]]; then
@@ -367,7 +380,7 @@ function main() {
     exit 0
   fi
 
-  if ! printf '%s' "${command}" | grep -qE 'git\s+commit'; then
+  if ! printf '%s' "${command}" | grep -qE 'git[[:space:]]+commit([[:space:]]|$)'; then
     exit 0
   fi
 
