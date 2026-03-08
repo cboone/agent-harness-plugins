@@ -71,7 +71,7 @@ If TruffleHog was selected:
 
    If the lookup fails (e.g., `gh` is not installed or not authenticated), fall back to `v3.93.7`.
 
-2. **Create `.github/workflows/trufflehog.yml`** using the TruffleHog workflow template below, replacing `TRUFFLEHOG_VERSION` with the version obtained above.
+1. **Create `.github/workflows/trufflehog.yml`** using the TruffleHog workflow template below, replacing `TRUFFLEHOG_VERSION` with the version obtained above.
 
 Write the file using the Write tool.
 
