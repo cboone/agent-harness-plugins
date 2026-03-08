@@ -399,7 +399,7 @@
       "name": "setup-secret-scanning",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-secret-scanning",
-      "version": "2.0.1"
+      "version": "2.0.2"
     },
     {
       "author": {

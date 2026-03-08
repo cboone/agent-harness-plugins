@@ -61,7 +61,17 @@ Write the file using the Write tool. The `.github/workflows/` directory will be 
 
 ### 5. Generate TruffleHog Workflow
 
-If TruffleHog was selected, create `.github/workflows/trufflehog.yml` using the TruffleHog workflow template below.
+If TruffleHog was selected:
+
+1. **Look up the latest release tag** so the generated workflow pins to a current version:
+
+   ```bash
+   gh api repos/trufflesecurity/trufflehog/releases/latest --jq '.tag_name'
+   ```
+
+   If the lookup fails (e.g., `gh` is not installed or not authenticated), fall back to `v3.93.7`.
+
+2. **Create `.github/workflows/trufflehog.yml`** using the TruffleHog workflow template below, replacing `TRUFFLEHOG_VERSION` with the version obtained above.
 
 Write the file using the Write tool.
 
@@ -212,14 +222,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: trufflesecurity/trufflehog@v3
+      - uses: trufflesecurity/trufflehog@TRUFFLEHOG_VERSION
         with:
           extra_args: --results=verified,unknown
 ```
 
 ### TruffleHog Workflow Notes
 
-- `trufflesecurity/trufflehog@v3` is the stable major version tag from the official TruffleHog GitHub Action.
+- `trufflesecurity/trufflehog` does not maintain a rolling major version tag (unlike most GitHub Actions). You must pin to a specific release tag (e.g., `v3.93.7`). The workflow above uses `TRUFFLEHOG_VERSION` as a placeholder; replace it with the latest release tag from step 5.
 - `--results=verified,unknown` reports confirmed-active and unknown-status secrets while filtering out confirmed false positives.
 - `fetch-depth: 0` clones the full git history for thorough scanning.
 - The `schedule` trigger runs a weekly scan on Saturdays at 4 AM UTC, complementing gitleaks' daily scans.
