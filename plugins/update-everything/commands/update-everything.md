@@ -34,20 +34,20 @@ If multiple types are detected (monorepo), note all of them.
 
 For each tool in the ecosystem, check for its signature artifacts. Only tools whose artifacts are found will be audited.
 
-| Tool                      | Signature artifacts                                                     |
-| ------------------------- | ----------------------------------------------------------------------- |
-| `scaffold-new-repo`       | `LICENSE` + `README.md` + `.gitignore`                                  |
-| `scaffold-go-cli`         | `go.mod` + `cmd/` + `.goreleaser.yml` + `.github/workflows/release.yml` |
-| `scaffold-go-library`     | `go.mod` (no `cmd/`) + `.golangci.yml` + `.github/workflows/ci.yml`     |
-| `setup-ci`                | `.github/workflows/ci.yml`                                              |
-| `setup-linters`           | `.editorconfig` or `.prettierrc.json` or `.golangci.yml`                |
-| `setup-secret-scanning`   | `.github/workflows/gitleaks.yml` or `.github/workflows/trufflehog.yml`  |
-| `add-goreleaser-homebrew` | `.goreleaser.yml` + `.github/workflows/release.yml`                     |
-| `add-community-files`     | `CONTRIBUTING.md` + `CODE_OF_CONDUCT.md`                                |
-| `add-scrut-cli-tests`     | `tests/scrut/` directory                                                |
-| `setup-installers`        | `install.sh` or `Formula/`                                              |
-| `optimize-runner-usage`   | `concurrency:` key in any `.github/workflows/*.yml`                     |
-| `clean-up-agent-config`   | `AGENTS.md` or (`CLAUDE.md` + `.claude/settings.json`)                  |
+| Tool                      | Signature artifacts                                                       |
+| ------------------------- | ------------------------------------------------------------------------- |
+| `scaffold-new-repo`       | `LICENSE` + `README.md` + `.gitignore`                                    |
+| `scaffold-go-cli`         | `go.mod` + `cmd/` + `.goreleaser.yml` + `.github/workflows/release.yml`   |
+| `scaffold-go-library`     | `go.mod` (no `cmd/`) + `.golangci.yml` + `.github/workflows/ci.yml`       |
+| `setup-ci`                | `.github/workflows/ci.yml`                                                |
+| `setup-linters`           | `.editorconfig` or `.prettierrc.json` or `.golangci.yml`                  |
+| `setup-secret-scanning`   | `.github/workflows/gitleaks.yml` or `.github/workflows/trufflehog.yml`    |
+| `add-goreleaser-homebrew` | `.goreleaser.yml` with `brews:` section + `.github/workflows/release.yml` |
+| `add-community-files`     | `CONTRIBUTING.md` + `CODE_OF_CONDUCT.md`                                  |
+| `add-scrut-cli-tests`     | `tests/scrut/` directory                                                  |
+| `setup-installers`        | `install.sh` or `Formula/`                                                |
+| `optimize-runner-usage`   | `concurrency:` key in any `.github/workflows/*.yml`                       |
+| `clean-up-agent-config`   | `AGENTS.md` or (`CLAUDE.md` + `.claude/settings.json`)                    |
 
 For each detected tool, record which artifacts were found and which expected artifacts are missing (for "Partially set up" status).
 
@@ -157,7 +157,7 @@ Suggest next steps:
 
 ## Reference: Action Versions
 
-The current expected versions for GitHub Actions used across plugin templates. When auditing workflow files, check all `uses:` lines against this table.
+The target versions for GitHub Actions that repositories should be updated to. When auditing workflow files, check all `uses:` lines against this table. Note: some plugin generation templates may still reference older versions; this table represents the latest recommended versions.
 
 | Action                          | Current version |
 | ------------------------------- | --------------- |
@@ -171,7 +171,7 @@ The current expected versions for GitHub Actions used across plugin templates. W
 | `gitleaks/gitleaks-action`      | `v2`            |
 | `golangci/golangci-lint-action` | `v9`            |
 | `goreleaser/goreleaser-action`  | `v6`            |
-| `ludeeus/action-shellcheck`     | `master`        |
+| `ludeeus/action-shellcheck`     | `2.0.0`         |
 | `mfinelli/setup-shfmt`          | `v4`            |
 | `oven-sh/setup-bun`             | `v2`            |
 | `ruby/setup-ruby`               | `v1`            |
@@ -224,7 +224,7 @@ The current expected versions for GitHub Actions used across plugin templates. W
 - Uses `gitleaks/gitleaks-action@v2`
 - Uses `actions/checkout@v6` with `fetch-depth: 0`
 - Has `permissions:` block with `contents: read` and `pull-requests: write`
-- Has `concurrency:` group with `cancel-in-progress: true`
+- Has `concurrency:` group with `cancel-in-progress: false`
 - Has `timeout-minutes:` on all jobs
 - Has `schedule:` trigger (daily cron)
 - Has `workflow_dispatch:` trigger
