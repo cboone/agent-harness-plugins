@@ -9,7 +9,7 @@ Audit the current repository against the latest templates and best practices fro
 
 This is the maintenance companion to `bootstrap-project`: bootstrap sets things up, this keeps them current.
 
-**Scope**: This command only audits and updates files that already exist. It does not offer to set up tools that were never used. For initial setup, use `/bootstrap-project` or the individual tool.
+**Scope**: This command audits tools already in use and updates their files to match current templates. For tools that are partially configured, it can restore missing expected files. It does not set up tools that were never used; for initial setup, use `/bootstrap-project` or the individual tool.
 
 ## Workflow
 
@@ -179,6 +179,8 @@ The target versions for GitHub Actions that repositories should be updated to. W
 | `Swatinem/rust-cache`           | `v2`            |
 | `trufflesecurity/trufflehog`    | `v3`            |
 
+When auditing, treat SHA-pinned references (e.g., `actions/checkout@a5ac7e5...`) as compliant if the pinned commit corresponds to the listed version or newer. Do not downgrade SHA pins to mutable version tags.
+
 <!-- Maintenance: update this table when any command template changes its action versions. -->
 
 ## Reference: CI Workflow Checks (setup-ci)
@@ -192,7 +194,7 @@ The target versions for GitHub Actions that repositories should be updated to. W
 
 - All `uses:` references match the Action Versions table above
 - Has a top-level `permissions:` block (typically `contents: read`)
-- Has a `concurrency:` block with `group: "${{ github.workflow }}-${{ github.ref }}"` and `cancel-in-progress: true`
+- Has a `concurrency:` block with `group: ${{ github.workflow }}-${{ github.ref }}` and `cancel-in-progress: true`
 - Every job has `timeout-minutes:` set (typically 15 for test/lint, 10 for format/vuln)
 - Has `paths-ignore:` on push and pull_request triggers with the standard list (see Reference: Standard paths-ignore)
 - Go projects: uses `go-version-file: go.mod` instead of a pinned Go version
@@ -224,7 +226,7 @@ The target versions for GitHub Actions that repositories should be updated to. W
 - Uses `gitleaks/gitleaks-action@v2`
 - Uses `actions/checkout@v6` with `fetch-depth: 0`
 - Has `permissions:` block with `contents: read` and `pull-requests: write`
-- Has `concurrency:` group with `cancel-in-progress: false`
+- Has `concurrency:` group with `cancel-in-progress: true`
 - Has `timeout-minutes:` on all jobs
 - Has `schedule:` trigger (daily cron)
 - Has `workflow_dispatch:` trigger
@@ -303,7 +305,7 @@ Must include language-specific entries appropriate for the detected project type
 - `.editorconfig`
 - `.prettierrc.json`
 - `.prettierignore`
-- `.markdownlint-cli2.jsonc` (or `.markdownlint-cli2.yaml`, `.markdownlint.json`)
+- `.markdownlint-cli2.jsonc` (or `.markdownlint-cli2.yaml`, `.markdownlint.json`, `.markdownlint.jsonc`, `.markdownlint.yaml`)
 - Language-specific linter configs (`.golangci.yml`, `.shellcheckrc`, etc.)
 
 ### Checks for .editorconfig
@@ -410,7 +412,7 @@ Must include language-specific entries appropriate for the detected project type
 | ----------------------- | ------------------------------------------------- | ------------------ |
 | CI                      | `${{ github.workflow }}-${{ github.ref }}`        | `true`             |
 | Release                 | `${{ github.repository }}-${{ github.workflow }}` | `false`            |
-| Secret scanning         | `${{ github.workflow }}-${{ github.ref }}`        | `false`            |
+| Secret scanning         | `${{ github.workflow }}-${{ github.ref }}`        | `true`             |
 | Scheduled               | `${{ github.workflow }}-${{ github.ref }}`        | `true`             |
 | Mixed (branches + tags) | `${{ github.workflow }}-${{ github.ref }}`        | `false`            |
 

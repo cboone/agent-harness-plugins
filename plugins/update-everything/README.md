@@ -21,7 +21,7 @@ Scans the current repository for files created by other plugins in this ecosyste
 
 The maintenance companion to [Bootstrap Project](../bootstrap-project/README.md): bootstrap asks "what needs to be set up?", this asks "what needs to be updated?"
 
-**Scope**: This command only audits and updates files that already exist. It does not offer to set up tools that were never used. For initial setup, use `/bootstrap-project` or the individual tool.
+**Scope**: This command audits tools already in use and updates their files to match current templates. For tools that are partially configured, it can restore missing expected files. It does not set up tools that were never used; for initial setup, use `/bootstrap-project` or the individual tool.
 
 ## Usage
 
