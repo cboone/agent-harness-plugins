@@ -140,7 +140,9 @@ Add `lint`, `format`, and/or `lint:fix` scripts to `package.json`, `Makefile`, o
 
 ### 8. Update Copilot Instructions
 
-If `.github/copilot-instructions.md` exists, append entries to the `## PR Review` section for the tools just installed. Only add entries for tools that were actually set up (not skipped or already existing). Before appending each entry, check whether the bold key text already exists in the file; skip entries that are already present.
+If `.github/copilot-instructions.md` exists, append entries to the PR review section for the tools just installed. Only add entries for tools that were actually set up (not skipped or already existing). Before appending each entry, check whether the bold key text already exists in the file; skip entries that are already present.
+
+To locate the PR review section: look for an existing heading whose text includes "PR Review" or "Code Review" (e.g., `## PR Review`, `## Code Review`, `## PR Review Checklist (CRITICAL)`). If no matching heading exists, append a new `## PR Review` section at the end of the file and place the entries there.
 
 If **Prettier** was installed:
 
