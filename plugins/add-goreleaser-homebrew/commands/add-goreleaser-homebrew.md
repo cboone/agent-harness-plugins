@@ -364,6 +364,8 @@ release-dry-run: ## Run GoReleaser in dry-run mode (no publish)
 
 Apply these modifications to the base `.goreleaser.yml` template and release workflow based on detected project features. Each section describes how to detect the feature and what to change.
 
+**Note:** All `before.hooks` examples below use `go run .`, which assumes the main package is at the repository root. If `builds.main` is a subdirectory (e.g., `./cmd/PROJECT-NAME`), replace `go run .` with `go run ./cmd/PROJECT-NAME` in all hook commands.
+
 ### Shell Completions
 
 #### Detection
