@@ -126,7 +126,7 @@ function check_new_scripts() {
   if [[ -n "${matches}" ]]; then
     local file_list
     file_list="$(echo "${matches}" | head -3 | sed 's/^/    /')"
-    REMINDERS+=("New script(s) added:\n${file_list}\n    Consider updating README.md usage section")
+    REMINDERS+=("New script(s) or command entrypoint(s) added:\n${file_list}\n    Consider updating README.md usage / CLI reference sections")
   fi
 }
 
@@ -359,7 +359,7 @@ function do_analyze() {
     echo ""
     echo "Documentation reminder: the committed changes may need documentation updates:"
     for reminder in "${REMINDERS[@]}"; do
-      echo -e "  - ${reminder}"
+      printf '  - %b\n' "${reminder}"
     done
     echo ""
     echo "Review the relevant documentation files and update them if needed."
