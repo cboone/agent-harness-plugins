@@ -62,20 +62,20 @@ Same detection table as `bootstrap-project` step 1. Scan for `go.mod`, `package.
 
 Check for signature artifacts of each tool:
 
-| Tool | Key artifacts |
-|------|--------------|
-| scaffold-new-repo | LICENSE, README.md, CHANGELOG.md, AGENTS.md |
-| scaffold-go-cli | go.mod + cmd/, .goreleaser.yml, release workflow |
-| scaffold-go-library | go.mod (no cmd/), .golangci.yml, CI workflow |
-| setup-ci | .github/workflows/ci.yml, Makefile |
-| setup-linters | .editorconfig, .prettierrc.json, linter configs |
-| setup-secret-scanning | gitleaks.yml, trufflehog.yml |
-| add-goreleaser-homebrew | .goreleaser.yml, release workflow |
-| add-community-files | CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, .github/PULL_REQUEST_TEMPLATE.md |
-| add-scrut-cli-tests | tests/scrut/ |
-| setup-installers | install.sh, Formula/ |
-| optimize-runner-usage | concurrency groups in workflows |
-| clean-up-agent-config | AGENTS.md, CLAUDE.md symlink, .claude/settings.json |
+| Tool                    | Key artifacts                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| scaffold-new-repo       | LICENSE, README.md, CHANGELOG.md, AGENTS.md                                                |
+| scaffold-go-cli         | go.mod + cmd/, .goreleaser.yml, release workflow                                           |
+| scaffold-go-library     | go.mod (no cmd/), .golangci.yml, CI workflow                                               |
+| setup-ci                | .github/workflows/ci.yml, Makefile                                                         |
+| setup-linters           | .editorconfig, .prettierrc.json, linter configs                                            |
+| setup-secret-scanning   | gitleaks.yml, trufflehog.yml                                                               |
+| add-goreleaser-homebrew | .goreleaser.yml, release workflow                                                          |
+| add-community-files     | CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, .github/PULL_REQUEST_TEMPLATE.md |
+| add-scrut-cli-tests     | tests/scrut/                                                                               |
+| setup-installers        | install.sh, Formula/                                                                       |
+| optimize-runner-usage   | concurrency groups in workflows                                                            |
+| clean-up-agent-config   | AGENTS.md, CLAUDE.md symlink, .claude/settings.json                                        |
 
 For each tool, record: detected (yes/no), which artifacts found, which missing.
 
@@ -120,12 +120,12 @@ Ask the user which items to act on. Only items with status "Needs update" or "Pa
 
 Two strategies depending on the scope:
 
-| Scenario | Strategy |
-|----------|----------|
-| Action version outdated | **Targeted**: find and replace the version string in the workflow file |
-| Missing config entry (e.g., .gitignore line) | **Targeted**: add the missing entry |
+| Scenario                                               | Strategy                                                                                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Action version outdated                                | **Targeted**: find and replace the version string in the workflow file                                                    |
+| Missing config entry (e.g., .gitignore line)           | **Targeted**: add the missing entry                                                                                       |
 | Missing file from a detected tool ("Partially set up") | **Full tool re-run**: invoke the original skill (via Skill tool) or read the original command .md and follow its workflow |
-| Structural mismatch (e.g., wrong CoC version) | **Targeted replacement** or full re-run depending on scope |
+| Structural mismatch (e.g., wrong CoC version)          | **Targeted replacement** or full re-run depending on scope                                                                |
 
 For full tool re-runs:
 
@@ -148,15 +148,15 @@ Sections to include:
 
 **Reference: Action Versions** (shared table of current expected versions, extracted from the latest command templates during implementation):
 
-| Action | Current Version |
-|--------|----------------|
-| actions/checkout | (from setup-ci.md) |
-| actions/setup-go | (from setup-ci.md) |
-| golangci/golangci-lint-action | (from setup-ci.md) |
-| gitleaks/gitleaks-action | (from setup-secret-scanning.md) |
-| trufflesecurity/trufflehog | (from setup-secret-scanning.md) |
-| goreleaser/goreleaser-action | (from add-goreleaser-homebrew.md) |
-| (etc.) | |
+| Action                        | Current Version                   |
+| ----------------------------- | --------------------------------- |
+| actions/checkout              | (from setup-ci.md)                |
+| actions/setup-go              | (from setup-ci.md)                |
+| golangci/golangci-lint-action | (from setup-ci.md)                |
+| gitleaks/gitleaks-action      | (from setup-secret-scanning.md)   |
+| trufflesecurity/trufflehog    | (from setup-secret-scanning.md)   |
+| goreleaser/goreleaser-action  | (from add-goreleaser-homebrew.md) |
+| (etc.)                        |                                   |
 
 **Reference: Per-tool Checklists** -- one section per tool, each listing:
 
