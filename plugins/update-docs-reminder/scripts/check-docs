@@ -1,0 +1,378 @@
+#!/usr/bin/env bash
+# check-docs -- Analyzes git commits and suggests documentation updates
+set -euo pipefail
+
+# =============================================================================
+# PostToolUse hook on Bash: fires after every Bash tool call.
+# Checks if a git commit just ran and, if so, analyzes the committed changes
+# for patterns that typically need documentation updates.
+#
+# Input:  JSON on stdin with the tool input (includes .tool_input.command or
+#         .input.command)
+# Output: Plain text to stdout when documentation reminders are warranted.
+#         Silent (no stdout) when no reminders are needed.
+# Exit:   Always 0 (PostToolUse hooks cannot block; they only observe).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Configuration
+# -----------------------------------------------------------------------------
+
+# Conventional commit prefixes that indicate no docs reminder is needed
+SKIP_PREFIXES="^(style|chore|docs|ci|test)(\(.+\))?:"
+readonly SKIP_PREFIXES
+
+# Test file patterns (extended grep)
+TEST_FILE_PATTERNS='(_test\.go|\.test\.[jt]sx?|\.spec\.[jt]sx?|test_[^/]+\.py|^tests/|/__tests__/|^spec/)'
+readonly TEST_FILE_PATTERNS
+
+# Doc file patterns (changes to these are already doc updates)
+DOC_FILE_PATTERNS='\.(md|rst|txt|adoc)$'
+readonly DOC_FILE_PATTERNS
+
+
+# -----------------------------------------------------------------------------
+# Globals
+# -----------------------------------------------------------------------------
+
+REMINDERS=()
+
+# -----------------------------------------------------------------------------
+# Configuration loading
+# -----------------------------------------------------------------------------
+
+function load_config() {
+  local git_root
+  git_root="$(git rev-parse --show-toplevel 2>/dev/null)" || return 0
+
+  local config_file="${git_root}/.update-docs-reminder.json"
+  if [[ ! -f "${config_file}" ]]; then
+    return 0
+  fi
+
+  # Check if plugin is disabled
+  local enabled
+  enabled="$(jq -r '.enabled // true' "${config_file}")"
+  if [[ "${enabled}" == "false" ]]; then
+    exit 0
+  fi
+}
+
+function check_enabled() {
+  local check_name="${1}"
+  local git_root
+  git_root="$(git rev-parse --show-toplevel 2>/dev/null)" || return 0
+
+  local config_file="${git_root}/.update-docs-reminder.json"
+  if [[ ! -f "${config_file}" ]]; then
+    return 0
+  fi
+
+  local enabled
+  enabled="$(jq -r ".checks.${check_name} // true" "${config_file}")"
+  if [[ "${enabled}" == "false" ]]; then
+    return 1
+  fi
+  return 0
+}
+
+function get_skip_prefixes() {
+  local git_root
+  git_root="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+    echo "${SKIP_PREFIXES}"
+    return
+  }
+
+  local config_file="${git_root}/.update-docs-reminder.json"
+  if [[ ! -f "${config_file}" ]]; then
+    echo "${SKIP_PREFIXES}"
+    return
+  fi
+
+  local prefixes
+  prefixes="$(jq -r '.skip_prefixes // empty' "${config_file}")"
+  if [[ -z "${prefixes}" ]] || [[ "${prefixes}" == "null" ]]; then
+    echo "${SKIP_PREFIXES}"
+    return
+  fi
+
+  # Convert JSON array to regex
+  local prefix_list
+  prefix_list="$(jq -r '.skip_prefixes | join("|")' "${config_file}")"
+  echo "^(${prefix_list})(\(.+\))?:"
+}
+
+# -----------------------------------------------------------------------------
+# Heuristic checks
+# -----------------------------------------------------------------------------
+
+function check_new_scripts() {
+  # shellcheck disable=SC2310
+  check_enabled "scripts" || return 0
+
+  local added_files="${1}"
+  local matches
+  matches="$(echo "${added_files}" | grep -E '^(bin|scripts|cmd)/' || true)"
+
+  if [[ -n "${matches}" ]]; then
+    local file_list
+    file_list="$(echo "${matches}" | head -3 | sed 's/^/    /')"
+    REMINDERS+=("New script(s) added:\n${file_list}\n    Consider updating README.md usage section")
+  fi
+}
+
+function check_new_directories() {
+  # shellcheck disable=SC2310
+  check_enabled "directories" || return 0
+
+  local added_files="${1}"
+  if [[ -z "${added_files}" ]]; then
+    return 0
+  fi
+
+  # Find new top-level directories from added files
+  local new_top_dirs
+  new_top_dirs="$(echo "${added_files}" | sed 's|/.*||' | sort -u)"
+
+  local existing_reminder=""
+  while IFS= read -r dir; do
+    [[ -z "${dir}" ]] && continue
+    # Check if this is a genuinely new directory (only has added files, no prior history)
+    local prior_files
+    prior_files="$(git ls-tree --name-only HEAD~1 "${dir}/" 2>/dev/null | head -1 || true)"
+    if [[ -z "${prior_files}" ]]; then
+      existing_reminder="${existing_reminder}    ${dir}/\n"
+    fi
+  done <<< "${new_top_dirs}"
+
+  if [[ -n "${existing_reminder}" ]]; then
+    REMINDERS+=("New top-level directory detected:\n${existing_reminder}    Consider updating CLAUDE.md structure section and README.md")
+  fi
+}
+
+function check_dependency_changes() {
+  # shellcheck disable=SC2310
+  check_enabled "dependencies" || return 0
+
+  local changed_files="${1}"
+  local dep_files
+  dep_files="$(echo "${changed_files}" | grep -E '^(go\.mod|package\.json|Cargo\.toml|requirements\.txt|pyproject\.toml|Gemfile|Pipfile)$' || true)"
+
+  if [[ -n "${dep_files}" ]]; then
+    local file_list
+    # shellcheck disable=SC2001
+    file_list="$(echo "${dep_files}" | sed 's/^/    /')"
+    REMINDERS+=("Dependency files changed:\n${file_list}\n    Consider updating README.md installation/requirements section")
+  fi
+}
+
+function check_config_changes() {
+  # shellcheck disable=SC2310
+  check_enabled "config" || return 0
+
+  local changed_files="${1}"
+  local config_files
+  config_files="$(echo "${changed_files}" | grep -E '(\.env\.example|\.env\.sample|docker-compose|Dockerfile)' || true)"
+
+  if [[ -n "${config_files}" ]]; then
+    local file_list
+    # shellcheck disable=SC2001
+    file_list="$(echo "${config_files}" | sed 's/^/    /')"
+    REMINDERS+=("Configuration files changed:\n${file_list}\n    Consider updating README.md configuration section")
+  fi
+}
+
+function check_ci_changes() {
+  # shellcheck disable=SC2310
+  check_enabled "ci" || return 0
+
+  local changed_files="${1}"
+  local ci_files
+  ci_files="$(echo "${changed_files}" | grep -E '^\.github/(workflows|actions)/' || true)"
+
+  if [[ -n "${ci_files}" ]]; then
+    REMINDERS+=("CI/CD workflows changed: consider updating README.md CI section if applicable")
+  fi
+}
+
+function check_new_env_vars() {
+  # shellcheck disable=SC2310
+  check_enabled "env_vars" || return 0
+
+  local added_files="${1}"
+  if [[ -z "${added_files}" ]]; then
+    return 0
+  fi
+
+  # Only check source files, not config/docs
+  local source_files
+  source_files="$(echo "${added_files}" | grep -E '\.(go|ts|js|py|rs|rb)$' | head -5 || true)"
+  if [[ -z "${source_files}" ]]; then
+    return 0
+  fi
+
+  # Check the diff for new environment variable references
+  local diff_content
+  local -a file_array
+  mapfile -t file_array <<< "${source_files}"
+  diff_content="$(git diff HEAD~1..HEAD -- "${file_array[@]}" 2>/dev/null | grep '^+' | head -200 || true)"
+
+  # shellcheck disable=SC2016
+  if echo "${diff_content}" | grep -qE '(os\.Getenv|process\.env\.|os\.environ|ENV\[|getenv\(|\$ENV\{)'; then
+    REMINDERS+=("New environment variable reference(s) detected in added files: consider updating README.md configuration section")
+  fi
+}
+
+function check_cli_flags() {
+  # shellcheck disable=SC2310
+  check_enabled "cli_flags" || return 0
+
+  local changed_files="${1}"
+
+  # Only check source files
+  local source_files
+  source_files="$(echo "${changed_files}" | grep -E '\.(go|ts|js|py|rs|rb)$' | head -5 || true)"
+  if [[ -z "${source_files}" ]]; then
+    return 0
+  fi
+
+  # Check the diff for flag/argument definitions
+  local diff_content
+  local -a file_array
+  mapfile -t file_array <<< "${source_files}"
+  diff_content="$(git diff HEAD~1..HEAD -- "${file_array[@]}" 2>/dev/null | grep '^+' | head -200 || true)"
+
+  if echo "${diff_content}" | grep -qE '(StringVar|BoolVar|IntVar|flag\.|pflag\.|\.option\(|\.argument\(|add_argument|argparse|clap::Arg|cobra\.Command)'; then
+    REMINDERS+=("CLI flag/argument definitions changed: consider updating README.md usage/options section")
+  fi
+}
+
+function check_public_api() {
+  # shellcheck disable=SC2310
+  check_enabled "public_api" || return 0
+
+  local added_files="${1}"
+  if [[ -z "${added_files}" ]]; then
+    return 0
+  fi
+
+  # Only check source files
+  local source_files
+  source_files="$(echo "${added_files}" | grep -E '\.(go|ts|js|py|rs)$' | head -5 || true)"
+  if [[ -z "${source_files}" ]]; then
+    return 0
+  fi
+
+  # Check for new exported functions/types in the diff
+  local diff_content
+  local -a file_array
+  mapfile -t file_array <<< "${source_files}"
+  diff_content="$(git diff HEAD~1..HEAD -- "${file_array[@]}" 2>/dev/null | grep '^+' | head -200 || true)"
+
+  if echo "${diff_content}" | grep -qE '(^+func [A-Z]|^+export (function|class|const|type|interface) |^+pub fn |^+pub struct |^+pub enum )'; then
+    REMINDERS+=("New public API exports detected in added files: consider updating README.md or API documentation")
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Main logic
+# -----------------------------------------------------------------------------
+
+function do_analyze() {
+  # Check if HEAD~1 exists (skip first commit in repo)
+  if ! git rev-parse --verify HEAD~1 > /dev/null 2>&1; then
+    return 0
+  fi
+
+  # Get commit message
+  local commit_msg
+  commit_msg="$(git log -1 --format=%s HEAD 2>/dev/null)" || return 0
+
+  # Skip if commit message matches skip prefixes
+  local skip_pattern
+  skip_pattern="$(get_skip_prefixes)"
+  if echo "${commit_msg}" | grep -qEi "${skip_pattern}"; then
+    return 0
+  fi
+
+  # Skip merge commits (more than one parent)
+  local parents
+  parents="$(git log -1 --format=%P HEAD 2>/dev/null)" || return 0
+  local parent_count
+  parent_count="$(echo "${parents}" | wc -w | tr -d ' ')"
+  if [[ "${parent_count}" -gt 1 ]]; then
+    return 0
+  fi
+
+  # Get changed files (all) and added files
+  local changed_files
+  changed_files="$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null)" || return 0
+
+  if [[ -z "${changed_files}" ]]; then
+    return 0
+  fi
+
+  local added_files
+  added_files="$(git diff-tree --no-commit-id --diff-filter=A --name-only -r HEAD 2>/dev/null)" || true
+
+  # Skip if only test files changed
+  local non_test_files
+  non_test_files="$(echo "${changed_files}" | grep -vE "${TEST_FILE_PATTERNS}" || true)"
+  if [[ -z "${non_test_files}" ]]; then
+    return 0
+  fi
+
+  # Skip if only doc files changed (already updating docs)
+  local non_doc_files
+  non_doc_files="$(echo "${changed_files}" | grep -vE "${DOC_FILE_PATTERNS}" || true)"
+  if [[ -z "${non_doc_files}" ]]; then
+    return 0
+  fi
+
+  # Load per-project configuration
+  load_config
+
+  # Run heuristic checks
+  check_new_scripts "${added_files}"
+  check_new_directories "${added_files}"
+  check_dependency_changes "${changed_files}"
+  check_config_changes "${changed_files}"
+  check_ci_changes "${changed_files}"
+  check_new_env_vars "${added_files}"
+  check_cli_flags "${changed_files}"
+  check_public_api "${added_files}"
+
+  # Output reminders if any were found
+  if [[ ${#REMINDERS[@]} -gt 0 ]]; then
+    echo ""
+    echo "Documentation reminder: the committed changes may need documentation updates:"
+    for reminder in "${REMINDERS[@]}"; do
+      echo -e "  - ${reminder}"
+    done
+    echo ""
+    echo "Review the relevant documentation files and update them if needed."
+  fi
+}
+
+function main() {
+  # Read JSON from stdin
+  local input
+  input="$(cat)"
+
+  # Extract the command that was run (handle both field name formats)
+  local command
+  command="$(echo "${input}" | jq -r '.tool_input.command // .input.command // empty' 2>/dev/null)" || exit 0
+
+  # Fast exit if not a git commit
+  if [[ -z "${command}" ]]; then
+    exit 0
+  fi
+
+  if ! printf '%s' "${command}" | grep -qE 'git\s+commit'; then
+    exit 0
+  fi
+
+  do_analyze
+}
+
+main "${@}"

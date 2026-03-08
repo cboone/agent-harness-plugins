@@ -272,6 +272,14 @@ cboone-cc-plugins/
     │               ├── heredoc-pattern.md
     │               ├── safety-rules.md
     │               └── tmpfile-pattern.md
+    ├── update-docs-reminder/        # Documentation update reminder hook
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   ├── hooks/
+    │   │   └── hooks.json
+    │   └── scripts/
+    │       └── check-docs
     ├── update-everything/           # Audit and update repo against latest templates
     │   ├── .claude-plugin/
     │   │   └── plugin.json
