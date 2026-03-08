@@ -278,6 +278,13 @@ cboone-cc-plugins/
     │   ├── README.md
     │   └── commands/
     │       └── update-everything.md
+    ├── update-review/               # Review update synthesizer skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── update-review/
+    │           └── SKILL.md
     ├── write-markdown/              # Markdown style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
