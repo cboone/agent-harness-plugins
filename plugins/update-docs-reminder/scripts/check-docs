@@ -227,7 +227,7 @@ function check_new_env_vars() {
   local diff_content
   local -a file_array
   mapfile -t file_array <<< "${source_files}"
-  diff_content="$(git diff HEAD~1..HEAD -- "${file_array[@]}" 2> /dev/null | grep '^+' | head -200 || true)"
+  diff_content="$(git diff HEAD~1..HEAD -- "${file_array[@]}" 2> /dev/null | grep '^+[^+]' | head -200 || true)"
 
   # shellcheck disable=SC2016
   if echo "${diff_content}" | grep -qE '(os\.Getenv|process\.env\.|os\.environ|ENV\[|getenv\(|\$ENV\{)'; then
@@ -252,7 +252,7 @@ function check_cli_flags() {
   local diff_content
   local -a file_array
   mapfile -t file_array <<< "${source_files}"
-  diff_content="$(git diff HEAD~1..HEAD -- "${file_array[@]}" 2> /dev/null | grep '^+' | head -200 || true)"
+  diff_content="$(git diff HEAD~1..HEAD -- "${file_array[@]}" 2> /dev/null | grep '^+[^+]' | head -200 || true)"
 
   if echo "${diff_content}" | grep -qE '(StringVar|BoolVar|IntVar|flag\.|pflag\.|\.option\(|\.argument\(|add_argument|argparse|clap::Arg|cobra\.Command)'; then
     REMINDERS+=("CLI flag/argument definitions changed: consider updating README.md usage/options section")
@@ -279,7 +279,7 @@ function check_public_api() {
   local diff_content
   local -a file_array
   mapfile -t file_array <<< "${source_files}"
-  diff_content="$(git diff HEAD~1..HEAD -- "${file_array[@]}" 2> /dev/null | grep '^+' | head -200 || true)"
+  diff_content="$(git diff HEAD~1..HEAD -- "${file_array[@]}" 2> /dev/null | grep '^+[^+]' | head -200 || true)"
 
   if echo "${diff_content}" | grep -qE '(^+func [A-Z]|^+export (function|class|const|type|interface) |^+pub fn |^+pub struct |^+pub enum )'; then
     REMINDERS+=("New public API exports detected: consider updating README.md or API documentation")

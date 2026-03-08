@@ -21,7 +21,7 @@ Analyzes each git commit for changes that typically require documentation update
 
 ## When It Fires
 
-This hook runs as a `PostToolUse` hook on the `Bash` tool. After every successful shell command, the hook checks whether a `git commit` just ran. If so, it analyzes the committed diff and reports which documentation files may need attention. Non-commit commands are ignored with no overhead.
+This hook runs as a `PostToolUse` hook on the `Bash` tool. After every successful shell command, the hook checks whether a `git commit` just ran. If so, it analyzes the committed diff and reports which documentation files may need attention. Non-commit commands are ignored with minimal overhead.
 
 | Change detected                     | Documentation to check            |
 | ----------------------------------- | --------------------------------- |
