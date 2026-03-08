@@ -54,12 +54,12 @@ Add a bullet: if the review file cannot be written, report the error but do not 
 
 ## Filename Examples
 
-| Branch | Date | Filename |
-| --- | --- | --- |
+| Branch                  | Date       | Filename                              |
+| ----------------------- | ---------- | ------------------------------------- |
 | `feature/store-reviews` | 2026-03-08 | `2026-03-08-feature-store-reviews.md` |
-| `fix/auth-bug` | 2026-03-08 | `2026-03-08-fix-auth-bug.md` |
-| `user/feature/thing` | 2026-03-08 | `2026-03-08-user-feature-thing.md` |
-| Detached HEAD | 2026-03-08 | `2026-03-08-HEAD.md` |
+| `fix/auth-bug`          | 2026-03-08 | `2026-03-08-fix-auth-bug.md`          |
+| `user/feature/thing`    | 2026-03-08 | `2026-03-08-user-feature-thing.md`    |
+| Detached HEAD           | 2026-03-08 | `2026-03-08-HEAD.md`                  |
 
 ## Edge Cases
 
@@ -72,6 +72,6 @@ Add a bullet: if the review file cannot be written, report the error but do not 
 ## Verification
 
 1. Read the modified SKILL.md and confirm step 7 follows naturally from step 6
-2. Confirm `--no-save` appears in both the Options section and step 7's skip condition
-3. Confirm README documents the new option and behavior
-4. Run `check-versions` to verify plugin.json and marketplace.json versions match
+1. Confirm `--no-save` appears in both the Options section and step 7's skip condition
+1. Confirm README documents the new option and behavior
+1. Run `check-versions` to verify plugin.json and marketplace.json versions match
