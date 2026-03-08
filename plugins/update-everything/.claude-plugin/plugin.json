@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "commands": "./commands",
+  "description": "Audit a repository against the latest plugin templates and update anything out of date.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["audit", "ci", "linters", "scaffolding", "templates", "update"],
+  "license": "MIT",
+  "name": "update-everything",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "version": "1.0.0"
+}
