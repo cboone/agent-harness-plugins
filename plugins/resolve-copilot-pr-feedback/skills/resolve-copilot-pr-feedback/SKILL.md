@@ -60,7 +60,7 @@ The thread resolution is NOT optional - it's the primary deliverable of this ski
 bash resolve-copilot-threads resolve THREAD_ID
 ```
 
-Outputs `true` on success.
+Outputs `true` on success. The `reply-and-resolve` command also outputs `true` on success.
 
 **You MUST call this for EVERY thread you address.**
 
@@ -167,7 +167,7 @@ For each unresolved Copilot comment:
 | **Nitpick**   | Contains `[nitpick]` prefix          | Auto-resolve immediately                                     |
 | **Outdated**  | Refers to code that no longer exists | Reply with explanation, resolve                              |
 | **Incorrect** | Misunderstands project conventions   | Reply with explanation, resolve, update Copilot instructions |
-| **Valid**     | Current, actionable concern          | Delegate to coder agent to fix                               |
+| **Valid**     | Current, actionable concern          | Fix directly, push, and resolve thread                       |
 | **Deferred**  | Valid but out of scope for this PR   | Track in PROJECT.md, reply, resolve                          |
 
 ### 3. Resolve Threads
@@ -228,12 +228,11 @@ Replace `TMPFILE` with the actual path returned by `mktemp`.
 
 #### Valid Concerns
 
-1. Delegate to coder agent with:
-   - PR number and title
-   - File and line number
-   - Copilot comment text
-   - Thread ID for resolution after fix
-1. Ensure coder pushes changes and resolves thread
+1. Read the relevant file and understand the context around the flagged line
+1. Fix the issue directly (edit the file, apply the suggested improvement)
+1. Commit the fix
+1. Push the changes (`git push`)
+1. Resolve the thread using the script
 
 #### Deferred (Out of Scope)
 
@@ -377,6 +376,6 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 
 - API failures: Retry with proper auth
 - Thread ID issues: Use alternative queries
-- Delegation failures: Attempt simple fixes directly
+- Fix failures: Retry with alternative approach or defer if out of scope
 - Summary comment failures: Log the error but treat as non-fatal. Thread resolution and code changes are the primary deliverables.
 - Partial resolution is better than none
