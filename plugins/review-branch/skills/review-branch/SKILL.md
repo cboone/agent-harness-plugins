@@ -21,6 +21,7 @@ The user may provide these options inline:
 - **--plan `<path>`**: Path to a plan document to compare progress against
 - **--since `<ref>`**: Use a specific tag, branch, or commit as the base reference instead of the default branch
 - **--brief**: Output only a high-level summary without the detailed breakdown
+- **--no-save**: Skip saving the review to `docs/reviews/` (default: save after outputting)
 
 ## Workflow
 
@@ -291,6 +292,64 @@ Files changed: <count> (<added> added, <modified> modified, <deleted> deleted, <
 
 Adjust section headers and content to fit what is actually present. Omit empty sections. The **Plan Compliance** and **Code Quality Assessment** sections are the most important outputs of this review: make them thorough, specific, and direct.
 
+### 7. Save the Review
+
+Save the review output to a file for future reference and use with the `address-review` skill. **Skip this step if `--no-save` was specified.**
+
+#### 7a. Determine the Filename
+
+Build the filename from today's date and the current branch name:
+
+1. **Get today's date**:
+
+```bash
+date +%Y-%m-%d
+```
+
+1. **Get the branch name** (already available from step 2):
+
+Use the branch name obtained from `git branch --show-current` in step 2. If in detached HEAD state, use `HEAD` as the branch name.
+
+1. **Sanitize the branch name** for use as a filename:
+
+- Replace `/` and any other characters that are unsafe in filenames (spaces, colons, backslashes) with `-`
+- Collapse consecutive hyphens into a single hyphen
+- Remove leading and trailing hyphens
+- If the result is empty after these steps, fall back to `branch` as the name
+
+The resulting filename format is `YYYY-MM-DD-sanitized-branch-name.md`. For example:
+
+- Branch `feature/store-reviews` on 2026-03-08 produces `2026-03-08-feature-store-reviews.md`
+- Branch `fix/auth-bug` on 2026-03-08 produces `2026-03-08-fix-auth-bug.md`
+- Detached HEAD on 2026-03-08 produces `2026-03-08-HEAD.md`
+- A branch that sanitizes to empty on 2026-03-08 produces `2026-03-08-branch.md`
+
+#### 7b. Create the Directory
+
+```bash
+mkdir -p docs/reviews
+```
+
+#### 7c. Write the File
+
+Use the **Write** tool to save the full review output (the same markdown content displayed in step 6) to `docs/reviews/<filename>`.
+
+If a file with the same name already exists, overwrite it. A review of the same branch on the same day is a re-review, and the latest version should replace the earlier one.
+
+#### 7d. Report the Saved Path
+
+After saving, report the file path to the user:
+
+```text
+Review saved to docs/reviews/<filename>
+```
+
+Include a hint about the address-review skill:
+
+```text
+To address the items in this review, run: /address-review docs/reviews/<filename>
+```
+
 ## Error Handling
 
 - **No commits on this branch**: Report that the branch has no changes compared to the base and stop.
@@ -298,4 +357,5 @@ Adjust section headers and content to fit what is actually present. Omit empty s
 - **Plan file not found**: If `--plan <path>` points to a non-existent file, report the error and continue with the review without plan comparison.
 - **No gh CLI**: Fall back to `git remote show origin` for base branch detection. The review does not require `gh`.
 - **Detached HEAD**: Use `HEAD` as the branch name and note that the review is running in detached HEAD state.
+- **Save failure**: If the review file cannot be written (e.g., read-only filesystem, permissions issue), report the error but do not fail the entire review. The terminal output is already complete.
 - **Large diffs**: If the diff is extremely large (thousands of lines), focus the summary on the stat output and commit messages rather than reading the entire diff line by line. Note that the detailed diff was too large for full analysis.
