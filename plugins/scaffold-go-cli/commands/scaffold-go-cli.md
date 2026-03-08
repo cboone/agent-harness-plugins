@@ -144,7 +144,6 @@ Create `LICENSE` using the template from the LICENSE Template section below.
 Create `README.md` using the template from the README Template section below.
 
 - Replace `PROJECT-NAME` with the project name (kebab-case)
-- Replace `PROJECT-TITLE` with the project name in title case
 - Replace `PROJECT-DESCRIPTION` with the short description
 - Replace `GITHUB-USERNAME` with the detected GitHub username
 
@@ -673,6 +672,9 @@ jobs:
       - name: Check formatting
         run: make fmt
 
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+
   vulncheck:
     name: Vulnerability check
     runs-on: ubuntu-latest
@@ -700,9 +702,9 @@ jobs:
 - `permissions: contents: read` follows the principle of least privilege
 - Uses `go-version-file: go.mod` instead of pinning a Go version (stays current automatically)
 - Test, lint, and vulncheck are separate jobs so they run in parallel
-- The lint job runs `vet` and `fmt` (both are fast and catch different issues)
+- The lint job runs `vet`, `fmt`, and `golangci-lint` (each catches different issues)
+- `golangci-lint-action` installs and caches golangci-lint automatically; it picks up `.golangci.yml` if present
 - The vulncheck job uses `govulncheck` from the Go team to detect known vulnerabilities in dependencies
-- `golangci-lint` is not included in CI by default; add it when the project is ready for stricter linting
 
 ## Reference: Release Workflow Template
 
@@ -791,10 +793,10 @@ SOFTWARE.
 
 ## Reference: README Template
 
-Use this template for the project `README.md`. Replace `PROJECT-NAME` (kebab-case), `PROJECT-TITLE` (title case), `PROJECT-DESCRIPTION`, and `GITHUB-USERNAME` with the actual values.
+Use this template for the project `README.md`. Replace `PROJECT-NAME` (kebab-case), `PROJECT-DESCRIPTION`, and `GITHUB-USERNAME` with the actual values.
 
 ````markdown
-# PROJECT-TITLE
+# PROJECT-NAME
 
 PROJECT-DESCRIPTION
 
@@ -838,7 +840,7 @@ PROJECT-NAME
 
 ### Notes
 
-- The heading uses the project name in title case (e.g., "Right Round", "Maze War++")
+- The heading uses the exact binary/repository name in kebab-case (e.g., `# gh-problemas`, `# my-tool`)
 - The one-liner description matches what was provided for `go.mod` and GoReleaser
 - Installation section covers all four install methods: Homebrew, `go install`, release binary, and local build
 - Usage section is a placeholder for the user to fill in

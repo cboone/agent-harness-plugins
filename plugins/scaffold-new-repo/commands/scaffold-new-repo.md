@@ -77,7 +77,7 @@ Create a `LICENSE` file using the MIT license template from the LICENSE Template
 
 Create a `README.md` using the template from the README Template section below.
 
-- Replace the heading with the project name (title case)
+- Replace the heading with the exact binary or repository name (kebab-case)
 - Insert the short description
 - Tailor the Installation section placeholder to the project type
 - Replace `GITHUB-USERNAME` with the detected GitHub username
@@ -124,7 +124,7 @@ Set up the hub-and-spoke agent configuration pattern (see the clean-up-agent-con
 
 Create the canonical instruction file using the template from the AGENTS.md Template section below.
 
-- Replace the heading with the project name (title case)
+- Replace the heading with the exact binary or repository name (kebab-case)
 - Insert the short description in the Overview section
 
 #### CLAUDE.md (symlink)
@@ -151,7 +151,7 @@ Create a minimal team-shared settings scaffold:
 
 Create a Copilot instructions file using the template from the Copilot Instructions Template section below.
 
-- Replace the heading with the project name in title case
+- Replace the heading with the exact binary or repository name (kebab-case)
 - The file cross-references AGENTS.md for full project conventions
 
 ### 10. Create docs/plans/
@@ -226,7 +226,7 @@ SOFTWARE.
 
 ## Reference: README Template
 
-Replace `PROJECT-NAME` with the project name in title case, `SHORT-DESCRIPTION` with the one-sentence description, and `GITHUB-USERNAME` with the user's GitHub username.
+Replace `PROJECT-NAME` with the exact binary or repository name (kebab-case), `SHORT-DESCRIPTION` with the one-sentence description, and `GITHUB-USERNAME` with the user's GitHub username.
 
 ```markdown
 # PROJECT-NAME
@@ -338,7 +338,7 @@ TODO
 
 ### Notes
 
-- The heading uses the project name in title case (e.g., `my-cool-tool` becomes `My Cool Tool`).
+- The heading uses the exact binary or repository name (e.g., `# my-cool-tool`), not a titleized version.
 - The description is a single sentence, not wrapped in a section header.
 - The License section always uses the full blurb with the `[MIT License](./LICENSE)` link.
 
@@ -694,7 +694,7 @@ token.json
 
 This is the single source of truth for all AI coding agents (Claude Code, Codex, Copilot, OpenCode). CLAUDE.md is created as a symlink pointing to this file.
 
-Replace `PROJECT-NAME` with the project name in title case and `SHORT-DESCRIPTION` with the one-sentence description.
+Replace `PROJECT-NAME` with the exact binary or repository name (kebab-case) and `SHORT-DESCRIPTION` with the one-sentence description.
 
 ```markdown
 # PROJECT-NAME
@@ -706,7 +706,7 @@ SHORT-DESCRIPTION
 
 ### Notes
 
-- The heading uses the project name in title case (e.g., `my-cool-tool` becomes `My Cool Tool`).
+- The heading uses the exact binary or repository name (e.g., `# my-cool-tool`), not a titleized version.
 - CLAUDE.md should be a symlink to this file: `ln -sfn AGENTS.md CLAUDE.md`
 - Add a `## Structure` section (with a fenced code block directory tree) once the project has enough files to document.
 - Add a `## Development` section listing common commands (build, test, lint, run) once they are established.
@@ -718,7 +718,7 @@ This file gives GitHub Copilot repo-wide context. It should NOT duplicate
 AGENTS.md. Instead, it cross-references AGENTS.md for full conventions.
 A default PR review rule is included; more can be added as needed (see Notes).
 
-Replace `PROJECT-NAME` with the project name in title case.
+Replace `PROJECT-NAME` with the exact binary or repository name (kebab-case).
 
 ```markdown
 # GitHub Copilot Instructions for PROJECT-NAME
@@ -743,5 +743,5 @@ For full project conventions, see AGENTS.md in the repository root.
   rules and add more iteratively.
 - **Title format:** Use `# GitHub Copilot Instructions for PROJECT-NAME` for
   new repos. Some repos use the shorter `# Copilot Instructions`, both work.
-- The heading uses the project name in title case (e.g., `my-cool-tool`
-  becomes `My Cool Tool`).
+- The heading uses the exact binary or repository name (e.g., `my-cool-tool`),
+  not a titleized version.
