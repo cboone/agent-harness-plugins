@@ -48,7 +48,7 @@ If none of the above markers are found, inform the user that only the shell inst
 
 Check for installers that are already set up:
 
-- **Homebrew**: look for a `homebrew_casks:` or `brews:` section in `.goreleaser.yml`, or a standalone `Formula/` directory
+- **Homebrew**: look for a `homebrew_casks:` or `brews:` section in `.goreleaser.yml` or `.goreleaser.yaml`, or a standalone `Formula/` directory
 - **Shell install script**: look for `install.sh` in the repo root or a `scripts/` directory
 - **go install**: grep the README for `go install` instructions (Go only)
 - **cargo install**: grep the README for `cargo install` instructions (Rust only)

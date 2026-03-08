@@ -41,7 +41,6 @@ Collect the following, inferring from existing files where possible:
   Do not derive the project name from the directory or branch name, which are often misleading.
 
 - **Short description**: check the README for a one-line description; if not found, ask the user
-- **Homebrew dependencies**: ask whether the tool has any runtime dependencies to declare in the cask (e.g., `gh`, `docker`)
 
 If the user already provided some or all of these in their initial request, do not re-ask.
 
