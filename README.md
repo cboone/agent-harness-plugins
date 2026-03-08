@@ -18,6 +18,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 <br>Code Review:
 [Address Review](#address-review)
 ∙ [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
+∙ [Update Review](#update-review)
 <br>Code Quality:
 [Handle Secrets](#handle-secrets)
 ∙ [Lint and Fix](#lint-and-fix)
@@ -167,6 +168,13 @@ Process and resolve GitHub Copilot automated PR review comments. Categorizes thr
 
 > **Trigger:** `/resolve-copilot-pr-feedback`
 > **Details:** [README](./plugins/resolve-copilot-pr-feedback/README.md)
+
+#### Update Review
+
+Find the latest branch review, assess commits made since, and update the review document in place with a synthesized reassessment. Plan compliance is recalculated from scratch, and the code quality assessment highlights what changed since the last review.
+
+> **Trigger:** `/update-review`
+> **Details:** [README](./plugins/update-review/README.md)
 
 ### Code Quality
 
