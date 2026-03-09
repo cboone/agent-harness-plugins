@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v4
         with:
@@ -63,6 +63,8 @@ jobs:
 ```
 
 ### Go
+
+Uses the `cboone/gh-actions` reusable workflow, which handles Go setup, golangci-lint installation with SHA-256 verification, and formatting checks internally.
 
 ```yaml
 name: Lint
@@ -95,20 +97,11 @@ concurrency:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
-
-      - name: Check formatting
-        run: test -z "$(gofmt -l .)"
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    with:
+      go-version-file: go.mod
+      run-lint: true
+      run-format-check: true
 ```
 
 ### Python
@@ -147,7 +140,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: astral-sh/setup-uv@v5
 
@@ -194,7 +187,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -243,7 +236,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -255,6 +248,8 @@ jobs:
 ```
 
 ### Shell
+
+Uses the `cboone/gh-actions` reusable workflow, which handles ShellCheck and shfmt installation and execution internally.
 
 ```yaml
 name: Lint
@@ -287,21 +282,7 @@ concurrency:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: ShellCheck
-        uses: ludeeus/action-shellcheck@2.0.0
-        with:
-          scandir: scripts
-
-      - name: Set up shfmt
-        uses: mfinelli/setup-shfmt@v4
-
-      - name: shfmt
-        run: shfmt -d .
+    uses: cboone/gh-actions/.github/workflows/shell-lint.yml@v1
 ```
 
 ### Swift
@@ -341,7 +322,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install tools
         run: brew install swiftlint swiftformat
@@ -366,9 +347,18 @@ These steps can be added to any language workflow:
 
 ### Actionlint
 
+As an inline step:
+
 ```yaml
 - name: Actionlint
   uses: raven-actions/actionlint@v2
+```
+
+Or as a reusable workflow job:
+
+```yaml
+github-lint:
+  uses: cboone/gh-actions/.github/workflows/github-lint.yml@v1
 ```
 
 ### Hadolint
@@ -417,14 +407,25 @@ These steps can be added to any language workflow:
 
 ### cspell
 
+As an inline step:
+
 ```yaml
 - name: cspell
   uses: streetsidesoftware/cspell-action@v6
 ```
 
+Or as a reusable workflow job (also covers markdownlint, prettier, yamllint):
+
+```yaml
+text-lint:
+  uses: cboone/gh-actions/.github/workflows/text-lint.yml@v1
+  with:
+    run-cspell: true
+```
+
 ## Combined Multi-Language Workflow
 
-For monorepos or projects with multiple languages, combine steps into a single workflow with separate jobs:
+For monorepos or projects with multiple languages, combine into a single workflow. Go uses a reusable workflow call; other languages use inline jobs:
 
 ```yaml
 name: Lint
@@ -456,11 +457,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  go-lint:
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    with:
+      go-version-file: go.mod
+      run-lint: true
+      run-format-check: true
+
   javascript:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -468,16 +476,6 @@ jobs:
       - run: npm ci
       - run: npx eslint .
       - run: npx prettier --check .
-
-  go:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - uses: golangci/golangci-lint-action@v9
 ```
 
 ## Caching Strategies
@@ -495,7 +493,7 @@ jobs:
 
 - Workflow file naming: use `.github/workflows/lint.yml` for a dedicated lint workflow.
 - If the project already has a CI workflow (e.g., `ci.yml`), offer to add lint steps to it rather than creating a separate file.
-- All templates use `actions/checkout@v4` and the latest stable setup actions.
+- Go and Shell templates use `cboone/gh-actions` reusable workflows. Other language templates use `actions/checkout@v6` and the latest stable setup actions.
 - For Node.js projects, adjust the `cache` option to match the detected package manager (`npm`, `yarn`, `pnpm`).
 - `ubuntu-latest` is the default runner. macOS or Windows runners are only needed for platform-specific linting.
 - Pin all `npx` tool versions to exact versions (e.g., `npx tool@X.Y.Z`) for CI reproducibility. Update versions periodically. This applies to tools invoked via `npx` without a prior `npm ci` step; tools installed as project dependencies (after `npm ci`) use the locked version automatically.
