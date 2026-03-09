@@ -848,8 +848,8 @@ build: ## Build the binary
 	mkdir -p $(OUTDIR)
 	go build $(LDFLAGS) -o $(OUTDIR)/$(BINARY) .
 
-test: ## Run tests
-	go test ./...
+test: ## Run tests with race detector
+	go test -v -race ./...
 
 lint: ## Run golangci-lint
 	golangci-lint run ./...
