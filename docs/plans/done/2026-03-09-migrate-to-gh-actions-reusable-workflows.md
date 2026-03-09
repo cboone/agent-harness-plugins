@@ -83,6 +83,7 @@ jobs:
 **JS/TS, Python, Rust, Ruby templates:** Stay as-is (no gh-actions equivalents).
 
 **Other updates:**
+
 - Update step 4 prose to reference reusable workflows instead of `actions/checkout@v6`
 - Remove the Makefile dependency note (line 67) since reusable workflows run Go commands directly
 - Update Notes sections throughout to remove third-party action references and explain centralized maintenance
@@ -116,6 +117,7 @@ jobs:
 ```
 
 **Workflow changes:**
+
 - Remove step 5's TruffleHog version lookup (reusable workflow handles versioning)
 - Simplify step 3 (Determine Repository Ownership): keep the question for documentation purposes but note that the workflow template is the same for both; org repos just need the GITLEAKS_LICENSE secret
 - Update all Notes sections to remove references to `gitleaks/gitleaks-action@v2`, `trufflesecurity/trufflehog@VERSION`, `fetch-depth: 0`
@@ -149,6 +151,7 @@ jobs:
 ```
 
 **Copilot instructions (step 19, lines 206-213):**
+
 - Remove `go-version-file: go.mod is valid` note
 - Remove `golangci-lint-action handles its own caching` note
 - Add: `cboone/gh-actions reusable workflows manage tool versions, caching, and installation internally. Do not suggest replacing reusable workflow calls with inlined third-party actions.`
@@ -235,13 +238,13 @@ Marketplace `metadata.version` stays at 1.23.0 (no plugins added or removed).
 ## Implementation Order
 
 1. lint-and-fix (smallest change, patch-level)
-2. setup-secret-scanning (straightforward, no matrix complexity)
-3. add-goreleaser-homebrew (one template)
-4. setup-ci: Go CLI template, then Go Library, then Shell
-5. scaffold-go-cli (CI + release + copilot instructions)
-6. scaffold-go-library (CI + release + copilot instructions)
-7. setup-linters (most templates, version fixes)
-8. Version bumps across all plugin.json and marketplace.json
+1. setup-secret-scanning (straightforward, no matrix complexity)
+1. add-goreleaser-homebrew (one template)
+1. setup-ci: Go CLI template, then Go Library, then Shell
+1. scaffold-go-cli (CI + release + copilot instructions)
+1. scaffold-go-library (CI + release + copilot instructions)
+1. setup-linters (most templates, version fixes)
+1. Version bumps across all plugin.json and marketplace.json
 
 ## Commit Strategy
 
@@ -250,18 +253,19 @@ One commit per logical change (per the issue checklist items), using `feat(<scop
 ## Items to Verify During Implementation
 
 1. Confirm `go-ci.yml` supports two calls in the same workflow (for Go Library matrix)
-2. Confirm `go-release.yml` supports `runs-on` input (for macOS-only variant)
-3. Confirm `secrets: inherit` works for forwarding GITLEAKS_LICENSE
-4. Confirm `go-ci.yml` runs standard Go commands (not `make` targets)
-5. Confirm `text-lint.yml` covers markdownlint, prettier, cspell, and yamllint
+1. Confirm `go-release.yml` supports `runs-on` input (for macOS-only variant)
+1. Confirm `secrets: inherit` works for forwarding GITLEAKS_LICENSE
+1. Confirm `go-ci.yml` runs standard Go commands (not `make` targets)
+1. Confirm `text-lint.yml` covers markdownlint, prettier, cspell, and yamllint
 
 If any of these cannot be confirmed from documentation, verify by reading the reusable workflow source files in the `cboone/gh-actions` repository.
 
 ## Verification
 
 After all changes:
+
 1. Run `check-versions` skill to verify version consistency
-2. Review each modified template for correct YAML syntax (proper indentation, `with:` and `secrets:` under `uses:`)
-3. Verify no third-party actions remain that have gh-actions replacements (grep for the eliminated action names)
-4. Verify all `on:` trigger blocks are preserved in calling workflows
-5. Confirm the issue checklist items are all addressed
+1. Review each modified template for correct YAML syntax (proper indentation, `with:` and `secrets:` under `uses:`)
+1. Verify no third-party actions remain that have gh-actions replacements (grep for the eliminated action names)
+1. Verify all `on:` trigger blocks are preserved in calling workflows
+1. Confirm the issue checklist items are all addressed
