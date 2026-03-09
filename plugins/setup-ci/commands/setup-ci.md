@@ -64,7 +64,7 @@ grep -E '^(test|lint|fmt|vet|vuln|build|cover|coverage|tidy|tools|all):' Makefil
 
 Report which targets already exist and which will be added. Only add targets that do not already exist. Ask before modifying any existing target.
 
-If no `Makefile` exists, offer to create one with the appropriate language-specific template from the Reference sections below. The Makefile provides standard targets for local development (`test`, `lint`, `fmt`, `vuln`, etc.) and is also used by CI reusable workflows when `use-makefile: true` is set (e.g., the Go CLI template calls `make test`, `make vet`, and `make fmt` via the reusable workflow). If the user declines, note that CI may fail for templates that use `use-makefile: true`.
+If no `Makefile` exists, offer to create one with the appropriate language-specific template from the Reference sections below. The Makefile provides standard targets for local development (`test`, `lint`, `fmt`, `vuln`, etc.) and is required by the Go CI reusable workflow (`go-ci.yml@v2`), which calls Makefile targets (`make test`, `make vet`, `make fmt`, etc.) directly. If the user declines, note that CI will fail for Go templates because the reusable workflow requires Makefile targets.
 
 ### 4. Create CI Workflow
 
@@ -164,10 +164,9 @@ permissions:
 
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
     with:
       go-version-file: go.mod
-      use-makefile: true
       run-lint: false
       run-format-check: true
 ```
@@ -175,8 +174,7 @@ jobs:
 ### Notes
 
 - Uses `go-version-file: go.mod` instead of pinning a Go version (stays current automatically)
-- The reusable workflow creates parallel jobs internally (test, vet, format-check, and optionally lint and build)
-- `use-makefile: true` tells the reusable workflow to call Makefile targets (`make test`, `make vet`, `make fmt`) instead of running Go commands directly
+- The reusable workflow creates parallel jobs internally (test, vet, format-check, and optionally lint and build) using Makefile targets
 - `run-lint: false` because golangci-lint is not included by default for Go CLI projects; set to `true` when the project is ready for stricter linting
 - `run-format-check: true` enables the gofmt/goimports formatting check
 
@@ -220,7 +218,7 @@ permissions:
 
 jobs:
   ci-minimum:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
     with:
       go-version: "MINIMUM-GO-VERSION"
       run-lint: true
@@ -228,7 +226,7 @@ jobs:
       run-build: true
 
   ci-stable:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
     with:
       go-version: "stable"
 ```
@@ -773,10 +771,9 @@ permissions:
 
 jobs:
   go-ci:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
     with:
       go-version-file: go.mod
-      use-makefile: true
       run-format-check: true
 
   js-test:
@@ -848,8 +845,8 @@ build: ## Build the binary
 	mkdir -p $(OUTDIR)
 	go build $(LDFLAGS) -o $(OUTDIR)/$(BINARY) .
 
-test: ## Run tests
-	go test ./...
+test: ## Run tests with race detector
+	go test -v -race ./...
 
 lint: ## Run golangci-lint
 	golangci-lint run ./...
@@ -903,7 +900,11 @@ coverage: ## Generate HTML coverage report
 	@echo "Coverage report: coverage.html"
 
 .PHONY: fmt
-fmt: ## Format code
+fmt: ## Check formatting (exits non-zero if files need formatting)
+	@test -z "$$(gofmt -l .)" || { gofmt -l . && exit 1; }
+
+.PHONY: format
+format: ## Format code (write mode)
 	go fmt ./...
 
 .PHONY: help
@@ -913,7 +914,8 @@ help: ## Show available targets
 	@echo "  build        Build all packages"
 	@echo "  clean        Remove build artifacts"
 	@echo "  coverage     Generate HTML coverage report"
-	@echo "  fmt          Format code"
+	@echo "  fmt          Check formatting"
+	@echo "  format       Format code (write mode)"
 	@echo "  help         Show this help message"
 	@echo "  lint         Run golangci-lint"
 	@echo "  test         Run tests with race detector"
@@ -927,7 +929,7 @@ lint: ## Run golangci-lint
 
 .PHONY: test
 test: ## Run tests with race detector
-	go test -race ./...
+	go test -v -race ./...
 
 .PHONY: tools
 tools: ## Install development tools

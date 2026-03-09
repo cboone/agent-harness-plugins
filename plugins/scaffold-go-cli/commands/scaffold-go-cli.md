@@ -463,8 +463,8 @@ build: ## Build the binary
 	mkdir -p $(OUTDIR)
 	go build $(LDFLAGS) -o $(OUTDIR)/$(BINARY) .
 
-test: ## Run tests
-	go test ./...
+test: ## Run tests with race detector
+	go test -v -race ./...
 
 lint: ## Run golangci-lint
 	golangci-lint run ./...
@@ -497,9 +497,10 @@ help: ## Show this help
 - Self-documenting: each target has a `## Comment` that `make help` displays
 - Version is derived from git tags, falling back to `"dev"`
 - Binary output goes to `bin/` to keep the project root clean
-- `fmt` target checks formatting without modifying files (CI-friendly)
-- `lint` assumes `golangci-lint` is installed (`brew install golangci-lint`)
+- `fmt` target checks formatting without modifying files (CI-friendly); use `go fmt ./...` directly for write-mode formatting
+- `lint` runs only `golangci-lint`; repos with broader linting should use a separate `lint-all` umbrella target
 - `vuln` assumes `govulncheck` is installed (`go install golang.org/x/vuln/cmd/govulncheck@latest`)
+- The five targets `vet`, `test`, `lint`, `build`, and `fmt` are required by `go-ci.yml@v2`, which calls them via Makefile
 
 ## Reference: .gitignore Template
 
@@ -662,10 +663,9 @@ permissions:
 
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
     with:
       go-version-file: go.mod
-      use-makefile: true
       run-lint: true
       run-format-check: true
 ```
@@ -675,8 +675,7 @@ jobs:
 - `paths-ignore` skips CI for documentation and agent configuration changes; remove `*.md` if Markdown is source code (e.g., Scrut CLI tests in `tests/scrut/` are nested and NOT ignored)
 - Concurrency groups cancel in-progress runs when new commits are pushed to the same branch/PR
 - `permissions: contents: read` follows the principle of least privilege
-- The reusable workflow creates parallel jobs internally (test, vet, lint, format-check)
-- `use-makefile: true` tells the reusable workflow to call Makefile targets (`make test`, `make vet`, `make fmt`) instead of running Go commands directly
+- The reusable workflow creates parallel jobs internally (test, vet, lint, format-check) using Makefile targets (`make test`, `make vet`, `make fmt`, etc.)
 - `run-lint: true` enables golangci-lint with SHA-256 verification
 - `run-format-check: true` enables the gofmt/goimports formatting check
 - The reusable workflow uses `go-version-file: go.mod` to stay current automatically

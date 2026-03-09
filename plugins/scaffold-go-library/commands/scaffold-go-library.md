@@ -337,9 +337,14 @@ coverage:
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: coverage.html"
 
-# Format code
+# Check formatting (exits non-zero if files need formatting)
 .PHONY: fmt
 fmt:
+	@test -z "$$(gofmt -l .)" || { gofmt -l . && exit 1; }
+
+# Format code (write mode)
+.PHONY: format
+format:
 	go fmt ./...
 
 # Show available targets
@@ -350,7 +355,8 @@ help:
 	@echo "  build        Build all packages"
 	@echo "  clean        Remove build artifacts"
 	@echo "  coverage     Generate HTML coverage report"
-	@echo "  fmt          Format code"
+	@echo "  fmt          Check formatting"
+	@echo "  format       Format code (write mode)"
 	@echo "  help         Show this help message"
 	@echo "  lint         Run golangci-lint"
 	@echo "  test         Run tests with race detector"
@@ -366,7 +372,7 @@ lint:
 # Run tests with race detector
 .PHONY: test
 test:
-	go test -race ./...
+	go test -v -race ./...
 
 # Install development tools
 .PHONY: tools
@@ -669,7 +675,7 @@ permissions:
 
 jobs:
   ci-minimum:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
     with:
       go-version: "MINIMUM-GO-VERSION"
       run-lint: true
@@ -677,7 +683,7 @@ jobs:
       run-build: true
 
   ci-stable:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
     with:
       go-version: "stable"
 ```
@@ -687,7 +693,7 @@ jobs:
 - `paths-ignore` skips CI for documentation and agent configuration changes; remove `*.md` if Markdown is source code (e.g., Scrut CLI tests in `tests/scrut/` are nested and NOT ignored)
 - Concurrency groups cancel in-progress runs when new commits are pushed to the same branch/PR
 - Two reusable workflow calls implement the Go version matrix: one for the minimum supported version (all checks) and one for stable (tests only)
-- Each call creates its own set of parallel jobs internally
+- Each call creates its own set of parallel jobs internally using Makefile targets
 - `run-lint: true` enables golangci-lint with SHA-256 verification
 - `run-format-check: true` enables the gofmt/goimports formatting check
 - `run-build: true` enables the `go build ./...` check
