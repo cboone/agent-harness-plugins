@@ -30,10 +30,10 @@ jobs:
       - name: ShellCheck
         run: shellcheck -S warning bin/* plugins/*/scripts/*
       - name: Set up shfmt
-        uses: cboone/gh-actions/actions/setup-shfmt@main
+        uses: cboone/gh-actions/actions/setup-shfmt@v1
       - name: shfmt
         run: shfmt -d bin/* plugins/*/scripts/*
-      - uses: cboone/gh-actions/actions/setup-actionlint@main
+      - uses: cboone/gh-actions/actions/setup-actionlint@v1
       - name: Actionlint
         run: actionlint
       - name: Validate JSON syntax
