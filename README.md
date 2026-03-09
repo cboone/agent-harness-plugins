@@ -11,7 +11,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Review Branch](#review-branch)
 ∙ [Use Git](#use-git)
 <br>Issues and Worktrees:
-[Create Issue](#create-issue)
+[Address Issue](#address-issue)
+∙ [Create Issue](#create-issue)
 ∙ [Create Worktree](#create-worktree)
 ∙ [Create Worktree from Issue](#create-worktree-from-issue)
 ∙ [Suggest Next Issue](#suggest-next-issue)
@@ -119,6 +120,14 @@ Git and GitHub CLI conventions for Claude Code. Covers when to use tmpfiles vs H
 ### Issues and Worktrees
 
 Parallel development with git worktrees. Pick an issue, spin up an isolated worktree with its own agent session, and let each agent work independently.
+
+#### Address Issue
+
+Fetch a GitHub issue by number or search text, classify it, plan the work, execute changes in the current branch, and commit with conventional commit messages referencing the issue. Marks the issue "in progress" at the start and removes the label when done.
+
+> **Trigger:** `/address-issue`
+> **Requires:** [`gh`](https://cli.github.com/)
+> **Details:** [README](./plugins/address-issue/README.md)
 
 #### Create Issue
 

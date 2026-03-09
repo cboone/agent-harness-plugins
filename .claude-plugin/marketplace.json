@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "1.22.0"
+    "version": "1.23.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -50,6 +50,20 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/add-scrut-cli-tests",
       "version": "1.3.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
+      "description": "Fetch a GitHub issue, plan the work, execute changes, and commit with issue references.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["gh", "github", "issues", "workflow"],
+      "license": "MIT",
+      "name": "address-issue",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/address-issue",
+      "version": "1.0.0"
     },
     {
       "author": {
@@ -175,7 +189,7 @@
       "name": "create-worktree-from-issue",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-worktree-from-issue",
-      "version": "1.2.4"
+      "version": "1.2.5"
     },
     {
       "author": {

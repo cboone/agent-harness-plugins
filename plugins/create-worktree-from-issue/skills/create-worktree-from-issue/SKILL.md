@@ -3,9 +3,9 @@ name: create-worktree-from-issue
 description: >-
   Find a GitHub issue in the current repository and create a new git worktree,
   branch, and tmux window for working on it using workmux. Use when the user
-  says "start issue", "work on issue", "create worktree from issue",
-  "create worktree for issue", or references starting work on a GitHub issue
-  by number (e.g., "#42") or by description (e.g., "the dark mode issue").
+  says "start issue", "create worktree from issue", "create worktree for
+  issue", or references starting work on a GitHub issue by number (e.g.,
+  "#42") or by description (e.g., "the dark mode issue") in a new worktree.
   Requires the gh CLI and workmux to be installed.
 ---
 
