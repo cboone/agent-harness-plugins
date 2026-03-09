@@ -64,21 +64,21 @@ grep -E '^(test|lint|fmt|vet|vuln|build|cover|coverage|tidy|tools|all):' Makefil
 
 Report which targets already exist and which will be added. Only add targets that do not already exist. Ask before modifying any existing target.
 
-If no `Makefile` exists, offer to create one with the appropriate language-specific template from the Reference sections below. The Makefile provides standard targets for local development (`test`, `lint`, `fmt`, `vuln`, etc.) and may also be referenced by CI workflows (e.g., Go CLI templates use `make test` and `make vet`). If the user declines, note that CI may fail for language templates whose workflows reference `make` targets.
+If no `Makefile` exists, offer to create one with the appropriate language-specific template from the Reference sections below. The Makefile provides standard targets for local development (`test`, `lint`, `fmt`, `vuln`, etc.) and is also used by CI reusable workflows when `use-makefile: true` is set (e.g., the Go CLI template calls `make test`, `make vet`, and `make fmt` via the reusable workflow). If the user declines, note that CI may fail for templates that use `use-makefile: true`.
 
 ### 4. Create CI Workflow
 
 Generate `.github/workflows/ci.yml` from the appropriate language template in the Reference sections below. Write the file using the Write tool. The `.github/workflows/` directory will be created automatically if it does not exist.
+
+Go, Shell, and secret scanning templates use `cboone/gh-actions` reusable workflows that handle tool installation, caching, and execution internally. Other language templates use inline jobs.
 
 All templates share:
 
 - Triggers: push to `main`, pull requests targeting `main`
 - `paths-ignore` for documentation and agent configuration changes
 - Concurrency groups to cancel in-progress runs on the same branch/PR
-- Timeout limits on all jobs
 - `permissions: contents: read`
-- Separate parallel jobs
-- `actions/checkout@v6`
+- `actions/checkout@v6` (in inline jobs) or handled by reusable workflows
 
 #### Runner Usage Notes
 
@@ -128,9 +128,7 @@ Print a summary of what was created or modified:
 
 ## Reference: Go CLI CI Workflow
 
-Use this template for Go CLI projects (projects with `main.go` or a `cmd/` directory).
-
-3 parallel jobs: test, lint, vulncheck.
+Use this template for Go CLI projects (projects with `main.go` or a `cmd/` directory). Uses the `cboone/gh-actions` reusable workflow, which creates parallel jobs for test, vet, format-check, and optionally lint and build.
 
 ```yaml
 name: CI
@@ -165,75 +163,28 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: Run tests
-        run: make test
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: Run vet
-        run: make vet
-
-      - name: Check formatting
-        run: make fmt
-
-  vulncheck:
-    name: Vulnerability check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
-
-      - name: Run govulncheck
-        run: govulncheck ./...
+  ci:
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    with:
+      go-version-file: go.mod
+      use-makefile: true
+      run-lint: false
+      run-format-check: true
 ```
 
 ### Notes
 
 - Uses `go-version-file: go.mod` instead of pinning a Go version (stays current automatically)
-- Test, lint, and vulncheck are separate jobs so they run in parallel
-- The lint job runs `vet` and `fmt` (both are fast and catch different issues)
-- `golangci-lint` is not included in CI by default; add it when the project is ready for stricter linting
+- The reusable workflow creates parallel jobs internally (test, vet, format-check, and optionally lint and build)
+- `use-makefile: true` tells the reusable workflow to call Makefile targets (`make test`, `make vet`, `make fmt`) instead of running Go commands directly
+- `run-lint: false` because golangci-lint is not included by default for Go CLI projects; set to `true` when the project is ready for stricter linting
+- `run-format-check: true` enables the gofmt/goimports formatting check
 
 ---
 
 ## Reference: Go Library CI Workflow
 
-Use this template for Go library projects (no `main.go` at root, no `cmd/` directory). Replace `MINIMUM-GO-VERSION` with the minimum Go version from `go.mod` (e.g., `1.24`).
-
-5 parallel jobs: test (with version matrix), lint, build, format, vulncheck.
+Use this template for Go library projects (no `main.go` at root, no `cmd/` directory). Replace `MINIMUM-GO-VERSION` with the minimum Go version from `go.mod` (e.g., `1.24`). Uses two `cboone/gh-actions` reusable workflow calls: one for the minimum Go version (all checks) and one for stable (tests only).
 
 ```yaml
 name: CI
@@ -268,105 +219,29 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test (Go ${{ matrix.go-version }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      matrix:
-        go-version: ["MINIMUM-GO-VERSION", "stable"]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+  ci-minimum:
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    with:
+      go-version: "MINIMUM-GO-VERSION"
+      run-lint: true
+      run-format-check: true
+      run-build: true
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ matrix.go-version }}
-
-      - name: Run tests
-        run: go test -race -v ./...
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "MINIMUM-GO-VERSION"
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v9
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "MINIMUM-GO-VERSION"
-
-      - name: Build
-        run: go build ./...
-
-  format:
-    name: Format
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "MINIMUM-GO-VERSION"
-
-      - name: Check formatting
-        run: |
-          if [ -n "$(gofmt -l .)" ]; then
-            echo "The following files are not formatted:"
-            gofmt -l .
-            exit 1
-          fi
-
-  vulncheck:
-    name: Vulnerability check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "MINIMUM-GO-VERSION"
-
-      - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
-
-      - name: Run govulncheck
-        run: govulncheck ./...
+  ci-stable:
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    with:
+      go-version: "stable"
 ```
 
 ### Notes
 
-- The test job uses a Go version matrix (`MINIMUM-GO-VERSION` + `stable`) to verify compatibility across versions
+- Two reusable workflow calls implement the Go version matrix: one for the minimum supported version (all checks) and one for stable (tests only)
+- Each call creates its own set of parallel jobs internally
 - Libraries benefit from multi-version testing more than CLIs because consumers may use older Go versions
-- The lint job uses the official golangci-lint GitHub Action for consistent results
-- The format job checks that all files pass `gofmt` (fails CI if not)
-- **Action version pinning**: `golangci/golangci-lint-action@v9` is pinned to the `v9` version tag, matching this project's convention of using version tags or branch refs (not commit SHAs) for GitHub Actions. When updating this workflow, bump the tag (for example, to `v10`) only after verifying compatibility with the new action version.
+- `run-lint: true` enables golangci-lint with SHA-256 verification
+- `run-format-check: true` enables the gofmt/goimports formatting check
+- `run-build: true` enables the `go build ./...` check
+- The stable call uses defaults (test only) since lint, format, and build results do not vary by Go version
 
 ---
 
@@ -812,11 +687,7 @@ jobs:
 
 ## Reference: Shell CI Workflow
 
-Use this template for shell script projects.
-
-1 job: lint (ShellCheck + shfmt).
-
-Detect where shell scripts live. Common locations: `scripts/`, `bin/`, or the repository root. Adjust the `scandir` and shfmt paths accordingly.
+Use this template for shell script projects. Uses the `cboone/gh-actions` reusable workflow, which handles ShellCheck and shfmt installation and execution internally.
 
 ```yaml
 name: CI
@@ -852,37 +723,19 @@ permissions:
 
 jobs:
   lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: scripts
-
-      - name: Set up shfmt
-        uses: mfinelli/setup-shfmt@v4
-
-      - name: Check formatting
-        run: shfmt -d .
+    uses: cboone/gh-actions/.github/workflows/shell-lint.yml@v1
 ```
 
 ### Notes
 
-- The `scandir` value should match where shell scripts live in the project
-- If scripts are in multiple directories, use the repository root (`.`) for `scandir`
-- `shfmt -d .` checks formatting without modifying files (diff mode)
-- **Action versioning**: `ludeeus/action-shellcheck` and `mfinelli/setup-shfmt` are third-party actions. Generated workflows should follow the project convention of pinning them to upstream version tags or branch refs (e.g., `ludeeus/action-shellcheck@master`, `mfinelli/setup-shfmt@v4`) rather than commit SHAs.
+- The reusable workflow handles ShellCheck and shfmt installation, checkout, and execution internally
+- ShellCheck and shfmt configuration (scan directories, formatting options) is managed by the reusable workflow
 
 ---
 
 ## Reference: Multi-Language CI Workflow
 
-For projects with multiple detected languages, combine language-specific jobs into one workflow file. Each language gets its own set of jobs with a language prefix to avoid name collisions.
+For projects with multiple detected languages, combine language-specific jobs into one workflow file. Go uses a reusable workflow call; other languages use inline jobs.
 
 Example combining Go and JavaScript:
 
@@ -919,40 +772,12 @@ permissions:
   contents: read
 
 jobs:
-  go-test:
-    name: "Go: Test"
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: Run tests
-        run: make test
-
-  go-lint:
-    name: "Go: Lint"
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: Run vet
-        run: make vet
-
-      - name: Check formatting
-        run: make fmt
+  go-ci:
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    with:
+      go-version-file: go.mod
+      use-makefile: true
+      run-format-check: true
 
   js-test:
     name: "JS: Test"
@@ -997,10 +822,10 @@ jobs:
 
 ### Notes
 
-- Prefix job IDs with the language name (e.g., `go-test`, `js-lint`) to avoid collisions
-- Prefix job display names with the language (e.g., `"Go: Test"`, `"JS: Lint"`)
+- Go uses a reusable workflow call that creates its own parallel jobs internally
+- Non-Go languages use inline jobs with language-prefixed IDs (e.g., `js-test`, `js-lint`)
+- Prefix job display names with the language (e.g., `"JS: Test"`, `"JS: Lint"`)
 - Only include jobs relevant to each detected language
-- Apply the same patterns from the single-language templates
 
 ---
 
