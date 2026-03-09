@@ -717,7 +717,6 @@ permissions:
 jobs:
   release:
     uses: cboone/gh-actions/.github/workflows/go-release.yml@v1
-    secrets: inherit
 ```
 
 ### Notes
@@ -725,7 +724,7 @@ jobs:
 - Triggers on version tags (e.g., `v0.1.0`, `v1.0.0`)
 - Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
 - The reusable workflow handles checkout with `fetch-depth: 0`, Go setup, GoReleaser installation, and the release command internally
-- `secrets: inherit` passes `GITHUB_TOKEN` to the reusable workflow (no `HOMEBREW_TAP_TOKEN` needed since libraries have no Homebrew formula)
+- `GITHUB_TOKEN` is provided automatically by GitHub Actions and its permissions are controlled by the caller workflow's `permissions:` block (no `HOMEBREW_TAP_TOKEN` needed since libraries have no Homebrew formula)
 - `permissions: contents: write` is required for GoReleaser to create the GitHub release
 - GoReleaser will skip the build step (configured in `.goreleaser.yml`) and only generate the changelog and release
 

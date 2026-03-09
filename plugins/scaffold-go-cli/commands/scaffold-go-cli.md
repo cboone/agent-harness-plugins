@@ -714,7 +714,7 @@ jobs:
 - Triggers on version tags (`v*` matches `v1.0.0`, `v0.1.0-rc1`, etc.)
 - Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
 - The reusable workflow handles checkout with `fetch-depth: 0`, Go setup, GoReleaser installation, and the release command internally
-- `GITHUB_TOKEN` is provided automatically by the reusable workflow
+- `GITHUB_TOKEN` is provided automatically by GitHub Actions and its permissions are controlled by the caller workflow's `permissions:` block
 - `HOMEBREW_TAP_TOKEN` must be added as a repository secret (see "Reference: HOMEBREW_TAP_TOKEN Setup" for creation and configuration)
 
 ## Reference: LICENSE Template

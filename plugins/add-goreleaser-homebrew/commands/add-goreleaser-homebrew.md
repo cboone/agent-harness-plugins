@@ -315,7 +315,7 @@ This ensures the build environment matches the target platform, which matters fo
 - The reusable workflow handles checkout with `fetch-depth: 0`, Go setup, GoReleaser installation, and the release command internally
 - `go-version-file: go.mod` reads the Go version from `go.mod` rather than hardcoding it
 - `HOMEBREW_TAP_TOKEN` must be added as a repository secret (see "Reference: HOMEBREW_TAP_TOKEN Setup" for creation and configuration)
-- `GITHUB_TOKEN` is provided automatically by the reusable workflow
+- `GITHUB_TOKEN` is provided automatically by GitHub Actions and its permissions are controlled by the caller workflow's `permissions:` block
 
 ---
 
