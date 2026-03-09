@@ -9,5 +9,5 @@
   "name": "lint-and-fix",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "skills": "./skills",
-  "version": "1.3.0"
+  "version": "1.3.1"
 }
