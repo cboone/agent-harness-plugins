@@ -67,7 +67,7 @@ gh label create "in progress" --description "Work is actively being done" --colo
 gh issue edit NUMBER --add-label "in progress"
 ```
 
-The `gh label create` command is safe to run even if the label already exists. `2>/dev/null` suppresses the "already exists" error and `|| true` ensures a zero exit code so the subsequent command always runs. This ensures the label is available before `gh issue edit --add-label` attempts to use it, since `gh` does **not** auto-create labels.
+The `gh label create` command is safe to run even if the label already exists. `2> /dev/null` suppresses the "already exists" error and `|| true` ensures a zero exit code so the subsequent command always runs. This ensures the label is available before `gh issue edit --add-label` attempts to use it, since `gh` does **not** auto-create labels.
 
 Self-assignment is idempotent, safe to re-run if the assignee already exists.
 
