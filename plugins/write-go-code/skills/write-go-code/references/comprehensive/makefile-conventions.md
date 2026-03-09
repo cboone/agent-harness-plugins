@@ -6,13 +6,13 @@ The `cboone/gh-actions` reusable CI workflow (`go-ci.yml@v2`) calls Makefile tar
 
 These five targets must exist in every Go project Makefile:
 
-| Target  | Command                                                           | Purpose              |
-| ------- | ----------------------------------------------------------------- | -------------------- |
-| `vet`   | `go vet ./...`                                                    | Static analysis      |
-| `test`  | `go test -v -race ./...`                                          | Run tests            |
-| `lint`  | `golangci-lint run ./...`                                         | Go linting only      |
-| `build` | `go build ./...` or `go build -o bin/name .`                      | Compile              |
-| `fmt`   | `@test -z "$$(gofmt -l .)" \|\| { gofmt -l . && exit 1; }` | Check formatting     |
+| Target  | Command                                      | Purpose          |
+| ------- | -------------------------------------------- | ---------------- |
+| `vet`   | `go vet ./...`                               | Static analysis  |
+| `test`  | `go test -v -race ./...`                     | Run tests        |
+| `lint`  | `golangci-lint run ./...`                    | Go linting only  |
+| `build` | `go build ./...` or `go build -o bin/name .` | Compile          |
+| `fmt`   | gofmt check pattern (see below)              | Check formatting |
 
 ## Key Rules
 
