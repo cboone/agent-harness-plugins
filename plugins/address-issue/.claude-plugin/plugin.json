@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Fetch a GitHub issue, plan the work, execute changes, and commit with issue references.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["gh", "github", "issues", "workflow"],
+  "license": "MIT",
+  "name": "address-issue",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
