@@ -39,6 +39,7 @@ description: >-
 - `references/comprehensive/data-types.md` - new vs make, slices, maps
 - `references/comprehensive/functions.md` - Multiple returns, defer
 - `references/comprehensive/interfaces.md` - Embedding, type assertions
+- `references/comprehensive/makefile-conventions.md` - Required CI targets, fmt vs format
 
 ## Sources
 

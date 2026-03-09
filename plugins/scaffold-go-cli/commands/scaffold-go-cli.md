@@ -497,9 +497,10 @@ help: ## Show this help
 - Self-documenting: each target has a `## Comment` that `make help` displays
 - Version is derived from git tags, falling back to `"dev"`
 - Binary output goes to `bin/` to keep the project root clean
-- `fmt` target checks formatting without modifying files (CI-friendly)
-- `lint` assumes `golangci-lint` is installed (`brew install golangci-lint`)
+- `fmt` target checks formatting without modifying files (CI-friendly); use `go fmt ./...` directly for write-mode formatting
+- `lint` runs only `golangci-lint`; repos with broader linting should use a separate `lint-all` umbrella target
 - `vuln` assumes `govulncheck` is installed (`go install golang.org/x/vuln/cmd/govulncheck@latest`)
+- The five targets `vet`, `test`, `lint`, `build`, and `fmt` are required by `go-ci.yml@v2`, which calls them via Makefile
 
 ## Reference: .gitignore Template
 
