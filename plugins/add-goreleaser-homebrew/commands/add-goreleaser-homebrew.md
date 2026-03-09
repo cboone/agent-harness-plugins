@@ -265,7 +265,7 @@ homebrew_casks:
 
 ## Reference: Release Workflow Template
 
-Use this template for `.github/workflows/release.yml`. No placeholder replacements are needed; the workflow is project-name-independent.
+Use this template for `.github/workflows/release.yml`. Uses the `cboone/gh-actions` reusable workflow, which handles Go setup, GoReleaser installation, and release execution internally. No placeholder replacements are needed; the workflow is project-name-independent.
 
 ```yaml
 name: Release
@@ -283,36 +283,27 @@ permissions:
   contents: write
 
 jobs:
-  goreleaser:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - uses: goreleaser/goreleaser-action@v6
-        with:
-          version: "~> v2"
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+  release:
+    uses: cboone/gh-actions/.github/workflows/go-release.yml@v1
+    with:
+      go-version-file: go.mod
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
 
 ### macOS-Only Variant
 
-For projects that only target macOS, change the runner:
+For projects that only target macOS, add the `runs-on` input:
 
 ```yaml
 jobs:
-  goreleaser:
-    # macOS runner required for platform-specific builds
-    runs-on: macos-latest
+  release:
+    uses: cboone/gh-actions/.github/workflows/go-release.yml@v1
+    with:
+      go-version-file: go.mod
+      runs-on: macos-latest
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
 
 This ensures the build environment matches the target platform, which matters for projects that depend on macOS-specific APIs or frameworks.
@@ -321,12 +312,10 @@ This ensures the build environment matches the target platform, which matters fo
 
 - Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
 - Triggers on version tags (`v*` matches `v1.0.0`, `v0.1.0-rc1`, etc.)
-- `fetch-depth: 0` fetches full git history (required for GoReleaser changelog generation)
-- `go-version-file: go.mod` reads the Go version from `go.mod` rather than hardcoding it, so the workflow stays in sync with the project automatically
-- `version: "~> v2"` uses the latest GoReleaser v2.x release
-- `GITHUB_TOKEN` is provided automatically by GitHub Actions
+- The reusable workflow handles checkout with `fetch-depth: 0`, Go setup, GoReleaser installation, and the release command internally
+- `go-version-file: go.mod` reads the Go version from `go.mod` rather than hardcoding it
 - `HOMEBREW_TAP_TOKEN` must be added as a repository secret (see "Reference: HOMEBREW_TAP_TOKEN Setup" for creation and configuration)
-- `--clean` removes previous build artifacts before releasing
+- `GITHUB_TOKEN` is provided automatically by GitHub Actions and its permissions are controlled by the caller workflow's `permissions:` block
 
 ---
 

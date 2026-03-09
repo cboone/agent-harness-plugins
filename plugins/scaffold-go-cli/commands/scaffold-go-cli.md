@@ -207,8 +207,7 @@ If `.github/copilot-instructions.md` exists (created by `scaffold-new-repo` when
 
 To locate the PR review section: look for an existing heading whose text includes "PR Review" or "Code Review" (e.g., `## PR Review`, `## Code Review`, `## PR Review Checklist (CRITICAL)`). If no matching heading exists, append a new `## PR Review` section at the end of the file and place the entries there.
 
-- **`go-version-file: go.mod` is valid**: The `actions/setup-go` action supports `go-version-file: go.mod` to read the Go version from the module file. This is the preferred approach. Do not suggest replacing it with a hardcoded version.
-- **golangci-lint-action handles its own caching**: The `golangci/golangci-lint-action` manages golangci-lint installation and caching automatically. Do not suggest adding manual cache steps or replacing it with a manual install.
+- **`cboone/gh-actions` reusable workflows manage tool versions internally**: The CI and release workflows use `cboone/gh-actions` reusable workflows that handle tool installation, version pinning, caching, and SHA-256 verification internally. Do not suggest replacing reusable workflow calls with inlined third-party actions.
 
 If `.github/copilot-instructions.md` does not exist, skip this step.
 
@@ -627,7 +626,7 @@ homebrew_casks:
 
 ## Reference: CI Workflow Template
 
-Use this template for `.github/workflows/ci.yml`.
+Use this template for `.github/workflows/ci.yml`. Uses the `cboone/gh-actions` reusable workflow, which creates parallel jobs for test, vet, lint, format-check, and more.
 
 ```yaml
 name: CI
@@ -662,62 +661,13 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: Run tests
-        run: make test
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: Run vet
-        run: make vet
-
-      - name: Check formatting
-        run: make fmt
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v9
-
-  vulncheck:
-    name: Vulnerability check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
-
-      - name: Run govulncheck
-        run: govulncheck ./...
+  ci:
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    with:
+      go-version-file: go.mod
+      use-makefile: true
+      run-lint: true
+      run-format-check: true
 ```
 
 ### Notes
@@ -725,15 +675,15 @@ jobs:
 - `paths-ignore` skips CI for documentation and agent configuration changes; remove `*.md` if Markdown is source code (e.g., Scrut CLI tests in `tests/scrut/` are nested and NOT ignored)
 - Concurrency groups cancel in-progress runs when new commits are pushed to the same branch/PR
 - `permissions: contents: read` follows the principle of least privilege
-- Uses `go-version-file: go.mod` instead of pinning a Go version (stays current automatically)
-- Test, lint, and vulncheck are separate jobs so they run in parallel
-- The lint job runs `vet`, `fmt`, and `golangci-lint` (each catches different issues)
-- `golangci-lint-action` installs and caches golangci-lint automatically; it picks up `.golangci.yml` if present
-- The vulncheck job uses `govulncheck` from the Go team to detect known vulnerabilities in dependencies
+- The reusable workflow creates parallel jobs internally (test, vet, lint, format-check)
+- `use-makefile: true` tells the reusable workflow to call Makefile targets (`make test`, `make vet`, `make fmt`) instead of running Go commands directly
+- `run-lint: true` enables golangci-lint with SHA-256 verification
+- `run-format-check: true` enables the gofmt/goimports formatting check
+- The reusable workflow uses `go-version-file: go.mod` to stay current automatically
 
 ## Reference: Release Workflow Template
 
-Use this template for `.github/workflows/release.yml`.
+Use this template for `.github/workflows/release.yml`. Uses the `cboone/gh-actions` reusable workflow, which handles Go setup, GoReleaser installation, and release execution internally.
 
 ```yaml
 name: Release
@@ -751,36 +701,21 @@ permissions:
   contents: write
 
 jobs:
-  goreleaser:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - uses: goreleaser/goreleaser-action@v6
-        with:
-          version: "~> v2"
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+  release:
+    uses: cboone/gh-actions/.github/workflows/go-release.yml@v1
+    with:
+      go-version-file: go.mod
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
 
 ### Notes
 
 - Triggers on version tags (`v*` matches `v1.0.0`, `v0.1.0-rc1`, etc.)
 - Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
-- `fetch-depth: 0` fetches full git history (required for GoReleaser changelog generation)
-- `version: "~> v2"` uses the latest GoReleaser v2.x release
-- `GITHUB_TOKEN` is provided automatically by GitHub Actions
+- The reusable workflow handles checkout with `fetch-depth: 0`, Go setup, GoReleaser installation, and the release command internally
+- `GITHUB_TOKEN` is provided automatically by GitHub Actions and its permissions are controlled by the caller workflow's `permissions:` block
 - `HOMEBREW_TAP_TOKEN` must be added as a repository secret (see "Reference: HOMEBREW_TAP_TOKEN Setup" for creation and configuration)
-- `--clean` removes previous build artifacts before releasing
 
 ## Reference: LICENSE Template
 

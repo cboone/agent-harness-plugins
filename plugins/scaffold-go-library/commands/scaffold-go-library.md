@@ -215,7 +215,7 @@ If `.github/copilot-instructions.md` exists (created by `scaffold-new-repo` when
 To locate the PR review section: look for an existing heading whose text includes "PR Review" or "Code Review" (e.g., `## PR Review`, `## Code Review`, `## PR Review Checklist (CRITICAL)`). If no matching heading exists, append a new `## PR Review` section at the end of the file and place the entries there.
 
 - **golangci-lint v2 config format is intentional**: This project uses golangci-lint v2 configuration which includes `formatters:` as a top-level key and supports `golangci-lint fmt` as a subcommand. These are correct v2 features. Do not suggest reverting to v1 config format.
-- **golangci-lint-action handles its own caching**: The `golangci/golangci-lint-action` manages golangci-lint installation and caching automatically. Do not suggest adding manual cache steps or replacing it with a manual install.
+- **`cboone/gh-actions` reusable workflows manage tool versions internally**: The CI and release workflows use `cboone/gh-actions` reusable workflows that handle tool installation, version pinning, caching, and SHA-256 verification internally. Do not suggest replacing reusable workflow calls with inlined third-party actions.
 
 If `.github/copilot-instructions.md` does not exist, skip this step.
 
@@ -633,9 +633,7 @@ indent_style = tab
 
 ## Reference: CI Workflow Template
 
-Use this template for `.github/workflows/ci.yml`. Replace `MINIMUM-GO-VERSION` with the minimum Go version specified by the user (e.g., `1.24`).
-
-The Go version matrix should include the minimum version and `stable` (the latest release).
+Use this template for `.github/workflows/ci.yml`. Replace `MINIMUM-GO-VERSION` with the minimum Go version specified by the user (e.g., `1.24`). Uses two `cboone/gh-actions` reusable workflow calls: one for the minimum Go version (all checks) and one for stable (tests only).
 
 ```yaml
 name: CI
@@ -670,113 +668,36 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test (Go ${{ matrix.go-version }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      matrix:
-        go-version: ["MINIMUM-GO-VERSION", "stable"]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+  ci-minimum:
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    with:
+      go-version: "MINIMUM-GO-VERSION"
+      run-lint: true
+      run-format-check: true
+      run-build: true
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ matrix.go-version }}
-
-      - name: Run tests
-        run: go test -race -v ./...
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "MINIMUM-GO-VERSION"
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v9
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "MINIMUM-GO-VERSION"
-
-      - name: Build
-        run: go build ./...
-
-  format:
-    name: Format
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "MINIMUM-GO-VERSION"
-
-      - name: Check formatting
-        run: |
-          if [ -n "$(gofmt -l .)" ]; then
-            echo "The following files are not formatted:"
-            gofmt -l .
-            exit 1
-          fi
-
-  vulncheck:
-    name: Vulnerability check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "MINIMUM-GO-VERSION"
-
-      - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
-
-      - name: Run govulncheck
-        run: govulncheck ./...
+  ci-stable:
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    with:
+      go-version: "stable"
 ```
 
 ### Notes
 
 - `paths-ignore` skips CI for documentation and agent configuration changes; remove `*.md` if Markdown is source code (e.g., Scrut CLI tests in `tests/scrut/` are nested and NOT ignored)
 - Concurrency groups cancel in-progress runs when new commits are pushed to the same branch/PR
-- Five parallel jobs: test, lint, build, format, vulncheck
-- The test job uses a Go version matrix (`MINIMUM-GO-VERSION` + `stable`) to verify compatibility across versions
-- The lint job uses the official golangci-lint GitHub Action for consistent results
-- The format job checks that all files pass `gofmt` (fails CI if not)
-- The vulncheck job uses `govulncheck` from the Go team to detect known vulnerabilities in dependencies
+- Two reusable workflow calls implement the Go version matrix: one for the minimum supported version (all checks) and one for stable (tests only)
+- Each call creates its own set of parallel jobs internally
+- `run-lint: true` enables golangci-lint with SHA-256 verification
+- `run-format-check: true` enables the gofmt/goimports formatting check
+- `run-build: true` enables the `go build ./...` check
 - `permissions: contents: read` follows the principle of least privilege
 - Libraries benefit from multi-version testing more than CLIs because consumers may use older Go versions
+- The stable call uses defaults (test only) since lint, format, and build results do not vary by Go version
 
 ## Reference: Release Workflow Template
 
-Use this template for `.github/workflows/release.yml`. No replacements needed.
+Use this template for `.github/workflows/release.yml`. Uses the `cboone/gh-actions` reusable workflow. No replacements needed.
 
 ```yaml
 name: Release
@@ -795,39 +716,17 @@ permissions:
 
 jobs:
   release:
-    name: Release
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: stable
-
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    uses: cboone/gh-actions/.github/workflows/go-release.yml@v1
 ```
 
 ### Notes
 
 - Triggers on version tags (e.g., `v0.1.0`, `v1.0.0`)
 - Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
-- Uses `fetch-depth: 0` to get full git history for changelog generation
-- Only needs `GITHUB_TOKEN` (no `HOMEBREW_TAP_TOKEN` since libraries have no Homebrew formula)
+- The reusable workflow handles checkout with `fetch-depth: 0`, Go setup, GoReleaser installation, and the release command internally
+- `GITHUB_TOKEN` is provided automatically by GitHub Actions and its permissions are controlled by the caller workflow's `permissions:` block (no `HOMEBREW_TAP_TOKEN` needed since libraries have no Homebrew formula)
 - `permissions: contents: write` is required for GoReleaser to create the GitHub release
 - GoReleaser will skip the build step (configured in `.goreleaser.yml`) and only generate the changelog and release
-- Uses `go-version: stable` since the release workflow only needs to run GoReleaser, not compile code
 
 ## Reference: LICENSE Template
 
