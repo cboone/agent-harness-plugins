@@ -17,16 +17,16 @@ Core skill definition with YAML frontmatter. Trigger phrases cover: "address iss
 Workflow steps:
 
 1. **Find the Issue** - By number (`gh issue view NUMBER --json ...`) or fuzzy text search (`gh issue list --search ...`). Reuses the exact patterns from `create-worktree-from-issue`.
-2. **Check Issue State** - Warn on closed issues, ask to proceed.
-3. **Mark Issue In Progress** - Self-assign (`gh issue edit NUMBER --add-assignee @me`) and add "in progress" label (create label if needed with `gh label create "in progress" ... 2>/dev/null || true`, then `gh issue edit NUMBER --add-label "in progress"`). Best-effort: warn on failure but continue. Skip for closed issues. Reuses the exact pattern from `create-worktree-from-issue`.
-4. **Display Issue Context** - Show number, title, labels, assignees, body (truncated at ~2000 chars).
-5. **Analyze the Issue** - Classify as bug fix, feature, documentation, refactor, or chore. Extract sub-tasks from unchecked task list items.
-6. **Plan the Work** - Explore codebase, identify affected files, present plan for user confirmation.
-7. **Execute the Changes** - Work through each change, announcing progress.
-8. **Commit the Changes** - Conventional commits with issue references (e.g., `fix: resolve crash (#42)`). Commit type derived from issue classification.
-9. **Mark Issue Done** - Remove "in progress" label (`gh issue edit NUMBER --remove-label "in progress"`). Best-effort: warn on failure but continue. Skip if step 3 was skipped or failed.
-10. **Report Completion** - Summary table of changes made/skipped.
-11. **Offer Next Steps** - Suggest `/pr`, note remaining items.
+1. **Check Issue State** - Warn on closed issues, ask to proceed.
+1. **Mark Issue In Progress** - Self-assign (`gh issue edit NUMBER --add-assignee @me`) and add "in progress" label (create label if needed with `gh label create "in progress" ... 2>/dev/null || true`, then `gh issue edit NUMBER --add-label "in progress"`). Best-effort: warn on failure but continue. Skip for closed issues. Reuses the exact pattern from `create-worktree-from-issue`.
+1. **Display Issue Context** - Show number, title, labels, assignees, body (truncated at ~2000 chars).
+1. **Analyze the Issue** - Classify as bug fix, feature, documentation, refactor, or chore. Extract sub-tasks from unchecked task list items.
+1. **Plan the Work** - Explore codebase, identify affected files, present plan for user confirmation.
+1. **Execute the Changes** - Work through each change, announcing progress.
+1. **Commit the Changes** - Conventional commits with issue references (e.g., `fix: resolve crash (#42)`). Commit type derived from issue classification.
+1. **Mark Issue Done** - Remove "in progress" label (`gh issue edit NUMBER --remove-label "in progress"`). Best-effort: warn on failure but continue. Skip if step 3 was skipped or failed.
+1. **Report Completion** - Summary table of changes made/skipped.
+1. **Offer Next Steps** - Suggest `/pr`, note remaining items.
 
 Options: `--dry-run`, `--no-commit`, `--commit-per-change`.
 
@@ -64,7 +64,7 @@ Bump `create-worktree-from-issue` version to `1.2.5` in both `plugin.json` and `
 ## Verification
 
 1. Check that `plugin.json` version matches the `marketplace.json` entry version
-2. Verify marketplace.json is valid JSON
-3. Confirm the README ToC entries are alphabetically ordered and follow the one-link-per-line format
-4. Run `/check-versions` to verify version correctness
-5. Test the skill by saying "address issue #42" in a repository with GitHub issues
+1. Verify marketplace.json is valid JSON
+1. Confirm the README ToC entries are alphabetically ordered and follow the one-link-per-line format
+1. Run `/check-versions` to verify version correctness
+1. Test the skill by saying "address issue #42" in a repository with GitHub issues

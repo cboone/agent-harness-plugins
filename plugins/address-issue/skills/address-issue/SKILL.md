@@ -96,13 +96,14 @@ BODY_CONTENT
 
 **Classify the issue** into one of these types based on labels, title, and body content:
 
-| Type            | Signals                                                             | Commit prefix |
-| --------------- | ------------------------------------------------------------------- | ------------- |
-| bug fix         | "bug" label, "fix", "crash", "error", "broken" in title/body       | `fix`         |
-| feature         | "enhancement"/"feature" label, "add", "implement", "support"       | `feat`        |
-| documentation   | "documentation" label, "docs", "readme", "guide"                   | `docs`        |
-| refactor        | "refactor" label, "clean up", "simplify", "reorganize"             | `refactor`    |
-| chore           | "chore"/"maintenance" label, "update", "bump", "dependencies"      | `chore`       |
+<!-- prettier-ignore -->
+| Type          | Signals                                                       | Commit prefix |
+| ------------- | ------------------------------------------------------------- | ------------- |
+| bug fix       | "bug" label, "fix", "crash", "error", "broken" in title/body  | `fix`         |
+| feature       | "enhancement"/"feature" label, "add", "implement", "support"  | `feat`        |
+| documentation | "documentation" label, "docs", "readme", "guide"              | `docs`        |
+| refactor      | "refactor" label, "clean up", "simplify", "reorganize"        | `refactor`    |
+| chore         | "chore"/"maintenance" label, "update", "bump", "dependencies" | `chore`       |
 
 Default to `feat` when the classification is ambiguous.
 
@@ -194,7 +195,6 @@ Display a summary of what was done:
 | 1   | Fix null pointer in auth.go         | Done    | abc1234 |
 | 2   | Add test for login handler          | Done    | abc1234 |
 | 3   | Update README                       | Skipped | -       |
-```
 
 **Total**: N changes made, M skipped
 ```

@@ -29,11 +29,11 @@ Fetches a GitHub issue by number or search text, classifies it (bug fix, feature
 /address-issue #42 --commit-per-change
 ```
 
-| Option               | Description                                                  |
-| -------------------- | ------------------------------------------------------------ |
-| `--dry-run`          | Fetch, analyze, and plan without making changes              |
-| `--no-commit`        | Make changes but do not commit them                          |
-| `--commit-per-change`| Commit after each logical change instead of grouping         |
+| Option                | Description                                          |
+| --------------------- | ---------------------------------------------------- |
+| `--dry-run`           | Fetch, analyze, and plan without making changes      |
+| `--no-commit`         | Make changes but do not commit them                  |
+| `--commit-per-change` | Commit after each logical change instead of grouping |
 
 ## Recommended Permissions
 
