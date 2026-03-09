@@ -41,41 +41,19 @@ Ask the user which tools to set up:
 - **Gitleaks only**: fast pattern matching on every push and PR
 - **TruffleHog only**: verification-based scanning on pushes to main
 
-### 3. Determine Repository Ownership (Gitleaks Only)
+### 3. Generate Gitleaks Workflow
 
-If gitleaks was selected, ask the user whether this is a personal or organization-owned repository:
-
-- **Personal**: no gitleaks license needed. The action works out of the box.
-- **Organization**: requires a `GITLEAKS_LICENSE` repository secret. Free licenses are available at [gitleaks.io](https://gitleaks.io).
-
-Skip this step if only TruffleHog was selected.
-
-### 4. Generate Gitleaks Workflow
-
-If gitleaks was selected, create `.github/workflows/gitleaks.yml` using the appropriate workflow template below:
-
-- Use the **Personal Repository** template if the repo is personally owned.
-- Use the **Organization Repository** template if the repo is organization-owned (includes the `GITLEAKS_LICENSE` env var).
+If gitleaks was selected, create `.github/workflows/gitleaks.yml` using the gitleaks workflow template below.
 
 Write the file using the Write tool. The `.github/workflows/` directory will be created automatically if it does not exist.
 
-### 5. Generate TruffleHog Workflow
+### 4. Generate TruffleHog Workflow
 
-If TruffleHog was selected:
-
-1. **Look up the latest release tag** so the generated workflow pins to a current version:
-
-   ```bash
-   gh api repos/trufflesecurity/trufflehog/releases/latest --jq '.tag_name'
-   ```
-
-   If the lookup fails (e.g., `gh` is not installed or not authenticated), fall back to `v3.93.7`.
-
-1. **Create `.github/workflows/trufflehog.yml`** using the TruffleHog workflow template below, replacing `TRUFFLEHOG_VERSION` with the version obtained above.
+If TruffleHog was selected, create `.github/workflows/trufflehog.yml` using the TruffleHog workflow template below.
 
 Write the file using the Write tool.
 
-### 6. Optionally Generate Gitleaks Configuration
+### 5. Optionally Generate Gitleaks Configuration
 
 If gitleaks was selected, ask the user whether they want a `.gitleaks.toml` configuration file.
 
@@ -88,63 +66,27 @@ If yes, create `.gitleaks.toml` in the repository root using the configuration t
 
 If no, skip this step.
 
-### 7. Summary
+### 6. Summary
 
 Print a summary of what was created:
 
 - List every file generated
 - For gitleaks: note that it runs on pushes, pull requests, and daily at 4 AM UTC
 - For TruffleHog: note that it runs on pushes to main and weekly on Saturdays at 4 AM UTC
-- If the repository is organization-owned and gitleaks was selected, remind the user to add the `GITLEAKS_LICENSE` secret in Settings > Secrets and variables > Actions
 - Mention that gitleaks will automatically comment on PRs when secrets are detected
 
 ## Error Handling
 
 - If any workflow file already exists, ask before overwriting
-- If the user is unsure about personal vs. organization ownership, suggest checking the repository URL: `github.com/USERNAME/repo` is personal, `github.com/ORG-NAME/repo` is an organization
 - If `.github/workflows/` cannot be created, check that the current directory is a git repository root
 
 ---
 
-## Reference: Gitleaks GitHub Actions Workflow Templates
+## Reference: Gitleaks GitHub Actions Workflow Template
 
-Choose the template matching the repository ownership. Organization-owned repos require a gitleaks license; personal repos do not.
+A single template that works for all repository types. Uses the `cboone/gh-actions` reusable workflow, which runs the gitleaks CLI directly (no license required).
 
-### Personal Repository
-
-```yaml
-name: gitleaks
-
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
-  schedule:
-    - cron: "0 4 * * *"
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-jobs:
-  scan:
-    name: gitleaks
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### Organization Repository
+### Template
 
 ```yaml
 name: gitleaks
@@ -162,37 +104,23 @@ concurrency:
 
 jobs:
   scan:
-    name: gitleaks
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+    uses: cboone/gh-actions/.github/workflows/secret-scan.yml@v1
+    with:
+      tool: gitleaks
 ```
 
 ### Gitleaks Workflow Notes
 
-- `fetch-depth: 0` clones the full git history so gitleaks can scan all commits, not just the latest.
+- The reusable workflow uses the gitleaks CLI directly, not `gitleaks/gitleaks-action`. The CLI works without a license for both personal and organization repositories.
 - The `schedule` trigger runs a daily scan at 4 AM UTC to catch secrets introduced outside of PR workflows (e.g., direct pushes).
 - `workflow_dispatch` allows manual triggering from the GitHub Actions UI.
-- `GITHUB_TOKEN` is automatically provided by GitHub and enables PR comments when secrets are detected.
-- `GITLEAKS_LICENSE` is required for organization-owned repositories. Free licenses are available at [gitleaks.io](https://gitleaks.io). Personal account repositories do not need a license.
-- `permissions` grants `contents: read` for repository access and `pull-requests: write` for PR comment creation. Without explicit permissions, repos with restricted default permissions will get 403 errors. The `write` scope is required because gitleaks-action posts inline PR comments when it detects secrets.
+- The reusable workflow handles checkout with `fetch-depth: 0`, permissions, and tool installation internally.
 
 ---
 
 ## Reference: TruffleHog GitHub Actions Workflow Template
 
-A single template that works for all repository types (no license distinction).
+A single template that works for all repository types. Uses the `cboone/gh-actions` reusable workflow.
 
 ### Template
 
@@ -212,30 +140,17 @@ concurrency:
 
 jobs:
   scan:
-    name: trufflehog
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - uses: trufflesecurity/trufflehog@TRUFFLEHOG_VERSION
-        with:
-          extra_args: --results=verified,unknown
+    uses: cboone/gh-actions/.github/workflows/secret-scan.yml@v1
+    with:
+      tool: trufflehog
 ```
 
 ### TruffleHog Workflow Notes
 
-- `trufflesecurity/trufflehog` does not maintain a rolling major version tag (unlike most GitHub Actions). You must pin to a specific release tag (e.g., `v3.93.7`). The workflow above uses `TRUFFLEHOG_VERSION` as a placeholder; replace it with the latest release tag from step 5.
-- `--results=verified,unknown` reports confirmed-active and unknown-status secrets while filtering out confirmed false positives.
-- `fetch-depth: 0` clones the full git history for thorough scanning.
+- The reusable workflow handles TruffleHog version pinning, checkout with `fetch-depth: 0`, and configuration internally.
 - The `schedule` trigger runs a weekly scan on Saturdays at 4 AM UTC, complementing gitleaks' daily scans.
 - `workflow_dispatch` allows manual triggering from the GitHub Actions UI.
 - Runs on pushes to `main` only (post-merge), since gitleaks already covers per-push and per-PR pattern matching.
-- No `.trufflehog.yml` config file is needed; all configuration is passed via `extra_args`.
 
 ---
 
