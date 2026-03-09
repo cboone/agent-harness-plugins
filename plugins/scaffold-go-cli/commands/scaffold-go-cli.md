@@ -662,10 +662,9 @@ permissions:
 
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
     with:
       go-version-file: go.mod
-      use-makefile: true
       run-lint: true
       run-format-check: true
 ```
@@ -675,8 +674,7 @@ jobs:
 - `paths-ignore` skips CI for documentation and agent configuration changes; remove `*.md` if Markdown is source code (e.g., Scrut CLI tests in `tests/scrut/` are nested and NOT ignored)
 - Concurrency groups cancel in-progress runs when new commits are pushed to the same branch/PR
 - `permissions: contents: read` follows the principle of least privilege
-- The reusable workflow creates parallel jobs internally (test, vet, lint, format-check)
-- `use-makefile: true` tells the reusable workflow to call Makefile targets (`make test`, `make vet`, `make fmt`) instead of running Go commands directly
+- The reusable workflow creates parallel jobs internally (test, vet, lint, format-check) using Makefile targets (`make test`, `make vet`, `make fmt`, etc.)
 - `run-lint: true` enables golangci-lint with SHA-256 verification
 - `run-format-check: true` enables the gofmt/goimports formatting check
 - The reusable workflow uses `go-version-file: go.mod` to stay current automatically

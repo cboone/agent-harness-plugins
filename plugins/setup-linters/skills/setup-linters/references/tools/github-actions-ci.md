@@ -97,7 +97,7 @@ concurrency:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
     with:
       go-version-file: go.mod
       run-lint: true
@@ -458,7 +458,7 @@ concurrency:
 
 jobs:
   go-lint:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v1
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
     with:
       go-version-file: go.mod
       run-lint: true
