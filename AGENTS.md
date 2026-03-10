@@ -65,6 +65,23 @@ cboone-cc-plugins/
     │           ├── SKILL.md
     │           └── references/
     │               └── overlap-rules.md
+    ├── check-zsh/                   # Zsh script checking skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── check-zsh/
+    │           ├── SKILL.md
+    │           └── references/
+    │               └── tools/
+    │                   ├── beautysh.md
+    │                   ├── checkbashisms.md
+    │                   ├── setopt-warnings.md
+    │                   ├── shellcheck.md
+    │                   ├── shellharden.md
+    │                   ├── shfmt.md
+    │                   ├── zcompile.md
+    │                   └── zsh-n.md
     ├── commit/                      # Smart git commit skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

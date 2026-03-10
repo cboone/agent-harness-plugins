@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Check and evaluate zsh scripts using shellcheck, beautysh, shfmt, shellharden, zsh -n, zcompile, setopt warn_create_global/warn_nested_var, and checkbashisms.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["beautysh", "checkbashisms", "shellcheck", "shellharden", "shfmt", "zsh"],
+  "license": "MIT",
+  "name": "check-zsh",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
