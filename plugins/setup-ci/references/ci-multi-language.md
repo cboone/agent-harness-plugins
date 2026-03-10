@@ -1,0 +1,92 @@
+# Multi-Language CI Workflow
+
+For projects with multiple detected languages, combine language-specific jobs into one workflow file. Go uses a reusable workflow call; other languages use inline jobs.
+
+Example combining Go and JavaScript:
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".editorconfig"
+      - ".claude/**"
+      - "**/CLAUDE.md"
+      - "**/AGENTS.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".editorconfig"
+      - ".claude/**"
+      - "**/CLAUDE.md"
+      - "**/AGENTS.md"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  go-ci:
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
+    with:
+      go-version-file: go.mod
+      run-format-check: true
+
+  js-test:
+    name: "JS: Test"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+  js-lint:
+    name: "JS: Lint"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npx eslint .
+```
+
+## Notes
+
+- Go uses a reusable workflow call that creates its own parallel jobs internally
+- Non-Go languages use inline jobs with language-prefixed IDs (e.g., `js-test`, `js-lint`)
+- Prefix job display names with the language (e.g., `"JS: Test"`, `"JS: Lint"`)
+- Only include jobs relevant to each detected language

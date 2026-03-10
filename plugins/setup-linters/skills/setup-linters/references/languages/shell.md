@@ -19,7 +19,7 @@ brew install shellcheck shfmt
 Create `.shellcheckrc` in the project root:
 
 ```ini
-# Optional checks that align with the write-shell-scripts style guide
+# Optional checks that align with the write-bash-scripts style guide
 enable=add-default-case
 enable=avoid-negated-conditions
 enable=avoid-nullary-conditions
@@ -55,7 +55,7 @@ switch_case_indent = true
 | `space_redirects`        | `-sr`    | Add space after redirect operators (`> file`)  |
 | `switch_case_indent`     | `-ci`    | Indent `case` patterns one level inside `case` |
 
-The `switch_case_indent` property aligns with the write-shell-scripts style guide, which shows case patterns indented under `case`.
+The `switch_case_indent` property aligns with the write-bash-scripts style guide, which shows case patterns indented under `case`.
 
 If `.editorconfig` is not present, pass formatting flags directly:
 
@@ -95,6 +95,6 @@ Adjust the file patterns (`scripts/*.sh`, `bin/*`) to match the project's shell 
 
 - ShellCheck has no auto-fix mode. All issues must be resolved manually (or by reading the SC code and applying the recommended fix).
 - `shfmt` reads all its formatting preferences from `.editorconfig` (indent style, indent size, and the extended properties documented above), so it integrates naturally with the EditorConfig setup.
-- The optional checks enforce the `write-shell-scripts` style guide: `require-double-brackets` and `require-variable-braces` catch syntax style, `check-extra-masked-returns` catches the `local var=$(cmd)` anti-pattern, and `deprecate-which` enforces `command -v`.
+- The optional checks enforce the `write-bash-scripts` style guide: `require-double-brackets` and `require-variable-braces` catch syntax style, `check-extra-masked-returns` catches the `local var=$(cmd)` anti-pattern, and `deprecate-which` enforces `command -v`.
 - `external-sources=true` tells ShellCheck to follow `source`/`.` directives for cross-file analysis, rather than silently ignoring them.
 - No `shell=bash` is set globally; ShellCheck detects the dialect from each file's shebang line (`#!/usr/bin/env bash`).

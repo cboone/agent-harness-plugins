@@ -1,4 +1,4 @@
-# Optional checks that align with the write-shell-scripts style guide
+# Optional checks that align with the write-bash-scripts style guide
 enable=add-default-case
 enable=avoid-negated-conditions
 enable=avoid-nullary-conditions

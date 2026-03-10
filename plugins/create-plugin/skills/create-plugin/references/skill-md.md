@@ -77,15 +77,15 @@ One sentence summarizing the skill's purpose.
 
 Skills in this repository use these sections as applicable:
 
-| Section                   | Purpose                                            | Used by                            |
-| ------------------------- | -------------------------------------------------- | ---------------------------------- |
-| `## Options`              | User-configurable parameters                       | suggest-next-issue                 |
-| `## Workflow`             | Step-by-step numbered process (`### 1. Step Name`) | All workflow skills                |
-| `## Key Conventions`      | Summary of rules (for style guide skills)          | write-shell-scripts, write-go-code |
-| `## Reference Navigation` | Pointers to reference files by topic               | write-go-code                      |
-| `## Example Output`       | Sample output in a code block                      | suggest-next-issue                 |
-| `## Error Handling`       | Bullet list of failure modes and recovery          | All skills                         |
-| `## Sources`              | Attribution links                                  | write-go-code, write-shell-scripts |
+| Section                   | Purpose                                            | Used by                           |
+| ------------------------- | -------------------------------------------------- | --------------------------------- |
+| `## Options`              | User-configurable parameters                       | suggest-next-issue                |
+| `## Workflow`             | Step-by-step numbered process (`### 1. Step Name`) | All workflow skills               |
+| `## Key Conventions`      | Summary of rules (for style guide skills)          | write-bash-scripts, write-go-code |
+| `## Reference Navigation` | Pointers to reference files by topic               | write-go-code                     |
+| `## Example Output`       | Sample output in a code block                      | suggest-next-issue                |
+| `## Error Handling`       | Bullet list of failure modes and recovery          | All skills                        |
+| `## Sources`              | Attribution links                                  | write-go-code, write-bash-scripts |
 
 ### Workflow Steps
 

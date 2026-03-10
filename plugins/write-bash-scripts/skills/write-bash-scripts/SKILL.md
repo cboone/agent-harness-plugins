@@ -1,14 +1,14 @@
 ---
-name: write-shell-scripts
+name: write-bash-scripts
 description: >-
-  Applies Bash style conventions when creating or editing shell scripts.
-  Use when: (1) creating new shell scripts, (2) editing existing scripts in /bin/,
+  Applies Bash style conventions when creating or editing Bash scripts.
+  Use when: (1) creating new Bash scripts, (2) editing existing scripts in /bin/,
   or (3) reviewing Bash code for bugs or style issues.
 ---
 
 # Bash Style Guide
 
-Apply the Bash conventions from `./references/BASH.md` when creating or editing shell scripts.
+Apply the Bash conventions from `./references/BASH.md` when creating or editing Bash scripts.
 
 ## Key Conventions
 
@@ -46,4 +46,4 @@ Read `./references/BASH.md` for the complete guide. Summary:
 
 ## Validation
 
-Whenever possible, validate the script before finishing. Prefer using a project-specific validation script, if available. Common locations include declarations in `package.json` and scripts stored in `bin/`. If those aren't present, `shellcheck` is a commonly available linter for shell scripts.
+Whenever possible, validate the script before finishing. Prefer using a project-specific validation script, if available. Common locations include declarations in `package.json` and scripts stored in `bin/`. If those aren't present, `shellcheck` is a commonly available linter for Bash scripts.

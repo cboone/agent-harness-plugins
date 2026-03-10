@@ -26,8 +26,15 @@ cboone-cc-plugins/
     ├── add-goreleaser-homebrew/     # GoReleaser + Homebrew tap setup command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
-    │   └── commands/
-    │       └── add-goreleaser-homebrew.md
+    │   ├── commands/
+    │   │   └── add-goreleaser-homebrew.md
+    │   └── references/
+    │       ├── conditional-features.md
+    │       ├── goreleaser-base.md
+    │       ├── homebrew-tap-token.md
+    │       ├── makefile-targets.md
+    │       ├── migration-guide.md
+    │       └── release-workflow.md
     ├── add-scrut-cli-tests/         # Scrut CLI integration testing command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -80,6 +87,7 @@ cboone-cc-plugins/
     │       └── create-plugin/
     │           ├── SKILL.md
     │           └── references/
+    │               ├── command-md.md
     │               ├── hooks-json.md
     │               ├── marketplace-json.md
     │               ├── plugin-json.md
@@ -193,32 +201,85 @@ cboone-cc-plugins/
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── commands/
-    │       └── scaffold-new-repo.md
+    │   ├── commands/
+    │   │   └── scaffold-new-repo.md
+    │   └── references/
+    │       ├── agents-md.md
+    │       ├── changelog.md
+    │       ├── copilot-instructions.md
+    │       ├── gitignore-templates.md
+    │       ├── license.md
+    │       └── readme.md
     ├── scaffold-go-cli/            # Go CLI project scaffolding command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── commands/
-    │       └── scaffold-go-cli.md
+    │   ├── commands/
+    │   │   └── scaffold-go-cli.md
+    │   └── references/
+    │       ├── ci-workflow.md
+    │       ├── gitignore.md
+    │       ├── go-mod.md
+    │       ├── goreleaser.md
+    │       ├── homebrew-tap-token.md
+    │       ├── license.md
+    │       ├── main-go.md
+    │       ├── makefile.md
+    │       ├── readme.md
+    │       ├── release-workflow.md
+    │       ├── root-go-with-viper.md
+    │       └── root-go-without-viper.md
     ├── scaffold-go-library/        # Go library project scaffolding command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── commands/
-    │       └── scaffold-go-library.md
+    │   ├── commands/
+    │   │   └── scaffold-go-library.md
+    │   └── references/
+    │       ├── ci-workflow.md
+    │       ├── doc-go.md
+    │       ├── editorconfig.md
+    │       ├── gitignore.md
+    │       ├── go-mod.md
+    │       ├── golangci.md
+    │       ├── goreleaser.md
+    │       ├── license.md
+    │       ├── makefile.md
+    │       ├── package-file.md
+    │       ├── readme.md
+    │       └── release-workflow.md
     ├── setup-ci/                   # GitHub Actions CI setup command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── commands/
-    │       └── setup-ci.md
+    │   ├── commands/
+    │   │   └── setup-ci.md
+    │   └── references/
+    │       ├── ci-go-cli.md
+    │       ├── ci-go-library.md
+    │       ├── ci-javascript.md
+    │       ├── ci-multi-language.md
+    │       ├── ci-python.md
+    │       ├── ci-ruby.md
+    │       ├── ci-rust.md
+    │       ├── ci-shell.md
+    │       ├── makefile-go-cli.md
+    │       ├── makefile-go-library.md
+    │       ├── makefile-javascript.md
+    │       ├── makefile-python.md
+    │       ├── makefile-ruby.md
+    │       ├── makefile-rust.md
+    │       └── makefile-shell.md
     ├── setup-secret-scanning/      # Secret scanning setup command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── commands/
-    │       └── setup-secret-scanning.md
+    │   ├── commands/
+    │   │   └── setup-secret-scanning.md
+    │   └── references/
+    │       ├── gitleaks-config.md
+    │       ├── gitleaks-workflow.md
+    │       └── trufflehog-workflow.md
     ├── setup-installers/           # Installer/distribution setup command
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -311,12 +372,12 @@ cboone-cc-plugins/
     │           ├── SKILL.md
     │           └── references/
     │               └── SCRUT.md
-    ├── write-shell-scripts/        # Bash style guide skill
+    ├── write-bash-scripts/        # Bash style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
     │   └── skills/
-    │       └── write-shell-scripts/
+    │       └── write-bash-scripts/
     │           ├── SKILL.md
     │           └── references/
     │               └── BASH.md

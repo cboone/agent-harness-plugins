@@ -3,8 +3,9 @@ name: create-plugin
 description: >-
   Guide for creating new plugins in this repository with consistent structure
   and conventions. Use when the user says "create a plugin", "add a new skill",
-  "add a new hook", "new plugin", "scaffold plugin", "create a new plugin", or
-  asks to add a skill or hook to this repository.
+  "add a new hook", "add a new command", "create a slash command", "new plugin",
+  "scaffold plugin", "create a new plugin", or asks to add a skill, hook, or
+  command to this repository.
 ---
 
 # Create Plugin
@@ -18,8 +19,11 @@ Create a new plugin for this repository following established conventions.
 Infer the plugin type from the user's request:
 
 - **Skills plugin**: Provides instructions and workflows that Claude Code follows (e.g., style guides, multi-step procedures). Most plugins are this type.
+- **Command plugin**: Provides slash commands that users invoke explicitly (e.g., `/setup-ci`, `/scaffold-go-cli`). Commands are structured Markdown files with frontmatter, a workflow, and optional reference templates.
 - **Hooks plugin**: Provides event-driven shell commands that run automatically in response to Claude Code lifecycle events (e.g., notifications on task completion).
-- **Both**: A plugin can provide both skills and hooks.
+- **Combinations**: A plugin can provide any combination of skills, commands, and hooks.
+
+Inference heuristic: "create a command", "add a slash command", "add a `/something` command" implies a command plugin. "create a skill", "add a style guide", "add a workflow" implies a skills plugin. "create a hook", "add a notification" implies a hooks plugin.
 
 If the request doesn't imply a type (e.g., just "create a plugin"), ask. If ambiguous, default to a skills plugin.
 
@@ -51,6 +55,19 @@ Add a `references/` subdirectory if the skill needs supplementary documentation:
 plugins/PLUGIN-NAME/skills/PLUGIN-NAME/references/
 ```
 
+#### Command Plugin
+
+```text
+plugins/PLUGIN-NAME/.claude-plugin/
+plugins/PLUGIN-NAME/commands/
+```
+
+Add a `references/` directory if the command has large templates to extract:
+
+```text
+plugins/PLUGIN-NAME/references/
+```
+
 #### Hooks Plugin
 
 ```text
@@ -59,21 +76,22 @@ plugins/PLUGIN-NAME/hooks/
 plugins/PLUGIN-NAME/scripts/
 ```
 
-#### Both
+#### Combinations
 
-Combine both structures under the same plugin directory.
+Combine structures under the same plugin directory as needed. A plugin can have any combination of `skills/`, `commands/`, `hooks/`, `scripts/`, and `references/`.
 
 ### 4. Write plugin.json
 
-Create `.claude-plugin/plugin.json` with alphabetized fields. See `./references/plugin-json.md` for the full field list, versioning rules, and templates for each plugin type.
+Create `.claude-plugin/plugin.json` with alphabetized fields. See `./references/plugin-json.md` for the full field list, versioning rules, and templates for each plugin type (Skills, Commands, Hooks).
 
 Key points:
 
 - New plugins start at version `1.0.0`
 - Include `"skills": "./skills"` only if the plugin provides skills
+- Include `"commands": "./commands"` only if the plugin provides commands
 - The `name` field must match the directory name
 
-### 5. Write SKILL.md or hooks.json
+### 5. Write SKILL.md, hooks.json, or Command .md
 
 #### For Skills
 
@@ -85,6 +103,18 @@ Key points:
 - The `description` includes trigger phrases for automatic activation
 - Use `>-` (folded block scalar) for multi-line descriptions
 - Structure the body with a `## Workflow` section using numbered steps
+
+#### For Commands
+
+Create `commands/COMMAND-NAME.md`. See `./references/command-md.md` for the frontmatter fields, argument handling, external file references, and body structure.
+
+Key points:
+
+- Frontmatter includes `description` and `disable-model-invocation: true`
+- Add `argument-hint` if the command accepts arguments
+- Use `$ARGUMENTS` and `$1`/`$2` for argument access in the body
+- Structure the body with `## Workflow` numbered steps, `## Error Handling`, and `## Reference:` sections
+- For large commands, extract templates into `references/` files using `@${CLAUDE_PLUGIN_ROOT}/references/file.md`
 
 #### For Hooks
 
@@ -108,12 +138,14 @@ Key points:
 
 ### 7. Add Reference Files (if needed)
 
-Skills that need supplementary documentation should place it under `references/`:
+Skills and commands that need supplementary documentation or templates should place them under `references/`:
 
 - **Flat structure**: `references/FILE.md` -- for a small number of reference files
 - **Categorized structure**: `references/CATEGORY/FILE.md` -- for many files organized by topic (e.g., `references/essential/` and `references/comprehensive/`)
 
-Reference files are plain Markdown. Point to them from SKILL.md with relative paths.
+**For skills**: Reference files are plain Markdown. Point to them from SKILL.md with relative paths (e.g., `./references/checklist.md`).
+
+**For commands**: Reference files contain templates that the command uses at runtime. Include them in the command file using the `@${CLAUDE_PLUGIN_ROOT}/references/file.md` pattern. Place `references/` alongside `commands/` (not inside it). See `./references/command-md.md` for the extraction guidelines and file format.
 
 ### 8. Register in marketplace.json
 
@@ -127,11 +159,12 @@ Key points:
 
 ### 9. Update README.md
 
-Add the new plugin to three places in `README.md`. See `./references/readme-updates.md` for the exact format of each section.
+Add the new plugin to two places in `README.md`. See `./references/readme-updates.md` for the exact format of each section.
 
-1. **Table of Contents**: Add link alphabetically in the Skills or Hooks line
-1. **Installation**: Add `/plugin install` command alphabetically
-1. **Description section**: Add H3 subsection alphabetically under Skills or Hooks
+1. **Table of Contents**: Add link alphabetically in the Skills, Commands, or Hooks line
+1. **Description section**: Add H3 subsection alphabetically under Skills, Commands, or Hooks
+
+No individual install commands are needed in the Installation section; the marketplace flow handles installation.
 
 ### 10. Update CLAUDE.md
 
@@ -147,8 +180,13 @@ Before finishing, verify:
 - [ ] `marketplace.json` entry fields match `plugin.json` (shared fields)
 - [ ] `README.md` has the new plugin in ToC, installation, and description sections
 - [ ] `CLAUDE.md` directory tree reflects the new plugin structure
-- [ ] `SKILL.md` frontmatter has only `name` and `description` fields
-- [ ] All reference files are reachable from `SKILL.md` via relative paths
+- [ ] `SKILL.md` frontmatter has only `name` and `description` fields (skills only)
+- [ ] All reference files are reachable from `SKILL.md` via relative paths (skills only)
+- [ ] Command `.md` has `description` and `disable-model-invocation: true` in frontmatter (commands only)
+- [ ] Command filename matches the intended slash command name (commands only)
+- [ ] `plugin.json` includes `"commands": "./commands"` (commands only)
+- [ ] External file references use `@${CLAUDE_PLUGIN_ROOT}/references/` pattern (commands with extracted templates only)
+- [ ] `$ARGUMENTS` handling is documented in the workflow if `argument-hint` is set (commands only)
 - [ ] Scripts (if any) are executable
 - [ ] Hooks (if any) reference scripts via `${CLAUDE_PLUGIN_ROOT}`
 
