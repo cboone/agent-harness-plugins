@@ -12,7 +12,7 @@ Scripts have no file extension (they are executables, not sourced libraries).
 
 ## Script Structure
 
-All scripts in this repository follow the Bash conventions from the `write-shell-scripts` plugin. The essential structure:
+All scripts in this repository follow the Bash conventions from the `write-bash-scripts` plugin. The essential structure:
 
 ```bash
 #!/usr/bin/env bash
