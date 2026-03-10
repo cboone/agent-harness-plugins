@@ -157,7 +157,6 @@ Print a summary of what was created and modified:
 - If the module path in `go.mod` does not follow the `github.com/USER/REPO` pattern, ask the user for the homepage URL
 - If no version variable is found in Go source files, use the default ldflags path and suggest adding `var version string` to `main.go`
 
-
 ---
 
 ## Reference Templates

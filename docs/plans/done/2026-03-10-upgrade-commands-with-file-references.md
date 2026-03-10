@@ -24,6 +24,7 @@ Pick the smallest command with a reference section (e.g., `setup-secret-scanning
 Path: `plugins/create-plugin/skills/create-plugin/references/command-md.md`
 
 Cover:
+
 - File location: `plugins/PLUGIN-NAME/commands/COMMAND-NAME.md`
 - Frontmatter fields: `description`, `disable-model-invocation`, `argument-hint`, `allowed-tools`, `model`
 - Our convention: `disable-model-invocation: true` for all commands in this repo
@@ -68,6 +69,7 @@ Changes across existing steps:
 ## Phase 3: Extract Templates from Large Commands
 
 Apply to the 5 largest commands, starting with `setup-ci` as proof of concept. Each command gets:
+
 - A `references/` directory alongside `commands/`
 - Templates moved from inline `## Reference:` sections to individual reference files
 - `@${CLAUDE_PLUGIN_ROOT}/references/file.md` references in the command file
@@ -132,6 +134,7 @@ Use the `check-versions` skill to verify all plugin.json and marketplace.json ve
 ## Files to Modify
 
 ### Phase 2 (create-plugin updates)
+
 - `plugins/create-plugin/skills/create-plugin/SKILL.md`
 - `plugins/create-plugin/skills/create-plugin/references/command-md.md` (new)
 - `plugins/create-plugin/skills/create-plugin/references/plugin-json.md`
@@ -139,25 +142,28 @@ Use the `check-versions` skill to verify all plugin.json and marketplace.json ve
 - `plugins/create-plugin/.claude-plugin/plugin.json`
 
 ### Phase 3 (template extraction, per command)
+
 - Command `.md` file (shrink)
 - New `references/*.md` files (extracted templates)
 - `.claude-plugin/plugin.json` (version bump)
 
 ### Phase 4 (finalize)
+
 - `CLAUDE.md`
 - `.claude-plugin/marketplace.json`
 
 ## Commit Strategy
 
 One commit per logical unit:
+
 1. Phase 1: verify `@${CLAUDE_PLUGIN_ROOT}` (may be reverted if it doesn't work)
-2. Phase 2: one commit per reference file created, one for SKILL.md updates, one for version bump
-3. Phase 3: one commit per command extraction (includes references + command update + version bump)
-4. Phase 4: CLAUDE.md update, marketplace sync, version check
+1. Phase 2: one commit per reference file created, one for SKILL.md updates, one for version bump
+1. Phase 3: one commit per command extraction (includes references + command update + version bump)
+1. Phase 4: CLAUDE.md update, marketplace sync, version check
 
 ## Verification
 
 1. After Phase 1: invoke `/setup-secret-scanning` and confirm template content is available
-2. After each Phase 3 extraction: invoke the command and confirm templates are available
-3. After Phase 4: run `check-versions` skill
-4. Final: review all modified commands to ensure no template content was lost
+1. After each Phase 3 extraction: invoke the command and confirm templates are available
+1. After Phase 4: run `check-versions` skill
+1. Final: review all modified commands to ensure no template content was lost

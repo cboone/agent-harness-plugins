@@ -162,4 +162,3 @@ Print a summary of what was created or modified:
 @${CLAUDE_PLUGIN_ROOT}/references/makefile-ruby.md
 
 @${CLAUDE_PLUGIN_ROOT}/references/makefile-shell.md
-

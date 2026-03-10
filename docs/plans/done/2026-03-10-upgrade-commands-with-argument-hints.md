@@ -16,10 +16,12 @@ Two other Ralph features were evaluated and deemed not applicable:
 #### 1. scaffold-new-repo (v1.4.5 -> v1.5.0)
 
 **Files:**
+
 - `plugins/scaffold-new-repo/commands/scaffold-new-repo.md`
 - `plugins/scaffold-new-repo/.claude-plugin/plugin.json`
 
 **Frontmatter addition:**
+
 ```yaml
 argument-hint: "[project-name] [--type TYPE]"
 ```
@@ -31,10 +33,12 @@ argument-hint: "[project-name] [--type TYPE]"
 #### 2. scaffold-go-cli (v2.4.0 -> v2.5.0)
 
 **Files:**
+
 - `plugins/scaffold-go-cli/commands/scaffold-go-cli.md`
 - `plugins/scaffold-go-cli/.claude-plugin/plugin.json`
 
 **Frontmatter addition:**
+
 ```yaml
 argument-hint: "[project-name]"
 ```
@@ -46,10 +50,12 @@ argument-hint: "[project-name]"
 #### 3. scaffold-go-library (v1.5.0 -> v1.6.0)
 
 **Files:**
+
 - `plugins/scaffold-go-library/commands/scaffold-go-library.md`
 - `plugins/scaffold-go-library/.claude-plugin/plugin.json`
 
 **Frontmatter addition:**
+
 ```yaml
 argument-hint: "[project-name]"
 ```
@@ -61,10 +67,12 @@ argument-hint: "[project-name]"
 #### 4. setup-ci (v1.2.0 -> v1.3.0)
 
 **Files:**
+
 - `plugins/setup-ci/commands/setup-ci.md`
 - `plugins/setup-ci/.claude-plugin/plugin.json`
 
 **Frontmatter addition:**
+
 ```yaml
 argument-hint: "[go-cli|go-library|javascript|python|rust|ruby|shell]"
 ```
@@ -76,10 +84,12 @@ argument-hint: "[go-cli|go-library|javascript|python|rust|ruby|shell]"
 #### 5. setup-secret-scanning (v2.1.0 -> v2.2.0)
 
 **Files:**
+
 - `plugins/setup-secret-scanning/commands/setup-secret-scanning.md`
 - `plugins/setup-secret-scanning/.claude-plugin/plugin.json`
 
 **Frontmatter addition:**
+
 ```yaml
 argument-hint: "[gitleaks|trufflehog|both]"
 ```
@@ -118,12 +128,12 @@ argument-hint: "..."
 ## Implementation sequence
 
 1. Update `scaffold-new-repo` (frontmatter + content + plugin.json)
-2. Update `scaffold-go-cli` (frontmatter + content + plugin.json)
-3. Update `scaffold-go-library` (frontmatter + content + plugin.json)
-4. Update `setup-ci` (frontmatter + content + plugin.json)
-5. Update `setup-secret-scanning` (frontmatter + content + plugin.json)
-6. Update `marketplace.json` (5 version entries)
-7. Run `check-versions` skill to verify consistency
+1. Update `scaffold-go-cli` (frontmatter + content + plugin.json)
+1. Update `scaffold-go-library` (frontmatter + content + plugin.json)
+1. Update `setup-ci` (frontmatter + content + plugin.json)
+1. Update `setup-secret-scanning` (frontmatter + content + plugin.json)
+1. Update `marketplace.json` (5 version entries)
+1. Run `check-versions` skill to verify consistency
 
 ## Files to modify
 
@@ -142,6 +152,6 @@ argument-hint: "..."
 ## Verification
 
 1. After each command update, invoke the command in Claude Code (e.g., `/scaffold-new-repo`) and confirm the ghost text appears inline at the prompt
-2. Test with arguments (e.g., `/scaffold-new-repo my-project --type go-cli`) and verify the argument is used to skip detection
-3. Test without arguments and verify the interactive flow still works as before
-4. Run `check-versions` to verify all plugin.json and marketplace.json versions match
+1. Test with arguments (e.g., `/scaffold-new-repo my-project --type go-cli`) and verify the argument is used to skip detection
+1. Test without arguments and verify the interactive flow still works as before
+1. Run `check-versions` to verify all plugin.json and marketplace.json versions match

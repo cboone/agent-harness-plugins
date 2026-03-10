@@ -191,7 +191,6 @@ Print a summary of what was created:
 - If `git init` fails, continue generating files but warn the user
 - If the user provides an unrecognized project type, attempt the GitHub fallback (see Step 8). If that also fails, fall back to Generic and mention it
 
-
 ---
 
 ## Reference Templates

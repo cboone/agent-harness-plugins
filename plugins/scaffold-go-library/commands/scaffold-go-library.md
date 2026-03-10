@@ -242,7 +242,6 @@ Print a summary of what was created:
 - If `git init` fails, continue generating files but warn the user
 - If the build verification fails, show the error and attempt to fix it before continuing
 
-
 ---
 
 ## Reference Templates

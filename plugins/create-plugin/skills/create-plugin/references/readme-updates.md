@@ -88,11 +88,11 @@ Format rules are identical to Skills and Hooks. Commands are separated from Skil
 
 ### Subcategory Guide for Commands
 
-| Subcategory    | Covers                                | Examples                                       |
-| -------------- | ------------------------------------- | ---------------------------------------------- |
-| **Scaffolding** | Project and repo setup commands       | scaffold-go-cli, scaffold-new-repo             |
-| **CI/CD**      | CI, release, and distribution setup   | setup-ci, add-goreleaser-homebrew              |
-| **Security**   | Secret scanning and security tooling  | setup-secret-scanning                          |
+| Subcategory     | Covers                               | Examples                           |
+| --------------- | ------------------------------------ | ---------------------------------- |
+| **Scaffolding** | Project and repo setup commands      | scaffold-go-cli, scaffold-new-repo |
+| **CI/CD**       | CI, release, and distribution setup  | setup-ci, add-goreleaser-homebrew  |
+| **Security**    | Secret scanning and security tooling | setup-secret-scanning              |
 
 ### Adding a New Command
 

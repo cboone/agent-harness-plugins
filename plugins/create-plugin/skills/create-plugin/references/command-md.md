@@ -27,8 +27,8 @@ argument-hint: "[arg-name]"
 | Field                      | Required    | Description                                                                                        |
 | -------------------------- | ----------- | -------------------------------------------------------------------------------------------------- |
 | `description`              | Yes         | One-sentence summary shown in the command list. Start with a verb.                                 |
-| `disable-model-invocation` | Conditional | Set to `true` to prevent Claude from invoking this command automatically. Convention in this repo.  |
-| `argument-hint`            | Optional    | Hint shown after the command name in autocomplete (e.g., `"[project-name]"`, `"[go-cli\|python]"`) |
+| `disable-model-invocation` | Conditional | Set to `true` to prevent Claude from invoking this command automatically. Convention in this repo. |
+| `argument-hint`            | Optional    | Hint shown after the command name in autocomplete (e.g., `"[project-name]"`)                       |
 | `allowed-tools`            | Optional    | Comma-separated list of tools the command may use. Omit to allow all tools.                        |
 | `model`                    | Optional    | Override the model for this command (e.g., `"sonnet"`). Omit to use the default.                   |
 

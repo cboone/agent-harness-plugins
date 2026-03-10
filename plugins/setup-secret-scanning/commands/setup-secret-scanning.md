@@ -83,7 +83,6 @@ Print a summary of what was created:
 - If any workflow file already exists, ask before overwriting
 - If `.github/workflows/` cannot be created, check that the current directory is a git repository root
 
-
 ---
 
 ## Reference Templates
