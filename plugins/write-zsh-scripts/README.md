@@ -41,6 +41,6 @@ The skill also activates automatically when Claude Code detects zsh script work.
 
 ## See Also
 
-- [Write Shell Scripts](../write-shell-scripts/README.md): Bash style conventions
+- [Write Bash Scripts](../write-bash-scripts/README.md): Bash style conventions
 - [Lint and Fix](../lint-and-fix/README.md): run linters and formatters across the project
 - [All plugins](../../README.md)
