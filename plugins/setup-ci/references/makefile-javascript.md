@@ -1,6 +1,6 @@
 # JavaScript/TypeScript Makefile
 
-Replace `INSTALL-COMMAND` and `RUN-PREFIX` with the detected package manager equivalents.
+Replace `RUN-PREFIX` with the detected package manager equivalent (e.g., `npx`, `bunx`, `pnpm exec`).
 
 ```makefile
 .PHONY: test lint fmt typecheck clean help

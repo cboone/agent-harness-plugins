@@ -72,7 +72,7 @@ gem install PROJECT-NAME
 Clone the repository:
 
 ```bash
-git clone https://github.com/cboone/PROJECT-NAME.git
+git clone https://github.com/GITHUB-USERNAME/PROJECT-NAME.git
 ```
 ````
 
@@ -99,7 +99,7 @@ Add the dependency in your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/cboone/PROJECT-NAME", from: "1.0.0")
+    .package(url: "https://github.com/GITHUB-USERNAME/PROJECT-NAME", from: "1.0.0")
 ]
 ```
 ````
