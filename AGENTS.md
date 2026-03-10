@@ -311,12 +311,12 @@ cboone-cc-plugins/
     │           ├── SKILL.md
     │           └── references/
     │               └── SCRUT.md
-    ├── write-shell-scripts/        # Bash style guide skill
+    ├── write-bash-scripts/        # Bash style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
     │   └── skills/
-    │       └── write-shell-scripts/
+    │       └── write-bash-scripts/
     │           ├── SKILL.md
     │           └── references/
     │               └── BASH.md

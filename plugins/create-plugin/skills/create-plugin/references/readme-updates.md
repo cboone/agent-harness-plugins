@@ -211,7 +211,7 @@ Describe what events trigger the hook and what happens.
 
 ### Variations
 
-- **Style guides** (write-go-code, write-markdown, write-shell-scripts): Note automatic activation in the trigger line. Mention the reference structure.
+- **Style guides** (write-go-code, write-markdown, write-bash-scripts): Note automatic activation in the trigger line. Mention the reference structure.
 - **Simple skills** with no options: Omit the options table from Usage.
 - **Hooks** with no dependencies: Omit the Requires line.
 - **Skills that run Bash commands**: Include the Recommended Permissions section with specific `Bash(pattern)` rules derived from the SKILL.md commands. Omit this section for skills that only use Read/Glob/Grep tools.
