@@ -9,5 +9,5 @@
   "name": "setup-secret-scanning",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "commands": "./commands",
-  "version": "2.1.0"
+  "version": "2.3.0"
 }
