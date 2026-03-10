@@ -966,12 +966,6 @@ Quote heredoc tags to prevent variable interpolation. Use descriptive tags.
 
 ---
 
-### File extensions
-
-Use no extension for executables; use `.zsh` for sourced libraries.
-
----
-
 ### Direct file input
 
 Pass files directly to commands or use redirection.

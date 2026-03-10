@@ -335,7 +335,9 @@ Return zero if the function added any matches. Return non-zero if no matches wer
 ```zsh
 _my_command() {
   local -a matches=(one two three)
-  compadd -- "${matches[@]}" && return 0
+  local expl
+  _description values expl 'value'
+  compadd "${expl[@]}" -- "${matches[@]}" && return 0
   return 1
 }
 ```
