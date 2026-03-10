@@ -1,6 +1,7 @@
 ---
 description: Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets.
 disable-model-invocation: true
+argument-hint: "[go-cli|go-library|javascript|python|rust|ruby|shell]"
 ---
 
 # Setup CI
@@ -10,6 +11,8 @@ Detect the project's language(s), create a GitHub Actions CI workflow with appro
 ## Workflow
 
 ### 1. Detect Project Type
+
+If `$ARGUMENTS` specifies a language (e.g., `go-cli`, `go-library`, `javascript`, `python`, `rust`, `ruby`, `shell`), use it directly instead of scanning for markers. Still perform sub-detection steps as needed (e.g., JS package manager detection for `javascript`, or verifying `main.go`/`cmd/` for `go-cli` vs `go-library`).
 
 Scan for language and file-type markers using Glob. **Exclude `node_modules/`, `.yarn/`, `vendor/`, and other dependency directories from all searches** to avoid false positives from vendored code.
 

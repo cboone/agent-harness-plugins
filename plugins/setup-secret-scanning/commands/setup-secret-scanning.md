@@ -1,6 +1,7 @@
 ---
 description: Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration.
 disable-model-invocation: true
+argument-hint: "[gitleaks|trufflehog|both]"
 ---
 
 # Setup Secret Scanning
@@ -34,6 +35,8 @@ ls .gitleaks.toml
 If any workflows already exist, inform the user and ask whether to overwrite each one or skip it.
 
 ### 2. Choose Scanning Tools
+
+If `$ARGUMENTS` specifies a tool selection (`gitleaks`, `trufflehog`, or `both`), use it directly instead of asking the user.
 
 Ask the user which tools to set up:
 

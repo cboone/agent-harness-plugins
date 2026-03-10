@@ -1,6 +1,7 @@
 ---
 description: Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions CI/CD, Homebrew tap, and Makefile.
 disable-model-invocation: true
+argument-hint: "[project-name]"
 ---
 
 # Scaffold Go CLI
@@ -10,6 +11,8 @@ Generate the full boilerplate for a new Go CLI project.
 ## Workflow
 
 ### 1. Gather Project Information
+
+If `$ARGUMENTS` is provided, use it as the project name and skip asking for it. Still ask for the remaining parameters (description, Viper, Charmbracelet TUI) unless already provided in the user's initial request.
 
 Ask the user for these parameters:
 

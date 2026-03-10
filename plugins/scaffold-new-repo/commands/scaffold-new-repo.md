@@ -1,6 +1,7 @@
 ---
 description: Scaffold the universal boilerplate for a new repository.
 disable-model-invocation: true
+argument-hint: "[project-name] [--type TYPE]"
 ---
 
 # Scaffold New Repo
@@ -10,6 +11,8 @@ Generate the language-agnostic foundation files that every new repository starts
 ## Workflow
 
 ### 1. Gather Project Information
+
+If `$ARGUMENTS` is provided, parse it for a project name (first positional word) and/or a `--type TYPE` flag. If a project name is present, use it directly instead of detecting from git remote or README. If `--type` is present, use the specified type instead of inferring from `.gitignore`. Valid types: `go-cli`, `go-library`, `javascript`, `pascal`, `python`, `ruby`, `rust`, `shell`, `swift`, `generic`. Any remaining parameters should still be gathered normally.
 
 Derive what you can automatically, then ask for only what's missing:
 

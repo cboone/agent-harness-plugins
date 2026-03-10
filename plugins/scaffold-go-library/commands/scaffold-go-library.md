@@ -1,6 +1,7 @@
 ---
 description: Scaffold a Go library project with GoReleaser changelog releases, golangci-lint, GitHub Actions CI/CD, and Makefile.
 disable-model-invocation: true
+argument-hint: "[project-name]"
 ---
 
 # Scaffold Go Library
@@ -10,6 +11,8 @@ Generate the full boilerplate for a new Go library project.
 ## Workflow
 
 ### 1. Gather Project Information
+
+If `$ARGUMENTS` is provided, use it as the project name and skip asking for it. Still ask for the remaining parameters (description, minimum Go version, example tests) unless already provided in the user's initial request.
 
 Ask the user for these parameters:
 
