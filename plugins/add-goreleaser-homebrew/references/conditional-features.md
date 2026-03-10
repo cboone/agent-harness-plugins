@@ -141,12 +141,17 @@ archives:
 
 ### .github/workflows/release.yml Modifications
 
-Change the runner to `macos-latest`:
+Pass `runs-on: macos-latest` as an input to the reusable workflow:
 
 ```yaml
 jobs:
-  goreleaser:
-    runs-on: macos-latest
+  release:
+    uses: cboone/gh-actions/.github/workflows/go-release.yml@v1
+    with:
+      go-version-file: go.mod
+      runs-on: macos-latest
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
 
 ## Combining Features
@@ -234,7 +239,7 @@ homebrew_casks:
       fish: completions/PROJECT-NAME.fish
 ```
 
-Note: When macOS-only, remove the Windows format override from archives and change the release workflow runner to `macos-latest`.
+Note: When macOS-only, remove the Windows format override from archives and pass `runs-on: macos-latest` to the reusable release workflow.
 
 ## Notes
 

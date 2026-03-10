@@ -24,4 +24,4 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'
 ```
 
-Adapt targets to match `package.json` scripts when they exist (e.g., if `package.json` has a `test` script, use `npm test` instead of `npx jest`).
+Adapt targets to match `package.json` scripts when they exist (e.g., if `package.json` has a `test` script, use the package manager's run command instead of calling the test runner directly).

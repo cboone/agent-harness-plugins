@@ -159,11 +159,12 @@ Key points:
 
 ### 9. Update README.md
 
-Add the new plugin to three places in `README.md`. See `./references/readme-updates.md` for the exact format of each section.
+Add the new plugin to two places in `README.md`. See `./references/readme-updates.md` for the exact format of each section.
 
 1. **Table of Contents**: Add link alphabetically in the Skills, Commands, or Hooks line
-1. **Installation**: Add `/plugin install` command alphabetically
 1. **Description section**: Add H3 subsection alphabetically under Skills, Commands, or Hooks
+
+No individual install commands are needed in the Installation section; the marketplace flow handles installation.
 
 ### 10. Update CLAUDE.md
 
