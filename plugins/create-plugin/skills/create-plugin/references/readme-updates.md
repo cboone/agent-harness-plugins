@@ -69,6 +69,37 @@ Use this guide to determine which subcategory a new plugin belongs to:
 
 The installation section directs users to add the marketplace and browse plugins from there. It does not list individual install commands; users select plugins interactively after adding the marketplace.
 
+## Table of Contents: Commands
+
+Commands follow the same one-entry-per-line pattern, with their own subcategories:
+
+```markdown
+**Commands**
+<br>Scaffolding:
+[Command A](#command-a)
+∙ [Command B](#command-b)
+<br>CI/CD:
+[Command C](#command-c)
+<br>Security:
+[Command D](#command-d)
+```
+
+Format rules are identical to Skills and Hooks. Commands are separated from Skills and Hooks by a blank line.
+
+### Subcategory Guide for Commands
+
+| Subcategory    | Covers                                | Examples                                       |
+| -------------- | ------------------------------------- | ---------------------------------------------- |
+| **Scaffolding** | Project and repo setup commands       | scaffold-go-cli, scaffold-new-repo             |
+| **CI/CD**      | CI, release, and distribution setup   | setup-ci, add-goreleaser-homebrew              |
+| **Security**   | Secret scanning and security tooling  | setup-secret-scanning                          |
+
+### Adding a New Command
+
+1. Insert a new line with `∙ [Command Name](#command-name)` in alphabetical order within the appropriate subcategory. If the new entry is the first in its subcategory, omit the leading `∙`.
+1. Add an H3 description section (see below).
+1. Create a per-plugin README (see below).
+
 ## Plugin Description Sections
 
 ### Skills Section
@@ -107,6 +138,29 @@ Description of what the hook does and when it fires.
 > **Requires:** [`dependency`](URL). Install via [Homebrew](https://brew.sh): `install command`
 > **Details:** [README](./plugins/hook-name/README.md)
 ```
+
+### Commands Section
+
+Each command gets an H3 subsection under `## Commands`, in alphabetical order. The description is 1-2 sentences, followed by a blockquote metadata block with the trigger command, any external dependencies, and a link to the per-plugin README:
+
+```markdown
+### Command Name
+
+One-to-two sentence summary of what the command does.
+
+> **Trigger:** `/command-name`
+> **Requires:** [`dependency`](URL)
+> **Details:** [README](./plugins/command-name/README.md)
+```
+
+Key patterns:
+
+- The H3 heading is title case (e.g., "Setup CI", "Scaffold Go CLI")
+- The description is 1-2 concise sentences
+- The blockquote metadata block goes at the end of each section
+- Always include the `> **Trigger:**` line
+- Include `> **Requires:**` only if the command has external dependencies
+- Always include the `> **Details:**` line linking to the per-plugin README
 
 ## Per-Plugin README
 
@@ -209,12 +263,65 @@ Describe what events trigger the hook and what happens.
 - [All plugins](../../README.md)
 ````
 
+### Template for Commands
+
+````markdown
+# Command Name
+
+One-sentence description.
+
+**Type:** Command
+**Trigger:** `/command-name`
+
+## Installation
+
+Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
+
+```text
+/plugin marketplace add cboone/cboone-cc-plugins
+```
+
+Then select **Command Name** from the available plugins.
+
+## What It Does
+
+2-4 sentences describing the outcome for the user. Focus on what the user
+gets, not internal agent workflow.
+
+## Requirements
+
+(Only if external dependencies exist.)
+
+- [`dependency`](URL). Install via Homebrew: `brew install dependency`
+
+## Usage
+
+The trigger command and any arguments.
+
+```text
+/command-name [argument]
+```
+
+## Arguments
+
+| Argument   | Description                          |
+| ---------- | ------------------------------------ |
+| `arg-name` | What this argument does. (Optional.) |
+
+## See Also
+
+- [Related Plugin](../related-plugin/README.md): brief reason
+- [All plugins](../../README.md)
+````
+
 ### Variations
 
 - **Style guides** (write-go-code, write-markdown, write-shell-scripts): Note automatic activation in the trigger line. Mention the reference structure.
 - **Simple skills** with no options: Omit the options table from Usage.
 - **Hooks** with no dependencies: Omit the Requires line.
 - **Skills that run Bash commands**: Include the Recommended Permissions section with specific `Bash(pattern)` rules derived from the SKILL.md commands. Omit this section for skills that only use Read/Glob/Grep tools.
+- **Commands** with no arguments: Omit the Arguments table from Usage.
+- **Commands** with arguments: Include the Arguments table and show usage examples.
 
 ## Notes
 
