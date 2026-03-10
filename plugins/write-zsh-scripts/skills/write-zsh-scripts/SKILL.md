@@ -77,5 +77,5 @@ Whenever possible, validate the script before finishing. Prefer using a project-
 
 If those aren't present:
 
-- `zsh -n script.zsh` for syntax checking
+- `zsh -n path/to/script` for syntax checking
 - `shellcheck --shell=bash` for general linting (limited zsh support, may produce false positives on zsh-specific syntax)

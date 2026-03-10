@@ -240,11 +240,11 @@ Place `then` and `do` on the same line as `if`, `for`, and `while`.
 
 ### Heredoc quoting
 
-Quote heredoc tags to prevent variable interpolation.
+Quote heredoc tags to prevent variable interpolation. Use descriptive tag names (see the [Heredocs](#heredocs) section).
 
-| Use       | Avoid   |
-| --------- | ------- |
-| `<<'EOF'` | `<<EOF` |
+| Use             | Avoid         |
+| --------------- | ------------- |
+| `<<'SQL_QUERY'` | `<<SQL_QUERY` |
 
 ---
 
@@ -1186,7 +1186,7 @@ echo "${path}" | cut -d/ -f1
 Validate syntax before running.
 
 ```zsh
-zsh -n script.zsh
+zsh -n path/to/script
 ```
 
 ---
