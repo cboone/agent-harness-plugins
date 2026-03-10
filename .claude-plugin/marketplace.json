@@ -490,6 +490,20 @@
         "name": "Christopher Boone"
       },
       "category": "code-quality",
+      "description": "Applies Bash style conventions when creating or editing Bash scripts.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["bash", "format", "scripts", "shell", "style"],
+      "license": "MIT",
+      "name": "write-bash-scripts",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/write-bash-scripts",
+      "version": "2.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
       "description": "Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["code-review", "go", "golang", "style"],
@@ -526,20 +540,6 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/write-scrut-tests",
       "version": "1.0.2"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "code-quality",
-      "description": "Applies Bash style conventions when creating or editing Bash scripts.",
-      "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["bash", "format", "scripts", "shell", "style"],
-      "license": "MIT",
-      "name": "write-bash-scripts",
-      "repository": "https://github.com/cboone/cboone-cc-plugins",
-      "source": "./plugins/write-bash-scripts",
-      "version": "2.0.0"
     }
   ]
 }
