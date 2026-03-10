@@ -57,7 +57,9 @@ Review the file's contents before running this check on untrusted scripts. For f
 
 - Most useful for library-style zsh scripts with multiple functions.
 - Combine with `emulate -L zsh` to reset options to zsh defaults before sourcing:
+
   ```bash
   zsh -c 'emulate -L zsh; setopt warn_create_global warn_nested_var; source <file>'
   ```
+
 - The `-L` flag to `emulate` makes the option setting local to the current scope.

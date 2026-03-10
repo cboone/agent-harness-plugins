@@ -32,12 +32,12 @@ pipx install beautysh
 
 ## Options
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--indent-size N` | Number of spaces per indent level | 4 |
-| `--tab` | Use tabs instead of spaces | Off |
-| `--backup` | Create a backup before modifying | Off |
-| `--force-function-style STYLE` | Force function style: `fnpar` (name()), `fnonly` (name), `paronly` (()) | None |
+| Flag                           | Description                                                             | Default |
+| ------------------------------ | ----------------------------------------------------------------------- | ------- |
+| `--indent-size N`              | Number of spaces per indent level                                       | 4       |
+| `--tab`                        | Use tabs instead of spaces                                              | Off     |
+| `--backup`                     | Create a backup before modifying                                        | Off     |
+| `--force-function-style STYLE` | Force function style: `fnpar` (name()), `fnonly` (name), `paronly` (()) | None    |
 
 ## Zsh Support
 
