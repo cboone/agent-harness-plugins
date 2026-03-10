@@ -72,6 +72,7 @@ cboone-cc-plugins/
     │                   ├── setopt-warnings.md
     │                   ├── shellcheck.md
     │                   ├── shellharden.md
+    │                   ├── shfmt.md
     │                   ├── zcompile.md
     │                   └── zsh-n.md
     ├── commit/                      # Smart git commit skill

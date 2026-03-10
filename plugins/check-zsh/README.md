@@ -17,12 +17,13 @@ Then select **Check Zsh** from the available plugins.
 
 ## What It Does
 
-Runs seven complementary tools against zsh scripts in a recommended order: syntax checking (`zsh -n`), compilation (`zcompile`), static analysis (`shellcheck --shell=zsh`), bashism detection (`checkbashisms`), safety suggestions (`shellharden`), variable scope warnings (`setopt warn_create_global warn_nested_var`), and formatting (`beautysh`). Reports findings with false-positive filtering for tools that have limited zsh support. Offers auto-formatting via beautysh where applicable.
+Runs eight complementary tools against zsh scripts in a recommended order: syntax checking (`zsh -n`), compilation (`zcompile`), static analysis (`shellcheck --shell=zsh`), bashism detection (`checkbashisms`), safety suggestions (`shellharden`), variable scope warnings (`setopt warn_create_global warn_nested_var`), and formatting (`shfmt`, `beautysh`). Reports findings with false-positive filtering for tools that have limited zsh support. Offers auto-formatting via shfmt and beautysh where applicable.
 
 ## Requirements
 
 - [`shellcheck`](https://www.shellcheck.net/). Install via Homebrew: `brew install shellcheck`
 - [`beautysh`](https://pypi.org/project/beautysh/). Install via pip: `pip install beautysh` (or `pipx install beautysh`)
+- [`shfmt`](https://github.com/mvdan/sh). Install via Homebrew: `brew install shfmt`
 - [`shellharden`](https://github.com/anordal/shellharden). Install via Homebrew: `brew install shellharden` (or `cargo install shellharden`)
 - [`checkbashisms`](https://packages.debian.org/devscripts). Install via Homebrew: `brew install devscripts`
 - `zsh` and `zcompile` are typically pre-installed on macOS and most Linux distributions.
@@ -38,7 +39,7 @@ This skill runs shell commands that trigger permission prompts. To allow them au
 ```json
 {
   "permissions": {
-    "allow": ["Bash(zsh -n *)", "Bash(zsh -c *)", "Bash(zcompile *)", "Bash(shellcheck *)", "Bash(checkbashisms *)", "Bash(shellharden *)", "Bash(beautysh *)", "Bash(rm *.zwc)"]
+    "allow": ["Bash(zsh -n *)", "Bash(zsh -c *)", "Bash(zcompile *)", "Bash(shellcheck *)", "Bash(checkbashisms *)", "Bash(shfmt *)", "Bash(shellharden *)", "Bash(beautysh *)", "Bash(rm *.zwc)"]
   }
 }
 ```

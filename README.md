@@ -193,10 +193,10 @@ Style guides, linters, and security practices. These skills activate automatical
 
 #### Check Zsh
 
-Check and evaluate zsh scripts using multiple static analysis, syntax checking, and formatting tools. Runs `zsh -n`, `zcompile`, `shellcheck`, `checkbashisms`, `shellharden`, variable scope warnings, and `beautysh` in recommended order, with false-positive filtering for tools that have limited zsh support.
+Check and evaluate zsh scripts using multiple static analysis, syntax checking, and formatting tools. Runs `zsh -n`, `zcompile`, `shellcheck`, `checkbashisms`, `shellharden`, variable scope warnings, `shfmt`, and `beautysh` in recommended order, with false-positive filtering for tools that have limited zsh support.
 
 > **Trigger:** `/check-zsh` (also activates automatically)
-> **Requires:** [`shellcheck`](https://www.shellcheck.net/), [`beautysh`](https://pypi.org/project/beautysh/), [`shellharden`](https://github.com/anordal/shellharden), [`checkbashisms`](https://packages.debian.org/devscripts)
+> **Requires:** [`shellcheck`](https://www.shellcheck.net/), [`shfmt`](https://github.com/mvdan/sh), [`beautysh`](https://pypi.org/project/beautysh/), [`shellharden`](https://github.com/anordal/shellharden), [`checkbashisms`](https://packages.debian.org/devscripts)
 > **Details:** [README](./plugins/check-zsh/README.md)
 
 #### Handle Secrets
