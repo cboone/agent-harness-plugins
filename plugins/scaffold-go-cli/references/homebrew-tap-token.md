@@ -1,6 +1,6 @@
 # HOMEBREW_TAP_TOKEN Setup
 
-<!-- sync: this section is duplicated in plugins/add-goreleaser-homebrew/commands/add-goreleaser-homebrew.md -->
+<!-- sync: this section is duplicated in plugins/add-goreleaser-homebrew/references/homebrew-tap-token.md -->
 
 The release workflow needs a `HOMEBREW_TAP_TOKEN` repository secret so GoReleaser can push cask updates to the Homebrew tap repository. This section walks through creating the token and setting the secret.
 
