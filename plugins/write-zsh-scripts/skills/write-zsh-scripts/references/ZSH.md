@@ -586,7 +586,7 @@ done
 echo "${count}"  # still 0
 ```
 
-Use process substitution or the `PIPE_FAIL` approach instead:
+Use process substitution instead:
 
 ```zsh
 # Use: process substitution avoids subshell
