@@ -70,13 +70,13 @@ space_redirects = true
 
 ## Comparison with beautysh
 
-| Aspect | shfmt | beautysh |
-|--------|-------|----------|
-| Speed | Very fast (Go binary) | Slower (Python) |
-| Zsh support | Experimental (`-ln zsh`) | Good |
-| Configuration | `.editorconfig` | CLI flags |
-| Parse errors on zsh | More common | Less common |
-| Active maintenance | Very active | Less active |
+| Aspect              | shfmt                    | beautysh        |
+| ------------------- | ------------------------ | --------------- |
+| Speed               | Very fast (Go binary)    | Slower (Python) |
+| Zsh support         | Experimental (`-ln zsh`) | Good            |
+| Configuration       | `.editorconfig`          | CLI flags       |
+| Parse errors on zsh | More common              | Less common     |
+| Active maintenance  | Very active              | Less active     |
 
 Both tools can coexist. Run shfmt first (it is stricter about syntax), then beautysh for anything shfmt could not parse.
 

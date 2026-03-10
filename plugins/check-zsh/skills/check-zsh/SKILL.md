@@ -16,16 +16,16 @@ Check and evaluate zsh scripts using multiple complementary static analysis, syn
 
 ## Tool Overview
 
-| Order | Tool                          | Purpose                              | Zsh Support | Auto-Fix |
-| ----- | ----------------------------- | ------------------------------------ | ----------- | -------- |
-| 1     | `zsh -n`                      | Syntax check (parse without execute) | Native      | No       |
-| 2     | `zcompile`                    | Compile to wordcode                  | Native      | No       |
-| 3     | `shellcheck --shell=zsh`      | Static analysis                      | Limited     | No       |
-| 4     | `checkbashisms`               | Identify bash-specific constructs    | Indirect    | No       |
-| 5     | `shellharden --check`         | Safer syntax suggestions             | Limited     | Suggest  |
-| 6     | `zsh -c 'setopt ...; source'` | Variable scope warnings              | Native      | No       |
-| 7     | `shfmt -ln zsh`               | Shell formatter                      | Experimental | Yes     |
-| 8     | `beautysh`                    | Code formatter                       | Yes          | Yes     |
+| Order | Tool                          | Purpose                              | Zsh Support  | Auto-Fix |
+| ----- | ----------------------------- | ------------------------------------ | ------------ | -------- |
+| 1     | `zsh -n`                      | Syntax check (parse without execute) | Native       | No       |
+| 2     | `zcompile`                    | Compile to wordcode                  | Native       | No       |
+| 3     | `shellcheck --shell=zsh`      | Static analysis                      | Limited      | No       |
+| 4     | `checkbashisms`               | Identify bash-specific constructs    | Indirect     | No       |
+| 5     | `shellharden --check`         | Safer syntax suggestions             | Limited      | Suggest  |
+| 6     | `zsh -c 'setopt ...; source'` | Variable scope warnings              | Native       | No       |
+| 7     | `shfmt -ln zsh`               | Shell formatter                      | Experimental | Yes      |
+| 8     | `beautysh`                    | Code formatter                       | Yes          | Yes      |
 
 ## Workflow
 
