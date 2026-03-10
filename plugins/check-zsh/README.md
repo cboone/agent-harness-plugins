@@ -39,7 +39,7 @@ This skill runs shell commands that trigger permission prompts. To allow them au
 ```json
 {
   "permissions": {
-    "allow": ["Bash(zsh -n *)", "Bash(zsh -c *)", "Bash(zcompile *)", "Bash(shellcheck *)", "Bash(checkbashisms *)", "Bash(shfmt *)", "Bash(shellharden *)", "Bash(beautysh *)", "Bash(rm *.zwc)"]
+    "allow": ["Bash(zsh -n *)", "Bash(zsh -c *)", "Bash(shellcheck *)", "Bash(checkbashisms *)", "Bash(shfmt *)", "Bash(shellharden *)", "Bash(beautysh *)", "Bash(rm -f *.zwc)"]
   }
 }
 ```

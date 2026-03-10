@@ -7,8 +7,10 @@ Compile zsh scripts to wordcode (`.zwc` format). Catches errors that `zsh -n` mi
 ## Command
 
 ```bash
-zcompile <file>
+zsh -c 'zcompile "$1"' -- <file>
 ```
+
+`zcompile` is a zsh builtin. The `zsh -c` wrapper ensures it runs in zsh even when invoked from a bash shell.
 
 ## Cleanup
 

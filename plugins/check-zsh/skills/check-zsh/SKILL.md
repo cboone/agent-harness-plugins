@@ -79,7 +79,7 @@ See `./references/tools/zsh-n.md`.
 #### 3b. Compile Check
 
 ```bash
-zcompile <file>
+zsh -c 'zcompile "$1"' -- <file>
 ```
 
 Then clean up:

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Code formatter for bash and zsh scripts. The only tool in this suite with auto-fix capability.
+Code formatter for bash and zsh scripts. One of the auto-fix formatters in this suite, alongside `shfmt` (which supports zsh via `-ln zsh`).
 
 ## Commands
 
