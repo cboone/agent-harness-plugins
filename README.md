@@ -28,7 +28,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Write Go Code](#write-go-code)
 ∙ [Write Markdown](#write-markdown)
 ∙ [Write Scrut Tests](#write-scrut-tests)
-∙ [Write Shell Scripts](#write-shell-scripts)
+∙ [Write Bash Scripts](#write-bash-scripts)
 <br>Scaffolding:
 [Add Community Files](#add-community-files)
 ∙ [Bootstrap Project](#bootstrap-project)
@@ -234,12 +234,12 @@ Scrut test style conventions for writing and maintaining snapshot-based CLI test
 > **Trigger:** `/write-scrut-tests` (also activates automatically)
 > **Details:** [README](./plugins/write-scrut-tests/README.md)
 
-#### Write Shell Scripts
+#### Write Bash Scripts
 
-Bash style conventions for creating and editing shell scripts. Activates automatically when creating or editing shell scripts.
+Bash style conventions for creating and editing Bash scripts. Activates automatically when creating or editing Bash scripts.
 
-> **Trigger:** `/write-shell-scripts` (also activates automatically)
-> **Details:** [README](./plugins/write-shell-scripts/README.md)
+> **Trigger:** `/write-bash-scripts` (also activates automatically)
+> **Details:** [README](./plugins/write-bash-scripts/README.md)
 
 #### Setup Linters
 

@@ -15,6 +15,7 @@ All fields are alphabetized in the JSON file.
 | `license`     | string | Yes         | `"MIT"`                                                                            |
 | `name`        | string | Yes         | Plugin directory name, kebab-case. Must match the directory name under `plugins/`. |
 | `repository`  | string | Yes         | `"https://github.com/cboone/cboone-cc-plugins"`                                    |
+| `commands`    | string | Conditional | `"./commands"` -- include only if the plugin provides commands.                    |
 | `skills`      | string | Conditional | `"./skills"` -- include only if the plugin provides skills.                        |
 | `version`     | string | Yes         | Semver version. See versioning rules below.                                        |
 
@@ -62,8 +63,29 @@ Hooks plugins omit the `skills` field. They do not declare hooks in `plugin.json
 }
 ```
 
+## Command Plugin Template
+
+Command plugins use a `commands` field instead of `skills`. They do not declare commands in `plugin.json`; commands are defined as individual `.md` files in the `commands/` directory.
+
+```json
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "commands": "./commands",
+  "description": "DESCRIPTION",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["KEYWORD1", "KEYWORD2"],
+  "license": "MIT",
+  "name": "PLUGIN-NAME",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "version": "1.0.0"
+}
+```
+
 ## Notes
 
 - The `name` field must exactly match the plugin's directory name under `plugins/`.
 - Keywords should be lowercase, alphabetized, and relevant to the plugin's purpose.
 - The `description` should match between `plugin.json` and the corresponding `marketplace.json` entry.
+- A plugin can include both `"commands"` and `"skills"` fields if it provides both types.
