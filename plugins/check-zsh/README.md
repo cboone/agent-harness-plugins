@@ -56,6 +56,6 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 ## See Also
 
-- [Write Shell Scripts](../write-shell-scripts/README.md): Bash style conventions
+- [Write Bash Scripts](../write-bash-scripts/README.md): Bash style conventions
 - [Lint and Fix](../lint-and-fix/README.md): General linter and formatter runner
 - [All plugins](../../README.md)
