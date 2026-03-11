@@ -40,7 +40,7 @@ setopt NO_UNSET        # error on undefined variables (like set -u)
 setopt PIPE_FAIL       # catch failures in pipelines (like set -o pipefail)
 ```
 
-The short-form equivalent `emulate -LR zsh` resets all options to zsh defaults and scopes them locally, which is useful in functions meant for distribution.
+In functions meant for distribution, combine these options with `emulate -LR zsh` at the top of the function to reset option state to zsh defaults and scope subsequent `setopt` changes locally; note that `emulate -LR zsh` by itself does not enable `ERR_EXIT`, `NO_UNSET`, or `PIPE_FAIL`.
 
 ---
 
@@ -356,7 +356,7 @@ function process_file() {
 
 ### Autoloading
 
-Use `autoload -Uz` for functions that should be loaded on first use. The `-U` flag suppresses alias expansion during loading, and `-z` forces zsh-style word splitting.
+Use `autoload -Uz` for functions that should be loaded on first use. The `-U` flag suppresses alias expansion during loading, and `-z` selects zsh-style autoloading semantics (as opposed to ksh-style).
 
 ```zsh
 autoload -Uz my_function
@@ -444,7 +444,7 @@ alias ll='ls -la'
 
 ### typeset over declare
 
-Use `typeset` for explicit variable declarations. It is the native zsh builtin; `declare` is a bash compatibility alias.
+Use `typeset` for explicit variable declarations. It is the native zsh builtin; `declare` is a bash compatibility synonym.
 
 | Use                | Avoid              |
 | ------------------ | ------------------ |

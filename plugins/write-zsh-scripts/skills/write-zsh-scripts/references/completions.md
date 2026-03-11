@@ -209,7 +209,7 @@ Pass `-1V` (unsorted unique) or `-2J` (sorted group) flags to `_description`, no
 
 ```zsh
 # Correct
-_description -V users expl 'user name'
+_description -1V users expl 'user name'
 compadd "${expl[@]}" -- "${users[@]}"
 
 # Wrong: sort flag on compadd
