@@ -29,6 +29,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Write Markdown](#write-markdown)
 ∙ [Write Scrut Tests](#write-scrut-tests)
 ∙ [Write Bash Scripts](#write-bash-scripts)
+∙ [Write Zsh Scripts](#write-zsh-scripts)
 <br>Scaffolding:
 [Add Community Files](#add-community-files)
 ∙ [Bootstrap Project](#bootstrap-project)
@@ -240,6 +241,13 @@ Bash style conventions for creating and editing Bash scripts. Activates automati
 
 > **Trigger:** `/write-bash-scripts` (also activates automatically)
 > **Details:** [README](./plugins/write-bash-scripts/README.md)
+
+#### Write Zsh Scripts
+
+Zsh style conventions for creating and editing zsh scripts, configurations, and completions. Activates automatically when creating or editing zsh files. Includes a comprehensive scripting guide and a separate completion function reference drawn from the upstream zsh completion-style-guide.
+
+> **Trigger:** `/write-zsh-scripts` (also activates automatically)
+> **Details:** [README](./plugins/write-zsh-scripts/README.md)
 
 #### Setup Linters
 

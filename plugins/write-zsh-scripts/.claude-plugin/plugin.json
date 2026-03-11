@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Applies zsh style conventions when creating or editing zsh scripts, configurations, and completions.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["completions", "format", "scripts", "style", "zsh"],
+  "license": "MIT",
+  "name": "write-zsh-scripts",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

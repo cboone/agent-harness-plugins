@@ -398,6 +398,16 @@ cboone-cc-plugins/
     │           ├── SKILL.md
     │           └── references/
     │               └── BASH.md
+    ├── write-zsh-scripts/          # Zsh style guide skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── write-zsh-scripts/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── ZSH.md
+    │               └── completions.md
     └── clean-up-agent-config/      # Agent config cleanup skill
         ├── .claude-plugin/
         │   └── plugin.json
