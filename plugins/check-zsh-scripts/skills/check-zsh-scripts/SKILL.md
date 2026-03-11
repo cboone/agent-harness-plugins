@@ -1,16 +1,16 @@
 ---
-name: check-zsh
+name: check-zsh-scripts
 description: >-
   Check and evaluate zsh scripts using shellcheck, beautysh, shfmt,
   shellharden, zsh -n, zcompile, setopt warn_create_global/warn_nested_var,
   and checkbashisms. Use when: (1) creating or editing zsh scripts (.zsh, zshrc,
   zshenv, zprofile, zlogin, zlogout), (2) reviewing zsh code for bugs or
   portability issues, (3) checking zsh variable scoping, (4) formatting zsh
-  scripts, or (5) the user says "check zsh", "lint zsh", "validate zsh",
-  "zsh check", or "check my zsh script".
+  scripts, or (5) the user says "check zsh", "check zsh scripts", "lint zsh",
+  "validate zsh", "zsh check", or "check my zsh script".
 ---
 
-# Check Zsh
+# Check Zsh Scripts
 
 Check and evaluate zsh scripts using multiple complementary static analysis, syntax checking, and formatting tools.
 

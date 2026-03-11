@@ -1,9 +1,9 @@
-# Check Zsh
+# Check Zsh Scripts
 
 Check and evaluate zsh scripts using multiple static analysis, syntax checking, and formatting tools.
 
 **Type:** Skill
-**Trigger:** `/check-zsh` (also activates automatically)
+**Trigger:** `/check-zsh-scripts` (also activates automatically)
 
 ## Installation
 
@@ -13,7 +13,7 @@ Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins
 /plugin marketplace add cboone/cboone-cc-plugins
 ```
 
-Then select **Check Zsh** from the available plugins.
+Then select **Check Zsh Scripts** from the available plugins.
 
 ## What It Does
 
@@ -30,7 +30,7 @@ Runs eight complementary tools against zsh scripts in a recommended order: synta
 
 ## Usage
 
-Invoke manually with `/check-zsh`, or the skill activates automatically when working with zsh files (`.zsh`, `.zshrc`, `.zshenv`, `.zprofile`, `.zlogin`, `.zlogout`).
+Invoke manually with `/check-zsh-scripts`, or the skill activates automatically when working with zsh files (`.zsh`, `.zshrc`, `.zshenv`, `.zprofile`, `.zlogin`, `.zlogout`).
 
 ## Recommended Permissions
 

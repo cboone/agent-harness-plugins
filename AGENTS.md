@@ -65,12 +65,12 @@ cboone-cc-plugins/
     │           ├── SKILL.md
     │           └── references/
     │               └── overlap-rules.md
-    ├── check-zsh/                   # Zsh script checking skill
+    ├── check-zsh-scripts/           # Zsh script checking skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
     │   └── skills/
-    │       └── check-zsh/
+    │       └── check-zsh-scripts/
     │           ├── SKILL.md
     │           └── references/
     │               └── tools/
