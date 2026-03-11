@@ -78,12 +78,12 @@ fi
 
 Use `.zsh` for sourced library files, sourced configuration snippets, and plugin files. Use no extension for executable scripts.
 
-| File type              | Extension | Example           |
-| ---------------------- | --------- | ----------------- |
-| Executable script      | none      | `deploy-project`  |
-| Library / plugin       | `.zsh`    | `git-helpers.zsh` |
-| Completion             | none      | `_my-command`     |
-| Configuration snippet  | `.zsh`    | `aliases.zsh`     |
+| File type             | Extension | Example           |
+| --------------------- | --------- | ----------------- |
+| Executable script     | none      | `deploy-project`  |
+| Library / plugin      | `.zsh`    | `git-helpers.zsh` |
+| Completion            | none      | `_my-command`     |
+| Configuration snippet | `.zsh`    | `aliases.zsh`     |
 
 ---
 
