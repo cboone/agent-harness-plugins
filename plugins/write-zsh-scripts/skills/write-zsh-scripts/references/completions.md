@@ -273,7 +273,7 @@ _values 'log level' \
 
 ### \_wanted
 
-Test whether a tag is wanted and, if so, call a completion function. Combines `_tags`, `_requested`, and `_all_labels` in one call.
+Test whether a tag is wanted and, if so, call a completion function. Combines `_tags`, `_requested`, and `_all_labels` in one call. `_wanted` automatically injects `"${expl[@]}"` into the `compadd` call, so you do not pass it explicitly.
 
 ```zsh
 _wanted users expl 'user name' compadd -- "${users[@]}"

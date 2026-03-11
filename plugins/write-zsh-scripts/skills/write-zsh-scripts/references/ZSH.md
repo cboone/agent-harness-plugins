@@ -76,14 +76,14 @@ fi
 
 ### File extensions
 
-Use `.zsh` for sourced library files, configuration files, and plugin files. Use no extension for executable scripts.
+Use `.zsh` for sourced library files, sourced configuration snippets, and plugin files. Use no extension for executable scripts.
 
-| File type         | Extension | Example           |
-| ----------------- | --------- | ----------------- |
-| Executable script | none      | `deploy-project`  |
-| Library / plugin  | `.zsh`    | `git-helpers.zsh` |
-| Completion        | none      | `_my-command`     |
-| Configuration     | `.zsh`    | `aliases.zsh`     |
+| File type              | Extension | Example           |
+| ---------------------- | --------- | ----------------- |
+| Executable script      | none      | `deploy-project`  |
+| Library / plugin       | `.zsh`    | `git-helpers.zsh` |
+| Completion             | none      | `_my-command`     |
+| Configuration snippet  | `.zsh`    | `aliases.zsh`     |
 
 ---
 
@@ -1110,7 +1110,7 @@ Use `mktemp` and set restrictive permissions.
 local tmp
 tmp=$(mktemp)
 chmod 600 "${tmp}"
-trap "rm -f '${tmp}'" EXIT
+trap 'rm -f -- "$tmp"' EXIT
 ```
 
 ---
