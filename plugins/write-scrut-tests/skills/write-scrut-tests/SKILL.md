@@ -24,6 +24,7 @@ Read `./references/SCRUT.md` for the complete guide. Summary:
 ### Test Structure
 
 - One logical assertion per scrut block for precise failure locations
+- Use `> ` continuation prefix to split long `&&`-chained commands across lines
 - Order blocks: happy path first, then common variations, then edge cases, then errors
 - Level-1 heading for the test group, level-2 headings for individual test cases
 
