@@ -36,7 +36,7 @@ expected output
 
 ## One Command Per Block
 
-Each fenced scrut block supports only one `$` command line (plus optional `> ` continuation lines). Any additional `$` lines are interpreted as expected output, not as commands to execute.
+Each fenced scrut block supports only one `$` command line (plus optional `>` continuation lines). Any additional `$` lines are interpreted as expected output, not as commands to execute.
 
 Correct, two separate blocks:
 
@@ -68,7 +68,7 @@ result
 ```
 ````
 
-Because each block gets its own shell process, you must `source` the file in every block that needs it. Chain the source and the function call with `&&` on the same command line.
+Because scrut does not preserve sourced definitions across separate blocks, you must `source` the file in every block that needs it. Chain the source and the function call with `&&` on the same command line.
 
 ## ERR_EXIT and shopt Pitfall
 
@@ -82,7 +82,7 @@ shopt: command not found
 
 ### Workaround
 
-Do not set `ERR_EXIT` at the file level in zsh code that will be tested with scrut. Instead, use `emulate -L zsh` with strict options inside individual functions:
+Do not set `ERR_EXIT` at the file level in zsh code that will be tested with scrut. Instead, use `emulate -LR zsh` with strict options inside individual functions:
 
 Good:
 
@@ -90,7 +90,7 @@ Good:
 # helpers.zsh
 
 function my_function() {
-  emulate -L zsh
+  emulate -LR zsh
   setopt ERR_EXIT NO_UNSET PIPE_FAIL
 
   # function body with strict error handling

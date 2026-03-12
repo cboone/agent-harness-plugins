@@ -139,9 +139,9 @@ File created
 
 ### Continuation Lines for Long Commands
 
-Scrut supports a `> ` continuation prefix (inherited from cram) that lets you split long `&&`-chained commands across multiple lines. Use continuation lines when a command chain exceeds a comfortable line length.
+Scrut supports a `>` continuation prefix (inherited from cram) that lets you split long `&&`-chained commands across multiple lines. Use continuation lines when a command chain exceeds a comfortable line length.
 
-The `> ` prefix must appear at the start of the line, followed by exactly two spaces of indentation for readability. The indentation is literal and becomes part of the command, but shell parsing ignores leading whitespace in continuation contexts.
+Each continuation line must start with the literal `>` prefix (a `>` character followed by a single space). You may add indentation after this prefix (for example, two spaces before `&&`) to align chained commands for readability. That indentation is literal and becomes part of the command, but shell parsing ignores leading whitespace in these continuation contexts.
 
 The "Config init creates file" example above, rewritten with continuation lines:
 

@@ -25,7 +25,7 @@ Read `./references/SCRUT.md` for the complete guide. Summary:
 ### Test Structure
 
 - One logical assertion per scrut block for precise failure locations
-- Use `> ` continuation prefix to split long `&&`-chained commands across lines
+- Use `>` continuation prefix to split long `&&`-chained commands across lines
 - Order blocks: happy path first, then common variations, then edge cases, then errors
 - Level-1 heading for the test group, level-2 headings for individual test cases
 
@@ -63,7 +63,7 @@ For testing zsh plugins and sourced library code with scrut, read `./references/
 - Use `--shell zsh` flag with `scrut test` and `scrut update`
 - Use `source "${TESTDIR}/path/to/file.zsh"` instead of `"${TOOL_BIN}"`
 - Each scrut block supports only one `$` line; additional `$` lines are treated as expected output
-- Do not set `ERR_EXIT` at file level; use `emulate -L zsh` with strict options inside functions
+- Do not set `ERR_EXIT` at file level; use `emulate -LR zsh` with strict options inside functions
 - Chain `source` and function calls with `&&` on the same command line
 
 ## Validation

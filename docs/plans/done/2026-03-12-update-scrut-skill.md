@@ -4,7 +4,7 @@
 
 The write-scrut-tests skill (`plugins/write-scrut-tests/`) is focused entirely on CLI binary testing. Two enhancements are needed:
 
-- **Issue #211**: The SCRUT.md reference shows multi-command test blocks as long single-line `&&` chains. Scrut supports a `> ` continuation prefix (inherited from cram) that improves readability. The guide should document and recommend this syntax.
+- **Issue #211**: The SCRUT.md reference shows multi-command test blocks as long single-line `&&` chains. Scrut supports a `>` continuation prefix (inherited from cram) that improves readability. The guide should document and recommend this syntax.
 - **Issue #209**: The skill lacks guidance for testing zsh plugins and sourced library code with scrut. This involves different invocation patterns (`source` instead of `${TOOL_BIN}`), a critical `ERR_EXIT`/`shopt` pitfall, the one-command-per-block constraint in markdown mode, and the `--shell zsh` flag.
 
 Both are new capabilities, so the plugin version bumps from 1.0.2 to 1.1.0 (minor).
@@ -19,12 +19,12 @@ Insert a new `### Continuation Lines for Long Commands` subsection between "One 
 
 Content:
 
-- Explain the `> ` continuation prefix for splitting long `&&`-chained commands across lines
+- Explain the `>` continuation prefix for splitting long `&&`-chained commands across lines
 - Show the existing single-line pattern rewritten with continuation lines (use the "Config init creates file" example already at line 134)
 - Recommend continuation lines when commands exceed a comfortable line length
-- Note that `> ` must be followed by exactly two spaces of indentation for readability (indentation is literal)
+- Note that `>` must be followed by exactly two spaces of indentation for readability (indentation is literal)
 
-Also update the existing multi-command example at line 131-138 to cross-reference the new subsection, adding a note like: "For long command chains, see [Continuation Lines for Long Commands](#continuation-lines-for-long-commands)."
+Also update the existing multi-command example at line 131-138 to cross-reference the new subsection, adding a note like: "For long command chains, see `[Continuation Lines for Long Commands](#continuation-lines-for-long-commands)`."
 
 ### 2. Create zsh plugin testing reference file (#209)
 
@@ -104,13 +104,13 @@ Structure:
 ## Commit Strategy
 
 1. `feat: document continuation line syntax in scrut guide (#211)` -- SCRUT.md changes, SKILL.md continuation bullet
-2. `feat: add zsh plugin and sourced-library testing guide (#209)` -- new zsh-plugin-testing.md, SKILL.md zsh section
-3. `chore: bump write-scrut-tests to v1.1.0` -- plugin.json, marketplace.json, both READMEs, CLAUDE.md tree
+1. `feat: add zsh plugin and sourced-library testing guide (#209)` -- new zsh-plugin-testing.md, SKILL.md zsh section
+1. `chore: bump write-scrut-tests to v1.1.0` -- plugin.json, marketplace.json, both READMEs, CLAUDE.md tree
 
 ## Verification
 
 1. Review all modified files for consistent cross-references
-2. Run `/check-versions` to verify plugin.json and marketplace.json versions match
-3. Confirm CLAUDE.md tree accurately reflects the new file structure
-4. Read through the new zsh-plugin-testing.md to ensure technical accuracy of the ERR_EXIT pitfall description
-5. Verify the continuation line examples use correct `> ` syntax
+1. Run `/check-versions` to verify plugin.json and marketplace.json versions match
+1. Confirm CLAUDE.md tree accurately reflects the new file structure
+1. Read through the new zsh-plugin-testing.md to ensure technical accuracy of the ERR_EXIT pitfall description
+1. Verify the continuation line examples use correct `>` syntax
