@@ -20,7 +20,7 @@ Check and evaluate zsh scripts using multiple complementary static analysis, syn
 | ----- | ----------------------------- | ------------------------------------ | ------------ | -------- |
 | 1     | `zsh -n`                      | Syntax check (parse without execute) | Native       | No       |
 | 2     | `zcompile`                    | Compile to wordcode                  | Native       | No       |
-| 3     | `shellcheck --shell=zsh`      | Static analysis                      | Limited      | No       |
+| 3     | `shellcheck --shell=bash`     | Static analysis                      | Limited      | No       |
 | 4     | `checkbashisms`               | Identify bash-specific constructs    | Indirect     | No       |
 | 5     | `shellharden --check`         | Safer syntax suggestions             | Limited      | Suggest  |
 | 6     | `zsh -c 'setopt ...; source'` | Variable scope warnings              | Native       | No       |
@@ -79,7 +79,7 @@ See `./references/tools/zsh-n.md`.
 #### 3b. Compile Check
 
 ```bash
-zsh -c 'zcompile "$1"' -- <file>
+zsh -c 'zcompile "$1"' _ <file>
 ```
 
 Then clean up:
@@ -93,10 +93,10 @@ See `./references/tools/zcompile.md`.
 #### 3c. Static Analysis
 
 ```bash
-shellcheck --shell=zsh <file>
+shellcheck --shell=bash --exclude=SC1090,SC2039,SC2154,SC2168,SC2296,SC2299 <file>
 ```
 
-Filter false positives: SC2296, SC2299 (zsh parameter expansion flags), SC2154 (framework variables), SC1090 (non-constant source), SC2039/SC3000-series (zsh features flagged as non-POSIX), SC2168 (local in non-function contexts).
+The `--exclude` flag suppresses stable false-positive codes. Additionally, filter SC3000-series codes (too numerous for `--exclude`) from the output, as they flag zsh features as non-POSIX.
 
 See `./references/tools/shellcheck.md` for the full list of applicable vs. false-positive SC codes.
 

@@ -17,7 +17,7 @@ Then select **Check Zsh Scripts** from the available plugins.
 
 ## What It Does
 
-Runs eight complementary tools against zsh scripts in a recommended order: syntax checking (`zsh -n`), compilation (`zcompile`), static analysis (`shellcheck --shell=zsh`), bashism detection (`checkbashisms`), safety suggestions (`shellharden`), variable scope warnings (`setopt warn_create_global warn_nested_var`), and formatting (`shfmt`, `beautysh`). Reports findings with false-positive filtering for tools that have limited zsh support. Offers auto-formatting via shfmt and beautysh where applicable.
+Runs eight complementary tools against zsh scripts in a recommended order: syntax checking (`zsh -n`), compilation (`zcompile`), static analysis (`shellcheck`), bashism detection (`checkbashisms`), safety suggestions (`shellharden`), variable scope warnings (`setopt warn_create_global warn_nested_var`), and formatting (`shfmt`, `beautysh`). Reports findings with false-positive filtering for tools that have limited zsh support. Offers auto-formatting via shfmt and beautysh where applicable.
 
 ## Requirements
 
