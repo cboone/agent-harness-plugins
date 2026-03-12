@@ -39,7 +39,7 @@ These should be filtered or presented with a caveat:
 
 ## Zsh Support Status
 
-ShellCheck's zsh support is experimental. Many checks assume bash semantics. The tool is most useful for catching quoting issues and unused variables, less useful for zsh-specific constructs.
+ShellCheck has no native zsh mode. When used with `--shell=bash` on zsh scripts, many checks assume bash semantics. The tool is most useful for catching quoting issues and unused variables, less useful for zsh-specific constructs.
 
 ## Guidance
 
