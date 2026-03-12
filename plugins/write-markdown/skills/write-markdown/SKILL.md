@@ -25,7 +25,6 @@ These two issues cause the most lint failures. Check every Markdown file for the
 | retries | number | 3       |
 ```
 
-<!-- prettier-ignore -->
 ```markdown
 <!-- Wrong: ragged pipes, no padding -->
 
