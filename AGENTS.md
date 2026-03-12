@@ -388,7 +388,8 @@ cboone-cc-plugins/
     │       └── write-scrut-tests/
     │           ├── SKILL.md
     │           └── references/
-    │               └── SCRUT.md
+    │               ├── SCRUT.md
+    │               └── zsh-plugin-testing.md
     ├── write-bash-scripts/        # Bash style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
