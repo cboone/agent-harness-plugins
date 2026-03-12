@@ -125,7 +125,7 @@ $ "${TOOL_BIN}" -h
 ```
 ````
 
-Multiple commands in a single block are fine when they form a logical sequence (e.g., setup then verify):
+Multiple commands in a single block are fine when they form a logical sequence (e.g., setup then verify). For long command chains, see [Continuation Lines for Long Commands](#continuation-lines-for-long-commands).
 
 ````markdown
 ## Config init creates file
@@ -136,6 +136,29 @@ Created configuration file: .config.yaml
 File created
 ```
 ````
+
+### Continuation Lines for Long Commands
+
+Scrut supports a `>` continuation prefix (inherited from cram) that lets you split long `&&`-chained commands across multiple lines. Use continuation lines when a command chain exceeds a comfortable line length.
+
+Each continuation line must start with the literal `>` prefix (a `>` character followed by a single space). You may add indentation after this prefix (for example, two spaces before `&&`) to align chained commands for readability. That indentation is literal and becomes part of the command, but shell parsing ignores leading whitespace in these continuation contexts.
+
+The "Config init creates file" example above, rewritten with continuation lines:
+
+````markdown
+## Config init creates file
+
+```scrut
+$ cd "$(mktemp -d)" \
+>   && NO_COLOR=1 "${TOOL_BIN}" config init \
+>   && test -f .config.yaml \
+>   && echo "File created"
+Created configuration file: .config.yaml
+File created
+```
+````
+
+Prefer the single-line form for short chains (two or three short commands). Use continuation lines when the single-line form is hard to read at a glance.
 
 ### Block Order
 

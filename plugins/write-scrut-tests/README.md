@@ -17,7 +17,7 @@ Then select **Write Scrut Tests** from the available plugins.
 
 ## What It Does
 
-Provides style conventions for writing [scrut](https://github.com/facebookincubator/scrut) snapshot-based CLI test files. Covers file organization, naming conventions, assertion type selection, error testing patterns, test isolation, and maintainability. Activates automatically when creating or editing scrut test files.
+Provides style conventions for writing [scrut](https://github.com/facebookincubator/scrut) snapshot-based test files for CLI binaries and zsh plugins. Covers file organization, naming conventions, assertion type selection, error testing patterns, test isolation, zsh plugin invocation, and maintainability. Activates automatically when creating or editing scrut test files.
 
 ## Usage
 
@@ -32,6 +32,7 @@ The skill also activates automatically when creating or editing `.md` files in `
 - "add a scrut test for the config command": applies style conventions while writing the test
 - "review the scrut tests": checks existing tests against the style guide
 - "write scrut tests for error handling": follows conventions for error test patterns
+- "write scrut tests for my zsh plugin": uses source-based invocation with `--shell zsh`
 
 ## See Also
 

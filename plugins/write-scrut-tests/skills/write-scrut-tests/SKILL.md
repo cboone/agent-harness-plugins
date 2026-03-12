@@ -1,10 +1,11 @@
 ---
 name: write-scrut-tests
 description: >-
-  Applies scrut test style conventions when creating or editing scrut CLI
-  test files. Use when: (1) creating new scrut test files in tests/scrut/,
-  (2) editing existing scrut test .md files, or (3) reviewing scrut tests
-  for style and maintainability.
+  Applies scrut test style conventions when creating or editing scrut test
+  files for CLI binaries and zsh plugins. Use when: (1) creating new scrut
+  test files in tests/scrut/, (2) editing existing scrut test .md files,
+  (3) reviewing scrut tests for style and maintainability, or (4) testing
+  zsh plugins or sourced libraries with scrut.
 ---
 
 # Scrut Test Style Guide
@@ -24,6 +25,7 @@ Read `./references/SCRUT.md` for the complete guide. Summary:
 ### Test Structure
 
 - One logical assertion per scrut block for precise failure locations
+- Use `>` continuation prefix to split long `&&`-chained commands across lines
 - Order blocks: happy path first, then common variations, then edge cases, then errors
 - Level-1 heading for the test group, level-2 headings for individual test cases
 
@@ -53,6 +55,16 @@ Read `./references/SCRUT.md` for the complete guide. Summary:
 - Pin help text and error messages exactly (catches regressions in user-facing text)
 - Use glob for values that change between builds (versions, hashes, timestamps)
 - Review diffs after `make test-scrut-update` to ensure glob/regex patterns were not replaced with literals
+
+## Zsh Plugin and Library Testing
+
+For testing zsh plugins and sourced library code with scrut, read `./references/zsh-plugin-testing.md`. Key points:
+
+- Use `--shell zsh` flag with `scrut test` and `scrut update`
+- Use `source "${TESTDIR}/path/to/file.zsh"` instead of `"${TOOL_BIN}"`
+- Each scrut block supports only one `$` line; additional `$` lines are treated as expected output
+- Do not set `ERR_EXIT` at file level; use `emulate -LR zsh` with strict options inside functions
+- Chain `source` and function calls with `&&` on the same command line
 
 ## Validation
 

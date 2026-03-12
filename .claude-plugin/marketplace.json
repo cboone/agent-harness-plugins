@@ -546,14 +546,14 @@
         "name": "Christopher Boone"
       },
       "category": "code-quality",
-      "description": "Applies scrut test style conventions when creating or editing scrut CLI test files.",
+      "description": "Applies scrut test style conventions when creating or editing scrut test files for CLI binaries and zsh plugins.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["cli", "scrut", "style", "testing"],
+      "keywords": ["cli", "scrut", "style", "testing", "zsh"],
       "license": "MIT",
       "name": "write-scrut-tests",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/write-scrut-tests",
-      "version": "1.0.2"
+      "version": "1.1.0"
     },
     {
       "author": {
