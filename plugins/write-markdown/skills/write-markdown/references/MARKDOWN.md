@@ -327,6 +327,7 @@ Use `-` (hyphen) for unordered list items. Be consistent throughout the document
 
 Either numbering style is acceptable for ordered lists: repeating `1.` for every item, or sequential numbering (`1.`, `2.`, `3.`). Be consistent within each list.
 
+<!-- prettier-ignore -->
 ```markdown
 <!-- Both are acceptable -->
 
