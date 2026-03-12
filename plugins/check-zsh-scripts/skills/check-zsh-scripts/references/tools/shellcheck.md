@@ -1,13 +1,13 @@
-# shellcheck --shell=zsh
+# shellcheck (zsh scripts)
 
 ## Purpose
 
-Static analysis for shell scripts. ShellCheck has experimental/limited zsh support, so results require filtering.
+Static analysis for shell scripts. ShellCheck does not support `--shell=zsh`; `--shell=bash` is used as the closest approximation. Results require filtering for zsh false positives.
 
 ## Command
 
 ```bash
-shellcheck --shell=zsh <file>
+shellcheck --shell=bash --exclude=SC1090,SC2039,SC2154,SC2168,SC2296,SC2299 <file>
 ```
 
 ## Installation
@@ -39,7 +39,7 @@ These should be filtered or presented with a caveat:
 
 ## Zsh Support Status
 
-ShellCheck's zsh support is experimental. Many checks assume bash semantics. The tool is most useful for catching quoting issues and unused variables, less useful for zsh-specific constructs.
+ShellCheck has no native zsh mode. When used with `--shell=bash` on zsh scripts, many checks assume bash semantics. The tool is most useful for catching quoting issues and unused variables, less useful for zsh-specific constructs.
 
 ## Guidance
 
