@@ -12,7 +12,7 @@ Apply the Markdown conventions from `./references/MARKDOWN.md` when creating or 
 
 ## Common Mistakes
 
-These three issues cause the most lint failures. Check every Markdown file for them.
+These two issues cause the most lint failures. Check every Markdown file for them.
 
 ### Tables: align all pipes vertically
 
@@ -25,7 +25,6 @@ These three issues cause the most lint failures. Check every Markdown file for t
 | retries | number | 3       |
 ```
 
-<!-- prettier-ignore -->
 ```markdown
 <!-- Wrong: ragged pipes, no padding -->
 
@@ -36,26 +35,6 @@ These three issues cause the most lint failures. Check every Markdown file for t
 ```
 
 Procedure: write all rows, find the longest content per column, pad every cell to that width, fill delimiter hyphens to match, then verify all pipes line up.
-
-### Ordered lists: use `1.` for every item
-
-```markdown
-<!-- Correct -->
-
-1. First item
-1. Second item
-1. Third item
-```
-
-```markdown
-<!-- Wrong -->
-
-1. First item
-2. Second item
-3. Third item
-```
-
-Never use `2.`, `3.`, `4.`, etc. This applies to nested ordered lists too.
 
 ### Code blocks: always include a language identifier
 
@@ -102,7 +81,7 @@ Read `./references/MARKDOWN.md` for the complete guide. Summary:
 
 ### Lists
 
-- Consistent markers: `-` for unordered (MD004), `1.` for every ordered list item, never `2.`, `3.`, etc. (MD029)
+- Consistent markers: `-` for unordered (MD004); for ordered lists, use either `1.` for every item or sequential numbering (`1.`, `2.`, `3.`), but be consistent within each list (MD029)
 - Indent nested lists consistently
 - Blank line before and after a list block (MD032)
 

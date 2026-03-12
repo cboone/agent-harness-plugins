@@ -325,23 +325,21 @@ Use `-` (hyphen) for unordered list items. Be consistent throughout the document
 
 ### Ordered list numbering (MD029)
 
-Use `1.` as the prefix for every item in ordered lists. Never use `2.`, `3.`, `4.`, etc. The renderer handles the numbering, and this avoids renumbering when items are added or removed. This applies to all ordered lists, including nested ones.
+Either numbering style is acceptable for ordered lists: repeating `1.` for every item, or sequential numbering (`1.`, `2.`, `3.`). Be consistent within each list.
 
 ```markdown
-<!-- Use -->
+<!-- Both are acceptable -->
 
 1. First item
 1. Second item
 1. Third item
-```
-
-```markdown
-<!-- Avoid: manual numbering -->
 
 1. First item
 2. Second item
 3. Third item
 ```
+
+Do not mix styles within a single list.
 
 ---
 
@@ -542,7 +540,6 @@ Pad cell content so that pipe characters align vertically across all rows. Fill 
 | retries | number | 3       |
 ```
 
-<!-- prettier-ignore -->
 ```markdown
 <!-- Avoid: ragged columns -->
 

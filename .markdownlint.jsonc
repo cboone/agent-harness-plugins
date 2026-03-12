@@ -25,7 +25,7 @@
 
   // MD029 - Ordered list item prefix
   // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md029.md
-  "MD029": { "style": "one" },
+  "MD029": { "style": "one_or_ordered" },
 
   // MD033 - No inline HTML
   // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md033.md

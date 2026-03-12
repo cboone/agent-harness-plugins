@@ -4,6 +4,9 @@ node_modules/
 # Package manager lockfiles
 yarn.lock
 
+# Markdown (formatted by markdownlint-cli2, not prettier)
+*.md
+
 # Shell scripts (formatted by shfmt, not prettier)
 bin/*
 plugins/*/scripts/*
