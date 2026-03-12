@@ -68,20 +68,8 @@ switch_case_indent = true
 space_redirects = true
 ```
 
-## Comparison with beautysh
-
-| Aspect              | shfmt                    | beautysh        |
-| ------------------- | ------------------------ | --------------- |
-| Speed               | Very fast (Go binary)    | Slower (Python) |
-| Zsh support         | Experimental (`-ln zsh`) | Good            |
-| Configuration       | `.editorconfig`          | CLI flags       |
-| Parse errors on zsh | More common              | Less common     |
-| Active maintenance  | Very active              | Less active     |
-
-Both tools can coexist. Run shfmt first (it is stricter about syntax), then beautysh for anything shfmt could not parse.
-
 ## Notes
 
 - When shfmt encounters a zsh construct it cannot parse, it exits with a parse error. This is informational, not a bug in the script.
-- If shfmt fails to parse a file, skip it gracefully and rely on beautysh for formatting that file.
+- If shfmt fails to parse a file, skip it gracefully for that file.
 - shfmt's zsh support is evolving. Check for updates periodically.

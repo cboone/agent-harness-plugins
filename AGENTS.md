@@ -74,7 +74,6 @@ cboone-cc-plugins/
     │           ├── SKILL.md
     │           └── references/
     │               └── tools/
-    │                   ├── beautysh.md
     │                   ├── checkbashisms.md
     │                   ├── setopt-warnings.md
     │                   ├── shellcheck.md

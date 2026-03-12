@@ -1,9 +1,9 @@
 ---
 name: check-zsh-scripts
 description: >-
-  Check and evaluate zsh scripts using shellcheck, beautysh, shfmt,
-  shellharden, zsh -n, zcompile, setopt warn_create_global/warn_nested_var,
-  and checkbashisms. Use when: (1) creating or editing zsh scripts (.zsh, zshrc,
+  Check and evaluate zsh scripts using shellcheck, shfmt, shellharden,
+  zsh -n, zcompile, setopt warn_create_global/warn_nested_var, and
+  checkbashisms. Use when: (1) creating or editing zsh scripts (.zsh, zshrc,
   zshenv, zprofile, zlogin, zlogout), (2) reviewing zsh code for bugs or
   portability issues, (3) checking zsh variable scoping, (4) formatting zsh
   scripts, or (5) the user says "check zsh", "check zsh scripts", "lint zsh",
@@ -25,7 +25,6 @@ Check and evaluate zsh scripts using multiple complementary static analysis, syn
 | 5     | `shellharden --check`         | Safer syntax suggestions             | Limited      | Suggest  |
 | 6     | `zsh -c 'setopt ...; source'` | Variable scope warnings              | Native       | No       |
 | 7     | `shfmt -ln zsh`               | Shell formatter                      | Experimental | Yes      |
-| 8     | `beautysh`                    | Code formatter                       | Yes          | Yes      |
 
 ## Workflow
 
@@ -53,7 +52,6 @@ command -v shellcheck
 command -v checkbashisms
 command -v shellharden
 command -v shfmt
-command -v beautysh
 ```
 
 `zcompile` is a zsh builtin and does not need a separate check.
@@ -142,17 +140,9 @@ See `./references/tools/setopt-warnings.md`.
 shfmt -ln zsh -d <file>
 ```
 
-If shfmt fails to parse a zsh-specific construct, skip it gracefully for that file and rely on beautysh.
+If shfmt fails to parse a zsh-specific construct, skip it gracefully for that file.
 
 See `./references/tools/shfmt.md`.
-
-#### 3h. Code Formatting
-
-```bash
-beautysh --check-only <file>
-```
-
-See `./references/tools/beautysh.md`.
 
 ### 4. Report Results
 
@@ -168,7 +158,6 @@ Display a summary table:
 | shellharden | Pass/Suggestions | N | M filtered |
 | setopt warnings | Pass/Warnings | N | -- |
 | shfmt | Pass/Formatting | N files | -- |
-| beautysh | Pass/Formatting | N files | -- |
 ```
 
 Then list each genuine issue with:
@@ -181,14 +170,11 @@ Then list each genuine issue with:
 
 ### 5. Fix Issues
 
-For formatting issues, offer to auto-fix with shfmt and beautysh:
+For formatting issues, offer to auto-fix with shfmt:
 
 ```bash
 shfmt -ln zsh -w <file>
-beautysh <file>
 ```
-
-Run shfmt first (stricter parser), then beautysh for anything shfmt could not parse.
 
 For other tools, present findings with manual fix guidance from the relevant reference documentation.
 
@@ -210,5 +196,5 @@ rm -f <file>.zwc
 - **zcompile failure when zsh -n passed**: Report the compilation error as a potential edge case worth investigating.
 - **shellcheck excessive false positives**: If more than half the output is filtered, note this and suggest focusing on native zsh tools.
 - **setopt warnings in config files**: For `.zshrc`, `.zshenv`, and similar files that set global state by design, note that `warn_create_global` warnings are expected.
-- **shfmt parse error**: If shfmt cannot parse a zsh-specific construct, skip that file and rely on beautysh for formatting. The parse error is informational, not a bug in the script.
+- **shfmt parse error**: If shfmt cannot parse a zsh-specific construct, skip that file. The parse error is informational, not a bug in the script.
 - **Source side effects**: Before running the setopt check (step 3f), review the file for commands that modify state. Skip this check for files with significant side effects if the user prefers.
