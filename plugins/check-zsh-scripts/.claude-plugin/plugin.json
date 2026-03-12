@@ -6,8 +6,8 @@
   "homepage": "https://github.com/cboone/cboone-cc-plugins",
   "keywords": ["beautysh", "checkbashisms", "shellcheck", "shellharden", "shfmt", "zsh"],
   "license": "MIT",
-  "name": "check-zsh",
+  "name": "check-zsh-scripts",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "skills": "./skills",
-  "version": "1.0.0"
+  "version": "2.0.0"
 }

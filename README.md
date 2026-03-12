@@ -21,7 +21,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
 ∙ [Update Review](#update-review)
 <br>Code Quality:
-[Check Zsh](#check-zsh)
+[Check Zsh Scripts](#check-zsh-scripts)
 ∙ [Handle Secrets](#handle-secrets)
 ∙ [Lint and Fix](#lint-and-fix)
 ∙ [Setup Linters](#setup-linters)
@@ -192,13 +192,13 @@ Find the latest branch review, assess commits made since, and update the review 
 
 Style guides, linters, and security practices. These skills activate automatically when working with their target languages and file types.
 
-#### Check Zsh
+#### Check Zsh Scripts
 
 Check and evaluate zsh scripts using multiple static analysis, syntax checking, and formatting tools. Runs `zsh -n`, `zcompile`, `shellcheck`, `checkbashisms`, `shellharden`, variable scope warnings, `shfmt`, and `beautysh` in recommended order, with false-positive filtering for tools that have limited zsh support.
 
-> **Trigger:** `/check-zsh` (also activates automatically)
+> **Trigger:** `/check-zsh-scripts` (also activates automatically)
 > **Requires:** [`shellcheck`](https://www.shellcheck.net/), [`shfmt`](https://github.com/mvdan/sh), [`beautysh`](https://pypi.org/project/beautysh/), [`shellharden`](https://github.com/anordal/shellharden), [`checkbashisms`](https://packages.debian.org/devscripts)
-> **Details:** [README](./plugins/check-zsh/README.md)
+> **Details:** [README](./plugins/check-zsh-scripts/README.md)
 
 #### Handle Secrets
 
