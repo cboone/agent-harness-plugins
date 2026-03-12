@@ -230,7 +230,7 @@ Markdown style conventions targeting GitHub Flavored Markdown (GFM), aligned wit
 
 #### Write Scrut Tests
 
-Scrut test style conventions for writing and maintaining snapshot-based CLI test files. Activates automatically when creating or editing scrut test files.
+Scrut test style conventions for writing and maintaining snapshot-based test files for CLI binaries and zsh plugins. Activates automatically when creating or editing scrut test files.
 
 > **Trigger:** `/write-scrut-tests` (also activates automatically)
 > **Details:** [README](./plugins/write-scrut-tests/README.md)
