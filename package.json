@@ -7,8 +7,8 @@
     "format:check": "prettier --check .",
     "lint": "yarn lint:md && yarn lint:prettier",
     "lint:fix": "yarn lint:md:fix && yarn format",
-    "lint:md": "markdownlint-cli2 \"**/*.md\"",
-    "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\"",
+    "lint:md": "markdownlint-cli2 --config cli.markdownlint-cli2.jsonc \"**/*.md\"",
+    "lint:md:fix": "markdownlint-cli2 --config cli.markdownlint-cli2.jsonc --fix \"**/*.md\"",
     "lint:prettier": "prettier --check .",
     "validate": "bin/validate-plugins"
   },

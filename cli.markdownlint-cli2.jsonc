@@ -1,0 +1,21 @@
+{
+  // CLI-only markdownlint-cli2 config that adds ESM custom rules.
+  //
+  // The VSCode markdownlint extension cannot import ESM modules due to a
+  // VS Code platform limitation, so customRules are kept out of the
+  // auto-discovered .markdownlint-cli2.jsonc and loaded here via --config.
+  // https://github.com/DavidAnson/vscode-markdownlint/issues/349
+  //
+  // Rule configuration is duplicated from .markdownlint-cli2.jsonc because
+  // --config replaces auto-discovery entirely.
+
+  "$schema": "https://raw.githubusercontent.com/DavidAnson/markdownlint-cli2/main/schema/markdownlint-cli2-config-schema.json",
+
+  "config": {
+    "extends": ".markdownlint.jsonc",
+  },
+
+  "ignores": [".workmux/", "node_modules/"],
+
+  "customRules": ["@github/markdownlint-github", "markdownlint-rule-force-align-table-columns", "markdownlint-rule-relative-links"],
+}
