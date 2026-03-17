@@ -106,7 +106,7 @@ Present recommendations in a table using three status levels:
 | ------------ | ------------------------------ | -------- |
 | JavaScript   | ESLint + Prettier              | New      |
 | Shell        | ShellCheck, shfmt              | Partial  |
-| Zsh          | shellcheck, shfmt, shellharden | New      |
+| Zsh          | shellcheck, shfmt, shellharden, checkbashisms, zsh -n, zcompile, setopt warnings | New      |
 | Formatting   | Prettier, EditorConfig         | New      |
 | Markdown     | markdownlint-cli2              | Existing |
 | Docker       | Hadolint                       | New      |

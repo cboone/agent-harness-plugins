@@ -1,6 +1,6 @@
 # Zsh CI Workflow
 
-Use this template for zsh script projects. No `cboone/gh-actions` reusable workflow exists for zsh checking, so this inline job installs all required tools on Ubuntu and runs the generated check script via `make check-zsh`.
+Use this template for zsh script projects. No `cboone/gh-actions` reusable workflow exists for zsh checking, so this inline job installs the additional tools not preinstalled on `ubuntu-latest` and runs the generated check script via `make check-zsh`.
 
 ```yaml
 name: CI

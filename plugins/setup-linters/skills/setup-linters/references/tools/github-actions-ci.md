@@ -287,7 +287,7 @@ jobs:
 
 ### Zsh
 
-No `cboone/gh-actions` reusable workflow exists for zsh checking. This inline job installs all required tools on Ubuntu and runs the generated check script.
+No `cboone/gh-actions` reusable workflow exists for zsh checking. This inline job installs the additional tools not preinstalled on `ubuntu-latest` and runs the generated check script.
 
 ```yaml
 name: Lint

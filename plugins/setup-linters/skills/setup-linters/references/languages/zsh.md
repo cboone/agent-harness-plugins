@@ -115,7 +115,7 @@ Main check script. Runs each tool, collects results, and prints a summary.
 
 ```zsh
 #!/usr/bin/env zsh
-set -euo pipefail
+setopt ERR_EXIT NO_UNSET PIPE_FAIL
 
 script_dir="${0:A:h}"
 source "${script_dir}/lib/find-zsh-files.zsh"
@@ -218,7 +218,7 @@ print
 
 # Summary
 if (( errors > 0 )); then
-  print "Done. ${errors} tool(s) reported issues."
+  print "Done. ${errors} check(s) failed."
   exit 1
 else
   print "Done. All checks passed."
@@ -247,7 +247,7 @@ check-zsh: ## Run all zsh checks (7-tool pipeline)
 	./scripts/check-zsh.zsh
 
 format-zsh: ## Format zsh scripts
-	shfmt -ln zsh -w .
+	find . -name '*.zsh' -exec shfmt -ln zsh -w {} +
 ```
 
 ## Notes
