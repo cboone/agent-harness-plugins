@@ -20,16 +20,17 @@ Works for both brand-new and existing repositories.
 
 Scan for language and framework markers using Glob. Exclude `node_modules/`, `.yarn/`, `vendor/`, and other dependency directories from all searches.
 
-| Marker(s)                                        | Project type          |
-| ------------------------------------------------ | --------------------- |
-| `go.mod` + (`main.go` or `cmd/`)                 | Go CLI                |
-| `go.mod` without `main.go` or `cmd/`             | Go library            |
-| `package.json` + JS/TS source files              | JavaScript/TypeScript |
-| `pyproject.toml`, `setup.py`, `requirements.txt` | Python                |
-| `Cargo.toml`                                     | Rust                  |
-| `Gemfile`, `*.gemspec`                           | Ruby                  |
-| `*.sh`, `bin/*`, `scripts/*`                     | Shell                 |
-| No recognizable files                            | New/empty repo        |
+| Marker(s)                                                   | Project type          |
+| ----------------------------------------------------------- | --------------------- |
+| `go.mod` + (`main.go` or `cmd/`)                            | Go CLI                |
+| `go.mod` without `main.go` or `cmd/`                        | Go library            |
+| `package.json` + JS/TS source files                         | JavaScript/TypeScript |
+| `pyproject.toml`, `setup.py`, `requirements.txt`            | Python                |
+| `Cargo.toml`                                                | Rust                  |
+| `Gemfile`, `*.gemspec`                                      | Ruby                  |
+| `*.sh`, `bin/*`, `scripts/*`                                | Shell                 |
+| `*.zsh`, `#!/usr/bin/env zsh` shebangs, `.zshrc`, `.zshenv` | Zsh                   |
+| No recognizable files                                       | New/empty repo        |
 
 If no recognizable files are found, ask the user what type of project they intend to create.
 

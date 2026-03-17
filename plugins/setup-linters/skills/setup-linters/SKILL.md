@@ -26,6 +26,7 @@ Use both files and directories as signals:
 | `Gemfile`, `*.gemspec`, `.ruby-version`                                                     | Ruby                  |
 | `Package.swift`, `*.xcodeproj`, `*.xcworkspace`                                             | Swift                 |
 | `*.sh`, `bin/*`, `scripts/*`                                                                | Shell                 |
+| `*.zsh`, `#!/usr/bin/env zsh` shebangs, `.zshrc`, `.zshenv`                                 | Zsh                   |
 | `*.css`, `*.scss`, `*.less`                                                                 | CSS/SCSS              |
 | `Dockerfile`, `*.dockerfile`, `docker-compose.yml`                                          | Docker                |
 | `.github/workflows/`                                                                        | GitHub Actions        |
@@ -105,6 +106,7 @@ Present recommendations in a table using three status levels:
 | ------------ | ------------------------------ | -------- |
 | JavaScript   | ESLint + Prettier              | New      |
 | Shell        | ShellCheck, shfmt              | Partial  |
+| Zsh          | shellcheck, shfmt, shellharden, checkbashisms, zsh -n, zcompile, setopt warnings | New      |
 | Formatting   | Prettier, EditorConfig         | New      |
 | Markdown     | markdownlint-cli2              | Existing |
 | Docker       | Hadolint                       | New      |
@@ -169,6 +171,8 @@ If a CI workflow already exists, offer to add lint steps to it rather than creat
 | golangci-lint | `golangci/golangci-lint-action@v9`                                        |
 | swiftlint     | `brew install swiftlint` (macOS runner)                                   |
 | swiftformat   | `brew install swiftformat` (macOS runner)                                 |
+| checkbashisms | `apt-get install devscripts` (Ubuntu runner)                              |
+| shellharden   | `cargo install shellharden` (Ubuntu runner)                               |
 | hadolint      | `hadolint/hadolint-action@v3.1.0`                                         |
 | actionlint    | `raven-actions/actionlint@v2`                                             |
 | cspell        | `streetsidesoftware/cspell-action@v6`                                     |

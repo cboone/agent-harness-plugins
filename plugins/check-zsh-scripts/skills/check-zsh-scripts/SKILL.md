@@ -94,7 +94,7 @@ See `./references/tools/zcompile.md`.
 shellcheck --shell=bash --exclude=SC1090,SC2039,SC2154,SC2168,SC2296,SC2299 <file>
 ```
 
-The `--exclude` flag suppresses stable false-positive codes. Additionally, filter SC3000-series codes (too numerous for `--exclude`) from the output, as they flag zsh features as non-POSIX.
+The `--exclude` flag suppresses stable false-positive codes. Note: SC3000-series codes only fire with `--shell=sh`, not `--shell=bash`. Since this workflow uses `--shell=bash`, no SC3xxx filtering is needed. If the project ever switches to `--shell=sh`, add SC3xxx filtering at that point.
 
 See `./references/tools/shellcheck.md` for the full list of applicable vs. false-positive SC codes.
 

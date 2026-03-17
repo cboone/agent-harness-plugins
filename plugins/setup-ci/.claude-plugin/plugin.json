@@ -4,10 +4,10 @@
   },
   "description": "Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets.",
   "homepage": "https://github.com/cboone/cboone-cc-plugins",
-  "keywords": ["ci", "github-actions", "makefile", "testing", "workflow"],
+  "keywords": ["ci", "github-actions", "makefile", "testing", "workflow", "zsh"],
   "license": "MIT",
   "name": "setup-ci",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "commands": "./commands",
-  "version": "1.4.0"
+  "version": "1.5.0"
 }

@@ -1,7 +1,7 @@
 ---
 description: Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets.
 disable-model-invocation: true
-argument-hint: "[go-cli|go-library|javascript|python|rust|ruby|shell]"
+argument-hint: "[go-cli|go-library|javascript|python|rust|ruby|shell|zsh]"
 ---
 
 # Setup CI
@@ -12,7 +12,7 @@ Detect the project's language(s), create a GitHub Actions CI workflow with appro
 
 ### 1. Detect Project Type
 
-If `$ARGUMENTS` specifies a language (e.g., `go-cli`, `go-library`, `javascript`, `python`, `rust`, `ruby`, `shell`), use it directly instead of scanning for markers. Still perform sub-detection steps as needed (e.g., JS package manager detection for `javascript`, or verifying `main.go`/`cmd/` for `go-cli` vs `go-library`).
+If `$ARGUMENTS` specifies a language (e.g., `go-cli`, `go-library`, `javascript`, `python`, `rust`, `ruby`, `shell`, `zsh`), use it directly instead of scanning for markers. Still perform sub-detection steps as needed (e.g., JS package manager detection for `javascript`, or verifying `main.go`/`cmd/` for `go-cli` vs `go-library`).
 
 Scan for language and file-type markers using Glob. **Exclude `node_modules/`, `.yarn/`, `vendor/`, and other dependency directories from all searches** to avoid false positives from vendored code.
 
@@ -24,6 +24,7 @@ Scan for language and file-type markers using Glob. **Exclude `node_modules/`, `
 | `Cargo.toml`                                                                                                  | Rust                  |
 | `Gemfile`, `*.gemspec`                                                                                        | Ruby                  |
 | `*.sh`, `bin/*`, `scripts/*`                                                                                  | Shell                 |
+| `*.zsh`, `#!/usr/bin/env zsh` shebangs, `.zshrc`, `.zshenv`                                                   | Zsh                   |
 
 **Go sub-detection**: If `main.go` exists at the root or a `cmd/` directory exists, classify as **Go CLI**. Otherwise classify as **Go Library**.
 
@@ -145,6 +146,8 @@ Print a summary of what was created or modified:
 
 @${CLAUDE_PLUGIN_ROOT}/references/ci-shell.md
 
+@${CLAUDE_PLUGIN_ROOT}/references/ci-zsh.md
+
 @${CLAUDE_PLUGIN_ROOT}/references/ci-multi-language.md
 
 ## Makefile Templates
@@ -162,3 +165,5 @@ Print a summary of what was created or modified:
 @${CLAUDE_PLUGIN_ROOT}/references/makefile-ruby.md
 
 @${CLAUDE_PLUGIN_ROOT}/references/makefile-shell.md
+
+@${CLAUDE_PLUGIN_ROOT}/references/makefile-zsh.md
