@@ -337,6 +337,8 @@ jobs:
         run: cargo install --locked shellharden
 
       - name: Run zsh checks
+        env:
+          SKIP_SETOPT_CHECK: "1"
         run: make check-zsh
 ```
 

@@ -53,6 +53,8 @@ jobs:
         run: cargo install --locked shellharden
 
       - name: Run zsh checks
+        env:
+          SKIP_SETOPT_CHECK: "1"
         run: make check-zsh
 ```
 
@@ -63,4 +65,5 @@ jobs:
 - `devscripts` provides `checkbashisms`
 - `shellharden` is installed via `cargo install` (Rust toolchain is pre-installed on `ubuntu-latest`)
 - `shfmt` is installed via the `mfinelli/setup-shfmt@v4` action
+- `SKIP_SETOPT_CHECK=1` disables the setopt warnings step, which sources (executes) files. CI sets this to keep the job purely static analysis.
 - The `make check-zsh` target runs `./scripts/check-zsh.zsh`, which executes the 7-tool pipeline

@@ -209,14 +209,21 @@ fi
 print
 
 # 7. shfmt (formatting check)
-# NOTE: shfmt -ln zsh is experimental. Parse failures on zsh-specific
-# constructs are counted as errors, but the script continues checking
-# remaining files.
+# NOTE: shfmt -ln zsh is experimental. Parse errors on zsh-specific
+# constructs are reported as informational, not counted as errors.
+# Formatting differences are still counted as errors.
 if command -v shfmt &>/dev/null; then
   print "==> shfmt -ln zsh -d"
   for f in "${ZSH_FILES[@]}"; do
-    if ! shfmt -ln zsh -d "$f" 2>&1; then
-      (( errors++ ))
+    shfmt_out="$(shfmt -ln zsh -d "$f" 2>&1)"
+    shfmt_rc=$?
+    if (( shfmt_rc != 0 )); then
+      if [[ "$shfmt_out" == *"parse error"* ]]; then
+        print "  ${f}: shfmt parse error (skipped, experimental zsh mode)"
+      else
+        print "$shfmt_out"
+        (( errors++ ))
+      fi
     fi
   done
 else
@@ -261,7 +268,7 @@ format-zsh: ## Format zsh scripts (all zsh files including dotfiles)
 ## Notes
 
 - **Cross-reference**: The `check-zsh-scripts` skill provides interactive checking with the same 7-tool pipeline. This reference generates the scripts so the pipeline runs in CI via `make check-zsh`.
-- **shfmt experimental mode**: `shfmt -ln zsh` is experimental. If shfmt fails to parse a zsh-specific construct, the failure is counted as an error and the overall run will fail, but the script continues checking remaining files.
+- **shfmt experimental mode**: `shfmt -ln zsh` is experimental. If shfmt fails to parse a zsh-specific construct, the parse error is reported as informational but not counted as an error, so the overall run continues without failing on parser limitations. Formatting differences on files that parse successfully are still counted as errors.
 - **setopt side effects**: The setopt check **executes code** by sourcing files (it is not purely static analysis). The generated script skips config dotfiles that set globals by design. To disable this step (e.g., for projects where sourcing has unacceptable side effects), set `SKIP_SETOPT_CHECK=1` before running.
 - **Mixed bash/zsh projects**: Both `shell.md` and `zsh.md` tool stacks can coexist. ShellCheck uses the shebang for `.sh` files and `--shell=bash` override for `.zsh` files. shfmt uses default dialect for `.sh` files and `-ln zsh` for `.zsh` files.
 - **SC3xxx codes**: SC3000-series codes only fire with `--shell=sh`, not `--shell=bash`. Since the zsh check script uses `--shell=bash`, no SC3xxx filtering is needed.
