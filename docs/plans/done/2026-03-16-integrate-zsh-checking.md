@@ -7,6 +7,7 @@ Addresses [#218](https://github.com/cboone/cboone-cc-plugins/issues/218) and [#2
 **Issue #218**: The `check-zsh-scripts` skill (v2.1.0) has comprehensive knowledge of how to validate zsh scripts using 7 complementary tools, but the `setup-linters`, `setup-ci`, and `bootstrap-project` plugins do not account for zsh projects. They treat all shell scripts as bash: configuring `.shellcheckrc` with bash-oriented optional checks, using `shfmt` without `-ln zsh`, and generating CI with only ShellCheck/shfmt. This plan integrates zsh-specific checking knowledge into all three plugins.
 
 **Issue #219**: The `check-zsh-scripts` skill has two documentation gaps in its shellcheck reference:
+
 1. SC2034 ("Variable appears unused") is classified as reliably applying to zsh, but it produces false positives for zsh completion system variables (`PREFIX`, `SUFFIX`, etc.), cross-file globals, and indirect expansion via `${(P)var_name}`.
 2. The SKILL.md instructs filtering SC3xxx codes from shellcheck output, but SC3xxx codes only fire with `--shell=sh`, not `--shell=bash`. Since the skill uses `--shell=bash`, this filtering is a no-op.
 
@@ -31,20 +32,26 @@ Addresses [#218](https://github.com/cboone/cboone-cc-plugins/issues/218) and [#2
 Two changes:
 
 1. **Line 25 (SC2034 entry)**: Add a caveat to the "Reliably Apply to Zsh" entry. Change:
-   ```
+
+   ```text
    - **SC2034**: Variable appears unused (verify it is not exported or used by a framework)
    ```
+
    to:
-   ```
+
+   ```text
    - **SC2034**: Variable appears unused (verify it is not exported or used by a framework). May need project-specific exclusion for: zsh completion system variables (`PREFIX`, `SUFFIX`, `IPREFIX`, `ISUFFIX`), cross-file globals consumed in a different file, and indirect expansion via `${(P)var_name}`
    ```
 
 2. **Line 37 (SC3000-series entry)**: Add a note that SC3xxx codes only fire with `--shell=sh`. Change:
-   ```
+
+   ```text
    - **SC2039, SC3000-series**: Zsh-specific features flagged as "not POSIX" or "not supported in sh"
    ```
+
    to:
-   ```
+
+   ```text
    - **SC2039**: Zsh-specific features flagged as "not supported in sh"
    - **SC3000-series**: Zsh features flagged as "not POSIX" (only fires with `--shell=sh`, not `--shell=bash`; no filtering needed when using `--shell=bash`)
    ```
@@ -52,11 +59,14 @@ Two changes:
 #### 0b. EDIT: `plugins/check-zsh-scripts/skills/check-zsh-scripts/SKILL.md`
 
 **Lines 96-98 (section 3c)**: Update the SC3000-series filtering instruction. Change:
-```
+
+```text
 Additionally, filter SC3000-series codes (too numerous for `--exclude`) from the output, as they flag zsh features as non-POSIX.
 ```
+
 to:
-```
+
+```text
 Note: SC3000-series codes only fire with `--shell=sh`, not `--shell=bash`. Since this workflow uses `--shell=bash`, no SC3xxx filtering is needed. If the project ever switches to `--shell=sh`, add SC3xxx filtering at that point.
 ```
 
