@@ -100,12 +100,12 @@
       "category": "productivity",
       "description": "Assess a repository, determine what scaffolding and setup tools are needed, present a plan, and execute them in the correct order.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["bootstrap", "ci", "go", "linters", "scaffolding", "setup"],
+      "keywords": ["bootstrap", "ci", "go", "linters", "scaffolding", "setup", "zsh"],
       "license": "MIT",
       "name": "bootstrap-project",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/bootstrap-project",
-      "version": "1.0.2"
+      "version": "1.1.0"
     },
     {
       "author": {
@@ -380,12 +380,12 @@
       "category": "productivity",
       "description": "Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["ci", "github-actions", "makefile", "testing", "workflow"],
+      "keywords": ["ci", "github-actions", "makefile", "testing", "workflow", "zsh"],
       "license": "MIT",
       "name": "setup-ci",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-ci",
-      "version": "1.4.0"
+      "version": "1.5.0"
     },
     {
       "author": {
@@ -408,12 +408,12 @@
       "category": "code-quality",
       "description": "Detect project languages, recommend appropriate linters and formatters, install them, and generate config files.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["cspell", "eslint", "formatting", "linting", "prettier", "ruff", "setup"],
+      "keywords": ["cspell", "eslint", "formatting", "linting", "prettier", "ruff", "setup", "zsh"],
       "license": "MIT",
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.6.1"
+      "version": "1.7.0"
     },
     {
       "author": {

@@ -251,7 +251,7 @@ Zsh style conventions for creating and editing zsh scripts, configurations, and 
 
 #### Setup Linters
 
-Detect project languages and file types, recommend appropriate linters and formatters, install them, and generate config files. Supports JavaScript/TypeScript (ESLint + Prettier), Go, Python, Rust, Ruby, Shell, and cross-language tools (EditorConfig, markdownlint, cspell, Stylelint, Hadolint, Actionlint, and more).
+Detect project languages and file types, recommend appropriate linters and formatters, install them, and generate config files. Supports JavaScript/TypeScript (ESLint + Prettier), Go, Python, Rust, Ruby, Shell, Zsh, and cross-language tools (EditorConfig, markdownlint, cspell, Stylelint, Hadolint, Actionlint, and more).
 
 > **Trigger:** `/setup-linters`
 > **Details:** [README](./plugins/setup-linters/README.md)
@@ -350,7 +350,7 @@ Scaffold the universal boilerplate for any new repository: LICENSE, README, .git
 
 #### Setup CI
 
-Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets. Detects the project language (Go, JavaScript/TypeScript, Python, Rust, Ruby, Shell) and generates appropriate parallel CI jobs and Makefile targets.
+Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets. Detects the project language (Go, JavaScript/TypeScript, Python, Rust, Ruby, Shell, Zsh) and generates appropriate parallel CI jobs and Makefile targets.
 
 > **Trigger:** `/setup-ci`
 > **Details:** [README](./plugins/setup-ci/README.md)
