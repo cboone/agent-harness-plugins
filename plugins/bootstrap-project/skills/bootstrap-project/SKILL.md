@@ -29,6 +29,7 @@ Scan for language and framework markers using Glob. Exclude `node_modules/`, `.y
 | `Cargo.toml`                                     | Rust                  |
 | `Gemfile`, `*.gemspec`                           | Ruby                  |
 | `*.sh`, `bin/*`, `scripts/*`                     | Shell                 |
+| `*.zsh`, `#!/usr/bin/env zsh` shebangs, `.zshrc`, `.zshenv` | Zsh           |
 | No recognizable files                            | New/empty repo        |
 
 If no recognizable files are found, ask the user what type of project they intend to create.
