@@ -285,6 +285,61 @@ jobs:
     uses: cboone/gh-actions/.github/workflows/shell-lint.yml@v1
 ```
 
+### Zsh
+
+No `cboone/gh-actions` reusable workflow exists for zsh checking. This inline job installs all required tools on Ubuntu and runs the generated check script.
+
+```yaml
+name: Lint
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".editorconfig"
+      - ".claude/**"
+      - "**/CLAUDE.md"
+      - "**/AGENTS.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".editorconfig"
+      - ".claude/**"
+      - "**/CLAUDE.md"
+      - "**/AGENTS.md"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zsh-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install zsh
+        run: sudo apt-get update && sudo apt-get install -y zsh
+
+      - name: Install checkbashisms
+        run: sudo apt-get install -y devscripts
+
+      - uses: mfinelli/setup-shfmt@v4
+
+      - name: Install shellharden
+        run: cargo install shellharden
+
+      - name: Run zsh checks
+        run: make check-zsh
+```
+
 ### Swift
 
 ```yaml
