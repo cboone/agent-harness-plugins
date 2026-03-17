@@ -6,8 +6,8 @@
 check-zsh: ## Run all zsh checks (7-tool pipeline)
 	./scripts/check-zsh.zsh
 
-format-zsh: ## Format zsh scripts
-	find . -name '*.zsh' -exec shfmt -ln zsh -w {} +
+format-zsh: ## Format zsh scripts (all zsh files including dotfiles)
+	zsh -c 'source scripts/lib/find-zsh-files.zsh && shfmt -ln zsh -w "$${ZSH_FILES[@]}"'
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'

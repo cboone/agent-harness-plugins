@@ -24,7 +24,7 @@ brew install shellcheck shfmt shellharden
 brew install devscripts
 ```
 
-On Ubuntu CI, use `apt-get install devscripts` for checkbashisms, `cargo install shellharden` for shellharden, and the `mfinelli/setup-shfmt@v4` action for shfmt. ShellCheck is pre-installed on `ubuntu-latest`.
+On Ubuntu CI, use `apt-get install devscripts` for checkbashisms, `cargo install --locked shellharden` for shellharden, and the `mfinelli/setup-shfmt@v4` action for shfmt. ShellCheck is pre-installed on `ubuntu-latest`.
 
 ## Config
 
@@ -102,7 +102,7 @@ for f in scripts/*(.N) bin/*(.N); do
   [[ -f "$f" ]] || continue
   # Skip files already found by extension
   (( ${ZSH_FILES[(Ie)$f]} )) && continue
-  head -1 "$f" 2>/dev/null | grep -q '#!/usr/bin/env zsh\|#!/bin/zsh' && ZSH_FILES+=("$f")
+  head -1 "$f" 2>/dev/null | grep -Eq '#!/usr/bin/env zsh|#!/bin/zsh' && ZSH_FILES+=("$f")
 done
 
 # Deduplicate
@@ -190,6 +190,10 @@ fi
 print
 
 # 6. setopt warnings (variable scoping)
+# NOTE: This step sources (executes) each file. Set SKIP_SETOPT_CHECK=1 to disable.
+if [[ "${SKIP_SETOPT_CHECK:-}" == "1" ]]; then
+  print "==> setopt warnings: skipped (SKIP_SETOPT_CHECK=1)"
+else
 print "==> setopt warn_create_global/warn_nested_var"
 for f in "${ZSH_FILES[@]}"; do
   # Skip config files that intentionally set globals
@@ -201,9 +205,13 @@ for f in "${ZSH_FILES[@]}"; do
   esac
   zsh -c 'emulate -L zsh; setopt warn_create_global warn_nested_var; source "$1"' _ "$f" 2>&1 || true
 done
+fi
 print
 
 # 7. shfmt (formatting check)
+# NOTE: shfmt -ln zsh is experimental. Parse failures on zsh-specific
+# constructs are counted as errors, but the script continues checking
+# remaining files.
 if command -v shfmt &>/dev/null; then
   print "==> shfmt -ln zsh -d"
   for f in "${ZSH_FILES[@]}"; do
@@ -231,8 +239,8 @@ fi
 # Full check pipeline
 ./scripts/check-zsh.zsh
 
-# Format only
-shfmt -ln zsh -w **/*.zsh
+# Format only (all zsh files including dotfiles)
+source scripts/lib/find-zsh-files.zsh && shfmt -ln zsh -w "${ZSH_FILES[@]}"
 
 # Syntax check only
 for f in **/*.zsh(.N); do zsh -n "$f"; done
@@ -246,14 +254,14 @@ for f in **/*.zsh(.N); do zsh -n "$f"; done
 check-zsh: ## Run all zsh checks (7-tool pipeline)
 	./scripts/check-zsh.zsh
 
-format-zsh: ## Format zsh scripts
-	find . -name '*.zsh' -exec shfmt -ln zsh -w {} +
+format-zsh: ## Format zsh scripts (all zsh files including dotfiles)
+	zsh -c 'source scripts/lib/find-zsh-files.zsh && shfmt -ln zsh -w "$${ZSH_FILES[@]}"'
 ```
 
 ## Notes
 
 - **Cross-reference**: The `check-zsh-scripts` skill provides interactive checking with the same 7-tool pipeline. This reference generates the scripts so the pipeline runs in CI via `make check-zsh`.
-- **shfmt experimental mode**: `shfmt -ln zsh` is experimental. If shfmt fails to parse a zsh-specific construct, the check script continues gracefully.
-- **setopt side effects**: The setopt check sources files. The generated script skips config dotfiles that set globals by design.
+- **shfmt experimental mode**: `shfmt -ln zsh` is experimental. If shfmt fails to parse a zsh-specific construct, the failure is counted as an error and the overall run will fail, but the script continues checking remaining files.
+- **setopt side effects**: The setopt check **executes code** by sourcing files (it is not purely static analysis). The generated script skips config dotfiles that set globals by design. To disable this step (e.g., for projects where sourcing has unacceptable side effects), set `SKIP_SETOPT_CHECK=1` before running.
 - **Mixed bash/zsh projects**: Both `shell.md` and `zsh.md` tool stacks can coexist. ShellCheck uses the shebang for `.sh` files and `--shell=bash` override for `.zsh` files. shfmt uses default dialect for `.sh` files and `-ln zsh` for `.zsh` files.
 - **SC3xxx codes**: SC3000-series codes only fire with `--shell=sh`, not `--shell=bash`. Since the zsh check script uses `--shell=bash`, no SC3xxx filtering is needed.
