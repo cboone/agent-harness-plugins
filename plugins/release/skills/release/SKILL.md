@@ -228,6 +228,8 @@ Create a GPG-signed annotated tag:
 git tag -s vVERSION -m "vVERSION"
 ```
 
+Do NOT create floating major version tags (e.g., `v2`). Create only the exact version tag shown above.
+
 After tagging, confirm:
 
 ```text
@@ -294,6 +296,8 @@ If no remote is configured, report the error and tell the user to configure a Gi
 git push origin HEAD
 git push origin vVERSION
 ```
+
+Do NOT push any floating major version tags (e.g., `v2`). Push only the exact version tag.
 
 If the push is rejected, report the error and stop. Never force push. Show the remaining manual commands so the user can complete the process after resolving the push issue: retry the failed `git push` command(s), and if no release workflow was detected, also show the `gh release create` command.
 
