@@ -27,14 +27,17 @@ Four areas need changes:
 **Step 1 (Pre-Flight Checks):** Add the grep command to the parallel block. Note the result as a flag (e.g., "release workflow detected" or "no release workflow detected").
 
 **Step 11 prompt:** Change the prompt wording based on detection:
+
 - No workflow: "Push and create a GitHub Release for vVERSION?" (current behavior)
 - Workflow detected: "Push commit and tag for vVERSION? (release workflow detected; it will create the GitHub Release automatically)"
 
 **Step 11 "If the user declines":** Conditional manual commands:
+
 - No workflow: show all three commands (push HEAD, push tag, `gh release create`) as today
 - Workflow detected: show only the two push commands, note the workflow will handle the release
 
 **Step 11 "If the user accepts" (11c-11e):** Add a branch after 11b:
+
 - If a release workflow was detected: report that the workflow will create the GitHub Release when it runs, skip 11c/11d entirely, and go straight to 11e with adjusted output (no GitHub Release URL, note workflow will handle it)
 - If no workflow detected: proceed with existing 11c/11d/11e unchanged
 
