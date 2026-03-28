@@ -15,6 +15,9 @@ Each row reads as: "If **Tool A** will run, then apply **Action** to **Tool B**,
 | `scaffold-go-library` | `setup-ci`                | Skip       | `scaffold-go-library` generates CI workflow and Makefile                                      |
 | `scaffold-go-library` | `setup-linters`           | Scope down | `.golangci.yml` is configured; only add cross-language tools                                  |
 | `scaffold-go-library` | `scaffold-new-repo`       | Scope down | `scaffold-go-library` generates LICENSE, README, .gitignore; still run for agent config files |
+| `scaffold-rust-cli`   | `setup-ci`                | Skip       | `scaffold-rust-cli` generates CI workflow and Makefile                                        |
+| `scaffold-rust-cli`   | `setup-linters`           | Scope down | Rust linting configured; add cross-language tools                                             |
+| `scaffold-rust-cli`   | `scaffold-new-repo`       | Scope down | `scaffold-rust-cli` generates LICENSE, README, .gitignore; still run for agent config files   |
 
 Tool applicability (e.g., CLI-only tools not running on libraries) is defined in the **Applicability Rules** section below.
 
@@ -48,18 +51,37 @@ Both `scaffold-go-cli` and `scaffold-go-library` generate LICENSE, README, .giti
 - `.claude/settings.json`
 - `.github/copilot-instructions.md`
 
+### setup-linters after scaffold-rust-cli
+
+`scaffold-rust-cli` generates `rustfmt.toml`, `deny.toml`, `typos.toml`, and configures clippy in the Makefile and CI. Skip Rust-specific tools and only install cross-language tools:
+
+- Prettier
+- EditorConfig
+- markdownlint-cli2
+- Any other file-type-specific tools detected (Actionlint, yamllint, Hadolint, etc.)
+
+### scaffold-new-repo after scaffold-rust-cli
+
+`scaffold-rust-cli` generates LICENSE, README, .gitignore, and CHANGELOG. When scoped down, `scaffold-new-repo` should only generate agent config files:
+
+- `AGENTS.md`
+- `CLAUDE.md` (symlink to AGENTS.md)
+- `.claude/settings.json`
+- `.github/copilot-instructions.md`
+
 ## Applicability Rules
 
 Some tools only apply to certain project types:
 
-| Tool                      | Applicable when                                 |
-| ------------------------- | ----------------------------------------------- |
-| `scaffold-go-cli`         | Go CLI project (go.mod + main.go or cmd/)       |
-| `scaffold-go-library`     | Go library project (go.mod, no main.go or cmd/) |
-| `add-goreleaser-homebrew` | Go CLI project without existing GoReleaser      |
-| `setup-installers`        | Project produces a distributable binary (CLI)   |
-| `add-scrut-cli-tests`     | Project produces a CLI binary                   |
-| `setup-ci`                | Any project without existing CI workflow        |
-| `setup-linters`           | Any project                                     |
-| `setup-secret-scanning`   | Any project                                     |
-| `scaffold-new-repo`       | Any project missing foundational files          |
+| Tool                      | Applicable when                                                                |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| `scaffold-go-cli`         | Go CLI project (go.mod + main.go or cmd/)                                      |
+| `scaffold-go-library`     | Go library project (go.mod, no main.go or cmd/)                                |
+| `scaffold-rust-cli`       | Rust CLI project (Cargo.toml + src/main.rs, src/bin/*.rs, or `[[bin]]` target) |
+| `add-goreleaser-homebrew` | Go CLI project without existing GoReleaser                                     |
+| `setup-installers`        | Project produces a distributable binary (CLI)                                  |
+| `add-scrut-cli-tests`     | Project produces a CLI binary                                                  |
+| `setup-ci`                | Any project without existing CI workflow                                       |
+| `setup-linters`           | Any project                                                                    |
+| `setup-secret-scanning`   | Any project                                                                    |
+| `scaffold-new-repo`       | Any project missing foundational files                                         |

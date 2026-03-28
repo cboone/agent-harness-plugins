@@ -65,6 +65,8 @@ Check for existing linter configs using these patterns (aligned with the `lint-a
 | `pyproject.toml` with `[tool.ruff]`                                | Ruff          |
 | `rustfmt.toml`, `.rustfmt.toml`                                    | rustfmt       |
 | `clippy.toml`, `.clippy.toml`                                      | Clippy        |
+| `deny.toml`                                                        | cargo-deny    |
+| `typos.toml`, `_typos.toml`                                        | typos         |
 | `.rubocop.yml`                                                     | RuboCop       |
 | `.stylelintrc*`, `stylelint.config.*`                              | Stylelint     |
 | `knip.json`, `knip.config.*`, `knip.ts`                            | Knip          |
@@ -174,6 +176,8 @@ If a CI workflow already exists, offer to add lint steps to it rather than creat
 | swiftformat   | `brew install swiftformat` (macOS runner)                                 |
 | checkbashisms | `apt-get install devscripts` (Ubuntu runner)                              |
 | shellharden   | `cargo install shellharden` (Ubuntu runner)                               |
+| cargo-deny    | `taiki-e/install-action@cargo-deny`                                       |
+| typos         | `crate-ci/typos@v1`                                                       |
 | hadolint      | `hadolint/hadolint-action@v3.1.0`                                         |
 | actionlint    | `raven-actions/actionlint@v2`                                             |
 | cspell        | `streetsidesoftware/cspell-action@v6`                                     |

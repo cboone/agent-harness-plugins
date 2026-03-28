@@ -64,7 +64,7 @@ If a CI workflow exists, present its contents and ask the user:
 If a `Makefile` exists, scan for existing CI-relevant targets:
 
 ```bash
-grep -E '^(test|lint|fmt|vet|vuln|build|cover|coverage|tidy|tools|all):' Makefile
+grep -E '^(test|lint|fmt|vet|vuln|build|cover|coverage|tidy|tools|all|deny|audit|typos|changelog):' Makefile
 ```
 
 Report which targets already exist and which will be added. Only add targets that do not already exist. Ask before modifying any existing target.

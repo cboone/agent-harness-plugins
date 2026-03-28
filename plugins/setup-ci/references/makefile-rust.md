@@ -1,10 +1,10 @@
 # Rust Makefile
 
 ```makefile
-.PHONY: test lint fmt build clean help
+.PHONY: test lint fmt build deny audit typos changelog clean help
 
-test: ## Run tests
-	cargo test
+test: ## Run tests (cargo nextest, falls back to cargo test)
+	@command -v cargo-nextest >/dev/null 2>&1 && cargo nextest run || cargo test
 
 lint: ## Run clippy
 	cargo clippy -- -D warnings
@@ -14,6 +14,18 @@ fmt: ## Check formatting
 
 build: ## Build the project
 	cargo build
+
+deny: ## Check dependencies with cargo-deny
+	cargo deny check
+
+audit: ## Audit dependencies for vulnerabilities
+	cargo audit
+
+typos: ## Check for typos
+	typos
+
+changelog: ## Generate changelog from conventional commits
+	git cliff -o CHANGELOG.md
 
 clean: ## Remove build artifacts
 	cargo clean
