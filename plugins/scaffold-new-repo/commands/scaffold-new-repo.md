@@ -12,7 +12,7 @@ Generate the language-agnostic foundation files that every new repository starts
 
 ### 1. Gather Project Information
 
-If `$ARGUMENTS` is provided, parse it for a project name (first positional word) and/or a `--type TYPE` flag. If a project name is present, use it directly instead of detecting from git remote or README. If `--type` is present, use the specified type instead of inferring from `.gitignore`. Valid types: `go-cli`, `go-library`, `javascript`, `pascal`, `python`, `ruby`, `rust`, `shell`, `swift`, `generic`. Any remaining parameters should still be gathered normally.
+If `$ARGUMENTS` is provided, parse it for a project name (first positional word) and/or a `--type TYPE` flag. If a project name is present, use it directly instead of detecting from git remote or README. If `--type` is present, use the specified type instead of inferring from `.gitignore`. Valid types: `go-cli`, `go-library`, `javascript`, `pascal`, `python`, `ruby`, `rust`, `shell`, `swift`, `zig-cli`, `generic`. Any remaining parameters should still be gathered normally.
 
 Derive what you can automatically, then ask for only what's missing:
 
@@ -29,10 +29,11 @@ Derive what you can automatically, then ask for only what's missing:
   - `*.gem` or `.bundle/` → Ruby
   - `*.ppu` or `*.compiled` → Pascal
   - `xcuserdata/` alone, or both `.build/` and `*.ipa` together → Swift
+  - `.zig-cache/` or `zig-out/` → Zig CLI
   - `target/` with no other language markers matched → Rust
   - Minimal or macOS-only entries → Shell or Generic
   - Only ask the user for the project type if the `.gitignore` does not make it clear.
-- **Project type options**: Go CLI, Go library, JavaScript, Pascal, Python, Ruby, Rust, Shell, Swift, Generic
+- **Project type options**: Go CLI, Go library, JavaScript, Pascal, Python, Ruby, Rust, Shell, Swift, Zig CLI, Generic
 
 ### 2. Detect User Identity
 

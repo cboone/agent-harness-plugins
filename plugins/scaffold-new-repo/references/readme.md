@@ -104,6 +104,18 @@ dependencies: [
 ```
 ````
 
+### Zig CLI
+
+````markdown
+```bash
+git clone https://github.com/GITHUB-USERNAME/PROJECT-NAME.git
+cd PROJECT-NAME
+zig build -Doptimize=ReleaseSafe
+```
+
+The binary will be at `zig-out/bin/PROJECT-NAME`.
+````
+
 ### Generic
 
 ```markdown
