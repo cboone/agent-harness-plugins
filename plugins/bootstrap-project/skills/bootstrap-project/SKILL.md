@@ -20,17 +20,18 @@ Works for both brand-new and existing repositories.
 
 Scan for language and framework markers using Glob. Exclude `node_modules/`, `.yarn/`, `vendor/`, and other dependency directories from all searches.
 
-| Marker(s)                                                   | Project type          |
-| ----------------------------------------------------------- | --------------------- |
-| `go.mod` + (`main.go` or `cmd/`)                            | Go CLI                |
-| `go.mod` without `main.go` or `cmd/`                        | Go library            |
-| `package.json` + JS/TS source files                         | JavaScript/TypeScript |
-| `pyproject.toml`, `setup.py`, `requirements.txt`            | Python                |
-| `Cargo.toml`                                                | Rust                  |
-| `Gemfile`, `*.gemspec`                                      | Ruby                  |
-| `*.sh`, `bin/*`, `scripts/*`                                | Shell                 |
-| `*.zsh`, `#!/usr/bin/env zsh` shebangs, `.zshrc`, `.zshenv` | Zsh                   |
-| No recognizable files                                       | New/empty repo        |
+| Marker(s)                                                                  | Project type          |
+| -------------------------------------------------------------------------- | --------------------- |
+| `go.mod` + (`main.go` or `cmd/`)                                           | Go CLI                |
+| `go.mod` without `main.go` or `cmd/`                                       | Go library            |
+| `package.json` + JS/TS source files                                        | JavaScript/TypeScript |
+| `pyproject.toml`, `setup.py`, `requirements.txt`                           | Python                |
+| `Cargo.toml` + (`src/main.rs`, `src/bin/*.rs`, or `[[bin]]` in Cargo.toml) | Rust CLI              |
+| `Cargo.toml` without `src/main.rs`, `src/bin/*.rs`, or `[[bin]]`           | Rust library          |
+| `Gemfile`, `*.gemspec`                                                     | Ruby                  |
+| `*.sh`, `bin/*`, `scripts/*`                                               | Shell                 |
+| `*.zsh`, `#!/usr/bin/env zsh` shebangs, `.zshrc`, `.zshenv`                | Zsh                   |
+| No recognizable files                                                      | New/empty repo        |
 
 If no recognizable files are found, ask the user what type of project they intend to create.
 
@@ -51,6 +52,10 @@ Check for files and directories that indicate what is already set up:
 | `.github/workflows/gitleaks.yml`   | Gitleaks exists         | `setup-secret-scanning`                       |
 | `.github/workflows/trufflehog.yml` | TruffleHog exists       | `setup-secret-scanning`                       |
 | `.goreleaser.yml`                  | GoReleaser exists       | `scaffold-go-cli` / `add-goreleaser-homebrew` |
+| `rustfmt.toml`                     | Rust formatter config   | `scaffold-rust-cli` / `setup-linters`         |
+| `deny.toml`                        | cargo-deny config       | `scaffold-rust-cli` / `setup-linters`         |
+| `typos.toml`                       | typos config            | `scaffold-rust-cli` / `setup-linters`         |
+| `cliff.toml`                       | git-cliff config        | `scaffold-rust-cli`                           |
 | `Makefile`                         | Build targets exist     | `scaffold-go-*` / `setup-ci`                  |
 | Linter config files                | Linters exist           | `setup-linters` / `scaffold-go-*`             |
 | `tests/scrut/`                     | Scrut tests exist       | `add-scrut-cli-tests`                         |
@@ -67,13 +72,14 @@ Key overlap rules:
 - If `scaffold-go-library` will run: skip `setup-ci` (included). Scope down `scaffold-new-repo` to only generate agent config files. `add-goreleaser-homebrew` and `setup-installers` are not applicable for libraries.
 - If `scaffold-go-library` will run: still run `setup-linters` but only for cross-language tools (Prettier, EditorConfig, markdownlint) since `.golangci.yml` is already configured.
 - If `scaffold-go-cli` will run: still run `setup-linters` for `.golangci.yml` configuration and cross-language tools (the Makefile lint target exists but no golangci config).
+- If `scaffold-rust-cli` will run: skip `setup-ci` (included). Scope down `scaffold-new-repo` to only generate agent config files. Still run `setup-linters` but only for cross-language tools since Rust linting is already configured.
 - `setup-secret-scanning` is always independent (no overlap with other tools).
 - `add-scrut-cli-tests` is applicable only if the project produces a CLI binary.
 
 Execution order (dependencies flow downward):
 
 1. `scaffold-new-repo` (foundation: LICENSE, README, .gitignore, agent config)
-1. `scaffold-go-cli` OR `scaffold-go-library` (language-specific scaffolding, if applicable)
+1. `scaffold-go-cli` OR `scaffold-go-library` OR `scaffold-rust-cli` (language-specific scaffolding, if applicable)
 1. `setup-ci` (if not already covered by step 2)
 1. `setup-linters` (cross-language tools, or full setup if no Go scaffolder ran)
 1. `setup-secret-scanning` (secret scanning)
@@ -128,6 +134,7 @@ The tools referenced in this plan are a mix of **skills** and **commands**. They
   - `scaffold-new-repo` (read `plugins/scaffold-new-repo/commands/scaffold-new-repo.md`)
   - `scaffold-go-cli` (read `plugins/scaffold-go-cli/commands/scaffold-go-cli.md`)
   - `scaffold-go-library` (read `plugins/scaffold-go-library/commands/scaffold-go-library.md`)
+  - `scaffold-rust-cli` (read `plugins/scaffold-rust-cli/commands/scaffold-rust-cli.md`)
   - `setup-ci` (read `plugins/setup-ci/commands/setup-ci.md`)
   - `setup-secret-scanning` (read `plugins/setup-secret-scanning/commands/setup-secret-scanning.md`)
   - `add-goreleaser-homebrew` (read `plugins/add-goreleaser-homebrew/commands/add-goreleaser-homebrew.md`)
