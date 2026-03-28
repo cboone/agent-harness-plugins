@@ -153,6 +153,8 @@ jobs:
 
 ### Rust
 
+Uses the `cboone/gh-actions` reusable workflow, which handles Rust toolchain setup, clippy, rustfmt, cargo-deny, cargo-audit, and typos internally. To use it for lint-only (disabling tests), set `run-test: false`:
+
 ```yaml
 name: Lint
 
@@ -184,30 +186,12 @@ concurrency:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
-
-      - name: Clippy
-        run: cargo clippy -- -D warnings
-
-      - name: Rustfmt
-        run: cargo fmt -- --check
-
-      - name: Install cargo-deny
-        uses: taiki-e/install-action@cargo-deny
-
-      - name: cargo deny
-        run: cargo deny check
-
-      - name: Typos
-        uses: crate-ci/typos@v1
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@v2
+    with:
+      run-test: false
 ```
+
+If the project already uses `rust-ci.yml` for full CI (which includes all lint checks by default), a separate lint workflow is redundant.
 
 ### Ruby
 
@@ -530,6 +514,11 @@ jobs:
       run-lint: true
       run-format-check: true
 
+  rust-lint:
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@v2
+    with:
+      run-test: false
+
   javascript:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -549,9 +538,9 @@ jobs:
 | Language | Cache Action                        | Cache Key           |
 | -------- | ----------------------------------- | ------------------- |
 | Node.js  | `actions/setup-node` `cache: "npm"` | `package-lock.json` |
-| Go       | `actions/setup-go` (built-in cache) | `go.sum`            |
+| Go       | Handled by reusable workflow        | `go.sum`            |
 | Python   | `astral-sh/setup-uv` (built-in)     | `uv.lock`           |
-| Rust     | `Swatinem/rust-cache@v2`            | `Cargo.lock`        |
+| Rust     | Handled by reusable workflow        | `Cargo.lock`        |
 | Ruby     | `ruby/setup-ruby` `bundler-cache`   | `Gemfile.lock`      |
 | Swift    | _(none needed for lint-only CI)_    | _(N/A)_             |
 
@@ -559,7 +548,7 @@ jobs:
 
 - Workflow file naming: use `.github/workflows/lint.yml` for a dedicated lint workflow.
 - If the project already has a CI workflow (e.g., `ci.yml`), offer to add lint steps to it rather than creating a separate file.
-- Go and Shell templates use `cboone/gh-actions` reusable workflows. Other language templates use `actions/checkout@v6` and the latest stable setup actions.
+- Go, Rust, and Shell templates use `cboone/gh-actions` reusable workflows. Other language templates use `actions/checkout@v6` and the latest stable setup actions.
 - For Node.js projects, adjust the `cache` option to match the detected package manager (`npm`, `yarn`, `pnpm`).
 - `ubuntu-latest` is the default runner. macOS or Windows runners are only needed for platform-specific linting.
 - Pin all `npx` tool versions to exact versions (e.g., `npx tool@X.Y.Z`) for CI reproducibility. Update versions periodically. This applies to tools invoked via `npx` without a prior `npm ci` step; tools installed as project dependencies (after `npm ci`) use the locked version automatically.
