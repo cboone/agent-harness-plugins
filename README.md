@@ -46,6 +46,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 [Add GoReleaser Homebrew](#add-goreleaser-homebrew)
 ∙ [Scaffold Go CLI](#scaffold-go-cli)
 ∙ [Scaffold Go Library](#scaffold-go-library)
+∙ [Scaffold Rust CLI](#scaffold-rust-cli)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
 ∙ [Setup CI](#setup-ci)
 ∙ [Setup Secret Scanning](#setup-secret-scanning)
@@ -340,6 +341,13 @@ Scaffold a Go library project with GoReleaser changelog-only releases, golangci-
 
 > **Trigger:** `/scaffold-go-library`
 > **Details:** [README](./plugins/scaffold-go-library/README.md)
+
+#### Scaffold Rust CLI
+
+Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest, git-cliff, GitHub Actions CI/CD, and Makefile. Generates `Cargo.toml`, `src/main.rs`, `rust-toolchain.toml`, `rustfmt.toml`, `deny.toml`, `typos.toml`, `cliff.toml`, Makefile, CI and release workflows, LICENSE, README, and directory stubs. Supports optional clap argument parsing and macOS-only project configuration.
+
+> **Trigger:** `/scaffold-rust-cli`
+> **Details:** [README](./plugins/scaffold-rust-cli/README.md)
 
 #### Scaffold New Repo
 

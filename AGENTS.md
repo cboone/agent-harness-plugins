@@ -264,6 +264,29 @@ cboone-cc-plugins/
     │       ├── package-file.md
     │       ├── readme.md
     │       └── release-workflow.md
+    ├── scaffold-rust-cli/          # Rust CLI project scaffolding command
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   ├── commands/
+    │   │   └── scaffold-rust-cli.md
+    │   └── references/
+    │       ├── cargo-toml.md
+    │       ├── ci-workflow.md
+    │       ├── ci-workflow-macos-only.md
+    │       ├── cliff.md
+    │       ├── deny.md
+    │       ├── gitignore.md
+    │       ├── license.md
+    │       ├── main-rs.md
+    │       ├── main-rs-with-clap.md
+    │       ├── makefile.md
+    │       ├── readme.md
+    │       ├── release-workflow.md
+    │       ├── release-workflow-macos-only.md
+    │       ├── rust-toolchain.md
+    │       ├── rustfmt.md
+    │       └── typos.md
     ├── setup-ci/                   # GitHub Actions CI setup command
     │   ├── .claude-plugin/
     │   │   └── plugin.json

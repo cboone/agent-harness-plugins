@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "1.25.0"
+    "version": "1.26.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -100,12 +100,12 @@
       "category": "productivity",
       "description": "Assess a repository, determine what scaffolding and setup tools are needed, present a plan, and execute them in the correct order.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["bootstrap", "ci", "go", "linters", "scaffolding", "setup", "zsh"],
+      "keywords": ["bootstrap", "ci", "go", "linters", "rust", "scaffolding", "setup", "zsh"],
       "license": "MIT",
       "name": "bootstrap-project",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/bootstrap-project",
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "author": {
@@ -364,6 +364,20 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
+      "description": "Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest, git-cliff, GitHub Actions CI/CD, and Makefile.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cargo", "cli", "rust", "scaffolding"],
+      "license": "MIT",
+      "name": "scaffold-rust-cli",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/scaffold-rust-cli",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "productivity",
       "description": "Scaffold the universal boilerplate for a new repository: LICENSE, README, CHANGELOG, .gitignore, agent config files, and a plans directory.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["boilerplate", "git", "project", "repo", "scaffolding"],
@@ -385,7 +399,7 @@
       "name": "setup-ci",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-ci",
-      "version": "1.5.0"
+      "version": "1.6.0"
     },
     {
       "author": {
@@ -413,7 +427,7 @@
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.7.0"
+      "version": "1.8.0"
     },
     {
       "author": {
