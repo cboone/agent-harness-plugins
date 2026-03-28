@@ -292,6 +292,34 @@ Carthage/Build/
 Package.resolved
 ```
 
+## Zig CLI
+
+```gitignore
+# System
+.DS_Store
+
+# Agent config
+.claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+credentials.json
+token.json
+
+# Zig
+.zig-cache/
+zig-out/
+*.o
+*.d
+*.pdb
+```
+
 ## Generic
 
 ```gitignore

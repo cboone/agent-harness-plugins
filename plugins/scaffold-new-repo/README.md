@@ -17,7 +17,7 @@ Then select **Scaffold New Repo** from the available plugins.
 
 ## What It Does
 
-Generates LICENSE (MIT), README.md, a project-type-specific `.gitignore`, agent config files (`AGENTS.md`, `CLAUDE.md` symlink, `.claude/settings.json`, `.github/copilot-instructions.md`), and a `docs/plans/` directory. Infers the project type from an existing `.gitignore` when possible. Supports Go CLI, Go library, Shell, JavaScript, Ruby, and generic project types.
+Generates LICENSE (MIT), README.md, a project-type-specific `.gitignore`, agent config files (`AGENTS.md`, `CLAUDE.md` symlink, `.claude/settings.json`, `.github/copilot-instructions.md`), and a `docs/plans/` directory. Infers the project type from an existing `.gitignore` when possible. Supports Go CLI, Go library, Shell, JavaScript, Ruby, Zig CLI, and generic project types.
 
 ## Usage
 

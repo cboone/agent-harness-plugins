@@ -19,7 +19,7 @@ Then select **Setup CI** from the available plugins.
 
 Detects the project's language(s), creates a GitHub Actions CI workflow (`.github/workflows/ci.yml`) with appropriate parallel jobs, and creates matching Makefile targets for local development.
 
-Supported languages: Go (CLI and library), JavaScript/TypeScript, Python, Rust, Ruby, Shell, and Zsh. Multi-language projects get a combined workflow with one job group per language.
+Supported languages: Go (CLI and library), JavaScript/TypeScript, Python, Rust, Ruby, Shell, Zig, and Zsh. Multi-language projects get a combined workflow with one job group per language.
 
 ## Usage
 

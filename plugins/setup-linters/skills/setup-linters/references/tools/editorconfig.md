@@ -61,6 +61,19 @@ indent_size = 4
 indent_size = 4
 ```
 
+#### Zig
+
+```ini
+[*.zig]
+indent_size = 4
+
+[build.zig]
+indent_size = 4
+
+[build.zig.zon]
+indent_size = 4
+```
+
 #### Shell (shfmt)
 
 Shell scripts use the base 2-space indent from `[*]`. These additional properties configure `shfmt` formatting and are ignored by editors and other tools:
@@ -137,7 +150,7 @@ indent_style = tab
 - `root = true` stops editors from searching parent directories for more `.editorconfig` files.
 - Go files must use tabs (gofmt enforces this). The `indent_size = 4` on tab-indented sections is a display hint that controls how wide tabs render in editors.
 - `go.mod` and `go.sum` use the same tab indentation as Go source files.
-- Python convention is 4-space indentation (PEP 8). Rust convention is also 4-space (rustfmt default).
+- Python convention is 4-space indentation (PEP 8). Rust convention is also 4-space (rustfmt default). Zig convention is 4-space (`zig fmt` enforces this).
 - Ruby and YAML use 2-space indentation, matching the base `[*]` defaults, so they do not need separate sections.
 - Shell scripts also use the base 2-space indent, but the `[*]` section should include shfmt-specific properties (`binary_next_line`, `space_redirects`, `switch_case_indent`) when shfmt is configured. These properties are ignored by editors and other tools.
 - Markdown has `trim_trailing_whitespace = false` because trailing spaces create line breaks.

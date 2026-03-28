@@ -17,7 +17,7 @@ Then select **Add Scrut CLI Tests** from the available plugins.
 
 ## What It Does
 
-Adds [scrut](https://github.com/facebookincubator/scrut) snapshot-based CLI integration testing to an existing CLI project. Detects the project language (Go, Swift, Rust, Python, Ruby, shell), creates a `tests/scrut/` directory with starter test files for help and version output, adds Makefile targets for running and updating tests, and configures the CI workflow to install scrut and run CLI tests.
+Adds [scrut](https://github.com/facebookincubator/scrut) snapshot-based CLI integration testing to an existing CLI project. Detects the project language (Go, Swift, Rust, Zig, Python, Ruby, shell), creates a `tests/scrut/` directory with starter test files for help and version output, adds Makefile targets for running and updating tests, and configures the CI workflow to install scrut and run CLI tests.
 
 ## Usage
 

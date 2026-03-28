@@ -1,12 +1,12 @@
 ---
-description: Set up installer and distribution methods for Go, Swift, and Rust projects
+description: Set up installer and distribution methods for Go, Swift, Rust, and Zig projects
 disable-model-invocation: true
 argument-hint: "[homebrew|go-install|cargo-install]"
 ---
 
 # Setup Installers
 
-Set up installer and distribution methods for a project. Supports Go, Swift, and Rust projects.
+Set up installer and distribution methods for a project. Supports Go, Swift, Rust, and Zig projects.
 
 Installer types:
 
@@ -25,6 +25,7 @@ Scan the project to determine its language and structure:
 | `go.mod`        | Go       | Also check for `.goreleaser.yml`/`.goreleaser.yaml` |
 | `Package.swift` | Swift    | Check for macOS-only constraints                    |
 | `Cargo.toml`    | Rust     | Check for binary targets                            |
+| `build.zig`     | Zig      | Check for executable targets                        |
 
 Additional checks regardless of language:
 
@@ -41,7 +42,9 @@ Additional checks regardless of language:
 
 **Rust binary detection**: Check `Cargo.toml` for `[[bin]]` sections, a `src/main.rs` file, or binaries under `src/bin/` (for example, `src/bin/*.rs`) to confirm this is a binary crate (not a library).
 
-If none of the above markers are found, inform the user that the project type is not supported. This command requires a Go, Swift, or Rust project.
+**Zig binary detection**: Check `build.zig` for `b.addExecutable(.{ .name = "..." })` calls or a `src/main.zig` file to confirm this is an executable project (not a library).
+
+If none of the above markers are found, inform the user that the project type is not supported. This command requires a Go, Swift, Rust, or Zig project.
 
 ### 2. Detect Existing Installers
 
@@ -60,11 +63,11 @@ If `$ARGUMENTS` is provided (e.g., `homebrew`, `go-install`, `cargo-install`, or
 
 Otherwise, ask the user which installer types to set up. Present applicable options based on the detected language:
 
-| Installer     | Go  | Swift | Rust |
-| ------------- | --- | ----- | ---- |
-| Homebrew      | Yes | Yes   | Yes  |
-| go install    | Yes | No    | No   |
-| cargo install | No  | No    | Yes  |
+| Installer     | Go  | Swift | Rust | Zig |
+| ------------- | --- | ----- | ---- | --- |
+| Homebrew      | Yes | Yes   | Yes  | Yes |
+| go install    | Yes | No    | No   | No  |
+| cargo install | No  | No    | Yes  | No  |
 
 Include notes about which installers are already detected and which are not applicable to the project type.
 
@@ -76,6 +79,7 @@ Collect the following, inferring from existing files where possible. Do not re-a
   - Go: from Makefile, `.goreleaser.yml`, or the last segment of the Go module path
   - Swift: from `Package.swift` executable target name, or the package name
   - Rust: from `Cargo.toml` `[[bin]]` name, `package.name`, or the directory name
+  - Zig: from `build.zig` by reading the `.name` field in `b.addExecutable(.{ .name = "..." })`, or the directory name
 - **Project description**: from the README or `gh repo view`
 - **GitHub owner/repo**: from `gh repo view`, the Go module path, or `git remote`
 - **Latest tag**: run `git describe --tags --abbrev=0 2>/dev/null` (may not exist yet)
@@ -543,6 +547,103 @@ Notes:
 - `aarch64-unknown-linux-gnu` cross-compilation requires `gcc-aarch64-linux-gnu` on Ubuntu runners
 - For Rust workspace projects, adjust the `cargo build` command to target the specific binary
 - **Action pinning**: `dtolnay/rust-toolchain@stable` and `softprops/action-gh-release@v2` follow this project's convention of pinning to version tags
+
+#### Reference: Zig Release Workflow
+
+Use for Zig projects. Cross-compiles for linux/darwin on amd64/arm64 plus Windows amd64. Unlike Rust, all targets build on a single `ubuntu-latest` runner with no extra toolchains.
+
+```yaml
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Zig
+        uses: mlugg/setup-zig@v2
+
+      - name: Build release binaries
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          BINARY="PROJECT-NAME"
+          targets=(
+            x86_64-linux
+            aarch64-linux
+            x86_64-macos
+            aarch64-macos
+            x86_64-windows
+          )
+          for target in "${targets[@]}"; do
+            echo "Building for ${target}..."
+            zig build -Dtarget="${target}" -Doptimize=ReleaseSafe
+            # Map Zig target triples to archive naming convention
+            case "${target}" in
+              x86_64-linux)   os="linux";  arch="amd64" ;;
+              aarch64-linux)  os="linux";  arch="arm64" ;;
+              x86_64-macos)   os="darwin"; arch="amd64" ;;
+              aarch64-macos)  os="darwin"; arch="arm64" ;;
+              x86_64-windows) os="windows"; arch="amd64" ;;
+            esac
+            if [ "${os}" = "windows" ]; then
+              zip "${BINARY}-${VERSION}-${os}-${arch}.zip" "zig-out/bin/${BINARY}.exe"
+            else
+              tar -czf "${BINARY}-${VERSION}-${os}-${arch}.tar.gz" -C "zig-out/bin" "${BINARY}"
+            fi
+          done
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries
+          path: |
+            *.tar.gz
+            *.zip
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+
+      - name: Generate checksums
+        run: sha256sum *.tar.gz *.zip > checksums.txt
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.tar.gz
+            *.zip
+            checksums.txt
+          generate_release_notes: true
+```
+
+Notes:
+
+- Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
+- All 5 targets build on a single `ubuntu-latest` runner. Zig's cross-compilation requires no extra toolchains, no macOS runners, and no cross-compilation tools.
+- The `mlugg/setup-zig@v2` action reads the Zig version from `build.zig.zon` by default
+- Windows produces a `.zip` archive; all other targets produce `.tar.gz`
+- **Action pinning**: `mlugg/setup-zig@v2` and `softprops/action-gh-release@v2` follow this project's convention of pinning to version tags
 
 ### 8. Update README
 

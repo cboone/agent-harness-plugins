@@ -23,6 +23,7 @@ Use both files and directories as signals:
 | `go.mod`, `go.sum`                                                                          | Go                    |
 | `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt`, `Pipfile`, `.venv/`, `venv/` | Python                |
 | `Cargo.toml`, `Cargo.lock`                                                                  | Rust                  |
+| `build.zig`, `build.zig.zon`                                                                | Zig                   |
 | `Gemfile`, `*.gemspec`, `.ruby-version`                                                     | Ruby                  |
 | `Package.swift`, `*.xcodeproj`, `*.xcworkspace`                                             | Swift                 |
 | `*.sh`, `bin/*`, `scripts/*`                                                                | Shell                 |
