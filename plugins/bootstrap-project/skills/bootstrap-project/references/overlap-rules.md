@@ -73,15 +73,15 @@ Both `scaffold-go-cli` and `scaffold-go-library` generate LICENSE, README, .giti
 
 Some tools only apply to certain project types:
 
-| Tool                      | Applicable when                                                 |
-| ------------------------- | --------------------------------------------------------------- |
-| `scaffold-go-cli`         | Go CLI project (go.mod + main.go or cmd/)                       |
-| `scaffold-go-library`     | Go library project (go.mod, no main.go or cmd/)                 |
+| Tool                      | Applicable when                                                                |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| `scaffold-go-cli`         | Go CLI project (go.mod + main.go or cmd/)                                      |
+| `scaffold-go-library`     | Go library project (go.mod, no main.go or cmd/)                                |
 | `scaffold-rust-cli`       | Rust CLI project (Cargo.toml + src/main.rs, src/bin/*.rs, or `[[bin]]` target) |
-| `add-goreleaser-homebrew` | Go CLI project without existing GoReleaser                      |
-| `setup-installers`        | Project produces a distributable binary (CLI)                   |
-| `add-scrut-cli-tests`     | Project produces a CLI binary                                   |
-| `setup-ci`                | Any project without existing CI workflow                        |
-| `setup-linters`           | Any project                                                     |
-| `setup-secret-scanning`   | Any project                                                     |
-| `scaffold-new-repo`       | Any project missing foundational files                          |
+| `add-goreleaser-homebrew` | Go CLI project without existing GoReleaser                                     |
+| `setup-installers`        | Project produces a distributable binary (CLI)                                  |
+| `add-scrut-cli-tests`     | Project produces a CLI binary                                                  |
+| `setup-ci`                | Any project without existing CI workflow                                       |
+| `setup-linters`           | Any project                                                                    |
+| `setup-secret-scanning`   | Any project                                                                    |
+| `scaffold-new-repo`       | Any project missing foundational files                                         |
