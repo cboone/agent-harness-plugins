@@ -110,7 +110,7 @@ If found, add a `test-scrut` job using the template from the CI Job Template sec
 
 - Set `scrut-setup-cmd` to the command that builds the project binary (e.g., `make build`). For interpreted languages (shell scripts, Python, Ruby), omit this input.
 - Set `scrut-env` to the environment variable mapping the binary path (e.g., `TOOL_BIN=./bin/my-tool`). Use the same `TOOL_BIN` variable name and `BINARY_PATH` value from the Makefile targets.
-- If the project requires a macOS runner, set `runs-on: macos-latest`.
+- If the project requires a macOS runner, pass `runs-on: macos-latest` as an input in the reusable workflow's `with:` block (do not add a top-level `runs-on` field on the job).
 - Place the new job after existing test jobs
 - If the workflow uses job dependencies (`needs`), set up appropriate dependencies for the new job
 
@@ -321,7 +321,7 @@ test-all: test test-scrut
 
 ## Reference: CI Job
 
-GitHub Actions job template for running scrut CLI tests. Uses the `cboone/gh-actions` reusable workflow, which handles scrut installation with SHA-256 checksum verification, checkout, and test execution internally.
+GitHub Actions job template for running scrut CLI tests. Uses the `cboone/gh-actions` reusable workflow, which handles scrut installation (using an internal SHA-256 checksum manifest), checkout, and test execution internally. This verified checksum source is available only via the reusable workflow; scrut's published GitHub releases do not currently provide checksums for manual local installation.
 
 ### Template
 
@@ -335,11 +335,11 @@ test-scrut:
 
 ### Placeholders
 
-| Placeholder   | Description                                                    | Example                                            |
-| ------------- | -------------------------------------------------------------- | -------------------------------------------------- |
-| `SETUP_CMD`   | Command to build the project binary before running scrut tests | `make build`, `cargo build --release`, `zig build` |
-| `TOOL_BIN`    | Environment variable name for the binary path                  | `BOPCA_BIN`                                        |
-| `BINARY_PATH` | Path to the built binary or executable script                  | `./bin/bopca`, `./target/release/bopca`            |
+| Placeholder   | Description                                                                                               | Example                                            |
+| ------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `SETUP_CMD`   | Command to build the project binary before running scrut tests (optional, omit for interpreted languages) | `make build`, `cargo build --release`, `zig build` |
+| `TOOL_BIN`    | Environment variable name for the binary path                                                             | `BOPCA_BIN`                                        |
+| `BINARY_PATH` | Path to the built binary or executable script                                                             | `./bin/bopca`, `./target/release/bopca`            |
 
 ### Notes
 

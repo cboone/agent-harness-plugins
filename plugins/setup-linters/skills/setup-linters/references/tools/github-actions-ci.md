@@ -475,7 +475,7 @@ text-lint:
 
 ## Combined Multi-Language Workflow
 
-For monorepos or projects with multiple languages, combine into a single workflow. Go uses a reusable workflow call; other languages use inline jobs:
+For monorepos or projects with multiple languages, combine into a single workflow. Go and Rust use reusable workflow calls; other languages use inline jobs:
 
 ```yaml
 name: Lint
