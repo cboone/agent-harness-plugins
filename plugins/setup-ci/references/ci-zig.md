@@ -1,8 +1,6 @@
 # Zig CI Workflow
 
-Use this template for Zig projects.
-
-4 parallel jobs: test, format, build, cross-compile.
+Use this template for Zig projects. Uses the `cboone/gh-actions` reusable workflow, which creates parallel jobs for test, format check, build, and cross-compilation internally.
 
 Zig has no separate linter tool. `zig fmt` is the formatter, and the compiler itself catches most lint-like issues. The cross-compile job validates all release targets on every PR, which is cheap with Zig (single runner, no extra toolchains).
 
@@ -39,78 +37,18 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Zig
-        uses: mlugg/setup-zig@v2
-
-      - name: Run tests
-        run: zig build test
-
-  format:
-    name: Format
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Zig
-        uses: mlugg/setup-zig@v2
-
-      - name: Check formatting
-        run: zig fmt --check src/ build.zig
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Zig
-        uses: mlugg/setup-zig@v2
-
-      - name: Build
-        run: zig build
-
-  cross-compile:
-    name: Cross-Compile
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Zig
-        uses: mlugg/setup-zig@v2
-
-      - name: Cross-compile all release targets
-        run: |
-          targets=(
-            x86_64-linux
-            aarch64-linux
-            x86_64-macos
-            aarch64-macos
-            x86_64-windows
-          )
-          for target in "${targets[@]}"; do
-            echo "Building for ${target}..."
-            zig build -Dtarget="${target}" -Doptimize=ReleaseSafe
-          done
+  ci:
+    uses: cboone/gh-actions/.github/workflows/zig-ci.yml@v2
+    with:
+      zig-version: "0.14.0"
+      run-cross-compile: true
 ```
 
 ## Notes
 
-- Uses `mlugg/setup-zig@v2` for toolchain setup. The action reads the Zig version from `build.zig.zon` `minimum_zig_version` by default.
-- No separate lint job: Zig has no Clippy equivalent. The format job (`zig fmt --check`) and the build job (compiler warnings) cover lint-like checks.
-- The cross-compile job builds all 5 release targets on a single `ubuntu-latest` runner. Unlike Rust, Zig requires no extra toolchains or macOS runners for cross-compilation.
-- If scrut tests exist (`tests/scrut/` directory), add a `test-scrut` job following the pattern in the scrut CLI tests reference.
-- **Action pinning**: `mlugg/setup-zig@v2` follows this project's convention of pinning third-party actions to upstream-maintained tags rather than commit SHAs.
+- The `zig-version` input is required. Set it to the project's Zig version (check `build.zig.zon` `minimum_zig_version` or the version used locally). Keep this in sync when upgrading the Zig toolchain.
+- The reusable workflow creates parallel jobs internally for test, format check (`zig fmt --check`), build, and cross-compilation
+- All checks are enabled by default except cross-compilation. Set `run-cross-compile: true` to validate release targets on every PR. Cross-compilation is cheap with Zig (single runner, no extra toolchains).
+- To disable a specific check, set its input to `false` (e.g., `run-test: false`, `run-fmt: false`, `run-build: false`)
+- The reusable workflow handles Zig toolchain setup internally
+- Optional inputs include `cross-targets` (space-separated target triples, defaults to linux/macOS/Windows), `run-scrut` for CLI snapshot testing, and `scrut-build-cmd`/`scrut-env`/`scrut-test-dir` for scrut configuration
