@@ -1,18 +1,18 @@
 # Zig Makefile
 
 ```makefile
-.PHONY: test lint fmt fmt-check build run clean release help
+.PHONY: test lint fmt format build run clean release help
 
 test: ## Run tests
 	zig build test
 
-lint: fmt-check build ## Check formatting and build (Zig has no separate linter)
+lint: fmt build ## Check formatting and build (Zig has no separate linter)
 
-fmt: ## Format code
-	zig fmt src/ build.zig
-
-fmt-check: ## Check formatting without modifying files
+fmt: ## Check formatting without modifying files
 	zig fmt --check src/ build.zig
+
+format: ## Format code
+	zig fmt src/ build.zig
 
 build: ## Build the project
 	zig build

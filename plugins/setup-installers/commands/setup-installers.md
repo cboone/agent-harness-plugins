@@ -44,7 +44,7 @@ Additional checks regardless of language:
 
 **Zig binary detection**: Check `build.zig` for `b.addExecutable(.{ .name = "..." })` calls or a `src/main.zig` file to confirm this is an executable project (not a library).
 
-If none of the above markers are found, inform the user that the project type is not supported. This command requires a Go, Swift, or Rust project.
+If none of the above markers are found, inform the user that the project type is not supported. This command requires a Go, Swift, Rust, or Zig project.
 
 ### 2. Detect Existing Installers
 
