@@ -44,7 +44,7 @@ This skill runs git commands that trigger permission prompts. To allow them auto
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git status --porcelain)", "Bash(git branch --show-current)", "Bash(git tag *)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git remote get-url *)", "Bash(git push *)", "Bash(gh release create *)", "Bash(date *)"]
+    "allow": ["Bash(git status --porcelain)", "Bash(git branch --show-current)", "Bash(git tag *)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git remote get-url *)", "Bash(git push *)", "Bash(command -v gh)", "Bash(mktemp /tmp/gh-release-notes-*)", "Bash(rm -f /tmp/gh-release-notes-*)", "Bash(gh release create *)", "Bash(date *)"]
   }
 }
 ```

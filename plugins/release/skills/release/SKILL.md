@@ -256,7 +256,7 @@ To publish manually:
 git remote get-url origin
 ```
 
-If no remote is configured, report the error and show the manual push commands without the `gh release create` line. Stop.
+If no remote is configured, report the error and tell the user to configure a Git remote (for example, `git remote add origin <url>`) before rerunning this step. Do not show any `git push origin ...` commands in this case. Stop.
 
 ##### 11b. Push commit and tag
 
@@ -265,7 +265,7 @@ git push origin HEAD
 git push origin vVERSION
 ```
 
-If the push is rejected, report the error and stop. Never force push. Show the remaining manual `gh release create` command so the user can complete the process after resolving the push issue.
+If the push is rejected, report the error and stop. Never force push. Show the remaining manual commands (retry the failed `git push` command(s), then run the `gh release create` command) so the user can complete the process after resolving the push issue.
 
 ##### 11c. Extract changelog section
 
@@ -275,7 +275,15 @@ If `CHANGELOG.md` does not exist or the version section cannot be found, use the
 
 ##### 11d. Create GitHub Release
 
-Generate a temporary file for the release notes:
+First, check that `gh` is available:
+
+```bash
+command -v gh
+```
+
+If `gh` is not available, skip the GitHub Release creation. Report that `gh` is required for GitHub Releases and show the manual `gh release create` command. Do not create a tmpfile.
+
+If `gh` is available, generate a temporary file for the release notes:
 
 ```bash
 mktemp /tmp/gh-release-notes-XXXXXX
@@ -294,8 +302,6 @@ Always remove the tmpfile after the command completes, regardless of success or 
 ```bash
 rm -f TMPFILE
 ```
-
-If `gh` is not available, skip the GitHub Release creation. Report that `gh` is required for GitHub Releases and show the manual `gh release create` command.
 
 ##### 11e. Report results
 
@@ -323,7 +329,7 @@ Release vVERSION published.
 - **CHANGELOG parse error:** If the existing file has an unrecognized format, warn the user and offer to create a new one or append a version section at the top.
 - **Tag already exists:** Abort with a message that the tag `vVERSION` already exists. Suggest choosing a different version.
 - **Not a git repository:** Abort immediately.
-- **No remote configured:** Skip comparison links in CHANGELOG, skip doc version updates, skip push and GitHub Release in step 11, warn the user.
+- **No remote configured:** Skip comparison links in CHANGELOG, skip push and GitHub Release in step 11, warn the user.
 - **First release:** Use `v0.0.0` as the base for bump calculation, create the CHANGELOG from scratch, skip doc version updates (no old version to replace).
 - **Push rejected:** Report the error and show remaining manual commands. Never force push.
 - **`gh` not available:** Push the commit and tag, skip GitHub Release creation, note that `gh` is required for GitHub Releases and show the manual `gh release create` command.
