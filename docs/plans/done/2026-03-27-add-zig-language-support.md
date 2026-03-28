@@ -19,16 +19,19 @@ Zig is absent from all detection tables, templates, and reference files across t
 ### 1. scaffold-new-repo (3 files modified)
 
 **`plugins/scaffold-new-repo/commands/scaffold-new-repo.md`**:
+
 - Add `zig-cli` to the valid types list (line 15, alongside existing types)
 - Add `.gitignore` detection heuristic: `.zig-cache/` or `zig-out/` -> Zig (insert before the `target/` -> Rust rule, since `target/` is a weaker signal)
 - Add `Zig CLI` to the project type options list
 
 **`plugins/scaffold-new-repo/references/gitignore-templates.md`**:
+
 - Add a `## Zig CLI` section with template (between Rust and Swift, or at the end before Generic):
   - Common entries (same as all templates)
   - Zig-specific: `.zig-cache/`, `zig-out/`, `*.o`, `*.d`, `*.pdb`
 
 **`plugins/scaffold-new-repo/references/readme.md`**:
+
 - Add a `### Zig CLI` installation placeholder section:
 
 ````markdown
@@ -46,6 +49,7 @@ The binary will be at `zig-out/bin/PROJECT-NAME`.
 ### 2. setup-ci (3 files: 2 new, 1 modified)
 
 **NEW `plugins/setup-ci/references/ci-zig.md`**:
+
 - 5 parallel jobs: test, format, build, cross-compile, test-scrut (conditional)
 - Toolchain setup: `mlugg/setup-zig@v2` with version from `build.zig.zon`
 - Cross-compile job loops over 5 targets:
@@ -55,10 +59,12 @@ The binary will be at `zig-out/bin/PROJECT-NAME`.
 - Follow the same structure as `ci-rust.md` (header, YAML template, notes)
 
 **NEW `plugins/setup-ci/references/makefile-zig.md`**:
+
 - Targets: `build`, `test`, `fmt`, `fmt-check`, `lint` (fmt-check + debug build), `run`, `clean`, `release`, `help`
 - Follow the same structure as `makefile-rust.md`
 
 **`plugins/setup-ci/commands/setup-ci.md`**:
+
 - Add `zig` to the argument-hint list (line 4)
 - Add row to detection table: `build.zig, build.zig.zon` -> `Zig`
 - Add `@${CLAUDE_PLUGIN_ROOT}/references/ci-zig.md` to CI Workflow Templates section
@@ -69,10 +75,12 @@ The binary will be at `zig-out/bin/PROJECT-NAME`.
 ### 3. setup-linters (2 files modified)
 
 **`plugins/setup-linters/skills/setup-linters/SKILL.md`**:
+
 - Add row to detection table (step 1): `build.zig, build.zig.zon` -> `Zig`
 - No new linter config entries needed (Zig has no external linter; `zig fmt` is built into the toolchain)
 
 **`plugins/setup-linters/skills/setup-linters/references/tools/editorconfig.md`**:
+
 - Add a `#### Zig` section with `[*.zig]` override: `indent_size = 4` (Zig uses 4-space indent, like Rust)
 - Add `[build.zig]` and `[build.zig.zon]` with `indent_size = 4`
 - Update the notes section to mention Zig uses 4-space indentation (`zig fmt` enforces this)
@@ -82,6 +90,7 @@ The binary will be at `zig-out/bin/PROJECT-NAME`.
 ### 4. setup-installers (1 file modified)
 
 **`plugins/setup-installers/commands/setup-installers.md`**:
+
 - Update frontmatter description to include Zig (line 2)
 - Add Zig to the detection table: `build.zig` -> `Zig` with note "Check for executable targets"
 - Add Zig binary detection description: Check `build.zig` for `addExecutable()` calls or `src/main.zig`
@@ -98,6 +107,7 @@ The binary will be at `zig-out/bin/PROJECT-NAME`.
 ### 5. add-scrut-cli-tests (1 file modified)
 
 **`plugins/add-scrut-cli-tests/commands/add-scrut-cli-tests.md`**:
+
 - Add row to detection table: `build.zig` -> `Zig`
 - Add Zig binary name inference: Check `build.zig` for `addExecutable()` name or use directory name
 - Add Zig binary path: `$(CURDIR)/zig-out/bin/PROJECT-NAME`
@@ -108,10 +118,12 @@ The binary will be at `zig-out/bin/PROJECT-NAME`.
 ### 6. bootstrap-project (1 file modified)
 
 **`plugins/bootstrap-project/skills/bootstrap-project/SKILL.md`**:
+
 - Add row to detection table: `build.zig` + (`src/main.zig` or `src/`) -> `Zig CLI`
 - No overlap rules changes needed (no Zig-specific scaffolder exists, simplest case like Rust)
 
 **`plugins/bootstrap-project/skills/bootstrap-project/references/overlap-rules.md`**:
+
 - No changes needed (Zig has no dedicated scaffolder, so all tools run at full scope)
 
 **Version bump**: `1.1.0` -> `1.2.0` (new capability: Zig detection)
@@ -119,15 +131,18 @@ The binary will be at `zig-out/bin/PROJECT-NAME`.
 ### 7. Marketplace and README
 
 **`.claude-plugin/marketplace.json`**:
+
 - Update version entries for all 6 modified plugins to match their new `plugin.json` versions
 - No marketplace `metadata.version` bump (no plugins added or removed, only existing plugins updated)
 
 **Root `README.md`**:
+
 - No structural changes needed (plugin descriptions remain the same; Zig is just another supported language within existing plugins)
 
 ### 8. Plugin READMEs (6 files modified)
 
 Each affected plugin's `README.md` should be updated to mention Zig in the supported languages list:
+
 - `plugins/scaffold-new-repo/README.md`
 - `plugins/setup-ci/README.md`
 - `plugins/setup-linters/README.md`
