@@ -75,7 +75,7 @@ If no `Makefile` exists, offer to create one with the appropriate language-speci
 
 Generate `.github/workflows/ci.yml` from the appropriate language template in the Reference sections below. Write the file using the Write tool. The `.github/workflows/` directory will be created automatically if it does not exist.
 
-Go, Shell, and secret scanning templates use `cboone/gh-actions` reusable workflows that handle tool installation, caching, and execution internally. Other language templates use inline jobs.
+Go, Rust, Zig, Shell, and secret scanning templates use `cboone/gh-actions` reusable workflows that handle tool installation, caching, and execution internally. Other language templates use inline jobs.
 
 All templates share:
 
