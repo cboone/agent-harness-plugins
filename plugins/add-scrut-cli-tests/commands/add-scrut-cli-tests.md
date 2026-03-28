@@ -42,7 +42,7 @@ Collect the following, inferring from existing files where possible:
   - **Go**: check the Makefile `build` target for the output binary name (look for `-o bin/NAME` or `-o NAME`), or derive from the last segment of the module path in `go.mod`
   - **Swift**: check `Package.swift` for executable target names, or check the Makefile `build` target
   - **Rust**: check `Cargo.toml` for `[[bin]]` entries or the `name` field under `[package]`
-  - **Zig**: check `build.zig` for `addExecutable()` name argument, or use the directory name
+  - **Zig**: check `build.zig` for `b.addExecutable(.{ .name = "..." })` and use the `.name` value, or use the directory name
   - **Python**: check `pyproject.toml` for `[project.scripts]` entries
   - **Ruby**: check the gemspec for `executables` or look in `bin/` or `exe/`
   - **Shell**: use the script filename as the binary name

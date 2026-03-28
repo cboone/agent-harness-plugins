@@ -43,7 +43,7 @@ Additional checks regardless of language:
 
 **Rust binary detection**: Check `Cargo.toml` for `[[bin]]` sections, a `src/main.rs` file, or binaries under `src/bin/` (for example, `src/bin/*.rs`) to confirm this is a binary crate (not a library).
 
-**Zig binary detection**: Check `build.zig` for `addExecutable()` calls or a `src/main.zig` file to confirm this is an executable project (not a library).
+**Zig binary detection**: Check `build.zig` for `b.addExecutable(.{ .name = "..." })` calls or a `src/main.zig` file to confirm this is an executable project (not a library).
 
 If none of the above markers are found, inform the user that only the shell install script is applicable as a generic binary distribution method.
 
@@ -82,7 +82,7 @@ Collect the following, inferring from existing files where possible. Do not re-a
   - Go: from Makefile, `.goreleaser.yml`, or the last segment of the Go module path
   - Swift: from `Package.swift` executable target name, or the package name
   - Rust: from `Cargo.toml` `[[bin]]` name, `package.name`, or the directory name
-  - Zig: from `build.zig` `addExecutable()` name argument, or the directory name
+  - Zig: from `build.zig` by reading the `.name` field in `b.addExecutable(.{ .name = "..." })`, or the directory name
 - **Project description**: from the README or `gh repo view`
 - **GitHub owner/repo**: from `gh repo view`, the Go module path, or `git remote`
 - **Latest tag**: run `git describe --tags --abbrev=0 2>/dev/null` (may not exist yet)
