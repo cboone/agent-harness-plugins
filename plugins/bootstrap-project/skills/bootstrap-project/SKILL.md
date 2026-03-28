@@ -28,7 +28,7 @@ Scan for language and framework markers using Glob. Exclude `node_modules/`, `.y
 | `pyproject.toml`, `setup.py`, `requirements.txt`                           | Python                |
 | `Cargo.toml` + (`src/main.rs`, `src/bin/*.rs`, or `[[bin]]` in Cargo.toml) | Rust CLI              |
 | `Cargo.toml` without `src/main.rs`, `src/bin/*.rs`, or `[[bin]]`           | Rust library          |
-| `build.zig` + (`src/main.zig` or `src/`)                    | Zig CLI               |
+| `build.zig` + (`src/main.zig` or `src/`)                                   | Zig CLI               |
 | `Gemfile`, `*.gemspec`                                                     | Ruby                  |
 | `*.sh`, `bin/*`, `scripts/*`                                               | Shell                 |
 | `*.zsh`, `#!/usr/bin/env zsh` shebangs, `.zshrc`, `.zshenv`                | Zsh                   |
