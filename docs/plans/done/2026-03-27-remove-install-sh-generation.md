@@ -8,11 +8,11 @@ Since the "Other" project type column in the installer selection table only had 
 
 ## Versioning
 
-| File | Field | Before | After | Reason |
-| --- | --- | --- | --- | --- |
-| `plugins/setup-installers/.claude-plugin/plugin.json` | `version` | 1.4.0 | 2.0.0 | Major: removed capability |
-| `.claude-plugin/marketplace.json` (setup-installers entry) | `version` | 1.4.0 | 2.0.0 | Must match plugin.json |
-| `.claude-plugin/marketplace.json` | `metadata.version` | 1.25.0 | 1.26.0 | Minor: catalog changed |
+| File                                                       | Field              | Before | After  | Reason                    |
+| ---------------------------------------------------------- | ------------------ | ------ | ------ | ------------------------- |
+| `plugins/setup-installers/.claude-plugin/plugin.json`      | `version`          | 1.4.0  | 2.0.0  | Major: removed capability |
+| `.claude-plugin/marketplace.json` (setup-installers entry) | `version`          | 1.4.0  | 2.0.0  | Must match plugin.json    |
+| `.claude-plugin/marketplace.json`                          | `metadata.version` | 1.25.0 | 1.26.0 | Minor: catalog changed    |
 
 ## Changes by File
 
