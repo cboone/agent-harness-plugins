@@ -2,7 +2,7 @@
 
 Use this template for Zig projects.
 
-5 parallel jobs: test, format, build, cross-compile, test-scrut (conditional).
+4 parallel jobs: test, format, build, cross-compile.
 
 Zig has no separate linter tool. `zig fmt` is the formatter, and the compiler itself catches most lint-like issues. The cross-compile job validates all release targets on every PR, which is cheap with Zig (single runner, no extra toolchains).
 
