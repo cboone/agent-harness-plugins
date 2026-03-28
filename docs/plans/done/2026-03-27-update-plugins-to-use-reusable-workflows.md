@@ -32,6 +32,7 @@ Available reusable workflows in `cboone/gh-actions` (latest release: v2.1.0, flo
 ### 1. lint-and-fix (1.3.2 -> 1.3.3, patch)
 
 **`plugins/lint-and-fix/skills/lint-and-fix/SKILL.md`**
+
 - Line 64: Expand reusable workflow skip example to include `rust-ci.yml@v2` and `zig-ci.yml@v2` alongside `go-ci.yml@v2`
 - Line 221: Same expansion in error handling section
 
@@ -40,8 +41,10 @@ Available reusable workflows in `cboone/gh-actions` (latest release: v2.1.0, flo
 ### 2. add-scrut-cli-tests (1.4.0 -> 1.5.0, minor)
 
 **`plugins/add-scrut-cli-tests/commands/add-scrut-cli-tests.md`**
+
 - Replace "Reference: CI Job" section (lines ~326-379): swap the inline job template with a `scrut.yml@v2` reusable workflow call
 - New template structure:
+
   ```yaml
   test-scrut:
     uses: cboone/gh-actions/.github/workflows/scrut.yml@v2
@@ -49,6 +52,7 @@ Available reusable workflows in `cboone/gh-actions` (latest release: v2.1.0, flo
       scrut-setup-cmd: "make build"
       scrut-env: "TOOL_BIN=BINARY_PATH"
   ```
+
 - Update Placeholders table: remove `RUNNER_OS`, `LANGUAGE_SETUP_STEPS`, `SCRUT_VERSION`, `SCRUT_PLATFORM`; keep `TOOL_BIN`, `BINARY_PATH`; add `scrut-setup-cmd` and `scrut-env` descriptions
 - Rewrite Notes: remove manual installation discussion and checksum unavailability note; add that the reusable workflow handles installation with SHA-256 verification, and that `scrut-setup-cmd` is the build command (omit for interpreted languages)
 - Update step 6 prose to reference the reusable workflow pattern
@@ -59,12 +63,15 @@ Available reusable workflows in `cboone/gh-actions` (latest release: v2.1.0, flo
 ### 3. setup-ci Rust template (1.6.0 -> 1.7.0, minor)
 
 **`plugins/setup-ci/references/ci-rust.md`**
+
 - Replace 150-line inline 7-job template with:
+
   ```yaml
   jobs:
     ci:
       uses: cboone/gh-actions/.github/workflows/rust-ci.yml@v2
   ```
+
 - Keep `on:`, `concurrency:`, `permissions:` blocks (same pattern as `ci-go-cli.md`)
 - Rewrite Notes: explain parallel jobs are created internally, no separate build job, remove third-party action references
 - Simplify macOS-only section to show `runs-on: macos-latest` input
@@ -72,7 +79,9 @@ Available reusable workflows in `cboone/gh-actions` (latest release: v2.1.0, flo
 ### 4. setup-ci Zig template
 
 **`plugins/setup-ci/references/ci-zig.md`**
+
 - Replace 108-line inline 4-job template with:
+
   ```yaml
   jobs:
     ci:
@@ -80,16 +89,19 @@ Available reusable workflows in `cboone/gh-actions` (latest release: v2.1.0, flo
       with:
         zig-version: "0.14.0"
   ```
+
 - Rewrite Notes: explain `zig-version` is required, parallel jobs created internally, `run-scrut` input available
 - Remove `mlugg/setup-zig@v2` references
 
 ### 5. setup-ci multi-language and command prose
 
 **`plugins/setup-ci/references/ci-multi-language.md`**
+
 - Expand example to show Go + Rust + JS (three-language combo with two reusable + one inline)
 - Update Notes to list Go, Rust, and Zig as reusable workflow options
 
 **`plugins/setup-ci/commands/setup-ci.md`**
+
 - Line 79: Change "Go, Shell, and secret scanning" to "Go, Rust, Zig, Shell, and secret scanning"
 
 **`plugins/setup-ci/.claude-plugin/plugin.json`** -- bump to 1.7.0
@@ -97,15 +109,19 @@ Available reusable workflows in `cboone/gh-actions` (latest release: v2.1.0, flo
 ### 6. scaffold-rust-cli CI templates (1.0.0 -> 1.1.0, minor)
 
 **`plugins/scaffold-rust-cli/references/ci-workflow.md`**
+
 - Replace 150-line inline template with `rust-ci.yml@v2` call (same as setup-ci)
 
 **`plugins/scaffold-rust-cli/references/ci-workflow-macos-only.md`**
+
 - Replace inline template with `rust-ci.yml@v2` call using `runs-on: macos-latest`
 
 ### 7. scaffold-rust-cli release templates
 
 **`plugins/scaffold-rust-cli/references/release-workflow.md`**
+
 - Replace ~96-line inline build matrix + publish with:
+
   ```yaml
   jobs:
     release:
@@ -113,9 +129,11 @@ Available reusable workflows in `cboone/gh-actions` (latest release: v2.1.0, flo
       with:
         binary-name: PROJECT-NAME
   ```
+
 - Keep `on:` (tag trigger), `concurrency:`, `permissions: contents: write`
 
 **`plugins/scaffold-rust-cli/references/release-workflow-macos-only.md`**
+
 - Same, constraining targets to macOS only
 
 **`plugins/scaffold-rust-cli/.claude-plugin/plugin.json`** -- bump to 1.1.0
@@ -123,6 +141,7 @@ Available reusable workflows in `cboone/gh-actions` (latest release: v2.1.0, flo
 ### 8. setup-linters (1.8.0 -> 1.9.0, minor)
 
 **`plugins/setup-linters/skills/setup-linters/references/tools/github-actions-ci.md`**
+
 - Rust section (lines 155-210): Replace inline clippy/rustfmt/deny/typos job with `rust-ci.yml@v2` example (with `run-test: false` for lint-only usage)
 - Combined Multi-Language Workflow (lines 492-545): Add Rust and Zig reusable workflow examples
 - Notes (line 562): Update "Go and Shell templates" to include Rust and Zig

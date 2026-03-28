@@ -335,11 +335,11 @@ test-scrut:
 
 ### Placeholders
 
-| Placeholder    | Description                                                      | Example                         |
-| -------------- | ---------------------------------------------------------------- | ------------------------------- |
-| `SETUP_CMD`    | Command to build the project binary before running scrut tests   | `make build`, `cargo build --release`, `zig build` |
-| `TOOL_BIN`     | Environment variable name for the binary path                    | `BOPCA_BIN`                     |
-| `BINARY_PATH`  | Path to the built binary or executable script                    | `./bin/bopca`, `./target/release/bopca` |
+| Placeholder   | Description                                                    | Example                                            |
+| ------------- | -------------------------------------------------------------- | -------------------------------------------------- |
+| `SETUP_CMD`   | Command to build the project binary before running scrut tests | `make build`, `cargo build --release`, `zig build` |
+| `TOOL_BIN`    | Environment variable name for the binary path                  | `BOPCA_BIN`                                        |
+| `BINARY_PATH` | Path to the built binary or executable script                  | `./bin/bopca`, `./target/release/bopca`            |
 
 ### Notes
 
