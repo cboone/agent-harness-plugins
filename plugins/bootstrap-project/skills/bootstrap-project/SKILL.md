@@ -54,7 +54,7 @@ Check for files and directories that indicate what is already set up:
 | `Makefile`                         | Build targets exist     | `scaffold-go-*` / `setup-ci`                  |
 | Linter config files                | Linters exist           | `setup-linters` / `scaffold-go-*`             |
 | `tests/scrut/`                     | Scrut tests exist       | `add-scrut-cli-tests`                         |
-| `install.sh` or `Formula/`         | Installers exist        | `setup-installers`                            |
+| `Formula/`                         | Installers exist        | `setup-installers`                            |
 | `CONTRIBUTING.md`                  | Community files exist   | `add-community-files`                         |
 
 ### 3. Build the Plan
@@ -106,7 +106,7 @@ Example output:
 | 5   | setup-secret-scanning    | Will run       | Gitleaks + TruffleHog secret scanning       |
 | 6   | add-goreleaser-homebrew  | Skipped        | Covered by scaffold-go-cli                  |
 | 7   | add-community-files      | Will run       | CONTRIBUTING, CoC, SECURITY, PR template    |
-| 8   | setup-installers         | Will run       | Homebrew formula, install.sh                |
+| 8   | setup-installers         | Will run       | Homebrew formula                            |
 | 9   | add-scrut-cli-tests      | Will run       | Scrut CLI integration tests                 |
 ```
 

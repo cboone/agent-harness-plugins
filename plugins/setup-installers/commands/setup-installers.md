@@ -1,7 +1,7 @@
 ---
 description: Set up installer and distribution methods for Go, Swift, and Rust projects
 disable-model-invocation: true
-argument-hint: "[homebrew|shell|go-install|cargo-install]"
+argument-hint: "[homebrew|go-install|cargo-install]"
 ---
 
 # Setup Installers
@@ -11,7 +11,6 @@ Set up installer and distribution methods for a project. Supports Go, Swift, and
 Installer types:
 
 - **Homebrew**: a Homebrew tap formula for `brew install`
-- **Shell install script**: a portable `install.sh` that downloads from GitHub Releases
 - **go install**: compatibility and README instructions for `go install` (Go only)
 - **cargo install**: compatibility and README instructions for `cargo install` (Rust only)
 
@@ -42,14 +41,13 @@ Additional checks regardless of language:
 
 **Rust binary detection**: Check `Cargo.toml` for `[[bin]]` sections, a `src/main.rs` file, or binaries under `src/bin/` (for example, `src/bin/*.rs`) to confirm this is a binary crate (not a library).
 
-If none of the above markers are found, inform the user that only the shell install script is applicable as a generic binary distribution method.
+If none of the above markers are found, inform the user that the project type is not supported. This command requires a Go, Swift, or Rust project.
 
 ### 2. Detect Existing Installers
 
 Check for installers that are already set up:
 
 - **Homebrew**: look for a `homebrew_casks:` or `brews:` section in `.goreleaser.yml` or `.goreleaser.yaml`, or a standalone `Formula/` directory
-- **Shell install script**: look for `install.sh` in the repo root or a `scripts/` directory
 - **go install**: grep the README for `go install` instructions (Go only)
 - **cargo install**: grep the README for `cargo install` instructions (Rust only)
 - **Release workflow**: look for `.github/workflows/release.yml` or `.github/workflows/release.yaml`
@@ -58,16 +56,15 @@ Report any existing installers to the user before proceeding. Existing installer
 
 ### 3. Select Installer Types
 
-If `$ARGUMENTS` is provided (e.g., `homebrew`, `shell`, `go-install`, `cargo-install`, or a comma-separated combination), use that selection.
+If `$ARGUMENTS` is provided (e.g., `homebrew`, `go-install`, `cargo-install`, or a comma-separated combination), use that selection.
 
 Otherwise, ask the user which installer types to set up. Present applicable options based on the detected language:
 
-| Installer            | Go  | Swift | Rust | Other |
-| -------------------- | --- | ----- | ---- | ----- |
-| Homebrew             | Yes | Yes   | Yes  | No    |
-| Shell install script | Yes | Yes   | Yes  | Yes   |
-| go install           | Yes | No    | No   | No    |
-| cargo install        | No  | No    | Yes  | No    |
+| Installer     | Go  | Swift | Rust |
+| ------------- | --- | ----- | ---- |
+| Homebrew      | Yes | Yes   | Yes  |
+| go install    | Yes | No    | No   |
+| cargo install | No  | No    | Yes  |
 
 Include notes about which installers are already detected and which are not applicable to the project type.
 
@@ -222,172 +219,7 @@ gh repo create "${OWNER}/homebrew-tap" --public --description "Homebrew tap for 
 
 Then offer to create the issue after the repo is created.
 
-### 6. Set Up Shell Install Script
-
-Skip this section if the user did not select the shell install script.
-
-Generate `install.sh` in the repo root. For macOS-only projects, add the platform guard shown in the "macOS-only variant" note below.
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Install PROJECT-NAME from GitHub Releases.
-#
-# Usage:
-#   curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/install.sh | bash
-#   curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/install.sh | bash -s -- --version v1.0.0
-
-REPO="OWNER/REPO"
-BINARY="PROJECT-NAME"
-INSTALL_DIR="${INSTALL_DIR:-${HOME}/.local/bin}"
-
-# Parse arguments.
-VERSION=""
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --version)
-      VERSION="$2"
-      shift 2
-      ;;
-    *)
-      printf 'Unknown argument: %s\n' "$1" >&2
-      exit 1
-      ;;
-  esac
-done
-
-# Determine the latest version if not specified.
-if [[ -z "${VERSION}" ]]; then
-  VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/' || true)"
-  if [[ -z "${VERSION}" ]]; then
-    printf 'Error: could not determine latest version.\n' >&2
-    exit 1
-  fi
-fi
-
-# Detect OS.
-OS="$(uname -s)"
-case "${OS}" in
-  Linux)  OS="linux" ;;
-  Darwin) OS="darwin" ;;
-  *)
-    printf 'Unsupported OS: %s\n' "${OS}" >&2
-    exit 1
-    ;;
-esac
-
-# Detect architecture.
-ARCH="$(uname -m)"
-case "${ARCH}" in
-  x86_64)  ARCH="amd64" ;;
-  aarch64) ARCH="arm64" ;;
-  arm64)   ARCH="arm64" ;;
-  *)
-    printf 'Unsupported architecture: %s\n' "${ARCH}" >&2
-    exit 1
-    ;;
-esac
-
-# Download.
-TARBALL="${BINARY}-${VERSION#v}-${OS}-${ARCH}.tar.gz"
-URL="https://github.com/${REPO}/releases/download/${VERSION}/${TARBALL}"
-
-TMPDIR="$(mktemp -d)"
-trap 'rm -rf "${TMPDIR}"' EXIT
-
-printf 'Downloading %s %s for %s/%s...\n' "${BINARY}" "${VERSION}" "${OS}" "${ARCH}"
-curl -fsSL -o "${TMPDIR}/${TARBALL}" "${URL}"
-
-# Verify checksum if checksums file exists.
-CHECKSUMS_URL="https://github.com/${REPO}/releases/download/${VERSION}/checksums.txt"
-if curl -fsSL -o "${TMPDIR}/checksums.txt" "${CHECKSUMS_URL}" 2>/dev/null; then
-  printf 'Verifying checksum...\n'
-  EXPECTED="$(awk -v t="${TARBALL}" '$0 ~ t { print $1 }' "${TMPDIR}/checksums.txt")"
-  if [[ -n "${EXPECTED}" ]]; then
-    if command -v sha256sum >/dev/null 2>&1; then
-      ACTUAL="$(sha256sum "${TMPDIR}/${TARBALL}" | awk '{ print $1 }')"
-    elif command -v shasum >/dev/null 2>&1; then
-      ACTUAL="$(shasum -a 256 "${TMPDIR}/${TARBALL}" | awk '{ print $1 }')"
-    else
-      printf 'Warning: no sha256 tool found, skipping checksum verification.\n' >&2
-      ACTUAL="${EXPECTED}"
-    fi
-    if [[ "${ACTUAL}" != "${EXPECTED}" ]]; then
-      printf 'Checksum mismatch: expected %s, got %s\n' "${EXPECTED}" "${ACTUAL}" >&2
-      exit 1
-    fi
-    printf 'Checksum verified.\n'
-  fi
-fi
-
-# Extract and install.
-if tar -tzf "${TMPDIR}/${TARBALL}" | grep -qE '(^/|(^|/)\.\\.(/|$))'; then
-  printf 'Error: archive contains unsafe paths, refusing to install.\n' >&2
-  exit 1
-fi
-EXTRACT_DIR="${TMPDIR}/extract"
-mkdir -p "${EXTRACT_DIR}"
-tar -xzf "${TMPDIR}/${TARBALL}" -C "${EXTRACT_DIR}"
-mkdir -p "${INSTALL_DIR}"
-install -m 755 "${EXTRACT_DIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
-
-printf 'Installed %s to %s/%s\n' "${BINARY}" "${INSTALL_DIR}" "${BINARY}"
-
-# Check if INSTALL_DIR is in PATH.
-case ":${PATH}:" in
-  *":${INSTALL_DIR}:"*) ;;
-  *)
-    printf '\nNote: %s is not in your PATH.\n' "${INSTALL_DIR}"
-    # shellcheck disable=SC2016
-    printf 'Add it with: export PATH="%s:${PATH}"\n' "${INSTALL_DIR}"
-    ;;
-esac
-```
-
-Replace `OWNER`, `REPO`, and `PROJECT-NAME` with the actual values.
-
-**macOS-only variant**: For macOS-only projects, add a platform guard after `set -euo pipefail` and remove the Linux case from OS detection:
-
-```bash
-# This tool is macOS-only.
-if [[ "$(uname -s)" != "Darwin" ]]; then
-  printf 'Error: %s is only available for macOS.\n' "PROJECT-NAME" >&2
-  exit 1
-fi
-
-OS="darwin"
-```
-
-This replaces the full OS detection `case` statement. Keep the architecture detection as-is.
-
-**GoReleaser naming**: If the project uses GoReleaser, adjust the tarball naming pattern to match GoReleaser's output format (typically `PROJECT-NAME_VERSION_OS_ARCH.tar.gz` with underscores and no `v` prefix on the version).
-
-Make the script executable:
-
-```bash
-chmod +x install.sh
-```
-
-After generating install.sh, validate it with ShellCheck if available:
-
-```bash
-command -v shellcheck >/dev/null 2>&1 && shellcheck install.sh
-```
-
-If ShellCheck reports any issues, fix or suppress them before proceeding. If ShellCheck is not installed, skip validation and note in the summary that the user can install it with `brew install shellcheck`.
-
-After creating install.sh, check if `.prettierignore` exists. If it does and does not already contain `*.sh`, append `*.sh` to it. Prettier has no parser for shell scripts, so any `.sh` file will cause `prettier --check .` to fail.
-
-```bash
-if [ -f .prettierignore ]; then
-  grep -q '^\*\.sh$' .prettierignore || printf '\n*.sh\n' >> .prettierignore
-fi
-```
-
-If `.prettierignore` does not exist, skip this step.
-
-### 7. Set Up Language-Specific Install Method
+### 6. Set Up Language-Specific Install Method
 
 #### go install (Go projects only)
 
@@ -420,9 +252,9 @@ Check compatibility:
 
 Do not create any files for this installer type. The output is README content only.
 
-### 8. Set Up Release Workflow
+### 7. Set Up Release Workflow
 
-If the user selected Homebrew or shell install script, the generated files depend on GitHub Releases with tarballs in a specific naming format. Offer to generate a release workflow.
+If the user selected Homebrew, the generated files depend on GitHub Releases with tarballs in a specific naming format. Offer to generate a release workflow.
 
 **If GoReleaser exists**: Skip this step. GoReleaser handles releases. Note this in the summary.
 
@@ -605,7 +437,7 @@ jobs:
 Notes:
 
 - Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
-- The build step maps `x86_64` to `amd64` in the tarball name to match the `install.sh` convention
+- The build step maps `x86_64` to `amd64` in the tarball name to match the tarball naming convention used by Homebrew formulas
 - The binary path varies between Swift versions; the template tries `.build/apple/Products/Release/` first, then falls back to `--show-bin-path`
 - Swift cross-compilation to Linux is not supported in this template; add Linux targets manually if needed
 
@@ -712,7 +544,7 @@ Notes:
 - For Rust workspace projects, adjust the `cargo build` command to target the specific binary
 - **Action pinning**: `dtolnay/rust-toolchain@stable` and `softprops/action-gh-release@v2` follow this project's convention of pinning to version tags
 
-### 9. Update README
+### 8. Update README
 
 Add or merge an **Installation** section in the README. If an Installation section already exists, merge the new methods into it without removing existing content.
 
@@ -725,18 +557,6 @@ Use this structure (including only the methods that were set up):
 
 ```bash
 brew install OWNER/tap/PROJECT-NAME
-```
-
-### Shell script
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/install.sh | bash
-```
-
-To install a specific version:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/install.sh | bash -s -- --version v1.0.0
 ```
 
 ### go install
@@ -766,21 +586,19 @@ Adjust the Go version requirement based on the minimum version in `go.mod`. Adju
 
 If the README already has installation instructions, integrate the new methods into the existing section rather than creating a duplicate.
 
-### 10. Print Summary
+### 9. Print Summary
 
 After completing all selected installer types, print a summary:
 
 - **Files created**: list each new file with its path (including release workflow if generated)
-- **Files modified**: list each modified file with what changed (including `.prettierignore` if updated)
+- **Files modified**: list each modified file with what changed
 - **Skipped installers**: note any installers that were skipped and why (e.g., "Homebrew: already configured via GoReleaser", "Release workflow: GoReleaser handles releases")
 - **Next steps**: note any required follow-up actions:
   - For Homebrew standalone formula: if an issue was created on the tap repo, note the issue URL; otherwise, remind the user to create the tap repository and push the formula
-  - For shell install script: the script expects GitHub Releases with tarballs in the naming format described above
   - For go install: ensure the module has no `replace` directives and is tagged with a version
   - For cargo install: ensure the crate is published to crates.io (if applicable)
   - For release workflow: tag a release to trigger the workflow (e.g., `git tag v0.1.0 && git push origin v0.1.0`)
   - If `HOMEBREW_TAP_TOKEN` was found to be missing during step 5: remind the user to configure it before the first release, either by running `/add-goreleaser-homebrew` for guided setup or by manually creating a fine-grained PAT and adding it as a repository secret
-  - If ShellCheck was not available: note that the user can install it with `brew install shellcheck`
 
 ## Error Handling
 
@@ -792,6 +610,5 @@ After completing all selected installer types, print a summary:
 - If `Package.swift` has no executable targets, warn that the project may be a library (installer setup is for binary distributions)
 - If `Cargo.toml` has no `[[bin]]` section and no `src/main.rs`, warn that the project may be a library
 - If the README does not exist, create one with just the Installation section
-- If ShellCheck is not installed, skip validation and note in the summary
 - If the release workflow already exists, ask before overwriting
 - If the homebrew-tap repo cannot be accessed, fall back to providing formula content inline

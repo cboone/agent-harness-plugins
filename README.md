@@ -364,7 +364,7 @@ Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and
 
 #### Setup Installers
 
-Set up installer and distribution methods for Go, Swift, and Rust projects: Homebrew tap formula, shell install script, go/cargo install, release workflow generation, and homebrew-tap issue creation. Detects existing release infrastructure and generates appropriate files.
+Set up installer and distribution methods for Go, Swift, and Rust projects: Homebrew tap formula, go/cargo install, release workflow generation, and homebrew-tap issue creation. Detects existing release infrastructure and generates appropriate files.
 
 > **Trigger:** `/setup-installers`
 > **Details:** [README](./plugins/setup-installers/README.md)
