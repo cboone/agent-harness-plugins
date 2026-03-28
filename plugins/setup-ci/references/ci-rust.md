@@ -1,8 +1,6 @@
 # Rust CI Workflow
 
-Use this template for Rust projects.
-
-7 parallel jobs: test, lint, format, build, deny, audit, typos.
+Use this template for Rust projects. Uses the `cboone/gh-actions` reusable workflow, which creates parallel jobs for test (with nextest), lint (clippy), format check, deny, audit, and typos internally.
 
 ```yaml
 name: CI
@@ -37,133 +35,31 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Run tests
-        run: cargo nextest run
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Run clippy
-        run: cargo clippy -- -D warnings
-
-  format:
-    name: Format
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-
-      - name: Check formatting
-        run: cargo fmt -- --check
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build
-        run: cargo build
-
-  deny:
-    name: Deny
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Install cargo-deny
-        uses: taiki-e/install-action@cargo-deny
-
-      - name: Run cargo deny
-        run: cargo deny check
-
-  audit:
-    name: Audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Install cargo-audit
-        uses: taiki-e/install-action@cargo-audit
-
-      - name: Run cargo audit
-        run: cargo audit
-
-  typos:
-    name: Typos
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Check for typos
-        uses: crate-ci/typos@v1
+  ci:
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@v2
 ```
 
 ## Notes
 
-- Uses `dtolnay/rust-toolchain@stable` for toolchain setup
-- `Swatinem/rust-cache@v2` caches Cargo dependencies and build artifacts
-- Clippy runs with `-D warnings` to fail on any warning
-- The format job uses `cargo fmt -- --check` (check mode, no modifications)
-- `cargo nextest run` replaces `cargo test` for faster parallel test execution with better output. Installed via `taiki-e/install-action@nextest`.
-- `cargo-deny` checks dependency licenses, bans, advisories, and sources against a `deny.toml` config. The deny and audit jobs do not need Rust cache since they install standalone binaries.
-- `cargo-audit` scans the RustSec advisory database for known vulnerabilities in dependencies.
-- `typos` catches spelling mistakes in source code and documentation. The job does not need a Rust toolchain since the action bundles the binary.
-- **Action pinning**: `dtolnay/rust-toolchain@stable`, `Swatinem/rust-cache@v2`, `taiki-e/install-action@nextest`, `taiki-e/install-action@cargo-deny`, `taiki-e/install-action@cargo-audit`, and `crate-ci/typos@v1` follow this project's convention of pinning third-party actions to upstream-maintained tags and branch references rather than commit SHAs. Generated workflows should keep these references as shown.
+- The reusable workflow creates parallel jobs internally for test (with nextest), lint (clippy with `-D warnings`), format check (rustfmt), deny, audit, and typos
+- All checks are enabled by default with no `with:` inputs needed. To disable a specific check, set its input to `false` (e.g., `run-deny: false`, `run-audit: false`, `run-typos: false`)
+- There is no separate build job because `cargo nextest run` compiles the project as part of testing
+- The reusable workflow handles Rust toolchain setup, dependency caching, and tool installation internally
+- Optional inputs include `rust-version` (default: `stable`), `use-nextest` (default: `true`), `clippy-args`, `cargo-features`, and `coverage` (with Codecov integration)
 
 ## macOS-Only Projects
 
-For projects that depend on macOS system frameworks (Security.framework, AppKit, CoreFoundation, etc.), swap all `runs-on: ubuntu-latest` to `runs-on: macos-latest`. Indicators that a project is macOS-only:
+For projects that depend on macOS system frameworks (Security.framework, AppKit, CoreFoundation, etc.), add the `runs-on` input:
+
+```yaml
+jobs:
+  ci:
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@v2
+    with:
+      runs-on: macos-latest
+```
+
+Indicators that a project is macOS-only:
 
 - `Cargo.toml` contains `[target.'cfg(target_os = "macos")']` dependencies
 - Source code imports `security_framework`, `core_foundation`, `cocoa`, `objc`, or similar crates

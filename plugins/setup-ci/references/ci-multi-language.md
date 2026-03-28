@@ -1,8 +1,8 @@
 # Multi-Language CI Workflow
 
-For projects with multiple detected languages, combine language-specific jobs into one workflow file. Go uses a reusable workflow call; other languages use inline jobs.
+For projects with multiple detected languages, combine language-specific jobs into one workflow file. Go, Rust, and Zig use reusable workflow calls; other languages use inline jobs.
 
-Example combining Go and JavaScript:
+Example combining Go, Rust, and JavaScript:
 
 ```yaml
 name: CI
@@ -42,6 +42,9 @@ jobs:
     with:
       go-version-file: go.mod
       run-format-check: true
+
+  rust-ci:
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@v2
 
   js-test:
     name: "JS: Test"
@@ -86,7 +89,8 @@ jobs:
 
 ## Notes
 
-- Go uses a reusable workflow call that creates its own parallel jobs internally
-- Non-Go languages use inline jobs with language-prefixed IDs (e.g., `js-test`, `js-lint`)
+- Go, Rust, and Zig use reusable workflow calls that create their own parallel jobs internally
+- Non-reusable languages (JS/TS, Python, Ruby) use inline jobs with language-prefixed IDs (e.g., `js-test`, `js-lint`)
 - Prefix job display names with the language (e.g., `"JS: Test"`, `"JS: Lint"`)
 - Only include jobs relevant to each detected language
+- Zig requires the `zig-version` input (e.g., `zig-version: "0.14.0"`); Go and Rust work with defaults

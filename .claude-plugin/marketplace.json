@@ -49,7 +49,7 @@
       "name": "add-scrut-cli-tests",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/add-scrut-cli-tests",
-      "version": "1.4.0"
+      "version": "1.5.0"
     },
     {
       "author": {
@@ -231,7 +231,7 @@
       "name": "lint-and-fix",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/lint-and-fix",
-      "version": "1.3.2"
+      "version": "1.3.3"
     },
     {
       "author": {
@@ -385,7 +385,7 @@
       "name": "scaffold-rust-cli",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-rust-cli",
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     {
       "author": {
@@ -399,7 +399,7 @@
       "name": "setup-ci",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-ci",
-      "version": "1.6.0"
+      "version": "1.7.0"
     },
     {
       "author": {
@@ -427,7 +427,7 @@
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.8.0"
+      "version": "1.9.0"
     },
     {
       "author": {
