@@ -1,6 +1,6 @@
 # Setup Installers
 
-Set up installer and distribution methods for Go, Swift, and Rust projects: Homebrew tap formula, shell install script, go/cargo install, and release workflow.
+Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap formula, shell install script, go/cargo install, and release workflow.
 
 **Type:** Command
 **Trigger:** `/setup-installers`
@@ -22,6 +22,7 @@ Then select **Setup Installers** from the available plugins.
 | Go       | Yes      | Yes          | Yes        | -             | Yes (unless GoReleaser) |
 | Swift    | Yes      | Yes          | -          | -             | Yes                     |
 | Rust     | Yes      | Yes          | -          | Yes           | Yes                     |
+| Zig      | Yes      | Yes          | -          | -             | Yes                     |
 
 ## What It Does
 
