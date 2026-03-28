@@ -27,6 +27,7 @@ Scan for language and framework markers using Glob. Exclude `node_modules/`, `.y
 | `package.json` + JS/TS source files                         | JavaScript/TypeScript |
 | `pyproject.toml`, `setup.py`, `requirements.txt`            | Python                |
 | `Cargo.toml`                                                | Rust                  |
+| `build.zig` + (`src/main.zig` or `src/`)                    | Zig CLI               |
 | `Gemfile`, `*.gemspec`                                      | Ruby                  |
 | `*.sh`, `bin/*`, `scripts/*`                                | Shell                 |
 | `*.zsh`, `#!/usr/bin/env zsh` shebangs, `.zshrc`, `.zshenv` | Zsh                   |
