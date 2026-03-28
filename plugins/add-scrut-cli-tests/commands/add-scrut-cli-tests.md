@@ -23,6 +23,7 @@ Identify the project language by checking for manifest files:
 | `go.mod`                         | Go       |
 | `Package.swift`                  | Swift    |
 | `Cargo.toml`                     | Rust     |
+| `build.zig`                      | Zig      |
 | `pyproject.toml`, `setup.py`     | Python   |
 | `Gemfile`, `*.gemspec`           | Ruby     |
 | Executable scripts (no manifest) | Shell    |
@@ -41,11 +42,12 @@ Collect the following, inferring from existing files where possible:
   - **Go**: check the Makefile `build` target for the output binary name (look for `-o bin/NAME` or `-o NAME`), or derive from the last segment of the module path in `go.mod`
   - **Swift**: check `Package.swift` for executable target names, or check the Makefile `build` target
   - **Rust**: check `Cargo.toml` for `[[bin]]` entries or the `name` field under `[package]`
+  - **Zig**: check `build.zig` for `addExecutable()` name argument, or use the directory name
   - **Python**: check `pyproject.toml` for `[project.scripts]` entries
   - **Ruby**: check the gemspec for `executables` or look in `bin/` or `exe/`
   - **Shell**: use the script filename as the binary name
 - **Binary path**: determine the full path used to run the binary:
-  - **Compiled languages** (Go, Swift, Rust): typically `bin/NAME` or a build output directory (e.g., `$(CURDIR)/bin/NAME`)
+  - **Compiled languages** (Go, Swift, Rust, Zig): typically `bin/NAME` or a build output directory (e.g., `$(CURDIR)/bin/NAME` for Go, `$(CURDIR)/zig-out/bin/NAME` for Zig)
   - **Interpreted languages** (Python, Ruby, Shell): the script path itself (e.g., `bin/NAME`, `./NAME`)
 - **Environment variable name**: derive from the binary name, uppercased with hyphens replaced by underscores, suffixed with `_BIN` (e.g., `bopca` becomes `BOPCA_BIN`, `my-tool` becomes `MY_TOOL_BIN`)
 - **Build required**: whether a build step is needed before running tests (yes for compiled languages, no for interpreted languages)
@@ -363,6 +365,7 @@ test-scrut:
   - **Go**: `actions/setup-go@v6` with `go-version` and caching settings matching the existing workflow
   - **Swift**: Swift is preinstalled on macOS runners; for Ubuntu runners, use a Swift setup action or install step
   - **Rust**: `dtolnay/rust-toolchain` with the appropriate toolchain version
+  - **Zig**: `mlugg/setup-zig@v2` (reads version from `build.zig.zon` by default)
   - **Python**: `actions/setup-python@v5` with `python-version` matching the existing workflow
   - **Ruby**: `ruby/setup-ruby@v1` with `ruby-version` matching the existing workflow
   - **Shell**: no language setup step needed; remove the placeholder entirely
