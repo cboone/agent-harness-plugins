@@ -40,7 +40,12 @@ git tag --list 'v*' --sort=-version:refname
 
 # Get today's date
 date +%Y-%m-%d
+
+# Check for a release workflow triggered by version tags
+grep -rl '"v\*"' .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null
 ```
+
+If the `grep` returns any files, note that a **release workflow exists** that will automatically create a GitHub Release when a version tag is pushed. This flag affects step 11.
 
 **Abort conditions:**
 
@@ -229,15 +234,26 @@ Release vVERSION tagged locally.
 
 ### 11. Publish
 
-Ask the user if they want to push the commit and tag and create a GitHub Release:
+Ask the user if they want to push the commit and tag.
+
+If **no release workflow** was detected in step 1:
 
 ```text
 Push and create a GitHub Release for vVERSION?
 ```
 
+If a **release workflow was detected** in step 1:
+
+```text
+Push commit and tag for vVERSION?
+(Release workflow detected; it will create the GitHub Release automatically.)
+```
+
 #### If the user declines
 
-Show the manual commands and stop:
+Show the manual commands and stop. The commands depend on whether a release workflow was detected.
+
+If **no release workflow** was detected:
 
 ```text
 Release vVERSION is ready locally.
@@ -246,6 +262,18 @@ To publish manually:
   git push origin HEAD
   git push origin vVERSION
   gh release create vVERSION --title "vVERSION" --notes-file <changelog-notes-file> --verify-tag
+```
+
+If a **release workflow was detected**:
+
+```text
+Release vVERSION is ready locally.
+
+To publish manually:
+  git push origin HEAD
+  git push origin vVERSION
+
+The release workflow will create the GitHub Release automatically when the tag is pushed.
 ```
 
 #### If the user accepts
@@ -265,15 +293,30 @@ git push origin HEAD
 git push origin vVERSION
 ```
 
-If the push is rejected, report the error and stop. Never force push. Show the remaining manual commands (retry the failed `git push` command(s), then run the `gh release create` command) so the user can complete the process after resolving the push issue.
+If the push is rejected, report the error and stop. Never force push. Show the remaining manual commands so the user can complete the process after resolving the push issue: retry the failed `git push` command(s), and if no release workflow was detected, also show the `gh release create` command.
 
-##### 11c. Extract changelog section
+##### 11c. Check for release workflow
+
+If a **release workflow was detected** in step 1, skip steps 11d and 11e. Report:
+
+```text
+Release vVERSION published.
+
+  Tag: vVERSION
+  GitHub Release: the release workflow will create it automatically.
+```
+
+Then stop.
+
+If **no release workflow** was detected, continue to step 11d.
+
+##### 11d. Extract changelog section
 
 Read `CHANGELOG.md` and extract the content for the new version. The section starts after the `## [VERSION] - YYYY-MM-DD` heading and ends before the next `## [` heading or before the comparison link block at the bottom of the file. Include the category headings (`### Added`, `### Fixed`, etc.) and their entries. Do not include the version heading itself or comparison links.
 
 If `CHANGELOG.md` does not exist or the version section cannot be found, use the fallback: `Release vVERSION`.
 
-##### 11d. Create GitHub Release
+##### 11e. Create GitHub Release
 
 First, check that `gh` is available:
 
@@ -303,7 +346,7 @@ Always remove the tmpfile after the command completes, regardless of success or 
 rm -f TMPFILE
 ```
 
-##### 11e. Report results
+##### 11f. Report results
 
 ```text
 Release vVERSION published.
@@ -332,5 +375,6 @@ Release vVERSION published.
 - **No remote configured:** Skip comparison links in CHANGELOG, skip push and GitHub Release in step 11, warn the user.
 - **First release:** Use `v0.0.0` as the base for bump calculation, create the CHANGELOG from scratch, skip doc version updates (no old version to replace).
 - **Push rejected:** Report the error and show remaining manual commands. Never force push.
+- **Release workflow detected:** Skip manual GitHub Release creation; the workflow will create it when the tag is pushed. Push the commit and tag only.
 - **`gh` not available:** Push the commit and tag, skip GitHub Release creation, note that `gh` is required for GitHub Releases and show the manual `gh release create` command.
 - **GitHub Release creation fails:** The push already succeeded, so the tag is on the remote. Report the `gh` error and show the manual `gh release create` command for the user to retry.
