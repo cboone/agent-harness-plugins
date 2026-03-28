@@ -26,8 +26,8 @@ Scan for language and framework markers using Glob. Exclude `node_modules/`, `.y
 | `go.mod` without `main.go` or `cmd/`                        | Go library            |
 | `package.json` + JS/TS source files                         | JavaScript/TypeScript |
 | `pyproject.toml`, `setup.py`, `requirements.txt`            | Python                |
-| `Cargo.toml` + (`src/main.rs` or `[[bin]]` in Cargo.toml)   | Rust CLI              |
-| `Cargo.toml` without `src/main.rs` or `[[bin]]`             | Rust library          |
+| `Cargo.toml` + (`src/main.rs`, `src/bin/*.rs`, or `[[bin]]` in Cargo.toml) | Rust CLI     |
+| `Cargo.toml` without `src/main.rs`, `src/bin/*.rs`, or `[[bin]]`           | Rust library |
 | `Gemfile`, `*.gemspec`                                      | Ruby                  |
 | `*.sh`, `bin/*`, `scripts/*`                                | Shell                 |
 | `*.zsh`, `#!/usr/bin/env zsh` shebangs, `.zshrc`, `.zshenv` | Zsh                   |

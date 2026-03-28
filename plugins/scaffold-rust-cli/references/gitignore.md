@@ -22,7 +22,6 @@ token.json
 
 # Rust
 /target
-debug
 **/*.rs.bk
 *.pdb
 

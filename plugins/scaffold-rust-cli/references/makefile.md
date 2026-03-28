@@ -33,7 +33,7 @@ format-check: ## Check formatting with Prettier
 	prettier --check .
 
 lint-md: ## Lint Markdown files
-	npx markdownlint-cli2 "**/*.md"
+	markdownlint-cli2 "**/*.md"
 
 lint-actions: ## Lint GitHub Actions workflows
 	actionlint

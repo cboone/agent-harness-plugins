@@ -77,7 +77,7 @@ Some tools only apply to certain project types:
 | ------------------------- | --------------------------------------------------------------- |
 | `scaffold-go-cli`         | Go CLI project (go.mod + main.go or cmd/)                       |
 | `scaffold-go-library`     | Go library project (go.mod, no main.go or cmd/)                 |
-| `scaffold-rust-cli`       | Rust CLI project (Cargo.toml + src/main.rs or `[[bin]]` target) |
+| `scaffold-rust-cli`       | Rust CLI project (Cargo.toml + src/main.rs, src/bin/*.rs, or `[[bin]]` target) |
 | `add-goreleaser-homebrew` | Go CLI project without existing GoReleaser                      |
 | `setup-installers`        | Project produces a distributable binary (CLI)                   |
 | `add-scrut-cli-tests`     | Project produces a CLI binary                                   |
