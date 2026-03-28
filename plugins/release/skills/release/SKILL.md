@@ -42,10 +42,12 @@ git tag --list 'v*' --sort=-version:refname
 date +%Y-%m-%d
 
 # Check for a release workflow triggered by version tags
-grep -rl '"v\*"' .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null
+if [ -d .github/workflows ]; then
+  grep -rl '"v\*"' .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null || true
+fi
 ```
 
-If the `grep` returns any files, note that a **release workflow exists** that will automatically create a GitHub Release when a version tag is pushed. This flag affects step 11.
+If the `grep` returns any files, note that a **release workflow likely exists** that will automatically create a GitHub Release when a version tag is pushed. This detection is best-effort: it may miss workflows that use different quoting (e.g., single quotes around `v*`) or match unrelated workflows. If the detection seems wrong, ask the user to confirm. This flag affects step 11.
 
 **Abort conditions:**
 
@@ -300,10 +302,10 @@ If the push is rejected, report the error and stop. Never force push. Show the r
 If a **release workflow was detected** in step 1, skip steps 11d and 11e. Report:
 
 ```text
-Release vVERSION published.
+Tagged vVERSION and pushed to origin.
 
   Tag: vVERSION
-  GitHub Release: the release workflow will create it automatically.
+  GitHub Release: the release workflow is expected to create it automatically.
 ```
 
 Then stop.
