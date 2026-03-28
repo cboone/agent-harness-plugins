@@ -9,5 +9,5 @@
   "name": "add-scrut-cli-tests",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "commands": "./commands",
-  "version": "1.4.0"
+  "version": "1.5.0"
 }
