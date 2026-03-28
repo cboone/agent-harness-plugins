@@ -1,9 +1,10 @@
 # Release
 
-Prepare a versioned release: analyze commits, update versions and changelog, create a release commit, and tag locally.
+Prepare a versioned release: analyze commits, update versions and changelog, create a release commit, tag locally, and optionally publish a GitHub Release.
 
 **Type:** Skill
 **Trigger:** `/release`
+**Requires:** [`gh`](https://cli.github.com/) (optional, for GitHub Release creation)
 
 ## Installation
 
@@ -17,7 +18,7 @@ Then select **Release** from the available plugins.
 
 ## What It Does
 
-Detects your project type (Go CLI, Go library, or generic), analyzes conventional commits since the last release to recommend a version bump, updates version references in project files and documentation, manages `CHANGELOG.md` in Keep a Changelog format, creates a GPG-signed release commit, and applies an annotated git tag. The tag and commit stay local until you push.
+Detects your project type (Go CLI, Go library, or generic), analyzes conventional commits since the last release to recommend a version bump, updates version references in project files and documentation, manages `CHANGELOG.md` in Keep a Changelog format, creates a GPG-signed release commit, and applies an annotated git tag. Optionally pushes the commit and tag and creates a GitHub Release with the version's changelog section as release notes.
 
 ## Usage
 
@@ -43,7 +44,7 @@ This skill runs git commands that trigger permission prompts. To allow them auto
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git status --porcelain)", "Bash(git branch --show-current)", "Bash(git tag *)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git remote get-url *)", "Bash(date *)"]
+    "allow": ["Bash(git status --porcelain)", "Bash(git branch --show-current)", "Bash(git tag *)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git remote get-url *)", "Bash(git push *)", "Bash(command -v gh)", "Bash(mktemp /tmp/gh-release-notes-*)", "Bash(rm -f /tmp/gh-release-notes-*)", "Bash(gh release create *)", "Bash(date *)"]
   }
 }
 ```

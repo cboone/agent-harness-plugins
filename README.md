@@ -100,9 +100,10 @@ Commit all changes, push to remote, and create a GitHub pull request in one auto
 
 #### Release
 
-Prepare a versioned release by analyzing conventional commits, recommending a version bump, updating version references in project files and documentation, managing `CHANGELOG.md` in Keep a Changelog format, creating a release commit, and tagging locally. Detects project type automatically (Go CLI, Go library, or generic).
+Prepare a versioned release by analyzing conventional commits, recommending a version bump, updating version references in project files and documentation, managing `CHANGELOG.md` in Keep a Changelog format, creating a release commit, tagging locally, and optionally pushing and creating a GitHub Release. Detects project type automatically (Go CLI, Go library, or generic).
 
 > **Trigger:** `/release`
+> **Requires:** [`gh`](https://cli.github.com/) (optional, for GitHub Release creation)
 > **Details:** [README](./plugins/release/README.md)
 
 #### Review Branch
@@ -364,7 +365,7 @@ Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and
 
 #### Setup Installers
 
-Set up installer and distribution methods for Go, Swift, and Rust projects: Homebrew tap formula, shell install script, go/cargo install, release workflow generation, and homebrew-tap issue creation. Detects existing release infrastructure and generates appropriate files.
+Set up installer and distribution methods for Go, Swift, and Rust projects: Homebrew tap formula, go/cargo install, release workflow generation, and homebrew-tap issue creation. Detects existing release infrastructure and generates appropriate files.
 
 > **Trigger:** `/setup-installers`
 > **Details:** [README](./plugins/setup-installers/README.md)

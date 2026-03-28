@@ -27,7 +27,7 @@ Orchestrates these tools:
 - `setup-linters`: linters and formatters
 - `setup-secret-scanning`: secret scanning workflows
 - `add-goreleaser-homebrew`: GoReleaser and Homebrew tap publishing
-- `setup-installers`: Homebrew formula, install script
+- `setup-installers`: Homebrew formula
 - `add-scrut-cli-tests`: scrut CLI integration tests
 
 ## Usage

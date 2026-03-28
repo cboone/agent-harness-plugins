@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "1.25.0"
+    "version": "1.26.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -294,14 +294,14 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
-      "description": "Prepare a versioned release: analyze commits, update versions and changelog, create a release commit, and tag locally.",
+      "description": "Prepare a versioned release: analyze commits, update versions and changelog, create a release commit, tag locally, and optionally publish a GitHub Release.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["changelog", "conventional-commits", "git", "release", "semver", "tags", "versioning"],
+      "keywords": ["changelog", "conventional-commits", "gh", "git", "github-release", "release", "semver", "tags", "versioning"],
       "license": "MIT",
       "name": "release",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/release",
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "author": {
@@ -392,14 +392,14 @@
         "name": "Christopher Boone"
       },
       "category": "productivity",
-      "description": "Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, shell install script, go/cargo install, and release workflow.",
+      "description": "Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, go/cargo install, and release workflow.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["cargo", "distribution", "github-actions", "go", "golang", "homebrew", "install", "release", "rust", "swift", "zig"],
       "license": "MIT",
       "name": "setup-installers",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-installers",
-      "version": "1.5.0"
+      "version": "2.1.0"
     },
     {
       "author": {
