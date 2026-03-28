@@ -12,14 +12,14 @@ The ke repository's [bootstrap branch](https://github.com/cboone/ke/compare/main
 
 Six sub-tasks from the issue. Sub-task 4 (scaffold-rust-library) is deferred to a future issue.
 
-| # | Sub-task | Priority | Status |
-| - | -------- | -------- | ------ |
-| 1 | Add `scaffold-rust-cli` command | High | To do |
-| 2 | Enhance `setup-ci` Rust templates | Medium | To do |
-| 3 | Add platform-aware CI variants | Medium | To do |
-| 4 | Update `bootstrap-project` overlap rules | Medium | To do |
-| 5 | Add cargo-deny and typos to `setup-linters` Rust reference | Lower | To do |
-| 6 | Add `scaffold-rust-library` command | Lower | Deferred |
+| # | Sub-task                                                   | Priority | Status   |
+| - | ---------------------------------------------------------- | -------- | -------- |
+| 1 | Add `scaffold-rust-cli` command                            | High     | To do    |
+| 2 | Enhance `setup-ci` Rust templates                          | Medium   | To do    |
+| 3 | Add platform-aware CI variants                             | Medium   | To do    |
+| 4 | Update `bootstrap-project` overlap rules                   | Medium   | To do    |
+| 5 | Add cargo-deny and typos to `setup-linters` Rust reference | Lower    | To do    |
+| 6 | Add `scaffold-rust-library` command                        | Lower    | Deferred |
 
 ## Sub-task 1: Add `scaffold-rust-cli` command
 
@@ -186,6 +186,7 @@ Add Scope-Down Details sections for `setup-linters after scaffold-rust-cli` and 
 **`plugins/setup-linters/skills/setup-linters/references/checklist.md`**
 
 Update the Rust row:
+
 - Tools: `clippy + rustfmt + cargo-deny + typos`
 - Install: `clippy/rustfmt built-in; cargo install --locked cargo-deny; cargo install typos-cli`
 - Config: `rustfmt.toml`, `deny.toml`, `typos.toml` (optional)

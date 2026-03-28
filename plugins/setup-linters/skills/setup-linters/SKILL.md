@@ -65,7 +65,7 @@ Check for existing linter configs using these patterns (aligned with the `lint-a
 | `rustfmt.toml`, `.rustfmt.toml`                                    | rustfmt       |
 | `clippy.toml`, `.clippy.toml`                                      | Clippy        |
 | `deny.toml`                                                        | cargo-deny    |
-| `typos.toml`, `_typos.toml`                                       | typos         |
+| `typos.toml`, `_typos.toml`                                        | typos         |
 | `.rubocop.yml`                                                     | RuboCop       |
 | `.stylelintrc*`, `stylelint.config.*`                              | Stylelint     |
 | `knip.json`, `knip.config.*`, `knip.ts`                            | Knip          |
