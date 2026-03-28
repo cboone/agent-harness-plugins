@@ -17,7 +17,7 @@ Then select **Setup Linters** from the available plugins.
 
 ## What It Does
 
-Scans the project for language markers and file types, checks for existing linter configurations, and recommends the appropriate tool stack. Supports JavaScript/TypeScript, Go, Python, Rust, Ruby, Shell, Zsh, Swift, and cross-language tools. Installs selected tools, generates sensible default configs, creates an `.editorconfig`, and optionally wires up a CI lint workflow.
+Scans the project for language markers and file types, checks for existing linter configurations, and recommends the appropriate tool stack. Supports JavaScript/TypeScript, Go, Python, Rust, Ruby, Shell, Zig, Zsh, Swift, and cross-language tools. Installs selected tools, generates sensible default configs, creates an `.editorconfig`, and optionally wires up a CI lint workflow.
 
 ## Usage
 
