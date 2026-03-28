@@ -198,6 +198,15 @@ jobs:
 
       - name: Rustfmt
         run: cargo fmt -- --check
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@cargo-deny
+
+      - name: cargo deny
+        run: cargo deny check
+
+      - name: Typos
+        uses: crate-ci/typos@v1
 ```
 
 ### Ruby
