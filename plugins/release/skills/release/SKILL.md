@@ -3,15 +3,15 @@ name: release
 description: >-
   Prepare a versioned release: detect project type, analyze conventional commits,
   recommend a version bump, update version references and CHANGELOG.md, create a
-  release commit, and tag it locally. Use when the user says "release", "create a
-  release", "cut a release", "prepare a release", "bump the version", "tag a
-  release", "make a release", or any variant involving creating a new versioned
-  release.
+  release commit, tag it locally, and optionally push and create a GitHub Release.
+  Use when the user says "release", "create a release", "cut a release", "prepare
+  a release", "bump the version", "tag a release", "make a release", or any
+  variant involving creating a new versioned release.
 ---
 
 # Release
 
-Prepare a versioned release: analyze commits, update versions and changelog, create a release commit, and tag locally.
+Prepare a versioned release: analyze commits, update versions and changelog, create a release commit, tag locally, and optionally publish a GitHub Release.
 
 ## Options
 
@@ -112,7 +112,7 @@ If `--major`, `--minor`, or `--patch` was specified, use that bump level instead
 
 **Confirm the version with the user.** Present the recommended (or forced) version and wait for approval before proceeding.
 
-**Dry-run gate:** If `--dry-run` was specified, skip steps 5-7 entirely. Do not create or modify any files. Instead, describe what changes _would_ be made (which files would be updated, what the CHANGELOG entry would look like). Then proceed directly to step 8b.
+**Dry-run gate:** If `--dry-run` was specified, skip steps 5-7 and 11 entirely. Do not create or modify any files. Instead, describe what changes _would_ be made (which files would be updated, what the CHANGELOG entry would look like). Then proceed directly to step 8b.
 
 ### 5. Update Version in Project Files
 
@@ -221,14 +221,89 @@ Create a GPG-signed annotated tag:
 git tag -s vVERSION -m "vVERSION"
 ```
 
-Do NOT push the tag or the commit. After tagging, remind the user how to push when ready:
+After tagging, confirm:
 
 ```text
-Release v1.2.0 is ready locally.
+Release vVERSION tagged locally.
+```
 
-To publish:
+### 11. Publish
+
+Ask the user if they want to push the commit and tag and create a GitHub Release:
+
+```text
+Push and create a GitHub Release for vVERSION?
+```
+
+#### If the user declines
+
+Show the manual commands and stop:
+
+```text
+Release vVERSION is ready locally.
+
+To publish manually:
   git push origin HEAD
-  git push origin v1.2.0
+  git push origin vVERSION
+  gh release create vVERSION --title "vVERSION" --notes-file <changelog-notes-file> --verify-tag
+```
+
+#### If the user accepts
+
+##### 11a. Check for remote
+
+```bash
+git remote get-url origin
+```
+
+If no remote is configured, report the error and show the manual push commands without the `gh release create` line. Stop.
+
+##### 11b. Push commit and tag
+
+```bash
+git push origin HEAD
+git push origin vVERSION
+```
+
+If the push is rejected, report the error and stop. Never force push. Show the remaining manual `gh release create` command so the user can complete the process after resolving the push issue.
+
+##### 11c. Extract changelog section
+
+Read `CHANGELOG.md` and extract the content for the new version. The section starts after the `## [VERSION] - YYYY-MM-DD` heading and ends before the next `## [` heading or before the comparison link block at the bottom of the file. Include the category headings (`### Added`, `### Fixed`, etc.) and their entries. Do not include the version heading itself or comparison links.
+
+If `CHANGELOG.md` does not exist or the version section cannot be found, use the fallback: `Release vVERSION`.
+
+##### 11d. Create GitHub Release
+
+Generate a temporary file for the release notes:
+
+```bash
+mktemp /tmp/gh-release-notes-XXXXXX
+```
+
+Write the extracted changelog section to the path returned by `mktemp` using the Write tool. Then create the release:
+
+```bash
+gh release create vVERSION --title "vVERSION" --notes-file TMPFILE --verify-tag
+```
+
+The `--verify-tag` flag ensures the command fails if the tag was not pushed successfully (safety net for step 11b).
+
+Always remove the tmpfile after the command completes, regardless of success or failure:
+
+```bash
+rm -f TMPFILE
+```
+
+If `gh` is not available, skip the GitHub Release creation. Report that `gh` is required for GitHub Releases and show the manual `gh release create` command.
+
+##### 11e. Report results
+
+```text
+Release vVERSION published.
+
+  Tag: vVERSION
+  GitHub Release: <URL returned by gh release create>
 ```
 
 ## Reference Navigation
@@ -248,5 +323,8 @@ To publish:
 - **CHANGELOG parse error:** If the existing file has an unrecognized format, warn the user and offer to create a new one or append a version section at the top.
 - **Tag already exists:** Abort with a message that the tag `vVERSION` already exists. Suggest choosing a different version.
 - **Not a git repository:** Abort immediately.
-- **No remote configured:** Skip comparison links in CHANGELOG, skip doc version updates, warn the user.
+- **No remote configured:** Skip comparison links in CHANGELOG, skip doc version updates, skip push and GitHub Release in step 11, warn the user.
 - **First release:** Use `v0.0.0` as the base for bump calculation, create the CHANGELOG from scratch, skip doc version updates (no old version to replace).
+- **Push rejected:** Report the error and show remaining manual commands. Never force push.
+- **`gh` not available:** Push the commit and tag, skip GitHub Release creation, note that `gh` is required for GitHub Releases and show the manual `gh release create` command.
+- **GitHub Release creation fails:** The push already succeeded, so the tag is on the remote. Report the `gh` error and show the manual `gh release create` command for the user to retry.
