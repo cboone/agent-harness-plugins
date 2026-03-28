@@ -45,7 +45,7 @@ For each tool in the ecosystem, check for its signature artifacts. Only tools wh
 | `add-goreleaser-homebrew` | `.goreleaser.yml` with `brews:` section + `.github/workflows/release.yml` |
 | `add-community-files`     | `CONTRIBUTING.md` + `CODE_OF_CONDUCT.md`                                  |
 | `add-scrut-cli-tests`     | `tests/scrut/` directory                                                  |
-| `setup-installers`        | `install.sh` or `Formula/`                                                |
+| `setup-installers`        | `Formula/`                                                                |
 | `optimize-runner-usage`   | `concurrency:` key in any `.github/workflows/*.yml`                       |
 | `clean-up-agent-config`   | `AGENTS.md` or (`CLAUDE.md` + `.claude/settings.json`)                    |
 
@@ -476,15 +476,7 @@ Must include language-specific entries appropriate for the detected project type
 
 ### Files
 
-- `install.sh`
 - `Formula/*.rb`
-
-### Checks for install.sh
-
-- Has `set -euo pipefail` (strict mode)
-- Detects OS and architecture
-- Verifies checksums (SHA256)
-- Checks if install directory is in PATH
 
 ### Checks for Formula/\*.rb
 
