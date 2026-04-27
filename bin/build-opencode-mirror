@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+# Regenerates dist/opencode/{skills,commands} from plugins/*.
+# Each entry is a relative symlink back to the canonical Claude Code plugin file.
+set -euo pipefail
+
+OUTPUT_DIR="dist/opencode"
+SKILL_NAME_REGEX='^[a-z0-9]+(-[a-z0-9]+)*$'
+readonly OUTPUT_DIR SKILL_NAME_REGEX
+
+errors=0
+
+function error() {
+  echo "::error::$1" >&2
+  errors=$((errors + 1))
+}
+
+# Returns 0 if the named field is present in the file's YAML frontmatter and
+# has non-empty content. Handles inline values and `>-`/`|` folded blocks.
+function frontmatter_has_field() {
+  local file="$1" field="$2"
+  awk -v field="${field}" '
+    /^---$/ { fm = !fm; if (!fm) exit; next }
+    fm && $0 ~ "^"field":" {
+      sub("^"field":[[:space:]]*", "")
+      sub("^[>|][-+]?[[:space:]]*$", "")
+      if (length($0) > 0) { found = 1; exit }
+      need_continuation = 1
+      next
+    }
+    fm && need_continuation && /^[[:space:]]+[^[:space:]]/ { found = 1; exit }
+    fm && need_continuation && /^[^[:space:]]/ { exit }
+    END { exit !found }
+  ' "${file}"
+}
+
+# Extracts a single-line frontmatter field value. Strips wrapping quotes.
+function frontmatter_field_value() {
+  local file="$1" field="$2"
+  awk -v field="${field}" '
+    /^---$/ { fm = !fm; if (!fm) exit; next }
+    fm && $0 ~ "^"field":" {
+      sub("^"field":[[:space:]]*", "")
+      gsub(/^["'\'']|["'\'']$/, "")
+      print
+      exit
+    }
+  ' "${file}"
+}
+
+# ─── 1. Discover and validate skills ─────────────────────────────────────────
+
+skill_names=()
+skill_paths=()
+
+for skill_md in plugins/*/skills/*/SKILL.md; do
+  if [[ ! -f "${skill_md}" ]]; then
+    continue
+  fi
+
+  skill_dir="$(dirname "${skill_md}")"
+  skill_name="$(basename "${skill_dir}")"
+
+  if [[ ! "${skill_name}" =~ ${SKILL_NAME_REGEX} ]]; then
+    error "Skill directory '${skill_name}' does not match OpenCode regex ${SKILL_NAME_REGEX}"
+    continue
+  fi
+
+  if ! frontmatter_has_field "${skill_md}" name; then
+    error "Skill '${skill_name}': SKILL.md missing 'name' field"
+    continue
+  fi
+
+  fm_name="$(frontmatter_field_value "${skill_md}" name)"
+  if [[ "${fm_name}" != "${skill_name}" ]]; then
+    error "Skill '${skill_name}': frontmatter name '${fm_name}' does not match directory name"
+    continue
+  fi
+
+  if ! frontmatter_has_field "${skill_md}" description; then
+    error "Skill '${skill_name}': SKILL.md missing 'description' field"
+    continue
+  fi
+
+  skill_names+=("${skill_name}")
+  skill_paths+=("${skill_dir}")
+done
+
+if [[ ${#skill_names[@]} -gt 0 ]]; then
+  while IFS= read -r dup; do
+    [[ -z "${dup}" ]] && continue
+    error "Duplicate skill name '${dup}' across plugins"
+  done < <(printf '%s\n' "${skill_names[@]}" | sort | uniq -d)
+fi
+
+# ─── 2. Discover and validate commands ───────────────────────────────────────
+
+command_names=()
+command_paths=()
+
+for command_md in plugins/*/commands/*.md; do
+  if [[ ! -f "${command_md}" ]]; then
+    continue
+  fi
+
+  command_name="$(basename "${command_md}" .md)"
+
+  command_names+=("${command_name}")
+  command_paths+=("${command_md}")
+done
+
+if [[ ${#command_names[@]} -gt 0 ]]; then
+  while IFS= read -r dup; do
+    [[ -z "${dup}" ]] && continue
+    error "Duplicate command name '${dup}' across plugins"
+  done < <(printf '%s\n' "${command_names[@]}" | sort | uniq -d)
+fi
+
+# ─── 3. Bail on validation errors ────────────────────────────────────────────
+
+if [[ ${errors} -gt 0 ]]; then
+  echo "${errors} validation error(s); refusing to build mirror." >&2
+  exit 1
+fi
+
+# ─── 4. Recreate the mirror ──────────────────────────────────────────────────
+
+rm -rf "${OUTPUT_DIR}"
+mkdir -p "${OUTPUT_DIR}/skills" "${OUTPUT_DIR}/commands"
+
+for ((i = 0; i < ${#skill_names[@]}; i++)); do
+  skill_name="${skill_names[${i}]}"
+  source_path="${skill_paths[${i}]}"
+  ln -s "../../../${source_path}" "${OUTPUT_DIR}/skills/${skill_name}"
+done
+
+for ((i = 0; i < ${#command_names[@]}; i++)); do
+  command_name="${command_names[${i}]}"
+  source_path="${command_paths[${i}]}"
+  ln -s "../../../${source_path}" "${OUTPUT_DIR}/commands/${command_name}.md"
+done
+
+# ─── 5. Summary ──────────────────────────────────────────────────────────────
+
+echo "Built OpenCode mirror at ${OUTPUT_DIR}"
+echo "  skills:   ${#skill_names[@]}"
+echo "  commands: ${#command_names[@]}"
