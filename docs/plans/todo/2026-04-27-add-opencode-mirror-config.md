@@ -187,7 +187,10 @@ That is it. The mirror travels with the repo, so a fresh clone and a `git pull` 
 
 When adding or removing a plugin, regenerate the mirror with `bin/build-opencode-mirror` and commit the result. CI will fail if the mirror drifts.
 
-Hooks are not ported: OpenCode's hook system is incompatible with Claude Code's. Skills and commands are.
+### Known limitations
+
+- **Hooks are not ported.** OpenCode's hook system is incompatible with Claude Code's. Skills and commands are.
+- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Some commands and one skill use Claude Code's `@${CLAUDE_PLUGIN_ROOT}/references/...` pattern to inline reference files at runtime. OpenCode does not expand this variable, so those inclusions appear to the agent as literal path strings rather than inlined content. The inline workflow text in each affected file still loads correctly. Affected commands: `/add-goreleaser-homebrew`, `/scaffold-go-cli`, `/scaffold-go-library`, `/scaffold-new-repo`, `/scaffold-rust-cli`, `/setup-ci`, `/setup-secret-scanning`. Affected skill: `create-plugin`. For full fidelity in these cases, run them in Claude Code.
 ````
 
 ### 3. CI integration
@@ -236,13 +239,7 @@ The new CI step in `ci.yml` runs the build script on every push and PR, exercisi
 
 ## Open Questions
 
-1. **How to handle `${CLAUDE_PLUGIN_ROOT}` references.** Affects 7 of 11 commands and 1 skill. Three options:
-
-   - **(a) Accept the limitation.** Document in the README that affected commands have degraded reference-inclusion behavior in OpenCode. Lowest implementation cost; works fine for commands whose value is in their inline workflow rather than their template references. Best fit for "keep it simple to start."
-   - **(b) Resolve at build time.** Have `bin/build-opencode-mirror` materialize affected commands as transformed copies (replacing `${CLAUDE_PLUGIN_ROOT}` with the absolute path to the plugin's references). Trade: those files become real copies, so edits no longer propagate live and re-running the build script is required after every edit. Still a small fraction of commands, so the friction is bounded.
-   - **(c) Set `CLAUDE_PLUGIN_ROOT` per-command via wrapper.** Not viable: a single env var cannot point at multiple plugin directories simultaneously, and OpenCode's docs do not describe shell-style env-var expansion in command bodies anyway.
-
-   Recommendation: start with (a), document the limitation, and revisit with (b) if it proves annoying in practice.
+1. **How to handle `${CLAUDE_PLUGIN_ROOT}` references.** Resolved: accept the limitation and document it. Affected files mirror as plain symlinks alongside the rest; the inline portion of each command and skill loads correctly, and the `@${CLAUDE_PLUGIN_ROOT}/...` template inclusions degrade gracefully (the LLM sees the literal path string rather than the inlined content). The README must explicitly call out which commands and which skill are affected so OpenCode users know what to expect. If the degradation proves disruptive in practice, revisit with a build-time path-resolution pass that materializes the affected files as transformed copies instead of symlinks. Affected commands: `add-goreleaser-homebrew`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-new-repo`, `scaffold-rust-cli`, `setup-ci`, `setup-secret-scanning`. Affected skill: `create-plugin`.
 
 2. **Should the script also produce a project-local `.opencode/` directory in arbitrary repos?** Out of scope for this plan; the env-var workflow covers the canonical use case (the user wants these tools available everywhere they run OpenCode, not selectively per project).
 3. **Should we publish a separate `cboone-opencode` package or repo at some future point?** Not now. Revisit if OpenCode users without this repo cloned start asking for it.
