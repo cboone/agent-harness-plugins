@@ -1,0 +1,1 @@
+../../../plugins/add-goreleaser-homebrew/commands/add-goreleaser-homebrew.md

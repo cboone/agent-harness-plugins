@@ -1,0 +1,1 @@
+../../../plugins/scaffold-go-library/commands/scaffold-go-library.md
