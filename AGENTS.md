@@ -428,6 +428,33 @@ cboone-cc-plugins/
     │               │   └── tables.md
     │               └── essential/
     │                   └── checklist.md
+    ├── write-lean-code/             # Lean 4 and Mathlib style guide skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── write-lean-code/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── comprehensive/
+    │               │   ├── build-infrastructure.md
+    │               │   ├── general-programming.md
+    │               │   ├── mathlib-api-discovery.md
+    │               │   ├── mathlib.md
+    │               │   ├── metaprogramming.md
+    │               │   ├── naming.md
+    │               │   ├── pfr-downstream.md
+    │               │   ├── proof-style.md
+    │               │   └── style-and-formatting.md
+    │               └── essential/
+    │                   └── checklist.md
+    ├── write-lean-tests/            # Lean 4 API regression tests skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── write-lean-tests/
+    │           └── SKILL.md
     ├── write-markdown/              # Markdown style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

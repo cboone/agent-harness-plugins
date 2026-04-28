@@ -28,6 +28,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Setup Linters](#setup-linters)
 ∙ [Write Go Code](#write-go-code)
 ∙ [Write LaTeX](#write-latex)
+∙ [Write Lean Code](#write-lean-code)
+∙ [Write Lean Tests](#write-lean-tests)
 ∙ [Write Markdown](#write-markdown)
 ∙ [Write Scrut Tests](#write-scrut-tests)
 ∙ [Write Bash Scripts](#write-bash-scripts)
@@ -247,6 +249,20 @@ LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2, and 
 
 > **Trigger:** `/write-latex` (also activates automatically)
 > **Details:** [README](./plugins/write-latex/README.md)
+
+#### Write Lean Code
+
+Lean 4 style guide and Mathlib conventions covering naming, proof style, formatting, Mathlib API discovery, build infrastructure, metaprogramming, and general functional-programming idioms. Organized into an essential checklist and comprehensive references by topic.
+
+> **Trigger:** `/write-lean-code` (also activates automatically)
+> **Details:** [README](./plugins/write-lean-code/README.md)
+
+#### Write Lean Tests
+
+Conventions for compile-time, `example`-based Lean 4 API regression tests that mirror a library's public surface. Pairs with `write-lean-code` (which governs the library code itself).
+
+> **Trigger:** `/write-lean-tests` (also activates automatically)
+> **Details:** [README](./plugins/write-lean-tests/README.md)
 
 #### Write Markdown
 
