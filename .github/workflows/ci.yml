@@ -40,3 +40,7 @@ jobs:
         run: bin/validate-json
       - name: Validate plugin structure
         run: bin/validate-plugins
+      - name: Validate OpenCode mirror is up to date
+        run: |
+          bin/build-opencode-mirror
+          git diff --exit-code dist/

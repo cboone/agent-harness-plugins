@@ -1,0 +1,1 @@
+../../../plugins/setup-secret-scanning/commands/setup-secret-scanning.md

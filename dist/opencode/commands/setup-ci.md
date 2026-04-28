@@ -1,0 +1,1 @@
+../../../plugins/setup-ci/commands/setup-ci.md
