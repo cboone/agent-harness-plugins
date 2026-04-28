@@ -1,6 +1,14 @@
 ---
-description: Audit a repository against the latest plugin templates and update anything out of date.
-disable-model-invocation: true
+name: update-everything
+description: >-
+  Audit a repository against the latest cboone-cc-plugins templates and update
+  anything out of date. Use when the user says "update everything", "audit my
+  repo", "audit the repo", "refresh templates", "bring this repo up to date",
+  "check what's outdated", or wants the maintenance companion to
+  bootstrap-project. Detects which scaffolds, CI workflows, linters, and
+  installers are in use, diffs them against current templates, and applies
+  confirmed updates. Does not set up tools that were never used; use
+  bootstrap-project for initial setup.
 ---
 
 # Update Everything
@@ -9,7 +17,7 @@ Audit the current repository against the latest templates and best practices fro
 
 This is the maintenance companion to `bootstrap-project`: bootstrap sets things up, this keeps them current.
 
-**Scope**: This command audits tools already in use and updates their files to match current templates. For tools that are partially configured, it can restore missing expected files. It does not set up tools that were never used; for initial setup, use `/bootstrap-project` or the individual tool.
+**Scope**: This skill audits tools already in use and updates their files to match current templates. For tools that are partially configured, it can restore missing expected files. It does not set up tools that were never used; for initial setup, use the bootstrap-project skill or the individual tool.
 
 ## Workflow
 
@@ -87,7 +95,7 @@ Status values:
 | Up to date       | All checks pass; nothing to do                                        |
 | Needs update     | Files exist but fail some checks                                      |
 | Partially set up | Some expected files from a detected tool are missing entirely         |
-| Not detected     | Tool was never used (use `/bootstrap-project` or the individual tool) |
+| Not detected     | Tool was never used (use the bootstrap-project skill or the individual tool) |
 | Not applicable   | Tool does not apply to this project type                              |
 
 Items with status "Not detected" and "Not applicable" are informational only and are not actionable in this command.
@@ -115,12 +123,9 @@ For each confirmed update item, choose a strategy based on scope:
 | Missing `permissions:` block                   | **Targeted**: add the permissions block at the workflow level                        |
 | CLAUDE.md is regular file, not symlink         | **Full re-run**: invoke `clean-up-agent-config` to reconcile CLAUDE.md and AGENTS.md |
 | Community file outdated (e.g., CoC version)    | **Full re-run**: invoke the `add-community-files` skill via the Skill tool           |
-| Missing file from a detected tool              | **Full re-run**: invoke the original skill or read the original command .md          |
+| Missing file from a detected tool              | **Full re-run**: invoke the original skill via the Skill tool                        |
 
-For full tool re-runs:
-
-- **Skills** (`add-community-files`, `setup-linters`): invoke via the Skill tool.
-- **Commands** (`setup-ci`, `setup-secret-scanning`, `add-goreleaser-homebrew`, `setup-installers`, `add-scrut-cli-tests`, `scaffold-new-repo`, `optimize-runner-usage`): use Glob to find the command .md file (e.g., `**/commands/setup-ci.md`), read it with the Read tool, and follow its workflow instructions directly.
+For full tool re-runs, all detected tools are skills. Invoke them via the Skill tool. Relevant skills include `add-community-files`, `setup-linters`, `setup-ci`, `setup-secret-scanning`, `add-goreleaser-homebrew`, `setup-installers`, `add-scrut-cli-tests`, `scaffold-new-repo`, and `optimize-runner-usage`.
 
 Process updates in this order (matching the bootstrap-project execution order):
 
