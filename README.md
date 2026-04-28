@@ -1,6 +1,6 @@
 # Claude Code Plugins
 
-A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), from [Christopher Boone](https://cboone.github.io).
+A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (and skills and commands for [OpenCode](https://opencode.ai/docs/skills/)), from [Christopher Boone](https://cboone.github.io).
 
 **Skills**
 <br>Git:
@@ -69,6 +69,16 @@ Or, from within `claude`, run:
 ```bash
 /plugin marketplace add cboone/cboone-cc-plugins
 ```
+
+### Using with OpenCode
+
+This repository is primarily a Claude Code plugin marketplace, but the skills and commands also work in [OpenCode](https://opencode.ai) via a committed mirror at [`dist/opencode/`](./dist/opencode/).
+
+```bash
+export OPENCODE_CONFIG_DIR="$(pwd)/dist/opencode"
+```
+
+See below for [more details](#using-with-opencode-1) and [known limitations](#known-limitations).
 
 ## Skills
 
@@ -423,8 +433,6 @@ This repository is primarily a Claude Code plugin marketplace, but the skills an
 ```bash
 export OPENCODE_CONFIG_DIR="$(pwd)/dist/opencode"
 ```
-
-That is it. The mirror travels with the repo, so a fresh clone or a `git pull` are both enough to pick up new skills and commands. Edits to canonical skill or command files propagate live through the symlinks.
 
 When adding or removing a plugin, regenerate the mirror with `bin/build-opencode-mirror` and commit the result. CI fails if the mirror drifts from the source plugins.
 
