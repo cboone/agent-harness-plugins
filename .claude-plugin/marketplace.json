@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "1.31.0"
+    "version": "1.32.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -526,6 +526,20 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/write-bash-scripts",
       "version": "2.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "writing",
+      "description": "Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["formal-methods", "isabelle", "lean", "planning", "rocq"],
+      "license": "MIT",
+      "name": "write-formalization-roadmap",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/write-formalization-roadmap",
+      "version": "1.0.0"
     },
     {
       "author": {

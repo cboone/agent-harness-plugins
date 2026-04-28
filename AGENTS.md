@@ -152,6 +152,22 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── merge-main/
     │           └── SKILL.md
+    ├── write-formalization-roadmap/ # Formalization roadmap structure skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── write-formalization-roadmap/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── comprehensive/
+    │               │   ├── anti-patterns.md
+    │               │   ├── conventions.md
+    │               │   ├── document-structure.md
+    │               │   ├── examples.md
+    │               │   └── milestone-anatomy.md
+    │               └── essential/
+    │                   └── checklist.md
     ├── write-go-code/              # Go style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

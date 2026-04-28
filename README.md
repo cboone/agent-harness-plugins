@@ -35,7 +35,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Write Bash Scripts](#write-bash-scripts)
 ∙ [Write Zsh Scripts](#write-zsh-scripts)
 <br>Writing:
-[Write Math](#write-math)
+[Write Formalization Roadmap](#write-formalization-roadmap)
+∙ [Write Math](#write-math)
 ∙ [Write Pandoc Markdown](#write-pandoc-markdown)
 <br>Scaffolding:
 [Add Community Files](#add-community-files)
@@ -302,6 +303,13 @@ Detect project languages and file types, recommend appropriate linters and forma
 ### Writing
 
 Style and structure guides for prose, documentation, and document artifacts. These skills activate automatically when working with their target file types and content.
+
+#### Write Formalization Roadmap
+
+Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants. Sibling to `write-math`: governs the structure of long-lived mechanization plans (10-section schema, 5-part milestone anatomy) without dictating mathematical prose style.
+
+> **Trigger:** `/write-formalization-roadmap` (also activates automatically)
+> **Details:** [README](./plugins/write-formalization-roadmap/README.md)
 
 #### Write Math
 
