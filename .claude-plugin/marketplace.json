@@ -615,7 +615,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "code-quality",
+      "category": "writing",
       "description": "Applies Markdown style conventions when creating or editing Markdown files.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["documentation", "format", "markdown", "style"],

@@ -30,12 +30,12 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Write LaTeX](#write-latex)
 ∙ [Write Lean Code](#write-lean-code)
 ∙ [Write Lean Tests](#write-lean-tests)
-∙ [Write Markdown](#write-markdown)
 ∙ [Write Scrut Tests](#write-scrut-tests)
 ∙ [Write Bash Scripts](#write-bash-scripts)
 ∙ [Write Zsh Scripts](#write-zsh-scripts)
 <br>Writing:
 [Write Formalization Roadmap](#write-formalization-roadmap)
+∙ [Write Markdown](#write-markdown)
 ∙ [Write Math](#write-math)
 ∙ [Write Pandoc Markdown](#write-pandoc-markdown)
 <br>Scaffolding:
@@ -266,13 +266,6 @@ Conventions for compile-time, `example`-based Lean 4 API regression tests that m
 > **Trigger:** `/write-lean-tests` (also activates automatically)
 > **Details:** [README](./plugins/write-lean-tests/README.md)
 
-#### Write Markdown
-
-Markdown style conventions targeting GitHub Flavored Markdown (GFM), aligned with markdownlint-cli2 rules. Activates automatically when creating or editing Markdown files.
-
-> **Trigger:** `/write-markdown` (also activates automatically)
-> **Details:** [README](./plugins/write-markdown/README.md)
-
 #### Write Scrut Tests
 
 Scrut test style conventions for writing and maintaining snapshot-based test files for CLI binaries and zsh plugins. Activates automatically when creating or editing scrut test files.
@@ -311,6 +304,13 @@ Document-structure guide for multi-milestone formalization roadmaps in Lean, Roc
 
 > **Trigger:** `/write-formalization-roadmap` (also activates automatically)
 > **Details:** [README](./plugins/write-formalization-roadmap/README.md)
+
+#### Write Markdown
+
+Markdown style conventions targeting GitHub Flavored Markdown (GFM), aligned with markdownlint-cli2 rules. Activates automatically when creating or editing Markdown files. Distinct from `write-pandoc-markdown`, which targets Pandoc-flavored Markdown for academic papers.
+
+> **Trigger:** `/write-markdown` (also activates automatically)
+> **Details:** [README](./plugins/write-markdown/README.md)
 
 #### Write Math
 
