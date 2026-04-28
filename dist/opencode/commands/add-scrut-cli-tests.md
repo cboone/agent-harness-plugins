@@ -1,1 +1,0 @@
-../../../plugins/add-scrut-cli-tests/commands/add-scrut-cli-tests.md

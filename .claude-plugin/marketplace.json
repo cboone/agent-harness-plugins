@@ -35,7 +35,7 @@
       "name": "add-goreleaser-homebrew",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/add-goreleaser-homebrew",
-      "version": "2.2.0"
+      "version": "2.3.0"
     },
     {
       "author": {
@@ -49,7 +49,7 @@
       "name": "add-scrut-cli-tests",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/add-scrut-cli-tests",
-      "version": "1.5.0"
+      "version": "1.6.0"
     },
     {
       "author": {
@@ -273,7 +273,7 @@
       "name": "optimize-runner-usage",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/optimize-runner-usage",
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "author": {
@@ -343,7 +343,7 @@
       "name": "scaffold-go-cli",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-cli",
-      "version": "2.6.0"
+      "version": "2.7.0"
     },
     {
       "author": {
@@ -357,7 +357,7 @@
       "name": "scaffold-go-library",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-library",
-      "version": "1.7.0"
+      "version": "1.8.0"
     },
     {
       "author": {
@@ -371,7 +371,7 @@
       "name": "scaffold-new-repo",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-new-repo",
-      "version": "1.7.0"
+      "version": "1.8.0"
     },
     {
       "author": {
@@ -385,7 +385,7 @@
       "name": "scaffold-rust-cli",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-rust-cli",
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "author": {
@@ -399,7 +399,7 @@
       "name": "setup-ci",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-ci",
-      "version": "1.7.0"
+      "version": "1.8.0"
     },
     {
       "author": {
@@ -413,7 +413,7 @@
       "name": "setup-installers",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-installers",
-      "version": "2.1.0"
+      "version": "2.2.0"
     },
     {
       "author": {
@@ -441,7 +441,7 @@
       "name": "setup-secret-scanning",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-secret-scanning",
-      "version": "2.3.0"
+      "version": "2.4.0"
     },
     {
       "author": {
@@ -483,7 +483,7 @@
       "name": "update-everything",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/update-everything",
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     {
       "author": {

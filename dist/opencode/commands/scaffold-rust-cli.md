@@ -1,1 +1,0 @@
-../../../plugins/scaffold-rust-cli/commands/scaffold-rust-cli.md

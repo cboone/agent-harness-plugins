@@ -1,1 +1,0 @@
-../../../plugins/setup-installers/commands/setup-installers.md

@@ -1,1 +1,0 @@
-../../../plugins/scaffold-go-cli/commands/scaffold-go-cli.md

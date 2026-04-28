@@ -21,7 +21,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Resolve Copilot PR Feedback](#resolve-copilot-pr-feedback)
 ∙ [Update Review](#update-review)
 <br>Code Quality:
-[Check Zsh Scripts](#check-zsh-scripts)
+[Add Scrut CLI Tests](#add-scrut-cli-tests)
+∙ [Check Zsh Scripts](#check-zsh-scripts)
 ∙ [Handle Secrets](#handle-secrets)
 ∙ [Lint and Fix](#lint-and-fix)
 ∙ [Setup Linters](#setup-linters)
@@ -33,25 +34,20 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 <br>Scaffolding:
 [Add Community Files](#add-community-files)
 ∙ [Bootstrap Project](#bootstrap-project)
+∙ [Scaffold Go CLI](#scaffold-go-cli)
+∙ [Scaffold Go Library](#scaffold-go-library)
+∙ [Scaffold New Repo](#scaffold-new-repo)
+∙ [Scaffold Rust CLI](#scaffold-rust-cli)
+<br>CI and Release:
+[Add GoReleaser Homebrew](#add-goreleaser-homebrew)
+∙ [Optimize Runner Usage](#optimize-runner-usage)
+∙ [Setup CI](#setup-ci)
+∙ [Setup Installers](#setup-installers)
+∙ [Setup Secret Scanning](#setup-secret-scanning)
+∙ [Update Everything](#update-everything)
 <br>Agents:
 [Clean Up Agent Config](#clean-up-agent-config)
 ∙ [Create Plugin](#create-plugin)
-
-**Commands**
-<br>Code Quality:
-[Add Scrut CLI Tests](#add-scrut-cli-tests)
-<br>CI Optimization:
-[Optimize Runner Usage](#optimize-runner-usage)
-<br>Scaffolding:
-[Add GoReleaser Homebrew](#add-goreleaser-homebrew)
-∙ [Scaffold Go CLI](#scaffold-go-cli)
-∙ [Scaffold Go Library](#scaffold-go-library)
-∙ [Scaffold Rust CLI](#scaffold-rust-cli)
-∙ [Scaffold New Repo](#scaffold-new-repo)
-∙ [Setup CI](#setup-ci)
-∙ [Setup Secret Scanning](#setup-secret-scanning)
-∙ [Setup Installers](#setup-installers)
-∙ [Update Everything](#update-everything)
 
 **Hooks**
 <br>Security:
@@ -204,6 +200,14 @@ Find the latest branch review, assess commits made since, and update the review 
 
 Style guides, linters, and security practices. These skills activate automatically when working with their target languages and file types.
 
+#### Add Scrut CLI Tests
+
+Set up scrut snapshot-based CLI integration testing for a CLI project. Detects the project language, creates starter test files, adds Makefile targets, and configures CI to run scrut tests.
+
+> **Trigger:** `/add-scrut-cli-tests`
+> **Requires:** [`scrut`](https://github.com/facebookincubator/scrut) (Makefile checks for availability and provides install instructions)
+> **Details:** [README](./plugins/add-scrut-cli-tests/README.md)
+
 #### Check Zsh Scripts
 
 Check and evaluate zsh scripts using multiple static analysis, syntax checking, and formatting tools. Runs `zsh -n`, `zcompile`, `shellcheck`, `checkbashisms`, `shellharden`, variable scope warnings, and `shfmt` in recommended order, with false-positive filtering for tools that have limited zsh support.
@@ -286,6 +290,80 @@ Assess a repository, determine what scaffolding and setup tools are needed, pres
 > **Trigger:** `/bootstrap-project`
 > **Details:** [README](./plugins/bootstrap-project/README.md)
 
+#### Scaffold Go CLI
+
+Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions CI/CD, and Homebrew tap support. Generates all project files and supports optional Viper and Charmbracelet dependencies.
+
+> **Trigger:** `/scaffold-go-cli`
+> **Details:** [README](./plugins/scaffold-go-cli/README.md)
+
+#### Scaffold Go Library
+
+Scaffold a Go library project with GoReleaser changelog-only releases, golangci-lint, GitHub Actions CI/CD (multi-version Go matrix), and Makefile. Generates the package source file, doc.go, go.mod, Makefile, .gitignore, .goreleaser.yml, .golangci.yml, .editorconfig, CI and release workflows, LICENSE, README, and a plans directory. Optionally generates example tests.
+
+> **Trigger:** `/scaffold-go-library`
+> **Details:** [README](./plugins/scaffold-go-library/README.md)
+
+#### Scaffold New Repo
+
+Scaffold the universal boilerplate for any new repository: LICENSE, README, .gitignore, agent config files, and a plans directory. Supports multiple project types.
+
+> **Trigger:** `/scaffold-new-repo`
+> **Details:** [README](./plugins/scaffold-new-repo/README.md)
+
+#### Scaffold Rust CLI
+
+Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest, git-cliff, GitHub Actions CI/CD, and Makefile. Generates `Cargo.toml`, `src/main.rs`, `rust-toolchain.toml`, `rustfmt.toml`, `deny.toml`, `typos.toml`, `cliff.toml`, Makefile, CI and release workflows, LICENSE, README, and directory stubs. Supports optional clap argument parsing and macOS-only project configuration.
+
+> **Trigger:** `/scaffold-rust-cli`
+> **Details:** [README](./plugins/scaffold-rust-cli/README.md)
+
+### CI and Release
+
+Wire up GitHub Actions CI, secret scanning, release automation, and installer distribution for an existing project. Optimize and audit those workflows over time.
+
+#### Add GoReleaser Homebrew
+
+Add GoReleaser configuration and a GitHub Actions release workflow to an existing Go CLI project with Homebrew tap publishing to `cboone/homebrew-tap`. Detects project features (shell completions, man page generation, macOS-only constraints) and generates appropriate configuration with conventional commit changelog grouping. Optionally adds a `release-dry-run` Makefile target.
+
+> **Trigger:** `/add-goreleaser-homebrew`
+> **Details:** [README](./plugins/add-goreleaser-homebrew/README.md)
+
+#### Optimize Runner Usage
+
+Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows. Scans all workflow files, classifies each by trigger pattern, and applies only the optimizations appropriate for each workflow type.
+
+> **Trigger:** `/optimize-runner-usage`
+> **Details:** [README](./plugins/optimize-runner-usage/README.md)
+
+#### Setup CI
+
+Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets. Detects the project language (Go, JavaScript/TypeScript, Python, Rust, Ruby, Shell, Zig, Zsh) and generates appropriate parallel CI jobs and Makefile targets.
+
+> **Trigger:** `/setup-ci`
+> **Details:** [README](./plugins/setup-ci/README.md)
+
+#### Setup Installers
+
+Set up installer and distribution methods for Go, Swift, and Rust projects: Homebrew tap formula, go/cargo install, release workflow generation, and homebrew-tap issue creation. Detects existing release infrastructure and generates appropriate files.
+
+> **Trigger:** `/setup-installers`
+> **Details:** [README](./plugins/setup-installers/README.md)
+
+#### Setup Secret Scanning
+
+Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration. Gitleaks provides fast pattern matching on every push and PR; TruffleHog adds deeper verification-based scanning on pushes to main.
+
+> **Trigger:** `/setup-secret-scanning`
+> **Details:** [README](./plugins/setup-secret-scanning/README.md)
+
+#### Update Everything
+
+Audit a repository against the latest plugin templates and update anything out of date. The maintenance companion to Bootstrap Project: bootstrap sets things up, this keeps them current. Detects which tools have been used, compares files against current templates, presents a plan, and applies confirmed updates.
+
+> **Trigger:** `/update-everything`
+> **Details:** [README](./plugins/update-everything/README.md)
+
 ### Agents
 
 Meta-tools for the agent ecosystem. Audit agent configuration files and create new plugins.
@@ -303,97 +381,6 @@ Guide for creating new plugins in this repository with consistent structure and 
 
 > **Trigger:** `/create-plugin`
 > **Details:** [README](./plugins/create-plugin/README.md)
-
-## Commands
-
-Commands are invoked explicitly via `/command-name` and are not loaded into the system prompt. Use these for one-time setup tasks.
-
-### Code Quality
-
-#### Add Scrut CLI Tests
-
-Set up scrut snapshot-based CLI integration testing for a CLI project. Detects the project language, creates starter test files, adds Makefile targets, and configures CI to run scrut tests.
-
-> **Trigger:** `/add-scrut-cli-tests`
-> **Requires:** [`scrut`](https://github.com/facebookincubator/scrut) (Makefile checks for availability and provides install instructions)
-> **Details:** [README](./plugins/add-scrut-cli-tests/README.md)
-
-### CI Optimization
-
-Reduce wasted GitHub Actions minutes on existing workflows.
-
-#### Optimize Runner Usage
-
-Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows. Scans all workflow files, classifies each by trigger pattern, and applies only the optimizations appropriate for each workflow type.
-
-> **Trigger:** `/optimize-runner-usage`
-> **Details:** [README](./plugins/optimize-runner-usage/README.md)
-
-### Scaffolding
-
-Bootstrap new projects with consistent structure. Generate boilerplate, CI/CD pipelines, and security scanning from templates.
-
-#### Add GoReleaser Homebrew
-
-Add GoReleaser configuration and a GitHub Actions release workflow to an existing Go CLI project with Homebrew tap publishing to `cboone/homebrew-tap`. Detects project features (shell completions, man page generation, macOS-only constraints) and generates appropriate configuration with conventional commit changelog grouping. Optionally adds a `release-dry-run` Makefile target.
-
-> **Trigger:** `/add-goreleaser-homebrew`
-
-#### Scaffold Go CLI
-
-Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions CI/CD, and Homebrew tap support. Generates all project files and supports optional Viper and Charmbracelet dependencies.
-
-> **Trigger:** `/scaffold-go-cli`
-> **Details:** [README](./plugins/scaffold-go-cli/README.md)
-
-#### Scaffold Go Library
-
-Scaffold a Go library project with GoReleaser changelog-only releases, golangci-lint, GitHub Actions CI/CD (multi-version Go matrix), and Makefile. Generates the package source file, doc.go, go.mod, Makefile, .gitignore, .goreleaser.yml, .golangci.yml, .editorconfig, CI and release workflows, LICENSE, README, and a plans directory. Optionally generates example tests.
-
-> **Trigger:** `/scaffold-go-library`
-> **Details:** [README](./plugins/scaffold-go-library/README.md)
-
-#### Scaffold Rust CLI
-
-Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest, git-cliff, GitHub Actions CI/CD, and Makefile. Generates `Cargo.toml`, `src/main.rs`, `rust-toolchain.toml`, `rustfmt.toml`, `deny.toml`, `typos.toml`, `cliff.toml`, Makefile, CI and release workflows, LICENSE, README, and directory stubs. Supports optional clap argument parsing and macOS-only project configuration.
-
-> **Trigger:** `/scaffold-rust-cli`
-> **Details:** [README](./plugins/scaffold-rust-cli/README.md)
-
-#### Scaffold New Repo
-
-Scaffold the universal boilerplate for any new repository: LICENSE, README, .gitignore, agent config files, and a plans directory. Supports multiple project types.
-
-> **Trigger:** `/scaffold-new-repo`
-> **Details:** [README](./plugins/scaffold-new-repo/README.md)
-
-#### Setup CI
-
-Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets. Detects the project language (Go, JavaScript/TypeScript, Python, Rust, Ruby, Shell, Zsh) and generates appropriate parallel CI jobs and Makefile targets.
-
-> **Trigger:** `/setup-ci`
-> **Details:** [README](./plugins/setup-ci/README.md)
-
-#### Setup Secret Scanning
-
-Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration. Gitleaks provides fast pattern matching on every push and PR; TruffleHog adds deeper verification-based scanning on pushes to main.
-
-> **Trigger:** `/setup-secret-scanning`
-> **Details:** [README](./plugins/setup-secret-scanning/README.md)
-
-#### Setup Installers
-
-Set up installer and distribution methods for Go, Swift, and Rust projects: Homebrew tap formula, go/cargo install, release workflow generation, and homebrew-tap issue creation. Detects existing release infrastructure and generates appropriate files.
-
-> **Trigger:** `/setup-installers`
-> **Details:** [README](./plugins/setup-installers/README.md)
-
-#### Update Everything
-
-Audit a repository against the latest plugin templates and update anything out of date. The maintenance companion to Bootstrap Project: bootstrap sets things up, this keeps them current. Detects which tools have been used, compares files against current templates, presents a plan, and applies confirmed updates.
-
-> **Trigger:** `/update-everything`
-> **Details:** [README](./plugins/update-everything/README.md)
 
 ## Hooks
 
