@@ -2,12 +2,12 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "commands": "./commands",
   "description": "Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, go/cargo install, and release workflow.",
   "homepage": "https://github.com/cboone/cboone-cc-plugins",
   "keywords": ["cargo", "distribution", "github-actions", "go", "golang", "homebrew", "install", "release", "rust", "swift", "zig"],
   "license": "MIT",
   "name": "setup-installers",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
-  "version": "2.1.0"
+  "skills": "./skills",
+  "version": "2.2.0"
 }

@@ -413,7 +413,7 @@
       "name": "setup-installers",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-installers",
-      "version": "2.1.0"
+      "version": "2.2.0"
     },
     {
       "author": {

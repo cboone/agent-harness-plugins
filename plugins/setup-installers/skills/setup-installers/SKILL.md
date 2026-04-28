@@ -1,7 +1,15 @@
 ---
-description: Set up installer and distribution methods for Go, Swift, Rust, and Zig projects
-disable-model-invocation: true
-argument-hint: "[homebrew|go-install|cargo-install]"
+name: setup-installers
+description: >-
+  Set up installer and distribution methods for Go, Swift, Rust, and Zig
+  projects: a Homebrew tap formula for `brew install`, plus README and
+  compatibility wiring for `go install` (Go) and `cargo install` (Rust). Use
+  when the user says "set up installers", "add a Homebrew formula", "set up
+  homebrew", "publish to homebrew tap", "support brew install", "support go
+  install", "support cargo install", "set up distribution", or wants users to
+  install their CLI through a package manager. Pairs with
+  add-goreleaser-homebrew when GoReleaser-driven Homebrew publishing is the
+  goal.
 ---
 
 # Setup Installers
@@ -59,7 +67,7 @@ Report any existing installers to the user before proceeding. Existing installer
 
 ### 3. Select Installer Types
 
-If `$ARGUMENTS` is provided (e.g., `homebrew`, `go-install`, `cargo-install`, or a comma-separated combination), use that selection.
+If the user named an installer type in their request (e.g., `homebrew`, `go-install`, `cargo-install`, or a comma-separated combination), use that selection.
 
 Otherwise, ask the user which installer types to set up. Present applicable options based on the detected language:
 
@@ -95,9 +103,9 @@ Skip this section if the user did not select Homebrew.
 gh secret list | grep HOMEBREW_TAP_TOKEN || true
 ```
 
-If the secret is missing, warn the user that releases will fail without it. Suggest running `/add-goreleaser-homebrew` for a guided setup that includes interactive token configuration, or manually adding the secret (see the HOMEBREW_TAP_TOKEN Setup reference section in `add-goreleaser-homebrew`).
+If the secret is missing, warn the user that releases will fail without it. Suggest invoking the add-goreleaser-homebrew skill for a guided setup that includes interactive token configuration, or manually adding the secret (see the HOMEBREW_TAP_TOKEN Setup reference in the add-goreleaser-homebrew skill).
 
-**If GoReleaser exists without a `homebrew_casks:` or `brews:` section**: suggest using `/add-goreleaser-homebrew` to add Homebrew support through GoReleaser, which is the preferred approach for Go projects with GoReleaser. That command includes interactive `HOMEBREW_TAP_TOKEN` setup. Skip creating a standalone formula.
+**If GoReleaser exists without a `homebrew_casks:` or `brews:` section**: suggest invoking the add-goreleaser-homebrew skill to add Homebrew support through GoReleaser, which is the preferred approach for Go projects with GoReleaser. That skill includes interactive `HOMEBREW_TAP_TOKEN` setup. Skip creating a standalone formula.
 
 **If no GoReleaser exists**: create a standalone Homebrew formula. Choose the appropriate template based on platform constraints.
 
@@ -699,7 +707,7 @@ After completing all selected installer types, print a summary:
   - For go install: ensure the module has no `replace` directives and is tagged with a version
   - For cargo install: ensure the crate is published to crates.io (if applicable)
   - For release workflow: tag a release to trigger the workflow (e.g., `git tag v0.1.0 && git push origin v0.1.0`)
-  - If `HOMEBREW_TAP_TOKEN` was found to be missing during step 5: remind the user to configure it before the first release, either by running `/add-goreleaser-homebrew` for guided setup or by manually creating a fine-grained PAT and adding it as a repository secret
+  - If `HOMEBREW_TAP_TOKEN` was found to be missing during step 5: remind the user to configure it before the first release, either by invoking the add-goreleaser-homebrew skill for guided setup or by manually creating a fine-grained PAT and adding it as a repository secret
 
 ## Error Handling
 
