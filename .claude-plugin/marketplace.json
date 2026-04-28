@@ -357,7 +357,7 @@
       "name": "scaffold-go-library",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-library",
-      "version": "1.7.0"
+      "version": "1.8.0"
     },
     {
       "author": {

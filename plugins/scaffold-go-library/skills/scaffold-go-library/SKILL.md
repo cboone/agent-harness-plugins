@@ -1,7 +1,13 @@
 ---
-description: Scaffold a Go library project with GoReleaser changelog releases, golangci-lint, GitHub Actions CI/CD, and Makefile.
-disable-model-invocation: true
-argument-hint: "[project-name]"
+name: scaffold-go-library
+description: >-
+  Scaffold a Go library project with GoReleaser changelog releases,
+  golangci-lint, GitHub Actions CI/CD (multi-version Go matrix), and Makefile.
+  Use when the user says "scaffold a Go library", "new Go library", "create a
+  Go package", "start a Go library", "bootstrap a Go library", or starts a Go
+  module that exposes a library API rather than a CLI binary. For Go CLIs
+  (have main.go) use scaffold-go-cli instead. For language-agnostic
+  boilerplate alone, use scaffold-new-repo.
 ---
 
 # Scaffold Go Library
@@ -12,7 +18,7 @@ Generate the full boilerplate for a new Go library project.
 
 ### 1. Gather Project Information
 
-If `$ARGUMENTS` is provided, use it as the project name and skip asking for it. Still ask for the remaining parameters (description, minimum Go version, example tests) unless already provided in the user's initial request.
+If the user provided a project name in their request, use it as the project name and skip asking for it. Still ask for the remaining parameters (description, minimum Go version, example tests) unless already provided in the user's initial request.
 
 Ask the user for these parameters:
 
@@ -57,7 +63,7 @@ git init
 
 ### 5. Initialize go.mod
 
-Follow the instructions in the go.mod Template section below:
+Read `./references/go-mod.md` for the canonical `go mod init` invocation.
 
 ```bash
 go mod init github.com/GITHUB-USERNAME/PROJECT-NAME
@@ -67,7 +73,7 @@ No dependencies to install -- Go libraries should start stdlib-only.
 
 ### 6. Generate Package File
 
-Create `PACKAGE-NAME.go` using the template from the Package File Template section below.
+Read `./references/package-file.md` for the package-file template and create `PACKAGE-NAME.go` from it.
 
 - Replace `PACKAGE-NAME` with the derived package name
 
@@ -75,7 +81,7 @@ This file contains the `package` declaration and a `Version` constant. No doc co
 
 ### 7. Generate doc.go
 
-Create `doc.go` using the template from the doc.go Template section below.
+Read `./references/doc-go.md` for the `doc.go` template and create `doc.go` from it.
 
 - Replace `PACKAGE-NAME` with the derived package name
 - Replace `PROJECT-DESCRIPTION` with the short description
@@ -95,13 +101,13 @@ If the user requested example tests, create `example_test.go` with a basic `Exam
 
 ### 9. Generate Makefile
 
-Create `Makefile` using the template from the Makefile Template section below.
+Read `./references/makefile.md` for the Makefile template and create `Makefile` from it.
 
 - Replace `PROJECT-NAME` with the project name
 
 ### 10. Generate .gitignore
 
-Create `.gitignore` using the template from the .gitignore Template section below.
+Read `./references/gitignore.md` for the `.gitignore` template and create `.gitignore` from it.
 
 No replacements needed.
 
@@ -109,7 +115,7 @@ If a `.gitignore` already exists, merge the template entries into it rather than
 
 ### 11. Generate .goreleaser.yml
 
-Create `.goreleaser.yml` using the template from the .goreleaser.yml Template section below.
+Read `./references/goreleaser.md` for the GoReleaser template and create `.goreleaser.yml` from it.
 
 - Replace `PROJECT-NAME` with the project name
 - Replace `PROJECT-DESCRIPTION` with the short description
@@ -117,39 +123,39 @@ Create `.goreleaser.yml` using the template from the .goreleaser.yml Template se
 
 ### 12. Generate .golangci.yml
 
-Create `.golangci.yml` using the template from the .golangci.yml Template section below.
+Read `./references/golangci.md` for the golangci-lint template and create `.golangci.yml` from it.
 
 - Replace `GITHUB-USERNAME` with the detected GitHub username
 - Replace `PROJECT-NAME` with the project name
 
 ### 13. Generate .editorconfig
 
-Create `.editorconfig` using the template from the .editorconfig Template section below.
+Read `./references/editorconfig.md` for the `.editorconfig` template and create `.editorconfig` from it.
 
 No replacements needed.
 
 ### 14. Generate CI Workflow
 
-Create `.github/workflows/ci.yml` using the template from the CI Workflow Template section below.
+Read `./references/ci-workflow.md` for the CI workflow template and create `.github/workflows/ci.yml` from it.
 
 - Replace `MINIMUM-GO-VERSION` with the minimum Go version (from step 1)
 
 ### 15. Generate Release Workflow
 
-Create `.github/workflows/release.yml` using the template from the Release Workflow Template section below.
+Read `./references/release-workflow.md` for the release workflow template and create `.github/workflows/release.yml` from it.
 
 No replacements needed.
 
 ### 16. Generate LICENSE
 
-Create `LICENSE` using the template from the LICENSE Template section below.
+Read `./references/license.md` for the LICENSE template and create `LICENSE` from it.
 
 - Replace `YEAR` with the current year (run `date +%Y` to get it)
 - Replace `COPYRIGHT-HOLDER` with the detected full name
 
 ### 17. Generate README.md
 
-Create `README.md` using the template from the README Template section below.
+Read `./references/readme.md` for the README template and create `README.md` from it.
 
 - Replace `PROJECT-NAME` with the project name (kebab-case)
 - Replace `PROJECT-TITLE` with the project name in title case
@@ -213,7 +219,7 @@ git commit -S -m "feat: scaffold Go library project"
 
 ### 23. Update Copilot Instructions
 
-If `.github/copilot-instructions.md` exists (created by `scaffold-new-repo` when running in the bootstrap flow, or already present in an existing repo), append the following entries to the PR review section. Before appending each entry, check whether the bold key text already exists in the file; skip entries that are already present.
+If `.github/copilot-instructions.md` exists (created by the scaffold-new-repo skill when running in the bootstrap flow, or already present in an existing repo), append the following entries to the PR review section. Before appending each entry, check whether the bold key text already exists in the file; skip entries that are already present.
 
 To locate the PR review section: look for an existing heading whose text includes "PR Review" or "Code Review" (e.g., `## PR Review`, `## Code Review`, `## PR Review Checklist (CRITICAL)`). If no matching heading exists, append a new `## PR Review` section at the end of the file and place the entries there.
 
@@ -233,7 +239,7 @@ Print a summary of what was created:
   - Tag releases with `git tag v0.1.0 && git push --tags` to trigger GoReleaser
   - Write tests alongside source files (e.g., `PACKAGE-NAME_test.go`)
   - Use `make coverage` to generate an HTML coverage report
-  - Run `/add-community-files` to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
+  - Run the add-community-files skill to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
 
 ## Error Handling
 
@@ -242,30 +248,17 @@ Print a summary of what was created:
 - If `git init` fails, continue generating files but warn the user
 - If the build verification fails, show the error and attempt to fix it before continuing
 
----
-
 ## Reference Templates
 
-@${CLAUDE_PLUGIN_ROOT}/references/go-mod.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/package-file.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/doc-go.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/makefile.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/gitignore.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/goreleaser.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/golangci.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/editorconfig.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/ci-workflow.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/release-workflow.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/license.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/readme.md
+- `./references/go-mod.md` -- `go mod init` setup
+- `./references/package-file.md` -- top-level package source file
+- `./references/doc-go.md` -- `doc.go` package doc comment
+- `./references/makefile.md` -- Makefile template
+- `./references/gitignore.md` -- `.gitignore` template
+- `./references/goreleaser.md` -- `.goreleaser.yml` template
+- `./references/golangci.md` -- `.golangci.yml` template
+- `./references/editorconfig.md` -- `.editorconfig` template
+- `./references/ci-workflow.md` -- `.github/workflows/ci.yml`
+- `./references/release-workflow.md` -- `.github/workflows/release.yml`
+- `./references/license.md` -- MIT license template
+- `./references/readme.md` -- README template
