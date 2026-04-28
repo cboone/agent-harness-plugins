@@ -1,7 +1,14 @@
 ---
-description: Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration.
-disable-model-invocation: true
-argument-hint: "[gitleaks|trufflehog|both]"
+name: setup-secret-scanning
+description: >-
+  Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows
+  and optional gitleaks configuration. Use when the user says "add secret
+  scanning", "set up secret scanning", "set up gitleaks", "set up trufflehog",
+  "scan for secrets in CI", or wants to detect leaked credentials in a
+  repository. Gitleaks performs fast pattern matching on every push and PR
+  plus a daily scheduled scan; TruffleHog adds verification-based scanning on
+  pushes to main with a weekly schedule. Pairs with handle-secrets for
+  application-level secret hygiene.
 ---
 
 # Setup Secret Scanning
@@ -36,7 +43,7 @@ If any workflows already exist, inform the user and ask whether to overwrite eac
 
 ### 2. Choose Scanning Tools
 
-If `$ARGUMENTS` specifies a tool selection (`gitleaks`, `trufflehog`, or `both`), use it directly instead of asking the user.
+If the user specified a tool selection in their request (`gitleaks`, `trufflehog`, or `both`), use it directly instead of asking.
 
 Ask the user which tools to set up:
 
@@ -46,13 +53,13 @@ Ask the user which tools to set up:
 
 ### 3. Generate Gitleaks Workflow
 
-If gitleaks was selected, create `.github/workflows/gitleaks.yml` using the gitleaks workflow template below.
+If gitleaks was selected, read `./references/gitleaks-workflow.md` for the workflow template and create `.github/workflows/gitleaks.yml` from it.
 
 Write the file using the Write tool. The `.github/workflows/` directory will be created automatically if it does not exist.
 
 ### 4. Generate TruffleHog Workflow
 
-If TruffleHog was selected, create `.github/workflows/trufflehog.yml` using the TruffleHog workflow template below.
+If TruffleHog was selected, read `./references/trufflehog-workflow.md` for the workflow template and create `.github/workflows/trufflehog.yml` from it.
 
 Write the file using the Write tool.
 
@@ -60,7 +67,7 @@ Write the file using the Write tool.
 
 If gitleaks was selected, ask the user whether they want a `.gitleaks.toml` configuration file.
 
-If yes, create `.gitleaks.toml` in the repository root using the configuration template below. Adapt the allowlist paths to the project:
+If yes, read `./references/gitleaks-config.md` for the configuration template and create `.gitleaks.toml` in the repository root from it. Adapt the allowlist paths to the project:
 
 - **Go projects** (have `go.mod`): include `go.sum`
 - **JavaScript projects** (have `package.json`): include `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`
@@ -83,12 +90,8 @@ Print a summary of what was created:
 - If any workflow file already exists, ask before overwriting
 - If `.github/workflows/` cannot be created, check that the current directory is a git repository root
 
----
-
 ## Reference Templates
 
-@${CLAUDE_PLUGIN_ROOT}/references/gitleaks-workflow.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/trufflehog-workflow.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/gitleaks-config.md
+- `./references/gitleaks-workflow.md` -- gitleaks GitHub Actions workflow
+- `./references/trufflehog-workflow.md` -- TruffleHog GitHub Actions workflow
+- `./references/gitleaks-config.md` -- `.gitleaks.toml` configuration
