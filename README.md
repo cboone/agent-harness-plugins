@@ -27,10 +27,14 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Lint and Fix](#lint-and-fix)
 ∙ [Setup Linters](#setup-linters)
 ∙ [Write Go Code](#write-go-code)
+∙ [Write LaTeX](#write-latex)
 ∙ [Write Markdown](#write-markdown)
 ∙ [Write Scrut Tests](#write-scrut-tests)
 ∙ [Write Bash Scripts](#write-bash-scripts)
 ∙ [Write Zsh Scripts](#write-zsh-scripts)
+<br>Writing:
+[Write Math](#write-math)
+∙ [Write Pandoc Markdown](#write-pandoc-markdown)
 <br>Scaffolding:
 [Add Community Files](#add-community-files)
 ∙ [Bootstrap Project](#bootstrap-project)
@@ -237,6 +241,13 @@ Go code style guide based on Google Go Style Guide, Effective Go, and Code Revie
 > **Trigger:** `/write-go-code` (also activates automatically)
 > **Details:** [README](./plugins/write-go-code/README.md)
 
+#### Write LaTeX
+
+LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2, and Knuth conventions. Covers math typesetting, document conventions, packages, macros and cross-references, figures and floats, tables, spacing and alignment, ISO conventions, bibliography, and common mistakes.
+
+> **Trigger:** `/write-latex` (also activates automatically)
+> **Details:** [README](./plugins/write-latex/README.md)
+
 #### Write Markdown
 
 Markdown style conventions targeting GitHub Flavored Markdown (GFM), aligned with markdownlint-cli2 rules. Activates automatically when creating or editing Markdown files.
@@ -271,6 +282,24 @@ Detect project languages and file types, recommend appropriate linters and forma
 
 > **Trigger:** `/setup-linters`
 > **Details:** [README](./plugins/setup-linters/README.md)
+
+### Writing
+
+Style and structure guides for prose, documentation, and document artifacts. These skills activate automatically when working with their target file types and content.
+
+#### Write Math
+
+Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references. Covers clarity, notation discipline, theorem and proof structure, paper organization, and revision workflow. Activates automatically when producing or discussing mathematical content in any venue, including chat responses and Lean docstrings.
+
+> **Trigger:** `/write-math` (also activates automatically)
+> **Details:** [README](./plugins/write-math/README.md)
+
+#### Write Pandoc Markdown
+
+Pandoc-flavored Markdown conventions for academic papers with LaTeX output. Covers YAML frontmatter, math and citations, cross-references, raw LaTeX blocks, and the Pandoc-to-LaTeX build pipeline. Distinct from `write-markdown`, which targets GitHub Flavored Markdown.
+
+> **Trigger:** `/write-pandoc-markdown` (also activates automatically)
+> **Details:** [README](./plugins/write-pandoc-markdown/README.md)
 
 ### Scaffolding
 

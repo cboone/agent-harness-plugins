@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "1.26.0"
+    "version": "1.29.0"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -175,7 +175,7 @@
       "name": "create-plugin",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-plugin",
-      "version": "1.2.0"
+      "version": "1.2.1"
     },
     {
       "author": {
@@ -546,6 +546,20 @@
         "name": "Christopher Boone"
       },
       "category": "code-quality",
+      "description": "LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2, and Knuth conventions.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["academic-writing", "ams", "ieee", "latex", "typesetting"],
+      "license": "MIT",
+      "name": "write-latex",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/write-latex",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
       "description": "Applies Markdown style conventions when creating or editing Markdown files.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["documentation", "format", "markdown", "style"],
@@ -554,6 +568,34 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/write-markdown",
       "version": "1.2.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "writing",
+      "description": "Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["academic-writing", "exposition", "mathematics", "notation", "proofs"],
+      "license": "MIT",
+      "name": "write-math",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/write-math",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "writing",
+      "description": "Pandoc-flavored Markdown conventions for academic papers with LaTeX output.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["academic-writing", "latex", "markdown", "pandoc"],
+      "license": "MIT",
+      "name": "write-pandoc-markdown",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/write-pandoc-markdown",
+      "version": "1.0.0"
     },
     {
       "author": {

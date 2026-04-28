@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["academic-writing", "exposition", "mathematics", "notation", "proofs"],
+  "license": "MIT",
+  "name": "write-math",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
