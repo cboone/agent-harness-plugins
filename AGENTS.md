@@ -145,6 +145,21 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── lint-and-fix/
     │           └── SKILL.md
+    ├── manage-repo-licensing/       # REUSE/SPDX licensing skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── manage-repo-licensing/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── commit-sequence.md
+    │               ├── example-flows.md
+    │               ├── file-type-matrix.md
+    │               ├── license-split.yaml
+    │               ├── NOTICE.template.md
+    │               ├── reference-material-text.md
+    │               └── verification.md
     ├── merge-main/                  # Base branch merge skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

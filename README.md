@@ -41,6 +41,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 <br>Scaffolding:
 [Add Community Files](#add-community-files)
 ∙ [Bootstrap Project](#bootstrap-project)
+∙ [Manage Repo Licensing](#manage-repo-licensing)
 ∙ [Scaffold Go CLI](#scaffold-go-cli)
 ∙ [Scaffold Go Library](#scaffold-go-library)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
@@ -342,6 +343,14 @@ Assess a repository, determine what scaffolding and setup tools are needed, pres
 
 > **Trigger:** `/bootstrap-project`
 > **Details:** [README](./plugins/bootstrap-project/README.md)
+
+#### Manage Repo Licensing
+
+Bootstrap, audit, and maintain REUSE-style mixed-license coverage in a repository: populate `LICENSES/`, author `NOTICE`, wire `REUSE.toml`, apply SPDX headers or sidecars, and keep `reuse lint` clean. Three operating modes: Bootstrap (new repo), Maintain (audit and fix drift on an existing repo), and New-file drop (single file).
+
+> **Trigger:** `/manage-repo-licensing` (also activates automatically)
+> **Requires:** [`reuse`](https://reuse.software/). Install via [Homebrew](https://brew.sh): `brew install reuse`
+> **Details:** [README](./plugins/manage-repo-licensing/README.md)
 
 #### Scaffold Go CLI
 
