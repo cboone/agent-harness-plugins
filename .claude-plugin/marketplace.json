@@ -49,7 +49,7 @@
       "name": "add-scrut-cli-tests",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/add-scrut-cli-tests",
-      "version": "1.5.0"
+      "version": "1.6.0"
     },
     {
       "author": {
