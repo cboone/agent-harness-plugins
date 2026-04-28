@@ -26,14 +26,22 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Handle Secrets](#handle-secrets)
 ∙ [Lint and Fix](#lint-and-fix)
 ∙ [Setup Linters](#setup-linters)
-∙ [Write Go Code](#write-go-code)
-∙ [Write Markdown](#write-markdown)
-∙ [Write Scrut Tests](#write-scrut-tests)
 ∙ [Write Bash Scripts](#write-bash-scripts)
+∙ [Write Go Code](#write-go-code)
+∙ [Write LaTeX](#write-latex)
+∙ [Write Lean Code](#write-lean-code)
+∙ [Write Lean Tests](#write-lean-tests)
+∙ [Write Scrut Tests](#write-scrut-tests)
 ∙ [Write Zsh Scripts](#write-zsh-scripts)
+<br>Writing:
+[Write Formalization Roadmap](#write-formalization-roadmap)
+∙ [Write Markdown](#write-markdown)
+∙ [Write Math](#write-math)
+∙ [Write Pandoc Markdown](#write-pandoc-markdown)
 <br>Scaffolding:
 [Add Community Files](#add-community-files)
 ∙ [Bootstrap Project](#bootstrap-project)
+∙ [Manage Repo Licensing](#manage-repo-licensing)
 ∙ [Scaffold Go CLI](#scaffold-go-cli)
 ∙ [Scaffold Go Library](#scaffold-go-library)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
@@ -230,26 +238,12 @@ Detect available linters and formatters in the project, run them with auto-fix, 
 > **Trigger:** `/lint-and-fix`
 > **Details:** [README](./plugins/lint-and-fix/README.md)
 
-#### Write Go Code
+#### Setup Linters
 
-Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments. Organized into an essential checklist and comprehensive references by topic.
+Detect project languages and file types, recommend appropriate linters and formatters, install them, and generate config files. Supports JavaScript/TypeScript (ESLint + Prettier), Go, Python, Rust, Ruby, Shell, Zsh, and cross-language tools (EditorConfig, markdownlint, cspell, Stylelint, Hadolint, Actionlint, and more).
 
-> **Trigger:** `/write-go-code` (also activates automatically)
-> **Details:** [README](./plugins/write-go-code/README.md)
-
-#### Write Markdown
-
-Markdown style conventions targeting GitHub Flavored Markdown (GFM), aligned with markdownlint-cli2 rules. Activates automatically when creating or editing Markdown files.
-
-> **Trigger:** `/write-markdown` (also activates automatically)
-> **Details:** [README](./plugins/write-markdown/README.md)
-
-#### Write Scrut Tests
-
-Scrut test style conventions for writing and maintaining snapshot-based test files for CLI binaries and zsh plugins. Activates automatically when creating or editing scrut test files.
-
-> **Trigger:** `/write-scrut-tests` (also activates automatically)
-> **Details:** [README](./plugins/write-scrut-tests/README.md)
+> **Trigger:** `/setup-linters`
+> **Details:** [README](./plugins/setup-linters/README.md)
 
 #### Write Bash Scripts
 
@@ -258,6 +252,41 @@ Bash style conventions for creating and editing Bash scripts. Activates automati
 > **Trigger:** `/write-bash-scripts` (also activates automatically)
 > **Details:** [README](./plugins/write-bash-scripts/README.md)
 
+#### Write Go Code
+
+Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments. Organized into an essential checklist and comprehensive references by topic.
+
+> **Trigger:** `/write-go-code` (also activates automatically)
+> **Details:** [README](./plugins/write-go-code/README.md)
+
+#### Write LaTeX
+
+LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2, and Knuth conventions. Covers math typesetting, document conventions, packages, macros and cross-references, figures and floats, tables, spacing and alignment, ISO conventions, bibliography, and common mistakes.
+
+> **Trigger:** `/write-latex` (also activates automatically)
+> **Details:** [README](./plugins/write-latex/README.md)
+
+#### Write Lean Code
+
+Lean 4 style guide and Mathlib conventions covering naming, proof style, formatting, Mathlib API discovery, build infrastructure, metaprogramming, and general functional-programming idioms. Organized into an essential checklist and comprehensive references by topic.
+
+> **Trigger:** `/write-lean-code` (also activates automatically)
+> **Details:** [README](./plugins/write-lean-code/README.md)
+
+#### Write Lean Tests
+
+Conventions for compile-time, `example`-based Lean 4 API regression tests that mirror a library's public surface. Pairs with `write-lean-code` (which governs the library code itself).
+
+> **Trigger:** `/write-lean-tests` (also activates automatically)
+> **Details:** [README](./plugins/write-lean-tests/README.md)
+
+#### Write Scrut Tests
+
+Scrut test style conventions for writing and maintaining snapshot-based test files for CLI binaries and zsh plugins. Activates automatically when creating or editing scrut test files.
+
+> **Trigger:** `/write-scrut-tests` (also activates automatically)
+> **Details:** [README](./plugins/write-scrut-tests/README.md)
+
 #### Write Zsh Scripts
 
 Zsh style conventions for creating and editing zsh scripts, configurations, and completions. Activates automatically when creating or editing zsh files. Includes a comprehensive scripting guide and a separate completion function reference drawn from the upstream zsh completion-style-guide.
@@ -265,12 +294,37 @@ Zsh style conventions for creating and editing zsh scripts, configurations, and 
 > **Trigger:** `/write-zsh-scripts` (also activates automatically)
 > **Details:** [README](./plugins/write-zsh-scripts/README.md)
 
-#### Setup Linters
+### Writing
 
-Detect project languages and file types, recommend appropriate linters and formatters, install them, and generate config files. Supports JavaScript/TypeScript (ESLint + Prettier), Go, Python, Rust, Ruby, Shell, Zsh, and cross-language tools (EditorConfig, markdownlint, cspell, Stylelint, Hadolint, Actionlint, and more).
+Style and structure guides for prose, documentation, and document artifacts. These skills activate automatically when working with their target file types and content.
 
-> **Trigger:** `/setup-linters`
-> **Details:** [README](./plugins/setup-linters/README.md)
+#### Write Formalization Roadmap
+
+Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants. Sibling to `write-math`: governs the structure of long-lived mechanization plans (10-section schema, 5-part milestone anatomy) without dictating mathematical prose style.
+
+> **Trigger:** `/write-formalization-roadmap` (also activates automatically)
+> **Details:** [README](./plugins/write-formalization-roadmap/README.md)
+
+#### Write Markdown
+
+Markdown style conventions targeting GitHub Flavored Markdown (GFM), aligned with markdownlint-cli2 rules. Activates automatically when creating or editing Markdown files. Distinct from `write-pandoc-markdown`, which targets Pandoc-flavored Markdown for academic papers.
+
+> **Trigger:** `/write-markdown` (also activates automatically)
+> **Details:** [README](./plugins/write-markdown/README.md)
+
+#### Write Math
+
+Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references. Covers clarity, notation discipline, theorem and proof structure, paper organization, and revision workflow. Activates automatically when producing or discussing mathematical content in any venue, including chat responses and Lean docstrings.
+
+> **Trigger:** `/write-math` (also activates automatically)
+> **Details:** [README](./plugins/write-math/README.md)
+
+#### Write Pandoc Markdown
+
+Pandoc-flavored Markdown conventions for academic papers with LaTeX output. Covers YAML frontmatter, math and citations, cross-references, raw LaTeX blocks, and the Pandoc-to-LaTeX build pipeline. Distinct from `write-markdown`, which targets GitHub Flavored Markdown.
+
+> **Trigger:** `/write-pandoc-markdown` (also activates automatically)
+> **Details:** [README](./plugins/write-pandoc-markdown/README.md)
 
 ### Scaffolding
 
@@ -289,6 +343,14 @@ Assess a repository, determine what scaffolding and setup tools are needed, pres
 
 > **Trigger:** `/bootstrap-project`
 > **Details:** [README](./plugins/bootstrap-project/README.md)
+
+#### Manage Repo Licensing
+
+Bootstrap, audit, and maintain REUSE-style mixed-license coverage in a repository: populate `LICENSES/`, author `NOTICE`, wire `REUSE.toml`, apply SPDX headers or sidecars, and keep `reuse lint` clean. Three operating modes: Bootstrap (new repo), Maintain (audit and fix drift on an existing repo), and New-file drop (single file).
+
+> **Trigger:** `/manage-repo-licensing` (also activates automatically)
+> **Requires:** [`reuse`](https://reuse.software/). Install via [Homebrew](https://brew.sh): `brew install reuse`
+> **Details:** [README](./plugins/manage-repo-licensing/README.md)
 
 #### Scaffold Go CLI
 

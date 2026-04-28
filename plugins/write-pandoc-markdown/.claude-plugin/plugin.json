@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Pandoc-flavored Markdown conventions for academic papers with LaTeX output.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["academic-writing", "latex", "markdown", "pandoc"],
+  "license": "MIT",
+  "name": "write-pandoc-markdown",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

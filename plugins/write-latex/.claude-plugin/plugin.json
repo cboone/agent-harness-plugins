@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2, and Knuth conventions.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["academic-writing", "ams", "ieee", "latex", "typesetting"],
+  "license": "MIT",
+  "name": "write-latex",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

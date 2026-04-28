@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Lean 4 style guide and Mathlib conventions for naming, proofs, formatting, and metaprogramming.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["formal-methods", "lean", "lean4", "mathlib", "style"],
+  "license": "MIT",
+  "name": "write-lean-code",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

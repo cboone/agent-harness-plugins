@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["formal-methods", "isabelle", "lean", "planning", "rocq"],
+  "license": "MIT",
+  "name": "write-formalization-roadmap",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

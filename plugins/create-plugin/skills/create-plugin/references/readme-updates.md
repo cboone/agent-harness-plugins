@@ -44,14 +44,15 @@ Format rules:
 
 Use this guide to determine which subcategory a new plugin belongs to:
 
-| Subcategory              | Covers                             | Examples                                    |
-| ------------------------ | ---------------------------------- | ------------------------------------------- |
-| **Git**                  | Commit-to-PR pipeline              | commit, merge-main, pr, review-branch       |
-| **Issues and Worktrees** | Multi-agent and issue-driven work  | create-worktree, suggest-next-issue         |
-| **Code Review**          | Responding to external feedback    | address-review, resolve-copilot-pr-feedback |
-| **Code Quality**         | Style guides, linting, formatting  | lint-and-fix, write-go-code                 |
-| **Scaffolding**          | Project and repo setup             | scaffold-go-cli, setup-secret-scanning      |
-| **Agents**               | Meta-tools for the agent ecosystem | clean-up-agent-config, create-plugin        |
+| Subcategory              | Covers                                                       | Examples                                    |
+| ------------------------ | ------------------------------------------------------------ | ------------------------------------------- |
+| **Git**                  | Commit-to-PR pipeline                                        | commit, merge-main, pr, review-branch       |
+| **Issues and Worktrees** | Multi-agent and issue-driven work                            | create-worktree, suggest-next-issue         |
+| **Code Review**          | Responding to external feedback                              | address-review, resolve-copilot-pr-feedback |
+| **Code Quality**         | Style guides for code, linting, formatting                   | lint-and-fix, write-go-code                 |
+| **Writing**              | Style and structure guides for prose and document artifacts  | write-markdown, write-pandoc-markdown       |
+| **Scaffolding**          | Project and repo setup                                       | scaffold-go-cli, setup-secret-scanning      |
+| **Agents**               | Meta-tools for the agent ecosystem                           | clean-up-agent-config, create-plugin        |
 
 ### Adding a New Skill
 

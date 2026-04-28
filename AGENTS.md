@@ -145,6 +145,21 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── lint-and-fix/
     │           └── SKILL.md
+    ├── manage-repo-licensing/       # REUSE/SPDX licensing skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── manage-repo-licensing/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── commit-sequence.md
+    │               ├── example-flows.md
+    │               ├── file-type-matrix.md
+    │               ├── license-split.yaml
+    │               ├── NOTICE.template.md
+    │               ├── reference-material-text.md
+    │               └── verification.md
     ├── merge-main/                  # Base branch merge skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -152,6 +167,22 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── merge-main/
     │           └── SKILL.md
+    ├── write-formalization-roadmap/ # Formalization roadmap structure skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── write-formalization-roadmap/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── comprehensive/
+    │               │   ├── anti-patterns.md
+    │               │   ├── conventions.md
+    │               │   ├── document-structure.md
+    │               │   ├── examples.md
+    │               │   └── milestone-anatomy.md
+    │               └── essential/
+    │                   └── checklist.md
     ├── write-go-code/              # Go style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -407,6 +438,54 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── update-review/
     │           └── SKILL.md
+    ├── write-latex/                 # LaTeX typesetting style guide skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── write-latex/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── comprehensive/
+    │               │   ├── bibliography.md
+    │               │   ├── common-mistakes.md
+    │               │   ├── document-conventions.md
+    │               │   ├── figures-and-floats.md
+    │               │   ├── iso-conventions.md
+    │               │   ├── macros-and-cross-refs.md
+    │               │   ├── math-typesetting.md
+    │               │   ├── packages.md
+    │               │   ├── spacing-and-alignment.md
+    │               │   └── tables.md
+    │               └── essential/
+    │                   └── checklist.md
+    ├── write-lean-code/             # Lean 4 and Mathlib style guide skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── write-lean-code/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── comprehensive/
+    │               │   ├── build-infrastructure.md
+    │               │   ├── general-programming.md
+    │               │   ├── mathlib-api-discovery.md
+    │               │   ├── mathlib.md
+    │               │   ├── metaprogramming.md
+    │               │   ├── naming.md
+    │               │   ├── pfr-downstream.md
+    │               │   ├── proof-style.md
+    │               │   └── style-and-formatting.md
+    │               └── essential/
+    │                   └── checklist.md
+    ├── write-lean-tests/            # Lean 4 API regression tests skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── write-lean-tests/
+    │           └── SKILL.md
     ├── write-markdown/              # Markdown style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -416,6 +495,40 @@ cboone-cc-plugins/
     │           ├── SKILL.md
     │           └── references/
     │               └── MARKDOWN.md
+    ├── write-math/                  # Mathematical writing and exposition skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── write-math/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── comprehensive/
+    │               │   ├── citations-and-references.md
+    │               │   ├── english-usage.md
+    │               │   ├── notation.md
+    │               │   ├── paper-structure.md
+    │               │   ├── reader-centered-writing.md
+    │               │   ├── revision-and-process.md
+    │               │   └── theorems-and-proofs.md
+    │               └── essential/
+    │                   └── checklist.md
+    ├── write-pandoc-markdown/       # Pandoc Markdown for academic papers skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── write-pandoc-markdown/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── comprehensive/
+    │               │   ├── build-pipeline.md
+    │               │   ├── cross-references.md
+    │               │   ├── math-and-citations.md
+    │               │   ├── raw-latex-blocks.md
+    │               │   └── yaml-frontmatter.md
+    │               └── essential/
+    │                   └── checklist.md
     ├── write-scrut-tests/           # Scrut test style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

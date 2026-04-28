@@ -53,8 +53,9 @@ Each entry in the `plugins` array has these fields, alphabetized:
 
 Categories currently used in this repository:
 
-- `"code-quality"` -- style guides, code review tools, linting
+- `"code-quality"` -- style guides for code, code review tools, linting
 - `"productivity"` -- workflow automation, scaffolding, issue management
+- `"writing"` -- style and structure guides for prose, documentation, and document artifacts (Markdown, Pandoc, mathematical exposition, document templates)
 
 ## Plugin Entry Template
 
