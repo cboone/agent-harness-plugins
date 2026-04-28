@@ -23,24 +23,26 @@ cboone-cc-plugins/
     │               ├── contributing.md
     │               ├── pr-template.md
     │               └── security.md
-    ├── add-goreleaser-homebrew/     # GoReleaser + Homebrew tap setup command
+    ├── add-goreleaser-homebrew/     # GoReleaser + Homebrew tap setup skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
-    │   ├── commands/
-    │   │   └── add-goreleaser-homebrew.md
-    │   └── references/
-    │       ├── conditional-features.md
-    │       ├── goreleaser-base.md
-    │       ├── homebrew-tap-token.md
-    │       ├── makefile-targets.md
-    │       ├── migration-guide.md
-    │       └── release-workflow.md
-    ├── add-scrut-cli-tests/         # Scrut CLI integration testing command
+    │   └── skills/
+    │       └── add-goreleaser-homebrew/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── conditional-features.md
+    │               ├── goreleaser-base.md
+    │               ├── homebrew-tap-token.md
+    │               ├── makefile-targets.md
+    │               ├── migration-guide.md
+    │               └── release-workflow.md
+    ├── add-scrut-cli-tests/         # Scrut CLI integration testing skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── commands/
-    │       └── add-scrut-cli-tests.md
+    │   └── skills/
+    │       └── add-scrut-cli-tests/
+    │           └── SKILL.md
     ├── address-review/              # Review feedback resolver skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -213,118 +215,129 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── resolve-copilot-pr-feedback/
     │           └── SKILL.md
-    ├── scaffold-new-repo/          # New repository scaffolding command
+    ├── scaffold-new-repo/          # New repository scaffolding skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   ├── commands/
-    │   │   └── scaffold-new-repo.md
-    │   └── references/
-    │       ├── agents-md.md
-    │       ├── changelog.md
-    │       ├── copilot-instructions.md
-    │       ├── gitignore-templates.md
-    │       ├── license.md
-    │       └── readme.md
-    ├── scaffold-go-cli/            # Go CLI project scaffolding command
+    │   └── skills/
+    │       └── scaffold-new-repo/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── agents-md.md
+    │               ├── changelog.md
+    │               ├── copilot-instructions.md
+    │               ├── gitignore-templates.md
+    │               ├── license.md
+    │               └── readme.md
+    ├── scaffold-go-cli/            # Go CLI project scaffolding skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   ├── commands/
-    │   │   └── scaffold-go-cli.md
-    │   └── references/
-    │       ├── ci-workflow.md
-    │       ├── gitignore.md
-    │       ├── go-mod.md
-    │       ├── goreleaser.md
-    │       ├── homebrew-tap-token.md
-    │       ├── license.md
-    │       ├── main-go.md
-    │       ├── makefile.md
-    │       ├── readme.md
-    │       ├── release-workflow.md
-    │       ├── root-go-with-viper.md
-    │       └── root-go-without-viper.md
-    ├── scaffold-go-library/        # Go library project scaffolding command
+    │   └── skills/
+    │       └── scaffold-go-cli/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── ci-workflow.md
+    │               ├── gitignore.md
+    │               ├── go-mod.md
+    │               ├── goreleaser.md
+    │               ├── homebrew-tap-token.md
+    │               ├── license.md
+    │               ├── main-go.md
+    │               ├── makefile.md
+    │               ├── readme.md
+    │               ├── release-workflow.md
+    │               ├── root-go-with-viper.md
+    │               └── root-go-without-viper.md
+    ├── scaffold-go-library/        # Go library project scaffolding skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   ├── commands/
-    │   │   └── scaffold-go-library.md
-    │   └── references/
-    │       ├── ci-workflow.md
-    │       ├── doc-go.md
-    │       ├── editorconfig.md
-    │       ├── gitignore.md
-    │       ├── go-mod.md
-    │       ├── golangci.md
-    │       ├── goreleaser.md
-    │       ├── license.md
-    │       ├── makefile.md
-    │       ├── package-file.md
-    │       ├── readme.md
-    │       └── release-workflow.md
-    ├── scaffold-rust-cli/          # Rust CLI project scaffolding command
+    │   └── skills/
+    │       └── scaffold-go-library/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── ci-workflow.md
+    │               ├── doc-go.md
+    │               ├── editorconfig.md
+    │               ├── gitignore.md
+    │               ├── go-mod.md
+    │               ├── golangci.md
+    │               ├── goreleaser.md
+    │               ├── license.md
+    │               ├── makefile.md
+    │               ├── package-file.md
+    │               ├── readme.md
+    │               └── release-workflow.md
+    ├── scaffold-rust-cli/          # Rust CLI project scaffolding skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   ├── commands/
-    │   │   └── scaffold-rust-cli.md
-    │   └── references/
-    │       ├── cargo-toml.md
-    │       ├── ci-workflow.md
-    │       ├── ci-workflow-macos-only.md
-    │       ├── cliff.md
-    │       ├── deny.md
-    │       ├── gitignore.md
-    │       ├── license.md
-    │       ├── main-rs.md
-    │       ├── main-rs-with-clap.md
-    │       ├── makefile.md
-    │       ├── readme.md
-    │       ├── release-workflow.md
-    │       ├── release-workflow-macos-only.md
-    │       ├── rust-toolchain.md
-    │       ├── rustfmt.md
-    │       └── typos.md
-    ├── setup-ci/                   # GitHub Actions CI setup command
+    │   └── skills/
+    │       └── scaffold-rust-cli/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── cargo-toml.md
+    │               ├── ci-workflow.md
+    │               ├── ci-workflow-macos-only.md
+    │               ├── cliff.md
+    │               ├── deny.md
+    │               ├── gitignore.md
+    │               ├── license.md
+    │               ├── main-rs.md
+    │               ├── main-rs-with-clap.md
+    │               ├── makefile.md
+    │               ├── readme.md
+    │               ├── release-workflow.md
+    │               ├── release-workflow-macos-only.md
+    │               ├── rust-toolchain.md
+    │               ├── rustfmt.md
+    │               └── typos.md
+    ├── setup-ci/                   # GitHub Actions CI setup skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   ├── commands/
-    │   │   └── setup-ci.md
-    │   └── references/
-    │       ├── ci-go-cli.md
-    │       ├── ci-go-library.md
-    │       ├── ci-javascript.md
-    │       ├── ci-multi-language.md
-    │       ├── ci-python.md
-    │       ├── ci-ruby.md
-    │       ├── ci-rust.md
-    │       ├── ci-shell.md
-    │       ├── makefile-go-cli.md
-    │       ├── makefile-go-library.md
-    │       ├── makefile-javascript.md
-    │       ├── makefile-python.md
-    │       ├── makefile-ruby.md
-    │       ├── makefile-rust.md
-    │       └── makefile-shell.md
-    ├── setup-secret-scanning/      # Secret scanning setup command
+    │   └── skills/
+    │       └── setup-ci/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── ci-go-cli.md
+    │               ├── ci-go-library.md
+    │               ├── ci-javascript.md
+    │               ├── ci-multi-language.md
+    │               ├── ci-python.md
+    │               ├── ci-ruby.md
+    │               ├── ci-rust.md
+    │               ├── ci-shell.md
+    │               ├── ci-zig.md
+    │               ├── ci-zsh.md
+    │               ├── makefile-go-cli.md
+    │               ├── makefile-go-library.md
+    │               ├── makefile-javascript.md
+    │               ├── makefile-python.md
+    │               ├── makefile-ruby.md
+    │               ├── makefile-rust.md
+    │               ├── makefile-shell.md
+    │               ├── makefile-zig.md
+    │               └── makefile-zsh.md
+    ├── setup-secret-scanning/      # Secret scanning setup skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   ├── commands/
-    │   │   └── setup-secret-scanning.md
-    │   └── references/
-    │       ├── gitleaks-config.md
-    │       ├── gitleaks-workflow.md
-    │       └── trufflehog-workflow.md
-    ├── setup-installers/           # Installer/distribution setup command
+    │   └── skills/
+    │       └── setup-secret-scanning/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── gitleaks-config.md
+    │               ├── gitleaks-workflow.md
+    │               └── trufflehog-workflow.md
+    ├── setup-installers/           # Installer/distribution setup skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── commands/
-    │       └── setup-installers.md
+    │   └── skills/
+    │       └── setup-installers/
+    │           └── SKILL.md
     ├── setup-linters/              # Linter and formatter setup skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -384,8 +397,9 @@ cboone-cc-plugins/
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── commands/
-    │       └── update-everything.md
+    │   └── skills/
+    │       └── update-everything/
+    │           └── SKILL.md
     ├── update-review/               # Review update synthesizer skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
