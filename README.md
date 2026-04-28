@@ -416,6 +416,23 @@ Analyzes git commits for changes that typically need documentation updates and p
 > **Requires:** [`jq`](https://jqlang.github.io/jq/)
 > **Details:** [README](./plugins/update-docs-reminder/README.md)
 
+## Using with OpenCode
+
+This repository is primarily a Claude Code plugin marketplace, but the skills and commands also work in [OpenCode](https://opencode.ai) via a committed mirror at [`dist/opencode/`](./dist/opencode/).
+
+```bash
+export OPENCODE_CONFIG_DIR="$(pwd)/dist/opencode"
+```
+
+That is it. The mirror travels with the repo, so a fresh clone or a `git pull` are both enough to pick up new skills and commands. Edits to canonical skill or command files propagate live through the symlinks.
+
+When adding or removing a plugin, regenerate the mirror with `bin/build-opencode-mirror` and commit the result. CI fails if the mirror drifts from the source plugins.
+
+### Known limitations
+
+- **Hooks are not ported.** OpenCode's hook system is incompatible with Claude Code's. Skills and commands are.
+- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Some commands and one skill use Claude Code's `@${CLAUDE_PLUGIN_ROOT}/references/...` pattern to inline reference files at runtime. OpenCode does not expand this variable, so those inclusions appear to the agent as literal path strings rather than inlined content. The inline workflow text in each affected file still loads correctly. Affected commands: `/add-goreleaser-homebrew`, `/scaffold-go-cli`, `/scaffold-go-library`, `/scaffold-new-repo`, `/scaffold-rust-cli`, `/setup-ci`, `/setup-secret-scanning`. Affected skill: `create-plugin`. For full fidelity in these cases, run them in Claude Code.
+
 ## License
 
 [MIT License](./LICENSE). TL;DR: Do whatever you want with this software, just keep the copyright notice included. The authors aren't liable if something goes wrong.

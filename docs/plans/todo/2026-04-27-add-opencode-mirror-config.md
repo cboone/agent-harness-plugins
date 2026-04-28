@@ -20,12 +20,12 @@ This means a flat mirror tree generated inside this repo, plus one env var the u
 Verified end-to-end against `opencode 1.14.28` using `OPENCODE_CONFIG_DIR` pointed at a temporary mirror with one symlinked skill (`commit`) and one symlinked command (`setup-ci`).
 
 - **Skill frontmatter**: OpenCode recognizes `name`, `description`, `license`, `compatibility`, `metadata`. Unknown fields are silently ignored, so Claude Code's existing SKILL.md files load verbatim. Folder-name-must-equal-`name` is already enforced in the repo. Confirmed: `opencode debug skill` returned the `commit` skill with full description and 10,710 bytes of content.
-- **Skill name regex**: `^[a-z0-9]+(-[a-z0-9]+)*$`. All 28 existing skills already conform.
+- **Skill name regex**: `^[a-z0-9]+(-[a-z0-9]+)*$`. All 27 existing skills already conform.
 - **Command files**: each `.md` becomes one command, with the filename (minus extension) as the command name. Subdirectories are not supported. The body of the markdown file is automatically used as `template`; no `template:` frontmatter field is required. Confirmed: `opencode debug config` resolved `setup-ci`'s body verbatim into `command["setup-ci"].template`. The Claude-Code-only frontmatter fields `disable-model-invocation` and `argument-hint` were silently dropped; only `description` survived alongside the auto-generated `template`.
 - **Argument syntax**: OpenCode supports `$ARGUMENTS`, `$1`, `$2`, plus `` !`cmd` `` and `@file` placeholders. The first overlaps with Claude Code; the latter two are OpenCode-only and currently unused in this repo.
 - **`${CLAUDE_PLUGIN_ROOT}` is not expanded**: 7 of 11 commands and 1 skill use `@${CLAUDE_PLUGIN_ROOT}/references/...` to inline reference files at runtime. `CLAUDE_PLUGIN_ROOT` is a Claude-Code-specific variable; OpenCode does not document any equivalent. The literal text passes through unchanged in the resolved config. This means the affected commands and skill will work for their inline content but their reference inclusions will not resolve. Affected commands: `add-goreleaser-homebrew`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-new-repo`, `scaffold-rust-cli`, `setup-ci`, `setup-secret-scanning`. Affected skill: `create-plugin`. See "Open Questions" for handling options.
 - **Claude Code compat path interaction**: OpenCode also loads skills from `~/.claude/skills/` by default. If the user already has skills installed there, OpenCode will log warnings about duplicates when both paths supply the same skill name. Out of scope for this plan but worth noting for the README.
-- **Inventory at time of writing**: 28 skills, 11 commands, zero name collisions across plugins, zero plugins that contribute both a skill and a command.
+- **Inventory at time of writing**: 27 skills, 11 commands, zero name collisions across plugins, zero plugins that contribute both a skill and a command.
 
 ## Approach
 
@@ -90,7 +90,7 @@ dist/
 └── opencode/
     ├── skills/
     │   ├── add-community-files -> ../../../plugins/add-community-files/skills/add-community-files
-    │   ├── ...                                    (28 symlinks total)
+    │   ├── ...                                    (27 symlinks total)
     │   └── write-zsh-scripts   -> ../../../plugins/write-zsh-scripts/skills/write-zsh-scripts
     └── commands/
         ├── add-goreleaser-homebrew.md -> ../../../plugins/add-goreleaser-homebrew/commands/add-goreleaser-homebrew.md
@@ -141,7 +141,7 @@ No flags. The script always validates, wipes, and rebuilds.
 
    ```text
    Built OpenCode mirror at dist/opencode
-     skills:   28
+     skills:   27
      commands: 11
    ```
 
@@ -214,7 +214,7 @@ If we decide cross-plugin name uniqueness is valuable to enforce regardless of t
 
 ### Manual smoke tests (before merging)
 
-1. Run `bin/build-opencode-mirror`, confirm `dist/opencode/skills/` has 28 entries and `dist/opencode/commands/` has 11, all symlinks.
+1. Run `bin/build-opencode-mirror`, confirm `dist/opencode/skills/` has 27 entries and `dist/opencode/commands/` has 11, all symlinks.
 2. `export OPENCODE_CONFIG_DIR="$(pwd)/dist/opencode"` and start OpenCode.
 3. Verify the agent can see and load at least one skill (e.g. ask "what skills do you have?") and that running a command (e.g. `/lint-and-fix`) produces the expected behavior.
 4. Edit a SKILL.md, restart OpenCode, confirm the edit appears (verifies symlinks work).
