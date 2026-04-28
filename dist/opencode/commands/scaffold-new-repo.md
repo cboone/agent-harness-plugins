@@ -1,1 +1,0 @@
-../../../plugins/scaffold-new-repo/commands/scaffold-new-repo.md

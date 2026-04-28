@@ -1,1 +1,0 @@
-../../../plugins/update-everything/commands/update-everything.md
