@@ -1,7 +1,14 @@
 ---
-description: Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions CI/CD, Homebrew tap, and Makefile.
-disable-model-invocation: true
-argument-hint: "[project-name]"
+name: scaffold-go-cli
+description: >-
+  Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions
+  CI/CD, Homebrew tap publishing, and Makefile. Use when the user says
+  "scaffold a Go CLI", "new Go CLI project", "create a Go CLI", "start a Go
+  CLI", "bootstrap a Go CLI", or starts a Go command-line tool from scratch.
+  Optionally adds Viper for config file management and Charmbracelet
+  bubbletea/lipgloss/bubbles for TUI work. For Go libraries (no main.go) use
+  scaffold-go-library instead. For language-agnostic boilerplate alone, use
+  scaffold-new-repo.
 ---
 
 # Scaffold Go CLI
@@ -12,7 +19,7 @@ Generate the full boilerplate for a new Go CLI project.
 
 ### 1. Gather Project Information
 
-If `$ARGUMENTS` is provided, use it as the project name and skip asking for it. Still ask for the remaining parameters (description, Viper, Charmbracelet TUI) unless already provided in the user's initial request.
+If the user provided a project name in their request, use it as the project name and skip asking for it. Still ask for the remaining parameters (description, Viper, Charmbracelet TUI) unless already provided in the user's initial request.
 
 Ask the user for these parameters:
 
@@ -55,7 +62,7 @@ git init
 
 ### 5. Generate main.go
 
-Create `main.go` using the template from the main.go Template section below.
+Read `./references/main-go.md` for the `main.go` template and create the file from it.
 
 - Replace `PROJECT-NAME` with the project name
 - Replace `GITHUB-USERNAME` with the detected GitHub username
@@ -64,8 +71,8 @@ Create `main.go` using the template from the main.go Template section below.
 
 Choose the template based on the Viper parameter:
 
-- **Without Viper**: use the root.go Template (Without Viper) section below
-- **With Viper**: use the root.go Template (With Viper) section below
+- **Without Viper**: read `./references/root-go-without-viper.md`
+- **With Viper**: read `./references/root-go-with-viper.md`
 
 Replace in the chosen template:
 
@@ -74,7 +81,7 @@ Replace in the chosen template:
 
 ### 7. Initialize go.mod and Install Dependencies
 
-Follow the instructions in the go.mod Template section below:
+Read `./references/go-mod.md` for the canonical setup commands. The base sequence:
 
 ```bash
 go mod init github.com/GITHUB-USERNAME/PROJECT-NAME
@@ -103,13 +110,13 @@ go mod tidy
 
 ### 8. Generate Makefile
 
-Create `Makefile` using the template from the Makefile Template section below.
+Read `./references/makefile.md` for the Makefile template and create `Makefile` from it.
 
 - Replace `PROJECT-NAME` with the project name
 
 ### 9. Generate .gitignore
 
-Create `.gitignore` using the template from the .gitignore Template section below.
+Read `./references/gitignore.md` for the `.gitignore` template and create `.gitignore` from it.
 
 - Replace `PROJECT-NAME` with the project name
 
@@ -117,7 +124,7 @@ If a `.gitignore` already exists, merge the template entries into it rather than
 
 ### 10. Generate .goreleaser.yml
 
-Create `.goreleaser.yml` using the template from the .goreleaser.yml Template section below.
+Read `./references/goreleaser.md` for the GoReleaser template and create `.goreleaser.yml` from it.
 
 - Replace `PROJECT-NAME` with the project name
 - Replace `PROJECT-DESCRIPTION` with the short description
@@ -125,26 +132,26 @@ Create `.goreleaser.yml` using the template from the .goreleaser.yml Template se
 
 ### 11. Generate CI Workflow
 
-Create `.github/workflows/ci.yml` using the template from the CI Workflow Template section below.
+Read `./references/ci-workflow.md` for the CI workflow template and create `.github/workflows/ci.yml` from it.
 
 No replacements needed (the workflow is project-name-independent).
 
 ### 12. Generate Release Workflow
 
-Create `.github/workflows/release.yml` using the template from the Release Workflow Template section below.
+Read `./references/release-workflow.md` for the release workflow template and create `.github/workflows/release.yml` from it.
 
 No replacements needed.
 
 ### 13. Generate LICENSE
 
-Create `LICENSE` using the template from the LICENSE Template section below.
+Read `./references/license.md` for the LICENSE template and create `LICENSE` from it.
 
 - Replace `YEAR` with the current year (run `date +%Y` to get it)
 - Replace `COPYRIGHT-HOLDER` with the detected full name
 
 ### 14. Generate README.md
 
-Create `README.md` using the template from the README Template section below.
+Read `./references/readme.md` for the README template and create `README.md` from it.
 
 - Replace `PROJECT-NAME` with the project name (kebab-case)
 - Replace `PROJECT-DESCRIPTION` with the short description
@@ -216,11 +223,11 @@ If `.github/copilot-instructions.md` does not exist, skip this step.
 
 ### 20. Set Up HOMEBREW_TAP_TOKEN
 
-The release workflow requires a `HOMEBREW_TAP_TOKEN` repository secret to publish Homebrew casks. Follow the steps in the "Reference: HOMEBREW_TAP_TOKEN Setup" section at the bottom of this file.
+The release workflow requires a `HOMEBREW_TAP_TOKEN` repository secret to publish Homebrew casks. Read `./references/homebrew-tap-token.md` for the full setup steps.
 
 Ask the user whether they want to set up the token now or defer it to later. If they defer, note in the summary that the token must be configured before the first release.
 
-Note: for brand-new projects that have not been pushed to GitHub yet, `gh secret` commands (including `gh secret set` and `gh secret list`) will not work until a GitHub remote exists. See the "No remote yet?" note in the reference section.
+Note: for brand-new projects that have not been pushed to GitHub yet, `gh secret` commands (including `gh secret set` and `gh secret list`) will not work until a GitHub remote exists. See the "No remote yet?" note in the reference.
 
 ### 21. Summary
 
@@ -231,7 +238,7 @@ Print a summary of what was created:
 - Remind the user to:
   - Add subcommands under `cmd/` as the CLI grows
   - Run `make help` to see available Makefile targets
-  - Run `/add-community-files` to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
+  - Run the add-community-files skill to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
 - If `HOMEBREW_TAP_TOKEN` setup was deferred in step 20: check whether a GitHub remote exists and is accessible before creating a follow-up issue:
 
   ```bash
@@ -240,7 +247,7 @@ Print a summary of what was created:
       --title "Set up HOMEBREW_TAP_TOKEN repository secret" \
       --body "The release workflow needs a HOMEBREW_TAP_TOKEN secret so GoReleaser can push Homebrew cask updates to the tap repository.
 
-  See the HOMEBREW_TAP_TOKEN Setup reference in the scaffold-go-cli documentation for step-by-step instructions."
+  See the HOMEBREW_TAP_TOKEN Setup reference in the scaffold-go-cli skill documentation for step-by-step instructions."
   fi
   ```
 
@@ -256,30 +263,17 @@ Print a summary of what was created:
 - If `git init` fails, continue generating files but warn the user
 - If the build verification fails, show the error and attempt to fix it before continuing
 
----
-
 ## Reference Templates
 
-@${CLAUDE_PLUGIN_ROOT}/references/main-go.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/root-go-without-viper.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/root-go-with-viper.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/go-mod.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/makefile.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/gitignore.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/goreleaser.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/ci-workflow.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/release-workflow.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/license.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/readme.md
-
-@${CLAUDE_PLUGIN_ROOT}/references/homebrew-tap-token.md
+- `./references/main-go.md` -- `main.go` template
+- `./references/root-go-without-viper.md` -- `cmd/root.go` without Viper
+- `./references/root-go-with-viper.md` -- `cmd/root.go` with Viper
+- `./references/go-mod.md` -- `go mod init` and dependency setup
+- `./references/makefile.md` -- Makefile template
+- `./references/gitignore.md` -- `.gitignore` template
+- `./references/goreleaser.md` -- `.goreleaser.yml` template
+- `./references/ci-workflow.md` -- `.github/workflows/ci.yml`
+- `./references/release-workflow.md` -- `.github/workflows/release.yml`
+- `./references/license.md` -- MIT license template
+- `./references/readme.md` -- README template
+- `./references/homebrew-tap-token.md` -- `HOMEBREW_TAP_TOKEN` repository-secret setup
