@@ -26,12 +26,12 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Handle Secrets](#handle-secrets)
 ∙ [Lint and Fix](#lint-and-fix)
 ∙ [Setup Linters](#setup-linters)
+∙ [Write Bash Scripts](#write-bash-scripts)
 ∙ [Write Go Code](#write-go-code)
 ∙ [Write LaTeX](#write-latex)
 ∙ [Write Lean Code](#write-lean-code)
 ∙ [Write Lean Tests](#write-lean-tests)
 ∙ [Write Scrut Tests](#write-scrut-tests)
-∙ [Write Bash Scripts](#write-bash-scripts)
 ∙ [Write Zsh Scripts](#write-zsh-scripts)
 <br>Writing:
 [Write Formalization Roadmap](#write-formalization-roadmap)
@@ -238,6 +238,20 @@ Detect available linters and formatters in the project, run them with auto-fix, 
 > **Trigger:** `/lint-and-fix`
 > **Details:** [README](./plugins/lint-and-fix/README.md)
 
+#### Setup Linters
+
+Detect project languages and file types, recommend appropriate linters and formatters, install them, and generate config files. Supports JavaScript/TypeScript (ESLint + Prettier), Go, Python, Rust, Ruby, Shell, Zsh, and cross-language tools (EditorConfig, markdownlint, cspell, Stylelint, Hadolint, Actionlint, and more).
+
+> **Trigger:** `/setup-linters`
+> **Details:** [README](./plugins/setup-linters/README.md)
+
+#### Write Bash Scripts
+
+Bash style conventions for creating and editing Bash scripts. Activates automatically when creating or editing Bash scripts.
+
+> **Trigger:** `/write-bash-scripts` (also activates automatically)
+> **Details:** [README](./plugins/write-bash-scripts/README.md)
+
 #### Write Go Code
 
 Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments. Organized into an essential checklist and comprehensive references by topic.
@@ -273,26 +287,12 @@ Scrut test style conventions for writing and maintaining snapshot-based test fil
 > **Trigger:** `/write-scrut-tests` (also activates automatically)
 > **Details:** [README](./plugins/write-scrut-tests/README.md)
 
-#### Write Bash Scripts
-
-Bash style conventions for creating and editing Bash scripts. Activates automatically when creating or editing Bash scripts.
-
-> **Trigger:** `/write-bash-scripts` (also activates automatically)
-> **Details:** [README](./plugins/write-bash-scripts/README.md)
-
 #### Write Zsh Scripts
 
 Zsh style conventions for creating and editing zsh scripts, configurations, and completions. Activates automatically when creating or editing zsh files. Includes a comprehensive scripting guide and a separate completion function reference drawn from the upstream zsh completion-style-guide.
 
 > **Trigger:** `/write-zsh-scripts` (also activates automatically)
 > **Details:** [README](./plugins/write-zsh-scripts/README.md)
-
-#### Setup Linters
-
-Detect project languages and file types, recommend appropriate linters and formatters, install them, and generate config files. Supports JavaScript/TypeScript (ESLint + Prettier), Go, Python, Rust, Ruby, Shell, Zsh, and cross-language tools (EditorConfig, markdownlint, cspell, Stylelint, Hadolint, Actionlint, and more).
-
-> **Trigger:** `/setup-linters`
-> **Details:** [README](./plugins/setup-linters/README.md)
 
 ### Writing
 
