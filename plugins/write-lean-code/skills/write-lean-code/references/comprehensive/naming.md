@@ -50,10 +50,10 @@ When an `UpperCamelCase` name appears as a component within a `snake_case` lemma
 
 The casing of acronyms depends on their length:
 
-| Length     | Rule                             | Examples                           |
-| ---------- | -------------------------------- | ---------------------------------- |
-| 3 or fewer | Same case as surrounding context | `IO`, `IORef`, `ioRef`, `RPC`      |
-| 4 or more  | Lowercase from the second letter | `Json`, `JsonRPC`, `Http`, `Wasm`  |
+| Length     | Rule                             | Examples                          |
+| ---------- | -------------------------------- | --------------------------------- |
+| 3 or fewer | Same case as surrounding context | `IO`, `IORef`, `ioRef`, `RPC`     |
+| 4 or more  | Lowercase from the second letter | `Json`, `JsonRPC`, `Http`, `Wasm` |
 
 ```lean
 -- Good
@@ -92,12 +92,12 @@ Mathlib uses a compositional naming scheme where lemma names encode the types, o
 
 ### Components
 
-| Component | Description               | Examples                                  |
-| --------- | ------------------------- | ----------------------------------------- |
-| Type      | The primary type involved | `Nat`, `List`, `Finset`                   |
-| Operation | The function or relation  | `add`, `mul`, `map`, `filter`, `mem`      |
-| Property  | The property being proved | `comm`, `assoc`, `zero`, `succ`, `nil`    |
-| Modifier  | Qualifiers and separators | `left`, `right`, `iff`                    |
+| Component | Description               | Examples                               |
+| --------- | ------------------------- | -------------------------------------- |
+| Type      | The primary type involved | `Nat`, `List`, `Finset`                |
+| Operation | The function or relation  | `add`, `mul`, `map`, `filter`, `mem`   |
+| Property  | The property being proved | `comm`, `assoc`, `zero`, `succ`, `nil` |
+| Modifier  | Qualifiers and separators | `left`, `right`, `iff`                 |
 
 ### Examples
 
@@ -140,20 +140,20 @@ These tables list the standard Lean/Mathlib names for common symbols used in lem
 
 ### Set
 
-| Lean input     | Name        | Notes              |
-| -------------- | ----------- | ------------------ |
-| `\in`          | `mem`       |                    |
-| `\notin`       | `notMem`    |                    |
-| `\cup`         | `union`     |                    |
-| `\cap`         | `inter`     |                    |
-| `\Union`       | `iUnion`    | `biUnion` bounded  |
-| `\Inter`       | `iInter`    | `biInter` bounded  |
-| `\Union\0`     | `sUnion`    | set union          |
-| `\Inter\0`     | `sInter`    | set intersection   |
-| `\`            | `sdiff`     | set difference     |
-| `\compl`       | `compl`     | complement         |
-| `{x \| p}`     | `setOf`     |                    |
-| `{x}`          | `singleton` |                    |
+| Lean input | Name        | Notes             |
+| ---------- | ----------- | ----------------- |
+| `\in`      | `mem`       |                   |
+| `\notin`   | `notMem`    |                   |
+| `\cup`     | `union`     |                   |
+| `\cap`     | `inter`     |                   |
+| `\Union`   | `iUnion`    | `biUnion` bounded |
+| `\Inter`   | `iInter`    | `biInter` bounded |
+| `\Union\0` | `sUnion`    | set union         |
+| `\Inter\0` | `sInter`    | set intersection  |
+| `\`        | `sdiff`     | set difference    |
+| `\compl`   | `compl`     | complement        |
+| (builder)  | `setOf`     | set builder       |
+| `{x}`      | `singleton` |                   |
 
 ### Algebra
 
@@ -175,18 +175,18 @@ These tables list the standard Lean/Mathlib names for common symbols used in lem
 
 ### Lattices
 
-| Lean input | Name   | Notes                         |
-| ---------- | ------ | ----------------------------- |
-| `<`        | `lt`   | prefer over `gt`              |
-| `\le`      | `le`   | prefer over `ge`              |
-| `>`        | `gt`   | use only when needed          |
-| `\ge`      | `ge`   | use only when needed          |
-| `\sup`     | `sup`  |                               |
-| `\inf`     | `inf`  |                               |
-| `\Sup`     | `iSup` | `biSup`/`ciSup` for variants  |
-| `\Inf`     | `iInf` | `biInf`/`ciInf` for variants  |
-| `\bot`     | `bot`  |                               |
-| `\top`     | `top`  |                               |
+| Lean input | Name   | Notes                        |
+| ---------- | ------ | ---------------------------- |
+| `<`        | `lt`   | prefer over `gt`             |
+| `\le`      | `le`   | prefer over `ge`             |
+| `>`        | `gt`   | use only when needed         |
+| `\ge`      | `ge`   | use only when needed         |
+| `\sup`     | `sup`  |                              |
+| `\inf`     | `inf`  |                              |
+| `\Sup`     | `iSup` | `biSup`/`ciSup` for variants |
+| `\Inf`     | `iInf` | `biInf`/`ciInf` for variants |
+| `\bot`     | `bot`  |                              |
+| `\top`     | `top`  |                              |
 
 ## Ordering: le/lt vs ge/gt
 
@@ -215,23 +215,23 @@ theorem ne_of_gt [Preorder α] {a b : α} (h : b < a) :
 
 Standard names for structural properties used in theorem names:
 
-| Name                | Meaning              |
-| ------------------- | -------------------- |
-| `refl`              | reflexivity          |
-| `irrefl`            | irreflexivity        |
-| `symm`              | symmetry             |
-| `trans`             | transitivity         |
-| `antisymm`          | antisymmetry         |
-| `asymm`             | asymmetry            |
-| `congr`             | congruence           |
-| `comm`              | commutativity        |
-| `assoc`             | associativity        |
-| `left_comm`         | left commutativity   |
-| `right_comm`        | right commutativity  |
-| `mul_left_cancel`   | left cancellation    |
-| `mul_right_cancel`  | right cancellation   |
-| `inj`               | injectivity          |
-| `def`               | definition unfolding |
+| Name               | Meaning              |
+| ------------------ | -------------------- |
+| `refl`             | reflexivity          |
+| `irrefl`           | irreflexivity        |
+| `symm`             | symmetry             |
+| `trans`            | transitivity         |
+| `antisymm`         | antisymmetry         |
+| `asymm`            | asymmetry            |
+| `congr`            | congruence           |
+| `comm`             | commutativity        |
+| `assoc`            | associativity        |
+| `left_comm`        | left commutativity   |
+| `right_comm`       | right commutativity  |
+| `mul_left_cancel`  | left cancellation    |
+| `mul_right_cancel` | right cancellation   |
+| `inj`              | injectivity          |
+| `def`              | definition unfolding |
 
 ## Hypothesis Separation
 
@@ -307,10 +307,10 @@ When a namespace-qualified definition appears as part of a lemma name, remove th
 
 ### Induction and Recursion Principles
 
-| Motive eliminates into    | Value first      | Constructions first |
-| ------------------------- | ---------------- | ------------------- |
-| `Prop`                    | `T.induction_on` | `T.induction`       |
-| `Sort u` or `Type u`      | `T.recOn`        | `T.rec`             |
+| Motive eliminates into | Value first      | Constructions first |
+| ---------------------- | ---------------- | ------------------- |
+| `Prop`                 | `T.induction_on` | `T.induction`       |
+| `Sort u` or `Type u`   | `T.recOn`        | `T.rec`             |
 
 Include `on` when the value precedes the constructions in argument order.
 
@@ -385,20 +385,20 @@ Eq.symm      Eq.trans      Iff.symm         Iff.refl
 
 Mathlib uses conventional single-letter names for mathematical objects:
 
-| Variable | Meaning                            |
-| -------- | ---------------------------------- |
-| `u v w`  | Universe levels                    |
-| `a b c`  | Elements of a type                 |
-| `m n k`  | Natural numbers                    |
-| `f g`    | Functions or morphisms             |
-| `h`      | Hypotheses (e.g., `h1`, `h2`)      |
-| `s t`    | Sets                               |
-| `x y z`  | Elements (generic)                 |
-| `G`      | Groups                             |
-| `R`      | Rings                              |
-| `K`      | Fields                             |
-| `M`      | Monoids or modules                 |
-| `p q`    | Propositions or primes             |
+| Variable | Meaning                       |
+| -------- | ----------------------------- |
+| `u v w`  | Universe levels               |
+| `a b c`  | Elements of a type            |
+| `m n k`  | Natural numbers               |
+| `f g`    | Functions or morphisms        |
+| `h`      | Hypotheses (e.g., `h1`, `h2`) |
+| `s t`    | Sets                          |
+| `x y z`  | Elements (generic)            |
+| `G`      | Groups                        |
+| `R`      | Rings                         |
+| `K`      | Fields                        |
+| `M`      | Monoids or modules            |
+| `p q`    | Propositions or primes        |
 
 For Greek letters used as type variables (`α`, `β`, `γ`) and analysis constants (`ε`, `δ`), use the standard Lean input notation (`\alpha`, `\beta`, `\gamma`, `\epsilon`, `\delta`).
 

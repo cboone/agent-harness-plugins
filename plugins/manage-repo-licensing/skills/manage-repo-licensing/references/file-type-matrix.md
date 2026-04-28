@@ -26,24 +26,24 @@ This is a shift from the original rule ("commentable -> inline, non-commentable 
 
 ### REUSE.toml prose group (`CC-BY-4.0`, `precedence = "aggregate"`)
 
-| File or pattern                                    | Notes                                              |
-| -------------------------------------------------- | -------------------------------------------------- |
-| `NOTICE`                                           | The root notice itself. No `NOTICE.license`.       |
-| Any extensionless root prose file                  | E.g. `CITATION`, `AUTHORS`.                        |
-| `README.md`                                        | Carries no inline SPDX.                            |
-| `CHANGELOG.md`                                     |                                                    |
-| `CONTRIBUTING.md`                                  |                                                    |
-| `AGENTS.md`, `CLAUDE.md`                           | Agent-config docs.                                 |
-| `.github/**/*.md`                                  | `PULL_REQUEST_TEMPLATE.md`, `SECURITY.md`, etc.    |
-| `docs/**/*.md`                                     | All docs subtrees.                                 |
-| Project-authored prose subtrees                    | `framework/`, `examples/`, `papers/`, `explainers/`, `verso/`, `process-account/`. |
-| `references/summaries/**/*.md`                     | Project-authored editorial.                        |
-| `references/reviews/**/*.md`                       | Project-authored editorial.                        |
-| `references/datasets/**/*.md`                      | Project-authored editorial.                        |
-| `references/bibliographies/**/*.md`                | Project-curated bibliographies.                    |
-| `references/README.md`                             | Navigation prose.                                  |
-| `references/papers.bib`                            | Project-curated bibliography; travels with prose.  |
-| `skills/**/*.md`, `skills/**/*.yaml`               | Skill docs authored alongside prose.               |
+| File or pattern                      | Notes                                                                              |
+| ------------------------------------ | ---------------------------------------------------------------------------------- |
+| `NOTICE`                             | The root notice itself. No `NOTICE.license`.                                       |
+| Any extensionless root prose file    | E.g. `CITATION`, `AUTHORS`.                                                        |
+| `README.md`                          | Carries no inline SPDX.                                                            |
+| `CHANGELOG.md`                       |                                                                                    |
+| `CONTRIBUTING.md`                    |                                                                                    |
+| `AGENTS.md`, `CLAUDE.md`             | Agent-config docs.                                                                 |
+| `.github/**/*.md`                    | `PULL_REQUEST_TEMPLATE.md`, `SECURITY.md`, etc.                                    |
+| `docs/**/*.md`                       | All docs subtrees.                                                                 |
+| Project-authored prose subtrees      | `framework/`, `examples/`, `papers/`, `explainers/`, `verso/`, `process-account/`. |
+| `references/summaries/**/*.md`       | Project-authored editorial.                                                        |
+| `references/reviews/**/*.md`         | Project-authored editorial.                                                        |
+| `references/datasets/**/*.md`        | Project-authored editorial.                                                        |
+| `references/bibliographies/**/*.md`  | Project-curated bibliographies.                                                    |
+| `references/README.md`               | Navigation prose.                                                                  |
+| `references/papers.bib`              | Project-curated bibliography; travels with prose.                                  |
+| `skills/**/*.md`, `skills/**/*.yaml` | Skill docs authored alongside prose.                                               |
 
 `CODE_OF_CONDUCT.md` is **not** in the prose group when it is Contributor-Covenant-derived — it goes in its own `CC-BY-SA-4.0` annotation block with `precedence = "override"`.
 
@@ -51,17 +51,17 @@ This is a shift from the original rule ("commentable -> inline, non-commentable 
 
 Infrastructure files: hand-authored or auto-merged, functional rather than substantive, SPDX tag is not part of their public interface. License: the repo's code bucket — `MIT` if present, else `Apache-2.0`.
 
-| File or pattern                                    | Notes                                              |
-| -------------------------------------------------- | -------------------------------------------------- |
-| `Makefile`, `**/*.mk`                              | Build config. Can contain substantive shell but treated as config here. |
-| `lakefile.toml`, `lakefile.lean`                   | Lake build config.                                 |
-| `pyproject.toml`                                   | Python project config.                             |
-| `**/*.toml` (config-shaped)                        | Repo config TOML not covered above (`REUSE.toml` itself; `cliff.toml`; `typos.toml`; `deny.toml`; `rustfmt.toml`). |
-| `**/*.yaml`, `**/*.yml`                            | Includes `.github/workflows/*.yml`, linter configs, data-adjacent YAML. |
-| `**/*.jsonc`                                       | `cspell.jsonc`, `.markdownlint-cli2.jsonc`, `.vscode/*.json` when JSONC-flavoured. |
-| `.editorconfig`, `.gitignore`, `.gitattributes`, `.ignore` | Repo-infra dotfiles.                       |
-| `cspell-words.txt`                                 | Spell-check word list. Not content the project asserts authorship over. |
-| `.github/**/*.yml`, `.github/**/*.yaml`            | Covered by the YAML pattern above; listed for clarity. |
+| File or pattern                                            | Notes                                                                                                              |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `Makefile`, `**/*.mk`                                      | Build config. Can contain substantive shell but treated as config here.                                            |
+| `lakefile.toml`, `lakefile.lean`                           | Lake build config.                                                                                                 |
+| `pyproject.toml`                                           | Python project config.                                                                                             |
+| `**/*.toml` (config-shaped)                                | Repo config TOML not covered above (`REUSE.toml` itself; `cliff.toml`; `typos.toml`; `deny.toml`; `rustfmt.toml`). |
+| `**/*.yaml`, `**/*.yml`                                    | Includes `.github/workflows/*.yml`, linter configs, data-adjacent YAML.                                            |
+| `**/*.jsonc`                                               | `cspell.jsonc`, `.markdownlint-cli2.jsonc`, `.vscode/*.json` when JSONC-flavoured.                                 |
+| `.editorconfig`, `.gitignore`, `.gitattributes`, `.ignore` | Repo-infra dotfiles.                                                                                               |
+| `cspell-words.txt`                                         | Spell-check word list. Not content the project asserts authorship over.                                            |
+| `.github/**/*.yml`, `.github/**/*.yaml`                    | Covered by the YAML pattern above; listed for clarity.                                                             |
 
 Shell, zsh, or similar scripts that contain substantive logic go **inline**, not in the config group. The config group is for files whose job is "tell a tool what to do." A shell script that implements a non-trivial pipeline is code.
 
@@ -71,28 +71,28 @@ Auto-regenerated by tooling. Content is mechanical (hashes, pinned versions, too
 
 Using `CC0-1.0` adds `LICENSES/CC0-1.0.txt` to the repo and one line to `NOTICE`. That is the price for not lying about authorship on `uv.lock`.
 
-| File or pattern                                    | Notes                                              |
-| -------------------------------------------------- | -------------------------------------------------- |
-| `lake-manifest.json`                               | Lake-regenerated.                                  |
-| `uv.lock`                                          | uv-regenerated.                                    |
-| `poetry.lock`                                      | Poetry-regenerated.                                |
-| `package-lock.json`, `yarn.lock`                   | Tool-regenerated.                                  |
-| `lean-toolchain`                                   | One-line pinned-version file.                      |
-| `papers/*/main.tex`                                | Pandoc-regenerated on every build.                 |
-| `papers/submission-schedule.ics`                   | `bin/generate-submission-ics`-regenerated.         |
-| `references/cross-reference-*.json`                | `bin/build-cross-references.py`-regenerated.       |
-| `references/cross-reference-frequency.md`          | Same generator. Overrides the prose group.         |
-| `zoo/generated/**/*.json`                          | Generator-owned tree.                              |
-| Benchmark JSONL (`**/*.jsonl` in throughput-benchmarks) | Generator-owned.                              |
-| Figure JSON outputs (`papers/*/figures/*.json`)    | Script-generated.                                  |
+| File or pattern                                         | Notes                                        |
+| ------------------------------------------------------- | -------------------------------------------- |
+| `lake-manifest.json`                                    | Lake-regenerated.                            |
+| `uv.lock`                                               | uv-regenerated.                              |
+| `poetry.lock`                                           | Poetry-regenerated.                          |
+| `package-lock.json`, `yarn.lock`                        | Tool-regenerated.                            |
+| `lean-toolchain`                                        | One-line pinned-version file.                |
+| `papers/*/main.tex`                                     | Pandoc-regenerated on every build.           |
+| `papers/submission-schedule.ics`                        | `bin/generate-submission-ics`-regenerated.   |
+| `references/cross-reference-*.json`                     | `bin/build-cross-references.py`-regenerated. |
+| `references/cross-reference-frequency.md`               | Same generator. Overrides the prose group.   |
+| `zoo/generated/**/*.json`                               | Generator-owned tree.                        |
+| Benchmark JSONL (`**/*.jsonl` in throughput-benchmarks) | Generator-owned.                             |
+| Figure JSON outputs (`papers/*/figures/*.json`)         | Script-generated.                            |
 
 If a "generated" file turns out to be hand-authored (you inspect it and see it carries substantive work), promote it out of this group. CC0 coverage must be defensible.
 
 ### REUSE.toml structural group (code-bucket license, `precedence = "override"`)
 
-| File or pattern                                    | Notes                                              |
-| -------------------------------------------------- | -------------------------------------------------- |
-| `**/.gitkeep`                                      | Zero-byte directory-scaffolding placeholders. One glob annotation under the repo's code-bucket license (MIT if present, otherwise Apache-2.0). |
+| File or pattern | Notes                                                                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `**/.gitkeep`   | Zero-byte directory-scaffolding placeholders. One glob annotation under the repo's code-bucket license (MIT if present, otherwise Apache-2.0). |
 
 ### REUSE.toml reference-material group (`LicenseRef-Reference-Material`, `precedence = "override"`)
 
@@ -106,18 +106,18 @@ Conditional. Include only when `CODE_OF_CONDUCT.md` is Contributor-Covenant-deri
 
 Substantive hand-authored source code where the SPDX tag is part of the file's public interface.
 
-| File or extension                                  | Comment syntax              |
-| -------------------------------------------------- | --------------------------- |
-| `.lean`                                            | `/- ... -/` at file top     |
-| `.py` (hand-authored, non-generated)               | `#` (after any shebang)     |
-| `.tex` (hand-authored macros, filters, shared)     | `%`                         |
-| `.lua` (filters, custom tactics)                   | `--`                        |
-| `.js`, `.ts`                                       | `//`                        |
-| `.css`, `.less`                                    | `/* ... */`                 |
-| `.html` (hand-authored pages)                      | `<!-- ... -->`              |
-| Shebang scripts with substantive logic             | `#` immediately after `#!`  |
-| `.sh`, `.zsh` (beyond trivial wrappers)            | `#`                         |
-| `.go`, `.rs`, `.c`, `.cpp`, `.h`, `.hpp`, `.swift`, `.kt`, `.java` | Native comment |
+| File or extension                                                  | Comment syntax             |
+| ------------------------------------------------------------------ | -------------------------- |
+| `.lean`                                                            | `/- ... -/` at file top    |
+| `.py` (hand-authored, non-generated)                               | `#` (after any shebang)    |
+| `.tex` (hand-authored macros, filters, shared)                     | `%`                        |
+| `.lua` (filters, custom tactics)                                   | `--`                       |
+| `.js`, `.ts`                                                       | `//`                       |
+| `.css`, `.less`                                                    | `/* ... */`                |
+| `.html` (hand-authored pages)                                      | `<!-- ... -->`             |
+| Shebang scripts with substantive logic                             | `#` immediately after `#!` |
+| `.sh`, `.zsh` (beyond trivial wrappers)                            | `#`                        |
+| `.go`, `.rs`, `.c`, `.cpp`, `.h`, `.hpp`, `.swift`, `.kt`, `.java` | Native comment             |
 
 Generated source in these extensions (for example, a `.tex` emitted by Pandoc) goes in the generated group, not inline.
 
@@ -125,12 +125,12 @@ Generated source in these extensions (for example, a `.tex` emitted by Pandoc) g
 
 Narrow residual class. Per-file `.license` sidecars are now reserved for situations where per-file metadata is actually meaningful — not as catch-all coverage for anything that resists inline comments.
 
-| File or pattern                                    | Reason                                             |
-| -------------------------------------------------- | -------------------------------------------------- |
-| Individual bundled reference PDFs under a small-collection threshold (~20) | Per-file sidecar carries actual author/publisher copyright lines. |
-| Binary assets the project authors and wants to tag per-file (logos with unusual attribution, figures with distinct authorship) | Non-commentable; per-file metadata matters. |
-| Hand-authored strict `.json` schemas outside a generated tree | Rare. Consider first whether it really belongs in the config group (`.jsonc`) or generated group. |
-| Hand-authored `.csv` / `.tsv` data files with distinct authorship | Rare. Consider first whether it belongs in the generated group. |
+| File or pattern                                                                                                                | Reason                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| Individual bundled reference PDFs under a small-collection threshold (~20)                                                     | Per-file sidecar carries actual author/publisher copyright lines.                                 |
+| Binary assets the project authors and wants to tag per-file (logos with unusual attribution, figures with distinct authorship) | Non-commentable; per-file metadata matters.                                                       |
+| Hand-authored strict `.json` schemas outside a generated tree                                                                  | Rare. Consider first whether it really belongs in the config group (`.jsonc`) or generated group. |
+| Hand-authored `.csv` / `.tsv` data files with distinct authorship                                                              | Rare. Consider first whether it belongs in the generated group.                                   |
 
 **Almost nothing belongs here.** If the file is ceremonially covered (infrastructure, regenerated, placeholder, prose), it goes in `REUSE.toml`. If its SPDX tag carries information a consumer should see on the file itself, it goes inline. Sidecars survive only where per-file metadata is substantive and the format blocks inline comments.
 

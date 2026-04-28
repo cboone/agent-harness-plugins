@@ -135,13 +135,13 @@ theorem my_thm : P ∧ Q := by
 
 When developing proofs interactively, these tactics help discover the right approach:
 
-| Tactic    | Purpose                                      |
-| --------- | -------------------------------------------- |
-| `exact?`  | Search for a term that closes the goal       |
-| `apply?`  | Search for a lemma whose conclusion matches  |
-| `rw?`     | Search for a rewrite rule that applies       |
-| `simp?`   | Run `simp` and report which lemmas were used |
-| `decide`  | Decide propositions with decidable instances |
+| Tactic   | Purpose                                      |
+| -------- | -------------------------------------------- |
+| `exact?` | Search for a term that closes the goal       |
+| `apply?` | Search for a lemma whose conclusion matches  |
+| `rw?`    | Search for a rewrite rule that applies       |
+| `simp?`  | Run `simp` and report which lemmas were used |
+| `decide` | Decide propositions with decidable instances |
 
 **Important**: replace exploration tactics with their output before finalizing code, with one exception: **do not squeeze terminal `simp`**. A terminal `simp` that closes a goal should be left as `simp` or `simp [specific_lemmas]`. Only non-terminal `simp` (followed by more tactics) should become `simp only [...]`.
 
@@ -164,18 +164,18 @@ theorem my_thm : 2 + 3 = 5 := by simp
 
 Prefer automation tactics that close goals completely:
 
-| Tactic     | Domain                                          |
-| ---------- | ----------------------------------------------- |
-| `simp`     | Simplification using lemma database             |
-| `omega`    | Linear arithmetic over `Nat` and `Int`          |
-| `decide`   | Decidable propositions (finite computation)     |
-| `norm_num` | Numerical normalization                         |
-| `ring`     | Ring equalities                                 |
-| `linarith` | Linear arithmetic over ordered fields           |
-| `aesop`    | Automated reasoning (broader search)            |
-| `tauto`    | Propositional tautologies                       |
-| `trivial`  | Simple goals (`rfl`, `assumption`, etc.)        |
-| `exact`    | Provide the exact proof term                    |
+| Tactic     | Domain                                      |
+| ---------- | ------------------------------------------- |
+| `simp`     | Simplification using lemma database         |
+| `omega`    | Linear arithmetic over `Nat` and `Int`      |
+| `decide`   | Decidable propositions (finite computation) |
+| `norm_num` | Numerical normalization                     |
+| `ring`     | Ring equalities                             |
+| `linarith` | Linear arithmetic over ordered fields       |
+| `aesop`    | Automated reasoning (broader search)        |
+| `tauto`    | Propositional tautologies                   |
+| `trivial`  | Simple goals (`rfl`, `assumption`, etc.)    |
+| `exact`    | Provide the exact proof term                |
 
 **`simp` best practices**:
 

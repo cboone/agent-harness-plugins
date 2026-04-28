@@ -9,16 +9,16 @@ Mathematics is communicated in English (or another natural language), not in pur
 
 English connectives carry logical meaning. Choose them deliberately:
 
-| Connective | Logical role | Example |
-|---|---|---|
-| since, because | cause/reason (premise to conclusion) | "Since $f$ is continuous, it is bounded on $[0,1]$." |
-| therefore, thus, hence | conclusion (follows from above) | "The set is closed and bounded; therefore it is compact." |
-| in particular | specialization (key consequence) | "Every compact set is bounded. In particular, $K \subset [-M, M]$." |
-| moreover, furthermore | addition (new supporting fact) | "The function is differentiable. Moreover, its derivative is Lipschitz." |
-| however, on the other hand | contrast or qualification | "The bound is tight for $n = 2$. However, for $n \ge 3$, we can improve it." |
-| also | neutral addition | "The map is injective. It is also surjective." |
-| namely | clarification/restatement | "There is exactly one fixed point, namely $x = 0$." |
-| recall that | reminder of earlier fact | "Recall that $G$ is assumed to be abelian." |
+| Connective                 | Logical role                         | Example                                                                      |
+| -------------------------- | ------------------------------------ | ---------------------------------------------------------------------------- |
+| since, because             | cause/reason (premise to conclusion) | "Since $f$ is continuous, it is bounded on $[0,1]$."                         |
+| therefore, thus, hence     | conclusion (follows from above)      | "The set is closed and bounded; therefore it is compact."                    |
+| in particular              | specialization (key consequence)     | "Every compact set is bounded. In particular, $K \subset [-M, M]$."          |
+| moreover, furthermore      | addition (new supporting fact)       | "The function is differentiable. Moreover, its derivative is Lipschitz."     |
+| however, on the other hand | contrast or qualification            | "The bound is tight for $n = 2$. However, for $n \ge 3$, we can improve it." |
+| also                       | neutral addition                     | "The map is injective. It is also surjective."                               |
+| namely                     | clarification/restatement            | "There is exactly one fixed point, namely $x = 0$."                          |
+| recall that                | reminder of earlier fact             | "Recall that $G$ is assumed to be abelian."                                  |
 
 **Do not use "since" for temporal sequence in mathematical writing.** Reserve it for logical causation. Write "After establishing Lemma 2, we turn to..." for temporal ordering, and "Since Lemma 2 gives us a bound on $|G|$, we can now..." for logical dependence.
 
@@ -209,16 +209,16 @@ Clear (dependent $C$): "For every $n$, there exists a constant $C_n$ such that $
 
 **Write out the following in words; do not use their symbolic forms in running text:**
 
-| Symbol | Write instead |
-|---|---|
-| $\forall$ | "for all" or "for every" |
-| $\exists$ | "there exists" |
-| $\wedge$ | "and" |
-| $\vee$ | "or" |
-| $\Rightarrow$ | "implies" or "if...then" |
-| $\Leftrightarrow$ | "if and only if" |
-| $\neg$ | "not" |
-| s.t. | "such that" |
+| Symbol            | Write instead            |
+| ----------------- | ------------------------ |
+| $\forall$         | "for all" or "for every" |
+| $\exists$         | "there exists"           |
+| $\wedge$          | "and"                    |
+| $\vee$            | "or"                     |
+| $\Rightarrow$     | "implies" or "if...then" |
+| $\Leftrightarrow$ | "if and only if"         |
+| $\neg$            | "not"                    |
+| s.t.              | "such that"              |
 
 **The symbol $\in$ is acceptable in formal writing:** "Let $x \in \mathbb{R}$" is standard and reads naturally.
 

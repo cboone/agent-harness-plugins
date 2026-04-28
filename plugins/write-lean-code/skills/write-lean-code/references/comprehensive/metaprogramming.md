@@ -41,12 +41,12 @@ TermElabM       -- term elaboration (parsing expressions into terms)
 TacticM         -- tactic state (goal list management)
 ```
 
-| Monad       | Key Capabilities                                             |
-| ----------- | ------------------------------------------------------------ |
-| `CoreM`     | Environment access, options, messages, name generation       |
-| `MetaM`     | Create/assign metavariables, `isDefEq`, `inferType`, `whnf`  |
-| `TermElabM` | Elaborate syntax to expressions, handle pending goals        |
-| `TacticM`   | Access and modify the goal list, focus goals                 |
+| Monad       | Key Capabilities                                            |
+| ----------- | ----------------------------------------------------------- |
+| `CoreM`     | Environment access, options, messages, name generation      |
+| `MetaM`     | Create/assign metavariables, `isDefEq`, `inferType`, `whnf` |
+| `TermElabM` | Elaborate syntax to expressions, handle pending goals       |
+| `TacticM`   | Access and modify the goal list, focus goals                |
 
 Each monad in the hierarchy can use all operations from the monads above it. A `TacticM` computation can call `MetaM` functions directly.
 

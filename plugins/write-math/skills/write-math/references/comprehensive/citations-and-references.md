@@ -153,15 +153,15 @@ Tao suggests factoring in pricing and accessibility when selecting a venue. Open
 
 ## Quick Reference: Citation Practices
 
-| Practice | Example |
-|---|---|
-| Named citation | "Smith [3] proved that..." |
-| Bare citation for surveys | "...in applications [2, 8, 15]" |
-| Specific reference | "[Rudin, Thm. 3.3, p. 59]" |
-| Standard result | One textbook reference suffices |
-| Adapted technique | "Our argument follows [3, Thm. 2.1], with..." |
-| Over-citation | Avoid listing 5+ refs for a well-known fact |
-| Attribution | Credit ideas even when paraphrasing |
+| Practice                  | Example                                       |
+| ------------------------- | --------------------------------------------- |
+| Named citation            | "Smith [3] proved that..."                    |
+| Bare citation for surveys | "...in applications [2, 8, 15]"               |
+| Specific reference        | "[Rudin, Thm. 3.3, p. 59]"                    |
+| Standard result           | One textbook reference suffices               |
+| Adapted technique         | "Our argument follows [3, Thm. 2.1], with..." |
+| Over-citation             | Avoid listing 5+ refs for a well-known fact   |
+| Attribution               | Credit ideas even when paraphrasing           |
 
 ## Sources
 

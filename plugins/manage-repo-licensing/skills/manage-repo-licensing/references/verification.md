@@ -19,13 +19,13 @@ reuse lint
 
 Zero errors. Not "only low-severity" — zero. Common errors and what they mean:
 
-| Error                                                          | Likely cause                                                       |
-| -------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `<path> has no copyright and licensing information`            | File lacks inline SPDX, sidecar, and REUSE.toml coverage.          |
-| `<path> has copyright information, but no licensing information` | Only one of the two SPDX tags present; both are required.        |
-| `License <SPDX-ID> in <path> is not included in the LICENSES/ folder` | License-text file missing or mis-cased in `LICENSES/`.      |
-| `Unused license <path>`                                        | License-text file present but no file claims it. Either add a file using that license or remove the text. |
-| `Could not parse <path>`                                       | Malformed SPDX in a header or sidecar. Re-check syntax.            |
+| Error                                                                 | Likely cause                                                                                              |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `<path> has no copyright and licensing information`                   | File lacks inline SPDX, sidecar, and REUSE.toml coverage.                                                 |
+| `<path> has copyright information, but no licensing information`      | Only one of the two SPDX tags present; both are required.                                                 |
+| `License <SPDX-ID> in <path> is not included in the LICENSES/ folder` | License-text file missing or mis-cased in `LICENSES/`.                                                    |
+| `Unused license <path>`                                               | License-text file present but no file claims it. Either add a file using that license or remove the text. |
+| `Could not parse <path>`                                              | Malformed SPDX in a header or sidecar. Re-check syntax.                                                   |
 
 Fix the error, do not suppress it. `reuse lint --quiet` is for CI plumbing, not for rolling past real failures.
 

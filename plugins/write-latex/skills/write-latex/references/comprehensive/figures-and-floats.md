@@ -5,12 +5,12 @@
 
 Choose the format based on the content type:
 
-| Content Type                   | Format     | Reason                                           |
-|-------------------------------|-----------|--------------------------------------------------|
-| Diagrams, plots, line art     | PDF or EPS | Vector formats scale without pixelation           |
-| Photographs, screenshots      | PNG or JPG | Raster is acceptable for continuous-tone images   |
-| Generated plots (matplotlib)  | PDF        | Always export as vector; never screenshot a plot  |
-| TikZ/PGF figures              | Compiled   | Generate directly in LaTeX or export to PDF       |
+| Content Type                 | Format     | Reason                                           |
+| ---------------------------- | ---------- | ------------------------------------------------ |
+| Diagrams, plots, line art    | PDF or EPS | Vector formats scale without pixelation          |
+| Photographs, screenshots     | PNG or JPG | Raster is acceptable for continuous-tone images  |
+| Generated plots (matplotlib) | PDF        | Always export as vector; never screenshot a plot |
+| TikZ/PGF figures             | Compiled   | Generate directly in LaTeX or export to PDF      |
 
 **Never use bitmaps (PNG, JPG, BMP, GIF) for plots, diagrams, or any content with lines, text, or geometric shapes.**
 Bitmapped plots look blurry when printed or zoomed, and they inflate file size compared to vector equivalents.
@@ -196,12 +196,12 @@ The float placement specifier tells LaTeX where it is *allowed* to place the flo
 It is a permission list, not a command.
 
 | Specifier | Meaning                                                |
-|-----------|--------------------------------------------------------|
+| --------- | ------------------------------------------------------ |
 | `t`       | Top of a text page                                     |
 | `b`       | Bottom of a text page                                  |
 | `p`       | Dedicated float page (for large floats)                |
 | `h`       | Here, approximately where it appears in the source     |
-| `!`       | Override internal aesthetic limits (more aggressive)    |
+| `!`       | Override internal aesthetic limits (more aggressive)   |
 | `H`       | Exactly here (float package); disables float mechanism |
 
 ### Recommended Defaults

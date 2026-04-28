@@ -208,18 +208,18 @@ Present information in the order the reader needs it. A forward reference ("as w
 
 ## Quick Reference: Principles at a Glance
 
-| Principle | Action |
-|---|---|
-| Audience | Write for a beginning graduate student in the field |
-| Examples first | Concrete instance before general definition |
-| Counterexamples | Show what fails without each hypothesis |
-| Signpost three times | Abstract, introduction, body |
-| Section openings | State what comes next and why |
-| Assertion status | Definition, theorem, conjecture: always explicit |
-| Definition placement | Start of sentence or environment, never buried |
-| Recall earlier terms | Parenthetical reminders for distant definitions |
-| Clear antecedents | Repeat nouns rather than relying on pronouns |
-| Hierarchy | Headings distinguish main ideas from secondary details |
+| Principle            | Action                                                 |
+| -------------------- | ------------------------------------------------------ |
+| Audience             | Write for a beginning graduate student in the field    |
+| Examples first       | Concrete instance before general definition            |
+| Counterexamples      | Show what fails without each hypothesis                |
+| Signpost three times | Abstract, introduction, body                           |
+| Section openings     | State what comes next and why                          |
+| Assertion status     | Definition, theorem, conjecture: always explicit       |
+| Definition placement | Start of sentence or environment, never buried         |
+| Recall earlier terms | Parenthetical reminders for distant definitions        |
+| Clear antecedents    | Repeat nouns rather than relying on pronouns           |
+| Hierarchy            | Headings distinguish main ideas from secondary details |
 
 ## Sources
 

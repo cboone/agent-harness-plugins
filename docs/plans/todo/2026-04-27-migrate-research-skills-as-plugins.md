@@ -49,12 +49,12 @@ Follow the existing `/create-plugin` workflow at `plugins/create-plugin/skills/c
 
 Order the migrations bottom-up so cross-references between newly migrated skills resolve as each lands:
 
-| Tier | Plugins | Why this tier |
-| --- | --- | --- |
-| 1 | `write-math`, `write-latex`, `write-pandoc-markdown` | No cross-skill deps; foundations. |
-| 2 | `write-lean-code`, `write-lean-tests` | Bidirectional pair; land together. |
-| 3 | `write-formalization-roadmap` | References Tier 1. |
-| 4 | `manage-repo-licensing` | Standalone; can land anywhere. |
+| Tier | Plugins                                              | Why this tier                      |
+| ---- | ---------------------------------------------------- | ---------------------------------- |
+| 1    | `write-math`, `write-latex`, `write-pandoc-markdown` | No cross-skill deps; foundations.  |
+| 2    | `write-lean-code`, `write-lean-tests`                | Bidirectional pair; land together. |
+| 3    | `write-formalization-roadmap`                        | References Tier 1.                 |
+| 4    | `manage-repo-licensing`                              | Standalone; can land anywhere.     |
 
 Each tier can be its own commit (or commits) for clean PR history. The category infrastructure changes (new `writing` category in references, recategorization of `write-markdown`) should land first as a "category prep" commit so subsequent tiers can use the new category cleanly.
 
@@ -103,14 +103,14 @@ Per-plugin notes (from end-to-end SKILL.md reads on 2026-04-27):
 
 Find-and-replace table (apply to all 7 SKILL.md files and references):
 
-| Find (project-specific) | Replace with (generic) |
-| --- | --- |
-| `proofs/StrengthModelTest/` | `<Name>Test/` (or `proofs/<Name>Test/` when the host repo's proof root is implied) |
-| `proofs/StrengthModel/` | `<Name>/` |
-| `StrengthModel.X.Y` (Lean module path) | `<Name>.X.Y` |
-| `proofs/lakefile.toml` | `lakefile.toml` (with note: "in this repo's case, `proofs/lakefile.toml`") |
+| Find (project-specific)                                                       | Replace with (generic)                                                                         |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `proofs/StrengthModelTest/`                                                   | `<Name>Test/` (or `proofs/<Name>Test/` when the host repo's proof root is implied)             |
+| `proofs/StrengthModel/`                                                       | `<Name>/`                                                                                      |
+| `StrengthModel.X.Y` (Lean module path)                                        | `<Name>.X.Y`                                                                                   |
+| `proofs/lakefile.toml`                                                        | `lakefile.toml` (with note: "in this repo's case, `proofs/lakefile.toml`")                     |
 | Concrete fixture names (`threeGuessAttacker`, `cheapHashVf`, `iphoneDefense`) | Keep as illustrative in a `Sources` section, marked "(example fixtures from `strength-model`)" |
-| `strength-model` repo paths in workflow steps | Replace with role-based descriptions ("the host research repo") |
+| `strength-model` repo paths in workflow steps                                 | Replace with role-based descriptions ("the host research repo")                                |
 
 ## New `writing` marketplace category
 

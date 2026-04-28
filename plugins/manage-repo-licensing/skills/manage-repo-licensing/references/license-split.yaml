@@ -44,7 +44,7 @@ buckets:
       proof repo).
 
   infrastructure_config:
-    spdx: MIT  # or Apache-2.0 when repo has no MIT bucket
+    spdx: MIT # or Apache-2.0 when repo has no MIT bucket
     placement: reuse_toml_config_group
     matches:
       - "Makefile"
@@ -70,7 +70,7 @@ buckets:
     spdx: CC-BY-4.0
     placement: reuse_toml_prose_group
     matches:
-      - "**/*.md"  # project-authored only; LicenseRef-Reference-Material overrides for bundled third-party
+      - "**/*.md" # project-authored only; LicenseRef-Reference-Material overrides for bundled third-party
       - "**/*.bib"
       - "NOTICE"
     rationale: >-
@@ -100,7 +100,7 @@ buckets:
       has no tracked generated artifacts.
 
   structural_placeholders:
-    spdx: MIT  # or Apache-2.0 when repo has no MIT bucket
+    spdx: MIT # or Apache-2.0 when repo has no MIT bucket
     placement: reuse_toml_structural_group
     matches:
       - "**/.gitkeep"
@@ -120,7 +120,7 @@ buckets:
 
   third_party_reference_material:
     spdx: LicenseRef-Reference-Material
-    placement: scale_tiered  # per-file sidecars for small collections; REUSE.toml glob for large
+    placement: scale_tiered # per-file sidecars for small collections; REUSE.toml glob for large
     matches:
       - "references/papers/**"
       - "references/extractions/**"

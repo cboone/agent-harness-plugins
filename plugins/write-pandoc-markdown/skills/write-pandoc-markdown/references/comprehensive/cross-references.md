@@ -146,7 +146,7 @@ The `{#eq:label}` attribute follows the display math block. Note the space betwe
 
 ```markdown
 | Column A | Column B |
-|----------|----------|
+| ---------- | ---------- |
 | 1        | 2        |
 
 : Comparison of approaches {#tbl:comparison}
@@ -166,15 +166,14 @@ As described in @sec:formal-model, we define five spaces.
 
 ### Listing references
 
-```markdown
+````markdown
 ```{#lst:example .python caption="Example code"}
 def hello():
     print("Hello")
 ```
 
 See @lst:example for the implementation.
-
-```
+````
 
 ### Multiple references
 
@@ -272,15 +271,15 @@ Best when:
 
 ### Comparison
 
-| Feature | Raw LaTeX spans | pandoc-crossref |
-|---|---|---|
-| Dependencies | None (Pandoc only) | pandoc-crossref filter |
-| Output formats | LaTeX only | All formats |
-| Syntax | `` `\cref{label}`{=latex} `` | `@fig:label` |
-| LaTeX command control | Full | Limited (uses defaults) |
-| Range compression | Manual | Automatic |
-| Subfigures | Raw LaTeX required | Native div syntax |
-| Filter ordering | No concerns | Must precede citeproc |
+| Feature               | Raw LaTeX spans              | pandoc-crossref         |
+| --------------------- | ---------------------------- | ----------------------- |
+| Dependencies          | None (Pandoc only)           | pandoc-crossref filter  |
+| Output formats        | LaTeX only                   | All formats             |
+| Syntax                | `` `\cref{label}`{=latex} `` | `@fig:label`            |
+| LaTeX command control | Full                         | Limited (uses defaults) |
+| Range compression     | Manual                       | Automatic               |
+| Subfigures            | Raw LaTeX required           | Native div syntax       |
+| Filter ordering       | No concerns                  | Must precede citeproc   |
 
 ### Choosing between the two
 
@@ -329,7 +328,7 @@ Stable:
 
 ### Pandoc syntax inside raw LaTeX blocks
 
-```markdown
+````markdown
 Wrong (inside a raw LaTeX block):
 ```{=latex}
 \begin{theorem}
@@ -344,7 +343,6 @@ Right:
 See \cite{shannon1948} for details.      % LaTeX citation inside raw LaTeX
 \end{theorem}
 ```
+````
 
 Inside raw LaTeX blocks, Pandoc does not process any content. Use LaTeX commands directly.
-
-```

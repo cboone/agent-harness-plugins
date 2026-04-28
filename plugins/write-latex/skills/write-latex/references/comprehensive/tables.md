@@ -37,11 +37,11 @@ A minimal booktabs table:
 
 ### The three rules
 
-| Command       | Purpose                    | Thickness  |
-| ------------- | -------------------------- | ---------- |
-| `\toprule`    | Above the column headers   | Thickest   |
-| `\midrule`    | Below the column headers   | Medium     |
-| `\bottomrule` | At the bottom of the table | Thickest   |
+| Command       | Purpose                    | Thickness |
+| ------------- | -------------------------- | --------- |
+| `\toprule`    | Above the column headers   | Thickest  |
+| `\midrule`    | Below the column headers   | Medium    |
+| `\bottomrule` | At the bottom of the table | Thickest  |
 
 The `\toprule` and `\bottomrule` are slightly thicker than `\midrule` by default. This visual hierarchy helps the reader's eye distinguish the header from the data and the data from what follows the table.
 

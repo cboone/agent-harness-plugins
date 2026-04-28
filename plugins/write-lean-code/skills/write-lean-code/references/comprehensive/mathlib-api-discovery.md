@@ -52,12 +52,12 @@ Once you have a predicted name, test it with `#check`:
 
 These tactics search the Mathlib API for lemmas that close or simplify the current goal. They work best on focused, specific goals.
 
-| Tactic    | What it searches for                                            |
-| --------- | --------------------------------------------------------------- |
-| `exact?`  | A single lemma or term that closes the goal exactly             |
-| `apply?`  | A lemma whose conclusion matches the goal (may leave subgoals) |
-| `rw?`     | A rewrite rule that applies to some part of the goal            |
-| `simp?`   | The minimal `simp only [...]` call that simplifies the goal     |
+| Tactic   | What it searches for                                           |
+| -------- | -------------------------------------------------------------- |
+| `exact?` | A single lemma or term that closes the goal exactly            |
+| `apply?` | A lemma whose conclusion matches the goal (may leave subgoals) |
+| `rw?`    | A rewrite rule that applies to some part of the goal           |
+| `simp?`  | The minimal `simp only [...]` call that simplifies the goal    |
 
 See `proof-style.md` under "Exploration tactics" for syntax details.
 
@@ -102,17 +102,17 @@ This map covers Mathlib areas commonly depended on by theorem-proving projects. 
 
 The `Finset` family is the most heavily used part of Mathlib in this project.
 
-| Module path                             | Provides                                                     |
-| --------------------------------------- | ------------------------------------------------------------ |
-| `Mathlib.Data.Finset.Basic`             | Core `Finset` type, membership, `∅`, `insert`, `∪`, `∩`     |
-| `Mathlib.Data.Finset.Card`              | `Finset.card`, cardinality lemmas                            |
-| `Mathlib.Data.Finset.Image`             | `Finset.image`, `Finset.map`                                 |
-| `Mathlib.Data.Finset.Filter`            | `Finset.filter`, membership and cardinality of filtered sets |
-| `Mathlib.Data.Finset.Sum`               | Disjoint union of finsets                                    |
-| `Mathlib.Data.Finset.Lattice`           | `Finset.sup`, `Finset.inf`, lattice operations on finsets    |
-| `Mathlib.Data.Finset.Prod`              | `Finset.product`, cartesian product                          |
-| `Mathlib.Data.Finset.Sort`              | Sorted lists from finsets                                    |
-| `Mathlib.Algebra.BigOperators.Group.Finset` | `Finset.sum`, `Finset.prod`, `∑` and `∏` notation       |
+| Module path                                 | Provides                                                     |
+| ------------------------------------------- | ------------------------------------------------------------ |
+| `Mathlib.Data.Finset.Basic`                 | Core `Finset` type, membership, `∅`, `insert`, `∪`, `∩`      |
+| `Mathlib.Data.Finset.Card`                  | `Finset.card`, cardinality lemmas                            |
+| `Mathlib.Data.Finset.Image`                 | `Finset.image`, `Finset.map`                                 |
+| `Mathlib.Data.Finset.Filter`                | `Finset.filter`, membership and cardinality of filtered sets |
+| `Mathlib.Data.Finset.Sum`                   | Disjoint union of finsets                                    |
+| `Mathlib.Data.Finset.Lattice`               | `Finset.sup`, `Finset.inf`, lattice operations on finsets    |
+| `Mathlib.Data.Finset.Prod`                  | `Finset.product`, cartesian product                          |
+| `Mathlib.Data.Finset.Sort`                  | Sorted lists from finsets                                    |
+| `Mathlib.Algebra.BigOperators.Group.Finset` | `Finset.sum`, `Finset.prod`, `∑` and `∏` notation            |
 
 `Finset.sum` and `Finset.prod` live in `Algebra.BigOperators`, not in `Data.Finset`. This is the single most common source of confusion when searching for sum-related lemmas.
 
@@ -132,13 +132,13 @@ The `Finset` family is the most heavily used part of Mathlib in this project.
 
 ### Number types
 
-| Module path                | Provides                                           |
-| -------------------------- | -------------------------------------------------- |
-| `Mathlib.Data.Real.Basic`  | `Real` (ℝ), field operations, ordering             |
-| `Mathlib.Data.PNat.Basic`  | `PNat` (ℕ+), positive natural numbers              |
-| `Mathlib.Data.ENat.Basic`  | `ENat` (ℕ∞), extended naturals with infinity       |
-| `Mathlib.Data.NNReal.Basic` | `NNReal` (ℝ≥0), nonnegative reals                 |
-| `Mathlib.Data.ENNReal.Basic` | `ENNReal` (ℝ≥0∞), extended nonnegative reals     |
+| Module path                  | Provides                                     |
+| ---------------------------- | -------------------------------------------- |
+| `Mathlib.Data.Real.Basic`    | `Real` (ℝ), field operations, ordering       |
+| `Mathlib.Data.PNat.Basic`    | `PNat` (ℕ+), positive natural numbers        |
+| `Mathlib.Data.ENat.Basic`    | `ENat` (ℕ∞), extended naturals with infinity |
+| `Mathlib.Data.NNReal.Basic`  | `NNReal` (ℝ≥0), nonnegative reals            |
+| `Mathlib.Data.ENNReal.Basic` | `ENNReal` (ℝ≥0∞), extended nonnegative reals |
 
 ### Algebraic structures and big operators
 
@@ -152,24 +152,24 @@ The `Finset` family is the most heavily used part of Mathlib in this project.
 
 ### Order and lattice theory
 
-| Module path                       | Provides                                           |
-| --------------------------------- | -------------------------------------------------- |
-| `Mathlib.Order.Basic`             | `LE`, `LT`, `Preorder`, `PartialOrder`            |
-| `Mathlib.Order.Lattice`           | `Sup`, `Inf`, `Lattice`                            |
-| `Mathlib.Order.Filter.Basic`      | Filters (used in limit definitions, not in this project directly) |
-| `Mathlib.Order.CompleteLattice`   | `iSup`, `iInf` for indexed suprema/infima         |
+| Module path                     | Provides                                                          |
+| ------------------------------- | ----------------------------------------------------------------- |
+| `Mathlib.Order.Basic`           | `LE`, `LT`, `Preorder`, `PartialOrder`                            |
+| `Mathlib.Order.Lattice`         | `Sup`, `Inf`, `Lattice`                                           |
+| `Mathlib.Order.Filter.Basic`    | Filters (used in limit definitions, not in this project directly) |
+| `Mathlib.Order.CompleteLattice` | `iSup`, `iInf` for indexed suprema/infima                         |
 
 ### Analysis and inequalities
 
-| Module path                                | Provides                                    |
-| ------------------------------------------ | ------------------------------------------- |
-| `Mathlib.Analysis.MeanInequalities`        | Jensen's inequality, power mean inequalities |
-| `Mathlib.Analysis.SpecialFunctions.Log.Basic` | `Real.log`, logarithm identities          |
+| Module path                                   | Provides                                     |
+| --------------------------------------------- | -------------------------------------------- |
+| `Mathlib.Analysis.MeanInequalities`           | Jensen's inequality, power mean inequalities |
+| `Mathlib.Analysis.SpecialFunctions.Log.Basic` | `Real.log`, logarithm identities             |
 
 ### Tactics
 
-| Module path      | Provides                                                   |
-| ---------------- | ---------------------------------------------------------- |
+| Module path      | Provides                                                                                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `Mathlib.Tactic` | Kitchen-sink import: `simp`, `ring`, `linarith`, `omega`, `positivity`, `norm_num`, `field_simp`, `gcongr`, `ext`, `push_neg`, `contrapose`, and all exploration tactics |
 
 Importing `Mathlib.Tactic` is convenient but heavy. For production code, prefer importing only the specific tactic modules you need.
@@ -180,53 +180,53 @@ Quick reference for frequently needed lemma families, organized by proof goal.
 
 ### Finset sums
 
-| You need to...                         | Look for                                                   |
-| -------------------------------------- | ---------------------------------------------------------- |
+| You need to...                         | Look for                                                                               |
+| -------------------------------------- | -------------------------------------------------------------------------------------- |
 | Rewrite a sum by rewriting each term   | `Finset.sum_congr` (needs proof that the index set is equal and terms agree pointwise) |
-| Swap the order of a double sum         | `Finset.sum_comm`                                          |
-| Split a sum over a union               | `Finset.sum_union` (requires disjointness)                 |
-| Split a sum into filter and complement | `Finset.sum_filter_add_sum_filter_not`                     |
-| Factor a constant out of a sum         | `Finset.mul_sum`, `Finset.sum_mul`                         |
-| Bound a sum by bounding each term      | `Finset.sum_le_sum` (needs pointwise `≤`)                  |
-| Bound a single term by the whole sum   | `Finset.single_le_sum` (needs each term `≥ 0`)             |
-| Show a sum of nonneg terms is nonneg   | `Finset.sum_nonneg`                                        |
-| Telescope a sum                        | `Finset.sum_range_succ`, `Finset.sum_Ico_eq_sum_range`     |
-| Sum over the empty set                 | `Finset.sum_empty`                                         |
-| Sum over a singleton                   | `Finset.sum_singleton`                                     |
+| Swap the order of a double sum         | `Finset.sum_comm`                                                                      |
+| Split a sum over a union               | `Finset.sum_union` (requires disjointness)                                             |
+| Split a sum into filter and complement | `Finset.sum_filter_add_sum_filter_not`                                                 |
+| Factor a constant out of a sum         | `Finset.mul_sum`, `Finset.sum_mul`                                                     |
+| Bound a sum by bounding each term      | `Finset.sum_le_sum` (needs pointwise `≤`)                                              |
+| Bound a single term by the whole sum   | `Finset.single_le_sum` (needs each term `≥ 0`)                                         |
+| Show a sum of nonneg terms is nonneg   | `Finset.sum_nonneg`                                                                    |
+| Telescope a sum                        | `Finset.sum_range_succ`, `Finset.sum_Ico_eq_sum_range`                                 |
+| Sum over the empty set                 | `Finset.sum_empty`                                                                     |
+| Sum over a singleton                   | `Finset.sum_singleton`                                                                 |
 
 ### Finset membership and filtering
 
-| You need to...                           | Look for                                   |
-| ---------------------------------------- | ------------------------------------------ |
-| Unfold membership in a filtered set      | `Finset.mem_filter`                         |
-| Unfold membership in an intersection     | `Finset.mem_inter`                          |
-| Unfold membership in a union             | `Finset.mem_union`                          |
-| Unfold membership in a singleton         | `Finset.mem_singleton`                      |
-| Unfold membership in an image            | `Finset.mem_image`                          |
-| Unfold membership in `Finset.univ`       | `Finset.mem_univ` (always `True`)           |
-| Show two filters are equal               | `Finset.filter_congr`                       |
-| Compose two filters                      | `Finset.filter_filter`                      |
+| You need to...                       | Look for                          |
+| ------------------------------------ | --------------------------------- |
+| Unfold membership in a filtered set  | `Finset.mem_filter`               |
+| Unfold membership in an intersection | `Finset.mem_inter`                |
+| Unfold membership in a union         | `Finset.mem_union`                |
+| Unfold membership in a singleton     | `Finset.mem_singleton`            |
+| Unfold membership in an image        | `Finset.mem_image`                |
+| Unfold membership in `Finset.univ`   | `Finset.mem_univ` (always `True`) |
+| Show two filters are equal           | `Finset.filter_congr`             |
+| Compose two filters                  | `Finset.filter_filter`            |
 
 ### Finset cardinality
 
-| You need to...                              | Look for                              |
-| ------------------------------------------- | ------------------------------------- |
-| Card of a filtered set                      | `Finset.card_filter_le`               |
+| You need to...                              | Look for                                                   |
+| ------------------------------------------- | ---------------------------------------------------------- |
+| Card of a filtered set                      | `Finset.card_filter_le`                                    |
 | Card of a union                             | `Finset.card_union_le`, `Finset.card_union_add_card_inter` |
-| Card of an image (injective function)       | `Finset.card_image_of_injective`      |
-| Card of `Finset.univ` equals `Fintype.card` | `Finset.card_univ`                    |
-| Card of the empty set                       | `Finset.card_empty`                   |
-| Card of a singleton                         | `Finset.card_singleton`               |
+| Card of an image (injective function)       | `Finset.card_image_of_injective`                           |
+| Card of `Finset.univ` equals `Fintype.card` | `Finset.card_univ`                                         |
+| Card of the empty set                       | `Finset.card_empty`                                        |
+| Card of a singleton                         | `Finset.card_singleton`                                    |
 
 ### Fin and coercions
 
-| You need to...                                  | Look for                                 |
-| ----------------------------------------------- | ---------------------------------------- |
+| You need to...                                  | Look for                                |
+| ----------------------------------------------- | --------------------------------------- |
 | Extract the `Nat` value from `Fin n`            | `Fin.val` (the coercion `↑i` uses this) |
 | Prove `(i : Fin n).val < n`                     | `Fin.isLt`, `i.isLt`                    |
 | Cast between `Fin n` and `Fin m`                | `Fin.cast`, `Fin.castLE`                |
 | Construct a `Fin (n+1)` from `Fin n`            | `Fin.castSucc`, `Fin.succ`              |
-| The last element of `Fin (n+1)`                 | `Fin.last`                               |
+| The last element of `Fin (n+1)`                 | `Fin.last`                              |
 | Extensionality: two `Fin` values equal iff vals | `Fin.ext`, `Fin.ext_iff`                |
 
 ### Real-number arithmetic
@@ -244,20 +244,20 @@ Quick reference for frequently needed lemma families, organized by proof goal.
 
 ### Logarithms
 
-| You need to...                          | Look for                  |
-| --------------------------------------- | ------------------------- |
-| `log(a * b) = log(a) + log(b)`         | `Real.log_mul`            |
-| `log(a / b) = log(a) - log(b)`         | `Real.log_div`            |
-| `log(a ^ n) = n * log(a)`              | `Real.log_pow`            |
-| `log(1) = 0`                           | `Real.log_one`            |
-| `log` is monotone                       | `Real.log_le_log`         |
-| `log` is strictly monotone on positives | `Real.log_lt_log`         |
+| You need to...                          | Look for          |
+| --------------------------------------- | ----------------- |
+| `log(a * b) = log(a) + log(b)`          | `Real.log_mul`    |
+| `log(a / b) = log(a) - log(b)`          | `Real.log_div`    |
+| `log(a ^ n) = n * log(a)`               | `Real.log_pow`    |
+| `log(1) = 0`                            | `Real.log_one`    |
+| `log` is monotone                       | `Real.log_le_log` |
+| `log` is strictly monotone on positives | `Real.log_lt_log` |
 
 ### Division and reciprocals
 
 | You need to...                               | Look for                           |
 | -------------------------------------------- | ---------------------------------- |
-| `a / b * b = a` (when `b ≠ 0`)              | `div_mul_cancel₀`                  |
+| `a / b * b = a` (when `b ≠ 0`)               | `div_mul_cancel₀`                  |
 | `a * (b / a) = b`                            | `mul_div_cancel₀`                  |
 | `1 / a = a⁻¹`                                | `one_div`                          |
 | `(a / b) / c = a / (b * c)`                  | `div_div`                          |

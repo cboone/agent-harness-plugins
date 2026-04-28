@@ -207,7 +207,7 @@ Tao recommends drawing boxes for lemmas and theorems with arrows showing the log
 
 **Example diagram:**
 
-```
+```text
 Lemma 2.1 ──┐
              ├──> Theorem 3.1 ──> Main Theorem (4.1)
 Lemma 2.3 ──┘                         ^
@@ -251,16 +251,16 @@ The debugging techniques above translate directly into writing advice:
 
 ## Quick Reference: Process Stages
 
-| Stage | Key Action |
-|---|---|
-| Pre-writing | Work out the proof on paper; identify the main contribution |
-| Outlining | Table of contents with bullet points; draft theorem statements |
-| First draft | Get the mathematics right; write the introduction first |
-| Second draft | Restructure for the reader; add examples and signposting |
-| Third draft | Tighten prose; enforce notation consistency; streamline |
-| Pre-submission | Get feedback from non-coauthors; ask for criticism |
-| Final pass | Proofread on paper; check references and formatting |
-| Post-rejection | Use referee reports constructively; revise and resubmit |
+| Stage          | Key Action                                                     |
+| -------------- | -------------------------------------------------------------- |
+| Pre-writing    | Work out the proof on paper; identify the main contribution    |
+| Outlining      | Table of contents with bullet points; draft theorem statements |
+| First draft    | Get the mathematics right; write the introduction first        |
+| Second draft   | Restructure for the reader; add examples and signposting       |
+| Third draft    | Tighten prose; enforce notation consistency; streamline        |
+| Pre-submission | Get feedback from non-coauthors; ask for criticism             |
+| Final pass     | Proofread on paper; check references and formatting            |
+| Post-rejection | Use referee reports constructively; revise and resubmit        |
 
 ## Sources
 

@@ -103,11 +103,11 @@ When a composed `example` fails, the fix is usually in the library (loosen a hyp
 
 `<Name>/X/Y.lean` mirrors 1:1 to `<Name>Test/X/Y.lean`. Examples from the `strength-model` project:
 
-| Library module                                        | Test module                                                |
-| ----------------------------------------------------- | ---------------------------------------------------------- |
-| `proofs/StrengthModel/Survival.lean`                  | `proofs/StrengthModelTest/Survival.lean`                   |
-| `proofs/StrengthModel/Entropy.lean`                   | `proofs/StrengthModelTest/Entropy.lean`                    |
-| `proofs/StrengthModel/LargeDeviations.lean`           | `proofs/StrengthModelTest/LargeDeviations.lean`            |
+| Library module                              | Test module                                     |
+| ------------------------------------------- | ----------------------------------------------- |
+| `proofs/StrengthModel/Survival.lean`        | `proofs/StrengthModelTest/Survival.lean`        |
+| `proofs/StrengthModel/Entropy.lean`         | `proofs/StrengthModelTest/Entropy.lean`         |
+| `proofs/StrengthModel/LargeDeviations.lean` | `proofs/StrengthModelTest/LargeDeviations.lean` |
 
 Namespaces inside the test module match the library's namespaces for the section they cover: `namespace <Name>.LargeDeviations ... end <Name>.LargeDeviations`. When the library's entrypoint is `<Name>.lean` and the test library is configured with a submodule glob (in the example's case, `proofs/lakefile.toml`):
 

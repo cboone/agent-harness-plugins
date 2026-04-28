@@ -116,13 +116,13 @@ Cleveref handles multiple references intelligently:
 
 ### Key options
 
-| Option        | Effect                                                |
-| ------------- | ----------------------------------------------------- |
-| `colorlinks`  | Color link text instead of drawing boxes around them  |
-| `hidelinks`   | No visible indication of links (for print)            |
-| `bookmarks`   | Generate PDF bookmarks (default: true)                |
-| `breaklinks`  | Allow links to break across lines                     |
-| `pdfusetitle` | Use `\title` and `\author` for PDF metadata           |
+| Option        | Effect                                               |
+| ------------- | ---------------------------------------------------- |
+| `colorlinks`  | Color link text instead of drawing boxes around them |
+| `hidelinks`   | No visible indication of links (for print)           |
+| `bookmarks`   | Generate PDF bookmarks (default: true)               |
+| `breaklinks`  | Allow links to break across lines                    |
+| `pdfusetitle` | Use `\title` and `\author` for PDF metadata          |
 
 ### Common pitfalls
 

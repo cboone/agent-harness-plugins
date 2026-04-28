@@ -171,7 +171,7 @@ Pandoc offers two mutually exclusive citation processing modes. You must choose 
 
 Pandoc converts citation syntax to `\cite` family commands in the `.tex` output. BibTeX (or biber) resolves the references during the latexmk compilation step.
 
-```
+```text
 [@key]      -->  \cite{key}
 @key        -->  \citet{key}
 [-@key]     -->  \citeyear{key}
@@ -198,13 +198,13 @@ Pandoc resolves all citations internally using CSL (Citation Style Language) fil
 
 ### Comparison
 
-| Feature | `--natbib` | `--citeproc` |
-|---|---|---|
-| Output format | LaTeX only | Any format |
-| Style files | `.bst` (BibTeX) | `.csl` (Citation Style Language) |
-| Processing | External (BibTeX/biber) | Internal (Pandoc) |
-| Venue compatibility | Excellent for IEEE, ACM, USENIX | Excellent for journals using CSL |
-| Multi-pass compilation | Required (latexmk handles it) | Not needed |
+| Feature                | `--natbib`                      | `--citeproc`                     |
+| ---------------------- | ------------------------------- | -------------------------------- |
+| Output format          | LaTeX only                      | Any format                       |
+| Style files            | `.bst` (BibTeX)                 | `.csl` (Citation Style Language) |
+| Processing             | External (BibTeX/biber)         | Internal (Pandoc)                |
+| Venue compatibility    | Excellent for IEEE, ACM, USENIX | Excellent for journals using CSL |
+| Multi-pass compilation | Required (latexmk handles it)   | Not needed                       |
 
 ### Choosing a convention
 

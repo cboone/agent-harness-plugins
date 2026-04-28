@@ -218,20 +218,20 @@ cleveref automatically sorts, compresses, and groups multiple references:
 Adopt a consistent naming scheme for labels across the entire document.
 cleveref uses these to determine the reference type, but consistent prefixes also make the source readable:
 
-| Prefix  | Environment          | Example              |
-|---------|---------------------|----------------------|
-| `fig:`  | figure               | `\label{fig:arch}`   |
-| `tbl:`  | table                | `\label{tbl:results}`|
-| `eq:`   | equation, align      | `\label{eq:loss}`    |
-| `sec:`  | section              | `\label{sec:method}` |
-| `thm:`  | theorem              | `\label{thm:main}`   |
-| `lem:`  | lemma                | `\label{lem:bound}`  |
-| `def:`  | definition           | `\label{def:space}`  |
-| `cor:`  | corollary            | `\label{cor:tight}`  |
-| `rem:`  | remark               | `\label{rem:note}`   |
-| `alg:`  | algorithm            | `\label{alg:train}`  |
-| `lst:`  | listing              | `\label{lst:code}`   |
-| `app:`  | appendix section     | `\label{app:proofs}` |
+| Prefix | Environment      | Example               |
+| ------ | ---------------- | --------------------- |
+| `fig:` | figure           | `\label{fig:arch}`    |
+| `tbl:` | table            | `\label{tbl:results}` |
+| `eq:`  | equation, align  | `\label{eq:loss}`     |
+| `sec:` | section          | `\label{sec:method}`  |
+| `thm:` | theorem          | `\label{thm:main}`    |
+| `lem:` | lemma            | `\label{lem:bound}`   |
+| `def:` | definition       | `\label{def:space}`   |
+| `cor:` | corollary        | `\label{cor:tight}`   |
+| `rem:` | remark           | `\label{rem:note}`    |
+| `alg:` | algorithm        | `\label{alg:train}`   |
+| `lst:` | listing          | `\label{lst:code}`    |
+| `app:` | appendix section | `\label{app:proofs}`  |
 
 ### Equation References: `\cref` vs `\eqref`
 

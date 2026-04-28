@@ -134,18 +134,18 @@ These are analogous to `align` and `gather` but are sub-environments that fit in
 
 ### When to use each
 
-| Goal                                        | Environment          |
-| ------------------------------------------- | -------------------- |
-| Single numbered equation                    | `equation`           |
-| Single unnumbered equation                  | `equation*` or `\[`  |
-| Multiple aligned equations, each numbered   | `align`              |
-| Multiple aligned equations, none numbered   | `align*`             |
-| Multiple centered equations, each numbered  | `gather`             |
-| Multiple centered equations, none numbered  | `gather*`            |
-| One long equation split across lines        | `multline`           |
-| Aligned lines sharing one number            | `equation` + `split` |
-| Alignment as a sub-expression               | `aligned`            |
-| Centering as a sub-expression               | `gathered`           |
+| Goal                                       | Environment          |
+| ------------------------------------------ | -------------------- |
+| Single numbered equation                   | `equation`           |
+| Single unnumbered equation                 | `equation*` or `\[`  |
+| Multiple aligned equations, each numbered  | `align`              |
+| Multiple aligned equations, none numbered  | `align*`             |
+| Multiple centered equations, each numbered | `gather`             |
+| Multiple centered equations, none numbered | `gather*`            |
+| One long equation split across lines       | `multline`           |
+| Aligned lines sharing one number           | `equation` + `split` |
+| Alignment as a sub-expression              | `aligned`            |
+| Centering as a sub-expression              | `gathered`           |
 
 ### notag vs nonumber
 
@@ -245,13 +245,13 @@ The starred variant `\operatorname*` gives limit placement.
 
 Use named commands for delimiters that have no direct keyboard equivalent:
 
-| Delimiter              | Left command  | Right command  |
-| ---------------------- | ------------- | -------------- |
-| Angle brackets         | `\langle`     | `\rangle`      |
-| Absolute value         | `\lvert`      | `\rvert`       |
-| Norm                   | `\lVert`      | `\rVert`       |
-| Floor                  | `\lfloor`     | `\rfloor`      |
-| Ceiling                | `\lceil`      | `\rceil`       |
+| Delimiter      | Left command | Right command |
+| -------------- | ------------ | ------------- |
+| Angle brackets | `\langle`    | `\rangle`     |
+| Absolute value | `\lvert`     | `\rvert`      |
+| Norm           | `\lVert`     | `\rVert`      |
+| Floor          | `\lfloor`    | `\rfloor`     |
+| Ceiling        | `\lceil`     | `\rceil`      |
 
 Never use `<` and `>` for angle brackets; they produce relation symbols with wrong spacing.
 
@@ -265,12 +265,12 @@ Prefer manual sizing commands over `\left`/`\right`. The `\left`/`\right` pair:
 
 The manual sizing commands from smallest to largest:
 
-| Left     | Right     | Size    |
-| -------- | --------- | ------- |
-| `\bigl`  | `\bigr`   | Small   |
-| `\Bigl`  | `\Bigr`   | Medium  |
-| `\biggl` | `\biggr`  | Large   |
-| `\Biggl` | `\Biggr`  | Largest |
+| Left     | Right    | Size    |
+| -------- | -------- | ------- |
+| `\bigl`  | `\bigr`  | Small   |
+| `\Bigl`  | `\Bigr`  | Medium  |
+| `\biggl` | `\biggr` | Large   |
+| `\Biggl` | `\Biggr` | Largest |
 
 There are also middle variants (`\bigm`, `\Bigm`, etc.) for delimiters that act as binary relations (like `\mid` in set-builder notation).
 

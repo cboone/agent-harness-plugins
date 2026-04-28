@@ -111,7 +111,7 @@ The backtick-delimited content is the raw LaTeX command. The `{=latex}` attribut
 
 The `+raw_attribute` Pandoc extension must be enabled. In the project Makefiles, this is included in the format specification:
 
-```
+```text
 -f markdown+raw_tex+raw_attribute+fenced_divs+citations
 ```
 
@@ -135,12 +135,12 @@ This is \textbf{bold} via raw LaTeX.
 
 ### Comparison with `{=latex}` blocks
 
-| Feature | `+raw_tex` (unfenced) | `{=latex}` blocks |
-|---|---|---|
-| Explicitness | Implicit; Pandoc guesses | Explicit; clearly marked |
-| Parsing reliability | Can be ambiguous | Always reliable |
-| Readability | Cleaner for simple commands | More verbose |
-| Recommended for | Simple commands, environments | Complex blocks, all cases where clarity matters |
+| Feature             | `+raw_tex` (unfenced)         | `{=latex}` blocks                               |
+| ------------------- | ----------------------------- | ----------------------------------------------- |
+| Explicitness        | Implicit; Pandoc guesses      | Explicit; clearly marked                        |
+| Parsing reliability | Can be ambiguous              | Always reliable                                 |
+| Readability         | Cleaner for simple commands   | More verbose                                    |
+| Recommended for     | Simple commands, environments | Complex blocks, all cases where clarity matters |
 
 ### When `+raw_tex` can cause problems
 

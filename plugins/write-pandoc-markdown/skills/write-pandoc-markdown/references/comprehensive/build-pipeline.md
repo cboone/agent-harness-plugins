@@ -10,7 +10,7 @@ The pipeline has two distinct stages:
 1. **Pandoc** converts `.md` to `.tex` using a venue-specific LaTeX template.
 2. **latexmk** compiles `.tex` to `.pdf` via pdflatex and BibTeX (multiple passes as needed).
 
-```
+```text
 main.md  --[Pandoc]--> main.tex  --[latexmk]--> main.pdf
 ```
 
@@ -45,12 +45,12 @@ pandoc --template=templates/<venue>.latex -o main.tex main.md
 
 Converts Pandoc citation syntax to `\cite` family commands:
 
-| Pandoc syntax | LaTeX output |
-|---|---|
-| `[@key]` | `\cite{key}` |
-| `@key` | `\citet{key}` |
-| `[-@key]` | `\citeyear{key}` |
-| `[@k1; @k2]` | `\cite{k1,k2}` |
+| Pandoc syntax | LaTeX output     |
+| ------------- | ---------------- |
+| `[@key]`      | `\cite{key}`     |
+| `@key`        | `\citet{key}`    |
+| `[-@key]`     | `\citeyear{key}` |
+| `[@k1; @k2]`  | `\cite{k1,k2}`   |
 
 The actual bibliography formatting is handled by BibTeX during the latexmk step, using the `.bst` style specified in `bibliographystyle:`.
 
@@ -69,12 +69,12 @@ For example, a long `\caption{}` that Pandoc wraps across lines may produce inva
 
 Specifies the input format with required Pandoc extensions:
 
-| Extension | Purpose |
-|---|---|
-| `+raw_tex` | Pass through raw LaTeX commands outside fenced blocks |
-| `+raw_attribute` | Enable `{=latex}` on fenced blocks and inline spans |
-| `+fenced_divs` | Allow `:::` div syntax for custom containers |
-| `+citations` | Enable `[@key]` citation syntax |
+| Extension        | Purpose                                               |
+| ---------------- | ----------------------------------------------------- |
+| `+raw_tex`       | Pass through raw LaTeX commands outside fenced blocks |
+| `+raw_attribute` | Enable `{=latex}` on fenced blocks and inline spans   |
+| `+fenced_divs`   | Allow `:::` div syntax for custom containers          |
+| `+citations`     | Enable `[@key]` citation syntax                       |
 
 #### `--syntax-highlighting=none`
 
@@ -103,10 +103,10 @@ latexmk manages the multi-pass compilation needed to resolve all cross-reference
 latexmk -pdf -silent -interaction=nonstopmode main
 ```
 
-| Flag | Purpose |
-|---|---|
-| `-pdf` | Produce PDF via pdflatex |
-| `-silent` | Suppress non-essential output |
+| Flag                       | Purpose                                      |
+| -------------------------- | -------------------------------------------- |
+| `-pdf`                     | Produce PDF via pdflatex                     |
+| `-silent`                  | Suppress non-essential output                |
 | `-interaction=nonstopmode` | Do not stop for errors (continue and report) |
 
 ### What latexmk does automatically
@@ -245,15 +245,15 @@ $body$
 
 ### Key variables
 
-| Variable | Source | Description |
-|---|---|---|
-| `$title$` | YAML `title:` | Paper title |
-| `$author$` | YAML `author:` | Author name(s) |
-| `$abstract$` | YAML `abstract:` | Abstract text |
-| `$body$` | Markdown content | Converted paper body |
-| `$bibliography$` | YAML `bibliography:` | Path to .bib file |
-| `$bibliographystyle$` | YAML `bibliographystyle:` | BibTeX style name |
-| `$header-includes$` | YAML `header-includes:` | Extra preamble content |
+| Variable              | Source                    | Description            |
+| --------------------- | ------------------------- | ---------------------- |
+| `$title$`             | YAML `title:`             | Paper title            |
+| `$author$`            | YAML `author:`            | Author name(s)         |
+| `$abstract$`          | YAML `abstract:`          | Abstract text          |
+| `$body$`              | Markdown content          | Converted paper body   |
+| `$bibliography$`      | YAML `bibliography:`      | Path to .bib file      |
+| `$bibliographystyle$` | YAML `bibliographystyle:` | BibTeX style name      |
+| `$header-includes$`   | YAML `header-includes:`   | Extra preamble content |
 
 ### Template conditionals and loops
 
@@ -395,11 +395,11 @@ This shows which extensions are active, how citations are processed, and any war
 
 latexmk produces several log files:
 
-| File | Contents |
-|---|---|
+| File       | Contents                                             |
+| ---------- | ---------------------------------------------------- |
 | `main.log` | Full pdflatex output (warnings, errors, page counts) |
-| `main.blg` | BibTeX log (citation resolution, missing entries) |
-| `main.aux` | Auxiliary data (labels, citation keys) |
+| `main.blg` | BibTeX log (citation resolution, missing entries)    |
+| `main.aux` | Auxiliary data (labels, citation keys)               |
 
 Check `main.blg` first for citation issues, then `main.log` for everything else.
 

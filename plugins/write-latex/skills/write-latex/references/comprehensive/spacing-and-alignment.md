@@ -6,14 +6,14 @@
 LaTeX provides six built-in spacing commands for fine-tuning mathematical expressions.
 The fundamental unit is the *mu* (math unit): 1 mu = 1/18 em at the current math font size.
 
-| Command   | Width  | Usage                                          |
-|-----------|--------|-------------------------------------------------|
-| `\,`      |  3 mu  | Thin space; most common fine-tuning space       |
-| `\:`      |  4 mu  | Medium space; rarely needed                     |
-| `\;`      |  5 mu  | Thick space; between adjacent display formulas  |
-| `\!`      | -3 mu  | Negative thin space; for pulling symbols closer |
-| `\quad`   | 18 mu  | 1 em; standard separator in display math        |
-| `\qquad`  | 36 mu  | 2 em; large separator between formulas          |
+| Command  | Width | Usage                                           |
+| -------- | ----- | ----------------------------------------------- |
+| `\,`     | 3 mu  | Thin space; most common fine-tuning space       |
+| `\:`     | 4 mu  | Medium space; rarely needed                     |
+| `\;`     | 5 mu  | Thick space; between adjacent display formulas  |
+| `\!`     | -3 mu | Negative thin space; for pulling symbols closer |
+| `\quad`  | 18 mu | 1 em; standard separator in display math        |
+| `\qquad` | 36 mu | 2 em; large separator between formulas          |
 
 In running text, `\quad` and `\qquad` serve as logical separators between conditions or between a formula and its qualifier:
 
@@ -98,11 +98,11 @@ This allows extremely fine adjustments:
 Phantom commands create invisible boxes with the dimensions of their argument.
 They are essential for aligning content across separate equations.
 
-| Command      | Width | Height | Depth |
-|-------------|-------|--------|-------|
-| `\phantom`   | Yes   | Yes    | Yes   |
-| `\hphantom`  | Yes   | No     | No    |
-| `\vphantom`  | No    | Yes    | Yes   |
+| Command     | Width | Height | Depth |
+| ----------- | ----- | ------ | ----- |
+| `\phantom`  | Yes   | Yes    | Yes   |
+| `\hphantom` | Yes   | No     | No    |
+| `\vphantom` | No    | Yes    | Yes   |
 
 ### Vertical Alignment with `\vphantom`
 

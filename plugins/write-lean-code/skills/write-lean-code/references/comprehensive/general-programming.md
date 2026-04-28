@@ -97,14 +97,14 @@ def sumList (xs : List Nat) : Nat := Id.run do
 
 ### Common monads
 
-| Monad       | Purpose                                          |
-| ----------- | ------------------------------------------------ |
-| `IO`        | Side effects (files, network, etc.)              |
-| `Option`    | Computations that may fail silently              |
-| `Except ε`  | Computations that may fail with error type `ε`   |
-| `StateM σ`  | Stateful computation with state type `σ`         |
-| `ReaderM ρ` | Read-only environment of type `ρ`                |
-| `Id`        | Pure computation (use with `Id.run`)             |
+| Monad       | Purpose                                        |
+| ----------- | ---------------------------------------------- |
+| `IO`        | Side effects (files, network, etc.)            |
+| `Option`    | Computations that may fail silently            |
+| `Except ε`  | Computations that may fail with error type `ε` |
+| `StateM σ`  | Stateful computation with state type `σ`       |
+| `ReaderM ρ` | Read-only environment of type `ρ`              |
+| `Id`        | Pure computation (use with `Id.run`)           |
 
 ### Monad transformers
 
@@ -326,13 +326,13 @@ require aesop from git
 
 ### Common Lake commands
 
-| Command                  | Purpose                                |
-| ------------------------ | -------------------------------------- |
-| `lake build`             | Build the project                      |
-| `lake exe myApp`         | Run an executable target               |
-| `lake update`            | Update dependencies                    |
-| `lake clean`             | Remove build artifacts                 |
-| `lake env printPaths`    | Show include paths (useful for editor) |
+| Command               | Purpose                                |
+| --------------------- | -------------------------------------- |
+| `lake build`          | Build the project                      |
+| `lake exe myApp`      | Run an executable target               |
+| `lake update`         | Update dependencies                    |
+| `lake clean`          | Remove build artifacts                 |
+| `lake env printPaths` | Show include paths (useful for editor) |
 
 Mathlib build policy: in a fresh clone or worktree, do not use `lake build` as the bootstrap step. Run the project's documented bootstrap script first so `lake exe cache get` downloads Mathlib's prebuilt artifacts. If Mathlib's build artifacts are missing, rerun the bootstrap script rather than letting Lake compile Mathlib from source. The invoking project's CLAUDE.md names the specific bootstrap script and the expected artifact path.
 
