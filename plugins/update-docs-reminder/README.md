@@ -3,7 +3,11 @@
 Reminds you to update documentation when a commit includes significant code changes.
 
 **Type:** Hook
-**Requires:** [`jq`](https://jqlang.github.io/jq/). Install via [Homebrew](https://brew.sh): `brew install jq`
+**Requires:**
+
+- `bash` 3.2 or newer. The system `bash` on macOS (`/bin/bash`, version 3.2.57) works; no Homebrew `bash` install is needed.
+- [`jq`](https://jqlang.github.io/jq/). Install via [Homebrew](https://brew.sh): `brew install jq`.
+- `git`. The hook silently skips analysis when not invoked inside a git repository.
 
 ## Installation
 

@@ -12,6 +12,13 @@ set -euo pipefail
 # Output: Plain text to stdout when documentation reminders are warranted.
 #         Silent (no stdout) when no reminders are needed.
 # Exit:   Always 0 (PostToolUse hooks cannot block; they only observe).
+#
+# Requirements:
+#   - bash 3.2+ (the system bash on macOS); avoids `mapfile`/`readarray` and
+#     other bash 4+ constructs so it runs whether `/usr/bin/env bash` resolves
+#     to /bin/bash or a Homebrew bash.
+#   - jq (for parsing hook input and per-project config).
+#   - git (analysis is skipped silently when not in a git repo).
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -225,8 +232,11 @@ function check_new_env_vars() {
 
   # Check the diff for new environment variable references
   local diff_content
-  local -a file_array
-  mapfile -t file_array <<< "${source_files}"
+  local -a file_array=()
+  local line
+  while IFS= read -r line; do
+    file_array+=("${line}")
+  done <<< "${source_files}"
   diff_content="$(git diff HEAD~1..HEAD -- "${file_array[@]}" 2> /dev/null | grep '^+[^+]' | head -200 || true)"
 
   # shellcheck disable=SC2016
@@ -250,8 +260,11 @@ function check_cli_flags() {
 
   # Check the diff for flag/argument definitions
   local diff_content
-  local -a file_array
-  mapfile -t file_array <<< "${source_files}"
+  local -a file_array=()
+  local line
+  while IFS= read -r line; do
+    file_array+=("${line}")
+  done <<< "${source_files}"
   diff_content="$(git diff HEAD~1..HEAD -- "${file_array[@]}" 2> /dev/null | grep '^+[^+]' | head -200 || true)"
 
   if echo "${diff_content}" | grep -qE '(StringVar|BoolVar|IntVar|flag\.|pflag\.|\.option\(|\.argument\(|add_argument|argparse|clap::Arg|cobra\.Command)'; then
@@ -277,11 +290,16 @@ function check_public_api() {
 
   # Check for new exported functions/types in the diff
   local diff_content
-  local -a file_array
-  mapfile -t file_array <<< "${source_files}"
+  local -a file_array=()
+  local line
+  while IFS= read -r line; do
+    file_array+=("${line}")
+  done <<< "${source_files}"
   diff_content="$(git diff HEAD~1..HEAD -- "${file_array[@]}" 2> /dev/null | grep '^+[^+]' | head -200 || true)"
 
-  if echo "${diff_content}" | grep -qE '(^+func [A-Z]|^+export (function|class|const|type|interface) |^+pub fn |^+pub struct |^+pub enum )'; then
+  # Escape `+` as `\+` so BSD grep (macOS) treats it as a literal diff-add
+  # marker rather than a repetition operator without a preceding atom.
+  if echo "${diff_content}" | grep -qE '(^\+func [A-Z]|^\+export (function|class|const|type|interface) |^\+pub fn |^\+pub struct |^\+pub enum )'; then
     REMINDERS+=("New public API exports detected: consider updating README.md or API documentation")
   fi
 }
@@ -387,4 +405,7 @@ function main() {
   do_analyze
 }
 
-main "${@}"
+# main takes no arguments; do not pass "$@" -- under bash 3.2 with `set -u`,
+# expanding "$@" with zero positional parameters trips an "@: unbound variable"
+# error. Calling main bare avoids the issue entirely.
+main
