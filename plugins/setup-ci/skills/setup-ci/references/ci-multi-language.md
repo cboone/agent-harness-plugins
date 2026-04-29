@@ -57,7 +57,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "npm"
 
       - name: Install dependencies
@@ -77,7 +77,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "npm"
 
       - name: Install dependencies
@@ -93,4 +93,4 @@ jobs:
 - Non-reusable languages (JS/TS, Python, Ruby) use inline jobs with language-prefixed IDs (e.g., `js-test`, `js-lint`)
 - Prefix job display names with the language (e.g., `"JS: Test"`, `"JS: Lint"`)
 - Only include jobs relevant to each detected language
-- Zig requires the `zig-version` input (e.g., `zig-version: "0.14.0"`); Go and Rust work with defaults
+- Zig requires the `zig-version` input. Pass `zig-version: ""` to make the wrapped `mlugg/setup-zig` read `minimum_zig_version` from `build.zig.zon` (the version-file equivalent until `zig-ci.yml` exposes a dedicated input). Go and Rust work with defaults.

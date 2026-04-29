@@ -50,7 +50,7 @@ jobs:
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "npm"
 
       - run: npm ci
@@ -233,7 +233,7 @@ jobs:
 
       - uses: ruby/setup-ruby@c4e5b1316158f92e3d49443a9d58b31d25ac0f8f # v1.306.0
         with:
-          ruby-version: "3.3"
+          ruby-version-file: ".tool-versions"
           bundler-cache: true
 
       - name: RuboCop
@@ -526,7 +526,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "npm"
       - run: npm ci
       - run: npx eslint .

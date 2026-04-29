@@ -62,7 +62,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "PACKAGE-MANAGER"
 
       - name: Install dependencies
@@ -82,7 +82,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "PACKAGE-MANAGER"
 
       - name: Install dependencies
@@ -102,7 +102,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "PACKAGE-MANAGER"
 
       - name: Install dependencies
@@ -123,7 +123,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "PACKAGE-MANAGER"
 
       - name: Install dependencies

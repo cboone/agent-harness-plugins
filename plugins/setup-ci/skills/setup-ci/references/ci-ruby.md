@@ -48,7 +48,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@c4e5b1316158f92e3d49443a9d58b31d25ac0f8f # v1.306.0
         with:
-          ruby-version: "3.3"
+          ruby-version-file: ".tool-versions"
           bundler-cache: true
 
       - name: Run tests
@@ -65,7 +65,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@c4e5b1316158f92e3d49443a9d58b31d25ac0f8f # v1.306.0
         with:
-          ruby-version: "3.3"
+          ruby-version-file: ".tool-versions"
           bundler-cache: true
 
       - name: Run RuboCop

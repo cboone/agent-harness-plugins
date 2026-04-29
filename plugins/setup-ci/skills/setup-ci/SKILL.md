@@ -85,6 +85,24 @@ Read the appropriate language CI reference under `./references/ci-<language>.md`
 
 Go, Rust, Zig, Shell, and secret scanning templates use `cboone/gh-actions` reusable workflows that handle tool installation, caching, and execution internally. Other language templates use inline jobs.
 
+#### Ensure a Language Version File
+
+The CI templates read language runtime versions from a project-owned version file rather than pinning inline:
+
+| Language | Version source the workflow reads                | Action if missing                                                                 |
+| -------- | ------------------------------------------------ | --------------------------------------------------------------------------------- |
+| Node.js  | `.tool-versions` (line `nodejs <version>`)       | Create `.tool-versions` with `nodejs <latest LTS>` and warn the user to commit it |
+| Ruby     | `.tool-versions` (line `ruby <version>`)         | Create `.tool-versions` (or append) with `ruby <latest stable>`                   |
+| Go       | `go.mod` (`go X.Y` directive)                    | Always present in a Go project; no action needed                                  |
+| Rust     | `rust-toolchain.toml` (when present)             | Create one with `[toolchain] channel = "stable"` if missing                       |
+| Python   | `pyproject.toml` `requires-python` (uv reads it) | Ensure the constraint is present in `pyproject.toml`                              |
+| Zig      | `build.zig.zon` `minimum_zig_version`            | Always present in a Zig project; no action needed                                 |
+
+Before writing the CI workflow, check for the relevant version file and create or update it as needed. Latest LTS / stable lookups:
+
+- Node.js LTS: `curl -s https://nodejs.org/dist/index.json | jq -r 'first(.[] | select(.lts != false)) | .version' | sed 's/^v//'`
+- Latest stable Ruby: `gh api repos/ruby/ruby/releases --jq 'first(.[] | select(.prerelease == false)) | .tag_name'`
+
 All templates share:
 
 - Triggers: push to `main`, pull requests targeting `main`
