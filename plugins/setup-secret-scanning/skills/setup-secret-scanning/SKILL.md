@@ -5,8 +5,8 @@ description: >-
   and optional gitleaks configuration. Use when the user says "add secret
   scanning", "set up secret scanning", "set up gitleaks", "set up trufflehog",
   "scan for secrets in CI", or wants to detect leaked credentials in a
-  repository. Both tools run on pushes to main, on pull requests, and on
-  manual dispatch; gitleaks does fast pattern matching, TruffleHog adds
+  repository. Both tools run on pushes to `main`, on pull requests, and on
+  `workflow_dispatch`; gitleaks does fast pattern matching, TruffleHog adds
   verification-based scanning. Pairs with handle-secrets for
   application-level secret hygiene.
 ---
