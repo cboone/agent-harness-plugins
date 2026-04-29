@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/shell-lint.yml@v1
+    uses: cboone/gh-actions/.github/workflows/shell-lint.yml@e4e9f34f54041223e72f0d6241efede27a698fa1 # v1.0.0
 ```
 
 ## Notes

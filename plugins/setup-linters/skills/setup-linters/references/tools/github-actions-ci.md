@@ -97,7 +97,7 @@ concurrency:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
     with:
       go-version-file: go.mod
       run-lint: true
@@ -142,7 +142,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Ruff lint
         run: uvx ruff check .
@@ -186,7 +186,7 @@ concurrency:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@v2
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
     with:
       run-test: false
 ```
@@ -275,7 +275,7 @@ concurrency:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/shell-lint.yml@v1
+    uses: cboone/gh-actions/.github/workflows/shell-lint.yml@e4e9f34f54041223e72f0d6241efede27a698fa1 # v1.0.0
 ```
 
 ### Zsh
@@ -408,7 +408,7 @@ Or as a reusable workflow job:
 
 ```yaml
 github-lint:
-  uses: cboone/gh-actions/.github/workflows/github-lint.yml@v1
+  uses: cboone/gh-actions/.github/workflows/github-lint.yml@e4e9f34f54041223e72f0d6241efede27a698fa1 # v1.0.0
 ```
 
 ### Hadolint
@@ -461,14 +461,14 @@ As an inline step:
 
 ```yaml
 - name: cspell
-  uses: streetsidesoftware/cspell-action@e464ae97d348eb3beb0c5a6296dc4388ad4484d9 # v6.11.1
+  uses: streetsidesoftware/cspell-action@de2a73e963e7443969755b648a1008f77033c5b2 # v8.4.0
 ```
 
 Or as a reusable workflow job (also covers markdownlint, prettier, yamllint):
 
 ```yaml
 text-lint:
-  uses: cboone/gh-actions/.github/workflows/text-lint.yml@v1
+  uses: cboone/gh-actions/.github/workflows/text-lint.yml@e4e9f34f54041223e72f0d6241efede27a698fa1 # v1.0.0
   with:
     run-cspell: true
 ```
@@ -508,14 +508,14 @@ concurrency:
 
 jobs:
   go-lint:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
     with:
       go-version-file: go.mod
       run-lint: true
       run-format-check: true
 
   rust-lint:
-    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@v2
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
     with:
       run-test: false
 
@@ -552,4 +552,4 @@ jobs:
 - For Node.js projects, adjust the `cache` option to match the detected package manager (`npm`, `yarn`, `pnpm`).
 - `ubuntu-latest` is the default runner. macOS or Windows runners are only needed for platform-specific linting.
 - Pin all `npx` tool versions to exact versions (e.g., `npx tool@X.Y.Z`) for CI reproducibility. Update versions periodically. This applies to tools invoked via `npx` without a prior `npm ci` step; tools installed as project dependencies (after `npm ci`) use the locked version automatically.
-- Pin all third-party `uses:` references to a 40-character commit SHA with a `# vX.Y.Z` comment. Tags are mutable and can be re-pointed by maintainers; SHAs cannot. Dependabot bumps both the SHA and the comment together. Reusable workflows under `cboone/gh-actions` are an exception: they stay tag-pinned because the version tags are managed in-house.
+- Pin every `uses:` ref to a 40-character commit SHA with a `# vX.Y.Z` comment. This applies to third-party actions and to `cboone/gh-actions` reusable workflows alike. Tags are mutable; SHAs are not. Dependabot bumps the SHA and the comment together. Refresh the `cboone/gh-actions` SHAs at scaffold time using the snippet in this skill's `SKILL.md`.

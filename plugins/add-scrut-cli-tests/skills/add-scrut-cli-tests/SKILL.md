@@ -334,7 +334,7 @@ GitHub Actions job template for running scrut CLI tests. Uses the `cboone/gh-act
 
 ```yaml
 test-scrut:
-  uses: cboone/gh-actions/.github/workflows/scrut.yml@v2
+  uses: cboone/gh-actions/.github/workflows/scrut.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
   with:
     scrut-setup-cmd: "SETUP_CMD"
     scrut-env: "TOOL_BIN=BINARY_PATH"
@@ -507,3 +507,15 @@ Scrut provides these variables in every test execution:
 - Prefer JSON output with `jq` extraction over snapshotting raw text for structured data.
 - Use one test file per logical group of related behaviors (e.g., `help.md`, `version.md`, `error-handling.md`).
 - Run `make test-scrut-update` to regenerate expected output after intentional changes.
+
+## Refresh `cboone/gh-actions` SHAs before scaffolding
+
+The `cboone/gh-actions` reusable-workflow refs in this skill's templates are SHA-pinned with a `# vX.Y.Z` comment that was current when the template was authored. New releases of `cboone/gh-actions` rot those SHAs. Before emitting a workflow into a user's repo, refresh both the SHA and the comment to current latest:
+
+```bash
+TAG="$(gh release view --repo cboone/gh-actions --json tagName --jq '.tagName')"
+SHA="$(gh api "repos/cboone/gh-actions/commits/${TAG}" --jq '.sha')"
+echo "${SHA} # ${TAG}"
+```
+
+Replace each `cboone/gh-actions/.../<workflow>.yml@<old-sha> # <old-tag>` in the emitted workflow with the new SHA and tag. Dependabot in the user's repo keeps them in sync afterwards.

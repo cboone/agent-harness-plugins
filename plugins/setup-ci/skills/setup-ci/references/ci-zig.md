@@ -38,7 +38,7 @@ permissions:
 
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/zig-ci.yml@v2
+    uses: cboone/gh-actions/.github/workflows/zig-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
     with:
       zig-version: "0.14.0"
       run-cross-compile: true

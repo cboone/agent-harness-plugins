@@ -95,3 +95,15 @@ Print a summary of what was created:
 - `./references/gitleaks-workflow.md` -- gitleaks GitHub Actions workflow
 - `./references/trufflehog-workflow.md` -- TruffleHog GitHub Actions workflow
 - `./references/gitleaks-config.md` -- `.gitleaks.toml` configuration
+
+## Refresh `cboone/gh-actions` SHAs before scaffolding
+
+The `cboone/gh-actions` reusable-workflow refs in this skill's templates are SHA-pinned with a `# vX.Y.Z` comment that was current when the template was authored. New releases of `cboone/gh-actions` rot those SHAs. Before emitting a workflow into a user's repo, refresh both the SHA and the comment to current latest:
+
+```bash
+TAG="$(gh release view --repo cboone/gh-actions --json tagName --jq '.tagName')"
+SHA="$(gh api "repos/cboone/gh-actions/commits/${TAG}" --jq '.sha')"
+echo "${SHA} # ${TAG}"
+```
+
+Replace each `cboone/gh-actions/.../<workflow>.yml@<old-sha> # <old-tag>` in the emitted workflow with the new SHA and tag. Dependabot in the user's repo keeps them in sync afterwards.

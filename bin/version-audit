@@ -5,8 +5,7 @@
 # Surfaces audited:
 #   - .tool-versions (Node.js)
 #   - package.json packageManager (Yarn via Corepack)
-#   - Third-party action refs SHA-pinned in plugin templates and workflows
-#   - cboone/gh-actions reusable workflow tag refs
+#   - All SHA-pinned action refs (third-party and cboone/gh-actions)
 #
 # Requires: gh (authenticated), jq, curl.
 set -euo pipefail
@@ -86,9 +85,6 @@ function audit_actions() {
     if [[ "${line}" =~ ([a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+)(/[^@]*)?@[a-f0-9]{40}[[:space:]]+#[[:space:]]+(v[0-9]+(\.[0-9]+)*) ]]; then
       repo="${BASH_REMATCH[1]}"
       current="${BASH_REMATCH[3]}"
-      if [[ "${repo}" == "cboone/gh-actions" ]]; then
-        continue
-      fi
       if [[ -n "${seen[${repo}]:-}" ]]; then
         continue
       fi
@@ -99,49 +95,6 @@ function audit_actions() {
       fi
     fi
   done < <(grep -rhE 'uses:[[:space:]]+[a-zA-Z0-9._/-]+@[a-f0-9]{40}' .github/ plugins/ 2> /dev/null || true)
-}
-
-# ─── 4. Audit cboone/gh-actions reusable workflow tag refs ───────────────────
-#
-# Rolling-major refs (@v1, @v2) are intentionally floating; treat them as
-# drifted only when a higher major exists. Pinned refs (@vN.M.P) drift when
-# they no longer match the latest release.
-
-function audit_reusable_workflows() {
-  declare -A seen=()
-  local line current latest latest_major current_major
-
-  latest=$(github_latest_release "cboone/gh-actions")
-  if [[ -z "${latest}" ]]; then
-    return
-  fi
-  latest_major="${latest#v}"
-  latest_major="${latest_major%%.*}"
-
-  while IFS= read -r line; do
-    if [[ "${line}" =~ uses:[[:space:]]+cboone/gh-actions/[^@]+@(v[0-9]+(\.[0-9]+)*) ]]; then
-      current="${BASH_REMATCH[1]}"
-      if [[ -n "${seen[${current}]:-}" ]]; then
-        continue
-      fi
-      seen[${current}]=1
-
-      current_major="${current#v}"
-      current_major="${current_major%%.*}"
-
-      if [[ "${current}" =~ ^v[0-9]+$ ]]; then
-        if ((latest_major > current_major)); then
-          record_drift "Reusable workflows" "cboone/gh-actions" \
-            "${current} (rolling)" "v${latest_major} available" "skill templates"
-        fi
-      else
-        if [[ "${current}" != "${latest}" ]]; then
-          record_drift "Reusable workflows" "cboone/gh-actions" \
-            "${current}" "${latest}" "skill templates"
-        fi
-      fi
-    fi
-  done < <(grep -rhE 'uses:[[:space:]]+cboone/gh-actions/[^@]+@v[0-9]+' .github/ plugins/ 2> /dev/null || true)
 }
 
 # ─── 5. Print Markdown report ────────────────────────────────────────────────
@@ -170,5 +123,4 @@ function print_report() {
 audit_node
 audit_yarn
 audit_actions
-audit_reusable_workflows
 print_report

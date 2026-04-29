@@ -279,7 +279,7 @@ All release workflow templates share:
 - Trigger: push tags matching `v*`
 - `permissions: contents: write` (needed to create releases)
 - Build matrix producing tarballs in the format `BINARY-VERSION-OS-ARCH.tar.gz`
-- A `publish` job that downloads all artifacts, generates `checksums.txt`, and creates a GitHub Release via `softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2`
+- A `publish` job that downloads all artifacts, generates `checksums.txt`, and creates a GitHub Release via `softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0`
 - `generate_release_notes: true` for auto-generated release notes
 
 Replace `PROJECT-NAME` with the actual binary name in all templates.
@@ -337,7 +337,7 @@ jobs:
           tar -czf "${BINARY}-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" "${BINARY}"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-${{ matrix.goos }}-${{ matrix.goarch }}
           path: "*.tar.gz"
@@ -348,7 +348,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: release-*
           merge-multiple: true
@@ -357,7 +357,7 @@ jobs:
         run: sha256sum *.tar.gz > checksums.txt
 
       - name: Create release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           files: |
             *.tar.gz
@@ -418,7 +418,7 @@ jobs:
           tar -czf "${BINARY}-${VERSION}-darwin-${ARCH}.tar.gz" -C "$(dirname "${BUILT}")" "${BINARY}"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-darwin-${{ matrix.arch }}
           path: "*.tar.gz"
@@ -429,7 +429,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: release-*
           merge-multiple: true
@@ -438,7 +438,7 @@ jobs:
         run: sha256sum *.tar.gz > checksums.txt
 
       - name: Create release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           files: |
             *.tar.gz
@@ -520,7 +520,7 @@ jobs:
             -C "target/${{ matrix.target }}/release" "${BINARY}"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-${{ matrix.os }}-${{ matrix.arch }}
           path: "*.tar.gz"
@@ -531,7 +531,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: release-*
           merge-multiple: true
@@ -540,7 +540,7 @@ jobs:
         run: sha256sum *.tar.gz > checksums.txt
 
       - name: Create release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           files: |
             *.tar.gz
@@ -554,7 +554,7 @@ Notes:
 - For macOS-only Rust projects, remove the two Linux matrix entries
 - `aarch64-unknown-linux-gnu` cross-compilation requires `gcc-aarch64-linux-gnu` on Ubuntu runners
 - For Rust workspace projects, adjust the `cargo build` command to target the specific binary
-- **Action pinning**: third-party actions (e.g., `dtolnay/rust-toolchain`, `softprops/action-gh-release`) are pinned to a 40-char commit SHA with a `# vX.Y.Z` comment so renovation tools can read the intended version. Reusable workflows under `cboone/gh-actions` stay tag-pinned because they are owned by this organization.
+- **Action pinning**: every `uses:` ref (third-party and `cboone/gh-actions`) is pinned to a 40-char commit SHA with a `# vX.Y.Z` comment. Tags are mutable; SHAs are not. The comment lets Dependabot and human reviewers see the intended version. The `cboone/gh-actions` SHAs in the templates rot as new releases ship; refresh them at scaffold time per the note in this skill's SKILL.md.
 
 #### Reference: Zig Release Workflow
 
@@ -615,7 +615,7 @@ jobs:
           done
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-binaries
           path: |
@@ -628,7 +628,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: release-binaries
 
@@ -636,7 +636,7 @@ jobs:
         run: sha256sum *.tar.gz *.zip > checksums.txt
 
       - name: Create release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           files: |
             *.tar.gz
@@ -651,7 +651,7 @@ Notes:
 - All 5 targets build on a single `ubuntu-latest` runner. Zig's cross-compilation requires no extra toolchains, no macOS runners, and no cross-compilation tools.
 - The `mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1` action reads the Zig version from `build.zig.zon` by default
 - Windows produces a `.zip` archive; all other targets produce `.tar.gz`
-- **Action pinning**: third-party actions (e.g., `mlugg/setup-zig`, `softprops/action-gh-release`) are pinned to a 40-char commit SHA with a `# vX.Y.Z` comment so renovation tools can read the intended version. Reusable workflows under `cboone/gh-actions` stay tag-pinned because they are owned by this organization.
+- **Action pinning**: every `uses:` ref (third-party and `cboone/gh-actions`) is pinned to a 40-char commit SHA with a `# vX.Y.Z` comment. Tags are mutable; SHAs are not. The comment lets Dependabot and human reviewers see the intended version. The `cboone/gh-actions` SHAs in the templates rot as new releases ship; refresh them at scaffold time per the note in this skill's SKILL.md.
 
 ### 8. Update README
 
@@ -721,3 +721,15 @@ After completing all selected installer types, print a summary:
 - If the README does not exist, create one with just the Installation section
 - If the release workflow already exists, ask before overwriting
 - If the homebrew-tap repo cannot be accessed, fall back to providing formula content inline
+
+## Refresh `cboone/gh-actions` SHAs before scaffolding
+
+The `cboone/gh-actions` reusable-workflow refs in this skill's templates are SHA-pinned with a `# vX.Y.Z` comment that was current when the template was authored. New releases of `cboone/gh-actions` rot those SHAs. Before emitting a workflow into a user's repo, refresh both the SHA and the comment to current latest:
+
+```bash
+TAG="$(gh release view --repo cboone/gh-actions --json tagName --jq '.tagName')"
+SHA="$(gh api "repos/cboone/gh-actions/commits/${TAG}" --jq '.sha')"
+echo "${SHA} # ${TAG}"
+```
+
+Replace each `cboone/gh-actions/.../<workflow>.yml@<old-sha> # <old-tag>` in the emitted workflow with the new SHA and tag. Dependabot in the user's repo keeps them in sync afterwards.

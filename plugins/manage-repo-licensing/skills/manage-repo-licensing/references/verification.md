@@ -61,7 +61,7 @@ For repos that run CI, add a `reuse lint` step to the lint workflow. Example (Gi
 
 ```yaml
 - name: REUSE compliance
-  uses: fsfe/reuse-action@bb774aa972c2a89ff34781233d275075cbddf542 # v5.0.0
+  uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
 ```
 
 or inline:

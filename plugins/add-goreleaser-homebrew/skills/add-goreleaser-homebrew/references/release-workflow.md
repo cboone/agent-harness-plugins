@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/go-release.yml@v1
+    uses: cboone/gh-actions/.github/workflows/go-release.yml@e4e9f34f54041223e72f0d6241efede27a698fa1 # v1.0.0
     with:
       go-version-file: go.mod
     secrets:
@@ -33,7 +33,7 @@ For projects that only target macOS, add the `runs-on` input:
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/go-release.yml@v1
+    uses: cboone/gh-actions/.github/workflows/go-release.yml@e4e9f34f54041223e72f0d6241efede27a698fa1 # v1.0.0
     with:
       go-version-file: go.mod
       runs-on: macos-latest

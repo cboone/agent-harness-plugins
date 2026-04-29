@@ -38,13 +38,13 @@ permissions:
 
 jobs:
   go-ci:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
     with:
       go-version-file: go.mod
       run-format-check: true
 
   rust-ci:
-    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@v2
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
 
   js-test:
     name: "JS: Test"

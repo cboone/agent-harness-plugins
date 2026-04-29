@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   ci-minimum:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
     with:
       go-version: "MINIMUM-GO-VERSION"
       run-lint: true
@@ -44,7 +44,7 @@ jobs:
       run-build: true
 
   ci-stable:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
     with:
       go-version: "stable"
 ```
