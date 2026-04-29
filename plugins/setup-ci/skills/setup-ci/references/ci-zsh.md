@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install zsh
         run: sudo apt-get update && sudo apt-get install -y zsh
@@ -47,7 +47,7 @@ jobs:
       - name: Install checkbashisms
         run: sudo apt-get install -y devscripts
 
-      - uses: mfinelli/setup-shfmt@v4
+      - uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
 
       - name: Install shellharden
         run: cargo install --locked shellharden
@@ -64,6 +64,6 @@ jobs:
 - `zsh` is installed via `apt-get` (not pre-installed on Ubuntu runners)
 - `devscripts` provides `checkbashisms`
 - `shellharden` is installed via `cargo install` (Rust toolchain is pre-installed on `ubuntu-latest`)
-- `shfmt` is installed via the `mfinelli/setup-shfmt@v4` action
+- `shfmt` is installed via the `mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1` action
 - `SKIP_SETOPT_CHECK=1` disables the setopt warnings step, which sources (executes) files. CI sets this to keep the job purely static analysis.
 - The `make check-zsh` target runs `./scripts/check-zsh.zsh`, which executes the 7-tool pipeline

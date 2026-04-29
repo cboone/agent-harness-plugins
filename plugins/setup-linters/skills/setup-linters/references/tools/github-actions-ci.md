@@ -46,9 +46,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "22"
           cache: "npm"
@@ -140,9 +140,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
 
       - name: Ruff lint
         run: uvx ruff check .
@@ -229,9 +229,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@c4e5b1316158f92e3d49443a9d58b31d25ac0f8f # v1.306.0
         with:
           ruby-version: "3.3"
           bundler-cache: true
@@ -316,7 +316,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install zsh
         run: sudo apt-get update && sudo apt-get install -y zsh
@@ -324,7 +324,7 @@ jobs:
       - name: Install checkbashisms
         run: sudo apt-get install -y devscripts
 
-      - uses: mfinelli/setup-shfmt@v4
+      - uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
 
       - name: Install shellharden
         run: cargo install --locked shellharden
@@ -372,7 +372,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install tools
         run: brew install swiftlint swiftformat
@@ -401,7 +401,7 @@ As an inline step:
 
 ```yaml
 - name: Actionlint
-  uses: raven-actions/actionlint@v2
+  uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2
 ```
 
 Or as a reusable workflow job:
@@ -415,7 +415,7 @@ github-lint:
 
 ```yaml
 - name: Hadolint
-  uses: hadolint/hadolint-action@v3.1.0
+  uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0
   with:
     dockerfile: Dockerfile
 ```
@@ -461,7 +461,7 @@ As an inline step:
 
 ```yaml
 - name: cspell
-  uses: streetsidesoftware/cspell-action@v6
+  uses: streetsidesoftware/cspell-action@e464ae97d348eb3beb0c5a6296dc4388ad4484d9 # v6.11.1
 ```
 
 Or as a reusable workflow job (also covers markdownlint, prettier, yamllint):
@@ -523,8 +523,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "22"
           cache: "npm"
@@ -548,7 +548,8 @@ jobs:
 
 - Workflow file naming: use `.github/workflows/lint.yml` for a dedicated lint workflow.
 - If the project already has a CI workflow (e.g., `ci.yml`), offer to add lint steps to it rather than creating a separate file.
-- Go, Rust, and Shell templates use `cboone/gh-actions` reusable workflows. Other language templates use `actions/checkout@v6` and the latest stable setup actions.
+- Go, Rust, and Shell templates use `cboone/gh-actions` reusable workflows. Other language templates use `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2` and the latest stable setup actions.
 - For Node.js projects, adjust the `cache` option to match the detected package manager (`npm`, `yarn`, `pnpm`).
 - `ubuntu-latest` is the default runner. macOS or Windows runners are only needed for platform-specific linting.
 - Pin all `npx` tool versions to exact versions (e.g., `npx tool@X.Y.Z`) for CI reproducibility. Update versions periodically. This applies to tools invoked via `npx` without a prior `npm ci` step; tools installed as project dependencies (after `npm ci`) use the locked version automatically.
+- Pin all third-party `uses:` references to a 40-character commit SHA with a `# vX.Y.Z` comment. Tags are mutable and can be re-pointed by maintainers; SHAs cannot. Dependabot bumps both the SHA and the comment together. Reusable workflows under `cboone/gh-actions` are an exception: they stay tag-pinned because the version tags are managed in-house.

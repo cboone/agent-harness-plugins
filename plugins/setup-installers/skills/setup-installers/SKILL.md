@@ -279,7 +279,7 @@ All release workflow templates share:
 - Trigger: push tags matching `v*`
 - `permissions: contents: write` (needed to create releases)
 - Build matrix producing tarballs in the format `BINARY-VERSION-OS-ARCH.tar.gz`
-- A `publish` job that downloads all artifacts, generates `checksums.txt`, and creates a GitHub Release via `softprops/action-gh-release@v2`
+- A `publish` job that downloads all artifacts, generates `checksums.txt`, and creates a GitHub Release via `softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2`
 - `generate_release_notes: true` for auto-generated release notes
 
 Replace `PROJECT-NAME` with the actual binary name in all templates.
@@ -319,9 +319,9 @@ jobs:
           - goos: darwin
             goarch: arm64
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version-file: go.mod
 
@@ -337,7 +337,7 @@ jobs:
           tar -czf "${BINARY}-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" "${BINARY}"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-${{ matrix.goos }}-${{ matrix.goarch }}
           path: "*.tar.gz"
@@ -348,7 +348,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: release-*
           merge-multiple: true
@@ -357,7 +357,7 @@ jobs:
         run: sha256sum *.tar.gz > checksums.txt
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: |
             *.tar.gz
@@ -400,7 +400,7 @@ jobs:
       matrix:
         arch: [arm64, x86_64]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Build
         run: |
@@ -418,7 +418,7 @@ jobs:
           tar -czf "${BINARY}-${VERSION}-darwin-${ARCH}.tar.gz" -C "$(dirname "${BUILT}")" "${BINARY}"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-darwin-${{ matrix.arch }}
           path: "*.tar.gz"
@@ -429,7 +429,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: release-*
           merge-multiple: true
@@ -438,7 +438,7 @@ jobs:
         run: sha256sum *.tar.gz > checksums.txt
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: |
             *.tar.gz
@@ -498,9 +498,9 @@ jobs:
             os: darwin
             arch: arm64
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           targets: ${{ matrix.target }}
 
@@ -520,7 +520,7 @@ jobs:
             -C "target/${{ matrix.target }}/release" "${BINARY}"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-${{ matrix.os }}-${{ matrix.arch }}
           path: "*.tar.gz"
@@ -531,7 +531,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: release-*
           merge-multiple: true
@@ -540,7 +540,7 @@ jobs:
         run: sha256sum *.tar.gz > checksums.txt
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: |
             *.tar.gz
@@ -554,7 +554,7 @@ Notes:
 - For macOS-only Rust projects, remove the two Linux matrix entries
 - `aarch64-unknown-linux-gnu` cross-compilation requires `gcc-aarch64-linux-gnu` on Ubuntu runners
 - For Rust workspace projects, adjust the `cargo build` command to target the specific binary
-- **Action pinning**: `dtolnay/rust-toolchain@stable` and `softprops/action-gh-release@v2` follow this project's convention of pinning to version tags
+- **Action pinning**: third-party actions (e.g., `dtolnay/rust-toolchain`, `softprops/action-gh-release`) are pinned to a 40-char commit SHA with a `# vX.Y.Z` comment so renovation tools can read the intended version. Reusable workflows under `cboone/gh-actions` stay tag-pinned because they are owned by this organization.
 
 #### Reference: Zig Release Workflow
 
@@ -580,10 +580,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Zig
-        uses: mlugg/setup-zig@v2
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
 
       - name: Build release binaries
         run: |
@@ -615,7 +615,7 @@ jobs:
           done
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-binaries
           path: |
@@ -628,7 +628,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-binaries
 
@@ -636,7 +636,7 @@ jobs:
         run: sha256sum *.tar.gz *.zip > checksums.txt
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: |
             *.tar.gz
@@ -649,9 +649,9 @@ Notes:
 
 - Concurrency uses `cancel-in-progress: false` to avoid interrupting active releases
 - All 5 targets build on a single `ubuntu-latest` runner. Zig's cross-compilation requires no extra toolchains, no macOS runners, and no cross-compilation tools.
-- The `mlugg/setup-zig@v2` action reads the Zig version from `build.zig.zon` by default
+- The `mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1` action reads the Zig version from `build.zig.zon` by default
 - Windows produces a `.zip` archive; all other targets produce `.tar.gz`
-- **Action pinning**: `mlugg/setup-zig@v2` and `softprops/action-gh-release@v2` follow this project's convention of pinning to version tags
+- **Action pinning**: third-party actions (e.g., `mlugg/setup-zig`, `softprops/action-gh-release`) are pinned to a 40-char commit SHA with a `# vX.Y.Z` comment so renovation tools can read the intended version. Reusable workflows under `cboone/gh-actions` stay tag-pinned because they are owned by this organization.
 
 ### 8. Update README
 
