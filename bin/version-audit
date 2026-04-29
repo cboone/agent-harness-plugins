@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+# Audits version surfaces that Dependabot does not cover and writes a
+# Markdown report to stdout. Empty output means no drift.
+#
+# Surfaces audited:
+#   - .tool-versions (Node.js)
+#   - package.json packageManager (Yarn via Corepack)
+#   - Third-party action refs SHA-pinned in plugin templates and workflows
+#   - cboone/gh-actions reusable workflow tag refs
+#
+# Requires: gh (authenticated), jq, curl.
+set -euo pipefail
+
+TOOL_VERSIONS_FILE=".tool-versions"
+PACKAGE_JSON="package.json"
+readonly TOOL_VERSIONS_FILE PACKAGE_JSON
+
+drift_rows=()
+
+function record_drift() {
+  local category="${1}" name="${2}" current="${3}" latest="${4}" location="${5}"
+  drift_rows+=("${category}|${name}|${current}|${latest}|${location}")
+}
+
+function github_latest_release() {
+  local repo="${1}"
+  gh api "repos/${repo}/releases/latest" --jq '.tag_name' 2> /dev/null || true
+}
+
+# ─── 1. Audit Node.js version in .tool-versions ──────────────────────────────
+
+function audit_node() {
+  if [[ ! -f "${TOOL_VERSIONS_FILE}" ]]; then
+    return
+  fi
+
+  local current latest
+  current=$(awk '/^nodejs / {print $2; exit}' "${TOOL_VERSIONS_FILE}")
+  if [[ -z "${current}" ]]; then
+    return
+  fi
+
+  latest=$(curl -fsSL https://nodejs.org/dist/index.json 2> /dev/null \
+    | jq -r 'first(.[] | select(.lts != false)) | .version' \
+    | sed 's/^v//')
+  if [[ -z "${latest}" ]]; then
+    return
+  fi
+
+  if [[ "${current}" != "${latest}" ]]; then
+    record_drift "Node.js" "nodejs (LTS)" "${current}" "${latest}" "${TOOL_VERSIONS_FILE}"
+  fi
+}
+
+# ─── 2. Audit Yarn version in package.json packageManager ────────────────────
+
+function audit_yarn() {
+  if [[ ! -f "${PACKAGE_JSON}" ]]; then
+    return
+  fi
+
+  local declaration current latest
+  declaration=$(jq -r '.packageManager // empty' "${PACKAGE_JSON}")
+  if [[ ! "${declaration}" =~ ^yarn@([0-9.]+) ]]; then
+    return
+  fi
+  current="${BASH_REMATCH[1]}"
+
+  latest=$(curl -fsSL https://repo.yarnpkg.com/tags 2> /dev/null \
+    | jq -r '.latest.stable // empty')
+  if [[ -z "${latest}" ]]; then
+    return
+  fi
+
+  if [[ "${current}" != "${latest}" ]]; then
+    record_drift "Yarn" "yarn (Corepack)" "${current}" "${latest}" "${PACKAGE_JSON}"
+  fi
+}
+
+# ─── 3. Audit SHA-pinned third-party action refs ─────────────────────────────
+
+function audit_actions() {
+  declare -A seen=()
+  local line repo current latest
+  while IFS= read -r line; do
+    if [[ "${line}" =~ ([a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+)(/[^@]*)?@[a-f0-9]{40}[[:space:]]+#[[:space:]]+(v[0-9]+(\.[0-9]+)*) ]]; then
+      repo="${BASH_REMATCH[1]}"
+      current="${BASH_REMATCH[3]}"
+      if [[ "${repo}" == "cboone/gh-actions" ]]; then
+        continue
+      fi
+      if [[ -n "${seen[${repo}]:-}" ]]; then
+        continue
+      fi
+      seen[${repo}]=1
+      latest=$(github_latest_release "${repo}")
+      if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
+        record_drift "Actions" "${repo}" "${current}" "${latest}" "skill templates"
+      fi
+    fi
+  done < <(grep -rhE 'uses:[[:space:]]+[a-zA-Z0-9._/-]+@[a-f0-9]{40}' .github/ plugins/ 2> /dev/null || true)
+}
+
+# ─── 4. Audit cboone/gh-actions reusable workflow tag refs ───────────────────
+#
+# Rolling-major refs (@v1, @v2) are intentionally floating; treat them as
+# drifted only when a higher major exists. Pinned refs (@vN.M.P) drift when
+# they no longer match the latest release.
+
+function audit_reusable_workflows() {
+  declare -A seen=()
+  local line current latest latest_major current_major
+
+  latest=$(github_latest_release "cboone/gh-actions")
+  if [[ -z "${latest}" ]]; then
+    return
+  fi
+  latest_major="${latest#v}"
+  latest_major="${latest_major%%.*}"
+
+  while IFS= read -r line; do
+    if [[ "${line}" =~ uses:[[:space:]]+cboone/gh-actions/[^@]+@(v[0-9]+(\.[0-9]+)*) ]]; then
+      current="${BASH_REMATCH[1]}"
+      if [[ -n "${seen[${current}]:-}" ]]; then
+        continue
+      fi
+      seen[${current}]=1
+
+      current_major="${current#v}"
+      current_major="${current_major%%.*}"
+
+      if [[ "${current}" =~ ^v[0-9]+$ ]]; then
+        if ((latest_major > current_major)); then
+          record_drift "Reusable workflows" "cboone/gh-actions" \
+            "${current} (rolling)" "v${latest_major} available" "skill templates"
+        fi
+      else
+        if [[ "${current}" != "${latest}" ]]; then
+          record_drift "Reusable workflows" "cboone/gh-actions" \
+            "${current}" "${latest}" "skill templates"
+        fi
+      fi
+    fi
+  done < <(grep -rhE 'uses:[[:space:]]+cboone/gh-actions/[^@]+@v[0-9]+' .github/ plugins/ 2> /dev/null || true)
+}
+
+# ─── 5. Print Markdown report ────────────────────────────────────────────────
+
+function print_report() {
+  if ((${#drift_rows[@]} == 0)); then
+    return
+  fi
+
+  printf '<!-- version-audit -->\n\n'
+  printf '## Version drift\n\n'
+  printf 'Surfaces that Dependabot does not cover have drifted from upstream. Each row lists the current pinned version and the latest available.\n\n'
+  printf '| Category | Name | Current | Latest | Location |\n'
+  printf '| --- | --- | --- | --- | --- |\n'
+
+  local row category name current latest location
+  for row in "${drift_rows[@]}"; do
+    IFS='|' read -r category name current latest location <<< "${row}"
+    printf '| %s | `%s` | `%s` | `%s` | %s |\n' \
+      "${category}" "${name}" "${current}" "${latest}" "${location}"
+  done
+
+  printf '\n---\n_Generated by `bin/version-audit`._\n'
+}
+
+audit_node
+audit_yarn
+audit_actions
+audit_reusable_workflows
+print_report
