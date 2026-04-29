@@ -173,20 +173,20 @@ If a CI workflow already exists, offer to add lint steps to it rather than creat
 
 **Tool dependency verification**: For every tool referenced in Makefile targets, confirm the CI workflow includes a corresponding setup/install step. Common tool-to-action mappings (all third-party `uses:` refs are SHA-pinned with a `# vX.Y.Z` comment per the convention in `./references/tools/github-actions-ci.md`; refresh both SHA and comment to current latest before emitting):
 
-| Tool          | CI Setup                                                                                            |
-| ------------- | --------------------------------------------------------------------------------------------------- |
+| Tool          | CI Setup                                                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | shfmt         | `mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1` or `go install mvdan.cc/sh/v3/cmd/shfmt@v3.13.1` |
-| shellcheck    | `ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0`                        |
-| golangci-lint | `golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0`                   |
-| swiftlint     | `brew install swiftlint` (macOS runner)                                                             |
-| swiftformat   | `brew install swiftformat` (macOS runner)                                                           |
-| checkbashisms | `apt-get install devscripts` (Ubuntu runner)                                                        |
-| shellharden   | `cargo install --locked --version 4.3.1 shellharden` (Ubuntu runner)                                |
-| cargo-deny    | `taiki-e/install-action@b651345a718c8f44efa2460560b3dbf29cbd7ee1 # v2.75.26` (with `tool: cargo-deny`) |
-| typos         | `crate-ci/typos@7c572958218557a3272c2d6719629443b5cc26fd # v1.45.2`                                 |
-| hadolint      | `hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0`                        |
-| actionlint    | `raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2`                        |
-| cspell        | `streetsidesoftware/cspell-action@de2a73e963e7443969755b648a1008f77033c5b2 # v8.4.0`                |
+| shellcheck    | `ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0`                                              |
+| golangci-lint | `golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0`                                         |
+| swiftlint     | `brew install swiftlint` (macOS runner)                                                                                   |
+| swiftformat   | `brew install swiftformat` (macOS runner)                                                                                 |
+| checkbashisms | `apt-get install devscripts` (Ubuntu runner)                                                                              |
+| shellharden   | `cargo install --locked --version 4.3.1 shellharden` (Ubuntu runner)                                                      |
+| cargo-deny    | `taiki-e/install-action@b651345a718c8f44efa2460560b3dbf29cbd7ee1 # v2.75.26` (with `tool: cargo-deny`)                    |
+| typos         | `crate-ci/typos@7c572958218557a3272c2d6719629443b5cc26fd # v1.45.2`                                                       |
+| hadolint      | `hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0`                                              |
+| actionlint    | `raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2`                                              |
+| cspell        | `streetsidesoftware/cspell-action@de2a73e963e7443969755b648a1008f77033c5b2 # v8.4.0`                                      |
 
 ### 10. Run Initial Lint (Optional)
 
