@@ -130,6 +130,12 @@ For each selected tool, install using the project's package manager. Read the ap
 - Language-specific: `./references/languages/<language>.md`
 - Cross-language tools: `./references/tools/<tool>.md`
 
+#### Pin tool versions to mitigate supply-chain risk
+
+The reference files pin install commands to specific versions (e.g., `cargo install --locked --version X.Y.Z <crate>`, `pip install '<pkg>==X.Y.Z'`, `go install <path>@vX.Y.Z`). Unpinned installs (`@latest`, no `==`) pull whatever the registry currently serves; an attacker who compromises a maintainer account can publish a malicious patch release and have it picked up by every install that ran after the publish. Specific-version pins make the install reproducible and force an explicit bump when the version is updated.
+
+When a pinned version drifts from upstream latest, the repository's `bin/version-audit` workflow opens an issue listing what bumped. Use that as the trigger to refresh the pin in the relevant reference file.
+
 ### 6. Create Config Files
 
 Generate default config files and ignore files for each tool. Use templates from the reference files. Also generate:
@@ -167,20 +173,20 @@ If a CI workflow already exists, offer to add lint steps to it rather than creat
 
 **Tool dependency verification**: For every tool referenced in Makefile targets, confirm the CI workflow includes a corresponding setup/install step. Common tool-to-action mappings:
 
-| Tool          | CI Setup                                                                  |
-| ------------- | ------------------------------------------------------------------------- |
-| shfmt         | `mfinelli/setup-shfmt@v4` or `go install mvdan.cc/sh/v3/cmd/shfmt@latest` |
-| shellcheck    | `ludeeus/action-shellcheck@2.0.0`                                         |
-| golangci-lint | `golangci/golangci-lint-action@v9`                                        |
-| swiftlint     | `brew install swiftlint` (macOS runner)                                   |
-| swiftformat   | `brew install swiftformat` (macOS runner)                                 |
-| checkbashisms | `apt-get install devscripts` (Ubuntu runner)                              |
-| shellharden   | `cargo install shellharden` (Ubuntu runner)                               |
-| cargo-deny    | `taiki-e/install-action@cargo-deny`                                       |
-| typos         | `crate-ci/typos@v1`                                                       |
-| hadolint      | `hadolint/hadolint-action@v3.1.0`                                         |
-| actionlint    | `raven-actions/actionlint@v2`                                             |
-| cspell        | `streetsidesoftware/cspell-action@v6`                                     |
+| Tool          | CI Setup                                                                              |
+| ------------- | ------------------------------------------------------------------------------------- |
+| shfmt         | `mfinelli/setup-shfmt@v4` or `go install mvdan.cc/sh/v3/cmd/shfmt@v3.13.1`            |
+| shellcheck    | `ludeeus/action-shellcheck@2.0.0`                                                     |
+| golangci-lint | `golangci/golangci-lint-action@v9`                                                    |
+| swiftlint     | `brew install swiftlint` (macOS runner)                                               |
+| swiftformat   | `brew install swiftformat` (macOS runner)                                             |
+| checkbashisms | `apt-get install devscripts` (Ubuntu runner)                                          |
+| shellharden   | `cargo install --locked --version 4.3.1 shellharden` (Ubuntu runner)                  |
+| cargo-deny    | `taiki-e/install-action@cargo-deny`                                                   |
+| typos         | `crate-ci/typos@v1`                                                                   |
+| hadolint      | `hadolint/hadolint-action@v3.1.0`                                                     |
+| actionlint    | `raven-actions/actionlint@v2`                                                         |
+| cspell        | `streetsidesoftware/cspell-action@v6`                                                 |
 
 ### 10. Run Initial Lint (Optional)
 

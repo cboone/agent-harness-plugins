@@ -51,5 +51,5 @@ help: ## Show this help
 - Binary output goes to `bin/` to keep the project root clean
 - `fmt` target checks formatting without modifying files (CI-friendly); use `go fmt ./...` directly for write-mode formatting
 - `lint` runs only `golangci-lint`; repos with broader linting should use a separate `lint-all` umbrella target
-- `vuln` assumes `govulncheck` is installed (`go install golang.org/x/vuln/cmd/govulncheck@latest`)
+- `vuln` assumes `govulncheck` is installed (`go install golang.org/x/vuln/cmd/govulncheck@v1.1.4`)
 - The five targets `vet`, `test`, `lint`, `build`, and `fmt` are required by `go-ci.yml@v2`, which calls them via Makefile

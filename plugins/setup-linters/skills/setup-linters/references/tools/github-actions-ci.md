@@ -327,7 +327,7 @@ jobs:
       - uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
 
       - name: Install shellharden
-        run: cargo install --locked shellharden
+        run: cargo install --locked --version 4.3.1 shellharden
 
       - name: Run zsh checks
         env:
@@ -388,7 +388,7 @@ jobs:
 
 ```yaml
 - name: markdownlint
-  run: npx markdownlint-cli2@0.21.0 "**/*.md"
+  run: npx markdownlint-cli2@0.22.1 "**/*.md"
 ```
 
 ## Cross-Language Steps
@@ -424,21 +424,21 @@ github-lint:
 
 ```yaml
 - name: Knip
-  run: npx knip@5.85.0
+  run: npx knip@6.9.0
 ```
 
 ### Prettier (non-JS projects)
 
 ```yaml
 - name: Prettier
-  run: npx prettier@3.8.1 --check .
+  run: npx prettier@3.8.3 --check .
 ```
 
 ### Stylelint
 
 ```yaml
 - name: Stylelint
-  run: npx stylelint@17.3.0 "**/*.{css,scss,less}"
+  run: npx stylelint@17.9.1 "**/*.{css,scss,less}"
 ```
 
 ### Taplo

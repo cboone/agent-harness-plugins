@@ -50,7 +50,7 @@ jobs:
       - uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
 
       - name: Install shellharden
-        run: cargo install --locked shellharden
+        run: cargo install --locked --version 4.3.1 shellharden
 
       - name: Run zsh checks
         env:

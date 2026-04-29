@@ -69,9 +69,9 @@ test:
 # Install development tools
 .PHONY: tools
 tools:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	go install github.com/goreleaser/goreleaser/v2@latest
-	go install golang.org/x/vuln/cmd/govulncheck@latest
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.11.4
+	go install github.com/goreleaser/goreleaser/v2@v2.15.4
+	go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
 
 # Run go vet
 .PHONY: vet
