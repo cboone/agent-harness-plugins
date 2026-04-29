@@ -9,10 +9,9 @@ name: gitleaks
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
-  schedule:
-    - cron: "0 4 * * *"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -31,7 +30,7 @@ jobs:
 ## Notes
 
 - The reusable workflow uses the gitleaks CLI directly, not `gitleaks/gitleaks-action`. The CLI works without a license for both personal and organization repositories.
-- The `schedule` trigger runs a daily scan at 4 AM UTC to catch secrets introduced outside of PR workflows (e.g., direct pushes).
-- `workflow_dispatch` allows manual triggering from the GitHub Actions UI.
+- Runs on pushes to `main` (post-merge) and on every pull request, so all merged code is scanned and proposed changes are scanned before merge.
+- `workflow_dispatch` allows manual triggering from the GitHub Actions UI, useful for re-scanning history after a gitleaks rule update.
 - The reusable workflow handles checkout with `fetch-depth: 0` and tool installation internally.
 - `permissions: contents: read` grants the minimum access needed for scanning. Reusable workflows cannot elevate permissions beyond what the caller grants.
