@@ -5,9 +5,9 @@ description: >-
   and optional gitleaks configuration. Use when the user says "add secret
   scanning", "set up secret scanning", "set up gitleaks", "set up trufflehog",
   "scan for secrets in CI", or wants to detect leaked credentials in a
-  repository. Gitleaks performs fast pattern matching on every push and PR
-  plus a daily scheduled scan; TruffleHog adds verification-based scanning on
-  pushes to main with a weekly schedule. Pairs with handle-secrets for
+  repository. Both tools run on pushes to main, on pull requests, and on
+  manual dispatch; gitleaks does fast pattern matching, TruffleHog adds
+  verification-based scanning. Pairs with handle-secrets for
   application-level secret hygiene.
 ---
 
@@ -17,8 +17,10 @@ Set up secret scanning in a repository with [gitleaks](https://github.com/gitlea
 
 The two tools are complementary:
 
-- **Gitleaks** performs fast pattern matching on every push and PR, plus a daily scheduled scan.
-- **TruffleHog** performs deeper verification-based scanning on pushes to main, with a weekly scheduled scan.
+- **Gitleaks** performs fast pattern matching.
+- **TruffleHog** performs deeper verification-based scanning that confirms whether detected credentials are still live.
+
+Both run on pushes to `main`, on every pull request, and on manual `workflow_dispatch`.
 
 ## Workflow
 
@@ -81,8 +83,7 @@ If no, skip this step.
 Print a summary of what was created:
 
 - List every file generated
-- For gitleaks: note that it runs on pushes, pull requests, and daily at 4 AM UTC
-- For TruffleHog: note that it runs on pushes to main and weekly on Saturdays at 4 AM UTC
+- Note that both workflows run on pushes to `main`, pull requests, and `workflow_dispatch`
 - Mention that gitleaks will automatically comment on PRs when secrets are detected
 
 ## Error Handling

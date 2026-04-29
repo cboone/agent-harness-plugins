@@ -17,7 +17,7 @@ Then select **Setup Secret Scanning** from the available plugins.
 
 ## What It Does
 
-Sets up complementary secret scanning with two tools: gitleaks for fast pattern matching on every push and PR (with daily scheduled scans), and TruffleHog for deeper verification-based scanning on pushes to main (with weekly scheduled scans). Lets you choose both tools (recommended), gitleaks only, or TruffleHog only. For gitleaks, detects organization vs. personal repositories and optionally creates a starter `.gitleaks.toml`.
+Sets up complementary secret scanning with two tools: gitleaks for fast pattern matching, and TruffleHog for deeper verification-based scanning that confirms whether detected credentials are still live. Both run on pushes to `main`, on every pull request, and on manual `workflow_dispatch`. Lets you choose both tools (recommended), gitleaks only, or TruffleHog only. For gitleaks, optionally creates a starter `.gitleaks.toml`.
 
 ## Usage
 

@@ -10,9 +10,8 @@ name: trufflehog
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
-  schedule:
-    - cron: "0 4 * * 6"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -31,6 +30,5 @@ jobs:
 ## Notes
 
 - The reusable workflow handles TruffleHog version pinning, checkout with `fetch-depth: 0`, and configuration internally.
-- The `schedule` trigger runs a weekly scan on Saturdays at 4 AM UTC, complementing gitleaks' daily scans.
-- `workflow_dispatch` allows manual triggering from the GitHub Actions UI.
-- Runs on pushes to `main` only (post-merge), since gitleaks already covers per-push and per-PR pattern matching.
+- Runs on pushes to `main` (post-merge) and on every pull request, so verification-based scanning covers both merged code and proposed changes.
+- `workflow_dispatch` allows manual triggering from the GitHub Actions UI, useful for re-running verification against live providers on demand.
