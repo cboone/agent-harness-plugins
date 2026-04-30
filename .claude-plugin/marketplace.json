@@ -13,7 +13,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "scaffolding",
       "description": "Add standard community files to a project: CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, and PR template",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["code-of-conduct", "community", "contributing", "open-source", "security"],
@@ -27,7 +27,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "ci-and-release",
       "description": "Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with conditional support for completions, man pages, and macOS-only builds.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["github-actions", "go", "golang", "goreleaser", "homebrew"],
@@ -55,7 +55,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "issues-and-worktrees",
       "description": "Fetch a GitHub issue, plan the work, execute changes, and commit with issue references.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["gh", "github", "issues", "workflow"],
@@ -69,7 +69,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "code-review",
       "description": "Parse a review document for actionable feedback, work through items systematically, and track resolution progress.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["code-review", "feedback", "markdown", "review", "workflow"],
@@ -83,7 +83,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "code-quality",
+      "category": "security",
       "description": "Blocks recursive rm commands and suggests using trash instead.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["guard", "safety", "trash"],
@@ -97,7 +97,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "scaffolding",
       "description": "Assess a repository, determine what scaffolding and setup tools are needed, present a plan, and execute them in the correct order.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["bootstrap", "ci", "go", "linters", "rust", "scaffolding", "setup", "zig", "zsh"],
@@ -125,7 +125,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "agents",
       "description": "Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, Copilot, and OpenCode.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["agents", "codex", "config", "copilot", "opencode", "settings"],
@@ -139,7 +139,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "git",
       "description": "Smart, context-aware git commits with conventional commit messages and plan awareness.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["commit", "conventional-commits", "git", "plans"],
@@ -153,7 +153,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "issues-and-worktrees",
       "description": "Create GitHub issues using tmpfiles to avoid permission prompts from large multiline Bash arguments.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["gh", "github", "issues", "workflow"],
@@ -167,7 +167,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "agents",
       "description": "Guide for creating new plugins in this repository with consistent structure and conventions.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["claude-code", "hooks", "plugins", "scaffolding", "skills"],
@@ -175,13 +175,13 @@
       "name": "create-plugin",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-plugin",
-      "version": "1.2.1"
+      "version": "1.2.2"
     },
     {
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "issues-and-worktrees",
       "description": "Create a git worktree, branch, and tmux window with a task prompt using workmux.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["git", "tmux", "workmux", "worktree"],
@@ -195,7 +195,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "issues-and-worktrees",
       "description": "Find a GitHub issue and create a worktree, branch, and tmux window for working on it, with issue context injected as a task prompt.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["git", "github", "issues", "tmux", "workmux", "worktree"],
@@ -237,7 +237,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "scaffolding",
       "description": "Bootstrap, audit, and maintain REUSE-style mixed-license coverage in a repository: LICENSES/, NOTICE, REUSE.toml, SPDX headers, and reuse lint cleanliness.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["licensing", "notice", "reuse", "spdx"],
@@ -251,7 +251,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "git",
       "description": "Fetch and merge the base branch into the current feature branch with automatic conflict resolution.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["branch", "conflicts", "git", "merge"],
@@ -265,7 +265,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "workflow",
       "description": "Notifies you when Claude finishes a task or needs your attention.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["alerts", "macos", "notifications"],
@@ -279,7 +279,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "ci-and-release",
       "description": "Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["ci", "concurrency", "github-actions", "optimization", "timeout", "workflow"],
@@ -293,7 +293,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "git",
       "description": "Lint, commit, push, and create a pull request in one step with no prompts.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["git", "github", "plans", "pull-requests", "workflow"],
@@ -307,7 +307,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "git",
       "description": "Prepare a versioned release: analyze commits, update versions and changelog, create a release commit, tag locally, and optionally publish a GitHub Release.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["changelog", "conventional-commits", "gh", "git", "github-release", "release", "semver", "tags", "versioning"],
@@ -321,7 +321,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "code-quality",
+      "category": "code-review",
       "description": "Process and resolve GitHub Copilot automated PR review comments.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["code-review", "copilot", "github", "pull-requests"],
@@ -335,7 +335,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "git",
       "description": "Review and evaluate all work done on the current branch: summarize changes, assess plan compliance, and evaluate code quality.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["branch", "code-review", "diff", "git", "plans", "review", "summary"],
@@ -349,7 +349,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "scaffolding",
       "description": "Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions, and Homebrew tap support.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["cli", "go", "golang", "goreleaser", "scaffolding"],
@@ -363,7 +363,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "scaffolding",
       "description": "Scaffold a Go library project with GoReleaser changelog releases, golangci-lint, GitHub Actions CI/CD, and Makefile.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["go", "golang", "goreleaser", "library", "scaffolding"],
@@ -377,7 +377,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "scaffolding",
       "description": "Scaffold the universal boilerplate for a new repository: LICENSE, README, CHANGELOG, .gitignore, agent config files, and a plans directory.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["boilerplate", "git", "project", "repo", "scaffolding"],
@@ -391,7 +391,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "scaffolding",
       "description": "Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest, git-cliff, GitHub Actions CI/CD, and Makefile.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["cargo", "cli", "rust", "scaffolding"],
@@ -405,7 +405,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "ci-and-release",
       "description": "Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["ci", "github-actions", "makefile", "testing", "workflow", "zig", "zsh"],
@@ -419,7 +419,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "ci-and-release",
       "description": "Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, go/cargo install, and release workflow.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["cargo", "distribution", "github-actions", "go", "golang", "homebrew", "install", "release", "rust", "swift", "zig"],
@@ -447,7 +447,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "code-quality",
+      "category": "ci-and-release",
       "description": "Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["gitleaks", "github-actions", "scanning", "secrets", "security", "trufflehog"],
@@ -461,7 +461,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "issues-and-worktrees",
       "description": "Review open GitHub issues and recommend what to work on next with prioritized reasoning.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["github", "issues", "planning", "prioritization", "triage"],
@@ -475,7 +475,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "workflow",
       "description": "Reminds you to update documentation when a commit includes significant code changes.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["documentation", "git", "hooks", "reminders"],
@@ -489,7 +489,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "ci-and-release",
       "description": "Audit a repository against the latest plugin templates and update anything out of date.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["audit", "ci", "linters", "scaffolding", "templates", "update"],
@@ -503,7 +503,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "productivity",
+      "category": "code-review",
       "description": "Find the latest branch review, assess commits made since, and update the review document with a synthesized reassessment.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["branch", "code-review", "diff", "git", "review", "update"],
@@ -517,7 +517,7 @@
       "author": {
         "name": "Christopher Boone"
       },
-      "category": "code-quality",
+      "category": "git",
       "description": "Git and GitHub CLI conventions for Claude Code: tmpfile patterns, HEREDOC commits, GPG signing, safe push practices, and permission-prompt avoidance.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["cli", "conventions", "gh", "git", "github", "permissions"],
