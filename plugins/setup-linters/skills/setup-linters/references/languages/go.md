@@ -13,7 +13,7 @@
 brew install golangci-lint
 
 # Go install (alternative)
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4
 ```
 
 ## Config

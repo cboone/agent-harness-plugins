@@ -10,10 +10,10 @@ When the project has many YAML files (`*.yaml`, `*.yml`), beyond the typical few
 
 ```bash
 # uv (preferred)
-uv tool install yamllint
+uv tool install 'yamllint==1.38.0'
 
 # pip (alternative)
-pip install yamllint
+pip install 'yamllint==1.38.0'
 
 # Homebrew (alternative)
 brew install yamllint

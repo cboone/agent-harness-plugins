@@ -23,7 +23,7 @@ Runs seven complementary tools against zsh scripts in a recommended order: synta
 
 - [`shellcheck`](https://www.shellcheck.net/). Install via Homebrew: `brew install shellcheck`
 - [`shfmt`](https://github.com/mvdan/sh). Install via Homebrew: `brew install shfmt`
-- [`shellharden`](https://github.com/anordal/shellharden). Install via Homebrew: `brew install shellharden` (or `cargo install shellharden`)
+- [`shellharden`](https://github.com/anordal/shellharden). Install via Homebrew: `brew install shellharden` (or `cargo install --locked --version 4.3.1 shellharden`)
 - [`checkbashisms`](https://packages.debian.org/devscripts). Install via Homebrew: `brew install devscripts`
 - `zsh` and `zcompile` are typically pre-installed on macOS and most Linux distributions.
 

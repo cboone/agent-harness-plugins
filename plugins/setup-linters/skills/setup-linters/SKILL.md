@@ -130,6 +130,12 @@ For each selected tool, install using the project's package manager. Read the ap
 - Language-specific: `./references/languages/<language>.md`
 - Cross-language tools: `./references/tools/<tool>.md`
 
+#### Pin tool versions to mitigate supply-chain risk
+
+The reference files pin install commands to specific versions (e.g., `cargo install --locked --version X.Y.Z <crate>`, `pip install '<pkg>==X.Y.Z'`, `go install <path>@vX.Y.Z`). Unpinned installs (`@latest`, no `==`) pull whatever the registry currently serves; an attacker who compromises a maintainer account can publish a malicious patch release and have it picked up by every install that ran after the publish. Specific-version pins make the install reproducible and force an explicit bump when the version is updated.
+
+When a pinned version drifts from upstream latest, the repository's `bin/version-audit` workflow opens an issue listing what bumped. Use that as the trigger to refresh the pin in the relevant reference file.
+
 ### 6. Create Config Files
 
 Generate default config files and ignore files for each tool. Use templates from the reference files. Also generate:
@@ -165,22 +171,22 @@ Ask whether to create a GitHub Actions workflow. If yes, read `./references/tool
 
 If a CI workflow already exists, offer to add lint steps to it rather than creating a new file.
 
-**Tool dependency verification**: For every tool referenced in Makefile targets, confirm the CI workflow includes a corresponding setup/install step. Common tool-to-action mappings:
+**Tool dependency verification**: For every tool referenced in Makefile targets, confirm the CI workflow includes a corresponding setup/install step. Common tool-to-action mappings (all third-party `uses:` refs are SHA-pinned with a comment that matches the upstream tag, typically `# vX.Y.Z` but `# X.Y.Z` when upstream omits the `v` prefix, per the convention in `./references/tools/github-actions-ci.md`; refresh both SHA and comment to current latest before emitting):
 
-| Tool          | CI Setup                                                                  |
-| ------------- | ------------------------------------------------------------------------- |
-| shfmt         | `mfinelli/setup-shfmt@v4` or `go install mvdan.cc/sh/v3/cmd/shfmt@latest` |
-| shellcheck    | `ludeeus/action-shellcheck@2.0.0`                                         |
-| golangci-lint | `golangci/golangci-lint-action@v9`                                        |
-| swiftlint     | `brew install swiftlint` (macOS runner)                                   |
-| swiftformat   | `brew install swiftformat` (macOS runner)                                 |
-| checkbashisms | `apt-get install devscripts` (Ubuntu runner)                              |
-| shellharden   | `cargo install shellharden` (Ubuntu runner)                               |
-| cargo-deny    | `taiki-e/install-action@cargo-deny`                                       |
-| typos         | `crate-ci/typos@v1`                                                       |
-| hadolint      | `hadolint/hadolint-action@v3.1.0`                                         |
-| actionlint    | `raven-actions/actionlint@v2`                                             |
-| cspell        | `streetsidesoftware/cspell-action@v6`                                     |
+| Tool          | CI Setup                                                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| shfmt         | `mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1` or `go install mvdan.cc/sh/v3/cmd/shfmt@v3.13.1` |
+| shellcheck    | `ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0`                                              |
+| golangci-lint | `golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0`                                         |
+| swiftlint     | `brew install swiftlint` (macOS runner)                                                                                   |
+| swiftformat   | `brew install swiftformat` (macOS runner)                                                                                 |
+| checkbashisms | `apt-get install devscripts` (Ubuntu runner)                                                                              |
+| shellharden   | `cargo install --locked --version 4.3.1 shellharden` (Ubuntu runner)                                                      |
+| cargo-deny    | `taiki-e/install-action@b651345a718c8f44efa2460560b3dbf29cbd7ee1 # v2.75.26` (with `tool: cargo-deny`)                    |
+| typos         | `crate-ci/typos@7c572958218557a3272c2d6719629443b5cc26fd # v1.45.2`                                                       |
+| hadolint      | `hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0`                                              |
+| actionlint    | `raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2`                                              |
+| cspell        | `streetsidesoftware/cspell-action@de2a73e963e7443969755b648a1008f77033c5b2 # v8.4.0`                                      |
 
 ### 10. Run Initial Lint (Optional)
 
@@ -198,3 +204,15 @@ Ask whether to commit the setup. Suggest `chore: set up <tool list>` as the comm
 - **Install failure**: If a tool fails to install, report the error and continue with the next tool.
 - **Config conflict**: If a generated config would overwrite an existing file, ask before overwriting.
 - **Pre-commit hook failure on commit**: Fix the issue, re-stage, and create a new commit (never amend).
+
+## Refresh `cboone/gh-actions` SHAs before scaffolding
+
+The `cboone/gh-actions` reusable-workflow refs in this skill's templates are SHA-pinned with a `# vX.Y.Z` comment that was current when the template was authored. New releases of `cboone/gh-actions` rot those SHAs. Before emitting a workflow into a user's repo, refresh both the SHA and the comment to current latest:
+
+```bash
+TAG="$(gh release view --repo cboone/gh-actions --json tagName --jq '.tagName')"
+SHA="$(gh api "repos/cboone/gh-actions/commits/${TAG}" --jq '.sha')"
+echo "${SHA} # ${TAG}"
+```
+
+Replace each `cboone/gh-actions/.../<workflow>.yml@<old-sha> # <old-tag>` in the emitted workflow with the new SHA and tag. Dependabot in the user's repo keeps them in sync afterwards.

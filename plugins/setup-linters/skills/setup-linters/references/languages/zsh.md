@@ -24,7 +24,7 @@ brew install shellcheck shfmt shellharden
 brew install devscripts
 ```
 
-On Ubuntu CI, use `apt-get install devscripts` for checkbashisms, `cargo install --locked shellharden` for shellharden, and the `mfinelli/setup-shfmt@v4` action for shfmt. ShellCheck is pre-installed on `ubuntu-latest`.
+On Ubuntu CI, use `apt-get install devscripts` for checkbashisms, `cargo install --locked --version 4.3.1 shellharden` for shellharden, and the `mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1` action for shfmt. ShellCheck is pre-installed on `ubuntu-latest`.
 
 ## Config
 

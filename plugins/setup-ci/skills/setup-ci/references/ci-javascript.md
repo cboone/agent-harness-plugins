@@ -13,10 +13,10 @@ If the project has a `tsconfig.json`, include the optional typecheck job.
 
 **Package manager setup variations:**
 
-- **npm**: Use `actions/setup-node@v4` with `cache: "npm"`. No extra setup needed.
-- **yarn** (detected via `.yarnrc.yml` or `yarn.lock`): Add a `run: corepack enable` step before `actions/setup-node@v4`. Use `cache: "yarn"`.
-- **pnpm** (detected via `pnpm-lock.yaml`): Add a `run: corepack enable` step before `actions/setup-node@v4`. Use `cache: "pnpm"`.
-- **bun** (detected via `bun.lock`): Replace the `actions/setup-node@v4` step entirely with `oven-sh/setup-bun@v2` (omit the `cache` and `node-version` parameters; Bun manages its own caching). The `actions/setup-node` `cache` option does not support Bun.
+- **npm**: Use `actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0` with `cache: "npm"`. No extra setup needed.
+- **yarn** (detected via `.yarnrc.yml` or `yarn.lock`): Add a `run: corepack enable` step before `actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0`. Use `cache: "yarn"`.
+- **pnpm** (detected via `pnpm-lock.yaml`): Add a `run: corepack enable` step before `actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0`. Use `cache: "pnpm"`.
+- **bun** (detected via `bun.lock`): Replace the `actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0` step entirely with `oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0` (omit the `cache` and `node-version` parameters; Bun manages its own caching). The `actions/setup-node` `cache` option does not support Bun.
 
 ```yaml
 name: CI
@@ -57,12 +57,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "PACKAGE-MANAGER"
 
       - name: Install dependencies
@@ -77,12 +77,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "PACKAGE-MANAGER"
 
       - name: Install dependencies
@@ -97,12 +97,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "PACKAGE-MANAGER"
 
       - name: Install dependencies
@@ -118,12 +118,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "PACKAGE-MANAGER"
 
       - name: Install dependencies
@@ -141,4 +141,4 @@ jobs:
 - Only include the typecheck job if `tsconfig.json` exists
 - The template above shows the npm setup; see "Package manager setup variations" above for yarn, pnpm, and bun differences
 - For **yarn** and **pnpm**: add `run: corepack enable` as a step before `actions/setup-node` so the correct package manager shim is available for caching and installation
-- For **bun**: replace `actions/setup-node@v4` with `oven-sh/setup-bun@v2` and remove `node-version` and `cache` parameters
+- For **bun**: replace `actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0` with `oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0` and remove `node-version` and `cache` parameters

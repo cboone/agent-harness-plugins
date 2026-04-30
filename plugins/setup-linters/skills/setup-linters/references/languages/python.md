@@ -18,10 +18,10 @@ Python projects are detected by:
 
 ```bash
 # uv (preferred)
-uv add --dev ruff
+uv add --dev 'ruff==0.15.12'
 
 # uv pip (alternative, when not using a uv project)
-uv pip install ruff
+uv pip install 'ruff==0.15.12'
 ```
 
 ## Config

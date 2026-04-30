@@ -43,12 +43,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@c4e5b1316158f92e3d49443a9d58b31d25ac0f8f # v1.306.0
         with:
-          ruby-version: "3.3"
+          ruby-version-file: ".tool-versions"
           bundler-cache: true
 
       - name: Run tests
@@ -60,12 +60,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@c4e5b1316158f92e3d49443a9d58b31d25ac0f8f # v1.306.0
         with:
-          ruby-version: "3.3"
+          ruby-version-file: ".tool-versions"
           bundler-cache: true
 
       - name: Run RuboCop
@@ -74,7 +74,7 @@ jobs:
 
 ## Notes
 
-- Uses `ruby/setup-ruby@v1` with `bundler-cache: true` for automatic Bundler caching
+- Uses `ruby/setup-ruby@c4e5b1316158f92e3d49443a9d58b31d25ac0f8f # v1.306.0` with `bundler-cache: true` for automatic Bundler caching
 - Detect the Ruby version from `.ruby-version` if it exists and use that instead of `"3.3"`
 - If the project uses RSpec instead of Minitest, use `bundle exec rspec` for the test command
 - If the project uses `standardrb` instead of RuboCop, adjust the lint command accordingly

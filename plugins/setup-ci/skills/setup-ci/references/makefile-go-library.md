@@ -57,8 +57,8 @@ test: ## Run tests with race detector
 
 .PHONY: tools
 tools: ## Install development tools
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	go install golang.org/x/vuln/cmd/govulncheck@latest
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4
+	go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
 
 .PHONY: vet
 vet: ## Run go vet

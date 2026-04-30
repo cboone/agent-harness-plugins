@@ -33,7 +33,7 @@ brew install shfmt
 Or via Go:
 
 ```bash
-go install mvdan.cc/sh/v3/cmd/shfmt@latest
+go install mvdan.cc/sh/v3/cmd/shfmt@v3.13.1
 ```
 
 ## Zsh Support

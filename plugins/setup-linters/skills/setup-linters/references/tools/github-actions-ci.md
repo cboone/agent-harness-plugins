@@ -46,11 +46,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "npm"
 
       - run: npm ci
@@ -97,7 +97,7 @@ concurrency:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
     with:
       go-version-file: go.mod
       run-lint: true
@@ -140,9 +140,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Ruff lint
         run: uvx ruff check .
@@ -186,7 +186,7 @@ concurrency:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@v2
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
     with:
       run-test: false
 ```
@@ -229,11 +229,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@c4e5b1316158f92e3d49443a9d58b31d25ac0f8f # v1.306.0
         with:
-          ruby-version: "3.3"
+          ruby-version-file: ".tool-versions"
           bundler-cache: true
 
       - name: RuboCop
@@ -275,7 +275,7 @@ concurrency:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/shell-lint.yml@v1
+    uses: cboone/gh-actions/.github/workflows/shell-lint.yml@e4e9f34f54041223e72f0d6241efede27a698fa1 # v1.0.0
 ```
 
 ### Zsh
@@ -316,7 +316,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install zsh
         run: sudo apt-get update && sudo apt-get install -y zsh
@@ -324,10 +324,10 @@ jobs:
       - name: Install checkbashisms
         run: sudo apt-get install -y devscripts
 
-      - uses: mfinelli/setup-shfmt@v4
+      - uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
 
       - name: Install shellharden
-        run: cargo install --locked shellharden
+        run: cargo install --locked --version 4.3.1 shellharden
 
       - name: Run zsh checks
         env:
@@ -372,7 +372,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install tools
         run: brew install swiftlint swiftformat
@@ -388,7 +388,7 @@ jobs:
 
 ```yaml
 - name: markdownlint
-  run: npx markdownlint-cli2@0.21.0 "**/*.md"
+  run: npx markdownlint-cli2@0.22.1 "**/*.md"
 ```
 
 ## Cross-Language Steps
@@ -401,21 +401,21 @@ As an inline step:
 
 ```yaml
 - name: Actionlint
-  uses: raven-actions/actionlint@v2
+  uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2
 ```
 
 Or as a reusable workflow job:
 
 ```yaml
 github-lint:
-  uses: cboone/gh-actions/.github/workflows/github-lint.yml@v1
+  uses: cboone/gh-actions/.github/workflows/github-lint.yml@e4e9f34f54041223e72f0d6241efede27a698fa1 # v1.0.0
 ```
 
 ### Hadolint
 
 ```yaml
 - name: Hadolint
-  uses: hadolint/hadolint-action@v3.1.0
+  uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0
   with:
     dockerfile: Dockerfile
 ```
@@ -424,21 +424,21 @@ github-lint:
 
 ```yaml
 - name: Knip
-  run: npx knip@5.85.0
+  run: npx knip@6.9.0
 ```
 
 ### Prettier (non-JS projects)
 
 ```yaml
 - name: Prettier
-  run: npx prettier@3.8.1 --check .
+  run: npx prettier@3.8.3 --check .
 ```
 
 ### Stylelint
 
 ```yaml
 - name: Stylelint
-  run: npx stylelint@17.3.0 "**/*.{css,scss,less}"
+  run: npx stylelint@17.9.1 "**/*.{css,scss,less}"
 ```
 
 ### Taplo
@@ -461,14 +461,14 @@ As an inline step:
 
 ```yaml
 - name: cspell
-  uses: streetsidesoftware/cspell-action@v6
+  uses: streetsidesoftware/cspell-action@de2a73e963e7443969755b648a1008f77033c5b2 # v8.4.0
 ```
 
 Or as a reusable workflow job (also covers markdownlint, prettier, yamllint):
 
 ```yaml
 text-lint:
-  uses: cboone/gh-actions/.github/workflows/text-lint.yml@v1
+  uses: cboone/gh-actions/.github/workflows/text-lint.yml@e4e9f34f54041223e72f0d6241efede27a698fa1 # v1.0.0
   with:
     run-cspell: true
 ```
@@ -508,14 +508,14 @@ concurrency:
 
 jobs:
   go-lint:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
     with:
       go-version-file: go.mod
       run-lint: true
       run-format-check: true
 
   rust-lint:
-    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@v2
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
     with:
       run-test: false
 
@@ -523,10 +523,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version-file: ".tool-versions"
           cache: "npm"
       - run: npm ci
       - run: npx eslint .
@@ -548,7 +548,8 @@ jobs:
 
 - Workflow file naming: use `.github/workflows/lint.yml` for a dedicated lint workflow.
 - If the project already has a CI workflow (e.g., `ci.yml`), offer to add lint steps to it rather than creating a separate file.
-- Go, Rust, and Shell templates use `cboone/gh-actions` reusable workflows. Other language templates use `actions/checkout@v6` and the latest stable setup actions.
+- Go, Rust, and Shell templates use `cboone/gh-actions` reusable workflows. Other language templates use `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2` and the latest stable setup actions.
 - For Node.js projects, adjust the `cache` option to match the detected package manager (`npm`, `yarn`, `pnpm`).
 - `ubuntu-latest` is the default runner. macOS or Windows runners are only needed for platform-specific linting.
 - Pin all `npx` tool versions to exact versions (e.g., `npx tool@X.Y.Z`) for CI reproducibility. Update versions periodically. This applies to tools invoked via `npx` without a prior `npm ci` step; tools installed as project dependencies (after `npm ci`) use the locked version automatically.
+- Pin every `uses:` ref to a 40-character commit SHA with a `# vX.Y.Z` comment that matches the upstream tag (the leading `v` is optional when upstream omits it, as with `ludeeus/action-shellcheck`'s `2.0.0` tag). This applies to third-party actions and to `cboone/gh-actions` reusable workflows alike. Tags are mutable; SHAs are not. Dependabot bumps the SHA and the comment together. Refresh the `cboone/gh-actions` SHAs at scaffold time using the snippet in this skill's `SKILL.md`. A small number of actions release through moving channel aliases instead of versioned tags (e.g., `dtolnay/rust-toolchain@<sha> # stable`); use the channel name in the comment for those refs and accept that `bin/version-audit` cannot track drift on them.

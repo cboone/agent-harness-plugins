@@ -13,7 +13,7 @@ When `.github/workflows/` directory is detected.
 brew install actionlint
 
 # Go install (alternative)
-go install github.com/rhysd/actionlint/cmd/actionlint@latest
+go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
 ```
 
 ## Usage

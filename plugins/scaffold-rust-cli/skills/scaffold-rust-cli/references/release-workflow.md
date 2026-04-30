@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/rust-release.yml@v2
+    uses: cboone/gh-actions/.github/workflows/rust-release.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
     with:
       binary-name: PROJECT-NAME
 ```

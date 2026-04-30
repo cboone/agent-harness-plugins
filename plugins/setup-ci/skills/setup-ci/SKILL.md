@@ -85,6 +85,24 @@ Read the appropriate language CI reference under `./references/ci-<language>.md`
 
 Go, Rust, Zig, Shell, and secret scanning templates use `cboone/gh-actions` reusable workflows that handle tool installation, caching, and execution internally. Other language templates use inline jobs.
 
+#### Ensure a Language Version File
+
+The CI templates read language runtime versions from a project-owned version file rather than pinning inline:
+
+| Language | Version source the workflow reads                | Action if missing                                                                 |
+| -------- | ------------------------------------------------ | --------------------------------------------------------------------------------- |
+| Node.js  | `.tool-versions` (line `nodejs <version>`)       | Create `.tool-versions` with `nodejs <latest LTS>` and warn the user to commit it |
+| Ruby     | `.tool-versions` (line `ruby <version>`)         | Create `.tool-versions` (or append) with `ruby <latest stable>`                   |
+| Go       | `go.mod` (`go X.Y` directive)                    | Always present in a Go project; no action needed                                  |
+| Rust     | `rust-toolchain.toml` (when present)             | Create one with `[toolchain] channel = "stable"` if missing                       |
+| Python   | `pyproject.toml` `requires-python` (uv reads it) | Ensure the constraint is present in `pyproject.toml`                              |
+| Zig      | `build.zig.zon` `minimum_zig_version`            | Always present in a Zig project; no action needed                                 |
+
+Before writing the CI workflow, check for the relevant version file and create or update it as needed. Latest LTS / stable lookups:
+
+- Node.js LTS: `curl -s https://nodejs.org/dist/index.json | jq -r 'first(.[] | select(.lts != false)) | .version' | sed 's/^v//'`
+- Latest stable Ruby: `gh api repos/ruby/ruby/releases --jq 'first(.[] | select(.prerelease == false)) | .tag_name' | sed 's/^v//; s/_/./g'` (Ruby tags use both `v3.4.0` and `v3_4_0` forms; the trailing `sed` normalizes them to the dotted format `.tool-versions` expects)
+
 All templates share:
 
 - Triggers: push to `main`, pull requests targeting `main`
@@ -161,3 +179,15 @@ Print a summary of what was created or modified:
 - `./references/makefile-shell.md` -- Shell Makefile
 - `./references/makefile-zig.md` -- Zig Makefile
 - `./references/makefile-zsh.md` -- Zsh Makefile
+
+## Refresh `cboone/gh-actions` SHAs before scaffolding
+
+The `cboone/gh-actions` reusable-workflow refs in this skill's templates are SHA-pinned with a `# vX.Y.Z` comment that was current when the template was authored. New releases of `cboone/gh-actions` rot those SHAs. Before emitting a workflow into a user's repo, refresh both the SHA and the comment to current latest:
+
+```bash
+TAG="$(gh release view --repo cboone/gh-actions --json tagName --jq '.tagName')"
+SHA="$(gh api "repos/cboone/gh-actions/commits/${TAG}" --jq '.sha')"
+echo "${SHA} # ${TAG}"
+```
+
+Replace each `cboone/gh-actions/.../<workflow>.yml@<old-sha> # <old-tag>` in the emitted workflow with the new SHA and tag. Dependabot in the user's repo keeps them in sync afterwards.
