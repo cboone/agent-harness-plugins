@@ -78,8 +78,8 @@ Adjust to match the project's minimum Swift version.
 # SwiftLint (lint)
 swiftlint lint --strict
 
-# SwiftLint (auto-fix then verify)
-swiftlint lint --fix && swiftlint lint --strict
+# SwiftLint (auto-fix, verify lint, then verify compilation)
+swiftlint lint --fix && swiftlint lint --strict && swift build
 
 # SwiftFormat (check)
 swiftformat --lint .
@@ -101,6 +101,7 @@ lint-fix: ## Auto-fix then verify
 	swiftlint lint --fix
 	swiftlint lint --strict
 	swiftformat .
+	swift build
 
 fmt: ## Format Swift code
 	swiftformat .
@@ -109,7 +110,8 @@ fmt: ## Format Swift code
 ## Notes
 
 - **Trailing comma conflict**: SwiftLint and SwiftFormat disagree on trailing commas by default. SwiftLint's `trailing_comma` rule warns against trailing commas, while SwiftFormat's `trailingCommas` rule adds them. To resolve this, set `mandatory_comma: true` in `.swiftlint.yml` and `--trailingCommas always` in `.swiftformat`. This makes both tools agree that trailing commas are required.
-- **Lint-fix verification pattern**: The `lint-fix` target runs `swiftlint lint --fix` followed by `swiftlint lint --strict`. The first pass auto-corrects fixable violations; the second pass verifies that no unfixable violations remain. Without the verification pass, unfixable lint errors would go unnoticed.
+- **Lint-fix verification pattern**: The `lint-fix` target runs `swiftlint lint --fix`, then `swiftlint lint --strict`, then `swift build`. The first pass auto-corrects fixable violations; the second pass verifies that no unfixable violations remain; the third pass verifies that the auto-fixes did not introduce compilation errors (see the next note). Without the verification passes, unfixable lint errors and broken auto-fixes would go unnoticed.
+- **Auto-fix can break compilation**: Some SwiftLint auto-fix rules produce incorrect code in edge cases. The most common offender is `redundant_nil_coalescing`: it strips `?? nil` from expressions like `dict[key] ?? nil`, but when the dictionary's value type is itself optional (`[K: V?]`), the `?? nil` is doing real work (flattening `V??` to `V?`) and removing it changes the return type and breaks the build. After running `swiftlint lint --fix`, always re-run `swift build` (or `swift test`) to verify the auto-fixes did not introduce compilation errors. When you hit a case like this, restore the expression and disable the rule on that line: `// swiftlint:disable:next redundant_nil_coalescing`.
 - SwiftLint uses `--strict` to treat warnings as errors, ensuring CI catches all violations.
 - SwiftFormat handles all formatting concerns (indentation, braces, whitespace), while SwiftLint focuses on style rules and code quality checks.
 - The `.swift-version` file is used by SwiftFormat and Swift toolchain managers (such as `swiftenv`) to determine the Swift language version. SwiftLint does not read `.swift-version`; configure its Swift version explicitly via the `swift_version` setting in `.swiftlint.yml` or the `--swift-version` CLI flag if needed.
