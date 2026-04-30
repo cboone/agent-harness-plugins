@@ -203,7 +203,7 @@ Ask whether to commit the setup. Suggest `chore: set up <tool list>` as the comm
 - **Package manager not found**: If a Node.js project has no lockfile, default to npm. For non-Node projects, guide installation via Homebrew, Cargo, or the appropriate system package manager.
 - **Install failure**: If a tool fails to install, report the error and continue with the next tool.
 - **Config conflict**: If a generated config would overwrite an existing file, ask before overwriting.
-- **Auto-fix introduces compilation errors**: Some linter auto-fix rules can produce incorrect code in edge cases (notably SwiftLint's `redundant_nil_coalescing` rule, which can break double-optional expressions). After any auto-fix pass, re-run the project's compiler or test command (`swift build`, `cargo build`, `go build`, `tsc`, etc.) to verify that the auto-fixes did not introduce compilation errors. The language-specific reference files include this verification step in their suggested `lint-fix` Makefile targets.
+- **Auto-fix introduces compilation errors**: Some linter auto-fix rules can produce incorrect code in edge cases (notably SwiftLint's `redundant_nil_coalescing` rule, which can break double-optional expressions). After any auto-fix pass, re-run the project's compiler or test command (`swift test --build-tests`, `cargo build`, `go build`, `tsc`, etc.) to verify that the auto-fixes did not introduce compilation errors. Where applicable, include a compile or test verification step in the language reference's suggested auto-fix target.
 - **Pre-commit hook failure on commit**: Fix the issue, re-stage, and create a new commit (never amend).
 
 ## Refresh `cboone/gh-actions` SHAs before scaffolding
