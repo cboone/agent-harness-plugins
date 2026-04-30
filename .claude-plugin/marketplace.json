@@ -293,6 +293,20 @@
       "author": {
         "name": "Christopher Boone"
       },
+      "category": "ci-and-release",
+      "description": "Pin every version surface in a repository to commit hashes, integrity digests, or specific versions. SHA-pins GitHub Actions, integrity-pins Yarn via Corepack, exact-pins package-manager dependencies (when application context is detected), migrates scaffolded CI to language version files, and pins install commands (go install, cargo install, pip, uv, npx). Optionally generates a weekly drift-audit script and tightens Dependabot.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["dependencies", "pinning", "security", "supply-chain", "versioning"],
+      "license": "MIT",
+      "name": "pin-everything",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/pin-everything",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
       "category": "git",
       "description": "Lint, commit, push, and create a pull request in one step with no prompts.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",

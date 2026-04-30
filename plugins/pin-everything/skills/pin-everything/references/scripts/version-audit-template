@@ -1,0 +1,259 @@
+#!/usr/bin/env bash
+# Template for bin/version-audit. Audits version surfaces that Dependabot does
+# not cover and writes a Markdown report to stdout. Empty output means no drift.
+#
+# This file is a TEMPLATE consumed by the pin-everything skill. The skill reads
+# it, tailors the SCAN_PATHS list and the audit_* function calls at the bottom
+# to the consuming repo's actual surfaces, and writes the result to that repo's
+# bin/version-audit.
+#
+# Surfaces audited:
+#   - .tool-versions (Node.js LTS)
+#   - package.json packageManager (Yarn via Corepack)
+#   - All SHA-pinned action refs (third-party and reusable workflows)
+#   - npx <tool>@<version> pins
+#   - go install <path>@v<version> pins for known tools
+#   - cargo install --version <X> <crate> pins
+#   - pip / uv install <pkg>==<X> pins
+#
+# Requires: gh (authenticated), jq, curl.
+
+set -euo pipefail
+
+# REPLACE: SCAN_PATHS lists the directories the audit greps for embedded pins.
+# Tailor this to the consuming repo's layout. Defaults match cboone-cc-plugins.
+SCAN_PATHS=(.github/ plugins/)
+
+TOOL_VERSIONS_FILE=".tool-versions"
+PACKAGE_JSON="package.json"
+readonly TOOL_VERSIONS_FILE PACKAGE_JSON SCAN_PATHS
+
+drift_rows=()
+
+function record_drift() {
+  local category="${1}" name="${2}" current="${3}" latest="${4}" location="${5}"
+  drift_rows+=("${category}|${name}|${current}|${latest}|${location}")
+}
+
+function github_latest_release() {
+  local repo="${1}"
+  gh api "repos/${repo}/releases/latest" --jq '.tag_name' 2> /dev/null || true
+}
+
+# 1. Node.js LTS in .tool-versions
+
+function audit_node() {
+  if [[ ! -f "${TOOL_VERSIONS_FILE}" ]]; then
+    return
+  fi
+
+  local current latest
+  current=$(awk '/^nodejs / {print $2; exit}' "${TOOL_VERSIONS_FILE}")
+  if [[ -z "${current}" ]]; then
+    return
+  fi
+
+  latest=$(curl -fsSL https://nodejs.org/dist/index.json 2> /dev/null \
+    | jq -r 'first(.[] | select(.lts != false)) | .version' \
+    | sed 's/^v//')
+  if [[ -z "${latest}" ]]; then
+    return
+  fi
+
+  if [[ "${current}" != "${latest}" ]]; then
+    record_drift "Node.js" "nodejs (LTS)" "${current}" "${latest}" "${TOOL_VERSIONS_FILE}"
+  fi
+}
+
+# 2. Yarn version in package.json packageManager
+
+function audit_yarn() {
+  if [[ ! -f "${PACKAGE_JSON}" ]]; then
+    return
+  fi
+
+  local declaration current latest
+  declaration=$(jq -r '.packageManager // empty' "${PACKAGE_JSON}")
+  if [[ ! "${declaration}" =~ ^yarn@([0-9.]+) ]]; then
+    return
+  fi
+  current="${BASH_REMATCH[1]}"
+
+  latest=$(curl -fsSL https://repo.yarnpkg.com/tags 2> /dev/null \
+    | jq -r '.latest.stable // empty')
+  if [[ -z "${latest}" ]]; then
+    return
+  fi
+
+  if [[ "${current}" != "${latest}" ]]; then
+    record_drift "Yarn" "yarn (Corepack)" "${current}" "${latest}" "${PACKAGE_JSON}"
+  fi
+}
+
+# 3. SHA-pinned third-party action refs
+
+function audit_actions() {
+  declare -A seen=()
+  local line repo current latest
+  while IFS= read -r line; do
+    if [[ "${line}" =~ ([a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+)(/[^@]*)?@[a-f0-9]{40}[[:space:]]+#[[:space:]]+(v?[0-9]+(\.[0-9]+)*) ]]; then
+      repo="${BASH_REMATCH[1]}"
+      current="${BASH_REMATCH[3]}"
+      if [[ -n "${seen[${repo}]:-}" ]]; then
+        continue
+      fi
+      seen[${repo}]=1
+      latest=$(github_latest_release "${repo}")
+      if [[ -n "${latest}" && "${latest#v}" != "${current#v}" ]]; then
+        record_drift "Actions" "${repo}" "${current}" "${latest}" "scan paths"
+      fi
+    fi
+  done < <(grep -rhE 'uses:[[:space:]]+[a-zA-Z0-9._/-]+@[a-f0-9]{40}' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+}
+
+# 4. npx <tool>@<version> pins
+
+function npm_latest() {
+  local pkg="${1}"
+  curl -fsSL "https://registry.npmjs.org/${pkg}/latest" 2> /dev/null | jq -r '.version // empty'
+}
+
+function audit_npx_pins() {
+  declare -A seen=()
+  local line pkg current latest
+  while IFS= read -r line; do
+    if [[ "${line}" =~ npx[[:space:]]+(@?[a-zA-Z0-9._/-]+)@([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+      pkg="${BASH_REMATCH[1]}"
+      current="${BASH_REMATCH[2]}"
+      if [[ -n "${seen[${pkg}]:-}" ]]; then
+        continue
+      fi
+      seen[${pkg}]=1
+      latest=$(npm_latest "${pkg}")
+      if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
+        record_drift "npx pin" "${pkg}" "${current}" "${latest}" "scan paths"
+      fi
+    fi
+  done < <(grep -rhE 'npx[[:space:]]+@?[a-zA-Z0-9._/-]+@[0-9]+\.[0-9]+\.[0-9]+' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+}
+
+# 5. go install <path>@v<version> pins for known tools
+#
+# REPLACE: extend path_to_repo with the install paths the consuming repo uses.
+# Maps go-install paths to a GitHub repo whose latest release is the
+# upstream-of-record. Unknown paths are skipped.
+
+function audit_go_install_pins() {
+  declare -A path_to_repo=(
+    ['github.com/golangci/golangci-lint/v2/cmd/golangci-lint']='golangci/golangci-lint'
+    ['golang.org/x/vuln/cmd/govulncheck']='golang/vuln'
+    ['github.com/goreleaser/goreleaser/v2']='goreleaser/goreleaser'
+    ['github.com/rhysd/actionlint/cmd/actionlint']='rhysd/actionlint'
+    ['mvdan.cc/sh/v3/cmd/shfmt']='mvdan/sh'
+  )
+  declare -A seen=()
+  local line install_path current repo latest
+  while IFS= read -r line; do
+    if [[ "${line}" =~ go[[:space:]]install[[:space:]]+([a-zA-Z0-9./-]+)@(v[0-9]+(\.[0-9]+)*) ]]; then
+      install_path="${BASH_REMATCH[1]}"
+      current="${BASH_REMATCH[2]}"
+      repo="${path_to_repo[${install_path}]:-}"
+      if [[ -z "${repo}" ]]; then
+        continue
+      fi
+      if [[ -n "${seen[${install_path}]:-}" ]]; then
+        continue
+      fi
+      seen[${install_path}]=1
+      latest=$(github_latest_release "${repo}")
+      if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
+        record_drift "go install" "${install_path}" "${current}" "${latest}" "scan paths"
+      fi
+    fi
+  done < <(grep -rhE 'go install [a-zA-Z0-9./-]+@v[0-9]+' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+}
+
+# 6. cargo install --version <X> <crate> pins
+
+function crates_io_latest() {
+  local crate="${1}"
+  curl -fsSL "https://crates.io/api/v1/crates/${crate}" 2> /dev/null | jq -r '.crate.max_stable_version // empty'
+}
+
+function audit_cargo_install_pins() {
+  declare -A seen=()
+  local line current crate latest
+  while IFS= read -r line; do
+    if [[ "${line}" =~ cargo[[:space:]]install[[:space:]]+(--locked[[:space:]]+)?--version[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)[[:space:]]+([a-zA-Z0-9_-]+) ]]; then
+      current="${BASH_REMATCH[2]}"
+      crate="${BASH_REMATCH[3]}"
+      if [[ -n "${seen[${crate}]:-}" ]]; then
+        continue
+      fi
+      seen[${crate}]=1
+      latest=$(crates_io_latest "${crate}")
+      if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
+        record_drift "cargo install" "${crate}" "${current}" "${latest}" "scan paths"
+      fi
+    fi
+  done < <(grep -rhE 'cargo install (--locked )?--version [0-9]+\.[0-9]+' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+}
+
+# 7. pip / uv install <pkg>==<X> pins
+
+function pypi_latest() {
+  local pkg="${1}"
+  curl -fsSL "https://pypi.org/pypi/${pkg}/json" 2> /dev/null | jq -r '.info.version // empty'
+}
+
+function audit_pip_install_pins() {
+  declare -A seen=()
+  local line pkg current latest
+  while IFS= read -r line; do
+    if [[ "${line}" =~ \'?([a-zA-Z0-9_-]+)==([0-9]+(\.[0-9]+)*)\'? ]]; then
+      pkg="${BASH_REMATCH[1]}"
+      current="${BASH_REMATCH[2]}"
+      if [[ -n "${seen[${pkg}]:-}" ]]; then
+        continue
+      fi
+      seen[${pkg}]=1
+      latest=$(pypi_latest "${pkg}")
+      if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
+        record_drift "pip / uv install" "${pkg}" "${current}" "${latest}" "scan paths"
+      fi
+    fi
+  done < <(grep -rhE '(pip install|uv (pip install|add( --dev)?)) +.[a-zA-Z0-9_-]+==[0-9]' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+}
+
+# Print Markdown report
+
+function print_report() {
+  if ((${#drift_rows[@]} == 0)); then
+    return
+  fi
+
+  printf '<!-- version-audit -->\n\n'
+  printf '## Version drift\n\n'
+  printf 'Surfaces that Dependabot does not cover have drifted from upstream. Each row lists the current pinned version and the latest available.\n\n'
+  printf '| Category | Name | Current | Latest | Location |\n'
+  printf '| --- | --- | --- | --- | --- |\n'
+
+  local row category name current latest location
+  for row in "${drift_rows[@]}"; do
+    IFS='|' read -r category name current latest location <<< "${row}"
+    printf '| %s | `%s` | `%s` | `%s` | %s |\n' \
+      "${category}" "${name}" "${current}" "${latest}" "${location}"
+  done
+
+  printf '\n---\n_Generated by `bin/version-audit`._\n'
+}
+
+# REPLACE: drop audit_* calls for surfaces the consuming repo does not use.
+audit_node
+audit_yarn
+audit_actions
+audit_npx_pins
+audit_go_install_pins
+audit_cargo_install_pins
+audit_pip_install_pins
+print_report

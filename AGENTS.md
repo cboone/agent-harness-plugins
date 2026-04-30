@@ -202,6 +202,24 @@ cboone-cc-plugins/
     │               │   └── testing.md
     │               └── essential/
     │                   └── checklist.md
+    ├── pin-everything/              # Supply-chain version pinning skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── pin-everything/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── checklist.md
+    │               ├── dependabot.md
+    │               ├── github-actions.md
+    │               ├── install-commands.md
+    │               ├── language-runtimes.md
+    │               ├── version-audit.md
+    │               ├── yarn-corepack.md
+    │               └── scripts/
+    │                   ├── version-audit-template
+    │                   └── version-audit-workflow-template.yml
     ├── pr/                          # Commit, push, and create PR skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

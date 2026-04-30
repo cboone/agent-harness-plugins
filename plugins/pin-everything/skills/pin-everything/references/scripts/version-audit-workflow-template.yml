@@ -1,0 +1,94 @@
+# Template for .github/workflows/version-audit.yml. Runs bin/version-audit
+# weekly and manages a single labeled issue with the drift report.
+#
+# This file is a TEMPLATE consumed by the pin-everything skill. The skill reads
+# it, refreshes the actions/checkout SHA against current upstream, and writes
+# the result to the consuming repo's .github/workflows/version-audit.yml.
+
+name: Version audit
+
+on:
+  schedule:
+    - cron: "0 12 * * 1" # Mondays at 12:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: version-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Audit pinned versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE_TITLE: "Version audit: drift detected"
+      ISSUE_LABEL: version-audit
+    steps:
+      # REPLACE: refresh this SHA against current actions/checkout latest before
+      # writing the workflow into the consuming repo. The skill's "Refresh own
+      # SHAs at scaffold time" section in SKILL.md covers the lookup pattern.
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Ensure label exists
+        run: |
+          gh label create "${ISSUE_LABEL}" \
+            --description "Drift report from bin/version-audit" \
+            --color BFD4F2 \
+            --force
+
+      - name: Run audit
+        id: audit
+        run: |
+          report="$(bin/version-audit)"
+          {
+            echo "report<<AUDIT_REPORT_EOF"
+            printf '%s\n' "${report}"
+            echo "AUDIT_REPORT_EOF"
+          } >> "${GITHUB_OUTPUT}"
+          if [[ -n "${report}" ]]; then
+            echo "has_drift=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "has_drift=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Find existing audit issue
+        id: existing
+        run: |
+          number="$(gh issue list \
+            --label "${ISSUE_LABEL}" \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')"
+          echo "number=${number}" >> "${GITHUB_OUTPUT}"
+
+      - name: Open or update issue
+        if: steps.audit.outputs.has_drift == 'true'
+        env:
+          REPORT: ${{ steps.audit.outputs.report }}
+          EXISTING: ${{ steps.existing.outputs.number }}
+        run: |
+          body_file="$(mktemp)"
+          printf '%s\n' "${REPORT}" > "${body_file}"
+          if [[ -n "${EXISTING}" ]]; then
+            gh issue edit "${EXISTING}" --body-file "${body_file}"
+            echo "Updated issue #${EXISTING}"
+          else
+            gh issue create \
+              --title "${ISSUE_TITLE}" \
+              --label "${ISSUE_LABEL}" \
+              --body-file "${body_file}"
+          fi
+
+      - name: Close stale audit issue
+        if: steps.audit.outputs.has_drift == 'false' && steps.existing.outputs.number != ''
+        env:
+          EXISTING: ${{ steps.existing.outputs.number }}
+        run: |
+          gh issue close "${EXISTING}" \
+            --comment "Drift cleared. Closed automatically by version-audit workflow."
