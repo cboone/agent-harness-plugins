@@ -101,7 +101,7 @@ The CI templates read language runtime versions from a project-owned version fil
 Before writing the CI workflow, check for the relevant version file and create or update it as needed. Latest LTS / stable lookups:
 
 - Node.js LTS: `curl -s https://nodejs.org/dist/index.json | jq -r 'first(.[] | select(.lts != false)) | .version' | sed 's/^v//'`
-- Latest stable Ruby: `gh api repos/ruby/ruby/releases --jq 'first(.[] | select(.prerelease == false)) | .tag_name'`
+- Latest stable Ruby: `gh api repos/ruby/ruby/releases --jq 'first(.[] | select(.prerelease == false)) | .tag_name' | sed 's/^v//; s/_/./g'` (Ruby tags use both `v3.4.0` and `v3_4_0` forms; the trailing `sed` normalizes them to the dotted format `.tool-versions` expects)
 
 All templates share:
 
