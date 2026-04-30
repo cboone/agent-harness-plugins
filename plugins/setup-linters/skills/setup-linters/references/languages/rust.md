@@ -22,7 +22,7 @@ rustup component add rustfmt
 cargo install --locked --version 0.19.4 cargo-deny
 ```
 
-Or install via `taiki-e/install-action@cargo-deny` in CI.
+Or install via `taiki-e/install-action@b651345a718c8f44efa2460560b3dbf29cbd7ee1 # v2.75.26` (with `tool: cargo-deny`) in CI.
 
 ### typos
 
@@ -30,7 +30,7 @@ Or install via `taiki-e/install-action@cargo-deny` in CI.
 cargo install --locked --version 1.45.2 typos-cli
 ```
 
-Or use the `crate-ci/typos@v1` GitHub Action in CI.
+Or use the `crate-ci/typos@7c572958218557a3272c2d6719629443b5cc26fd # v1.45.2` GitHub Action in CI.
 
 ## Config
 
