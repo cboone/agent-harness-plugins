@@ -17,10 +17,14 @@ The ToC is at the top of the file, organized by type and subcategory. Each entry
 [Skill D](#skill-d)
 <br>Code Quality:
 [Skill E](#skill-e)
-<br>Scaffolding:
+<br>Writing:
 [Skill F](#skill-f)
-<br>Agents:
+<br>Scaffolding:
 [Skill G](#skill-g)
+<br>CI and Release:
+[Skill H](#skill-h)
+<br>Agents:
+[Skill I](#skill-i)
 
 **Hooks**
 <br>Security:
@@ -33,7 +37,7 @@ Format rules:
 
 - **One entry per line.** This is critical for avoiding merge conflicts.
 - **Skills** and **Hooks** are separated by a blank line.
-- Skills are grouped into subcategories: Git, Issues and Worktrees, Code Review, Code Quality, Scaffolding, Agents.
+- Skills are grouped into subcategories: Git, Issues and Worktrees, Code Review, Code Quality, Writing, Scaffolding, CI and Release, Agents.
 - Hooks are grouped into subcategories: Security, Workflow.
 - Subcategory labels use `<br>Name:` format (plain text with trailing colon) on their own line.
 - The first link in each subcategory has no leading middle dot; subsequent links start with `∙` (middle dot, space).
