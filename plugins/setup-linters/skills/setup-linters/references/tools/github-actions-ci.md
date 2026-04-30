@@ -384,6 +384,36 @@ jobs:
         run: swiftformat --lint .
 ```
 
+### Lean
+
+Lean projects use `leanprover/lean-action`, which runs `lake build`, `lake test`, and (with `lint: true`) `lake lint` in a single composite action. There is no separate "Lean lint" workflow; the lint step is one input to the same action that handles build and test.
+
+This skill does not synthesize a Lean CI workflow from scratch; that is the Lean scaffolder's job. The patch this skill makes is enabling the `lint: true` input on an already-present `leanprover/lean-action` step:
+
+```yaml
+- uses: leanprover/lean-action@<sha> # <tag>
+  with:
+    test: true
+    lint: true
+```
+
+If the project deliberately splits build, test, and lint into separate jobs, recommend a dedicated step instead of toggling `lint: true`:
+
+```yaml
+- name: Lean lint
+  run: lake lint
+```
+
+The `lake lint` step requires Mathlib's prebuilt artifacts to be on disk, so the bootstrap step (`bin/bootstrap-worktree` or the equivalent `lake exe cache get` invocation) must run first. `leanprover/lean-action` handles this internally; a hand-rolled split workflow has to handle it explicitly.
+
+Refresh the SHA and tag for `leanprover/lean-action` to current latest before emitting:
+
+```bash
+TAG="$(gh release view --repo leanprover/lean-action --json tagName --jq '.tagName')"
+SHA="$(gh api "repos/leanprover/lean-action/commits/${TAG}" --jq '.sha')"
+echo "${SHA} # ${TAG}"
+```
+
 ### Markdown
 
 ```yaml
