@@ -53,6 +53,24 @@ This command **sources the file**, which means:
 
 Review the file's contents before running this check on untrusted scripts. For files with significant side effects, consider extracting functions into a separate file for testing, or skip this check.
 
+## SKIP_SETOPT_CHECK
+
+Because this step is the only part of the pipeline that executes code, generated `check-zsh.zsh` scripts (and any wrapper invoking this check) should honor a `SKIP_SETOPT_CHECK=1` opt-out:
+
+```zsh
+if [[ "${SKIP_SETOPT_CHECK:-}" == "1" ]]; then
+  print "==> setopt warnings: skipped (SKIP_SETOPT_CHECK=1)"
+else
+  # run the setopt check
+fi
+```
+
+Design rationale:
+
+- **Opt-out, not opt-in**: The check is a core part of the 7-tool pipeline and runs by default during local development. Do not invert this to require an opt-in flag.
+- **CI compatibility**: The `setup-ci` zsh CI workflow template sets `SKIP_SETOPT_CHECK: "1"` in the job `env` to keep lint jobs purely static analysis. Generated check scripts must honor this env var to interoperate.
+- **Local override**: Users with significant side effects in their scripts (or sandboxed environments) can also set `SKIP_SETOPT_CHECK=1` interactively.
+
 ## Notes
 
 - Most useful for library-style zsh scripts with multiple functions.

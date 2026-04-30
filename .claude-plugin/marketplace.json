@@ -119,7 +119,7 @@
       "name": "check-zsh-scripts",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/check-zsh-scripts",
-      "version": "2.1.1"
+      "version": "2.1.2"
     },
     {
       "author": {

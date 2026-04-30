@@ -132,6 +132,18 @@ zsh -c 'emulate -L zsh; setopt warn_create_global warn_nested_var; source <file>
 
 This sources the file, so review its contents for side effects first. For `.zshrc` and similar config files that intentionally set global state, many warnings are expected. Note this context when reporting.
 
+Because this step executes code (it is not purely static analysis), generated `check-zsh.zsh` scripts and any wrapper that runs this check should support a `SKIP_SETOPT_CHECK=1` opt-out. The check runs by default during local development; CI workflows set `SKIP_SETOPT_CHECK=1` to keep lint jobs purely static. Use the guard pattern:
+
+```zsh
+if [[ "${SKIP_SETOPT_CHECK:-}" == "1" ]]; then
+  print "==> setopt warnings: skipped (SKIP_SETOPT_CHECK=1)"
+else
+  # run the setopt check
+fi
+```
+
+The `setup-ci` zsh CI template sets `SKIP_SETOPT_CHECK: "1"` in the workflow `env`, so generated check scripts must honor this env var to interoperate with that template.
+
 See `./references/tools/setopt-warnings.md`.
 
 #### 3g. Shell Formatting
@@ -197,4 +209,4 @@ rm -f <file>.zwc
 - **shellcheck excessive false positives**: If more than half the output is filtered, note this and suggest focusing on native zsh tools.
 - **setopt warnings in config files**: For `.zshrc`, `.zshenv`, and similar files that set global state by design, note that `warn_create_global` warnings are expected.
 - **shfmt parse error**: If shfmt cannot parse a zsh-specific construct, skip that file. The parse error is informational, not a bug in the script.
-- **Source side effects**: Before running the setopt check (step 3f), review the file for commands that modify state. Skip this check for files with significant side effects if the user prefers.
+- **Source side effects**: Before running the setopt check (step 3f), review the file for commands that modify state. Skip this check for files with significant side effects if the user prefers, or set `SKIP_SETOPT_CHECK=1` to disable the step in generated check scripts.
