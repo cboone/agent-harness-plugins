@@ -91,7 +91,9 @@ BODY_CONTENT
 
 ### 5. Create the Worktree
 
-Use the Write tool to create a temporary prompt file at `/tmp/workmux-prompt-BRANCH_NAME.md` with the composed prompt from step 4. Using the Write tool avoids shell escaping issues with arbitrary issue body content.
+Derive a filesystem-safe name from the branch by replacing `/` with `-`. For example, `feature/add-dark-mode` becomes `feature-add-dark-mode`. This `SAFE_NAME` is used only for the temporary prompt file path; pass the original `BRANCH_NAME` (with the slash) to `launch-workmux`.
+
+Use the Write tool to create a temporary prompt file at `/tmp/workmux-prompt-SAFE_NAME.md` with the composed prompt from step 4. Using the Write tool avoids shell escaping issues with arbitrary issue body content. Substituting the unsanitized `BRANCH_NAME` would cause the `Write` tool to treat the slash as a directory separator, creating a stray subdirectory under `/tmp/`.
 
 **Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. The `launch-workmux` script handles backgrounding, detaching, waiting, and outputting the log.
 
@@ -104,7 +106,7 @@ In the example below, `SCRIPTS_DIR/launch-workmux` is a placeholder for the scri
 Do not specify a `--base` branch. Let `workmux` use its default.
 
 ```bash
-bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" "/tmp/workmux-prompt-BRANCH_NAME.md"
+bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" "/tmp/workmux-prompt-SAFE_NAME.md"
 ```
 
 The script outputs the workmux log directly and cleans up its own log file. Verify success:
@@ -116,7 +118,7 @@ git worktree list
 If the log shows success and the worktree appears in the list, clean up the prompt file:
 
 ```bash
-rm -f /tmp/workmux-prompt-BRANCH_NAME.md
+rm -f /tmp/workmux-prompt-SAFE_NAME.md
 ```
 
 If the log shows an error (e.g., "Failed to read prompt file"), the prompt file may have been deleted too early or another issue occurred. Check the log output for details.
