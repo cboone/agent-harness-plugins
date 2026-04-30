@@ -40,25 +40,35 @@ Format rules:
 - Skills and hooks are listed alphabetically within their respective groups/subcategories.
 - Anchor links use the kebab-case H3 heading (e.g., `#create-worktree-from-issue`).
 
-### Subcategory Guide
+### Subcategory Guide for Skills
 
-Use this guide to determine which subcategory a new plugin belongs to:
+Use this guide to determine which subcategory a new skill belongs to. Each subcategory maps directly to a marketplace `category` value (kebab-case version of the label). Keep the README ToC subcategory and the marketplace `category` aligned so filtering in either place yields the same grouping.
 
-| Subcategory              | Covers                                                       | Examples                                    |
-| ------------------------ | ------------------------------------------------------------ | ------------------------------------------- |
-| **Git**                  | Commit-to-PR pipeline                                        | commit, merge-main, pr, review-branch       |
-| **Issues and Worktrees** | Multi-agent and issue-driven work                            | create-worktree, suggest-next-issue         |
-| **Code Review**          | Responding to external feedback                              | address-review, resolve-copilot-pr-feedback |
-| **Code Quality**         | Style guides for code, linting, formatting                   | lint-and-fix, write-go-code                 |
-| **Writing**              | Style and structure guides for prose and document artifacts  | write-markdown, write-pandoc-markdown       |
-| **Scaffolding**          | Project and repo setup                                       | scaffold-go-cli, setup-secret-scanning      |
-| **Agents**               | Meta-tools for the agent ecosystem                           | clean-up-agent-config, create-plugin        |
+| Subcategory              | Marketplace category    | Covers                                                       | Examples                                    |
+| ------------------------ | ----------------------- | ------------------------------------------------------------ | ------------------------------------------- |
+| **Git**                  | `git`                   | Commit-to-PR pipeline                                        | commit, merge-main, pr, review-branch, use-git |
+| **Issues and Worktrees** | `issues-and-worktrees`  | Multi-agent and issue-driven work                            | create-worktree, suggest-next-issue         |
+| **Code Review**          | `code-review`           | Responding to external feedback                              | address-review, resolve-copilot-pr-feedback |
+| **Code Quality**         | `code-quality`          | Style guides for code, linting, formatting                   | lint-and-fix, write-go-code                 |
+| **Writing**              | `writing`               | Style and structure guides for prose and document artifacts  | write-markdown, write-pandoc-markdown       |
+| **Scaffolding**          | `scaffolding`           | Project and repo scaffolding                                 | scaffold-go-cli, bootstrap-project          |
+| **CI and Release**       | `ci-and-release`        | CI workflows, installers, release automation, repo audits    | setup-ci, add-goreleaser-homebrew, setup-secret-scanning |
+| **Agents**               | `agents`                | Meta-tools for the agent ecosystem                           | clean-up-agent-config, create-plugin        |
 
 ### Adding a New Skill
 
 1. Insert a new line with `∙ [Skill Name](#skill-name)` in alphabetical order within the appropriate subcategory. If the new entry is the first in its subcategory, omit the leading `∙`.
 1. Add an H3 description section (see below).
 1. Create a per-plugin README (see below).
+
+### Subcategory Guide for Hooks
+
+Use this guide to determine which subcategory a new hook belongs to. Each subcategory maps directly to a marketplace `category` value.
+
+| Subcategory  | Marketplace category | Covers                                | Examples                       |
+| ------------ | -------------------- | ------------------------------------- | ------------------------------ |
+| **Security** | `security`           | Hooks that block dangerous operations | block-rm-rf                    |
+| **Workflow** | `workflow`           | General workflow utility hooks        | notify, update-docs-reminder   |
 
 ### Adding a New Hook
 
