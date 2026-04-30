@@ -171,7 +171,7 @@ Ask whether to create a GitHub Actions workflow. If yes, read `./references/tool
 
 If a CI workflow already exists, offer to add lint steps to it rather than creating a new file.
 
-**Tool dependency verification**: For every tool referenced in Makefile targets, confirm the CI workflow includes a corresponding setup/install step. Common tool-to-action mappings (all third-party `uses:` refs are SHA-pinned with a `# vX.Y.Z` comment per the convention in `./references/tools/github-actions-ci.md`; refresh both SHA and comment to current latest before emitting):
+**Tool dependency verification**: For every tool referenced in Makefile targets, confirm the CI workflow includes a corresponding setup/install step. Common tool-to-action mappings (all third-party `uses:` refs are SHA-pinned with a comment that matches the upstream tag, typically `# vX.Y.Z` but `# X.Y.Z` when upstream omits the `v` prefix, per the convention in `./references/tools/github-actions-ci.md`; refresh both SHA and comment to current latest before emitting):
 
 | Tool          | CI Setup                                                                                                                  |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------- |

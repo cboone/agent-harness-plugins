@@ -555,6 +555,7 @@ Notes:
 - `aarch64-unknown-linux-gnu` cross-compilation requires `gcc-aarch64-linux-gnu` on Ubuntu runners
 - For Rust workspace projects, adjust the `cargo build` command to target the specific binary
 - **Action pinning**: every `uses:` ref (third-party and `cboone/gh-actions`) is pinned to a 40-char commit SHA with a `# vX.Y.Z` comment. Tags are mutable; SHAs are not. The comment lets Dependabot and human reviewers see the intended version. The `cboone/gh-actions` SHAs in the templates rot as new releases ship; refresh them at scaffold time per the note in this skill's SKILL.md.
+- **`dtolnay/rust-toolchain` channel pin**: this action releases through the moving `stable`/`nightly`/`beta` channel aliases rather than SemVer tags, so the comment is `# stable` (or the chosen channel) rather than `# vX.Y.Z`. The SHA is still pinned for security; refresh it manually when you want to pick up a newer Rust toolchain. `bin/version-audit` does not track drift on channel-pinned refs.
 
 #### Reference: Zig Release Workflow
 

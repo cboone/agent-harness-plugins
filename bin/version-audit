@@ -86,7 +86,7 @@ function audit_actions() {
   declare -A seen=()
   local line repo current latest
   while IFS= read -r line; do
-    if [[ "${line}" =~ ([a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+)(/[^@]*)?@[a-f0-9]{40}[[:space:]]+#[[:space:]]+(v[0-9]+(\.[0-9]+)*) ]]; then
+    if [[ "${line}" =~ ([a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+)(/[^@]*)?@[a-f0-9]{40}[[:space:]]+#[[:space:]]+(v?[0-9]+(\.[0-9]+)*) ]]; then
       repo="${BASH_REMATCH[1]}"
       current="${BASH_REMATCH[3]}"
       if [[ -n "${seen[${repo}]:-}" ]]; then
@@ -94,7 +94,7 @@ function audit_actions() {
       fi
       seen[${repo}]=1
       latest=$(github_latest_release "${repo}")
-      if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
+      if [[ -n "${latest}" && "${latest#v}" != "${current#v}" ]]; then
         record_drift "Actions" "${repo}" "${current}" "${latest}" "skill templates"
       fi
     fi
@@ -134,7 +134,7 @@ function audit_npx_pins() {
 
 function audit_go_install_pins() {
   declare -A path_to_repo=(
-    ['github.com/golangci/golangci-lint/cmd/golangci-lint']='golangci/golangci-lint'
+    ['github.com/golangci/golangci-lint/v2/cmd/golangci-lint']='golangci/golangci-lint'
     ['golang.org/x/vuln/cmd/govulncheck']='golang/vuln'
     ['github.com/goreleaser/goreleaser/v2']='goreleaser/goreleaser'
     ['github.com/rhysd/actionlint/cmd/actionlint']='rhysd/actionlint'

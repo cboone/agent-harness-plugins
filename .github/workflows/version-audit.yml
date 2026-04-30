@@ -54,7 +54,7 @@ jobs:
             --label "${ISSUE_LABEL}" \
             --state open \
             --json number \
-            --jq 'first.number // empty')"
+            --jq '.[0].number // empty')"
           echo "number=${number}" >> "${GITHUB_OUTPUT}"
 
       - name: Open or update issue
