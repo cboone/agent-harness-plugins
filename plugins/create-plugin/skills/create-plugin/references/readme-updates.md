@@ -44,16 +44,16 @@ Format rules:
 
 Use this guide to determine which subcategory a new skill belongs to. Each subcategory maps directly to a marketplace `category` value (kebab-case version of the label). Keep the README ToC subcategory and the marketplace `category` aligned so filtering in either place yields the same grouping.
 
-| Subcategory              | Marketplace category    | Covers                                                       | Examples                                    |
-| ------------------------ | ----------------------- | ------------------------------------------------------------ | ------------------------------------------- |
-| **Git**                  | `git`                   | Commit-to-PR pipeline                                        | commit, merge-main, pr, review-branch, use-git |
-| **Issues and Worktrees** | `issues-and-worktrees`  | Multi-agent and issue-driven work                            | create-worktree, suggest-next-issue         |
-| **Code Review**          | `code-review`           | Responding to external feedback                              | address-review, resolve-copilot-pr-feedback |
-| **Code Quality**         | `code-quality`          | Style guides for code, linting, formatting                   | lint-and-fix, write-go-code                 |
-| **Writing**              | `writing`               | Style and structure guides for prose and document artifacts  | write-markdown, write-pandoc-markdown       |
-| **Scaffolding**          | `scaffolding`           | Project and repo scaffolding                                 | scaffold-go-cli, bootstrap-project          |
-| **CI and Release**       | `ci-and-release`        | CI workflows, installers, release automation, repo audits    | setup-ci, add-goreleaser-homebrew, setup-secret-scanning |
-| **Agents**               | `agents`                | Meta-tools for the agent ecosystem                           | clean-up-agent-config, create-plugin        |
+| Subcategory              | Marketplace category   | Covers                                                      | Examples                                                 |
+| ------------------------ | ---------------------- | ----------------------------------------------------------- | -------------------------------------------------------- |
+| **Git**                  | `git`                  | Commit-to-PR pipeline                                       | commit, merge-main, pr, review-branch, use-git           |
+| **Issues and Worktrees** | `issues-and-worktrees` | Multi-agent and issue-driven work                           | create-worktree, suggest-next-issue                      |
+| **Code Review**          | `code-review`          | Responding to external feedback                             | address-review, resolve-copilot-pr-feedback              |
+| **Code Quality**         | `code-quality`         | Style guides for code, linting, formatting                  | lint-and-fix, write-go-code                              |
+| **Writing**              | `writing`              | Style and structure guides for prose and document artifacts | write-markdown, write-pandoc-markdown                    |
+| **Scaffolding**          | `scaffolding`          | Project and repo scaffolding                                | scaffold-go-cli, bootstrap-project                       |
+| **CI and Release**       | `ci-and-release`       | CI workflows, installers, release automation, repo audits   | setup-ci, add-goreleaser-homebrew, setup-secret-scanning |
+| **Agents**               | `agents`               | Meta-tools for the agent ecosystem                          | clean-up-agent-config, create-plugin                     |
 
 ### Adding a New Skill
 
