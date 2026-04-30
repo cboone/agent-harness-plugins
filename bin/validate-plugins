@@ -86,6 +86,16 @@ for ((i = 0; i < marketplace_count; i++)); do
   fi
 done
 
+# ─── 6b. Source paths start with ./ ──────────────────────────────────────────
+
+for ((i = 0; i < marketplace_count; i++)); do
+  entry_name="$(jq -r ".plugins[${i}].name" "${MARKETPLACE}")"
+  entry_source="$(jq -r ".plugins[${i}].source" "${MARKETPLACE}")"
+  if [[ "${entry_source}" != ./* ]]; then
+    error "Marketplace entry '${entry_name}': source '${entry_source}' must start with ./"
+  fi
+done
+
 # ─── 7. Required fields in marketplace entries ───────────────────────────────
 
 MARKETPLACE_REQUIRED_FIELDS=("author" "category" "description" "homepage" "keywords" "license" "name" "repository" "source" "version")
