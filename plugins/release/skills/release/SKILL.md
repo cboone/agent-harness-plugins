@@ -43,11 +43,16 @@ date +%Y-%m-%d
 
 # Check for a release workflow triggered by version tags
 if [ -d .github/workflows ]; then
-  grep -rl '"v\*"' .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null || true
+  for f in .github/workflows/*.yml .github/workflows/*.yaml; do
+    [ -f "$f" ] || continue
+    if grep -q 'tags:' "$f" && grep -qE "['\"]?v[*[0-9]" "$f"; then
+      echo "$f"
+    fi
+  done
 fi
 ```
 
-If the `grep` returns any files, note that a **release workflow likely exists** that will automatically create a GitHub Release when a version tag is pushed. This detection is best-effort: it may miss workflows that use different quoting (e.g., single quotes around `v*`) or match unrelated workflows. If the detection seems wrong, ask the user to confirm. This flag affects step 11.
+If the loop prints any files, note that a **release workflow likely exists** that will automatically create a GitHub Release when a version tag is pushed. The detection looks for workflow files that contain both a `tags:` trigger and a `v`-prefixed pattern (e.g., `"v*"`, `'v*'`, `"v[0-9]*.[0-9]*.[0-9]*"`, `"v[0-9]+.[0-9]+.[0-9]+"`, or unquoted `v*`). It is best-effort and may match unrelated workflows or miss exotic patterns. If the detection seems wrong, ask the user to confirm. This flag affects step 11.
 
 **Abort conditions:**
 
