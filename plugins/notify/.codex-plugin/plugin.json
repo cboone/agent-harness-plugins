@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Notifies you when Codex finishes a task or needs your attention.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "hooks": "./hooks/codex.hooks.json",
+  "keywords": ["alerts", "macos", "notifications"],
+  "license": "MIT",
+  "name": "notify",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "version": "1.1.0"
+}
