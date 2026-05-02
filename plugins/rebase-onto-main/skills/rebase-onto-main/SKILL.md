@@ -37,7 +37,7 @@ gh repo view --json defaultBranchRef -q '.defaultBranchRef.name'
 git branch --show-current
 
 # Check whether the branch has been pushed to a remote
-git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null
+git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "no upstream"
 ```
 
 If `--base <branch>` was specified, use that value instead of the detected default branch.
@@ -172,13 +172,14 @@ After a successful rebase (with or without conflict resolution):
 
 1. **Push**:
 
-   First decide whether a force push is actually required by comparing the current HEAD against `<pre-rebase-head>` from step 3:
+   First decide whether a force push is actually required. A change in HEAD alone is not enough to conclude that history was rewritten: when the local branch had no commits beyond the base, `git rebase` simply fast-forwards HEAD onto the new tip without rewriting anything. Distinguish the two cases by checking whether `<pre-rebase-head>` from step 3 is still reachable from the post-rebase HEAD:
 
    ```bash
    git rev-parse HEAD
+   git merge-base --is-ancestor <pre-rebase-head> HEAD
    ```
 
-   If the commit hash changed, history was rewritten and any already-published copy of the branch needs a force push. If the hash is unchanged (no-op rebase) or only fast-forwarded onto upstream commits that were already pushed, a normal push is sufficient.
+   If `git merge-base --is-ancestor` exits 0, the pre-rebase commit is an ancestor of the new HEAD, so the rebase was a no-op or a fast-forward and no force push is needed. If it exits non-zero, the original commits are no longer on the branch's history line, so the rebase rewrote history and any already-published copy of the branch must be replaced with a force push.
 
    Choose the push command based on three cases:
 
@@ -188,13 +189,13 @@ After a successful rebase (with or without conflict resolution):
      git push -u origin HEAD
      ```
 
-   - **Upstream exists, HEAD unchanged after rebase** (no-op or fast-forward only, nothing to push): skip the push entirely, or run a plain `git push` if there are local commits ahead of upstream that haven't been pushed yet.
+   - **Upstream exists, no-op or fast-forward only** (`<pre-rebase-head>` is an ancestor of the post-rebase HEAD): history was not rewritten. Skip the push entirely if HEAD is unchanged, or run a plain `git push` if there are local commits ahead of upstream that haven't been pushed yet.
 
      ```bash
      git push
      ```
 
-   - **Upstream exists, HEAD rewritten by rebase**: force-with-lease is required to replace the previously pushed history.
+   - **Upstream exists, history rewritten by rebase** (`<pre-rebase-head>` is no longer an ancestor of the post-rebase HEAD): force-with-lease is required to replace the previously pushed history.
 
      ```bash
      git push --force-with-lease
