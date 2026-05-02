@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Serialize releases on main so two rapid merges cannot race to create the same
+# tag. cancel-in-progress is false because each push may correspond to a
+# distinct catalog state we still want to publish.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Tag and publish catalog state
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Full history lets gh release --generate-notes diff against the
+          # previous tag, and lets git rev-parse resolve refs/tags/* via fetch.
+          fetch-depth: 0
+
+      - name: Compute catalog state
+        id: state
+        run: |
+          tag="$(bin/compute-catalog-state)"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "Catalog state: ${tag}"
+
+      - name: Check whether tag already exists
+        id: check
+        env:
+          TAG: ${{ steps.state.outputs.tag }}
+        run: |
+          # Idempotency guard: re-runs of the same main SHA, no-op merges, and
+          # reverts that land on an already-released catalog state must not
+          # republish. Consult the remote so a tag created by an earlier run of
+          # this workflow is honored even if it is not in the local fetch.
+          if git ls-remote --tags --exit-code origin "refs/tags/${TAG}" > /dev/null 2>&1; then
+            echo "Tag ${TAG} already exists on origin; nothing to do."
+            echo "exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "Tag ${TAG} does not exist; will create."
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Create and push annotated tag
+        if: steps.check.outputs.exists == 'false'
+        env:
+          TAG: ${{ steps.state.outputs.tag }}
+        run: |
+          # Annotated (not signed) tag: Actions does not have access to a GPG
+          # key, and the tag's authenticity is established by the workflow
+          # being the only writer of catalog-* tags on the repository.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG}" -m "${TAG}"
+          git push origin "refs/tags/${TAG}"
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          TAG: ${{ steps.state.outputs.tag }}
+        run: |
+          # --generate-notes uses GitHub's auto-generated notes (commits and
+          # merged PRs since the previous release). The release skill produces
+          # commit-derived notes for local releases; CI uses --generate-notes
+          # to keep the workflow self-contained and avoid duplicating that
+          # logic here.
+          gh release create "${TAG}" \
+            --title "Marketplace ${TAG}" \
+            --generate-notes \
+            --verify-tag
