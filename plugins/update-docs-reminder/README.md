@@ -19,6 +19,12 @@ Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins
 
 Then select **Update Docs Reminder** from the available plugins.
 
+### Using with OpenCode
+
+OpenCode loads the plugin automatically when [`OPENCODE_CONFIG_DIR`](../../README.md#using-with-opencode) is set to this repository's `dist/opencode/` mirror. The TypeScript plugin lives at [`opencode/index.ts`](./opencode/index.ts) and uses the `tool.execute.after` hook with the same skip rules, file patterns, and per-project `.update-docs-reminder.json` schema as the Claude Code version.
+
+OpenCode has no surface comparable to Claude Code's PostToolUse stdout, so the reminder is appended to the bash tool's `output.output` instead. The agent reads it on its next turn, with the same wording and bullet structure.
+
 ## What It Does
 
 Analyzes each git commit for changes that typically require documentation updates and provides specific, actionable reminders. Detects new scripts, CLI flags, directories, dependencies, environment variables, configuration changes, and public API additions, then maps each to the relevant documentation files.
