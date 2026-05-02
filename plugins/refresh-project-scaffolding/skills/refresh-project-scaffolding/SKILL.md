@@ -391,7 +391,7 @@ Must include language-specific entries appropriate for the detected project type
 - Go CLI releases pass `go-version-file: go.mod`
 - Triggers on `push: tags: ["v*"]`
 - Has `permissions: contents: write`
-- Has `concurrency:` group with `cancel-in-progress: false` (never interrupt releases)
+- Has `concurrency:` group with `group: ${{ github.repository }}-${{ github.workflow }}` and `cancel-in-progress: false` (never interrupt releases)
 - The reusable workflow handles checkout with `fetch-depth: 0`, Go setup, GoReleaser installation, and release execution internally
 
 ### Checks for .goreleaser.yml
