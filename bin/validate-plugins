@@ -3,13 +3,20 @@
 set -euo pipefail
 
 MARKETPLACE=".claude-plugin/marketplace.json"
-readonly MARKETPLACE
+CODEX_MARKETPLACE=".agents/plugins/marketplace.json"
+CODEX_DIST_DIR="dist/codex"
+CODEX_SKILL_DESCRIPTION_BUDGET="${CODEX_SKILL_DESCRIPTION_BUDGET:-12000}"
+readonly MARKETPLACE CODEX_MARKETPLACE CODEX_DIST_DIR CODEX_SKILL_DESCRIPTION_BUDGET
 
 errors=0
 
 function error() {
   echo "::error::$1"
   errors=$((errors + 1))
+}
+
+function warning() {
+  echo "::warning::$1"
 }
 
 # ─── 1. Every plugin directory has plugin.json ───────────────────────────────
@@ -246,6 +253,139 @@ for dir in plugins/*/; do
     error "Plugin '${local_name}': .codex-plugin/plugin.json missing non-empty string field 'hooks'"
   fi
 done
+
+# ─── 15. Generated Codex marketplace mirrors the Claude marketplace ─────────
+
+if ! [[ "${CODEX_SKILL_DESCRIPTION_BUDGET}" =~ ^[0-9]+$ ]]; then
+  error "CODEX_SKILL_DESCRIPTION_BUDGET must be an integer"
+fi
+
+if [[ ! -f "${CODEX_MARKETPLACE}" ]]; then
+  error "Codex marketplace '${CODEX_MARKETPLACE}' does not exist; run bin/build-codex-marketplace"
+else
+  claude_plugin_versions="$(jq -r '.plugins[] | "\(.name)\t\(.version)"' "${MARKETPLACE}" | sort)"
+  codex_plugin_versions="$(jq -r '.plugins[] | "\(.name)\t\(.version)"' "${CODEX_MARKETPLACE}" | sort)"
+  if [[ "${claude_plugin_versions}" != "${codex_plugin_versions}" ]]; then
+    error "Codex marketplace plugin set or versions differ from ${MARKETPLACE}"
+  fi
+
+  claude_metadata="$(jq -cS '.metadata' "${MARKETPLACE}")"
+  codex_metadata="$(jq -cS '.metadata' "${CODEX_MARKETPLACE}")"
+  if [[ "${claude_metadata}" != "${codex_metadata}" ]]; then
+    error "Codex marketplace metadata differs from ${MARKETPLACE}"
+  fi
+
+  for ((i = 0; i < marketplace_count; i++)); do
+    entry_name="$(jq -r ".plugins[${i}].name" "${CODEX_MARKETPLACE}")"
+    entry_source="$(jq -r ".plugins[${i}].source" "${CODEX_MARKETPLACE}")"
+    expected_source="./dist/codex/plugins/${entry_name}"
+    if [[ "${entry_source}" != "${expected_source}" ]]; then
+      error "Codex marketplace entry '${entry_name}': source '${entry_source}' must be '${expected_source}'"
+    fi
+  done
+fi
+
+# ─── 16. Generated Codex plugin roots are current ───────────────────────────
+
+function validate_codex_generated_output() {
+  local expected_root expected_marketplace expected_dist
+  expected_root="$(mktemp -d "${TMPDIR:-/tmp}/codex-marketplace.XXXXXX")"
+  expected_marketplace="${expected_root}/.agents/plugins/marketplace.json"
+  expected_dist="${expected_root}/dist/codex"
+
+  if ! env CODEX_MARKETPLACE="${expected_marketplace}" CODEX_DIST_DIR="${expected_dist}" bin/build-codex-marketplace > /dev/null; then
+    error "Could not regenerate Codex marketplace for validation"
+    rm -r "${expected_root}"
+    return
+  fi
+
+  if [[ ! -f "${CODEX_MARKETPLACE}" ]]; then
+    error "Codex marketplace '${CODEX_MARKETPLACE}' does not exist; run bin/build-codex-marketplace"
+  elif ! diff -q "${expected_marketplace}" "${CODEX_MARKETPLACE}" > /dev/null; then
+    error "Codex marketplace '${CODEX_MARKETPLACE}' is out of date; run bin/build-codex-marketplace"
+  fi
+
+  if [[ ! -d "${CODEX_DIST_DIR}" ]]; then
+    error "Codex distribution '${CODEX_DIST_DIR}' does not exist; run bin/build-codex-marketplace"
+  elif ! diff -qr "${expected_dist}" "${CODEX_DIST_DIR}" > /dev/null; then
+    error "Codex distribution '${CODEX_DIST_DIR}' is out of date; run bin/build-codex-marketplace"
+  fi
+
+  rm -r "${expected_root}"
+}
+
+validate_codex_generated_output
+
+# ─── 17. Generated Codex skill descriptions stay within Codex limits ───────
+
+function frontmatter_description() {
+  local file="${1}"
+
+  awk '
+    NR == 1 && $0 == "---" {
+      in_frontmatter = 1
+      next
+    }
+
+    in_frontmatter && collecting {
+      if ($0 ~ /^[[:space:]]+/) {
+        line = $0
+        sub(/^[[:space:]]+/, "", line)
+        description = description (description == "" ? "" : " ") line
+        next
+      }
+      printed = 1
+      print description
+      exit
+    }
+
+    in_frontmatter && $0 ~ /^description:/ {
+      line = $0
+      sub(/^description:[[:space:]]*/, "", line)
+      if (line ~ /^[>|][-+]?[[:space:]]*$/) {
+        collecting = 1
+        next
+      }
+      printed = 1
+      print line
+      exit
+    }
+
+    in_frontmatter && $0 == "---" {
+      exit
+    }
+
+    END {
+      if (collecting && !printed) {
+        print description
+      }
+    }
+  ' "${file}"
+}
+
+total_codex_description_length=0
+for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
+  if [[ ! -f "${skill_md}" ]]; then
+    continue
+  fi
+
+  description="$(frontmatter_description "${skill_md}")"
+  description_length="${#description}"
+  total_codex_description_length=$((total_codex_description_length + description_length))
+
+  if [[ -z "${description}" ]]; then
+    error "Generated Codex skill '${skill_md}' has an empty description"
+  fi
+  if [[ ${description_length} -gt 1024 ]]; then
+    error "Generated Codex skill '${skill_md}' description is ${description_length} characters, exceeding Codex's 1024-character limit"
+  elif [[ ${description_length} -gt 320 ]]; then
+    warning "Generated Codex skill '${skill_md}' description is ${description_length} characters; prefer 320 or fewer"
+  fi
+done
+
+if [[ "${CODEX_SKILL_DESCRIPTION_BUDGET}" =~ ^[0-9]+$ ]] && [[ ${total_codex_description_length} -gt ${CODEX_SKILL_DESCRIPTION_BUDGET} ]]; then
+  error "Generated Codex skill descriptions total ${total_codex_description_length} characters, exceeding budget ${CODEX_SKILL_DESCRIPTION_BUDGET}"
+fi
 
 # ─── Summary ────────────────────────────────────────────────────────────────
 
