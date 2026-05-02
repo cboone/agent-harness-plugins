@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Assess every version reference in a repository, evaluate available upgrades with repo-specific risk and reward, and present selectable upgrade options.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["dependencies", "maintenance", "risk", "upgrades", "versioning"],
+  "license": "MIT",
+  "name": "upgrade-everything",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

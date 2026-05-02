@@ -427,6 +427,17 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── update-review/
     │           └── SKILL.md
+    ├── upgrade-everything/          # Risk/reward upgrade audit skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── upgrade-everything/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── risk-reward.md
+    │               ├── upgrade-sources.md
+    │               └── version-surfaces.md
     ├── write-latex/                 # LaTeX typesetting style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

@@ -55,6 +55,8 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Setup CI](#setup-ci)
 ∙ [Setup Installers](#setup-installers)
 ∙ [Setup Secret Scanning](#setup-secret-scanning)
+∙ [Update Everything](#update-everything)
+∙ [Upgrade Everything](#upgrade-everything)
 <br>Agents:
 [Clean Up Agent Config](#clean-up-agent-config)
 ∙ [Create Plugin](#create-plugin)
@@ -451,6 +453,20 @@ Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and
 
 > **Trigger:** `/setup-secret-scanning`
 > **Details:** [README](./plugins/setup-secret-scanning/README.md)
+
+#### Update Everything
+
+Audit a repository against the latest plugin templates and update anything out of date. The maintenance companion to Bootstrap Project: bootstrap sets things up, this keeps them current. Detects which tools have been used, compares files against current templates, presents a plan, and applies confirmed updates.
+
+> **Trigger:** `/update-everything`
+> **Details:** [README](./plugins/update-everything/README.md)
+
+#### Upgrade Everything
+
+Assess every version reference in a repository, resolve current upstream versions, and present a risk/reward upgrade plan that includes every discovered upgrade candidate. Applies only the upgrades the user explicitly selects, preserving each ecosystem's normal update mechanism.
+
+> **Trigger:** `/upgrade-everything` (also activates automatically)
+> **Details:** [README](./plugins/upgrade-everything/README.md)
 
 ### Agents
 
