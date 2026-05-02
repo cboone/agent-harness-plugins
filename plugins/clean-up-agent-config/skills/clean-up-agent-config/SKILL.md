@@ -31,6 +31,10 @@ The goal is a hub-and-spoke model: shared instructions in one canonical file, to
 
 ### Instruction files (the hub)
 
+Pick **one** scoped-instructions layout per repo. The two layouts below are mutually exclusive alternatives, not files that should coexist.
+
+**Flat layout** (convenient for one or two scoped files):
+
 ```text
 repo/
 +-- AGENTS.md                              # Single source of truth (all tools)
@@ -40,12 +44,25 @@ repo/
 |       +-- *.md                           # Claude-specific rules (auto-loaded)
 +-- .github/
     +-- copilot-instructions.md            # Copilot repo-wide review rules
-    +-- *.instructions.md                  # Copilot path-scoped rules (flat layout)
-    +-- instructions/
-        +-- *.instructions.md              # Copilot path-scoped rules (subdir layout)
+    +-- *.instructions.md                  # Copilot path-scoped rules
 ```
 
-Either flat (`.github/<scope>.instructions.md`) or nested (`.github/instructions/<scope>.instructions.md`) layout works. Both are read by Copilot and both honor `applyTo` frontmatter. Pick one and stick with it per repo. The flat layout is convenient for repos with one or two scoped files; the nested layout scales better when there are many scoped files or when the team wants to keep `.github/` uncluttered.
+**Nested layout** (scales better when there are many scoped files, or to keep `.github/` uncluttered):
+
+```text
+repo/
++-- AGENTS.md                              # Single source of truth (all tools)
++-- CLAUDE.md -> AGENTS.md                 # Symlink for Claude Code
++-- .claude/
+|   +-- rules/
+|       +-- *.md                           # Claude-specific rules (auto-loaded)
++-- .github/
+    +-- copilot-instructions.md            # Copilot repo-wide review rules
+    +-- instructions/
+        +-- *.instructions.md              # Copilot path-scoped rules
+```
+
+Both are read by Copilot and both honor `applyTo` frontmatter. Choose based on how many scoped files the repo needs and stick with that choice; do not mix the two.
 
 ### Config files (the spokes)
 
@@ -282,10 +299,12 @@ For full project conventions, see AGENTS.md in the repository root.
 
 ## Scoped Instructions
 
-Path-scoped Copilot instructions live alongside this file:
+Flat-layout example -- path-scoped Copilot instructions live alongside this file:
 
 - [`lean.instructions.md`](lean.instructions.md) -- Lean source files (`**/*.lean`).
 - [`ts.instructions.md`](ts.instructions.md) -- TypeScript files (`**/*.ts`, `**/*.tsx`).
+
+If the repo uses the nested layout under `.github/instructions/`, link to `instructions/lean.instructions.md` and `instructions/ts.instructions.md` instead.
 
 ## PR Review
 
