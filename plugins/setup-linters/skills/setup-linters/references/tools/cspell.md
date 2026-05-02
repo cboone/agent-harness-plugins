@@ -90,6 +90,7 @@ Create `cspell.jsonc` in the project root:
     ".git/",
     ".lake/**",
     "references/papers/**",
+    "references/papers.bib",
     "references/transcriptions/**",
     "docs/plans/done/**",
   ],
@@ -106,7 +107,7 @@ Create `cspell.jsonc` in the project root:
     "/\\$\\$[\\s\\S]*?\\$\\$/gm", // display math
     "/```\\{=latex\\}[\\s\\S]*?```/gm", // raw LaTeX blocks
     "/`[^`]+`\\{=latex\\}/g", // inline raw LaTeX
-    "/\\[@[\\w;:@\\s,.$^>{}\\\\+:-]+\\]/g", // Pandoc citations
+    "/\\[[^\\]]*@[-\\w:.]+[^\\]]*\\]/g", // Pandoc citations
     "/@[\\w:.-]+/g", // bare citekeys
     "/\\\\[a-zA-Z]+/g", // LaTeX commands
   ],
