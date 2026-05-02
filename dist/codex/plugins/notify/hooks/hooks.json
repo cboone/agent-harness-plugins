@@ -1,0 +1,54 @@
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify 'Claude Code' '' 'Waiting for input…' Ping",
+            "type": "command"
+          }
+        ],
+        "matcher": "idle_prompt"
+      },
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify 'Claude Code' '' 'Needs input…' Ping",
+            "type": "command"
+          }
+        ],
+        "matcher": "elicitation_dialog"
+      },
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify 'Claude Code' '' 'Needs permission…' Ping",
+            "type": "command"
+          }
+        ],
+        "matcher": "permission_prompt"
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify 'Claude Code' '' 'Auto-compacting…' Ping",
+            "type": "command"
+          }
+        ],
+        "matcher": "auto"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify stop",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

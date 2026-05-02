@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+# Regenerates the Codex marketplace and plugin roots from the canonical plugins.
+set -euo pipefail
+
+CLAUDE_MARKETPLACE="${CLAUDE_MARKETPLACE:-.claude-plugin/marketplace.json}"
+CODEX_MARKETPLACE="${CODEX_MARKETPLACE:-.agents/plugins/marketplace.json}"
+CODEX_DIST_DIR="${CODEX_DIST_DIR:-dist/codex}"
+readonly CLAUDE_MARKETPLACE CODEX_MARKETPLACE CODEX_DIST_DIR
+
+errors=0
+
+function error() {
+  echo "::error::$1" >&2
+  errors=$((errors + 1))
+}
+
+function marketplace_value() {
+  local plugin_name="${1}" jq_filter="${2}"
+
+  jq -r --arg name "${plugin_name}" ".plugins[] | select(.name == \$name) | ${jq_filter}" "${CLAUDE_MARKETPLACE}"
+}
+
+function plugin_source_path() {
+  local plugin_name="${1}"
+
+  marketplace_value "${plugin_name}" '(.source | if type == "string" then . else .path end) // empty'
+}
+
+function plugin_description() {
+  local plugin_name="${1}"
+
+  marketplace_value "${plugin_name}" '.description // empty'
+}
+
+function remove_existing_dir() {
+  local path="${1}"
+
+  if [[ ! -e "${path}" ]]; then
+    return
+  fi
+
+  if [[ ! -d "${path}" ]]; then
+    error "Refusing to replace '${path}' because it is not a directory"
+    return
+  fi
+
+  rm -r "${path}"
+}
+
+function rewrite_skill_description() {
+  local skill_md="${1}" description="${2}"
+  local tmp_file
+  tmp_file="$(mktemp "${skill_md}.tmp.XXXXXX")"
+
+  awk -v description="${description}" '
+    function emit_description(raw, words, count, i, word, line) {
+      print "description: >-"
+      count = split(raw, words, /[[:space:]]+/)
+      line = ""
+      for (i = 1; i <= count; i++) {
+        word = words[i]
+        if (word == "") {
+          continue
+        }
+        if (line == "") {
+          line = word
+        } else if (length(line) + 1 + length(word) <= 78) {
+          line = line " " word
+        } else {
+          print "  " line
+          line = word
+        }
+      }
+      if (line != "") {
+        print "  " line
+      }
+    }
+
+    NR == 1 && $0 == "---" {
+      in_frontmatter = 1
+      print
+      next
+    }
+
+    in_frontmatter && skipping_description {
+      if ($0 ~ /^[[:space:]]+/) {
+        next
+      }
+      skipping_description = 0
+    }
+
+    in_frontmatter && $0 ~ /^description:/ {
+      emit_description(description)
+      found_description = 1
+      skipping_description = 1
+      next
+    }
+
+    in_frontmatter && $0 == "---" {
+      in_frontmatter = 0
+      print
+      next
+    }
+
+    { print }
+
+    END {
+      if (!found_description) {
+        exit 2
+      }
+    }
+  ' "${skill_md}" > "${tmp_file}" || {
+    rm "${tmp_file}"
+    error "Skill '${skill_md}' is missing a description field"
+    return
+  }
+
+  mv "${tmp_file}" "${skill_md}"
+}
+
+function rewrite_generated_readme_links() {
+  local readme="${1}"
+
+  if [[ ! -f "${readme}" ]]; then
+    return
+  fi
+
+  perl -0pi -e 's/\]\(\.\.\/\.\.\/README\.md/](..\/..\/..\/..\/README.md/g' "${readme}"
+}
+
+function write_codex_marketplace() {
+  local output_dir
+  output_dir="$(dirname "${CODEX_MARKETPLACE}")"
+  mkdir -p "${output_dir}"
+  cp "${CLAUDE_MARKETPLACE}" "${CODEX_MARKETPLACE}"
+
+  while IFS= read -r plugin_name; do
+    PLUGIN_NAME="${plugin_name}" perl -0pi -e 'my $name = $ENV{"PLUGIN_NAME"}; s/"source": "\.\/plugins\/\Q$name\E"/"source": ".\/dist\/codex\/plugins\/$name"/g' "${CODEX_MARKETPLACE}"
+  done < <(jq -r '.plugins[].name' "${CLAUDE_MARKETPLACE}")
+}
+
+function copy_codex_plugin_roots() {
+  local plugin_name source_path source_dir target_dir description
+
+  remove_existing_dir "${CODEX_DIST_DIR}"
+  if [[ ${errors} -gt 0 ]]; then
+    return
+  fi
+
+  mkdir -p "${CODEX_DIST_DIR}/plugins"
+
+  while IFS= read -r plugin_name; do
+    source_path="$(plugin_source_path "${plugin_name}")"
+    if [[ -z "${source_path}" ]]; then
+      error "Marketplace entry '${plugin_name}' is missing a source path"
+      continue
+    fi
+
+    source_dir="${source_path#./}"
+    if [[ "${source_path}" == "${source_dir}" ]]; then
+      error "Marketplace entry '${plugin_name}' source '${source_path}' must start with ./"
+      continue
+    fi
+    if [[ ! -d "${source_dir}" ]]; then
+      error "Marketplace entry '${plugin_name}' source '${source_path}' does not exist"
+      continue
+    fi
+
+    target_dir="${CODEX_DIST_DIR}/plugins/${plugin_name}"
+    mkdir -p "${target_dir}"
+    cp -R "${source_dir}/." "${target_dir}"
+    rewrite_generated_readme_links "${target_dir}/README.md"
+
+    description="$(plugin_description "${plugin_name}")"
+    if [[ -z "${description}" ]]; then
+      error "Marketplace entry '${plugin_name}' is missing a description"
+      continue
+    fi
+
+    for skill_md in "${target_dir}"/skills/*/SKILL.md; do
+      if [[ ! -f "${skill_md}" ]]; then
+        continue
+      fi
+      rewrite_skill_description "${skill_md}" "${description}"
+    done
+  done < <(jq -r '.plugins[].name' "${CLAUDE_MARKETPLACE}")
+}
+
+function validate_outputs() {
+  local plugin_name expected_source actual_source
+
+  while IFS= read -r plugin_name; do
+    expected_source="./dist/codex/plugins/${plugin_name}"
+    actual_source="$(jq -r --arg name "${plugin_name}" '.plugins[] | select(.name == $name) | .source' "${CODEX_MARKETPLACE}")"
+    if [[ "${actual_source}" != "${expected_source}" ]]; then
+      error "Codex marketplace entry '${plugin_name}' source '${actual_source}' does not match '${expected_source}'"
+    fi
+  done < <(jq -r '.plugins[].name' "${CLAUDE_MARKETPLACE}")
+}
+
+function main() {
+  if [[ ! -f "${CLAUDE_MARKETPLACE}" ]]; then
+    error "Canonical marketplace '${CLAUDE_MARKETPLACE}' does not exist"
+  fi
+
+  if [[ ${errors} -gt 0 ]]; then
+    echo "${errors} validation error(s); refusing to build Codex marketplace." >&2
+    exit 1
+  fi
+
+  write_codex_marketplace
+  copy_codex_plugin_roots
+  validate_outputs
+
+  if [[ ${errors} -gt 0 ]]; then
+    echo "${errors} validation error(s); Codex marketplace build failed." >&2
+    exit 1
+  fi
+
+  echo "Built Codex marketplace at ${CODEX_MARKETPLACE}"
+  echo "Built Codex plugin roots at ${CODEX_DIST_DIR}/plugins"
+}
+
+main "${@}"

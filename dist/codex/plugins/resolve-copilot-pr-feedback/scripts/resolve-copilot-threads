@@ -1,0 +1,389 @@
+#!/usr/bin/env bash
+# resolve-copilot-threads — Fetch, reply to, and resolve Copilot PR review threads
+# Author: Christopher Boone
+# Date: 2026-02-06
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+# =============================================================================
+# Copilot author detection heuristics
+# =============================================================================
+# Author logins matched unconditionally:
+#   - copilot-pull-request-reviewer: Copilot code review bot (primary)
+#   - copilot: Legacy/alternative Copilot login
+#   - github-copilot[bot]: GitHub Copilot bot account
+#
+# Author logins matched with body signature verification:
+#   - github-actions[bot]: Copilot sometimes posts via GitHub Actions;
+#     matched only when the comment body starts with a severity tag
+#     (e.g., [nitpick], [suggestion], [important], [critical], [note])
+# =============================================================================
+readonly COPILOT_DIRECT_LOGINS='["copilot-pull-request-reviewer", "copilot", "github-copilot[bot]"]'
+readonly COPILOT_ACTIONS_LOGIN="github-actions[bot]"
+readonly COPILOT_SEVERITY_PATTERN="^\\s*\\[(nitpick|suggestion|important|critical|note)\\]"
+
+function usage() {
+  cat << USAGE_TEXT
+Usage: ${SCRIPT_NAME} <command> [arguments]
+
+Manage GitHub Copilot PR review threads via GraphQL.
+
+Commands:
+  fetch <owner> <repo> <pr_number>                    Fetch unresolved Copilot threads
+  resolve <thread_id>                                  Resolve a review thread
+  reply <thread_id> [--body-file <path>]               Reply to a review thread
+  reply-and-resolve <thread_id> [--body-file <path>]   Reply and resolve
+
+Options:
+  -h, --help    Show this help
+
+The reply and reply-and-resolve commands read the reply body from --body-file
+or stdin if --body-file is not specified.
+
+Examples:
+  ${SCRIPT_NAME} fetch octocat hello-world 42
+  ${SCRIPT_NAME} resolve PRRT_kwDONZ...
+  echo "Explanation here" | ${SCRIPT_NAME} reply PRRT_kwDONZ...
+  ${SCRIPT_NAME} reply PRRT_kwDONZ... --body-file response.md
+  ${SCRIPT_NAME} reply-and-resolve PRRT_kwDONZ... --body-file response.md
+USAGE_TEXT
+}
+
+function die() {
+  echo "Error: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function check_dependencies() {
+  if ! command -v gh > /dev/null 2>&1; then
+    die "gh (GitHub CLI) is required but not found. Install it: https://cli.github.com"
+  fi
+
+  if ! command -v jq > /dev/null 2>&1; then
+    die "jq is required but not found. Install it: https://jqlang.github.io/jq/download/"
+  fi
+
+  if ! gh auth status > /dev/null 2>&1; then
+    die "Not authenticated with GitHub. Run: gh auth login"
+  fi
+}
+
+# Reads reply body from --body-file argument or stdin.
+# Arguments:
+#   [--body-file <path>] - Read body from file (optional)
+# Outputs:
+#   Reply body text to stdout
+function read_body() {
+  case "$#" in
+    0)
+      cat
+      ;;
+    2)
+      if [[ "$1" != "--body-file" ]]; then
+        die "Invalid argument '$1'. Expected '--body-file <path>' or no arguments."
+      fi
+      if [[ -z "${2:-}" ]]; then
+        die "Missing path after --body-file"
+      fi
+      if [[ ! -f "$2" ]]; then
+        die "File not found: $2"
+      fi
+      cat -- "$2"
+      ;;
+    *)
+      die "Invalid arguments to read_body. Expected no arguments or '--body-file <path>'."
+      ;;
+  esac
+}
+
+# Sends a reply to a review thread via GraphQL mutation.
+# Arguments:
+#   $1 - Thread ID (e.g., PRRT_kwDONZ...)
+#   $2 - Reply body text
+# Outputs:
+#   Comment ID to stdout
+function send_reply() {
+  local thread_id="${1}"
+  local body="${2}"
+
+  local response
+  local comment_id
+
+  # shellcheck disable=SC2016
+  # $variables in the query are GraphQL references, not shell variables
+  response="$(
+    gh api graphql \
+      -f threadId="${thread_id}" \
+      --raw-field body="${body}" \
+      -f query='
+        mutation($threadId: ID!, $body: String!) {
+          addPullRequestReviewThreadReply(input: {
+            pullRequestReviewThreadId: $threadId,
+            body: $body
+          }) {
+            comment { id }
+          }
+        }
+      '
+  )"
+
+  if jq -e '.errors and (.errors | length > 0)' > /dev/null <<< "${response}"; then
+    local error_message
+    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<< "${response}")"
+    die "Failed to send reply: ${error_message}"
+  fi
+
+  comment_id="$(jq -r '.data.addPullRequestReviewThreadReply.comment.id // empty' <<< "${response}")"
+  if [[ -z "${comment_id}" || "${comment_id}" == "null" ]]; then
+    die "Failed to send reply: missing comment id in GraphQL response"
+  fi
+
+  printf '%s\n' "${comment_id}"
+}
+
+# Fetches all unresolved Copilot-authored review threads for a PR.
+# Uses gh --paginate --slurp for automatic cursor-based pagination.
+# Arguments:
+#   $1 - Repository owner
+#   $2 - Repository name
+#   $3 - Pull request number
+# Outputs:
+#   JSON array of unresolved Copilot threads to stdout
+function do_fetch() {
+  local owner="${1}"
+  local repo="${2}"
+  local pr_number="${3}"
+
+  local response
+
+  # shellcheck disable=SC2016
+  # $variables in the query are GraphQL references, not shell variables
+  response="$(
+    gh api graphql \
+      --paginate \
+      --slurp \
+      -f owner="${owner}" \
+      -f repo="${repo}" \
+      -F pr_number="${pr_number}" \
+      -f query='
+        query($owner: String!, $repo: String!, $pr_number: Int!, $endCursor: String) {
+          repository(owner: $owner, name: $repo) {
+            pullRequest(number: $pr_number) {
+              reviewThreads(first: 100, after: $endCursor) {
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+                nodes {
+                  id
+                  isResolved
+                  isOutdated
+                  path
+                  line
+                  originalLine
+                  startLine
+                  originalStartLine
+                  comments(first: 20) {
+                    nodes {
+                      author { login }
+                      body
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      '
+  )"
+
+  # Check for GraphQL errors before running the normalization filter
+  local graphql_error
+  graphql_error="$(
+    printf '%s' "${response}" \
+      | jq -r 'map(.errors? // []) | add | .[0].message? // empty'
+  )"
+
+  if [[ -n "${graphql_error}" ]]; then
+    die "GraphQL error while fetching threads: ${graphql_error}"
+  fi
+
+  # Validate that the response contains the expected data shape.
+  # Invalid owner/repo/PR number can return null data without GraphQL errors.
+  local null_path
+  null_path="$(
+    printf '%s' "${response}" \
+      | jq -r '
+          [.[] | .data as $d |
+            if $d.repository == null then "repository"
+            elif $d.repository.pullRequest == null then "pullRequest"
+            else empty
+            end
+          ] | first // empty
+        '
+  )"
+
+  if [[ -n "${null_path}" ]]; then
+    die "Invalid response: ${null_path} is null. Verify the owner, repo, and PR number are correct."
+  fi
+
+  printf '%s' "${response}" \
+    | jq \
+      --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" \
+      --arg actions_login "${COPILOT_ACTIONS_LOGIN}" \
+      --arg severity_pattern "${COPILOT_SEVERITY_PATTERN}" \
+      '
+        [
+          .[].data.repository.pullRequest.reviewThreads.nodes[]
+          | select(.isResolved == false)
+          | select(.comments.nodes | length > 0)
+          | .comments.nodes[0] as $first
+          | ($first.author.login? // "") as $login
+          | select(
+              ($direct_logins | any(. == $login))
+              or (
+                $login == $actions_login
+                and (($first.body? // "") | test($severity_pattern; "i"))
+              )
+            )
+          | (.line // .originalLine // .startLine // .originalStartLine) as $ln
+          | {
+              id: .id,
+              path: .path,
+              location: (.path + ":" + (if $ln then ($ln | tostring) else "(no-line)" end)),
+              isOutdated: .isOutdated,
+              comments: [.comments.nodes[] | {author: (.author.login? // ""), body: .body}]
+            }
+        ]
+      '
+}
+
+# Resolves a review thread via GraphQL mutation.
+# Arguments:
+#   $1 - Thread ID (e.g., PRRT_kwDONZ...)
+# Outputs:
+#   "true" on success to stdout
+function do_resolve() {
+  local thread_id="${1}"
+
+  local response
+
+  # shellcheck disable=SC2016
+  # $variables in the query are GraphQL references, not shell variables
+  response="$(
+    gh api graphql \
+      -f threadId="${thread_id}" \
+      -f query='
+        mutation($threadId: ID!) {
+          resolveReviewThread(input: {threadId: $threadId}) {
+            thread { isResolved }
+          }
+        }
+      '
+  )"
+
+  # Check for GraphQL errors before extracting the result
+  if jq -e '.errors and (.errors | length > 0)' > /dev/null <<< "${response}"; then
+    local error_message
+    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<< "${response}")"
+    die "Failed to resolve review thread ${thread_id}: ${error_message}"
+  fi
+
+  local is_resolved
+  is_resolved="$(jq -r '.data.resolveReviewThread.thread.isResolved' <<< "${response}")"
+
+  if [[ "${is_resolved}" != "true" ]]; then
+    die "Failed to resolve review thread ${thread_id}: isResolved=${is_resolved}"
+  fi
+
+  echo "${is_resolved}"
+}
+
+# Replies to a review thread via GraphQL mutation.
+# Reads body from --body-file or stdin.
+# Arguments:
+#   $1 - Thread ID
+#   [--body-file <path>] - Read body from file; reads from stdin otherwise
+# Outputs:
+#   Comment ID to stdout
+function do_reply() {
+  local thread_id="${1}"
+  shift
+
+  local body
+  body=$(read_body "$@")
+
+  send_reply "${thread_id}" "${body}"
+}
+
+# Replies to and resolves a review thread.
+# Reads body from --body-file or stdin.
+# Arguments:
+#   $1 - Thread ID
+#   [--body-file <path>] - Read body from file; reads from stdin otherwise
+# Outputs:
+#   "true" on success to stdout (consistent with do_resolve)
+function do_reply_and_resolve() {
+  local thread_id="${1}"
+  shift
+
+  local body
+  body=$(read_body "$@")
+
+  send_reply "${thread_id}" "${body}" > /dev/null
+
+  do_resolve "${thread_id}"
+}
+
+function main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
+  local command="${1:-}"
+  if [[ $# -gt 0 ]]; then
+    shift
+  fi
+
+  # Validate command before checking dependencies so that missing/unknown
+  # commands show usage errors rather than confusing dependency failures.
+  case "${command}" in
+    fetch | resolve | reply | reply-and-resolve)
+      check_dependencies
+      ;;
+    "")
+      usage
+      exit 1
+      ;;
+    *)
+      die "Unknown command: ${command}. Use '${SCRIPT_NAME} --help' for usage."
+      ;;
+  esac
+
+  case "${command}" in
+    fetch)
+      [[ $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} fetch <owner> <repo> <pr_number>"
+      do_fetch "$1" "$2" "$3"
+      ;;
+    resolve)
+      [[ $# -ne 1 ]] && die "Usage: ${SCRIPT_NAME} resolve <thread_id>"
+      do_resolve "$1"
+      ;;
+    reply)
+      [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply <thread_id> [--body-file <path>]"
+      do_reply "$@"
+      ;;
+    reply-and-resolve)
+      [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply-and-resolve <thread_id> [--body-file <path>]"
+      do_reply_and_resolve "$@"
+      ;;
+    *)
+      die "Unknown command: ${command}"
+      ;;
+  esac
+}
+
+main "$@"
