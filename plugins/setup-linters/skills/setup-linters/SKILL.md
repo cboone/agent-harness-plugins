@@ -106,7 +106,7 @@ Read the appropriate reference files for details on each tool.
 
 **Lean projects**: Lean has no external linter to install. Recommend `lake lint` driven by `lintDriver = "batteries/runLinter"` instead of a tool install. Setup is wiring (the `lintDriver` field, a `lean-lint` Makefile target gated on `_check-mathlib-cache`, and a CI step). Cross-language tools (markdownlint-cli2, cspell, EditorConfig, yamllint, Actionlint) still apply on top. See `./references/languages/lean.md`.
 
-**Pandoc-academic preset**: If the preset was detected or requested, recommend markdownlint-cli2 and cspell with the Pandoc-academic configuration variant instead of the generic Markdown and spelling defaults. Mark the preset as "Existing" only when `.markdownlint-cli2.jsonc` and a cspell config (`cspell.json`, `cspell.jsonc`, `.cspell.json`, `.cspell.jsonc`, or `cspell.config.*`) already contain the Pandoc/LaTeX rule customizations, and `cspell-words.txt` exists for the configured project dictionary.
+**Pandoc-academic preset**: If the preset was detected or requested, recommend markdownlint-cli2 and cspell with the Pandoc-academic configuration variant instead of the generic Markdown and spelling defaults. Mark the preset as "Existing" only when a markdownlint config already contains the Pandoc/LaTeX rule customizations, a cspell config (`cspell.json`, `cspell.jsonc`, `.cspell.json`, `.cspell.jsonc`, or `cspell.config.*`) contains the Pandoc/LaTeX ignore patterns, and the cspell project vocabulary is satisfiable through existing inline `words` or existing referenced dictionary files.
 
 Present recommendations in a table using three status levels:
 

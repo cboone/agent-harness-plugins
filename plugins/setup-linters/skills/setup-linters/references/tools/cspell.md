@@ -90,7 +90,6 @@ Create `cspell.jsonc` in the project root:
     ".git/",
     ".lake/**",
     "references/papers/**",
-    "references/papers.bib",
     "references/transcriptions/**",
     "docs/plans/done/**",
   ],
