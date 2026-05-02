@@ -191,7 +191,7 @@ jobs:
       run-test: false
 ```
 
-If the project already uses `rust-ci.yml` for full CI (which includes all lint checks by default), a separate lint workflow is redundant.
+If the project already uses `run-rust-ci.yml` for full CI (which includes all lint checks by default), a separate lint workflow is redundant.
 
 ### Ruby
 

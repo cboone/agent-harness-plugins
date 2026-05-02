@@ -455,7 +455,7 @@
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.10.2"
+      "version": "1.10.3"
     },
     {
       "author": {
