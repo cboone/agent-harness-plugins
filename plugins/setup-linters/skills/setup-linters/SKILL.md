@@ -49,7 +49,7 @@ For CSS/SCSS projects, check whether Tailwind CSS is in use by looking for `tail
 
 For JavaScript/TypeScript projects, perform framework sub-detection to determine which ESLint plugins to install. Check `package.json` dependencies for `react`/`react-dom` (React), `next` (Next.js), `express`/`fastify`/`koa`/`hapi` (Node.js), and look for server-side directory markers (`server.*`, `api/`, `bin/`). See `./references/languages/javascript.md` for the full detection table.
 
-For Lean projects (any of `lakefile.toml`, `lakefile.lean`, `lean-toolchain`, or `*.lean` files present), the project uses `lake lint` driven by `lintDriver = "batteries/runLinter"` rather than an external linter. There is no tool to install: `lake` ships with the toolchain, `batteries/runLinter` ships with Batteries (already a transitive Mathlib dependency). Setup is wiring (the `lintDriver` field in `lakefile.toml`, a `lean-lint` Makefile target, and a CI step) rather than installation. Skip any toolchain install in this skill; the Lean scaffolder handles `elan` and the bootstrap script. See `./references/languages/lean.md` for details.
+For Lean projects (any of `lakefile.toml`, `lakefile.lean`, `lean-toolchain`, or `*.lean` files present), the project uses `lake lint` driven by `lintDriver = "batteries/runLinter"` rather than an external linter. There is no tool to install: `lake` ships with the toolchain, `batteries/runLinter` ships with Batteries (already a transitive Mathlib dependency). Setup is wiring (the `lintDriver` field in `lakefile.toml`, a `lean-lint` Makefile target, and a CI step) rather than installation. Skip any toolchain install in this skill; the `scaffold-lean-library` skill handles `elan` and the bootstrap script. See `./references/languages/lean.md` for details.
 
 If multiple languages are detected, present all of them (monorepo scenario).
 
@@ -137,7 +137,7 @@ For each selected tool, install using the project's package manager. Read the ap
 - Language-specific: `./references/languages/<language>.md`
 - Cross-language tools: `./references/tools/<tool>.md`
 
-**Lean has nothing to install in this step.** `lake` ships with the toolchain and `batteries/runLinter` ships with the Batteries dependency. Do not install `lean`, `elan`, or any external Lean linter from this skill; the Lean scaffolder owns toolchain provisioning. Skip directly to the wiring steps (config, Makefile, CI) below.
+**Lean has nothing to install in this step.** `lake` ships with the toolchain and `batteries/runLinter` ships with the Batteries dependency. Do not install `lean`, `elan`, or any external Lean linter from this skill; the `scaffold-lean-library` skill owns toolchain provisioning. Skip directly to the wiring steps (config, Makefile, CI) below.
 
 #### Pin tool versions to mitigate supply-chain risk
 
@@ -158,7 +158,7 @@ For **Lean projects**, the equivalent of "creating a config file" is adding the 
 lintDriver = "batteries/runLinter"
 ```
 
-If the field is already present, mark Lean as "Existing" and skip. If `lakefile.toml` exists but lacks the field, offer to add it. If neither `lakefile.toml` nor `lakefile.lean` exists in the detected Lean project, defer to the Lean scaffolder rather than synthesizing one here. See `./references/languages/lean.md` for the `lakefile.lean` form.
+If the field is already present, mark Lean as "Existing" and skip. If `lakefile.toml` exists but lacks the field, offer to add it. If neither `lakefile.toml` nor `lakefile.lean` exists in the detected Lean project, defer to the `scaffold-lean-library` skill rather than synthesizing one here. See `./references/languages/lean.md` for the `lakefile.lean` form.
 
 Adapt to the project (e.g., TypeScript vs. JavaScript ESLint config, directory structure for ignore patterns).
 
@@ -173,7 +173,7 @@ lean-lint: _check-mathlib-cache ## Run Lean linter (batteries)
 	lake lint
 ```
 
-If a `Makefile` exists but has no `lean-lint` target, offer to add it. If the `Makefile` lacks `_check-mathlib-cache` as well, the project's Makefile predates the standard Mathlib-downstream target set; defer to the Lean scaffolder rather than synthesizing the target wholesale here. If no `Makefile` exists at all, defer to the Lean scaffolder.
+If a `Makefile` exists but has no `lean-lint` target, offer to add it. If the `Makefile` lacks `_check-mathlib-cache` as well, the project's Makefile predates the standard Mathlib-downstream target set; defer to the `scaffold-lean-library` skill rather than synthesizing the target wholesale here. If no `Makefile` exists at all, defer to the `scaffold-lean-library` skill.
 
 ### 8. Update Copilot Instructions
 
@@ -200,7 +200,7 @@ If a CI workflow already exists, offer to add lint steps to it rather than creat
 For **Lean projects**, scan `.github/workflows/*.yml` for the `leanprover/lean-action` action:
 
 - If found, confirm the `lint: true` input is set on the action. If it is, mark Lean CI as "Existing"; `lake lint` runs as part of the action. If `lint: true` is missing, offer to add it (or recommend a dedicated `lake lint` step if the project deliberately splits build, test, and lint into separate jobs).
-- If not found, defer to the Lean scaffolder rather than synthesizing a Lean CI workflow here.
+- If not found, defer to the `scaffold-lean-library` skill rather than synthesizing a Lean CI workflow here.
 
 **Tool dependency verification**: For every tool referenced in Makefile targets, confirm the CI workflow includes a corresponding setup/install step. Common tool-to-action mappings (all third-party `uses:` refs are SHA-pinned with a comment that matches the upstream tag, typically `# vX.Y.Z` but `# X.Y.Z` when upstream omits the `v` prefix, per the convention in `./references/tools/github-actions-ci.md`; refresh both SHA and comment to current latest before emitting):
 

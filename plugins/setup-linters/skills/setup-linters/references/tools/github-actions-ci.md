@@ -388,7 +388,7 @@ jobs:
 
 Lean projects use `leanprover/lean-action`, which runs `lake build`, `lake test`, and (with `lint: true`) `lake lint` in a single composite action. There is no separate "Lean lint" workflow; the lint step is one input to the same action that handles build and test.
 
-This skill does not synthesize a Lean CI workflow from scratch; that is the Lean scaffolder's job. The patch this skill makes is enabling the `lint: true` input on an already-present `leanprover/lean-action` step:
+This skill does not synthesize a Lean CI workflow from scratch; that is the `scaffold-lean-library` skill's job. The patch this skill makes is enabling the `lint: true` input on an already-present `leanprover/lean-action` step:
 
 ```yaml
 - uses: leanprover/lean-action@<sha> # <tag>
