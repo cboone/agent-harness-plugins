@@ -9,5 +9,5 @@
   "name": "write-go-code",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "skills": "./skills",
-  "version": "1.1.1"
+  "version": "1.2.0"
 }

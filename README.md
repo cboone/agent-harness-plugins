@@ -271,7 +271,7 @@ Bash style conventions for creating and editing Bash scripts. Activates automati
 
 #### Write Go Code
 
-Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments. Organized into an essential checklist and comprehensive references by topic.
+Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments. Includes Cobra CLI guidance for root command usage output, and is organized into an essential checklist and comprehensive references by topic.
 
 > **Trigger:** `/write-go-code` (also activates automatically)
 > **Details:** [README](./plugins/write-go-code/README.md)
