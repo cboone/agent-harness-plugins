@@ -101,4 +101,4 @@ The `.yarnrc.yml` defaults section above is Yarn-specific. pnpm uses `.npmrc` an
 
 ## When the User Opts Out of Corepack
 
-If the project uses npm (not Yarn or pnpm), step 5 of the skill is a no-op — no `packageManager` field, no `.yarnrc.yml`. Skip both. There is no equivalent integrity-pin mechanism in `package.json` for npm; rely on `package-lock.json` (which contains per-package integrity hashes) and `npm ci` in CI to enforce them.
+If the project uses npm (not Yarn or pnpm), step 5 of the skill is a no-op. The `packageManager` field is either absent or set to `npm@X.Y.Z` (npm declarations are legal but not integrity-suffixed); either way there is nothing to integrity-pin, and there is no `.yarnrc.yml` to harden. Skip both. There is no equivalent integrity-pin mechanism in `package.json` for npm; rely on `package-lock.json` (which contains per-package integrity hashes) and `npm ci` in CI to enforce them.

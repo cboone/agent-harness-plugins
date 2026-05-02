@@ -423,6 +423,7 @@ Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Act
 Pin every version surface in a repository as a one-shot supply-chain hardening pass: SHA pins for GitHub Actions, integrity hashes for Yarn and pnpm via Corepack, exact pins for application package-manager dependencies (with library detection to avoid breaking downstream version unification), version-file refs for language runtimes, and explicit versions for install commands. Optionally generates a weekly drift-audit script that covers the four surfaces Dependabot does not (`.tool-versions`, `packageManager`, action SHAs in `.md` templates, install-command pins inside scripts) and tightens Dependabot config.
 
 > **Trigger:** `/pin-everything` (also activates automatically)
+> **Requires:** [`gh`](https://cli.github.com/), [`jq`](https://jqlang.org/); optional [`corepack`](https://github.com/nodejs/corepack) (only when pinning Yarn/pnpm) and [`reuse`](https://reuse.software/) (only in REUSE-licensed repos)
 > **Details:** [README](./plugins/pin-everything/README.md)
 
 #### Setup CI

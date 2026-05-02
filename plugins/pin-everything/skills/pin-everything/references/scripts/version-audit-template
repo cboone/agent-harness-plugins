@@ -495,11 +495,14 @@ function audit_python_install_pins() {
     # each match, advance `rest` past the matched substring and try again until
     # no further requirement matches. PyPI package names may include `.` (e.g.,
     # `zope.interface`), `-`, and `_`; PEP 503 normalizes them but the surface
-    # form preserves the original.
+    # form preserves the original. Optional surrounding quotes (single or
+    # double) and PEP 508 extras like `foo[bar,baz]==1.2.3` are tolerated; the
+    # extras list is dropped before resolving against PyPI since extras don't
+    # affect the published version.
     rest="${content}"
-    while [[ "${rest}" =~ \'?([a-zA-Z0-9._-]+)==([0-9]+(\.[0-9]+)*)\'? ]]; do
+    while [[ "${rest}" =~ [\"\']?([a-zA-Z0-9._-]+)(\[[a-zA-Z0-9._,-]+\])?==([0-9]+(\.[0-9]+)*)[\"\']? ]]; do
       pkg="${BASH_REMATCH[1]}"
-      current="${BASH_REMATCH[2]}"
+      current="${BASH_REMATCH[3]}"
       rest="${rest#*"${BASH_REMATCH[0]}"}"
       key="${pkg}|${current}"
       if [[ -n "${seen[${key}]:-}" ]]; then
@@ -513,12 +516,13 @@ function audit_python_install_pins() {
     done
     # Allow arbitrary flags / quoting between the install command and the
     # `pkg==X.Y.Z` requirement so forms like `pip install --upgrade 'pkg==1.2.3'`,
-    # `uv add --dev 'pkg==1.2.3'`, `uv tool install --force 'pkg==1.2.3'`, and
-    # `uvx --from 'pkg==1.2.3' cmd` are not silently skipped. The extraction
-    # regex inside the function still anchors on the unquoted `pkg==version`
-    # token. Match every Python install verb that resolves against PyPI:
-    # `pip install`, `uv pip install`, `uv add`, `uv tool install`, `uvx`.
-  done < <(grep -rHE '(pip install|uv (pip install|add|tool install)|uvx)[[:space:]].*[a-zA-Z0-9._-]+==[0-9]' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+    # `uv add --dev "pkg==1.2.3"`, `uv tool install --force 'pkg[extra]==1.2.3'`,
+    # and `uvx --from pkg==1.2.3 cmd` are not silently skipped. The pre-filter
+    # only requires `==<digit>` on the line; the extraction regex inside the
+    # function performs the precise package/version match. Match every Python
+    # install verb that resolves against PyPI: `pip install`, `uv pip install`,
+    # `uv add`, `uv tool install`, `uvx`.
+  done < <(grep -rHE '(pip install|uv (pip install|add|tool install)|uvx)[[:space:]].*==[0-9]' "${SCAN_PATHS[@]}" 2> /dev/null || true)
 }
 
 # Print Markdown report
