@@ -130,12 +130,12 @@ if [ -d .github/workflows ]; then
 fi
 ```
 
-If the loop prints any files, note that a **release workflow likely exists** that will automatically create a GitHub Release. Two patterns are detected:
+If the loop prints any files, note that a **release workflow likely exists** that will automatically create a GitHub Release. Preserve which workflow kind was detected, because marketplace catalog releases handle the two kinds differently:
 
 - **Tag-triggered workflows**: a `tags:` trigger plus a YAML list entry whose value starts with `v` followed by `*`, `[`, or a digit (e.g., `- "v*"`, `- "v[0-9]+.[0-9]+.[0-9]+"`), or starts with `catalog-`. Anchoring to list-item form avoids false positives from action refs like `actions/checkout@v4`.
 - **Marketplace push-to-main workflows**: a workflow that invokes `bin/compute-catalog-state`, runs `gh release create`, and triggers on push to the default branch (`main` or `master`). All three signals together mark end-to-end automation that tags and publishes on push to the default branch. A workflow that only computes the catalog state (e.g., for validation) does not qualify, and neither does a workflow_dispatch-only or PR-triggered workflow that happens to invoke both, since neither will run when a commit lands on main.
 
-Detection is best-effort and may miss inline list forms (e.g., `tags: ['v*']`) or other exotic patterns. If the detection seems wrong, ask the user to confirm. This flag affects M4-M8 for marketplace releases and step 11 for SemVer releases.
+Detection is best-effort and may miss inline list forms (e.g., `tags: ['v*']`) or other exotic patterns. If the detection seems wrong, ask the user to confirm. This workflow kind affects M4-M8 for marketplace releases and step 11 for SemVer releases. For marketplace releases, only a **marketplace push-to-main workflow** skips local catalog tagging; a **tag-triggered workflow** still needs M7 to create the exact `catalog-*` tag so pushing that tag can fire the workflow.
 
 **Abort conditions:**
 
@@ -288,14 +288,25 @@ fi
 
 # Prefer the remote tag whenever it exists. Published tags are
 # authoritative; a stale or recreated local tag pointing at HEAD must
-# not mask a remote ref pointing at a different commit.
-existing_commit="${remote_commit:-${local_commit}}"
+# not mask a remote ref pointing at a different commit. Track whether
+# the matching tag came from the remote or only from the local clone:
+# a local-only tag is not proof that the catalog state was published.
+existing_commit=""
+existing_tag_source=""
+if [[ -n "${remote_commit}" ]]; then
+  existing_commit="${remote_commit}"
+  existing_tag_source="remote"
+elif [[ -n "${local_commit}" ]]; then
+  existing_commit="${local_commit}"
+  existing_tag_source="local"
+fi
 ```
 
 Cases:
 
 - **No existing tag** (`existing_commit` empty): proceed.
-- **Tag exists at `HEAD`**: a release for this catalog state is already published at this commit. Report that there is nothing to release and stop. Do not retag or republish.
+- **Remote tag exists at `HEAD`** (`existing_tag_source=remote`): a release for this catalog state is already published at this commit. Report that there is nothing to release and stop. Do not retag or republish.
+- **Only a local tag exists at `HEAD`** (`existing_tag_source=local`): the catalog state is already tagged locally, but it is not known to be published. Do not report that there is nothing to release. Continue to M5-M8, skip creating a replacement tag in M7, and publish the existing local tag if the user chooses to publish. If no remote is configured, M8 will stop with the normal "configure a Git remote" guidance.
 - **Tag exists at a different commit**: distinguish "catalog state genuinely unchanged" from "real collision" by comparing the marketplace plugin versions at the tagged commit against `HEAD`'s. This is the same comparison `.github/workflows/release.yml` performs:
 
   ```bash
@@ -336,9 +347,9 @@ Do not create another tag or choose a different state tag automatically. The use
 
 #### M5. Pre-Tag Review
 
-Build a final review and wait for explicit user approval. The wording depends on whether a release workflow was detected in step 1.
+Build a final review and wait for explicit user approval. The wording depends on which release workflow kind was detected in step 1.
 
-If **no release workflow** was detected:
+If **no marketplace push-to-main workflow** was detected:
 
 ```text
 Pre-tag review for CATALOG-STATE:
@@ -349,12 +360,13 @@ Files modified:
 
 Catalog state:
   - Tag: CATALOG-STATE
-  - GitHub Release title: Marketplace CATALOG-STATE
+  - GitHub Release: created by tag-triggered workflow after the tag is pushed
+    (or created directly by this skill if no release workflow was detected)
 
 Tags are immutable. Proceed with commit and tag?
 ```
 
-If a **release workflow was detected**:
+If a **marketplace push-to-main workflow** was detected:
 
 ```text
 Pre-release review for CATALOG-STATE:
@@ -364,8 +376,8 @@ Files modified:
   - plugins/<name>/.claude-plugin/plugin.json (plugin version bumped)
 
 Catalog state CATALOG-STATE will be tagged and released automatically by the
-detected release workflow when this change reaches the default branch. No
-local tag will be created.
+detected marketplace push-to-main workflow when this change reaches the default
+branch. No local tag will be created.
 
 Proceed with commit?
 ```
@@ -374,10 +386,10 @@ If `--dry-run` was specified, present this as a proposed review and stop. Do not
 
 #### M6. Create Marketplace Commit
 
-Stage only the files changed by the release and create a GPG-signed commit. Choose the commit message based on whether a release workflow was detected:
+Stage only the files changed by the release and create a GPG-signed commit. Choose the commit message based on whether marketplace push-to-main automation was detected:
 
-- **No release workflow**: use `release: CATALOG-STATE` so the message marks the local tag.
-- **Release workflow detected**: use a conventional commit that describes the underlying plugin change (e.g., `chore: bump <plugin> to <version> and resync catalog state`, or `feat(<plugin>): <summary>` if the bump is a feature). The workflow will produce its own release-named tag from the resulting `metadata.version`; the commit subject should describe the work, not the catalog state.
+- **No marketplace push-to-main workflow**: use `release: CATALOG-STATE` so the message marks the local tag. This includes tag-triggered release workflows, because this skill still creates and pushes the exact catalog tag that fires the workflow.
+- **Marketplace push-to-main workflow detected**: use a conventional commit that describes the underlying plugin change (e.g., `chore: bump <plugin> to <version> and resync catalog state`, or `feat(<plugin>): <summary>` if the bump is a feature). The workflow will produce its own release-named tag from the resulting `metadata.version`; the commit subject should describe the work, not the catalog state.
 
 ```bash
 git add <FILES>
@@ -391,9 +403,11 @@ CRITICAL: Never use `git commit --amend`. Always create a new commit. If a pre-c
 
 #### M7. Tag the Catalog State
 
-Skip this step entirely if a **release workflow was detected** in step 1. The workflow is the only writer of `catalog-*` tags in that case; creating one locally would break workflow idempotency by registering a tag the workflow then sees as already existing.
+Skip this step entirely if a **marketplace push-to-main workflow** was detected in step 1. The workflow is the only writer of `catalog-*` tags in that case; creating one locally would break workflow idempotency by registering a tag the workflow then sees as already existing.
 
-If **no release workflow** was detected, create a GPG-signed annotated tag using the exact catalog state:
+If M4 found an **only-local tag at `HEAD`** (`existing_tag_source=local`), do not create a replacement tag. Reuse that existing local tag in M8 so the user can finish publishing it.
+
+Otherwise, create a GPG-signed annotated tag using the exact catalog state:
 
 ```bash
 git tag -s CATALOG-STATE -m "CATALOG-STATE"
@@ -409,9 +423,9 @@ Marketplace release CATALOG-STATE tagged locally.
 
 #### M8. Publish
 
-The publish step depends on whether a release workflow was detected in step 1.
+The publish step depends on which release workflow kind was detected in step 1.
 
-##### M8a. Release workflow detected
+##### M8a. Marketplace push-to-main workflow detected
 
 The workflow will create the tag and GitHub Release automatically once the commit lands on the default branch (usually `main`). The skill should not push tags or create releases directly.
 
@@ -419,7 +433,7 @@ Ask the user how they want to land the commit:
 
 ```text
 Commit for CATALOG-STATE is ready.
-The release workflow will tag and release it once it merges into the default branch.
+The marketplace push-to-main workflow will tag and release it once it merges into the default branch.
 
 How would you like to publish?
   - Open a pull request (recommended)
@@ -439,7 +453,52 @@ After this commit reaches the default branch, the release workflow will:
   - Publish "Marketplace CATALOG-STATE" with auto-generated release notes
 ```
 
-##### M8b. No release workflow detected
+##### M8b. Tag-triggered release workflow detected
+
+Ask the user if they want to push the commit and tag:
+
+```text
+Push commit and tag for CATALOG-STATE?
+(Tag-triggered release workflow detected; it will create the GitHub Release when the tag is pushed.)
+```
+
+If the user declines, show the manual commands and stop:
+
+```text
+Marketplace release CATALOG-STATE is ready locally.
+
+To publish manually:
+  git push origin HEAD
+  git push origin CATALOG-STATE
+
+The tag-triggered release workflow will create the GitHub Release automatically when the tag is pushed.
+```
+
+If the user accepts, push the commit and tag.
+
+First, check for a remote:
+
+```bash
+git remote get-url origin
+```
+
+If no remote is configured, report the error and tell the user to configure a Git remote before rerunning this step. Do not show any `git push origin ...` commands in this case. Stop.
+
+```bash
+git push origin HEAD
+git push origin CATALOG-STATE
+```
+
+If the push is rejected, report the error and stop. Never force push.
+
+Report:
+
+```text
+Marketplace release CATALOG-STATE tag pushed.
+The tag-triggered release workflow will create the GitHub Release.
+```
+
+##### M8c. No release workflow detected
 
 Ask the user if they want to push the commit and tag:
 
@@ -815,7 +874,8 @@ Release vVERSION published.
 - **Version file not found:** Skip source file updates, rely on git tag, inform the user.
 - **CHANGELOG parse error:** If the existing file has an unrecognized format, warn the user and offer to create a new one or append a version section at the top.
 - **Tag already exists:** Abort with a message that the tag `vVERSION` already exists. Suggest choosing a different version.
-- **Marketplace catalog tag already exists at HEAD:** A release for this catalog state is already published at this commit. Report that there is nothing to release and stop; do not retag.
+- **Marketplace catalog remote tag already exists at HEAD:** A release for this catalog state is already published at this commit. Report that there is nothing to release and stop; do not retag.
+- **Marketplace catalog local-only tag already exists at HEAD:** The catalog state is tagged locally but is not known to be published. Continue through M5-M8, skip replacement tag creation in M7, and publish the existing local tag if the user chooses to publish.
 - **Marketplace catalog tag already exists at a different commit, same plugin versions:** The catalog state is genuinely unchanged (e.g., a docs-only follow-up reused the previous catalog state). Report that there is nothing to release and stop; do not retag.
 - **Marketplace catalog tag already exists at a different commit, different plugin versions:** Treat as a catalog-state collision (the sum-based tag format is not collision-free). Abort with the collision-aware message in M4 and ask the user to bump one plugin so the marketplace produces a unique catalog state. Do not retag or rename.
 - **Not a git repository:** Abort immediately.

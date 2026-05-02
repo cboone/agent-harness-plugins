@@ -151,9 +151,21 @@ jobs:
           # push` succeeded on a prior run but `gh release create` failed, the
           # tag will be present without a release; rerunning must recreate the
           # release rather than silently skip it. Conversely, a release can
-          # outlive a deleted tag; rerunning should recreate the tag without
-          # calling `gh release create` for an already-existing release.
+          # outlive a deleted tag; rerunning must not recreate that tag at the
+          # current commit and silently retarget an already-published release.
           if release_exists "${TAG}"; then
+            if [[ -z "${remote_commit}" ]]; then
+              {
+                echo "::error::GitHub Release ${TAG} exists, but refs/tags/${TAG} is missing on origin."
+                echo
+                echo "Recreating the missing tag at ${GITHUB_SHA} would retarget an"
+                echo "already-published release to the current commit. Restore the"
+                echo "original tag manually, or delete and recreate the GitHub Release"
+                echo "intentionally before rerunning this workflow."
+              } >&2
+              exit 1
+            fi
+
             echo "Release ${TAG} already exists; nothing to do."
             echo "release_exists=true" >> "${GITHUB_OUTPUT}"
           else
