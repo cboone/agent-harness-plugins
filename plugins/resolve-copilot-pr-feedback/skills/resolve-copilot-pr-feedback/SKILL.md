@@ -16,7 +16,7 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 **NEVER leave comments directly on GitHub PRs.** This is strictly forbidden:
 
 - `gh pr review --comment` - FORBIDDEN
-- `gh pr comment` - FORBIDDEN (except the single summary comment in step 7)
+- `gh pr comment` - FORBIDDEN (except the single required final workflow summary in step 7)
 - Any GraphQL mutation that creates new reviews or PR-level comments - FORBIDDEN
 - Responding to human review comments - FORBIDDEN
 
@@ -29,7 +29,7 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 - Resolve Copilot threads using the script's `resolve` command
 - Reply and resolve in one step using the script's `reply-and-resolve` command
 
-**Single exception:** Step 7 uses `gh pr comment` with `--body-file` to post a one-time summary of code changes made while resolving feedback. This is the ONLY permitted use of `gh pr comment` in this skill.
+**Single exception:** Step 7 uses `gh pr comment` with `--body-file` to post one required final workflow summary after terminal workflow state once PR context exists. This is the ONLY permitted use of `gh pr comment` in this skill. The final summary is blocking: if it cannot be posted, the workflow is incomplete.
 
 ## Script Setup
 
@@ -138,6 +138,8 @@ bash resolve-copilot-threads fetch OWNER REPO PR_NUMBER
 ```
 
 The script automatically handles pagination and filters for unresolved Copilot-authored threads.
+
+Record the `OWNER`, `REPO`, and `PR_NUMBER` values used for the fetch. This establishes PR context for the required final workflow summary in step 7. If PR context or GitHub authentication cannot be established, report that the required final summary could not be posted and do not mark the workflow complete.
 
 **Output format** (JSON array):
 
@@ -274,33 +276,95 @@ This step prevents CI failures from lint issues introduced while resolving feedb
 
    Expected output: `[]` (empty array)
 
-1. Report summary of actions taken
+1. Determine terminal workflow status and counts:
+   - **No unresolved Copilot feedback**: The initial fetch returned `[]`
+   - **Completed**: Every fetched thread was handled according to its category, no failed or pending items remain, and any required code changes were pushed
+   - **Partial**: At least one fetched thread was handled, but one or more fetched threads, replies, resolutions, tracking items, instruction updates, lint runs, pushes, or verification checks failed or remain pending
+   - **Failed**: The workflow could not fetch or process threads, or no required processing step succeeded
+1. Proceed to step 7 before claiming completion
 
 ### 7. Post PR Summary Comment
 
-**Condition:** Only post if at least one thread was categorized as Valid or Incorrect and resulted in code changes. If all threads were Nitpick, Outdated, or Deferred, skip this step.
+**Required:** Once PR context exists, always post exactly one final PR summary comment after terminal workflow state. Do this for every outcome: no unresolved comments, fully resolved comments, only non-code-change resolutions, code-change resolutions, partial processing, failures, and pending items.
 
-Post a summary comment to the PR so reviewers can see what changed at a glance.
+Post a summary comment to the PR so reviewers can see the workflow outcome at a glance. Do not post interim PR comments.
 
 **Comment format:**
 
 ```markdown
-## Copilot Feedback Resolved
+## Copilot Feedback Summary
 
-Addressed N Copilot review comment(s) with code changes:
+Status: Completed
 
-| File            | Category  | Action                                            |
-| --------------- | --------- | ------------------------------------------------- |
-| `src/foo.ts:42` | Valid     | Fixed null check                                  |
-| `lib/util.js:8` | Incorrect | Updated error handling; added Copilot instruction |
+| Metric              | Count |
+| ------------------- | ----- |
+| Fetched             | 4     |
+| Resolved            | 3     |
+| Pending             | 0     |
+| Failed              | 0     |
+| Deferred            | 1     |
+| Code-change threads | 2     |
 
-M additional comment(s) resolved without code changes (nitpicks, outdated).
+| File            | Category  | Outcome  | Action                                            |
+| --------------- | --------- | -------- | ------------------------------------------------- |
+| `src/foo.ts:42` | Valid     | Resolved | Fixed null check                                  |
+| `lib/util.js:8` | Incorrect | Resolved | Updated error handling; added Copilot instruction |
+| `src/ui.tsx:20` | Deferred  | Resolved | Tracked follow-up work                            |
+| `docs/api.md:5` | Nitpick   | Resolved | Auto-resolved                                     |
 ```
 
-- Table includes only threads that resulted in code changes (Valid and Incorrect)
-- Count line for non-code-change threads shown only if any exist
+- Status must be one of `Completed`, `No unresolved Copilot feedback`, `Partial`, or `Failed`
+- Counts must include fetched, resolved, pending, failed, deferred, and code-change threads
+- Table includes all processed threads, not only Valid and Incorrect threads
 - Incorrect category notes Copilot instruction additions in the Action column
 - Thread IDs omitted (meaningless to human reviewers)
+
+If no unresolved Copilot comments were found, use this no-op form:
+
+```markdown
+## Copilot Feedback Summary
+
+Status: No unresolved Copilot feedback
+
+No unresolved Copilot comments were found.
+
+| Metric              | Count |
+| ------------------- | ----- |
+| Fetched             | 0     |
+| Resolved            | 0     |
+| Pending             | 0     |
+| Failed              | 0     |
+| Deferred            | 0     |
+| Code-change threads | 0     |
+```
+
+If processing was partial or failed, include failure details and the remaining required action:
+
+```markdown
+## Copilot Feedback Summary
+
+Status: Partial
+
+| Metric              | Count |
+| ------------------- | ----- |
+| Fetched             | 3     |
+| Resolved            | 2     |
+| Pending             | 1     |
+| Failed              | 1     |
+| Deferred            | 0     |
+| Code-change threads | 1     |
+
+| File            | Category | Outcome  | Action                        |
+| --------------- | -------- | -------- | ----------------------------- |
+| `src/foo.ts:42` | Valid    | Resolved | Fixed null check              |
+| `src/bar.ts:7`  | Outdated | Failed   | Reply failed                  |
+| `lib/baz.ts:9`  | Nitpick  | Pending  | Resolution still required     |
+
+### Remaining Required Action
+
+- Resolve the failed reply for `src/bar.ts:7`
+- Resolve the pending nitpick at `lib/baz.ts:9`
+```
 
 **Mechanics:**
 
@@ -321,7 +385,7 @@ rm -f TMPFILE
 
 Replace `PR_NUMBER` and `TMPFILE` with actual values. The cleanup must be a separate Bash tool call (see [Outdated/Incorrect Copilot Comments](#outdatedincorrect-copilot-comments) above for the rationale): chaining with `; status=$?; rm -f TMPFILE; exit $status` breaks under zsh because `status` is a read-only built-in alias for `$?`.
 
-If the comment fails, log the error but do not fail the workflow. Thread resolution and code changes are the primary deliverables; the summary comment is best-effort.
+If the comment fails, log the error and do not claim completion. Thread resolution, code changes, and the required final PR summary are all workflow deliverables.
 
 ## Reply Templates
 
@@ -350,7 +414,9 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 1. **Linters and formatters pass** (via `lint-and-fix` skill, if any files were changed while addressing feedback)
 1. Re-fetch confirms empty array `[]` for all processed threads
 1. Output summary table (see format below)
-1. **If code changes were made**: PR summary comment posted via step 7
+1. **Final PR summary comment posted via step 7** after terminal workflow state, once PR context exists
+
+If PR context or GitHub authentication is unavailable, or if `gh pr comment` fails, the workflow is incomplete. Report the failure locally and include the remaining action needed to post the required summary.
 
 ### Required Output: Thread Summary Table
 
@@ -380,5 +446,5 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 - API failures: Retry with proper auth
 - Thread ID issues: Use alternative queries
 - Fix failures: Retry with alternative approach or defer if out of scope
-- Summary comment failures: Log the error but treat as non-fatal. Thread resolution and code changes are the primary deliverables.
-- Partial resolution is better than none
+- Summary comment failures: Log the error and treat the workflow as incomplete until the required final summary posts successfully
+- Partial resolution is better than none, but a partial or failed terminal state still requires the final PR summary once PR context exists
