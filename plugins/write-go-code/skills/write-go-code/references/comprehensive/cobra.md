@@ -25,59 +25,66 @@ Usage:
   myapp [command] [flags]
 ```
 
-## Add a combined usage template
+## Add a version-compatible usage template
 
-Add a package-level template near the root command definition and install it in `init()`:
+Do not paste a full Cobra default usage template from another project or a newer Cobra release. Cobra has changed template fields over time, and fields such as command groups may not exist in older versions. Instead, start from the project's installed Cobra default template and replace only the top `Usage:` block.
+
+Use `.UseLine()` when constructing the runnable command form. It preserves positional arguments from the command's `Use` string, such as `myapp [file]`.
 
 ```go
-const usageTemplate = `Usage:{{if or .Runnable .HasAvailableSubCommands}}
-  {{.CommandPath}}{{if .HasAvailableSubCommands}} [command]{{end}}{{if .HasAvailableFlags}} [flags]{{end}}{{end}}{{if gt (len .Aliases) 0}}
+package cmd
 
-Aliases:
-  {{.NameAndAliases}}{{end}}{{if .HasExample}}
+import (
+	"strings"
 
-Examples:
-{{.Example}}{{end}}{{if .HasAvailableSubCommands}}{{$cmds := .Commands}}{{if eq (len .Groups) 0}}
+	"github.com/spf13/cobra"
+)
 
-Available Commands:{{range $cmds}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{else}}{{range $group := .Groups}}
+const defaultUsageBlock = `Usage:{{if .Runnable}}
+  {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
+  {{.CommandPath}} [command]{{end}}`
 
-{{.Title}}{{range $cmds}}{{if (and (eq .GroupID $group.ID) (or .IsAvailableCommand (eq .Name "help")))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if not .AllChildCommandsHaveGroup}}
-
-Additional Commands:{{range $cmds}}{{if (and (eq .GroupID "") (or .IsAvailableCommand (eq .Name "help")))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
-
-Flags:
-{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
-
-Global Flags:
-{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
-
-Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
-  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
-
-Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
-`
+const combinedUsageBlock = `Usage:{{if or .Runnable .HasAvailableSubCommands}}
+  {{combinedUseLine .}}{{end}}`
 
 func init() {
-	rootCmd.SetUsageTemplate(usageTemplate)
+	cobra.AddTemplateFunc("combinedUseLine", combinedUseLine)
+	rootCmd.SetUsageTemplate(strings.Replace(rootCmd.UsageTemplate(), defaultUsageBlock, combinedUsageBlock, 1))
 	rootCmd.AddCommand(newServeCommand())
+}
+
+func combinedUseLine(cmd *cobra.Command) string {
+	if !cmd.Runnable() {
+		return cmd.CommandPath() + " [command]"
+	}
+
+	useLine := cmd.UseLine()
+	if !cmd.HasAvailableSubCommands() {
+		return useLine
+	}
+
+	useLine = strings.TrimSuffix(useLine, " [flags]")
+	if cmd.HasAvailableFlags() {
+		return useLine + " [command] [flags]"
+	}
+
+	return useLine + " [command]"
 }
 ```
 
-Keep the rest of Cobra's default sections intact unless the project already has a local usage template. If a project has an existing custom template, preserve its local sections and adjust only the usage line logic.
+If `strings.Replace` does not match because the project has already customized `UsageTemplate()`, inspect the local template and make the same narrow edit to its `Usage:` block. Keep all other sections from the project's current template intact.
 
 ## Expected usage forms
 
 The template should produce these forms:
 
-| Command shape                    | Usage line                |
-| -------------------------------- | ------------------------- |
-| Runnable with subcommands        | `myapp [command] [flags]` |
-| Runnable with no subcommands     | `myapp [flags]`           |
-| Non-runnable with subcommands    | `myapp [command]`         |
-| Non-runnable with no subcommands | no usage line             |
+| Command shape                         | Usage line                         |
+| ------------------------------------- | ---------------------------------- |
+| Runnable with subcommands             | `myapp [command] [flags]`          |
+| Runnable with subcommands and args    | `myapp [file] [command] [flags]`   |
+| Runnable with no subcommands          | Cobra's existing `.UseLine()`      |
+| Non-runnable with subcommands         | `myapp [command]`                  |
+| Non-runnable with no subcommands      | no usage line                      |
 
 ## Verify help output
 

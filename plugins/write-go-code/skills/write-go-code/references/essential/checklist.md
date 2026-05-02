@@ -159,4 +159,4 @@ Quick reference for code reviews. For detailed guidance, see `../comprehensive/`
 
 ## CLI Commands
 
-- [ ] Cobra root commands with both `Run`/`RunE` and subcommands set a combined usage template so help shows one line: `myapp [command] [flags]`
+- [ ] Cobra root commands with both `Run`/`RunE` and subcommands combine usage lines while preserving positional arguments from `Use`, such as `myapp [file] [command] [flags]`
