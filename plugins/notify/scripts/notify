@@ -80,13 +80,16 @@ function do_send() {
   local message="${3:-}"
   local sound="${4:-Glass}"
 
-  terminal-notifier \
+  if ! terminal-notifier \
     -title "${title}" \
     -subtitle "${subtitle}" \
     -message "${message}" \
     -sound "${sound}" \
     -group claude-code \
-    -activate com.apple.Terminal
+    -activate com.apple.Terminal \
+    > /dev/null; then
+    echo "Warning: terminal-notifier failed to send notification." >&2
+  fi
 }
 
 function do_stop() {

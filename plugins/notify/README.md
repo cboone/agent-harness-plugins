@@ -21,8 +21,9 @@ Then select **Notify** from the available plugins.
 
 ```bash
 codex plugin marketplace add cboone/cboone-cc-plugins
-codex plugin install notify@cboone-cc-plugins
 ```
+
+Codex CLI manages this plugin through the marketplace. For a Git-backed marketplace, refresh it after repository updates with `codex plugin marketplace upgrade cboone-cc-plugins`. For a local-path marketplace, restart Codex after changing plugin files so it can rebuild cached plugin copies from the local source.
 
 ### Using with OpenCode
 
