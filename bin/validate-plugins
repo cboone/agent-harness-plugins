@@ -158,7 +158,7 @@ function compute_catalog_state() {
   ' "${MARKETPLACE}"
 }
 
-if ! computed_catalog_state="$(compute_catalog_state 2>/dev/null)"; then
+if ! computed_catalog_state="$(compute_catalog_state 2> /dev/null)"; then
   error "Marketplace metadata.version could not be computed because one or more plugin versions are not SemVer"
 else
   metadata_version="$(jq -r '.metadata.version // empty' "${MARKETPLACE}")"
