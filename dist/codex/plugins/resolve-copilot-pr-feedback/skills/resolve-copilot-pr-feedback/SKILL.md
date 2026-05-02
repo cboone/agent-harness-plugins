@@ -157,6 +157,8 @@ Record the `OWNER`, `REPO`, and `PR_NUMBER` values used for the fetch. This esta
 
 An empty array `[]` means no unresolved Copilot threads remain.
 
+Treat `[]` as "no currently unresolved Copilot threads," not proof that no work happened in a previous attempt. Before using the no-op summary form, check whether this invocation is recovering from a prior failed summary-post step. If a previous run resolved threads or made code changes but failed to post the required final summary, reuse the preserved summary body from that run or reconstruct it from the prior local output, resolved review threads, branch commits, and branch diff. Do not downgrade that recovery summary to the no-op form just because a later fetch returns `[]`.
+
 ### 2. Categorize Each Comment
 
 For each unresolved Copilot comment:
@@ -293,6 +295,7 @@ Post a summary comment to the PR so reviewers can see the workflow outcome at a 
 ## Copilot Feedback Summary
 
 Status: Completed
+Head SHA: `abc1234`
 
 | Metric              | Count |
 | ------------------- | ----- |
@@ -326,6 +329,7 @@ If no unresolved Copilot comments were found, use this no-op form:
 ## Copilot Feedback Summary
 
 Status: No unresolved Copilot feedback
+Head SHA: `abc1234`
 
 No unresolved Copilot comments were found.
 
@@ -346,6 +350,7 @@ If processing was partial or failed, include failure details and the remaining r
 ## Copilot Feedback Summary
 
 Status: Partial
+Head SHA: `abc1234`
 
 | Metric              | Count |
 | ------------------- | ----- |
@@ -376,6 +381,8 @@ Status: Partial
 - Push branch changes
 ```
 
+**No-op summary idempotency:** Before posting a `No unresolved Copilot feedback` summary, inspect existing top-level PR comments for a `## Copilot Feedback Summary` comment with the same head SHA and no-op status. If one already exists and this invocation did not recover a failed summary-post attempt, do not add another no-op comment. Report the existing summary comment URL locally and treat that existing same-head no-op summary as satisfying the final summary requirement for this no-op run. This idempotency exception applies only to empty-fetch no-op runs; if this invocation processed threads, made code changes, or is recovering a failed summary-post attempt, post the required outcome summary.
+
 **Mechanics:**
 
 ```bash
@@ -396,6 +403,8 @@ rm -f TMPFILE
 Replace `OWNER`, `REPO`, `PR_NUMBER`, and `TMPFILE` with actual values recorded during fetch. Always pass `--repo OWNER/REPO` so the final summary targets the intended PR even if the current checkout or working directory changes. The cleanup must be a separate Bash tool call (see [Outdated/Incorrect Copilot Comments](#outdatedincorrect-copilot-comments) above for the rationale): chaining with `; status=$?; rm -f TMPFILE; exit $status` breaks under zsh because `status` is a read-only built-in alias for `$?`.
 
 If the comment fails, log the error and do not claim completion. Thread resolution, code changes, and the required final PR summary are all workflow deliverables.
+
+When the final summary comment fails, preserve the exact intended summary Markdown in the local final output. A later retry must use that preserved body, or reconstruct the same outcome from available PR and git evidence, before falling back to any no-op summary.
 
 ## Reply Templates
 
@@ -424,7 +433,7 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 1. **Linters and formatters pass** (via `lint-and-fix` skill, if any files were changed while addressing feedback)
 1. Re-fetch confirms empty array `[]` for all processed threads
 1. Output summary table (see format below)
-1. **Final PR summary comment posted via step 7** after terminal workflow state, once PR context exists
+1. **Final PR summary comment posted via step 7** after terminal workflow state, once PR context exists. For empty-fetch no-op runs only, an existing same-head no-op summary may satisfy this requirement without adding a duplicate comment.
 
 If PR context or GitHub authentication is unavailable, or if `gh pr comment` fails, the workflow is incomplete. Report the failure locally and include the remaining action needed to post the required summary.
 
@@ -456,5 +465,5 @@ If PR context or GitHub authentication is unavailable, or if `gh pr comment` fai
 - API failures: Retry with proper auth
 - Thread ID issues: Use alternative queries
 - Fix failures: Retry with alternative approach or defer if out of scope
-- Summary comment failures: Log the error and treat the workflow as incomplete until the required final summary posts successfully
+- Summary comment failures: Log the error, preserve the intended summary Markdown in the local final output, and treat the workflow as incomplete until the required final summary posts successfully
 - Partial resolution is better than none, but a partial or failed terminal state still requires the final PR summary once PR context exists
