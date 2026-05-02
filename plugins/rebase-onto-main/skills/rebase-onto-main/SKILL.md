@@ -89,10 +89,10 @@ If the rebase completes without conflicts:
 1. Show a summary of the replayed commits:
 
 ```bash
-git log @{u}..HEAD --oneline
+git log origin/<base-branch>..HEAD --oneline
 ```
 
-If the branch has no upstream yet, fall back to `git log origin/<base-branch>..HEAD --oneline`.
+This range lists exactly the commits that now sit on top of the rebased base, regardless of whether the branch has an upstream. Avoid `@{u}..HEAD` here: it fails when the branch has no upstream, and after a rebase it can also include base-branch commits the rebase moved onto, not just the replayed feature commits.
 
 #### Already Up to Date
 
