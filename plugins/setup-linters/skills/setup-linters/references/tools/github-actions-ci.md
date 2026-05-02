@@ -97,7 +97,7 @@ concurrency:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
+    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
     with:
       go-version-file: go.mod
       run-lint: true
@@ -186,12 +186,12 @@ concurrency:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
+    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
     with:
       run-test: false
 ```
 
-If the project already uses `rust-ci.yml` for full CI (which includes all lint checks by default), a separate lint workflow is redundant.
+If the project already uses `run-rust-ci.yml` for full CI (which includes all lint checks by default), a separate lint workflow is redundant.
 
 ### Ruby
 
@@ -275,7 +275,7 @@ concurrency:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/shell-lint.yml@e4e9f34f54041223e72f0d6241efede27a698fa1 # v1.0.0
+    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
 ```
 
 ### Zsh
@@ -438,7 +438,7 @@ Or as a reusable workflow job:
 
 ```yaml
 github-lint:
-  uses: cboone/gh-actions/.github/workflows/github-lint.yml@e4e9f34f54041223e72f0d6241efede27a698fa1 # v1.0.0
+  uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
 ```
 
 ### Hadolint
@@ -491,14 +491,14 @@ As an inline step:
 
 ```yaml
 - name: cspell
-  uses: cboone/gh-actions/actions/run-cspell@7371f5d84ff9f0b0e38bfde10ab7a46ddb331e92 # v2.2.0
+  uses: cboone/gh-actions/actions/run-cspell@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
 ```
 
 Or as a reusable workflow job (also covers markdownlint, prettier, yamllint):
 
 ```yaml
 text-lint:
-  uses: cboone/gh-actions/.github/workflows/text-lint.yml@e4e9f34f54041223e72f0d6241efede27a698fa1 # v1.0.0
+  uses: cboone/gh-actions/.github/workflows/lint-text.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
   with:
     run-cspell: true
 ```
@@ -538,14 +538,14 @@ concurrency:
 
 jobs:
   go-lint:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
+    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
     with:
       go-version-file: go.mod
       run-lint: true
       run-format-check: true
 
   rust-lint:
-    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
+    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
     with:
       run-test: false
 

@@ -1,6 +1,6 @@
-# Makefile Conventions for go-ci.yml v2
+# Makefile Conventions for run-go-ci.yml v3
 
-The `cboone/gh-actions` reusable CI workflow (`go-ci.yml@v2`) calls Makefile targets directly. All Go projects using this workflow must follow these conventions.
+The `cboone/gh-actions` reusable CI workflow (`run-go-ci.yml@v3.0.0`) calls Makefile targets directly. All Go projects using this workflow must follow these conventions.
 
 ## Required Targets
 

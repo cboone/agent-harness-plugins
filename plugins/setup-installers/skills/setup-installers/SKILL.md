@@ -279,7 +279,7 @@ All release workflow templates share:
 - Trigger: push tags matching `v*`
 - `permissions: contents: write` (needed to create releases)
 - Build matrix producing tarballs in the format `BINARY-VERSION-OS-ARCH.tar.gz`
-- A `publish` job that downloads all artifacts, generates `checksums.txt`, and creates a GitHub Release via `cboone/gh-actions/actions/gh-release@7371f5d84ff9f0b0e38bfde10ab7a46ddb331e92 # v2.2.0`
+- A `publish` job that downloads all artifacts, generates `checksums.txt`, and creates a GitHub Release via `cboone/gh-actions/actions/create-gh-release@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0`
 - `generate-release-notes: true` for auto-generated release notes
 
 Replace `PROJECT-NAME` with the actual binary name in all templates.
@@ -357,7 +357,7 @@ jobs:
         run: sha256sum *.tar.gz > checksums.txt
 
       - name: Create release
-        uses: cboone/gh-actions/actions/gh-release@7371f5d84ff9f0b0e38bfde10ab7a46ddb331e92 # v2.2.0
+        uses: cboone/gh-actions/actions/create-gh-release@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
         with:
           files: |
             *.tar.gz
@@ -438,7 +438,7 @@ jobs:
         run: sha256sum *.tar.gz > checksums.txt
 
       - name: Create release
-        uses: cboone/gh-actions/actions/gh-release@7371f5d84ff9f0b0e38bfde10ab7a46ddb331e92 # v2.2.0
+        uses: cboone/gh-actions/actions/create-gh-release@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
         with:
           files: |
             *.tar.gz
@@ -540,7 +540,7 @@ jobs:
         run: sha256sum *.tar.gz > checksums.txt
 
       - name: Create release
-        uses: cboone/gh-actions/actions/gh-release@7371f5d84ff9f0b0e38bfde10ab7a46ddb331e92 # v2.2.0
+        uses: cboone/gh-actions/actions/create-gh-release@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
         with:
           files: |
             *.tar.gz
@@ -637,7 +637,7 @@ jobs:
         run: sha256sum *.tar.gz *.zip > checksums.txt
 
       - name: Create release
-        uses: cboone/gh-actions/actions/gh-release@7371f5d84ff9f0b0e38bfde10ab7a46ddb331e92 # v2.2.0
+        uses: cboone/gh-actions/actions/create-gh-release@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
         with:
           files: |
             *.tar.gz
