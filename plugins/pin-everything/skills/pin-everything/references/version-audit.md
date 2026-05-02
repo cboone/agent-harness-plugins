@@ -22,7 +22,7 @@ Each surface has an upstream-of-record API the script queries. If the script fin
 | GitHub releases | `gh api repos/<r>/releases/latest`        |
 | crates.io       | `https://crates.io/api/v1/crates/<crate>` |
 | PyPI            | `https://pypi.org/pypi/<pkg>/json`        |
-| npm registry    | `https://registry.npmjs.org/<pkg>/latest` |
+| npm registry    | `https://registry.npmjs.org/<pkg>/latest` (scoped packages require the `/` between scope and name to be URL-encoded as `%2f`, e.g. `@taplo/cli` → `@taplo%2fcli`) |
 
 Each surface's jq filter (extracted from `./scripts/version-audit-template`):
 
