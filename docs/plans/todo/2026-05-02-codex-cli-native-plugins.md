@@ -32,9 +32,9 @@ Lean on codex's native Claude-style compatibility. Touch only the files that nee
 2. **Document codex's `notify = [...]` config and `tui.notifications` settings** in `plugins/notify/README.md` as the way codex users get the `Notification`/`PreCompact` behavior they would otherwise lose. These are codex-native mechanisms, not part of our plugin.
 3. **Update the top-level `README.md`** with a "Using with Codex CLI" section parallel to the OpenCode one, with its own self-contained "Known limitations" subsection (per earlier user direction: do not merge with the OpenCode limitations).
 4. **Update `CLAUDE.md`** so the "When adding new plugins" checklist mentions the codex compat consideration (only relevant when a plugin uses Claude-only hook events).
-5. **Add CI validation** for dual-manifest consistency: when a plugin has both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`, their `name`, `version`, `author`, `homepage`, `repository`, `license`, and `description` must match. Extend `bin/validate-plugins`.
+5. **Add CI validation** for dual-manifest consistency: when a plugin has both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`, their `name`, `version`, `author`, `homepage`, `repository`, `license`, and `keywords` must match. The `description` and `hooks` fields are allowed to differ (description for system-specific phrasing, hooks because divergence is the whole point). Extend `bin/validate-plugins`.
 6. **Bump `notify` plugin version** (minor) and **mirror in `marketplace.json`**, since the notify plugin gains codex-specific behavior. Per `CLAUDE.md` versioning rules: "Minor: new capabilities or meaningful behavior changes."
-7. **Do not bump `metadata.version` in `marketplace.json`** for this work — no plugins are added or removed from the catalog.
+7. **Recompute `metadata.version` in `marketplace.json`** to reflect the new sum of plugin version components. `bin/validate-plugins` enforces that `metadata.version` matches the computed `catalog-M<sum>-m<sum>-p<sum>-n<count>` value, so any plugin version bump in this PR requires recomputing the catalog state tag.
 
 ## Files to create
 

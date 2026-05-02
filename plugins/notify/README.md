@@ -23,7 +23,7 @@ Then select **Notify** from the available plugins.
 codex plugin marketplace add cboone/cboone-cc-plugins
 ```
 
-Codex CLI manages this plugin through the marketplace. For a Git-backed marketplace, refresh it after repository updates with `codex plugin marketplace upgrade cboone-cc-plugins`. For a local-path marketplace, restart Codex after changing plugin files so it can rebuild cached plugin copies from the local source.
+Codex CLI manages this plugin through the marketplace. For a Git-backed marketplace, refresh it after repository updates with `codex plugin marketplace upgrade cboone-cc-plugins` (note that `upgrade` takes the marketplace name `cboone-cc-plugins`, derived from the repository name, not the `owner/repo` identifier used by `add`). For a local-path marketplace, restart Codex after changing plugin files so it can rebuild cached plugin copies from the local source.
 
 Enable plugin-bundled hooks once per host so the `Stop` hook fires:
 
