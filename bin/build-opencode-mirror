@@ -115,17 +115,45 @@ if [[ ${#command_names[@]} -gt 0 ]]; then
   done < <(printf '%s\n' "${command_names[@]}" | sort | uniq -d)
 fi
 
-# ─── 3. Bail on validation errors ────────────────────────────────────────────
+# ─── 3. Discover and validate plugins ────────────────────────────────────────
+
+plugin_names=()
+plugin_paths=()
+
+for plugin_ts in plugins/*/opencode/index.ts; do
+  if [[ ! -f "${plugin_ts}" ]]; then
+    continue
+  fi
+
+  plugin_name="$(basename "$(dirname "$(dirname "${plugin_ts}")")")"
+
+  if [[ ! "${plugin_name}" =~ ${SKILL_NAME_REGEX} ]]; then
+    error "Plugin directory '${plugin_name}' does not match OpenCode regex ${SKILL_NAME_REGEX}"
+    continue
+  fi
+
+  plugin_names+=("${plugin_name}")
+  plugin_paths+=("${plugin_ts}")
+done
+
+if [[ ${#plugin_names[@]} -gt 0 ]]; then
+  while IFS= read -r dup; do
+    [[ -z "${dup}" ]] && continue
+    error "Duplicate plugin name '${dup}' across plugins"
+  done < <(printf '%s\n' "${plugin_names[@]}" | sort | uniq -d)
+fi
+
+# ─── 4. Bail on validation errors ────────────────────────────────────────────
 
 if [[ ${errors} -gt 0 ]]; then
   echo "${errors} validation error(s); refusing to build mirror." >&2
   exit 1
 fi
 
-# ─── 4. Recreate the mirror ──────────────────────────────────────────────────
+# ─── 5. Recreate the mirror ──────────────────────────────────────────────────
 
 rm -rf "${OUTPUT_DIR}"
-mkdir -p "${OUTPUT_DIR}/skills" "${OUTPUT_DIR}/commands"
+mkdir -p "${OUTPUT_DIR}/skills" "${OUTPUT_DIR}/commands" "${OUTPUT_DIR}/plugins"
 
 for ((i = 0; i < ${#skill_names[@]}; i++)); do
   skill_name="${skill_names[${i}]}"
@@ -139,8 +167,15 @@ for ((i = 0; i < ${#command_names[@]}; i++)); do
   ln -s "../../../${source_path}" "${OUTPUT_DIR}/commands/${command_name}.md"
 done
 
-# ─── 5. Summary ──────────────────────────────────────────────────────────────
+for ((i = 0; i < ${#plugin_names[@]}; i++)); do
+  plugin_name="${plugin_names[${i}]}"
+  source_path="${plugin_paths[${i}]}"
+  ln -s "../../../${source_path}" "${OUTPUT_DIR}/plugins/${plugin_name}.ts"
+done
+
+# ─── 6. Summary ──────────────────────────────────────────────────────────────
 
 echo "Built OpenCode mirror at ${OUTPUT_DIR}"
 echo "  skills:   ${#skill_names[@]}"
 echo "  commands: ${#command_names[@]}"
+echo "  plugins:  ${#plugin_names[@]}"

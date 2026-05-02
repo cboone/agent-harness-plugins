@@ -91,7 +91,7 @@
       "name": "block-rm-rf",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/block-rm-rf",
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     {
       "author": {
@@ -273,7 +273,7 @@
       "name": "notify",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/notify",
-      "version": "1.0.3"
+      "version": "1.1.0"
     },
     {
       "author": {
@@ -497,7 +497,7 @@
       "name": "update-docs-reminder",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/update-docs-reminder",
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     {
       "author": {

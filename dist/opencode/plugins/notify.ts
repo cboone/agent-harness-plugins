@@ -1,0 +1,1 @@
+../../../plugins/notify/opencode/index.ts

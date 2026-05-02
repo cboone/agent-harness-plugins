@@ -6,7 +6,7 @@
     "extends": ".markdownlint.jsonc",
   },
 
-  "ignores": [".workmux/", "node_modules/"],
+  "ignores": [".workmux/", "**/node_modules/**"],
 
   // customRules are in cli.markdownlint-cli2.jsonc, loaded via --config in
   // package.json scripts. They cannot live here because the VSCode

@@ -1,0 +1,1 @@
+../../../plugins/block-rm-rf/opencode/index.ts
