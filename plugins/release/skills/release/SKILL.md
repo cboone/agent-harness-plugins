@@ -63,23 +63,67 @@ if [ -d .github/workflows ]; then
     # trigger check rules out workflow_dispatch-only or PR-only workflows
     # that happen to mention both strings: those will not run when a
     # commit lands on main, so deferring to them would silently skip
-    # local catalog tagging and leave nothing tagged or released.
-    if grep -q 'compute-catalog-state' "$f" && grep -q 'gh release create' "$f" && (
-      # Inline-list form: branches: [main], branches: ["main", "master"],
-      # branches: [dev, main]. \b is a word boundary, so [maintenance]
-      # and [main_v2] do not falsely match.
-      grep -qE 'branches:[[:space:]]*\[[^]]*\b(main|master)\b' "$f" ||
+    # local catalog tagging and leave nothing tagged or released. The
+    # branches:/main match must occur *under* push: rather than under a
+    # sibling key like pull_request: -- otherwise a workflow with
+    # `pull_request: branches: [main]` would falsely match. The awk
+    # script tracks indentation to scope branches: matches to the push:
+    # block, and handles both inline (`branches: [main]`) and YAML-list
+    # (`branches:` followed by `- main`) forms.
+    if grep -q 'compute-catalog-state' "$f" && grep -q 'gh release create' "$f" && awk '
+        function leading_ws(s) {
+          match(s, /^[[:space:]]*/)
+          return RLENGTH
+        }
+        {
+          # When indentation falls back to the push: level (or shallower),
+          # we have left the push: block. Reset state before running other
+          # rules on this line so a sibling key (e.g. pull_request:) does
+          # not pick up branches: matches inside push:.
+          if (in_push && $0 !~ /^[[:space:]]*$/ && leading_ws($0) <= push_indent) {
+            in_push = 0
+            in_list = 0
+          }
+        }
+        /^[[:space:]]*push:[[:space:]]*$/ {
+          push_indent = leading_ws($0)
+          in_push = 1
+          in_list = 0
+          next
+        }
+        # Inline form: branches: [main], branches: ["main", "master"],
+        # branches: [dev, main]. Strip brackets and quotes, split on
+        # commas/whitespace, then compare each token. This avoids needing
+        # word-boundary support, which BSD awk lacks ([maintenance] and
+        # [main_v2] do not produce a "main" or "master" token).
+        in_push && match($0, /branches:[[:space:]]*\[[^]]*\]/) {
+          s = substr($0, RSTART, RLENGTH)
+          gsub(/\[/, "", s)
+          gsub(/\]/, "", s)
+          gsub(/"/, "", s)
+          gsub(/\047/, "", s)
+          n = split(s, a, /[, ]+/)
+          for (i = 1; i <= n; i++) {
+            if (a[i] == "main" || a[i] == "master") {
+              found = 1
+              break
+            }
+          }
+        }
         # YAML-list form: a `branches:` line followed by indented
         # `- main` / `- master` entries. Exact line anchors avoid needing
-        # word-boundary support inside awk (BSD awk lacks \< \> and
-        # [[:<:]]).
-        awk '
-          /^[[:space:]]+branches:[[:space:]]*$/ { in_list = 1; next }
-          in_list && /^[[:space:]]+-[[:space:]]+["'\''"]?(main|master)["'\''"]?[[:space:]]*$/ { found = 1; in_list = 0 }
-          in_list && !/^[[:space:]]+-/ && !/^[[:space:]]*$/ { in_list = 0 }
-          END { exit !found }
-        ' "$f"
-    ); then
+        # word-boundary support.
+        in_push && /^[[:space:]]+branches:[[:space:]]*$/ {
+          in_list = 1
+          next
+        }
+        in_list && /^[[:space:]]+-[[:space:]]+["'\''"]?(main|master)["'\''"]?[[:space:]]*$/ {
+          found = 1
+          in_list = 0
+        }
+        in_list && !/^[[:space:]]+-/ && !/^[[:space:]]*$/ { in_list = 0 }
+        END { exit !found }
+      ' "$f"; then
       echo "$f"
     fi
   done
@@ -383,7 +427,7 @@ How would you like to publish?
   - Stop here and publish manually
 ```
 
-If the user opens a PR, recommend the `/pr` skill. If the user pushes directly, recommend the `/commit` skill's push step (or `git push origin HEAD`). In either case, do not run the push from this skill: leave that decision to the dedicated skill so its safety checks apply.
+If the user opens a PR, recommend the `/pr` skill. If the user pushes directly to the default branch, the commit must reach that branch on the remote. From the default branch itself, recommend the `/commit` skill's push step (or `git push origin HEAD`). From a feature branch, `git push origin HEAD` only updates the feature branch on the remote, leaving the default branch untouched and the release workflow inert; in that case the user must fast-forward or merge the commit onto the default branch first (`/pr` is the safest path), or push the commit explicitly with a refspec like `git push origin HEAD:main` if their branch protection rules allow it. In either case, do not run the push from this skill: leave that decision to the dedicated skill so its safety checks apply.
 
 After the user confirms how they intend to publish, report:
 
