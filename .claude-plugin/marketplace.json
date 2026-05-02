@@ -133,7 +133,7 @@
       "name": "clean-up-agent-config",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/clean-up-agent-config",
-      "version": "1.1.2"
+      "version": "1.2.0"
     },
     {
       "author": {
