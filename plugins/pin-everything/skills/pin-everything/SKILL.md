@@ -28,20 +28,20 @@ Scan the working tree for every version surface, then output a categorized table
 
 Surfaces to detect:
 
-| Category                    | Detection                                                                                                                      |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| GitHub Actions `uses:` refs | Glob `.github/workflows/*.{yml,yaml}` and `.github/actions/**/action.{yml,yaml}`; grep for `uses:`                             |
-| Reusable workflow refs      | Same files; grep for `uses:` lines containing `.github/workflows/`                                                             |
-| `packageManager` field      | Read `package.json`; check `.packageManager`                                                                                   |
-| `package.json` deps         | Read `package.json`; flag `^`/`~` ranges in `dependencies`/`devDependencies`. **Skip `peerDependencies`** — see step 6.        |
-| Language version files      | Glob `.tool-versions`, `.nvmrc`, `.ruby-version`, `rust-toolchain.toml`, `build.zig.zon`                                       |
-| `go.mod` `go` directive     | Read `go.mod`; capture the directive line                                                                                      |
-| Inline language pins in CI  | Grep workflows for `node-version:`, `ruby-version:`, `go-version:`, `python-version:`, `zig-version:` (without `-file` suffix) |
-| `go install` pins           | Grep for `go install <path>@<ref>` where `<ref>` is `latest` or a `vN.Y.Z` tag                                                 |
-| `cargo install` pins        | Grep for `cargo install` with or without `--locked --version`                                                                  |
-| `pip` / `uv` pins           | Grep for `pip install`, `uv pip install`, `uv add`, `uv tool install`, `uvx` (with or without `==`)                            |
-| `npx` pins                  | Grep for `npx <name>` (with or without `@version`)                                                                             |
-| Schema URLs                 | Grep `*.json` and `*.yaml` for `$schema` URLs containing `@latest`. Pinning is per-publisher (see step 7).                     |
+| Category                    | Detection                                                                                                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GitHub Actions `uses:` refs | Glob `.github/workflows/*.{yml,yaml}` and `.github/actions/**/action.{yml,yaml}`; grep for `uses:`                                                                       |
+| Reusable workflow refs      | Same files; grep for `uses:` lines containing `.github/workflows/`                                                                                                       |
+| `packageManager` field      | Read `package.json`; check `.packageManager`                                                                                                                             |
+| `package.json` deps         | Read `package.json`; flag `^`/`~` ranges in `dependencies`/`devDependencies`. **Skip `peerDependencies`** — see step 6.                                                  |
+| Language version files      | Glob `.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `.python-version`, `rust-toolchain.toml`, `build.zig.zon`; also grep `Gemfile` for a `ruby` directive |
+| `go.mod` `go` directive     | Read `go.mod`; capture the directive line                                                                                                                                |
+| Inline language pins in CI  | Grep workflows for `node-version:`, `ruby-version:`, `go-version:`, `python-version:`, `zig-version:` (without `-file` suffix)                                           |
+| `go install` pins           | Grep for `go install <path>@<ref>` where `<ref>` is `latest` or a `vN.Y.Z` tag                                                                                           |
+| `cargo install` pins        | Grep for `cargo install` with or without `--locked --version`                                                                                                            |
+| `pip` / `uv` pins           | Grep for `pip install`, `uv pip install`, `uv add`, `uv tool install`, `uvx` (with or without `==`)                                                                      |
+| `npx` pins                  | Grep for `npx <name>` (with or without `@version`)                                                                                                                       |
+| Schema URLs                 | Grep `*.json` and `*.yaml` for `$schema` URLs containing `@latest`. Pinning is per-publisher (see step 7).                                                               |
 
 Exclude vendored directories from all greps: `node_modules/`, `.yarn/`, `vendor/`, `dist/`, `target/`, `.venv/`.
 
@@ -77,7 +77,7 @@ Replace inline pins in scaffolded CI with version-file refs so the version of re
 | `ruby-version: "X"`               | `.tool-versions` if it has a `ruby` line, else `.ruby-version`, else `Gemfile` (if it has a `ruby` directive)                                                                               |
 | `go-version: "stable"` or `"X.Y"` | `go-version-file: "go.mod"`                                                                                                                                                                 |
 | `python-version: "X.Y"`           | `astral-sh/setup-uv`: omit input (reads `pyproject.toml` `requires-python` directly). `actions/setup-python`: `python-version-file: ".python-version"`; create `.python-version` if missing |
-| `zig-version: "X.Y.Z"`            | Action-direct (`mlugg/setup-zig`): omit (reads `build.zig.zon`). Wrapper (`cboone/gh-actions/.../zig-ci.yml` v2.2.0+): `zig-version-file: "build.zig.zon"`                                  |
+| `zig-version: "X.Y.Z"`            | Action-direct (`mlugg/setup-zig`): omit (reads `build.zig.zon`). Wrapper (`cboone/gh-actions/.../run-zig-ci.yml` v2.2.0+): `zig-version-file: "build.zig.zon"`                              |
 
 **Reuse the file that already pins this language.** Audit step 1 already enumerates which version files exist in the repo and what each one contains. Mere existence is not enough — a `.tool-versions` that lists only `python` and `ruby` will not configure Node when CI loads it. Verify the file has an entry for the language being configured before pointing the `*-version-file` input at it. If `.nvmrc` is present, point `node-version-file` at it instead of introducing a parallel `.tool-versions`. The whole purpose of the version-file rewrite is to make CI and local dev agree on a single source of truth; emitting a second file (or pointing at a file that lacks the relevant entry) silently re-creates the drift or breaks the workflow.
 
@@ -192,7 +192,7 @@ Skip this step if `--no-audit` was passed. Reference: `./references/version-audi
 ## Error Handling
 
 - **Tag does not resolve to a commit.** Annotated tags resolve via the tag object; lightweight tags resolve directly. If `gh api repos/<r>/git/ref/tags/<t>` returns a `tag` type, recurse through `.object.sha` to find the commit. The `gh api repos/<r>/commits/<tag>` endpoint sidesteps this entirely and is the preferred path.
-- **Action does not support a version-file input.** For action-direct `mlugg/setup-zig`, omit the version input entirely — the action reads `build.zig.zon`'s `minimum_zig_version` by default. The `cboone/gh-actions/.../zig-ci.yml` wrapper (v2.2.0+) exposes a real `zig-version-file: "build.zig.zon"` input. For other languages without a `*-version-file` input, pin inline to the value from the version file rather than dropping pinning entirely.
+- **Action does not support a version-file input.** For action-direct `mlugg/setup-zig`, omit the version input entirely — the action reads `build.zig.zon`'s `minimum_zig_version` by default. The `cboone/gh-actions/.../run-zig-ci.yml` wrapper (v2.2.0+) exposes a real `zig-version-file: "build.zig.zon"` input. For other languages without a `*-version-file` input, pin inline to the value from the version file rather than dropping pinning entirely.
 - **Ambiguous user-facing vs tool-install distinction.** If the install path looks like a real tool but lives in a scaffolded README under a `Usage:` heading or similar, prompt the user. Default to leaving placeholder-shaped paths unpinned.
 - **Conflicting existing Dependabot config.** If `.github/dependabot.yml` already exists, do not overwrite — merge: keep user-specific groups and schedules, add only the missing ecosystems and the standard split-group structure for ecosystems that lacked it. Show the diff before writing.
 - **Library detected when user expected an app pin.** Surface the library discriminator explicitly ("`Cargo.lock` not committed and crate exposes `[lib]` only — treating as a library and skipping manifest exact-pinning"). Let the user override per-ecosystem if the heuristic is wrong.

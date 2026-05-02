@@ -66,12 +66,17 @@ jobs:
           # across BOTH open and closed states so the previous cycle's issue is
           # reopened on re-drift instead of stacking a new one alongside it;
           # this is what preserves the documented single-issue invariant across
-          # drift→clear→drift cycles. `gh --jq` only accepts a single filter
-          # expression and does not forward `--arg` to jq, so the title is
-          # bound by piping through jq.
+          # drift→clear→drift cycles. `gh issue list` defaults to 30 rows, so
+          # request the maximum (`--limit 1000`) to ensure the previous cycle's
+          # issue is still found in repos that have accumulated many label
+          # matches over time; without this, a missed match would create a
+          # duplicate issue alongside the existing one. `gh --jq` only accepts
+          # a single filter expression and does not forward `--arg` to jq, so
+          # the title is bound by piping through jq.
           issue_json="$(gh issue list \
             --label "${ISSUE_LABEL}" \
             --state all \
+            --limit 1000 \
             --json number,title,state \
             | jq -c --arg title "${ISSUE_TITLE}" \
               '[.[] | select(.title == $title)][0] // {}')"

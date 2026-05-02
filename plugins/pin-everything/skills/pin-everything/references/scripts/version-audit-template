@@ -321,15 +321,23 @@ function pypi_latest() {
 
 function audit_python_install_pins() {
   declare -A seen=()
-  local line file content pkg current key latest
+  local line file content rest pkg current key latest
   while IFS= read -r line; do
     file="${line%%:*}"
     content="${line#*:}"
-    # PyPI package names may include `.` (e.g., `zope.interface`), `-`, and `_`;
-    # PEP 503 normalizes them but the surface form preserves the original.
-    if [[ "${content}" =~ \'?([a-zA-Z0-9._-]+)==([0-9]+(\.[0-9]+)*)\'? ]]; then
+    # Walk every `pkg==X.Y.Z` token on the line. Bash regex via `=~` only matches
+    # the first occurrence per attempt, so a single-shot match would silently
+    # skip drift for additional requirements on the same line (e.g.
+    # `pip install 'ruff==X' 'mypy==Y'` or `uv add 'foo==X' 'bar==Y'`). After
+    # each match, advance `rest` past the matched substring and try again until
+    # no further requirement matches. PyPI package names may include `.` (e.g.,
+    # `zope.interface`), `-`, and `_`; PEP 503 normalizes them but the surface
+    # form preserves the original.
+    rest="${content}"
+    while [[ "${rest}" =~ \'?([a-zA-Z0-9._-]+)==([0-9]+(\.[0-9]+)*)\'? ]]; do
       pkg="${BASH_REMATCH[1]}"
       current="${BASH_REMATCH[2]}"
+      rest="${rest#*"${BASH_REMATCH[0]}"}"
       key="${pkg}|${current}"
       if [[ -n "${seen[${key}]:-}" ]]; then
         continue
@@ -339,7 +347,7 @@ function audit_python_install_pins() {
       if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
         record_drift "python install" "${pkg}" "${current}" "${latest}" "${file}"
       fi
-    fi
+    done
     # Allow arbitrary flags / quoting between the install command and the
     # `pkg==X.Y.Z` requirement so forms like `pip install --upgrade 'pkg==1.2.3'`,
     # `uv add --dev 'pkg==1.2.3'`, `uv tool install --force 'pkg==1.2.3'`, and
