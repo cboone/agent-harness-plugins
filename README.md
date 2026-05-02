@@ -506,6 +506,14 @@ codex plugin marketplace add cboone/cboone-cc-plugins
 
 Codex CLI currently manages plugins at the marketplace level. In Codex CLI 0.128.0, `codex plugin` exposes the `marketplace` subcommand with `add`, `upgrade`, and `remove`; it does not expose a separate `codex plugin install` subcommand.
 
+Enable plugin-bundled hooks once per host so the `notify` and `update-docs-reminder` hooks fire:
+
+```bash
+codex features enable plugin_hooks
+```
+
+Plugin-bundled hooks are gated behind the `plugin_hooks` feature flag (listed as `under development` in Codex CLI 0.128.0). Without it the marketplace add and skill discovery still work, but `hooks/hooks.json` files inside installed plugins are silently ignored.
+
 Refresh a Git-backed marketplace after pulling repository updates or after a published release:
 
 ```bash
@@ -522,6 +530,7 @@ codex plugin marketplace remove cboone-cc-plugins
 
 ### Codex CLI known limitations
 
+- **Plugin-bundled hooks are gated behind a feature flag.** `plugin_hooks` is `under development` in Codex CLI 0.128.0 and is `false` by default. Run `codex features enable plugin_hooks` once before expecting `notify` or `update-docs-reminder` to fire on Codex; see the install section above.
 - **`Notification` and `PreCompact` hook events are not supported.** Codex CLI's hook schema only supports `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, and `Stop`. The `notify` plugin therefore wires only the turn-completion notification on Codex (its other Claude Code events have no Codex equivalent). For idle, elicitation, and permission alerts, enable Codex's built-in `tui.notifications = true` in `~/.codex/config.toml`. See the [`notify` plugin README](./plugins/notify/README.md) for details.
 - **No custom prompts shipped.** Codex's `~/.codex/prompts/` mechanism is officially deprecated in favor of skills. This repository ships skills (and hooks), not prompts.
 

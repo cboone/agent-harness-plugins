@@ -29,6 +29,14 @@ codex plugin marketplace add cboone/cboone-cc-plugins
 
 Codex CLI manages this plugin through the marketplace. For a Git-backed marketplace, refresh it after repository updates with `codex plugin marketplace upgrade cboone-cc-plugins`. For a local-path marketplace, restart Codex after changing plugin files so it can rebuild cached plugin copies from the local source. The plugin includes a Codex manifest with `"hooks": "./hooks/hooks.json"`, so Codex registers the same `PostToolUse` hook definition used by Claude Code.
 
+Enable plugin-bundled hooks once per host so the `PostToolUse` hook fires:
+
+```bash
+codex features enable plugin_hooks
+```
+
+Without this flag the plugin installs successfully but the hook is ignored. See [Codex CLI known limitations](../../README.md#codex-cli-known-limitations) for context.
+
 ### Using with OpenCode
 
 OpenCode loads the plugin automatically when [`OPENCODE_CONFIG_DIR`](../../README.md#using-with-opencode) is set to this repository's `dist/opencode/` mirror. The TypeScript plugin lives at [`opencode/index.ts`](./opencode/index.ts) and uses the `tool.execute.after` hook with the same skip rules, file patterns, and per-project `.update-docs-reminder.json` schema as the Claude Code version.
