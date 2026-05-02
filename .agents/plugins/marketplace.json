@@ -1,0 +1,685 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "metadata": {
+    "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
+    "version": "catalog-M55-m101-p109-n48"
+  },
+  "name": "cboone-cc-plugins",
+  "owner": {
+    "name": "Christopher Boone"
+  },
+  "plugins": [
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "scaffolding",
+      "description": "Add standard community files to a project: CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, and PR template",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["code-of-conduct", "community", "contributing", "open-source", "security"],
+      "license": "MIT",
+      "name": "add-community-files",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/add-community-files",
+      "version": "1.0.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "ci-and-release",
+      "description": "Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with conditional support for completions, man pages, and macOS-only builds.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["github-actions", "go", "golang", "goreleaser", "homebrew"],
+      "license": "MIT",
+      "name": "add-goreleaser-homebrew",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/add-goreleaser-homebrew",
+      "version": "2.3.2"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Set up scrut snapshot-based CLI integration testing for a CLI project.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cli", "scrut", "testing"],
+      "license": "MIT",
+      "name": "add-scrut-cli-tests",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/add-scrut-cli-tests",
+      "version": "1.6.2"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "issues-and-worktrees",
+      "description": "Fetch a GitHub issue, plan the work, execute changes, and commit with issue references.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["gh", "github", "issues", "workflow"],
+      "license": "MIT",
+      "name": "address-issue",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/address-issue",
+      "version": "1.0.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-review",
+      "description": "Parse a review document for actionable feedback, work through items systematically, and track resolution progress.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["code-review", "feedback", "markdown", "review", "workflow"],
+      "license": "MIT",
+      "name": "address-review",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/address-review",
+      "version": "1.0.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "scaffolding",
+      "description": "Assess a repository, determine what scaffolding and setup tools are needed, present a plan, and execute them in the correct order.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["bootstrap", "ci", "go", "linters", "rust", "scaffolding", "setup", "zig", "zsh"],
+      "license": "MIT",
+      "name": "bootstrap-project",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/bootstrap-project",
+      "version": "1.2.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Check and evaluate zsh scripts using shellcheck, shfmt, shellharden, zsh -n, zcompile, setopt warn_create_global/warn_nested_var, and checkbashisms.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["checkbashisms", "shellcheck", "shellharden", "shfmt", "zsh"],
+      "license": "MIT",
+      "name": "check-zsh-scripts",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/check-zsh-scripts",
+      "version": "2.1.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "agents",
+      "description": "Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, Copilot, and OpenCode.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["agents", "codex", "config", "copilot", "opencode", "settings"],
+      "license": "MIT",
+      "name": "clean-up-agent-config",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/clean-up-agent-config",
+      "version": "1.2.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "git",
+      "description": "Smart, context-aware git commits with conventional commit messages and plan awareness.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["commit", "conventional-commits", "git", "plans"],
+      "license": "MIT",
+      "name": "commit",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/commit",
+      "version": "1.2.2"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "issues-and-worktrees",
+      "description": "Create GitHub issues using tmpfiles to avoid permission prompts from large multiline Bash arguments.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["gh", "github", "issues", "workflow"],
+      "license": "MIT",
+      "name": "create-issue",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/create-issue",
+      "version": "1.0.4"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "agents",
+      "description": "Guide for creating new plugins in this repository with consistent structure and conventions.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["claude-code", "hooks", "plugins", "scaffolding", "skills"],
+      "license": "MIT",
+      "name": "create-plugin",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/create-plugin",
+      "version": "1.2.4"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "issues-and-worktrees",
+      "description": "Create a git worktree, branch, and tmux window with a task prompt using workmux.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["git", "tmux", "workmux", "worktree"],
+      "license": "MIT",
+      "name": "create-worktree",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/create-worktree",
+      "version": "1.0.10"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "issues-and-worktrees",
+      "description": "Find a GitHub issue and create a worktree, branch, and tmux window for working on it, with issue context injected as a task prompt.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["git", "github", "issues", "tmux", "workmux", "worktree"],
+      "license": "MIT",
+      "name": "create-worktree-from-issue",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/create-worktree-from-issue",
+      "version": "1.2.9"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Best practices for handling user-provided secrets in CLI tools: secure input methods, credential storage, secret masking, and language-specific libraries.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cli", "credentials", "keychain", "secrets", "security"],
+      "license": "MIT",
+      "name": "handle-secrets",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/handle-secrets",
+      "version": "1.0.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Detect project linters and formatters, run them with auto-fix, resolve remaining issues, then commit and push the fixes.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cspell", "eslint", "formatting", "linting", "prettier", "shellcheck", "shfmt"],
+      "license": "MIT",
+      "name": "lint-and-fix",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/lint-and-fix",
+      "version": "1.3.5"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "scaffolding",
+      "description": "Bootstrap, audit, and maintain REUSE-style mixed-license coverage in a repository: LICENSES/, NOTICE, REUSE.toml, SPDX headers, and reuse lint cleanliness.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["licensing", "notice", "reuse", "spdx"],
+      "license": "MIT",
+      "name": "manage-repo-licensing",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/manage-repo-licensing",
+      "version": "1.0.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "git",
+      "description": "Fetch and merge the base branch into the current feature branch with automatic conflict resolution.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["branch", "conflicts", "git", "merge"],
+      "license": "MIT",
+      "name": "merge-main",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/merge-main",
+      "version": "1.1.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "workflow",
+      "description": "Notifies you when Claude finishes a task or needs your attention.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["alerts", "macos", "notifications"],
+      "license": "MIT",
+      "name": "notify",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/notify",
+      "version": "1.1.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "ci-and-release",
+      "description": "Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["ci", "concurrency", "github-actions", "optimization", "timeout", "workflow"],
+      "license": "MIT",
+      "name": "optimize-runner-usage",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/optimize-runner-usage",
+      "version": "1.2.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "git",
+      "description": "Lint, commit, push, and create a pull request in one step with no prompts.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["git", "github", "plans", "pull-requests", "workflow"],
+      "license": "MIT",
+      "name": "pr",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/pr",
+      "version": "1.5.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "git",
+      "description": "Fetch and rebase the current feature branch onto the base branch with automatic conflict resolution and force-with-lease push.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["branch", "conflicts", "git", "rebase"],
+      "license": "MIT",
+      "name": "rebase-onto-main",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/rebase-onto-main",
+      "version": "1.0.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "scaffolding",
+      "description": "Refresh existing project scaffolding against the latest plugin templates.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["audit", "ci", "linters", "refresh", "scaffolding", "templates"],
+      "license": "MIT",
+      "name": "refresh-project-scaffolding",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/refresh-project-scaffolding",
+      "version": "2.0.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "git",
+      "description": "Prepare a versioned release or Claude Code marketplace catalog state tag: update release files, create a release commit, tag locally, and optionally publish a GitHub Release.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["catalog", "changelog", "conventional-commits", "gh", "git", "github-release", "marketplace", "release", "semver", "tags", "versioning"],
+      "license": "MIT",
+      "name": "release",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/release",
+      "version": "1.4.2"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-review",
+      "description": "Process and resolve GitHub Copilot automated PR review comments.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["code-review", "copilot", "github", "pull-requests"],
+      "license": "MIT",
+      "name": "resolve-copilot-pr-feedback",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/resolve-copilot-pr-feedback",
+      "version": "1.3.4"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "git",
+      "description": "Review and evaluate all work done on the current branch: summarize changes, assess plan compliance, and evaluate code quality.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["branch", "code-review", "diff", "git", "plans", "review", "summary"],
+      "license": "MIT",
+      "name": "review-branch",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/review-branch",
+      "version": "1.2.2"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "scaffolding",
+      "description": "Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions, and Homebrew tap support.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cli", "go", "golang", "goreleaser", "scaffolding"],
+      "license": "MIT",
+      "name": "scaffold-go-cli",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/scaffold-go-cli",
+      "version": "2.7.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "scaffolding",
+      "description": "Scaffold a Go library project with GoReleaser changelog releases, golangci-lint, GitHub Actions CI/CD, and Makefile.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["go", "golang", "goreleaser", "library", "scaffolding"],
+      "license": "MIT",
+      "name": "scaffold-go-library",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/scaffold-go-library",
+      "version": "1.8.2"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "scaffolding",
+      "description": "Scaffold the universal boilerplate for a new repository: LICENSE, README, CHANGELOG, .gitignore, agent config files, and a plans directory.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["boilerplate", "git", "project", "repo", "scaffolding"],
+      "license": "MIT",
+      "name": "scaffold-new-repo",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/scaffold-new-repo",
+      "version": "1.8.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "scaffolding",
+      "description": "Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest, git-cliff, GitHub Actions CI/CD, and Makefile.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cargo", "cli", "rust", "scaffolding"],
+      "license": "MIT",
+      "name": "scaffold-rust-cli",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/scaffold-rust-cli",
+      "version": "1.2.2"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "ci-and-release",
+      "description": "Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["ci", "github-actions", "makefile", "testing", "workflow", "zig", "zsh"],
+      "license": "MIT",
+      "name": "setup-ci",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/setup-ci",
+      "version": "1.9.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "ci-and-release",
+      "description": "Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, go/cargo install, and release workflow.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cargo", "distribution", "github-actions", "go", "golang", "homebrew", "install", "release", "rust", "swift", "zig"],
+      "license": "MIT",
+      "name": "setup-installers",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/setup-installers",
+      "version": "2.2.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Detect project languages, recommend appropriate linters and formatters, install them, and generate config files.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cspell", "eslint", "formatting", "lean", "linting", "prettier", "ruff", "setup", "zsh"],
+      "license": "MIT",
+      "name": "setup-linters",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/setup-linters",
+      "version": "1.10.4"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "ci-and-release",
+      "description": "Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["gitleaks", "github-actions", "scanning", "secrets", "security", "trufflehog"],
+      "license": "MIT",
+      "name": "setup-secret-scanning",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/setup-secret-scanning",
+      "version": "2.5.2"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "issues-and-worktrees",
+      "description": "Review open GitHub issues and recommend what to work on next with prioritized reasoning.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["github", "issues", "planning", "prioritization", "triage"],
+      "license": "MIT",
+      "name": "suggest-next-issue",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/suggest-next-issue",
+      "version": "1.1.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "workflow",
+      "description": "Reminds you to update documentation when a commit includes significant code changes.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["documentation", "git", "hooks", "reminders"],
+      "license": "MIT",
+      "name": "update-docs-reminder",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/update-docs-reminder",
+      "version": "1.2.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-review",
+      "description": "Find the latest branch review, assess commits made since, and update the review document with a synthesized reassessment.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["branch", "code-review", "diff", "git", "review", "update"],
+      "license": "MIT",
+      "name": "update-review",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/update-review",
+      "version": "1.0.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "git",
+      "description": "Git and GitHub CLI conventions for Claude Code: tmpfile patterns, HEREDOC commits, GPG signing, safe push practices, and permission-prompt avoidance.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cli", "conventions", "gh", "git", "github", "permissions"],
+      "license": "MIT",
+      "name": "use-git",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/use-git",
+      "version": "1.1.3"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Applies Bash style conventions when creating or editing Bash scripts.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["bash", "format", "scripts", "shell", "style"],
+      "license": "MIT",
+      "name": "write-bash-scripts",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/write-bash-scripts",
+      "version": "2.0.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "writing",
+      "description": "Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["formal-methods", "isabelle", "lean", "planning", "rocq"],
+      "license": "MIT",
+      "name": "write-formalization-roadmap",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/write-formalization-roadmap",
+      "version": "1.0.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["code-review", "go", "golang", "style"],
+      "license": "MIT",
+      "name": "write-go-code",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/write-go-code",
+      "version": "1.2.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2, and Knuth conventions.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["academic-writing", "ams", "ieee", "latex", "typesetting"],
+      "license": "MIT",
+      "name": "write-latex",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/write-latex",
+      "version": "1.0.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Lean 4 style guide and Mathlib conventions for naming, proofs, formatting, and metaprogramming.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["formal-methods", "lean", "lean4", "mathlib", "style"],
+      "license": "MIT",
+      "name": "write-lean-code",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/write-lean-code",
+      "version": "1.0.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Conventions for compile-time, example-based Lean 4 API regression tests that mirror a library's public surface.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["formal-methods", "lean", "lean4", "mathlib", "testing"],
+      "license": "MIT",
+      "name": "write-lean-tests",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/write-lean-tests",
+      "version": "1.0.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "writing",
+      "description": "Applies Markdown style conventions when creating or editing Markdown files.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["documentation", "format", "markdown", "style"],
+      "license": "MIT",
+      "name": "write-markdown",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/write-markdown",
+      "version": "1.2.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "writing",
+      "description": "Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["academic-writing", "exposition", "mathematics", "notation", "proofs"],
+      "license": "MIT",
+      "name": "write-math",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/write-math",
+      "version": "1.0.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "writing",
+      "description": "Pandoc-flavored Markdown conventions for academic papers with LaTeX output.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["academic-writing", "latex", "markdown", "pandoc"],
+      "license": "MIT",
+      "name": "write-pandoc-markdown",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/write-pandoc-markdown",
+      "version": "1.0.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Applies scrut test style conventions when creating or editing scrut test files for CLI binaries and zsh plugins.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cli", "scrut", "style", "testing", "zsh"],
+      "license": "MIT",
+      "name": "write-scrut-tests",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/write-scrut-tests",
+      "version": "1.1.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
+      "description": "Applies zsh style conventions when creating or editing zsh scripts, configurations, and completions.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["completions", "format", "scripts", "style", "zsh"],
+      "license": "MIT",
+      "name": "write-zsh-scripts",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/write-zsh-scripts",
+      "version": "1.0.1"
+    }
+  ]
+}
