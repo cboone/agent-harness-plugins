@@ -100,7 +100,7 @@ Strip `^`/`~` ranges from manifests, replacing each with the exact version locke
 | Node.js   | Lockfile committed AND (`"private": true` OR no published `name` exposure) | Library packages with `name`/`exports` configured for distribution | Pin manifest       |
 | Ruby      | No `*.gemspec`; `Gemfile.lock` committed                                   | `*.gemspec` present (gem)                                          | Pin from lockfile  |
 | Python    | `requirements.txt` or `uv.lock` committed; no library distribution name    | `pyproject.toml` declares a published distribution                 | Pin to `==`        |
-| Rust      | `Cargo.lock` committed AND crate has a `[[bin]]` target                    | Crate exposes `[lib]`; `Cargo.lock` typically not committed        | Exact-pin manifest |
+| Rust      | `Cargo.lock` committed AND crate has a binary target (`[[bin]]`, `src/main.rs`, or `src/bin/*.rs`; `publish = false` is also a strong app signal) | Crate exposes `[lib]`; `Cargo.lock` typically not committed        | Exact-pin manifest |
 
 When the discriminator is ambiguous (monorepo workspaces, hybrid crates, gems with bin entrypoints), prompt the user. **Always pin the lockfile** even for libraries — that is what `yarn install --frozen-lockfile` and friends consume in CI. Only the *manifest* changes between app and library treatment.
 

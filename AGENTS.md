@@ -167,41 +167,6 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── merge-main/
     │           └── SKILL.md
-    ├── write-formalization-roadmap/ # Formalization roadmap structure skill
-    │   ├── .claude-plugin/
-    │   │   └── plugin.json
-    │   ├── README.md
-    │   └── skills/
-    │       └── write-formalization-roadmap/
-    │           ├── SKILL.md
-    │           └── references/
-    │               ├── comprehensive/
-    │               │   ├── anti-patterns.md
-    │               │   ├── conventions.md
-    │               │   ├── document-structure.md
-    │               │   ├── examples.md
-    │               │   └── milestone-anatomy.md
-    │               └── essential/
-    │                   └── checklist.md
-    ├── write-go-code/              # Go style guide skill
-    │   ├── .claude-plugin/
-    │   │   └── plugin.json
-    │   ├── README.md
-    │   └── skills/
-    │       └── write-go-code/
-    │           ├── SKILL.md
-    │           └── references/
-    │               ├── comprehensive/
-    │               │   ├── code-organization.md
-    │               │   ├── concurrency.md
-    │               │   ├── data-types.md
-    │               │   ├── errors.md
-    │               │   ├── functions.md
-    │               │   ├── interfaces.md
-    │               │   ├── naming.md
-    │               │   └── testing.md
-    │               └── essential/
-    │                   └── checklist.md
     ├── pin-everything/              # Supply-chain version pinning skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -573,6 +538,41 @@ cboone-cc-plugins/
     │           ├── SKILL.md
     │           └── references/
     │               └── BASH.md
+    ├── write-formalization-roadmap/ # Formalization roadmap structure skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── write-formalization-roadmap/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── comprehensive/
+    │               │   ├── anti-patterns.md
+    │               │   ├── conventions.md
+    │               │   ├── document-structure.md
+    │               │   ├── examples.md
+    │               │   └── milestone-anatomy.md
+    │               └── essential/
+    │                   └── checklist.md
+    ├── write-go-code/              # Go style guide skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── write-go-code/
+    │           ├── SKILL.md
+    │           └── references/
+    │               ├── comprehensive/
+    │               │   ├── code-organization.md
+    │               │   ├── concurrency.md
+    │               │   ├── data-types.md
+    │               │   ├── errors.md
+    │               │   ├── functions.md
+    │               │   ├── interfaces.md
+    │               │   ├── naming.md
+    │               │   └── testing.md
+    │               └── essential/
+    │                   └── checklist.md
     ├── write-zsh-scripts/          # Zsh style guide skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json

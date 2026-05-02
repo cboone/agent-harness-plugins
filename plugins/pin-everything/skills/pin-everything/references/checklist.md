@@ -22,7 +22,7 @@ Single-page rapid-reference for the pin-everything skill. One row per surface: w
 | `go install ...@latest`            | `grep -RE 'go install [^ ]+@latest'`                                            | Look up upstream latest release; rewrite as `@vX.Y.Z`                                                                              | `go install` succeeds                           | `./install-commands.md`  |
 | `cargo install <crate>`            | `grep -RE 'cargo install [a-z]'` without `--version`                            | `cargo install --locked --version X.Y.Z <crate>`                                                                                   | `<crate> --version`                             | `./install-commands.md`  |
 | `pip install <pkg>`                | `grep` for `pip install`, `uv pip install`, or `uv add` without `==`            | `'<pkg>==X.Y.Z'`                                                                                                                   | `pip show <pkg>` or `uv pip show <pkg>`         | `./install-commands.md`  |
-| `npx <tool>`                       | `grep -RE 'npx [^@ ]+'` without trailing `@version`                             | `npx <tool>@X.Y.Z` in CI without prior install. Skip if local lockfile resolves it                                                 | `npx --version`                                 | `./install-commands.md`  |
+| `npx <tool>`                       | `grep -RE 'npx [^@ ]+'` without trailing `@version`                             | `npx <tool>@X.Y.Z` in CI without prior install. Skip if local lockfile resolves it                                                 | `npx <tool>@X.Y.Z --version` (or tool's equivalent version flag) | `./install-commands.md`  |
 | `.yarnrc.yml`                      | File exists at repo root                                                        | Add `enableScripts: false`, `enableTelemetry: false`, `defaultSemverRangePrefix: ""`. Revert any `approvedGitRepositories: ["**"]` | `cat .yarnrc.yml`                               | `./yarn-corepack.md`     |
 | `.github/dependabot.yml`           | File presence                                                                   | Create or merge with weekly schedule, split groups, 10-PR cap, `versioning-strategy: increase` for `npm`                           | Workflow tab shows Dependabot scheduled         | `./dependabot.md`        |
 | `bin/version-audit`                | Drift coverage for the four surfaces Dependabot can't track                     | Tailor `./scripts/version-audit-template`; write to `bin/version-audit`; pair with workflow                                        | `bash bin/version-audit` exits 0 with no output | `./version-audit.md`     |
@@ -43,7 +43,7 @@ Application context — pin the manifest:
 - Node.js: lockfile committed AND (`"private": true` OR no library-style export config)
 - Ruby: no `*.gemspec`; `Gemfile.lock` committed
 - Python: `requirements.txt` or `uv.lock` committed; no published distribution
-- Rust: `Cargo.lock` committed AND `[[bin]]` target present
+- Rust: `Cargo.lock` committed AND has a binary target (any of: `[[bin]]` in `Cargo.toml`, `src/main.rs` or `src/bin/*.rs`, or `cargo metadata` reports a `bin` kind). `publish = false` is also a strong app signal.
 
 Library context — pin the lockfile only, leave the manifest with caret / pessimistic ranges:
 
