@@ -201,12 +201,14 @@ bash resolve-copilot-threads reply THREAD_ID --body-file TMPFILE
 
 # Or reply and resolve in one step:
 bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file TMPFILE
+```
 
-# Step 4: Clean up:
+```bash
+# Step 4: Clean up — issue this as a SEPARATE Bash tool call, not chained onto step 3:
 rm -f TMPFILE
 ```
 
-Replace `TMPFILE` with the actual path returned by `mktemp`.
+Replace `TMPFILE` with the actual path returned by `mktemp`. The cleanup must be a separate Bash tool call: each tool invocation runs unconditionally, so the tmpfile is removed whether step 3 succeeded or failed, and the harness preserves step 3's exit code without any shell wrapping. Never combine the two with `; status=$?; rm -f TMPFILE; exit $status` — in zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status`. See `plugins/use-git/skills/use-git/references/tmpfile-pattern.md` for the full rationale.
 
 **NEVER pass the reply body inline** (e.g., via `echo "..." |` or heredocs). Always use the Write tool + `--body-file` pattern.
 
@@ -310,18 +312,20 @@ mktemp /tmp/copilot-summary-XXXXXX
 
 # Step 3: Post the comment:
 gh pr comment PR_NUMBER --body-file TMPFILE
+```
 
-# Step 4: Clean up:
+```bash
+# Step 4: Clean up — issue this as a SEPARATE Bash tool call, not chained onto step 3:
 rm -f TMPFILE
 ```
 
-Replace `PR_NUMBER` and `TMPFILE` with actual values.
+Replace `PR_NUMBER` and `TMPFILE` with actual values. The cleanup must be a separate Bash tool call (see [Outdated/Incorrect Copilot Comments](#outdatedincorrect-copilot-comments) above for the rationale): chaining with `; status=$?; rm -f TMPFILE; exit $status` breaks under zsh because `status` is a read-only built-in alias for `$?`.
 
 If the comment fails, log the error but do not fail the workflow. Thread resolution and code changes are the primary deliverables; the summary comment is best-effort.
 
 ## Reply Templates
 
-First, generate a unique tmpfile path with `mktemp /tmp/copilot-reply-XXXXXX`. Write these to the returned path using the Write tool, then pass via `--body-file`. Clean up the tmpfile after each reply operation.
+First, generate a unique tmpfile path with `mktemp /tmp/copilot-reply-XXXXXX`. Write these to the returned path using the Write tool, then pass via `--body-file`. Clean up the tmpfile (`rm -f TMPFILE`) after each reply operation as a **separate Bash tool call**, not chained onto the reply command.
 
 **For outdated comments:**
 

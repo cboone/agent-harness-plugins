@@ -285,7 +285,7 @@ If `gh` is available, write the notes to a tmpfile and create the GitHub Release
 gh release create CATALOG-STATE --title "Marketplace CATALOG-STATE" --notes-file TMPFILE --verify-tag
 ```
 
-Always remove the tmpfile after the command completes, regardless of success or failure.
+Always remove the tmpfile after the command completes, regardless of success or failure. Issue the cleanup (`rm -f TMPFILE`) as a **separate Bash tool call**, not chained onto `gh release create`. The harness preserves the prior call's exit code, and a chained `; status=$?; rm -f ...; exit $status` wrapper breaks under zsh because `status` is a read-only built-in alias for `$?`. See `plugins/use-git/skills/use-git/references/tmpfile-pattern.md` for the full rationale.
 
 Report:
 
@@ -578,11 +578,13 @@ gh release create vVERSION --title "vVERSION" --notes-file TMPFILE --verify-tag
 
 The `--verify-tag` flag ensures the command fails if the tag was not pushed successfully (safety net for step 11b).
 
-Always remove the tmpfile after the command completes, regardless of success or failure:
+Always remove the tmpfile after the command completes, regardless of success or failure. Issue the cleanup as a **separate Bash tool call**, not chained onto `gh release create`:
 
 ```bash
 rm -f TMPFILE
 ```
+
+Each Bash tool call runs unconditionally and the prior call's exit code is preserved by the harness, so a separate call cleans up after both successful and failed releases without any shell-level wrapping. Never combine the two with a `; status=$?; rm -f TMPFILE; exit $status` wrapper: in zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status`. See `plugins/use-git/skills/use-git/references/tmpfile-pattern.md` for the full rationale.
 
 ##### 11f. Report results
 
