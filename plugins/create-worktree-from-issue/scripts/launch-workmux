@@ -27,19 +27,39 @@ function die() {
   exit "${2:-1}"
 }
 
+# Escape MiniJinja delimiters so workmux's template engine emits them
+# literally. Without this, issue bodies containing GitHub Actions expressions
+# (`${{ ... }}`), Jinja/Liquid/Tera/Helm/Vue templates, or Handlebars-style
+# tokens are parsed as template variables and rejected with "undefined
+# variables". Each `{{ "{{" }}`, `{{ "{%" }}`, and `{{ "{#" }}` evaluates back
+# to the literal two-character delimiter at render time, so the rendered
+# prompt stored in `<worktree>/.workmux/PROMPT-*.md` matches the input
+# verbatim.
+function escape_minijinja_delimiters() {
+  local input="${1}"
+  local output="${2}"
+  sed -e 's/{{/{{ "{{" }}/g' \
+    -e 's/{%/{{ "{%" }}/g' \
+    -e 's/{#/{{ "{#" }}/g' \
+    "${input}" > "${output}"
+}
+
 function do_launch() {
   local branch="${1}"
   local prompt_file="${2}"
   local safe_name="${branch//\//-}"
-  local log
+  local log escaped_prompt
   log="$(mktemp "/tmp/workmux-${safe_name}.XXXXXX.log")"
+  escaped_prompt="$(mktemp "/tmp/workmux-prompt-escaped.XXXXXX")"
 
-  workmux add "${branch}" --open-if-exists -P "${prompt_file}" > "${log}" 2>&1 &
+  escape_minijinja_delimiters "${prompt_file}" "${escaped_prompt}"
+
+  workmux add "${branch}" --open-if-exists -P "${escaped_prompt}" > "${log}" 2>&1 &
   disown
   sleep 8
 
   cat "${log}"
-  rm -f "${log}"
+  rm -f "${log}" "${escaped_prompt}"
 }
 
 function main() {
