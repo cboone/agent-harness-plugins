@@ -1,12 +1,12 @@
-# Yarn (Corepack) and `.yarnrc.yml` Hardening
+# Corepack Integrity Pinning and `.yarnrc.yml` Hardening
 
-How to integrity-pin Yarn via Corepack, make `.yarnrc.yml` security defaults explicit, and detect harmful Corepack-migration side effects.
+How to integrity-pin Yarn or pnpm via Corepack, make `.yarnrc.yml` security defaults explicit (Yarn-only), and detect harmful Corepack-migration side effects.
 
-## Why Integrity-Pin Yarn
+## Why Integrity-Pin the `packageManager` Field
 
-`package.json`'s `"packageManager": "yarn@4.14.1"` field tells Corepack which Yarn to use, but the version alone is not enough — Corepack will fetch the matching tarball from `repo.yarnpkg.com` at install time. If that tarball has been tampered with (or if the registry is compromised), every developer and every CI run silently picks up the malicious binary.
+`package.json`'s `"packageManager": "yarn@4.14.1"` (or `"pnpm@9.12.3"`) field tells Corepack which package manager to use, but the version alone is not enough — Corepack will fetch the matching tarball from `repo.yarnpkg.com` (Yarn) or `registry.npmjs.org` (pnpm) at install time. If that tarball has been tampered with (or if the registry is compromised), every developer and every CI run silently picks up the malicious binary.
 
-The `+sha512.<hash>` suffix turns the field into a cryptographic commitment to a specific tarball: `"packageManager": "yarn@4.14.1+sha512.64df448055..."`. Corepack verifies the downloaded tarball's hash against the suffix and refuses to activate if they don't match. Tampering becomes detectable.
+The `+sha512.<hash>` suffix turns the field into a cryptographic commitment to a specific tarball: `"packageManager": "yarn@4.14.1+sha512.64df448055..."`. Corepack verifies the downloaded tarball's hash against the suffix and refuses to activate if they don't match. Tampering becomes detectable. The same suffix mechanism applies to pnpm.
 
 ## Computing the SHA-512 Hash
 
@@ -81,8 +81,24 @@ Some Corepack workflows add settings that weaken security. Detect and revert the
 
 Read `.yarnrc.yml` and warn the user before removing entries that look intentional (e.g. a private registry config).
 
+## pnpm via the Same `packageManager` Field
+
+The `packageManager` field is Corepack's surface for both Yarn and pnpm: `"packageManager": "pnpm@9.X.Y+sha512.<hash>"` works exactly the same way as the Yarn form. Run `corepack use pnpm@X.Y.Z` (not `corepack prepare`, which does not modify `package.json`) to write the integrity-suffixed form. The fallback hand-computation pulls the tarball from npm directly:
+
+```bash
+VERSION=9.12.3
+HASH=$(
+  curl -fsSL "https://registry.npmjs.org/pnpm/-/pnpm-${VERSION}.tgz" \
+    | shasum -a 512 \
+    | awk '{print $1}'
+)
+jq --arg pm "pnpm@${VERSION}+sha512.${HASH}" '.packageManager = $pm' package.json > package.json.tmp \
+  && mv package.json.tmp package.json
+corepack enable && pnpm --version
+```
+
+The `.yarnrc.yml` defaults section above is Yarn-specific. pnpm uses `.npmrc` and per-pnpm settings; this skill does not currently harden those.
+
 ## When the User Opts Out of Corepack
 
 If the project uses npm (not Yarn or pnpm), step 5 of the skill is a no-op — no `packageManager` field, no `.yarnrc.yml`. Skip both. There is no equivalent integrity-pin mechanism in `package.json` for npm; rely on `package-lock.json` (which contains per-package integrity hashes) and `npm ci` in CI to enforce them.
-
-For pnpm, the `packageManager` field still applies (`"packageManager": "pnpm@9.X.Y"`) and Corepack supports it the same way as Yarn. Run `corepack use pnpm@X.Y.Z` (not `corepack prepare`, which does not modify `package.json`) to write the integrity-suffixed `pnpm@X.Y.Z+sha512.<hash>` form. The `.yarnrc.yml` defaults section above is Yarn-specific and does not apply to pnpm.

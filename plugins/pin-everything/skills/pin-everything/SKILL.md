@@ -71,27 +71,29 @@ Reference: `./references/github-actions.md` for full recipes including annotated
 
 Replace inline pins in scaffolded CI with version-file refs so the version of record is a single file in the repo:
 
-| Inline form                       | Version-file form                                                                                                                                          |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `node-version: "X"`               | Prefer existing version file: `.tool-versions` > `.nvmrc` > `.node-version`                                                                                |
-| `ruby-version: "X"`               | Prefer existing version file: `.tool-versions` > `.ruby-version` > `Gemfile` (if it has a `ruby` directive)                                                |
-| `go-version: "stable"` or `"X.Y"` | `go-version-file: "go.mod"`                                                                                                                                |
-| `python-version: "X.Y"`           | Prefer existing version file: `.python-version` > `pyproject.toml` `requires-python` (uv reads it directly)                                                |
-| `zig-version: "X.Y.Z"`            | Action-direct (`mlugg/setup-zig`): omit (reads `build.zig.zon`). Wrapper (`cboone/gh-actions/.../zig-ci.yml` v2.2.0+): `zig-version-file: "build.zig.zon"` |
+| Inline form                       | Version-file form                                                                                                                                                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `node-version: "X"`               | `.tool-versions` if it has a `nodejs` line, else `.nvmrc`, else `.node-version`                                                                                                                                    |
+| `ruby-version: "X"`               | `.tool-versions` if it has a `ruby` line, else `.ruby-version`, else `Gemfile` (if it has a `ruby` directive)                                                                                                      |
+| `go-version: "stable"` or `"X.Y"` | `go-version-file: "go.mod"`                                                                                                                                                                                        |
+| `python-version: "X.Y"`           | `.python-version` if present, else `pyproject.toml` `requires-python` (uv reads it directly)                                                                                                                       |
+| `zig-version: "X.Y.Z"`            | Action-direct (`mlugg/setup-zig`): omit (reads `build.zig.zon`). Wrapper (`cboone/gh-actions/.../zig-ci.yml` v2.2.0+): `zig-version-file: "build.zig.zon"`                                                         |
 
-**Reuse the file local tooling already reads.** Audit step 1 already enumerates which version files exist in the repo. If `.nvmrc` is present, point `node-version-file` at it instead of introducing a parallel `.tool-versions`. The whole purpose of the version-file rewrite is to make CI and local dev agree on a single source of truth; emitting a second file silently re-creates the drift.
+**Reuse the file that already pins this language.** Audit step 1 already enumerates which version files exist in the repo and what each one contains. Mere existence is not enough — a `.tool-versions` that lists only `python` and `ruby` will not configure Node when CI loads it. Verify the file has an entry for the language being configured before pointing the `*-version-file` input at it. If `.nvmrc` is present, point `node-version-file` at it instead of introducing a parallel `.tool-versions`. The whole purpose of the version-file rewrite is to make CI and local dev agree on a single source of truth; emitting a second file (or pointing at a file that lacks the relevant entry) silently re-creates the drift or breaks the workflow.
 
-If no version file is present for the language, create `.tool-versions` (or the language's conventional file: `.python-version` for Python, `rust-toolchain.toml` for Rust) with current LTS / stable values. Reference `./references/language-runtimes.md` for the LTS / stable lookup commands per language and the per-language fallback order.
+If no version file pins this language, either add a line to an existing `.tool-versions` (preferred when one is already present) or create the language's conventional file (`.tool-versions` with the language's line, `.python-version` for Python, `rust-toolchain.toml` for Rust) with current LTS / stable values. Reference `./references/language-runtimes.md` for the LTS / stable lookup commands per language and the per-language fallback order.
 
-### 5. Pin Yarn (Corepack) with SHA-512 Integrity
+### 5. Pin the Corepack `packageManager` Field with SHA-512 Integrity
 
-If `package.json` has `"packageManager": "yarn@X.Y.Z"`:
+If `package.json` has `"packageManager": "<yarn|pnpm>@X.Y.Z"`:
 
-1. Compute the SHA-512 integrity hash. Preferred path: `corepack use yarn@X.Y.Z` — this downloads the requested Yarn release, computes the integrity hash, and writes the suffixed `yarn@X.Y.Z+sha512.<hash>` form into `package.json`'s `packageManager` field in one command. (`corepack prepare ... --activate` only prepares and activates the binary globally; it does not touch `package.json`.) Fall back to fetching `https://repo.yarnpkg.com/${X.Y.Z}/packages/yarnpkg-cli/bin/yarn.js` and computing `shasum -a 512` if Corepack is unavailable (`shasum` is portable across macOS and Linux; `sha512sum` is Linux-only).
-2. Rewrite the field as `"yarn@X.Y.Z+sha512.<hash>"`.
-3. Verify with `corepack enable && yarn --version`.
+1. Compute the SHA-512 integrity hash via Corepack itself. Run `corepack use yarn@X.Y.Z` for Yarn or `corepack use pnpm@X.Y.Z` for pnpm — either form downloads the requested release, computes the integrity hash, and writes the suffixed `<yarn|pnpm>@X.Y.Z+sha512.<hash>` form into `package.json`'s `packageManager` field in one command. (`corepack prepare ... --activate` only prepares and activates the binary globally; it does not touch `package.json`.) Fall back to fetching the upstream tarball and computing `shasum -a 512` if Corepack is unavailable: Yarn lives at `https://repo.yarnpkg.com/${X.Y.Z}/packages/yarnpkg-cli/bin/yarn.js`; pnpm lives at `https://registry.npmjs.org/pnpm/-/pnpm-${X.Y.Z}.tgz`. Use `shasum -a 512` (portable across macOS and Linux); `sha512sum` is Linux-only.
+2. Rewrite the field as `"<yarn|pnpm>@X.Y.Z+sha512.<hash>"`.
+3. Verify with `corepack enable && (yarn|pnpm) --version`.
 
-Reference: `./references/yarn-corepack.md`.
+npm-managed projects have no equivalent integrity surface in `package.json` — rely on `package-lock.json`'s per-package integrity hashes plus `npm ci` in CI. Skip this step when `packageManager` is absent or names `npm`.
+
+Reference: `./references/yarn-corepack.md` (Yarn-specific `.yarnrc.yml` hardening covered in step 8 does not apply to pnpm).
 
 ### 6. Exact-Pin Package-Manager Dependencies (Application Context Only)
 

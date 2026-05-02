@@ -9,7 +9,7 @@
 #
 # Surfaces audited:
 #   - .tool-versions (Node.js LTS)
-#   - package.json packageManager (Yarn via Corepack)
+#   - package.json packageManager (Yarn or pnpm via Corepack)
 #   - All SHA-pinned action refs (third-party and reusable workflows)
 #   - npx <tool>@<version> pins
 #   - go install <path>@v<version> pins for known tools
@@ -83,28 +83,39 @@ function audit_node() {
   fi
 }
 
-# 2. Yarn version in package.json packageManager
+# 2. Yarn / pnpm version in package.json packageManager
+#
+# Corepack supports both Yarn (`yarn@X.Y.Z+sha512.<hash>`) and pnpm
+# (`pnpm@X.Y.Z+sha512.<hash>`) under the same `packageManager` field. Audit
+# whichever is present; npm has no equivalent integrity surface.
 
-function audit_yarn() {
+function audit_packagemanager() {
   if [[ ! -f "${PACKAGE_JSON}" ]]; then
     return
   fi
 
-  local declaration current latest
+  local declaration mgr current latest
   declaration=$(jq -r '.packageManager // empty' "${PACKAGE_JSON}")
-  if [[ ! "${declaration}" =~ ^yarn@([0-9.]+) ]]; then
+  if [[ "${declaration}" =~ ^yarn@([0-9.]+) ]]; then
+    mgr="yarn"
+    current="${BASH_REMATCH[1]}"
+    latest=$(curl -fsSL https://repo.yarnpkg.com/tags 2> /dev/null \
+      | jq -r '.latest.stable // empty' || true)
+  elif [[ "${declaration}" =~ ^pnpm@([0-9.]+) ]]; then
+    mgr="pnpm"
+    current="${BASH_REMATCH[1]}"
+    latest=$(curl -fsSL https://registry.npmjs.org/pnpm/latest 2> /dev/null \
+      | jq -r '.version // empty' || true)
+  else
     return
   fi
-  current="${BASH_REMATCH[1]}"
 
-  latest=$(curl -fsSL https://repo.yarnpkg.com/tags 2> /dev/null \
-    | jq -r '.latest.stable // empty' || true)
   if [[ -z "${latest}" ]]; then
     return
   fi
 
   if [[ "${current}" != "${latest}" ]]; then
-    record_drift "Yarn" "yarn (Corepack)" "${current}" "${latest}" "${PACKAGE_JSON}"
+    record_drift "packageManager" "${mgr} (Corepack)" "${current}" "${latest}" "${PACKAGE_JSON}"
   fi
 }
 
@@ -184,6 +195,7 @@ function audit_go_install_pins() {
     ['github.com/goreleaser/goreleaser/v2']='goreleaser/goreleaser'
     ['github.com/rhysd/actionlint/cmd/actionlint']='rhysd/actionlint'
     ['mvdan.cc/sh/v3/cmd/shfmt']='mvdan/sh'
+    ['github.com/google/yamlfmt/cmd/yamlfmt']='google/yamlfmt'
   )
   declare -A seen=()
   local line file content install_path current key repo latest
@@ -300,7 +312,7 @@ function print_report() {
 
 # REPLACE: drop audit_* calls for surfaces the consuming repo does not use.
 audit_node
-audit_yarn
+audit_packagemanager
 audit_actions
 audit_npx_pins
 audit_go_install_pins

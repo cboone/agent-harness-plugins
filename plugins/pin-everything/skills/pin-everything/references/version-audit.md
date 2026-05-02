@@ -7,7 +7,7 @@ How to install and tailor the bundled `version-audit-template` script. Covers th
 The script audits the four surfaces Dependabot misses:
 
 1. **`.tool-versions`** — Node.js LTS drift (and other languages with similar version-file conventions).
-2. **`packageManager`** — Yarn release drift (Corepack stays at the pinned version until the file is bumped).
+2. **`packageManager`** — Yarn or pnpm release drift (Corepack stays at the pinned version until the field is bumped). npm has no equivalent integrity surface, so npm-managed projects produce no row here.
 3. **Action SHAs in scanned files** — third-party action refs found anywhere in the configured `SCAN_PATHS` (defaults: `.github/` and `plugins/`, which together cover both real workflows and the action refs embedded in skill templates and other Markdown). Only release-tagged refs (those whose comment is a numeric `# vX.Y.Z` tag) are audited; channel/branch pins like `# stable` or `# main` are intentionally out of scope, since they have no upstream "latest version" to compare against and would require a different "pinned SHA vs. branch HEAD" check.
 4. **Install-command pins inside scripts** — `go install`, `cargo install`, `pip install`, `npx` pins in shell scripts, Makefiles, and skill prose.
 
@@ -19,6 +19,7 @@ Each surface has an upstream-of-record API the script queries. If the script fin
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Node.js LTS     | `https://nodejs.org/dist/index.json`                                                                                                                              |
 | Yarn stable     | `https://repo.yarnpkg.com/tags`                                                                                                                                   |
+| pnpm stable     | `https://registry.npmjs.org/pnpm/latest`                                                                                                                          |
 | GitHub releases | `gh api repos/<r>/releases/latest`                                                                                                                                |
 | crates.io       | `https://crates.io/api/v1/crates/<crate>`                                                                                                                         |
 | PyPI            | `https://pypi.org/pypi/<pkg>/json`                                                                                                                                |
@@ -29,6 +30,7 @@ Each surface's jq filter (extracted from `./scripts/version-audit-template`):
 ```text
 Node.js LTS      first(.[] | select(.lts != false)) | .version    (then strip leading "v")
 Yarn stable      .latest.stable
+pnpm stable      .version
 GitHub releases  .tag_name
 crates.io        .crate.max_stable_version
 PyPI             .info.version
@@ -51,7 +53,7 @@ The single-issue invariant prevents the audit from spamming the issue tracker. R
 Read `./scripts/version-audit-template`. It contains seven `audit_*` functions plus a `print_report` driver. Tailor before writing the user's `bin/version-audit`:
 
 1. **Drop unused surface functions.** If the target repo has no `pip install` pins, delete `audit_pip_install_pins` and remove its call from the bottom of the script. Similarly drop `audit_npx_pins` if there are no `npx` pins, etc.
-2. **Adjust grep paths.** The template greps `plugins/` and `.github/` because that's where the canonical example repo keeps its surfaces. For a different layout, change the path arguments to `grep -rh ... <paths>`.
+2. **Adjust grep paths.** The template greps `plugins/` and `.github/` because that's where the canonical example repo keeps its surfaces. For a different layout, change the path arguments to `grep -rH ... <paths>` (the `-H` flag preserves filenames so drift rows can report the actual file).
 3. **Add new surface functions** if the target repo has surfaces the template doesn't cover (e.g. a custom version file format).
 
 Write the result to `bin/version-audit` and `chmod +x` it.
@@ -88,6 +90,8 @@ function audit_bun() {
   fi
 }
 ```
+
+For grep-based surface functions, follow the existing audit_* pattern: use `grep -rHE` so each match line is prefixed with its filename, then split with `file="${line%%:*}"; content="${line#*:}"` and pass `${file}` as the location argument to `record_drift`.
 
 Then add `audit_bun` to the call list at the bottom of the script. The `record_drift` helper handles the row formatting.
 

@@ -63,11 +63,13 @@ jobs:
           # Match on both the label AND the exact ISSUE_TITLE so a different
           # open issue that shares the label (e.g. one a maintainer opened by
           # hand and tagged) is not mutated or closed by the steps below.
+          # `gh --jq` only accepts a single filter expression and does not
+          # forward `--arg` to jq, so the title is bound by piping through jq.
           number="$(gh issue list \
             --label "${ISSUE_LABEL}" \
             --state open \
             --json number,title \
-            --jq --arg title "${ISSUE_TITLE}" \
+            | jq -r --arg title "${ISSUE_TITLE}" \
               '[.[] | select(.title == $title)][0].number // empty')"
           echo "number=${number}" >> "${GITHUB_OUTPUT}"
 
