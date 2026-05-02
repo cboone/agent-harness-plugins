@@ -278,11 +278,13 @@ gh pr create --title "the pr title" --body-file TMPFILE
 
 Pass `--base <base-branch>` if `<base-branch>` differs from `<default-branch>`. Do not pass `--draft`. Do not add labels or reviewers.
 
-Always remove the tmpfile after the PR creation attempt, regardless of whether it succeeded or failed:
+Always remove the tmpfile after the PR creation attempt, regardless of whether it succeeded or failed. Issue the cleanup as a **separate Bash tool call**, not chained onto `gh pr create`:
 
 ```bash
 rm -f TMPFILE
 ```
+
+Each Bash tool call runs unconditionally and the prior call's exit code is preserved by the harness, so a separate call cleans up after both successful and failed PR creations without any shell-level wrapping. Never combine the two with `;` followed by an exit-code preservation idiom such as `gh pr create ...; status=$?; rm -f TMPFILE; exit $status`. In zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status` and falsely reports a successful PR creation as failed. See `plugins/use-git/skills/use-git/references/tmpfile-pattern.md` for the full rationale.
 
 ### 8. Report Results
 
