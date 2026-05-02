@@ -81,10 +81,9 @@ This repository is also a native [Codex CLI](https://developers.openai.com/codex
 
 ```bash
 codex plugin marketplace add cboone/cboone-cc-plugins
-codex plugin install <plugin-name>@cboone-cc-plugins
 ```
 
-See below for [more details](#using-with-codex-cli-1) and [known limitations](#codex-cli-known-limitations).
+See below for [more details](#using-with-codex-cli-1), including refresh commands and [known limitations](#codex-cli-known-limitations).
 
 ### Using with OpenCode
 
@@ -497,13 +496,28 @@ Analyzes git commits for changes that typically need documentation updates and p
 
 ## Using with Codex CLI
 
-This repository works as a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace. Codex reads `.claude-plugin/marketplace.json` and `.claude-plugin/plugin.json` directly, and exposes `${CLAUDE_PLUGIN_ROOT}` to plugin-bundled hook commands for backward compatibility with existing Claude Code plugins.
+This repository works as a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace. Codex reads `.claude-plugin/marketplace.json` for catalog metadata and `.claude-plugin/plugin.json` for shared plugin metadata. Hook registration requires a per-plugin `.codex-plugin/plugin.json` with a non-empty `hooks` path, such as `"hooks": "./hooks/hooks.json"`; this lets hook plugins point Codex at a Codex-compatible hook file. Codex exposes `${CLAUDE_PLUGIN_ROOT}` to plugin-bundled hook commands for backward compatibility with existing Claude Code plugins.
 
-Add the marketplace and install plugins by name:
+Add the marketplace:
 
 ```bash
 codex plugin marketplace add cboone/cboone-cc-plugins
-codex plugin install <plugin-name>@cboone-cc-plugins
+```
+
+Codex CLI currently manages plugins at the marketplace level. In Codex CLI 0.128.0, `codex plugin` exposes the `marketplace` subcommand with `add`, `upgrade`, and `remove`; it does not expose a separate `codex plugin install` subcommand.
+
+Refresh a Git-backed marketplace after pulling repository updates or after a published release:
+
+```bash
+codex plugin marketplace upgrade cboone-cc-plugins
+```
+
+For a local-path marketplace, restart Codex after changing plugin files so it can rebuild cached plugin copies from the local source.
+
+Remove the configured marketplace by name:
+
+```bash
+codex plugin marketplace remove cboone-cc-plugins
 ```
 
 ### Codex CLI known limitations

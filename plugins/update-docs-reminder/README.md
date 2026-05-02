@@ -11,6 +11,8 @@ Reminds you to update documentation when a commit includes significant code chan
 
 ## Installation
 
+### Claude Code
+
 Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
 
 ```text
@@ -18,6 +20,14 @@ Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins
 ```
 
 Then select **Update Docs Reminder** from the available plugins.
+
+### Codex CLI
+
+```bash
+codex plugin marketplace add cboone/cboone-cc-plugins
+```
+
+Codex CLI manages this plugin through the marketplace. For a Git-backed marketplace, refresh it after repository updates with `codex plugin marketplace upgrade cboone-cc-plugins`. For a local-path marketplace, restart Codex after changing plugin files so it can rebuild cached plugin copies from the local source. The plugin includes a Codex manifest with `"hooks": "./hooks/hooks.json"`, so Codex registers the same `PostToolUse` hook definition used by Claude Code.
 
 ### Using with OpenCode
 
@@ -31,7 +41,7 @@ Analyzes each git commit for changes that typically require documentation update
 
 ## When It Fires
 
-This hook runs as a `PostToolUse` hook on the `Bash` tool. After every successful shell command, the hook checks whether a `git commit` just ran. If so, it analyzes the committed diff and reports which documentation files may need attention. Non-commit commands are ignored with minimal overhead.
+This hook runs as a `PostToolUse` hook on the `Bash` tool. After every successful shell command, the hook checks whether a `git commit` just ran. If so, it analyzes the committed diff and reports which documentation files may need attention. Non-commit commands are ignored with minimal overhead. Claude Code and Codex CLI use the same `hooks/hooks.json` definition.
 
 | Change detected                     | Documentation to check            |
 | ----------------------------------- | --------------------------------- |

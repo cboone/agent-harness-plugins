@@ -12,6 +12,24 @@ function error() {
   errors=$((errors + 1))
 }
 
+# Deprecated or Claude-only hook plugins that intentionally skip Codex hook registration.
+# block-rm-rf is pending removal, so it remains exempt instead of receiving Codex compatibility work.
+CODEX_HOOK_MANIFEST_EXEMPTIONS=("block-rm-rf")
+readonly CODEX_HOOK_MANIFEST_EXEMPTIONS
+
+function is_codex_hook_manifest_exempt() {
+  local plugin_name="${1}"
+  local exempt_name
+
+  for exempt_name in "${CODEX_HOOK_MANIFEST_EXEMPTIONS[@]}"; do
+    if [[ "${plugin_name}" == "${exempt_name}" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 # ─── 1. Every plugin directory has plugin.json ───────────────────────────────
 
 for dir in plugins/*/; do
@@ -223,6 +241,32 @@ for dir in plugins/*/; do
       error "Plugin '${local_name}': field '${field}' differs between .claude-plugin/plugin.json (${claude_value}) and .codex-plugin/plugin.json (${codex_value})"
     fi
   done
+done
+
+# ─── 14. Hook plugins declare Codex hook registration ───────────────────────
+
+for dir in plugins/*/; do
+  local_name="$(basename "${dir}")"
+  hooks_json="${dir}hooks/hooks.json"
+  codex_json="${dir}.codex-plugin/plugin.json"
+
+  if [[ ! -f "${hooks_json}" ]]; then
+    continue
+  fi
+
+  if is_codex_hook_manifest_exempt "${local_name}"; then
+    continue
+  fi
+
+  if [[ ! -f "${codex_json}" ]]; then
+    error "Plugin '${local_name}': hooks/hooks.json requires .codex-plugin/plugin.json for Codex hook registration"
+    continue
+  fi
+
+  codex_hooks="$(jq -r 'if (.hooks | type) == "string" then .hooks else "" end' "${codex_json}")"
+  if [[ -z "${codex_hooks}" ]]; then
+    error "Plugin '${local_name}': .codex-plugin/plugin.json missing non-empty string field 'hooks'"
+  fi
 done
 
 # ─── Summary ────────────────────────────────────────────────────────────────

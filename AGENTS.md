@@ -587,7 +587,7 @@ When adding new plugins:
 1. Create a per-plugin `README.md` in the plugin directory
 1. Update the root `README.md` with the new plugin description and details link
 
-If the plugin uses hook events that Codex CLI does not support (`Notification`, `PreCompact`, `SubagentStop`, `SessionEnd`), add a `.codex-plugin/plugin.json` sibling to `.claude-plugin/plugin.json` that points at a codex-compatible hooks file via the `hooks` field. See `plugins/notify/` for the pattern. Codex's strict hook schema (`PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, `Stop`) will reject the entire `hooks.json` if any unsupported event is present.
+Hook plugins that should work in Codex CLI must include a `.codex-plugin/plugin.json` sibling to `.claude-plugin/plugin.json` with a non-empty `hooks` field pointing at the Codex hook file, usually `./hooks/hooks.json`. If the Claude Code hook file uses hook events that Codex CLI does not support (`Notification`, `PreCompact`, `SubagentStop`, `SessionEnd`), point the Codex manifest at a separate compatible hooks file instead. See `plugins/notify/` for the split-manifest pattern. Codex's strict hook schema (`PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, `Stop`) will reject the entire hook file if any unsupported event is present.
 
 ### README ToC Format
 
