@@ -25,7 +25,7 @@ Walks an existing repository through a one-shot hardening pass that closes the s
 - **Language runtimes in CI** — inline `node-version: "X"` etc. swapped for `node-version-file: ".tool-versions"` and friends; missing version files created with current LTS / stable values.
 - **Install commands** — `go install`, `cargo install`, `pip install`, `uv add`, `npx <tool>` rewritten with explicit pinned forms (skipping placeholder paths in scaffolded templates).
 - **Dependabot** — `.github/dependabot.yml` created or merged with weekly schedule, split groups by update-type, 10-PR cap per ecosystem.
-- **Drift audit (optional)** — bundled `version-audit` script and weekly workflow cover the four surfaces Dependabot does not (`tool-versions`, `packageManager`, action SHAs in `.md` templates, install-command pins inside scripts).
+- **Drift audit (optional)** — bundled `version-audit` script and weekly workflow cover the four surfaces Dependabot does not (`.tool-versions`, `packageManager`, action SHAs in `.md` templates, install-command pins inside scripts).
 
 The skill confirms scope before each batch and supports per-category opt-out, so adopters who only want SHA-pinned actions can stop after the first batch. A `--dry-run` mode reports findings without editing.
 
@@ -62,6 +62,7 @@ This skill runs `gh api` queries to resolve action tags to SHAs, `corepack` to c
       "Bash(corepack use:*)",
       "Bash(corepack enable)",
       "Bash(yarn --version)",
+      "Bash(pnpm --version)",
       "Bash(git add:*)",
       "Bash(git commit:*)"
     ]

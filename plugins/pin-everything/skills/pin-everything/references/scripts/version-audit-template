@@ -11,7 +11,9 @@
 #   - Node.js LTS in whichever Node version file the repo uses
 #     (.tool-versions with a `nodejs` line, .nvmrc, or .node-version)
 #   - package.json packageManager (Yarn or pnpm via Corepack)
-#   - All SHA-pinned action refs (third-party and reusable workflows)
+#   - Release-tagged SHA-pinned action refs (those whose comment is a numeric
+#     `# vX.Y.Z` tag); channel/branch pins (`# stable`, `# main`) are out of
+#     scope because there is no upstream "latest version" to compare against
 #   - npx <tool>@<version> pins
 #   - go install <path>@v<version> pins for known tools
 #   - cargo install --version <X> <crate> pins
@@ -300,11 +302,11 @@ function audit_pip_install_pins() {
       fi
     fi
     # Allow arbitrary flags / quoting between the install command and the
-    # `pkg==X.Y.Z` requirement so forms like `pip install --upgrade 'pkg==1.2.3'`
-    # and `uv add --dev 'pkg==1.2.3'` are not silently skipped. The
-    # extraction regex inside the function still anchors on the unquoted
-    # `pkg==version` token.
-  done < <(grep -rHE '(pip install|uv (pip install|add( --dev)?))[[:space:]].*[a-zA-Z0-9._-]+==[0-9]' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+    # `pkg==X.Y.Z` requirement so forms like `pip install --upgrade 'pkg==1.2.3'`,
+    # `uv add --dev 'pkg==1.2.3'`, and `uv add --group lint 'pkg==1.2.3'` are
+    # not silently skipped. The extraction regex inside the function still
+    # anchors on the unquoted `pkg==version` token.
+  done < <(grep -rHE '(pip install|uv (pip install|add))[[:space:]].*[a-zA-Z0-9._-]+==[0-9]' "${SCAN_PATHS[@]}" 2> /dev/null || true)
 }
 
 # Print Markdown report

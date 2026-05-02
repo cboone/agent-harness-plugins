@@ -2,7 +2,7 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Pin every version surface in a repository to commit hashes, integrity digests, or specific versions. SHA-pins GitHub Actions, integrity-pins Yarn via Corepack, exact-pins package-manager dependencies (when application context is detected), migrates scaffolded CI to language version files, and pins install commands (go install, cargo install, pip, uv, npx). Optionally generates a weekly drift-audit script and tightens Dependabot.",
+  "description": "Pin every version surface in a repository to commit hashes, integrity digests, or specific versions. SHA-pins GitHub Actions, integrity-pins Yarn and pnpm via Corepack, exact-pins package-manager dependencies (when application context is detected), migrates scaffolded CI to language version files, and pins install commands (go install, cargo install, pip, uv, npx). Optionally generates a weekly drift-audit script and tightens Dependabot.",
   "homepage": "https://github.com/cboone/cboone-cc-plugins",
   "keywords": ["dependencies", "pinning", "security", "supply-chain", "versioning"],
   "license": "MIT",
