@@ -75,6 +75,19 @@ Create `cspell.jsonc` in the project root:
   "version": "0.2",
   "language": "en",
   "ignorePaths": [
+    "node_modules/",
+    "vendor/",
+    ".venv/",
+    "dist/",
+    "build/",
+    "coverage/",
+    "*.lock",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lock",
+    "go.sum",
+    ".git/",
     ".lake/**",
     "references/papers/**",
     "references/papers.bib",
@@ -94,8 +107,8 @@ Create `cspell.jsonc` in the project root:
     "/\\$\\$[\\s\\S]*?\\$\\$/gm", // display math
     "/```\\{=latex\\}[\\s\\S]*?```/gm", // raw LaTeX blocks
     "/`[^`]+`\\{=latex\\}/g", // inline raw LaTeX
-    "/\\[@[\\w;@\\s,.$^>{}\\\\+-]+\\]/g", // Pandoc citations
-    "/@\\w+/g", // bare citekeys
+    "/\\[@[\\w;:@\\s,.$^>{}\\\\+:-]+\\]/g", // Pandoc citations
+    "/@[\\w:.-]+/g", // bare citekeys
     "/\\\\[a-zA-Z]+/g", // LaTeX commands
   ],
 }

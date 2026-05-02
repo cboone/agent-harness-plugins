@@ -67,6 +67,9 @@ Create `.markdownlint-cli2.jsonc` in the project root:
     // Allow raw HTML.
     "MD033": false,
 
+    // Allow bare URLs without angle brackets.
+    "MD034": false,
+
     // The document title belongs in YAML frontmatter.
     "MD041": false,
 
@@ -89,6 +92,12 @@ Create `.markdownlint-cli2.jsonc` in the project root:
     "MD060": false,
   },
   "ignores": [
+    "node_modules/",
+    "vendor/",
+    ".venv/",
+    "dist/",
+    "build/",
+    "CHANGELOG.md",
     ".lake/**",
     "references/papers/**",
     "references/papers.bib",

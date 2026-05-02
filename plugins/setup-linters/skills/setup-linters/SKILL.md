@@ -83,7 +83,7 @@ Check for existing linter configs using these patterns (aligned with the `lint-a
 
 **CI workflow scanning**: Also scan `.github/workflows/*.yml` for tools running without config files. For example, a CI step like `shellcheck -S warning scripts/*` means ShellCheck is already in use even without a `.shellcheckrc`. Mark these tools as "Partial" (running in CI but missing local config). A partial tool should still appear in recommendations, but suggest adding the config file for local/CI parity rather than a full setup.
 
-For each already-configured tool, mark it as "Existing" and skip it in recommendations. If everything is already set up, inform the user and stop.
+For each already-configured tool, mark it as "Existing" and skip it in recommendations. Exception: when the Pandoc-academic preset was detected or requested, do not treat generic markdownlint/cspell config presence as sufficient. Continue to the preset recommendation step unless the preset completeness check below passes. If everything is already set up, inform the user and stop.
 
 ### 3. Recommend Linter Stack
 
@@ -106,7 +106,7 @@ Read the appropriate reference files for details on each tool.
 
 **Lean projects**: Lean has no external linter to install. Recommend `lake lint` driven by `lintDriver = "batteries/runLinter"` instead of a tool install. Setup is wiring (the `lintDriver` field, a `lean-lint` Makefile target gated on `_check-mathlib-cache`, and a CI step). Cross-language tools (markdownlint-cli2, cspell, EditorConfig, yamllint, Actionlint) still apply on top. See `./references/languages/lean.md`.
 
-**Pandoc-academic preset**: If the preset was detected or requested, recommend markdownlint-cli2 and cspell with the Pandoc-academic configuration variant instead of the generic Markdown and spelling defaults. Mark the preset as "Existing" only when both `.markdownlint-cli2.jsonc` and a cspell config (`cspell.json`, `cspell.jsonc`, `.cspell.json`, `.cspell.jsonc`, or `cspell.config.*`) already contain the Pandoc/LaTeX rule customizations.
+**Pandoc-academic preset**: If the preset was detected or requested, recommend markdownlint-cli2 and cspell with the Pandoc-academic configuration variant instead of the generic Markdown and spelling defaults. Mark the preset as "Existing" only when `.markdownlint-cli2.jsonc` and a cspell config (`cspell.json`, `cspell.jsonc`, `.cspell.json`, `.cspell.jsonc`, or `cspell.config.*`) already contain the Pandoc/LaTeX rule customizations, and `cspell-words.txt` exists for the configured project dictionary.
 
 Present recommendations in a table using three status levels:
 

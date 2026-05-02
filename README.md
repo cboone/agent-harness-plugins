@@ -257,7 +257,7 @@ Detect available linters and formatters in the project, run them with auto-fix, 
 
 #### Setup Linters
 
-Detect project languages and file types, recommend appropriate linters and formatters, install them, and generate config files. Supports JavaScript/TypeScript (ESLint + Prettier), Go, Python, Rust, Ruby, Shell, Zsh, Lean, the Pandoc-academic Markdown preset, and cross-language tools (EditorConfig, markdownlint, cspell, Stylelint, Hadolint, Actionlint, and more).
+Detect project languages and file types, recommend appropriate linters and formatters, install them, and generate config files. Supports JavaScript/TypeScript (ESLint + Prettier), Go, Python, Rust, Ruby, Shell, Zig, Zsh, Swift, Lean, the Pandoc-academic Markdown preset, and cross-language tools (EditorConfig, markdownlint, cspell, Stylelint, Hadolint, Actionlint, and more).
 
 > **Trigger:** `/setup-linters`
 > **Details:** [README](./plugins/setup-linters/README.md)
