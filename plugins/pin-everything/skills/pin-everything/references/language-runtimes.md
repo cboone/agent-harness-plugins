@@ -36,7 +36,7 @@ gh api repos/ruby/ruby/releases --jq '.[0].tag_name' \
   | sed 's/^v//; s/_/./g'
 ```
 
-`ruby/ruby` tags use underscores (`v3_4_2`); the `tr` normalization converts to the version-file format.
+`ruby/ruby` tags use underscores (`v3_4_2`); the `sed` normalization converts to the version-file format.
 
 ### Go (the `go.mod` directive)
 

@@ -55,7 +55,7 @@ function audit_node() {
 
   latest=$(curl -fsSL https://nodejs.org/dist/index.json 2> /dev/null \
     | jq -r 'first(.[] | select(.lts != false)) | .version' \
-    | sed 's/^v//')
+    | sed 's/^v//' || true)
   if [[ -z "${latest}" ]]; then
     return
   fi
@@ -80,7 +80,7 @@ function audit_yarn() {
   current="${BASH_REMATCH[1]}"
 
   latest=$(curl -fsSL https://repo.yarnpkg.com/tags 2> /dev/null \
-    | jq -r '.latest.stable // empty')
+    | jq -r '.latest.stable // empty' || true)
   if [[ -z "${latest}" ]]; then
     return
   fi
@@ -115,7 +115,7 @@ function audit_actions() {
 
 function npm_latest() {
   local pkg="${1}"
-  curl -fsSL "https://registry.npmjs.org/${pkg}/latest" 2> /dev/null | jq -r '.version // empty'
+  curl -fsSL "https://registry.npmjs.org/${pkg}/latest" 2> /dev/null | jq -r '.version // empty' || true
 }
 
 function audit_npx_pins() {
@@ -177,7 +177,7 @@ function audit_go_install_pins() {
 
 function crates_io_latest() {
   local crate="${1}"
-  curl -fsSL "https://crates.io/api/v1/crates/${crate}" 2> /dev/null | jq -r '.crate.max_stable_version // empty'
+  curl -fsSL "https://crates.io/api/v1/crates/${crate}" 2> /dev/null | jq -r '.crate.max_stable_version // empty' || true
 }
 
 function audit_cargo_install_pins() {
@@ -203,7 +203,7 @@ function audit_cargo_install_pins() {
 
 function pypi_latest() {
   local pkg="${1}"
-  curl -fsSL "https://pypi.org/pypi/${pkg}/json" 2> /dev/null | jq -r '.info.version // empty'
+  curl -fsSL "https://pypi.org/pypi/${pkg}/json" 2> /dev/null | jq -r '.info.version // empty' || true
 }
 
 function audit_pip_install_pins() {

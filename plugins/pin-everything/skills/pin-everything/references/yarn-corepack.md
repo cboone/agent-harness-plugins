@@ -26,9 +26,11 @@ If Corepack isn't available, fetch the tarball and compute SHA-512 directly:
 
 ```bash
 VERSION=4.14.1
-curl -fsSL "https://repo.yarnpkg.com/${VERSION}/packages/yarnpkg-cli/bin/yarn.js" \
-  | sha512sum \
-  | awk '{print $1}'
+HASH=$(
+  curl -fsSL "https://repo.yarnpkg.com/${VERSION}/packages/yarnpkg-cli/bin/yarn.js" \
+    | sha512sum \
+    | awk '{print $1}'
+)
 ```
 
 Then update `package.json`:

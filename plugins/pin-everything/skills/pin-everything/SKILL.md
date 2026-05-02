@@ -154,7 +154,7 @@ Dependabot does not cover four surfaces: `.tool-versions`, `packageManager`, act
 2. Tailor it to the surfaces actually present in the repo (drop unused `audit_*` functions, adjust grep paths to match the user's directory layout).
 3. Write the result to `bin/version-audit` and `chmod +x`.
 4. Read `./references/scripts/version-audit-workflow-template.yml`.
-5. Substitute the placeholder `${REPO_DIRS}` with the actual scan paths and write to `.github/workflows/version-audit.yml`.
+5. Refresh the `actions/checkout` SHA against current upstream (per [Refresh Own SHAs at Scaffold Time](#refresh-own-shas-at-scaffold-time)). Confirm the cron schedule and `ISSUE_LABEL` suit the project, then write the result to `.github/workflows/version-audit.yml`. Scan paths are configured in the script's `SCAN_PATHS`, not the workflow.
 
 Skip this step if `--no-audit` was passed. Reference: `./references/version-audit.md`.
 
