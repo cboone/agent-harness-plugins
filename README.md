@@ -1,6 +1,6 @@
 # Claude Code Plugins
 
-A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (and skills and commands for [OpenCode](https://opencode.ai/docs/skills/)), from [Christopher Boone](https://cboone.github.io).
+A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI's Codex CLI](https://developers.openai.com/codex/cli), and [OpenCode](https://opencode.ai/docs/skills/), from [Christopher Boone](https://cboone.github.io).
 
 **Skills**
 <br>Git:
@@ -75,15 +75,25 @@ Or, from within `claude`, run:
 /plugin marketplace add cboone/cboone-cc-plugins
 ```
 
+### Using with Codex CLI
+
+This repository is also a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace.
+
+```bash
+codex plugin marketplace add cboone/cboone-cc-plugins
+```
+
+See below for [more details](#using-with-codex-cli-1), including refresh commands and [known limitations](#codex-cli-known-limitations).
+
 ### Using with OpenCode
 
-This repository is primarily a Claude Code plugin marketplace, but the skills, commands, and hooks also work in [OpenCode](https://opencode.ai) via a committed mirror at [`dist/opencode/`](./dist/opencode/).
+The skills, commands, and hooks also work in [OpenCode](https://opencode.ai) via a committed mirror at [`dist/opencode/`](./dist/opencode/).
 
 ```bash
 export OPENCODE_CONFIG_DIR="$(pwd)/dist/opencode"
 ```
 
-See below for [more details](#using-with-opencode-1) and [known limitations](#known-limitations).
+See below for [more details](#using-with-opencode-1) and [known limitations](#opencode-known-limitations).
 
 ## Skills
 
@@ -484,9 +494,51 @@ Analyzes git commits for changes that typically need documentation updates and p
 > **Requires:** [`jq`](https://jqlang.github.io/jq/)
 > **Details:** [README](./plugins/update-docs-reminder/README.md)
 
+## Using with Codex CLI
+
+This repository works as a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace. Codex reads `.claude-plugin/marketplace.json` for catalog metadata. For per-plugin metadata it prefers `.codex-plugin/plugin.json` when present and falls back to `.claude-plugin/plugin.json` otherwise. Hook registration requires a `.codex-plugin/plugin.json` with a non-empty `hooks` path (for example `"hooks": "./hooks/hooks.json"`); this lets hook plugins point Codex at a Codex-compatible hook file. Codex exposes `${CLAUDE_PLUGIN_ROOT}` to plugin-bundled hook commands for backward compatibility with existing Claude Code plugins.
+
+Add the marketplace:
+
+```bash
+codex plugin marketplace add cboone/cboone-cc-plugins
+```
+
+Codex CLI currently manages plugins at the marketplace level. In Codex CLI 0.128.0, `codex plugin` exposes the `marketplace` subcommand with `add`, `upgrade`, and `remove`; it does not expose a separate `codex plugin install` subcommand.
+
+Enable plugin-bundled hooks once per host so the `notify` and `update-docs-reminder` hooks fire:
+
+```bash
+codex features enable plugin_hooks
+```
+
+Plugin-bundled hooks are gated behind the `plugin_hooks` feature flag (listed as `under development` in Codex CLI 0.128.0). Without it the marketplace add and skill discovery still work, but `hooks/hooks.json` files inside installed plugins are silently ignored.
+
+Refresh a Git-backed marketplace after pulling repository updates or after a published release:
+
+```bash
+codex plugin marketplace upgrade cboone-cc-plugins
+```
+
+`codex plugin marketplace upgrade` and `remove` take the marketplace name (`cboone-cc-plugins`, derived from the repository name), not the `owner/repo` identifier used by `add`.
+
+For a local-path marketplace, restart Codex after changing plugin files so it can rebuild cached plugin copies from the local source.
+
+Remove the configured marketplace by name:
+
+```bash
+codex plugin marketplace remove cboone-cc-plugins
+```
+
+### Codex CLI known limitations
+
+- **Plugin-bundled hooks are gated behind a feature flag.** `plugin_hooks` is `under development` in Codex CLI 0.128.0 and is `false` by default. Run `codex features enable plugin_hooks` once before expecting `notify` or `update-docs-reminder` to fire on Codex; see the install section above.
+- **`Notification` and `PreCompact` hook events are not supported.** Codex CLI's hook schema only supports `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, and `Stop`. The `notify` plugin therefore wires only the turn-completion notification on Codex (its other Claude Code events have no Codex equivalent). For idle, elicitation, and permission alerts, enable Codex's built-in `tui.notifications = true` in `~/.codex/config.toml`. See the [`notify` plugin README](./plugins/notify/README.md) for details.
+- **No custom prompts shipped.** Codex's `~/.codex/prompts/` mechanism is officially deprecated in favor of skills. This repository ships skills (and hooks), not prompts.
+
 ## Using with OpenCode
 
-This repository is primarily a Claude Code plugin marketplace, but the skills, commands, and hooks also work in [OpenCode](https://opencode.ai) via a committed mirror at [`dist/opencode/`](./dist/opencode/).
+This repository also works with the skills, commands, and hooks in [OpenCode](https://opencode.ai) via a committed mirror at [`dist/opencode/`](./dist/opencode/).
 
 ```bash
 export OPENCODE_CONFIG_DIR="$(pwd)/dist/opencode"
@@ -494,7 +546,7 @@ export OPENCODE_CONFIG_DIR="$(pwd)/dist/opencode"
 
 When adding or removing a plugin, regenerate the mirror with `bin/build-opencode-mirror` and commit the result. CI fails if the mirror drifts from the source plugins. Hooks are mirrored to `dist/opencode/plugins/` as TypeScript plugins, sourced from each plugin's `opencode/index.ts`.
 
-### Known limitations
+### OpenCode known limitations
 
 - **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Some commands and one skill use Claude Code's `@${CLAUDE_PLUGIN_ROOT}/references/...` pattern to inline reference files at runtime. OpenCode does not expand this variable, so those inclusions appear to the agent as literal path strings rather than inlined content. The inline workflow text in each affected file still loads correctly. Affected commands: `/add-goreleaser-homebrew`, `/scaffold-go-cli`, `/scaffold-go-library`, `/scaffold-new-repo`, `/scaffold-rust-cli`, `/setup-ci`, `/setup-secret-scanning`. Affected skill: `create-plugin`. For full fidelity in these cases, run them in Claude Code.
 - **Hook event parity is approximate.** OpenCode's event model collapses several distinct Claude Code notification matchers (`idle_prompt`, `elicitation_dialog`, `permission_prompt`) and the `PreCompact` event is mapped to an experimental OpenCode hook. See each hook's README for the specific mapping.
