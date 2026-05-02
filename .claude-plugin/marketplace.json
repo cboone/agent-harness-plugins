@@ -245,7 +245,7 @@
       "name": "manage-repo-licensing",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/manage-repo-licensing",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     {
       "author": {
@@ -441,7 +441,7 @@
       "name": "setup-installers",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-installers",
-      "version": "2.2.0"
+      "version": "2.2.1"
     },
     {
       "author": {
@@ -455,7 +455,7 @@
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.10.0"
+      "version": "1.10.1"
     },
     {
       "author": {
@@ -511,7 +511,7 @@
       "name": "update-everything",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/update-everything",
-      "version": "1.1.0"
+      "version": "1.1.1"
     },
     {
       "author": {

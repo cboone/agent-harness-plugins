@@ -9,5 +9,5 @@
   "name": "setup-installers",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "skills": "./skills",
-  "version": "2.2.0"
+  "version": "2.2.1"
 }

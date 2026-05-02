@@ -217,7 +217,7 @@ For **Lean projects**, scan `.github/workflows/*.yml` for the `leanprover/lean-a
 | typos         | `crate-ci/typos@7c572958218557a3272c2d6719629443b5cc26fd # v1.45.2`                                                       |
 | hadolint      | `hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0`                                              |
 | actionlint    | `raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2`                                              |
-| cspell        | `streetsidesoftware/cspell-action@de2a73e963e7443969755b648a1008f77033c5b2 # v8.4.0`                                      |
+| cspell        | `cboone/gh-actions/actions/run-cspell@7371f5d84ff9f0b0e38bfde10ab7a46ddb331e92 # v2.2.0`                                  |
 | lake lint     | `leanprover/lean-action@<sha> # <tag>` (with `lint: true`); refresh both SHA and tag to current latest before emitting    |
 
 ### 10. Run Initial Lint (Optional)

@@ -180,7 +180,6 @@ The target versions for GitHub Actions that repositories should be updated to. W
 | `mfinelli/setup-shfmt`          | `v4`            |
 | `oven-sh/setup-bun`             | `v2`            |
 | `ruby/setup-ruby`               | `v1`            |
-| `softprops/action-gh-release`   | `v2`            |
 | `Swatinem/rust-cache`           | `v2`            |
 | `trufflesecurity/trufflehog`    | `v3`            |
 
