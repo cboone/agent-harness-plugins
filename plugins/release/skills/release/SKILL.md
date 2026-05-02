@@ -126,10 +126,21 @@ Confirm the individual plugin version changes with the user before modifying fil
 
 #### M3. Compute Catalog State
 
-After plugin versions are final, compute the catalog state from marketplace plugin versions:
+After plugin versions are final, compute the catalog state from marketplace plugin versions. Use strict `MAJOR.MINOR.PATCH` parsing (matching `bin/validate-plugins`) so malformed versions fail loudly instead of silently producing an incorrect tag:
 
 ```bash
-jq -r '[.plugins[].version | split(".") | map(tonumber)] as $v | "catalog-M\($v | map(.[0]) | add)-m\($v | map(.[1]) | add)-p\($v | map(.[2]) | add)-n\($v | length)"' .claude-plugin/marketplace.json
+jq -r '
+  def parse_version:
+    capture("^(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)$")
+    | {
+        major: (.major | tonumber),
+        minor: (.minor | tonumber),
+        patch: (.patch | tonumber)
+      };
+
+  [.plugins[].version | parse_version] as $versions
+  | "catalog-M\($versions | map(.major) | add)-m\($versions | map(.minor) | add)-p\($versions | map(.patch) | add)-n\($versions | length)"
+' .claude-plugin/marketplace.json
 ```
 
 Update `.claude-plugin/marketplace.json` `metadata.version` to exactly the computed catalog state.
