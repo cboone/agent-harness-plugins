@@ -164,16 +164,51 @@ The fallback uses strict `MAJOR.MINOR.PATCH` parsing (matching `bin/validate-plu
 
 Update `.claude-plugin/marketplace.json` `metadata.version` to exactly the computed catalog state.
 
-#### M4. Abort if Tag Exists
+#### M4. Abort if Tag Exists at a Different Commit
 
-Before any commit or tag operation, check whether the exact catalog state tag already exists, both locally and on the remote:
+Before any commit or tag operation, check whether the exact catalog state tag already exists, both locally and on the remote, and compare the commit it points to against `HEAD`.
+
+Compare commit SHAs, not just the tag name. The catalog-state format is sum-based and not collision-free: two different plugin-version mixes can produce the same component sums (for example, `+1` minor on plugin A paired with `-1` minor on plugin B). Treating any same-named tag as "already released" would silently drop a real catalog change. Comparing SHAs lets the skill idempotently skip true repeats while loudly aborting on collisions.
 
 ```bash
-git rev-parse -q --verify "refs/tags/CATALOG-STATE" \
-  || git ls-remote --tags --exit-code origin "refs/tags/CATALOG-STATE"
+head_commit="$(git rev-parse HEAD)"
+
+# Annotated tags expose the commit they point to via the peeled refspec
+# (^{}). Lightweight tags expose the commit directly. Try both, locally
+# and on the remote.
+local_commit="$(git rev-parse -q --verify "refs/tags/CATALOG-STATE^{commit}" 2> /dev/null || true)"
+remote_commit="$(git ls-remote origin "refs/tags/CATALOG-STATE^{}" | cut -f1)"
+if [[ -z "${remote_commit}" ]]; then
+  remote_commit="$(git ls-remote origin "refs/tags/CATALOG-STATE" | cut -f1)"
+fi
+
+existing_commit="${local_commit:-${remote_commit}}"
 ```
 
-If either check finds the tag, abort with a message that the tag `CATALOG-STATE` already exists. Do not create another tag or choose a different state tag unless the user explicitly changes plugin versions.
+Three cases:
+
+- **No existing tag** (`existing_commit` empty): proceed.
+- **Tag exists at `HEAD`**: a release for this catalog state is already published at this commit. Report that there is nothing to release and stop. Do not retag or republish.
+- **Tag exists at a different commit**: abort with a collision-aware error.
+
+For the collision case, present this to the user:
+
+```text
+Catalog state tag CATALOG-STATE already exists at a different commit.
+
+Existing tag points to: <existing_commit>
+Current commit:         <head_commit>
+
+This usually indicates a catalog-state collision: the marketplace plugin
+versions changed in a way that produces the same per-component sums as a
+previously-released catalog state. The format is sum-based and not
+collision-free.
+
+To resolve, bump one plugin's version by an additional patch so the
+marketplace produces a unique catalog state, then re-run /release.
+```
+
+Do not create another tag or choose a different state tag automatically. The user must change plugin versions to break the collision.
 
 #### M5. Pre-Tag Review
 
@@ -656,7 +691,8 @@ Release vVERSION published.
 - **Version file not found:** Skip source file updates, rely on git tag, inform the user.
 - **CHANGELOG parse error:** If the existing file has an unrecognized format, warn the user and offer to create a new one or append a version section at the top.
 - **Tag already exists:** Abort with a message that the tag `vVERSION` already exists. Suggest choosing a different version.
-- **Marketplace catalog tag already exists:** Abort with a message that the tag `CATALOG-STATE` already exists. Recompute the catalog state only after the user changes individual plugin versions.
+- **Marketplace catalog tag already exists at HEAD:** A release for this catalog state is already published at this commit. Report that there is nothing to release and stop; do not retag.
+- **Marketplace catalog tag already exists at a different commit:** Treat as a catalog-state collision (the sum-based tag format is not collision-free). Abort with the collision-aware message in M4 and ask the user to bump one plugin so the marketplace produces a unique catalog state. Do not retag or rename.
 - **Not a git repository:** Abort immediately.
 - **No remote configured:** Skip comparison links in CHANGELOG, skip push and GitHub Release in step 11, warn the user.
 - **First release:** Use `v0.0.0` as the base for bump calculation, create the CHANGELOG from scratch, skip doc version updates (no old version to replace).
