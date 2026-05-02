@@ -35,7 +35,7 @@
       "name": "add-goreleaser-homebrew",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/add-goreleaser-homebrew",
-      "version": "2.3.0"
+      "version": "2.3.1"
     },
     {
       "author": {
@@ -49,7 +49,7 @@
       "name": "add-scrut-cli-tests",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/add-scrut-cli-tests",
-      "version": "1.6.0"
+      "version": "1.6.1"
     },
     {
       "author": {
@@ -231,7 +231,7 @@
       "name": "lint-and-fix",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/lint-and-fix",
-      "version": "1.3.3"
+      "version": "1.3.4"
     },
     {
       "author": {
@@ -245,7 +245,7 @@
       "name": "manage-repo-licensing",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/manage-repo-licensing",
-      "version": "1.0.1"
+      "version": "1.0.2"
     },
     {
       "author": {
@@ -371,7 +371,7 @@
       "name": "scaffold-go-cli",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-cli",
-      "version": "2.7.0"
+      "version": "2.7.1"
     },
     {
       "author": {
@@ -385,7 +385,7 @@
       "name": "scaffold-go-library",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-library",
-      "version": "1.8.0"
+      "version": "1.8.1"
     },
     {
       "author": {
@@ -413,7 +413,7 @@
       "name": "scaffold-rust-cli",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-rust-cli",
-      "version": "1.2.0"
+      "version": "1.2.1"
     },
     {
       "author": {
@@ -427,7 +427,7 @@
       "name": "setup-ci",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-ci",
-      "version": "1.9.0"
+      "version": "1.9.1"
     },
     {
       "author": {
@@ -441,7 +441,7 @@
       "name": "setup-installers",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-installers",
-      "version": "2.2.1"
+      "version": "2.2.2"
     },
     {
       "author": {
@@ -455,7 +455,7 @@
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.10.1"
+      "version": "1.10.2"
     },
     {
       "author": {
@@ -469,7 +469,7 @@
       "name": "setup-secret-scanning",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-secret-scanning",
-      "version": "2.5.0"
+      "version": "2.5.1"
     },
     {
       "author": {
@@ -581,7 +581,7 @@
       "name": "write-go-code",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/write-go-code",
-      "version": "1.1.0"
+      "version": "1.1.1"
     },
     {
       "author": {

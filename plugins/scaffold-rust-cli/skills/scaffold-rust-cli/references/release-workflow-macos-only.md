@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/rust-release.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
+    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
     with:
       binary-name: PROJECT-NAME
       targets: "x86_64-apple-darwin aarch64-apple-darwin"

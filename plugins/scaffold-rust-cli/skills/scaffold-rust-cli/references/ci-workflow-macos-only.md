@@ -38,7 +38,7 @@ permissions:
 
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@f69487c36f4e217afe28ea631de39edf17d35238 # v2.1.4
+    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
     with:
       runs-on: macos-latest
 ```
