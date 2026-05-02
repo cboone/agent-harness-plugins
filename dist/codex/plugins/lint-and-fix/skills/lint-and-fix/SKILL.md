@@ -35,7 +35,7 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 | Shell scripts in project                                           | shellcheck         | _(no auto-fix)_                                          | `shellcheck <files>`                                           |
 | Shell scripts in project                                           | shfmt              | `shfmt -w <files>`                                       | `shfmt -d <files>`                                             |
 | `knip.json`, `knip.config.*`, `knip.ts`                            | knip               | _(no auto-fix)_                                          | `npx knip`                                                     |
-| `cspell.json`, `.cspell.json`, `cspell.config.*`                   | cspell             | _(no auto-fix)_                                          | `npx cspell .`                                                 |
+| `cspell.json`, `.cspell.json`, `cspell.config.*`                   | cspell             | _(no auto-fix)_                                          | `npx cspell --dot .`                                           |
 | `package.json` has `lint` script                                   | npm lint           | Try `npm run lint -- --fix`, fall back to `npm run lint` | `npm run lint`                                                 |
 | `package.json` has `format` script                                 | npm format         | `npm run format`                                         | Try `npm run format -- --check`, fall back to `npm run format` |
 | `bin/lint`, `scripts/lint`, `script/lint`                          | Project script     | Try `<script> --fix` first                               | `<script>`                                                     |
@@ -114,7 +114,7 @@ Run the fix command (or check command if **--check** was specified). Capture std
 - **shellcheck**: No auto-fix. All issues reported for manual resolution.
 - **shfmt**: With `-w`, formats in place silently. With `-d`, shows diffs.
 - **knip**: No auto-fix. Reports unused files, dependencies, and exports.
-- **cspell**: No auto-fix. Reports spelling errors. Users fix typos in the source or add words to `cspell.json` (`words` array) or a project word list file.
+- **cspell**: No auto-fix. Runs with `--dot` so dotfiles and dot-directories match CI spell-check behavior. Users fix typos in the source or add words to `cspell.json` (`words` array) or a project word list file. In git worktrees, `--dot` can expose the `.git` file; if that happens, add `.git` as well as `.git/` to the project's cspell ignore paths.
 - **npm scripts**: Exit codes depend on the underlying tool.
 - **Project scripts**: Try with `--fix` first. If the script does not recognize `--fix`, run without it.
 - **CI workflow scripts**: Run exactly as specified in the workflow. These are typically check-only (no auto-fix). Exit code 0 = pass, non-zero = issues found.
