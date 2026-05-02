@@ -93,4 +93,4 @@ jobs:
 - Non-reusable languages (JS/TS, Python, Ruby) use inline jobs with language-prefixed IDs (e.g., `js-test`, `js-lint`)
 - Prefix job display names with the language (e.g., `"JS: Test"`, `"JS: Lint"`)
 - Only include jobs relevant to each detected language
-- Zig requires the `zig-version` input. Pass `zig-version: ""` to make the wrapped `mlugg/setup-zig` read `minimum_zig_version` from `build.zig.zon` (the version-file equivalent until `zig-ci.yml` exposes a dedicated input). Go and Rust work with defaults.
+- For Zig, pass `zig-version-file: build.zig.zon` to make the wrapped `mlugg/setup-zig` read `minimum_zig_version` from `build.zig.zon`. Go and Rust work with defaults.

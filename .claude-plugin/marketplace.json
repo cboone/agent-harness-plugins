@@ -427,7 +427,7 @@
       "name": "setup-ci",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-ci",
-      "version": "1.8.0"
+      "version": "1.9.0"
     },
     {
       "author": {
