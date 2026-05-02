@@ -36,11 +36,22 @@ gh pr create --title "Add user authentication" --body-file TMPFILE
 
 ## Cleanup
 
-Always remove the tmpfile after the command completes, regardless of success or failure:
+Issue cleanup as a **separate Bash tool call** after the `gh` command:
 
 ```bash
 rm -f TMPFILE
 ```
+
+Each Bash tool invocation runs unconditionally, so the cleanup runs whether the `gh` command succeeded or failed, and the `gh` command's exit code is preserved by the harness without any shell-level wrapping.
+
+Do not chain the cleanup onto the `gh` command, and do not wrap it to preserve the exit code. In particular, never write:
+
+```bash
+# BAD - breaks in zsh
+gh pr create --title "..." --body-file TMPFILE; status=$?; rm -f TMPFILE; exit $status
+```
+
+In zsh (the macOS default shell), `status` and `pipestatus` are read-only built-in aliases for `$?` and `${pipestatus[@]}`. Assigning to either fails with `read-only variable: status`, so this wrapper exits non-zero and mis-reports a successful `gh` call as failed. Keep cleanup in its own Bash tool call instead.
 
 ## Examples
 

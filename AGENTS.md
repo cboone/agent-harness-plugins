@@ -579,6 +579,8 @@ When adding new plugins:
 1. Create a per-plugin `README.md` in the plugin directory
 1. Update the root `README.md` with the new plugin description and details link
 
+Hook plugins that should work in Codex CLI must include a `.codex-plugin/plugin.json` sibling to `.claude-plugin/plugin.json` with a non-empty `hooks` field pointing at the Codex hook file, usually `./hooks/hooks.json`. If the Claude Code hook file uses hook events that Codex CLI does not support (`Notification`, `PreCompact`, `SubagentStop`, `SessionEnd`), point the Codex manifest at a separate compatible hooks file instead. See `plugins/notify/` for the split-manifest pattern. Codex's strict hook schema (`PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, `Stop`) will reject the entire hook file if any unsupported event is present.
+
 ### README ToC Format
 
 The README table of contents uses **one entry per line** to prevent merge conflicts when multiple branches add plugins simultaneously. Skills are organized into subcategories (Git, Issues and Worktrees, Code Review, Code Quality, Scaffolding, Agents). Hooks are organized by hook category; omit empty hook categories. Each continuation link starts with `∙` (middle dot, space) at the beginning of the line:
@@ -614,12 +616,18 @@ Rules:
 
 ### Versioning
 
-This repository uses two levels of semver versioning:
+This repository uses two levels of versioning:
 
 **Marketplace `metadata.version`** (in `.claude-plugin/marketplace.json`):
 
-- Bump **minor** when adding or removing a plugin (the catalog changed)
-- Do NOT bump for changes to existing plugin content
+- This is a catalog state tag, not SemVer.
+- Format: `catalog-M<major-sum>-m<minor-sum>-p<patch-sum>-n<plugin-count>`
+- `M`: sum of all plugin major versions
+- `m`: sum of all plugin minor versions
+- `p`: sum of all plugin patch versions
+- `n`: number of marketplace plugins
+- Do not normalize or carry between components.
+- Recompute it from `.plugins[].version` whenever any marketplace plugin version changes.
 
 **Individual plugin `version`** (in `plugin.json` and mirrored in `marketplace.json`):
 

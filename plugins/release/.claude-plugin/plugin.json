@@ -2,12 +2,12 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Prepare a versioned release: analyze commits, update versions and changelog, create a release commit, tag locally, and optionally publish a GitHub Release.",
+  "description": "Prepare a versioned release or Claude Code marketplace catalog state tag: update release files, create a release commit, tag locally, and optionally publish a GitHub Release.",
   "homepage": "https://github.com/cboone/cboone-cc-plugins",
-  "keywords": ["changelog", "conventional-commits", "gh", "git", "github-release", "release", "semver", "tags", "versioning"],
+  "keywords": ["catalog", "changelog", "conventional-commits", "gh", "git", "github-release", "marketplace", "release", "semver", "tags", "versioning"],
   "license": "MIT",
   "name": "release",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "skills": "./skills",
-  "version": "1.3.2"
+  "version": "1.4.1"
 }

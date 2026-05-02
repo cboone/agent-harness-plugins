@@ -72,11 +72,13 @@ gh issue create --repo owner/repo --title "Issue title here" --body-file TMPFILE
 
 ### 5. Clean Up
 
-Always remove the tmpfile after the issue creation attempt, regardless of whether it succeeded or failed:
+Always remove the tmpfile after the issue creation attempt, regardless of whether it succeeded or failed. Issue the cleanup as a **separate Bash tool call**, not chained onto `gh issue create`:
 
 ```bash
 rm -f TMPFILE
 ```
+
+Each Bash tool call runs unconditionally and the prior call's exit code is preserved by the harness, so a separate call cleans up after both successful and failed issue creations without any shell-level wrapping. Never combine the two with `;` followed by an exit-code preservation idiom such as `gh issue create ...; status=$?; rm -f TMPFILE; exit $status`. In zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status` and falsely reports a successful issue creation as failed. See `plugins/use-git/skills/use-git/references/tmpfile-pattern.md` for the full rationale.
 
 ### 6. Report the Result
 

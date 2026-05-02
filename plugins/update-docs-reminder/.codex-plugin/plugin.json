@@ -4,6 +4,7 @@
   },
   "description": "Reminds you to update documentation when a commit includes significant code changes.",
   "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "hooks": "./hooks/hooks.json",
   "keywords": ["documentation", "git", "hooks", "reminders"],
   "license": "MIT",
   "name": "update-docs-reminder",
