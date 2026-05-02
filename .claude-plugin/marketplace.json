@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "catalog-M55-m102-p66-n49"
+    "version": "catalog-M56-m101-p65-n49"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -321,6 +321,20 @@
       "author": {
         "name": "Christopher Boone"
       },
+      "category": "scaffolding",
+      "description": "Refresh existing project scaffolding against the latest plugin templates.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["audit", "ci", "linters", "refresh", "scaffolding", "templates"],
+      "license": "MIT",
+      "name": "refresh-project-scaffolding",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/refresh-project-scaffolding",
+      "version": "2.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
       "category": "git",
       "description": "Prepare a versioned release or Claude Code marketplace catalog state tag: update release files, create a release commit, tag locally, and optionally publish a GitHub Release.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
@@ -498,20 +512,6 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/update-docs-reminder",
       "version": "1.2.0"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "ci-and-release",
-      "description": "Audit a repository against the latest plugin templates and update anything out of date.",
-      "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["audit", "ci", "linters", "scaffolding", "templates", "update"],
-      "license": "MIT",
-      "name": "update-everything",
-      "repository": "https://github.com/cboone/cboone-cc-plugins",
-      "source": "./plugins/update-everything",
-      "version": "1.1.1"
     },
     {
       "author": {

@@ -1,9 +1,9 @@
-# Update Everything
+# Refresh Project Scaffolding
 
-Audit a repository against the latest plugin templates and update anything out of date.
+Refresh existing project scaffolding against the latest plugin templates.
 
-**Type:** Command
-**Trigger:** `/update-everything`
+**Type:** Skill
+**Trigger:** `/refresh-project-scaffolding`
 
 ## Installation
 
@@ -13,20 +13,20 @@ Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins
 /plugin marketplace add cboone/cboone-cc-plugins
 ```
 
-Then select **Update Everything** from the available plugins.
+Then select **Refresh Project Scaffolding** from the available plugins.
 
 ## What It Does
 
-Scans the current repository for files created by other plugins in this ecosystem (CI workflows, linter configs, community files, secret scanning, agent config, etc.), compares them against current templates, and identifies what's outdated. Presents a plan table showing the status of each tool, then applies targeted updates after user confirmation.
+Scans the current repository for files created by other plugins in this ecosystem (CI workflows, linter configs, community files, secret scanning, agent config, etc.), compares them against current templates, and identifies what's outdated. Presents a plan table showing the status of each tool, then applies targeted refreshes after user confirmation.
 
 The maintenance companion to [Bootstrap Project](../bootstrap-project/README.md): bootstrap asks "what needs to be set up?", this asks "what needs to be updated?"
 
-**Scope**: This command audits tools already in use and updates their files to match current templates. For tools that are partially configured, it can restore missing expected files. It does not set up tools that were never used; for initial setup, use `/bootstrap-project` or the individual tool.
+**Scope**: This command audits tools already in use and refreshes their files to match current templates. For tools that are partially configured, it can restore missing expected files. It does not set up tools that were never used; for initial setup, use `/bootstrap-project` or the individual tool.
 
 ## Usage
 
 ```text
-/update-everything
+/refresh-project-scaffolding
 ```
 
 ## What It Checks
