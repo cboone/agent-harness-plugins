@@ -77,7 +77,7 @@ grep -E '^(test|lint|fmt|vet|vuln|build|cover|coverage|tidy|tools|all|deny|audit
 
 Report which targets already exist and which will be added. Only add targets that do not already exist. Ask before modifying any existing target.
 
-If no `Makefile` exists, offer to create one with the appropriate language-specific Makefile reference (see `./references/makefile-<language>.md`). The Makefile provides standard targets for local development (`test`, `lint`, `fmt`, `vuln`, etc.) and is required by the Go CI reusable workflow (`go-ci.yml@v2`), which calls Makefile targets (`make test`, `make vet`, `make fmt`, etc.) directly. If the user declines, note that CI will fail for Go templates because the reusable workflow requires Makefile targets.
+If no `Makefile` exists, offer to create one with the appropriate language-specific Makefile reference (see `./references/makefile-<language>.md`). The Makefile provides standard targets for local development (`test`, `lint`, `fmt`, `vuln`, etc.) and is required by the Go CI reusable workflow (`run-go-ci.yml@v3.0.0`), which calls Makefile targets (`make test`, `make vet`, `make fmt`, etc.) directly. If the user declines, note that CI will fail for Go templates because the reusable workflow requires Makefile targets.
 
 ### 4. Create CI Workflow
 
