@@ -1,19 +1,20 @@
 ---
-name: update-everything
+name: refresh-project-scaffolding
 description: >-
-  Audit a repository against the latest cboone-cc-plugins templates and update
-  anything out of date. Use when the user says "update everything", "audit my
-  repo", "audit the repo", "refresh templates", "bring this repo up to date",
-  "check what's outdated", or wants the maintenance companion to
+  Refresh existing project scaffolding against the latest cboone-cc-plugins
+  templates. Use when the user says "refresh project scaffolding", "update
+  everything", "audit my repo", "audit the repo", "refresh templates", "bring
+  this repo up to date", "check what's outdated", or wants the maintenance
+  companion to
   bootstrap-project. Detects which scaffolds, CI workflows, linters, and
   installers are in use, diffs them against current templates, and applies
   confirmed updates. Does not set up tools that were never used; use
   bootstrap-project for initial setup.
 ---
 
-# Update Everything
+# Refresh Project Scaffolding
 
-Audit the current repository against the latest templates and best practices from the cboone-cc-plugins ecosystem. Detect which tools have been used, compare existing files against current standards, present a plan of what's out of date, confirm with the user, and apply targeted updates.
+Refresh the current repository's existing scaffolding against the latest templates and best practices from the cboone-cc-plugins ecosystem. Detect which tools have been used, compare existing files against current standards, present a plan of what's out of date, confirm with the user, and apply targeted updates.
 
 This is the maintenance companion to `bootstrap-project`: bootstrap sets things up, this keeps them current.
 
