@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+# Sends macOS notifications via terminal-notifier
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+# =============================================================================
+# NOTE: Custom icon does not work
+# =============================================================================
+# terminal-notifier has known bugs with icons:
+# - -appIcon does not show the icon (confirmed bug)
+# - -sender conflicts with -activate (cannot be used together)
+#
+# See: https://github.com/julienXX/terminal-notifier/issues/320
+# =============================================================================
+
+function usage() {
+  cat << 'USAGE_TEXT'
+Usage: bin/notify [command] [options]
+
+Sends macOS notifications via terminal-notifier.
+
+Commands:
+  send <title> [subtitle] [message] [sound]   Send notification (default)
+  stop                                        Hook for Claude Code task completion
+
+Options:
+  -h, --help     Show this help
+
+Examples:
+  bin/notify "Claude Code" "" "Task complete" "Glass"
+  bin/notify send "Error" "project" "Failed" "Basso"
+  bin/notify stop                  # Reads JSON from stdin (hook Stop)
+USAGE_TEXT
+}
+
+# Truncates text with ellipsis if it exceeds limit
+function truncate_with_ellipsis() {
+  local text="$1"
+  local limit="${2:-80}"
+
+  text=$(echo "${text}" | head -c "${limit}")
+  if [[ ${#text} -eq ${limit} ]]; then
+    text="${text}…"
+  fi
+  echo "${text}"
+}
+
+# Extracts last user message from transcript
+function extract_last_user_message() {
+  local transcript_path="$1"
+  local limit="${2:-80}"
+
+  if [[ -z "${transcript_path}" ]] || [[ ! -f "${transcript_path}" ]]; then
+    return 0
+  fi
+
+  # Search for last user message (type: human)
+  # Read failures are intentionally ignored (notification script)
+  # shellcheck disable=SC2312
+  tac "${transcript_path}" 2> /dev/null | while read -r line; do
+    local msg_type
+    msg_type=$(echo "${line}" | jq -r '.type // empty')
+    if [[ "${msg_type}" = "human" ]]; then
+      local msg
+      # shellcheck disable=SC2312
+      msg=$(echo "${line}" | jq -r '.message.content // empty' | head -c "${limit}")
+      if [[ -n "${msg}" ]]; then
+        echo "${msg}"
+        break
+      fi
+    fi
+  done
+}
+
+function do_send() {
+  local title="${1:-Claude Code}"
+  local subtitle="${2:-}"
+  local message="${3:-}"
+  local sound="${4:-Glass}"
+
+  if ! terminal-notifier \
+    -title "${title}" \
+    -subtitle "${subtitle}" \
+    -message "${message}" \
+    -sound "${sound}" \
+    -group claude-code \
+    -activate com.apple.Terminal \
+    > /dev/null; then
+    echo "Warning: terminal-notifier failed to send notification." >&2
+  fi
+}
+
+function do_stop() {
+  # Read JSON from stdin (contains transcript_path)
+  local input
+  input=$(cat)
+  local transcript_path
+  transcript_path=$(echo "${input}" | jq -r '.transcript_path // empty')
+
+  # Get project name and current branch
+  local project
+  project=$(basename "${PWD}")
+  local branch
+  branch=$(git branch --show-current 2> /dev/null || echo "unknown")
+
+  # Get last user message from transcript
+  local task
+  task=$(extract_last_user_message "${transcript_path}" 80)
+
+  # Fallback and truncation
+  if [[ -z "${task}" ]]; then
+    task="Task completed"
+  else
+    task=$(truncate_with_ellipsis "${task}" 80)
+  fi
+
+  do_send "Claude Code" "${project} @ ${branch}" "${task}" "Glass"
+}
+
+function main() {
+  # If first argument is -h or --help
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
+  # If first argument is a known command
+  case "${1:-}" in
+    stop)
+      do_stop
+      ;;
+    send)
+      shift
+      do_send "$@"
+      ;;
+    -*)
+      echo "Error: unknown option: $1" >&2
+      echo "Use '${SCRIPT_NAME} --help' to see available options." >&2
+      exit 1
+      ;;
+    *)
+      # Default behavior: treat arguments as send
+      do_send "$@"
+      ;;
+  esac
+}
+
+main "$@"

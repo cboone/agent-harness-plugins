@@ -14,13 +14,12 @@ OpenAI's [Codex CLI](https://developers.openai.com/codex/cli) takes the opposite
 
 Net effect: most of this repository is already a working codex plugin marketplace. The `dist/codex/` mirror, `bin/build-codex-mirror`, and `bin/install-codex-hooks` ideas from the previous draft of this plan are unnecessary and have been dropped.
 
-The only real compatibility gap is the `notify` plugin, whose `hooks/hooks.json` uses the Claude-only events `Notification` (3 matchers) and `PreCompact`. Loading it under codex would fail at deserialize time. The other two hook plugins are unaffected:
+The only real compatibility gap is the `notify` plugin, whose `hooks/hooks.json` uses the Claude-only events `Notification` (3 matchers) and `PreCompact`. Loading it under codex would fail at deserialize time. Hook plugin status:
 
-| Plugin                 | Events used                               | Codex status                                                              |
-| ---------------------- | ----------------------------------------- | ------------------------------------------------------------------------- |
-| `block-rm-rf`          | `PreToolUse` matcher `Bash`               | Out of scope for this plan: user is removing the plugin in separate work. |
-| `update-docs-reminder` | `PostToolUse` matcher `Bash`              | Already compatible. No changes required.                                  |
-| `notify`               | `Notification` (×3), `PreCompact`, `Stop` | Codex rejects the file. Needs a codex-specific hooks variant.             |
+| Plugin                 | Events used                               | Codex status                                                  |
+| ---------------------- | ----------------------------------------- | ------------------------------------------------------------- |
+| `update-docs-reminder` | `PostToolUse` matcher `Bash`              | Already compatible. No changes required.                      |
+| `notify`               | `Notification` (×3), `PreCompact`, `Stop` | Codex rejects the file. Needs a codex-specific hooks variant. |
 
 Goal: each plugin in this repo installs cleanly via `codex plugin marketplace add cboone/cboone-cc-plugins` (the only plugin install path exposed in Codex CLI 0.128.0). README documents the codex install path. CI verifies dual-manifest consistency for plugins that need it.
 
@@ -130,7 +129,6 @@ Extend with a new validation rule: for each plugin directory, if both `.claude-p
 - **All other plugins' `.claude-plugin/plugin.json`:** unchanged. Codex reads them as-is (verified at `plugin_namespace.rs:DISCOVERABLE_PLUGIN_MANIFEST_PATHS`). No `.codex-plugin/plugin.json` siblings needed except for `notify`.
 - **`plugins/notify/hooks/hooks.json`:** unchanged. Claude Code continues to use it.
 - **`plugins/notify/scripts/notify`:** unchanged. The same script is used by both systems via `${CLAUDE_PLUGIN_ROOT}` resolution.
-- **`block-rm-rf`:** out of scope. User is removing the plugin in separate work.
 - **`update-docs-reminder`:** unchanged. Already codex-compatible.
 - **`.gitignore`, `.prettierignore`, `cli.markdownlint-cli2.jsonc`:** no change.
 
