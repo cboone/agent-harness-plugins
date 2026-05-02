@@ -141,6 +141,32 @@ if [[ "${sorted}" != "${actual}" ]]; then
   error "Marketplace plugins array is not in alphabetical order by name"
 fi
 
+# ─── 10. Marketplace catalog state matches plugin versions ──────────────────
+
+function compute_catalog_state() {
+  jq -r '
+    def parse_version:
+      capture("^(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)$")
+      | {
+          major: (.major | tonumber),
+          minor: (.minor | tonumber),
+          patch: (.patch | tonumber)
+        };
+
+    [.plugins[].version | parse_version] as $versions
+    | "catalog-M\($versions | map(.major) | add)-m\($versions | map(.minor) | add)-p\($versions | map(.patch) | add)-n\($versions | length)"
+  ' "${MARKETPLACE}"
+}
+
+if ! computed_catalog_state="$(compute_catalog_state 2> /dev/null)"; then
+  error "Marketplace metadata.version could not be computed because one or more plugin versions are not SemVer"
+else
+  metadata_version="$(jq -r '.metadata.version // empty' "${MARKETPLACE}")"
+  if [[ "${metadata_version}" != "${computed_catalog_state}" ]]; then
+    error "Marketplace metadata.version '${metadata_version}' does not match computed catalog state '${computed_catalog_state}'"
+  fi
+fi
+
 # ─── Summary ────────────────────────────────────────────────────────────────
 
 if [[ ${errors} -gt 0 ]]; then

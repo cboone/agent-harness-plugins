@@ -1,10 +1,10 @@
 # Release
 
-Prepare a versioned release: analyze commits, update versions and changelog, create a release commit, tag locally, and optionally publish a GitHub Release.
+Prepare a versioned release or Claude Code marketplace catalog state tag: analyze commits, update release files, create a release commit, tag locally, and optionally publish a GitHub Release.
 
 **Type:** Skill
 **Trigger:** `/release`
-**Requires:** [`gh`](https://cli.github.com/) (optional, for GitHub Release creation)
+**Requires:** [`jq`](https://jqlang.org/) for Claude Code marketplace releases; [`gh`](https://cli.github.com/) is optional for GitHub Release creation
 
 ## Installation
 
@@ -18,7 +18,7 @@ Then select **Release** from the available plugins.
 
 ## What It Does
 
-Detects your project type (Go CLI, Go library, or generic), analyzes conventional commits since the last release to recommend a version bump, updates version references in project files and documentation, manages `CHANGELOG.md` in Keep a Changelog format, creates a GPG-signed release commit, and applies an annotated git tag. Optionally pushes the commit and tag and creates a GitHub Release with the version's changelog section as release notes.
+Detects your project type (Claude Code marketplace, Go CLI, Go library, or generic), analyzes conventional commits since the last release, updates release files, creates a GPG-signed release commit, and applies an annotated git tag. For Claude Code marketplaces, it computes `metadata.version` as a catalog state tag such as `catalog-M55-m101-p44-n49` from the individual plugin versions and uses `Marketplace <catalog-state>` as the GitHub Release title. For other projects, it recommends a SemVer bump, updates version references and `CHANGELOG.md`, and can create a GitHub Release with the version's changelog section as release notes.
 
 ## Usage
 
@@ -44,7 +44,7 @@ This skill runs git commands that trigger permission prompts. To allow them auto
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git status --porcelain)", "Bash(git branch --show-current)", "Bash(git tag *)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git remote get-url *)", "Bash(git push *)", "Bash(grep -rl *)", "Bash(command -v gh)", "Bash(mktemp /tmp/gh-release-notes-*)", "Bash(rm -f /tmp/gh-release-notes-*)", "Bash(gh release create *)", "Bash(date *)"]
+    "allow": ["Bash(git status --porcelain)", "Bash(git branch --show-current)", "Bash(git tag *)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git rev-parse *)", "Bash(git remote get-url *)", "Bash(git push *)", "Bash(grep -rl *)", "Bash(command -v gh)", "Bash(jq *)", "Bash(mktemp /tmp/gh-release-notes-*)", "Bash(rm -f /tmp/gh-release-notes-*)", "Bash(gh release create *)", "Bash(date *)"]
   }
 }
 ```
@@ -53,7 +53,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 ## Examples
 
-- "release": analyzes commits, recommends a bump, updates files, commits, and tags
+- "release": analyzes commits, updates files, commits, and tags
 - "cut a release": same behavior
 - "bump the version": same behavior
 - "release --dry-run": previews what would change without modifying anything

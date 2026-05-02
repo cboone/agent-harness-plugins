@@ -124,10 +124,10 @@ Fetch and rebase the current feature branch onto the repository's base branch. A
 
 #### Release
 
-Prepare a versioned release by analyzing conventional commits, recommending a version bump, updating version references in project files and documentation, managing `CHANGELOG.md` in Keep a Changelog format, creating a release commit, tagging locally, and optionally pushing and creating a GitHub Release. Detects project type automatically (Go CLI, Go library, or generic).
+Prepare a versioned release by analyzing conventional commits, updating release files, creating a release commit, tagging locally, and optionally pushing and creating a GitHub Release. Detects project type automatically (Claude Code marketplace, Go CLI, Go library, or generic). For Claude Code marketplaces, computes `metadata.version` as a catalog state tag such as `catalog-M55-m101-p44-n49` and uses `Marketplace <catalog-state>` as the GitHub Release title; for other projects, recommends a SemVer bump and manages version references and `CHANGELOG.md`.
 
 > **Trigger:** `/release`
-> **Requires:** [`gh`](https://cli.github.com/) (optional, for GitHub Release creation)
+> **Requires:** [`jq`](https://jqlang.org/) for Claude Code marketplace releases; [`gh`](https://cli.github.com/) is optional for GitHub Release creation
 > **Details:** [README](./plugins/release/README.md)
 
 #### Review Branch
