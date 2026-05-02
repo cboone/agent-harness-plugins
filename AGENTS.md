@@ -627,7 +627,7 @@ This repository uses two levels of versioning:
 - `p`: sum of all plugin patch versions
 - `n`: number of marketplace plugins
 - Do not normalize or carry between components.
-- Recompute it from `.plugins[].version` whenever any marketplace plugin version changes.
+- Recompute it from `.plugins[].version` whenever any marketplace plugin version changes. Use `bin/compute-catalog-state` (the canonical implementation, also consumed by `bin/validate-plugins` and `.github/workflows/release.yml`).
 
 **Individual plugin `version`** (in `plugin.json` and mirrored in `marketplace.json`):
 
