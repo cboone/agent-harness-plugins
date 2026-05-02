@@ -33,7 +33,7 @@ The skill confirms scope before each batch and supports per-category opt-out, so
 
 - [`gh`](https://cli.github.com/) (authenticated). Install via Homebrew: `brew install gh`.
 - [`jq`](https://jqlang.org/). Install via Homebrew: `brew install jq`.
-- [`corepack`](https://github.com/nodejs/corepack) (only when pinning Yarn). Bundled with modern Node.js; activate via `corepack enable`.
+- [`corepack`](https://github.com/nodejs/corepack) (only when pinning Yarn or pnpm via `package.json`'s `packageManager` field; step 5 invokes `corepack use yarn@…` or `corepack use pnpm@…` and verifies with the corresponding `--version`). Bundled with modern Node.js; activate via `corepack enable`.
 - [`reuse`](https://reuse.software/) (only when the consuming repo has REUSE/SPDX licensing set up). Install via Homebrew: `brew install reuse`.
 
 ## Usage
