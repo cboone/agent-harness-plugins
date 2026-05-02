@@ -79,7 +79,7 @@ Present a table with all detected tools and their status:
 ```text
 | # | Tool                    | Status         | Issues Found                                   | Action          |
 |---|-------------------------|----------------|-------------------------------------------------|-----------------|
-| 1 | setup-ci                | Needs update   | actions/checkout@v4 (current: v6), no timeout   | Update workflow |
+| 1 | setup-ci                | Needs update   | actions/checkout@v4 (target: v6), no timeout    | Update workflow |
 | 2 | setup-linters           | Up to date     |                                                 | None            |
 | 3 | setup-secret-scanning   | Partially set  | TruffleHog workflow missing                     | Add workflow    |
 | 4 | add-community-files     | Needs update   | CoC is v2.1 (current: v3.0)                     | Update CoC      |
@@ -163,26 +163,26 @@ Suggest next steps:
 
 ## Reference: Action Versions
 
-The target versions for GitHub Actions that repositories should be updated to. When auditing workflow files, check `uses:` lines against this table. Actions not listed in this table are outside the scope of this audit and should be skipped without flagging. Note: some plugin generation templates may still reference older versions; this table represents the latest recommended versions.
+The target versions for GitHub Actions that repositories should be updated to. When auditing workflow files, check `uses:` lines against this table. Actions not listed in this table are outside the scope of this audit and should be skipped without flagging.
 
-| Action                          | Current version |
-| ------------------------------- | --------------- |
-| `actions/checkout`              | `v6`            |
-| `actions/download-artifact`     | `v4`            |
-| `actions/setup-go`              | `v6`            |
-| `actions/setup-node`            | `v4`            |
-| `actions/upload-artifact`       | `v4`            |
-| `astral-sh/setup-uv`            | `v5`            |
-| `dtolnay/rust-toolchain`        | `stable`        |
-| `gitleaks/gitleaks-action`      | `v2`            |
-| `golangci/golangci-lint-action` | `v9`            |
-| `goreleaser/goreleaser-action`  | `v6`            |
-| `ludeeus/action-shellcheck`     | `2.0.0`         |
-| `mfinelli/setup-shfmt`          | `v4`            |
-| `oven-sh/setup-bun`             | `v2`            |
-| `ruby/setup-ruby`               | `v1`            |
-| `Swatinem/rust-cache`           | `v2`            |
-| `trufflesecurity/trufflehog`    | `v3`            |
+| Action                          | Target version |
+| ------------------------------- | -------------- |
+| `actions/checkout`              | `v6`           |
+| `actions/download-artifact`     | `v8`           |
+| `actions/setup-go`              | `v6`           |
+| `actions/setup-node`            | `v6`           |
+| `actions/upload-artifact`       | `v7`           |
+| `astral-sh/setup-uv`            | `v8`           |
+| `dtolnay/rust-toolchain`        | `stable`       |
+| `gitleaks/gitleaks-action`      | `v2`           |
+| `golangci/golangci-lint-action` | `v9`           |
+| `goreleaser/goreleaser-action`  | `v6`           |
+| `ludeeus/action-shellcheck`     | `2.0.0`        |
+| `mfinelli/setup-shfmt`          | `v4`           |
+| `oven-sh/setup-bun`             | `v2`           |
+| `ruby/setup-ruby`               | `v1`           |
+| `Swatinem/rust-cache`           | `v2`           |
+| `trufflesecurity/trufflehog`    | `v3`           |
 
 When auditing, treat SHA-pinned references (e.g., `actions/checkout@a5ac7e5...`) as compliant if the pinned commit corresponds to the listed version or newer. Do not downgrade SHA pins to mutable version tags.
 
@@ -228,24 +228,25 @@ When auditing, treat SHA-pinned references (e.g., `actions/checkout@a5ac7e5...`)
 
 ### Checks for gitleaks.yml
 
-- Uses `gitleaks/gitleaks-action@v2`
-- Uses `actions/checkout@v6` with `fetch-depth: 0`
-- Has `permissions:` block with `contents: read` and `pull-requests: write`
+- Uses `cboone/gh-actions/.github/workflows/scan-for-secrets.yml` with a refreshed SHA-pinned ref and current version comment
+- Sets `tool: gitleaks`
+- Has `permissions:` block with `contents: read`
 - Has `concurrency:` group with `group: ${{ github.workflow }}-${{ github.ref }}` and `cancel-in-progress: true`
-- Has `timeout-minutes:` on all jobs
-- Has `schedule:` trigger (daily cron)
+- Triggers on `push: branches: [main]`
+- Has `pull_request:` trigger
 - Has `workflow_dispatch:` trigger
-- Org repos: references `GITLEAKS_LICENSE` secret
+- The reusable workflow handles checkout with `fetch-depth: 0` and tool installation internally
 
 ### Checks for trufflehog.yml
 
-- Uses `trufflesecurity/trufflehog@v3.x.y` (pinned to a specific release tag, not a bare `@v3`)
-- Uses `actions/checkout@v6` with `fetch-depth: 0`
-- Has `--results=verified,unknown` in extra_args
+- Uses `cboone/gh-actions/.github/workflows/scan-for-secrets.yml` with a refreshed SHA-pinned ref and current version comment
+- Sets `tool: trufflehog`
+- Has `permissions:` block with `contents: read`
 - Triggers on `push: branches: [main]`
-- Has `schedule:` trigger (weekly cron)
+- Has `pull_request:` trigger
+- Has `workflow_dispatch:` trigger
 - Has `concurrency:` group with `group: ${{ github.workflow }}-${{ github.ref }}` and `cancel-in-progress: true`
-- Has `timeout-minutes:` on all jobs
+- The reusable workflow handles checkout with `fetch-depth: 0`, TruffleHog version pinning, and tool execution internally
 
 ### Checks for .gitleaks.toml
 
@@ -386,13 +387,12 @@ Must include language-specific entries appropriate for the detected project type
 
 ### Checks for release.yml
 
-- Uses `goreleaser/goreleaser-action@v6`
-- Uses `actions/checkout@v6` with `fetch-depth: 0`
-- Uses `actions/setup-go@v6` with `go-version-file: go.mod`
+- Uses `cboone/gh-actions/.github/workflows/release-go-binaries.yml` with a refreshed SHA-pinned ref and current version comment
+- Go CLI releases pass `go-version-file: go.mod`
 - Triggers on `push: tags: ["v*"]`
 - Has `permissions: contents: write`
 - Has `concurrency:` group with `cancel-in-progress: false` (never interrupt releases)
-- Has `timeout-minutes:` (typically 30)
+- The reusable workflow handles checkout with `fetch-depth: 0`, Go setup, GoReleaser installation, and release execution internally
 
 ### Checks for .goreleaser.yml
 
