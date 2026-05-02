@@ -149,15 +149,16 @@ function npm_latest() {
 
 function audit_npx_pins() {
   declare -A seen=()
-  local line pkg current latest
+  local line pkg current key latest
   while IFS= read -r line; do
     if [[ "${line}" =~ npx[[:space:]]+(@?[a-zA-Z0-9._/-]+)@([0-9]+\.[0-9]+\.[0-9]+) ]]; then
       pkg="${BASH_REMATCH[1]}"
       current="${BASH_REMATCH[2]}"
-      if [[ -n "${seen[${pkg}]:-}" ]]; then
+      key="${pkg}|${current}"
+      if [[ -n "${seen[${key}]:-}" ]]; then
         continue
       fi
-      seen[${pkg}]=1
+      seen[${key}]=1
       latest=$(npm_latest "${pkg}")
       if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
         record_drift "npx pin" "${pkg}" "${current}" "${latest}" "scan paths"
@@ -181,7 +182,7 @@ function audit_go_install_pins() {
     ['mvdan.cc/sh/v3/cmd/shfmt']='mvdan/sh'
   )
   declare -A seen=()
-  local line install_path current repo latest
+  local line install_path current key repo latest
   while IFS= read -r line; do
     if [[ "${line}" =~ go[[:space:]]install[[:space:]]+([a-zA-Z0-9./-]+)@(v[0-9]+(\.[0-9]+)*) ]]; then
       install_path="${BASH_REMATCH[1]}"
@@ -190,10 +191,11 @@ function audit_go_install_pins() {
       if [[ -z "${repo}" ]]; then
         continue
       fi
-      if [[ -n "${seen[${install_path}]:-}" ]]; then
+      key="${install_path}|${current}"
+      if [[ -n "${seen[${key}]:-}" ]]; then
         continue
       fi
-      seen[${install_path}]=1
+      seen[${key}]=1
       latest=$(github_latest_release "${repo}")
       if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
         record_drift "go install" "${install_path}" "${current}" "${latest}" "scan paths"
@@ -211,15 +213,16 @@ function crates_io_latest() {
 
 function audit_cargo_install_pins() {
   declare -A seen=()
-  local line current crate latest
+  local line current crate key latest
   while IFS= read -r line; do
     if [[ "${line}" =~ cargo[[:space:]]install[[:space:]]+(--locked[[:space:]]+)?--version[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)[[:space:]]+([a-zA-Z0-9_-]+) ]]; then
       current="${BASH_REMATCH[2]}"
       crate="${BASH_REMATCH[3]}"
-      if [[ -n "${seen[${crate}]:-}" ]]; then
+      key="${crate}|${current}"
+      if [[ -n "${seen[${key}]:-}" ]]; then
         continue
       fi
-      seen[${crate}]=1
+      seen[${key}]=1
       latest=$(crates_io_latest "${crate}")
       if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
         record_drift "cargo install" "${crate}" "${current}" "${latest}" "scan paths"
@@ -237,15 +240,16 @@ function pypi_latest() {
 
 function audit_pip_install_pins() {
   declare -A seen=()
-  local line pkg current latest
+  local line pkg current key latest
   while IFS= read -r line; do
     if [[ "${line}" =~ \'?([a-zA-Z0-9_-]+)==([0-9]+(\.[0-9]+)*)\'? ]]; then
       pkg="${BASH_REMATCH[1]}"
       current="${BASH_REMATCH[2]}"
-      if [[ -n "${seen[${pkg}]:-}" ]]; then
+      key="${pkg}|${current}"
+      if [[ -n "${seen[${key}]:-}" ]]; then
         continue
       fi
-      seen[${pkg}]=1
+      seen[${key}]=1
       latest=$(pypi_latest "${pkg}")
       if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
         record_drift "pip / uv install" "${pkg}" "${current}" "${latest}" "scan paths"

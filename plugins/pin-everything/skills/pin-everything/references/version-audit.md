@@ -80,9 +80,9 @@ function audit_bun() {
   if [[ -z "${current}" ]]; then
     return
   fi
-  latest=$(curl -fsSL https://api.github.com/repos/oven-sh/bun/releases/latest \
+  latest=$(curl -fsSL https://api.github.com/repos/oven-sh/bun/releases/latest 2> /dev/null \
     | jq -r '.tag_name' \
-    | sed 's/^bun-v//')
+    | sed 's/^bun-v//' || true)
   if [[ -n "${latest}" && "${current}" != "${latest}" ]]; then
     record_drift "Bun" "bun runtime" "${current}" "${latest}" "bun.lock"
   fi
