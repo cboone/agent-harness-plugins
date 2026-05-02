@@ -22,13 +22,13 @@ jq -r '.packageManager' package.json
 
 ### Fallback: Compute by Hand
 
-If Corepack isn't available, fetch the tarball and compute SHA-512 directly:
+If Corepack isn't available, fetch the tarball and compute SHA-512 directly. Use `shasum -a 512` for portability: it's preinstalled on macOS and most Linux distributions, while `sha512sum` (GNU coreutils) is Linux-only and absent from a stock macOS install.
 
 ```bash
 VERSION=4.14.1
 HASH=$(
   curl -fsSL "https://repo.yarnpkg.com/${VERSION}/packages/yarnpkg-cli/bin/yarn.js" \
-    | sha512sum \
+    | shasum -a 512 \
     | awk '{print $1}'
 )
 ```

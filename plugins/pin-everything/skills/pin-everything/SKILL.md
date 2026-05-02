@@ -37,7 +37,7 @@ Surfaces to detect:
 | Language version files      | Glob `.tool-versions`, `.nvmrc`, `.ruby-version`, `rust-toolchain.toml`, `build.zig.zon`                                       |
 | `go.mod` `go` directive     | Read `go.mod`; capture the directive line                                                                                      |
 | Inline language pins in CI  | Grep workflows for `node-version:`, `ruby-version:`, `go-version:`, `python-version:`, `zig-version:` (without `-file` suffix) |
-| `go install` pins           | Grep for `go install [^ ]+@(latest&#124;v[0-9])`                                                                               |
+| `go install` pins           | Grep for `go install <path>@<ref>` where `<ref>` is `latest` or a `vN.Y.Z` tag                                                 |
 | `cargo install` pins        | Grep for `cargo install` with or without `--locked --version`                                                                  |
 | `pip` / `uv` pins           | Grep for `pip install`, `uv pip install`, `uv add` (with or without `==`)                                                      |
 | `npx` pins                  | Grep for `npx <name>` (with or without `@version`)                                                                             |

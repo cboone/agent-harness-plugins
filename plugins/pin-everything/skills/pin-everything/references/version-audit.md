@@ -15,16 +15,25 @@ Each surface has an upstream-of-record API the script queries. If the script fin
 
 ## Per-Surface Upstream APIs
 
-| Surface         | Upstream                                  | Query (jq filter)                                              |
-| --------------- | ----------------------------------------- | -------------------------------------------------------------- |
-| Node.js LTS     | `https://nodejs.org/dist/index.json`      | `first(.[] ; select(.lts != false)) ; .version` then strip `v` |
-| Yarn stable     | `https://repo.yarnpkg.com/tags`           | `.latest.stable`                                               |
-| GitHub releases | `gh api repos/<r>/releases/latest`        | `.tag_name`                                                    |
-| crates.io       | `https://crates.io/api/v1/crates/<crate>` | `.crate.max_stable_version`                                    |
-| PyPI            | `https://pypi.org/pypi/<pkg>/json`        | `.info.version`                                                |
-| npm registry    | `https://registry.npmjs.org/<pkg>/latest` | `.version`                                                     |
+| Surface         | Upstream                                  |
+| --------------- | ----------------------------------------- |
+| Node.js LTS     | `https://nodejs.org/dist/index.json`      |
+| Yarn stable     | `https://repo.yarnpkg.com/tags`           |
+| GitHub releases | `gh api repos/<r>/releases/latest`        |
+| crates.io       | `https://crates.io/api/v1/crates/<crate>` |
+| PyPI            | `https://pypi.org/pypi/<pkg>/json`        |
+| npm registry    | `https://registry.npmjs.org/<pkg>/latest` |
 
-(In the Node.js row, the jq filter actually uses pipe characters; the table renders them as `;` for layout — the real script in `./scripts/version-audit-template` shows the literal form.)
+Each surface's jq filter (extracted from `./scripts/version-audit-template`):
+
+```text
+Node.js LTS      first(.[] | select(.lts != false)) | .version    (then strip leading "v")
+Yarn stable      .latest.stable
+GitHub releases  .tag_name
+crates.io        .crate.max_stable_version
+PyPI             .info.version
+npm registry     .version
+```
 
 The script wraps each query in error-tolerant boilerplate (`curl -fsSL ... 2>/dev/null || true`); a transient network failure produces no row, not a script failure.
 

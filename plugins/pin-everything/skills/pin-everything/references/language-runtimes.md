@@ -32,11 +32,12 @@ curl -fsSL https://nodejs.org/dist/index.json \
 ### Ruby (stable)
 
 ```bash
-gh api repos/ruby/ruby/releases --jq '.[0].tag_name' \
+gh api repos/ruby/ruby/releases \
+  --jq 'first(.[] | select(.prerelease == false)) | .tag_name' \
   | sed 's/^v//; s/_/./g'
 ```
 
-`ruby/ruby` tags use underscores (`v3_4_2`); the `sed` normalization converts to the version-file format.
+`ruby/ruby` tags use underscores (`v3_4_2`); the `sed` normalization converts to the version-file format. The `select(.prerelease == false)` filter prevents preview / rc tags from being chosen as "stable".
 
 ### Go (the `go.mod` directive)
 
