@@ -64,7 +64,7 @@ uv tool install 'ruff==0.15.12'
 uvx 'ruff==0.15.12' check .
 ```
 
-`uv` is preferred over `pip` in scripted contexts: it resolves and installs an order of magnitude faster and writes to `uv.lock` for reproducibility. When converting `pip install` to `uv add`, retain the version pin verbatim.
+`uv` is preferred over `pip` for newly written install commands: it resolves and installs an order of magnitude faster and (in the case of `uv add`) writes to `uv.lock` for reproducibility. **Do not convert existing `pip install` lines to `uv add` (or any other uv verb) as part of pin-everything.** Each verb has a distinct destination — see the per-verb breakdown below — so swapping verbs silently changes which surface is touched. Pin in place: a `pip install foo` line becomes `pip install 'foo==X.Y.Z'`, not `uv add 'foo==X.Y.Z'`.
 
 The five forms are not interchangeable:
 
