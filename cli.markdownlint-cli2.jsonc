@@ -15,7 +15,7 @@
     "extends": ".markdownlint.jsonc",
   },
 
-  "ignores": [".workmux/", "node_modules/"],
+  "ignores": [".workmux/", "**/node_modules/**"],
 
   "customRules": ["@github/markdownlint-github", "markdownlint-rule-force-align-table-columns", "markdownlint-rule-relative-links"],
 }
