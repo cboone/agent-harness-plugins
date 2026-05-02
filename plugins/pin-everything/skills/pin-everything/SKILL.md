@@ -28,22 +28,22 @@ Scan the working tree for every version surface, then output a categorized table
 
 Surfaces to detect:
 
-| Category                    | Detection                                                                                                                                                                |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| GitHub Actions `uses:` refs | Glob `.github/workflows/*.{yml,yaml}` and `.github/actions/**/action.{yml,yaml}`; grep for `uses:`                                                                       |
-| Reusable workflow refs      | Same files; grep for `uses:` lines containing `.github/workflows/`                                                                                                       |
-| `packageManager` field      | Read `package.json`; check `.packageManager`                                                                                                                             |
-| `package.json` deps         | Read `package.json`; flag `^`/`~` ranges in `dependencies`/`devDependencies`. **Skip `peerDependencies`** — see step 6.                                                  |
-| Language version files      | Glob `.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `.python-version`, `rust-toolchain.toml`, `build.zig.zon`; also grep `Gemfile` for a `ruby` directive |
-| `go.mod` `go` directive     | Read `go.mod`; capture the directive line                                                                                                                                |
-| Inline language pins in CI  | Grep workflows for `node-version:`, `ruby-version:`, `go-version:`, `python-version:`, `zig-version:` (without `-file` suffix)                                           |
-| `go install` pins           | Grep for `go install <path>@<ref>` where `<ref>` is `latest` or a `vN.Y.Z` tag                                                                                           |
-| `cargo install` pins        | Grep for `cargo install` with or without `--locked --version`                                                                                                            |
-| `pip` / `uv` pins           | Grep for `pip install`, `uv pip install`, `uv add`, `uv tool install`, `uvx` (with or without `==`)                                                                      |
-| `npx` pins                  | Grep for `npx <name>` (with or without `@version`)                                                                                                                       |
-| Schema URLs                 | Grep `*.json` and `*.yaml` for `$schema` URLs containing `@latest`. Pinning is per-publisher (see step 7).                                                               |
+| Category                    | Detection                                                                                                                                                                                                 |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub Actions `uses:` refs | Glob `.github/workflows/*.{yml,yaml}` and `.github/actions/**/action.{yml,yaml}`; also grep `**/*.md` for `uses:` lines (scaffolded reference docs and templates often embed real refs); grep for `uses:` |
+| Reusable workflow refs      | Same files plus the same Markdown sweep; grep for `uses:` lines containing `.github/workflows/`                                                                                                           |
+| `packageManager` field      | Read `package.json`; check `.packageManager`                                                                                                                                                              |
+| `package.json` deps         | Read `package.json`; flag `^`/`~` ranges in `dependencies`/`devDependencies`. **Skip `peerDependencies`** — see step 6.                                                                                   |
+| Language version files      | Glob `.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `.python-version`, `rust-toolchain.toml`, `build.zig.zon`; also grep `Gemfile` for a `ruby` directive                                  |
+| `go.mod` `go` directive     | Read `go.mod`; capture the directive line                                                                                                                                                                 |
+| Inline language pins in CI  | Grep workflows for `node-version:`, `ruby-version:`, `go-version:`, `python-version:`, `zig-version:` (without `-file` suffix)                                                                            |
+| `go install` pins           | Grep for `go install <path>@<ref>` where `<ref>` is `latest`, a `vN.Y.Z` tag (with optional prerelease), or a pseudo-version (`v0.0.0-YYYYMMDDhhmmss-<12-hex>`)                                           |
+| `cargo install` pins        | Grep for `cargo install` with or without `--locked --version`                                                                                                                                             |
+| `pip` / `uv` pins           | Grep for `pip install`, `uv pip install`, `uv add`, `uv tool install`, `uvx` (with or without `==`)                                                                                                       |
+| `npx` pins                  | Grep for `npx <name>` (with or without `@version`)                                                                                                                                                        |
+| Schema URLs                 | Grep `*.json` and `*.yaml` for `$schema` URLs containing `@latest`. Pinning is per-publisher (see step 7).                                                                                                |
 
-Exclude vendored directories from all greps: `node_modules/`, `.yarn/`, `vendor/`, `dist/`, `target/`, `.venv/`.
+Exclude vendored directories from all greps: `node_modules/`, `.yarn/`, `vendor/`, `dist/`, `target/`, `.venv/`. Markdown templates with `uses:` refs that the consuming repo distributes downstream (skill scaffolds, README install snippets, etc.) are still in scope: real refs there should be pinned and refreshed against upstream just like CI workflows. The deliberate exclusions for placeholder paths (`OWNER/REPO`, `<...>`, etc.) are documented in step 7 and apply to install commands, not `uses:` refs.
 
 Print the output as a Markdown table grouped by category, with one row per file showing the file path, the count of matching refs, and a one-word state (`pinned` / `unpinned` / `mixed`).
 

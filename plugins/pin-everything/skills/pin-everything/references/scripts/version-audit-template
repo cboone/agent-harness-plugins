@@ -419,7 +419,13 @@ function audit_go_install_pins() {
   while IFS= read -r line; do
     file="${line%%:*}"
     content="${line#*:}"
-    if [[ "${content}" =~ go[[:space:]]install[[:space:]]+([a-zA-Z0-9./-]+)@(v[0-9]+(\.[0-9]+)*) ]]; then
+    # Module path character class follows Go's spec: lowercase letters, digits,
+    # `.`, `-`, `_`, and `~` (uppercase tolerated for completeness). Version
+    # component matches both tagged releases (`v1.2.3`, `v1.2.3-rc.1`) and Go
+    # pseudo-versions (`v0.0.0-20240901123456-abcdef123456`,
+    # `v1.2.3-0.20240901123456-abcdef123456`); both are documented in
+    # `references/install-commands.md` as legitimate pin forms.
+    if [[ "${content}" =~ go[[:space:]]install[[:space:]]+([a-zA-Z0-9._/~-]+)@(v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?) ]]; then
       install_path="${BASH_REMATCH[1]}"
       current="${BASH_REMATCH[2]}"
       repo=$(go_install_path_to_repo "${install_path}")
@@ -436,7 +442,7 @@ function audit_go_install_pins() {
         record_drift "go install" "${install_path}" "${current}" "${latest}" "${file}"
       fi
     fi
-  done < <(grep -rHE 'go install [a-zA-Z0-9./-]+@v[0-9]+' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+  done < <(grep -rHE 'go install [a-zA-Z0-9._/~-]+@v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?' "${SCAN_PATHS[@]}" 2> /dev/null || true)
 }
 
 # 8. cargo install --version <X> <crate> pins
