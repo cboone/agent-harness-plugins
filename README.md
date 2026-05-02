@@ -7,6 +7,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 [Commit](#commit)
 ∙ [Merge Main](#merge-main)
 ∙ [PR](#pr)
+∙ [Rebase Onto Main](#rebase-onto-main)
 ∙ [Release](#release)
 ∙ [Review Branch](#review-branch)
 ∙ [Use Git](#use-git)
@@ -112,6 +113,14 @@ Commit all changes, push to remote, and create a GitHub pull request in one auto
 > **Trigger:** `/pr`
 > **Requires:** [`gh`](https://cli.github.com/)
 > **Details:** [README](./plugins/pr/README.md)
+
+#### Rebase Onto Main
+
+Fetch and rebase the current feature branch onto the repository's base branch. Automatically detects the default branch, handles uncommitted changes, resolves conflicts per replayed commit, and force-with-lease pushes after a successful rebase. The merge-main counterpart for projects that prefer a linear history.
+
+> **Trigger:** `/rebase-onto-main`
+> **Requires:** [`gh`](https://cli.github.com/) (falls back to `git remote show origin` if unavailable)
+> **Details:** [README](./plugins/rebase-onto-main/README.md)
 
 #### Release
 

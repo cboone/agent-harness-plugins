@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Fetch and rebase the current feature branch onto the base branch with automatic conflict resolution and force-with-lease push.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["branch", "conflicts", "git", "rebase"],
+  "license": "MIT",
+  "name": "rebase-onto-main",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

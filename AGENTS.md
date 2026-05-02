@@ -209,6 +209,13 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── pr/
     │           └── SKILL.md
+    ├── rebase-onto-main/             # Base branch rebase skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── rebase-onto-main/
+    │           └── SKILL.md
     ├── release/                     # Versioned release preparation skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
