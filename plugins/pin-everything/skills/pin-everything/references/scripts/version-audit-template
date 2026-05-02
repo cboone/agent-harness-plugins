@@ -428,6 +428,17 @@ function audit_go_install_pins() {
     if [[ "${content}" =~ go[[:space:]]install[[:space:]]+([a-zA-Z0-9._/~-]+)@(v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?) ]]; then
       install_path="${BASH_REMATCH[1]}"
       current="${BASH_REMATCH[2]}"
+      # Skip pseudo-versions (`v0.0.0-YYYYMMDDhhmmss-<12-hex>`,
+      # `v1.2.3-0.YYYYMMDDhhmmss-<12-hex>`) and prerelease tags (`v1.2.3-rc.1`,
+      # `v1.2.3-beta.1`, etc.). Both are intentional pins to a specific
+      # unreleased commit or release candidate; comparing them against the
+      # repo's latest *released* tag would always report bogus drift even when
+      # the pin is exactly what the repo wants. The presence of any `-` suffix
+      # in the captured semver is the discriminator: a clean release tag is
+      # `vX.Y.Z` with no suffix.
+      if [[ "${current}" == *-* ]]; then
+        continue
+      fi
       repo=$(go_install_path_to_repo "${install_path}")
       if [[ -z "${repo}" ]]; then
         continue

@@ -44,7 +44,7 @@ The skill confirms scope before each batch and supports per-category opt-out, so
 
 | Option            | Effect                                                                                                |
 | ----------------- | ----------------------------------------------------------------------------------------------------- |
-| `--scope <list>`  | Restrict to a subset of categories: `actions,runtimes,yarn,manifest,installs,yarnrc,dependabot,audit` |
+| `--scope <list>`  | Restrict to a subset of categories: `actions,runtimes,corepack,manifest,installs,yarnrc,dependabot,audit` (the `corepack` scope covers Yarn and pnpm; `yarnrc` is Yarn-only) |
 | `--no-audit`      | Skip generating `bin/version-audit` and its workflow                                                  |
 | `--no-dependabot` | Skip writing `.github/dependabot.yml`                                                                 |
 | `--dry-run`       | Audit and report; do not edit any files                                                               |

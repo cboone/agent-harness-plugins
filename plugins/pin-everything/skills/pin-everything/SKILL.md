@@ -53,7 +53,7 @@ Present the categorized findings. The default is to pin everything in the repo t
 
 Ask the user to confirm or trim the scope. Offer per-category opt-out (e.g., "skip pip pinning", "skip Dependabot config", "actions only"). If the user invokes the skill with `--scope <comma-list>`, use that list directly; otherwise prompt.
 
-If the user requested `--dry-run`, perform the audit only and stop here.
+If the user requested `--dry-run`, or invoked the skill with audit-only phrasing (e.g. "audit version pins", "audit pins", "report unpinned versions", or any other request that asks for findings without changes), perform the audit only and stop here. Treat all audit-shaped trigger phrases the same as `--dry-run` so the README's "audit version pins" example does not silently fall into the mutating path.
 
 ### 3. SHA-Pin GitHub Actions
 
@@ -184,7 +184,7 @@ Skip this step if `--no-audit` was passed. Reference: `./references/version-audi
 
 ## Options
 
-- `--scope <comma-list>` — restrict the run to a subset of surface categories. Categories: `actions`, `runtimes`, `yarn`, `manifest`, `installs`, `yarnrc`, `dependabot`, `audit`. Example: `--scope actions,runtimes`.
+- `--scope <comma-list>` — restrict the run to a subset of surface categories. Categories: `actions`, `runtimes`, `corepack` (covers both Yarn and pnpm via Corepack — see step 5), `manifest`, `installs`, `yarnrc` (Yarn-only `.yarnrc.yml` hardening — see step 8), `dependabot`, `audit`. Example: `--scope actions,runtimes`.
 - `--no-audit` — skip step 10 (do not emit `bin/version-audit` or its workflow).
 - `--no-dependabot` — skip step 9 (do not write `.github/dependabot.yml`).
 - `--dry-run` — perform the audit (step 1) and report findings, but do not edit any files.
