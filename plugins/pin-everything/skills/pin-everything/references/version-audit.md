@@ -9,7 +9,7 @@ The script audits the four surfaces Dependabot misses:
 1. **Node.js LTS** — drift in whichever Node version file the repo uses (`.tool-versions` with a `nodejs` line, `.nvmrc`, or `.node-version`), mirroring the priority order in skill step 4.
 2. **`packageManager`** — Yarn or pnpm release drift (Corepack stays at the pinned version until the field is bumped). npm has no equivalent integrity surface, so npm-managed projects produce no row here.
 3. **Action SHAs in scanned files** — third-party action refs found anywhere in the configured `SCAN_PATHS` (defaults: `.github/` and `plugins/`, which together cover both real workflows and the action refs embedded in skill templates and other Markdown). Only release-tagged refs (those whose comment is a numeric `# vX.Y.Z` tag) are audited; channel/branch pins like `# stable` or `# main` are intentionally out of scope, since they have no upstream "latest version" to compare against and would require a different "pinned SHA vs. branch HEAD" check.
-4. **Install-command pins inside scripts** — `go install`, `cargo install`, `pip install`, `npx` pins in shell scripts, Makefiles, and skill prose.
+4. **Install-command pins inside scripts** — `go install`, `cargo install`, every Python install verb (`pip install`, `uv pip install`, `uv add`, `uv tool install`, `uvx`), and `npx` pins in shell scripts, Makefiles, and skill prose. The single `audit_python_install_pins` function covers all five Python verbs with one regex.
 
 Each surface has an upstream-of-record API the script queries. If the script finds a pinned version older than the upstream's current latest, it records a row in the drift report.
 
@@ -53,7 +53,7 @@ The single-issue invariant prevents the audit from spamming the issue tracker. R
 
 Read `./scripts/version-audit-template`. It contains seven `audit_*` functions plus a `print_report` driver. Tailor before writing the user's `bin/version-audit`:
 
-1. **Drop unused surface functions.** If the target repo has no `pip install` pins, delete `audit_pip_install_pins` and remove its call from the bottom of the script. Similarly drop `audit_npx_pins` if there are no `npx` pins, etc.
+1. **Drop unused surface functions.** If the target repo has no Python install pins of any kind (no `pip install`, `uv pip install`, `uv add`, `uv tool install`, or `uvx` calls with `==`), delete `audit_python_install_pins` and remove its call from the bottom of the script. The function name covers all five Python install verbs together because they share an upstream (PyPI) and a single grep handles them all; deleting it on the basis of "no plain `pip install` pins" alone would drop drift coverage for the `uv`-only repos. Apply the same all-or-nothing rule to `audit_npx_pins`, `audit_go_install_pins`, and `audit_cargo_install_pins`.
 2. **Adjust grep paths.** The template greps `plugins/` and `.github/` because that's where the canonical example repo keeps its surfaces. For a different layout, change the path arguments to `grep -rH ... <paths>` (the `-H` flag preserves filenames so drift rows can report the actual file).
 3. **Add new surface functions** if the target repo has surfaces the template doesn't cover (e.g. a custom version file format).
 

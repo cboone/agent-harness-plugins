@@ -39,7 +39,7 @@ Surfaces to detect:
 | Inline language pins in CI  | Grep workflows for `node-version:`, `ruby-version:`, `go-version:`, `python-version:`, `zig-version:` (without `-file` suffix) |
 | `go install` pins           | Grep for `go install <path>@<ref>` where `<ref>` is `latest` or a `vN.Y.Z` tag                                                 |
 | `cargo install` pins        | Grep for `cargo install` with or without `--locked --version`                                                                  |
-| `pip` / `uv` pins           | Grep for `pip install`, `uv pip install`, `uv add` (with or without `==`)                                                      |
+| `pip` / `uv` pins           | Grep for `pip install`, `uv pip install`, `uv add`, `uv tool install`, `uvx` (with or without `==`)                            |
 | `npx` pins                  | Grep for `npx <name>` (with or without `@version`)                                                                             |
 | Schema URLs                 | Grep `*.json` and `*.yaml` for `$schema` URLs containing `@latest`. Pinning is per-publisher (see step 7).                     |
 
@@ -83,6 +83,8 @@ Replace inline pins in scaffolded CI with version-file refs so the version of re
 
 If no version file pins this language, either add a line to an existing `.tool-versions` (preferred when one is already present) or create the language's conventional file (`.tool-versions` with the language's line, `.python-version` for Python, `rust-toolchain.toml` for Rust) with current LTS / stable values. Reference `./references/language-runtimes.md` for the LTS / stable lookup commands per language and the per-language fallback order.
 
+**Normalize the file's value to an exact `X.Y.Z` before treating the rewrite as a pin.** Existing version files routinely carry moving forms that look pinned but aren't: `.nvmrc` accepts aliases like `lts/*`, `lts/iron`, `node`, and `latest`; `.ruby-version`, `.python-version`, and `.tool-versions` entries are often major-only (`3.4`) or truncated to major+minor (`3.13`). CI that reads any of those values resolves them at install time, so each fresh runner can pick a different patch release while the workflow still claims to be "pinned to" the file. After selecting (or creating) the file, inspect its current contents and, if the value is anything other than an exact `X.Y.Z`, rewrite it to the matching exact release using the lookup commands in `./references/language-runtimes.md`. Only then has the runtime actually been pinned.
+
 ### 5. Pin the Corepack `packageManager` Field with SHA-512 Integrity
 
 If `package.json` has `"packageManager": "<yarn|pnpm>@X.Y.Z"`:
@@ -121,9 +123,11 @@ For every install invocation in CI templates, Makefiles, scripts, and skill docs
 | `pip install <pkg>` (no `==`)                             | `pip install '<pkg>==X.Y.Z'`                     | PyPI                                |
 | `uv pip install <pkg>`                                    | `uv pip install '<pkg>==X.Y.Z'`                  | PyPI                                |
 | `uv add <pkg>`                                            | `uv add '<pkg>==X.Y.Z'`                          | PyPI                                |
+| `uv tool install <pkg>`                                   | `uv tool install '<pkg>==X.Y.Z'`                 | PyPI                                |
+| `uvx <pkg> [args]` (no `==`)                              | `uvx '<pkg>==X.Y.Z' [args]`                      | PyPI                                |
 | `npx <tool>` (no `@version`, in CI without prior install) | `npx <tool>@X.Y.Z`                               | npm registry                        |
 
-**Preserve `uv add` vs `uv pip install`.** They are not interchangeable: `uv add` records the dependency in `pyproject.toml` and `uv.lock`, while `uv pip install` only mutates the active environment. Add the `==` pin in place; never rewrite one verb as the other.
+**Preserve the uv verb when adding a `==` pin.** The four uv install surfaces are not interchangeable and rewriting one as another silently changes scope: `uv pip install` mutates the active environment, `uv add` records the dependency in `pyproject.toml` and `uv.lock`, `uv tool install` installs a tool persistently to the user-global `~/.local/bin`, and `uvx` (alias for `uv tool run`) executes a tool ephemerally from a cached install. Pin in place, never swap.
 
 **Skip user-facing placeholders.** If the install path contains `OWNER/REPO`, `GITHUB-USERNAME`, `PROJECT-NAME`, or `<...>`-style placeholders, leave the `@latest` (or unversioned form) intact — it's a template the downstream user will customize.
 

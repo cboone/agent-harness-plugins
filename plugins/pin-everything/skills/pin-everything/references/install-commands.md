@@ -15,11 +15,13 @@ A `go install some/tool@latest` in CI installs whatever the upstream maintainer 
 | `pip install`            | `pip install '<pkg>==X.Y.Z'`                     | PyPI                                | `https://pypi.org/pypi/<pkg>/json` → `.info.version`                    |
 | `uv pip install`         | `uv pip install '<pkg>==X.Y.Z'`                  | PyPI                                | Same as `pip`                                                           |
 | `uv add`                 | `uv add '<pkg>==X.Y.Z'`                          | PyPI                                | Same as `pip`                                                           |
+| `uv tool install`        | `uv tool install '<pkg>==X.Y.Z'`                 | PyPI                                | Same as `pip`                                                           |
+| `uvx`                    | `uvx '<pkg>==X.Y.Z' [args]`                      | PyPI                                | Same as `pip`                                                           |
 | `npx`                    | `npx <tool>@X.Y.Z`                               | npm registry                        | `https://registry.npmjs.org/<tool>/latest` → `.version`                 |
 | `brew install` (formula) | _no in-line pin_; use a tap with versioned cask  | (not a pinning surface)             | —                                                                       |
 | `brew install` (cask)    | `version "X.Y.Z"` in a tap-managed cask          | The tap's release process           | Owned by the publishing repo, not by this skill                         |
 
-Keep `uv pip install` and `uv add` as separate verbs: `uv add` writes the dependency to `pyproject.toml` and `uv.lock`, while `uv pip install` only mutates the current environment. Do not rewrite one as the other when adding a `==` pin.
+Keep the four uv verbs distinct when adding a `==` pin: `uv pip install` mutates the current environment, `uv add` writes the dependency to `pyproject.toml` and `uv.lock`, `uv tool install` installs a tool persistently to the user-global `~/.local/bin`, and `uvx` (alias for `uv tool run`) executes a tool ephemerally from a cached install. Each verb has a distinct destination; rewriting one as another silently changes which surface is pinned. Pin in place, never swap.
 
 For the HTTP lookup endpoints (`crates.io`, `pypi.org`, `registry.npmjs.org`), fetch with `curl -fsSL <endpoint>` and extract with `jq -r '<filter>'`. The `go install` row uses `gh release view` instead — the upstream-of-record is a GitHub release for the install path's repo, not an HTTP API, so the recipe is `gh release view --repo <owner>/<repo> --json tagName --jq '.tagName'`. The bundled `version-audit-template` script wraps both shapes in error-tolerant boilerplate.
 
@@ -58,14 +60,20 @@ Single-quote the requirement spec so the shell doesn't interpret `==`:
 pip install 'ruff==0.15.12'
 uv pip install 'ruff==0.15.12'
 uv add 'ruff==0.15.12'
+uv tool install 'ruff==0.15.12'
+uvx 'ruff==0.15.12' check .
 ```
 
 `uv` is preferred over `pip` in scripted contexts: it resolves and installs an order of magnitude faster and writes to `uv.lock` for reproducibility. When converting `pip install` to `uv add`, retain the version pin verbatim.
 
-The three forms are not interchangeable:
+The five forms are not interchangeable:
 
 - `pip install 'pkg==X.Y.Z'` and `uv pip install 'pkg==X.Y.Z'` install into the current environment without recording the dependency.
-- `uv add 'pkg==X.Y.Z'` records the pin in `pyproject.toml` and updates `uv.lock`. Preserve the verb when adding a pin: rewriting `uv add` as `uv pip install` silently drops the manifest update.
+- `uv add 'pkg==X.Y.Z'` records the pin in `pyproject.toml` and updates `uv.lock`.
+- `uv tool install 'pkg==X.Y.Z'` installs a tool persistently to the user-global `~/.local/bin` (or `$UV_TOOL_BIN_DIR`). Use this when CI or local dev needs a stable tool binary on `PATH` without touching the project's `pyproject.toml` (linters, formatters, build helpers).
+- `uvx 'pkg==X.Y.Z' [args]` is shorthand for `uv tool run` — it resolves the tool to the pinned version, caches it on first run, and invokes it ephemerally without persisting anything to a tool dir or to `pyproject.toml`. The `pkg@X.Y.Z` (`@`) shorthand is equivalent but the `==` form composes with the rest of this guide.
+
+Preserve the verb when adding a pin: rewriting `uv add` as `uv pip install` drops the manifest update; rewriting `uv tool install` as `uv add` adds the tool to the project as a dependency rather than to the user's tool dir; rewriting `uvx` as `uv tool install` persists a binary that was meant to be ephemeral.
 
 ## `npx` Specifics
 

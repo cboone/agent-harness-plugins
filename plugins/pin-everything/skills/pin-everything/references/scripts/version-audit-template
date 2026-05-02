@@ -20,7 +20,8 @@
 #   - npx <tool>@<version> pins
 #   - go install <path>@v<version> pins for known tools
 #   - cargo install --version <X> <crate> pins
-#   - pip / uv install <pkg>==<X> pins
+#   - Python install pins across every uv / pip verb: pip install, uv pip install,
+#     uv add, uv tool install, and uvx (all using `<pkg>==<X>` form)
 #
 # Requires: gh (authenticated), jq, curl.
 
@@ -290,14 +291,15 @@ function audit_cargo_install_pins() {
   done < <(grep -rHE 'cargo install (--locked )?--version [0-9]+\.[0-9]+' "${SCAN_PATHS[@]}" 2> /dev/null || true)
 }
 
-# 7. pip / uv install <pkg>==<X> pins
+# 7. Python install pins across every uv / pip verb (pip install, uv pip install,
+# uv add, uv tool install, uvx) — all use `<pkg>==<X>` and resolve against PyPI.
 
 function pypi_latest() {
   local pkg="${1}"
   curl -fsSL "https://pypi.org/pypi/${pkg}/json" 2> /dev/null | jq -r '.info.version // empty' || true
 }
 
-function audit_pip_install_pins() {
+function audit_python_install_pins() {
   declare -A seen=()
   local line file content pkg current key latest
   while IFS= read -r line; do
@@ -315,15 +317,17 @@ function audit_pip_install_pins() {
       seen[${key}]=1
       latest=$(pypi_latest "${pkg}")
       if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
-        record_drift "pip / uv install" "${pkg}" "${current}" "${latest}" "${file}"
+        record_drift "python install" "${pkg}" "${current}" "${latest}" "${file}"
       fi
     fi
     # Allow arbitrary flags / quoting between the install command and the
     # `pkg==X.Y.Z` requirement so forms like `pip install --upgrade 'pkg==1.2.3'`,
-    # `uv add --dev 'pkg==1.2.3'`, and `uv add --group lint 'pkg==1.2.3'` are
-    # not silently skipped. The extraction regex inside the function still
-    # anchors on the unquoted `pkg==version` token.
-  done < <(grep -rHE '(pip install|uv (pip install|add))[[:space:]].*[a-zA-Z0-9._-]+==[0-9]' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+    # `uv add --dev 'pkg==1.2.3'`, `uv tool install --force 'pkg==1.2.3'`, and
+    # `uvx --from 'pkg==1.2.3' cmd` are not silently skipped. The extraction
+    # regex inside the function still anchors on the unquoted `pkg==version`
+    # token. Match every Python install verb that resolves against PyPI:
+    # `pip install`, `uv pip install`, `uv add`, `uv tool install`, `uvx`.
+  done < <(grep -rHE '(pip install|uv (pip install|add|tool install)|uvx)[[:space:]].*[a-zA-Z0-9._-]+==[0-9]' "${SCAN_PATHS[@]}" 2> /dev/null || true)
 }
 
 # Print Markdown report
@@ -356,5 +360,5 @@ audit_actions
 audit_npx_pins
 audit_go_install_pins
 audit_cargo_install_pins
-audit_pip_install_pins
+audit_python_install_pins
 print_report
