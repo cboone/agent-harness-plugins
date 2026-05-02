@@ -12,8 +12,11 @@
 #     (.tool-versions with a `nodejs` line, .nvmrc, or .node-version)
 #   - package.json packageManager (Yarn or pnpm via Corepack)
 #   - Release-tagged SHA-pinned action refs (those whose comment is a numeric
-#     `# vX.Y.Z` tag); channel/branch pins (`# stable`, `# main`) are out of
-#     scope because there is no upstream "latest version" to compare against
+#     `# vX.Y.Z` tag). Drift is checked against `releases/latest`, falling
+#     back to the highest semver-looking entry under `repos/<r>/tags` for
+#     repos that publish tags without creating GitHub Releases. Channel/branch
+#     pins (`# stable`, `# main`) are out of scope because there is no
+#     upstream "latest version" to compare against
 #   - npx <tool>@<version> pins
 #   - go install <path>@v<version> pins for known tools
 #   - cargo install --version <X> <crate> pins
@@ -57,8 +60,22 @@ function record_drift() {
 }
 
 function github_latest_release() {
-  local repo="${1}"
-  gh api "repos/${repo}/releases/latest" --jq '.tag_name' 2> /dev/null || true
+  local repo="${1}" latest
+  # Prefer GitHub Releases when the repo publishes them.
+  latest=$(gh api "repos/${repo}/releases/latest" --jq '.tag_name' 2> /dev/null || true)
+  if [[ -n "${latest}" ]]; then
+    printf '%s\n' "${latest}"
+    return
+  fi
+  # Fall back to the highest semver-looking tag for repos that publish version
+  # tags without creating GitHub Releases (otherwise audit_actions would
+  # silently skip drift for valid SHA-pinned refs against those repos).
+  # `sort -V` does version-aware ordering and handles the common `v` prefix.
+  gh api "repos/${repo}/tags" --paginate --jq '.[].name' 2> /dev/null \
+    | grep -E '^v?[0-9]+(\.[0-9]+)+$' \
+    | sort -V \
+    | tail -n 1 \
+    || true
 }
 
 # 1. Node.js LTS — read whichever Node version file the repo uses.

@@ -20,7 +20,7 @@ Each surface has an upstream-of-record API the script queries. If the script fin
 | Node.js LTS     | `https://nodejs.org/dist/index.json`                                                                                                                              |
 | Yarn stable     | `https://repo.yarnpkg.com/tags`                                                                                                                                   |
 | pnpm stable     | `https://registry.npmjs.org/pnpm/latest`                                                                                                                          |
-| GitHub releases | `gh api repos/<r>/releases/latest`                                                                                                                                |
+| GitHub releases | `gh api repos/<r>/releases/latest`, with `gh api repos/<r>/tags` (highest semver entry) as a fallback for repos that publish version tags without GitHub Releases |
 | crates.io       | `https://crates.io/api/v1/crates/<crate>`                                                                                                                         |
 | PyPI            | `https://pypi.org/pypi/<pkg>/json`                                                                                                                                |
 | npm registry    | `https://registry.npmjs.org/<pkg>/latest` (scoped packages require the `/` between scope and name to be URL-encoded as `%2f`, e.g. `@taplo/cli` → `@taplo%2fcli`) |
@@ -31,7 +31,7 @@ Each surface's jq filter (extracted from `./scripts/version-audit-template`):
 Node.js LTS      first(.[] | select(.lts != false)) | .version    (then strip leading "v")
 Yarn stable      .latest.stable
 pnpm stable      .version
-GitHub releases  .tag_name
+GitHub releases  .tag_name (releases/latest); .[].name filtered to ^v?[0-9]+(\.[0-9]+)+$ then sort -V (tags fallback)
 crates.io        .crate.max_stable_version
 PyPI             .info.version
 npm registry     .version
