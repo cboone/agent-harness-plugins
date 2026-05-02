@@ -55,10 +55,31 @@ if [ -d .github/workflows ]; then
       continue
     fi
     # Marketplace push-to-main automation: workflow invokes the canonical
-    # catalog state computation AND publishes a GitHub Release. Both halves
-    # are required: a validation workflow may call compute-catalog-state
-    # without tagging or releasing anything, and we should not defer to it.
-    if grep -q 'compute-catalog-state' "$f" && grep -q 'gh release create' "$f"; then
+    # catalog state computation, publishes a GitHub Release, AND triggers
+    # on push to the default branch (main or master). All three are
+    # required. The compute-catalog-state and gh release create checks
+    # rule out partial automation (e.g., a validation workflow that
+    # computes the catalog state without tagging or releasing). The push
+    # trigger check rules out workflow_dispatch-only or PR-only workflows
+    # that happen to mention both strings: those will not run when a
+    # commit lands on main, so deferring to them would silently skip
+    # local catalog tagging and leave nothing tagged or released.
+    if grep -q 'compute-catalog-state' "$f" && grep -q 'gh release create' "$f" && (
+      # Inline-list form: branches: [main], branches: ["main", "master"],
+      # branches: [dev, main]. \b is a word boundary, so [maintenance]
+      # and [main_v2] do not falsely match.
+      grep -qE 'branches:[[:space:]]*\[[^]]*\b(main|master)\b' "$f" ||
+        # YAML-list form: a `branches:` line followed by indented
+        # `- main` / `- master` entries. Exact line anchors avoid needing
+        # word-boundary support inside awk (BSD awk lacks \< \> and
+        # [[:<:]]).
+        awk '
+          /^[[:space:]]+branches:[[:space:]]*$/ { in_list = 1; next }
+          in_list && /^[[:space:]]+-[[:space:]]+["'\''"]?(main|master)["'\''"]?[[:space:]]*$/ { found = 1; in_list = 0 }
+          in_list && !/^[[:space:]]+-/ && !/^[[:space:]]*$/ { in_list = 0 }
+          END { exit !found }
+        ' "$f"
+    ); then
       echo "$f"
     fi
   done
@@ -68,7 +89,7 @@ fi
 If the loop prints any files, note that a **release workflow likely exists** that will automatically create a GitHub Release. Two patterns are detected:
 
 - **Tag-triggered workflows**: a `tags:` trigger plus a YAML list entry whose value starts with `v` followed by `*`, `[`, or a digit (e.g., `- "v*"`, `- "v[0-9]+.[0-9]+.[0-9]+"`), or starts with `catalog-`. Anchoring to list-item form avoids false positives from action refs like `actions/checkout@v4`.
-- **Marketplace push-to-main workflows**: a workflow that invokes `bin/compute-catalog-state` _and_ runs `gh release create`. Both signals together mark end-to-end automation that tags and publishes on push to the default branch. A workflow that only computes the catalog state (e.g., for validation) does not qualify.
+- **Marketplace push-to-main workflows**: a workflow that invokes `bin/compute-catalog-state`, runs `gh release create`, and triggers on push to the default branch (`main` or `master`). All three signals together mark end-to-end automation that tags and publishes on push to the default branch. A workflow that only computes the catalog state (e.g., for validation) does not qualify, and neither does a workflow_dispatch-only or PR-triggered workflow that happens to invoke both, since neither will run when a commit lands on main.
 
 Detection is best-effort and may miss inline list forms (e.g., `tags: ['v*']`) or other exotic patterns. If the detection seems wrong, ask the user to confirm. This flag affects M4-M8 for marketplace releases and step 11 for SemVer releases.
 
@@ -196,9 +217,28 @@ local_commit="$(git rev-parse -q --verify "refs/tags/CATALOG-STATE^{commit}" 2> 
 # not fail here just because `git ls-remote origin` would error out.
 remote_commit=""
 if git remote get-url origin > /dev/null 2>&1; then
-  remote_commit="$(git ls-remote origin "refs/tags/CATALOG-STATE^{}" | cut -f1)"
+  # Capture ls-remote's output and exit status separately. Piping straight
+  # into `cut` would mask auth/network failures: cut succeeds on empty
+  # input, so an authentication error or a transient network failure
+  # would leave remote_commit empty and silently fall back to the local
+  # tag. That can mask an already-published remote CATALOG-STATE tag and
+  # surface the conflict only when the eventual `git push` fails.
+  if ! ls_remote_output="$(git ls-remote origin "refs/tags/CATALOG-STATE^{}" "refs/tags/CATALOG-STATE" 2>&1)"; then
+    {
+      echo "git ls-remote origin failed:"
+      printf '%s\n' "${ls_remote_output}"
+      echo
+      echo "Cannot verify whether catalog state CATALOG-STATE is already published on origin."
+      echo "Resolve the network or authentication issue and re-run /release rather than"
+      echo "proceeding with a possibly-stale local view of remote tags."
+    } >&2
+    exit 1
+  fi
+  # Prefer the peeled refspec (annotated tags); fall back to the unpeeled
+  # refspec (lightweight tags). Both are queried in one ls-remote call.
+  remote_commit="$(printf '%s\n' "${ls_remote_output}" | awk '$2 == "refs/tags/CATALOG-STATE^{}" {print $1; exit}')"
   if [[ -z "${remote_commit}" ]]; then
-    remote_commit="$(git ls-remote origin "refs/tags/CATALOG-STATE" | cut -f1)"
+    remote_commit="$(printf '%s\n' "${ls_remote_output}" | awk '$2 == "refs/tags/CATALOG-STATE" {print $1; exit}')"
   fi
 fi
 

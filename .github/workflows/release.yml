@@ -35,41 +35,27 @@ jobs:
           # previous tag, and lets git rev-parse resolve refs/tags/* via fetch.
           fetch-depth: 0
 
+      - name: Validate plugins and marketplace
+        run: |
+          # Run the full plugin/marketplace validator before publishing.
+          # Gating only on the metadata.version <-> catalog-state invariant
+          # would let other inconsistencies (plugin.json <-> marketplace.json
+          # version drift, missing marketplace entries, alphabetical-ordering
+          # violations, Codex hook manifest issues, etc.) slip through and
+          # produce a tag and Release for a marketplace state that
+          # bin/validate-plugins rejects in CI. Running the full validator
+          # keeps automation in lockstep with the validator and ci.yml.
+          # Rule 10 of bin/validate-plugins covers the metadata.version
+          # check via bin/compute-catalog-state, so this also subsumes the
+          # previous standalone metadata-version verification.
+          bin/validate-plugins
+
       - name: Compute catalog state
         id: state
         run: |
           tag="$(bin/compute-catalog-state)"
           echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
           echo "Catalog state: ${tag}"
-
-      - name: Verify committed metadata.version matches computed catalog state
-        env:
-          TAG: ${{ steps.state.outputs.tag }}
-        run: |
-          # Refuse to publish if .claude-plugin/marketplace.json's
-          # metadata.version disagrees with what bin/compute-catalog-state
-          # derives from .plugins[].version. A bad merge could otherwise land
-          # on main with stale metadata, and this workflow would happily mint
-          # a tag and Release for the computed state even though the
-          # repository advertises a different one (and bin/validate-plugins
-          # rejects it). Gating here keeps automation in lockstep with the
-          # validator.
-          metadata_version="$(jq -er '.metadata.version // empty' .claude-plugin/marketplace.json)"
-          if [[ "${metadata_version}" != "${TAG}" ]]; then
-            {
-              echo "::error::Marketplace metadata.version '${metadata_version}' does not match computed catalog state '${TAG}'."
-              echo
-              echo "The committed .claude-plugin/marketplace.json is out of sync with"
-              echo "its own .plugins[].version entries. Refusing to publish a tag and"
-              echo "Release derived from the computed state while the repository"
-              echo "advertises a different one."
-              echo
-              echo "To resolve, run bin/compute-catalog-state and update"
-              echo ".claude-plugin/marketplace.json's metadata.version to match,"
-              echo "then push or merge again."
-            } >&2
-            exit 1
-          fi
 
       - name: Check whether tag and release already exist
         id: check
