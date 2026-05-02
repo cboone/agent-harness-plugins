@@ -101,7 +101,7 @@ Simplified example based on the `notify` plugin (see `plugins/notify/hooks/hooks
 
 ## Example: PreToolUse Guard
 
-Example based on the `block-rm-rf` plugin (see `plugins/block-rm-rf/hooks/hooks.json`). The hook intercepts Bash commands and blocks recursive `rm` invocations:
+This example intercepts Bash commands before they run and delegates the decision to a plugin-local script:
 
 ```json
 {
@@ -110,7 +110,7 @@ Example based on the `block-rm-rf` plugin (see `plugins/block-rm-rf/hooks/hooks.
       {
         "hooks": [
           {
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/check-rm",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/check-command",
             "type": "command"
           }
         ],

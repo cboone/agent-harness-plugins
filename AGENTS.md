@@ -50,14 +50,6 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── address-review/
     │           └── SKILL.md
-    ├── block-rm-rf/                 # Recursive rm blocker hook
-    │   ├── .claude-plugin/
-    │   │   └── plugin.json
-    │   ├── README.md
-    │   ├── hooks/
-    │   │   └── hooks.json
-    │   └── scripts/
-    │       └── check-rm
     ├── bootstrap-project/           # Full project bootstrap skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
@@ -589,7 +581,7 @@ When adding new plugins:
 
 ### README ToC Format
 
-The README table of contents uses **one entry per line** to prevent merge conflicts when multiple branches add plugins simultaneously. Skills are organized into subcategories (Git, Issues and Worktrees, Code Review, Code Quality, Scaffolding, Agents). Hooks are organized into subcategories (Security, Workflow). Each continuation link starts with `∙` (middle dot, space) at the beginning of the line:
+The README table of contents uses **one entry per line** to prevent merge conflicts when multiple branches add plugins simultaneously. Skills are organized into subcategories (Git, Issues and Worktrees, Code Review, Code Quality, Scaffolding, Agents). Hooks are organized by hook category; omit empty hook categories. Each continuation link starts with `∙` (middle dot, space) at the beginning of the line:
 
 ```markdown
 **Skills**
@@ -608,8 +600,6 @@ The README table of contents uses **one entry per line** to prevent merge confli
 [Skill G](#skill-g)
 
 **Hooks**
-<br>Security:
-[Hook A](#hook-a)
 <br>Workflow:
 [Hook B](#hook-b)
 ```
@@ -620,7 +610,7 @@ Rules:
 - The first link in each subcategory has no leading `∙`; subsequent links start with `∙`.
 - Subcategory labels use `<br>Name:` format (plain text with trailing colon).
 - **Skills** and **Hooks** are separated by a blank line.
-- Hooks have their own subcategories (Security, Workflow).
+- Hooks have their own subcategories; omit any subcategory with no entries.
 
 ### Versioning
 
