@@ -189,7 +189,7 @@
       "name": "create-worktree",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/create-worktree",
-      "version": "1.0.7"
+      "version": "1.0.8"
     },
     {
       "author": {
