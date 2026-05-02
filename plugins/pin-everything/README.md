@@ -51,7 +51,7 @@ The skill confirms scope before each batch and supports per-category opt-out, so
 
 ## Recommended Permissions
 
-This skill runs `gh api` queries to resolve action tags to SHAs and `corepack` to compute Yarn integrity hashes. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+This skill runs `gh api` queries to resolve action tags to SHAs, `corepack` to compute Yarn integrity hashes, and `git add` / `git commit` to land the resulting changes. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
 ```json
 {
@@ -59,9 +59,11 @@ This skill runs `gh api` queries to resolve action tags to SHAs and `corepack` t
     "allow": [
       "Bash(gh api:*)",
       "Bash(gh release view:*)",
-      "Bash(corepack prepare:*)",
+      "Bash(corepack use:*)",
       "Bash(corepack enable)",
-      "Bash(yarn --version)"
+      "Bash(yarn --version)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

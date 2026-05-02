@@ -83,8 +83,6 @@ Read `.yarnrc.yml` and warn the user before removing entries that look intention
 
 ## When the User Opts Out of Corepack
 
-If the project uses npm or pnpm (not Yarn), step 5 of the skill is a no-op — no `packageManager` field, no `.yarnrc.yml`. Skip both.
+If the project uses npm (not Yarn or pnpm), step 5 of the skill is a no-op — no `packageManager` field, no `.yarnrc.yml`. Skip both. There is no equivalent integrity-pin mechanism in `package.json` for npm; rely on `package-lock.json` (which contains per-package integrity hashes) and `npm ci` in CI to enforce them.
 
-For pnpm specifically, the `packageManager` field still applies (`"packageManager": "pnpm@9.X.Y"`) and Corepack supports it the same way. Use the same `corepack prepare pnpm@X.Y.Z --activate` flow to add the SHA-512 suffix.
-
-For npm, there is no equivalent integrity-pin mechanism in `package.json`; rely on `package-lock.json` (which contains per-package integrity hashes) and `npm ci` in CI to enforce them.
+For pnpm, the `packageManager` field still applies (`"packageManager": "pnpm@9.X.Y"`) and Corepack supports it the same way as Yarn. Run `corepack use pnpm@X.Y.Z` (not `corepack prepare`, which does not modify `package.json`) to write the integrity-suffixed `pnpm@X.Y.Z+sha512.<hash>` form. The `.yarnrc.yml` defaults section above is Yarn-specific and does not apply to pnpm.
