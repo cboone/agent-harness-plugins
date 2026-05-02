@@ -28,7 +28,7 @@ function die() {
   exit "${2:-1}"
 }
 
-# Escape MiniJinja delimiters so workmux's template engine emits them
+# Escape MiniJinja delimiters in-place so workmux's template engine emits them
 # literally. Without this, prompts containing GitHub Actions expressions
 # (`${{ ... }}`), Jinja/Liquid/Tera/Helm/Vue templates, or Handlebars-style
 # tokens are parsed as template variables and rejected with "undefined
@@ -36,13 +36,20 @@ function die() {
 # to the literal two-character delimiter at render time, so the rendered
 # prompt stored in `<worktree>/.workmux/PROMPT-*.md` matches the input
 # verbatim.
-function escape_minijinja_delimiters() {
-  local input="${1}"
-  local output="${2}"
+#
+# Editing in-place (rather than into a separate temp file) means the file
+# workmux reads is the same one the caller manages. The caller defers cleanup
+# until success is verified, so there is no race window where workmux could
+# read a deleted prompt.
+function escape_minijinja_delimiters_in_place() {
+  local file="${1}"
+  local tmp
+  tmp="$(mktemp "${file}.XXXXXX")"
   sed -e 's/{{/{{ "{{" }}/g' \
     -e 's/{%/{{ "{%" }}/g' \
     -e 's/{#/{{ "{#" }}/g' \
-    "${input}" > "${output}"
+    "${file}" > "${tmp}"
+  mv -f "${tmp}" "${file}"
 }
 
 function do_launch() {
@@ -50,13 +57,12 @@ function do_launch() {
   local prompt_file="${2}"
   local base_branch="${3:-}"
   local safe_name="${branch//\//-}"
-  local log escaped_prompt
+  local log
   log="$(mktemp "/tmp/workmux-${safe_name}.XXXXXX.log")"
-  escaped_prompt="$(mktemp "/tmp/workmux-prompt-escaped.XXXXXX")"
 
-  escape_minijinja_delimiters "${prompt_file}" "${escaped_prompt}"
+  escape_minijinja_delimiters_in_place "${prompt_file}"
 
-  local -a cmd=(workmux add "${branch}" --open-if-exists -P "${escaped_prompt}")
+  local -a cmd=(workmux add "${branch}" --open-if-exists -P "${prompt_file}")
   if [[ -n "${base_branch}" ]]; then
     cmd+=(--base "${base_branch}")
   fi
@@ -66,7 +72,7 @@ function do_launch() {
   sleep 8
 
   cat "${log}"
-  rm -f "${log}" "${escaped_prompt}"
+  rm -f "${log}"
 }
 
 function main() {
