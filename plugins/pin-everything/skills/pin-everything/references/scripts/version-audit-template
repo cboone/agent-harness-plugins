@@ -103,15 +103,23 @@ function audit_yarn() {
 
 function audit_actions() {
   declare -A seen=()
-  local line repo current latest
+  local line repo current key latest
   while IFS= read -r line; do
+    # Only release-tagged pins (numeric `# vX.Y.Z` comment) are audited.
+    # Channel/branch pins (`# stable`, `# main`) are intentionally out of scope:
+    # they have no upstream "latest version" to compare against and would need a
+    # different "pinned SHA vs. branch HEAD" check entirely.
     if [[ "${line}" =~ ([a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+)(/[^@]*)?@[a-f0-9]{40}[[:space:]]+#[[:space:]]+(v?[0-9]+(\.[0-9]+)*) ]]; then
       repo="${BASH_REMATCH[1]}"
       current="${BASH_REMATCH[3]}"
-      if [[ -n "${seen[${repo}]:-}" ]]; then
+      # Key dedup by repo+current so divergent pins (same action at two
+      # different versions in the repo) are each checked rather than masked
+      # by whichever pin happens to be greppped first.
+      key="${repo}|${current}"
+      if [[ -n "${seen[${key}]:-}" ]]; then
         continue
       fi
-      seen[${repo}]=1
+      seen[${key}]=1
       latest=$(github_latest_release "${repo}")
       if [[ -n "${latest}" && "${latest#v}" != "${current#v}" ]]; then
         record_drift "Actions" "${repo}" "${current}" "${latest}" "scan paths"
@@ -231,7 +239,12 @@ function audit_pip_install_pins() {
         record_drift "pip / uv install" "${pkg}" "${current}" "${latest}" "scan paths"
       fi
     fi
-  done < <(grep -rhE '(pip install|uv (pip install|add( --dev)?)) +.[a-zA-Z0-9_-]+==[0-9]' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+    # Allow arbitrary flags / quoting between the install command and the
+    # `pkg==X.Y.Z` requirement so forms like `pip install --upgrade 'pkg==1.2.3'`
+    # and `uv add --dev 'pkg==1.2.3'` are not silently skipped. The
+    # extraction regex inside the function still anchors on the unquoted
+    # `pkg==version` token.
+  done < <(grep -rhE '(pip install|uv (pip install|add( --dev)?))[[:space:]].*[a-zA-Z0-9_-]+==[0-9]' "${SCAN_PATHS[@]}" 2> /dev/null || true)
 }
 
 # Print Markdown report
