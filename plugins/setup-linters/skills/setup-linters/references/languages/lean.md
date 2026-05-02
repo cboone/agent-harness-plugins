@@ -23,7 +23,7 @@ Confirm `lakefile.toml` declares the lint driver:
 lintDriver = "batteries/runLinter"
 ```
 
-Without this line, `lake lint` is a silent no-op. With it, `lake lint` becomes a real pre-commit gate that catches the same issues Mathlib reviewers would flag.
+Without this line, `lake lint` is a no-op. With it, `lake lint` becomes a real pre-commit gate that catches the same issues Mathlib reviewers would flag.
 
 If the project uses `lakefile.lean` instead of `lakefile.toml`, the equivalent goes in the `package` block:
 

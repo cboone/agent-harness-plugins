@@ -13,7 +13,7 @@ Detect the project type, recommend appropriate linters and formatters, install t
 
 ### 1. Detect Project Type
 
-Scan for language and file-type markers using Glob. **Exclude `node_modules/`, `.yarn/`, and other dependency directories from all searches** to avoid false positives from vendored code.
+Scan for language and file-type markers using Glob. **Exclude `node_modules/`, `.yarn/`, `.lake/` (Lean dependency/build directory, including `.lake/packages/**`), and other dependency directories from all searches** to avoid false positives from vendored code.
 
 Use both files and directories as signals:
 
@@ -49,7 +49,7 @@ For CSS/SCSS projects, check whether Tailwind CSS is in use by looking for `tail
 
 For JavaScript/TypeScript projects, perform framework sub-detection to determine which ESLint plugins to install. Check `package.json` dependencies for `react`/`react-dom` (React), `next` (Next.js), `express`/`fastify`/`koa`/`hapi` (Node.js), and look for server-side directory markers (`server.*`, `api/`, `bin/`). See `./references/languages/javascript.md` for the full detection table.
 
-For Lean projects (any of `lakefile.toml`, `lakefile.lean`, `lean-toolchain`, or `*.lean` files present), the project uses `lake lint` driven by `lintDriver = "batteries/runLinter"` rather than an external linter. There is no tool to install: `lake` ships with the toolchain, `batteries/runLinter` ships with Batteries (already a transitive Mathlib dependency). Setup is wiring (the `lintDriver` field in `lakefile.toml`, a `lean-lint` Makefile target, and a CI step) rather than installation. Skip any toolchain install in this skill; the `scaffold-lean-library` skill handles `elan` and the bootstrap script. See `./references/languages/lean.md` for details.
+For Lean projects (any of `lakefile.toml`, `lakefile.lean`, `lean-toolchain`, or `*.lean` files present, with `.lake/` excluded so dependency-vendored `lakefile.*` and `*.lean` files do not trigger detection), the project uses `lake lint` driven by `lintDriver = "batteries/runLinter"` rather than an external linter. There is no tool to install: `lake` ships with the toolchain, `batteries/runLinter` ships with Batteries (already a transitive Mathlib dependency). Setup is wiring (the `lintDriver` field in `lakefile.toml`, a `lean-lint` Makefile target, and a CI step) rather than installation. Skip any toolchain install in this skill; the `scaffold-lean-library` skill handles `elan` and the bootstrap script. See `./references/languages/lean.md` for details.
 
 If multiple languages are detected, present all of them (monorepo scenario).
 
