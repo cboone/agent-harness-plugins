@@ -55,8 +55,10 @@ if [ -d .github/workflows ]; then
       continue
     fi
     # Marketplace push-to-main automation: workflow invokes the canonical
-    # catalog state computation.
-    if grep -q 'compute-catalog-state' "$f"; then
+    # catalog state computation AND publishes a GitHub Release. Both halves
+    # are required: a validation workflow may call compute-catalog-state
+    # without tagging or releasing anything, and we should not defer to it.
+    if grep -q 'compute-catalog-state' "$f" && grep -q 'gh release create' "$f"; then
       echo "$f"
     fi
   done
@@ -66,7 +68,7 @@ fi
 If the loop prints any files, note that a **release workflow likely exists** that will automatically create a GitHub Release. Two patterns are detected:
 
 - **Tag-triggered workflows**: a `tags:` trigger plus a YAML list entry whose value starts with `v` followed by `*`, `[`, or a digit (e.g., `- "v*"`, `- "v[0-9]+.[0-9]+.[0-9]+"`), or starts with `catalog-`. Anchoring to list-item form avoids false positives from action refs like `actions/checkout@v4`.
-- **Marketplace push-to-main workflows**: any workflow that invokes `bin/compute-catalog-state`, which signals end-to-end automation that tags and publishes on push to the default branch.
+- **Marketplace push-to-main workflows**: a workflow that invokes `bin/compute-catalog-state` _and_ runs `gh release create`. Both signals together mark end-to-end automation that tags and publishes on push to the default branch. A workflow that only computes the catalog state (e.g., for validation) does not qualify.
 
 Detection is best-effort and may miss inline list forms (e.g., `tags: ['v*']`) or other exotic patterns. If the detection seems wrong, ask the user to confirm. This flag affects M4-M8 for marketplace releases and step 11 for SemVer releases.
 
@@ -182,7 +184,10 @@ if [[ -z "${remote_commit}" ]]; then
   remote_commit="$(git ls-remote origin "refs/tags/CATALOG-STATE" | cut -f1)"
 fi
 
-existing_commit="${local_commit:-${remote_commit}}"
+# Prefer the remote tag whenever it exists. Published tags are
+# authoritative; a stale or recreated local tag pointing at HEAD must
+# not mask a remote ref pointing at a different commit.
+existing_commit="${remote_commit:-${local_commit}}"
 ```
 
 Three cases:
