@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify stop",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

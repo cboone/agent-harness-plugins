@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Refresh existing project scaffolding against the latest plugin templates.",
+  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "keywords": ["audit", "ci", "linters", "refresh", "scaffolding", "templates"],
+  "license": "MIT",
+  "name": "refresh-project-scaffolding",
+  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "skills": "./skills",
+  "version": "2.0.1"
+}

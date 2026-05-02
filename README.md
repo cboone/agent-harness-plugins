@@ -483,7 +483,9 @@ Analyzes git commits for changes that typically need documentation updates and p
 
 ## Using with Codex CLI
 
-This repository works as a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace. Codex reads `.claude-plugin/marketplace.json` for catalog metadata. For per-plugin metadata it prefers `.codex-plugin/plugin.json` when present and falls back to `.claude-plugin/plugin.json` otherwise. Hook registration requires a `.codex-plugin/plugin.json` with a non-empty `hooks` path (for example `"hooks": "./hooks/hooks.json"`); this lets hook plugins point Codex at a Codex-compatible hook file. Codex exposes `${CLAUDE_PLUGIN_ROOT}` to plugin-bundled hook commands for backward compatibility with existing Claude Code plugins.
+This repository works as a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace. Codex reads the generated `.agents/plugins/marketplace.json`, which points at committed plugin roots under `dist/codex/plugins/`. Those generated roots mirror the canonical `plugins/*` directories but replace skill frontmatter descriptions with shorter Codex-facing descriptions from the marketplace entries. The canonical `plugins/*/skills/*/SKILL.md` files keep their richer Claude Code trigger descriptions.
+
+For per-plugin metadata Codex prefers `.codex-plugin/plugin.json` when present and falls back to `.claude-plugin/plugin.json` otherwise. Hook registration requires a `.codex-plugin/plugin.json` with a non-empty `hooks` path (for example `"hooks": "./hooks/hooks.json"`); this lets hook plugins point Codex at a Codex-compatible hook file. Codex exposes `${CLAUDE_PLUGIN_ROOT}` to plugin-bundled hook commands for backward compatibility with existing Claude Code plugins.
 
 Add the marketplace:
 
@@ -509,7 +511,7 @@ codex plugin marketplace upgrade cboone-cc-plugins
 
 `codex plugin marketplace upgrade` and `remove` take the marketplace name (`cboone-cc-plugins`, derived from the repository name), not the `owner/repo` identifier used by `add`.
 
-For a local-path marketplace, restart Codex after changing plugin files so it can rebuild cached plugin copies from the local source.
+When changing plugin metadata, skills, hooks, scripts, or references, regenerate the Codex marketplace with `bin/build-codex-marketplace` and commit `.agents/plugins/marketplace.json` plus `dist/codex/`. For a local-path marketplace, restart Codex after changing plugin files so it can rebuild cached plugin copies from the local source.
 
 Remove the configured marketplace by name:
 
