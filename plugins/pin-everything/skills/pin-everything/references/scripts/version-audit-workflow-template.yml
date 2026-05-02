@@ -61,27 +61,43 @@ jobs:
         id: existing
         run: |
           # Match on both the label AND the exact ISSUE_TITLE so a different
-          # open issue that shares the label (e.g. one a maintainer opened by
-          # hand and tagged) is not mutated or closed by the steps below.
-          # `gh --jq` only accepts a single filter expression and does not
-          # forward `--arg` to jq, so the title is bound by piping through jq.
-          number="$(gh issue list \
+          # issue that shares the label (e.g. one a maintainer opened by hand
+          # and tagged) is not mutated or closed by the steps below. Search
+          # across BOTH open and closed states so the previous cycle's issue is
+          # reopened on re-drift instead of stacking a new one alongside it;
+          # this is what preserves the documented single-issue invariant across
+          # drift→clear→drift cycles. `gh --jq` only accepts a single filter
+          # expression and does not forward `--arg` to jq, so the title is
+          # bound by piping through jq.
+          issue_json="$(gh issue list \
             --label "${ISSUE_LABEL}" \
-            --state open \
-            --json number,title \
-            | jq -r --arg title "${ISSUE_TITLE}" \
-              '[.[] | select(.title == $title)][0].number // empty')"
+            --state all \
+            --json number,title,state \
+            | jq -c --arg title "${ISSUE_TITLE}" \
+              '[.[] | select(.title == $title)][0] // {}')"
+          number="$(printf '%s' "${issue_json}" | jq -r '.number // empty')"
+          state="$(printf '%s' "${issue_json}" | jq -r '.state // empty')"
           echo "number=${number}" >> "${GITHUB_OUTPUT}"
+          echo "state=${state}" >> "${GITHUB_OUTPUT}"
 
       - name: Open or update issue
         if: steps.audit.outputs.has_drift == 'true'
         env:
           REPORT: ${{ steps.audit.outputs.report }}
           EXISTING: ${{ steps.existing.outputs.number }}
+          EXISTING_STATE: ${{ steps.existing.outputs.state }}
         run: |
           body_file="$(mktemp)"
           printf '%s\n' "${REPORT}" > "${body_file}"
           if [[ -n "${EXISTING}" ]]; then
+            # Reopen first when the previous cycle closed the issue, so the
+            # body update lands on an open issue (gh issue edit also works on
+            # closed issues, but reopening surfaces the new drift in the
+            # default issue view and lets watchers re-subscribe).
+            if [[ "${EXISTING_STATE}" == "CLOSED" ]]; then
+              gh issue reopen "${EXISTING}" \
+                --comment "Drift detected again. Reopened automatically by version-audit workflow."
+            fi
             gh issue edit "${EXISTING}" --body-file "${body_file}"
             echo "Updated issue #${EXISTING}"
           else
@@ -92,7 +108,7 @@ jobs:
           fi
 
       - name: Close stale audit issue
-        if: steps.audit.outputs.has_drift == 'false' && steps.existing.outputs.number != ''
+        if: steps.audit.outputs.has_drift == 'false' && steps.existing.outputs.number != '' && steps.existing.outputs.state == 'OPEN'
         env:
           EXISTING: ${{ steps.existing.outputs.number }}
         run: |

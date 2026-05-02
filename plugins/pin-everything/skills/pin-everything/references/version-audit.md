@@ -43,10 +43,11 @@ The script wraps each query in error-tolerant boilerplate (`curl -fsSL ... 2>/de
 
 The companion GitHub Actions workflow (`version-audit.yml`) runs the script weekly and manages exactly one labeled issue per repo:
 
-- If the script's stdout is non-empty (drift detected), the workflow opens an issue titled "Version audit: drift detected" with the labeled list of drifted surfaces. If an issue with that label already exists, it updates the existing issue's body in place.
-- If stdout is empty (no drift), and an issue with that label is open, the workflow closes it with a "drift cleared" comment.
+- The "Find existing audit issue" step searches across **both open and closed** issues for the label+title pair. This is what preserves the single-issue invariant across drift→clear→drift cycles: if a previous cycle closed the issue when drift cleared, the next drift detection finds and reopens that same issue rather than stacking a new one alongside it.
+- If the script's stdout is non-empty (drift detected), the workflow opens an issue titled "Version audit: drift detected" with the labeled list of drifted surfaces. If an existing issue with that label is found, the workflow updates its body in place; if that issue is currently closed, it is reopened first with a "drift detected again" comment.
+- If stdout is empty (no drift) and the existing issue is currently open, the workflow closes it with a "drift cleared" comment. Already-closed issues are left alone.
 
-The single-issue invariant prevents the audit from spamming the issue tracker. Reviewers see exactly one issue at a time, with the current state of every surface in its body.
+The single-issue invariant prevents the audit from spamming the issue tracker. Reviewers see exactly one issue per repo (open during drift, closed when the surfaces are current again), with the current state of every surface in its body.
 
 ## Tailoring the Template
 
