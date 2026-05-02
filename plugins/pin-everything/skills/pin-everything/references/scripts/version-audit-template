@@ -8,8 +8,10 @@
 # bin/version-audit.
 #
 # Surfaces audited:
-#   - Node.js LTS in whichever Node version file the repo uses
-#     (.tool-versions with a `nodejs` line, .nvmrc, or .node-version)
+#   - Node.js in whichever Node version file the repo uses (.tool-versions with
+#     a `nodejs` line, .nvmrc, or .node-version). Drift is checked against the
+#     latest release in the same major series as the pinned version (so repos
+#     intentionally on a Current/non-LTS major are not falsely flagged).
 #   - package.json packageManager (Yarn or pnpm via Corepack)
 #   - Release-tagged SHA-pinned action refs (those whose comment is a numeric
 #     `# vX.Y.Z` tag). Drift is checked against `releases/latest`, falling
@@ -79,15 +81,25 @@ function github_latest_release() {
     || true
 }
 
-# 1. Node.js LTS — read whichever Node version file the repo uses.
+# 1. Node.js — read whichever Node version file the repo uses.
 #
 # Skill step 4 prefers reusing the file local tooling already reads (.nvmrc for
 # nvm, .node-version for nodenv) over introducing a parallel .tool-versions.
 # Mirror that priority order here so the audit inspects the actual source of
 # truth rather than silently missing drift when the repo uses .nvmrc instead.
+#
+# Drift is checked against the latest release in the same major series as the
+# pinned version, NOT against the latest LTS unconditionally. Repos that
+# intentionally pin a Current (odd-numbered, non-LTS) major like Node 23 should
+# not be told to "downgrade" to the latest LTS major every audit cycle; they
+# should only be flagged when the upstream cuts a newer patch within the same
+# major. If the file holds a non-numeric value (an .nvmrc alias like `lts/*`,
+# `node`, or `latest`; a major-only pin like `22`), the same-major lookup
+# returns no match and the audit silently skips the row — those values are not
+# pins and the script has nothing to compare against.
 
 function audit_node() {
-  local current="" source="" latest
+  local current="" source="" major latest
 
   if [[ -f "${TOOL_VERSIONS_FILE}" ]]; then
     current=$(awk '/^nodejs / {print $2; exit}' "${TOOL_VERSIONS_FILE}")
@@ -111,15 +123,23 @@ function audit_node() {
     return
   fi
 
+  # Require an exact `X.Y.Z` form: a non-numeric or partial value (alias,
+  # major-only) cannot be matched against a same-major upstream release.
+  if [[ ! "${current}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return
+  fi
+  major="${current%%.*}"
+
   latest=$(curl -fsSL https://nodejs.org/dist/index.json 2> /dev/null \
-    | jq -r 'first(.[] | select(.lts != false)) | .version' \
+    | jq -r --arg prefix "v${major}." \
+      'first(.[] | select(.version | startswith($prefix))) | .version // empty' \
     | sed 's/^v//' || true)
   if [[ -z "${latest}" ]]; then
     return
   fi
 
   if [[ "${current}" != "${latest}" ]]; then
-    record_drift "Node.js" "nodejs (LTS)" "${current}" "${latest}" "${source}"
+    record_drift "Node.js" "nodejs (${major}.x)" "${current}" "${latest}" "${source}"
   fi
 }
 

@@ -6,7 +6,7 @@ How to install and tailor the bundled `version-audit-template` script. Covers th
 
 The script audits the four surfaces Dependabot misses:
 
-1. **Node.js LTS** — drift in whichever Node version file the repo uses (`.tool-versions` with a `nodejs` line, `.nvmrc`, or `.node-version`), mirroring the priority order in skill step 4.
+1. **Node.js** — drift in whichever Node version file the repo uses (`.tool-versions` with a `nodejs` line, `.nvmrc`, or `.node-version`), mirroring the priority order in skill step 4. Drift is checked against the latest release in the **same major series** as the pinned version, not against the latest LTS unconditionally — repos that intentionally pin a Current (odd-numbered, non-LTS) major like Node 23 are flagged only when a newer patch lands within that same major, never told to "downgrade" to the latest LTS major. Non-numeric values (`.nvmrc` aliases like `lts/*`, `node`, `latest`; major-only pins like `22`) are not pins, so the audit silently skips them.
 2. **`packageManager`** — Yarn or pnpm release drift (Corepack stays at the pinned version until the field is bumped). npm has no equivalent integrity surface, so npm-managed projects produce no row here.
 3. **Action SHAs in scanned files** — third-party action refs found anywhere in the configured `SCAN_PATHS` (defaults: `.github/` and `plugins/`, which together cover both real workflows and the action refs embedded in skill templates and other Markdown). Only release-tagged refs (those whose comment is a numeric `# vX.Y.Z` tag) are audited; channel/branch pins like `# stable` or `# main` are intentionally out of scope, since they have no upstream "latest version" to compare against and would require a different "pinned SHA vs. branch HEAD" check.
 4. **Install-command pins inside scripts** — `go install`, `cargo install`, every Python install verb (`pip install`, `uv pip install`, `uv add`, `uv tool install`, `uvx`), and `npx` pins in shell scripts, Makefiles, and skill prose. The single `audit_python_install_pins` function covers all five Python verbs with one regex.
@@ -28,7 +28,9 @@ Each surface has an upstream-of-record API the script queries. If the script fin
 Each surface's jq filter (extracted from `./scripts/version-audit-template`):
 
 ```text
-Node.js LTS      first(.[] | select(.lts != false)) | .version    (then strip leading "v")
+Node.js          first(.[] | select(.version | startswith($prefix))) | .version
+                 with $prefix = "v<major>." derived from the current pinned version
+                 (then strip leading "v")
 Yarn stable      .latest.stable
 pnpm stable      .version
 GitHub releases  .tag_name (releases/latest); .[].name filtered to ^v?[0-9]+(\.[0-9]+)+$ then sort -V (tags fallback)
