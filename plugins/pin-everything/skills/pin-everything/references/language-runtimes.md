@@ -60,8 +60,7 @@ gh api repos/ruby/ruby/releases --paginate \
   --jq '.[] | select(.prerelease == false) | .tag_name' \
   | sed 's/^v//; s/_/./g' \
   | grep -E "^${SERIES//./\\.}\.[0-9]+$" \
-  | sort -V \
-  | tail -n 1
+  | jq -R -s -r 'split("\n") | map(select(length > 0)) | sort_by(split(".") | map(tonumber? // 0)) | last // empty'
 ```
 
 Create-from-scratch (current stable):
@@ -72,7 +71,7 @@ gh api repos/ruby/ruby/releases \
   | sed 's/^v//; s/_/./g'
 ```
 
-`ruby/ruby` tags use underscores (`v3_4_2`); the `sed` normalization converts to the version-file format. The `select(.prerelease == false)` filter prevents preview / rc tags from being chosen as "stable".
+`ruby/ruby` tags use underscores (`v3_4_2`); the `sed` normalization converts to the version-file format. The `select(.prerelease == false)` filter prevents preview / rc tags from being chosen as "stable". The `jq` slurp picks the highest version-aware match without relying on GNU `sort -V`, which BSD `sort` on stock macOS does not implement; `jq` is already a dependency, so this stays portable across Linux runners and macOS dev machines.
 
 ### Go (the `go.mod` directive)
 
@@ -94,9 +93,10 @@ gh api repos/python/cpython/releases --paginate \
   --jq '.[] | select(.prerelease == false) | .tag_name' \
   | sed 's/^v//' \
   | grep -E "^${SERIES//./\\.}\.[0-9]+$" \
-  | sort -V \
-  | tail -n 1
+  | jq -R -s -r 'split("\n") | map(select(length > 0)) | sort_by(split(".") | map(tonumber? // 0)) | last // empty'
 ```
+
+The trailing `jq` slurp avoids GNU `sort -V`, which BSD `sort` on stock macOS does not implement. `jq` is already required, so this works on both Linux runners and macOS dev machines without an extra coreutils dependency.
 
 Create-from-scratch (current stable):
 

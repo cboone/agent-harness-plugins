@@ -28,11 +28,10 @@ For the HTTP lookup endpoints (`crates.io`, `pypi.org`, `registry.npmjs.org`), f
 ```bash
 gh api "repos/<owner>/<repo>/tags" --paginate --jq '.[].name' \
   | grep -E '^v?[0-9]+(\.[0-9]+)+$' \
-  | sort -V \
-  | tail -n 1
+  | jq -R -s -r 'split("\n") | map(select(length > 0)) | sort_by(sub("^v"; "") | split(".") | map(tonumber? // 0)) | last // empty'
 ```
 
-The bundled `version-audit-template` script implements this two-tier lookup in its `github_latest_release` helper; mirror the same pattern for one-off lookups during the pinning pass so tools that ship tags without releases are not silently left at `@latest`.
+The trailing `jq` slurp picks the highest version-aware match without relying on GNU `sort -V`, which BSD `sort` on stock macOS does not implement; `jq` is already required by the surrounding workflow, so this stays portable across Linux runners and macOS dev machines. The bundled `version-audit-template` script implements this two-tier lookup in its `github_latest_release` helper (paired with a shared `semver_max` jq helper); mirror the same pattern for one-off lookups during the pinning pass so tools that ship tags without releases are not silently left at `@latest`.
 
 ## `go install` Specifics
 

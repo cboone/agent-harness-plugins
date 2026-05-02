@@ -42,20 +42,22 @@ Node.js            first(.[] | select(.version | startswith($prefix))) | .versio
                    (then strip leading "v")
 Ruby               .[] | select(.prerelease == false) | .tag_name
                    then sed 's/^v//; s/_/./g' and grep ^<X.Y>\.[0-9]+$
-                   then sort -V | tail -n 1
+                   then semver_max (jq-based, portable replacement for sort -V | tail -n 1)
 Python             .[] | select(.prerelease == false) | .tag_name
                    then sed 's/^v//' and grep ^<X.Y>\.[0-9]+$
-                   then sort -V | tail -n 1
+                   then semver_max
 Yarn stable        .latest.stable
 pnpm stable        .version
-GitHub releases    .tag_name (releases/latest); .[].name filtered to ^v?[0-9]+(\.[0-9]+)+$ then sort -V (tags fallback)
+GitHub releases    .tag_name (releases/latest); .[].name filtered to ^v?[0-9]+(\.[0-9]+)+$ then semver_max (tags fallback)
 GitHub same-major  .[] | select(.prerelease == false) | .tag_name (releases, paginated)
-                   filtered to ^v?<major>(\.[0-9]+)+$ then sort -V | tail -n 1
+                   filtered to ^v?<major>(\.[0-9]+)+$ then semver_max
                    (tags fallback uses the same filter)
 crates.io          .crate.max_stable_version
 PyPI               .info.version
 npm registry       .version
 ```
+
+The `semver_max` helper is defined once near the top of the script and reused by every surface that needs to pick the highest version-aware match from a stream of release tags. It uses `jq` (already a hard dependency) instead of GNU `sort -V`, so the script runs on stock macOS BSD `sort` without an extra coreutils install.
 
 The script wraps each query in error-tolerant boilerplate (`curl -fsSL ... 2>/dev/null || true`); a transient network failure produces no row, not a script failure.
 

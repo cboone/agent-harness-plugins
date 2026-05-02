@@ -73,6 +73,24 @@ function record_drift() {
   drift_rows+=("${category}|${name}|${current}|${latest}|${location}")
 }
 
+# Returns the highest semver-shaped version from stdin (one per line, with an
+# optional `v` prefix). Portable replacement for `sort -V | tail -n 1`: BSD
+# sort on stock macOS does not support `-V`, but `jq` (already required) does
+# the job by parsing each line into a numeric tuple and sorting. Empty input
+# prints nothing. Inputs are expected to be pre-filtered to clean release tags
+# (no prerelease suffixes); a `-rc1` style suffix would coerce to 0 in the key
+# and lose ordering, but the upstream `grep -E` filters elsewhere already drop
+# those before reaching this helper.
+function semver_max() {
+  jq -R -s -r '
+    split("\n")
+    | map(select(length > 0))
+    | map({tag: ., key: (sub("^v"; "") | split(".") | map(tonumber? // 0))})
+    | sort_by(.key)
+    | last.tag // empty
+  '
+}
+
 function github_latest_release() {
   local repo="${1}" latest
   # Prefer GitHub Releases when the repo publishes them.
@@ -84,11 +102,9 @@ function github_latest_release() {
   # Fall back to the highest semver-looking tag for repos that publish version
   # tags without creating GitHub Releases (otherwise audit_actions would
   # silently skip drift for valid SHA-pinned refs against those repos).
-  # `sort -V` does version-aware ordering and handles the common `v` prefix.
   gh api "repos/${repo}/tags" --paginate --jq '.[].name' 2> /dev/null \
     | grep -E '^v?[0-9]+(\.[0-9]+)+$' \
-    | sort -V \
-    | tail -n 1 \
+    | semver_max \
     || true
 }
 
@@ -106,8 +122,7 @@ function github_latest_release_in_major() {
   # an older major after releasing the next one is still audited correctly.
   result=$(gh api "repos/${repo}/releases" --paginate --jq '.[] | select(.prerelease == false) | .tag_name' 2> /dev/null \
     | grep -E "${pattern}" \
-    | sort -V \
-    | tail -n 1 \
+    | semver_max \
     || true)
   if [[ -n "${result}" ]]; then
     printf '%s\n' "${result}"
@@ -116,8 +131,7 @@ function github_latest_release_in_major() {
   # Fall back to /tags for repos that publish version tags without releases.
   gh api "repos/${repo}/tags" --paginate --jq '.[].name' 2> /dev/null \
     | grep -E "${pattern}" \
-    | sort -V \
-    | tail -n 1 \
+    | semver_max \
     || true
 }
 
@@ -220,8 +234,7 @@ function audit_ruby() {
   latest=$(gh api repos/ruby/ruby/releases --paginate --jq '.[] | select(.prerelease == false) | .tag_name' 2> /dev/null \
     | sed 's/^v//; s/_/./g' \
     | grep -E "${pattern}" \
-    | sort -V \
-    | tail -n 1 \
+    | semver_max \
     || true)
   if [[ -z "${latest}" ]]; then
     return
@@ -260,8 +273,7 @@ function audit_python_runtime() {
   latest=$(gh api repos/python/cpython/releases --paginate --jq '.[] | select(.prerelease == false) | .tag_name' 2> /dev/null \
     | sed 's/^v//' \
     | grep -E "${pattern}" \
-    | sort -V \
-    | tail -n 1 \
+    | semver_max \
     || true)
   if [[ -z "${latest}" ]]; then
     return
