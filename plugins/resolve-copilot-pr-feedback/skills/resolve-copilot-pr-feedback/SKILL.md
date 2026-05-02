@@ -281,6 +281,7 @@ This step prevents CI failures from lint issues introduced while resolving feedb
    - **Completed**: Every fetched thread was handled according to its category, no failed or pending items remain, and any required code changes were pushed
    - **Partial**: At least one fetched thread was handled, but one or more fetched threads, replies, resolutions, tracking items, instruction updates, lint runs, pushes, or verification checks failed or remain pending
    - **Failed**: The workflow could not fetch or process threads, or no required processing step succeeded
+1. Track thread metrics separately from workflow-level failures. Thread metrics cover fetched, resolved, pending, failed, deferred, and code-change threads. Workflow-level failures cover non-thread steps such as instruction updates, follow-up tracking, lint runs, pushes, and verification checks.
 1. Proceed to step 7 before claiming completion
 
 ### 7. Post PR Summary Comment
@@ -304,6 +305,7 @@ Status: Completed
 | Failed              | 0     |
 | Deferred            | 1     |
 | Code-change threads | 2     |
+| Workflow failures   | 0     |
 
 | File            | Category  | Outcome  | Action                                            |
 | --------------- | --------- | -------- | ------------------------------------------------- |
@@ -314,10 +316,12 @@ Status: Completed
 ```
 
 - Status must be one of `Completed`, `No unresolved Copilot feedback`, `Partial`, or `Failed`
-- Counts must include fetched, resolved, pending, failed, deferred, and code-change threads
-- Table includes all processed threads, not only Valid and Incorrect threads
+- Counts must include fetched, resolved, pending, failed, deferred, and code-change threads, plus workflow-level failures
+- Table includes all processed threads when the comment remains safely postable, not only Valid and Incorrect threads
+- If the processed-thread table would make the PR comment too large, replace detailed rows with aggregate category/outcome rows and state how many thread detail rows were omitted. Keep the full thread-by-thread table in the local final output for the agent/user audit trail.
 - Incorrect category notes Copilot instruction additions in the Action column
 - Thread IDs omitted (meaningless to human reviewers)
+- Non-thread failures must be described in a failure details section, not forced into the thread table
 
 If no unresolved Copilot comments were found, use this no-op form:
 
@@ -336,6 +340,7 @@ No unresolved Copilot comments were found.
 | Failed              | 0     |
 | Deferred            | 0     |
 | Code-change threads | 0     |
+| Workflow failures   | 0     |
 ```
 
 If processing was partial or failed, include failure details and the remaining required action:
@@ -353,6 +358,7 @@ Status: Partial
 | Failed              | 1     |
 | Deferred            | 0     |
 | Code-change threads | 1     |
+| Workflow failures   | 1     |
 
 | File            | Category | Outcome  | Action                        |
 | --------------- | -------- | -------- | ----------------------------- |
@@ -360,10 +366,17 @@ Status: Partial
 | `src/bar.ts:7`  | Outdated | Failed   | Reply failed                  |
 | `lib/baz.ts:9`  | Nitpick  | Pending  | Resolution still required     |
 
+### Failure Details
+
+| Scope    | Item       | Outcome | Remaining action    |
+| -------- | ---------- | ------- | ------------------- |
+| Workflow | `git push` | Failed  | Push branch changes |
+
 ### Remaining Required Action
 
 - Resolve the failed reply for `src/bar.ts:7`
 - Resolve the pending nitpick at `lib/baz.ts:9`
+- Push branch changes
 ```
 
 **Mechanics:**
@@ -375,7 +388,7 @@ mktemp /tmp/copilot-summary-XXXXXX
 # Step 2: Write comment body to TMPFILE using the Write tool (not shown here as bash)
 
 # Step 3: Post the comment:
-gh pr comment PR_NUMBER --body-file TMPFILE
+gh pr comment PR_NUMBER --repo OWNER/REPO --body-file TMPFILE
 ```
 
 ```bash
@@ -383,7 +396,7 @@ gh pr comment PR_NUMBER --body-file TMPFILE
 rm -f TMPFILE
 ```
 
-Replace `PR_NUMBER` and `TMPFILE` with actual values. The cleanup must be a separate Bash tool call (see [Outdated/Incorrect Copilot Comments](#outdatedincorrect-copilot-comments) above for the rationale): chaining with `; status=$?; rm -f TMPFILE; exit $status` breaks under zsh because `status` is a read-only built-in alias for `$?`.
+Replace `OWNER`, `REPO`, `PR_NUMBER`, and `TMPFILE` with actual values recorded during fetch. Always pass `--repo OWNER/REPO` so the final summary targets the intended PR even if the current checkout or working directory changes. The cleanup must be a separate Bash tool call (see [Outdated/Incorrect Copilot Comments](#outdatedincorrect-copilot-comments) above for the rationale): chaining with `; status=$?; rm -f TMPFILE; exit $status` breaks under zsh because `status` is a read-only built-in alias for `$?`.
 
 If the comment fails, log the error and do not claim completion. Thread resolution, code changes, and the required final PR summary are all workflow deliverables.
 
