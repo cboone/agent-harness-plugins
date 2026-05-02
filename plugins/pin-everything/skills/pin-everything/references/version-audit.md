@@ -93,7 +93,7 @@ Then add `audit_bun` to the call list at the bottom of the script. The `record_d
 
 ## Operational Notes
 
-- The script requires `gh` (authenticated), `jq`, and `curl`. CI runners on `ubuntu-latest` have all three preinstalled. Locally, install via `brew install gh jq curl`.
+- The script requires `gh` (authenticated), `jq`, `curl`, and **Bash 4+** (it uses associative arrays via `declare -A`). CI runners on `ubuntu-latest` have all four preinstalled. macOS ships `/bin/bash` 3.2, which fails on the first `declare -A`; install a newer Bash via `brew install bash gh jq curl` and invoke the script through its shebang (`./bin/version-audit`) so `/usr/bin/env bash` picks up the Homebrew-installed Bash from `PATH`. The script's first action is a Bash version check that exits cleanly with an actionable error if Bash 4+ is unavailable.
 - The script reads no secrets and writes no files. It `cd`s to `git rev-parse --show-toplevel` on entry, so it's safe to invoke from any working directory inside the repo (it errors out cleanly if invoked outside a git checkout).
 - Empty stdout is the success signal. If the script errors out (a syntax error, a missing tool), the workflow's `Run audit` step fails before the issue-management steps run.
 
@@ -104,7 +104,9 @@ Before committing the tailored script:
 ```bash
 shellcheck -S warning bin/version-audit
 shfmt -d bin/version-audit
-bash bin/version-audit
+./bin/version-audit
 ```
+
+The third command invokes the script via its shebang (`#!/usr/bin/env bash`), which picks up the Bash from `PATH` rather than forcing `/bin/bash`. This matters on macOS, where `/bin/bash` is 3.2 and lacks the associative-array support the script requires.
 
 The first two should produce no output. The third should produce the drift report (or no output if everything is current).

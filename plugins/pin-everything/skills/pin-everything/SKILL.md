@@ -77,7 +77,7 @@ Replace inline pins in scaffolded CI with version-file refs so the version of re
 | `ruby-version: "X"`               | `ruby-version-file: ".tool-versions"`                              |
 | `go-version: "stable"` or `"X.Y"` | `go-version-file: "go.mod"`                                        |
 | `python-version: "X.Y"`           | `python-version-file: ".python-version"`                           |
-| `zig-version: "X.Y.Z"`            | `version-file: "build.zig.zon"` (or `version: ""` to fall through) |
+| `zig-version: "X.Y.Z"`            | Action-direct (`mlugg/setup-zig`): omit (reads `build.zig.zon`). Wrapper (`cboone/gh-actions/.../zig-ci.yml` v2.2.0+): `zig-version-file: "build.zig.zon"` |
 
 If the corresponding version file is missing in the repo, create it with current LTS / stable values. Reference `./references/language-runtimes.md` for the LTS / stable lookup commands per language.
 
@@ -175,7 +175,7 @@ Skip this step if `--no-audit` was passed. Reference: `./references/version-audi
 ## Error Handling
 
 - **Tag does not resolve to a commit.** Annotated tags resolve via the tag object; lightweight tags resolve directly. If `gh api repos/<r>/git/ref/tags/<t>` returns a `tag` type, recurse through `.object.sha` to find the commit. The `gh api repos/<r>/commits/<tag>` endpoint sidesteps this entirely and is the preferred path.
-- **Action does not support a version-file input.** For Zig (no `version-file` on most setup actions), pass `version: ""` to fall through to `build.zig.zon`'s `minimum_zig_version`. For other languages without a `*-version-file` input, pin inline to the value from the version file rather than dropping pinning entirely.
+- **Action does not support a version-file input.** For action-direct `mlugg/setup-zig`, omit the version input entirely — the action reads `build.zig.zon`'s `minimum_zig_version` by default. The `cboone/gh-actions/.../zig-ci.yml` wrapper (v2.2.0+) exposes a real `zig-version-file: "build.zig.zon"` input. For other languages without a `*-version-file` input, pin inline to the value from the version file rather than dropping pinning entirely.
 - **Ambiguous user-facing vs tool-install distinction.** If the install path looks like a real tool but lives in a scaffolded README under a `Usage:` heading or similar, prompt the user. Default to leaving placeholder-shaped paths unpinned.
 - **Conflicting existing Dependabot config.** If `.github/dependabot.yml` already exists, do not overwrite — merge: keep user-specific groups and schedules, add only the missing ecosystems and the standard split-group structure for ecosystems that lacked it. Show the diff before writing.
 - **Library detected when user expected an app pin.** Surface the library discriminator explicitly ("`Cargo.lock` not committed and crate exposes `[lib]` only — treating as a library and skipping manifest exact-pinning"). Let the user override per-ecosystem if the heuristic is wrong.

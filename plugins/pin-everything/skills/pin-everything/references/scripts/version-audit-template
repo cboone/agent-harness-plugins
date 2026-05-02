@@ -20,6 +20,15 @@
 
 set -euo pipefail
 
+# Requires Bash 4+ (associative arrays via `declare -A`). macOS ships /bin/bash
+# 3.2 by default; install a newer Bash via Homebrew (`brew install bash`) and
+# invoke this script via its shebang (`./bin/version-audit`) so /usr/bin/env
+# picks up the Homebrew-installed bash from PATH.
+if ((BASH_VERSINFO[0] < 4)); then
+  echo "version-audit: Bash 4+ required (found ${BASH_VERSION}). On macOS, run 'brew install bash' and invoke as ./bin/version-audit." >&2
+  exit 1
+fi
+
 # Resolve to the repo root so all relative paths below (TOOL_VERSIONS_FILE,
 # PACKAGE_JSON, SCAN_PATHS) work regardless of the caller's working directory.
 repo_root=$(git rev-parse --show-toplevel 2> /dev/null || true)

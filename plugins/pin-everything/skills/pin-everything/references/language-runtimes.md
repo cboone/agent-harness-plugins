@@ -15,7 +15,7 @@ Inline pins like `node-version: "20"` in a workflow file create a second source 
 | Go       | `actions/setup-go`                                                                   | `go-version-file: "go.mod"`                                                                          | `go X.Y` directive                                       | Always present in Go projects                        |
 | Python   | `actions/setup-python` / `astral-sh/setup-uv`                                        | `python-version-file: ".python-version"` (setup-python); uv reads `pyproject.toml` `requires-python` | `X.Y.Z` (one per line)                                   | Create with current stable; or set `requires-python` |
 | Rust     | `dtolnay/rust-toolchain`                                                             | _no version-file input_; `rust-toolchain.toml` is read by cargo directly                             | `[toolchain]\nchannel = "stable"`                        | Create or pass `toolchain:` input                    |
-| Zig      | `mlugg/setup-zig` (action-direct) or `cboone/gh-actions/.../setup-zig.yml` (wrapper) | `version-file: build.zig.zon` or `version: ""` (passthrough)                                         | `.{ .minimum_zig_version = "X.Y.Z" }` in `build.zig.zon` | Always present in Zig projects                       |
+| Zig      | `mlugg/setup-zig` (action-direct) or `cboone/gh-actions/.../zig-ci.yml` (wrapper)    | None for `mlugg/setup-zig` (reads `build.zig.zon` by default); `zig-version-file: build.zig.zon` on the wrapper | `.{ .minimum_zig_version = "X.Y.Z" }` in `build.zig.zon` | Always present in Zig projects                       |
 
 ## Lookup Commands
 
@@ -76,14 +76,13 @@ For pre-release tracking (master), set `.minimum_zig_version = "0.X.Y-dev.NNNN+a
 
 ## Special Cases
 
-### Zig Without a Version-File Input
+### Zig Version-File Inputs
 
-Most third-party Zig setup actions don't expose a `version-file:` input. Two workarounds:
+The pattern depends on which surface is in use:
 
-1. **Pass `version: ""`.** The action interprets the empty string as "use the project's stated minimum" and falls through to `.minimum_zig_version` in `build.zig.zon`. Works with `mlugg/setup-zig` and the `cboone/gh-actions/setup-zig.yml` wrapper.
-2. **Mirror the value inline.** Read `.minimum_zig_version` and pass it as `version: "X.Y.Z"`. This restores the inline-pin drift problem the version-file approach exists to avoid; only do it if option 1 isn't available.
-
-The `cboone/gh-actions` wrapper exposes a real `version-file: "build.zig.zon"` input ([gh-actions#41](https://github.com/cboone/gh-actions/issues/41) tracks this); when that lands, prefer the wrapper.
+1. **Action-direct (`mlugg/setup-zig`).** Pass no version input. The action reads `.minimum_zig_version` from `build.zig.zon` automatically when no `version` is specified.
+2. **Reusable workflow (`cboone/gh-actions/.../zig-ci.yml`, v2.2.0+).** Pass `zig-version-file: build.zig.zon`. The wrapper forwards the file to `mlugg/setup-zig` so `.minimum_zig_version` is the single source of truth.
+3. **Last resort.** If neither surface fits, mirror the value inline: read `.minimum_zig_version` and pass it as `zig-version: "X.Y.Z"` (or `version:` for action-direct). This restores the inline-pin drift problem the version-file approach exists to avoid; only do it if options 1 and 2 aren't available.
 
 ### Ruby Without `.tool-versions`
 
