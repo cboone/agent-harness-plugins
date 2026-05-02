@@ -8,7 +8,8 @@
 # bin/version-audit.
 #
 # Surfaces audited:
-#   - .tool-versions (Node.js LTS)
+#   - Node.js LTS in whichever Node version file the repo uses
+#     (.tool-versions with a `nodejs` line, .nvmrc, or .node-version)
 #   - package.json packageManager (Yarn or pnpm via Corepack)
 #   - All SHA-pinned action refs (third-party and reusable workflows)
 #   - npx <tool>@<version> pins
@@ -58,15 +59,34 @@ function github_latest_release() {
   gh api "repos/${repo}/releases/latest" --jq '.tag_name' 2> /dev/null || true
 }
 
-# 1. Node.js LTS in .tool-versions
+# 1. Node.js LTS — read whichever Node version file the repo uses.
+#
+# Skill step 4 prefers reusing the file local tooling already reads (.nvmrc for
+# nvm, .node-version for nodenv) over introducing a parallel .tool-versions.
+# Mirror that priority order here so the audit inspects the actual source of
+# truth rather than silently missing drift when the repo uses .nvmrc instead.
 
 function audit_node() {
-  if [[ ! -f "${TOOL_VERSIONS_FILE}" ]]; then
-    return
-  fi
+  local current="" source="" latest
 
-  local current latest
-  current=$(awk '/^nodejs / {print $2; exit}' "${TOOL_VERSIONS_FILE}")
+  if [[ -f "${TOOL_VERSIONS_FILE}" ]]; then
+    current=$(awk '/^nodejs / {print $2; exit}' "${TOOL_VERSIONS_FILE}")
+    if [[ -n "${current}" ]]; then
+      source="${TOOL_VERSIONS_FILE}"
+    fi
+  fi
+  if [[ -z "${current}" && -f ".nvmrc" ]]; then
+    current=$(head -n 1 .nvmrc | sed 's/^v//; s/[[:space:]]//g')
+    if [[ -n "${current}" ]]; then
+      source=".nvmrc"
+    fi
+  fi
+  if [[ -z "${current}" && -f ".node-version" ]]; then
+    current=$(head -n 1 .node-version | sed 's/^v//; s/[[:space:]]//g')
+    if [[ -n "${current}" ]]; then
+      source=".node-version"
+    fi
+  fi
   if [[ -z "${current}" ]]; then
     return
   fi
@@ -79,7 +99,7 @@ function audit_node() {
   fi
 
   if [[ "${current}" != "${latest}" ]]; then
-    record_drift "Node.js" "nodejs (LTS)" "${current}" "${latest}" "${TOOL_VERSIONS_FILE}"
+    record_drift "Node.js" "nodejs (LTS)" "${current}" "${latest}" "${source}"
   fi
 }
 

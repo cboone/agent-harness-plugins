@@ -21,7 +21,7 @@ A `go install some/tool@latest` in CI installs whatever the upstream maintainer 
 
 Keep `uv pip install` and `uv add` as separate verbs: `uv add` writes the dependency to `pyproject.toml` and `uv.lock`, while `uv pip install` only mutates the current environment. Do not rewrite one as the other when adding a `==` pin.
 
-For each lookup endpoint above, fetch with `curl -fsSL <endpoint>` and extract with `jq -r '<filter>'`. The bundled `version-audit-template` script wraps these in error-tolerant boilerplate.
+For the HTTP lookup endpoints (`crates.io`, `pypi.org`, `registry.npmjs.org`), fetch with `curl -fsSL <endpoint>` and extract with `jq -r '<filter>'`. The `go install` row uses `gh release view` instead — the upstream-of-record is a GitHub release for the install path's repo, not an HTTP API, so the recipe is `gh release view --repo <owner>/<repo> --json tagName --jq '.tagName'`. The bundled `version-audit-template` script wraps both shapes in error-tolerant boilerplate.
 
 ## `go install` Specifics
 
