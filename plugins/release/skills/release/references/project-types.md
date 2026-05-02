@@ -4,9 +4,16 @@ Detect the project type to determine where version numbers live and how to updat
 
 ## Detection Priority
 
+1. Claude Code marketplace
 1. Go CLI
 1. Go library
 1. Generic (fallback)
+
+## Claude Code Marketplace
+
+**Detection:** `.claude-plugin/marketplace.json` exists and contains a top-level `plugins` array.
+
+**Version files:** Individual plugin versions live in `plugins/<name>/.claude-plugin/plugin.json` and the matching `.claude-plugin/marketplace.json` entry. The marketplace top-level `metadata.version` is not SemVer; compute it from all marketplace plugin versions with `catalog-M<major-sum>-m<minor-sum>-p<patch-sum>-n<plugin-count>`.
 
 ## Go CLI
 

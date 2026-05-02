@@ -624,12 +624,18 @@ Rules:
 
 ### Versioning
 
-This repository uses two levels of semver versioning:
+This repository uses two levels of versioning:
 
 **Marketplace `metadata.version`** (in `.claude-plugin/marketplace.json`):
 
-- Bump **minor** when adding or removing a plugin (the catalog changed)
-- Do NOT bump for changes to existing plugin content
+- This is a catalog state tag, not SemVer.
+- Format: `catalog-M<major-sum>-m<minor-sum>-p<patch-sum>-n<plugin-count>`
+- `M`: sum of all plugin major versions
+- `m`: sum of all plugin minor versions
+- `p`: sum of all plugin patch versions
+- `n`: number of marketplace plugins
+- Do not normalize or carry between components.
+- Recompute it from `.plugins[].version` whenever any marketplace plugin version changes.
 
 **Individual plugin `version`** (in `plugin.json` and mirrored in `marketplace.json`):
 
