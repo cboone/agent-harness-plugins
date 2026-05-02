@@ -78,14 +78,14 @@ The same shape applies — weekly schedule, split groups, 10-PR cap, `commit-mes
 
 ## What Dependabot Does Not Cover
 
-Four surfaces are outside Dependabot's scope:
+Four surface families are outside Dependabot's scope:
 
-1. **`.tool-versions`** — there's no Dependabot ecosystem for `asdf`-style version files. Drift is silent.
+1. **Language version files** — `.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `.python-version`. There's no Dependabot ecosystem for any of these per-language pin files (asdf-style `.tool-versions` and the per-language fallback files are silent surfaces). Drift accumulates until something triggers a manual bump.
 2. **`packageManager` field** — Dependabot recognizes the field but does not propose updates to it.
 3. **Action SHAs in `.md` templates** — Dependabot only scans workflow files, not markdown.
 4. **Install-command pins inside scripts** — `go install`, `cargo install`, `pip install`, `npx <tool>@X.Y.Z` lines in shell scripts and Makefiles are invisible to Dependabot.
 
-These four surfaces are exactly what the bundled `version-audit-template` covers (step 10 of the skill). After enabling Dependabot, generate the audit script too — together they cover everything.
+These four surface families are exactly what the bundled `version-audit-template` covers (step 10 of the skill). After enabling Dependabot, generate the audit script too — together they cover everything.
 
 ## Conflicting Existing Config
 

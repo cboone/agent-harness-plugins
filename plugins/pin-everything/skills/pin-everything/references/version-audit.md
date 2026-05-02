@@ -4,39 +4,57 @@ How to install and tailor the bundled `version-audit-template` script. Covers th
 
 ## Surfaces Audited
 
-The script audits the four surfaces Dependabot misses:
+The script audits the surfaces Dependabot does not cover:
 
-1. **Node.js** — drift in whichever Node version file the repo uses (`.tool-versions` with a `nodejs` line, `.nvmrc`, or `.node-version`), mirroring the priority order in skill step 4. Drift is checked against the latest release in the **same major series** as the pinned version, not against the latest LTS unconditionally — repos that intentionally pin a Current (odd-numbered, non-LTS) major like Node 23 are flagged only when a newer patch lands within that same major, never told to "downgrade" to the latest LTS major. Non-numeric values (`.nvmrc` aliases like `lts/*`, `node`, `latest`; major-only pins like `22`) are not pins, so the audit silently skips them.
+1. **Language runtime version files** — drift in whichever version file the repo uses for each language pinned by skill step 4. Three languages are covered:
+   - **Node.js** in `.tool-versions` (with a `nodejs` line), `.nvmrc`, or `.node-version`. Drift is checked within the **same major series** so repos intentionally pinning a Current (odd-numbered, non-LTS) major like Node 23 are not told to "downgrade" to the latest LTS major every cycle.
+   - **Ruby** in `.tool-versions` (with a `ruby` line) or `.ruby-version`. Drift is checked within the same X.Y feature-release series (Ruby's release boundary is at the minor — 3.4.x is one line, 3.5.x the next). Tags in `ruby/ruby` use underscores (`v3_4_2`); the audit normalizes them to dots before comparing. Pre-releases are filtered out so a freshly-cut `v3.5.0-preview1` is not reported as drift against a stable `v3.4.2` pin.
+   - **Python** in `.python-version`. Drift is checked within the same X.Y series, mirroring Ruby. `pyproject.toml`'s `requires-python` is intentionally **not** audited — it uses `>=` semantics, so it's a floor, not a pin.
+
+   Non-numeric values (`.nvmrc` aliases like `lts/*`, `node`, `latest`; major-only pins like `22` or `3.4`) are silently skipped — they're not pins, so there's nothing to compare against.
+
 2. **`packageManager`** — Yarn or pnpm release drift (Corepack stays at the pinned version until the field is bumped). npm has no equivalent integrity surface, so npm-managed projects produce no row here.
-3. **Action SHAs in scanned files** — third-party action refs found anywhere in the configured `SCAN_PATHS` (defaults: `.github/` and `plugins/`, which together cover both real workflows and the action refs embedded in skill templates and other Markdown). Only release-tagged refs (those whose comment is a numeric `# vX.Y.Z` tag) are audited; channel/branch pins like `# stable` or `# main` are intentionally out of scope, since they have no upstream "latest version" to compare against and would require a different "pinned SHA vs. branch HEAD" check.
-4. **Install-command pins inside scripts** — `go install`, `cargo install`, every Python install verb (`pip install`, `uv pip install`, `uv add`, `uv tool install`, `uvx`), and `npx` pins in shell scripts, Makefiles, and skill prose. The single `audit_python_install_pins` function covers all five Python verbs with one regex.
+3. **Action SHAs in scanned files** — third-party action refs found anywhere in the configured `SCAN_PATHS` (defaults: `.github/` and `plugins/`, which together cover both real workflows and the action refs embedded in skill templates and other Markdown). Only release-tagged refs (those whose comment is a numeric `# vX.Y.Z` tag) are audited; channel/branch pins like `# stable` or `# main` are intentionally out of scope, since they have no upstream "latest version" to compare against and would require a different "pinned SHA vs. branch HEAD" check. Drift is checked **within the same major series** as the pinned version, matching the held-major pattern documented in `references/github-actions.md`. A `# v8.0.0 — held at v8 pending v9 migration` pin is flagged when a newer v8.x lands but never told to "upgrade" to v9, so the audit doesn't emit a permanent false-positive row for the held-major lifetime. Major bumps are a separate concern (Dependabot already proposes them for workflow files); the audit's role is the same-major patch backstop for SHA pins inside scanned Markdown templates and other surfaces Dependabot does not see.
+4. **Install-command pins inside scripts** — `go install`, `cargo install`, every Python install verb (`pip install`, `uv pip install`, `uv add`, `uv tool install`, `uvx`), and `npx` pins in shell scripts, Makefiles, and skill prose. The single `audit_python_install_pins` function covers all five Python verbs with one regex. For `go install`, `github.com/<owner>/<repo>[/...]` paths are auto-derived (the upstream-of-record is the GitHub repo named by the first two path segments); vanity domains like `golang.org/x/...` and `mvdan.cc/...` redirect to repos whose names do not match the import path, so they require an explicit entry in the `vanity_path_to_repo` map inside `audit_go_install_pins`. Unmapped vanity paths are skipped silently — extending that map for the consuming repo's vanity-domain Go tools is a required tailoring step.
 
-Each surface has an upstream-of-record API the script queries. If the script finds a pinned version older than the upstream's current latest, it records a row in the drift report.
+Each surface has an upstream-of-record API the script queries. If the script finds a pinned version older than the upstream's current latest within the relevant series, it records a row in the drift report.
 
 ## Per-Surface Upstream APIs
 
-| Surface         | Upstream                                                                                                                                                          |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Node.js LTS     | `https://nodejs.org/dist/index.json`                                                                                                                              |
-| Yarn stable     | `https://repo.yarnpkg.com/tags`                                                                                                                                   |
-| pnpm stable     | `https://registry.npmjs.org/pnpm/latest`                                                                                                                          |
-| GitHub releases | `gh api repos/<r>/releases/latest`, with `gh api repos/<r>/tags` (highest semver entry) as a fallback for repos that publish version tags without GitHub Releases |
-| crates.io       | `https://crates.io/api/v1/crates/<crate>`                                                                                                                         |
-| PyPI            | `https://pypi.org/pypi/<pkg>/json`                                                                                                                                |
-| npm registry    | `https://registry.npmjs.org/<pkg>/latest` (scoped packages require the `/` between scope and name to be URL-encoded as `%2f`, e.g. `@taplo/cli` → `@taplo%2fcli`) |
+| Surface              | Upstream                                                                                                                                                                                                                                                                                                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node.js (same major) | `https://nodejs.org/dist/index.json`                                                                                                                                                                                                                                                                                                                                        |
+| Ruby (same X.Y)      | `gh api repos/ruby/ruby/releases` (paginated, `select(.prerelease == false)`); tag names are normalized from `v3_4_2` → `3.4.2`                                                                                                                                                                                                                                             |
+| Python (same X.Y)    | `gh api repos/python/cpython/releases` (paginated, `select(.prerelease == false)`)                                                                                                                                                                                                                                                                                          |
+| Yarn stable          | `https://repo.yarnpkg.com/tags`                                                                                                                                                                                                                                                                                                                                             |
+| pnpm stable          | `https://registry.npmjs.org/pnpm/latest`                                                                                                                                                                                                                                                                                                                                    |
+| GitHub releases      | `gh api repos/<r>/releases/latest`, with `gh api repos/<r>/tags` (highest semver entry) as a fallback for repos that publish version tags without GitHub Releases                                                                                                                                                                                                           |
+| GitHub same-major    | `gh api repos/<r>/releases` (paginated, filtered to the major and sorted by version), with `gh api repos/<r>/tags` (same filter+sort) as a fallback. Used by `audit_actions` so pinned `# vN.x.y` comments are compared only within the same vN.* line — required to avoid false-positive drift rows for held-major pins like `# v8.0.0 — held at v8 pending v9 migration`. |
+| crates.io            | `https://crates.io/api/v1/crates/<crate>`                                                                                                                                                                                                                                                                                                                                   |
+| PyPI                 | `https://pypi.org/pypi/<pkg>/json`                                                                                                                                                                                                                                                                                                                                          |
+| npm registry         | `https://registry.npmjs.org/<pkg>/latest` (scoped packages require the `/` between scope and name to be URL-encoded as `%2f`, e.g. `@taplo/cli` → `@taplo%2fcli`)                                                                                                                                                                                                           |
 
 Each surface's jq filter (extracted from `./scripts/version-audit-template`):
 
 ```text
-Node.js          first(.[] | select(.version | startswith($prefix))) | .version
-                 with $prefix = "v<major>." derived from the current pinned version
-                 (then strip leading "v")
-Yarn stable      .latest.stable
-pnpm stable      .version
-GitHub releases  .tag_name (releases/latest); .[].name filtered to ^v?[0-9]+(\.[0-9]+)+$ then sort -V (tags fallback)
-crates.io        .crate.max_stable_version
-PyPI             .info.version
-npm registry     .version
+Node.js            first(.[] | select(.version | startswith($prefix))) | .version
+                   with $prefix = "v<major>." derived from the current pinned version
+                   (then strip leading "v")
+Ruby               .[] | select(.prerelease == false) | .tag_name
+                   then sed 's/^v//; s/_/./g' and grep ^<X.Y>\.[0-9]+$
+                   then sort -V | tail -n 1
+Python             .[] | select(.prerelease == false) | .tag_name
+                   then sed 's/^v//' and grep ^<X.Y>\.[0-9]+$
+                   then sort -V | tail -n 1
+Yarn stable        .latest.stable
+pnpm stable        .version
+GitHub releases    .tag_name (releases/latest); .[].name filtered to ^v?[0-9]+(\.[0-9]+)+$ then sort -V (tags fallback)
+GitHub same-major  .[] | select(.prerelease == false) | .tag_name (releases, paginated)
+                   filtered to ^v?<major>(\.[0-9]+)+$ then sort -V | tail -n 1
+                   (tags fallback uses the same filter)
+crates.io          .crate.max_stable_version
+PyPI               .info.version
+npm registry       .version
 ```
 
 The script wraps each query in error-tolerant boilerplate (`curl -fsSL ... 2>/dev/null || true`); a transient network failure produces no row, not a script failure.
@@ -53,11 +71,12 @@ The single-issue invariant prevents the audit from spamming the issue tracker. R
 
 ## Tailoring the Template
 
-Read `./scripts/version-audit-template`. It contains seven `audit_*` functions plus a `print_report` driver. Tailor before writing the user's `bin/version-audit`:
+Read `./scripts/version-audit-template`. It contains nine `audit_*` functions plus a `print_report` driver. Tailor before writing the user's `bin/version-audit`:
 
-1. **Drop unused surface functions.** If the target repo has no Python install pins of any kind (no `pip install`, `uv pip install`, `uv add`, `uv tool install`, or `uvx` calls with `==`), delete `audit_python_install_pins` and remove its call from the bottom of the script. The function name covers all five Python install verbs together because they share an upstream (PyPI) and a single grep handles them all; deleting it on the basis of "no plain `pip install` pins" alone would drop drift coverage for the `uv`-only repos. Apply the same all-or-nothing rule to `audit_npx_pins`, `audit_go_install_pins`, and `audit_cargo_install_pins`.
+1. **Drop unused surface functions.** If the target repo has no Python install pins of any kind (no `pip install`, `uv pip install`, `uv add`, `uv tool install`, or `uvx` calls with `==`), delete `audit_python_install_pins` and remove its call from the bottom of the script. The function name covers all five Python install verbs together because they share an upstream (PyPI) and a single grep handles them all; deleting it on the basis of "no plain `pip install` pins" alone would drop drift coverage for the `uv`-only repos. Apply the same all-or-nothing rule to `audit_npx_pins`, `audit_go_install_pins`, and `audit_cargo_install_pins`. For runtime functions: drop `audit_node` if no Node version file is present (no `.tool-versions` with a `nodejs` line, no `.nvmrc`, no `.node-version`); drop `audit_ruby` if no Ruby version file is present (no `.tool-versions` with a `ruby` line, no `.ruby-version`); drop `audit_python_runtime` if no `.python-version` is present.
 2. **Adjust grep paths.** The template greps `plugins/` and `.github/` because that's where the canonical example repo keeps its surfaces. For a different layout, change the path arguments to `grep -rH ... <paths>` (the `-H` flag preserves filenames so drift rows can report the actual file).
-3. **Add new surface functions** if the target repo has surfaces the template doesn't cover (e.g. a custom version file format).
+3. **Extend the vanity-domain map for `go install`.** `audit_go_install_pins` auto-derives `OWNER/REPO` for any `github.com/<owner>/<repo>[/...]` import path, so most consuming repos need no change there. But vanity domains (`golang.org/x/...`, `mvdan.cc/...`, `gotest.tools/...`, `sigs.k8s.io/...`, `oras.land/...`, etc.) redirect to repos whose names do not match the import path, so each one needs a manual entry in the `vanity_path_to_repo` associative array inside `go_install_path_to_repo`. Audit-time silence on a vanity-domain pin is a tailoring gap, not a feature — extend the map for every vanity-domain `go install` line in the consuming repo before writing `bin/version-audit`.
+4. **Add new surface functions** if the target repo has surfaces the template doesn't cover (e.g. a custom version file format, a different language runtime).
 
 Write the result to `bin/version-audit` and `chmod +x` it.
 

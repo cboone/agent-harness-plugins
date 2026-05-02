@@ -113,6 +113,8 @@ uses: golangci/golangci-lint-action@<sha> # v8.0.0 — held at v8 pending v9 mig
 
 When the upstream cuts a new patch release within the held major, Dependabot will still propose the bump. Accept it; the major boundary stays put because the comment matches the held major's tag pattern.
 
+The bundled `version-audit-template` (step 10 of `SKILL.md`) reads pinned `# vX.Y.Z` comments and compares each one against upstream releases **within the same major series**, not against the absolute upstream latest. That is what makes the held-major comment work as an intentional pin: the audit flags a v8 -> v8.x.y patch but never an unwanted v8 -> v9 "drift" row.
+
 ## Bumping a Held Major
 
 Before bumping, read the upstream major's release notes for breaking changes:
