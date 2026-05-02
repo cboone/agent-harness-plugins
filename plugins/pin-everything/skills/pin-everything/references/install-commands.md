@@ -4,7 +4,7 @@ Per-package-manager pinning recipes for tool-install commands embedded in CI wor
 
 ## Why Pin Install Commands
 
-A `go install some/tool@latest` in CI installs whatever the upstream maintainer most recently tagged. If they tag a malicious release, CI runs the malicious binary on the next push. Pinning the install command to an explicit version means CI runs only the version that was reviewed when the line was added — and Dependabot proposes a PR when a newer version is available, so the upgrade is intentional.
+A `go install some/tool@latest` in CI installs whatever the upstream maintainer most recently tagged. If they tag a malicious release, CI runs the malicious binary on the next push. Pinning the install command to an explicit version means CI runs only the version that was reviewed when the line was added, so any upgrade is intentional. Note: install-command pins inside scripts, Makefiles, and skill prose are *not* tracked by Dependabot (it only scans manifest/lockfile ecosystems and workflow `uses:` refs). For drift coverage of these surfaces, pair this step with the bundled `version-audit` script (step 10).
 
 ## Per-Manager Recipes
 

@@ -85,7 +85,7 @@ If the corresponding version file is missing in the repo, create it with current
 
 If `package.json` has `"packageManager": "yarn@X.Y.Z"`:
 
-1. Compute the SHA-512 integrity hash. Preferred path: `corepack prepare yarn@X.Y.Z --activate` then read the resulting `packageManager` field — Corepack writes the hash itself. Fall back to fetching `https://repo.yarnpkg.com/${X.Y.Z}/packages/yarnpkg-cli/bin/yarn.js` and computing `shasum -a 512` if Corepack is unavailable (`shasum` is portable across macOS and Linux; `sha512sum` is Linux-only).
+1. Compute the SHA-512 integrity hash. Preferred path: `corepack use yarn@X.Y.Z` — this downloads the requested Yarn release, computes the integrity hash, and writes the suffixed `yarn@X.Y.Z+sha512.<hash>` form into `package.json`'s `packageManager` field in one command. (`corepack prepare ... --activate` only prepares and activates the binary globally; it does not touch `package.json`.) Fall back to fetching `https://repo.yarnpkg.com/${X.Y.Z}/packages/yarnpkg-cli/bin/yarn.js` and computing `shasum -a 512` if Corepack is unavailable (`shasum` is portable across macOS and Linux; `sha512sum` is Linux-only).
 2. Rewrite the field as `"yarn@X.Y.Z+sha512.<hash>"`.
 3. Verify with `corepack enable && yarn --version`.
 
@@ -141,7 +141,7 @@ Create or merge `.github/dependabot.yml` with:
 - Weekly schedule.
 - Per-ecosystem split groups (`<ecosystem>-minor-patch` and `<ecosystem>-major`) so minor/patch can auto-merge later while majors get human review.
 - 10-PR cap per ecosystem (raised from the default of 5 — SHA-pinning produces finer-grained PRs than tag-pinning).
-- `versioning-strategy: increase` for `npm` so existing exact pins are not widened.
+- `versioning-strategy: increase` for `npm` (and for `pip` if step 6 exact-pinned Python requirements to `==X.Y.Z`) so existing exact pins are not widened on the first Dependabot bump.
 - Coverage for `github-actions` plus whichever package ecosystems are present in the repo (`npm`, `cargo`, `pip`, `bundler`, `gomod`).
 
 Skip this step if `--no-dependabot` was passed. Reference: `./references/dependabot.md`.

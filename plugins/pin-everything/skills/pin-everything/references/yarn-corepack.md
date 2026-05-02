@@ -13,12 +13,12 @@ The `+sha512.<hash>` suffix turns the field into a cryptographic commitment to a
 ### Preferred: Let Corepack Compute It
 
 ```bash
-corepack prepare yarn@4.14.1 --activate
+corepack use yarn@4.14.1
 jq -r '.packageManager' package.json
 # → yarn@4.14.1+sha512.64df448055b2d37ba269d7db535a469b8da93f8ef1140c25fd7a83c00a8fbaacb214ca0e02553b92a2c54cef78bb67d0b4817fab02001df0e24fac0faccc3b42
 ```
 
-`corepack prepare` downloads the requested Yarn version, computes the integrity hash, and writes the suffixed form into `packageManager`. This is the path Yarn's documentation recommends — it's a single command, and the hash format is exactly what Corepack will verify against later.
+`corepack use` downloads the requested Yarn version, computes the integrity hash, and writes the suffixed form into `packageManager` — all in one command. This is the path Yarn's documentation recommends. The closely-named `corepack prepare yarn@X.Y.Z --activate` only prepares and activates the binary globally; it does not modify `package.json`, so it will not produce the integrity-pinned field on its own.
 
 ### Fallback: Compute by Hand
 
