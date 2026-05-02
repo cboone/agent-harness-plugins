@@ -31,6 +31,12 @@ Quick-reference lookup table for the setup-linters skill. Each row maps a projec
 | yamllint          | YAML files                      | When project has many YAML files                              | `uv tool install yamllint`                           | `.yamllint.yml`                       | `./tools/yamllint.md`     |
 | cspell            | Spelling in code/docs           | All projects                                                  | `npm install -D cspell`                              | `cspell.json`                         | `./tools/cspell.md`       |
 
+## Presets
+
+| Preset          | Scope                                                      | When to Offer                                                                                                   | Tools                     | Config Files                                                   | Reference                                      |
+| --------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
+| Pandoc-academic | Paper-backed Lean/math Markdown with Pandoc and LaTeX math | When `references/papers/` or `references/transcriptions/` exists, or when the user requests `--pandoc-academic` | markdownlint-cli2, cspell | `.markdownlint-cli2.jsonc`, `cspell.jsonc`, `cspell-words.txt` | `./tools/markdownlint.md`, `./tools/cspell.md` |
+
 ## CI Integration
 
 | Scope             | Reference                      |

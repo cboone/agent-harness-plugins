@@ -52,6 +52,63 @@ For projects using scrut CLI tests, also add:
     "MD014": false
 ```
 
+### Pandoc-academic preset
+
+Use this preset when the project contains `references/papers/` or `references/transcriptions/`, or when the user explicitly requests `--pandoc-academic`.
+
+Create `.markdownlint-cli2.jsonc` in the project root:
+
+```jsonc
+{
+  "config": {
+    // Pandoc and LaTeX source files are author-wrapped, not formatter-wrapped.
+    "MD013": false,
+
+    // Allow raw HTML.
+    "MD033": false,
+
+    // Allow bare URLs without angle brackets.
+    "MD034": false,
+
+    // The document title belongs in YAML frontmatter.
+    "MD041": false,
+
+    // Allow Pandoc raw LaTeX fences such as ```{=latex}```.
+    "MD040": false,
+
+    // Allow duplicate headings under different parents.
+    "MD024": { "siblings_only": true },
+
+    // Do not require a single H1 in body content.
+    "MD025": false,
+
+    // Allow trailing-colon headings common in theorem/proof transcriptions.
+    "MD026": { "punctuation": ".,;!" },
+
+    // Preserve hard tabs inside transcription/code blocks.
+    "MD010": { "code_blocks": false },
+
+    // Dense academic tables are acceptable.
+    "MD060": false,
+  },
+  "ignores": [
+    "node_modules/",
+    "vendor/",
+    ".venv/",
+    "dist/",
+    "build/",
+    "CHANGELOG.md",
+    ".lake/**",
+    "references/papers/**",
+    "references/papers.bib",
+    "references/transcriptions/**",
+    "docs/plans/done/**",
+  ],
+}
+```
+
+Use this preset instead of layering ad-hoc markdownlint disables throughout paper sources.
+
 ### .markdownlintignore (optional)
 
 If the ignore list is long, create a separate `.markdownlintignore` file:

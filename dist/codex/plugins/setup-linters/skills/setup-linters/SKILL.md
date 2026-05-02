@@ -1,8 +1,8 @@
 ---
 name: setup-linters
 description: >-
-  Detect project languages, recommend appropriate linters and formatters,
-  install them, and generate config files.
+  Detect project languages, recommend linters and formatters, install them, and
+  generate config files, including Pandoc-academic Markdown presets.
 ---
 
 # Setup Linters
@@ -51,6 +51,8 @@ For JavaScript/TypeScript projects, perform framework sub-detection to determine
 
 For Lean projects (any of `lakefile.toml`, `lakefile.lean`, `lean-toolchain`, or `*.lean` files present, with `.lake/` excluded so dependency-vendored `lakefile.*` and `*.lean` files do not trigger detection), the project uses `lake lint` driven by `lintDriver = "batteries/runLinter"` rather than an external linter. There is no tool to install: `lake` ships with the toolchain, `batteries/runLinter` ships with Batteries (already a transitive Mathlib dependency). Setup is wiring (the `lintDriver` field in `lakefile.toml`, a `lean-lint` Makefile target, and a CI step) rather than installation. Skip any toolchain install in this skill; the `scaffold-lean-library` skill handles `elan` and the bootstrap script. See `./references/languages/lean.md` for details.
 
+Detect the **Pandoc-academic preset** separately from language detection. Enable it when the project contains `references/papers/` or `references/transcriptions/`, or when the user explicitly requests it with `--pandoc-academic` or equivalent wording such as "Pandoc-academic preset". This preset customizes markdownlint and cspell for paper-backed Lean/math projects that use YAML frontmatter titles, Pandoc citations, LaTeX math, raw `{=latex}` blocks, dense tables, and transcription trees. See `./references/tools/markdownlint.md` and `./references/tools/cspell.md`.
+
 If multiple languages are detected, present all of them (monorepo scenario).
 
 ### 2. Detect Existing Linters
@@ -76,12 +78,12 @@ Check for existing linter configs using these patterns (aligned with the `lint-a
 | `.hadolint.yaml`, `.hadolint.yml`                                                   | Hadolint      |
 | `.yamllint.yml`, `.yamllint.yaml`                                                   | yamllint      |
 | `taplo.toml`, `.taplo.toml`                                                         | Taplo         |
-| `cspell.json`, `.cspell.json`, `cspell.config.*`                                    | cspell        |
+| `cspell.json`, `cspell.jsonc`, `.cspell.json`, `.cspell.jsonc`, `cspell.config.*`   | cspell        |
 | `lakefile.toml` containing `lintDriver`, `lakefile.lean` containing `lintDriver :=` | `lake lint`   |
 
 **CI workflow scanning**: Also scan `.github/workflows/*.yml` for tools running without config files. For example, a CI step like `shellcheck -S warning scripts/*` means ShellCheck is already in use even without a `.shellcheckrc`. Mark these tools as "Partial" (running in CI but missing local config). A partial tool should still appear in recommendations, but suggest adding the config file for local/CI parity rather than a full setup.
 
-For each already-configured tool, mark it as "Existing" and skip it in recommendations. If everything is already set up, inform the user and stop.
+For each already-configured tool, mark it as "Existing" and skip it in recommendations. Exception: when the Pandoc-academic preset was detected or requested, do not treat generic markdownlint/cspell config presence as sufficient. Continue to the preset recommendation step unless the preset completeness check below passes. If everything is already set up, inform the user and stop.
 
 ### 3. Recommend Linter Stack
 
@@ -103,6 +105,8 @@ Based on detected languages and file types, recommend the appropriate tool stack
 Read the appropriate reference files for details on each tool.
 
 **Lean projects**: Lean has no external linter to install. Recommend `lake lint` driven by `lintDriver = "batteries/runLinter"` instead of a tool install. Setup is wiring (the `lintDriver` field, a `lean-lint` Makefile target gated on `_check-mathlib-cache`, and a CI step). Cross-language tools (markdownlint-cli2, cspell, EditorConfig, yamllint, Actionlint) still apply on top. See `./references/languages/lean.md`.
+
+**Pandoc-academic preset**: If the preset was detected or requested, recommend markdownlint-cli2 and cspell with the Pandoc-academic configuration variant instead of the generic Markdown and spelling defaults. Mark the preset as "Existing" only when a markdownlint config already contains the Pandoc/LaTeX rule customizations and preset-specific ignore globs, a cspell config (`cspell.json`, `cspell.jsonc`, `.cspell.json`, `.cspell.jsonc`, or `cspell.config.*`) contains the Pandoc/LaTeX ignore patterns and preset-specific ignore paths, and the cspell project vocabulary is satisfiable through existing inline `words` or existing referenced dictionary files.
 
 Present recommendations in a table using three status levels:
 
@@ -161,6 +165,12 @@ lintDriver = "batteries/runLinter"
 If the field is already present, mark Lean as "Existing" and skip. If `lakefile.toml` exists but lacks the field, offer to add it. If neither `lakefile.toml` nor `lakefile.lean` exists in the detected Lean project, defer to the `scaffold-lean-library` skill rather than synthesizing one here. See `./references/languages/lean.md` for the `lakefile.lean` form.
 
 Adapt to the project (e.g., TypeScript vs. JavaScript ESLint config, directory structure for ignore patterns).
+
+For the **Pandoc-academic preset**, generate all of the following together:
+
+- `.markdownlint-cli2.jsonc` using the Pandoc-academic markdownlint rule overrides from `./references/tools/markdownlint.md`
+- `cspell.jsonc` using the Pandoc-academic `ignorePaths`, dictionary definition, and `ignoreRegExpList` from `./references/tools/cspell.md`
+- `cspell-words.txt` seeded with the Lean/math vocabulary from `./references/tools/cspell.md`, plus core author surnames from citations the project actually uses (usually from `references/papers.bib`)
 
 ### 7. Add Package Manager Scripts
 
