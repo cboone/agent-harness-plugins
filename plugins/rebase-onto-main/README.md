@@ -18,7 +18,7 @@ Then select **Rebase Onto Main** from the available plugins.
 
 ## What It Does
 
-Automatically detects the default branch, handles uncommitted changes (stash, commit, or abort), resolves conflicts per replayed commit, and force-with-lease pushes after a successful rebase. Suggests running install commands when lockfiles change.
+Automatically detects the default branch, handles uncommitted changes (stash, commit, or abort), resolves conflicts per replayed commit, and pushes after a successful rebase (using `--force-with-lease` only when the rebase rewrote history). Suggests running install commands when lockfiles change.
 
 Unlike a merge, a rebase rewrites history: each commit on the feature branch is replayed on top of the base branch. Conflicts are resolved per commit, and any branch that has already been pushed requires a `--force-with-lease` push afterward. The skill never uses plain `--force`.
 
@@ -55,12 +55,13 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 ## Force-Push Safety
 
-After a rebase, the local branch's history diverges from any previously pushed copy. Pushing requires either:
+After a rebase, the local branch's history may diverge from any previously pushed copy. The skill picks the push command based on whether the rebase actually rewrote history:
 
-- `git push --force-with-lease` (preferred, refuses to overwrite if the remote moved), or
-- `git push -u origin HEAD` (only valid if the branch has no upstream yet).
+- **History rewritten** (commits replayed onto a new base): `git push --force-with-lease`, which refuses to overwrite the remote if someone else has pushed in the meantime.
+- **No-op or fast-forward only** (HEAD unchanged after rebase): a plain `git push`, since nothing was rewritten.
+- **No upstream yet** (fresh branch never pushed): `git push -u origin HEAD`, no force needed.
 
-The skill always uses `--force-with-lease` and never plain `--force`. The default branch is never force-pushed.
+The skill never uses plain `--force`, and never force-pushes the default branch.
 
 ## See Also
 

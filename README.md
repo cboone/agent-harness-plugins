@@ -116,7 +116,7 @@ Commit all changes, push to remote, and create a GitHub pull request in one auto
 
 #### Rebase Onto Main
 
-Fetch and rebase the current feature branch onto the repository's base branch. Automatically detects the default branch, handles uncommitted changes, resolves conflicts per replayed commit, and force-with-lease pushes after a successful rebase. The merge-main counterpart for projects that prefer a linear history.
+Fetch and rebase the current feature branch onto the repository's base branch. Automatically detects the default branch, handles uncommitted changes, resolves conflicts per replayed commit, and pushes after a successful rebase (using `--force-with-lease` only when the rebase rewrote history). The merge-main counterpart for projects that prefer a linear history.
 
 > **Trigger:** `/rebase-onto-main`
 > **Requires:** [`gh`](https://cli.github.com/) (falls back to `git remote show origin` if unavailable)

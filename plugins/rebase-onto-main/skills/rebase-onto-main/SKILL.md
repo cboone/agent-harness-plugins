@@ -64,6 +64,14 @@ Rebase will refuse to start with a dirty working tree, so this step is mandatory
 
 ### 3. Fetch and Rebase
 
+Capture the current HEAD so the post-rebase step can detect whether history was actually rewritten:
+
+```bash
+git rev-parse HEAD
+```
+
+Record this as `<pre-rebase-head>`. Then:
+
 ```bash
 git fetch origin <base-branch>
 git rebase origin/<base-branch>
@@ -88,7 +96,7 @@ If the branch has no upstream yet, fall back to `git log origin/<base-branch>..H
 
 #### Already Up to Date
 
-If git reports "Current branch <branch> is up to date." or "Fast-forwarded ...", report the result and continue to the post-rebase steps.
+If git reports "Current branch <branch> is up to date." or "Fast-forwarded ...", report the result and continue to the post-rebase steps. In this case the local HEAD is unchanged (or only fast-forwarded), so the push step uses a normal `git push` rather than `--force-with-lease`.
 
 #### Conflicts
 
@@ -164,21 +172,37 @@ After a successful rebase (with or without conflict resolution):
 
 1. **Push**:
 
-   Rebase rewrites history, so any branch that has already been pushed needs a force push. **Always use `--force-with-lease`, never plain `--force`.** `--force-with-lease` refuses to overwrite the remote if someone else has pushed in the meantime; plain `--force` clobbers their work without checking.
-
-   The user's CLAUDE.md forbids using force flags as a workaround without explicit instruction. Force-pushing after a rebase is the documented exception: it is required by the rebase workflow itself, not a workaround for an unexpected failure. Still prefer `--force-with-lease` over `--force` and surface the command before running it.
-
-   If the branch already has an upstream:
+   First decide whether a force push is actually required by comparing the current HEAD against `<pre-rebase-head>` from step 3:
 
    ```bash
-   git push --force-with-lease
+   git rev-parse HEAD
    ```
 
-   If the branch has no upstream (fresh branch never pushed), no force is needed:
+   If the commit hash changed, history was rewritten and any already-published copy of the branch needs a force push. If the hash is unchanged (no-op rebase) or only fast-forwarded onto upstream commits that were already pushed, a normal push is sufficient.
 
-   ```bash
-   git push -u origin HEAD
-   ```
+   Choose the push command based on three cases:
+
+   - **No upstream** (fresh branch never pushed): no force needed.
+
+     ```bash
+     git push -u origin HEAD
+     ```
+
+   - **Upstream exists, HEAD unchanged after rebase** (no-op or fast-forward only, nothing to push): skip the push entirely, or run a plain `git push` if there are local commits ahead of upstream that haven't been pushed yet.
+
+     ```bash
+     git push
+     ```
+
+   - **Upstream exists, HEAD rewritten by rebase**: force-with-lease is required to replace the previously pushed history.
+
+     ```bash
+     git push --force-with-lease
+     ```
+
+   **Always use `--force-with-lease`, never plain `--force`.** `--force-with-lease` refuses to overwrite the remote if someone else has pushed in the meantime; plain `--force` clobbers their work without checking.
+
+   The user's CLAUDE.md forbids using force flags as a workaround without explicit instruction. Force-pushing after a rebase that rewrote history is the documented exception: it is required by the rebase workflow itself, not a workaround for an unexpected failure. Still prefer `--force-with-lease` over `--force` and surface the command before running it.
 
    **Never** run `git push --force` (without `--force-with-lease`) and **never** force-push the default branch.
 
