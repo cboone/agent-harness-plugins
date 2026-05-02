@@ -33,7 +33,7 @@ Surfaces to detect:
 | GitHub Actions `uses:` refs | Glob `.github/workflows/*.{yml,yaml}` and `.github/actions/**/action.{yml,yaml}`; grep for `uses:`                             |
 | Reusable workflow refs      | Same files; grep for `uses:` lines containing `.github/workflows/`                                                             |
 | `packageManager` field      | Read `package.json`; check `.packageManager`                                                                                   |
-| `package.json` deps         | Read `package.json`; flag `^`/`~` ranges in `dependencies`/`devDependencies`/`peerDependencies`                                |
+| `package.json` deps         | Read `package.json`; flag `^`/`~` ranges in `dependencies`/`devDependencies`. **Skip `peerDependencies`** — see step 6.        |
 | Language version files      | Glob `.tool-versions`, `.nvmrc`, `.ruby-version`, `rust-toolchain.toml`, `build.zig.zon`                                       |
 | `go.mod` `go` directive     | Read `go.mod`; capture the directive line                                                                                      |
 | Inline language pins in CI  | Grep workflows for `node-version:`, `ruby-version:`, `go-version:`, `python-version:`, `zig-version:` (without `-file` suffix) |
@@ -41,7 +41,7 @@ Surfaces to detect:
 | `cargo install` pins        | Grep for `cargo install` with or without `--locked --version`                                                                  |
 | `pip` / `uv` pins           | Grep for `pip install`, `uv pip install`, `uv add` (with or without `==`)                                                      |
 | `npx` pins                  | Grep for `npx <name>` (with or without `@version`)                                                                             |
-| Schema URLs                 | Grep `*.json` and `*.yaml` for `$schema` URLs containing `@latest`                                                             |
+| Schema URLs                 | Grep `*.json` and `*.yaml` for `$schema` URLs containing `@latest`. Pinning is per-publisher (see step 7).                     |
 
 Exclude vendored directories from all greps: `node_modules/`, `.yarn/`, `vendor/`, `dist/`, `target/`, `.venv/`.
 
@@ -73,13 +73,15 @@ Replace inline pins in scaffolded CI with version-file refs so the version of re
 
 | Inline form                       | Version-file form                                                                                                                                          |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `node-version: "X"`               | `node-version-file: ".tool-versions"`                                                                                                                      |
-| `ruby-version: "X"`               | `ruby-version-file: ".tool-versions"`                                                                                                                      |
+| `node-version: "X"`               | Prefer existing version file: `.tool-versions` > `.nvmrc` > `.node-version`                                                                                |
+| `ruby-version: "X"`               | Prefer existing version file: `.tool-versions` > `.ruby-version` > `Gemfile` (if it has a `ruby` directive)                                                |
 | `go-version: "stable"` or `"X.Y"` | `go-version-file: "go.mod"`                                                                                                                                |
-| `python-version: "X.Y"`           | `python-version-file: ".python-version"`                                                                                                                   |
+| `python-version: "X.Y"`           | Prefer existing version file: `.python-version` > `pyproject.toml` `requires-python` (uv reads it directly)                                                |
 | `zig-version: "X.Y.Z"`            | Action-direct (`mlugg/setup-zig`): omit (reads `build.zig.zon`). Wrapper (`cboone/gh-actions/.../zig-ci.yml` v2.2.0+): `zig-version-file: "build.zig.zon"` |
 
-If the corresponding version file is missing in the repo, create it with current LTS / stable values. Reference `./references/language-runtimes.md` for the LTS / stable lookup commands per language.
+**Reuse the file local tooling already reads.** Audit step 1 already enumerates which version files exist in the repo. If `.nvmrc` is present, point `node-version-file` at it instead of introducing a parallel `.tool-versions`. The whole purpose of the version-file rewrite is to make CI and local dev agree on a single source of truth; emitting a second file silently re-creates the drift.
+
+If no version file is present for the language, create `.tool-versions` (or the language's conventional file: `.python-version` for Python, `rust-toolchain.toml` for Rust) with current LTS / stable values. Reference `./references/language-runtimes.md` for the LTS / stable lookup commands per language and the per-language fallback order.
 
 ### 5. Pin Yarn (Corepack) with SHA-512 Integrity
 
@@ -104,6 +106,8 @@ Strip `^`/`~` ranges from manifests, replacing each with the exact version locke
 
 When the discriminator is ambiguous (monorepo workspaces, hybrid crates, gems with bin entrypoints), prompt the user. **Always pin the lockfile** even for libraries — that is what `yarn install --frozen-lockfile` and friends consume in CI. Only the *manifest* changes between app and library treatment.
 
+**Never exact-pin Node.js `peerDependencies`.** They express the range of host versions a package is compatible with; rewriting them to `==X.Y.Z` overconstrains downstream installers and can break otherwise compatible consumers. Leave the existing range (caret, pessimistic, or `>=`) intact even when pinning `dependencies` and `devDependencies`. The same logic applies to `optionalPeerDependencies`. The audit in step 1 already excludes `peerDependencies`; do not reintroduce them here.
+
 ### 7. Pin Install Commands
 
 For every install invocation in CI templates, Makefiles, scripts, and skill docs:
@@ -113,12 +117,17 @@ For every install invocation in CI templates, Makefiles, scripts, and skill docs
 | `go install <path>@latest`                                | `go install <path>@vX.Y.Z`                       | GitHub releases for the path's repo |
 | `cargo install <crate>` (no version)                      | `cargo install --locked --version X.Y.Z <crate>` | crates.io                           |
 | `pip install <pkg>` (no `==`)                             | `pip install '<pkg>==X.Y.Z'`                     | PyPI                                |
-| `uv pip install <pkg>` / `uv add <pkg>`                   | `uv pip install '<pkg>==X.Y.Z'`                  | PyPI                                |
+| `uv pip install <pkg>`                                    | `uv pip install '<pkg>==X.Y.Z'`                  | PyPI                                |
+| `uv add <pkg>`                                            | `uv add '<pkg>==X.Y.Z'`                          | PyPI                                |
 | `npx <tool>` (no `@version`, in CI without prior install) | `npx <tool>@X.Y.Z`                               | npm registry                        |
+
+**Preserve `uv add` vs `uv pip install`.** They are not interchangeable: `uv add` records the dependency in `pyproject.toml` and `uv.lock`, while `uv pip install` only mutates the active environment. Add the `==` pin in place; never rewrite one verb as the other.
 
 **Skip user-facing placeholders.** If the install path contains `OWNER/REPO`, `GITHUB-USERNAME`, `PROJECT-NAME`, or `<...>`-style placeholders, leave the `@latest` (or unversioned form) intact — it's a template the downstream user will customize.
 
 **Skip local-dev examples that resolve via lockfile.** `npx prettier --write .` inside a `package.json` repo with a committed `prettier` devDependency is fine unpinned; the lockfile is the version of record.
+
+**Schema URLs (`$schema: ...@latest`).** Whether they can be pinned depends on the publisher. JSON Schema Store and similar registries expose versioned URLs (e.g., `https://json.schemastore.org/foo-1.2.3.json`); rewrite the `@latest` form to the current versioned URL when one exists. Some publishers only ship a moving `@latest` URL with no immutable mirror — record those in the audit summary as "publisher exposes no versioned URL" and exclude them from the step 11 re-audit. Do not block verification on a surface that has no upstream pinning mechanism.
 
 Reference: `./references/install-commands.md`.
 
@@ -160,7 +169,7 @@ Skip this step if `--no-audit` was passed. Reference: `./references/version-audi
 
 ### 11. Verify and Commit
 
-1. Re-run the audit from step 1 and confirm zero unpinned surfaces remain (modulo the deliberate exclusions confirmed in step 2).
+1. Re-run the audit from step 1 and confirm zero unpinned surfaces remain (modulo the deliberate exclusions confirmed in step 2 and any schema URLs whose publisher exposes no versioned upstream — see step 7).
 2. Invoke the `lint-and-fix` skill via the Skill tool to run project linters and formatters.
 3. If the user has REUSE/SPDX licensing set up (root `REUSE.toml` present), invoke `manage-repo-licensing` to add SPDX coverage for any newly emitted files (`bin/version-audit`, `.github/workflows/version-audit.yml`, `.github/dependabot.yml`) and run `reuse lint`.
 4. Commit with a Conventional Commits message scoped to what was pinned. Default to one commit per category for clarity (e.g. `chore: SHA-pin third-party action refs`, `chore: pin install commands`, `chore: add Dependabot config`). If the user prefers a single bundled commit, do that instead.

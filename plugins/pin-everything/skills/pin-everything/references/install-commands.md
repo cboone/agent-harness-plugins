@@ -8,15 +8,18 @@ A `go install some/tool@latest` in CI installs whatever the upstream maintainer 
 
 ## Per-Manager Recipes
 
-| Manager                     | Pinned form                                      | Upstream-of-record                  | Lookup endpoint                                                         |
-| --------------------------- | ------------------------------------------------ | ----------------------------------- | ----------------------------------------------------------------------- |
-| `go install`                | `go install <path>@vX.Y.Z`                       | GitHub releases for the path's repo | `gh release view --repo <owner>/<repo> --json tagName`                  |
-| `cargo install`             | `cargo install --locked --version X.Y.Z <crate>` | crates.io                           | `https://crates.io/api/v1/crates/<crate>` → `.crate.max_stable_version` |
-| `pip install`               | `pip install '<pkg>==X.Y.Z'`                     | PyPI                                | `https://pypi.org/pypi/<pkg>/json` → `.info.version`                    |
-| `uv pip install` / `uv add` | `uv pip install '<pkg>==X.Y.Z'`                  | PyPI                                | Same as `pip`                                                           |
-| `npx`                       | `npx <tool>@X.Y.Z`                               | npm registry                        | `https://registry.npmjs.org/<tool>/latest` → `.version`                 |
-| `brew install` (formula)    | _no in-line pin_; use a tap with versioned cask  | (not a pinning surface)             | —                                                                       |
-| `brew install` (cask)       | `version "X.Y.Z"` in a tap-managed cask          | The tap's release process           | Owned by the publishing repo, not by this skill                         |
+| Manager                  | Pinned form                                      | Upstream-of-record                  | Lookup endpoint                                                         |
+| ------------------------ | ------------------------------------------------ | ----------------------------------- | ----------------------------------------------------------------------- |
+| `go install`             | `go install <path>@vX.Y.Z`                       | GitHub releases for the path's repo | `gh release view --repo <owner>/<repo> --json tagName`                  |
+| `cargo install`          | `cargo install --locked --version X.Y.Z <crate>` | crates.io                           | `https://crates.io/api/v1/crates/<crate>` → `.crate.max_stable_version` |
+| `pip install`            | `pip install '<pkg>==X.Y.Z'`                     | PyPI                                | `https://pypi.org/pypi/<pkg>/json` → `.info.version`                    |
+| `uv pip install`         | `uv pip install '<pkg>==X.Y.Z'`                  | PyPI                                | Same as `pip`                                                           |
+| `uv add`                 | `uv add '<pkg>==X.Y.Z'`                          | PyPI                                | Same as `pip`                                                           |
+| `npx`                    | `npx <tool>@X.Y.Z`                               | npm registry                        | `https://registry.npmjs.org/<tool>/latest` → `.version`                 |
+| `brew install` (formula) | _no in-line pin_; use a tap with versioned cask  | (not a pinning surface)             | —                                                                       |
+| `brew install` (cask)    | `version "X.Y.Z"` in a tap-managed cask          | The tap's release process           | Owned by the publishing repo, not by this skill                         |
+
+Keep `uv pip install` and `uv add` as separate verbs: `uv add` writes the dependency to `pyproject.toml` and `uv.lock`, while `uv pip install` only mutates the current environment. Do not rewrite one as the other when adding a `==` pin.
 
 For each lookup endpoint above, fetch with `curl -fsSL <endpoint>` and extract with `jq -r '<filter>'`. The bundled `version-audit-template` script wraps these in error-tolerant boilerplate.
 
@@ -58,6 +61,11 @@ uv add 'ruff==0.15.12'
 ```
 
 `uv` is preferred over `pip` in scripted contexts: it resolves and installs an order of magnitude faster and writes to `uv.lock` for reproducibility. When converting `pip install` to `uv add`, retain the version pin verbatim.
+
+The three forms are not interchangeable:
+
+- `pip install 'pkg==X.Y.Z'` and `uv pip install 'pkg==X.Y.Z'` install into the current environment without recording the dependency.
+- `uv add 'pkg==X.Y.Z'` records the pin in `pyproject.toml` and updates `uv.lock`. Preserve the verb when adding a pin: rewriting `uv add` as `uv pip install` silently drops the manifest update.
 
 ## `npx` Specifics
 
