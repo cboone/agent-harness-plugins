@@ -10,7 +10,7 @@ Inline pins like `node-version: "20"` in a workflow file create a second source 
 
 Version-file selection is **prefer the file that already has the language's entry, not just any file that exists**. A bare `.tool-versions` is only useful here if it actually contains a line for the language being configured (e.g., `nodejs 22.10.0`); pointing CI at a `.tool-versions` that only lists `python` or `ruby` will break setup. The principle is: reuse the file local tooling already reads for *this* language (e.g., `.nvmrc` for `nvm`, `.ruby-version` for `rbenv`/`chruby`) so CI and local dev share one source of truth. Only fall back to creating `.tool-versions` when no language-specific file is present.
 
-**Normalize the file's value to an exact `X.Y.Z` before treating the version-file ref as a pin.** The same files frequently carry moving forms that look pinned but aren't: `.nvmrc` accepts aliases like `lts/*`, `lts/iron`, `node`, and `latest`; `.ruby-version`, `.python-version`, and `.tool-versions` entries are often major-only (`3.4`) or truncated to major+minor (`3.13`). CI that reads any of those values resolves them at install time, which means each fresh runner can pick a different patch release. After selecting (or creating) the file, inspect its current contents and, if the value is anything other than an exact `X.Y.Z`, rewrite it to the matching exact release using the lookup commands in [Lookup Commands](#lookup-commands) below. Only then has the runtime actually been pinned.
+**Normalize the file's value to an exact `X.Y.Z` before treating the version-file ref as a pin.** The same files frequently carry moving forms that look pinned but aren't: `.nvmrc` accepts aliases like `lts/*`, `lts/iron`, `node`, and `latest`; `.ruby-version`, `.python-version`, and `.tool-versions` entries are often major-only (`3.4`) or truncated to major+minor (`3.13`). CI that reads any of those values resolves them at install time, which means each fresh runner can pick a different patch release. After selecting (or creating) the file, inspect its current contents and, if the value is anything other than an exact `X.Y.Z`, rewrite it to the matching exact release **within the existing release line**: the latest patch in the same major for Node.js (a `.nvmrc = 23` repo stays on the `23.x` line), and the latest patch in the same X.Y feature line for Ruby and Python (a `.ruby-version = 3.4` repo stays on `3.4.z`). Use the in-series lookup commands in [Lookup Commands](#lookup-commands) below for that case. Only fall back to the absolute LTS / stable lookup when no version file existed before this pass and a fresh release line is being chosen, since that path will move the project onto the current global LTS / stable major rather than preserving the existing one. Only then has the runtime actually been pinned.
 
 | Language | Action(s)                                                                             | Version-file input (in priority order)                                                                                                                                                                          | File format                                                                                | If no file is present                                                                                                      |
 | -------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
@@ -23,9 +23,26 @@ Version-file selection is **prefer the file that already has the language's entr
 
 ## Lookup Commands
 
-Each language exposes its current LTS / stable via a queryable upstream. Use these to populate a missing version file.
+Each language exposes its current LTS / stable via a queryable upstream. Two shapes of lookup are useful here:
 
-### Node.js (LTS)
+- **In-series** (use for normalizing an existing partial pin like `.nvmrc = 23` or `.ruby-version = 3.4`): pick the latest patch within the major (Node.js) or X.Y feature line (Ruby, Python) that the project is already on. This preserves the release line.
+- **Create-from-scratch** (use only when no prior version file exists): pick the current global LTS / stable. This selects a release line.
+
+Pick the in-series form by default during a pinning pass; only fall back to the create-from-scratch form when there is no existing pin to preserve.
+
+### Node.js
+
+In-series (preserve an existing major like `23`):
+
+```bash
+MAJOR=23  # use the major found in the existing version file
+curl -fsSL https://nodejs.org/dist/index.json \
+  | jq -r --arg prefix "v${MAJOR}." \
+    'first(.[] | select(.version | startswith($prefix))) | .version' \
+  | sed 's/^v//'
+```
+
+Create-from-scratch (current LTS):
 
 ```bash
 curl -fsSL https://nodejs.org/dist/index.json \
@@ -33,7 +50,21 @@ curl -fsSL https://nodejs.org/dist/index.json \
   | sed 's/^v//'
 ```
 
-### Ruby (stable)
+### Ruby
+
+In-series (preserve an existing X.Y series like `3.4`):
+
+```bash
+SERIES=3.4  # use the X.Y series found in the existing version file
+gh api repos/ruby/ruby/releases --paginate \
+  --jq '.[] | select(.prerelease == false) | .tag_name' \
+  | sed 's/^v//; s/_/./g' \
+  | grep -E "^${SERIES//./\\.}\.[0-9]+$" \
+  | sort -V \
+  | tail -n 1
+```
+
+Create-from-scratch (current stable):
 
 ```bash
 gh api repos/ruby/ruby/releases \
@@ -53,7 +84,21 @@ curl -fsSL 'https://go.dev/dl/?mode=json' \
   | sed 's/^go//'
 ```
 
-### Python (stable)
+### Python
+
+In-series (preserve an existing X.Y series like `3.13`):
+
+```bash
+SERIES=3.13  # use the X.Y series found in the existing version file
+gh api repos/python/cpython/releases --paginate \
+  --jq '.[] | select(.prerelease == false) | .tag_name' \
+  | sed 's/^v//' \
+  | grep -E "^${SERIES//./\\.}\.[0-9]+$" \
+  | sort -V \
+  | tail -n 1
+```
+
+Create-from-scratch (current stable):
 
 ```bash
 gh api repos/python/cpython/releases --jq \

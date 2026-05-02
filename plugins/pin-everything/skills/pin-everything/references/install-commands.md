@@ -23,7 +23,16 @@ A `go install some/tool@latest` in CI installs whatever the upstream maintainer 
 
 Keep the four uv verbs distinct when adding a `==` pin: `uv pip install` mutates the current environment, `uv add` writes the dependency to `pyproject.toml` and `uv.lock`, `uv tool install` installs a tool persistently to the user-global `~/.local/bin`, and `uvx` (alias for `uv tool run`) executes a tool ephemerally from a cached install. Each verb has a distinct destination; rewriting one as another silently changes which surface is pinned. Pin in place, never swap.
 
-For the HTTP lookup endpoints (`crates.io`, `pypi.org`, `registry.npmjs.org`), fetch with `curl -fsSL <endpoint>` and extract with `jq -r '<filter>'`. The `go install` row uses `gh release view` instead — the upstream-of-record is a GitHub release for the install path's repo, not an HTTP API, so the recipe is `gh release view --repo <owner>/<repo> --json tagName --jq '.tagName'`. The bundled `version-audit-template` script wraps both shapes in error-tolerant boilerplate.
+For the HTTP lookup endpoints (`crates.io`, `pypi.org`, `registry.npmjs.org`), fetch with `curl -fsSL <endpoint>` and extract with `jq -r '<filter>'`. The `go install` row uses `gh release view` first, since the upstream-of-record is a GitHub release for the install path's repo, not an HTTP API: `gh release view --repo <owner>/<repo> --json tagName --jq '.tagName'`. **Some Go tools publish version tags without creating GitHub Releases**; for those, `gh release view` returns no result, so fall back to picking the highest semver-shaped tag from the Tags API:
+
+```bash
+gh api "repos/<owner>/<repo>/tags" --paginate --jq '.[].name' \
+  | grep -E '^v?[0-9]+(\.[0-9]+)+$' \
+  | sort -V \
+  | tail -n 1
+```
+
+The bundled `version-audit-template` script implements this two-tier lookup in its `github_latest_release` helper; mirror the same pattern for one-off lookups during the pinning pass so tools that ship tags without releases are not silently left at `@latest`.
 
 ## `go install` Specifics
 
