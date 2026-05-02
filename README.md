@@ -59,8 +59,6 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Create Plugin](#create-plugin)
 
 **Hooks**
-<br>Security:
-[Block rm -rf](#block-rm--rf)
 <br>Workflow:
 [Notify](#notify-macos)
 ∙ [Update Docs Reminder](#update-docs-reminder)
@@ -464,17 +462,6 @@ Guide for creating new plugins in this repository with consistent structure and 
 > **Details:** [README](./plugins/create-plugin/README.md)
 
 ## Hooks
-
-### Security
-
-Prevent destructive operations before they happen.
-
-#### Block rm -rf
-
-Blocks recursive `rm` commands before they execute and suggests using `trash` instead, which moves files to the system Trash.
-
-> **Requires:** [`trash`](https://hasseg.org/trash/). Install via [Homebrew](https://brew.sh): `brew install trash`
-> **Details:** [README](./plugins/block-rm-rf/README.md)
 
 ### Workflow
 

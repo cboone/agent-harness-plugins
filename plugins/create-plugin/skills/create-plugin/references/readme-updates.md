@@ -27,8 +27,6 @@ The ToC is at the top of the file, organized by type and subcategory. Each entry
 [Skill I](#skill-i)
 
 **Hooks**
-<br>Security:
-[Hook A](#hook-a)
 <br>Workflow:
 [Hook B](#hook-b)
 ```
@@ -38,7 +36,7 @@ Format rules:
 - **One entry per line.** This is critical for avoiding merge conflicts.
 - **Skills** and **Hooks** are separated by a blank line.
 - Skills are grouped into subcategories: Git, Issues and Worktrees, Code Review, Code Quality, Writing, Scaffolding, CI and Release, Agents.
-- Hooks are grouped into subcategories: Security, Workflow.
+- Hooks are grouped by hook category; omit empty hook categories.
 - Subcategory labels use `<br>Name:` format (plain text with trailing colon) on their own line.
 - The first link in each subcategory has no leading middle dot; subsequent links start with `∙` (middle dot, space).
 - Skills and hooks are listed alphabetically within their respective groups/subcategories.
@@ -69,14 +67,13 @@ Use this guide to determine which subcategory a new skill belongs to. Each subca
 
 Use this guide to determine which subcategory a new hook belongs to. Each subcategory maps directly to a marketplace `category` value.
 
-| Subcategory  | Marketplace category | Covers                                | Examples                       |
-| ------------ | -------------------- | ------------------------------------- | ------------------------------ |
-| **Security** | `security`           | Hooks that block dangerous operations | block-rm-rf                    |
-| **Workflow** | `workflow`           | General workflow utility hooks        | notify, update-docs-reminder   |
+| Subcategory  | Marketplace category | Covers                              | Examples                     |
+| ------------ | -------------------- | ----------------------------------- | ---------------------------- |
+| **Workflow** | `workflow`           | General workflow utility hooks      | notify, update-docs-reminder |
 
 ### Adding a New Hook
 
-1. Insert a new line with `∙ [Hook Name](#hook-name)` in alphabetical order within the appropriate subcategory (Security or Workflow). If the new entry is the first in its subcategory, omit the leading `∙`.
+1. Insert a new line with `∙ [Hook Name](#hook-name)` in alphabetical order within the appropriate subcategory. If the new entry is the first in its subcategory, omit the leading `∙`.
 1. Add an H3 description section (see below).
 1. Create a per-plugin README (see below).
 

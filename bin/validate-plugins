@@ -12,24 +12,6 @@ function error() {
   errors=$((errors + 1))
 }
 
-# Deprecated or Claude-only hook plugins that intentionally skip Codex hook registration.
-# block-rm-rf is pending removal, so it remains exempt instead of receiving Codex compatibility work.
-CODEX_HOOK_MANIFEST_EXEMPTIONS=("block-rm-rf")
-readonly CODEX_HOOK_MANIFEST_EXEMPTIONS
-
-function is_codex_hook_manifest_exempt() {
-  local plugin_name="${1}"
-  local exempt_name
-
-  for exempt_name in "${CODEX_HOOK_MANIFEST_EXEMPTIONS[@]}"; do
-    if [[ "${plugin_name}" == "${exempt_name}" ]]; then
-      return 0
-    fi
-  done
-
-  return 1
-}
-
 # ─── 1. Every plugin directory has plugin.json ───────────────────────────────
 
 for dir in plugins/*/; do
@@ -251,10 +233,6 @@ for dir in plugins/*/; do
   codex_json="${dir}.codex-plugin/plugin.json"
 
   if [[ ! -f "${hooks_json}" ]]; then
-    continue
-  fi
-
-  if is_codex_hook_manifest_exempt "${local_name}"; then
     continue
   fi
 
