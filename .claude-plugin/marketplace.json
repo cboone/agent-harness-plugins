@@ -371,7 +371,7 @@
       "name": "scaffold-go-cli",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-cli",
-      "version": "2.7.1"
+      "version": "2.7.2"
     },
     {
       "author": {
@@ -427,7 +427,7 @@
       "name": "setup-ci",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-ci",
-      "version": "1.9.1"
+      "version": "1.9.2"
     },
     {
       "author": {
