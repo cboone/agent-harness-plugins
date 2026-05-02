@@ -167,6 +167,64 @@ else
   fi
 fi
 
+# ─── 11. .codex-plugin/plugin.json name matches directory name ──────────────
+
+for dir in plugins/*/; do
+  local_name="$(basename "${dir}")"
+  codex_json="${dir}.codex-plugin/plugin.json"
+  if [[ ! -f "${codex_json}" ]]; then
+    continue
+  fi
+
+  json_name="$(jq -r '.name' "${codex_json}")"
+  if [[ "${json_name}" != "${local_name}" ]]; then
+    error "Plugin '${local_name}': .codex-plugin/plugin.json name '${json_name}' does not match directory name"
+  fi
+done
+
+# ─── 12. Required fields in .codex-plugin/plugin.json ───────────────────────
+
+for dir in plugins/*/; do
+  local_name="$(basename "${dir}")"
+  codex_json="${dir}.codex-plugin/plugin.json"
+  if [[ ! -f "${codex_json}" ]]; then
+    continue
+  fi
+
+  for field in "${PLUGIN_REQUIRED_FIELDS[@]}"; do
+    value="$(jq -r ".${field} // empty" "${codex_json}")"
+    if [[ -z "${value}" ]]; then
+      error "Plugin '${local_name}': .codex-plugin/plugin.json missing required field '${field}'"
+    fi
+  done
+done
+
+# ─── 13. Dual manifests agree on shared fields ──────────────────────────────
+# When both .claude-plugin/plugin.json and .codex-plugin/plugin.json exist,
+# they must agree on identity and metadata fields. `description` and `hooks`
+# are allowed to differ (description for system-specific phrasing; hooks is
+# the whole reason for a separate codex manifest).
+
+DUAL_MANIFEST_SHARED_FIELDS=("author" "homepage" "keywords" "license" "name" "repository" "version")
+readonly DUAL_MANIFEST_SHARED_FIELDS
+
+for dir in plugins/*/; do
+  local_name="$(basename "${dir}")"
+  claude_json="${dir}.claude-plugin/plugin.json"
+  codex_json="${dir}.codex-plugin/plugin.json"
+  if [[ ! -f "${claude_json}" ]] || [[ ! -f "${codex_json}" ]]; then
+    continue
+  fi
+
+  for field in "${DUAL_MANIFEST_SHARED_FIELDS[@]}"; do
+    claude_value="$(jq -cS ".${field}" "${claude_json}")"
+    codex_value="$(jq -cS ".${field}" "${codex_json}")"
+    if [[ "${claude_value}" != "${codex_value}" ]]; then
+      error "Plugin '${local_name}': field '${field}' differs between .claude-plugin/plugin.json (${claude_value}) and .codex-plugin/plugin.json (${codex_value})"
+    fi
+  done
+done
+
 # ─── Summary ────────────────────────────────────────────────────────────────
 
 if [[ ${errors} -gt 0 ]]; then
