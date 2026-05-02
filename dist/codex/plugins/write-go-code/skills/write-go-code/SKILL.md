@@ -1,8 +1,8 @@
 ---
 name: write-go-code
 description: >-
-  Go code style guide based on Google Go Style Guide, Effective Go, and Code
-  Review Comments.
+  Go code style guide based on Google Go Style Guide, Effective Go, Code Review
+  Comments, and Cobra CLI behavior.
 ---
 
 # Write Go Code

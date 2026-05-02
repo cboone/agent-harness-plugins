@@ -1,6 +1,6 @@
 # Write Go Code
 
-Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments.
+Go code style guide based on Google Go Style Guide, Effective Go, Code Review Comments, and Cobra CLI behavior.
 
 **Type:** Skill
 **Trigger:** `/write-go-code` (also activates automatically)

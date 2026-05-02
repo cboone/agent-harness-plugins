@@ -159,4 +159,4 @@ Quick reference for code reviews. For detailed guidance, see `../comprehensive/`
 
 ## CLI Commands
 
-- [ ] Cobra root commands with both `Run`/`RunE` and subcommands combine usage lines while preserving positional arguments from `Use`, such as `myapp [file] [command] [flags]`
+- [ ] Cobra root commands with both `Run`/`RunE` and subcommands combine usage lines only when root `Use` has no positional arguments; otherwise, keep root args and subcommands as separate alternative usage lines
