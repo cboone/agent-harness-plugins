@@ -59,12 +59,12 @@ Each entry in the `plugins` array has these fields, alphabetized:
 Categories currently used in this repository. Each marketplace category corresponds to a subcategory in the root `README.md` table of contents:
 
 - `"agents"` -- meta-tools for the agent ecosystem (e.g., `clean-up-agent-config`, `create-plugin`)
-- `"ci-and-release"` -- CI workflows, installers, release automation, repo audits (e.g., `setup-ci`, `add-goreleaser-homebrew`, `setup-secret-scanning`, `update-everything`)
+- `"ci-and-release"` -- CI workflows, installers, release automation, repo audits (e.g., `setup-ci`, `add-goreleaser-homebrew`, `setup-secret-scanning`)
 - `"code-quality"` -- style guides for code, linting, formatting, language-specific testing (e.g., `lint-and-fix`, `write-go-code`)
 - `"code-review"` -- responding to external review feedback (e.g., `address-review`, `resolve-copilot-pr-feedback`)
 - `"git"` -- the commit-to-PR pipeline (e.g., `commit`, `pr`, `merge-main`, `release`, `review-branch`, `use-git`)
 - `"issues-and-worktrees"` -- issue management and multi-agent worktree workflows (e.g., `create-issue`, `create-worktree`, `suggest-next-issue`)
-- `"scaffolding"` -- project and repository scaffolding (e.g., `scaffold-go-cli`, `scaffold-new-repo`, `bootstrap-project`)
+- `"scaffolding"` -- project and repository scaffolding (e.g., `scaffold-go-cli`, `scaffold-new-repo`, `bootstrap-project`, `refresh-project-scaffolding`)
 - `"workflow"` -- general workflow utility hooks (e.g., `notify`, `update-docs-reminder`)
 - `"writing"` -- style and structure guides for prose and document artifacts (e.g., `write-markdown`, `write-pandoc-markdown`, `write-math`, `write-formalization-roadmap`)
 

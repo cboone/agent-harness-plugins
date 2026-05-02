@@ -43,6 +43,7 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 [Add Community Files](#add-community-files)
 ∙ [Bootstrap Project](#bootstrap-project)
 ∙ [Manage Repo Licensing](#manage-repo-licensing)
+∙ [Refresh Project Scaffolding](#refresh-project-scaffolding)
 ∙ [Scaffold Go CLI](#scaffold-go-cli)
 ∙ [Scaffold Go Library](#scaffold-go-library)
 ∙ [Scaffold New Repo](#scaffold-new-repo)
@@ -53,7 +54,6 @@ A collection of plugins for [Claude Code](https://docs.anthropic.com/en/docs/cla
 ∙ [Setup CI](#setup-ci)
 ∙ [Setup Installers](#setup-installers)
 ∙ [Setup Secret Scanning](#setup-secret-scanning)
-∙ [Update Everything](#update-everything)
 <br>Agents:
 [Clean Up Agent Config](#clean-up-agent-config)
 ∙ [Create Plugin](#create-plugin)
@@ -345,7 +345,7 @@ Pandoc-flavored Markdown conventions for academic papers with LaTeX output. Cove
 
 ### Scaffolding
 
-Orchestrate project setup. Assess what is needed and run all applicable scaffolding and setup tools in the correct order.
+Orchestrate project setup and refresh existing scaffolding. Assess what is needed, run all applicable setup tools in the correct order, and keep generated project files aligned with current templates.
 
 #### Add Community Files
 
@@ -368,6 +368,13 @@ Bootstrap, audit, and maintain REUSE-style mixed-license coverage in a repositor
 > **Trigger:** `/manage-repo-licensing` (also activates automatically)
 > **Requires:** [`reuse`](https://reuse.software/). Install via [Homebrew](https://brew.sh): `brew install reuse`
 > **Details:** [README](./plugins/manage-repo-licensing/README.md)
+
+#### Refresh Project Scaffolding
+
+Refresh existing project scaffolding against the latest plugin templates. The maintenance companion to Bootstrap Project: bootstrap sets things up, this keeps them current. Detects which tools have been used, compares files against current templates, presents a plan, and applies confirmed updates.
+
+> **Trigger:** `/refresh-project-scaffolding`
+> **Details:** [README](./plugins/refresh-project-scaffolding/README.md)
 
 #### Scaffold Go CLI
 
@@ -399,7 +406,7 @@ Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest, git-
 
 ### CI and Release
 
-Wire up GitHub Actions CI, secret scanning, release automation, and installer distribution for an existing project. Optimize and audit those workflows over time.
+Wire up GitHub Actions CI, secret scanning, release automation, and installer distribution for an existing project. Optimize those workflows over time.
 
 #### Add GoReleaser Homebrew
 
@@ -435,13 +442,6 @@ Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and
 
 > **Trigger:** `/setup-secret-scanning`
 > **Details:** [README](./plugins/setup-secret-scanning/README.md)
-
-#### Update Everything
-
-Audit a repository against the latest plugin templates and update anything out of date. The maintenance companion to Bootstrap Project: bootstrap sets things up, this keeps them current. Detects which tools have been used, compares files against current templates, presents a plan, and applies confirmed updates.
-
-> **Trigger:** `/update-everything`
-> **Details:** [README](./plugins/update-everything/README.md)
 
 ### Agents
 

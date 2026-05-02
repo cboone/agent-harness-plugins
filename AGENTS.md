@@ -423,12 +423,12 @@ cboone-cc-plugins/
     │   │   └── hooks.json
     │   └── scripts/
     │       └── check-docs
-    ├── update-everything/           # Audit and update repo against latest templates
+    ├── refresh-project-scaffolding/ # Refresh existing project scaffolding against latest templates
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
     │   └── skills/
-    │       └── update-everything/
+    │       └── refresh-project-scaffolding/
     │           └── SKILL.md
     ├── update-review/               # Review update synthesizer skill
     │   ├── .claude-plugin/
