@@ -94,7 +94,7 @@ Then add `audit_bun` to the call list at the bottom of the script. The `record_d
 ## Operational Notes
 
 - The script requires `gh` (authenticated), `jq`, and `curl`. CI runners on `ubuntu-latest` have all three preinstalled. Locally, install via `brew install gh jq curl`.
-- The script reads no secrets and writes no files; it's safe to run from any working directory in the repo.
+- The script reads no secrets and writes no files. It `cd`s to `git rev-parse --show-toplevel` on entry, so it's safe to invoke from any working directory inside the repo (it errors out cleanly if invoked outside a git checkout).
 - Empty stdout is the success signal. If the script errors out (a syntax error, a missing tool), the workflow's `Run audit` step fails before the issue-management steps run.
 
 ## Verifying Locally

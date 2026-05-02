@@ -85,7 +85,7 @@ If the corresponding version file is missing in the repo, create it with current
 
 If `package.json` has `"packageManager": "yarn@X.Y.Z"`:
 
-1. Compute the SHA-512 integrity hash. Preferred path: `corepack prepare yarn@X.Y.Z --activate` then read the resulting `packageManager` field — Corepack writes the hash itself. Fall back to fetching `https://repo.yarnpkg.com/${X.Y.Z}/packages/yarnpkg-cli/bin/yarn.js` and computing `sha512sum` if Corepack is unavailable.
+1. Compute the SHA-512 integrity hash. Preferred path: `corepack prepare yarn@X.Y.Z --activate` then read the resulting `packageManager` field — Corepack writes the hash itself. Fall back to fetching `https://repo.yarnpkg.com/${X.Y.Z}/packages/yarnpkg-cli/bin/yarn.js` and computing `shasum -a 512` if Corepack is unavailable (`shasum` is portable across macOS and Linux; `sha512sum` is Linux-only).
 2. Rewrite the field as `"yarn@X.Y.Z+sha512.<hash>"`.
 3. Verify with `corepack enable && yarn --version`.
 

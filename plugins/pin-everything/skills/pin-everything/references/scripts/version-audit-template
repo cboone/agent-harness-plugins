@@ -20,6 +20,15 @@
 
 set -euo pipefail
 
+# Resolve to the repo root so all relative paths below (TOOL_VERSIONS_FILE,
+# PACKAGE_JSON, SCAN_PATHS) work regardless of the caller's working directory.
+repo_root=$(git rev-parse --show-toplevel 2> /dev/null || true)
+if [[ -z "${repo_root}" ]]; then
+  echo "version-audit: must be run inside a git repository" >&2
+  exit 1
+fi
+cd "${repo_root}"
+
 # REPLACE: SCAN_PATHS lists the directories the audit greps for embedded pins.
 # Tailor this to the consuming repo's layout. Defaults match cboone-cc-plugins.
 SCAN_PATHS=(.github/ plugins/)
