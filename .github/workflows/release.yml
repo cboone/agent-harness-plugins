@@ -5,11 +5,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Serialize releases on main so two rapid merges cannot race to create the same
-# tag. cancel-in-progress is false because each push may correspond to a
-# distinct catalog state we still want to publish.
+# Serialize releases so two rapid merges cannot race to create the same tag.
+# cancel-in-progress is false because each push may correspond to a distinct
+# catalog state we still want to publish.
 concurrency:
-  group: release-main
+  group: ${{ github.repository }}-${{ github.workflow }}
   cancel-in-progress: false
 
 permissions:
@@ -45,10 +45,12 @@ jobs:
           # produce a tag and Release for a marketplace state that
           # bin/validate-plugins rejects in CI. Running the full validator
           # keeps automation in lockstep with the validator and ci.yml.
-          # Rule 10 of bin/validate-plugins covers the metadata.version
-          # check via bin/compute-catalog-state, so this also subsumes the
-          # previous standalone metadata-version verification.
+          # Rule 10 of bin/validate-plugins covers the metadata.version check
+          # via bin/compute-catalog-state, so this also subsumes the previous
+          # standalone metadata-version verification.
           bin/validate-plugins
+          bin/build-opencode-mirror
+          git diff --exit-code dist/
 
       - name: Compute catalog state
         id: state

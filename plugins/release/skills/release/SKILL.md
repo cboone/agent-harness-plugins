@@ -305,7 +305,7 @@ fi
 Cases:
 
 - **No existing tag** (`existing_commit` empty): proceed.
-- **Remote tag exists at `HEAD`** (`existing_tag_source=remote`): a release for this catalog state is already published at this commit. Report that there is nothing to release and stop. Do not retag or republish.
+- **Remote tag exists at `HEAD`** (`existing_tag_source=remote`): do not retag. If no release workflow was detected, continue to M8c so the skill can verify or create the GitHub Release for the existing remote tag; a previous manual release may have pushed the tag and failed before `gh release create`. If a release workflow was detected, report that the catalog tag is already on the remote and the workflow owns GitHub Release publication; do not push the tag again.
 - **Only a local tag exists at `HEAD`** (`existing_tag_source=local`): the catalog state is already tagged locally, but it is not known to be published. Do not report that there is nothing to release. Continue to M5-M8, skip creating a replacement tag in M7, and publish the existing local tag if the user chooses to publish. If no remote is configured, M8 will stop with the normal "configure a Git remote" guidance.
 - **Tag exists at a different commit**: distinguish "catalog state genuinely unchanged" from "real collision" by comparing the marketplace plugin versions at the tagged commit against `HEAD`'s. This is the same comparison `.github/workflows/release.yml` performs:
 
@@ -315,7 +315,9 @@ Cases:
 
   if [[ -n "${tagged_versions}" && "${tagged_versions}" == "${head_versions}" ]]; then
     # Plugin versions are identical, so the catalog state is unchanged.
-    # Report that there is nothing to release and stop. Do not retag.
+    # Do not retag. If no release workflow was detected, continue to M8c
+    # so the skill can create a missing GitHub Release for the existing
+    # remote tag. Otherwise report that the release workflow owns publication.
     :
   else
     # Real catalog-state collision; abort with the message below.
@@ -406,6 +408,8 @@ CRITICAL: Never use `git commit --amend`. Always create a new commit. If a pre-c
 Skip this step entirely if a **marketplace push-to-main workflow** was detected in step 1. The workflow is the only writer of `catalog-*` tags in that case; creating one locally would break workflow idempotency by registering a tag the workflow then sees as already existing.
 
 If M4 found an **only-local tag at `HEAD`** (`existing_tag_source=local`), do not create a replacement tag. Reuse that existing local tag in M8 so the user can finish publishing it.
+
+If M4 found an **existing remote tag** to reuse (either at `HEAD` or at a different commit with identical plugin versions), do not create a replacement tag. The remote tag is authoritative for this catalog state. In the no-workflow path, M8c can still create the missing GitHub Release for that existing tag.
 
 Otherwise, create a GPG-signed annotated tag using the exact catalog state:
 
@@ -500,6 +504,16 @@ The tag-triggered release workflow will create the GitHub Release.
 
 ##### M8c. No release workflow detected
 
+If M4 found an **existing remote tag** to reuse, this is a release-recovery path rather than a tag-publishing path. Do not push `CATALOG-STATE` again and do not create a replacement local tag. If a release commit was created locally, ask whether to push the commit before creating the GitHub Release; if there are no local commits to publish, skip the commit push as well.
+
+Before creating a GitHub Release for an existing remote tag, check whether it already exists:
+
+```bash
+gh release view CATALOG-STATE --json tagName
+```
+
+If the release exists, report that the catalog tag and GitHub Release already exist and stop. If `gh release view` reports the release is missing, continue with release-note creation and `gh release create` below. If it fails for another reason (auth, API, or network), report the error and stop rather than treating it as missing.
+
 Ask the user if they want to push the commit and tag:
 
 ```text
@@ -512,10 +526,12 @@ If the user declines, show the manual commands and stop:
 Marketplace release CATALOG-STATE is ready locally.
 
 To publish manually:
-  git push origin HEAD
-  git push origin CATALOG-STATE
-  gh release create CATALOG-STATE --title "Marketplace CATALOG-STATE" --notes-file <release-notes-file> --verify-tag
+git push origin HEAD
+git push origin CATALOG-STATE
+gh release create CATALOG-STATE --title "Marketplace CATALOG-STATE" --notes-file <release-notes-file> --verify-tag
 ```
+
+If M4 found an existing remote tag to reuse, omit `git push origin CATALOG-STATE` from the manual commands. Keep `gh release create ... --verify-tag`, since the tag is already on the remote.
 
 If the user accepts, push the commit and tag.
 
@@ -531,6 +547,8 @@ If no remote is configured, report the error and tell the user to configure a Gi
 git push origin HEAD
 git push origin CATALOG-STATE
 ```
+
+If M4 found an existing remote tag to reuse, skip `git push origin CATALOG-STATE`. The tag is already on the remote, and pushing it again can fail or be a no-op depending on local tag state.
 
 If the push is rejected, report the error and stop. Never force push. Show the remaining manual commands so the user can complete the process after resolving the push issue.
 
@@ -874,9 +892,9 @@ Release vVERSION published.
 - **Version file not found:** Skip source file updates, rely on git tag, inform the user.
 - **CHANGELOG parse error:** If the existing file has an unrecognized format, warn the user and offer to create a new one or append a version section at the top.
 - **Tag already exists:** Abort with a message that the tag `vVERSION` already exists. Suggest choosing a different version.
-- **Marketplace catalog remote tag already exists at HEAD:** A release for this catalog state is already published at this commit. Report that there is nothing to release and stop; do not retag.
+- **Marketplace catalog remote tag already exists at HEAD:** Do not retag. In the no-workflow path, continue to M8c to verify or create the GitHub Release for the existing remote tag. With release workflow automation, report that the remote tag exists and the workflow owns release publication.
 - **Marketplace catalog local-only tag already exists at HEAD:** The catalog state is tagged locally but is not known to be published. Continue through M5-M8, skip replacement tag creation in M7, and publish the existing local tag if the user chooses to publish.
-- **Marketplace catalog tag already exists at a different commit, same plugin versions:** The catalog state is genuinely unchanged (e.g., a docs-only follow-up reused the previous catalog state). Report that there is nothing to release and stop; do not retag.
+- **Marketplace catalog tag already exists at a different commit, same plugin versions:** The catalog state is genuinely unchanged (e.g., a docs-only follow-up reused the previous catalog state). Do not retag. In the no-workflow path, continue to M8c to verify or create the GitHub Release for the existing remote tag; with release workflow automation, report that the workflow owns release publication.
 - **Marketplace catalog tag already exists at a different commit, different plugin versions:** Treat as a catalog-state collision (the sum-based tag format is not collision-free). Abort with the collision-aware message in M4 and ask the user to bump one plugin so the marketplace produces a unique catalog state. Do not retag or rename.
 - **Not a git repository:** Abort immediately.
 - **No remote configured:** Skip comparison links in CHANGELOG, skip push and GitHub Release in step 11, warn the user.
