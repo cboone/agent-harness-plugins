@@ -42,6 +42,35 @@ jobs:
           echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
           echo "Catalog state: ${tag}"
 
+      - name: Verify committed metadata.version matches computed catalog state
+        env:
+          TAG: ${{ steps.state.outputs.tag }}
+        run: |
+          # Refuse to publish if .claude-plugin/marketplace.json's
+          # metadata.version disagrees with what bin/compute-catalog-state
+          # derives from .plugins[].version. A bad merge could otherwise land
+          # on main with stale metadata, and this workflow would happily mint
+          # a tag and Release for the computed state even though the
+          # repository advertises a different one (and bin/validate-plugins
+          # rejects it). Gating here keeps automation in lockstep with the
+          # validator.
+          metadata_version="$(jq -er '.metadata.version // empty' .claude-plugin/marketplace.json)"
+          if [[ "${metadata_version}" != "${TAG}" ]]; then
+            {
+              echo "::error::Marketplace metadata.version '${metadata_version}' does not match computed catalog state '${TAG}'."
+              echo
+              echo "The committed .claude-plugin/marketplace.json is out of sync with"
+              echo "its own .plugins[].version entries. Refusing to publish a tag and"
+              echo "Release derived from the computed state while the repository"
+              echo "advertises a different one."
+              echo
+              echo "To resolve, run bin/compute-catalog-state and update"
+              echo ".claude-plugin/marketplace.json's metadata.version to match,"
+              echo "then push or merge again."
+            } >&2
+            exit 1
+          fi
+
       - name: Check whether tag and release already exist
         id: check
         env:
