@@ -13,7 +13,7 @@ Detect the project type, recommend appropriate linters and formatters, install t
 
 ### 1. Detect Project Type
 
-Scan for language and file-type markers using Glob. **Exclude `node_modules/`, `.yarn/`, and other dependency directories from all searches** to avoid false positives from vendored code.
+Scan for language and file-type markers using Glob. **Exclude `node_modules/`, `.yarn/`, `.lake/` (Lean dependency/build directory, including `.lake/packages/**`), and other dependency directories from all searches** to avoid false positives from vendored code.
 
 Use both files and directories as signals:
 
@@ -26,6 +26,7 @@ Use both files and directories as signals:
 | `build.zig`, `build.zig.zon`                                                                | Zig                   |
 | `Gemfile`, `*.gemspec`, `.ruby-version`                                                     | Ruby                  |
 | `Package.swift`, `*.xcodeproj`, `*.xcworkspace`                                             | Swift                 |
+| `lakefile.toml`, `lakefile.lean`, `lean-toolchain`, `*.lean`                                | Lean                  |
 | `*.sh`, `bin/*`, `scripts/*`                                                                | Shell                 |
 | `*.zsh`, `#!/usr/bin/env zsh` shebangs, `.zshrc`, `.zshenv`                                 | Zsh                   |
 | `*.css`, `*.scss`, `*.less`                                                                 | CSS/SCSS              |
@@ -48,32 +49,35 @@ For CSS/SCSS projects, check whether Tailwind CSS is in use by looking for `tail
 
 For JavaScript/TypeScript projects, perform framework sub-detection to determine which ESLint plugins to install. Check `package.json` dependencies for `react`/`react-dom` (React), `next` (Next.js), `express`/`fastify`/`koa`/`hapi` (Node.js), and look for server-side directory markers (`server.*`, `api/`, `bin/`). See `./references/languages/javascript.md` for the full detection table.
 
+For Lean projects (any of `lakefile.toml`, `lakefile.lean`, `lean-toolchain`, or `*.lean` files present, with `.lake/` excluded so dependency-vendored `lakefile.*` and `*.lean` files do not trigger detection), the project uses `lake lint` driven by `lintDriver = "batteries/runLinter"` rather than an external linter. There is no tool to install: `lake` ships with the toolchain, `batteries/runLinter` ships with Batteries (already a transitive Mathlib dependency). Setup is wiring (the `lintDriver` field in `lakefile.toml`, a `lean-lint` Makefile target, and a CI step) rather than installation. Skip any toolchain install in this skill; the `scaffold-lean-library` skill handles `elan` and the bootstrap script. See `./references/languages/lean.md` for details.
+
 If multiple languages are detected, present all of them (monorepo scenario).
 
 ### 2. Detect Existing Linters
 
 Check for existing linter configs using these patterns (aligned with the `lint-and-fix` detection table):
 
-| Config file(s)                                                     | Tool          |
-| ------------------------------------------------------------------ | ------------- |
-| `eslint.config.*`, `.eslintrc.*`                                   | ESLint        |
-| `.prettierrc*`, `prettier.config.*`                                | Prettier      |
-| `.markdownlint.json`, `.markdownlint.yaml`, `.markdownlint-cli2.*` | markdownlint  |
-| `.shellcheckrc`                                                    | ShellCheck    |
-| `.editorconfig`                                                    | EditorConfig  |
-| `.golangci.yml`, `.golangci.yaml`                                  | golangci-lint |
-| `pyproject.toml` with `[tool.ruff]`                                | Ruff          |
-| `rustfmt.toml`, `.rustfmt.toml`                                    | rustfmt       |
-| `clippy.toml`, `.clippy.toml`                                      | Clippy        |
-| `deny.toml`                                                        | cargo-deny    |
-| `typos.toml`, `_typos.toml`                                        | typos         |
-| `.rubocop.yml`                                                     | RuboCop       |
-| `.stylelintrc*`, `stylelint.config.*`                              | Stylelint     |
-| `knip.json`, `knip.config.*`, `knip.ts`                            | Knip          |
-| `.hadolint.yaml`, `.hadolint.yml`                                  | Hadolint      |
-| `.yamllint.yml`, `.yamllint.yaml`                                  | yamllint      |
-| `taplo.toml`, `.taplo.toml`                                        | Taplo         |
-| `cspell.json`, `.cspell.json`, `cspell.config.*`                   | cspell        |
+| Config file(s)                                                                      | Tool          |
+| ----------------------------------------------------------------------------------- | ------------- |
+| `eslint.config.*`, `.eslintrc.*`                                                    | ESLint        |
+| `.prettierrc*`, `prettier.config.*`                                                 | Prettier      |
+| `.markdownlint.json`, `.markdownlint.yaml`, `.markdownlint-cli2.*`                  | markdownlint  |
+| `.shellcheckrc`                                                                     | ShellCheck    |
+| `.editorconfig`                                                                     | EditorConfig  |
+| `.golangci.yml`, `.golangci.yaml`                                                   | golangci-lint |
+| `pyproject.toml` with `[tool.ruff]`                                                 | Ruff          |
+| `rustfmt.toml`, `.rustfmt.toml`                                                     | rustfmt       |
+| `clippy.toml`, `.clippy.toml`                                                       | Clippy        |
+| `deny.toml`                                                                         | cargo-deny    |
+| `typos.toml`, `_typos.toml`                                                         | typos         |
+| `.rubocop.yml`                                                                      | RuboCop       |
+| `.stylelintrc*`, `stylelint.config.*`                                               | Stylelint     |
+| `knip.json`, `knip.config.*`, `knip.ts`                                             | Knip          |
+| `.hadolint.yaml`, `.hadolint.yml`                                                   | Hadolint      |
+| `.yamllint.yml`, `.yamllint.yaml`                                                   | yamllint      |
+| `taplo.toml`, `.taplo.toml`                                                         | Taplo         |
+| `cspell.json`, `.cspell.json`, `cspell.config.*`                                    | cspell        |
+| `lakefile.toml` containing `lintDriver`, `lakefile.lean` containing `lintDriver :=` | `lake lint`   |
 
 **CI workflow scanning**: Also scan `.github/workflows/*.yml` for tools running without config files. For example, a CI step like `shellcheck -S warning scripts/*` means ShellCheck is already in use even without a `.shellcheckrc`. Mark these tools as "Partial" (running in CI but missing local config). A partial tool should still appear in recommendations, but suggest adding the config file for local/CI parity rather than a full setup.
 
@@ -98,6 +102,8 @@ Based on detected languages and file types, recommend the appropriate tool stack
 
 Read the appropriate reference files for details on each tool.
 
+**Lean projects**: Lean has no external linter to install. Recommend `lake lint` driven by `lintDriver = "batteries/runLinter"` instead of a tool install. Setup is wiring (the `lintDriver` field, a `lean-lint` Makefile target gated on `_check-mathlib-cache`, and a CI step). Cross-language tools (markdownlint-cli2, cspell, EditorConfig, yamllint, Actionlint) still apply on top. See `./references/languages/lean.md`.
+
 Present recommendations in a table using three status levels:
 
 - **Existing**: Config file found and tool is fully set up. Skip in recommendations.
@@ -110,6 +116,7 @@ Present recommendations in a table using three status levels:
 | JavaScript   | ESLint + Prettier              | New      |
 | Shell        | ShellCheck, shfmt              | Partial  |
 | Zsh          | shellcheck, shfmt, shellharden, checkbashisms, zsh -n, zcompile, setopt warnings | New      |
+| Lean         | lake lint (lintDriver = "batteries/runLinter")                                   | Partial  |
 | Formatting   | Prettier, EditorConfig         | New      |
 | Markdown     | markdownlint-cli2              | Existing |
 | Docker       | Hadolint                       | New      |
@@ -130,6 +137,8 @@ For each selected tool, install using the project's package manager. Read the ap
 - Language-specific: `./references/languages/<language>.md`
 - Cross-language tools: `./references/tools/<tool>.md`
 
+**Lean has nothing to install in this step.** `lake` ships with the toolchain and `batteries/runLinter` ships with the Batteries dependency. Do not install `lean`, `elan`, or any external Lean linter from this skill; the `scaffold-lean-library` skill owns toolchain provisioning. Skip directly to the wiring steps (config, Makefile, CI) below.
+
 #### Pin tool versions to mitigate supply-chain risk
 
 The reference files pin install commands to specific versions (e.g., `cargo install --locked --version X.Y.Z <crate>`, `pip install '<pkg>==X.Y.Z'`, `go install <path>@vX.Y.Z`). Unpinned installs (`@latest`, no `==`) pull whatever the registry currently serves; an attacker who compromises a maintainer account can publish a malicious patch release and have it picked up by every install that ran after the publish. Specific-version pins make the install reproducible and force an explicit bump when the version is updated.
@@ -143,11 +152,28 @@ Generate default config files and ignore files for each tool. Use templates from
 - **`.editorconfig`** from `./references/tools/editorconfig.md` (adapted to project languages)
 - **`.prettierrc.json`** and **`.prettierignore`** from `./references/tools/prettier.md`
 
+For **Lean projects**, the equivalent of "creating a config file" is adding the `lintDriver` field to `lakefile.toml` (or the `package` block of `lakefile.lean`):
+
+```toml
+lintDriver = "batteries/runLinter"
+```
+
+If the field is already present, mark Lean as "Existing" and skip. If `lakefile.toml` exists but lacks the field, offer to add it. If neither `lakefile.toml` nor `lakefile.lean` exists in the detected Lean project, defer to the `scaffold-lean-library` skill rather than synthesizing one here. See `./references/languages/lean.md` for the `lakefile.lean` form.
+
 Adapt to the project (e.g., TypeScript vs. JavaScript ESLint config, directory structure for ignore patterns).
 
 ### 7. Add Package Manager Scripts
 
 Add `lint`, `format`, and/or `lint:fix` scripts to `package.json`, `Makefile`, or equivalent. Read the language-specific reference for exact entries.
+
+For **Lean projects**, the script entry is a `lean-lint` Makefile target that wraps `lake lint` and depends on the `_check-mathlib-cache` private target:
+
+```makefile
+lean-lint: _check-mathlib-cache ## Run Lean linter (batteries)
+	lake lint
+```
+
+If a `Makefile` exists but has no `lean-lint` target, offer to add it. If the `Makefile` lacks `_check-mathlib-cache` as well, the project's Makefile predates the standard Mathlib-downstream target set; defer to the `scaffold-lean-library` skill rather than synthesizing the target wholesale here. If no `Makefile` exists at all, defer to the `scaffold-lean-library` skill.
 
 ### 8. Update Copilot Instructions
 
@@ -171,6 +197,11 @@ Ask whether to create a GitHub Actions workflow. If yes, read `./references/tool
 
 If a CI workflow already exists, offer to add lint steps to it rather than creating a new file.
 
+For **Lean projects**, scan `.github/workflows/*.yml` for the `leanprover/lean-action` action:
+
+- If found, confirm the `lint: true` input is set on the action. If it is, mark Lean CI as "Existing"; `lake lint` runs as part of the action. If `lint: true` is missing, offer to add it (or recommend a dedicated `lake lint` step if the project deliberately splits build, test, and lint into separate jobs).
+- If not found, defer to the `scaffold-lean-library` skill rather than synthesizing a Lean CI workflow here.
+
 **Tool dependency verification**: For every tool referenced in Makefile targets, confirm the CI workflow includes a corresponding setup/install step. Common tool-to-action mappings (all third-party `uses:` refs are SHA-pinned with a comment that matches the upstream tag, typically `# vX.Y.Z` but `# X.Y.Z` when upstream omits the `v` prefix, per the convention in `./references/tools/github-actions-ci.md`; refresh both SHA and comment to current latest before emitting):
 
 | Tool          | CI Setup                                                                                                                  |
@@ -187,6 +218,7 @@ If a CI workflow already exists, offer to add lint steps to it rather than creat
 | hadolint      | `hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0`                                              |
 | actionlint    | `raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2`                                              |
 | cspell        | `streetsidesoftware/cspell-action@de2a73e963e7443969755b648a1008f77033c5b2 # v8.4.0`                                      |
+| lake lint     | `leanprover/lean-action@<sha> # <tag>` (with `lint: true`); refresh both SHA and tag to current latest before emitting    |
 
 ### 10. Run Initial Lint (Optional)
 

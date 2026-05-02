@@ -436,12 +436,12 @@
       "category": "code-quality",
       "description": "Detect project languages, recommend appropriate linters and formatters, install them, and generate config files.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["cspell", "eslint", "formatting", "linting", "prettier", "ruff", "setup", "zsh"],
+      "keywords": ["cspell", "eslint", "formatting", "lean", "linting", "prettier", "ruff", "setup", "zsh"],
       "license": "MIT",
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.9.1"
+      "version": "1.10.0"
     },
     {
       "author": {
