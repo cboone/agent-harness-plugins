@@ -71,12 +71,12 @@ Reference: `./references/github-actions.md` for full recipes including annotated
 
 Replace inline pins in scaffolded CI with version-file refs so the version of record is a single file in the repo:
 
-| Inline form                       | Version-file form                                                  |
-| --------------------------------- | ------------------------------------------------------------------ |
-| `node-version: "X"`               | `node-version-file: ".tool-versions"`                              |
-| `ruby-version: "X"`               | `ruby-version-file: ".tool-versions"`                              |
-| `go-version: "stable"` or `"X.Y"` | `go-version-file: "go.mod"`                                        |
-| `python-version: "X.Y"`           | `python-version-file: ".python-version"`                           |
+| Inline form                       | Version-file form                                                                                                                                          |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node-version: "X"`               | `node-version-file: ".tool-versions"`                                                                                                                      |
+| `ruby-version: "X"`               | `ruby-version-file: ".tool-versions"`                                                                                                                      |
+| `go-version: "stable"` or `"X.Y"` | `go-version-file: "go.mod"`                                                                                                                                |
+| `python-version: "X.Y"`           | `python-version-file: ".python-version"`                                                                                                                   |
 | `zig-version: "X.Y.Z"`            | Action-direct (`mlugg/setup-zig`): omit (reads `build.zig.zon`). Wrapper (`cboone/gh-actions/.../zig-ci.yml` v2.2.0+): `zig-version-file: "build.zig.zon"` |
 
 If the corresponding version file is missing in the repo, create it with current LTS / stable values. Reference `./references/language-runtimes.md` for the LTS / stable lookup commands per language.
