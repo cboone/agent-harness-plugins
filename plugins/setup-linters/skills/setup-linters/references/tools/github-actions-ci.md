@@ -491,7 +491,7 @@ As an inline step:
 
 ```yaml
 - name: cspell
-  uses: streetsidesoftware/cspell-action@de2a73e963e7443969755b648a1008f77033c5b2 # v8.4.0
+  uses: cboone/gh-actions/actions/run-cspell@7371f5d84ff9f0b0e38bfde10ab7a46ddb331e92 # v2.2.0
 ```
 
 Or as a reusable workflow job (also covers markdownlint, prettier, yamllint):
