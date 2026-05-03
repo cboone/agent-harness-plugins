@@ -33,13 +33,14 @@ Do not paste a full Cobra default usage template from another project or a newer
 
 Guard the replacement so template drift is visible. An unchecked `strings.Replace` can silently leave help output unchanged when the installed Cobra template differs from the example block.
 
+Do not turn template drift into a production startup failure. If the default block is missing at runtime, leave the existing template in place so the CLI remains usable, and add a test that fails when the replacement no longer applies.
+
 Use `.UseLine()` when constructing the runnable command form. It preserves positional arguments from the command's `Use` string, such as `myapp [file]`, and respects options such as `DisableFlagsInUseLine`. Insert `[command]` before an existing `[flags]` suffix rather than adding `[flags]` yourself.
 
 ```go
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -49,44 +50,52 @@ const defaultUsageBlock = `Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} [command]{{end}}`
 
-const combinedUsageBlock = `Usage:{{usageLines .}}`
+const combinedUsageBlock = `{{usageBlock .}}`
+
+var usageTemplateReplaced bool
 
 func init() {
-	cobra.AddTemplateFunc("usageLines", usageLines)
-	if err := setUsageTemplate(rootCmd); err != nil {
-		panic(err)
-	}
+	cobra.AddTemplateFunc("usageBlock", usageBlock)
+	usageTemplateReplaced = setUsageTemplate(rootCmd)
 	rootCmd.AddCommand(newServeCommand())
 }
 
-func setUsageTemplate(cmd *cobra.Command) error {
+func setUsageTemplate(cmd *cobra.Command) bool {
 	usageTemplate := cmd.UsageTemplate()
 	if !strings.Contains(usageTemplate, defaultUsageBlock) {
-		return fmt.Errorf("unexpected Cobra usage template; update the Usage block replacement")
+		return false
 	}
 
 	cmd.SetUsageTemplate(strings.Replace(usageTemplate, defaultUsageBlock, combinedUsageBlock, 1))
-	return nil
+	return true
 }
 
-func usageLines(cmd *cobra.Command) string {
+func usageBlock(cmd *cobra.Command) string {
+	lines := usageLines(cmd)
+	if len(lines) == 0 {
+		return ""
+	}
+	return "Usage:\n  " + strings.Join(lines, "\n  ")
+}
+
+func usageLines(cmd *cobra.Command) []string {
 	if !cmd.Runnable() {
 		if cmd.HasAvailableSubCommands() {
-			return "\n  " + cmd.CommandPath() + " [command]"
+			return []string{cmd.CommandPath() + " [command]"}
 		}
-		return ""
+		return nil
 	}
 
 	useLine := cmd.UseLine()
 	if !cmd.HasAvailableSubCommands() {
-		return "\n  " + useLine
+		return []string{useLine}
 	}
 
 	if hasUseArgs(cmd) {
-		return "\n  " + useLine + "\n  " + cmd.CommandPath() + " [command]"
+		return []string{useLine, cmd.CommandPath() + " [command]"}
 	}
 
-	return "\n  " + insertCommandInUseLine(useLine)
+	return []string{insertCommandInUseLine(useLine)}
 }
 
 func hasUseArgs(cmd *cobra.Command) bool {
@@ -104,6 +113,17 @@ func insertCommandInUseLine(useLine string) string {
 
 If the guarded replacement fails because the project has already customized `UsageTemplate()`, inspect the local template and make the same narrow edit to its `Usage:` block. Keep all other sections from the project's current template intact.
 
+Add a test that fails when Cobra's default `Usage:` block changes:
+
+```go
+func TestUsageTemplateReplacement(t *testing.T) {
+	cmd := &cobra.Command{Use: "myapp"}
+	if !setUsageTemplate(cmd) {
+		t.Fatal("expected Cobra usage template replacement to apply")
+	}
+}
+```
+
 ## Expected usage forms
 
 The template should produce these forms:
@@ -118,11 +138,11 @@ The template should produce these forms:
 
 ## Verify help output
 
-When applying this guidance, run the CLI help for the root command and at least one child command:
+When applying this guidance, run the CLI's actual entrypoint for the root command and at least one child command. Use the package path or binary command that the project already uses; do not assume the main package lives at the repository root.
 
 ```bash
-go run . --help
-go run . child --help
+go run ./cmd/myapp --help
+go run ./cmd/myapp child --help
 ```
 
 Confirm that the root usage has one line, flags still render, subcommands still render, and grouped command sections still render if the project uses Cobra command groups.
