@@ -114,12 +114,13 @@ Read `./references/BASH.md` for the complete guide.
 Or with a navigation table:
 
 ```markdown
-- `references/essential/checklist.md` - Condensed, actionable rules
-- `references/comprehensive/naming.md` - Package names, identifiers, receivers
+- `./references/languages/go.md` - Go-specific setup guidance
+- `./references/tools/actionlint.md` - actionlint installation and usage
 ```
 
 ## Notes
 
-- Skills can have a flat `references/` directory or a categorized one (e.g., `references/essential/`, `references/comprehensive/`)
+- Workflow skills use flat `references/` with topic-named files by default. When a workflow skill needs subdirectories, use topical names such as `languages/`, `tools/`, or `scripts/`, not `essential/` plus `comprehensive/`
+- Style-guide skills, primarily `write-*`, may use a single canonical topic document such as `BASH.md` or split reference material into `essential/` plus `comprehensive/`. That split is for quick-reference versus deep-reference reading modes, not file count
 - Keep the SKILL.md focused on workflow and orchestration; put detailed reference material in separate files under `references/`
 - All paths in SKILL.md are relative to the skill directory
