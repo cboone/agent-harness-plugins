@@ -156,3 +156,7 @@ Quick reference for code reviews. For detailed guidance, see `../comprehensive/`
 - [ ] No import renaming unless collision
 - [ ] Pass values, not pointers, for small immutable data
 - [ ] Receiver type consistent across all methods of a type
+
+## CLI Commands
+
+- [ ] Cobra root commands with both `Run`/`RunE` and subcommands combine usage lines only when root `Use` has no positional arguments; otherwise, keep root args and subcommands as separate alternative usage lines
