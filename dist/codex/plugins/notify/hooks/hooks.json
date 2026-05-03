@@ -4,7 +4,7 @@
       {
         "hooks": [
           {
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify 'Claude Code' '' 'Waiting for input…' Ping",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify cc-idle",
             "type": "command"
           }
         ],
@@ -13,7 +13,7 @@
       {
         "hooks": [
           {
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify 'Claude Code' '' 'Needs input…' Ping",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify cc-elicit",
             "type": "command"
           }
         ],
@@ -22,7 +22,7 @@
       {
         "hooks": [
           {
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify 'Claude Code' '' 'Needs permission…' Ping",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify cc-permission",
             "type": "command"
           }
         ],
@@ -33,7 +33,7 @@
       {
         "hooks": [
           {
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify 'Claude Code' '' 'Auto-compacting…' Ping",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify cc-compact",
             "type": "command"
           }
         ],
@@ -44,7 +44,7 @@
       {
         "hooks": [
           {
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify stop",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify cc-stop",
             "type": "command"
           }
         ]

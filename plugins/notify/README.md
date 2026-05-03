@@ -21,7 +21,20 @@ Then select **Notify** from the available plugins.
 
 ```bash
 codex plugin marketplace add cboone/cboone-cc-plugins
-codex plugin install notify@cboone-cc-plugins
+```
+
+Enable plugin-bundled hooks once per host so the `Stop` and `PermissionRequest` hooks fire:
+
+```bash
+codex features enable plugin_hooks
+```
+
+Without this flag the plugin installs successfully but the hooks are silently ignored. See [Codex CLI known limitations](../../README.md#codex-cli-known-limitations) for context.
+
+Refresh the marketplace after repository updates:
+
+```bash
+codex plugin marketplace upgrade cboone-cc-plugins
 ```
 
 Codex's hook event enum does not include `Notification` or `PreCompact`, so the plugin only wires the `Stop` and `PermissionRequest` events on Codex. For idle / elicitation / compact-style banners, enable Codex's native `tui.notifications = true` in `~/.codex/config.toml` (the two are complementary; both can run at once).

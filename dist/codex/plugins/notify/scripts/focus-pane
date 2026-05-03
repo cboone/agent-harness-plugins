@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Activates a terminal app and (optionally) switches a tmux client to a pane.
+#
+# Used as the click handler for notifications produced by the notify plugin.
+# Failures are silent: the user clicked a notification, they should not see
+# an error if the target pane has since closed or no tmux client is attached.
+#
+# Usage: focus-pane <term-program> [<tmux-session> <tmux-window> <tmux-pane>]
+set -euo pipefail
+
+function bundle_id_for() {
+  local term_program="${1}"
+  case "${term_program}" in
+    Apple_Terminal) printf 'com.apple.Terminal' ;;
+    iTerm.app) printf 'com.googlecode.iterm2' ;;
+    ghostty) printf 'com.mitchellh.ghostty' ;;
+    WezTerm) printf 'com.github.wez.wezterm' ;;
+    vscode) printf 'com.microsoft.VSCode' ;;
+    alacritty) printf 'org.alacritty' ;;
+    *) printf 'com.apple.Terminal' ;;
+  esac
+}
+
+function activate_terminal() {
+  local bundle_id="${1}"
+  osascript -e "tell application id \"${bundle_id}\" to activate" > /dev/null 2>&1 || true
+}
+
+function switch_tmux_pane() {
+  local session="${1}"
+  local window="${2}"
+  local pane="${3}"
+  tmux switch-client -t "${session}" \; \
+    select-window -t "${session}:${window}" \; \
+    select-pane -t "${session}:${window}.${pane}" \
+    > /dev/null 2>&1 || true
+}
+
+function main() {
+  local term_program="${1:-}"
+  local tmux_session="${2:-}"
+  local tmux_window="${3:-}"
+  local tmux_pane="${4:-}"
+
+  local bundle_id
+  bundle_id="$(bundle_id_for "${term_program}")"
+  activate_terminal "${bundle_id}"
+
+  if [[ -n "${tmux_session}" && -n "${tmux_window}" && -n "${tmux_pane}" ]]; then
+    switch_tmux_pane "${tmux_session}" "${tmux_window}" "${tmux_pane}"
+  fi
+}
+
+main "${@}"

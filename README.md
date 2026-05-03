@@ -486,9 +486,9 @@ Stay informed about agent activity.
 
 #### Notify (macOS)
 
-Sends macOS notifications when Claude finishes a task or needs your attention.
+Sends rich macOS notifications when Claude Code, OpenCode, or Codex finishes a task or needs your attention. Notifications carry per-harness icons, a project + tmux pane subtitle, and informative bodies (last assistant tail for `Stop`, per-tool previews for permission events). Click a notification to focus the originating terminal app and tmux pane. On Codex, `PermissionRequest` notifications get `Approve`/`Deny` buttons that decide for the agent.
 
-> **Requires:** [`terminal-notifier`](https://github.com/julienXX/terminal-notifier). Install via [Homebrew](https://brew.sh): `brew install terminal-notifier`
+> **Requires:** [`alerter`](https://github.com/vjeantet/alerter). Install via [Homebrew](https://brew.sh): `brew install vjeantet/tap/alerter`
 > **Details:** [README](./plugins/notify/README.md)
 
 #### Update Docs Reminder
