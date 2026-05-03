@@ -114,8 +114,8 @@ Read `./references/BASH.md` for the complete guide.
 Or with a navigation table:
 
 ```markdown
-- `references/languages/go.md` - Go-specific setup guidance
-- `references/tools/actionlint.md` - actionlint installation and usage
+- `./references/languages/go.md` - Go-specific setup guidance
+- `./references/tools/actionlint.md` - actionlint installation and usage
 ```
 
 ## Notes

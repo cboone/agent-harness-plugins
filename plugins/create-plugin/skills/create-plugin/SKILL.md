@@ -140,8 +140,8 @@ Key points:
 
 Skills and commands that need supplementary documentation or templates should place them under `references/`:
 
-- **Workflow skills**: Use a flat `references/` directory with topic-named files by default (e.g., `references/checklist.md`, `references/github.md`). If a workflow skill has enough reference files that a flat list becomes hard to scan, use topical subdirectories named for the organizing axis, such as `references/languages/`, `references/tools/`, or `references/scripts/`. Do not use `references/essential/` plus `references/comprehensive/` for workflow skills.
-- **Style-guide skills**: Style-guide skills, primarily `write-*`, may use one canonical topic document such as `references/BASH.md` or `references/MARKDOWN.md`, or split reference material into `references/essential/` plus `references/comprehensive/`. The split is about reading mode: condensed actionable rules versus deep topic-by-topic guidance. It is not a file-count convention.
+- **Workflow skills**: Use a flat `references/` directory with topic-named files by default (e.g., `./references/checklist.md`, `./references/github.md`). If a workflow skill has enough reference files that a flat list becomes hard to scan, use topical subdirectories named for the organizing axis, such as `./references/languages/`, `./references/tools/`, or `./references/scripts/`. Do not use `./references/essential/` plus `./references/comprehensive/` for workflow skills.
+- **Style-guide skills**: Style-guide skills, primarily `write-*`, may use one canonical topic document such as `./references/BASH.md` or `./references/MARKDOWN.md`, or split reference material into `./references/essential/` plus `./references/comprehensive/`. The split is about reading mode: condensed actionable rules versus deep topic-by-topic guidance. It is not a file-count convention.
 
 **For skills**: Reference files are plain Markdown. Point to them from SKILL.md with relative paths (e.g., `./references/checklist.md`).
 
