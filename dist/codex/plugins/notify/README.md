@@ -9,13 +9,7 @@ Sends macOS notifications when the agent finishes a task or needs your attention
 
 ### Claude Code
 
-Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
-
-```text
-/plugin marketplace add cboone/cboone-cc-plugins
-```
-
-Then select **Notify** from the available plugins.
+See the [marketplace install instructions](../../../../README.md#install).
 
 ### Codex CLI
 
@@ -39,11 +33,11 @@ OpenCode loads the plugin automatically when [`OPENCODE_CONFIG_DIR`](../../../..
 
 OpenCode's event model differs from Claude Code's, so the parity is approximate:
 
-| OpenCode event                     | Notification          | Claude Code equivalent                                     |
-| ---------------------------------- | --------------------- | ---------------------------------------------------------- |
-| `session.idle`                     | Task completed        | `Stop` (with project + branch + last user message)         |
-| `permission.updated`               | "Needs permission…"   | `Notification` (`permission_prompt`, `elicitation_dialog`) |
-| `experimental.session.compacting`  | "Auto-compacting…"    | `PreCompact` (`auto`)                                      |
+| OpenCode event                    | Notification        | Claude Code equivalent                                     |
+| --------------------------------- | ------------------- | ---------------------------------------------------------- |
+| `session.idle`                    | Task completed      | `Stop` (with project + branch + last user message)         |
+| `permission.updated`              | "Needs permission…" | `Notification` (`permission_prompt`, `elicitation_dialog`) |
+| `experimental.session.compacting` | "Auto-compacting…"  | `PreCompact` (`auto`)                                      |
 
 The standalone "Waiting for input…" notification (Claude Code's `Notification:idle_prompt`) is not separately representable: OpenCode's `session.idle` already carries the Stop semantics. The compacting hook depends on an experimental OpenCode API and may break on upgrades.
 

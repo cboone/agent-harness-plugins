@@ -7,13 +7,7 @@ Conventions for compile-time, `example`-based Lean 4 API regression tests that m
 
 ## Installation
 
-Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
-
-```text
-/plugin marketplace add cboone/cboone-cc-plugins
-```
-
-Then select **Write Lean Tests** from the available plugins.
+See the [marketplace install instructions](../../../../README.md#install).
 
 ## What It Does
 

@@ -7,13 +7,7 @@ LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2, and 
 
 ## Installation
 
-Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
-
-```text
-/plugin marketplace add cboone/cboone-cc-plugins
-```
-
-Then select **Write LaTeX** from the available plugins.
+See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 
