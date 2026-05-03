@@ -62,7 +62,7 @@ Crates.io's API exposes `max_stable_version` (excludes pre-releases) and `max_ve
 
 ## `pip` / `uv` Specifics
 
-Single-quote the requirement spec so the shell doesn't interpret `==`:
+Single-quote the requirement spec for consistency with version specs that contain shell-special characters. The `==` operator itself is not shell-special, but specs commonly use `>`, `<`, `*`, or `!` (for example, `'pkg>=1.0,<2.0'` or `'pkg!=1.4.*'`), and quoting every spec the same way keeps the recipe safe when the operator changes:
 
 ```bash
 pip install 'ruff==0.15.12'
