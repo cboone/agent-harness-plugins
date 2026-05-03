@@ -27,8 +27,12 @@ function read_issue_json() {
 function validate_json() {
   local issue_json="${1}"
 
-  if ! jq -e . > /dev/null 2>&1 <<< "${issue_json}"; then
+  if ! jq empty > /dev/null 2>&1 <<< "${issue_json}"; then
     die "invalid issue JSON"
+  fi
+
+  if ! jq -e 'type == "object"' > /dev/null 2>&1 <<< "${issue_json}"; then
+    die "invalid issue JSON: expected object"
   fi
 }
 

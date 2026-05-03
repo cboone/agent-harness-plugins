@@ -28,3 +28,19 @@ Issue body with {{ "{{" }} value }}
 prompt-file-exists: yes
 prompt cleanup: yes
 ```
+
+## Create worktree launcher rejects empty stdin
+
+```scrut
+$ env WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/missing-prompt" < /dev/null 2>&1
+launch-workmux: expected prompt content on stdin
+[1]
+```
+
+## Create worktree from issue launcher rejects empty stdin
+
+```scrut
+$ env WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN}" "feature/missing-prompt" < /dev/null 2>&1
+launch-workmux: expected prompt content on stdin
+[1]
+```

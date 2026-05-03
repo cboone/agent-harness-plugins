@@ -35,6 +35,14 @@ compose-issue-prompt: invalid issue JSON
 [1]
 ```
 
+## Non-object JSON
+
+```scrut
+$ printf 'null' | "${COMPOSE_ISSUE_PROMPT_BIN}" 2>&1
+compose-issue-prompt: invalid issue JSON: expected object
+[1]
+```
+
 ## Missing required field
 
 ```scrut

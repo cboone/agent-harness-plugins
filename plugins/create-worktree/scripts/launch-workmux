@@ -27,15 +27,6 @@ function die() {
   exit "${2:-1}"
 }
 
-function write_escaped_prompt() {
-  local prompt_file="${1}"
-
-  sed -e 's/{{/{{ "{{" }}/g' \
-    -e 's/{%/{{ "{%" }}/g' \
-    -e 's/{#/{{ "{#" }}/g' \
-    > "${prompt_file}"
-}
-
 function remove_file_if_present() {
   local file="${1}"
 
@@ -48,6 +39,39 @@ function remove_file_if_present() {
   fi
 
   [[ ! -e "${file}" && ! -L "${file}" ]]
+}
+
+function write_escaped_prompt() {
+  local prompt_file="${1}"
+  local raw_prompt status
+
+  if [[ -t 0 ]]; then
+    remove_file_if_present "${prompt_file}"
+    die "expected prompt content on stdin"
+  fi
+
+  raw_prompt="$(mktemp "${prompt_file}.raw.XXXXXX")"
+  cat > "${raw_prompt}"
+
+  if [[ ! -s "${raw_prompt}" ]]; then
+    remove_file_if_present "${raw_prompt}"
+    remove_file_if_present "${prompt_file}"
+    die "expected prompt content on stdin"
+  fi
+
+  set +e
+  sed -e 's/{{/{{ "{{" }}/g' \
+    -e 's/{%/{{ "{%" }}/g' \
+    -e 's/{#/{{ "{#" }}/g' \
+    "${raw_prompt}" > "${prompt_file}"
+  status=$?
+  set -e
+
+  remove_file_if_present "${raw_prompt}"
+  if ((status != 0)); then
+    remove_file_if_present "${prompt_file}"
+    return "${status}"
+  fi
 }
 
 function run_workmux_and_cleanup_prompt() {
@@ -69,8 +93,8 @@ function do_launch() {
   local base_branch="${2:-}"
   local safe_name="${branch//\//-}"
   local log prompt_file
-  log="$(mktemp "/tmp/workmux-${safe_name}.XXXXXX.log")"
-  prompt_file="$(mktemp "/tmp/workmux-prompt-${safe_name}.XXXXXX.md")"
+  log="$(mktemp "/tmp/workmux-${safe_name}.log.XXXXXX")"
+  prompt_file="$(mktemp "/tmp/workmux-prompt-${safe_name}.md.XXXXXX")"
 
   write_escaped_prompt "${prompt_file}"
 
