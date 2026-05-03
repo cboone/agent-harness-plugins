@@ -33,8 +33,8 @@ Quick-reference lookup table for the setup-linters skill. Each row maps a projec
 
 ## Presets
 
-| Preset          | Scope                                                      | When to Offer                                                                                                   | Tools                     | Config Files                                                   | Reference                                      |
-| --------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
+| Preset          | Scope                                                      | When to Offer                                                                                                                                                                | Tools                     | Config Files                                                   | Reference                                      |
+| --------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
 | Pandoc-academic | Paper-backed Lean/math Markdown with Pandoc and LaTeX math | When `references/papers/`, `references/transcriptions/`, or `papers/**/main.md` plus `papers/shared/templates/*.latex` exists, or when the user requests `--pandoc-academic` | markdownlint-cli2, cspell | `.markdownlint-cli2.jsonc`, `cspell.jsonc`, `cspell-words.txt` | `./tools/markdownlint.md`, `./tools/cspell.md` |
 
 ## CI Integration

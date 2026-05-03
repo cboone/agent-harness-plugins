@@ -66,7 +66,7 @@ Review the generated list and remove any actual misspellings before committing.
 
 ### Pandoc-academic preset
 
-Use this preset when the project contains `references/papers/` or `references/transcriptions/`, or when the user explicitly requests `--pandoc-academic`.
+Use this preset when the project contains `references/papers/`, `references/transcriptions/`, or a Pandoc paper pipeline with `papers/**/main.md` plus `papers/shared/templates/*.latex`, or when the user explicitly requests `--pandoc-academic`.
 
 Create `cspell.jsonc` in the project root:
 
@@ -92,6 +92,7 @@ Create `cspell.jsonc` in the project root:
     ".lake/**",
     "references/papers/**",
     "references/papers.bib",
+    "references/extractions/**",
     "references/transcriptions/**",
   ],
   "dictionaryDefinitions": [
