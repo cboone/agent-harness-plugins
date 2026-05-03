@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "catalog-M58-m103-p109-n50"
+    "version": "catalog-M59-m103-p109-n51"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -400,6 +400,20 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-library",
       "version": "1.8.2"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "scaffolding",
+      "description": "Scaffold a Lean 4 library project with Mathlib or PFR dependencies, Lake test/lint wiring, GitHub Actions CI, text linting, and agent instructions.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["lake", "lean", "mathlib", "pfr", "scaffolding"],
+      "license": "MIT",
+      "name": "scaffold-lean-library",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/scaffold-lean-library",
+      "version": "1.0.0"
     },
     {
       "author": {
