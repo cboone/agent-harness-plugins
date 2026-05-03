@@ -77,7 +77,7 @@ Read `.claude-plugin/marketplace.json` and verify:
 
 - **Version matching**: each marketplace entry's `version` matches its `plugin.json`
 - **Coverage**: every `plugins/*/` directory has a marketplace entry, and every marketplace entry points to an existing plugin directory
-- **Metadata version**: `metadata.version` is a catalog state tag in the form `catalog-M<major-sum>-m<minor-sum>-p<patch-sum>-n<plugin-count>`, derived from the marketplace plugin versions with no normalization or carry between components. Recompute it from `.plugins[].version` and verify the stored value matches the recomputed value. The `bin/validate-plugins` script uses the same computation and is the source of truth.
+- **Metadata version**: `metadata.version` is a catalog state tag in the form `catalog-M<major-sum>-m<minor-sum>-p<patch-sum>-n<plugin-count>`, derived from the marketplace plugin versions with no normalization or carry between components. Recompute it and verify the stored value matches. Prefer running `bin/compute-catalog-state` directly (the canonical implementation, also consumed by `bin/validate-plugins` and the `release` workflow); fall back to recomputing from `.plugins[].version` only if the script is missing.
 
 ### 5. Report
 
