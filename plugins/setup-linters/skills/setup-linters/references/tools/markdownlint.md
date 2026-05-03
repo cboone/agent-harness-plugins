@@ -120,6 +120,11 @@ vendor/
 dist/
 build/
 CHANGELOG.md
+.lake/**
+references/papers/**
+references/papers.bib
+references/extractions/**
+references/transcriptions/**
 ```
 
 ## Commands
