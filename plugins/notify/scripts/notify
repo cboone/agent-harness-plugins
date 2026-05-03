@@ -421,7 +421,13 @@ function do_cc_stop() {
 
   local user_msg assistant_tail
   user_msg="$(extract_last_user_message "${transcript_path}" "${BODY_LIMIT_USER_HEAD}")"
-  assistant_tail="$(extract_last_assistant_message "${transcript_path}" "${BODY_LIMIT_ASSISTANT_TAIL_PAIRED}")"
+  # Stop payloads expose the final assistant text directly; only the matching
+  # user message still requires walking the transcript.
+  assistant_tail="$(printf '%s' "${input}" | jq -r '.last_assistant_message // empty')"
+  if [[ -n "${assistant_tail}" ]]; then
+    assistant_tail="${assistant_tail//$'\n'/ }"
+    assistant_tail="$(truncate_with_ellipsis "${assistant_tail}" "${BODY_LIMIT_ASSISTANT_TAIL_PAIRED}")"
+  fi
 
   local body
   if [[ -n "${user_msg}" && -n "${assistant_tail}" ]]; then

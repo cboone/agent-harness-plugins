@@ -57,8 +57,8 @@ Delivers native macOS notifications so you can work in other apps while an agent
 
 - **A per-harness icon**: Claude Code, OpenCode, or Codex's app icon.
 - **A subtitle that identifies the task**: when running inside tmux with a custom pane title (set by `workmux` or similar), the subtitle is `<project> · <pane title>`. Otherwise, `<project> · <branch suffix>`, where the branch suffix is everything after the first `/` (so `feature/improve-notifier` becomes `improve-notifier`).
-- **An informative body**: per-event content (see matrix below). For permission events, the body includes a per-tool preview (the Bash command, the file path being edited, the URL being fetched, etc.). For Claude Code and OpenCode Stop events, the body is `<last user message> → <last assistant message tail>`. Codex Stop is the last assistant message alone, taken directly from the hook payload's `last_assistant_message`.
-- **A per-event sound** (Tink for Claude Code idle/elicit and Codex done, Funk for permission, Pop for auto-compact, Glass for Claude Code and OpenCode done). Codex Stop uses the soft Tink rather than the louder Glass because Codex fires `Stop` once per "no follow-up needed" sampling cycle in its turn loop, so a single user turn can produce multiple notifications when Stop hooks request continuation. Each Stop updates the same notification group, so successive firings replace the previous banner in place rather than stacking.
+- **An informative body**: per-event content (see matrix below). Claude Code permission events show a per-tool preview (the Bash command, the file path being edited, etc.) reconstructed from the most recent `tool_use` block in the transcript, since the Notification payload itself omits tool details. OpenCode permission events use OpenCode's pre-computed `title`, falling back to `pattern` or per-tool `metadata`. Claude Code and OpenCode Stop events show `<last user message> → <last assistant message tail>`; the Claude Code assistant tail comes from the Stop payload's `last_assistant_message` rather than from a transcript walk. Codex Stop is the last assistant message alone, also taken from the payload.
+- **A per-event sound** (Tink for Claude Code idle/elicit and Codex done, Funk for permission and OpenCode error, Pop for auto-compact, Glass for Claude Code and OpenCode done). Codex Stop uses the soft Tink rather than the louder Glass because Codex fires `Stop` once per "no follow-up needed" sampling cycle in its turn loop, so a single user turn can produce multiple notifications when Stop hooks request continuation. Each Stop updates the same notification group, so successive firings replace the previous banner in place rather than stacking.
 - **A per-event group** so a fresh notification dismisses any prior notification of the same kind, instead of stacking.
 - **Click-to-focus**: clicking the body of any notification activates the originating terminal app (auto-detected from `$TERM_PROGRAM`, supports Apple Terminal, iTerm2, Ghostty, WezTerm, VSCode, Alacritty) and, if you were inside tmux when the hook fired, switches the tmux client to the originating session, window, and pane.
 
@@ -84,11 +84,12 @@ Codex fires `Stop` once per "no follow-up needed" sampling cycle in its turn loo
 
 ### OpenCode
 
-| Event                             | Title                   | Body                                                  | Sound   |
-| --------------------------------- | ----------------------- | ----------------------------------------------------- | ------- |
-| `permission.updated`              | `OpenCode · Permission` | `<Tool>: <preview>`                                   | `Funk`  |
-| `experimental.session.compacting` | `OpenCode · Compacting` | `Auto-compacting context`                             | `Pop`   |
-| `session.idle`                    | `OpenCode · Done`       | `<last user message> → <last assistant message tail>` | `Glass` |
+| Event                             | Title                   | Body                                                                              | Sound   |
+| --------------------------------- | ----------------------- | --------------------------------------------------------------------------------- | ------- |
+| `permission.updated`              | `OpenCode · Permission` | OpenCode's pre-computed `title`, falling back to `pattern` or per-tool `metadata` | `Funk`  |
+| `session.error`                   | `OpenCode · Error`      | `error.data.message` (or the error name)                                          | `Funk`  |
+| `experimental.session.compacting` | `OpenCode · Compacting` | `Auto-compacting context`                                                         | `Pop`   |
+| `session.idle`                    | `OpenCode · Done`       | `<last user message> → <last assistant message tail>`                             | `Glass` |
 
 ## Click-to-focus details
 

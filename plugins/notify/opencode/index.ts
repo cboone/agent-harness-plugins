@@ -24,6 +24,7 @@ interface TmuxState {
 
 const seenPermissions = new Set<string>();
 const seenCompactions = new Set<string>();
+const seenErrors = new Set<string>();
 
 export const Notify: Plugin = async ({ $, client, directory }) => {
   return {
@@ -42,6 +43,36 @@ export const Notify: Plugin = async ({ $, client, directory }) => {
           message,
           sound: "Glass",
           group: "opencode-stop",
+          icon: ICON_PATH,
+          tmux,
+        });
+        return;
+      }
+
+      if (event.type === "session.error") {
+        const props = event.properties as { sessionID?: string; error?: unknown };
+        const sessionID = typeof props.sessionID === "string" ? props.sessionID : "";
+        const error = props.error as { name?: string; data?: Record<string, unknown> } | undefined;
+        const errorName = typeof error?.name === "string" ? error.name : "";
+        const errorData = error?.data && typeof error.data === "object" ? error.data : {};
+        const errorMessage = typeof errorData.message === "string" ? errorData.message : "";
+
+        // Dedup on (session, name, message) so retry storms with the same root
+        // cause do not replay the alert sound, while distinct errors still fire.
+        const dedupKey = `${sessionID}:${errorName}:${errorMessage}`;
+        if (seenErrors.has(dedupKey)) return;
+        seenErrors.add(dedupKey);
+
+        const subtitle = await computeSubtitle($, directory);
+        const tmux = await computeTmuxState($);
+        const body = errorMessage || errorName || "Session error";
+
+        fireAlerterDetached($, {
+          title: `${TITLE_BASE} · Error`,
+          subtitle,
+          message: truncate(body.replace(/\n/g, " "), TASK_LIMIT_DEFAULT),
+          sound: "Funk",
+          group: "opencode-error",
           icon: ICON_PATH,
           tmux,
         });
@@ -200,50 +231,99 @@ interface ToolInfo {
   preview: string;
 }
 
-// OpenCode's permission.updated event carries varying shapes by version. Try
-// the documented properties; fall back to empty if the field is missing.
+// `permission.updated` properties match the SDK's `Permission` type:
+//   { id, type, pattern?, sessionID, messageID, callID?, title, metadata, time }
+// `type` is the lowercase permission name ("bash", "edit", ...). `title` is a
+// pre-computed UI summary; `pattern` and `metadata` are the per-tool fall-backs
+// when no title is set. Older shapes (`tool`, `tool_name`, `tool_input`) are
+// still accepted defensively in case an older OpenCode emits them.
 function extractToolFromPermission(event: { properties: Record<string, unknown> }): ToolInfo {
   const props = event.properties;
-  const name = (typeof props.tool === "string" ? props.tool : typeof props.tool_name === "string" ? props.tool_name : "") || "";
 
-  let input: Record<string, unknown> | null = null;
-  if (props.tool_input && typeof props.tool_input === "object") {
-    input = props.tool_input as Record<string, unknown>;
-  } else if (props.input && typeof props.input === "object") {
-    input = props.input as Record<string, unknown>;
-  }
+  const rawType = typeof props.type === "string" ? props.type : typeof props.tool === "string" ? props.tool : typeof props.tool_name === "string" ? props.tool_name : "";
+  const name = capitalize(rawType);
 
-  let raw = "";
-  if (input) {
-    switch (name) {
-      case "Bash":
-        raw = String(input.command ?? "");
-        break;
-      case "Edit":
-      case "Write":
-      case "Read":
-        raw = String(input.file_path ?? input.path ?? "");
-        break;
-      case "WebFetch":
-        raw = String(input.url ?? "");
-        break;
-      case "Grep":
-      case "Glob":
-        raw = String(input.pattern ?? "");
-        break;
-      case "Task":
-        raw = String(input.description ?? "");
-        break;
-      case "NotebookEdit":
-        raw = String(input.notebook_path ?? "");
-        break;
+  const candidates: string[] = [typeof props.title === "string" ? props.title : "", patternToString(props.pattern), patternToString(props.patterns), metadataPreview(props.metadata, rawType), legacyInputPreview(props, rawType)];
+
+  for (const candidate of candidates) {
+    const trimmed = candidate.trim();
+    if (trimmed) {
+      return {
+        name,
+        preview: truncate(trimmed.replace(/\n/g, " "), TASK_LIMIT_DEFAULT),
+      };
     }
   }
 
-  return {
-    name,
-    preview: raw ? truncate(raw.replace(/\n/g, " "), TASK_LIMIT_DEFAULT) : "",
-  };
+  return { name, preview: "" };
+}
+
+function patternToString(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && value.length > 0) return String(value[0] ?? "");
+  return "";
+}
+
+function metadataPreview(metadata: unknown, type: string): string {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return "";
+  const m = metadata as Record<string, unknown>;
+  switch (type.toLowerCase()) {
+    case "bash":
+    case "shell":
+      return typeof m.command === "string" ? m.command : "";
+    case "edit":
+    case "write":
+    case "read":
+      for (const key of ["filepath", "file_path", "path"]) {
+        const value = m[key];
+        if (typeof value === "string") return value;
+      }
+      return "";
+    case "webfetch":
+      return typeof m.url === "string" ? m.url : "";
+    case "grep":
+    case "glob":
+      return typeof m.pattern === "string" ? m.pattern : "";
+    case "task":
+      return typeof m.description === "string" ? m.description : "";
+    case "notebookedit":
+      return typeof m.notebook_path === "string" ? m.notebook_path : "";
+    default:
+      return "";
+  }
+}
+
+function legacyInputPreview(props: Record<string, unknown>, type: string): string {
+  const input = props.tool_input && typeof props.tool_input === "object" && !Array.isArray(props.tool_input) ? (props.tool_input as Record<string, unknown>) : props.input && typeof props.input === "object" && !Array.isArray(props.input) ? (props.input as Record<string, unknown>) : null;
+  if (!input) return "";
+  switch (type.toLowerCase()) {
+    case "bash":
+    case "shell":
+      return typeof input.command === "string" ? input.command : "";
+    case "edit":
+    case "write":
+    case "read":
+      for (const key of ["file_path", "filepath", "path"]) {
+        const value = input[key];
+        if (typeof value === "string") return value;
+      }
+      return "";
+    case "webfetch":
+      return typeof input.url === "string" ? input.url : "";
+    case "grep":
+    case "glob":
+      return typeof input.pattern === "string" ? input.pattern : "";
+    case "task":
+      return typeof input.description === "string" ? input.description : "";
+    case "notebookedit":
+      return typeof input.notebook_path === "string" ? input.notebook_path : "";
+    default:
+      return "";
+  }
+}
+
+function capitalize(s: string): string {
+  return s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
 function truncate(text: string, limit: number): string {
