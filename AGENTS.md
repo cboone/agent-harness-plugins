@@ -34,6 +34,7 @@ Skills with longer reference material add a `references/` subdirectory:
 plugins/handle-secrets/
 ├── .claude-plugin/
 │   └── plugin.json
+├── README.md
 └── skills/
     └── handle-secrets/
         ├── SKILL.md

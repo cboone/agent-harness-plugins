@@ -159,7 +159,7 @@ Hooks are event-driven; they have no slash-command trigger.
 **External tools:**
 
 - *Notify:* [`terminal-notifier`](https://github.com/julienXX/terminal-notifier). Install via [Homebrew](https://brew.sh): `brew install terminal-notifier`
-- *Update Docs Reminder:* [`jq`](https://jqlang.github.io/jq/)
+- *Update Docs Reminder:* [`jq`](https://jqlang.org/)
 
 ## Using with Codex CLI
 
