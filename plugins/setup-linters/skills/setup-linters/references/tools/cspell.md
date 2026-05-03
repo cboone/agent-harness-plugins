@@ -32,7 +32,7 @@ Create `cspell.json` in the project root:
 {
   "version": "0.2",
   "language": "en",
-  "ignorePaths": ["node_modules/", "vendor/", ".venv/", "dist/", "build/", "coverage/", "*.lock", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "go.sum", ".git/"]
+  "ignorePaths": ["node_modules/", "vendor/", ".venv/", "dist/", "build/", "coverage/", "*.lock", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "go.sum", ".git", ".git/"]
 }
 ```
 
@@ -52,7 +52,7 @@ For project-specific dictionary words, create a `cspell-words.txt` file (one wor
     }
   ],
   "dictionaries": ["project-words"],
-  "ignorePaths": ["node_modules/", "vendor/", "dist/", "*.lock", ".git/"]
+  "ignorePaths": ["node_modules/", "vendor/", "dist/", "*.lock", ".git", ".git/"]
 }
 ```
 
@@ -63,6 +63,72 @@ npx cspell . --unique --words-only --no-progress | sort > cspell-words.txt
 ```
 
 Review the generated list and remove any actual misspellings before committing.
+
+### Pandoc-academic preset
+
+Use this preset when the project contains `references/papers/`, `references/extractions/`, `references/transcriptions/`, or a Pandoc paper pipeline with `papers/**/main.md` plus `papers/shared/templates/*.latex`, or when the user explicitly requests `--pandoc-academic`.
+
+Create `cspell.jsonc` in the project root:
+
+```jsonc
+{
+  "version": "0.2",
+  "language": "en",
+  "ignorePaths": [
+    "node_modules/",
+    "vendor/",
+    ".venv/",
+    "dist/",
+    "build/",
+    "coverage/",
+    "*.lock",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lock",
+    "go.sum",
+    ".git",
+    ".git/",
+    ".lake/**",
+    "papers/shared/templates/**",
+    "references/papers/**",
+    "references/papers.bib",
+    "references/extractions/**",
+    "references/transcriptions/**",
+  ],
+  "dictionaryDefinitions": [
+    {
+      "name": "project-words",
+      "path": "./cspell-words.txt",
+      "addWords": true,
+    },
+  ],
+  "dictionaries": ["project-words"],
+  "ignoreRegExpList": [
+    "/\\$[^$]+\\$/g", // inline math
+    "/\\$\\$[\\s\\S]*?\\$\\$/gm", // display math
+    "/```\\{=latex\\}[\\s\\S]*?```/gm", // raw LaTeX blocks
+    "/`[^`]+`\\{=latex\\}/g", // inline raw LaTeX
+    "/\\[[^\\]]*@[-\\w:.]+[^\\]]*\\]/g", // Pandoc citations
+    "/@[\\w:.-]+/g", // bare citekeys
+    "/\\\\[a-zA-Z]+/g", // LaTeX commands
+  ],
+}
+```
+
+Create `cspell-words.txt` with the baseline Lean/math vocabulary, then append author surnames from citations the project actually uses (usually from `references/papers.bib`):
+
+```text
+Batteries
+Fintype
+Finset
+Lake
+Lean
+Mathlib
+Mathpix
+Pandoc
+batteries
+```
 
 ## Commands
 
