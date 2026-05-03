@@ -328,5 +328,6 @@ function capitalize(s: string): string {
 
 function truncate(text: string, limit: number): string {
   if (text.length <= limit) return text;
-  return text.slice(0, limit) + "…";
+  if (limit < 1) return "";
+  return text.slice(0, limit - 1) + "…";
 }
