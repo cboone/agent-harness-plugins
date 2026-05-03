@@ -33,9 +33,9 @@ Detection commands:
 
 ```bash
 # Find version declarations across the project.
-grep -rn 'var\s\+version\b' --include='*.go' .
-grep -rn 'var\s\+commit\b' --include='*.go' .
-grep -rn 'var\s\+date\b' --include='*.go' .
+grep -rnE '^[[:space:]]*var[[:space:]]+version([[:space:]=]|$)' --include='*.go' .
+grep -rnE '^[[:space:]]*var[[:space:]]+commit([[:space:]=]|$)' --include='*.go' .
+grep -rnE '^[[:space:]]*var[[:space:]]+date([[:space:]=]|$)' --include='*.go' .
 ```
 
 Also check for an existing version subcommand:
@@ -45,13 +45,13 @@ Also check for an existing version subcommand:
 test -f cmd/version.go && echo "cmd/version.go exists"
 
 # Existing version subcommand registration via &cobra.Command{ Use: "version", ... }.
-grep -rn 'Use:\s*"version"' --include='*.go' .
+grep -rnE 'Use:[[:space:]]*"version"' --include='*.go' .
 ```
 
 If a `cmd/version.go` already exists, read it. Decide:
 
 - If it already prints version, commit, date, and Go runtime version with a `--json` flag, treat it as up to date and skip step 5 (only continue with the wiring steps for any state still missing).
-- Otherwise, ask the user whether to overwrite. If they decline, abort the skill.
+- Otherwise, ask the user whether to overwrite. If they decline, skip step 5 and continue with the remaining wiring steps so the existing file is preserved while partial version state is repaired.
 
 ### 3. Detect ldflags Target Package
 
@@ -78,7 +78,7 @@ Use the result wherever templates reference `PROJECT-NAME`.
 Read `./references/version-go.md` for the `cmd/version.go` template and create the file from it.
 
 - Replace `PROJECT-NAME` with the binary name from step 4.
-- Do not modify the file if step 2 found an up-to-date `cmd/version.go` and the user chose to keep it.
+- Do not modify the file if step 2 found an up-to-date `cmd/version.go` or the user chose to keep the existing file.
 
 The generated subcommand:
 
