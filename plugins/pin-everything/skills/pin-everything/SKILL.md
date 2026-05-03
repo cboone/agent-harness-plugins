@@ -165,7 +165,7 @@ Skip this step if `--no-dependabot` was passed. Reference: `./references/dependa
 
 ### 10. Optionally Generate a Version-Audit Script
 
-Dependabot does not cover four surface families: language version files (`.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `.python-version`), `packageManager`, action SHAs in `.md` templates, and install-command pins inside scripts. If the user wants drift coverage for these:
+Dependabot does not cover four surface families: language version files (`.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `Gemfile`, `.python-version`, `go.mod`, `rust-toolchain.toml`, `build.zig.zon`), `packageManager`, action SHAs in `.md` templates, and install-command pins inside scripts. If the user wants drift coverage for these:
 
 1. Read `./references/scripts/version-audit-template`.
 2. Tailor it to the surfaces actually present in the repo (drop unused `audit_*` functions, adjust grep paths to match the user's directory layout).

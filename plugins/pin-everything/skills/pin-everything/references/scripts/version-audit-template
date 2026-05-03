@@ -13,13 +13,26 @@
 #     latest release in the same major series as the pinned version (so repos
 #     intentionally on a Current/non-LTS major are not falsely flagged).
 #   - Ruby in whichever Ruby version file the repo uses (.tool-versions with a
-#     `ruby` line, or .ruby-version). Drift is checked within the same X.Y
-#     feature-release series as the pinned version (Ruby's release series
-#     boundary is at the minor, not the major).
+#     `ruby` line, .ruby-version, or a Gemfile `ruby 'X.Y.Z'` directive). Drift
+#     is checked within the same X.Y feature-release series as the pinned
+#     version (Ruby's release series boundary is at the minor, not the major).
 #   - Python in .python-version. Drift is checked within the same X.Y series.
 #     pyproject.toml `requires-python` is intentionally NOT audited: it uses
 #     `>=` semantics, so it's a floor, not a pin.
-#   - package.json packageManager (Yarn or pnpm via Corepack)
+#   - Go in go.mod's `go X.Y.Z` directive (the X.Y-only form is a module-spec
+#     floor and is silently skipped). Drift is checked within the same X.Y
+#     release line.
+#   - Rust in rust-toolchain.toml's `channel = "X.Y.Z"`. Moving channels
+#     (`stable`, `beta`, `nightly`) are silently skipped. Drift is checked
+#     against absolute latest stable.
+#   - Zig in build.zig.zon's `.minimum_zig_version = "X.Y.Z"`. mlugg/setup-zig
+#     installs exactly that version, so it functions as a pin for CI even
+#     though the field's name reads "minimum". Dev-snapshot pins
+#     (`0.X.Y-dev.NNNN+abcdef`) are silently skipped.
+#   - package.json packageManager (Yarn or pnpm via Corepack). Both the version
+#     and the `+sha512.<hash>` integrity suffix are audited; a bare
+#     `<mgr>@<X.Y.Z>` (no integrity hash) is itself drift, since it defeats
+#     Corepack's tarball-pinning guarantee even when the version is current.
 #   - Release-tagged SHA-pinned action refs (those whose comment is a numeric
 #     `# vX.Y.Z` tag). Drift is checked within the same major series as the
 #     pinned version, so a `# v8.0.0 -- held at v8 pending v9 migration` pin
@@ -200,17 +213,20 @@ function audit_node() {
 # 2. Ruby — read whichever Ruby version file the repo uses.
 #
 # Skill step 4 reuses the file local tooling already reads (`.ruby-version`
-# for rbenv/chruby, or a `ruby` line in `.tool-versions`). Mirror that here.
+# for rbenv/chruby, a `ruby` line in `.tool-versions`, or a `ruby 'X.Y.Z'`
+# directive in `Gemfile` when bundler owns the pin). Mirror that priority
+# order here so the audit reads the same source of truth as the workflow.
 # Ruby's release-series boundary is at the minor (3.4.x is one feature line,
 # 3.5.x is the next), so drift is checked within the same X.Y series. Tags in
 # `ruby/ruby` use underscores (`v3_4_2`); normalize to dots before comparing.
 # Pre-releases (`select(.prerelease == false)`) are skipped so a freshly-cut
 # `v3.5.0-preview1` is not reported as drift against a stable `v3.4.2` pin.
-# Non-numeric values and major-only pins are silently skipped — they're not
-# pins and there's nothing to compare against.
+# Non-numeric values, constraint forms (`~>`, `>=`), engine delegations
+# (`ruby file: '.ruby-version'`), and major-only pins are silently skipped —
+# they're not pins or are handled by the prior file in priority order.
 
 function audit_ruby() {
-  local current="" source="" series pattern latest
+  local current="" source="" series pattern latest line
   if [[ -f "${TOOL_VERSIONS_FILE}" ]]; then
     current=$(awk '/^ruby / {print $2; exit}' "${TOOL_VERSIONS_FILE}")
     if [[ -n "${current}" ]]; then
@@ -222,6 +238,18 @@ function audit_ruby() {
     if [[ -n "${current}" ]]; then
       source=".ruby-version"
     fi
+  fi
+  if [[ -z "${current}" && -f "Gemfile" ]]; then
+    # Match `ruby 'X.Y.Z'` or `ruby "X.Y.Z"` only. Constraint forms (`~>`,
+    # `>=`) and engine delegations (`ruby file: '.ruby-version'`) are not
+    # auditable as exact pins and are skipped.
+    while IFS= read -r line; do
+      if [[ "${line}" =~ ^[[:space:]]*ruby[[:space:]]+[\"\']([0-9]+\.[0-9]+\.[0-9]+)[\"\'] ]]; then
+        current="${BASH_REMATCH[1]}"
+        source="Gemfile"
+        break
+      fi
+    done < Gemfile
   fi
   if [[ -z "${current}" ]]; then
     return
@@ -283,43 +311,157 @@ function audit_python_runtime() {
   fi
 }
 
-# 4. Yarn / pnpm version in package.json packageManager
+# 4. Go runtime — read go.mod's `go X.Y.Z` directive.
+#
+# Skill step 4 wires `actions/setup-go` to `go-version-file: go.mod`, so the
+# `go` directive is the version-of-record CI installs. The module spec also
+# allows the `go X.Y` form, but that one is a floor (Go selects the highest
+# patch in the X.Y line at install time) and is silently skipped: there is
+# nothing to compare against. Drift is checked within the same X.Y release
+# line, mirroring Ruby and Python.
+
+function audit_go_runtime() {
+  local current="" series pattern latest
+  if [[ -f "go.mod" ]]; then
+    current=$(awk '/^go [0-9]+\.[0-9]+\.[0-9]+$/ {print $2; exit}' go.mod)
+  fi
+  if [[ -z "${current}" ]]; then
+    return
+  fi
+  series="${current%.*}"
+  pattern="^go${series//./\\.}\.[0-9]+$"
+  latest=$(gh api repos/golang/go/tags --paginate --jq '.[].name' 2> /dev/null \
+    | grep -E "${pattern}" \
+    | sed 's/^go//' \
+    | semver_max \
+    || true)
+  if [[ -z "${latest}" ]]; then
+    return
+  fi
+  if [[ "${current}" != "${latest}" ]]; then
+    record_drift "Go" "go (${series})" "${current}" "${latest}" "go.mod"
+  fi
+}
+
+# 5. Rust toolchain — read rust-toolchain.toml's `channel = "X.Y.Z"`.
+#
+# Skill step 4 documents `dtolnay/rust-toolchain` plus rust-toolchain.toml as
+# the wiring; the `channel` field carries either a moving channel name
+# (`stable`, `beta`, `nightly`) or an exact `X.Y.Z`. Moving channels are
+# resolved at install time and have no fixed upstream to compare against, so
+# they are silently skipped. Exact channels are audited against the absolute
+# latest stable; Rust's release model does not maintain parallel patch lines
+# the way Ruby and Python do, so same-major filtering would not add value.
+
+function audit_rust_runtime() {
+  local current="" latest
+  if [[ -f "rust-toolchain.toml" ]]; then
+    current=$(awk -F\" '/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"/ {print $2; exit}' rust-toolchain.toml)
+  fi
+  if [[ -z "${current}" ]]; then
+    return
+  fi
+  if [[ ! "${current}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return
+  fi
+  latest=$(gh api repos/rust-lang/rust/releases --jq '.[0].tag_name' 2> /dev/null \
+    | sed 's/^v//' \
+    || true)
+  if [[ -z "${latest}" ]]; then
+    return
+  fi
+  if [[ "${current}" != "${latest}" ]]; then
+    record_drift "Rust" "rustc" "${current}" "${latest}" "rust-toolchain.toml"
+  fi
+}
+
+# 6. Zig runtime — read build.zig.zon's `.minimum_zig_version = "X.Y.Z"`.
+#
+# Although the field's name reads "minimum", `mlugg/setup-zig` (the action
+# skill step 4 wires up) installs exactly the value it finds — there is no
+# range resolution. So in CI it functions as a pin and drift is meaningful.
+# Dev-snapshot pins (`0.X.Y-dev.NNNN+abcdef`) and any other non-`X.Y.Z` form
+# are silently skipped: dev snapshots track master rather than a release
+# line, and comparing them against the latest tagged release would always
+# report bogus drift. Drift is checked against absolute latest tag.
+
+function audit_zig_runtime() {
+  local current="" latest
+  if [[ -f "build.zig.zon" ]]; then
+    current=$(grep -E '\.minimum_zig_version[[:space:]]*=[[:space:]]*"' build.zig.zon \
+      | head -n 1 \
+      | sed -E 's/.*"([^"]*)".*/\1/' \
+      || true)
+  fi
+  if [[ -z "${current}" ]]; then
+    return
+  fi
+  if [[ ! "${current}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return
+  fi
+  latest=$(gh api repos/ziglang/zig/releases --jq '.[0].tag_name' 2> /dev/null || true)
+  if [[ -z "${latest}" || ! "${latest}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return
+  fi
+  if [[ "${current}" != "${latest}" ]]; then
+    record_drift "Zig" "zig" "${current}" "${latest}" "build.zig.zon"
+  fi
+}
+
+# 7. Yarn / pnpm version in package.json packageManager
 #
 # Corepack supports both Yarn (`yarn@X.Y.Z+sha512.<hash>`) and pnpm
 # (`pnpm@X.Y.Z+sha512.<hash>`) under the same `packageManager` field. Audit
 # whichever is present; npm has no equivalent integrity surface.
+#
+# Two failure modes are reported as drift. First, ordinary version drift: the
+# pinned version is older than upstream stable. Second, integrity-hash
+# regression: a bare `<mgr>@<X.Y.Z>` (no `+sha512.<hash>` suffix) defeats the
+# Corepack tarball-pinning contract that skill step 5 relies on, so it is
+# itself drift even when the version is current. The integrity-hash row takes
+# precedence over the version row when both apply, since regenerating the pin
+# closes both at once.
 
 function audit_packagemanager() {
   if [[ ! -f "${PACKAGE_JSON}" ]]; then
     return
   fi
 
-  local declaration mgr current latest
+  local declaration mgr current has_hash latest
   declaration=$(jq -r '.packageManager // empty' "${PACKAGE_JSON}")
-  if [[ "${declaration}" =~ ^yarn@([0-9.]+) ]]; then
-    mgr="yarn"
-    current="${BASH_REMATCH[1]}"
-    latest=$(curl -fsSL https://repo.yarnpkg.com/tags 2> /dev/null \
-      | jq -r '.latest.stable // empty' || true)
-  elif [[ "${declaration}" =~ ^pnpm@([0-9.]+) ]]; then
-    mgr="pnpm"
-    current="${BASH_REMATCH[1]}"
-    latest=$(curl -fsSL https://registry.npmjs.org/pnpm/latest 2> /dev/null \
-      | jq -r '.version // empty' || true)
+  if [[ -z "${declaration}" ]]; then
+    return
+  fi
+
+  if [[ "${declaration}" =~ ^(yarn|pnpm)@([0-9.]+)(\+sha512\.[0-9a-f]+)? ]]; then
+    mgr="${BASH_REMATCH[1]}"
+    current="${BASH_REMATCH[2]}"
+    has_hash="${BASH_REMATCH[3]:-}"
   else
     return
+  fi
+
+  if [[ "${mgr}" == "yarn" ]]; then
+    latest=$(curl -fsSL https://repo.yarnpkg.com/tags 2> /dev/null \
+      | jq -r '.latest.stable // empty' || true)
+  else
+    latest=$(curl -fsSL https://registry.npmjs.org/pnpm/latest 2> /dev/null \
+      | jq -r '.version // empty' || true)
   fi
 
   if [[ -z "${latest}" ]]; then
     return
   fi
 
-  if [[ "${current}" != "${latest}" ]]; then
+  if [[ -z "${has_hash}" ]]; then
+    record_drift "packageManager" "${mgr} (Corepack)" \
+      "${current} (no integrity hash)" "${current}+sha512.<hash>" "${PACKAGE_JSON}"
+  elif [[ "${current}" != "${latest}" ]]; then
     record_drift "packageManager" "${mgr} (Corepack)" "${current}" "${latest}" "${PACKAGE_JSON}"
   fi
 }
 
-# 5. SHA-pinned third-party action refs
+# 8. SHA-pinned third-party action refs
 #
 # Drift is checked within the **same major series** as the pinned version. This
 # matters for the held-major pattern documented in `references/github-actions.md`:
@@ -364,7 +506,7 @@ function audit_actions() {
   done < <(grep -rHE 'uses:[[:space:]]+[a-zA-Z0-9._/-]+@[a-f0-9]{40}' "${SCAN_PATHS[@]}" 2> /dev/null || true)
 }
 
-# 6. npx <tool>@<version> pins
+# 9. npx <tool>@<version> pins
 
 function npm_latest() {
   local pkg="${1}"
@@ -396,7 +538,7 @@ function audit_npx_pins() {
   done < <(grep -rHE 'npx[[:space:]]+@?[a-zA-Z0-9._/-]+@[0-9]+\.[0-9]+\.[0-9]+' "${SCAN_PATHS[@]}" 2> /dev/null || true)
 }
 
-# 7. go install <path>@v<version> pins
+# 10. go install <path>@v<version> pins
 #
 # `github.com/<owner>/<repo>[/...]` paths are auto-derived: the upstream of
 # record is the GitHub repo named by the first two segments (the trailing
@@ -468,7 +610,7 @@ function audit_go_install_pins() {
   done < <(grep -rHE 'go install [a-zA-Z0-9._/~-]+@v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?' "${SCAN_PATHS[@]}" 2> /dev/null || true)
 }
 
-# 8. cargo install --version <X> <crate> pins
+# 11. cargo install --version <X> <crate> pins
 
 function crates_io_latest() {
   local crate="${1}"
@@ -497,7 +639,7 @@ function audit_cargo_install_pins() {
   done < <(grep -rHE 'cargo install (--locked )?--version [0-9]+\.[0-9]+' "${SCAN_PATHS[@]}" 2> /dev/null || true)
 }
 
-# 9. Python install pins across every uv / pip verb (pip install, uv pip install,
+# 12. Python install pins across every uv / pip verb (pip install, uv pip install,
 # uv add, uv tool install, uvx) — all use `<pkg>==<X>` and resolve against PyPI.
 
 function pypi_latest() {
@@ -575,6 +717,9 @@ function print_report() {
 audit_node
 audit_ruby
 audit_python_runtime
+audit_go_runtime
+audit_rust_runtime
+audit_zig_runtime
 audit_packagemanager
 audit_actions
 audit_npx_pins
