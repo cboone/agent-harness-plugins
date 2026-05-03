@@ -35,6 +35,7 @@ The skill confirms scope before each batch and supports per-category opt-out, so
 - [`jq`](https://jqlang.org/). Install via Homebrew: `brew install jq`.
 - [`corepack`](https://github.com/nodejs/corepack) (only when pinning Yarn or pnpm via `package.json`'s `packageManager` field; step 5 invokes `corepack use yarn@…` or `corepack use pnpm@…` and verifies with the corresponding `--version`). Bundled with modern Node.js; activate via `corepack enable`.
 - [`reuse`](https://reuse.software/) (only when the consuming repo has REUSE/SPDX licensing set up). Install via Homebrew: `brew install reuse`.
+- [`curl`](https://curl.se/) and Bash 4+ (only when the bundled `version-audit` script is generated; the script's drift checks against `nodejs.org`, `repo.yarnpkg.com`, `registry.npmjs.org`, `crates.io`, and `pypi.org` use `curl`, and its `declare -A` associative arrays require Bash 4+). `curl` ships with macOS and most Linux distros; macOS ships only Bash 3.2 by default, so install Bash 4+ via Homebrew: `brew install bash`.
 
 ## Usage
 
