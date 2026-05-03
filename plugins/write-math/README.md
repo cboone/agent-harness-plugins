@@ -7,13 +7,7 @@ Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other
 
 ## Installation
 
-Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
-
-```text
-/plugin marketplace add cboone/cboone-cc-plugins
-```
-
-Then select **Write Math** from the available plugins.
+See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 

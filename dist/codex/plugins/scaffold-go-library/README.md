@@ -5,6 +5,10 @@ Scaffold a Go library project with GoReleaser changelog-only releases, golangci-
 **Type:** Skill
 **Trigger:** `/scaffold-go-library`
 
+## Installation
+
+See the [marketplace install instructions](../../../../README.md#install).
+
 ## What It Does
 
 Generates the full boilerplate for a new Go library project: package source file, `doc.go`, `go.mod`, `Makefile`, `.gitignore`, `.goreleaser.yml`, `.golangci.yml`, `.editorconfig`, CI and release workflows, `LICENSE`, `README`, and a plans directory. Optionally generates example tests.

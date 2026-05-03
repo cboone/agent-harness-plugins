@@ -8,13 +8,7 @@ Review all open GitHub issues and recommend what to work on next with prioritize
 
 ## Installation
 
-Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
-
-```text
-/plugin marketplace add cboone/cboone-cc-plugins
-```
-
-Then select **Suggest Next Issue** from the available plugins.
+See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 

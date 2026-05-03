@@ -9,13 +9,7 @@ Sends rich, harness-aware macOS notifications when Claude Code, OpenCode, or Cod
 
 ### Claude Code
 
-Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace:
-
-```text
-/plugin marketplace add cboone/cboone-cc-plugins
-```
-
-Then select **Notify** from the available plugins.
+See the [marketplace install instructions](../../README.md#install).
 
 ### Using with Codex CLI
 
