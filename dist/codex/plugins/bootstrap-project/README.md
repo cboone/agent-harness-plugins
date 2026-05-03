@@ -16,7 +16,7 @@ Scans the repository for language markers and existing infrastructure, determine
 Orchestrates these tools:
 
 - `scaffold-new-repo`: LICENSE, README, .gitignore, agent config
-- `scaffold-go-cli` / `scaffold-go-library`: language-specific project structure
+- `scaffold-go-cli` / `scaffold-go-library` / `scaffold-lean-library`: language-specific project structure
 - `setup-ci`: GitHub Actions CI workflow and Makefile targets
 - `setup-linters`: linters and formatters
 - `setup-secret-scanning`: secret scanning workflows
@@ -42,5 +42,6 @@ Orchestrates these tools:
 - [Scaffold New Repo](../scaffold-new-repo/README.md): foundational repo boilerplate only
 - [Scaffold Go CLI](../scaffold-go-cli/README.md): Go CLI project scaffolding only
 - [Scaffold Go Library](../scaffold-go-library/README.md): Go library project scaffolding only
+- [Scaffold Lean Library](../scaffold-lean-library/README.md): Lean 4 library project scaffolding only
 - [Setup Linters](../setup-linters/README.md): linter and formatter setup only
 - [All plugins](../../../../README.md)
