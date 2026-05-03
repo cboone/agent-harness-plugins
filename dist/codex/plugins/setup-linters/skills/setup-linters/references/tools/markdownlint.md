@@ -54,7 +54,7 @@ For projects using scrut CLI tests, also add:
 
 ### Pandoc-academic preset
 
-Use this preset when the project contains `references/papers/`, `references/transcriptions/`, or a Pandoc paper pipeline with `papers/**/main.md` plus `papers/shared/templates/*.latex`, or when the user explicitly requests `--pandoc-academic`.
+Use this preset when the project contains `references/papers/`, `references/extractions/`, `references/transcriptions/`, or a Pandoc paper pipeline with `papers/**/main.md` plus `papers/shared/templates/*.latex`, or when the user explicitly requests `--pandoc-academic`.
 
 Create `.markdownlint-cli2.jsonc` in the project root:
 

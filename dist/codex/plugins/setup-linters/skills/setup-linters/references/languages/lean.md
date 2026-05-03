@@ -42,7 +42,7 @@ Lean projects are typically paper-backed or documentation-heavy, so layer the st
 - `cspell` for spelling
 - `.editorconfig` for whitespace and encoding
 
-If the project has `references/papers/`, `references/transcriptions/`, or a Pandoc paper pipeline with `papers/**/main.md` plus `papers/shared/templates/*.latex`, or if the user requests `--pandoc-academic`, use the Pandoc-academic preset rather than the generic Markdown defaults. The preset ships coordinated markdownlint and cspell configs for Pandoc citations, LaTeX math, raw `{=latex}` blocks, dense tables, YAML frontmatter titles, and generated or verbatim reference-material trees treated as excluded material.
+If the project has `references/papers/`, `references/extractions/`, `references/transcriptions/`, or a Pandoc paper pipeline with `papers/**/main.md` plus `papers/shared/templates/*.latex`, or if the user requests `--pandoc-academic`, use the Pandoc-academic preset rather than the generic Markdown defaults. The preset ships coordinated markdownlint and cspell configs for Pandoc citations, LaTeX math, raw `{=latex}` blocks, dense tables, YAML frontmatter titles, and generated or verbatim reference-material trees treated as excluded material.
 
 ## Makefile Targets
 
