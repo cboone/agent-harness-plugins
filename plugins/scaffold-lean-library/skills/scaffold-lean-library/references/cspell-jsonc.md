@@ -15,6 +15,8 @@ Use this template for `cspell.jsonc`.
   ],
   "dictionaries": ["project-words"],
   "ignorePaths": [
+    ".git",
+    ".git/",
     ".git/**",
     ".lake/**",
     "lake-manifest.json",

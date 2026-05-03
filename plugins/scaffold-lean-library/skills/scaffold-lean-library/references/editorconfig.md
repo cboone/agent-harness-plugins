@@ -15,9 +15,14 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 2
 
-[*.{md,yml,yaml,json,jsonc,toml}]
+[*.{yml,yaml,json,jsonc,toml}]
 indent_style = space
 indent_size = 2
+
+[*.md]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
 
 [Makefile]
 indent_style = tab
