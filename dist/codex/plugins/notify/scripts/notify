@@ -302,7 +302,11 @@ function fire_alerter_detached() {
       *) ;;
     esac
   ) > /dev/null 2>&1 < /dev/null &
-  disown
+  # Best-effort detach. In non-interactive shells without job control,
+  # `disown` can fail; under `set -e` that would abort the hook and skip
+  # the notification. The background subshell is already detached via the
+  # redirections above, so swallowing this error is safe.
+  disown 2> /dev/null || true
 }
 
 # Fires alerter blocking with action buttons. Returns the alerter result text
