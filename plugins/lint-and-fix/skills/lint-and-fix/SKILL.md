@@ -30,20 +30,20 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 
 #### Detection Table
 
-| Config file(s)                                                     | Tool               | Fix command                                              | Check command                                                  |
-| ------------------------------------------------------------------ | ------------------ | -------------------------------------------------------- | -------------------------------------------------------------- |
-| `eslint.config.*`, `.eslintrc.*`                                   | eslint             | `npx eslint --fix .`                                     | `npx eslint .`                                                 |
-| `.prettierrc*`, `prettier.config.*`                                | prettier           | `npx prettier --write .`                                 | `npx prettier --check .`                                       |
-| `.markdownlint.json`, `.markdownlint.yaml`                         | markdownlint       | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
-| `.markdownlint-cli2.*`                                             | markdownlint-cli2  | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
-| Shell scripts in project                                           | shellcheck         | _(no auto-fix)_                                          | `shellcheck <files>`                                           |
-| Shell scripts in project                                           | shfmt              | `shfmt -w <files>`                                       | `shfmt -d <files>`                                             |
-| `knip.json`, `knip.config.*`, `knip.ts`                            | knip               | _(no auto-fix)_                                          | `npx knip`                                                     |
-| `cspell.json`, `.cspell.json`, `cspell.config.*`                   | cspell             | _(no auto-fix)_                                          | `npx cspell --dot .`                                           |
-| `package.json` has `lint` script                                   | npm lint           | Try `npm run lint -- --fix`, fall back to `npm run lint` | `npm run lint`                                                 |
-| `package.json` has `format` script                                 | npm format         | `npm run format`                                         | Try `npm run format -- --check`, fall back to `npm run format` |
-| `bin/lint`, `scripts/lint`, `script/lint`                          | Project script     | Try `<script> --fix` first                               | `<script>`                                                     |
-| `.github/workflows/*.yml`, `.github/workflows/*.yaml` `run:` steps | CI workflow script | Run detected command                                     | Run detected command                                           |
+| Config file(s)                                                                    | Tool               | Fix command                                              | Check command                                                  |
+| --------------------------------------------------------------------------------- | ------------------ | -------------------------------------------------------- | -------------------------------------------------------------- |
+| `eslint.config.*`, `.eslintrc.*`                                                  | eslint             | `npx eslint --fix .`                                     | `npx eslint .`                                                 |
+| `.prettierrc*`, `prettier.config.*`                                               | prettier           | `npx prettier --write .`                                 | `npx prettier --check .`                                       |
+| `.markdownlint.json`, `.markdownlint.jsonc`, `.markdownlint.yaml`                 | markdownlint       | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
+| `.markdownlint-cli2.*`                                                            | markdownlint-cli2  | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
+| Shell scripts in project                                                          | shellcheck         | _(no auto-fix)_                                          | `shellcheck <files>`                                           |
+| Shell scripts in project                                                          | shfmt              | `shfmt -w <files>`                                       | `shfmt -d <files>`                                             |
+| `knip.json`, `knip.config.*`, `knip.ts`                                           | knip               | _(no auto-fix)_                                          | `npx knip`                                                     |
+| `cspell.json`, `cspell.jsonc`, `.cspell.json`, `.cspell.jsonc`, `cspell.config.*` | cspell             | _(no auto-fix)_                                          | `npx cspell --dot .`                                           |
+| `package.json` has `lint` script                                                  | npm lint           | Try `npm run lint -- --fix`, fall back to `npm run lint` | `npm run lint`                                                 |
+| `package.json` has `format` script                                                | npm format         | `npm run format`                                         | Try `npm run format -- --check`, fall back to `npm run format` |
+| `bin/lint`, `scripts/lint`, `script/lint`                                         | Project script     | Try `<script> --fix` first                               | `<script>`                                                     |
+| `.github/workflows/*.yml`, `.github/workflows/*.yaml` `run:` steps                | CI workflow script | Run detected command                                     | Run detected command                                           |
 
 #### Detection Steps
 

@@ -21,6 +21,8 @@ Scans the project for language markers and file types, checks for existing linte
 
 For Lean projects, no external linter is installed: `lake lint` is wired up via `lintDriver = "batteries/runLinter"` in `lakefile.toml`, plus a `lean-lint` Makefile target and a `lake lint` step in `leanprover/lean-action`-driven CI.
 
+For paper-backed Lean/math projects, the Pandoc-academic preset generates coordinated markdownlint and cspell configs for Pandoc citations, LaTeX math, raw `{=latex}` blocks, YAML frontmatter titles, dense academic tables, and transcription trees treated as excluded reference material.
+
 ## Usage
 
 ```text

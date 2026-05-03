@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "catalog-M55-m103-p112-n48"
+    "version": "catalog-M55-m104-p109-n48"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -217,7 +217,7 @@
       "name": "lint-and-fix",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/lint-and-fix",
-      "version": "1.3.5"
+      "version": "1.3.6"
     },
     {
       "author": {
@@ -448,14 +448,14 @@
         "name": "Christopher Boone"
       },
       "category": "code-quality",
-      "description": "Detect project languages, recommend appropriate linters and formatters, install them, and generate config files.",
+      "description": "Detect project languages, recommend linters and formatters, install them, and generate config files, including Pandoc-academic Markdown presets.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["cspell", "eslint", "formatting", "lean", "linting", "prettier", "ruff", "setup", "zsh"],
+      "keywords": ["cspell", "eslint", "formatting", "lean", "linting", "markdown", "pandoc", "prettier", "ruff", "setup", "zsh"],
       "license": "MIT",
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.10.4"
+      "version": "1.11.0"
     },
     {
       "author": {
