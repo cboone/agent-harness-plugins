@@ -1,11 +1,11 @@
 {
   "author": { "name": "Christopher Boone" },
-  "description": "Add standard community files to a project: CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, and PR template",
+  "description": "Add standard community files to a project: CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, and PR template.",
   "homepage": "https://github.com/cboone/cboone-cc-plugins",
   "keywords": ["code-of-conduct", "community", "contributing", "open-source", "security"],
   "license": "MIT",
   "name": "add-community-files",
   "repository": "https://github.com/cboone/cboone-cc-plugins",
   "skills": "./skills",
-  "version": "1.0.1"
+  "version": "1.0.2"
 }

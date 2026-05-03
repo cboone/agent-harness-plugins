@@ -2,7 +2,7 @@
 name: add-community-files
 description: >-
   Add standard community files to a project: CONTRIBUTING.md,
-  CODE_OF_CONDUCT.md, SECURITY.md, and PR template
+  CODE_OF_CONDUCT.md, SECURITY.md, and PR template.
 ---
 
 # Add Community Files
