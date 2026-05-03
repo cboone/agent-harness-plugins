@@ -252,7 +252,7 @@
         "name": "Christopher Boone"
       },
       "category": "workflow",
-      "description": "Notifies you when Claude finishes a task or needs your attention.",
+      "description": "Sends macOS notifications when Claude Code, OpenCode, or Codex CLI finishes a task or needs your attention.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
       "keywords": ["alerts", "macos", "notifications"],
       "license": "MIT",
