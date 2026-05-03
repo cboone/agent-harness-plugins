@@ -361,7 +361,7 @@ Do not create another tag or choose a different state tag automatically. The use
 
 Build a final review and wait for explicit user approval. The wording depends on which release workflow kind was detected in step 1.
 
-If M4 found an **existing remote tag at a different commit with identical plugin versions** and M3 produced no release-file changes, skip the pre-tag review. The release-recovery path has no new commit or tag to approve; M8c handles the user approval before creating any missing GitHub Release.
+If M4 found an **existing catalog state tag to reuse** and M3 produced no release-file changes, skip the pre-tag review. The release-recovery path has no new commit or tag to approve; M8 handles the user approval before publishing any existing local tag or creating any missing GitHub Release.
 
 If **no marketplace push-to-main workflow** was detected:
 
@@ -400,7 +400,7 @@ If `--dry-run` was specified, present this as a proposed review and stop. Do not
 
 #### M6. Create Marketplace Commit
 
-If M4 found an **existing remote tag at a different commit with identical plugin versions**, first check whether M3 produced any release-file changes:
+If M4 found an **existing catalog state tag to reuse** (`existing_commit` is non-empty and the case was not a collision), first check whether M3 produced any release-file changes:
 
 ```bash
 if git diff --quiet -- .claude-plugin/marketplace.json plugins/*/.claude-plugin/plugin.json; then
@@ -410,10 +410,11 @@ else
 fi
 ```
 
-When no release-file changes exist, skip commit creation. This is the release-recovery path: do not create an empty commit, and do not stage or commit unrelated local changes. Continue based on the workflow kind:
+When no release-file changes exist, skip commit creation. This is the release-recovery path: do not create an empty commit, and do not stage or commit unrelated local changes. Continue based on the tag source and workflow kind:
 
-- **Release workflow detected**: report that the existing remote catalog tag is present and the workflow owns GitHub Release publication. Stop without creating a local commit or tag.
-- **No release workflow detected**: continue to M8c with `release_commit_created=0` so the skill can verify or create the missing GitHub Release for the existing remote tag.
+- **Existing remote tag and release workflow detected**: report that the existing remote catalog tag is present and the workflow owns GitHub Release publication. Stop without creating a local commit or tag.
+- **Existing local-only tag and tag-triggered release workflow detected**: continue to M8b with `release_commit_created=0` so the skill can publish the existing local tag without pushing an unrelated branch tip.
+- **No release workflow detected**: continue to M8c with `release_commit_created=0` so the skill can publish an existing local tag if needed, or verify or create the missing GitHub Release for an existing remote tag.
 
 For all other M4 cases, or when release files changed, stage only the files changed by the release and create a GPG-signed commit. Choose the commit message based on whether marketplace push-to-main automation was detected:
 
@@ -486,7 +487,7 @@ After this commit reaches the default branch, the release workflow will:
 
 ##### M8b. Tag-triggered release workflow detected
 
-Ask the user if they want to push the commit and tag:
+Ask the user if they want to push the commit and tag. If `release_commit_created=0`, ask whether to push the existing local tag instead:
 
 ```text
 Push commit and tag for CATALOG-STATE?
@@ -505,7 +506,9 @@ To publish manually:
 The tag-triggered release workflow will create the GitHub Release automatically when the tag is pushed.
 ```
 
-If the user accepts, push the commit and tag.
+If `release_commit_created=0`, omit `git push origin HEAD` from the manual commands. There is no new release commit to publish, and pushing `HEAD` could publish an unrelated branch tip. Keep `git push origin CATALOG-STATE` so the existing local tag can fire the tag-triggered workflow.
+
+If the user accepts, push the commit and tag. Skip the commit push when `release_commit_created=0`:
 
 First, check for a remote:
 
@@ -516,7 +519,10 @@ git remote get-url origin
 If no remote is configured, report the error and tell the user to configure a Git remote before rerunning this step. Do not show any `git push origin ...` commands in this case. Stop.
 
 ```bash
-git push origin HEAD
+if [ "${release_commit_created:-1}" -eq 1 ]; then
+  git push origin HEAD
+fi
+
 git push origin CATALOG-STATE
 ```
 
@@ -531,9 +537,9 @@ The tag-triggered release workflow will create the GitHub Release.
 
 ##### M8c. No release workflow detected
 
-If M4 found an **existing remote tag** to reuse, this is a release-recovery path rather than a tag-publishing path. Do not push `CATALOG-STATE` again and do not create a replacement local tag. If a release commit was created locally, ask whether to push the commit before creating the GitHub Release; if there are no local commits to publish, skip the commit push as well.
+If M4 found an **existing tag** to reuse, this is a release-recovery path. For an existing remote tag, do not push `CATALOG-STATE` again and do not create a replacement local tag. For an existing local-only tag, publish that tag if the user accepts. If a release commit was created locally, ask whether to push the commit before creating the GitHub Release; if there are no local commits to publish, skip the commit push as well.
 
-Before creating a GitHub Release for an existing remote tag, check whether it already exists:
+Before creating a GitHub Release for an existing remote tag, check whether it already exists. If M4 found an existing local-only tag, skip this pre-check until after the tag is pushed:
 
 ```bash
 gh release view CATALOG-STATE --json tagName
@@ -558,7 +564,7 @@ git push origin CATALOG-STATE
 gh release create CATALOG-STATE --title "Marketplace CATALOG-STATE" --notes-file <release-notes-file> --verify-tag
 ```
 
-If M4 found an existing remote tag to reuse, omit `git push origin CATALOG-STATE` from the manual commands. Keep `gh release create ... --verify-tag`, since the tag is already on the remote.
+If `release_commit_created=0`, omit `git push origin HEAD` from the manual commands. There is no new release commit to publish, and pushing `HEAD` could publish an unrelated branch tip. If M4 found an existing remote tag to reuse, also omit `git push origin CATALOG-STATE`. Keep `gh release create ... --verify-tag`, since the tag is already on the remote. If M4 found an existing local-only tag to reuse, keep `git push origin CATALOG-STATE` so the existing local tag is published before `gh release create`.
 
 If the user accepts, push the commit and tag.
 
@@ -571,11 +577,16 @@ git remote get-url origin
 If no remote is configured, report the error and tell the user to configure a Git remote before rerunning this step. Do not show any `git push origin ...` commands in this case. Stop.
 
 ```bash
-git push origin HEAD
-git push origin CATALOG-STATE
+if [ "${release_commit_created:-1}" -eq 1 ]; then
+  git push origin HEAD
+fi
+
+if [ "${existing_tag_source:-}" != "remote" ]; then
+  git push origin CATALOG-STATE
+fi
 ```
 
-If M4 found an existing remote tag to reuse, skip `git push origin CATALOG-STATE`. The tag is already on the remote, and pushing it again can fail or be a no-op depending on local tag state.
+If M4 found an existing remote tag to reuse, the tag push is skipped. The tag is already on the remote, and pushing it again can fail or be a no-op depending on local tag state.
 
 If the push is rejected, report the error and stop. Never force push. Show the remaining manual commands so the user can complete the process after resolving the push issue.
 
