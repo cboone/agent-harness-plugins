@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "catalog-M55-m102-p112-n48"
+    "version": "catalog-M55-m102-p113-n48"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -329,7 +329,7 @@
       "name": "release",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./dist/codex/plugins/release",
-      "version": "1.5.7"
+      "version": "1.5.8"
     },
     {
       "author": {
