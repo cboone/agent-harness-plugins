@@ -32,7 +32,7 @@ Create `cspell.json` in the project root:
 {
   "version": "0.2",
   "language": "en",
-  "ignorePaths": ["node_modules/", "vendor/", ".venv/", "dist/", "build/", "coverage/", "*.lock", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "go.sum", ".git/"]
+  "ignorePaths": ["node_modules/", "vendor/", ".venv/", "dist/", "build/", "coverage/", "*.lock", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "go.sum", ".git", ".git/"]
 }
 ```
 
@@ -52,7 +52,7 @@ For project-specific dictionary words, create a `cspell-words.txt` file (one wor
     }
   ],
   "dictionaries": ["project-words"],
-  "ignorePaths": ["node_modules/", "vendor/", "dist/", "*.lock", ".git/"]
+  "ignorePaths": ["node_modules/", "vendor/", "dist/", "*.lock", ".git", ".git/"]
 }
 ```
 
@@ -87,12 +87,12 @@ Create `cspell.jsonc` in the project root:
     "yarn.lock",
     "bun.lock",
     "go.sum",
+    ".git",
     ".git/",
     ".lake/**",
     "references/papers/**",
     "references/papers.bib",
     "references/transcriptions/**",
-    "docs/plans/done/**",
   ],
   "dictionaryDefinitions": [
     {

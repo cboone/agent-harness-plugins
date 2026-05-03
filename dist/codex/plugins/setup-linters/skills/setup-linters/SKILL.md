@@ -106,7 +106,7 @@ Read the appropriate reference files for details on each tool.
 
 **Lean projects**: Lean has no external linter to install. Recommend `lake lint` driven by `lintDriver = "batteries/runLinter"` instead of a tool install. Setup is wiring (the `lintDriver` field, a `lean-lint` Makefile target gated on `_check-mathlib-cache`, and a CI step). Cross-language tools (markdownlint-cli2, cspell, EditorConfig, yamllint, Actionlint) still apply on top. See `./references/languages/lean.md`.
 
-**Pandoc-academic preset**: If the preset was detected or requested, recommend markdownlint-cli2 and cspell with the Pandoc-academic configuration variant instead of the generic Markdown and spelling defaults. Mark the preset as "Existing" only when a markdownlint config already contains the Pandoc/LaTeX rule customizations and covers the preset ignore globs through either config-level `ignores` or `.markdownlintignore`, a cspell config (`cspell.json`, `cspell.jsonc`, `.cspell.json`, `.cspell.jsonc`, or `cspell.config.*`) contains the Pandoc/LaTeX ignore patterns and ignore paths for preset-specific files or directories that exist in the project, and the cspell project vocabulary is satisfiable through existing inline `words` or existing referenced dictionary files. Do not require optional ignore paths for absent directories such as `.lake/` or `docs/plans/done/`.
+**Pandoc-academic preset**: If the preset was detected or requested, recommend markdownlint-cli2 and cspell with the Pandoc-academic configuration variant instead of the generic Markdown and spelling defaults. Mark the preset as "Existing" only when a markdownlint config already contains the Pandoc/LaTeX rule customizations and covers the preset ignore globs through either config-level `ignores` or `.markdownlintignore`, a cspell config (`cspell.json`, `cspell.jsonc`, `.cspell.json`, `.cspell.jsonc`, or `cspell.config.*`) contains the Pandoc/LaTeX ignore patterns and ignore paths for preset-specific files or directories that exist in the project, and the cspell project vocabulary is satisfiable through existing inline `words` or existing referenced dictionary files. Do not require optional ignore paths for absent directories such as `.lake/`.
 
 Present recommendations in a table using three status levels:
 
@@ -166,7 +166,7 @@ If the field is already present, mark Lean as "Existing" and skip. If `lakefile.
 
 Adapt to the project (e.g., TypeScript vs. JavaScript ESLint config, directory structure for ignore patterns).
 
-For the **Pandoc-academic preset**, generate all of the following together:
+For the **Pandoc-academic preset**, generate all of the following together when markdownlint and cspell do not already have supported config files. If a supported config file exists but fails the preset completeness check, update that existing config in place instead of adding a second config file that the tool may not load. Preserve the existing config format where practical, including `.markdownlint.yaml`, `.markdownlint-cli2.*`, `cspell.json`, `cspell.jsonc`, `.cspell.json`, `.cspell.jsonc`, and `cspell.config.*`; if the existing format cannot be updated confidently, explain the conflict and ask before creating a replacement.
 
 - `.markdownlint-cli2.jsonc` using the Pandoc-academic markdownlint rule overrides from `./references/tools/markdownlint.md`
 - `cspell.jsonc` using the Pandoc-academic `ignorePaths`, dictionary definition, and `ignoreRegExpList` from `./references/tools/cspell.md`

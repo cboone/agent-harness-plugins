@@ -102,7 +102,6 @@ Create `.markdownlint-cli2.jsonc` in the project root:
     "references/papers/**",
     "references/papers.bib",
     "references/transcriptions/**",
-    "docs/plans/done/**",
   ],
 }
 ```
