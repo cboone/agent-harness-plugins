@@ -168,7 +168,7 @@ The target versions for GitHub Actions that repositories should be updated to. W
 | `dtolnay/rust-toolchain`        | `stable`       |
 | `gitleaks/gitleaks-action`      | `v2`           |
 | `golangci/golangci-lint-action` | `v9`           |
-| `goreleaser/goreleaser-action`  | `v6`           |
+| `goreleaser/goreleaser-action`  | `v7`           |
 | `ludeeus/action-shellcheck`     | `2.0.0`        |
 | `mfinelli/setup-shfmt`          | `v4`           |
 | `oven-sh/setup-bun`             | `v2`           |
