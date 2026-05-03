@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "catalog-M58-m103-p110-n50"
+    "version": "catalog-M58-m103-p115-n50"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -287,7 +287,7 @@
       "name": "pin-everything",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/pin-everything",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     {
       "author": {
@@ -329,7 +329,7 @@
       "name": "refresh-project-scaffolding",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/refresh-project-scaffolding",
-      "version": "2.0.1"
+      "version": "2.0.2"
     },
     {
       "author": {
@@ -399,7 +399,7 @@
       "name": "scaffold-go-library",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/scaffold-go-library",
-      "version": "1.8.2"
+      "version": "1.8.3"
     },
     {
       "author": {
@@ -441,7 +441,7 @@
       "name": "setup-ci",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-ci",
-      "version": "1.9.3"
+      "version": "1.9.4"
     },
     {
       "author": {
@@ -469,7 +469,7 @@
       "name": "setup-linters",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/setup-linters",
-      "version": "1.11.0"
+      "version": "1.11.1"
     },
     {
       "author": {
