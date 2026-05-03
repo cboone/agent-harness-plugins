@@ -214,10 +214,20 @@ cboone-cc-plugins/
     ├── notify/                     # Notification hooks plugin
     │   ├── .claude-plugin/
     │   │   └── plugin.json
+    │   ├── .codex-plugin/
+    │   │   └── plugin.json
     │   ├── README.md
+    │   ├── assets/
+    │   │   ├── claude-code.png
+    │   │   ├── codex.png
+    │   │   └── opencode.png
     │   ├── hooks/
+    │   │   ├── codex.hooks.json
     │   │   └── hooks.json
+    │   ├── opencode/
+    │   │   └── index.ts
     │   └── scripts/
+    │       ├── focus-pane
     │       └── notify
     ├── review-branch/               # Branch work summarizer skill
     │   ├── .claude-plugin/
