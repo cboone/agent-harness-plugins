@@ -54,7 +54,10 @@ function truncate_with_ellipsis() {
     printf '%s' "${text}"
     return
   fi
-  printf '%s…' "${text:0:${limit}}"
+  if [[ "${limit}" -lt 1 ]]; then
+    return
+  fi
+  printf '%s…' "${text:0:$((limit - 1))}"
 }
 
 function project_name() {
@@ -134,7 +137,13 @@ function extract_last_message_text() {
 
     local msg_type
     msg_type="$(printf '%s' "${line}" | jq -r '.type // empty' 2> /dev/null)" || continue
-    if [[ "${msg_type}" != "${role}" ]]; then
+    # Accept both "user" and "human" — Claude Code's older transcript format
+    # used "human"; current versions use "user".
+    if [[ "${role}" == "user" ]]; then
+      if [[ "${msg_type}" != "user" && "${msg_type}" != "human" ]]; then
+        continue
+      fi
+    elif [[ "${msg_type}" != "${role}" ]]; then
       continue
     fi
 
