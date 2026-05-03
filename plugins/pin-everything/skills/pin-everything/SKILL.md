@@ -135,7 +135,7 @@ For every install invocation in CI templates, Makefiles, scripts, and skill docs
 
 **Skip local-dev examples that resolve via lockfile.** `npx prettier --write .` inside a `package.json` repo with a committed `prettier` devDependency is fine unpinned; the lockfile is the version of record.
 
-**Schema URLs (`$schema: ...@latest`).** Whether they can be pinned depends on the publisher. JSON Schema Store and similar registries expose versioned URLs (e.g., `https://json.schemastore.org/foo-1.2.3.json`); rewrite the `@latest` form to the current versioned URL when one exists. Some publishers only ship a moving `@latest` URL with no immutable mirror — record those in the audit summary as "publisher exposes no versioned URL" and exclude them from the step 11 re-audit. Do not block verification on a surface that has no upstream pinning mechanism.
+**Schema URLs (`$schema: ...@latest`).** Whether they can be pinned depends on the publisher. JSON Schema Store and similar registries expose versioned URLs (e.g., `https://json.schemastore.org/foo-1.2.3.json`); rewrite the `@latest` form to the current versioned URL when one exists. Some publishers only ship a moving `@latest` URL with no immutable mirror — record those in the audit summary as "publisher exposes no versioned URL" and exclude them from the step 11 re-audit. Do not block verification on a surface that has no upstream pinning mechanism. Schema URL pins are also out of scope for the recurring drift audit emitted by step 10 — see that step's preamble for why.
 
 Reference: `./references/install-commands.md`.
 
@@ -165,7 +165,7 @@ Skip this step if `--no-dependabot` was passed. Reference: `./references/dependa
 
 ### 10. Optionally Generate a Version-Audit Script
 
-Dependabot does not cover four surface families: language version files (`.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `Gemfile`, `.python-version`, `go.mod`, `rust-toolchain.toml`, `build.zig.zon`), `packageManager`, action SHAs in `.md` templates, and install-command pins inside scripts. If the user wants drift coverage for these:
+Dependabot does not cover four surface families: language version files (`.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `Gemfile`, `.python-version`, `go.mod`, `rust-toolchain.toml`, `build.zig.zon`), `packageManager`, action SHAs in `.md` templates, and install-command pins inside scripts. Schema URLs (step 7) are a fifth Dependabot-uncovered family but are deliberately out of scope here: drift detection is publisher-specific (JSON Schema Store, vendored cloud schemas, and ad-hoc registries each expose versioned URLs differently, and many publishers expose no versioned URL at all), so a generic auditor would either always-pass or always-flag. Record schema URL pins in the step 1 audit summary instead and refresh them by hand when the publisher cuts a new version. If the user wants drift coverage for the four covered families:
 
 1. Read `./references/scripts/version-audit-template`.
 2. Tailor it to the surfaces actually present in the repo (drop unused `audit_*` functions, adjust grep paths to match the user's directory layout).

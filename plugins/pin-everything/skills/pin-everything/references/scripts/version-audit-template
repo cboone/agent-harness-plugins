@@ -49,6 +49,12 @@
 #   - Python install pins across every uv / pip verb: pip install, uv pip install,
 #     uv add, uv tool install, and uvx (all using `<pkg>==<X>` form)
 #
+# Surfaces NOT audited (deliberately out of scope; see SKILL.md step 10):
+#   - Schema URL pins (`$schema: .../foo-X.Y.Z.json`). Drift detection here is
+#     publisher-specific — JSON Schema Store, vendored cloud schemas, and ad-hoc
+#     registries each expose versioned URLs differently, and many expose none.
+#     Refresh schema pins by hand when the publisher cuts a new version.
+#
 # Requires: gh (authenticated), jq, curl.
 
 set -euo pipefail

@@ -87,13 +87,22 @@ jobs:
           # duplicate issue alongside the existing one. `gh --jq` only accepts
           # a single filter expression and does not forward `--arg` to jq, so
           # the title is bound by piping through jq.
+          #
+          # Selection prefers an OPEN match over a CLOSED one when both exist
+          # (e.g. a maintainer-opened duplicate from a prior buggy run). Taking
+          # whichever issue gh returned first would otherwise let the later
+          # `Open or update issue` and `Close stale audit issue` steps mutate or
+          # skip the wrong one, breaking the single-issue invariant.
           issue_json="$(gh issue list \
             --label "${ISSUE_LABEL}" \
             --state all \
             --limit 1000 \
             --json number,title,state \
             | jq -c --arg title "${ISSUE_TITLE}" \
-              '[.[] | select(.title == $title)][0] // {}')"
+              '[.[] | select(.title == $title)] as $matches
+               | (($matches | map(select(.state == "OPEN"))[0])
+                  // ($matches | map(select(.state == "CLOSED"))[0])
+                  // {})')"
           number="$(printf '%s' "${issue_json}" | jq -r '.number // empty')"
           state="$(printf '%s' "${issue_json}" | jq -r '.state // empty')"
           echo "number=${number}" >> "${GITHUB_OUTPUT}"
