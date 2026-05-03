@@ -159,6 +159,13 @@ cboone-cc-plugins/
     │   └── skills/
     │       └── merge-main/
     │           └── SKILL.md
+    ├── optimize-runner-usage/       # GitHub Actions runner-usage optimization skill
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── README.md
+    │   └── skills/
+    │       └── optimize-runner-usage/
+    │           └── SKILL.md
     ├── pin-everything/              # Supply-chain version pinning skill
     │   ├── .claude-plugin/
     │   │   └── plugin.json
