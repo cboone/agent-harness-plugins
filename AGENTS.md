@@ -2,7 +2,7 @@
 
 ## Project overview
 
-This repository is the canonical source for a collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugins (skills, commands, and hooks). Committed mirrors under `dist/codex/` and `dist/opencode/` make the same plugins work in [Codex CLI](https://developers.openai.com/codex/cli) and [OpenCode](https://opencode.ai). User-facing details live in `README.md`.
+This repository is the canonical source for a collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugins (skills and hooks). Committed mirrors under `dist/codex/` and `dist/opencode/` make the same plugins work in [Codex CLI](https://developers.openai.com/codex/cli) and [OpenCode](https://opencode.ai). User-facing details live in `README.md`.
 
 ## Where to find things
 
