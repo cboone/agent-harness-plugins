@@ -4,9 +4,9 @@ How to integrity-pin Yarn or pnpm via Corepack, make `.yarnrc.yml` security defa
 
 ## Why Integrity-Pin the `packageManager` Field
 
-`package.json`'s `"packageManager": "yarn@4.14.1"` (or `"pnpm@9.12.3"`) field tells Corepack which package manager to use, but the version alone is not enough — Corepack will fetch the matching tarball from `repo.yarnpkg.com` (Yarn) or `registry.npmjs.org` (pnpm) at install time. If that tarball has been tampered with (or if the registry is compromised), every developer and every CI run silently picks up the malicious binary.
+`package.json`'s `"packageManager": "yarn@4.14.1"` (or `"pnpm@9.12.3"`) field tells Corepack which package manager to use, but the version alone is not enough — Corepack will fetch the matching artifact at install time: Yarn 2+'s standalone `yarn.js` bundle from `repo.yarnpkg.com`, or pnpm's `.tgz` tarball from `registry.npmjs.org`. If that artifact has been tampered with (or if the registry is compromised), every developer and every CI run silently picks up the malicious binary.
 
-The `+sha512.<hash>` suffix turns the field into a cryptographic commitment to a specific tarball: `"packageManager": "yarn@4.14.1+sha512.64df448055..."`. Corepack verifies the downloaded tarball's hash against the suffix and refuses to activate if they don't match. Tampering becomes detectable. The same suffix mechanism applies to pnpm.
+The `+sha512.<hash>` suffix turns the field into a cryptographic commitment to that specific artifact: `"packageManager": "yarn@4.14.1+sha512.64df448055..."`. Corepack verifies the downloaded artifact's hash against the suffix and refuses to activate if they don't match. Tampering becomes detectable. The same suffix mechanism applies to pnpm (over its tarball).
 
 ## Computing the SHA-512 Hash
 
@@ -22,7 +22,7 @@ jq -r '.packageManager' package.json
 
 ### Fallback: Compute by Hand
 
-If Corepack isn't available, fetch the tarball and compute SHA-512 directly. Use `shasum -a 512` for portability: it's preinstalled on macOS and most Linux distributions, while `sha512sum` (GNU coreutils) is Linux-only and absent from a stock macOS install.
+If Corepack isn't available, fetch the artifact and compute SHA-512 directly. For Yarn 2+, the artifact is the standalone `yarn.js` bundle (not a tarball). Use `shasum -a 512` for portability: it's preinstalled on macOS and most Linux distributions, while `sha512sum` (GNU coreutils) is Linux-only and absent from a stock macOS install.
 
 ```bash
 VERSION=4.14.1
