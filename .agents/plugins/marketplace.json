@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "catalog-M55-m102-p113-n48"
+    "version": "catalog-M55-m103-p111-n48"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -560,14 +560,14 @@
         "name": "Christopher Boone"
       },
       "category": "code-quality",
-      "description": "Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments.",
+      "description": "Go code style guide based on Google Go Style Guide, Effective Go, Code Review Comments, and Cobra CLI behavior.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
-      "keywords": ["code-review", "go", "golang", "style"],
+      "keywords": ["cobra", "code-review", "go", "golang", "style"],
       "license": "MIT",
       "name": "write-go-code",
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./dist/codex/plugins/write-go-code",
-      "version": "1.1.2"
+      "version": "1.2.0"
     },
     {
       "author": {

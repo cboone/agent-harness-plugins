@@ -1,6 +1,6 @@
 # Write Go Code
 
-Go code style guide based on Google Go Style Guide, Effective Go, and Code Review Comments.
+Go code style guide based on Google Go Style Guide, Effective Go, Code Review Comments, and Cobra CLI behavior.
 
 **Type:** Skill
 **Trigger:** `/write-go-code` (also activates automatically)
@@ -17,7 +17,7 @@ Then select **Write Go Code** from the available plugins.
 
 ## What It Does
 
-Provides Go style conventions covering naming, error handling, concurrency, testing, data types, functions, interfaces, and code organization. Activates automatically when writing, reviewing, or refactoring Go code, so you get consistent style guidance without needing to invoke it manually.
+Provides Go style conventions covering naming, error handling, concurrency, testing, data types, functions, interfaces, code organization, and Cobra CLI command behavior. Activates automatically when writing, reviewing, or refactoring Go code, so you get consistent style guidance without needing to invoke it manually.
 
 Organized into an essential checklist for quick reviews and comprehensive references by topic.
 
@@ -33,6 +33,7 @@ The skill also activates automatically when Claude Code detects Go code work.
 
 - Writing a new Go function: the style guide activates automatically
 - "review this Go code for style": activates automatically
+- Editing a Cobra root command: checks for combined usage output when a runnable root also has subcommands
 - "/write-go-code": loads the full style guide explicitly
 
 ## See Also
