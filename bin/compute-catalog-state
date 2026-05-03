@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Computes the canonical catalog state tag for the marketplace.
+#
+# Reads .claude-plugin/marketplace.json and prints a tag of the form
+#   catalog-M<major-sum>-m<minor-sum>-p<patch-sum>-n<plugin-count>
+# where each component is the sum of the matching SemVer field across every
+# plugin in .plugins[]. No normalization or carry between components.
+#
+# Exits non-zero if any plugin version is not strict MAJOR.MINOR.PATCH.
+
+set -euo pipefail
+
+MARKETPLACE="${MARKETPLACE:-.claude-plugin/marketplace.json}"
+
+if [[ ! -f "${MARKETPLACE}" ]]; then
+  echo "compute-catalog-state: ${MARKETPLACE} not found" >&2
+  exit 2
+fi
+
+jq -er '
+  def parse_version:
+    capture("^(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)$")
+    | {
+        major: (.major | tonumber),
+        minor: (.minor | tonumber),
+        patch: (.patch | tonumber)
+      };
+
+  [.plugins[].version | parse_version] as $versions
+  | "catalog-M\($versions | map(.major) | add)-m\($versions | map(.minor) | add)-p\($versions | map(.patch) | add)-n\($versions | length)"
+' "${MARKETPLACE}"
