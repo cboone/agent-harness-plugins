@@ -1,10 +1,20 @@
 {
   "hooks": {
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify codex-permission",
+            "type": "command"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify stop",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify codex-stop",
             "type": "command"
           }
         ]

@@ -1,150 +1,599 @@
 #!/usr/bin/env bash
-# Sends macOS notifications via terminal-notifier
+# Sends macOS notifications via alerter for Claude Code and Codex CLI hooks.
+# OpenCode has its own TypeScript implementation under ../opencode/.
+#
+# Each hook event is a subcommand; reads the hook's JSON payload from stdin
+# and shells out to alerter with per-event title, subtitle, body, sound, group,
+# and per-harness icon. Most events fire detached so the harness is not blocked
+# on user interaction. Codex PermissionRequest blocks so its action-button
+# decision can be returned to Codex via the hook's stdout JSON response.
 set -euo pipefail
 
-SCRIPT_NAME="$(basename "$0")"
-readonly SCRIPT_NAME
+SCRIPT_NAME="$(basename "${0}")"
+SCRIPT_DIR="$(cd "$(dirname "${0}")" && pwd)"
+ASSETS_DIR="${SCRIPT_DIR}/../assets"
+FOCUS_SCRIPT="${SCRIPT_DIR}/focus-pane"
+readonly SCRIPT_NAME SCRIPT_DIR ASSETS_DIR FOCUS_SCRIPT
 
-# =============================================================================
-# NOTE: Custom icon does not work
-# =============================================================================
-# terminal-notifier has known bugs with icons:
-# - -appIcon does not show the icon (confirmed bug)
-# - -sender conflicts with -activate (cannot be used together)
-#
-# See: https://github.com/julienXX/terminal-notifier/issues/320
-# =============================================================================
+# Default content-body length budgets (alerter wraps; macOS truncates around 4 lines).
+readonly BODY_LIMIT_DEFAULT=140
+readonly BODY_LIMIT_ASSISTANT_TAIL=120
+readonly BODY_LIMIT_USER_HEAD=55
+readonly BODY_LIMIT_ASSISTANT_TAIL_PAIRED=60
+readonly BODY_LIMIT_USER_FALLBACK=120
+
+# Detached fire-and-forget timeout (24h). Codex permission uses its own.
+readonly FIRE_TIMEOUT=86400
+readonly CODEX_PERMISSION_TIMEOUT=600
 
 function usage() {
   cat << 'USAGE_TEXT'
-Usage: bin/notify [command] [options]
+Usage: notify <subcommand>
 
-Sends macOS notifications via terminal-notifier.
+Subcommands:
+  cc-idle           Claude Code Notification:idle_prompt
+  cc-elicit         Claude Code Notification:elicitation_dialog
+  cc-permission     Claude Code Notification:permission_prompt
+  cc-compact        Claude Code PreCompact:auto
+  cc-stop           Claude Code Stop
+  codex-permission  Codex PermissionRequest (blocks; emits decision JSON)
+  codex-stop        Codex Stop
 
-Commands:
-  send <title> [subtitle] [message] [sound]   Send notification (default)
-  stop                                        Hook for Claude Code task completion
-
-Options:
-  -h, --help     Show this help
-
-Examples:
-  bin/notify "Claude Code" "" "Task complete" "Glass"
-  bin/notify send "Error" "project" "Failed" "Basso"
-  bin/notify stop                  # Reads JSON from stdin (hook Stop)
+Each subcommand reads its hook payload as JSON on stdin.
 USAGE_TEXT
 }
 
-# Truncates text with ellipsis if it exceeds limit
-function truncate_with_ellipsis() {
-  local text="$1"
-  local limit="${2:-80}"
+# -----------------------------------------------------------------------------
+# Generic helpers
+# -----------------------------------------------------------------------------
 
-  text=$(echo "${text}" | head -c "${limit}")
-  if [[ ${#text} -eq ${limit} ]]; then
-    text="${text}…"
+function truncate_with_ellipsis() {
+  local text="${1}"
+  local limit="${2:-80}"
+  if [[ "${#text}" -le "${limit}" ]]; then
+    printf '%s' "${text}"
+    return
   fi
-  echo "${text}"
+  if [[ "${limit}" -lt 1 ]]; then
+    return
+  fi
+  printf '%s…' "${text:0:$((limit - 1))}"
 }
 
-# Extracts last user message from transcript
-function extract_last_user_message() {
-  local transcript_path="$1"
-  local limit="${2:-80}"
+function project_name() {
+  basename "${PWD}"
+}
 
-  if [[ -z "${transcript_path}" ]] || [[ ! -f "${transcript_path}" ]]; then
+function compute_branch_suffix() {
+  local branch
+  branch="$(git branch --show-current 2> /dev/null)" || branch=""
+  branch="${branch:-unknown}"
+  if [[ "${branch}" == */* ]]; then
+    branch="${branch#*/}"
+  fi
+  printf '%s' "${branch}"
+}
+
+function compute_pane_title() {
+  if [[ -z "${TMUX_PANE:-}" ]]; then
+    return 0
+  fi
+  local title
+  title="$(tmux display-message -t "${TMUX_PANE}" -p '#T' 2> /dev/null)" || return 0
+  if [[ -z "${title}" ]]; then
+    return 0
+  fi
+  local cwd_basename
+  cwd_basename="$(basename "${PWD}")"
+  case "${title}" in
+    "${cwd_basename}" | zsh | bash | fish | sh | tmux | ssh | nvim | vim | "-zsh" | "-bash") return 0 ;;
+    *) printf '%s' "${title}" ;;
+  esac
+}
+
+function compute_subtitle() {
+  local project
+  project="$(project_name)"
+  local pane_title
+  pane_title="$(compute_pane_title)"
+  if [[ -n "${pane_title}" ]]; then
+    printf '%s · %s' "${project}" "${pane_title}"
+    return
+  fi
+  local branch_suffix
+  branch_suffix="$(compute_branch_suffix)"
+  printf '%s · %s' "${project}" "${branch_suffix}"
+}
+
+function compute_tmux_state() {
+  if [[ -z "${TMUX_PANE:-}" ]]; then
+    return 0
+  fi
+  tmux display-message -t "${TMUX_PANE}" -p '#S|#I|#P' 2> /dev/null || true
+}
+
+# -----------------------------------------------------------------------------
+# Transcript extractors (Claude Code JSONL)
+# -----------------------------------------------------------------------------
+
+# Walk transcript backward, find the most recent message of the given role,
+# extract its concatenated text content. Handles both string content (legacy)
+# and array-of-blocks content (current). Uses process substitution rather than
+# a pipe so an early break does not SIGPIPE the producer.
+function extract_last_message_text() {
+  local transcript_path="${1}"
+  local role="${2}"
+  local limit="${3:-${BODY_LIMIT_DEFAULT}}"
+
+  if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
     return 0
   fi
 
-  # Search for last user message (type: human)
-  # Read failures are intentionally ignored (notification script)
-  # shellcheck disable=SC2312
-  tac "${transcript_path}" 2> /dev/null | while read -r line; do
-    local msg_type
-    msg_type=$(echo "${line}" | jq -r '.type // empty')
-    if [[ "${msg_type}" = "human" ]]; then
-      local msg
-      # shellcheck disable=SC2312
-      msg=$(echo "${line}" | jq -r '.message.content // empty' | head -c "${limit}")
-      if [[ -n "${msg}" ]]; then
-        echo "${msg}"
-        break
-      fi
+  local found=""
+  while IFS= read -r line; do
+    if [[ -n "${found}" ]]; then
+      continue
     fi
-  done
-}
 
-function do_send() {
-  local title="${1:-Claude Code}"
-  local subtitle="${2:-}"
-  local message="${3:-}"
-  local sound="${4:-Glass}"
+    local msg_type
+    msg_type="$(printf '%s' "${line}" | jq -r '.type // empty' 2> /dev/null)" || continue
+    # Accept both "user" and "human" — Claude Code's older transcript format
+    # used "human"; current versions use "user".
+    if [[ "${role}" == "user" ]]; then
+      if [[ "${msg_type}" != "user" && "${msg_type}" != "human" ]]; then
+        continue
+      fi
+    elif [[ "${msg_type}" != "${role}" ]]; then
+      continue
+    fi
 
-  if ! terminal-notifier \
-    -title "${title}" \
-    -subtitle "${subtitle}" \
-    -message "${message}" \
-    -sound "${sound}" \
-    -group claude-code \
-    -activate com.apple.Terminal \
-    > /dev/null; then
-    echo "Warning: terminal-notifier failed to send notification." >&2
+    local text
+    text="$(printf '%s' "${line}" | jq -r '
+      (.message.content // empty) as $c
+      | if ($c | type) == "string" then $c
+        elif ($c | type) == "array" then
+          ($c | map(select(.type == "text") | .text) | join(" "))
+        else "" end
+    ' 2> /dev/null)" || continue
+
+    # Skip Claude Code slash-command synthetic messages.
+    case "${text}" in
+      "<command-"* | "<local-"*) continue ;;
+      *) ;;
+    esac
+
+    if [[ -n "${text}" ]]; then
+      found="${text}"
+    fi
+  done < <(tac "${transcript_path}" 2> /dev/null || true)
+
+  if [[ -n "${found}" ]]; then
+    truncate_with_ellipsis "${found}" "${limit}"
   fi
 }
 
-function do_stop() {
-  # Read JSON from stdin (contains transcript_path)
-  local input
-  input=$(cat)
-  local transcript_path
-  transcript_path=$(echo "${input}" | jq -r '.transcript_path // empty')
+function extract_last_user_message() {
+  extract_last_message_text "${1}" "user" "${2:-${BODY_LIMIT_DEFAULT}}"
+}
 
-  # Get project name and current branch
-  local project
-  project=$(basename "${PWD}")
-  local branch
-  branch=$(git branch --show-current 2> /dev/null || echo "unknown")
+function extract_last_assistant_message() {
+  extract_last_message_text "${1}" "assistant" "${2:-${BODY_LIMIT_DEFAULT}}"
+}
 
-  # Get last user message from transcript
-  local task
-  task=$(extract_last_user_message "${transcript_path}" 80)
+# Returns JSON {name, input} for the most recent tool_use in any assistant
+# message, or empty if there is none. Used to identify which tool a Claude
+# Code permission_prompt is about.
+function get_pending_tool_use() {
+  local transcript_path="${1}"
+  if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
+    return 0
+  fi
 
-  # Fallback and truncation
-  if [[ -z "${task}" ]]; then
-    task="Task completed"
+  local found=""
+  while IFS= read -r line; do
+    if [[ -n "${found}" ]]; then
+      continue
+    fi
+
+    local msg_type
+    msg_type="$(printf '%s' "${line}" | jq -r '.type // empty' 2> /dev/null)" || continue
+    if [[ "${msg_type}" != "assistant" ]]; then
+      continue
+    fi
+
+    local tool_use
+    tool_use="$(printf '%s' "${line}" | jq -c '
+      (.message.content // [])
+      | map(select(.type == "tool_use"))
+      | last
+      | select(. != null)
+      | {name: .name, input: .input}
+    ' 2> /dev/null)" || continue
+
+    if [[ -n "${tool_use}" && "${tool_use}" != "null" ]]; then
+      found="${tool_use}"
+    fi
+  done < <(tac "${transcript_path}" 2> /dev/null || true)
+
+  if [[ -n "${found}" ]]; then
+    printf '%s' "${found}"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Tool preview formatting
+# -----------------------------------------------------------------------------
+
+function tool_name() {
+  local tool_json="${1}"
+  if [[ -z "${tool_json}" ]]; then
+    return 0
+  fi
+  printf '%s' "${tool_json}" | jq -r '.name // empty' 2> /dev/null || true
+}
+
+function tool_preview() {
+  local tool_json="${1}"
+  local limit="${2:-${BODY_LIMIT_DEFAULT}}"
+  if [[ -z "${tool_json}" ]]; then
+    return 0
+  fi
+
+  local name
+  name="$(tool_name "${tool_json}")"
+  local preview=""
+  case "${name}" in
+    Bash) preview="$(printf '%s' "${tool_json}" | jq -r '.input.command // empty')" ;;
+    Edit | Write | Read) preview="$(printf '%s' "${tool_json}" | jq -r '.input.file_path // empty')" ;;
+    WebFetch) preview="$(printf '%s' "${tool_json}" | jq -r '.input.url // empty')" ;;
+    Grep | Glob) preview="$(printf '%s' "${tool_json}" | jq -r '.input.pattern // empty')" ;;
+    Task) preview="$(printf '%s' "${tool_json}" | jq -r '.input.description // empty')" ;;
+    NotebookEdit) preview="$(printf '%s' "${tool_json}" | jq -r '.input.notebook_path // empty')" ;;
+    *) preview="" ;;
+  esac
+
+  if [[ -n "${preview}" ]]; then
+    # Collapse newlines so the body stays single-line in the alert.
+    preview="${preview//$'\n'/ }"
+    truncate_with_ellipsis "${preview}" "${limit}"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# alerter dispatch
+# -----------------------------------------------------------------------------
+
+# Fires alerter detached. The wrapper script captures alerter's stdout and
+# dispatches click actions to focus-pane, then exits. The harness is not
+# blocked on user interaction.
+function fire_alerter_detached() {
+  local title="${1}" subtitle="${2}" message="${3}"
+  local sound="${4}" group="${5}" icon="${6}"
+
+  local tmux_state session="" window="" pane=""
+  tmux_state="$(compute_tmux_state)"
+  if [[ -n "${tmux_state}" ]]; then
+    IFS='|' read -r session window pane <<< "${tmux_state}"
+  fi
+  local term_program="${TERM_PROGRAM:-}"
+
+  # Detached subshell: alerter blocks waiting for user interaction inside,
+  # parent function returns immediately so the harness is not blocked.
+  (
+    local result
+    result="$(alerter \
+      --title "${title}" \
+      --subtitle "${subtitle}" \
+      --message "${message}" \
+      --sound "${sound}" \
+      --group "${group}" \
+      --app-icon "${icon}" \
+      --timeout "${FIRE_TIMEOUT}" \
+      2> /dev/null)" || true
+    case "${result}" in
+      *@CONTENTCLICKED*)
+        "${FOCUS_SCRIPT}" \
+          "${term_program}" \
+          "${session}" \
+          "${window}" \
+          "${pane}" \
+          > /dev/null 2>&1 || true
+        ;;
+      *) ;;
+    esac
+  ) > /dev/null 2>&1 < /dev/null &
+  # Best-effort detach. In non-interactive shells without job control,
+  # `disown` can fail; under `set -e` that would abort the hook and skip
+  # the notification. The background subshell is already detached via the
+  # redirections above, so swallowing this error is safe.
+  disown 2> /dev/null || true
+}
+
+# Fires alerter blocking with action buttons. Returns the alerter result text
+# on stdout for the caller to parse. Click-on-content focuses the pane in
+# addition to returning the result.
+function fire_alerter_blocking_actions() {
+  local title="${1}" subtitle="${2}" message="${3}"
+  local sound="${4}" group="${5}" icon="${6}"
+  local actions="${7}" close_label="${8}" timeout="${9}"
+
+  local tmux_state session="" window="" pane=""
+  tmux_state="$(compute_tmux_state)"
+  if [[ -n "${tmux_state}" ]]; then
+    IFS='|' read -r session window pane <<< "${tmux_state}"
+  fi
+
+  local result
+  result="$(alerter \
+    --title "${title}" \
+    --subtitle "${subtitle}" \
+    --message "${message}" \
+    --sound "${sound}" \
+    --group "${group}" \
+    --app-icon "${icon}" \
+    --actions "${actions}" \
+    --close-label "${close_label}" \
+    --timeout "${timeout}" \
+    2> /dev/null)" || true
+
+  case "${result}" in
+    *@CONTENTCLICKED*)
+      "${FOCUS_SCRIPT}" \
+        "${TERM_PROGRAM:-}" \
+        "${session}" \
+        "${window}" \
+        "${pane}" \
+        > /dev/null 2>&1 || true
+      ;;
+    *) ;;
+  esac
+
+  printf '%s' "${result}"
+}
+
+# -----------------------------------------------------------------------------
+# Claude Code event handlers
+# -----------------------------------------------------------------------------
+
+function do_cc_idle() {
+  local input transcript_path
+  input="$(cat)"
+  transcript_path="$(printf '%s' "${input}" | jq -r '.transcript_path // empty')"
+
+  local subtitle body
+  subtitle="$(compute_subtitle)"
+  body="$(extract_last_assistant_message "${transcript_path}" "${BODY_LIMIT_ASSISTANT_TAIL}")"
+  if [[ -z "${body}" ]]; then
+    body="Waiting for input"
+  fi
+
+  fire_alerter_detached \
+    "Claude Code · Idle" \
+    "${subtitle}" \
+    "${body}" \
+    "Tink" \
+    "claude-idle" \
+    "${ASSETS_DIR}/claude-code.png"
+}
+
+function do_cc_elicit() {
+  local input message subtitle body
+  input="$(cat)"
+  message="$(printf '%s' "${input}" | jq -r '.message // empty')"
+  subtitle="$(compute_subtitle)"
+
+  if [[ -n "${message}" ]]; then
+    body="$(truncate_with_ellipsis "${message//$'\n'/ }" "${BODY_LIMIT_DEFAULT}")"
   else
-    task=$(truncate_with_ellipsis "${task}" 80)
+    body="Needs input"
   fi
 
-  do_send "Claude Code" "${project} @ ${branch}" "${task}" "Glass"
+  fire_alerter_detached \
+    "Claude Code · Question" \
+    "${subtitle}" \
+    "${body}" \
+    "Tink" \
+    "claude-elicit" \
+    "${ASSETS_DIR}/claude-code.png"
 }
+
+function do_cc_permission() {
+  local input transcript_path
+  input="$(cat)"
+  transcript_path="$(printf '%s' "${input}" | jq -r '.transcript_path // empty')"
+
+  local subtitle base
+  base="$(compute_subtitle)"
+
+  local pending name preview
+  pending="$(get_pending_tool_use "${transcript_path}")"
+  name="$(tool_name "${pending}")"
+  preview="$(tool_preview "${pending}" "${BODY_LIMIT_DEFAULT}")"
+
+  if [[ -n "${name}" ]]; then
+    subtitle="${base} · ${name}"
+  else
+    subtitle="${base}"
+  fi
+
+  local body
+  if [[ -n "${preview}" ]]; then
+    body="${preview}"
+  elif [[ -n "${name}" ]]; then
+    body="${name}"
+  else
+    body="$(printf '%s' "${input}" | jq -r '.message // "Needs permission"')"
+  fi
+
+  fire_alerter_detached \
+    "Claude Code · Permission" \
+    "${subtitle}" \
+    "${body}" \
+    "Funk" \
+    "claude-permission" \
+    "${ASSETS_DIR}/claude-code.png"
+}
+
+function do_cc_compact() {
+  # Drain stdin so Claude Code does not see EPIPE.
+  cat > /dev/null
+
+  local subtitle
+  subtitle="$(compute_subtitle)"
+
+  fire_alerter_detached \
+    "Claude Code · Compacting" \
+    "${subtitle}" \
+    "Auto-compacting context" \
+    "Pop" \
+    "claude-compact" \
+    "${ASSETS_DIR}/claude-code.png"
+}
+
+function do_cc_stop() {
+  local input transcript_path
+  input="$(cat)"
+  transcript_path="$(printf '%s' "${input}" | jq -r '.transcript_path // empty')"
+
+  local subtitle
+  subtitle="$(compute_subtitle)"
+
+  local user_msg assistant_tail
+  user_msg="$(extract_last_user_message "${transcript_path}" "${BODY_LIMIT_USER_HEAD}")"
+  assistant_tail="$(extract_last_assistant_message "${transcript_path}" "${BODY_LIMIT_ASSISTANT_TAIL_PAIRED}")"
+
+  local body
+  if [[ -n "${user_msg}" && -n "${assistant_tail}" ]]; then
+    body="${user_msg} → ${assistant_tail}"
+  elif [[ -n "${user_msg}" ]]; then
+    body="$(extract_last_user_message "${transcript_path}" "${BODY_LIMIT_USER_FALLBACK}")"
+  elif [[ -n "${assistant_tail}" ]]; then
+    body="${assistant_tail}"
+  else
+    body="Task completed"
+  fi
+
+  fire_alerter_detached \
+    "Claude Code · Done" \
+    "${subtitle}" \
+    "${body}" \
+    "Glass" \
+    "claude-stop" \
+    "${ASSETS_DIR}/claude-code.png"
+}
+
+# -----------------------------------------------------------------------------
+# Codex event handlers
+# -----------------------------------------------------------------------------
+
+function do_codex_permission() {
+  local input
+  input="$(cat)"
+
+  local name tool_json preview
+  name="$(printf '%s' "${input}" | jq -r '.tool_name // empty')"
+  tool_json="$(printf '%s' "${input}" | jq -c '{name: .tool_name, input: (.tool_input // {})}' 2> /dev/null)" || tool_json=""
+  preview="$(tool_preview "${tool_json}" "${BODY_LIMIT_DEFAULT}")"
+
+  local base subtitle
+  base="$(compute_subtitle)"
+  if [[ -n "${name}" ]]; then
+    subtitle="${base} · ${name}"
+  else
+    subtitle="${base}"
+  fi
+
+  local body
+  if [[ -n "${preview}" ]]; then
+    body="${preview}"
+  elif [[ -n "${name}" ]]; then
+    body="${name}"
+  else
+    body="Needs permission"
+  fi
+
+  local result
+  result="$(fire_alerter_blocking_actions \
+    "Codex · Permission" \
+    "${subtitle}" \
+    "${body}" \
+    "Funk" \
+    "codex-permission" \
+    "${ASSETS_DIR}/codex.png" \
+    "Approve,Deny" \
+    "Deny" \
+    "${CODEX_PERMISSION_TIMEOUT}")"
+
+  local decision="deny"
+  case "${result}" in
+    *Approve*) decision="allow" ;;
+    *) decision="deny" ;;
+  esac
+
+  printf '{"decision":"%s"}\n' "${decision}"
+}
+
+function do_codex_stop() {
+  local input transcript_path
+  input="$(cat)"
+  transcript_path="$(printf '%s' "${input}" | jq -r '.transcript_path // empty')"
+
+  local subtitle
+  subtitle="$(compute_subtitle)"
+
+  local user_msg assistant_tail
+  user_msg="$(extract_last_user_message "${transcript_path}" "${BODY_LIMIT_USER_HEAD}")"
+  assistant_tail="$(extract_last_assistant_message "${transcript_path}" "${BODY_LIMIT_ASSISTANT_TAIL_PAIRED}")"
+
+  local body
+  if [[ -n "${user_msg}" && -n "${assistant_tail}" ]]; then
+    body="${user_msg} → ${assistant_tail}"
+  elif [[ -n "${user_msg}" ]]; then
+    body="$(extract_last_user_message "${transcript_path}" "${BODY_LIMIT_USER_FALLBACK}")"
+  elif [[ -n "${assistant_tail}" ]]; then
+    body="${assistant_tail}"
+  else
+    body="Task completed"
+  fi
+
+  fire_alerter_detached \
+    "Codex · Done" \
+    "${subtitle}" \
+    "${body}" \
+    "Glass" \
+    "codex-stop" \
+    "${ASSETS_DIR}/codex.png"
+}
+
+# -----------------------------------------------------------------------------
+# Dispatcher
+# -----------------------------------------------------------------------------
 
 function main() {
-  # If first argument is -h or --help
   if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     usage
     exit 0
   fi
 
-  # If first argument is a known command
   case "${1:-}" in
-    stop)
-      do_stop
-      ;;
-    send)
-      shift
-      do_send "$@"
-      ;;
-    -*)
-      echo "Error: unknown option: $1" >&2
-      echo "Use '${SCRIPT_NAME} --help' to see available options." >&2
+    cc-idle) do_cc_idle ;;
+    cc-elicit) do_cc_elicit ;;
+    cc-permission) do_cc_permission ;;
+    cc-compact) do_cc_compact ;;
+    cc-stop) do_cc_stop ;;
+    codex-permission) do_codex_permission ;;
+    codex-stop) do_codex_stop ;;
+    "")
+      echo "Error: subcommand required" >&2
+      usage >&2
       exit 1
       ;;
     *)
-      # Default behavior: treat arguments as send
-      do_send "$@"
+      echo "Error: unknown subcommand: ${1}" >&2
+      echo "Use '${SCRIPT_NAME} --help' to see available subcommands." >&2
+      exit 1
       ;;
   esac
 }
 
-main "$@"
+main "${@}"

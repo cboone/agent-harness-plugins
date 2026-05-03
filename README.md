@@ -153,12 +153,12 @@ Hooks are event-driven; they have no slash-command trigger.
 
 | Plugin | What it does |
 | --- | --- |
-| [Notify (macOS)](./plugins/notify/README.md) | Notifies you when Claude finishes a task or needs your attention. |
+| [Notify (macOS)](./plugins/notify/README.md) | Sends macOS notifications when Claude Code, OpenCode, or Codex CLI finishes a task or needs your attention. |
 | [Update Docs Reminder](./plugins/update-docs-reminder/README.md) | Reminds you to update documentation when a commit includes significant code changes. |
 
 **External tools:**
 
-- *Notify:* [`terminal-notifier`](https://github.com/julienXX/terminal-notifier). Install via [Homebrew](https://brew.sh): `brew install terminal-notifier`
+- *Notify:* [`alerter`](https://github.com/vjeantet/alerter). Install via [Homebrew](https://brew.sh): `brew install vjeantet/tap/alerter`
 - *Update Docs Reminder:* [`jq`](https://jqlang.org/)
 
 ## Using with Codex CLI
