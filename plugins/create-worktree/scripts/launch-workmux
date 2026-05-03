@@ -39,9 +39,15 @@ function write_escaped_prompt() {
 function remove_file_if_present() {
   local file="${1}"
 
-  if [[ -e "${file}" || -L "${file}" ]]; then
-    rm "${file}"
+  if [[ ! -e "${file}" && ! -L "${file}" ]]; then
+    return 0
   fi
+
+  if rm -- "${file}" 2> /dev/null; then
+    return 0
+  fi
+
+  [[ ! -e "${file}" && ! -L "${file}" ]]
 }
 
 function run_workmux_and_cleanup_prompt() {
