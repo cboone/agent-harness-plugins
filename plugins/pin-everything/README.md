@@ -86,7 +86,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 ## See Also
 
 - [Setup Secret Scanning](../setup-secret-scanning/README.md): credential-leak hardening (sibling supply-chain concern)
-- [Update Everything](../update-everything/README.md): ongoing template-drift detection (different cadence)
+- [Refresh Project Scaffolding](../refresh-project-scaffolding/README.md): ongoing template-drift detection (different cadence)
 - [Manage Repo Licensing](../manage-repo-licensing/README.md): SPDX coverage for newly emitted files
 - [Lint and Fix](../lint-and-fix/README.md): invoked after pinning to format affected files
 - [All plugins](../../README.md)

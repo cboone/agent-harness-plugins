@@ -10,7 +10,7 @@ description: >-
   pins Yarn via Corepack, exact-pins application package-manager dependencies,
   migrates scaffolded CI to language version files, pins install commands, and
   optionally generates a weekly drift-audit script. For ongoing template-drift
-  detection use update-everything; for credential-leak hardening use
+  detection use refresh-project-scaffolding; for credential-leak hardening use
   setup-secret-scanning.
 ---
 
