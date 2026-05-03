@@ -54,7 +54,7 @@ For projects using scrut CLI tests, also add:
 
 ### Pandoc-academic preset
 
-Use this preset when the project contains `references/papers/` or `references/transcriptions/`, or when the user explicitly requests `--pandoc-academic`.
+Use this preset when the project contains `references/papers/`, `references/transcriptions/`, or a Pandoc paper pipeline with `papers/**/main.md` plus `papers/shared/templates/*.latex`, or when the user explicitly requests `--pandoc-academic`.
 
 Create `.markdownlint-cli2.jsonc` in the project root:
 
@@ -101,12 +101,13 @@ Create `.markdownlint-cli2.jsonc` in the project root:
     ".lake/**",
     "references/papers/**",
     "references/papers.bib",
+    "references/extractions/**",
     "references/transcriptions/**",
   ],
 }
 ```
 
-Use this preset instead of layering ad-hoc markdownlint disables throughout paper sources.
+Use this preset instead of layering ad-hoc markdownlint disables throughout project-authored Pandoc sources. The bundled ignores exclude third-party papers, OCR or extraction outputs, and verbatim transcriptions; project-authored Pandoc sources outside those reference-material paths are linted with the relaxed rules above.
 
 ### .markdownlintignore (optional)
 
