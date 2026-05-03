@@ -479,8 +479,9 @@ function audit_packagemanager() {
 # scanned Markdown templates and other surfaces Dependabot does not see.
 
 function audit_actions() {
-  declare -A seen=()
-  local line file content repo current major key latest
+  declare -A latest_cache=()
+  declare -A row_seen=()
+  local line file content repo current major key row_key latest
   while IFS= read -r line; do
     file="${line%%:*}"
     content="${line#*:}"
@@ -491,20 +492,27 @@ function audit_actions() {
     if [[ "${content}" =~ ([a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+)(/[^@]*)?@[a-f0-9]{40}[[:space:]]+#[[:space:]]+(v?[0-9]+(\.[0-9]+)*) ]]; then
       repo="${BASH_REMATCH[1]}"
       current="${BASH_REMATCH[3]}"
-      # Key dedup by repo+current so divergent pins (same action at two
-      # different versions in the repo) are each checked rather than masked
-      # by whichever pin happens to be grepped first.
+      # Cache the upstream lookup by repo+current so divergent pins (same
+      # action at two different versions in the repo) are each checked
+      # rather than masked by whichever pin happens to be grepped first.
+      # Row de-duplication is keyed by repo+current+file so the same stale
+      # pin in N files emits N drift rows (one per affected file) instead
+      # of collapsing to whichever file grep reaches first.
       key="${repo}|${current}"
-      if [[ -n "${seen[${key}]:-}" ]]; then
+      row_key="${key}|${file}"
+      if [[ -n "${row_seen[${row_key}]:-}" ]]; then
         continue
       fi
-      seen[${key}]=1
-      # Compare within the same major. Strip any leading `v`, take the
-      # leading numeric segment as the major, and look up the highest
-      # release whose tag falls in that major.x.y line.
-      major="${current#v}"
-      major="${major%%.*}"
-      latest=$(github_latest_release_in_major "${repo}" "${major}")
+      row_seen[${row_key}]=1
+      if [[ -z "${latest_cache[${key}]+set}" ]]; then
+        # Compare within the same major. Strip any leading `v`, take the
+        # leading numeric segment as the major, and look up the highest
+        # release whose tag falls in that major.x.y line.
+        major="${current#v}"
+        major="${major%%.*}"
+        latest_cache[${key}]=$(github_latest_release_in_major "${repo}" "${major}")
+      fi
+      latest="${latest_cache[${key}]}"
       if [[ -n "${latest}" && "${latest#v}" != "${current#v}" ]]; then
         record_drift "Actions" "${repo}" "${current}" "${latest}" "${file}"
       fi
@@ -523,20 +531,27 @@ function npm_latest() {
 }
 
 function audit_npx_pins() {
-  declare -A seen=()
-  local line file content pkg current key latest
+  declare -A latest_cache=()
+  declare -A row_seen=()
+  local line file content pkg current key row_key latest
   while IFS= read -r line; do
     file="${line%%:*}"
     content="${line#*:}"
     if [[ "${content}" =~ npx[[:space:]]+(@?[a-zA-Z0-9._/-]+)@([0-9]+\.[0-9]+\.[0-9]+) ]]; then
       pkg="${BASH_REMATCH[1]}"
       current="${BASH_REMATCH[2]}"
+      # Cache the registry lookup by pkg+current; key the row dedup by
+      # pkg+current+file so the same stale pin in N files emits N rows.
       key="${pkg}|${current}"
-      if [[ -n "${seen[${key}]:-}" ]]; then
+      row_key="${key}|${file}"
+      if [[ -n "${row_seen[${row_key}]:-}" ]]; then
         continue
       fi
-      seen[${key}]=1
-      latest=$(npm_latest "${pkg}")
+      row_seen[${row_key}]=1
+      if [[ -z "${latest_cache[${key}]+set}" ]]; then
+        latest_cache[${key}]=$(npm_latest "${pkg}")
+      fi
+      latest="${latest_cache[${key}]}"
       if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
         record_drift "npx pin" "${pkg}" "${current}" "${latest}" "${file}"
       fi
@@ -574,8 +589,9 @@ function go_install_path_to_repo() {
 }
 
 function audit_go_install_pins() {
-  declare -A seen=()
-  local line file content install_path current key repo latest
+  declare -A latest_cache=()
+  declare -A row_seen=()
+  local line file content install_path current key row_key repo latest
   while IFS= read -r line; do
     file="${line%%:*}"
     content="${line#*:}"
@@ -603,12 +619,18 @@ function audit_go_install_pins() {
       if [[ -z "${repo}" ]]; then
         continue
       fi
+      # Cache the GitHub lookup by install_path+current; key the row dedup
+      # by install_path+current+file so each affected file emits its own row.
       key="${install_path}|${current}"
-      if [[ -n "${seen[${key}]:-}" ]]; then
+      row_key="${key}|${file}"
+      if [[ -n "${row_seen[${row_key}]:-}" ]]; then
         continue
       fi
-      seen[${key}]=1
-      latest=$(github_latest_release "${repo}")
+      row_seen[${row_key}]=1
+      if [[ -z "${latest_cache[${key}]+set}" ]]; then
+        latest_cache[${key}]=$(github_latest_release "${repo}")
+      fi
+      latest="${latest_cache[${key}]}"
       if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
         record_drift "go install" "${install_path}" "${current}" "${latest}" "${file}"
       fi
@@ -624,20 +646,27 @@ function crates_io_latest() {
 }
 
 function audit_cargo_install_pins() {
-  declare -A seen=()
-  local line file content current crate key latest
+  declare -A latest_cache=()
+  declare -A row_seen=()
+  local line file content current crate key row_key latest
   while IFS= read -r line; do
     file="${line%%:*}"
     content="${line#*:}"
     if [[ "${content}" =~ cargo[[:space:]]install[[:space:]]+(--locked[[:space:]]+)?--version[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)[[:space:]]+([a-zA-Z0-9_-]+) ]]; then
       current="${BASH_REMATCH[2]}"
       crate="${BASH_REMATCH[3]}"
+      # Cache the crates.io lookup by crate+current; key the row dedup by
+      # crate+current+file so each affected file emits its own row.
       key="${crate}|${current}"
-      if [[ -n "${seen[${key}]:-}" ]]; then
+      row_key="${key}|${file}"
+      if [[ -n "${row_seen[${row_key}]:-}" ]]; then
         continue
       fi
-      seen[${key}]=1
-      latest=$(crates_io_latest "${crate}")
+      row_seen[${row_key}]=1
+      if [[ -z "${latest_cache[${key}]+set}" ]]; then
+        latest_cache[${key}]=$(crates_io_latest "${crate}")
+      fi
+      latest="${latest_cache[${key}]}"
       if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
         record_drift "cargo install" "${crate}" "${current}" "${latest}" "${file}"
       fi
@@ -654,8 +683,9 @@ function pypi_latest() {
 }
 
 function audit_python_install_pins() {
-  declare -A seen=()
-  local line file content rest pkg current key latest
+  declare -A latest_cache=()
+  declare -A row_seen=()
+  local line file content rest pkg current key row_key latest
   while IFS= read -r line; do
     file="${line%%:*}"
     content="${line#*:}"
@@ -680,12 +710,18 @@ function audit_python_install_pins() {
       pkg="${BASH_REMATCH[1]}"
       current="${BASH_REMATCH[3]}"
       rest="${rest#*"${BASH_REMATCH[0]}"}"
+      # Cache the PyPI lookup by pkg+current; key the row dedup by
+      # pkg+current+file so each affected file emits its own row.
       key="${pkg}|${current}"
-      if [[ -n "${seen[${key}]:-}" ]]; then
+      row_key="${key}|${file}"
+      if [[ -n "${row_seen[${row_key}]:-}" ]]; then
         continue
       fi
-      seen[${key}]=1
-      latest=$(pypi_latest "${pkg}")
+      row_seen[${row_key}]=1
+      if [[ -z "${latest_cache[${key}]+set}" ]]; then
+        latest_cache[${key}]=$(pypi_latest "${pkg}")
+      fi
+      latest="${latest_cache[${key}]}"
       if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
         record_drift "python install" "${pkg}" "${current}" "${latest}" "${file}"
       fi
