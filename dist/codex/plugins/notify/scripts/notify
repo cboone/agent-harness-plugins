@@ -4,9 +4,8 @@
 #
 # Each hook event is a subcommand; reads the hook's JSON payload from stdin
 # and shells out to alerter with per-event title, subtitle, body, sound, group,
-# and per-harness icon. Most events fire detached so the harness is not blocked
-# on user interaction. Codex PermissionRequest blocks so its action-button
-# decision can be returned to Codex via the hook's stdout JSON response.
+# and per-harness icon. Events fire detached so the harness is not blocked on
+# user interaction.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "${0}")"
@@ -22,22 +21,20 @@ readonly BODY_LIMIT_USER_HEAD=55
 readonly BODY_LIMIT_ASSISTANT_TAIL_PAIRED=60
 readonly BODY_LIMIT_USER_FALLBACK=120
 
-# Detached fire-and-forget timeout (24h). Codex permission uses its own.
+# Detached fire-and-forget timeout (24h).
 readonly FIRE_TIMEOUT=86400
-readonly CODEX_PERMISSION_TIMEOUT=600
 
 function usage() {
   cat << 'USAGE_TEXT'
 Usage: notify <subcommand>
 
 Subcommands:
-  cc-idle           Claude Code Notification:idle_prompt
-  cc-elicit         Claude Code Notification:elicitation_dialog
-  cc-permission     Claude Code Notification:permission_prompt
-  cc-compact        Claude Code PreCompact:auto
-  cc-stop           Claude Code Stop
-  codex-permission  Codex PermissionRequest (blocks; emits decision JSON)
-  codex-stop        Codex Stop
+  cc-idle       Claude Code Notification:idle_prompt
+  cc-elicit     Claude Code Notification:elicitation_dialog
+  cc-permission Claude Code Notification:permission_prompt
+  cc-compact    Claude Code PreCompact:auto
+  cc-stop       Claude Code Stop
+  codex-stop    Codex Stop
 
 Each subcommand reads its hook payload as JSON on stdin.
 USAGE_TEXT
@@ -265,7 +262,8 @@ function tool_preview() {
 
 # Fires alerter detached. The wrapper script captures alerter's stdout and
 # dispatches click actions to focus-pane, then exits. The harness is not
-# blocked on user interaction.
+# blocked on user interaction. An empty sound argument suppresses the
+# `--sound` flag so the notification is silent.
 function fire_alerter_detached() {
   local title="${1}" subtitle="${2}" message="${3}"
   local sound="${4}" group="${5}" icon="${6}"
@@ -277,6 +275,11 @@ function fire_alerter_detached() {
   fi
   local term_program="${TERM_PROGRAM:-}"
 
+  local sound_args=()
+  if [[ -n "${sound}" ]]; then
+    sound_args=(--sound "${sound}")
+  fi
+
   # Detached subshell: alerter blocks waiting for user interaction inside,
   # parent function returns immediately so the harness is not blocked.
   (
@@ -285,7 +288,7 @@ function fire_alerter_detached() {
       --title "${title}" \
       --subtitle "${subtitle}" \
       --message "${message}" \
-      --sound "${sound}" \
+      "${sound_args[@]}" \
       --group "${group}" \
       --app-icon "${icon}" \
       --timeout "${FIRE_TIMEOUT}" \
@@ -307,48 +310,6 @@ function fire_alerter_detached() {
   # the notification. The background subshell is already detached via the
   # redirections above, so swallowing this error is safe.
   disown 2> /dev/null || true
-}
-
-# Fires alerter blocking with action buttons. Returns the alerter result text
-# on stdout for the caller to parse. Click-on-content focuses the pane in
-# addition to returning the result.
-function fire_alerter_blocking_actions() {
-  local title="${1}" subtitle="${2}" message="${3}"
-  local sound="${4}" group="${5}" icon="${6}"
-  local actions="${7}" close_label="${8}" timeout="${9}"
-
-  local tmux_state session="" window="" pane=""
-  tmux_state="$(compute_tmux_state)"
-  if [[ -n "${tmux_state}" ]]; then
-    IFS='|' read -r session window pane <<< "${tmux_state}"
-  fi
-
-  local result
-  result="$(alerter \
-    --title "${title}" \
-    --subtitle "${subtitle}" \
-    --message "${message}" \
-    --sound "${sound}" \
-    --group "${group}" \
-    --app-icon "${icon}" \
-    --actions "${actions}" \
-    --close-label "${close_label}" \
-    --timeout "${timeout}" \
-    2> /dev/null)" || true
-
-  case "${result}" in
-    *@CONTENTCLICKED*)
-      "${FOCUS_SCRIPT}" \
-        "${TERM_PROGRAM:-}" \
-        "${session}" \
-        "${window}" \
-        "${pane}" \
-        > /dev/null 2>&1 || true
-      ;;
-    *) ;;
-  esac
-
-  printf '%s' "${result}"
 }
 
 # -----------------------------------------------------------------------------
@@ -486,72 +447,27 @@ function do_cc_stop() {
 # Codex event handlers
 # -----------------------------------------------------------------------------
 
-function do_codex_permission() {
+# Codex Stop fires once per "no follow-up needed" sampling cycle in turn.rs's
+# turn loop, which means a single user turn can produce multiple Stop events
+# when Stop hooks request continuation or compaction re-enters the loop. The
+# notification uses a deliberately soft Tink sound so successive firings
+# within a turn (same group, so they replace in place) are not disruptive.
+# The body comes straight from the payload's `last_assistant_message`, which
+# Codex provides directly, so we do not walk the transcript here.
+function do_codex_stop() {
   local input
   input="$(cat)"
-
-  local name tool_json preview
-  name="$(printf '%s' "${input}" | jq -r '.tool_name // empty')"
-  tool_json="$(printf '%s' "${input}" | jq -c '{name: .tool_name, input: (.tool_input // {})}' 2> /dev/null)" || tool_json=""
-  preview="$(tool_preview "${tool_json}" "${BODY_LIMIT_DEFAULT}")"
-
-  local base subtitle
-  base="$(compute_subtitle)"
-  if [[ -n "${name}" ]]; then
-    subtitle="${base} · ${name}"
-  else
-    subtitle="${base}"
-  fi
-
-  local body
-  if [[ -n "${preview}" ]]; then
-    body="${preview}"
-  elif [[ -n "${name}" ]]; then
-    body="${name}"
-  else
-    body="Needs permission"
-  fi
-
-  local result
-  result="$(fire_alerter_blocking_actions \
-    "Codex · Permission" \
-    "${subtitle}" \
-    "${body}" \
-    "Funk" \
-    "codex-permission" \
-    "${ASSETS_DIR}/codex.png" \
-    "Approve,Deny" \
-    "Deny" \
-    "${CODEX_PERMISSION_TIMEOUT}")"
-
-  local decision="deny"
-  case "${result}" in
-    *Approve*) decision="allow" ;;
-    *) decision="deny" ;;
-  esac
-
-  printf '{"decision":"%s"}\n' "${decision}"
-}
-
-function do_codex_stop() {
-  local input transcript_path
-  input="$(cat)"
-  transcript_path="$(printf '%s' "${input}" | jq -r '.transcript_path // empty')"
 
   local subtitle
   subtitle="$(compute_subtitle)"
 
-  local user_msg assistant_tail
-  user_msg="$(extract_last_user_message "${transcript_path}" "${BODY_LIMIT_USER_HEAD}")"
-  assistant_tail="$(extract_last_assistant_message "${transcript_path}" "${BODY_LIMIT_ASSISTANT_TAIL_PAIRED}")"
+  local assistant_tail
+  assistant_tail="$(printf '%s' "${input}" | jq -r '.last_assistant_message // empty')"
 
   local body
-  if [[ -n "${user_msg}" && -n "${assistant_tail}" ]]; then
-    body="${user_msg} → ${assistant_tail}"
-  elif [[ -n "${user_msg}" ]]; then
-    body="$(extract_last_user_message "${transcript_path}" "${BODY_LIMIT_USER_FALLBACK}")"
-  elif [[ -n "${assistant_tail}" ]]; then
-    body="${assistant_tail}"
+  if [[ -n "${assistant_tail}" ]]; then
+    assistant_tail="${assistant_tail//$'\n'/ }"
+    body="$(truncate_with_ellipsis "${assistant_tail}" "${BODY_LIMIT_DEFAULT}")"
   else
     body="Task completed"
   fi
@@ -560,7 +476,7 @@ function do_codex_stop() {
     "Codex · Done" \
     "${subtitle}" \
     "${body}" \
-    "Glass" \
+    "Tink" \
     "codex-stop" \
     "${ASSETS_DIR}/codex.png"
 }
@@ -581,7 +497,6 @@ function main() {
     cc-permission) do_cc_permission ;;
     cc-compact) do_cc_compact ;;
     cc-stop) do_cc_stop ;;
-    codex-permission) do_codex_permission ;;
     codex-stop) do_codex_stop ;;
     "")
       echo "Error: subcommand required" >&2

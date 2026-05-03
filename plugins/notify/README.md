@@ -1,6 +1,6 @@
 # Notify (macOS)
 
-Sends rich, harness-aware macOS notifications when Claude Code, OpenCode, or Codex CLI finishes a task or needs your attention. Click a notification to focus the originating terminal app and tmux pane. Codex permission requests get `Approve` and `Deny` buttons that decide for the agent.
+Sends rich, harness-aware macOS notifications when Claude Code, OpenCode, or Codex CLI finishes a task or needs your attention. Click a notification to focus the originating terminal app and tmux pane.
 
 **Type:** Hook
 **Requires:** [`alerter`](https://github.com/vjeantet/alerter) (>= 26.5). Install via [Homebrew](https://brew.sh): `brew install vjeantet/tap/alerter`. Also requires [`jq`](https://jqlang.github.io/jq/) and macOS `tmux` (only used when running inside a tmux session).
@@ -17,13 +17,13 @@ See the [marketplace install instructions](../../README.md#install).
 codex plugin marketplace add cboone/cboone-cc-plugins
 ```
 
-Enable plugin-bundled hooks once per host so the `Stop` and `PermissionRequest` hooks fire:
+Enable plugin-bundled hooks once per host so the `Stop` hook fires:
 
 ```bash
 codex features enable plugin_hooks
 ```
 
-Without this flag the plugin installs successfully but the hooks are silently ignored. See [Codex CLI known limitations](../../README.md#codex-cli-known-limitations) for context.
+Without this flag the plugin installs successfully but the hook is silently ignored. See [Codex CLI known limitations](../../README.md#codex-cli-known-limitations) for context.
 
 Refresh the marketplace after repository updates:
 
@@ -31,7 +31,7 @@ Refresh the marketplace after repository updates:
 codex plugin marketplace upgrade cboone-cc-plugins
 ```
 
-Codex's hook event enum does not include `Notification` or `PreCompact`, so the plugin only wires the `Stop` and `PermissionRequest` events on Codex. For idle / elicitation / compact-style banners, enable Codex's native `tui.notifications = true` in `~/.codex/config.toml` (the two are complementary; both can run at once).
+Codex's hook event enum does not include `Notification` or `PreCompact`, so the plugin only wires the `Stop` event on Codex. `PermissionRequest` is intentionally not wired: that hook runs in the automatic-policy path before Codex's user approval UI is shown, not as a user-facing prompt, so notifying on it would alert the human about decisions Codex's internal approver is already making. For idle / elicitation / compact-style banners and approval prompts, enable Codex's native `tui.notifications = true` in `~/.codex/config.toml` (the two are complementary; both can run at once).
 
 ### Using with OpenCode
 
@@ -57,8 +57,8 @@ Delivers native macOS notifications so you can work in other apps while an agent
 
 - **A per-harness icon**: Claude Code, OpenCode, or Codex's app icon.
 - **A subtitle that identifies the task**: when running inside tmux with a custom pane title (set by `workmux` or similar), the subtitle is `<project> · <pane title>`. Otherwise, `<project> · <branch suffix>`, where the branch suffix is everything after the first `/` (so `feature/improve-notifier` becomes `improve-notifier`).
-- **An informative body**: per-event content (see matrix below). For permission events, the body includes a per-tool preview (the Bash command, the file path being edited, the URL being fetched, etc.). For Stop events, the body is `<last user message> → <last assistant message tail>`.
-- **A per-event sound** (Tink for idle/elicit, Funk for permission, Pop for auto-compact, Glass for done).
+- **An informative body**: per-event content (see matrix below). For permission events, the body includes a per-tool preview (the Bash command, the file path being edited, the URL being fetched, etc.). For Claude Code and OpenCode Stop events, the body is `<last user message> → <last assistant message tail>`. Codex Stop is the last assistant message alone, taken directly from the hook payload's `last_assistant_message`.
+- **A per-event sound** (Tink for Claude Code idle/elicit and Codex done, Funk for permission, Pop for auto-compact, Glass for Claude Code and OpenCode done). Codex Stop uses the soft Tink rather than the louder Glass because Codex fires `Stop` once per "no follow-up needed" sampling cycle in its turn loop, so a single user turn can produce multiple notifications when Stop hooks request continuation. Each Stop updates the same notification group, so successive firings replace the previous banner in place rather than stacking.
 - **A per-event group** so a fresh notification dismisses any prior notification of the same kind, instead of stacking.
 - **Click-to-focus**: clicking the body of any notification activates the originating terminal app (auto-detected from `$TERM_PROGRAM`, supports Apple Terminal, iTerm2, Ghostty, WezTerm, VSCode, Alacritty) and, if you were inside tmux when the hook fired, switches the tmux client to the originating session, window, and pane.
 
@@ -76,12 +76,11 @@ Delivers native macOS notifications so you can work in other apps while an agent
 
 ### Codex
 
-| Event               | Title                | Body                                                  | Buttons            | Sound   |
-| ------------------- | -------------------- | ----------------------------------------------------- | ------------------ | ------- |
-| `PermissionRequest` | `Codex · Permission` | `<Tool>: <preview>`                                   | `Approve` / `Deny` | `Funk`  |
-| `Stop`              | `Codex · Done`       | `<last user message> → <last assistant message tail>` | none               | `Glass` |
+| Event  | Title          | Body                                      | Sound  |
+| ------ | -------------- | ----------------------------------------- | ------ |
+| `Stop` | `Codex · Done` | `last_assistant_message` from the payload | `Tink` |
 
-The `Approve` / `Deny` buttons feed back into Codex via the hook's JSON response (`{"decision":"allow"|"deny"}`). The hook blocks until you choose; clicking the close button or letting the notification time out (10 minutes) defaults to `deny`. Click the body of the notification (instead of a button) to focus the pane without making a decision: the hook keeps blocking until you click `Approve`, `Deny`, or close.
+Codex fires `Stop` once per "no follow-up needed" sampling cycle in its turn loop (`codex-rs/core/src/session/turn.rs`), so a single user turn may produce multiple Stop notifications when Stop hooks request continuation. The notification uses the soft Tink sound and reuses the `codex-stop` group, so successive firings within one turn dismiss the prior banner rather than stacking. Click the body to focus the originating pane.
 
 ### OpenCode
 
@@ -113,7 +112,7 @@ Failures (closed pane, no client attached, missing terminal app) are silent: cli
 
 ## Notes and caveats
 
-- `alerter` blocks waiting for user interaction. The fire-and-forget events (everything except Codex's `PermissionRequest`) are launched in a detached subshell so the harness is not held up. Each invocation has a 24-hour timeout to prevent orphaned processes from accumulating.
+- `alerter` blocks waiting for user interaction, so every event launches it in a detached subshell. The harness is never held up. Each invocation has a 24-hour timeout to prevent orphaned processes from accumulating.
 - The transcript-based extractors (last user message, last assistant message tail, pending tool use) iterate the transcript JSONL. Performance is fine for typical sessions; very long transcripts may add a small delay before the notification appears.
 - The `--app-icon` flag uses a private macOS API that `alerter` keeps working release to release. If a future macOS update breaks it, notifications will still fire but with the default Terminal icon.
 
