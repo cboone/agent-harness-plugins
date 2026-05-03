@@ -5,7 +5,7 @@ description: >-
   Review Comments. Use when: (1) writing new Go code, (2) reviewing Go code for
   style compliance, (3) refactoring existing Go code, (4) conducting code
   reviews. Covers naming, error handling, concurrency, testing, data types,
-  functions, interfaces, and code organization.
+  functions, interfaces, code organization, and Cobra CLI command behavior.
 ---
 
 # Write Go Code
@@ -22,6 +22,7 @@ description: >-
 1. Run automated checks (`make lint`, `make fmt` or `gofmt`, `goimports`)
 1. Review against essential checklist: `references/essential/checklist.md`
 1. For specific questions, consult: `references/comprehensive/{topic}.md`
+1. When creating or editing Cobra root commands, consult: `references/comprehensive/cobra.md`
 
 ## Reference Navigation
 
@@ -40,6 +41,7 @@ description: >-
 - `references/comprehensive/functions.md` - Multiple returns, defer
 - `references/comprehensive/interfaces.md` - Embedding, type assertions
 - `references/comprehensive/makefile-conventions.md` - Required CI targets, fmt vs format
+- `references/comprehensive/cobra.md` - Cobra root command usage templates
 
 ## Sources
 
