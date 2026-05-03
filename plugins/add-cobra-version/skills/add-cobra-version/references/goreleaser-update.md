@@ -32,11 +32,11 @@ If `-X main.version=...` is absent (rare; this skill targets projects that alrea
 
 Use these GoReleaser template variables exactly as shown:
 
-| Variable          | Replaced with                                              |
-| ----------------- | ---------------------------------------------------------- |
-| `{{.Version}}`    | The semver tag without the leading `v` (for example `1.2.3`). |
-| `{{.ShortCommit}}` | Seven-character abbreviated commit SHA.                   |
-| `{{.Date}}`       | Build start time, RFC 3339 / ISO 8601.                    |
+| Variable           | Replaced with                                                 |
+| ------------------ | ------------------------------------------------------------- |
+| `{{.Version}}`     | The semver tag without the leading `v` (for example `1.2.3`). |
+| `{{.ShortCommit}}` | Seven-character abbreviated commit SHA.                       |
+| `{{.Date}}`        | Build start time, RFC 3339 / ISO 8601.                        |
 
 The `{{` and `}}` delimiters are Go template syntax; do not quote the entries. YAML allows them unquoted because they do not begin with a YAML metacharacter.
 
