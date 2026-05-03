@@ -44,7 +44,7 @@ plugins/handle-secrets/
             └── ...
 ```
 
-A hook plugin that targets both Claude Code and Codex CLI carries split manifests and a script:
+A hook plugin that targets all three harnesses (Claude Code, Codex CLI, and OpenCode) carries split manifests, harness-specific entry points, and any helper scripts or assets:
 
 ```text
 plugins/notify/
@@ -53,11 +53,18 @@ plugins/notify/
 ├── .codex-plugin/
 │   └── plugin.json
 ├── README.md
+├── assets/
 ├── hooks/
+│   ├── codex.hooks.json
 │   └── hooks.json
+├── opencode/
+│   └── index.ts
 └── scripts/
+    ├── focus-pane
     └── notify
 ```
+
+`hooks/codex.hooks.json` carries only the events Codex understands (a subset of the full Claude Code set in `hooks/hooks.json`). `opencode/index.ts` is the OpenCode TypeScript plugin; `bin/build-opencode-mirror` mirrors it to `dist/opencode/plugins/`. Anything under `assets/` and `scripts/` is bundled with the plugin and reachable from hook commands via `${CLAUDE_PLUGIN_ROOT}`.
 
 ## Adding a plugin
 

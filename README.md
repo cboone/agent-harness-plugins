@@ -196,7 +196,7 @@ codex plugin marketplace remove cboone-cc-plugins
 ### Codex CLI known limitations
 
 - **Plugin-bundled hooks are gated behind a feature flag.** `plugin_hooks` is `under development` in Codex CLI 0.128.0 and is `false` by default. Run `codex features enable plugin_hooks` once before expecting `notify` or `update-docs-reminder` to fire on Codex; see above.
-- **`Notification` and `PreCompact` hook events are not supported.** Codex CLI's hook schema only supports `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, and `Stop`. The `notify` plugin therefore wires only the turn-completion notification on Codex (its other Claude Code events have no Codex equivalent). For idle, elicitation, and permission alerts, enable Codex's built-in `tui.notifications = true` in `~/.codex/config.toml`. See the [`notify` plugin README](./plugins/notify/README.md) for details.
+- **`Notification` and `PreCompact` hook events are not supported.** Codex CLI's hook schema only supports `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, and `Stop`. The `notify` plugin therefore wires only the `Stop` and `PermissionRequest` events on Codex (turn completion plus permission requests with `Approve` / `Deny` buttons). Idle, elicitation, and compact-style banners have no Codex hook equivalent; for those, enable Codex's built-in `tui.notifications = true` in `~/.codex/config.toml`. The two are complementary and can run side by side. See the [`notify` plugin README](./plugins/notify/README.md) for details.
 - **No custom prompts shipped.** Codex's `~/.codex/prompts/` mechanism is officially deprecated in favor of skills. This repository ships skills (and hooks), not prompts.
 
 ## Using with OpenCode
