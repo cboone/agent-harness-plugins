@@ -85,13 +85,13 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Handle Secrets](./plugins/handle-secrets/README.md) | `/handle-secrets` | Best practices for handling user-provided secrets in CLI tools: secure input methods, credential storage, secret masking, and language-specific libraries. |
 | [Lint and Fix](./plugins/lint-and-fix/README.md) | `/lint-and-fix` | Detect project linters and formatters, run them with auto-fix, resolve remaining issues, then commit and push the fixes. |
 | [Setup Linters](./plugins/setup-linters/README.md) | `/setup-linters` | Detect project languages, recommend linters and formatters, install them, and generate config files, including Pandoc-academic Markdown presets. |
-| [Write Bash Scripts](./plugins/write-bash-scripts/README.md) | `/write-bash-scripts` | Bash style conventions for creating and editing Bash scripts. |
+| [Write Bash Scripts](./plugins/write-bash-scripts/README.md) | `/write-bash-scripts` | Applies Bash style conventions when creating or editing Bash scripts. |
 | [Write Go Code](./plugins/write-go-code/README.md) | `/write-go-code` | Go code style guide based on Google Go Style Guide, Effective Go, Code Review Comments, and Cobra CLI behavior. |
 | [Write LaTeX](./plugins/write-latex/README.md) | `/write-latex` | LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2, and Knuth conventions. |
 | [Write Lean Code](./plugins/write-lean-code/README.md) | `/write-lean-code` | Lean 4 style guide and Mathlib conventions for naming, proofs, formatting, and metaprogramming. |
 | [Write Lean Tests](./plugins/write-lean-tests/README.md) | `/write-lean-tests` | Conventions for compile-time, example-based Lean 4 API regression tests that mirror a library's public surface. |
-| [Write Scrut Tests](./plugins/write-scrut-tests/README.md) | `/write-scrut-tests` | Scrut test style conventions for writing and editing scrut test files for CLI binaries and zsh plugins. |
-| [Write Zsh Scripts](./plugins/write-zsh-scripts/README.md) | `/write-zsh-scripts` | Zsh style conventions for creating and editing zsh scripts, configurations, and completions. |
+| [Write Scrut Tests](./plugins/write-scrut-tests/README.md) | `/write-scrut-tests` | Applies scrut test style conventions when creating or editing scrut test files for CLI binaries and zsh plugins. |
+| [Write Zsh Scripts](./plugins/write-zsh-scripts/README.md) | `/write-zsh-scripts` | Applies zsh style conventions when creating or editing zsh scripts, configurations, and completions. |
 
 **External tools:**
 
@@ -103,7 +103,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | Plugin | Trigger | What it does |
 | --- | --- | --- |
 | [Write Formalization Roadmap](./plugins/write-formalization-roadmap/README.md) | `/write-formalization-roadmap` | Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants. |
-| [Write Markdown](./plugins/write-markdown/README.md) | `/write-markdown` | Markdown style conventions for creating and editing Markdown files. |
+| [Write Markdown](./plugins/write-markdown/README.md) | `/write-markdown` | Applies Markdown style conventions when creating or editing Markdown files. |
 | [Write Math](./plugins/write-math/README.md) | `/write-math` | Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references. |
 | [Write Pandoc Markdown](./plugins/write-pandoc-markdown/README.md) | `/write-pandoc-markdown` | Pandoc-flavored Markdown conventions for academic papers with LaTeX output. |
 
@@ -128,7 +128,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 | Plugin | Trigger | What it does |
 | --- | --- | --- |
-| [Add GoReleaser Homebrew](./plugins/add-goreleaser-homebrew/README.md) | `/add-goreleaser-homebrew` | Add GoReleaser and Homebrew tap publishing to an existing Go CLI project, with conditional support for completions, man pages, and macOS-only builds. |
+| [Add GoReleaser Homebrew](./plugins/add-goreleaser-homebrew/README.md) | `/add-goreleaser-homebrew` | Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with conditional support for completions, man pages, and macOS-only builds. |
 | [Optimize Runner Usage](./plugins/optimize-runner-usage/README.md) | `/optimize-runner-usage` | Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows. |
 | [Pin Everything](./plugins/pin-everything/README.md) | `/pin-everything` | Pin every version surface in a repository (action SHAs, packageManager integrity digests, dependency exact-pins, runtime version files, install commands) for one-shot supply-chain hardening. |
 | [Setup CI](./plugins/setup-ci/README.md) | `/setup-ci` | Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets. |
