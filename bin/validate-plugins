@@ -149,23 +149,10 @@ if [[ "${sorted}" != "${actual}" ]]; then
 fi
 
 # ─── 10. Marketplace catalog state matches plugin versions ──────────────────
+# bin/compute-catalog-state is the single source of truth for the canonical
+# catalog state tag and is also consumed by .github/workflows/release.yml.
 
-function compute_catalog_state() {
-  jq -r '
-    def parse_version:
-      capture("^(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)$")
-      | {
-          major: (.major | tonumber),
-          minor: (.minor | tonumber),
-          patch: (.patch | tonumber)
-        };
-
-    [.plugins[].version | parse_version] as $versions
-    | "catalog-M\($versions | map(.major) | add)-m\($versions | map(.minor) | add)-p\($versions | map(.patch) | add)-n\($versions | length)"
-  ' "${MARKETPLACE}"
-}
-
-if ! computed_catalog_state="$(compute_catalog_state 2> /dev/null)"; then
+if ! computed_catalog_state="$(bin/compute-catalog-state 2> /dev/null)"; then
   error "Marketplace metadata.version could not be computed because one or more plugin versions are not SemVer"
 else
   metadata_version="$(jq -r '.metadata.version // empty' "${MARKETPLACE}")"
