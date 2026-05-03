@@ -663,9 +663,14 @@ function audit_python_install_pins() {
     # form preserves the original. Optional surrounding quotes (single or
     # double) and PEP 508 extras like `foo[bar,baz]==1.2.3` are tolerated; the
     # extras list is dropped before resolving against PyPI since extras don't
-    # affect the published version.
+    # affect the published version. The version expression accepts PEP 440
+    # release segments (`1.2.3`), pre-release suffixes (`1.2.3rc1`, `1.2.3a1`,
+    # `1.2.3b2`), post-releases (`1.2.3.post1`), dev-releases (`1.2.3.dev0`),
+    # and local-version identifiers (`1.2.3+local.id`); a numeric-only matcher
+    # would silently skip every non-final pin even though they are valid exact
+    # `==` requirements that audit_python_install_pins is documented to cover.
     rest="${content}"
-    while [[ "${rest}" =~ [\"\']?([a-zA-Z0-9._-]+)(\[[a-zA-Z0-9._,-]+\])?==([0-9]+(\.[0-9]+)*)[\"\']? ]]; do
+    while [[ "${rest}" =~ [\"\']?([a-zA-Z0-9._-]+)(\[[a-zA-Z0-9._,-]+\])?==([0-9]+(\.[0-9]+)*([a-z]+[0-9]*)?(\.post[0-9]+)?(\.dev[0-9]+)?(\+[a-zA-Z0-9._-]+)?)[\"\']? ]]; do
       pkg="${BASH_REMATCH[1]}"
       current="${BASH_REMATCH[3]}"
       rest="${rest#*"${BASH_REMATCH[0]}"}"

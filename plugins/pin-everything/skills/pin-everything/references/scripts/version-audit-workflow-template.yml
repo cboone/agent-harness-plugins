@@ -37,10 +37,24 @@ jobs:
 
       - name: Ensure label exists
         run: |
-          gh label create "${ISSUE_LABEL}" \
-            --description "Drift report from bin/version-audit" \
-            --color BFD4F2 \
-            --force
+          # Create the label only when it does not already exist; never use
+          # `gh label create --force`. The default label name is generic, so a
+          # consuming repo may already use `version-audit` for a different
+          # workflow with its own description and color. `--force` rewrites
+          # those fields silently on the first scheduled run, which is a
+          # destructive action this workflow has no business taking; the
+          # check-then-create form keeps existing label metadata intact and is
+          # idempotent across re-runs. The labels GET endpoint returns 404 when
+          # the label is absent, which `gh api --silent` propagates as a
+          # non-zero exit. `${GITHUB_REPOSITORY}` is `<owner>/<repo>`; the label
+          # name is URL-encoded with `jq -rn @uri` so labels containing spaces
+          # or other reserved characters resolve correctly.
+          encoded_label="$(jq -rn --arg name "${ISSUE_LABEL}" '$name | @uri')"
+          if ! gh api "repos/${GITHUB_REPOSITORY}/labels/${encoded_label}" --silent 2> /dev/null; then
+            gh label create "${ISSUE_LABEL}" \
+              --description "Drift report from bin/version-audit" \
+              --color BFD4F2
+          fi
 
       - name: Run audit
         id: audit

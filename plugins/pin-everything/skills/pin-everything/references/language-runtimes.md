@@ -16,7 +16,7 @@ Version-file selection is **prefer the file that already has the language's entr
 | -------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
 | Node.js  | `actions/setup-node`                                                                  | `node-version-file: ".tool-versions"` only if `.tool-versions` contains a `nodejs` line; else `.nvmrc`; else `.node-version`; else create `.tool-versions` (or add a `nodejs` line to an existing one)          | `.tool-versions`: `nodejs <version>` (one tool per line); `.nvmrc` / `.node-version`: bare | Create `.tool-versions` with current LTS                                                                                   |
 | Ruby     | `ruby/setup-ruby`                                                                     | `ruby-version-file: ".tool-versions"` only if `.tool-versions` contains a `ruby` line; else `.ruby-version`; else `Gemfile` (if it has a `ruby` directive); else create `.tool-versions` (or add a `ruby` line) | `.tool-versions`: `ruby <version>`; `.ruby-version`: bare                                  | Create `.tool-versions` with current stable                                                                                |
-| Go       | `actions/setup-go`                                                                    | `go-version-file: "go.mod"`                                                                                                                                                                                     | `go X.Y` directive                                                                         | Always present in Go projects                                                                                              |
+| Go       | `actions/setup-go`                                                                    | `go-version-file: "go.mod"`                                                                                                                                                                                     | `go X.Y.Z` directive (exact patch; the bare `go X.Y` form is a floor, not a pin)           | Always present in Go projects                                                                                              |
 | Python   | `actions/setup-python` / `astral-sh/setup-uv`                                         | `astral-sh/setup-uv`: no input (reads `pyproject.toml` `requires-python` directly). `actions/setup-python`: `python-version-file: ".python-version"` if present; else create `.python-version`                  | `.python-version`: `X.Y.Z` (one per line); `pyproject.toml`: `requires-python = ">=X.Y"`   | `setup-uv`: ensure `pyproject.toml` `requires-python` is set; `setup-python`: create `.python-version` with current stable |
 | Rust     | `dtolnay/rust-toolchain`                                                              | _no version-file input_; `rust-toolchain.toml` is read by cargo directly                                                                                                                                        | `[toolchain]\nchannel = "stable"`                                                          | Create or pass `toolchain:` input                                                                                          |
 | Zig      | `mlugg/setup-zig` (action-direct) or `cboone/gh-actions/.../run-zig-ci.yml` (wrapper) | None for `mlugg/setup-zig` (reads `build.zig.zon` by default); `zig-version-file: build.zig.zon` on the wrapper                                                                                                 | `.{ .minimum_zig_version = "X.Y.Z" }` in `build.zig.zon`                                   | Always present in Zig projects                                                                                             |
@@ -75,11 +75,26 @@ gh api repos/ruby/ruby/releases \
 
 ### Go (the `go.mod` directive)
 
-`go.mod`'s `go X.Y` directive is the version of record; populate it via `go mod edit -go X.Y`. The current Go release series is announced at `https://go.dev/dl/?mode=json`:
+`go.mod`'s `go` directive is the version of record. Two forms are syntactically valid, and only one of them actually pins the runtime:
+
+- `go X.Y` is a **module-spec floor**: `actions/setup-go` resolves it to the latest patch in the X.Y series at install time, so successive CI runs can pick different patches as upstream cuts new releases. The bundled `bin/version-audit` template silently skips this form because there is no fixed value to compare against.
+- `go X.Y.Z` is an **exact pin**: `actions/setup-go` installs that exact patch and the audit treats it as auditable drift against the latest patch in the same X.Y line.
+
+Populate the file with the exact form via `go mod edit -go X.Y.Z` (Go 1.21+ accepts the three-segment value). The current Go release series is announced at `https://go.dev/dl/?mode=json`, which already returns an exact `X.Y.Z`:
 
 ```bash
 curl -fsSL 'https://go.dev/dl/?mode=json' \
   | jq -r '.[0].version' \
+  | sed 's/^go//'
+```
+
+To preserve an existing X.Y series instead of jumping to the newest one, filter for that prefix:
+
+```bash
+SERIES=1.23  # use the X.Y series found in the existing go.mod directive
+curl -fsSL 'https://go.dev/dl/?mode=json&include=all' \
+  | jq -r --arg prefix "go${SERIES}." \
+    'first(.[] | select(.version | startswith($prefix))) | .version' \
   | sed 's/^go//'
 ```
 
