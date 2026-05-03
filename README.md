@@ -1,6 +1,6 @@
 # Claude Code Plugins
 
-A collection of plugins (skills, commands, and hooks) for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI's Codex CLI](https://developers.openai.com/codex/cli), and [OpenCode](https://opencode.ai/docs/skills/), from [Christopher Boone](https://cboone.github.io).
+A collection of plugins (skills and hooks) for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI's Codex CLI](https://developers.openai.com/codex/cli), and [OpenCode](https://opencode.ai/docs/skills/), from [Christopher Boone](https://cboone.github.io).
 
 ## Install
 
@@ -85,13 +85,13 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Handle Secrets](./plugins/handle-secrets/README.md) | `/handle-secrets` | Best practices for handling user-provided secrets in CLI tools: secure input methods, credential storage, secret masking, and language-specific libraries. |
 | [Lint and Fix](./plugins/lint-and-fix/README.md) | `/lint-and-fix` | Detect project linters and formatters, run them with auto-fix, resolve remaining issues, then commit and push the fixes. |
 | [Setup Linters](./plugins/setup-linters/README.md) | `/setup-linters` | Detect project languages, recommend linters and formatters, install them, and generate config files, including Pandoc-academic Markdown presets. |
-| [Write Bash Scripts](./plugins/write-bash-scripts/README.md) | `/write-bash-scripts` | Bash style conventions for creating and editing Bash scripts. |
+| [Write Bash Scripts](./plugins/write-bash-scripts/README.md) | `/write-bash-scripts` | Applies Bash style conventions when creating or editing Bash scripts. |
 | [Write Go Code](./plugins/write-go-code/README.md) | `/write-go-code` | Go code style guide based on Google Go Style Guide, Effective Go, Code Review Comments, and Cobra CLI behavior. |
 | [Write LaTeX](./plugins/write-latex/README.md) | `/write-latex` | LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2, and Knuth conventions. |
 | [Write Lean Code](./plugins/write-lean-code/README.md) | `/write-lean-code` | Lean 4 style guide and Mathlib conventions for naming, proofs, formatting, and metaprogramming. |
 | [Write Lean Tests](./plugins/write-lean-tests/README.md) | `/write-lean-tests` | Conventions for compile-time, example-based Lean 4 API regression tests that mirror a library's public surface. |
-| [Write Scrut Tests](./plugins/write-scrut-tests/README.md) | `/write-scrut-tests` | Scrut test style conventions for writing and editing scrut test files for CLI binaries and zsh plugins. |
-| [Write Zsh Scripts](./plugins/write-zsh-scripts/README.md) | `/write-zsh-scripts` | Zsh style conventions for creating and editing zsh scripts, configurations, and completions. |
+| [Write Scrut Tests](./plugins/write-scrut-tests/README.md) | `/write-scrut-tests` | Applies scrut test style conventions when creating or editing scrut test files for CLI binaries and zsh plugins. |
+| [Write Zsh Scripts](./plugins/write-zsh-scripts/README.md) | `/write-zsh-scripts` | Applies zsh style conventions when creating or editing zsh scripts, configurations, and completions. |
 
 **External tools:**
 
@@ -103,7 +103,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | Plugin | Trigger | What it does |
 | --- | --- | --- |
 | [Write Formalization Roadmap](./plugins/write-formalization-roadmap/README.md) | `/write-formalization-roadmap` | Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants. |
-| [Write Markdown](./plugins/write-markdown/README.md) | `/write-markdown` | Markdown style conventions for creating and editing Markdown files. |
+| [Write Markdown](./plugins/write-markdown/README.md) | `/write-markdown` | Applies Markdown style conventions when creating or editing Markdown files. |
 | [Write Math](./plugins/write-math/README.md) | `/write-math` | Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references. |
 | [Write Pandoc Markdown](./plugins/write-pandoc-markdown/README.md) | `/write-pandoc-markdown` | Pandoc-flavored Markdown conventions for academic papers with LaTeX output. |
 
@@ -128,7 +128,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 | Plugin | Trigger | What it does |
 | --- | --- | --- |
-| [Add GoReleaser Homebrew](./plugins/add-goreleaser-homebrew/README.md) | `/add-goreleaser-homebrew` | Add GoReleaser and Homebrew tap publishing to an existing Go CLI project, with conditional support for completions, man pages, and macOS-only builds. |
+| [Add GoReleaser Homebrew](./plugins/add-goreleaser-homebrew/README.md) | `/add-goreleaser-homebrew` | Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with conditional support for completions, man pages, and macOS-only builds. |
 | [Optimize Runner Usage](./plugins/optimize-runner-usage/README.md) | `/optimize-runner-usage` | Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows. |
 | [Pin Everything](./plugins/pin-everything/README.md) | `/pin-everything` | Pin every version surface in a repository (action SHAs, packageManager integrity digests, dependency exact-pins, runtime version files, install commands) for one-shot supply-chain hardening. |
 | [Setup CI](./plugins/setup-ci/README.md) | `/setup-ci` | Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets. |
@@ -196,18 +196,18 @@ codex plugin marketplace remove cboone-cc-plugins
 ### Codex CLI known limitations
 
 - **Plugin-bundled hooks are gated behind a feature flag.** `plugin_hooks` is `under development` in Codex CLI 0.128.0 and is `false` by default. Run `codex features enable plugin_hooks` once before expecting `notify` or `update-docs-reminder` to fire on Codex; see above.
-- **`Notification` and `PreCompact` hook events are not supported.** Codex CLI's hook schema only supports `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, and `Stop`. The `notify` plugin therefore wires only the turn-completion notification on Codex (its other Claude Code events have no Codex equivalent). For idle, elicitation, and permission alerts, enable Codex's built-in `tui.notifications = true` in `~/.codex/config.toml`. See the [`notify` plugin README](./plugins/notify/README.md) for details.
+- **`Notification` and `PreCompact` hook events are not supported.** Codex CLI's hook schema only supports `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, and `Stop`. The `notify` plugin therefore wires only the `Stop` and `PermissionRequest` events on Codex (turn completion plus permission requests with `Approve` / `Deny` buttons). Idle, elicitation, and compact-style banners have no Codex hook equivalent; for those, enable Codex's built-in `tui.notifications = true` in `~/.codex/config.toml`. The two are complementary and can run side by side. See the [`notify` plugin README](./plugins/notify/README.md) for details.
 - **No custom prompts shipped.** Codex's `~/.codex/prompts/` mechanism is officially deprecated in favor of skills. This repository ships skills (and hooks), not prompts.
 
 ## Using with OpenCode
 
-This repository also works with the skills, commands, and hooks in [OpenCode](https://opencode.ai) via a committed mirror at [`dist/opencode/`](./dist/opencode/).
+This repository also works with the skills and hooks in [OpenCode](https://opencode.ai) via a committed mirror at [`dist/opencode/`](./dist/opencode/).
 
 When adding or removing a plugin, regenerate the mirror with `bin/build-opencode-mirror` and commit the result. CI fails if the mirror drifts from the source plugins. Hooks are mirrored to `dist/opencode/plugins/` as TypeScript plugins, sourced from each plugin's `opencode/index.ts`.
 
 ### OpenCode known limitations
 
-- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Some commands and one skill use Claude Code's `@${CLAUDE_PLUGIN_ROOT}/references/...` pattern to inline reference files at runtime. OpenCode does not expand this variable, so those inclusions appear to the agent as literal path strings rather than inlined content. The inline workflow text in each affected file still loads correctly. Affected commands: `/add-goreleaser-homebrew`, `/scaffold-go-cli`, `/scaffold-go-library`, `/scaffold-new-repo`, `/scaffold-rust-cli`, `/setup-ci`, `/setup-secret-scanning`. Affected skill: `create-plugin`. For full fidelity in these cases, run them in Claude Code.
+- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Some skills use Claude Code's `@${CLAUDE_PLUGIN_ROOT}/references/...` pattern to inline reference files at runtime. OpenCode does not expand this variable, so those inclusions appear to the agent as literal path strings rather than inlined content. The inline workflow text in each affected file still loads correctly. Affected skills: `/add-goreleaser-homebrew`, `/scaffold-go-cli`, `/scaffold-go-library`, `/scaffold-new-repo`, `/scaffold-rust-cli`, `/setup-ci`, `/setup-secret-scanning`, `create-plugin`. For full fidelity in these cases, run them in Claude Code.
 - **Hook event parity is approximate.** OpenCode's event model collapses several distinct Claude Code notification matchers (`idle_prompt`, `elicitation_dialog`, `permission_prompt`) and the `PreCompact` event is mapped to an experimental OpenCode hook. See each hook's README for the specific mapping.
 
 ## License

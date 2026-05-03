@@ -108,12 +108,12 @@ If a release tag is unavailable (channel ref, branch ref), use the channel or br
 Sometimes you want to hold an action at a specific major because the next major has a breaking change you have not migrated yet. The pin is the same — SHA + comment — but the comment captures the intent:
 
 ```yaml
-uses: golangci/golangci-lint-action@<sha> # v8.0.0 — held at v8 pending v9 migration; see ISSUE-NUMBER
+uses: owner/action@<sha> # v2.3.4, held at v2 pending v3 migration; see ISSUE-NUMBER
 ```
 
 When the upstream cuts a new patch release within the held major, Dependabot will still propose the bump. Accept it; the major boundary stays put because the comment matches the held major's tag pattern.
 
-The bundled `version-audit-template` (step 10 of `SKILL.md`) reads pinned `# vX.Y.Z` comments and compares each one against upstream releases **within the same major series**, not against the absolute upstream latest. That is what makes the held-major comment work as an intentional pin: the audit flags a v8 -> v8.x.y patch but never an unwanted v8 -> v9 "drift" row.
+The bundled `version-audit-template` (step 10 of `SKILL.md`) reads pinned `# vX.Y.Z` comments and compares each one against upstream releases **within the same major series**, not against the absolute upstream latest. That is what makes the held-major comment work as an intentional pin: the audit flags a v2 -> v2.x.y patch but never an unwanted v2 -> v3 "drift" row.
 
 ## Bumping a Held Major
 
