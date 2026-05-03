@@ -1,0 +1,740 @@
+#!/usr/bin/env bash
+# Template for bin/version-audit. Audits version surfaces that Dependabot does
+# not cover and writes a Markdown report to stdout. Empty output means no drift.
+#
+# This file is a TEMPLATE consumed by the pin-everything skill. The skill reads
+# it, tailors the SCAN_PATHS list and the audit_* function calls at the bottom
+# to the consuming repo's actual surfaces, and writes the result to that repo's
+# bin/version-audit.
+#
+# Surfaces audited:
+#   - Node.js in whichever Node version file the repo uses (.tool-versions with
+#     a `nodejs` line, .nvmrc, or .node-version). Drift is checked against the
+#     latest release in the same major series as the pinned version (so repos
+#     intentionally on a Current/non-LTS major are not falsely flagged).
+#   - Ruby in whichever Ruby version file the repo uses (.tool-versions with a
+#     `ruby` line, .ruby-version, or a Gemfile `ruby 'X.Y.Z'` directive). Drift
+#     is checked within the same X.Y feature-release series as the pinned
+#     version (Ruby's release series boundary is at the minor, not the major).
+#   - Python in .python-version. Drift is checked within the same X.Y series.
+#     pyproject.toml `requires-python` is intentionally NOT audited: it uses
+#     `>=` semantics, so it's a floor, not a pin.
+#   - Go in go.mod's `go X.Y.Z` directive (the X.Y-only form is a module-spec
+#     floor and is silently skipped). Drift is checked within the same X.Y
+#     release line.
+#   - Rust in rust-toolchain.toml's `channel = "X.Y.Z"`. Moving channels
+#     (`stable`, `beta`, `nightly`) are silently skipped. Drift is checked
+#     against absolute latest stable.
+#   - Zig in build.zig.zon's `.minimum_zig_version = "X.Y.Z"`. mlugg/setup-zig
+#     installs exactly that version, so it functions as a pin for CI even
+#     though the field's name reads "minimum". Dev-snapshot pins
+#     (`0.X.Y-dev.NNNN+abcdef`) are silently skipped.
+#   - package.json packageManager (Yarn or pnpm via Corepack). Both the version
+#     and the `+sha512.<hash>` integrity suffix are audited; a bare
+#     `<mgr>@<X.Y.Z>` (no integrity hash) is itself drift, since it defeats
+#     Corepack's tarball-pinning guarantee even when the version is current.
+#   - Release-tagged SHA-pinned action refs (those whose comment is a numeric
+#     `# vX.Y.Z` tag). Drift is checked within the same major series as the
+#     pinned version, so a `# v8.0.0 -- held at v8 pending v9 migration` pin
+#     is only flagged when a newer v8.x lands, never told to "upgrade" to v9.
+#     Major bumps are intentional and Dependabot already proposes them for
+#     workflow files; the audit's role is the same-major patch backstop.
+#     Channel/branch pins (`# stable`, `# main`) are out of scope because
+#     there is no upstream "latest version" to compare against.
+#   - npx <tool>@<version> pins
+#   - go install <path>@v<version> pins. github.com/<owner>/<repo>[/...]
+#     paths are auto-derived; vanity domains (golang.org/x/..., mvdan.cc/...)
+#     require an explicit entry in the per-path map.
+#   - cargo install --version <X> <crate> pins
+#   - Python install pins across every uv / pip verb: pip install, uv pip install,
+#     uv add, uv tool install, and uvx (all using `<pkg>==<X>` form)
+#
+# Surfaces NOT audited (deliberately out of scope; see SKILL.md step 10):
+#   - Schema URL pins (`$schema: .../foo-X.Y.Z.json`). Drift detection here is
+#     publisher-specific — JSON Schema Store, vendored cloud schemas, and ad-hoc
+#     registries each expose versioned URLs differently, and many expose none.
+#     Refresh schema pins by hand when the publisher cuts a new version.
+#
+# Requires: gh (authenticated), jq, curl.
+
+set -euo pipefail
+
+# Requires Bash 4+ (associative arrays via `declare -A`). macOS ships /bin/bash
+# 3.2 by default; install a newer Bash via Homebrew (`brew install bash`) and
+# invoke this script via its shebang (`./bin/version-audit`) so /usr/bin/env
+# picks up the Homebrew-installed bash from PATH.
+if ((BASH_VERSINFO[0] < 4)); then
+  echo "version-audit: Bash 4+ required (found ${BASH_VERSION}). On macOS, run 'brew install bash' and invoke as ./bin/version-audit." >&2
+  exit 1
+fi
+
+# Resolve to the repo root so all relative paths below (TOOL_VERSIONS_FILE,
+# PACKAGE_JSON, SCAN_PATHS) work regardless of the caller's working directory.
+repo_root=$(git rev-parse --show-toplevel 2> /dev/null || true)
+if [[ -z "${repo_root}" ]]; then
+  echo "version-audit: must be run inside a git repository" >&2
+  exit 1
+fi
+cd "${repo_root}"
+
+# REPLACE: SCAN_PATHS lists the directories the audit greps for embedded pins.
+# Tailor this to the consuming repo's layout. Defaults match cboone-cc-plugins.
+SCAN_PATHS=(.github/ plugins/)
+
+TOOL_VERSIONS_FILE=".tool-versions"
+PACKAGE_JSON="package.json"
+readonly TOOL_VERSIONS_FILE PACKAGE_JSON SCAN_PATHS
+
+drift_rows=()
+
+function record_drift() {
+  local category="${1}" name="${2}" current="${3}" latest="${4}" location="${5}"
+  drift_rows+=("${category}|${name}|${current}|${latest}|${location}")
+}
+
+# Returns the highest semver-shaped version from stdin (one per line, with an
+# optional `v` prefix). Portable replacement for `sort -V | tail -n 1`: BSD
+# sort on stock macOS does not support `-V`, but `jq` (already required) does
+# the job by parsing each line into a numeric tuple and sorting. Empty input
+# prints nothing. Inputs are expected to be pre-filtered to clean release tags
+# (no prerelease suffixes); a `-rc1` style suffix would coerce to 0 in the key
+# and lose ordering, but the upstream `grep -E` filters elsewhere already drop
+# those before reaching this helper.
+function semver_max() {
+  jq -R -s -r '
+    split("\n")
+    | map(select(length > 0))
+    | map({tag: ., key: (sub("^v"; "") | split(".") | map(tonumber? // 0))})
+    | sort_by(.key)
+    | last.tag // empty
+  '
+}
+
+function github_latest_release() {
+  local repo="${1}" latest
+  # Prefer GitHub Releases when the repo publishes them.
+  latest=$(gh api "repos/${repo}/releases/latest" --jq '.tag_name' 2> /dev/null || true)
+  if [[ -n "${latest}" ]]; then
+    printf '%s\n' "${latest}"
+    return
+  fi
+  # Fall back to the highest semver-looking tag for repos that publish version
+  # tags without creating GitHub Releases (otherwise audit_actions would
+  # silently skip drift for valid SHA-pinned refs against those repos).
+  gh api "repos/${repo}/tags" --paginate --jq '.[].name' 2> /dev/null \
+    | grep -E '^v?[0-9]+(\.[0-9]+)+$' \
+    | semver_max \
+    || true
+}
+
+# Returns the highest release tag in the same major series as ${major}, or
+# empty if none is found. Used by audit_actions so a pinned `# vN.x.y` is only
+# compared against the upstream's vN.* line, never silently flagged as drift
+# to vN+1.* (which is what `releases/latest` would return for a held major).
+function github_latest_release_in_major() {
+  local repo="${1}" major="${2}"
+  major="${major#v}"
+  # Anchor the major boundary so `1` does not also match `10`, `11`, ....
+  local pattern="^v?${major}(\.[0-9]+)+$"
+  local result
+  # Prefer GitHub Releases (paginated) so a project that backports patches to
+  # an older major after releasing the next one is still audited correctly.
+  result=$(gh api "repos/${repo}/releases" --paginate --jq '.[] | select(.prerelease == false) | .tag_name' 2> /dev/null \
+    | grep -E "${pattern}" \
+    | semver_max \
+    || true)
+  if [[ -n "${result}" ]]; then
+    printf '%s\n' "${result}"
+    return
+  fi
+  # Fall back to /tags for repos that publish version tags without releases.
+  gh api "repos/${repo}/tags" --paginate --jq '.[].name' 2> /dev/null \
+    | grep -E "${pattern}" \
+    | semver_max \
+    || true
+}
+
+# 1. Node.js — read whichever Node version file the repo uses.
+#
+# Skill step 4 prefers reusing the file local tooling already reads (.nvmrc for
+# nvm, .node-version for nodenv) over introducing a parallel .tool-versions.
+# Mirror that priority order here so the audit inspects the actual source of
+# truth rather than silently missing drift when the repo uses .nvmrc instead.
+#
+# Drift is checked against the latest release in the same major series as the
+# pinned version, NOT against the latest LTS unconditionally. Repos that
+# intentionally pin a Current (odd-numbered, non-LTS) major like Node 23 should
+# not be told to "downgrade" to the latest LTS major every audit cycle; they
+# should only be flagged when the upstream cuts a newer patch within the same
+# major. If the file holds a non-numeric value (an .nvmrc alias like `lts/*`,
+# `node`, or `latest`; a major-only pin like `22`), the same-major lookup
+# returns no match and the audit silently skips the row — those values are not
+# pins and the script has nothing to compare against.
+
+function audit_node() {
+  local current="" source="" major latest
+
+  if [[ -f "${TOOL_VERSIONS_FILE}" ]]; then
+    current=$(awk '/^nodejs / {print $2; exit}' "${TOOL_VERSIONS_FILE}")
+    if [[ -n "${current}" ]]; then
+      source="${TOOL_VERSIONS_FILE}"
+    fi
+  fi
+  if [[ -z "${current}" && -f ".nvmrc" ]]; then
+    current=$(head -n 1 .nvmrc | sed 's/^v//; s/[[:space:]]//g')
+    if [[ -n "${current}" ]]; then
+      source=".nvmrc"
+    fi
+  fi
+  if [[ -z "${current}" && -f ".node-version" ]]; then
+    current=$(head -n 1 .node-version | sed 's/^v//; s/[[:space:]]//g')
+    if [[ -n "${current}" ]]; then
+      source=".node-version"
+    fi
+  fi
+  if [[ -z "${current}" ]]; then
+    return
+  fi
+
+  # Require an exact `X.Y.Z` form: a non-numeric or partial value (alias,
+  # major-only) cannot be matched against a same-major upstream release.
+  if [[ ! "${current}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return
+  fi
+  major="${current%%.*}"
+
+  latest=$(curl -fsSL https://nodejs.org/dist/index.json 2> /dev/null \
+    | jq -r --arg prefix "v${major}." \
+      'first(.[] | select(.version | startswith($prefix))) | .version // empty' \
+    | sed 's/^v//' || true)
+  if [[ -z "${latest}" ]]; then
+    return
+  fi
+
+  if [[ "${current}" != "${latest}" ]]; then
+    record_drift "Node.js" "nodejs (${major}.x)" "${current}" "${latest}" "${source}"
+  fi
+}
+
+# 2. Ruby — read whichever Ruby version file the repo uses.
+#
+# Skill step 4 reuses the file local tooling already reads (`.ruby-version`
+# for rbenv/chruby, a `ruby` line in `.tool-versions`, or a `ruby 'X.Y.Z'`
+# directive in `Gemfile` when bundler owns the pin). Mirror that priority
+# order here so the audit reads the same source of truth as the workflow.
+# Ruby's release-series boundary is at the minor (3.4.x is one feature line,
+# 3.5.x is the next), so drift is checked within the same X.Y series. Tags in
+# `ruby/ruby` use underscores (`v3_4_2`); normalize to dots before comparing.
+# Pre-releases (`select(.prerelease == false)`) are skipped so a freshly-cut
+# `v3.5.0-preview1` is not reported as drift against a stable `v3.4.2` pin.
+# Non-numeric values, constraint forms (`~>`, `>=`), engine delegations
+# (`ruby file: '.ruby-version'`), and major-only pins are silently skipped —
+# they're not pins or are handled by the prior file in priority order.
+
+function audit_ruby() {
+  local current="" source="" series pattern latest line
+  if [[ -f "${TOOL_VERSIONS_FILE}" ]]; then
+    current=$(awk '/^ruby / {print $2; exit}' "${TOOL_VERSIONS_FILE}")
+    if [[ -n "${current}" ]]; then
+      source="${TOOL_VERSIONS_FILE}"
+    fi
+  fi
+  if [[ -z "${current}" && -f ".ruby-version" ]]; then
+    current=$(head -n 1 .ruby-version | sed 's/^v//; s/[[:space:]]//g')
+    if [[ -n "${current}" ]]; then
+      source=".ruby-version"
+    fi
+  fi
+  if [[ -z "${current}" && -f "Gemfile" ]]; then
+    # Match `ruby 'X.Y.Z'` or `ruby "X.Y.Z"` only. Constraint forms (`~>`,
+    # `>=`) and engine delegations (`ruby file: '.ruby-version'`) are not
+    # auditable as exact pins and are skipped.
+    while IFS= read -r line; do
+      if [[ "${line}" =~ ^[[:space:]]*ruby[[:space:]]+[\"\']([0-9]+\.[0-9]+\.[0-9]+)[\"\'] ]]; then
+        current="${BASH_REMATCH[1]}"
+        source="Gemfile"
+        break
+      fi
+    done < Gemfile
+  fi
+  if [[ -z "${current}" ]]; then
+    return
+  fi
+  if [[ ! "${current}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return
+  fi
+  series="${current%.*}"
+  pattern="^${series//./\\.}\.[0-9]+$"
+  latest=$(gh api repos/ruby/ruby/releases --paginate --jq '.[] | select(.prerelease == false) | .tag_name' 2> /dev/null \
+    | sed 's/^v//; s/_/./g' \
+    | grep -E "${pattern}" \
+    | semver_max \
+    || true)
+  if [[ -z "${latest}" ]]; then
+    return
+  fi
+  if [[ "${current}" != "${latest}" ]]; then
+    record_drift "Ruby" "ruby (${series})" "${current}" "${latest}" "${source}"
+  fi
+}
+
+# 3. Python runtime — read .python-version.
+#
+# Step 4 of the skill treats `.python-version` as the version of record for
+# `actions/setup-python` workflows; for `astral-sh/setup-uv` workflows the
+# version source is `pyproject.toml` `requires-python`, which uses `>=`
+# semantics and is therefore a floor rather than a pin (auditing it would
+# either always-pass or always-flag, neither useful). So this function audits
+# only `.python-version`. Python's release-series boundary is at the minor
+# (3.13.x is one feature line, 3.14.x is the next), matching Ruby.
+
+function audit_python_runtime() {
+  local current="" source="" series pattern latest
+  if [[ -f ".python-version" ]]; then
+    current=$(head -n 1 .python-version | sed 's/^v//; s/[[:space:]]//g')
+    if [[ -n "${current}" ]]; then
+      source=".python-version"
+    fi
+  fi
+  if [[ -z "${current}" ]]; then
+    return
+  fi
+  if [[ ! "${current}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return
+  fi
+  series="${current%.*}"
+  pattern="^${series//./\\.}\.[0-9]+$"
+  latest=$(gh api repos/python/cpython/releases --paginate --jq '.[] | select(.prerelease == false) | .tag_name' 2> /dev/null \
+    | sed 's/^v//' \
+    | grep -E "${pattern}" \
+    | semver_max \
+    || true)
+  if [[ -z "${latest}" ]]; then
+    return
+  fi
+  if [[ "${current}" != "${latest}" ]]; then
+    record_drift "Python" "python (${series})" "${current}" "${latest}" "${source}"
+  fi
+}
+
+# 4. Go runtime — read go.mod's `go X.Y.Z` directive.
+#
+# Skill step 4 wires `actions/setup-go` to `go-version-file: go.mod`, so the
+# `go` directive is the version-of-record CI installs. The module spec also
+# allows the `go X.Y` form, but that one is a floor (Go selects the highest
+# patch in the X.Y line at install time) and is silently skipped: there is
+# nothing to compare against. Drift is checked within the same X.Y release
+# line, mirroring Ruby and Python.
+
+function audit_go_runtime() {
+  local current="" series pattern latest
+  if [[ -f "go.mod" ]]; then
+    current=$(awk '/^go [0-9]+\.[0-9]+\.[0-9]+$/ {print $2; exit}' go.mod)
+  fi
+  if [[ -z "${current}" ]]; then
+    return
+  fi
+  series="${current%.*}"
+  pattern="^go${series//./\\.}\.[0-9]+$"
+  latest=$(gh api repos/golang/go/tags --paginate --jq '.[].name' 2> /dev/null \
+    | grep -E "${pattern}" \
+    | sed 's/^go//' \
+    | semver_max \
+    || true)
+  if [[ -z "${latest}" ]]; then
+    return
+  fi
+  if [[ "${current}" != "${latest}" ]]; then
+    record_drift "Go" "go (${series})" "${current}" "${latest}" "go.mod"
+  fi
+}
+
+# 5. Rust toolchain — read rust-toolchain.toml's `channel = "X.Y.Z"`.
+#
+# Skill step 4 documents `dtolnay/rust-toolchain` plus rust-toolchain.toml as
+# the wiring; the `channel` field carries either a moving channel name
+# (`stable`, `beta`, `nightly`) or an exact `X.Y.Z`. Moving channels are
+# resolved at install time and have no fixed upstream to compare against, so
+# they are silently skipped. Exact channels are audited against the absolute
+# latest stable; Rust's release model does not maintain parallel patch lines
+# the way Ruby and Python do, so same-major filtering would not add value.
+
+function audit_rust_runtime() {
+  local current="" latest
+  if [[ -f "rust-toolchain.toml" ]]; then
+    current=$(awk -F\" '/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"/ {print $2; exit}' rust-toolchain.toml)
+  fi
+  if [[ -z "${current}" ]]; then
+    return
+  fi
+  if [[ ! "${current}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return
+  fi
+  latest=$(gh api repos/rust-lang/rust/releases --jq '.[0].tag_name' 2> /dev/null \
+    | sed 's/^v//' \
+    || true)
+  if [[ -z "${latest}" ]]; then
+    return
+  fi
+  if [[ "${current}" != "${latest}" ]]; then
+    record_drift "Rust" "rustc" "${current}" "${latest}" "rust-toolchain.toml"
+  fi
+}
+
+# 6. Zig runtime — read build.zig.zon's `.minimum_zig_version = "X.Y.Z"`.
+#
+# Although the field's name reads "minimum", `mlugg/setup-zig` (the action
+# skill step 4 wires up) installs exactly the value it finds — there is no
+# range resolution. So in CI it functions as a pin and drift is meaningful.
+# Dev-snapshot pins (`0.X.Y-dev.NNNN+abcdef`) and any other non-`X.Y.Z` form
+# are silently skipped: dev snapshots track master rather than a release
+# line, and comparing them against the latest tagged release would always
+# report bogus drift. Drift is checked against absolute latest tag.
+
+function audit_zig_runtime() {
+  local current="" latest
+  if [[ -f "build.zig.zon" ]]; then
+    current=$(grep -E '\.minimum_zig_version[[:space:]]*=[[:space:]]*"' build.zig.zon \
+      | head -n 1 \
+      | sed -E 's/.*"([^"]*)".*/\1/' \
+      || true)
+  fi
+  if [[ -z "${current}" ]]; then
+    return
+  fi
+  if [[ ! "${current}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return
+  fi
+  latest=$(gh api repos/ziglang/zig/releases --jq '.[0].tag_name' 2> /dev/null || true)
+  if [[ -z "${latest}" || ! "${latest}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return
+  fi
+  if [[ "${current}" != "${latest}" ]]; then
+    record_drift "Zig" "zig" "${current}" "${latest}" "build.zig.zon"
+  fi
+}
+
+# 7. Yarn / pnpm version in package.json packageManager
+#
+# Corepack supports both Yarn (`yarn@X.Y.Z+sha512.<hash>`) and pnpm
+# (`pnpm@X.Y.Z+sha512.<hash>`) under the same `packageManager` field. Audit
+# whichever is present; npm has no equivalent integrity surface.
+#
+# Two failure modes are reported as drift. First, ordinary version drift: the
+# pinned version is older than upstream stable. Second, integrity-hash
+# regression: a bare `<mgr>@<X.Y.Z>` (no `+sha512.<hash>` suffix) defeats the
+# Corepack tarball-pinning contract that skill step 5 relies on, so it is
+# itself drift even when the version is current. The integrity-hash row takes
+# precedence over the version row when both apply, since regenerating the pin
+# closes both at once.
+
+function audit_packagemanager() {
+  if [[ ! -f "${PACKAGE_JSON}" ]]; then
+    return
+  fi
+
+  local declaration mgr current has_hash latest
+  declaration=$(jq -r '.packageManager // empty' "${PACKAGE_JSON}")
+  if [[ -z "${declaration}" ]]; then
+    return
+  fi
+
+  if [[ "${declaration}" =~ ^(yarn|pnpm)@([0-9.]+)(\+sha512\.[0-9a-f]+)? ]]; then
+    mgr="${BASH_REMATCH[1]}"
+    current="${BASH_REMATCH[2]}"
+    has_hash="${BASH_REMATCH[3]:-}"
+  else
+    return
+  fi
+
+  if [[ "${mgr}" == "yarn" ]]; then
+    latest=$(curl -fsSL https://repo.yarnpkg.com/tags 2> /dev/null \
+      | jq -r '.latest.stable // empty' || true)
+  else
+    latest=$(curl -fsSL https://registry.npmjs.org/pnpm/latest 2> /dev/null \
+      | jq -r '.version // empty' || true)
+  fi
+
+  if [[ -z "${latest}" ]]; then
+    return
+  fi
+
+  if [[ -z "${has_hash}" ]]; then
+    record_drift "packageManager" "${mgr} (Corepack)" \
+      "${current} (no integrity hash)" "${current}+sha512.<hash>" "${PACKAGE_JSON}"
+  elif [[ "${current}" != "${latest}" ]]; then
+    record_drift "packageManager" "${mgr} (Corepack)" "${current}" "${latest}" "${PACKAGE_JSON}"
+  fi
+}
+
+# 8. SHA-pinned third-party action refs
+#
+# Drift is checked within the **same major series** as the pinned version. This
+# matters for the held-major pattern documented in `references/github-actions.md`:
+# `uses: foo/bar@<sha> # v8.0.0 -- held at v8 pending v9 migration`. Comparing
+# a held v8 against absolute upstream latest would emit a permanent v8 -> v9
+# "drift" row even though the held major is intentional. Major bumps are a
+# separate concern (Dependabot already proposes them for workflow files); the
+# audit's role here is the same-major patch backstop for SHA pins inside
+# scanned Markdown templates and other surfaces Dependabot does not see.
+
+function audit_actions() {
+  declare -A seen=()
+  local line file content repo current major key latest
+  while IFS= read -r line; do
+    file="${line%%:*}"
+    content="${line#*:}"
+    # Only release-tagged pins (numeric `# vX.Y.Z` comment) are audited.
+    # Channel/branch pins (`# stable`, `# main`) are intentionally out of scope:
+    # they have no upstream "latest version" to compare against and would need a
+    # different "pinned SHA vs. branch HEAD" check entirely.
+    if [[ "${content}" =~ ([a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+)(/[^@]*)?@[a-f0-9]{40}[[:space:]]+#[[:space:]]+(v?[0-9]+(\.[0-9]+)*) ]]; then
+      repo="${BASH_REMATCH[1]}"
+      current="${BASH_REMATCH[3]}"
+      # Key dedup by repo+current so divergent pins (same action at two
+      # different versions in the repo) are each checked rather than masked
+      # by whichever pin happens to be grepped first.
+      key="${repo}|${current}"
+      if [[ -n "${seen[${key}]:-}" ]]; then
+        continue
+      fi
+      seen[${key}]=1
+      # Compare within the same major. Strip any leading `v`, take the
+      # leading numeric segment as the major, and look up the highest
+      # release whose tag falls in that major.x.y line.
+      major="${current#v}"
+      major="${major%%.*}"
+      latest=$(github_latest_release_in_major "${repo}" "${major}")
+      if [[ -n "${latest}" && "${latest#v}" != "${current#v}" ]]; then
+        record_drift "Actions" "${repo}" "${current}" "${latest}" "${file}"
+      fi
+    fi
+  done < <(grep -rHE 'uses:[[:space:]]+[a-zA-Z0-9._/-]+@[a-f0-9]{40}' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+}
+
+# 9. npx <tool>@<version> pins
+
+function npm_latest() {
+  local pkg="${1}"
+  # Scoped packages (e.g. `@taplo/cli`) require the `/` between scope and name
+  # to be URL-encoded; otherwise the registry returns 404.
+  local encoded="${pkg//\//%2f}"
+  curl -fsSL "https://registry.npmjs.org/${encoded}/latest" 2> /dev/null | jq -r '.version // empty' || true
+}
+
+function audit_npx_pins() {
+  declare -A seen=()
+  local line file content pkg current key latest
+  while IFS= read -r line; do
+    file="${line%%:*}"
+    content="${line#*:}"
+    if [[ "${content}" =~ npx[[:space:]]+(@?[a-zA-Z0-9._/-]+)@([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+      pkg="${BASH_REMATCH[1]}"
+      current="${BASH_REMATCH[2]}"
+      key="${pkg}|${current}"
+      if [[ -n "${seen[${key}]:-}" ]]; then
+        continue
+      fi
+      seen[${key}]=1
+      latest=$(npm_latest "${pkg}")
+      if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
+        record_drift "npx pin" "${pkg}" "${current}" "${latest}" "${file}"
+      fi
+    fi
+  done < <(grep -rHE 'npx[[:space:]]+@?[a-zA-Z0-9._/-]+@[0-9]+\.[0-9]+\.[0-9]+' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+}
+
+# 10. go install <path>@v<version> pins
+#
+# `github.com/<owner>/<repo>[/...]` paths are auto-derived: the upstream of
+# record is the GitHub repo named by the first two segments (the trailing
+# `/v2`, `/cmd/<bin>`, etc. are unimportant for release lookup). This covers
+# the common case without per-path maintenance.
+#
+# Vanity domains (`golang.org/x/...`, `mvdan.cc/...`, `gotest.tools/...`,
+# `sigs.k8s.io/...`, etc.) cannot be auto-derived because they redirect to
+# repos whose names do not match the import path. They require an explicit
+# entry in the `vanity_path_to_repo` map below. Unmapped vanity paths are
+# skipped silently — when the skill writes a tailored version of this script,
+# step 10 of `SKILL.md` calls out extending this map for the consuming repo's
+# vanity-domain Go tools as a required tailoring step.
+
+function go_install_path_to_repo() {
+  local install_path="${1}"
+  if [[ "${install_path}" =~ ^github\.com/([a-zA-Z0-9._-]+)/([a-zA-Z0-9._-]+) ]]; then
+    printf '%s/%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+    return
+  fi
+  # REPLACE: extend this map for the consuming repo's vanity-domain Go tools.
+  declare -A vanity_path_to_repo=(
+    ['golang.org/x/vuln/cmd/govulncheck']='golang/vuln'
+    ['mvdan.cc/sh/v3/cmd/shfmt']='mvdan/sh'
+  )
+  printf '%s\n' "${vanity_path_to_repo[${install_path}]:-}"
+}
+
+function audit_go_install_pins() {
+  declare -A seen=()
+  local line file content install_path current key repo latest
+  while IFS= read -r line; do
+    file="${line%%:*}"
+    content="${line#*:}"
+    # Module path character class follows Go's spec: lowercase letters, digits,
+    # `.`, `-`, `_`, and `~` (uppercase tolerated for completeness). Version
+    # component matches both tagged releases (`v1.2.3`, `v1.2.3-rc.1`) and Go
+    # pseudo-versions (`v0.0.0-20240901123456-abcdef123456`,
+    # `v1.2.3-0.20240901123456-abcdef123456`); both are documented in
+    # `references/install-commands.md` as legitimate pin forms.
+    if [[ "${content}" =~ go[[:space:]]install[[:space:]]+([a-zA-Z0-9._/~-]+)@(v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?) ]]; then
+      install_path="${BASH_REMATCH[1]}"
+      current="${BASH_REMATCH[2]}"
+      # Skip pseudo-versions (`v0.0.0-YYYYMMDDhhmmss-<12-hex>`,
+      # `v1.2.3-0.YYYYMMDDhhmmss-<12-hex>`) and prerelease tags (`v1.2.3-rc.1`,
+      # `v1.2.3-beta.1`, etc.). Both are intentional pins to a specific
+      # unreleased commit or release candidate; comparing them against the
+      # repo's latest *released* tag would always report bogus drift even when
+      # the pin is exactly what the repo wants. The presence of any `-` suffix
+      # in the captured semver is the discriminator: a clean release tag is
+      # `vX.Y.Z` with no suffix.
+      if [[ "${current}" == *-* ]]; then
+        continue
+      fi
+      repo=$(go_install_path_to_repo "${install_path}")
+      if [[ -z "${repo}" ]]; then
+        continue
+      fi
+      key="${install_path}|${current}"
+      if [[ -n "${seen[${key}]:-}" ]]; then
+        continue
+      fi
+      seen[${key}]=1
+      latest=$(github_latest_release "${repo}")
+      if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
+        record_drift "go install" "${install_path}" "${current}" "${latest}" "${file}"
+      fi
+    fi
+  done < <(grep -rHE 'go install [a-zA-Z0-9._/~-]+@v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+}
+
+# 11. cargo install --version <X> <crate> pins
+
+function crates_io_latest() {
+  local crate="${1}"
+  curl -fsSL "https://crates.io/api/v1/crates/${crate}" 2> /dev/null | jq -r '.crate.max_stable_version // empty' || true
+}
+
+function audit_cargo_install_pins() {
+  declare -A seen=()
+  local line file content current crate key latest
+  while IFS= read -r line; do
+    file="${line%%:*}"
+    content="${line#*:}"
+    if [[ "${content}" =~ cargo[[:space:]]install[[:space:]]+(--locked[[:space:]]+)?--version[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)[[:space:]]+([a-zA-Z0-9_-]+) ]]; then
+      current="${BASH_REMATCH[2]}"
+      crate="${BASH_REMATCH[3]}"
+      key="${crate}|${current}"
+      if [[ -n "${seen[${key}]:-}" ]]; then
+        continue
+      fi
+      seen[${key}]=1
+      latest=$(crates_io_latest "${crate}")
+      if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
+        record_drift "cargo install" "${crate}" "${current}" "${latest}" "${file}"
+      fi
+    fi
+  done < <(grep -rHE 'cargo install (--locked )?--version [0-9]+\.[0-9]+' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+}
+
+# 12. Python install pins across every uv / pip verb (pip install, uv pip install,
+# uv add, uv tool install, uvx) — all use `<pkg>==<X>` and resolve against PyPI.
+
+function pypi_latest() {
+  local pkg="${1}"
+  curl -fsSL "https://pypi.org/pypi/${pkg}/json" 2> /dev/null | jq -r '.info.version // empty' || true
+}
+
+function audit_python_install_pins() {
+  declare -A seen=()
+  local line file content rest pkg current key latest
+  while IFS= read -r line; do
+    file="${line%%:*}"
+    content="${line#*:}"
+    # Walk every `pkg==X.Y.Z` token on the line. Bash regex via `=~` only matches
+    # the first occurrence per attempt, so a single-shot match would silently
+    # skip drift for additional requirements on the same line (e.g.
+    # `pip install 'ruff==X' 'mypy==Y'` or `uv add 'foo==X' 'bar==Y'`). After
+    # each match, advance `rest` past the matched substring and try again until
+    # no further requirement matches. PyPI package names may include `.` (e.g.,
+    # `zope.interface`), `-`, and `_`; PEP 503 normalizes them but the surface
+    # form preserves the original. Optional surrounding quotes (single or
+    # double) and PEP 508 extras like `foo[bar,baz]==1.2.3` are tolerated; the
+    # extras list is dropped before resolving against PyPI since extras don't
+    # affect the published version. The version expression accepts PEP 440
+    # release segments (`1.2.3`), pre-release suffixes (`1.2.3rc1`, `1.2.3a1`,
+    # `1.2.3b2`), post-releases (`1.2.3.post1`), dev-releases (`1.2.3.dev0`),
+    # and local-version identifiers (`1.2.3+local.id`); a numeric-only matcher
+    # would silently skip every non-final pin even though they are valid exact
+    # `==` requirements that audit_python_install_pins is documented to cover.
+    rest="${content}"
+    while [[ "${rest}" =~ [\"\']?([a-zA-Z0-9._-]+)(\[[a-zA-Z0-9._,-]+\])?==([0-9]+(\.[0-9]+)*([a-z]+[0-9]*)?(\.post[0-9]+)?(\.dev[0-9]+)?(\+[a-zA-Z0-9._-]+)?)[\"\']? ]]; do
+      pkg="${BASH_REMATCH[1]}"
+      current="${BASH_REMATCH[3]}"
+      rest="${rest#*"${BASH_REMATCH[0]}"}"
+      key="${pkg}|${current}"
+      if [[ -n "${seen[${key}]:-}" ]]; then
+        continue
+      fi
+      seen[${key}]=1
+      latest=$(pypi_latest "${pkg}")
+      if [[ -n "${latest}" && "${latest}" != "${current}" ]]; then
+        record_drift "python install" "${pkg}" "${current}" "${latest}" "${file}"
+      fi
+    done
+    # Allow arbitrary flags / quoting between the install command and the
+    # `pkg==X.Y.Z` requirement so forms like `pip install --upgrade 'pkg==1.2.3'`,
+    # `uv add --dev "pkg==1.2.3"`, `uv tool install --force 'pkg[extra]==1.2.3'`,
+    # and `uvx --from pkg==1.2.3 cmd` are not silently skipped. The pre-filter
+    # only requires `==<digit>` on the line; the extraction regex inside the
+    # function performs the precise package/version match. Match every Python
+    # install verb that resolves against PyPI: `pip install`, `uv pip install`,
+    # `uv add`, `uv tool install`, `uvx`.
+  done < <(grep -rHE '(pip install|uv (pip install|add|tool install)|uvx)[[:space:]].*==[0-9]' "${SCAN_PATHS[@]}" 2> /dev/null || true)
+}
+
+# Print Markdown report
+
+function print_report() {
+  if ((${#drift_rows[@]} == 0)); then
+    return
+  fi
+
+  printf '<!-- version-audit -->\n\n'
+  printf '## Version drift\n\n'
+  printf 'Surfaces that Dependabot does not cover have drifted from upstream. Each row lists the current pinned version and the latest available.\n\n'
+  printf '| Category | Name | Current | Latest | Location |\n'
+  printf '| --- | --- | --- | --- | --- |\n'
+
+  local row category name current latest location
+  for row in "${drift_rows[@]}"; do
+    IFS='|' read -r category name current latest location <<< "${row}"
+    printf '| %s | `%s` | `%s` | `%s` | %s |\n' \
+      "${category}" "${name}" "${current}" "${latest}" "${location}"
+  done
+
+  printf '\n---\n_Generated by `bin/version-audit`._\n'
+}
+
+# REPLACE: drop audit_* calls for surfaces the consuming repo does not use.
+audit_node
+audit_ruby
+audit_python_runtime
+audit_go_runtime
+audit_rust_runtime
+audit_zig_runtime
+audit_packagemanager
+audit_actions
+audit_npx_pins
+audit_go_install_pins
+audit_cargo_install_pins
+audit_python_install_pins
+print_report

@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# launch-workmux -- Create a worktree + tmux window via workmux, fully detached.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+function usage() {
+  cat << 'USAGE_TEXT'
+Usage: launch-workmux <branch-name> <prompt-file>
+
+Create a worktree and tmux window via workmux, fully detached from the
+calling process. Waits briefly for workmux to initialize, then outputs
+the log and cleans up.
+
+Arguments:
+  branch-name   Name of the git branch to create/open
+  prompt-file   Path to the workmux prompt file
+
+Options:
+  -h, --help    Show this help
+USAGE_TEXT
+}
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+# Escape MiniJinja delimiters in-place so workmux's template engine emits them
+# literally. Without this, issue bodies containing GitHub Actions expressions
+# (`${{ ... }}`), Jinja/Liquid/Tera/Helm/Vue templates, or Handlebars-style
+# tokens are parsed as template variables and rejected with "undefined
+# variables". Each `{{ "{{" }}`, `{{ "{%" }}`, and `{{ "{#" }}` evaluates back
+# to the literal two-character delimiter at render time, so the rendered
+# prompt stored in `<worktree>/.workmux/PROMPT-*.md` matches the input
+# verbatim.
+#
+# Editing in-place (rather than into a separate temp file) means the file
+# workmux reads is the same one the caller manages. The caller defers cleanup
+# until success is verified, so there is no race window where workmux could
+# read a deleted prompt.
+function escape_minijinja_delimiters_in_place() {
+  local file="${1}"
+  local tmp
+  tmp="$(mktemp "${file}.XXXXXX")"
+  sed -e 's/{{/{{ "{{" }}/g' \
+    -e 's/{%/{{ "{%" }}/g' \
+    -e 's/{#/{{ "{#" }}/g' \
+    "${file}" > "${tmp}"
+  mv -f "${tmp}" "${file}"
+}
+
+function do_launch() {
+  local branch="${1}"
+  local prompt_file="${2}"
+  local safe_name="${branch//\//-}"
+  local log
+  log="$(mktemp "/tmp/workmux-${safe_name}.XXXXXX.log")"
+
+  escape_minijinja_delimiters_in_place "${prompt_file}"
+
+  workmux add "${branch}" --open-if-exists -P "${prompt_file}" > "${log}" 2>&1 &
+  disown
+  sleep 8
+
+  cat "${log}"
+  rm -f "${log}"
+}
+
+function main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
+  if [[ $# -ne 2 ]]; then
+    usage >&2
+    die "expected 2 arguments (branch-name, prompt-file), got $#"
+  fi
+
+  do_launch "${1}" "${2}"
+}
+
+main "$@"

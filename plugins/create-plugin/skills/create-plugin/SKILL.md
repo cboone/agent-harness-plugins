@@ -156,6 +156,7 @@ Key points:
 - Insert alphabetically by plugin name
 - Include `category` and `source` fields (not present in `plugin.json`)
 - All shared fields must match `plugin.json` exactly
+- Do not hand-edit `.agents/plugins/marketplace.json` or `dist/codex/`; regenerate them with `bin/build-codex-marketplace`
 
 ### 9. Update README.md
 
@@ -178,6 +179,7 @@ Before finishing, verify:
 - [ ] `plugin.json` fields are alphabetized and `name` matches the directory name
 - [ ] `marketplace.json` is valid JSON with the new entry
 - [ ] `marketplace.json` entry fields match `plugin.json` (shared fields)
+- [ ] `bin/build-codex-marketplace` has regenerated `.agents/plugins/marketplace.json` and `dist/codex/`
 - [ ] `README.md` has the new plugin in ToC, installation, and description sections
 - [ ] `CLAUDE.md` directory tree reflects the new plugin structure
 - [ ] `SKILL.md` frontmatter has only `name` and `description` fields (skills only)
@@ -196,3 +198,4 @@ Before finishing, verify:
 - If `marketplace.json` cannot be parsed as valid JSON, fix the syntax before proceeding
 - If the user is unsure about the plugin type, default to a skills plugin (the most common type)
 - If the user wants to add a skill to an existing plugin instead of creating a new one, bump the minor version in both `plugin.json` and `marketplace.json`
+- If generated Codex files drift, run `bin/build-codex-marketplace` instead of editing generated files directly

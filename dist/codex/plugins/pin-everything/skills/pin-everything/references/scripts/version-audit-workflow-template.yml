@@ -1,0 +1,144 @@
+# Template for .github/workflows/version-audit.yml. Runs bin/version-audit
+# weekly and manages a single labeled issue with the drift report.
+#
+# This file is a TEMPLATE consumed by the pin-everything skill. The skill reads
+# it, refreshes the actions/checkout SHA against current upstream, and writes
+# the result to the consuming repo's .github/workflows/version-audit.yml.
+
+name: Version audit
+
+on:
+  schedule:
+    - cron: "0 12 * * 1" # Mondays at 12:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: version-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Audit pinned versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE_TITLE: "Version audit: drift detected"
+      ISSUE_LABEL: version-audit
+    steps:
+      # REPLACE: refresh this SHA against current actions/checkout latest before
+      # writing the workflow into the consuming repo. The skill's "Refresh own
+      # SHAs at scaffold time" section in SKILL.md covers the lookup pattern.
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Ensure label exists
+        run: |
+          # Create the label only when it does not already exist; never use
+          # `gh label create --force`. The default label name is generic, so a
+          # consuming repo may already use `version-audit` for a different
+          # workflow with its own description and color. `--force` rewrites
+          # those fields silently on the first scheduled run, which is a
+          # destructive action this workflow has no business taking; the
+          # check-then-create form keeps existing label metadata intact and is
+          # idempotent across re-runs. The labels GET endpoint returns 404 when
+          # the label is absent, which `gh api --silent` propagates as a
+          # non-zero exit. `${GITHUB_REPOSITORY}` is `<owner>/<repo>`; the label
+          # name is URL-encoded with `jq -rn @uri` so labels containing spaces
+          # or other reserved characters resolve correctly.
+          encoded_label="$(jq -rn --arg name "${ISSUE_LABEL}" '$name | @uri')"
+          if ! gh api "repos/${GITHUB_REPOSITORY}/labels/${encoded_label}" --silent 2> /dev/null; then
+            gh label create "${ISSUE_LABEL}" \
+              --description "Drift report from bin/version-audit" \
+              --color BFD4F2
+          fi
+
+      - name: Run audit
+        id: audit
+        run: |
+          report="$(bin/version-audit)"
+          {
+            echo "report<<AUDIT_REPORT_EOF"
+            printf '%s\n' "${report}"
+            echo "AUDIT_REPORT_EOF"
+          } >> "${GITHUB_OUTPUT}"
+          if [[ -n "${report}" ]]; then
+            echo "has_drift=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "has_drift=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Find existing audit issue
+        id: existing
+        run: |
+          # Match on both the label AND the exact ISSUE_TITLE so a different
+          # issue that shares the label (e.g. one a maintainer opened by hand
+          # and tagged) is not mutated or closed by the steps below. Search
+          # across BOTH open and closed states so the previous cycle's issue is
+          # reopened on re-drift instead of stacking a new one alongside it;
+          # this is what preserves the documented single-issue invariant across
+          # drift→clear→drift cycles. `gh issue list` defaults to 30 rows, so
+          # request the maximum (`--limit 1000`) to ensure the previous cycle's
+          # issue is still found in repos that have accumulated many label
+          # matches over time; without this, a missed match would create a
+          # duplicate issue alongside the existing one. `gh --jq` only accepts
+          # a single filter expression and does not forward `--arg` to jq, so
+          # the title is bound by piping through jq.
+          #
+          # Selection prefers an OPEN match over a CLOSED one when both exist
+          # (e.g. a maintainer-opened duplicate from a prior buggy run). Taking
+          # whichever issue gh returned first would otherwise let the later
+          # `Open or update issue` and `Close stale audit issue` steps mutate or
+          # skip the wrong one, breaking the single-issue invariant.
+          issue_json="$(gh issue list \
+            --label "${ISSUE_LABEL}" \
+            --state all \
+            --limit 1000 \
+            --json number,title,state \
+            | jq -c --arg title "${ISSUE_TITLE}" \
+              '[.[] | select(.title == $title)] as $matches
+               | (($matches | map(select(.state == "OPEN"))[0])
+                  // ($matches | map(select(.state == "CLOSED"))[0])
+                  // {})')"
+          number="$(printf '%s' "${issue_json}" | jq -r '.number // empty')"
+          state="$(printf '%s' "${issue_json}" | jq -r '.state // empty')"
+          echo "number=${number}" >> "${GITHUB_OUTPUT}"
+          echo "state=${state}" >> "${GITHUB_OUTPUT}"
+
+      - name: Open or update issue
+        if: steps.audit.outputs.has_drift == 'true'
+        env:
+          REPORT: ${{ steps.audit.outputs.report }}
+          EXISTING: ${{ steps.existing.outputs.number }}
+          EXISTING_STATE: ${{ steps.existing.outputs.state }}
+        run: |
+          body_file="$(mktemp)"
+          printf '%s\n' "${REPORT}" > "${body_file}"
+          if [[ -n "${EXISTING}" ]]; then
+            # Reopen first when the previous cycle closed the issue, so the
+            # body update lands on an open issue (gh issue edit also works on
+            # closed issues, but reopening surfaces the new drift in the
+            # default issue view and lets watchers re-subscribe).
+            if [[ "${EXISTING_STATE}" == "CLOSED" ]]; then
+              gh issue reopen "${EXISTING}" \
+                --comment "Drift detected again. Reopened automatically by version-audit workflow."
+            fi
+            gh issue edit "${EXISTING}" --body-file "${body_file}"
+            echo "Updated issue #${EXISTING}"
+          else
+            gh issue create \
+              --title "${ISSUE_TITLE}" \
+              --label "${ISSUE_LABEL}" \
+              --body-file "${body_file}"
+          fi
+
+      - name: Close stale audit issue
+        if: steps.audit.outputs.has_drift == 'false' && steps.existing.outputs.number != '' && steps.existing.outputs.state == 'OPEN'
+        env:
+          EXISTING: ${{ steps.existing.outputs.number }}
+        run: |
+          gh issue close "${EXISTING}" \
+            --comment "Drift cleared. Closed automatically by version-audit workflow."
