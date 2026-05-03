@@ -39,4 +39,4 @@ The skill applies only the upgrades the user explicitly selects. When applying u
 - [Pin Everything](../pin-everything/README.md): harden mutable version references before or after upgrade review
 - [Release](../release/README.md): update release metadata after selected upgrades land
 - [Lint and Fix](../lint-and-fix/README.md): format and verify files after upgrades
-- [All plugins](../../README.md)
+- [All plugins](../../../../README.md)

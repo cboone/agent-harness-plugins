@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "catalog-M56-m104-p109-n49"
+    "version": "catalog-M57-m104-p109-n50"
   },
   "name": "cboone-cc-plugins",
   "owner": {
@@ -526,6 +526,20 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./dist/codex/plugins/update-review",
       "version": "1.0.1"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "ci-and-release",
+      "description": "Assess every version reference in a repository, evaluate available upgrades with repo-specific risk and reward, and present selectable upgrade options.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["dependencies", "maintenance", "risk", "upgrades", "versioning"],
+      "license": "MIT",
+      "name": "upgrade-everything",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/upgrade-everything",
+      "version": "1.0.0"
     },
     {
       "author": {
