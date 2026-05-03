@@ -41,11 +41,12 @@ jobs:
     with:
       run-cspell: true
       run-markdownlint: true
-      run-prettier: true
+      run-prettier: false
       run-yamllint: false
 ```
 
 ## Notes
 
-- The reusable workflow installs markdownlint-cli2, Prettier, and cspell from the pinned `cboone/gh-actions` lockfile.
+- The generated local Makefile covers markdownlint-cli2 and cspell, so the reusable workflow keeps Prettier disabled by default.
+- Enable Prettier only when the generated repository adds a matching local target or package-manager pin.
 - Keep YAML linting disabled unless the generated repository adds a `.yamllint.yml` config and a matching local target.

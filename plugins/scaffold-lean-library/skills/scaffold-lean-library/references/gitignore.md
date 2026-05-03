@@ -8,8 +8,8 @@ Use this template for `.gitignore`.
 
 # Editor and OS metadata
 .DS_Store
-.idea/
-.vscode/
+# .idea/
+# .vscode/
 
 # Local environment files
 .env
