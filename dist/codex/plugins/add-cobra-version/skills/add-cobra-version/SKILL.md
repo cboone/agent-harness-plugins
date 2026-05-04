@@ -15,28 +15,37 @@ Add a `version` subcommand with version, commit hash, build date, and Go runtime
 
 ### 1. Verify the Project
 
-Confirm the current directory is a Go CLI project with Cobra:
+Confirm the current directory is a Go CLI project with Cobra using the `main.go` plus `cmd` package layout this skill updates:
 
 - `go.mod` exists. If not, abort with a message that this skill requires an existing Go module.
-- A Cobra root command exists. Check for `cmd/root.go` (the canonical location used by `scaffold-go-cli`); if absent, grep for `&cobra.Command{` in `*.go` and `cmd/*.go`. If no Cobra command is found, abort: this skill is Cobra-specific.
+- A Cobra root command exists in `package cmd`. Check `cmd/root.go` first (the canonical location used by `scaffold-go-cli`); if absent, inspect `cmd/*.go` for a package-level variable assigned to `&cobra.Command{`.
+- Record the root command variable identifier from that declaration, for example `rootCmd`, `cliCmd`, or `command`. Use this identifier everywhere the templates refer to the root command.
+- If Cobra commands exist only outside `package cmd`, abort with a message that this skill expects a `cmd` package root command that `main.go` runs via `cmd.Execute()`.
 - Read `go.mod` to extract the module path; needed when reasoning about ldflags `-X` targets.
 
 ### 2. Detect Current Version State
 
 Determine which of three states the project is in. The state controls how aggressive the changes need to be.
 
-1. **No version wiring**: no `var version` declaration in any Go source file.
-1. **Basic version only**: `var version = "dev"` (or similar) exists, typically in `main.go` or `cmd/root.go`, but no `commit` or `date` variables.
-1. **Full version info already present**: `version`, `commit`, and `date` package-level variables all exist.
+1. **No version wiring**: no package-level `version` declaration exists, either as `var version ...` or as a `version` entry in a top-level `var ( ... )` block.
+1. **Basic version only**: a package-level `version = "dev"` (or similar) declaration exists, typically in `main.go` or `cmd/root.go`, but package-level `commit` or `date` declarations are missing.
+1. **Full version info already present**: `version`, `commit`, and `date` package-level variables all exist, whether as single-line `var` declarations or entries in a top-level `var ( ... )` block.
 
 Detection commands:
 
 ```bash
-# Find version declarations across the project.
+# Find direct single-line declarations across the project.
 grep -rnE '^[[:space:]]*var[[:space:]]+version([[:space:]=]|$)' --include='*.go' .
 grep -rnE '^[[:space:]]*var[[:space:]]+commit([[:space:]=]|$)' --include='*.go' .
 grep -rnE '^[[:space:]]*var[[:space:]]+date([[:space:]=]|$)' --include='*.go' .
+
+# Also find identifiers inside top-level var (...) blocks.
+grep -rnE '^[[:space:]]*version[[:space:]]*=' --include='*.go' .
+grep -rnE '^[[:space:]]*commit[[:space:]]*=' --include='*.go' .
+grep -rnE '^[[:space:]]*date[[:space:]]*=' --include='*.go' .
 ```
+
+Read the surrounding context for every match and count only package-level declarations. Do not treat function-local variables as version wiring.
 
 Also check for an existing version subcommand:
 
@@ -67,7 +76,7 @@ Record the chosen ldflags prefix (`main.`) and the resolved module path; both ar
 
 The version subcommand prints a human-readable header that begins with the binary name (for example `bopca 1.2.3`). Determine the binary name in this precedence order:
 
-1. The `Use` field on the Cobra root command (read from `cmd/root.go`). Strip any trailing argument hints, for example `Use: "bopca [flags]"` becomes `bopca`.
+1. The `Use` field on the Cobra root command variable detected in step 1. Strip any trailing argument hints, for example `Use: "bopca [flags]"` becomes `bopca`.
 1. A `BINARY` or similar Makefile variable.
 1. The last segment of the module path in `go.mod`.
 
@@ -78,13 +87,14 @@ Use the result wherever templates reference `PROJECT-NAME`.
 Read `./references/version-go.md` for the `cmd/version.go` template and create the file from it.
 
 - Replace `PROJECT-NAME` with the binary name from step 4.
+- Replace `ROOT-COMMAND-VAR` with the root command variable identifier detected in step 1.
 - Do not modify the file if step 2 found an up-to-date `cmd/version.go` or the user chose to keep the existing file.
 
 The generated subcommand:
 
 - Prints version, commit, date, and `runtime.Version()` to `cmd.OutOrStdout()`.
 - Accepts a `--json` flag for machine-readable output.
-- Registers itself on `rootCmd` from its `init()` function, so no edits to `cmd/root.go` are required to wire it up.
+- Registers itself on the detected root command variable from its `init()` function, so no edits to `cmd/root.go` are required solely to wire up the subcommand.
 
 ### 6. Update `cmd/root.go`
 
@@ -95,8 +105,8 @@ If the file already declares the package-level variables (`version`, `commit`, `
 Otherwise:
 
 - Add (or extend) the package-level `var ( ... )` block to declare `version = "dev"`, `commit = "none"`, and `date = "unknown"`.
-- Add a `SetVersionInfo(v, c, d string)` function that assigns the three variables and sets `rootCmd.Version = v` so Cobra's built-in `--version` flag still works. If a `SetVersion(v string)` function already exists, replace it with `SetVersionInfo`. If callers in `main.go` reference the old name, they will be updated in step 7.
-- If the file currently sets `Version: version` directly on `rootCmd` and nothing else, leave that field in place; `SetVersionInfo` will overwrite it at startup.
+- Add a `SetVersionInfo(v, c, d string)` function that assigns the three variables and sets the detected root command variable's `Version` field so Cobra's built-in `--version` flag still works. If a `SetVersion(v string)` function already exists, replace it with `SetVersionInfo`. If callers in `main.go` reference the old name, they will be updated in step 7.
+- If the file currently sets `Version: version` directly on the detected root command variable and nothing else, leave that field in place; `SetVersionInfo` will overwrite it at startup.
 
 ### 7. Update `main.go`
 
@@ -187,6 +197,7 @@ Print a summary covering:
 
 - If `go.mod` is missing, abort: this skill requires an existing Go module.
 - If no Cobra root command can be located, abort: this skill is Cobra-specific.
+- If no package-level Cobra root command variable can be located in `package cmd`, abort: this skill updates the `main.go` plus `cmd` package layout used by `scaffold-go-cli` and does not safely patch arbitrary Cobra layouts.
 - If `cmd/version.go` already exists and the user declines to overwrite it, skip step 5 but continue with the remaining wiring steps so partial state is repaired.
 - If the version variables are split between `main.go` and `cmd/root.go` in a way that conflicts (for example, both declare `var version` with different defaults), surface the conflict to the user and ask which file should own the canonical declarations before proceeding.
 - If `go build ./...` fails after the edits, show the error and attempt to fix it; do not leave the project in a broken state.

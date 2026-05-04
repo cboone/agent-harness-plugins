@@ -30,6 +30,7 @@ The skill detects the project's existing version wiring (basic `var version` onl
 
 - Adds `cmd/version.go` (skips or asks before overwriting if one already exists).
 - Adds package-level `commit` and `date` variables to `cmd/root.go` alongside `version`, exposing a `SetVersionInfo(v, c, d string)` helper. If only `SetVersion` exists, it is replaced.
+- Detects the root command variable in `package cmd` and uses that identifier when registering the generated `version` subcommand.
 - Adds `commit` and `date` package-level vars to `main.go` and updates the call to `cmd.SetVersionInfo`.
 - Extends GoReleaser `ldflags` to include `-X main.commit={{.ShortCommit}}` and `-X main.date={{.Date}}`.
 - Extends the Makefile `LDFLAGS` to include matching `-X` entries plus `COMMIT` and `DATE` variables.

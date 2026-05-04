@@ -1,6 +1,6 @@
 # cmd/version.go Template
 
-Use this template for the `version` subcommand. Replace `PROJECT-NAME` with the binary name as it should appear in the human-readable header (for example `bopca`, `right-round`).
+Use this template for the `version` subcommand. Replace `PROJECT-NAME` with the binary name as it should appear in the human-readable header (for example `bopca`, `right-round`). Replace `ROOT-COMMAND-VAR` with the root command variable identifier detected from the target project's `package cmd` root command declaration.
 
 ```go
 package cmd
@@ -55,7 +55,7 @@ var versionCmd = &cobra.Command{
 
 func init() {
 	versionCmd.Flags().BoolVar(&versionJSON, "json", false, "Output version information as JSON")
-	rootCmd.AddCommand(versionCmd)
+	ROOT-COMMAND-VAR.AddCommand(versionCmd)
 }
 ```
 
@@ -63,7 +63,7 @@ func init() {
 
 - The `version`, `commit`, and `date` package-level variables come from `cmd/root.go` (see `./root-go-update.md`). They are populated at startup by `SetVersionInfo`, called from `main.go` (see `./main-go-update.md`).
 - `runtime.Version()` is read at execution time, so the Go runtime version always matches the binary's actual toolchain. There is no need to inject it via ldflags.
-- Output is written to `cmd.OutOrStdout()` so tests can capture it with `rootCmd.SetOut(...)`.
+- Output is written to `cmd.OutOrStdout()` so tests can capture it with the root command's `SetOut(...)` method.
 - The JSON encoder uses indented output to keep the human-piping case (`<binary> version --json | jq`) readable while still being machine-parseable.
-- Cobra's built-in `--version` flag (set on the root command via `rootCmd.Version = v`) continues to work and emits a single-line "PROJECT-NAME version VERSION" string. The subcommand exists for the richer multi-line output.
+- Cobra's built-in `--version` flag (set on the root command via `SetVersionInfo`) continues to work and emits a single-line "PROJECT-NAME version VERSION" string. The subcommand exists for the richer multi-line output.
 - Project-specific commands (for example bopca's `output.Print`) are intentionally not used here. Use plain `fmt.Fprintf` so the subcommand has no extra dependencies and can drop into any Cobra project.
