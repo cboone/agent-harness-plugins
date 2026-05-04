@@ -129,6 +129,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 | Plugin | Trigger | What it does |
 | --- | --- | --- |
+| [Add Cobra Version](./plugins/add-cobra-version/README.md) | `/add-cobra-version` | Add a version subcommand with build metadata (version, commit hash, build date, Go runtime version, optional JSON output) to an existing Cobra-based Go CLI, wiring up ldflags in main.go, the cmd package, GoReleaser, and the Makefile. |
 | [Add GoReleaser Homebrew](./plugins/add-goreleaser-homebrew/README.md) | `/add-goreleaser-homebrew` | Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with conditional support for completions, man pages, and macOS-only builds. |
 | [Optimize Runner Usage](./plugins/optimize-runner-usage/README.md) | `/optimize-runner-usage` | Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows. |
 | [Pin Everything](./plugins/pin-everything/README.md) | `/pin-everything` | Pin every version surface in a repository (action SHAs, packageManager integrity digests, dependency exact-pins, runtime version files, install commands) for one-shot supply-chain hardening. |

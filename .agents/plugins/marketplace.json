@@ -13,6 +13,20 @@
       "author": {
         "name": "Christopher Boone"
       },
+      "category": "ci-and-release",
+      "description": "Add a version subcommand with build metadata (version, commit hash, build date, Go runtime version, optional JSON output) to an existing Cobra-based Go CLI, wiring up ldflags in main.go, the cmd package, GoReleaser, and the Makefile.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cli", "cobra", "go", "golang", "version"],
+      "license": "MIT",
+      "name": "add-cobra-version",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./dist/codex/plugins/add-cobra-version",
+      "version": "1.0.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
       "category": "scaffolding",
       "description": "Add standard community files to a project: CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, and PR template.",
       "homepage": "https://github.com/cboone/cboone-cc-plugins",
