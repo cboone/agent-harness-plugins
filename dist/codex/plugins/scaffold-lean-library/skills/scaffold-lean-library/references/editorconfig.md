@@ -1,0 +1,29 @@
+# EditorConfig Template
+
+Use this template for `.editorconfig`.
+
+```ini
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.lean]
+indent_style = space
+indent_size = 2
+
+[*.{yml,yaml,json,jsonc,toml}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
+```
