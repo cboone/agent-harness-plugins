@@ -26,6 +26,19 @@ const seenPermissions = new Set<string>();
 const seenCompactions = new Set<string>();
 const seenErrors = new Set<string>();
 
+const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  bash: "Bash",
+  edit: "Edit",
+  glob: "Glob",
+  grep: "Grep",
+  notebookedit: "NotebookEdit",
+  read: "Read",
+  shell: "Shell",
+  task: "Task",
+  webfetch: "WebFetch",
+  write: "Write",
+};
+
 export const Notify: Plugin = async ({ $, client, directory }) => {
   return {
     event: async ({ event }) => {
@@ -241,7 +254,7 @@ function extractToolFromPermission(event: { properties: Record<string, unknown> 
   const props = event.properties;
 
   const rawType = typeof props.type === "string" ? props.type : typeof props.tool === "string" ? props.tool : typeof props.tool_name === "string" ? props.tool_name : "";
-  const name = capitalize(rawType);
+  const name = toolDisplayName(rawType);
 
   const candidates: string[] = [typeof props.title === "string" ? props.title : "", patternToString(props.pattern), patternToString(props.patterns), metadataPreview(props.metadata, rawType), legacyInputPreview(props, rawType)];
 
@@ -320,6 +333,10 @@ function legacyInputPreview(props: Record<string, unknown>, type: string): strin
     default:
       return "";
   }
+}
+
+function toolDisplayName(type: string): string {
+  return TOOL_DISPLAY_NAMES[type.toLowerCase()] ?? capitalize(type);
 }
 
 function capitalize(s: string): string {
