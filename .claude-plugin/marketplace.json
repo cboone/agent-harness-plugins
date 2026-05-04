@@ -2,13 +2,27 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "catalog-M59-m108-p97-n51"
+    "version": "catalog-M61-m108-p97-n53"
   },
   "name": "cboone-cc-plugins",
   "owner": {
     "name": "Christopher Boone"
   },
   "plugins": [
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "ci-and-release",
+      "description": "Add a version subcommand with build metadata (version, commit hash, build date, Go runtime version, optional JSON output) to an existing Cobra-based Go CLI, wiring up ldflags in main.go, the cmd package, GoReleaser, and the Makefile.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["cli", "cobra", "go", "golang", "version"],
+      "license": "MIT",
+      "name": "add-cobra-version",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/add-cobra-version",
+      "version": "1.0.0"
+    },
     {
       "author": {
         "name": "Christopher Boone"
@@ -610,6 +624,20 @@
       "repository": "https://github.com/cboone/cboone-cc-plugins",
       "source": "./plugins/write-go-code",
       "version": "1.2.0"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "ci-and-release",
+      "description": "Write or update Homebrew formulae using current Homebrew guidance and cboone/homebrew-tap conventions.",
+      "homepage": "https://github.com/cboone/cboone-cc-plugins",
+      "keywords": ["formula", "homebrew", "release", "ruby", "tap"],
+      "license": "MIT",
+      "name": "write-homebrew-formula",
+      "repository": "https://github.com/cboone/cboone-cc-plugins",
+      "source": "./plugins/write-homebrew-formula",
+      "version": "1.0.0"
     },
     {
       "author": {

@@ -129,6 +129,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 | Plugin | Trigger | What it does |
 | --- | --- | --- |
+| [Add Cobra Version](./plugins/add-cobra-version/README.md) | `/add-cobra-version` | Add a version subcommand with build metadata (version, commit hash, build date, Go runtime version, optional JSON output) to an existing Cobra-based Go CLI, wiring up ldflags in main.go, the cmd package, GoReleaser, and the Makefile. |
 | [Add GoReleaser Homebrew](./plugins/add-goreleaser-homebrew/README.md) | `/add-goreleaser-homebrew` | Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with conditional support for completions, man pages, and macOS-only builds. |
 | [Optimize Runner Usage](./plugins/optimize-runner-usage/README.md) | `/optimize-runner-usage` | Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows. |
 | [Pin Everything](./plugins/pin-everything/README.md) | `/pin-everything` | Pin every version surface in a repository (action SHAs, packageManager integrity digests, dependency exact-pins, runtime version files, install commands) for one-shot supply-chain hardening. |
@@ -136,10 +137,12 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Setup Installers](./plugins/setup-installers/README.md) | `/setup-installers` | Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, go/cargo install, and release workflow. |
 | [Setup Secret Scanning](./plugins/setup-secret-scanning/README.md) | `/setup-secret-scanning` | Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration. |
 | [Upgrade Everything](./plugins/upgrade-everything/README.md) | `/upgrade-everything` | Assess every version reference in a repository, evaluate available upgrades with repo-specific risk and reward, and present selectable upgrade options. |
+| [Write Homebrew Formula](./plugins/write-homebrew-formula/README.md) | `/write-homebrew-formula` | Write or update Homebrew formulae using current Homebrew guidance and cboone/homebrew-tap conventions. |
 
 **External tools:**
 
 - *Pin Everything:* [`gh`](https://cli.github.com/), [`jq`](https://jqlang.org/); optional [`corepack`](https://github.com/nodejs/corepack) (only when pinning Yarn or pnpm) and [`reuse`](https://reuse.software/) (only in REUSE-licensed repos)
+- *Write Homebrew Formula:* [Homebrew](https://brew.sh/) for formula audit, style, install, and test validation
 
 ### Agents
 
