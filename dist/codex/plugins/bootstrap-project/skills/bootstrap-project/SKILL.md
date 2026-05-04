@@ -15,21 +15,24 @@ Works for both brand-new and existing repositories.
 
 ### 1. Detect Project Type
 
-Scan for language and framework markers using Glob. Exclude `node_modules/`, `.yarn/`, `vendor/`, and other dependency directories from all searches.
+Scan for language and framework markers using Glob. Exclude `node_modules/`, `.yarn/`, `.lake/`, `vendor/`, and other dependency directories from all searches.
 
-| Marker(s)                                                                  | Project type          |
-| -------------------------------------------------------------------------- | --------------------- |
-| `go.mod` + (`main.go` or `cmd/`)                                           | Go CLI                |
-| `go.mod` without `main.go` or `cmd/`                                       | Go library            |
-| `package.json` + JS/TS source files                                        | JavaScript/TypeScript |
-| `pyproject.toml`, `setup.py`, `requirements.txt`                           | Python                |
-| `Cargo.toml` + (`src/main.rs`, `src/bin/*.rs`, or `[[bin]]` in Cargo.toml) | Rust CLI              |
-| `Cargo.toml` without `src/main.rs`, `src/bin/*.rs`, or `[[bin]]`           | Rust library          |
-| `build.zig` + (`src/main.zig` or `src/`)                                   | Zig CLI               |
-| `Gemfile`, `*.gemspec`                                                     | Ruby                  |
-| `*.sh`, `bin/*`, `scripts/*`                                               | Shell                 |
-| `*.zsh`, `#!/usr/bin/env zsh` shebangs, `.zshrc`, `.zshenv`                | Zsh                   |
-| No recognizable files                                                      | New/empty repo        |
+| Marker(s)                                                                                           | Project type          |
+| --------------------------------------------------------------------------------------------------- | --------------------- |
+| `go.mod` + (`main.go` or `cmd/`)                                                                    | Go CLI                |
+| `go.mod` without `main.go` or `cmd/`                                                                | Go library            |
+| `package.json` + JS/TS source files                                                                 | JavaScript/TypeScript |
+| `pyproject.toml`, `setup.py`, `requirements.txt`                                                    | Python                |
+| `Cargo.toml` + (`src/main.rs`, `src/bin/*.rs`, or `[[bin]]` in Cargo.toml)                          | Rust CLI              |
+| `Cargo.toml` without `src/main.rs`, `src/bin/*.rs`, or `[[bin]]`                                    | Rust library          |
+| `lakefile.toml` or `lakefile.lean` with `[[lean_exe]]`, `lean_exe`, `Main.lean`, or user says CLI   | Lean CLI              |
+| `lean-toolchain`, `lakefile.toml`, `lakefile.lean`, or `*.lean` without Lean CLI markers            | Lean library          |
+| User says Lean formalization, Mathlib-downstream library, PFR downstream project, or theorem prover | Lean library          |
+| `build.zig` + (`src/main.zig` or `src/`)                                                            | Zig CLI               |
+| `Gemfile`, `*.gemspec`                                                                              | Ruby                  |
+| `*.sh`, `bin/*`, `scripts/*`                                                                        | Shell                 |
+| `*.zsh`, `#!/usr/bin/env zsh` shebangs, `.zshrc`, `.zshenv`                                         | Zsh                   |
+| No recognizable files                                                                               | New/empty repo        |
 
 If no recognizable files are found, ask the user what type of project they intend to create.
 
@@ -46,9 +49,13 @@ Check for files and directories that indicate what is already set up:
 | `CHANGELOG.md`                     | Changelog exists        | `scaffold-new-repo`                           |
 | `AGENTS.md` or `CLAUDE.md`         | Agent config exists     | `scaffold-new-repo`                           |
 | `.github/workflows/ci.yml`         | CI exists               | `setup-ci` / `scaffold-go-*`                  |
+| `.github/workflows/text-lint.yml`  | Text lint CI exists     | `scaffold-lean-library` / `setup-linters`     |
 | `.github/workflows/release.yml`    | Release workflow exists | `scaffold-go-*` / `add-goreleaser-homebrew`   |
 | `.github/workflows/gitleaks.yml`   | Gitleaks exists         | `setup-secret-scanning`                       |
 | `.github/workflows/trufflehog.yml` | TruffleHog exists       | `setup-secret-scanning`                       |
+| `lean-toolchain`                   | Lean toolchain exists   | `scaffold-lean-library`                       |
+| `lakefile.toml` or `lakefile.lean` | Lake package exists     | `scaffold-lean-library`                       |
+| `bin/bootstrap-worktree`           | Lean bootstrap exists   | `scaffold-lean-library`                       |
 | `.goreleaser.yml`                  | GoReleaser exists       | `scaffold-go-cli` / `add-goreleaser-homebrew` |
 | `rustfmt.toml`                     | Rust formatter config   | `scaffold-rust-cli` / `setup-linters`         |
 | `deny.toml`                        | cargo-deny config       | `scaffold-rust-cli` / `setup-linters`         |
@@ -71,15 +78,17 @@ Key overlap rules:
 - If `scaffold-go-library` will run: still run `setup-linters` but only for cross-language tools (Prettier, EditorConfig, markdownlint) since `.golangci.yml` is already configured.
 - If `scaffold-go-cli` will run: still run `setup-linters` for `.golangci.yml` configuration and cross-language tools (the Makefile lint target exists but no golangci config).
 - If `scaffold-rust-cli` will run: skip `setup-ci` (included). Scope down `scaffold-new-repo` to only generate agent config files. Still run `setup-linters` but only for cross-language tools since Rust linting is already configured.
+- If `scaffold-lean-library` will run: skip `setup-ci` (included). Scope down `scaffold-new-repo` to only generate missing agent/config extras not produced by the Lean scaffolder. Scope down `setup-linters` to extra cross-language or Pandoc-academic refinements only, since the Lean scaffolder generates `lintDriver`, `lean-lint`, Markdown and cspell configs, and split CI workflows.
+- If `scaffold-lean-library` will run: mark `add-goreleaser-homebrew`, `setup-installers`, and `add-scrut-cli-tests` as not applicable because Lean libraries do not produce distributable binaries.
 - `setup-secret-scanning` is always independent (no overlap with other tools).
 - `add-scrut-cli-tests` is applicable only if the project produces a CLI binary.
 
 Execution order (dependencies flow downward):
 
 1. `scaffold-new-repo` (foundation: LICENSE, README, .gitignore, agent config)
-1. `scaffold-go-cli` OR `scaffold-go-library` OR `scaffold-rust-cli` (language-specific scaffolding, if applicable)
+1. `scaffold-go-cli` OR `scaffold-go-library` OR `scaffold-lean-library` OR `scaffold-rust-cli` (language-specific scaffolding, if applicable)
 1. `setup-ci` (if not already covered by step 2)
-1. `setup-linters` (cross-language tools, or full setup if no Go scaffolder ran)
+1. `setup-linters` (cross-language tools, or full setup if no language scaffolder already covered lint wiring)
 1. `setup-secret-scanning` (secret scanning)
 1. `add-goreleaser-homebrew` (if Go CLI and not already covered by step 2)
 1. `add-community-files` (community files: CONTRIBUTING, CoC, SECURITY, PR template)
@@ -127,6 +136,7 @@ The tools referenced in this plan are a mix of **skills** and **commands**. They
 
 - **Skills** (have a `skills/` directory): Invoke using the Skill tool.
   - `add-community-files`
+  - `scaffold-lean-library`
   - `setup-linters`
 - **Commands** (have a `commands/` directory): Read the command's Markdown file from its plugin directory using the Read tool, then follow the workflow instructions in that file directly.
   - `scaffold-new-repo` (read `plugins/scaffold-new-repo/commands/scaffold-new-repo.md`)
@@ -149,6 +159,8 @@ For each confirmed tool, in execution order:
 1. If a tool fails, report the error to the user and ask whether to continue with the remaining tools or stop.
 
 When invoking `setup-linters` in scoped-down mode, tell it to skip language-specific linters that the Go scaffolder already configured and only set up cross-language tools.
+
+When invoking `setup-linters` for a Lean library in scoped-down mode, tell it to skip Lean linter wiring that `scaffold-lean-library` already generated. Only request additional cross-language tools, existing-config refinement, or Pandoc-academic preset updates that the user selected.
 
 ### 6. Summary
 

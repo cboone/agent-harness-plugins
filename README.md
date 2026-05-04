@@ -117,6 +117,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Refresh Project Scaffolding](./plugins/refresh-project-scaffolding/README.md) | `/refresh-project-scaffolding` | Refresh existing project scaffolding against the latest plugin templates. |
 | [Scaffold Go CLI](./plugins/scaffold-go-cli/README.md) | `/scaffold-go-cli` | Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions, and Homebrew tap support. |
 | [Scaffold Go Library](./plugins/scaffold-go-library/README.md) | `/scaffold-go-library` | Scaffold a Go library project with GoReleaser changelog releases, golangci-lint, GitHub Actions CI/CD, and Makefile. |
+| [Scaffold Lean Library](./plugins/scaffold-lean-library/README.md) | `/scaffold-lean-library` | Scaffold a Lean 4 library project with Mathlib or PFR dependencies, Lake test/lint wiring, GitHub Actions CI, text linting, and agent instructions. |
 | [Scaffold New Repo](./plugins/scaffold-new-repo/README.md) | `/scaffold-new-repo` | Scaffold the universal boilerplate for a new repository: LICENSE, README, CHANGELOG, .gitignore, agent config files, and a plans directory. |
 | [Scaffold Rust CLI](./plugins/scaffold-rust-cli/README.md) | `/scaffold-rust-cli` | Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest, git-cliff, GitHub Actions CI/CD, and Makefile. |
 
