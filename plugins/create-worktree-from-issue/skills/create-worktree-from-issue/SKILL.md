@@ -60,6 +60,8 @@ Self-assignment is idempotent — safe to re-run if the assignee already exists.
 
 If any command fails, warn the user but continue with worktree creation. Status marking is best-effort and must never block the primary workflow.
 
+The "in progress" label is intentionally retained beyond worktree creation and local implementation. It represents active issue lifecycle state until the related pull request is merged or the user explicitly abandons the effort. Do not remove it as part of creating the worktree.
+
 ### 3. Build the Branch Name
 
 Construct a branch name in the format `TYPE/SLUG` where:
@@ -122,6 +124,7 @@ After confirming the worktree exists in `git worktree list`, report:
 - The tmux window name (to help the user switch to it)
 - A note that the issue context was injected into the new session
 - Whether the issue was marked in progress (assigned and labeled), or if status marking was skipped/failed
+- If status marking succeeded, a note that the "in progress" label is retained until PR merge or explicit abandonment
 
 ## Error Handling
 

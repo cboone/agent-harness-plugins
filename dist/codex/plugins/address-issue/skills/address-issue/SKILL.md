@@ -66,7 +66,7 @@ The `gh label create` command is safe to run even if the label already exists. `
 
 Self-assignment is idempotent, safe to re-run if the assignee already exists.
 
-If any command fails, warn the user but continue. Status marking is best-effort and must never block the primary workflow. Record whether this step succeeded for use in step 9.
+If any command fails, warn the user but continue. Status marking is best-effort and must never block the primary workflow. Record whether this step succeeded for the completion summary.
 
 ### 4. Display Issue Context
 
@@ -166,17 +166,13 @@ docs: update installation instructions (#88)
 
 For multi-commit cases, each commit references the same issue number.
 
-### 9. Mark Issue Done
+### 9. Leave Issue In Progress
 
-**Skip this step if**: step 3 was skipped (closed issue) or step 3 failed (status marking unsuccessful).
+Do not remove the "in progress" label after local implementation or committing.
 
-Remove the "in progress" label:
+The label means the issue has active work associated with it. Keep it in place until the related pull request is merged or the user explicitly abandons the effort.
 
-```bash
-gh issue edit NUMBER --remove-label "in progress"
-```
-
-Best-effort: if the command fails, warn the user but do not treat it as an error.
+If step 3 succeeded, report that issue status cleanup is deferred until PR merge or explicit abandonment. If step 3 was skipped or failed, report that no issue status was retained. Do not add PR merge automation or invent an abandonment workflow.
 
 ### 10. Report Completion
 
@@ -195,6 +191,8 @@ Display a summary of what was done:
 ```
 
 If any changes were skipped, list them with explanations.
+
+If step 3 succeeded, include a note that issue #NUMBER remains labeled "in progress" until the related PR merges or the user explicitly abandons the effort.
 
 ### 11. Offer Next Steps
 

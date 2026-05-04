@@ -12,7 +12,7 @@ See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 
-Analyzes open issues in context (current branches, recent work, project goals, and dependencies), then categorizes them as quick wins, high impact, unblocks others, or overdue. Provides specific reasoning for each recommendation so you can make an informed decision.
+Analyzes open issues in context (current branches, issue labels, assignments, recent work, project goals, and dependencies), excludes issues already marked in progress, then categorizes the remaining candidates as quick wins, high impact, unblocks others, or overdue. Provides specific reasoning for each recommendation so you can make an informed decision.
 
 ## Usage
 

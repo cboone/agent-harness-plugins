@@ -11,7 +11,7 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 ## What It Does
 
-Fetches a GitHub issue by number or search text, classifies it (bug fix, feature, documentation, refactor, or chore), extracts sub-tasks from task list checkboxes, plans the work, executes changes, and commits with conventional commit messages that reference the issue number. Marks the issue "in progress" at the start and removes the label when done.
+Fetches a GitHub issue by number or search text, classifies it (bug fix, feature, documentation, refactor, or chore), extracts sub-tasks from task list checkboxes, plans the work, executes changes, and commits with conventional commit messages that reference the issue number. Marks the issue "in progress" at the start and leaves that label in place until the related PR is merged or the user explicitly abandons the effort.
 
 ## Usage
 

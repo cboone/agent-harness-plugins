@@ -12,7 +12,7 @@ See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 
-Finds a GitHub issue by number or fuzzy text search, derives a branch name from the issue title and labels, self-assigns the issue, labels it "in progress", and creates a worktree via `workmux add` with the full issue context injected as a task prompt.
+Finds a GitHub issue by number or fuzzy text search, derives a branch name from the issue title and labels, self-assigns the issue, labels it "in progress", and creates a worktree via `workmux add` with the full issue context injected as a task prompt. The "in progress" label is retained until the related PR is merged or the user explicitly abandons the effort.
 
 ## Usage
 
