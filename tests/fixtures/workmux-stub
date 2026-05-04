@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Test stub for workmux add.
+set -euo pipefail
+
+function die() {
+  echo "workmux-stub: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function main() {
+  if [[ $# -lt 2 || "${1}" != "add" ]]; then
+    die "expected workmux add invocation"
+  fi
+
+  local branch="${2}"
+  local prompt_file=""
+  local base_branch=""
+  local open_if_exists="false"
+  shift 2
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --open-if-exists)
+        open_if_exists="true"
+        shift
+        ;;
+      -P)
+        if [[ $# -lt 2 ]]; then
+          die "-P requires a prompt file"
+        fi
+        prompt_file="${2}"
+        shift 2
+        ;;
+      --base)
+        if [[ $# -lt 2 ]]; then
+          die "--base requires a branch"
+        fi
+        base_branch="${2}"
+        shift 2
+        ;;
+      *)
+        die "unexpected argument: ${1}"
+        ;;
+    esac
+  done
+
+  if [[ -z "${prompt_file}" ]]; then
+    die "missing -P prompt file"
+  fi
+
+  if [[ -n "${STUB_STATE:-}" ]]; then
+    mkdir -p "${STUB_STATE}"
+    printf '%s' "${prompt_file}" > "${STUB_STATE}/prompt_path"
+  fi
+
+  printf 'workmux add\n'
+  printf 'branch: %s\n' "${branch}"
+  printf 'open-if-exists: %s\n' "${open_if_exists}"
+  if [[ -n "${base_branch}" ]]; then
+    printf 'base: %s\n' "${base_branch}"
+  fi
+  printf 'prompt:\n'
+  cat "${prompt_file}"
+  printf 'prompt-file-exists: '
+  if [[ -e "${prompt_file}" ]]; then
+    printf 'yes\n'
+  else
+    printf 'no\n'
+  fi
+}
+
+main "$@"

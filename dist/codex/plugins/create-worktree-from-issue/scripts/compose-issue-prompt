@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# compose-issue-prompt -- Convert `gh issue view --json ...` output to a workmux prompt.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+BODY_LIMIT=2000
+readonly BODY_LIMIT
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function read_issue_json() {
+  local issue_json
+  issue_json="$(cat)"
+
+  if [[ -z "${issue_json//[[:space:]]/}" ]]; then
+    die "expected issue JSON on stdin"
+  fi
+
+  printf '%s' "${issue_json}"
+}
+
+function validate_json() {
+  local issue_json="${1}"
+
+  if ! jq empty > /dev/null 2>&1 <<< "${issue_json}"; then
+    die "invalid issue JSON"
+  fi
+
+  if ! jq -e 'type == "object"' > /dev/null 2>&1 <<< "${issue_json}"; then
+    die "invalid issue JSON: expected object"
+  fi
+}
+
+function jq_value() {
+  local issue_json="${1}"
+  local filter="${2}"
+  local error_message="${3}"
+  local value
+
+  if ! value="$(jq -er "${filter}" <<< "${issue_json}")"; then
+    die "invalid issue JSON: ${error_message}"
+  fi
+
+  printf '%s' "${value}"
+}
+
+function trim_trailing_space() {
+  local value="${1}"
+
+  while [[ "${value}" == *[[:space:]] ]]; do
+    value="${value%?}"
+  done
+
+  printf '%s' "${value}"
+}
+
+function truncate_body() {
+  local body="${1}"
+  local number="${2}"
+  local prefix candidate paragraph char
+  local index
+
+  if ((${#body} <= BODY_LIMIT)); then
+    printf '%s' "${body}"
+    return
+  fi
+
+  prefix="${body:0:${BODY_LIMIT}}"
+  candidate="${prefix}"
+  paragraph="${prefix%$'\n\n'*}"
+
+  if [[ "${paragraph}" != "${prefix}" && -n "${paragraph//[[:space:]]/}" ]]; then
+    candidate="${paragraph}"
+  else
+    for ((index = ${#prefix} - 1; index >= 0; index--)); do
+      char="${prefix:${index}:1}"
+      if [[ "${char}" == "." || "${char}" == "!" || "${char}" == "?" ]]; then
+        candidate="${prefix:0:${index}+1}"
+        break
+      fi
+    done
+  fi
+
+  candidate="$(trim_trailing_space "${candidate}")"
+  printf '%s\n\n(Issue body truncated. Run `gh issue view %s` for full details.)' "${candidate}" "${number}"
+}
+
+function main() {
+  command -v jq > /dev/null || die "jq is required"
+
+  local issue_json number title labels body prompt_body
+  issue_json="$(read_issue_json)"
+  validate_json "${issue_json}"
+
+  number="$(jq_value "${issue_json}" '.number | select(type == "number")' "missing required numeric field 'number'")"
+  title="$(jq_value "${issue_json}" '.title | select(type == "string" and length > 0)' "missing required string field 'title'")"
+  jq_value "${issue_json}" '.state | select(type == "string" and length > 0)' "missing required string field 'state'" > /dev/null
+  labels="$(jq_value "${issue_json}" 'if ((has("labels") | not) or .labels == null) then [] elif (.labels | type) != "array" then error("labels must be an array") else [.labels[] | if type == "object" and (.name | type) == "string" then .name elif type == "string" then . else error("label entries must be objects with name strings") end] end | join(", ")' "labels must be an array of label objects")"
+  body="$(jq_value "${issue_json}" 'if ((has("body") | not) or .body == null) then "" elif (.body | type) == "string" then .body else error("body must be a string") end' "body must be a string")"
+
+  printf 'Work on issue #%s: %s\n' "${number}" "${title}"
+
+  if [[ -n "${labels}" ]]; then
+    printf '\nLabels: %s\n' "${labels}"
+  fi
+
+  if [[ -n "${body}" ]]; then
+    prompt_body="$(truncate_body "${body}" "${number}")"
+    printf '\n%s\n' "${prompt_body}"
+  fi
+}
+
+main "$@"

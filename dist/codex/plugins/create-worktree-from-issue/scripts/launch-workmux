@@ -7,15 +7,14 @@ readonly SCRIPT_NAME
 
 function usage() {
   cat << 'USAGE_TEXT'
-Usage: launch-workmux <branch-name> <prompt-file>
+Usage: launch-workmux <branch-name>
 
 Create a worktree and tmux window via workmux, fully detached from the
 calling process. Waits briefly for workmux to initialize, then outputs
-the log and cleans up.
+the log and cleans up. Reads the workmux prompt from stdin.
 
 Arguments:
   branch-name   Name of the git branch to create/open
-  prompt-file   Path to the workmux prompt file
 
 Options:
   -h, --help    Show this help
@@ -27,45 +26,83 @@ function die() {
   exit "${2:-1}"
 }
 
-# Escape MiniJinja delimiters in-place so workmux's template engine emits them
-# literally. Without this, issue bodies containing GitHub Actions expressions
-# (`${{ ... }}`), Jinja/Liquid/Tera/Helm/Vue templates, or Handlebars-style
-# tokens are parsed as template variables and rejected with "undefined
-# variables". Each `{{ "{{" }}`, `{{ "{%" }}`, and `{{ "{#" }}` evaluates back
-# to the literal two-character delimiter at render time, so the rendered
-# prompt stored in `<worktree>/.workmux/PROMPT-*.md` matches the input
-# verbatim.
-#
-# Editing in-place (rather than into a separate temp file) means the file
-# workmux reads is the same one the caller manages. The caller defers cleanup
-# until success is verified, so there is no race window where workmux could
-# read a deleted prompt.
-function escape_minijinja_delimiters_in_place() {
+function remove_file_if_present() {
   local file="${1}"
-  local tmp
-  tmp="$(mktemp "${file}.XXXXXX")"
+
+  if [[ ! -e "${file}" && ! -L "${file}" ]]; then
+    return 0
+  fi
+
+  if rm -- "${file}" 2> /dev/null; then
+    return 0
+  fi
+
+  [[ ! -e "${file}" && ! -L "${file}" ]]
+}
+
+function write_escaped_prompt() {
+  local prompt_file="${1}"
+  local raw_prompt status
+
+  if [[ -t 0 ]]; then
+    remove_file_if_present "${prompt_file}"
+    die "expected prompt content on stdin"
+  fi
+
+  raw_prompt="$(mktemp "${prompt_file}.raw.XXXXXX")"
+  cat > "${raw_prompt}"
+
+  if [[ ! -s "${raw_prompt}" ]]; then
+    remove_file_if_present "${raw_prompt}"
+    remove_file_if_present "${prompt_file}"
+    die "expected prompt content on stdin"
+  fi
+
+  set +e
   sed -e 's/{{/{{ "{{" }}/g' \
     -e 's/{%/{{ "{%" }}/g' \
     -e 's/{#/{{ "{#" }}/g' \
-    "${file}" > "${tmp}"
-  mv -f "${tmp}" "${file}"
+    "${raw_prompt}" > "${prompt_file}"
+  status=$?
+  set -e
+
+  remove_file_if_present "${raw_prompt}"
+  if ((status != 0)); then
+    remove_file_if_present "${prompt_file}"
+    return "${status}"
+  fi
+}
+
+function run_workmux_and_cleanup_prompt() {
+  local prompt_file="${1}"
+  local status
+  shift
+
+  set +e
+  "${@}"
+  status=$?
+  set -e
+
+  remove_file_if_present "${prompt_file}"
+  return "${status}"
 }
 
 function do_launch() {
   local branch="${1}"
-  local prompt_file="${2}"
   local safe_name="${branch//\//-}"
-  local log
-  log="$(mktemp "/tmp/workmux-${safe_name}.XXXXXX.log")"
+  local log prompt_file
+  prompt_file="$(mktemp "/tmp/workmux-prompt-${safe_name}.md.XXXXXX")"
 
-  escape_minijinja_delimiters_in_place "${prompt_file}"
+  write_escaped_prompt "${prompt_file}"
 
-  workmux add "${branch}" --open-if-exists -P "${prompt_file}" > "${log}" 2>&1 &
+  log="$(mktemp "/tmp/workmux-${safe_name}.log.XXXXXX")"
+
+  run_workmux_and_cleanup_prompt "${prompt_file}" workmux add "${branch}" --open-if-exists -P "${prompt_file}" > "${log}" 2>&1 &
   disown
-  sleep 8
+  sleep "${WORKMUX_LAUNCH_WAIT_SECONDS:-8}"
 
   cat "${log}"
-  rm -f "${log}"
+  remove_file_if_present "${log}"
 }
 
 function main() {
@@ -74,12 +111,12 @@ function main() {
     exit 0
   fi
 
-  if [[ $# -ne 2 ]]; then
+  if [[ $# -ne 1 ]]; then
     usage >&2
-    die "expected 2 arguments (branch-name, prompt-file), got $#"
+    die "expected 1 argument (branch-name), got $#"
   fi
 
-  do_launch "${1}" "${2}"
+  do_launch "${1}"
 }
 
 main "$@"

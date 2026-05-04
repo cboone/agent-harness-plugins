@@ -71,7 +71,7 @@ Examples:
 
 ### 4. Compose the Issue Prompt
 
-Build a prompt from the issue data retrieved in step 1. Format:
+Use the bundled `compose-issue-prompt` helper to convert `gh issue view --json number,title,labels,body,state` output into this prompt format:
 
 ```text
 Work on issue #NUMBER: TITLE
@@ -87,24 +87,20 @@ BODY_CONTENT
 
 ### 5. Create the Worktree
 
-Derive a filesystem-safe name from the branch by replacing `/` with `-`. For example, `feature/add-dark-mode` becomes `feature-add-dark-mode`. This `SAFE_NAME` is used only for the temporary prompt file path; pass the original `BRANCH_NAME` (with the slash) to `launch-workmux`.
-
-Use the Write tool to create a temporary prompt file at `/tmp/workmux-prompt-SAFE_NAME.md` with the composed prompt from step 4. Using the Write tool avoids shell escaping issues with arbitrary issue body content. Substituting the unsanitized `BRANCH_NAME` would cause the `Write` tool to treat the slash as a directory separator, creating a stray subdirectory under `/tmp/`.
-
 **Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. The `launch-workmux` script handles backgrounding, detaching, waiting, and outputting the log.
 
-**Template escaping:** `workmux` renders the prompt body through MiniJinja, so any literal `{{`, `{%`, or `{#` token in the issue body (e.g. GitHub Actions `${{ inputs.x }}` expressions, Jinja/Liquid/Tera/Helm/Vue templates, Handlebars-style snippets) would otherwise be parsed as a template variable reference and rejected with `Template uses undefined variables`. The `launch-workmux` script rewrites the prompt file in place before invoking `workmux add`, replacing each delimiter with a `{{ "..." }}` expression that renders back to the literal characters. The rewrite happens atomically (write to a sibling temp file, then `mv` over the original), so `workmux` always sees a complete file. The rendered prompt stored at `<worktree>/.workmux/PROMPT-*.md` matches the original input verbatim, so the new agent session sees the issue body unchanged. Because the script edits the file you wrote in-place, after this point the prompt file on disk contains the escaped form (not the original) until you delete it in cleanup.
+**Template escaping:** `workmux` renders the prompt body through MiniJinja, so any literal `{{`, `{%`, or `{#` token in the issue body (e.g. GitHub Actions `${{ inputs.x }}` expressions, Jinja/Liquid/Tera/Helm/Vue templates, Handlebars-style snippets) would otherwise be parsed as a template variable reference and rejected with `Template uses undefined variables`. The `launch-workmux` script reads the prompt from stdin, writes an escaped temporary prompt file for `workmux add -P`, and removes that temporary file after `workmux add` exits. Each escaped delimiter renders back to the literal characters, so the issue context stored at `<worktree>/.workmux/PROMPT-*.md` matches the original prompt.
 
-**Locating the script:** At the start of your session, locate the script by searching for `**/create-worktree-from-issue/scripts/launch-workmux`. Note the absolute path and use it with `bash` as the command prefix in all subsequent invocations. Do not use a shell variable, since shell state does not persist between commands.
+**Locating the scripts:** At the start of your session, locate the scripts by searching for `**/create-worktree-from-issue/scripts/compose-issue-prompt` and `**/create-worktree-from-issue/scripts/launch-workmux`. Note the absolute paths and use each with `bash` as the command prefix in all subsequent invocations. Do not use a shell variable, since shell state does not persist between commands.
 
-In the example below, `SCRIPTS_DIR/launch-workmux` is a placeholder for the script's **quoted absolute path** (e.g., `"/absolute/path/to/plugins/create-worktree-from-issue/scripts/launch-workmux"`). Always invoke via `bash` followed by the quoted path. This ensures the command token is `bash`, which matches stable allowlist patterns regardless of the plugin's installed path or version.
-
-**Important:** Do not delete the prompt file immediately after launching. `workmux` runs asynchronously and may not read the file for several seconds. Wait and verify success before cleaning up.
+In the example below, `SCRIPTS_DIR/compose-issue-prompt` and `SCRIPTS_DIR/launch-workmux` are placeholders for the scripts' **quoted absolute paths**. Always invoke them via `bash` followed by the quoted path. This ensures the command token is `bash`, which matches stable allowlist patterns regardless of the plugin's installed path or version.
 
 Do not specify a `--base` branch. Let `workmux` use its default.
 
 ```bash
-bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" "/tmp/workmux-prompt-SAFE_NAME.md"
+gh issue view NUMBER --json number,title,labels,body,state \
+  | bash "SCRIPTS_DIR/compose-issue-prompt" \
+  | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME"
 ```
 
 The script outputs the workmux log directly and cleans up its own log file. Verify success:
@@ -112,14 +108,6 @@ The script outputs the workmux log directly and cleans up its own log file. Veri
 ```bash
 git worktree list
 ```
-
-If the log shows success and the worktree appears in the list, clean up the prompt file:
-
-```bash
-rm -f /tmp/workmux-prompt-SAFE_NAME.md
-```
-
-If the log shows an error (e.g., "Failed to read prompt file"), the prompt file may have been deleted too early or another issue occurred. Check the log output for details.
 
 ### 6. Report Success
 

@@ -51,40 +51,38 @@ If the user provided only a branch name with no description, derive a human-read
 
 **Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. The `launch-workmux` script handles backgrounding, detaching, waiting, and outputting the log.
 
-**Template escaping:** `workmux` renders the prompt body through MiniJinja, so any literal `{{`, `{%`, or `{#` token in the task description (e.g. GitHub Actions `${{ inputs.x }}` expressions, Jinja/Liquid/Tera/Helm/Vue templates, Handlebars-style snippets) would otherwise be parsed as a template variable reference and rejected with `Template uses undefined variables`. The `launch-workmux` script rewrites the prompt file in place before invoking `workmux add`, replacing each delimiter with a `{{ "..." }}` expression that renders back to the literal characters. The rewrite happens atomically (write to a sibling temp file, then `mv` over the original), so `workmux` always sees a complete file. The rendered prompt stored at `<worktree>/.workmux/PROMPT-*.md` matches the original input verbatim, so the new agent session sees the prompt unchanged. Because the script edits the file you wrote in-place, after this point the prompt file on disk contains the escaped form (not the original) until you delete it in cleanup.
+**Template escaping:** `workmux` renders the prompt body through MiniJinja, so any literal `{{`, `{%`, or `{#` token in the task description (e.g. GitHub Actions `${{ inputs.x }}` expressions, Jinja/Liquid/Tera/Helm/Vue templates, Handlebars-style snippets) would otherwise be parsed as a template variable reference and rejected with `Template uses undefined variables`. The `launch-workmux` script reads the prompt from stdin, writes an escaped temporary prompt file for `workmux add -P`, and removes that temporary file after `workmux add` exits. Each escaped delimiter renders back to the literal characters, so the prompt stored at `<worktree>/.workmux/PROMPT-*.md` matches the original input.
 
 **Locating the script:** At the start of your session, locate the script by searching for `**/create-worktree/scripts/launch-workmux`. Note the absolute path and use it with `bash` as the command prefix in all subsequent invocations. Do not use a shell variable, since shell state does not persist between commands.
 
 In the example below, `SCRIPTS_DIR/launch-workmux` is a placeholder for the script's **quoted absolute path** (e.g., `"/absolute/path/to/plugins/create-worktree/scripts/launch-workmux"`). Always invoke via `bash` followed by the quoted path. This ensures the command token is `bash`, which matches stable allowlist patterns regardless of the plugin's installed path or version.
-
-First, use the Write tool to create a temporary prompt file at `/tmp/workmux-prompt-BRANCH_NAME.md` with the composed prompt from step 2. Using the Write tool avoids shell escaping issues with special characters in the prompt text.
-
-**Important:** Do not delete the prompt file immediately after launching. `workmux` runs asynchronously and may not read the file for several seconds. Wait and verify success before cleaning up.
 
 Do not specify `--base`. Let workmux use its default. Only pass `--base BRANCH` if the user explicitly requests a specific base branch.
 
 Then launch the worktree:
 
 ```bash
-bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" "/tmp/workmux-prompt-BRANCH_NAME.md"
+bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" <<'WORKMUX_PROMPT'
+Work on: [user's task description]
+
+Branch: [BRANCH_NAME]
+WORKMUX_PROMPT
 ```
 
 If the user requested a specific base branch:
 
 ```bash
-bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" "/tmp/workmux-prompt-BRANCH_NAME.md" --base "BASE_BRANCH"
+bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH" <<'WORKMUX_PROMPT'
+Work on: [user's task description]
+
+Branch: [BRANCH_NAME]
+WORKMUX_PROMPT
 ```
 
 The script outputs the workmux log directly and cleans up its own log file. Verify success:
 
 ```bash
 git worktree list
-```
-
-If the log shows success and the worktree appears in the list, clean up the prompt file:
-
-```bash
-rm -f /tmp/workmux-prompt-BRANCH_NAME.md
 ```
 
 ### 4. Report Success
