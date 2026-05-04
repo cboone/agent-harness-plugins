@@ -67,6 +67,8 @@ An issue is considered in progress if **any** of the following are true:
 
 Exclude in-progress issues from recommendations, but note them in the output as "already in progress" along with how each was detected (branch, label, assignment, or a combination).
 
+A label-only match may mean local work is complete but the related PR is still waiting to merge. Keep excluding the issue in that state. Do not recommend it again only because no matching branch or worktree is visible.
+
 ### 3. Analyze Each Issue
 
 Evaluate each open issue (that is not already in progress) on these signals:
@@ -107,7 +109,7 @@ For each recommendation, include:
 
 ### 5. Summarize In-Progress Work
 
-After recommendations, briefly list issues detected as in progress. For each, note how it was detected: branch/worktree, "in progress" label, assignment to current user, or a combination. This gives the user a complete picture of active work.
+After recommendations, briefly list issues detected as in progress. For each, note how it was detected: branch/worktree, "in progress" label, assignment to current user, or a combination. This gives the user a complete picture of active work, including issues that may be waiting on PR merge after local implementation is done.
 
 ### 6. Offer to Start Work
 
