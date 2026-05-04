@@ -91,10 +91,11 @@ function do_launch() {
   local branch="${1}"
   local safe_name="${branch//\//-}"
   local log prompt_file
-  log="$(mktemp "/tmp/workmux-${safe_name}.log.XXXXXX")"
   prompt_file="$(mktemp "/tmp/workmux-prompt-${safe_name}.md.XXXXXX")"
 
   write_escaped_prompt "${prompt_file}"
+
+  log="$(mktemp "/tmp/workmux-${safe_name}.log.XXXXXX")"
 
   run_workmux_and_cleanup_prompt "${prompt_file}" workmux add "${branch}" --open-if-exists -P "${prompt_file}" > "${log}" 2>&1 &
   disown

@@ -93,10 +93,11 @@ function do_launch() {
   local base_branch="${2:-}"
   local safe_name="${branch//\//-}"
   local log prompt_file
-  log="$(mktemp "/tmp/workmux-${safe_name}.log.XXXXXX")"
   prompt_file="$(mktemp "/tmp/workmux-prompt-${safe_name}.md.XXXXXX")"
 
   write_escaped_prompt "${prompt_file}"
+
+  log="$(mktemp "/tmp/workmux-${safe_name}.log.XXXXXX")"
 
   local -a cmd=(workmux add "${branch}" --open-if-exists -P "${prompt_file}")
   if [[ -n "${base_branch}" ]]; then
