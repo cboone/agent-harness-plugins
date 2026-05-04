@@ -136,10 +136,12 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Setup Installers](./plugins/setup-installers/README.md) | `/setup-installers` | Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, go/cargo install, and release workflow. |
 | [Setup Secret Scanning](./plugins/setup-secret-scanning/README.md) | `/setup-secret-scanning` | Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration. |
 | [Upgrade Everything](./plugins/upgrade-everything/README.md) | `/upgrade-everything` | Assess every version reference in a repository, evaluate available upgrades with repo-specific risk and reward, and present selectable upgrade options. |
+| [Write Homebrew Formula](./plugins/write-homebrew-formula/README.md) | `/write-homebrew-formula` | Write or update Homebrew formulae using current Homebrew guidance and cboone/homebrew-tap conventions. |
 
 **External tools:**
 
 - *Pin Everything:* [`gh`](https://cli.github.com/), [`jq`](https://jqlang.org/); optional [`corepack`](https://github.com/nodejs/corepack) (only when pinning Yarn or pnpm) and [`reuse`](https://reuse.software/) (only in REUSE-licensed repos)
+- *Write Homebrew Formula:* [Homebrew](https://brew.sh/) for formula audit, style, install, and test validation
 
 ### Agents
 
