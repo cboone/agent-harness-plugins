@@ -35,8 +35,8 @@
 #     Corepack's tarball-pinning guarantee even when the version is current.
 #   - Release-tagged SHA-pinned action refs (those whose comment is a numeric
 #     `# vX.Y.Z` tag). Drift is checked within the same major series as the
-#     pinned version, so a `# v8.0.0 -- held at v8 pending v9 migration` pin
-#     is only flagged when a newer v8.x lands, never told to "upgrade" to v9.
+#     pinned version, so a `# v2.3.4, held at v2 pending v3 migration` pin
+#     is only flagged when a newer v2.x lands, never told to "upgrade" to v3.
 #     Major bumps are intentional and Dependabot already proposes them for
 #     workflow files; the audit's role is the same-major patch backstop.
 #     Channel/branch pins (`# stable`, `# main`) are out of scope because
@@ -471,8 +471,8 @@ function audit_packagemanager() {
 #
 # Drift is checked within the **same major series** as the pinned version. This
 # matters for the held-major pattern documented in `references/github-actions.md`:
-# `uses: foo/bar@<sha> # v8.0.0 -- held at v8 pending v9 migration`. Comparing
-# a held v8 against absolute upstream latest would emit a permanent v8 -> v9
+# `uses: foo/bar@<sha> # v2.3.4, held at v2 pending v3 migration`. Comparing
+# a held v2 against absolute upstream latest would emit a permanent v2 -> v3
 # "drift" row even though the held major is intentional. Major bumps are a
 # separate concern (Dependabot already proposes them for workflow files); the
 # audit's role here is the same-major patch backstop for SHA pins inside
