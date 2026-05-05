@@ -1,52 +1,32 @@
 # README.md Updates Reference
 
-When adding a new plugin, update two sections in the root `README.md` (the table of contents and the plugin description section) and create a per-plugin `README.md` in the plugin directory.
+When adding a new plugin, update the compact category table in the root `README.md` and create a per-plugin `README.md` in the plugin directory. Do not add a root README table of contents or H3 plugin-description sections unless the root README is intentionally redesigned again.
 
-## Table of Contents
+## Root README Category Tables
 
-The ToC is at the top of the file, organized by type and subcategory. Each entry is on its own line to prevent merge conflicts when multiple branches add plugins simultaneously:
+The root `README.md` lists skills and command-style plugins under `## Skills`, grouped by category. Each category has a 3-column table:
 
 ```markdown
-**Skills**
-<br>Git:
-[Skill A](#skill-a)
-∙ [Skill B](#skill-b)
-<br>Issues and Worktrees:
-[Skill C](#skill-c)
-<br>Code Review:
-[Skill D](#skill-d)
-<br>Code Quality:
-[Skill E](#skill-e)
-<br>Writing:
-[Skill F](#skill-f)
-<br>Scaffolding:
-[Skill G](#skill-g)
-<br>CI and Release:
-[Skill H](#skill-h)
-<br>Agents:
-[Skill I](#skill-i)
-
-**Hooks**
-<br>Workflow:
-[Hook B](#hook-b)
+| Plugin | Trigger | What it does |
+| --- | --- | --- |
+| [Plugin Name](./plugins/plugin-name/README.md) | `/plugin-name` | Canonical marketplace description. |
 ```
 
 Format rules:
 
-- **One entry per line.** This is critical for avoiding merge conflicts.
-- **Skills** and **Hooks** are separated by a blank line.
-- Skills are grouped into subcategories: Git, Issues and Worktrees, Code Review, Code Quality, Writing, Scaffolding, CI and Release, Agents.
-- Hooks are grouped by hook category; omit empty hook categories.
-- Subcategory labels use `<br>Name:` format (plain text with trailing colon) on their own line.
-- The first link in each subcategory has no leading middle dot; subsequent links start with `∙` (middle dot, space).
-- Skills and hooks are listed alphabetically within their respective groups/subcategories.
-- Anchor links use the kebab-case H3 heading (e.g., `#create-worktree-from-issue`).
+- Keep the category order used by the root README: Git, Issues and Worktrees, Code Review, Code Quality, Writing, Scaffolding, CI and Release, Agents.
+- Insert the row alphabetically by plugin display name within the selected category table.
+- Link the plugin name to `./plugins/PLUGIN-NAME/README.md`.
+- Use the slash command in the `Trigger` column, usually `/PLUGIN-NAME`.
+- For style-guide skills that also activate automatically, do not annotate automatic activation in the root table. Explain activation behavior in the per-plugin README instead.
+- Copy the canonical marketplace `description` field verbatim into `What it does`.
+- Do not add individual install commands to the root README. The marketplace install flow covers installation.
 
-### Subcategory Guide for Skills
+### Category Guide for Skills and Command-Style Plugins
 
-Use this guide to determine which subcategory a new skill belongs to. Each subcategory maps directly to a marketplace `category` value (kebab-case version of the label). Keep the README ToC subcategory and the marketplace `category` aligned so filtering in either place yields the same grouping.
+Use this guide to choose the root README category and the matching marketplace `category` value.
 
-| Subcategory              | Marketplace category   | Covers                                                      | Examples                                                 |
+| Root README category     | Marketplace category   | Covers                                                      | Examples                                                 |
 | ------------------------ | ---------------------- | ----------------------------------------------------------- | -------------------------------------------------------- |
 | **Git**                  | `git`                  | Commit-to-PR pipeline                                       | commit, merge-main, pr, review-branch, use-git           |
 | **Issues and Worktrees** | `issues-and-worktrees` | Multi-agent and issue-driven work                           | create-worktree, suggest-next-issue                      |
@@ -57,122 +37,54 @@ Use this guide to determine which subcategory a new skill belongs to. Each subca
 | **CI and Release**       | `ci-and-release`       | CI workflows, installers, release automation, repo audits   | setup-ci, add-goreleaser-homebrew, setup-secret-scanning |
 | **Agents**               | `agents`               | Meta-tools for the agent ecosystem                          | clean-up-agent-config, create-plugin                     |
 
-### Adding a New Skill
+### Adding a New Skill or Command-Style Plugin
 
-1. Insert a new line with `∙ [Skill Name](#skill-name)` in alphabetical order within the appropriate subcategory. If the new entry is the first in its subcategory, omit the leading `∙`.
-1. Add an H3 description section (see below).
+1. Add the plugin to `.claude-plugin/marketplace.json` with the correct `category` and canonical `description`.
+1. Insert a row in the matching root README category table.
+1. Use the exact marketplace description in `What it does`.
 1. Create a per-plugin README (see below).
 
-### Subcategory Guide for Hooks
+## Hooks Table
 
-Use this guide to determine which subcategory a new hook belongs to. Each subcategory maps directly to a marketplace `category` value.
+Hooks are listed under `## Hooks` in a 2-column table because they have no slash-command trigger:
 
-| Subcategory  | Marketplace category | Covers                              | Examples                     |
-| ------------ | -------------------- | ----------------------------------- | ---------------------------- |
-| **Workflow** | `workflow`           | General workflow utility hooks      | notify, update-docs-reminder |
+```markdown
+| Plugin | What it does |
+| --- | --- |
+| [Hook Name](./plugins/hook-name/README.md) | Canonical marketplace description. |
+```
+
+Format rules:
+
+- Insert the row alphabetically by hook display name.
+- Link the hook name to `./plugins/PLUGIN-NAME/README.md`.
+- Copy the canonical marketplace `description` field verbatim into `What it does`.
+
+### Category Guide for Hooks
+
+| Root README section | Marketplace category | Covers                         | Examples                     |
+| ------------------- | -------------------- | ------------------------------ | ---------------------------- |
+| **Hooks**           | `workflow`           | General workflow utility hooks | notify, update-docs-reminder |
 
 ### Adding a New Hook
 
-1. Insert a new line with `∙ [Hook Name](#hook-name)` in alphabetical order within the appropriate subcategory. If the new entry is the first in its subcategory, omit the leading `∙`.
-1. Add an H3 description section (see below).
+1. Add the hook to `.claude-plugin/marketplace.json` with the correct `category` and canonical `description`.
+1. Insert a row in the hooks table.
+1. Use the exact marketplace description in `What it does`.
 1. Create a per-plugin README (see below).
 
-## Installation Section
+## External Tools
 
-The installation section directs users to add the marketplace and browse plugins from there. It does not list individual install commands; users select plugins interactively after adding the marketplace.
-
-## Table of Contents: Commands
-
-Commands follow the same one-entry-per-line pattern, with their own subcategories:
+If a plugin requires external tools, update the `**External tools:**` bullet list immediately below the relevant category table. Use one bullet per plugin, or one bullet for a small group of plugins that share the same requirement:
 
 ```markdown
-**Commands**
-<br>Scaffolding:
-[Command A](#command-a)
-∙ [Command B](#command-b)
-<br>CI/CD:
-[Command C](#command-c)
-<br>Security:
-[Command D](#command-d)
+**External tools:**
+
+- *Plugin Name:* [`tool`](https://example.com/)
+- *Plugin A, Plugin B:* [`tool`](https://example.com/)
 ```
 
-Format rules are identical to Skills and Hooks. Commands are separated from Skills and Hooks by a blank line.
-
-### Subcategory Guide for Commands
-
-| Subcategory     | Covers                               | Examples                           |
-| --------------- | ------------------------------------ | ---------------------------------- |
-| **Scaffolding** | Project and repo setup commands      | scaffold-go-cli, scaffold-new-repo |
-| **CI/CD**       | CI, release, and distribution setup  | setup-ci, add-goreleaser-homebrew  |
-| **Security**    | Secret scanning and security tooling | setup-secret-scanning              |
-
-### Adding a New Command
-
-1. Insert a new line with `∙ [Command Name](#command-name)` in alphabetical order within the appropriate subcategory. If the new entry is the first in its subcategory, omit the leading `∙`.
-1. Add an H3 description section (see below).
-1. Create a per-plugin README (see below).
-
-## Plugin Description Sections
-
-### Skills Section
-
-Each skill gets an H3 subsection under `## Skills`, in alphabetical order. The description is 1-2 sentences, followed by a blockquote metadata block with the trigger command, any external dependencies, and a link to the per-plugin README:
-
-```markdown
-### Skill Name
-
-One-to-two sentence summary of what the skill does.
-
-> **Trigger:** `/skill-name`
-> **Requires:** [`dependency`](URL)
-> **Details:** [README](./plugins/skill-name/README.md)
-```
-
-Key patterns:
-
-- The H3 heading is title case (e.g., "Create Worktree from Issue")
-- The description is 1-2 concise sentences
-- The blockquote metadata block goes at the end of each section
-- Always include the `> **Trigger:**` line
-- Include `> **Requires:**` only if the skill has external dependencies
-- Always include the `> **Details:**` line linking to the per-plugin README
-- When a skill also activates automatically, note it parenthetically: ``> **Trigger:** `/skill-name` (also activates automatically)``
-
-### Hooks Section
-
-Each hook gets an H3 subsection under `## Hooks`. The description is 1-2 sentences, followed by a blockquote with any dependency requirements and a details link:
-
-```markdown
-### Hook Name
-
-Description of what the hook does and when it fires.
-
-> **Requires:** [`dependency`](URL). Install via [Homebrew](https://brew.sh): `install command`
-> **Details:** [README](./plugins/hook-name/README.md)
-```
-
-### Commands Section
-
-Each command gets an H3 subsection under `## Commands`, in alphabetical order. The description is 1-2 sentences, followed by a blockquote metadata block with the trigger command, any external dependencies, and a link to the per-plugin README:
-
-```markdown
-### Command Name
-
-One-to-two sentence summary of what the command does.
-
-> **Trigger:** `/command-name`
-> **Requires:** [`dependency`](URL)
-> **Details:** [README](./plugins/command-name/README.md)
-```
-
-Key patterns:
-
-- The H3 heading is title case (e.g., "Setup CI", "Scaffold Go CLI")
-- The description is 1-2 concise sentences
-- The blockquote metadata block goes at the end of each section
-- Always include the `> **Trigger:**` line
-- Include `> **Requires:**` only if the command has external dependencies
-- Always include the `> **Details:**` line linking to the per-plugin README
+Omit the external-tools list for categories where no listed plugin requires external tools.
 
 ## Per-Plugin README
 
