@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, Copilot, and OpenCode.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["agents", "codex", "config", "copilot", "opencode", "settings"],
   "license": "MIT",
   "name": "clean-up-agent-config",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.2.1"
+  "version": "1.2.2"
 }

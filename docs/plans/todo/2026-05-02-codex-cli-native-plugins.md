@@ -10,7 +10,7 @@ OpenAI's [Codex CLI](https://developers.openai.com/codex/cli) takes the opposite
 - **Per-plugin manifest discovery** (`codex-rs/utils/plugins/src/plugin_namespace.rs`): codex scans both `.codex-plugin/plugin.json` and `.claude-plugin/plugin.json`, returning the first one found. With both present, `.codex-plugin/` wins. Our existing `.claude-plugin/plugin.json` files are read as-is when no `.codex-plugin/` sibling exists.
 - **Hook environment variables** (`codex-rs/hooks/src/engine/discovery.rs`): codex sets `PLUGIN_ROOT`, `CLAUDE_PLUGIN_ROOT` (with the comment `// For OOTB compat with existing plugins that use this env var.`), `PLUGIN_DATA`, and `CLAUDE_PLUGIN_DATA` in the environment of plugin-bundled hook commands. Existing `${CLAUDE_PLUGIN_ROOT}/scripts/...` references resolve correctly with no rewrite.
 - **Hook events** (`codex-rs/hooks/src/schema.rs`): codex defines a strict `HookEventNameWire` enum with exactly six variants: `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, `Stop`. Claude-only events (`Notification`, `PreCompact`, `SubagentStop`, `SessionEnd`) are not in the enum and will fail to deserialize, breaking the entire `hooks.json` for that plugin on codex.
-- **Plugin install:** `codex plugin marketplace add cboone/cboone-cc-plugins` clones the repo into `~/.codex/plugins/cache/cboone-cc-plugins/<plugin>/<version>/` and reads our existing `.claude-plugin/marketplace.json`. Codex CLI 0.128.0 does not expose a separate `codex plugin install` subcommand; `marketplace add` is the activation step. Plugin-bundled hooks are additionally gated behind the `plugin_hooks` feature flag (`codex features enable plugin_hooks`).
+- **Plugin install:** `codex plugin marketplace add cboone/agent-harness-plugins` clones the repo into `~/.codex/plugins/cache/agent-harness-plugins/<plugin>/<version>/` and reads our existing `.claude-plugin/marketplace.json`. Codex CLI 0.128.0 does not expose a separate `codex plugin install` subcommand; `marketplace add` is the activation step. Plugin-bundled hooks are additionally gated behind the `plugin_hooks` feature flag (`codex features enable plugin_hooks`).
 
 Net effect: most of this repository is already a working codex plugin marketplace. The `dist/codex/` mirror, `bin/build-codex-mirror`, and `bin/install-codex-hooks` ideas from the previous draft of this plan are unnecessary and have been dropped.
 
@@ -21,7 +21,7 @@ The only real compatibility gap is the `notify` plugin, whose `hooks/hooks.json`
 | `update-docs-reminder` | `PostToolUse` matcher `Bash`              | Already compatible. No changes required.                      |
 | `notify`               | `Notification` (×3), `PreCompact`, `Stop` | Codex rejects the file. Needs a codex-specific hooks variant. |
 
-Goal: each plugin in this repo installs cleanly via `codex plugin marketplace add cboone/cboone-cc-plugins` (the only plugin install path exposed in Codex CLI 0.128.0). README documents the codex install path. CI verifies dual-manifest consistency for plugins that need it.
+Goal: each plugin in this repo installs cleanly via `codex plugin marketplace add cboone/agent-harness-plugins` (the only plugin install path exposed in Codex CLI 0.128.0). README documents the codex install path. CI verifies dual-manifest consistency for plugins that need it.
 
 ## Approach
 
@@ -45,12 +45,12 @@ A minimal codex-specific manifest. Mirrors the existing `.claude-plugin/plugin.j
 {
   "author": { "name": "Christopher Boone" },
   "description": "Notifies you when Codex finishes a task or needs your attention.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "hooks": "./hooks/codex.hooks.json",
   "keywords": ["alerts", "macos", "notifications"],
   "license": "MIT",
   "name": "notify",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "version": "1.1.0"
 }
 ```
@@ -90,7 +90,7 @@ Bump `version` from `1.0.3` to `1.1.0`. No other changes.
 
 Add a "Using with Codex CLI" section that explains:
 
-- Install via `codex plugin marketplace add cboone/cboone-cc-plugins` (Codex CLI 0.128.0 has no separate `codex plugin install` subcommand). Plugin-bundled hooks also require `codex features enable plugin_hooks`.
+- Install via `codex plugin marketplace add cboone/agent-harness-plugins` (Codex CLI 0.128.0 has no separate `codex plugin install` subcommand). Plugin-bundled hooks also require `codex features enable plugin_hooks`.
 - The plugin only wires the `Stop` event on codex (turn-end notification), since codex's hook schema does not include `Notification` or `PreCompact`.
 - For idle/elicitation/permission notifications, recommend codex's built-in `tui.notifications = true` (and `tui.notification_method`, `tui.notification_condition`) in `~/.codex/config.toml`.
 - Do not mention codex's `notify = [...]` config: it is officially deprecated in the codex source (`codex-rs/config/src/config_toml.rs`: "Deprecated optional external command to spawn for end-user notifications.") in favor of lifecycle hooks. Our `Stop` hook is the same mechanism for new automation.
@@ -103,7 +103,7 @@ Bump the `notify` entry's `version` from `1.0.3` to `1.1.0`. No other changes (n
 
 Two parallel insertions:
 
-1. **Top-of-README pointer** (after the existing OpenCode subsection at lines 78-86). New "Using with Codex CLI" subsection: a heading, a one-sentence description, a fenced `bash` block with `codex plugin marketplace add cboone/cboone-cc-plugins`, and a "see below" pointer linking to the detailed section and to the codex known-limitations subsection.
+1. **Top-of-README pointer** (after the existing OpenCode subsection at lines 78-86). New "Using with Codex CLI" subsection: a heading, a one-sentence description, a fenced `bash` block with `codex plugin marketplace add cboone/agent-harness-plugins`, and a "see below" pointer linking to the detailed section and to the codex known-limitations subsection.
 
 2. **Tail-of-README detailed section** (new section after the existing OpenCode section at lines 487-500, before `## License`). Sibling to "Using with OpenCode," same depth and structure, **separate** "Known limitations" subsection (no merge with the OpenCode one). Includes:
 
@@ -141,12 +141,12 @@ End-to-end sanity, in order:
 3. **JSON syntax of new files.** `jq . plugins/notify/.codex-plugin/plugin.json plugins/notify/hooks/codex.hooks.json` exits 0.
 4. **Local marketplace install (codex CLI required, manual).** From a separate clean directory:
    - `codex plugin marketplace add /path/to/this/repo` (local source).
-   - `codex plugin list` shows all our plugins under the `cboone-cc-plugins` marketplace. (Codex CLI 0.128.0 has no separate `codex plugin install` subcommand; `marketplace add` is the activation step.)
+   - `codex plugin list` shows all our plugins under the `agent-harness-plugins` marketplace. (Codex CLI 0.128.0 has no separate `codex plugin install` subcommand; `marketplace add` is the activation step.)
    - In a codex session run `/skills` and confirm `commit` appears with the expected description.
    - With `codex features enable plugin_hooks` set, trigger a Bash tool call from codex, confirm the `update-docs-reminder` `PostToolUse` hook fires (script writes its log line; `${CLAUDE_PLUGIN_ROOT}` resolves to the cached plugin path).
    - End a turn in codex and confirm the `notify` `Stop` hook fires. Verify codex does not log a deserialize error for `Notification`/`PreCompact` (since the codex-flavored manifest points at `hooks/codex.hooks.json` which has neither).
 5. **Negative test for dual-manifest divergence.** Temporarily edit `plugins/notify/.codex-plugin/plugin.json` to change `version` to `9.9.9` and confirm `bin/validate-plugins` flags the inconsistency. Revert.
-6. **Remote marketplace install (manual, after merge).** Once merged: `codex plugin marketplace add cboone/cboone-cc-plugins` from the repo root URL succeeds.
+6. **Remote marketplace install (manual, after merge).** Once merged: `codex plugin marketplace add cboone/agent-harness-plugins` from the repo root URL succeeds.
 
 ## Out-of-scope but adjacent
 

@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Scaffold a Lean 4 library project with Mathlib or PFR dependencies, Lake test/lint wiring, GitHub Actions CI, text linting, and agent instructions.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["lake", "lean", "mathlib", "pfr", "scaffolding"],
   "license": "MIT",
   "name": "scaffold-lean-library",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.0.0"
+  "version": "1.0.1"
 }

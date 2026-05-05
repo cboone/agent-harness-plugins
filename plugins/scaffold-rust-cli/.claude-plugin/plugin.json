@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest, git-cliff, GitHub Actions CI/CD, and Makefile.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["cargo", "cli", "rust", "scaffolding"],
   "license": "MIT",
   "name": "scaffold-rust-cli",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.2.2"
+  "version": "1.2.3"
 }

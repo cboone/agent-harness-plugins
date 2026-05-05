@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Set up scrut snapshot-based CLI integration testing for a CLI project.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["cli", "scrut", "testing"],
   "license": "MIT",
   "name": "add-scrut-cli-tests",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.6.2"
+  "version": "1.6.3"
 }

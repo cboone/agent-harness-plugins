@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Lint, commit, push, and create a pull request in one step with no prompts.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["git", "github", "plans", "pull-requests", "workflow"],
   "license": "MIT",
   "name": "pr",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.5.3"
+  "version": "1.5.4"
 }

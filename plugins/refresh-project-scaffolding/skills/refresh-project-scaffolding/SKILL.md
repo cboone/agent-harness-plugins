@@ -1,7 +1,7 @@
 ---
 name: refresh-project-scaffolding
 description: >-
-  Refresh existing project scaffolding against the latest cboone-cc-plugins
+  Refresh existing project scaffolding against the latest agent-harness-plugins
   templates. Use when the user says "refresh project scaffolding", "update
   everything", "audit my repo", "audit the repo", "refresh templates", "bring
   this repo up to date", "check what's outdated", or wants the maintenance
@@ -14,7 +14,7 @@ description: >-
 
 # Refresh Project Scaffolding
 
-Refresh the current repository's existing scaffolding against the latest templates and best practices from the cboone-cc-plugins ecosystem. Detect which tools have been used, compare existing files against current standards, present a plan of what's out of date, confirm with the user, and apply targeted updates.
+Refresh the current repository's existing scaffolding against the latest templates and best practices from the agent-harness-plugins ecosystem. Detect which tools have been used, compare existing files against current standards, present a plan of what's out of date, confirm with the user, and apply targeted updates.
 
 This is the maintenance companion to `bootstrap-project`: bootstrap sets things up, this keeps them current.
 

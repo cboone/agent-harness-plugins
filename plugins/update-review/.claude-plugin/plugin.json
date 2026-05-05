@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Find the latest branch review, assess commits made since, and update the review document with a synthesized reassessment.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["branch", "code-review", "diff", "git", "review", "update"],
   "license": "MIT",
   "name": "update-review",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.0.1"
+  "version": "1.0.2"
 }

@@ -6,18 +6,18 @@ A collection of plugins (skills and hooks) for [Claude Code](https://docs.anthro
 
 ### Claude Code
 
-From within `claude`, open the plugins manager via `/plugin`, tab to `Marketplace`, and hit `enter` on `Add Marketplace`. Type `cboone/cboone-cc-plugins`, then choose which plugins to install.
+From within `claude`, open the plugins manager via `/plugin`, tab to `Marketplace`, and hit `enter` on `Add Marketplace`. Type `cboone/agent-harness-plugins`, then choose which plugins to install.
 
 Or, from within `claude`:
 
 ```bash
-/plugin marketplace add cboone/cboone-cc-plugins
+/plugin marketplace add cboone/agent-harness-plugins
 ```
 
 ### Codex CLI
 
 ```bash
-codex plugin marketplace add cboone/cboone-cc-plugins
+codex plugin marketplace add cboone/agent-harness-plugins
 ```
 
 See [Using with Codex CLI](#using-with-codex-cli) below for the `plugin_hooks` feature flag, marketplace upgrade and remove semantics, and Codex-specific limitations.
@@ -184,17 +184,17 @@ Plugin-bundled hooks are gated behind the `plugin_hooks` feature flag (listed as
 Refresh a Git-backed marketplace after pulling repository updates or after a published release:
 
 ```bash
-codex plugin marketplace upgrade cboone-cc-plugins
+codex plugin marketplace upgrade agent-harness-plugins
 ```
 
-`codex plugin marketplace upgrade` and `remove` take the marketplace name (`cboone-cc-plugins`, derived from the repository name), not the `owner/repo` identifier used by `add`.
+`codex plugin marketplace upgrade` and `remove` take the marketplace name (`agent-harness-plugins`, derived from the repository name), not the `owner/repo` identifier used by `add`.
 
 When changing plugin metadata, skills, hooks, scripts, or references, regenerate the Codex marketplace with `bin/build-codex-marketplace` and commit `.agents/plugins/marketplace.json` plus `dist/codex/`. For a local-path marketplace, restart Codex after changing plugin files so it can rebuild cached plugin copies from the local source.
 
 Remove the configured marketplace by name:
 
 ```bash
-codex plugin marketplace remove cboone-cc-plugins
+codex plugin marketplace remove agent-harness-plugins
 ```
 
 ### Codex CLI known limitations

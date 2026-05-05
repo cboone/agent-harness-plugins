@@ -14,7 +14,7 @@ See the [marketplace install instructions](../../README.md#install).
 ### Using with Codex CLI
 
 ```bash
-codex plugin marketplace add cboone/cboone-cc-plugins
+codex plugin marketplace add cboone/agent-harness-plugins
 ```
 
 Enable plugin-bundled hooks once per host so the `Stop` hook fires:
@@ -28,7 +28,7 @@ Without this flag the plugin installs successfully but the hook is silently igno
 Refresh the marketplace after repository updates:
 
 ```bash
-codex plugin marketplace upgrade cboone-cc-plugins
+codex plugin marketplace upgrade agent-harness-plugins
 ```
 
 Codex's hook event enum does not include `Notification` or `PreCompact`, so the plugin only wires the `Stop` event on Codex. `PermissionRequest` is intentionally not wired: that hook runs in the automatic-policy path before Codex's user approval UI is shown, not as a user-facing prompt, so notifying on it would alert the human about decisions Codex's internal approver is already making. For idle / elicitation / compact-style banners and approval prompts, enable Codex's native `tui.notifications = true` in `~/.codex/config.toml` (the two are complementary; both can run at once).

@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Check and evaluate zsh scripts using shellcheck, shfmt, shellharden, zsh -n, zcompile, setopt warn_create_global/warn_nested_var, and checkbashisms.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["checkbashisms", "shellcheck", "shellharden", "shfmt", "zsh"],
   "license": "MIT",
   "name": "check-zsh-scripts",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "2.1.3"
+  "version": "2.1.4"
 }

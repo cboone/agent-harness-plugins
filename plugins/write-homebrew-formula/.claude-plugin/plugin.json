@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Write or update Homebrew formulae using current Homebrew guidance and cboone/homebrew-tap conventions.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["formula", "homebrew", "release", "ruby", "tap"],
   "license": "MIT",
   "name": "write-homebrew-formula",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.0.0"
+  "version": "1.0.1"
 }
