@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Go code style guide based on Google Go Style Guide, Effective Go, Code Review Comments, and Cobra CLI behavior.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["cobra", "code-review", "go", "golang", "style"],
   "license": "MIT",
   "name": "write-go-code",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.2.0"
+  "version": "1.2.1"
 }

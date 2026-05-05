@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions, and Homebrew tap support.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["cli", "go", "golang", "goreleaser", "scaffolding"],
   "license": "MIT",
   "name": "scaffold-go-cli",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "2.7.3"
+  "version": "2.7.4"
 }

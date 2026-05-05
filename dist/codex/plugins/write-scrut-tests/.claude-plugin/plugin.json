@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Applies scrut test style conventions when creating or editing scrut test files for CLI binaries and zsh plugins.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["cli", "scrut", "style", "testing", "zsh"],
   "license": "MIT",
   "name": "write-scrut-tests",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.1.1"
+  "version": "1.1.2"
 }

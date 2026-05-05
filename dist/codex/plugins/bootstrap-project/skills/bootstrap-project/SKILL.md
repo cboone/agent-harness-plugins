@@ -149,7 +149,7 @@ The tools referenced in this plan are a mix of **skills** and **commands**. They
   - `setup-installers` (read `plugins/setup-installers/commands/setup-installers.md`)
   - `add-scrut-cli-tests` (read `plugins/add-scrut-cli-tests/commands/add-scrut-cli-tests.md`)
 
-The command file paths above are relative to the `cboone-cc-plugins` plugin repository root. To resolve the absolute path, use Glob to search for the command file (e.g., `**/commands/scaffold-new-repo.md`).
+The command file paths above are relative to the `agent-harness-plugins` plugin repository root. To resolve the absolute path, use Glob to search for the command file (e.g., `**/commands/scaffold-new-repo.md`).
 
 For each confirmed tool, in execution order:
 

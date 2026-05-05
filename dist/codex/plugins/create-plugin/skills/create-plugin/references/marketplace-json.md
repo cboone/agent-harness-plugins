@@ -23,7 +23,7 @@ bin/build-codex-marketplace
     "description": "Claude Code skills and hooks from Christopher Boone (cboone.github.io)",
     "version": "catalog-M55-m101-p44-n49"
   },
-  "name": "cboone-cc-plugins",
+  "name": "agent-harness-plugins",
   "owner": {
     "name": "Christopher Boone"
   },
@@ -54,11 +54,11 @@ Each entry in the `plugins` array has these fields, alphabetized:
 | `author`      | object | `{ "name": "Christopher Boone" }`                                      |
 | `category`    | string | One of the valid categories listed below.                              |
 | `description` | string | One-sentence summary. Must match `plugin.json`.                        |
-| `homepage`    | string | `"https://github.com/cboone/cboone-cc-plugins"`                        |
+| `homepage`    | string | `"https://github.com/cboone/agent-harness-plugins"`                        |
 | `keywords`    | array  | Must match `plugin.json`.                                              |
 | `license`     | string | `"MIT"`                                                                |
 | `name`        | string | Plugin name. Must match `plugin.json`.                                 |
-| `repository`  | string | `"https://github.com/cboone/cboone-cc-plugins"`                        |
+| `repository`  | string | `"https://github.com/cboone/agent-harness-plugins"`                        |
 | `source`      | string | Relative path to the plugin directory (e.g., `"./plugins/my-plugin"`). |
 | `version`     | string | Must match `plugin.json`.                                              |
 
@@ -85,11 +85,11 @@ Categories currently used in this repository. Each marketplace category correspo
   },
   "category": "CATEGORY",
   "description": "DESCRIPTION",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["KEYWORD1", "KEYWORD2"],
   "license": "MIT",
   "name": "PLUGIN-NAME",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "source": "./plugins/PLUGIN-NAME",
   "version": "1.0.0"
 }

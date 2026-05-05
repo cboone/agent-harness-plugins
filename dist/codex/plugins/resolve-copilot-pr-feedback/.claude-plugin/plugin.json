@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Process and resolve GitHub Copilot automated PR review comments.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["code-review", "copilot", "github", "pull-requests"],
   "license": "MIT",
   "name": "resolve-copilot-pr-feedback",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.4.0"
+  "version": "1.4.1"
 }

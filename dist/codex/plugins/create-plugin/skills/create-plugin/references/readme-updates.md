@@ -190,10 +190,10 @@ One-sentence description.
 
 ## Installation
 
-Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
+Add the [`cboone/agent-harness-plugins`](https://github.com/cboone/agent-harness-plugins) marketplace in Claude Code:
 
 ```text
-/plugin marketplace add cboone/cboone-cc-plugins
+/plugin marketplace add cboone/agent-harness-plugins
 ```
 
 Then select **Plugin Name** from the available plugins.
@@ -254,10 +254,10 @@ One-sentence description.
 
 ## Installation
 
-Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
+Add the [`cboone/agent-harness-plugins`](https://github.com/cboone/agent-harness-plugins) marketplace in Claude Code:
 
 ```text
-/plugin marketplace add cboone/cboone-cc-plugins
+/plugin marketplace add cboone/agent-harness-plugins
 ```
 
 Then select **Hook Name** from the available plugins.
@@ -287,10 +287,10 @@ One-sentence description.
 
 ## Installation
 
-Add the [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) marketplace in Claude Code:
+Add the [`cboone/agent-harness-plugins`](https://github.com/cboone/agent-harness-plugins) marketplace in Claude Code:
 
 ```text
-/plugin marketplace add cboone/cboone-cc-plugins
+/plugin marketplace add cboone/agent-harness-plugins
 ```
 
 Then select **Command Name** from the available plugins.

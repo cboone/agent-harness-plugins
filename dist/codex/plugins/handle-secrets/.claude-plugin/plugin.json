@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Best practices for handling user-provided secrets in CLI tools: secure input methods, credential storage, secret masking, and language-specific libraries.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["cli", "credentials", "keychain", "secrets", "security"],
   "license": "MIT",
   "name": "handle-secrets",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.0.3"
+  "version": "1.0.4"
 }

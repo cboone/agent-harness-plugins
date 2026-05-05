@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Conventions for compile-time, example-based Lean 4 API regression tests that mirror a library's public surface.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["formal-methods", "lean", "lean4", "mathlib", "testing"],
   "license": "MIT",
   "name": "write-lean-tests",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.0.1"
+  "version": "1.0.2"
 }

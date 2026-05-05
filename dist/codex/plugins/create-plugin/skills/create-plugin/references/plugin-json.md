@@ -10,11 +10,11 @@ All fields are alphabetized in the JSON file.
 | ------------- | ------ | ----------- | ---------------------------------------------------------------------------------- |
 | `author`      | object | Yes         | `{ "name": "Christopher Boone" }`                                                  |
 | `description` | string | Yes         | One-sentence summary of what the plugin does. Start with a verb or noun phrase.    |
-| `homepage`    | string | Yes         | `"https://github.com/cboone/cboone-cc-plugins"`                                    |
+| `homepage`    | string | Yes         | `"https://github.com/cboone/agent-harness-plugins"`                                    |
 | `keywords`    | array  | Yes         | Lowercase, alphabetized tags for discoverability.                                  |
 | `license`     | string | Yes         | `"MIT"`                                                                            |
 | `name`        | string | Yes         | Plugin directory name, kebab-case. Must match the directory name under `plugins/`. |
-| `repository`  | string | Yes         | `"https://github.com/cboone/cboone-cc-plugins"`                                    |
+| `repository`  | string | Yes         | `"https://github.com/cboone/agent-harness-plugins"`                                    |
 | `commands`    | string | Conditional | `"./commands"` -- include only if the plugin provides commands.                    |
 | `skills`      | string | Conditional | `"./skills"` -- include only if the plugin provides skills.                        |
 | `version`     | string | Yes         | Semver version. See versioning rules below.                                        |
@@ -34,11 +34,11 @@ All fields are alphabetized in the JSON file.
     "name": "Christopher Boone"
   },
   "description": "DESCRIPTION",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["KEYWORD1", "KEYWORD2"],
   "license": "MIT",
   "name": "PLUGIN-NAME",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
   "version": "1.0.0"
 }
@@ -54,11 +54,11 @@ Hooks plugins omit the `skills` field. They do not declare hooks in `plugin.json
     "name": "Christopher Boone"
   },
   "description": "DESCRIPTION",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["KEYWORD1", "KEYWORD2"],
   "license": "MIT",
   "name": "PLUGIN-NAME",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "version": "1.0.0"
 }
 ```
@@ -74,11 +74,11 @@ Command plugins use a `commands` field instead of `skills`. They do not declare 
   },
   "commands": "./commands",
   "description": "DESCRIPTION",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["KEYWORD1", "KEYWORD2"],
   "license": "MIT",
   "name": "PLUGIN-NAME",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "version": "1.0.0"
 }
 ```

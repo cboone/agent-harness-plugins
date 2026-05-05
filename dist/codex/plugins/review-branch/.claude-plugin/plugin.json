@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Review and evaluate all work done on the current branch: summarize changes, assess plan compliance, and evaluate code quality.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["branch", "code-review", "diff", "git", "plans", "review", "summary"],
   "license": "MIT",
   "name": "review-branch",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.2.2"
+  "version": "1.2.3"
 }

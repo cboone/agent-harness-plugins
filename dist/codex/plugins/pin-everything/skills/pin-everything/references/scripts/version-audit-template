@@ -78,7 +78,7 @@ fi
 cd "${repo_root}"
 
 # REPLACE: SCAN_PATHS lists the directories the audit greps for embedded pins.
-# Tailor this to the consuming repo's layout. Defaults match cboone-cc-plugins.
+# Tailor this to the consuming repo's layout. Defaults match agent-harness-plugins.
 SCAN_PATHS=(.github/ plugins/)
 
 TOOL_VERSIONS_FILE=".tool-versions"

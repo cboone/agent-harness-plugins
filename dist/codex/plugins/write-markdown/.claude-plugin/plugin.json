@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Applies Markdown style conventions when creating or editing Markdown files.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["documentation", "format", "markdown", "style"],
   "license": "MIT",
   "name": "write-markdown",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.2.1"
+  "version": "1.2.2"
 }

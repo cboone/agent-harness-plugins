@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Review open GitHub issues and recommend what to work on next with prioritized reasoning.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["github", "issues", "planning", "prioritization", "triage"],
   "license": "MIT",
   "name": "suggest-next-issue",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.1.4"
+  "version": "1.1.5"
 }

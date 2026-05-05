@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Guide for creating new plugins in this repository with consistent structure and conventions.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["claude-code", "hooks", "plugins", "scaffolding", "skills"],
   "license": "MIT",
   "name": "create-plugin",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.2.5"
+  "version": "1.2.6"
 }

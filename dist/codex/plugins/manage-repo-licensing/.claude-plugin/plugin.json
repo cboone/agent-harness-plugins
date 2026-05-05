@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Bootstrap, audit, and maintain REUSE-style mixed-license coverage in a repository: LICENSES/, NOTICE, REUSE.toml, SPDX headers, and reuse lint cleanliness.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["licensing", "notice", "reuse", "spdx"],
   "license": "MIT",
   "name": "manage-repo-licensing",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.0.3"
+  "version": "1.0.4"
 }

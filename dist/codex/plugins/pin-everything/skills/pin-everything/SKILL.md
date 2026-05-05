@@ -10,7 +10,7 @@ description: >-
 
 Pin every version surface in a repository as a one-shot supply-chain hardening pass: SHA pins for actions, integrity hashes for Corepack, exact pins for package-manager dependencies (in application context), version-file refs for language runtimes, and explicit versions for install commands. Optionally generates a weekly drift-audit script and tightens Dependabot.
 
-This skill is a generalization of the canonical hardening pass executed in [PR #250](https://github.com/cboone/cboone-cc-plugins/pull/250) on `cboone-cc-plugins` itself. Adopters who want to repeat that pass on their own repositories run the skill end-to-end. Adopters who only want a subset (for example, SHA-pinning actions) can stop after the relevant step.
+This skill is a generalization of the canonical hardening pass executed in [PR #250](https://github.com/cboone/agent-harness-plugins/pull/250) on `agent-harness-plugins` itself. Adopters who want to repeat that pass on their own repositories run the skill end-to-end. Adopters who only want a subset (for example, SHA-pinning actions) can stop after the relevant step.
 
 ## Workflow
 
@@ -203,7 +203,7 @@ Skip this step if `--no-audit` was passed. Reference: `./references/version-audi
 
 ## Refresh Own SHAs at Scaffold Time
 
-The example SHAs in this skill's own reference docs rot as upstream actions cut new releases. Before emitting any scaffolded workflow or template into a user's repo, refresh both the SHA and the `# vX.Y.Z` comment for each `uses:` ref against current upstream. The canonical example commits in [`cboone/cboone-cc-plugins`](https://github.com/cboone/cboone-cc-plugins) (the SHA-pin pass from PR #250 onwards) are the source of truth — when they update, the skill's references should follow.
+The example SHAs in this skill's own reference docs rot as upstream actions cut new releases. Before emitting any scaffolded workflow or template into a user's repo, refresh both the SHA and the `# vX.Y.Z` comment for each `uses:` ref against current upstream. The canonical example commits in [`cboone/agent-harness-plugins`](https://github.com/cboone/agent-harness-plugins) (the SHA-pin pass from PR #250 onwards) are the source of truth — when they update, the skill's references should follow.
 
 For a quick refresh of a single ref:
 

@@ -3,11 +3,11 @@
     "name": "Christopher Boone"
   },
   "description": "Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows.",
-  "homepage": "https://github.com/cboone/cboone-cc-plugins",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["ci", "concurrency", "github-actions", "optimization", "timeout", "workflow"],
   "license": "MIT",
   "name": "optimize-runner-usage",
-  "repository": "https://github.com/cboone/cboone-cc-plugins",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.2.1"
+  "version": "1.2.2"
 }
