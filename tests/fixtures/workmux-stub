@@ -56,6 +56,12 @@ function main() {
   printf 'workmux add\n'
   printf 'branch: %s\n' "${branch}"
   printf 'open-if-exists: %s\n' "${open_if_exists}"
+  if [[ "${STUB_CAPTURE_TERM:-}" == "1" ]]; then
+    printf 'term: %s\n' "${TERM:-}"
+  fi
+  if [[ "${STUB_CAPTURE_TMUX:-}" == "1" ]]; then
+    printf 'tmux: %s\n' "${TMUX:-}"
+  fi
   if [[ -n "${base_branch}" ]]; then
     printf 'base: %s\n' "${base_branch}"
   fi
