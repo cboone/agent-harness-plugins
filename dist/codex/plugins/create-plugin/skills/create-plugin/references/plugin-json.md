@@ -10,11 +10,11 @@ All fields are alphabetized in the JSON file.
 | ------------- | ------ | ----------- | ---------------------------------------------------------------------------------- |
 | `author`      | object | Yes         | `{ "name": "Christopher Boone" }`                                                  |
 | `description` | string | Yes         | One-sentence summary of what the plugin does. Start with a verb or noun phrase.    |
-| `homepage`    | string | Yes         | `"https://github.com/cboone/agent-harness-plugins"`                                    |
+| `homepage`    | string | Yes         | `"https://github.com/cboone/agent-harness-plugins"`                                |
 | `keywords`    | array  | Yes         | Lowercase, alphabetized tags for discoverability.                                  |
 | `license`     | string | Yes         | `"MIT"`                                                                            |
 | `name`        | string | Yes         | Plugin directory name, kebab-case. Must match the directory name under `plugins/`. |
-| `repository`  | string | Yes         | `"https://github.com/cboone/agent-harness-plugins"`                                    |
+| `repository`  | string | Yes         | `"https://github.com/cboone/agent-harness-plugins"`                                |
 | `commands`    | string | Conditional | `"./commands"` -- include only if the plugin provides commands.                    |
 | `skills`      | string | Conditional | `"./skills"` -- include only if the plugin provides skills.                        |
 | `version`     | string | Yes         | Semver version. See versioning rules below.                                        |

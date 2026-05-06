@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "catalog-M61-m108-p153-n53"
+    "version": "catalog-M61-m108-p154-n53"
   },
   "name": "agent-harness-plugins",
   "owner": {
@@ -175,7 +175,7 @@
       "name": "create-plugin",
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./dist/codex/plugins/create-plugin",
-      "version": "1.2.6"
+      "version": "1.2.7"
     },
     {
       "author": {

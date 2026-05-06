@@ -54,17 +54,17 @@ Each entry in the `plugins` array has these fields, alphabetized:
 | `author`      | object | `{ "name": "Christopher Boone" }`                                      |
 | `category`    | string | One of the valid categories listed below.                              |
 | `description` | string | One-sentence summary. Must match `plugin.json`.                        |
-| `homepage`    | string | `"https://github.com/cboone/agent-harness-plugins"`                        |
+| `homepage`    | string | `"https://github.com/cboone/agent-harness-plugins"`                    |
 | `keywords`    | array  | Must match `plugin.json`.                                              |
 | `license`     | string | `"MIT"`                                                                |
 | `name`        | string | Plugin name. Must match `plugin.json`.                                 |
-| `repository`  | string | `"https://github.com/cboone/agent-harness-plugins"`                        |
+| `repository`  | string | `"https://github.com/cboone/agent-harness-plugins"`                    |
 | `source`      | string | Relative path to the plugin directory (e.g., `"./plugins/my-plugin"`). |
 | `version`     | string | Must match `plugin.json`.                                              |
 
 ## Valid Categories
 
-Categories currently used in this repository. Each marketplace category corresponds to a subcategory in the root `README.md` table of contents:
+Categories currently used in this repository. Each marketplace category corresponds to a category table in the root `README.md`:
 
 - `"agents"` -- meta-tools for the agent ecosystem (e.g., `clean-up-agent-config`, `create-plugin`)
 - `"ci-and-release"` -- CI workflows, installers, release automation, repo audits (e.g., `setup-ci`, `add-goreleaser-homebrew`, `setup-secret-scanning`)

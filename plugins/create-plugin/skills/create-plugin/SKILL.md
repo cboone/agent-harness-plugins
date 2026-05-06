@@ -156,20 +156,27 @@ Key points:
 - Insert alphabetically by plugin name
 - Include `category` and `source` fields (not present in `plugin.json`)
 - All shared fields must match `plugin.json` exactly
-- Do not hand-edit `.agents/plugins/marketplace.json` or `dist/codex/`; regenerate them with `bin/build-codex-marketplace`
+- Do not hand-edit `.agents/plugins/marketplace.json`, `dist/codex/`, or `dist/opencode/`; regenerate them with the build scripts
 
 ### 9. Update README.md
 
-Add the new plugin to two places in `README.md`. See `./references/readme-updates.md` for the exact format of each section.
+Add the new plugin to the current compact category-table format in root `README.md`, and create the required per-plugin README. See `./references/readme-updates.md` for the exact format.
 
-1. **Table of Contents**: Add link alphabetically in the Skills, Commands, or Hooks line
-1. **Description section**: Add H3 subsection alphabetically under Skills, Commands, or Hooks
+1. **Root README category table**: Add a row to the appropriate category table. For skills and command-style plugins, use the `Plugin`, `Trigger`, and `What it does` columns. For hooks, use the hooks table with `Plugin` and `What it does`.
+1. **Canonical description**: Use the marketplace `description` field verbatim for the `What it does` column.
+1. **External tools**: If the plugin requires external tools, add or update the category's `**External tools:**` bullet list.
+1. **Per-plugin README**: Create `plugins/PLUGIN-NAME/README.md` with user-facing install, usage, requirements, examples, and related-plugin details.
 
-No individual install commands are needed in the Installation section; the marketplace flow handles installation.
+Do not add a root README table of contents, H3 plugin-description section, or individual install command. The root README now uses category tables, and the marketplace flow handles installation.
 
-### 10. Update CLAUDE.md
+### 10. Regenerate Generated Mirrors
 
-Add the new plugin to the directory tree in `CLAUDE.md`, maintaining alphabetical order among plugins. Include all files and directories created for the plugin.
+Regenerate generated surfaces from the canonical plugin source and commit the generated outputs:
+
+1. Run `bin/build-codex-marketplace` to update `.agents/plugins/marketplace.json` and `dist/codex/`.
+1. Run `bin/build-opencode-mirror` to update `dist/opencode/`.
+
+Do not edit generated mirror files directly. Only update project-level instruction files such as `AGENTS.md` or `CLAUDE.md` when the new plugin changes repository conventions or those files already contain a current plugin catalog that must be kept in sync.
 
 ### 11. Verification Checklist
 
@@ -180,8 +187,11 @@ Before finishing, verify:
 - [ ] `marketplace.json` is valid JSON with the new entry
 - [ ] `marketplace.json` entry fields match `plugin.json` (shared fields)
 - [ ] `bin/build-codex-marketplace` has regenerated `.agents/plugins/marketplace.json` and `dist/codex/`
-- [ ] `README.md` has the new plugin in ToC, installation, and description sections
-- [ ] `CLAUDE.md` directory tree reflects the new plugin structure
+- [ ] `bin/build-opencode-mirror` has regenerated `dist/opencode/`
+- [ ] Root `README.md` has the new plugin row in the correct category table, with the marketplace description copied verbatim
+- [ ] Root `README.md` external-tool bullets are updated if the plugin needs external tools
+- [ ] `plugins/PLUGIN-NAME/README.md` exists and documents installation, usage, requirements, examples, and related plugins
+- [ ] Project-level instruction files such as `AGENTS.md` or `CLAUDE.md` were updated only if the new plugin changes current repository conventions
 - [ ] `SKILL.md` frontmatter has only `name` and `description` fields (skills only)
 - [ ] All reference files are reachable from `SKILL.md` via relative paths (skills only)
 - [ ] Command `.md` has `description` and `disable-model-invocation: true` in frontmatter (commands only)
@@ -198,4 +208,4 @@ Before finishing, verify:
 - If `marketplace.json` cannot be parsed as valid JSON, fix the syntax before proceeding
 - If the user is unsure about the plugin type, default to a skills plugin (the most common type)
 - If the user wants to add a skill to an existing plugin instead of creating a new one, bump the minor version in both `plugin.json` and `marketplace.json`
-- If generated Codex files drift, run `bin/build-codex-marketplace` instead of editing generated files directly
+- If generated Codex or OpenCode files drift, run `bin/build-codex-marketplace` and `bin/build-opencode-mirror` instead of editing generated files directly
