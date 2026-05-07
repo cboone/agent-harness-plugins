@@ -39,6 +39,142 @@ function list_panes() {
   done <<< "${STUB_TMUX_PANES:-}"
 }
 
+function record_tmux_call() {
+  if [[ -n "${STUB_TMUX_LOG:-}" ]]; then
+    printf '%s\n' "${1}" >> "${STUB_TMUX_LOG}"
+  fi
+}
+
+function maybe_fail_command() {
+  local command_name="${1}"
+
+  if [[ "${STUB_TMUX_FAIL_COMMAND:-}" == "${command_name}" ]]; then
+    return 1
+  fi
+
+  return 0
+}
+
+function load_buffer() {
+  local socket="${1}"
+  local buffer="" file=""
+  shift
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      -b)
+        if [[ $# -lt 2 ]]; then
+          die "-b requires a buffer name"
+        fi
+        buffer="${2}"
+        shift 2
+        ;;
+      *)
+        if [[ -z "${file}" ]]; then
+          file="${1}"
+          shift
+        else
+          die "unexpected load-buffer argument: ${1}"
+        fi
+        ;;
+    esac
+  done
+
+  [[ -n "${buffer}" ]] || die "missing load-buffer -b"
+  [[ -n "${file}" ]] || die "missing load-buffer file"
+  record_tmux_call "tmux: load-buffer socket=${socket} buffer=${buffer} file=${file}"
+  maybe_fail_command "load-buffer"
+}
+
+function paste_buffer() {
+  local socket="${1}"
+  local target="" buffer=""
+  shift
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      -t)
+        if [[ $# -lt 2 ]]; then
+          die "-t requires a target"
+        fi
+        target="${2}"
+        shift 2
+        ;;
+      -b)
+        if [[ $# -lt 2 ]]; then
+          die "-b requires a buffer name"
+        fi
+        buffer="${2}"
+        shift 2
+        ;;
+      *)
+        die "unexpected paste-buffer argument: ${1}"
+        ;;
+    esac
+  done
+
+  [[ -n "${target}" ]] || die "missing paste-buffer -t"
+  [[ -n "${buffer}" ]] || die "missing paste-buffer -b"
+  record_tmux_call "tmux: paste-buffer socket=${socket} target=${target} buffer=${buffer}"
+  maybe_fail_command "paste-buffer"
+}
+
+function send_keys() {
+  local socket="${1}"
+  local target="" keys=""
+  shift
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      -t)
+        if [[ $# -lt 2 ]]; then
+          die "-t requires a target"
+        fi
+        target="${2}"
+        shift 2
+        ;;
+      *)
+        if [[ -z "${keys}" ]]; then
+          keys="${1}"
+        else
+          keys="${keys} ${1}"
+        fi
+        shift
+        ;;
+    esac
+  done
+
+  [[ -n "${target}" ]] || die "missing send-keys -t"
+  [[ -n "${keys}" ]] || die "missing send-keys keys"
+  record_tmux_call "tmux: send-keys socket=${socket} target=${target} keys=${keys}"
+  maybe_fail_command "send-keys"
+}
+
+function delete_buffer() {
+  local socket="${1}"
+  local buffer=""
+  shift
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      -b)
+        if [[ $# -lt 2 ]]; then
+          die "-b requires a buffer name"
+        fi
+        buffer="${2}"
+        shift 2
+        ;;
+      *)
+        die "unexpected delete-buffer argument: ${1}"
+        ;;
+    esac
+  done
+
+  [[ -n "${buffer}" ]] || die "missing delete-buffer -b"
+  record_tmux_call "tmux: delete-buffer socket=${socket} buffer=${buffer}"
+  maybe_fail_command "delete-buffer"
+}
+
 function main() {
   local socket="" command_name="" format=""
 
@@ -54,9 +190,13 @@ function main() {
 
   while [[ $# -gt 0 ]]; do
     case "${1}" in
-      list-panes)
+      list-panes | load-buffer | paste-buffer | send-keys | delete-buffer)
         command_name="${1}"
         shift
+        if [[ "${command_name}" != "list-panes" ]]; then
+          "${command_name//-/_}" "${socket}" "${@}"
+          return
+        fi
         ;;
       -a)
         shift

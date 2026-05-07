@@ -159,7 +159,9 @@ function resolved_tmux_env() {
   while IFS= read -r socket; do
     while IFS='|' read -r pane_id pane_command pane_path server_pid; do
       if [[ -d "${pane_path}" ]]; then
-        pane_path="$(cd "${pane_path}" && pwd -P)"
+        if ! pane_path="$(cd "${pane_path}" 2> /dev/null && pwd -P)"; then
+          continue
+        fi
       fi
       [[ "${pane_path}" == "${cwd}" ]] || continue
 
@@ -187,11 +189,15 @@ function codex_pane_for_path() {
 
   [[ -n "${tmux_env}" ]] || return 0
   [[ -d "${worktree_path}" ]] || return 0
-  worktree_path="$(cd "${worktree_path}" && pwd -P)"
+  if ! worktree_path="$(cd "${worktree_path}" 2> /dev/null && pwd -P)"; then
+    return 0
+  fi
 
   while IFS='|' read -r pane_id pane_command pane_path; do
     if [[ -d "${pane_path}" ]]; then
-      pane_path="$(cd "${pane_path}" && pwd -P)"
+      if ! pane_path="$(cd "${pane_path}" 2> /dev/null && pwd -P)"; then
+        continue
+      fi
     fi
     [[ "${pane_path}" == "${worktree_path}" ]] || continue
 
@@ -213,7 +219,7 @@ function codex_pane_for_path() {
 
 function send_prompt_to_codex_pane() {
   local tmux_env="${1}" worktree_path="${2}" prompt_file="${3}" safe_name="${4}"
-  local pane_id buffer delay
+  local pane_id buffer delay tmux_status
 
   [[ -s "${prompt_file}" ]] || return 0
   [[ -n "${tmux_env}" ]] || return 0
@@ -226,13 +232,32 @@ function send_prompt_to_codex_pane() {
   buffer="workmux-prompt-${safe_name}"
   delay="${WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS:-0.5}"
 
+  tmux_status=0
+  set +e
   env "TMUX=${tmux_env}" tmux load-buffer -b "${buffer}" "${prompt_file}"
-  env "TMUX=${tmux_env}" tmux paste-buffer -t "${pane_id}" -b "${buffer}"
-  sleep "${delay}"
-  env "TMUX=${tmux_env}" tmux send-keys -t "${pane_id}" Enter
-  sleep "${delay}"
-  env "TMUX=${tmux_env}" tmux send-keys -t "${pane_id}" Enter
-  printf 'Sent prompt to existing Codex pane for %s\n' "${worktree_path}"
+  tmux_status=$?
+  if ((tmux_status == 0)); then
+    env "TMUX=${tmux_env}" tmux paste-buffer -t "${pane_id}" -b "${buffer}"
+    tmux_status=$?
+  fi
+  if ((tmux_status == 0)); then
+    sleep "${delay}"
+    env "TMUX=${tmux_env}" tmux send-keys -t "${pane_id}" Enter
+    tmux_status=$?
+  fi
+  if ((tmux_status == 0)); then
+    sleep "${delay}"
+    env "TMUX=${tmux_env}" tmux send-keys -t "${pane_id}" Enter
+    tmux_status=$?
+  fi
+  env "TMUX=${tmux_env}" tmux delete-buffer -b "${buffer}" > /dev/null 2>&1
+  set -e
+
+  if ((tmux_status == 0)); then
+    printf 'Sent prompt to existing Codex pane for %s\n' "${worktree_path}"
+  fi
+
+  return 0
 }
 
 function run_workmux_command() {

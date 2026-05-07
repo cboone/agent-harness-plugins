@@ -10,7 +10,8 @@ $ function prepare_stubs() {
 >   stub_dir="$(mktemp -d)"
 >   cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux"
 >   cp "${TMUX_STUB_BIN}" "${stub_dir}/tmux"
->   chmod +x "${stub_dir}/workmux" "${stub_dir}/tmux"
+>   cp "${GIT_WORKTREE_STUB_BIN}" "${stub_dir}/git"
+>   chmod +x "${stub_dir}/workmux" "${stub_dir}/tmux" "${stub_dir}/git"
 > }
 > function create_socket_fixture() {
 >   tmux_tmpdir="$(mktemp -d)"
@@ -108,6 +109,57 @@ tmux: /tmp/tmux-501/existing,111,%1
 prompt:
 Issue body
 prompt-file-exists: yes
+```
+
+## Create worktree from issue launcher resends existing worktree prompt
+
+```scrut
+$ prepare_stubs \
+>   && existing_worktree="$(mktemp -d)" \
+>   && mkdir -p "${existing_worktree}/.workmux" \
+>   && printf '%s\n' 'Stored prompt' > "${existing_worktree}/.workmux/PROMPT-feature-existing-worktree.md" \
+>   && tmux_log="${state}/tmux-log" \
+>   && socket="/tmp/tmux-501/projects" \
+>   && panes="${socket}|%9|cx|${existing_worktree}|4242" \
+>   && porcelain="$(printf 'worktree %s\nHEAD abc123\nbranch refs/heads/feature/existing-worktree\n\n' "${existing_worktree}")" \
+>   && printf '%s\n' 'Issue body' \
+>     | env PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${porcelain}" STUB_TMUX_LOG="${tmux_log}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" WORKMUX_TMUX="${socket},4242,%1" WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS=0 WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN}" "feature/existing-worktree" \
+>   && sed "s|${existing_worktree}|<worktree>|g" "${tmux_log}"
+workmux add
+branch: feature/existing-worktree
+open-if-exists: true
+prompt:
+Issue body
+prompt-file-exists: yes
+Sent prompt to existing Codex pane for * (glob)
+tmux: load-buffer socket=/tmp/tmux-501/projects buffer=workmux-prompt-feature-existing-worktree file=*/.workmux/PROMPT-feature-existing-worktree.md (glob)
+tmux: paste-buffer socket=/tmp/tmux-501/projects target=%9 buffer=workmux-prompt-feature-existing-worktree
+tmux: send-keys socket=/tmp/tmux-501/projects target=%9 keys=Enter
+tmux: send-keys socket=/tmp/tmux-501/projects target=%9 keys=Enter
+tmux: delete-buffer socket=/tmp/tmux-501/projects buffer=workmux-prompt-feature-existing-worktree
+```
+
+## Create worktree from issue launcher ignores prompt resend failure
+
+```scrut
+$ prepare_stubs \
+>   && existing_worktree="$(mktemp -d)" \
+>   && tmux_log="${state}/tmux-log" \
+>   && socket="/tmp/tmux-501/projects" \
+>   && panes="${socket}|%9|cx|${existing_worktree}|4242" \
+>   && porcelain="$(printf 'worktree %s\nHEAD abc123\nbranch refs/heads/feature/existing-worktree-paste-fail\n\n' "${existing_worktree}")" \
+>   && printf '%s\n' 'Issue body' \
+>     | env PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${porcelain}" STUB_TMUX_FAIL_COMMAND=paste-buffer STUB_TMUX_LOG="${tmux_log}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" WORKMUX_TMUX="${socket},4242,%1" WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS=0 WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN}" "feature/existing-worktree-paste-fail" \
+>   && sed "s|${existing_worktree}|<worktree>|g" "${tmux_log}"
+workmux add
+branch: feature/existing-worktree-paste-fail
+open-if-exists: true
+prompt:
+Issue body
+prompt-file-exists: yes
+tmux: load-buffer socket=/tmp/tmux-501/projects buffer=workmux-prompt-feature-existing-worktree-paste-fail file=* (glob)
+tmux: paste-buffer socket=/tmp/tmux-501/projects target=%9 buffer=workmux-prompt-feature-existing-worktree-paste-fail
+tmux: delete-buffer socket=/tmp/tmux-501/projects buffer=workmux-prompt-feature-existing-worktree-paste-fail
 ```
 
 ## Create worktree launcher discovers one matching Codex pane

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# git-worktree-stub -- Test stub for git worktree list.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function main() {
+  if [[ $# -eq 3 && "${1}" == "worktree" && "${2}" == "list" && "${3}" == "--porcelain" ]]; then
+    printf '%s' "${STUB_GIT_WORKTREE_PORCELAIN:-}"
+    return 0
+  fi
+
+  die "expected git worktree list --porcelain invocation"
+}
+
+main "$@"

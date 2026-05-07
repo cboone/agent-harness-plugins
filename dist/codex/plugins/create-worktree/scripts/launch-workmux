@@ -128,7 +128,9 @@ function resolved_tmux_env() {
   while IFS= read -r socket; do
     while IFS='|' read -r pane_id pane_command pane_path server_pid; do
       if [[ -d "${pane_path}" ]]; then
-        pane_path="$(cd "${pane_path}" && pwd -P)"
+        if ! pane_path="$(cd "${pane_path}" 2> /dev/null && pwd -P)"; then
+          continue
+        fi
       fi
       [[ "${pane_path}" == "${cwd}" ]] || continue
 
