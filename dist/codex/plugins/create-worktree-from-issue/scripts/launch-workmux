@@ -87,17 +87,236 @@ function run_workmux_and_cleanup_prompt() {
   return "${status}"
 }
 
+function worktree_path_for_branch() {
+  local branch="${1}"
+  local line path="" branch_ref=""
+
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    case "${line}" in
+      worktree\ *)
+        path="${line#worktree }"
+        branch_ref=""
+        ;;
+      branch\ refs/heads/*)
+        branch_ref="${line#branch refs/heads/}"
+        ;;
+      "")
+        if [[ "${branch_ref}" == "${branch}" && -n "${path}" ]]; then
+          printf '%s' "${path}"
+          return 0
+        fi
+        path=""
+        branch_ref=""
+        ;;
+    esac
+  done < <(git worktree list --porcelain 2> /dev/null || true)
+
+  if [[ "${branch_ref}" == "${branch}" && -n "${path}" ]]; then
+    printf '%s' "${path}"
+    return 0
+  fi
+
+  return 1
+}
+
+function tmux_socket_candidates() {
+  local uid dir socket socket_dir
+  local -a dirs=()
+
+  uid="$(id -u)"
+  if [[ -n "${TMUX_TMPDIR:-}" ]]; then
+    dirs+=("${TMUX_TMPDIR}/tmux-${uid}")
+  fi
+  dirs+=("/tmp/tmux-${uid}" "/private/tmp/tmux-${uid}")
+
+  for dir in "${dirs[@]}"; do
+    [[ -d "${dir}" ]] || continue
+    for socket in "${dir}"/*; do
+      [[ -S "${socket}" ]] || continue
+      socket_dir="$(cd "$(dirname "${socket}")" && pwd -P)"
+      printf '%s/%s\n' "${socket_dir}" "$(basename "${socket}")"
+    done
+  done | sort -u
+}
+
+function resolved_tmux_env() {
+  if [[ -n "${TMUX:-}" ]]; then
+    printf '%s' "${TMUX}"
+    return
+  fi
+
+  if [[ -n "${WORKMUX_TMUX:-}" ]]; then
+    printf '%s' "${WORKMUX_TMUX}"
+    return
+  fi
+
+  command -v tmux > /dev/null || return 0
+
+  local cwd socket pane_id pane_command pane_path server_pid candidate
+  local count=0
+  cwd="$(pwd -P)"
+
+  while IFS= read -r socket; do
+    while IFS='|' read -r pane_id pane_command pane_path server_pid; do
+      if [[ -d "${pane_path}" ]]; then
+        if ! pane_path="$(cd "${pane_path}" 2> /dev/null && pwd -P)"; then
+          continue
+        fi
+      fi
+      [[ "${pane_path}" == "${cwd}" ]] || continue
+
+      case "${pane_command}" in
+        codex* | cx) ;;
+        *) continue ;;
+      esac
+
+      candidate="${socket},${server_pid},${pane_id}"
+      count=$((count + 1))
+    done < <(tmux -S "${socket}" list-panes -a -F '#{pane_id}|#{pane_current_command}|#{pane_current_path}|#{pid}' 2> /dev/null || true)
+  done < <(tmux_socket_candidates)
+
+  if ((count == 1)); then
+    printf '%s' "${candidate}"
+  fi
+
+  return 0
+}
+
+function codex_pane_for_path() {
+  local tmux_env="${1}" worktree_path="${2}"
+  local pane_id pane_command pane_path candidate
+  local count=0
+
+  [[ -n "${tmux_env}" ]] || return 0
+  [[ -d "${worktree_path}" ]] || return 0
+  if ! worktree_path="$(cd "${worktree_path}" 2> /dev/null && pwd -P)"; then
+    return 0
+  fi
+
+  while IFS='|' read -r pane_id pane_command pane_path; do
+    if [[ -d "${pane_path}" ]]; then
+      if ! pane_path="$(cd "${pane_path}" 2> /dev/null && pwd -P)"; then
+        continue
+      fi
+    fi
+    [[ "${pane_path}" == "${worktree_path}" ]] || continue
+
+    case "${pane_command}" in
+      codex* | cx) ;;
+      *) continue ;;
+    esac
+
+    candidate="${pane_id}"
+    count=$((count + 1))
+  done < <(env "TMUX=${tmux_env}" tmux list-panes -a -F '#{pane_id}|#{pane_current_command}|#{pane_current_path}' 2> /dev/null || true)
+
+  if ((count == 1)); then
+    printf '%s' "${candidate}"
+  fi
+
+  return 0
+}
+
+function send_prompt_to_codex_pane() {
+  local tmux_env="${1}" worktree_path="${2}" prompt_file="${3}" safe_name="${4}"
+  local pane_id buffer delay tmux_status
+
+  [[ -s "${prompt_file}" ]] || return 0
+  [[ -n "${tmux_env}" ]] || return 0
+
+  pane_id="$(codex_pane_for_path "${tmux_env}" "${worktree_path}" || true)"
+  if [[ -z "${pane_id}" ]]; then
+    return 0
+  fi
+
+  buffer="workmux-prompt-${safe_name}"
+  delay="${WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS:-0.5}"
+
+  tmux_status=0
+  set +e
+  env "TMUX=${tmux_env}" tmux load-buffer -b "${buffer}" "${prompt_file}"
+  tmux_status=$?
+  if ((tmux_status == 0)); then
+    env "TMUX=${tmux_env}" tmux paste-buffer -t "${pane_id}" -b "${buffer}"
+    tmux_status=$?
+  fi
+  if ((tmux_status == 0)); then
+    sleep "${delay}"
+    env "TMUX=${tmux_env}" tmux send-keys -t "${pane_id}" Enter
+    tmux_status=$?
+  fi
+  if ((tmux_status == 0)); then
+    sleep "${delay}"
+    env "TMUX=${tmux_env}" tmux send-keys -t "${pane_id}" Enter
+    tmux_status=$?
+  fi
+  env "TMUX=${tmux_env}" tmux delete-buffer -b "${buffer}" > /dev/null 2>&1
+  set -e
+
+  if ((tmux_status == 0)); then
+    printf 'Sent prompt to existing Codex pane for %s\n' "${worktree_path}"
+  fi
+
+  return 0
+}
+
+function run_workmux_command() {
+  local -a command=(workmux "${@}")
+  local -a env_args=()
+  local tmux_env
+  tmux_env="$(resolved_tmux_env)"
+
+  if [[ -n "${tmux_env}" ]]; then
+    env_args+=("TMUX=${tmux_env}")
+  fi
+
+  if [[ -n "${WORKMUX_TERM:-}" ]]; then
+    env_args+=("TERM=${WORKMUX_TERM}")
+  elif [[ "${TERM:-}" == "dumb" && -n "${tmux_env}" ]]; then
+    env_args+=(TERM=tmux-256color)
+  fi
+
+  if ((${#env_args[@]} > 0)); then
+    env "${env_args[@]}" "${command[@]}"
+  else
+    "${command[@]}"
+  fi
+}
+
+function run_workmux_with_existing_prompt_fallback() {
+  local prompt_file="${1}" existing_worktree_path="${2}" safe_name="${3}"
+  local status tmux_env prompt_to_send
+  shift 3
+
+  set +e
+  run_workmux_command "${@}"
+  status=$?
+  set -e
+
+  if ((status == 0)) && [[ -n "${existing_worktree_path}" ]]; then
+    tmux_env="$(resolved_tmux_env)"
+    prompt_to_send="${existing_worktree_path}/.workmux/PROMPT-${safe_name}.md"
+    if [[ ! -s "${prompt_to_send}" ]]; then
+      prompt_to_send="${prompt_file}"
+    fi
+    send_prompt_to_codex_pane "${tmux_env}" "${existing_worktree_path}" "${prompt_to_send}" "${safe_name}" || true
+  fi
+
+  return "${status}"
+}
+
 function do_launch() {
   local branch="${1}"
   local safe_name="${branch//\//-}"
-  local log prompt_file
+  local existing_worktree_path log prompt_file
   prompt_file="$(mktemp "/tmp/workmux-prompt-${safe_name}.md.XXXXXX")"
 
   write_escaped_prompt "${prompt_file}"
+  existing_worktree_path="$(worktree_path_for_branch "${branch}" || true)"
 
   log="$(mktemp "/tmp/workmux-${safe_name}.log.XXXXXX")"
 
-  run_workmux_and_cleanup_prompt "${prompt_file}" workmux add "${branch}" --open-if-exists -P "${prompt_file}" > "${log}" 2>&1 &
+  run_workmux_and_cleanup_prompt "${prompt_file}" run_workmux_with_existing_prompt_fallback "${prompt_file}" "${existing_worktree_path}" "${safe_name}" add "${branch}" --open-if-exists -P "${prompt_file}" > "${log}" 2>&1 &
   disown
   sleep "${WORKMUX_LAUNCH_WAIT_SECONDS:-8}"
 
