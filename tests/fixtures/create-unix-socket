@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# create-unix-socket -- Create a live Unix socket for launcher tests.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function start_socket_server() {
+  local socket_path="${1}"
+
+  if command -v ruby > /dev/null; then
+    ruby -rsocket -e 'socket_path = ARGV.fetch(0); server = UNIXServer.new(socket_path); cleanup = proc { server.close rescue nil; File.unlink(socket_path) rescue nil; exit 0 }; trap("TERM", &cleanup); trap("INT", &cleanup); sleep' "${socket_path}" > /dev/null 2>&1 &
+    printf '%s\n' "$!"
+    return 0
+  fi
+
+  if command -v perl > /dev/null; then
+    perl -MIO::Socket::UNIX -MSocket=SOCK_STREAM -e 'use strict; use warnings; my $socket_path = shift @ARGV; my $server = IO::Socket::UNIX->new(Type => SOCK_STREAM, Local => $socket_path, Listen => 1) or die "$!\n"; $SIG{TERM} = sub { close $server; unlink $socket_path; exit 0 }; $SIG{INT} = $SIG{TERM}; sleep 1 while 1;' "${socket_path}" > /dev/null 2>&1 &
+    printf '%s\n' "$!"
+    return 0
+  fi
+
+  die "ruby or perl is required to create a Unix socket"
+}
+
+function main() {
+  if [[ $# -ne 1 ]]; then
+    die "usage: ${SCRIPT_NAME} <socket-path>"
+  fi
+
+  local socket_path="${1}"
+  local socket_dir pid attempts_remaining
+  socket_dir="${socket_path%/*}"
+  if [[ "${socket_dir}" == "${socket_path}" ]]; then
+    socket_dir="."
+  fi
+
+  mkdir -p "${socket_dir}"
+  if [[ -e "${socket_path}" || -L "${socket_path}" ]]; then
+    die "socket path already exists: ${socket_path}"
+  fi
+
+  pid="$(start_socket_server "${socket_path}")"
+  attempts_remaining=50
+  while ((attempts_remaining > 0)); do
+    if [[ -S "${socket_path}" ]]; then
+      printf '%s\n' "${pid}"
+      return 0
+    fi
+    attempts_remaining=$((attempts_remaining - 1))
+    sleep 0.1
+  done
+
+  kill "${pid}" 2> /dev/null || true
+  die "socket was not created: ${socket_path}"
+}
+
+main "$@"

@@ -88,6 +88,88 @@ function run_workmux_and_cleanup_prompt() {
   return "${status}"
 }
 
+function tmux_socket_candidates() {
+  local uid dir socket socket_dir
+  local -a dirs=()
+
+  uid="$(id -u)"
+  if [[ -n "${TMUX_TMPDIR:-}" ]]; then
+    dirs+=("${TMUX_TMPDIR}/tmux-${uid}")
+  fi
+  dirs+=("/tmp/tmux-${uid}" "/private/tmp/tmux-${uid}")
+
+  for dir in "${dirs[@]}"; do
+    [[ -d "${dir}" ]] || continue
+    for socket in "${dir}"/*; do
+      [[ -S "${socket}" ]] || continue
+      socket_dir="$(cd "$(dirname "${socket}")" && pwd -P)"
+      printf '%s/%s\n' "${socket_dir}" "$(basename "${socket}")"
+    done
+  done | sort -u
+}
+
+function resolved_tmux_env() {
+  if [[ -n "${TMUX:-}" ]]; then
+    printf '%s' "${TMUX}"
+    return
+  fi
+
+  if [[ -n "${WORKMUX_TMUX:-}" ]]; then
+    printf '%s' "${WORKMUX_TMUX}"
+    return
+  fi
+
+  command -v tmux > /dev/null || return
+
+  local cwd socket pane_id pane_command pane_path server_pid candidate
+  local count=0
+  cwd="$(pwd -P)"
+
+  while IFS= read -r socket; do
+    while IFS='|' read -r pane_id pane_command pane_path server_pid; do
+      if [[ -d "${pane_path}" ]]; then
+        pane_path="$(cd "${pane_path}" && pwd -P)"
+      fi
+      [[ "${pane_path}" == "${cwd}" ]] || continue
+
+      case "${pane_command}" in
+        codex* | cx) ;;
+        *) continue ;;
+      esac
+
+      candidate="${socket},${server_pid},${pane_id}"
+      count=$((count + 1))
+    done < <(tmux -S "${socket}" list-panes -a -F '#{pane_id}|#{pane_current_command}|#{pane_current_path}|#{pid}' 2> /dev/null || true)
+  done < <(tmux_socket_candidates)
+
+  if ((count == 1)); then
+    printf '%s' "${candidate}"
+  fi
+}
+
+function run_workmux_command() {
+  local -a command=(workmux "${@}")
+  local -a env_args=()
+  local tmux_env
+  tmux_env="$(resolved_tmux_env)"
+
+  if [[ -n "${tmux_env}" ]]; then
+    env_args+=("TMUX=${tmux_env}")
+  fi
+
+  if [[ -n "${WORKMUX_TERM:-}" ]]; then
+    env_args+=("TERM=${WORKMUX_TERM}")
+  elif [[ "${TERM:-}" == "dumb" && -n "${tmux_env}" ]]; then
+    env_args+=(TERM=tmux-256color)
+  fi
+
+  if ((${#env_args[@]} > 0)); then
+    env "${env_args[@]}" "${command[@]}"
+  else
+    "${command[@]}"
+  fi
+}
+
 function do_launch() {
   local branch="${1}"
   local base_branch="${2:-}"
@@ -99,7 +181,7 @@ function do_launch() {
 
   log="$(mktemp "/tmp/workmux-${safe_name}.log.XXXXXX")"
 
-  local -a cmd=(workmux add "${branch}" --open-if-exists -P "${prompt_file}")
+  local -a cmd=(run_workmux_command add "${branch}" --open-if-exists -P "${prompt_file}")
   if [[ -n "${base_branch}" ]]; then
     cmd+=(--base "${base_branch}")
   fi

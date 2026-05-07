@@ -28,11 +28,11 @@ jobs:
       - name: Lint Markdown
         run: yarn lint
       - name: ShellCheck
-        run: shellcheck -S warning bin/* plugins/*/scripts/* tests/fixtures/workmux-stub
+        run: shellcheck -S warning bin/* plugins/*/scripts/* tests/fixtures/*
       - name: Set up shfmt
         uses: cboone/gh-actions/actions/set-up-shfmt@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
       - name: shfmt
-        run: shfmt -d bin/* plugins/*/scripts/* tests/fixtures/workmux-stub
+        run: shfmt -d bin/* plugins/*/scripts/* tests/fixtures/*
       - uses: cboone/gh-actions/actions/set-up-actionlint@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
       - name: Actionlint
         run: actionlint
@@ -53,5 +53,7 @@ jobs:
         COMPOSE_ISSUE_PROMPT_BIN=./plugins/create-worktree-from-issue/scripts/compose-issue-prompt
         CREATE_WORKTREE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree/scripts/launch-workmux
         CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree-from-issue/scripts/launch-workmux
+        TMUX_STUB_BIN=./tests/fixtures/tmux-stub
+        UNIX_SOCKET_FIXTURE_BIN=./tests/fixtures/create-unix-socket
         WORKMUX_STUB_BIN=./tests/fixtures/workmux-stub
       scrut-test-dir: "tests/scrut/"
