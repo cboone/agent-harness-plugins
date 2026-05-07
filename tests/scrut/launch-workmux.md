@@ -198,6 +198,44 @@ Issue body
 prompt-file-exists: yes
 ```
 
+## Create worktree launcher continues without `tmux`
+
+```scrut
+$ state="$(mktemp -d)" \
+>   && stub_dir="$(mktemp -d)" \
+>   && cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux" \
+>   && chmod +x "${stub_dir}/workmux" \
+>   && printf '%s\n' 'Prompt body' \
+>     | env -u TMUX PATH="${stub_dir}:/usr/bin:/bin:/usr/sbin:/sbin" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/no-tmux-command"
+workmux add
+branch: feature/no-tmux-command
+open-if-exists: true
+term: dumb
+tmux: <unset>
+prompt:
+Prompt body
+prompt-file-exists: yes
+```
+
+## Create worktree from issue launcher continues without `tmux`
+
+```scrut
+$ state="$(mktemp -d)" \
+>   && stub_dir="$(mktemp -d)" \
+>   && cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux" \
+>   && chmod +x "${stub_dir}/workmux" \
+>   && printf '%s\n' 'Issue body' \
+>     | env -u TMUX PATH="${stub_dir}:/usr/bin:/bin:/usr/sbin:/sbin" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN}" "feature/no-tmux-command-issue"
+workmux add
+branch: feature/no-tmux-command-issue
+open-if-exists: true
+term: dumb
+tmux: <unset>
+prompt:
+Issue body
+prompt-file-exists: yes
+```
+
 ## Create worktree launcher rejects empty stdin
 
 ```scrut

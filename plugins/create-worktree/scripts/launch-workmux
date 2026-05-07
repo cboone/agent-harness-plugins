@@ -119,7 +119,7 @@ function resolved_tmux_env() {
     return
   fi
 
-  command -v tmux > /dev/null || return
+  command -v tmux > /dev/null || return 0
 
   local cwd socket pane_id pane_command pane_path server_pid candidate
   local count=0
@@ -145,6 +145,8 @@ function resolved_tmux_env() {
   if ((count == 1)); then
     printf '%s' "${candidate}"
   fi
+
+  return 0
 }
 
 function run_workmux_command() {

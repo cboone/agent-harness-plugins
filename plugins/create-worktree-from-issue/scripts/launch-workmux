@@ -150,7 +150,7 @@ function resolved_tmux_env() {
     return
   fi
 
-  command -v tmux > /dev/null || return
+  command -v tmux > /dev/null || return 0
 
   local cwd socket pane_id pane_command pane_path server_pid candidate
   local count=0
@@ -176,6 +176,8 @@ function resolved_tmux_env() {
   if ((count == 1)); then
     printf '%s' "${candidate}"
   fi
+
+  return 0
 }
 
 function codex_pane_for_path() {
@@ -183,7 +185,8 @@ function codex_pane_for_path() {
   local pane_id pane_command pane_path candidate
   local count=0
 
-  [[ -n "${tmux_env}" ]] || return 1
+  [[ -n "${tmux_env}" ]] || return 0
+  [[ -d "${worktree_path}" ]] || return 0
   worktree_path="$(cd "${worktree_path}" && pwd -P)"
 
   while IFS='|' read -r pane_id pane_command pane_path; do
@@ -204,6 +207,8 @@ function codex_pane_for_path() {
   if ((count == 1)); then
     printf '%s' "${candidate}"
   fi
+
+  return 0
 }
 
 function send_prompt_to_codex_pane() {
@@ -211,8 +216,9 @@ function send_prompt_to_codex_pane() {
   local pane_id buffer delay
 
   [[ -s "${prompt_file}" ]] || return 0
+  [[ -n "${tmux_env}" ]] || return 0
 
-  pane_id="$(codex_pane_for_path "${tmux_env}" "${worktree_path}")"
+  pane_id="$(codex_pane_for_path "${tmux_env}" "${worktree_path}" || true)"
   if [[ -z "${pane_id}" ]]; then
     return 0
   fi
