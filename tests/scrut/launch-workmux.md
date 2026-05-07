@@ -25,6 +25,13 @@ $ function prepare_stubs() {
 >     kill "${socket_pid}" 2> /dev/null || true
 >     socket_pid=""
 >   fi
+>   if [[ -n "${tmux_tmpdir:-}" ]]; then
+>     rm -r -- "${tmux_tmpdir}"
+>     tmux_tmpdir=""
+>     socket_dir=""
+>     socket_path=""
+>     socket_real_path=""
+>   fi
 > }
 ```
 
