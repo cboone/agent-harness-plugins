@@ -62,9 +62,9 @@ Format rules:
 
 ### Category Guide for Hooks
 
-| Root README section | Marketplace category | Covers                         | Examples                     |
-| ------------------- | -------------------- | ------------------------------ | ---------------------------- |
-| **Hooks**           | `workflow`           | General workflow utility hooks | notify                       |
+| Root README section | Marketplace category | Covers                         | Examples |
+| ------------------- | -------------------- | ------------------------------ | -------- |
+| **Hooks**           | `workflow`           | General workflow utility hooks | notify   |
 
 ### Adding a New Hook
 
