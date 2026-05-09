@@ -137,7 +137,7 @@ else
 fi
 ```
 
-The `setup-ci` zsh CI template sets `SKIP_SETOPT_CHECK: "1"` in the workflow `env`, so generated check scripts must honor this env var to interoperate with that template.
+The `set-up-ci` zsh CI template sets `SKIP_SETOPT_CHECK: "1"` in the workflow `env`, so generated check scripts must honor this env var to interoperate with that template.
 
 See `./references/tools/setopt-warnings.md`.
 

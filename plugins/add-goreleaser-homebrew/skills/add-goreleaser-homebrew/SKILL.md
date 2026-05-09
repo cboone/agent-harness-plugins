@@ -8,7 +8,7 @@ description: >-
   for Go", or wants a Go CLI to ship signed release artifacts and a Homebrew
   cask. Detects shell completions, man-page generation, and macOS-only
   constraints, then conditionally tailors the GoReleaser config. Pairs with
-  setup-installers (alternative non-GoReleaser installer paths) and the
+  set-up-installers (alternative non-GoReleaser installer paths) and the
   release skill (cutting tagged releases).
 ---
 

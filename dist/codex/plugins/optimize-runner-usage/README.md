@@ -33,6 +33,6 @@ Each optimization is applied only where appropriate. For example, `paths-ignore`
 
 ## See Also
 
-- [Setup CI](../setup-ci/README.md): create CI workflows from scratch (includes these optimizations by default)
-- [Setup Secret Scanning](../setup-secret-scanning/README.md): add secret scanning workflows
+- [Set-Up CI](../set-up-ci/README.md): create CI workflows from scratch (includes these optimizations by default)
+- [Set-Up Secret Scanning](../set-up-secret-scanning/README.md): add secret scanning workflows
 - [All plugins](../../../../README.md)

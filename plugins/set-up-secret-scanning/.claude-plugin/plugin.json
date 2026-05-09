@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["gitleaks", "github-actions", "scanning", "secrets", "security", "trufflehog"],
+  "license": "MIT",
+  "name": "set-up-secret-scanning",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "3.0.0"
+}

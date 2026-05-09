@@ -40,13 +40,13 @@ For each tool in the ecosystem, check for its signature artifacts. Only tools wh
 | `scaffold-new-repo`       | `LICENSE` + `README.md` + `.gitignore`                                    |
 | `scaffold-go-cli`         | `go.mod` + `cmd/` + `.goreleaser.yml` + `.github/workflows/release.yml`   |
 | `scaffold-go-library`     | `go.mod` (no `cmd/`) + `.golangci.yml` + `.github/workflows/ci.yml`       |
-| `setup-ci`                | `.github/workflows/ci.yml`                                                |
-| `setup-linters`           | `.editorconfig` or `.prettierrc.json` or `.golangci.yml`                  |
-| `setup-secret-scanning`   | `.github/workflows/gitleaks.yml` or `.github/workflows/trufflehog.yml`    |
+| `set-up-ci`               | `.github/workflows/ci.yml`                                                |
+| `set-up-linters`          | `.editorconfig` or `.prettierrc.json` or `.golangci.yml`                  |
+| `set-up-secret-scanning`  | `.github/workflows/gitleaks.yml` or `.github/workflows/trufflehog.yml`    |
 | `add-goreleaser-homebrew` | `.goreleaser.yml` with `brews:` section + `.github/workflows/release.yml` |
 | `add-community-files`     | `CONTRIBUTING.md` + `CODE_OF_CONDUCT.md`                                  |
 | `add-scrut-cli-tests`     | `tests/scrut/` directory                                                  |
-| `setup-installers`        | `Formula/`                                                                |
+| `set-up-installers`       | `Formula/`                                                                |
 | `optimize-runner-usage`   | `concurrency:` key in any `.github/workflows/*.yml`                       |
 | `clean-up-agent-config`   | `AGENTS.md` or (`CLAUDE.md` + `.claude/settings.json`)                    |
 
@@ -71,9 +71,9 @@ Present a table with all detected tools and their status:
 ```text
 | # | Tool                    | Status         | Issues Found                                   | Action          |
 |---|-------------------------|----------------|-------------------------------------------------|-----------------|
-| 1 | setup-ci                | Needs update   | actions/checkout@v4 (target: v6), no timeout    | Update workflow |
-| 2 | setup-linters           | Up to date     |                                                 | None            |
-| 3 | setup-secret-scanning   | Partially set  | TruffleHog workflow missing                     | Add workflow    |
+| 1 | set-up-ci                | Needs update   | actions/checkout@v4 (target: v6), no timeout    | Update workflow |
+| 2 | set-up-linters           | Up to date     |                                                 | None            |
+| 3 | set-up-secret-scanning   | Partially set  | TruffleHog workflow missing                     | Add workflow    |
 | 4 | add-community-files     | Needs update   | CoC is v2.1 (current: v3.0)                     | Update CoC      |
 | 5 | clean-up-agent-config   | Needs update   | CLAUDE.md is regular file, not symlink           | Convert to symlink |
 | 6 | optimize-runner-usage   | Up to date     |                                                 | None            |
@@ -118,18 +118,18 @@ For each confirmed update item, choose a strategy based on scope:
 | Community file outdated (e.g., CoC version)    | **Full re-run**: invoke the `add-community-files` skill via the Skill tool           |
 | Missing file from a detected tool              | **Full re-run**: invoke the original skill via the Skill tool                        |
 
-For full tool re-runs, all detected tools are skills. Invoke them via the Skill tool. Relevant skills include `add-community-files`, `setup-linters`, `setup-ci`, `setup-secret-scanning`, `add-goreleaser-homebrew`, `setup-installers`, `add-scrut-cli-tests`, `scaffold-new-repo`, and `optimize-runner-usage`.
+For full tool re-runs, all detected tools are skills. Invoke them via the Skill tool. Relevant skills include `add-community-files`, `set-up-linters`, `set-up-ci`, `set-up-secret-scanning`, `add-goreleaser-homebrew`, `set-up-installers`, `add-scrut-cli-tests`, `scaffold-new-repo`, and `optimize-runner-usage`.
 
 Process updates in this order (matching the bootstrap-project execution order):
 
 1. `scaffold-new-repo` (foundation files)
 1. `scaffold-go-cli` / `scaffold-go-library` (language scaffold)
-1. `setup-ci` (CI workflow)
-1. `setup-linters` (linter configs)
-1. `setup-secret-scanning` (secret scanning)
+1. `set-up-ci` (CI workflow)
+1. `set-up-linters` (linter configs)
+1. `set-up-secret-scanning` (secret scanning)
 1. `add-goreleaser-homebrew` (release config)
 1. `add-community-files` (community files)
-1. `setup-installers` (distribution)
+1. `set-up-installers` (distribution)
 1. `add-scrut-cli-tests` (testing)
 1. `optimize-runner-usage` (CI optimization)
 1. `clean-up-agent-config` (agent config)
@@ -180,7 +180,7 @@ When auditing, treat SHA-pinned references (e.g., `actions/checkout@a5ac7e5...`)
 
 <!-- Maintenance: update this table when any command template changes its action versions. -->
 
-## Reference: CI Workflow Checks (setup-ci)
+## Reference: CI Workflow Checks (set-up-ci)
 
 ### Files
 
@@ -210,7 +210,7 @@ When auditing, treat SHA-pinned references (e.g., `actions/checkout@a5ac7e5...`)
 - Ruby targets: test, lint
 - Shell targets: lint, fmt
 
-## Reference: Secret Scanning Checks (setup-secret-scanning)
+## Reference: Secret Scanning Checks (set-up-secret-scanning)
 
 ### Files
 
@@ -296,7 +296,7 @@ Must include language-specific entries appropriate for the detected project type
 - `.github/copilot-instructions.md` exists and references `AGENTS.md`
 - `.claude/settings.local.json` is listed in `.gitignore`
 
-## Reference: Linter Config Checks (setup-linters)
+## Reference: Linter Config Checks (set-up-linters)
 
 ### Files
 
@@ -469,7 +469,7 @@ Must include language-specific entries appropriate for the detected project type
 - CI workflow has a job or step that installs and runs scrut
 - If markdownlint config exists: `MD014` is set to `false`
 
-## Reference: Installer Checks (setup-installers)
+## Reference: Installer Checks (set-up-installers)
 
 ### Files
 

@@ -41,5 +41,5 @@ PROJECT-NAME
 - The heading uses the exact binary/repository name in kebab-case
 - The one-liner description matches what was provided for `Cargo.toml`
 - Installation section covers three methods: Homebrew, `cargo install`, and release binary
-- Homebrew installation requires a Homebrew tap to be set up (see `/setup-installers`)
+- Homebrew installation requires a Homebrew tap to be set up (see `/set-up-installers`)
 - Usage section is a placeholder for the user to fill in

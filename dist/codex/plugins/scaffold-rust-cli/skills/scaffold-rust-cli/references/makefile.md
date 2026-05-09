@@ -64,7 +64,7 @@ help: ## Show this help
 ## Notes
 
 - The `test` target uses `cargo nextest run` if cargo-nextest is installed, falling back to `cargo test` otherwise.
-- Cross-language targets (`format`, `format-check`, `lint-md`, `lint-actions`) assume Prettier, markdownlint-cli2, and actionlint are installed. These are set up by `/setup-linters` and degrade gracefully with "command not found" if not yet installed.
+- Cross-language targets (`format`, `format-check`, `lint-md`, `lint-actions`) assume Prettier, markdownlint-cli2, and actionlint are installed. These are set up by `/set-up-linters` and degrade gracefully with "command not found" if not yet installed.
 - The `test-scrut` and `test-scrut-update` targets assume scrut is installed. Set up with `/add-scrut-cli-tests`.
 - The `changelog` target requires `git-cliff`. Install with `cargo install git-cliff`.
 - All Rust-specific targets (`test`, `lint`, `fmt`, `build`, `deny`, `audit`, `typos`, `clean`) use Cargo commands directly and work without additional setup beyond the Rust toolchain.

@@ -16,7 +16,7 @@ Create a new plugin for this repository following established conventions.
 Infer the plugin type from the user's request:
 
 - **Skills plugin**: Provides instructions and workflows that Claude Code follows (e.g., style guides, multi-step procedures). Most plugins are this type.
-- **Command plugin**: Provides slash commands that users invoke explicitly (e.g., `/setup-ci`, `/scaffold-go-cli`). Commands are structured Markdown files with frontmatter, a workflow, and optional reference templates.
+- **Command plugin**: Provides slash commands that users invoke explicitly (e.g., `/set-up-ci`, `/scaffold-go-cli`). Commands are structured Markdown files with frontmatter, a workflow, and optional reference templates.
 - **Hooks plugin**: Provides event-driven shell commands that run automatically in response to Claude Code lifecycle events (e.g., notifications on task completion).
 - **Combinations**: A plugin can provide any combination of skills, commands, and hooks.
 

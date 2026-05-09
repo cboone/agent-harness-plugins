@@ -8,7 +8,7 @@ description: >-
   "skip CI on docs changes", or wants to cut runner-minute waste on already
   configured workflows. Private repos pay for Actions minutes and macOS
   runners cost 10x Linux runners, so these optimizations matter most there.
-  For creating a CI workflow from scratch, use setup-ci instead.
+  For creating a CI workflow from scratch, use set-up-ci instead.
 ---
 
 # Optimize Runner Usage
@@ -25,11 +25,11 @@ Use Glob to find all `.yml` and `.yaml` files in `.github/workflows/`.
 
 If the `.github/workflows/` directory does not exist, abort with:
 
-> No `.github/workflows/` directory found. This skill optimizes existing GitHub Actions workflows. Invoke the setup-ci skill to create a CI workflow from scratch.
+> No `.github/workflows/` directory found. This skill optimizes existing GitHub Actions workflows. Invoke the set-up-ci skill to create a CI workflow from scratch.
 
 If no workflow files are found, abort with:
 
-> No workflow files found in `.github/workflows/`. Invoke the setup-ci skill to create a CI workflow.
+> No workflow files found in `.github/workflows/`. Invoke the set-up-ci skill to create a CI workflow.
 
 ### 2. Classify Each Workflow
 
@@ -203,7 +203,7 @@ Print a final summary:
 
 ## Error Handling
 
-- **No `.github/workflows/` directory**: Abort with a clear message suggesting the setup-ci skill.
-- **No workflow files found**: Abort with a clear message suggesting the setup-ci skill.
+- **No `.github/workflows/` directory**: Abort with a clear message suggesting the set-up-ci skill.
+- **No workflow files found**: Abort with a clear message suggesting the set-up-ci skill.
 - **YAML parse errors**: Skip the individual file with a warning and continue processing other files.
 - **Empty workflow file**: Skip with a note.

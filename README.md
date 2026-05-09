@@ -84,7 +84,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Check Zsh Scripts](./plugins/check-zsh-scripts/README.md) | `/check-zsh-scripts` | Check and evaluate zsh scripts using shellcheck, shfmt, shellharden, zsh -n, zcompile, setopt warn_create_global/warn_nested_var, and checkbashisms. |
 | [Handle Secrets](./plugins/handle-secrets/README.md) | `/handle-secrets` | Best practices for handling user-provided secrets in CLI tools: secure input methods, credential storage, secret masking, and language-specific libraries. |
 | [Lint and Fix](./plugins/lint-and-fix/README.md) | `/lint-and-fix` | Detect project linters and formatters, run them with auto-fix, resolve remaining issues, then commit and push the fixes. |
-| [Setup Linters](./plugins/setup-linters/README.md) | `/setup-linters` | Detect project languages, recommend linters and formatters, install them, and generate config files, including Pandoc-academic Markdown presets. |
+| [Set-Up Linters](./plugins/set-up-linters/README.md) | `/set-up-linters` | Detect project languages, recommend linters and formatters, install them, and generate config files, including Pandoc-academic Markdown presets. |
 | [Write Bash Scripts](./plugins/write-bash-scripts/README.md) | `/write-bash-scripts` | Applies Bash style conventions when creating or editing Bash scripts. |
 | [Write Go Code](./plugins/write-go-code/README.md) | `/write-go-code` | Go code style guide based on Google Go Style Guide, Effective Go, Code Review Comments, and Cobra CLI behavior. |
 | [Write LaTeX](./plugins/write-latex/README.md) | `/write-latex` | LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2, and Knuth conventions. |
@@ -133,9 +133,9 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Add GoReleaser Homebrew](./plugins/add-goreleaser-homebrew/README.md) | `/add-goreleaser-homebrew` | Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with conditional support for completions, man pages, and macOS-only builds. |
 | [Optimize Runner Usage](./plugins/optimize-runner-usage/README.md) | `/optimize-runner-usage` | Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub Actions workflows. |
 | [Pin Everything](./plugins/pin-everything/README.md) | `/pin-everything` | Pin every version surface in a repository (action SHAs, packageManager integrity digests, dependency exact-pins, runtime version files, install commands) for one-shot supply-chain hardening. |
-| [Setup CI](./plugins/setup-ci/README.md) | `/setup-ci` | Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets. |
-| [Setup Installers](./plugins/setup-installers/README.md) | `/setup-installers` | Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, go/cargo install, and release workflow. |
-| [Setup Secret Scanning](./plugins/setup-secret-scanning/README.md) | `/setup-secret-scanning` | Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration. |
+| [Set-Up CI](./plugins/set-up-ci/README.md) | `/set-up-ci` | Set up GitHub Actions CI with test, lint, format, and vulnerability check jobs, plus matching Makefile targets. |
+| [Set-Up Installers](./plugins/set-up-installers/README.md) | `/set-up-installers` | Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, go/cargo install, and release workflow. |
+| [Set-Up Secret Scanning](./plugins/set-up-secret-scanning/README.md) | `/set-up-secret-scanning` | Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration. |
 | [Upgrade Everything](./plugins/upgrade-everything/README.md) | `/upgrade-everything` | Assess every version reference in a repository, evaluate available upgrades with repo-specific risk and reward, and present selectable upgrade options. |
 | [Write Homebrew Formula](./plugins/write-homebrew-formula/README.md) | `/write-homebrew-formula` | Write or update Homebrew formulae using current Homebrew guidance and cboone/homebrew-tap conventions. |
 
@@ -211,7 +211,7 @@ When adding or removing a plugin, regenerate the mirror with `bin/build-opencode
 
 ### OpenCode known limitations
 
-- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Some skills use Claude Code's `@${CLAUDE_PLUGIN_ROOT}/references/...` pattern to inline reference files at runtime. OpenCode does not expand this variable, so those inclusions appear to the agent as literal path strings rather than inlined content. The inline workflow text in each affected file still loads correctly. Affected skills: `/add-goreleaser-homebrew`, `/scaffold-go-cli`, `/scaffold-go-library`, `/scaffold-new-repo`, `/scaffold-rust-cli`, `/setup-ci`, `/setup-secret-scanning`, `create-plugin`. For full fidelity in these cases, run them in Claude Code.
+- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Some skills use Claude Code's `@${CLAUDE_PLUGIN_ROOT}/references/...` pattern to inline reference files at runtime. OpenCode does not expand this variable, so those inclusions appear to the agent as literal path strings rather than inlined content. The inline workflow text in each affected file still loads correctly. Affected skills: `/add-goreleaser-homebrew`, `/scaffold-go-cli`, `/scaffold-go-library`, `/scaffold-new-repo`, `/scaffold-rust-cli`, `/set-up-ci`, `/set-up-secret-scanning`, `create-plugin`. For full fidelity in these cases, run them in Claude Code.
 - **Hook event parity is approximate.** OpenCode's event model collapses several distinct Claude Code notification matchers (`idle_prompt`, `elicitation_dialog`, `permission_prompt`) and the `PreCompact` event is mapped to an experimental OpenCode hook. See each hook's README for the specific mapping.
 
 ## License
