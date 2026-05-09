@@ -211,7 +211,7 @@ When adding or removing a plugin, regenerate the mirror with `bin/build-opencode
 
 ### OpenCode known limitations
 
-- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Some skills use Claude Code's `@${CLAUDE_PLUGIN_ROOT}/references/...` pattern to inline reference files at runtime. OpenCode does not expand this variable, so those inclusions appear to the agent as literal path strings rather than inlined content. The inline workflow text in each affected file still loads correctly. Affected skills: `/add-goreleaser-homebrew`, `/scaffold-go-cli`, `/scaffold-go-library`, `/scaffold-new-repo`, `/scaffold-rust-cli`, `/set-up-ci`, `/set-up-secret-scanning`, `create-plugin`. For full fidelity in these cases, run them in Claude Code.
+- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Some skills use Claude Code's `@${CLAUDE_PLUGIN_ROOT}/references/...` pattern to inline reference files at runtime. OpenCode does not expand this variable, so those inclusions appear to the agent as literal path strings rather than inlined content. The inline workflow text in each affected file still loads correctly. Affected skills: `/add-goreleaser-homebrew`, `/scaffold-go-cli`, `/scaffold-go-library`, `/scaffold-new-repo`, `/scaffold-rust-cli`, `/set-up-ci`, `/set-up-secret-scanning`, `/create-plugin`. For full fidelity in these cases, run them in Claude Code.
 - **Hook event parity is approximate.** OpenCode's event model collapses several distinct Claude Code notification matchers (`idle_prompt`, `elicitation_dialog`, `permission_prompt`) and the `PreCompact` event is mapped to an experimental OpenCode hook. See each hook's README for the specific mapping.
 
 ## License
