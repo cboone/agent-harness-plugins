@@ -62,9 +62,9 @@ Format rules:
 
 ### Category Guide for Hooks
 
-| Root README section | Marketplace category | Covers                         | Examples                     |
-| ------------------- | -------------------- | ------------------------------ | ---------------------------- |
-| **Hooks**           | `workflow`           | General workflow utility hooks | notify, update-docs-reminder |
+| Root README section | Marketplace category | Covers                         | Examples |
+| ------------------- | -------------------- | ------------------------------ | -------- |
+| **Hooks**           | `workflow`           | General workflow utility hooks | notify   |
 
 ### Adding a New Hook
 

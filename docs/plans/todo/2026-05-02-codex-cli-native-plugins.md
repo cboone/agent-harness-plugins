@@ -2,7 +2,7 @@
 
 ## Context
 
-This repository ships Claude Code plugins (skills + three hook plugins) and produces a parallel `dist/opencode/` mirror of the skills for [OpenCode](https://opencode.ai), since OpenCode has no native plugin marketplace and instead consumes the `OPENCODE_CONFIG_DIR` environment variable. A separate worktree is in progress to extend the OpenCode mirror with hooks support.
+This repository ships Claude Code plugins (skills plus the `notify` hook plugin) and produces a parallel `dist/opencode/` mirror of the skills for [OpenCode](https://opencode.ai), since OpenCode has no native plugin marketplace and instead consumes the `OPENCODE_CONFIG_DIR` environment variable. A separate worktree is in progress to extend the OpenCode mirror with hooks support.
 
 OpenAI's [Codex CLI](https://developers.openai.com/codex/cli) takes the opposite approach: it has its own first-class plugin marketplace system and was designed for Claude Code source compatibility. The relevant compatibility points were verified directly against the openai/codex source (verified at `main` on 2026-05-02):
 
@@ -16,10 +16,9 @@ Net effect: most of this repository is already a working codex plugin marketplac
 
 The only real compatibility gap is the `notify` plugin, whose `hooks/hooks.json` uses the Claude-only events `Notification` (3 matchers) and `PreCompact`. Loading it under codex would fail at deserialize time. Hook plugin status:
 
-| Plugin                 | Events used                               | Codex status                                                  |
-| ---------------------- | ----------------------------------------- | ------------------------------------------------------------- |
-| `update-docs-reminder` | `PostToolUse` matcher `Bash`              | Already compatible. No changes required.                      |
-| `notify`               | `Notification` (×3), `PreCompact`, `Stop` | Codex rejects the file. Needs a codex-specific hooks variant. |
+| Plugin   | Events used                               | Codex status                                                  |
+| -------- | ----------------------------------------- | ------------------------------------------------------------- |
+| `notify` | `Notification` (×3), `PreCompact`, `Stop` | Codex rejects the file. Needs a codex-specific hooks variant. |
 
 Goal: each plugin in this repo installs cleanly via `codex plugin marketplace add cboone/agent-harness-plugins` (the only plugin install path exposed in Codex CLI 0.128.0). README documents the codex install path. CI verifies dual-manifest consistency for plugins that need it.
 
@@ -129,7 +128,6 @@ Extend with a new validation rule: for each plugin directory, if both `.claude-p
 - **All other plugins' `.claude-plugin/plugin.json`:** unchanged. Codex reads them as-is (verified at `plugin_namespace.rs:DISCOVERABLE_PLUGIN_MANIFEST_PATHS`). No `.codex-plugin/plugin.json` siblings needed except for `notify`.
 - **`plugins/notify/hooks/hooks.json`:** unchanged. Claude Code continues to use it.
 - **`plugins/notify/scripts/notify`:** unchanged. The same script is used by both systems via `${CLAUDE_PLUGIN_ROOT}` resolution.
-- **`update-docs-reminder`:** unchanged. Already codex-compatible.
 - **`.gitignore`, `.prettierignore`, `cli.markdownlint-cli2.jsonc`:** no change.
 
 ## Verification
@@ -143,7 +141,6 @@ End-to-end sanity, in order:
    - `codex plugin marketplace add /path/to/this/repo` (local source).
    - `codex plugin list` shows all our plugins under the `agent-harness-plugins` marketplace. (Codex CLI 0.128.0 has no separate `codex plugin install` subcommand; `marketplace add` is the activation step.)
    - In a codex session run `/skills` and confirm `commit` appears with the expected description.
-   - With `codex features enable plugin_hooks` set, trigger a Bash tool call from codex, confirm the `update-docs-reminder` `PostToolUse` hook fires (script writes its log line; `${CLAUDE_PLUGIN_ROOT}` resolves to the cached plugin path).
    - End a turn in codex and confirm the `notify` `Stop` hook fires. Verify codex does not log a deserialize error for `Notification`/`PreCompact` (since the codex-flavored manifest points at `hooks/codex.hooks.json` which has neither).
 5. **Negative test for dual-manifest divergence.** Temporarily edit `plugins/notify/.codex-plugin/plugin.json` to change `version` to `9.9.9` and confirm `bin/validate-plugins` flags the inconsistency. Revert.
 6. **Remote marketplace install (manual, after merge).** Once merged: `codex plugin marketplace add cboone/agent-harness-plugins` from the repo root URL succeeds.

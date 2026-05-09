@@ -74,7 +74,6 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | --- | --- | --- |
 | [Address Review](./plugins/address-review/README.md) | `/address-review <path>` | Parse a review document for actionable feedback, work through items systematically, and track resolution progress. |
 | [Resolve Copilot PR Feedback](./plugins/resolve-copilot-pr-feedback/README.md) | `/resolve-copilot-pr-feedback` | Process and resolve GitHub Copilot automated PR review comments. |
-| [Update Review](./plugins/update-review/README.md) | `/update-review` | Find the latest branch review, assess commits made since, and update the review document with a synthesized reassessment. |
 
 ### Code Quality
 
@@ -158,12 +157,10 @@ Hooks are event-driven; they have no slash-command trigger.
 | Plugin | What it does |
 | --- | --- |
 | [Notify (macOS)](./plugins/notify/README.md) | Sends macOS notifications when Claude Code, OpenCode, or Codex CLI finishes a task or needs your attention. |
-| [Update Docs Reminder](./plugins/update-docs-reminder/README.md) | Reminds you to update documentation when a commit includes significant code changes. |
 
 **External tools:**
 
 - *Notify:* [`alerter`](https://github.com/vjeantet/alerter). Install via [Homebrew](https://brew.sh): `brew install vjeantet/tap/alerter`
-- *Update Docs Reminder:* [`jq`](https://jqlang.org/)
 
 ## Using with Codex CLI
 
@@ -173,7 +170,7 @@ For per-plugin metadata Codex prefers `.codex-plugin/plugin.json` when present a
 
 Codex CLI currently manages plugins at the marketplace level. In Codex CLI 0.128.0, `codex plugin` exposes the `marketplace` subcommand with `add`, `upgrade`, and `remove`; it does not expose a separate `codex plugin install` subcommand.
 
-Enable plugin-bundled hooks once per host so the `notify` and `update-docs-reminder` hooks fire:
+Enable plugin-bundled hooks once per host so the `notify` hook fires:
 
 ```bash
 codex features enable plugin_hooks
@@ -199,7 +196,7 @@ codex plugin marketplace remove agent-harness-plugins
 
 ### Codex CLI known limitations
 
-- **Plugin-bundled hooks are gated behind a feature flag.** `plugin_hooks` is `under development` in Codex CLI 0.128.0 and is `false` by default. Run `codex features enable plugin_hooks` once before expecting `notify` or `update-docs-reminder` to fire on Codex; see above.
+- **Plugin-bundled hooks are gated behind a feature flag.** `plugin_hooks` is `under development` in Codex CLI 0.128.0 and is `false` by default. Run `codex features enable plugin_hooks` once before expecting `notify` to fire on Codex; see above.
 - **`Notification` and `PreCompact` hook events are not supported.** Codex CLI's hook schema only supports `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, and `Stop`. The `notify` plugin therefore wires only the `Stop` and `PermissionRequest` events on Codex (turn completion plus permission requests with `Approve` / `Deny` buttons). Idle, elicitation, and compact-style banners have no Codex hook equivalent; for those, enable Codex's built-in `tui.notifications = true` in `~/.codex/config.toml`. The two are complementary and can run side by side. See the [`notify` plugin README](./plugins/notify/README.md) for details.
 - **No custom prompts shipped.** Codex's `~/.codex/prompts/` mechanism is officially deprecated in favor of skills. This repository ships skills (and hooks), not prompts.
 
