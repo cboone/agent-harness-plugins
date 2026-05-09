@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "catalog-M60-m106-p155-n52"
+    "version": "catalog-M59-m106-p153-n51"
   },
   "name": "agent-harness-plugins",
   "owner": {
@@ -526,20 +526,6 @@
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./plugins/suggest-next-issue",
       "version": "1.1.5"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "code-review",
-      "description": "Find the latest branch review, assess commits made since, and update the review document with a synthesized reassessment.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["branch", "code-review", "diff", "git", "review", "update"],
-      "license": "MIT",
-      "name": "update-review",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./plugins/update-review",
-      "version": "1.0.2"
     },
     {
       "author": {
