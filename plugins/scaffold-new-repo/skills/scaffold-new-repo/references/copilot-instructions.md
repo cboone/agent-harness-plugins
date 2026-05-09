@@ -32,6 +32,6 @@ For full project conventions, see AGENTS.md in the repository root.
 - The heading uses the exact binary or repository name (e.g., `my-cool-tool`),
   not a titleized version.
 - **Per-skill false positive entries:** Other scaffold and setup tools
-  (`scaffold-go-cli`, `scaffold-go-library`, `setup-linters`) append PR review
+  (`scaffold-go-cli`, `scaffold-go-library`, `set-up-linters`) append PR review
   entries to this file for patterns they generate that Copilot commonly flags.
   This file serves as the append target for those entries.

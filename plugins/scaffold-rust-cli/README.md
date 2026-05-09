@@ -30,5 +30,5 @@ The command prompts for project name, description, and optional features during 
 ## See Also
 
 - [Scaffold New Repo](../scaffold-new-repo/README.md): language-agnostic repo boilerplate (included automatically)
-- [Setup Installers](../setup-installers/README.md): set up Homebrew formula and shell install script after scaffolding
+- [Set-Up Installers](../set-up-installers/README.md): set up Homebrew formula and shell install script after scaffolding
 - [All plugins](../../README.md)

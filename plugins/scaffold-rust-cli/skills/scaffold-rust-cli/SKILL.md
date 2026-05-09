@@ -231,7 +231,7 @@ Print a summary of what was created:
 - Remind the user to:
   - Run `make help` to see available Makefile targets
   - Run the add-community-files skill to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
-  - Run the setup-installers skill when ready to set up a Homebrew formula and shell install script
+  - Run the set-up-installers skill when ready to set up a Homebrew formula and shell install script
   - Tag a release with `git tag v0.1.0 && git push origin v0.1.0` to trigger the release workflow
   - Use `make changelog` (requires `git-cliff`) to generate the changelog from conventional commits
 

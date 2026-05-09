@@ -17,11 +17,11 @@ Orchestrates these tools:
 
 - `scaffold-new-repo`: LICENSE, README, .gitignore, agent config
 - `scaffold-go-cli` / `scaffold-go-library` / `scaffold-lean-library`: language-specific project structure
-- `setup-ci`: GitHub Actions CI workflow and Makefile targets
-- `setup-linters`: linters and formatters
-- `setup-secret-scanning`: secret scanning workflows
+- `set-up-ci`: GitHub Actions CI workflow and Makefile targets
+- `set-up-linters`: linters and formatters
+- `set-up-secret-scanning`: secret scanning workflows
 - `add-goreleaser-homebrew`: GoReleaser and Homebrew tap publishing
-- `setup-installers`: Homebrew formula
+- `set-up-installers`: Homebrew formula
 - `add-scrut-cli-tests`: scrut CLI integration tests
 
 ## Usage
@@ -43,5 +43,5 @@ Orchestrates these tools:
 - [Scaffold Go CLI](../scaffold-go-cli/README.md): Go CLI project scaffolding only
 - [Scaffold Go Library](../scaffold-go-library/README.md): Go library project scaffolding only
 - [Scaffold Lean Library](../scaffold-lean-library/README.md): Lean 4 library project scaffolding only
-- [Setup Linters](../setup-linters/README.md): linter and formatter setup only
+- [Set-Up Linters](../set-up-linters/README.md): linter and formatter setup only
 - [All plugins](../../../../README.md)

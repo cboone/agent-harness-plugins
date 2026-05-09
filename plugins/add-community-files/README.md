@@ -37,6 +37,6 @@ Checks for existing files before writing and asks before overwriting.
 ## See Also
 
 - [Scaffold New Repo](../scaffold-new-repo/README.md): foundational repo boilerplate (LICENSE, README, .gitignore)
-- [Setup Linters](../setup-linters/README.md): linter and formatter setup
+- [Set-Up Linters](../set-up-linters/README.md): linter and formatter setup
 - [Bootstrap Project](../bootstrap-project/README.md): full project assessment and setup
 - [All plugins](../../README.md)

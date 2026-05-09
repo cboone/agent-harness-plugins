@@ -8,7 +8,7 @@ Each command plugin has a Markdown file that defines a slash command Claude Code
 plugins/PLUGIN-NAME/commands/COMMAND-NAME.md
 ```
 
-The command filename (without `.md`) becomes the slash command name. The command name usually matches the plugin name (e.g., `plugins/setup-ci/commands/setup-ci.md` becomes `/setup-ci`).
+The command filename (without `.md`) becomes the slash command name. The command name usually matches the plugin name (for example, `plugins/example-command/commands/example-command.md` becomes `/example-command`). Current setup-style workflows in this repository are skills instead; for example, `plugins/set-up-ci/skills/set-up-ci/SKILL.md` defines the `set-up-ci` skill.
 
 ## Frontmatter
 
@@ -63,7 +63,7 @@ If `$ARGUMENTS` is provided, parse it for a project name (first positional word)
 and/or a `--type TYPE` flag.
 ```
 
-**Enum argument** (`/setup-secret-scanning both`):
+**Enum argument** (`/set-up-secret-scanning both`):
 
 ```markdown
 If `$ARGUMENTS` specifies a tool selection (`gitleaks`, `trufflehog`, or `both`),

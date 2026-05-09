@@ -67,7 +67,7 @@ Each entry in the `plugins` array has these fields, alphabetized:
 Categories currently used in this repository. Each marketplace category corresponds to a category table in the root `README.md`:
 
 - `"agents"` -- meta-tools for the agent ecosystem (e.g., `clean-up-agent-config`, `create-plugin`)
-- `"ci-and-release"` -- CI workflows, installers, release automation, repo audits (e.g., `setup-ci`, `add-goreleaser-homebrew`, `setup-secret-scanning`)
+- `"ci-and-release"` -- CI workflows, installers, release automation, repo audits (e.g., `set-up-ci`, `add-goreleaser-homebrew`, `set-up-secret-scanning`)
 - `"code-quality"` -- style guides for code, linting, formatting, language-specific testing (e.g., `lint-and-fix`, `write-go-code`)
 - `"code-review"` -- responding to external review feedback (e.g., `address-review`, `resolve-copilot-pr-feedback`)
 - `"git"` -- the commit-to-PR pipeline (e.g., `commit`, `pr`, `merge-main`, `release`, `review-branch`, `use-git`)

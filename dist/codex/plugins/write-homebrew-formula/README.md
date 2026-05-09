@@ -35,5 +35,5 @@ The skill gathers project metadata, selects the right formula pattern, writes or
 ## See Also
 
 - [Add GoReleaser Homebrew](../add-goreleaser-homebrew/README.md): add GoReleaser with Homebrew tap publishing
-- [Setup Installers](../setup-installers/README.md): set up standalone Homebrew distribution for a project
+- [Set-Up Installers](../set-up-installers/README.md): set up standalone Homebrew distribution for a project
 - [All plugins](../../../../README.md)
