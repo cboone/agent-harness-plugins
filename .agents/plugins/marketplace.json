@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "catalog-M61-m108-p156-n53"
+    "version": "catalog-M60-m106-p155-n52"
   },
   "name": "agent-harness-plugins",
   "owner": {
@@ -526,20 +526,6 @@
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./dist/codex/plugins/suggest-next-issue",
       "version": "1.1.5"
-    },
-    {
-      "author": {
-        "name": "Christopher Boone"
-      },
-      "category": "workflow",
-      "description": "Reminds you to update documentation when a commit includes significant code changes.",
-      "homepage": "https://github.com/cboone/agent-harness-plugins",
-      "keywords": ["documentation", "git", "hooks", "reminders"],
-      "license": "MIT",
-      "name": "update-docs-reminder",
-      "repository": "https://github.com/cboone/agent-harness-plugins",
-      "source": "./dist/codex/plugins/update-docs-reminder",
-      "version": "1.2.1"
     },
     {
       "author": {

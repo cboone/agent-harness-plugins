@@ -1,1 +1,0 @@
-../../../plugins/update-docs-reminder/opencode/index.ts
