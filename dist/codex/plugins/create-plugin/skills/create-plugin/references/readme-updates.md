@@ -64,7 +64,7 @@ Format rules:
 
 | Root README section | Marketplace category | Covers                         | Examples                     |
 | ------------------- | -------------------- | ------------------------------ | ---------------------------- |
-| **Hooks**           | `workflow`           | General workflow utility hooks | notify, update-docs-reminder |
+| **Hooks**           | `workflow`           | General workflow utility hooks | notify                       |
 
 ### Adding a New Hook
 
