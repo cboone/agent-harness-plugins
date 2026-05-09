@@ -55,13 +55,13 @@ A scoped plan was added for pruning exactly these two plugins, including explici
 
 Files involved:
 
-- `docs/plans/todo/2026-05-09-prune-update-docs-reminder-and-update-review.md`
+- `docs/plans/done/2026-05-09-prune-update-docs-reminder-and-update-review.md`
 
 ## File Inventory
 
 ### New Files
 
-- `docs/plans/todo/2026-05-09-prune-update-docs-reminder-and-update-review.md`
+- `docs/plans/done/2026-05-09-prune-update-docs-reminder-and-update-review.md`
 
 ### Modified Files
 
@@ -110,7 +110,7 @@ None.
 
 ## Plan Compliance
 
-Plan reviewed: `docs/plans/todo/2026-05-09-prune-update-docs-reminder-and-update-review.md`
+Plan reviewed: `docs/plans/done/2026-05-09-prune-update-docs-reminder-and-update-review.md`
 
 Compliance verdict: good compliance with one formatting issue outside the plan's explicit validation list. The functional pruning work is complete, the generated mirrors and catalog metadata are consistent, and the commits are split along the planned logical boundaries. The remaining issue is Markdown lint failure in a touched table.
 
