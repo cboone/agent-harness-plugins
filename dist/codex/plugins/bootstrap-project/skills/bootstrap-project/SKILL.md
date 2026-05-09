@@ -114,12 +114,12 @@ Example output:
 | --- | ------------------------ | -------------- | ------------------------------------------- |
 | 1   | scaffold-new-repo        | Already set up | LICENSE, README, .gitignore, agent config   |
 | 2   | scaffold-go-cli          | Already set up | Go CLI project structure, CI, GoReleaser    |
-| 3   | set-up-ci                 | Skipped        | Covered by scaffold-go-cli                  |
-| 4   | set-up-linters            | Scoped down    | Cross-language tools only (Prettier, etc.)  |
-| 5   | set-up-secret-scanning    | Will run       | Gitleaks + TruffleHog secret scanning       |
+| 3   | set-up-ci                | Skipped        | Covered by scaffold-go-cli                  |
+| 4   | set-up-linters           | Scoped down    | Cross-language tools only (Prettier, etc.)  |
+| 5   | set-up-secret-scanning   | Will run       | Gitleaks + TruffleHog secret scanning       |
 | 6   | add-goreleaser-homebrew  | Skipped        | Covered by scaffold-go-cli                  |
 | 7   | add-community-files      | Will run       | CONTRIBUTING, CoC, SECURITY, PR template    |
-| 8   | set-up-installers         | Will run       | Homebrew formula                            |
+| 8   | set-up-installers        | Will run       | Homebrew formula                            |
 | 9   | add-scrut-cli-tests      | Will run       | Scrut CLI integration tests                 |
 ```
 

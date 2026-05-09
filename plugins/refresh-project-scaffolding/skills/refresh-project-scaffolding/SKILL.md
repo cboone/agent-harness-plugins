@@ -79,9 +79,9 @@ Present a table with all detected tools and their status:
 ```text
 | # | Tool                    | Status         | Issues Found                                   | Action          |
 |---|-------------------------|----------------|-------------------------------------------------|-----------------|
-| 1 | set-up-ci                | Needs update   | actions/checkout@v4 (target: v6), no timeout    | Update workflow |
-| 2 | set-up-linters           | Up to date     |                                                 | None            |
-| 3 | set-up-secret-scanning   | Partially set  | TruffleHog workflow missing                     | Add workflow    |
+| 1 | set-up-ci               | Needs update   | actions/checkout@v4 (target: v6), no timeout    | Update workflow |
+| 2 | set-up-linters          | Up to date     |                                                 | None            |
+| 3 | set-up-secret-scanning  | Partially set  | TruffleHog workflow missing                     | Add workflow    |
 | 4 | add-community-files     | Needs update   | CoC is v2.1 (current: v3.0)                     | Update CoC      |
 | 5 | clean-up-agent-config   | Needs update   | CLAUDE.md is regular file, not symlink           | Convert to symlink |
 | 6 | optimize-runner-usage   | Up to date     |                                                 | None            |
