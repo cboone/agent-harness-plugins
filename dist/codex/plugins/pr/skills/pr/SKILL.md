@@ -190,13 +190,19 @@ Run the `lint-and-fix` skill to catch lint and formatting errors before pushing.
 
    ```text
    lint-and-fix --no-push
+
+   Parent continuation:
+   - Caller: pr
+   - Resume target: Step 6, push branch, then Step 7, create the pull request.
+   - On lint success: Continue immediately to Step 6 without asking the user for confirmation.
+   - On lint failure or skipped required lint work: Stop before push and PR creation, then report the unresolved lint state.
    ```
 
    This runs all detected project linters and formatters, auto-fixes what it can, manually resolves remaining issues, and commits the fixes without pushing.
 
 1. **If no linters are detected**: Proceed to step 6. The absence of linters is not an error.
 1. **If all linters pass** (with or without auto-fixes) **and no issues remain unresolved or skipped**: Proceed to step 6. Any fix commits created by `lint-and-fix` will be included in the push.
-1. **If any linting issues remain unresolved, any items are skipped, or a required linter cannot run**: Stop and report the unresolved lint errors. Do not push or create the PR. The user must resolve the remaining issues before retrying.
+1. **If any linting issues remain unresolved, any required lint work is skipped, or a required linter cannot run**: Stop and report the unresolved lint state. Do not push or create the PR. The user must resolve the remaining issues before retrying.
 
 ### 6. Push to Remote
 

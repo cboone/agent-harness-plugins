@@ -261,11 +261,18 @@ This step prevents CI failures from lint issues introduced while resolving feedb
 
    ```text
    lint-and-fix --no-push
+
+   Parent continuation:
+   - Caller: resolve-copilot-pr-feedback
+   - Resume target: Step 6, push changes, re-fetch Copilot threads, then Step 7 summary comment.
+   - On lint success: Continue immediately to Step 6 without asking the user for confirmation.
+   - On lint failure or skipped required lint work: Record a workflow failure, then continue to the required terminal summary path in Step 7 because PR context exists.
    ```
 
    This runs all detected project linters and formatters, fixes issues, and commits the fixes without pushing.
 
-1. If lint-and-fix finds and fixes issues, the fixes are committed automatically. Proceed to step 6.
+1. If `lint-and-fix` reports `Lint status: success` or `Lint status: no-tools`, proceed to step 6. Any fix commits created by `lint-and-fix` will be included in the push.
+1. If `lint-and-fix` reports unresolved lint issues, skipped required lint work, missing required tools, or tool execution failures, record a workflow-level failure. Do not claim lint success. Continue through step 6 only for required verification that is still possible, then post the required partial or failed summary in step 7 because PR context exists.
 
 ### 6. Verify Completion
 

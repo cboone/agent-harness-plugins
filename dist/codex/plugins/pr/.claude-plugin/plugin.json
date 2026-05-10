@@ -9,5 +9,5 @@
   "name": "pr",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.5.4"
+  "version": "1.5.5"
 }
