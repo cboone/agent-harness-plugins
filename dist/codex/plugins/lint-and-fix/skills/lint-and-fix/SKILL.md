@@ -14,9 +14,38 @@ Detect project linters and formatters, run them with auto-fix, and resolve remai
 The user may provide these options inline:
 
 - **--no-commit**: Skip committing and pushing (default: commit and push after fixing)
-- **--no-push**: Commit but do not push (default: push after committing)
+- **--no-push**: Commit but leave push to the caller or user (default: push after committing)
 - **--tool <name>**: Run only a specific tool (e.g., `--tool eslint`, `--tool prettier`)
 - **--check**: Run in check-only mode (report issues without fixing)
+
+## Parent Continuation Contract
+
+When another skill invokes `lint-and-fix`, that parent skill may provide an explicit continuation block immediately after the command:
+
+```text
+Parent continuation:
+- Caller: <parent skill name>
+- Resume target: <parent workflow step to resume>
+- On lint success: <what the parent must do next>
+- On lint failure or skipped required lint work: <what the parent must do next>
+```
+
+Honor this block as part of the `lint-and-fix` invocation.
+
+- `--no-push` means "commit fixes, but leave push to the caller or user." It is not a terminal stop when a parent continuation block is supplied.
+- Do not ask the user whether to proceed when the continuation block says the parent should continue.
+- Do not end with a vague handoff as the terminal outcome. Report the structured result and the caller resume target instead.
+- On lint success, no tools detected, or no file changes needed, report the result and allow the parent to continue immediately according to `On lint success`.
+- On unresolved lint issues, skipped required lint work, missing required tools, or tool execution failures, report a workflow failure result and list the unresolved items so the parent can follow `On lint failure or skipped required lint work`.
+
+Final output for a parent invocation must include:
+
+```text
+Lint status: <success|no-tools|failure>
+Commit: <none|commit SHA>
+Unresolved or skipped: <none|summary>
+Caller resume target: <target from continuation block>
+```
 
 ## Workflow
 
@@ -80,7 +109,7 @@ Would produce two additional detected tools:
 
 If **--tool <name>** was specified, filter the detected list to only that tool. If the specified tool was not detected, report that and stop.
 
-If **no tools are detected**, report that no linters or formatters were found and stop.
+If **no tools are detected**, report that no linters or formatters were found. If a parent continuation block was supplied, report `Lint status: no-tools`, include the caller resume target, and allow the parent workflow to continue according to its continuation block. Otherwise stop.
 
 ### 2. Present Detected Tools
 
@@ -194,7 +223,7 @@ Skip this step only if:
 Check for file changes and commit:
 
 1. Run `git status --porcelain` and check whether its output is empty.
-1. **If no files were modified** (i.e., `git status --porcelain` produced no output): Report "No changes needed, all files were already clean." and stop.
+1. **If no files were modified** (i.e., `git status --porcelain` produced no output): Report "No changes needed, all files were already clean." If a parent continuation block was supplied, include the final output required by [Parent Continuation Contract](#parent-continuation-contract) and allow the parent workflow to continue according to its continuation block. Otherwise stop.
 1. **If files were modified** (i.e., `git status --porcelain` produced any output): Stage all modified files and commit them.
 1. Generate a conventional commit message:
    - Use `style:` for pure formatting and linting fixes.
@@ -203,7 +232,8 @@ Check for file changes and commit:
 
 After committing, push to the remote:
 
-1. **If --no-push was specified**: Stop after committing.
+1. **If --no-push was specified without a parent continuation block**: Report the final lint status and commit SHA, then stop.
+1. **If --no-push was specified with a parent continuation block**: Report the final output required by [Parent Continuation Contract](#parent-continuation-contract), including the caller resume target. The parent workflow should then continue according to its continuation block without asking the user for confirmation.
 1. Push to the current branch's upstream remote.
 1. If no upstream is set, push with `-u` to set it.
 
