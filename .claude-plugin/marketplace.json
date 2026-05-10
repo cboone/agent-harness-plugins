@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
     "description": "Claude Code commands, hooks, and skills from Christopher Boone (cboone.github.io)",
-    "version": "catalog-M63-m79-p145-n51"
+    "version": "catalog-M63-m79-p146-n51"
   },
   "name": "agent-harness-plugins",
   "owner": {
@@ -371,7 +371,7 @@
       "name": "resolve-copilot-pr-feedback",
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./plugins/resolve-copilot-pr-feedback",
-      "version": "1.4.2"
+      "version": "1.4.3"
     },
     {
       "author": {
