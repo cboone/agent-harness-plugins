@@ -300,26 +300,19 @@ Post a summary comment to the PR so reviewers can see the workflow outcome at a 
 Status: Completed
 Head SHA: `abc1234`
 
-| Metric              | Count |
-| ------------------- | ----- |
-| Fetched             | 4     |
-| Resolved            | 3     |
-| Pending             | 0     |
-| Failed              | 0     |
-| Deferred            | 1     |
-| Code-change threads | 2     |
-| Workflow failures   | 0     |
-
 | File            | Category  | Outcome  | Action                                            |
 | --------------- | --------- | -------- | ------------------------------------------------- |
 | `src/foo.ts:42` | Valid     | Resolved | Fixed null check                                  |
 | `lib/util.js:8` | Incorrect | Resolved | Updated error handling; added Copilot instruction |
 | `src/ui.tsx:20` | Deferred  | Resolved | Tracked follow-up work                            |
 | `docs/api.md:5` | Nitpick   | Resolved | Auto-resolved                                     |
+
+Counts: 4 fetched, 3 resolved, 1 deferred, 2 code-change threads.
 ```
 
 - Status must be one of `Completed`, `No unresolved Copilot feedback`, `Partial`, or `Failed`
-- Counts must include fetched, resolved, pending, failed, deferred, and code-change threads, plus workflow-level failures
+- The trailing `Counts:` line is one short sentence at the end of the comment. Include only non-zero counts from this set: fetched, resolved, pending, failed, deferred, code-change threads, workflow failures. Omit zero-valued metrics; do not render an empty table or "0" entries. If every count is zero, omit the `Counts:` line entirely.
+- Pluralize naturally (`1 fetched`, `2 fetched`; `1 code-change thread`, `2 code-change threads`; `1 workflow failure`, `2 workflow failures`).
 - Table includes all processed threads when the comment remains safely postable, not only Valid and Incorrect threads
 - If the processed-thread table would make the PR comment too large, replace detailed rows with aggregate category/outcome rows and state how many thread detail rows were omitted. Keep the full thread-by-thread table in the local final output for the agent/user audit trail.
 - Incorrect category notes Copilot instruction additions in the Action column
@@ -335,35 +328,15 @@ Status: No unresolved Copilot feedback
 Head SHA: `abc1234`
 
 No unresolved Copilot comments were found.
-
-| Metric              | Count |
-| ------------------- | ----- |
-| Fetched             | 0     |
-| Resolved            | 0     |
-| Pending             | 0     |
-| Failed              | 0     |
-| Deferred            | 0     |
-| Code-change threads | 0     |
-| Workflow failures   | 0     |
 ```
 
-If processing was partial or failed, include failure details and the remaining required action:
+If processing was partial or failed, include failure details, the remaining required action, and the trailing counts line:
 
 ```markdown
 ## Copilot Feedback Summary
 
 Status: Partial
 Head SHA: `abc1234`
-
-| Metric              | Count |
-| ------------------- | ----- |
-| Fetched             | 3     |
-| Resolved            | 2     |
-| Pending             | 1     |
-| Failed              | 1     |
-| Deferred            | 0     |
-| Code-change threads | 1     |
-| Workflow failures   | 1     |
 
 | File            | Category | Outcome  | Action                        |
 | --------------- | -------- | -------- | ----------------------------- |
@@ -382,6 +355,8 @@ Head SHA: `abc1234`
 - Resolve the failed reply for `src/bar.ts:7`
 - Resolve the pending nitpick at `lib/baz.ts:9`
 - Push branch changes
+
+Counts: 3 fetched, 2 resolved, 1 pending, 1 failed, 1 code-change thread, 1 workflow failure.
 ```
 
 **No-op summary idempotency:** Before posting a `No unresolved Copilot feedback` summary, inspect existing top-level PR comments for a `## Copilot Feedback Summary` comment with the same head SHA and no-op status. If one already exists and this invocation did not recover a failed summary-post attempt, do not add another no-op comment. Report the existing summary comment URL locally and treat that existing same-head no-op summary as satisfying the final summary requirement for this no-op run. This idempotency exception applies only to empty-fetch no-op runs; if this invocation processed threads, made code changes, or is recovering a failed summary-post attempt, post the required outcome summary.
