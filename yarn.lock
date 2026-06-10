@@ -5,12 +5,13 @@ __metadata:
   version: 9
   cacheKey: 10c0
 
-"@github/markdownlint-github@npm:0.8.0":
-  version: 0.8.0
-  resolution: "@github/markdownlint-github@npm:0.8.0"
+"@github/markdownlint-github@npm:0.8.1":
+  version: 0.8.1
+  resolution: "@github/markdownlint-github@npm:0.8.1"
   dependencies:
-    lodash-es: "npm:^4.17.15"
-  checksum: 10c0/4a5da82a660e741b8ec08987d8d66c27cdf373d11211d7984bfea99256adbdcf6986438fde6a0303fa2d3e649d2bfae2953f1a8110bb9c5009d8138be8b93fd2
+    lodash-es: "npm:^4.17.21"
+    markdown-it: "npm:14.1.1"
+  checksum: 10c0/3e15efc99d76c381021501640cd31438fe1ca3b2cfa6cbc6f40ebaf1233d0eae736daecdb750da7391cf8dc6b545259154dddcef2bf85df2598f894325427a5d
   languageName: node
   linkType: hard
 
@@ -347,7 +348,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash-es@npm:^4.17.15":
+"lodash-es@npm:^4.17.21":
   version: 4.18.1
   resolution: "lodash-es@npm:4.18.1"
   checksum: 10c0/35d4dcf87ef07f8d090f409447575800108057e360b445f590d0d25d09e3d1e33a163d2fc100d4d072b0f901d5e2fc533cd7c4bfd8eeb38a06abec693823c8b8
@@ -791,12 +792,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:3.8.3":
-  version: 3.8.3
-  resolution: "prettier@npm:3.8.3"
+"prettier@npm:3.8.4":
+  version: 3.8.4
+  resolution: "prettier@npm:3.8.4"
   bin:
     prettier: bin/prettier.cjs
-  checksum: 10c0/754816fd7593eb80f6376d7476d463e832c38a12f32775a82683adb6e35b772b1f484d65f19401507b983a8c8a7cd5a4a9f12006bd56491e8f35503473f77473
+  checksum: 10c0/b90a0cbe75b88ac0af9c13fe0f359bd19926fabccd88483227b21f71f0c1cc42da056fc1ac3a361e665577c568371d5ccfb2c62c31c8a1186f8d1bd531a063e9
   languageName: node
   linkType: hard
 
@@ -825,11 +826,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "root-workspace-0b6124@workspace:."
   dependencies:
-    "@github/markdownlint-github": "npm:0.8.0"
+    "@github/markdownlint-github": "npm:0.8.1"
     markdownlint-cli2: "npm:0.22.1"
     markdownlint-rule-force-align-table-columns: "npm:0.1.1"
     markdownlint-rule-relative-links: "npm:5.1.0"
-    prettier: "npm:3.8.3"
+    prettier: "npm:3.8.4"
   languageName: unknown
   linkType: soft
 
