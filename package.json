@@ -13,10 +13,10 @@
     "validate": "bin/validate-plugins"
   },
   "devDependencies": {
-    "@github/markdownlint-github": "0.8.0",
-    "markdownlint-cli2": "0.22.1",
+    "@github/markdownlint-github": "0.8.2",
+    "markdownlint-cli2": "0.23.0",
     "markdownlint-rule-force-align-table-columns": "0.1.1",
     "markdownlint-rule-relative-links": "5.1.0",
-    "prettier": "3.8.3"
+    "prettier": "3.9.4"
   }
 }
