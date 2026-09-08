@@ -1,4 +1,3 @@
-
 # Annotated Examples
 
 Fragments of working formalization roadmaps, annotated to show how the 10-section schema, the 5-part milestone anatomy, and the mandated conventions show up in practice.
@@ -13,10 +12,10 @@ Primary source: `cboone/zhang-yeung-inequality/docs/plans/todo/2026-04-15-zhang-
 **Created:** 2026-04-15
 **Target:** Lean 4 / Mathlib 4
 **Paper:** Zhang & Yeung, "On Characterization of Entropy Function via
-  Information Inequalities," *IEEE TIT* 44(4), July 1998, pp. 1440-1452.
+Information Inequalities," _IEEE TIT_ 44(4), July 1998, pp. 1440-1452.
 **Source PDF:** `references/papers/zhangyeung1998.pdf`
 **Source transcription:** `references/transcriptions/zhangyeung1998.md`
-  (verified 2026-04-16)
+(verified 2026-04-16)
 
 **Resolved decisions:**
 
@@ -28,7 +27,7 @@ Primary source: `cboone/zhang-yeung-inequality/docs/plans/todo/2026-04-15-zhang-
 
 ## 1. Context
 
-The Zhang-Yeung inequality is the first known *non-Shannon-type*
+The Zhang-Yeung inequality is the first known _non-Shannon-type_
 information inequality. ...
 ```
 
@@ -109,9 +108,9 @@ Shannon's 1948 finite-alphabet characterization theorem. ...
   Z, U, paper's equation (21):
   Delta(Z, U | X, Y) <= (1/2) [I(X; Y) + I(X; Z, U) + I(Z; U | X)
   - I(Z; U | Y)], together with the dual (22) (via X <-> Y swap) and
-  the averaged corollary (23).
+    the averaged corollary (23).
 - **Theorem 4 (Shannon is incomplete):** Explicit witness function F
-  in Gamma_4 \ tilde{Gamma}_4, proving cl(Gamma*_n) != Gamma_n for
+  in Gamma_4 \ tilde{Gamma}\_4, proving cl(Gamma\*\_n) != Gamma_n for
   n >= 4.
 
 **Stretch (Theorem 5):**
@@ -134,12 +133,12 @@ Shannon's 1948 finite-alphabet characterization theorem. ...
 - `ZhangYeung/Theorem3.lean`: derive the main inequality.
 - Follow Section III. Two applications of Lemma 2 give
   `Delta(Z, U | X, Y) <= I(X; Y_1)` and `I(Z; U) - 2 I(Z; U | X) <=
-  I(X; X_1)`. Combine: `2 I(Z; U) - 3 I(Z; U | X) - I(Z; U | Y) <=
-  I(X; X_1, Y_1) + I(X_1; Y_1)`. Two distinct Shannon ingredients close
-  the chase: (a) *marginal equality* `I(X_1; Y_1) = I(X; Y)` (the
-  (X_1, Y_1, Z, U) marginal of q coincides with the (X, Y, Z, U)
-  marginal of p, per eq. 44); (b) *data processing* `I(X; X_1, Y_1) <=
-  I(X; Z, U)` via the Markov chain (X_1, Y_1) - (Z, U) - X under q.
+I(X; X_1)`. Combine: `2 I(Z; U) - 3 I(Z; U | X) - I(Z; U | Y) <=
+I(X; X_1, Y_1) + I(X_1; Y_1)`. Two distinct Shannon ingredients close
+  the chase: (a) _marginal equality_ `I(X_1; Y_1) = I(X; Y)` (the
+  (X*1, Y_1, Z, U) marginal of q coincides with the (X, Y, Z, U)
+  marginal of p, per eq. 44); (b) \_data processing* `I(X; X_1, Y_1) <=
+I(X; Z, U)` via the Markov chain (X_1, Y_1) - (Z, U) - X under q.
 - All steps are Shannon-type; the non-Shannon character enters only
   through the copy lemma.
 - Prove (21) as the headline theorem, derive (22) by the X <-> Y swap,
@@ -151,16 +150,16 @@ Shannon's 1948 finite-alphabet characterization theorem. ...
 - **Prelude promotion:** M2 left two private helpers in
   `ZhangYeung/CopyLemma.lean` ... [policy note omitted]
 - **Checkpoint:** `theorem zhangYeung ... : delta Z U X Y mu <= (1/2)
-  * (I[X : Y; mu] + I[X : (Z, U); mu] + I[Z : U | X; mu]
-  - I[Z : U | Y; mu])` with all hypotheses explicit; averaged
-  corollary follows mechanically, and the theorem test module builds.
+  - (I[X : Y; mu] + I[X : (Z, U); mu] + I[Z : U | X; mu]
+  * I[Z : U | Y; mu])` with all hypotheses explicit; averaged
+    corollary follows mechanically, and the theorem test module builds.
 ```
 
 **Mapped to the 5-part anatomy.**
 
 1. **Title and one-line summary.** "M3: Theorem 3." The heading level and the single-sentence deliverable summary together carry this.
 1. **Deliverables.** `ZhangYeung/Theorem3.lean` with the main inequality, its dual, and the averaged corollary. Plus the test module.
-1. **Why-now reasoning.** Implicit through the roadmap's dependency graph (M3 consumes the copy lemma from M2). The entry carries the *proof strategy* why-now: specifically, that the two applications of Lemma 2 plus Shannon basics close the chase, and that the non-Shannon character enters only through M2.
+1. **Why-now reasoning.** Implicit through the roadmap's dependency graph (M3 consumes the copy lemma from M2). The entry carries the _proof strategy_ why-now: specifically, that the two applications of Lemma 2 plus Shannon basics close the chase, and that the non-Shannon character enters only through M2.
 1. **Testing approach.** `ZhangYeungTest/Theorem3.lean`, independent-variable smoke test plus averaged-form-derivation test.
 1. **Checkpoint gate.** Exact theorem statement with all hypotheses explicit, averaged corollary follows mechanically, test module builds.
 

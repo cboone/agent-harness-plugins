@@ -1,4 +1,3 @@
-
 # Raw LaTeX in Pandoc Markdown
 
 Comprehensive reference for embedding raw LaTeX content in Pandoc Markdown documents. Covers fenced block syntax, inline raw spans, the `+raw_tex` extension, theorem environments, and common pitfalls. Based on the Pandoc User's Guide and R Markdown Cookbook.
@@ -36,6 +35,7 @@ The `=` before `latex` is critical. It tells Pandoc that this is raw content in 
 
 ````markdown
 <!-- WRONG: creates a syntax-highlighted code block, not raw LaTeX -->
+
 ```{latex}
 \begin{theorem}
 ...
@@ -43,6 +43,7 @@ The `=` before `latex` is critical. It tells Pandoc that this is raw content in 
 ```
 
 <!-- WRONG: same problem, just a different syntax for code highlighting -->
+
 ```latex
 \begin{theorem}
 ...
@@ -50,6 +51,7 @@ The `=` before `latex` is critical. It tells Pandoc that this is raw content in 
 ```
 
 <!-- CORRECT: the equals sign makes it raw LaTeX -->
+
 ```{=latex}
 \begin{theorem}
 ...
@@ -59,8 +61,8 @@ The `=` before `latex` is critical. It tells Pandoc that this is raw content in 
 
 The difference is fundamental:
 
-- `` ```{latex} `` and `` ```latex `` produce a `<pre><code class="latex">` block in HTML or a `\begin{Shaded}\begin{Highlighting}` block in LaTeX. The content is displayed as source code.
-- `` ```{=latex} `` produces raw LaTeX that is compiled by the LaTeX engine. The content is executed, not displayed.
+- ` ```{latex} ` and ` ```latex ` produce a `<pre><code class="latex">` block in HTML or a `\begin{Shaded}\begin{Highlighting}` block in LaTeX. The content is displayed as source code.
+- ` ```{=latex} ` produces raw LaTeX that is compiled by the LaTeX engine. The content is executed, not displayed.
 
 ### Block placement
 
@@ -94,15 +96,18 @@ The backtick-delimited content is the raw LaTeX command. The `{=latex}` attribut
 
 ```markdown
 <!-- Cross-references -->
+
 `\cref{sec:model}`{=latex}
 `\Cref{fig:architecture}`{=latex}
 `\eqref{eq:entropy}`{=latex}
 
 <!-- Inline formatting -->
+
 `\textsc{Small Caps Text}`{=latex}
 `\textsuperscript{1}`{=latex}
 
 <!-- Custom macros -->
+
 `\pspace`{=latex}
 `\aspace`{=latex}
 ```
@@ -125,11 +130,13 @@ With `+raw_tex` enabled, Pandoc passes through any LaTeX command it encounters (
 
 ```markdown
 <!-- With +raw_tex, this works without {=latex} fences -->
+
 \begin{definition}
 A password space is the set of all accepted strings.
 \end{definition}
 
 <!-- LaTeX commands in running text also pass through -->
+
 This is \textbf{bold} via raw LaTeX.
 ```
 
@@ -298,6 +305,7 @@ Inside a `{=latex}` block, everything is raw LaTeX. Pandoc syntax does not work.
 
 ````markdown
 <!-- WRONG: Pandoc Markdown inside raw LaTeX -->
+
 ```{=latex}
 \begin{theorem}
 This uses **bold** and [@citation].
@@ -305,6 +313,7 @@ This uses **bold** and [@citation].
 ```
 
 <!-- RIGHT: LaTeX syntax inside raw LaTeX -->
+
 ```{=latex}
 \begin{theorem}
 This uses \textbf{bold} and \cite{citation}.

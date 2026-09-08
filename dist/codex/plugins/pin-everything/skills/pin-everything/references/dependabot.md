@@ -54,27 +54,27 @@ updates:
 
 Add additional `- package-ecosystem:` blocks for whichever package ecosystems are present in the repo:
 
-| Ecosystem present | Detection                                       | Add block with `package-ecosystem:` |
-| ----------------- | ----------------------------------------------- | ----------------------------------- |
-| Cargo (Rust)      | `Cargo.toml`                                    | `cargo`                             |
-| Pip / uv (Python) | `pyproject.toml` or `requirements.txt`          | `pip`                               |
-| Bundler (Ruby)    | `Gemfile`                                       | `bundler`                           |
-| Go modules        | `go.mod`                                        | `gomod`                             |
-| Composer (PHP)    | `composer.json`                                 | `composer`                          |
-| Docker            | `Dockerfile`                                    | `docker`                            |
+| Ecosystem present | Detection                              | Add block with `package-ecosystem:` |
+| ----------------- | -------------------------------------- | ----------------------------------- |
+| Cargo (Rust)      | `Cargo.toml`                           | `cargo`                             |
+| Pip / uv (Python) | `pyproject.toml` or `requirements.txt` | `pip`                               |
+| Bundler (Ruby)    | `Gemfile`                              | `bundler`                           |
+| Go modules        | `go.mod`                               | `gomod`                             |
+| Composer (PHP)    | `composer.json`                        | `composer`                          |
+| Docker            | `Dockerfile`                           | `docker`                            |
 
 The same shape applies — weekly schedule, split groups, 10-PR cap, `commit-message` prefix.
 
 ## `versioning-strategy` Per Ecosystem
 
-| Ecosystem        | Strategy                                                                          |
-| ---------------- | --------------------------------------------------------------------------------- |
-| `npm`            | `versioning-strategy: increase` (preserves exact pins from step 6)                |
-| `cargo`          | _no strategy needed_ (cargo is exact-version-by-default for `=X.Y.Z` pins)        |
-| `pip`            | `versioning-strategy: increase` if you've pinned to `==X.Y.Z`; default otherwise  |
-| `bundler`        | _no strategy field_; uses the lockfile as the source of truth                     |
-| `gomod`          | _no strategy field_; uses `go.sum` as the source of truth                         |
-| `github-actions` | _no strategy field_; SHA pins with `# vX.Y.Z` comments are bumped one-for-one     |
+| Ecosystem        | Strategy                                                                         |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `npm`            | `versioning-strategy: increase` (preserves exact pins from step 6)               |
+| `cargo`          | _no strategy needed_ (cargo is exact-version-by-default for `=X.Y.Z` pins)       |
+| `pip`            | `versioning-strategy: increase` if you've pinned to `==X.Y.Z`; default otherwise |
+| `bundler`        | _no strategy field_; uses the lockfile as the source of truth                    |
+| `gomod`          | _no strategy field_; uses `go.sum` as the source of truth                        |
+| `github-actions` | _no strategy field_; SHA pins with `# vX.Y.Z` comments are bumped one-for-one    |
 
 ## What Dependabot Does Not Cover
 

@@ -177,7 +177,6 @@ After a successful rebase (with or without conflict resolution):
    If `git merge-base --is-ancestor` exits 0, the pre-rebase commit is an ancestor of the new HEAD, so the rebase was a no-op or a fast-forward and no force push is needed. If it exits non-zero, the original commits are no longer on the branch's history line, so the rebase rewrote history and any already-published copy of the branch must be replaced with a force push.
 
    Choose the push command based on three cases:
-
    - **No upstream** (fresh branch never pushed): no force needed.
 
      ```bash

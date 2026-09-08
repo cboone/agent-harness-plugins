@@ -13,7 +13,7 @@ Detect the project type, recommend appropriate linters and formatters, install t
 
 ### 1. Detect Project Type
 
-Scan for language and file-type markers using Glob. **Exclude `node_modules/`, `.yarn/`, `.lake/` (Lean dependency/build directory, including `.lake/packages/**`), and other dependency directories from all searches** to avoid false positives from vendored code.
+Scan for language and file-type markers using Glob. **Exclude `node_modules/`, `.yarn/`, `.lake/` (Lean dependency/build directory, including `.lake/packages/**`), and other dependency directories from all searches\*\* to avoid false positives from vendored code.
 
 Use both files and directories as signals:
 

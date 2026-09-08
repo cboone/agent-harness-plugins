@@ -70,32 +70,11 @@ Use this preset when the project contains `references/papers/`, `references/extr
 
 Create `cspell.jsonc` in the project root:
 
-```jsonc
+````jsonc
 {
   "version": "0.2",
   "language": "en",
-  "ignorePaths": [
-    "node_modules/",
-    "vendor/",
-    ".venv/",
-    "dist/",
-    "build/",
-    "coverage/",
-    "*.lock",
-    "package-lock.json",
-    "pnpm-lock.yaml",
-    "yarn.lock",
-    "bun.lock",
-    "go.sum",
-    ".git",
-    ".git/",
-    ".lake/**",
-    "papers/shared/templates/**",
-    "references/papers/**",
-    "references/papers.bib",
-    "references/extractions/**",
-    "references/transcriptions/**",
-  ],
+  "ignorePaths": ["node_modules/", "vendor/", ".venv/", "dist/", "build/", "coverage/", "*.lock", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "go.sum", ".git", ".git/", ".lake/**", "papers/shared/templates/**", "references/papers/**", "references/papers.bib", "references/extractions/**", "references/transcriptions/**"],
   "dictionaryDefinitions": [
     {
       "name": "project-words",
@@ -114,7 +93,7 @@ Create `cspell.jsonc` in the project root:
     "/\\\\[a-zA-Z]+/g", // LaTeX commands
   ],
 }
-```
+````
 
 Create `cspell-words.txt` with the baseline Lean/math vocabulary, then append author surnames from citations the project actually uses (usually from `references/papers.bib`):
 

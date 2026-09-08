@@ -58,7 +58,7 @@ Use this preset when the project contains `references/papers/`, `references/extr
 
 Create `.markdownlint-cli2.jsonc` in the project root:
 
-```jsonc
+````jsonc
 {
   "config": {
     // Pandoc and LaTeX source files are author-wrapped, not formatter-wrapped.
@@ -91,21 +91,9 @@ Create `.markdownlint-cli2.jsonc` in the project root:
     // Dense academic tables are acceptable.
     "MD060": false,
   },
-  "ignores": [
-    "node_modules/",
-    "vendor/",
-    ".venv/",
-    "dist/",
-    "build/",
-    "CHANGELOG.md",
-    ".lake/**",
-    "references/papers/**",
-    "references/papers.bib",
-    "references/extractions/**",
-    "references/transcriptions/**",
-  ],
+  "ignores": ["node_modules/", "vendor/", ".venv/", "dist/", "build/", "CHANGELOG.md", ".lake/**", "references/papers/**", "references/papers.bib", "references/extractions/**", "references/transcriptions/**"],
 }
-```
+````
 
 Use this preset instead of layering ad-hoc markdownlint disables throughout project-authored Pandoc sources. The bundled ignores exclude third-party papers, OCR or extraction outputs, and verbatim transcriptions; project-authored Pandoc sources outside those reference-material paths are linted with the relaxed rules above.
 

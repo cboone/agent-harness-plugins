@@ -83,13 +83,13 @@ Present a table with all detected tools and their status:
 
 Status values:
 
-| Status           | Meaning                                                               |
-| ---------------- | --------------------------------------------------------------------- |
-| Up to date       | All checks pass; nothing to do                                        |
-| Needs update     | Files exist but fail some checks                                      |
-| Partially set up | Some expected files from a detected tool are missing entirely         |
-| Not detected     | Tool was never used (run bootstrap-project or the individual skill)   |
-| Not applicable   | Tool does not apply to this project type                              |
+| Status           | Meaning                                                             |
+| ---------------- | ------------------------------------------------------------------- |
+| Up to date       | All checks pass; nothing to do                                      |
+| Needs update     | Files exist but fail some checks                                    |
+| Partially set up | Some expected files from a detected tool are missing entirely       |
+| Not detected     | Tool was never used (run bootstrap-project or the individual skill) |
+| Not applicable   | Tool does not apply to this project type                            |
 
 Items with status "Not detected" and "Not applicable" are informational only and are not actionable in this command.
 
