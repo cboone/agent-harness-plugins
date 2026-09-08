@@ -347,11 +347,11 @@ If processing was partial or failed, include failure details, the remaining requ
 Status: Partial
 Head SHA: `abc1234`
 
-| File            | Category | Outcome  | Action                        |
-| --------------- | -------- | -------- | ----------------------------- |
-| `src/foo.ts:42` | Valid    | Resolved | Fixed null check              |
-| `src/bar.ts:7`  | Outdated | Failed   | Reply failed                  |
-| `lib/baz.ts:9`  | Nitpick  | Pending  | Resolution still required     |
+| File            | Category | Outcome  | Action                    |
+| --------------- | -------- | -------- | ------------------------- |
+| `src/foo.ts:42` | Valid    | Resolved | Fixed null check          |
+| `src/bar.ts:7`  | Outdated | Failed   | Reply failed              |
+| `lib/baz.ts:9`  | Nitpick  | Pending  | Resolution still required |
 
 ### Failure Details
 

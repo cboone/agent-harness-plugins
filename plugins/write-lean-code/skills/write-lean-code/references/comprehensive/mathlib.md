@@ -1,4 +1,3 @@
-
 # Mathlib Conventions
 
 Conventions and patterns for using Mathlib4 effectively, incorporating the Mathlib community documentation guide. For finding lemmas, navigating the module hierarchy, and search strategies, see `mathlib-api-discovery.md`.
@@ -288,9 +287,9 @@ A heartbeat is Lean's deterministic proxy for "work done" (roughly 1000 small ke
 
 ### Split first, optimize second
 
-The most effective fix for a bloated declaration is almost always to **extract sub-lemmas**, not to tweak tactics. Because `maxHeartbeats` is *per-declaration*, splitting one giant proof into N smaller named lemmas gives each piece its own fresh 200000-heartbeat budget. The combiner then invokes N pre-compiled closed terms, which elaborate nearly for free.
+The most effective fix for a bloated declaration is almost always to **extract sub-lemmas**, not to tweak tactics. Because `maxHeartbeats` is _per-declaration_, splitting one giant proof into N smaller named lemmas gives each piece its own fresh 200000-heartbeat budget. The combiner then invokes N pre-compiled closed terms, which elaborate nearly for free.
 
-Empirically validated result: on a proof with two declarations carrying `1600000` (8×) and `2400000` (12×) bumps, extracting eleven per-case facts into their own `private lemma`s dropped *both* declarations to the default `200000`, eliminating the bumps entirely. Build time fell from ~70s to ~3.5s. The file grew by ~90 lines of signatures but became more readable and reusable.
+Empirically validated result: on a proof with two declarations carrying `1600000` (8×) and `2400000` (12×) bumps, extracting eleven per-case facts into their own `private lemma`s dropped _both_ declarations to the default `200000`, eliminating the bumps entirely. Build time fell from ~70s to ~3.5s. The file grew by ~90 lines of signatures but became more readable and reusable.
 
 **Extraction prompts to ask when a declaration is over budget:**
 

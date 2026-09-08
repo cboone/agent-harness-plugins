@@ -13,7 +13,7 @@ See the [marketplace install instructions](../../README.md#install).
 
 Provides the document-structure conventions for multi-milestone formalization roadmaps: a 10-section schema and 5-part milestone anatomy designed for long-lived mechanization plans where scope resolutions are frozen in-document and tests land in parallel with proofs.
 
-Sibling to `write-math` (which governs *mathematical prose*), `write-formalization-roadmap` governs *document structure* for roadmap planning files. Applies regardless of which proof assistant or host library the roadmap targets.
+Sibling to `write-math` (which governs _mathematical prose_), `write-formalization-roadmap` governs _document structure_ for roadmap planning files. Applies regardless of which proof assistant or host library the roadmap targets.
 
 Activates when: writing or editing a new roadmap under `docs/plans/todo/` that lays out a multi-milestone proof project, reviewing an existing roadmap for structural drift or missing conventions, updating a roadmap when scope or milestones change, deciding whether a planning document should be a roadmap or a single-implementation plan, spinning out a per-milestone plan file from a roadmap entry, or auditing a milestone entry for the five required parts.
 

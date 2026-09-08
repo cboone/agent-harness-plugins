@@ -1,4 +1,3 @@
-
 # Reader-Centered Mathematical Writing
 
 Comprehensive reference for writing mathematics that serves the reader. Covers audience calibration, examples and intuition, signposting, assertion status, handling definitions, recalling earlier material, and minimizing complexity. Based on Goldreich, Pak, Lee, Cohn, Tsitsiklis, Tao, Poonen, and MIT course notes.
@@ -17,7 +16,7 @@ Goldreich emphasizes: assume the reader is intelligent but knows only the standa
 
 ### Calibrate detail to the reader's likely knowledge
 
-Audience calibration determines *who* you are writing for. Detail calibration determines *how much* you write about each piece of the argument. These are separate decisions, and the second one is easier to get wrong, because authors tend to overexpose the material they know best and skim the material they consider obvious.
+Audience calibration determines _who_ you are writing for. Detail calibration determines _how much_ you write about each piece of the argument. These are separate decisions, and the second one is easier to get wrong, because authors tend to overexpose the material they know best and skim the material they consider obvious.
 
 **Standard results get brief treatment.** If a lemma is well known to experts in the field and already in the literature, do not reprove it or work through its consequences in detail. A one-sentence reminder and a precise citation is enough:
 
@@ -119,7 +118,7 @@ Poonen recommends using formatting (definition environments, boxes, extra vertic
 
 When a term is defined for the first time, mark it with italics or boldface. This convention is nearly universal in mathematics, and readers rely on it. If they see an unfamiliar term in roman type, they assume it was defined earlier and they missed it; if they see it in italics, they know this is the definition.
 
-**Pattern:** "A group $G$ is called *residually finite* if for every non-identity element $g \in G$, there exists a homomorphism $\varphi$ from $G$ to a finite group such that $\varphi(g) \neq e$."
+**Pattern:** "A group $G$ is called _residually finite_ if for every non-identity element $g \in G$, there exists a homomorphism $\varphi$ from $G$ to a finite group such that $\varphi(g) \neq e$."
 
 ### Distinguishing standard from new
 
@@ -153,7 +152,7 @@ When introducing a definition, give two complementary descriptions: one formal a
 
 State definitions at the start of a line or sentence, never buried mid-sentence. The reader scanning for a definition should be able to find it by looking at sentence beginnings and environment labels.
 
-**Good:** "We say that a metric space is *proper* if every closed bounded subset is compact."
+**Good:** "We say that a metric space is _proper_ if every closed bounded subset is compact."
 **Poor:** "Since every closed bounded subset of a proper metric space is compact, we can apply..."
 
 The second example uses "proper" before defining it, and the definition is syntactically subordinate to another clause.

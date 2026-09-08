@@ -8,20 +8,16 @@ Use this template for `.markdownlint-cli2.jsonc`.
     "default": true,
     "MD013": false,
     "MD024": {
-      "siblings_only": true
+      "siblings_only": true,
     },
     "MD033": {
-      "allowed_elements": ["br", "details", "summary", "sub", "sup"]
+      "allowed_elements": ["br", "details", "summary", "sub", "sup"],
     },
     "MD046": {
-      "style": "fenced"
-    }
+      "style": "fenced",
+    },
   },
-  "ignores": [
-    ".lake/**",
-    "references/extractions/**",
-    "references/transcriptions/**"
-  ]
+  "ignores": [".lake/**", "references/extractions/**", "references/transcriptions/**"],
 }
 ```
 

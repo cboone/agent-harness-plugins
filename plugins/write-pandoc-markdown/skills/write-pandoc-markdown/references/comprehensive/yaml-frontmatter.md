@@ -1,4 +1,3 @@
-
 # YAML Frontmatter for Academic Papers
 
 Comprehensive reference for configuring Pandoc documents through YAML metadata blocks. Covers standard academic fields, template variables, header includes, escaping rules, and multi-block metadata. Based on the Pandoc User's Guide.
@@ -385,16 +384,13 @@ A Pandoc document may contain more than one YAML metadata block. Later blocks ov
 title: "My Paper"
 author: Alice
 ---
-
 Some content...
-
 ---
 date: "2025-01-15"
 keywords:
   - security
   - passwords
 ---
-
 More content...
 ```
 
