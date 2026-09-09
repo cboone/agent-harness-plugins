@@ -71,23 +71,22 @@ jobs:
   test-scrut:
     name: Scrut tests
     uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
-    # scrut-env below is a literal block: every line is parsed as KEY=value and a
-    # comment inside it is rejected, so the explanation lives out here.
+    # Every value below must start with "./". scrut runs each testcase from a
+    # temporary directory, and the reusable workflow rewrites only values
+    # matching ./* into absolute paths before exporting them. A bare "." is left
+    # untouched, so REPO_ROOT=. pointed at that temp dir: binaries still ran, but
+    # `cd "${REPO_ROOT}"` landed nowhere useful and the repository-wide grep
+    # guards scanned an empty directory and passed without checking anything.
     #
-    # COMPUTE_CATALOG_STATE_BIN, LIST_SHELL_SCRIPTS_BIN and REPO_ROOT are
-    # absolute while the entries around them are relative. scrut runs each
-    # testcase from a temporary directory, so a relative path resolves against
-    # that temp dir rather than the checkout. The repo-tooling suite both invokes
-    # those binaries and cds to REPO_ROOT for repository-wide grep guards; a
-    # relative value left the guards scanning an empty directory and passing
-    # without checking anything.
+    # scrut-env is a literal block whose every line is parsed as KEY=value, and a
+    # comment inside it fails the job, which is why this note lives out here.
     with:
       scrut-env: |
         COMPOSE_ISSUE_PROMPT_BIN=./plugins/create-worktree-from-issue/scripts/compose-issue-prompt
         COPILOT_REVIEW_DATA_DIR=./tests/data/copilot-reviews
-        COMPUTE_CATALOG_STATE_BIN=${{ github.workspace }}/bin/compute-catalog-state
-        LIST_SHELL_SCRIPTS_BIN=${{ github.workspace }}/bin/list-shell-scripts
-        REPO_ROOT=${{ github.workspace }}
+        COMPUTE_CATALOG_STATE_BIN=./bin/compute-catalog-state
+        LIST_SHELL_SCRIPTS_BIN=./bin/list-shell-scripts
+        REPO_ROOT=./
         CREATE_WORKTREE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree/scripts/launch-workmux
         CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree-from-issue/scripts/launch-workmux
         GIT_WORKTREE_STUB_BIN=./tests/fixtures/git-worktree-stub
