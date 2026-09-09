@@ -133,18 +133,21 @@ Hook commands are executed by the hooks system directly, so the script path can 
 
 ## Skill Integration
 
-When a SKILL.md instructs Claude to run a script via the Bash tool, always use `bash` as the command prefix:
+When a SKILL.md instructs Claude to run a script via the Bash tool, write the path with `${CLAUDE_PLUGIN_ROOT}` and always use `bash` as the command prefix:
 
 ```bash
-bash "/absolute/path/to/scripts/script-name" arg1 arg2
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/script-name" arg1 arg2
 ```
 
-**Why:** Claude Code's Bash tool permission allowlist matches on the command token (the first word of the command). If the script path is used directly, the resolved absolute path — including version-specific segments like `.../1.2.0/scripts/...` — becomes the command token. This breaks allowlist entries whenever the plugin version changes. Using `bash` as the prefix makes the command token stable: users add `Bash(bash:*)` once and it covers all script invocations permanently.
+**How the path resolves:** `CLAUDE_PLUGIN_ROOT` is *not* a shell environment variable during skill execution; running `echo "${CLAUDE_PLUGIN_ROOT}"` from the Bash tool prints nothing. Instead, Claude Code substitutes it as **prompt text** when the skill loads, replacing it with the installed plugin's absolute, version-correct root before the file reaches the model. The agent therefore sees a ready-to-use absolute path and needs no locating step.
 
-In SKILL.md files, instruct Claude to:
+**Never** instruct Claude to find the script by globbing for `**/plugin-name/scripts/script-name`. That shape describes the repository layout, not the installed one: the plugin cache interposes a version directory (`.../plugin-name/1.2.0/scripts/...`), so the glob cannot match the installed copy. It silently matches other copies instead (a marketplace checkout, a `dist/` build artifact, a stale backup), with nothing to choose between them.
 
-1. Locate the script path at the start of the session (e.g., by globbing for `**/plugin-name/scripts/script-name`)
-1. Invoke it with `bash` followed by the **quoted absolute path** and arguments
+**Why the `bash` prefix:** Claude Code's Bash tool permission rules match the whole command text. If the script path were the command itself, the version-specific segment (`.../1.2.0/scripts/...`) would sit at the front of every rule and break it on each release. Prefixing with `bash` keeps the leading token stable, so a rule like `Bash(bash "*/script-name" *)` keeps working across versions.
+
+**Caveat for SKILL.md prose:** the substitution is a global, unconditional text replacement, so a SKILL.md cannot *document* the literal variable; every occurrence is rewritten, including inside fenced code blocks. Use the literal only where substitution is the intent. To describe the variable itself, put that prose in a `references/` file, which is read from disk and left untouched.
+
+Other harnesses differ: Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. For a script-backed skill that must run there too, add a short fallback telling Claude that an unsubstituted path still begins with `$` rather than `/`, and to locate the script with `**/plugin-name/**/scripts/script-name` (note the `**` between the plugin name and `scripts`, which tolerates the version segment), preferring a match inside the harness's own installed-plugin directory.
 
 ## Notes
 
