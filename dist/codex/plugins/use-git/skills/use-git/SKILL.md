@@ -11,7 +11,7 @@ Conventions for running git and GitHub CLI (`gh`) commands in Claude Code. These
 
 ## Core Principles
 
-1. **Tmpfiles for long content**: Write long strings (PR bodies, issue bodies, review replies) to a tmpfile via the Write tool, then pass `--body-file`. Keeps Bash commands short and avoids permission prompts. Always generate the path with `mktemp -u` so the file does not already exist, and never batch the Write call together with the `gh` call that reads it.
+1. **Tmpfiles for long content**: Write long strings (PR bodies, issue bodies, review replies) to a tmpfile via the Write tool, then pass `--body-file`. Keeps Bash commands short and avoids permission prompts. Generate the path with `mktemp -u` so the file does not already exist, and never batch the Write call together with the `gh` call that reads it. Both rules are scoped to this pattern, which carries non-secret content; `references/tmpfile-pattern.md` explains why `-u` is the wrong choice for security-sensitive temp files.
 1. **HEREDOCs for short content**: Commit messages use `$(cat << 'EOF' ... EOF)`. Single-quoted `'EOF'` prevents variable expansion.
 1. **GPG sign every commit**: Always `git commit -S`. The sandbox cannot access GPG keys, so resort immediately to the unsandboxed command.
 1. **Never amend**: Always create new commits. Pre-commit hook failures mean the commit did not happen, so `--amend` would modify the wrong commit.
