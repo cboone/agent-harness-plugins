@@ -112,6 +112,25 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/n
 []
 ```
 
+## Reviews with an unusable author are skipped, not fatal
+
+A null, absent, or malformed `user` yields no login match rather than aborting the run over one review.
+
+```scrut
+$ echo '[{"id":1,"user":null,"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"### hi"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews
+[]
+```
+
+```scrut
+$ echo '[{"id":1,"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"### hi"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews
+[]
+```
+
+```scrut
+$ echo '[{"id":1,"user":"ghost","state":"COMMENTED","submitted_at":"x","html_url":"y","body":"### hi"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews
+[]
+```
+
 ## Empty review list
 
 ```scrut

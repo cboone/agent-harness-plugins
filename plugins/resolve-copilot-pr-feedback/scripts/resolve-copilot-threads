@@ -422,7 +422,15 @@ function do_parse_reviews() {
 
       [
         .[]
-        | select(.user.login as $login | $direct_logins | any(. == $login))
+        # Safe access, matching the thread path. A null or absent user already
+        # yields no match, but a malformed non-object user would otherwise abort
+        # the whole run rather than skipping one review.
+        #
+        # Only the direct logins apply here. The github-actions[bot] heuristic
+        # the thread fetch uses keys on a comment body opening with a severity
+        # tag, and review bodies open with a verdict heading instead, so it has
+        # nothing to match on.
+        | select((.user.login? // "") as $login | $direct_logins | any(. == $login))
         | select((.body // "") != "")
         | (.body | suppressed_slice) as $slice
         | {

@@ -171,7 +171,7 @@ Record the `OWNER`, `REPO`, and `PR_NUMBER` values used for the fetch. This esta
 ```
 
 - **`location`**: Uses the first non-null of `line`, `originalLine`, `startLine`, `originalStartLine`. If all line fields are null, reports `path:(no-line)`.
-- **Copilot detection**: Matches author logins `copilot-pull-request-reviewer`, `copilot-pull-request-reviewer[bot]`, `copilot`, `github-copilot[bot]`, and `github-actions[bot]` (with severity tag verification for the last). GraphQL and REST report the same Copilot account differently, without and with the `[bot]` suffix respectively, so both forms are matched and the same list serves `fetch` and `fetch-reviews`.
+- **Copilot detection**: Matches author logins `copilot-pull-request-reviewer`, `copilot-pull-request-reviewer[bot]`, `copilot`, and `github-copilot[bot]`, plus `github-actions[bot]` when the comment body opens with a severity tag. Both `[bot]`-suffixed and unsuffixed forms are listed because GraphQL and REST report the same Copilot account differently, so one list serves both commands. The `github-actions[bot]` rule is the exception: it applies to `fetch` only. It keys on a comment body opening with a severity tag, and review bodies open with a verdict heading, so `fetch-reviews` has nothing to match on and uses the direct logins alone.
 
 An empty array `[]` means no unresolved Copilot threads remain.
 
