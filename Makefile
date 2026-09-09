@@ -1,5 +1,17 @@
 SCRUT_TEST_DIR := tests/scrut/
 
+# Ambient variables the launcher scripts and stubs read. Unset them so results do
+# not depend on the developer's shell; every testcase that needs one sets it
+# explicitly on its own env line. See issue #330.
+#
+# This list is maintained by hand: add an entry whenever a launcher script or a
+# fixture under tests/fixtures/ starts reading a new variable, or the suite
+# silently becomes sensitive to the developer's environment again.
+SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
+	-u WORKMUX_LAUNCH_WAIT_SECONDS -u WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS \
+	-u STUB_CAPTURE_TERM -u STUB_CAPTURE_TMUX -u STUB_GIT_WORKTREE_PORCELAIN \
+	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES
+
 # Every scrut test resolves the script or fixture it exercises through one of
 # these variables. Defining them once keeps the test and update targets from
 # drifting apart, and .github/workflows/ci.yml passes the same list to the
@@ -67,10 +79,10 @@ build:
 
 test-scrut:
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }
-	$(SCRUT_ENV) scrut --shell bash test "$(SCRUT_TEST_DIR)"
+	env $(SCRUT_UNSET) $(SCRUT_ENV) scrut --shell bash test "$(SCRUT_TEST_DIR)"
 
 test-scrut-update:
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }
-	$(SCRUT_ENV) scrut --shell bash update --replace --assume-yes "$(SCRUT_TEST_DIR)"
+	env $(SCRUT_UNSET) $(SCRUT_ENV) scrut --shell bash update --replace --assume-yes "$(SCRUT_TEST_DIR)"
 
 test-all: lint validate test-scrut
