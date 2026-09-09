@@ -223,7 +223,7 @@ For **Lean projects**, scan `.github/workflows/*.yml` for the `leanprover/lean-a
 | swiftformat   | `brew install swiftformat` (macOS runner)                                                                                 |
 | checkbashisms | `apt-get install devscripts` (Ubuntu runner)                                                                              |
 | shellharden   | `cargo install --locked --version 4.3.2 shellharden` (Ubuntu runner)                                                      |
-| cargo-deny    | `taiki-e/install-action@c3ec0de9ae7f1019cea21aa96aa0a895b9552063 # v2.87.9` (with `tool: cargo-deny`)                    |
+| cargo-deny    | `taiki-e/install-action@c3ec0de9ae7f1019cea21aa96aa0a895b9552063 # v2.87.9` (with `tool: cargo-deny`)                     |
 | typos         | `crate-ci/typos@d43b6c087ac471e2ea7b8af622ff15f05c0c365b # v1.50.1`                                                       |
 | hadolint      | `hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0`                                              |
 | actionlint    | `raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0`                                              |
