@@ -248,7 +248,7 @@ The title rules below are this skill's default, not an override. They yield to a
 
    When such a workflow exists, read the commitlint config it uses and follow its `type-enum`, `scope-enum`, `subject-case`, and `header-max-length` values rather than the defaults below.
 
-1. **Project agent config states a PR title format.** Read `CLAUDE.md`, `AGENTS.md`, and `.github/copilot-instructions.md` in the repository root, and honor any user-level instructions already present in context. If they specify a PR title format, follow it.
+1. **Project agent config states a PR title format.** Read whichever of these exist: `CLAUDE.md` and `AGENTS.md` in the repository root, and `copilot-instructions.md` under `.github/`. Any of them may be absent, which is normal and not an error, and `CLAUDE.md` is often a symlink to `AGENTS.md`, so read the target rather than reporting a duplicate. Also honor any user-level instructions already present in context. If any of them specify a PR title format, follow it.
 
 1. **Merged PR titles are consistent.** As a fallback:
 
