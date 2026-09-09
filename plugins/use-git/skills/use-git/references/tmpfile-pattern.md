@@ -6,8 +6,9 @@ Use tmpfiles when passing long content to git or `gh` CLI commands. This keeps B
 
 - PR bodies (`gh pr create --body-file`)
 - Issue bodies (`gh issue create --body-file`)
+- Release notes (`gh release create --notes-file`)
 - Review replies (script `--body-file` flags)
-- Any `gh` subcommand that accepts `--body-file` and the content is more than a few lines
+- Any `gh` subcommand that reads content from a file flag, such as `--body-file` or `--notes-file`, when the content runs to more than a few lines
 
 ## Three-Step Workflow
 
@@ -32,7 +33,7 @@ Use the Write tool (not `echo` or `cat`) to write the full content to the path r
 
 ### 3. Pass `--body-file` to the command
 
-Run the `gh` command with `--body-file` pointing to the path returned by `mktemp -u` (shown as `TMPFILE` below), in a **separate message** issued only after the Write tool has returned:
+Run the `gh` command with `--body-file` (or `--notes-file`, for `gh release create`) pointing to the path returned by `mktemp -u` (shown as `TMPFILE` below), in a **separate message** issued only after the Write tool has returned:
 
 ```bash
 gh pr create --title "Add user authentication" --body-file TMPFILE
