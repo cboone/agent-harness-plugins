@@ -1,0 +1,12 @@
+[
+  {
+    "id": 4986975814,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-09T12:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-4986975814",
+    "body": "## Pull request overview\n\nCopilot reviewed 13 out of 13 changed files in this pull request and generated no new comments.\n\n\n\n\n<details>\n<summary>Suppressed comments (2)</summary>\n\n**src/ring_race.zig:395**\n* The tests for `valid()` currently assert that a window of only padding (`{0}`) is valid. If `valid()` rejects all-padding windows (so `validated` can’t be incremented without observing at least one writer-produced sample), the tests should be updated accordingly to keep the harness’s overlap signal meaningful.\n```\ntest \"a window of consecutive samples behind a zero pad is valid\" {\n    try testing.expect(valid(&[_]f32{ 0, 0, 1, 2, 3 }));\n    try testing.expect(valid(&[_]f32{ 7, 8, 9 }));\n    try testing.expect(valid(&[_]f32{0}));\n    try testing.expect(valid(&[_]f32{}));\n```\n**src/ring_race.zig:378**\n* `valid()` currently returns true for a window that is entirely padding (all zeros). That makes `Counters.validated`/the overlap check weaker than the surrounding comments imply, because a reader could \"validate\" a window that carried no sample the writer produced (e.g. if the written() gate regressed or indexing broke). Treat an all-zero window as invalid so \"validated\" always implies at least one non-zero sample was observed.\n\nThis issue also appears on line 391 of the same file.\n```\nfn valid(window: []const f32) bool {\n    var index: usize = 0;\n    while (index < window.len and window[index] == 0) index += 1;\n\n    while (index + 1 < window.len) : (index += 1) {\n```\n</details>\n\n\n"
+  }
+]

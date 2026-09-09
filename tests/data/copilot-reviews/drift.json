@@ -1,0 +1,12 @@
+[
+  {
+    "id": 9999999999,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-09T12:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-9999999999",
+    "body": "### 🔵 Needs a closer look\n\nA hypothetical future layout in which Copilot stops using bold `path:line` headings.\n\n<details>\n<summary>Review details</summary>\n\n### Suppressed comments (1)\n\n- src/example.ts, line 42: the finding prose now lives in a plain list item\n  instead of under a bold heading, so the structured parse finds nothing.\n\n- **Files reviewed:** 3/3 changed files\n- **Comments generated:** 0 new\n- **Review effort level:** Lite\n\n</details>\n"
+  }
+]

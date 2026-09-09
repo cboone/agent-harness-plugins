@@ -51,9 +51,11 @@ jobs:
     with:
       scrut-env: |
         COMPOSE_ISSUE_PROMPT_BIN=./plugins/create-worktree-from-issue/scripts/compose-issue-prompt
+        COPILOT_REVIEW_DATA_DIR=./tests/data/copilot-reviews
         CREATE_WORKTREE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree/scripts/launch-workmux
         CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree-from-issue/scripts/launch-workmux
         GIT_WORKTREE_STUB_BIN=./tests/fixtures/git-worktree-stub
+        RESOLVE_COPILOT_THREADS_BIN=./plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads
         TMUX_STUB_BIN=./tests/fixtures/tmux-stub
         UNIX_SOCKET_FIXTURE_BIN=./tests/fixtures/create-unix-socket
         WORKMUX_STUB_BIN=./tests/fixtures/workmux-stub
