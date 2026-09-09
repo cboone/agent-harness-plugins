@@ -45,7 +45,7 @@ Claude Code replaces the plugin-root placeholder with the installed plugin's abs
 
 **If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. In that case locate the script with `**/resolve-copilot-pr-feedback/**/scripts/resolve-copilot-threads`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
 
-In the examples below, `resolve-copilot-threads` is shorthand for the full **quoted path** shown above. Always invoke it via `bash` followed by that quoted path.
+The examples below abbreviate that path to just `resolve-copilot-threads` for readability. They are not literal commands: expand the abbreviation when you run one, so every invocation is `bash`, then the **double-quoted** absolute path, then the arguments shown.
 
 ## CRITICAL REQUIREMENTS
 
