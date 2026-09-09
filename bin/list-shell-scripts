@@ -13,15 +13,21 @@
 # twice and cannot be fixed in place.
 set -euo pipefail
 
+# Resolve the repository from this script's own location rather than the caller's
+# working directory, so `git ls-files` works no matter where the script is run
+# from. scrut, for one, executes each testcase in a temporary directory.
+REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly REPO_ROOT
+
 function is_bash_script() {
   local file="${1}"
 
-  if [[ ! -x "${file}" || -d "${file}" ]]; then
+  if [[ ! -x "${REPO_ROOT}/${file}" || -d "${REPO_ROOT}/${file}" ]]; then
     return 1
   fi
 
   local first_line
-  IFS= read -r first_line < "${file}" || true
+  IFS= read -r first_line < "${REPO_ROOT}/${file}" || true
   [[ "${first_line}" == '#!'*bash* ]]
 }
 
@@ -37,7 +43,7 @@ function main() {
     fi
     # --others --exclude-standard adds new, not-yet-committed scripts so a local
     # `make lint` covers them before they ever reach CI.
-  done < <(git ls-files -z --cached --others --exclude-standard)
+  done < <(git -C "${REPO_ROOT}" ls-files -z --cached --others --exclude-standard)
 }
 
 main

@@ -74,10 +74,17 @@ jobs:
     with:
       scrut-env: |
         COMPOSE_ISSUE_PROMPT_BIN=./plugins/create-worktree-from-issue/scripts/compose-issue-prompt
-        COMPUTE_CATALOG_STATE_BIN=./bin/compute-catalog-state
         COPILOT_REVIEW_DATA_DIR=./tests/data/copilot-reviews
-        LIST_SHELL_SCRIPTS_BIN=./bin/list-shell-scripts
-        REPO_ROOT=.
+        # Absolute, unlike the relative entries around them: scrut runs each
+        # testcase from a temporary directory, so a relative path here resolves
+        # against that temp dir rather than the checkout. The repo-tooling suite
+        # both invokes these binaries and `cd`s to REPO_ROOT to run
+        # repository-wide grep guards, and a relative value would leave those
+        # guards scanning an empty directory and passing without checking
+        # anything.
+        COMPUTE_CATALOG_STATE_BIN=${{ github.workspace }}/bin/compute-catalog-state
+        LIST_SHELL_SCRIPTS_BIN=${{ github.workspace }}/bin/list-shell-scripts
+        REPO_ROOT=${{ github.workspace }}
         CREATE_WORKTREE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree/scripts/launch-workmux
         CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree-from-issue/scripts/launch-workmux
         GIT_WORKTREE_STUB_BIN=./tests/fixtures/git-worktree-stub

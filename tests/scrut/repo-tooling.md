@@ -44,9 +44,12 @@ rejected
 `dist/` holds byte-identical copies of scripts already listed from `plugins/`,
 so linting them would report every finding twice.
 
+Reported alongside the total so a run that lists nothing at all cannot pass this
+as a vacuous zero.
+
 ```scrut
-$ cd "${REPO_ROOT}" && "${LIST_SHELL_SCRIPTS_BIN}" | grep -c '^dist/' || true
-0
+$ "${LIST_SHELL_SCRIPTS_BIN}" | awk 'BEGIN {d=0} /^dist\// {d++} END {print "dist=" d, "total>10=" (NR>10 ? "yes" : "no")}'
+dist=0 total>10=yes
 ```
 
 ## The shell script list reaches scripts under skill references
@@ -55,14 +58,15 @@ The previous `plugins/*/scripts/*` lint glob never reached this 33 KB script,
 and widening it by hand would have swept in a sibling `.yml`.
 
 ```scrut
-$ cd "${REPO_ROOT}" && "${LIST_SHELL_SCRIPTS_BIN}" | grep -q 'pin-everything/skills/pin-everything/references/scripts/version-audit-template' && echo found
+$ "${LIST_SHELL_SCRIPTS_BIN}" | grep -q 'pin-everything/skills/pin-everything/references/scripts/version-audit-template' && echo found
 found
 ```
 
 ## The shell script list contains only Bash scripts
 
 ```scrut
-$ cd "${REPO_ROOT}" && "${LIST_SHELL_SCRIPTS_BIN}" | while IFS= read -r f; do head -n 1 "${f}" | grep -q bash || echo "not bash: ${f}"; done
+$ cd "${REPO_ROOT}" && "${LIST_SHELL_SCRIPTS_BIN}" | while IFS= read -r f; do head -n 1 "${f}" | grep -q bash || echo "not bash: ${f}"; done; echo done
+done
 ```
 
 ## No angle-bracket placeholder is padded into a shell redirect
@@ -76,7 +80,10 @@ Checks every prose surface, not just `plugins/`: the repo-local `check-versions`
 skill carried two of these too, and a guard scoped to `plugins/` missed them.
 `docs/plans/done/` is excluded as a historical archive.
 
+The scanned count is reported as a yes/no so an empty scan, which would make the
+zero meaningless, fails the test instead of passing it.
+
 ```scrut
-$ cd "${REPO_ROOT}" && grep -rlE '< [a-z][a-z0-9-]+ >' plugins/ .claude/ .github/ README.md AGENTS.md 2>/dev/null | wc -l | tr -d ' '
-0
+$ cd "${REPO_ROOT}" && corrupted="$(grep -rlE '< [a-z][a-z0-9-]+ >' plugins/ .claude/ .github/ README.md AGENTS.md 2>/dev/null | wc -l)" && scanned="$(grep -rl 'git ' plugins/ .claude/ 2>/dev/null | wc -l)" && printf 'corrupted=%d scanned_enough=%s\n' "${corrupted}" "$([ "${scanned}" -gt 20 ] && echo yes || echo no)"
+corrupted=0 scanned_enough=yes
 ```
