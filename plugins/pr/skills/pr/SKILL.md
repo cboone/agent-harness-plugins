@@ -77,10 +77,10 @@ git diff
 git log --oneline -10
 
 # Full diff of this branch against the base branch
-git diff < base-branch > ...HEAD
+git diff <base-branch>...HEAD
 
 # Commit history of this branch since diverging from the base branch
-git log --oneline < base-branch > ..HEAD
+git log --oneline <base-branch>..HEAD
 
 # Check remote tracking status
 git rev-parse --abbrev-ref --symbolic-full-name @{u} 2> /dev/null || echo "no upstream"
