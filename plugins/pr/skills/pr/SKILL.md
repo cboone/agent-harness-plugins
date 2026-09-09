@@ -231,7 +231,7 @@ Analyze all commits on the branch (from `git log <base-branch>..HEAD` and `git d
 
 #### Detect the title convention
 
-The title rules below are this skill's default. They yield to a PR title convention that the project enforces in CI or documents in its agent config. Check these signals in order and stop at the first match:
+The title rules below are this skill's default, not an override. They yield to a PR title convention that the project enforces in CI, or that the project or the user documents in an agent config. Check these signals in order and stop at the first match:
 
 1. **CI lints the PR title.** Use Glob to find `.github/workflows/*.yml` and `.github/workflows/*.yaml`, then read each one. Look for a workflow that feeds `github.event.pull_request.title` into a linter, either piped into `commitlint`:
 
