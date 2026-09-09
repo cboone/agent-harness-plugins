@@ -236,14 +236,22 @@ Print a summary of what was created:
 - If `HOMEBREW_TAP_TOKEN` setup was deferred in step 20: check whether a GitHub remote exists and is accessible before creating a follow-up issue:
 
   ```bash
-  git remote get-url origin > /dev/null 2>&1 && gh repo view > /dev/null 2>&1
+  if git remote get-url origin > /dev/null 2>&1 && gh repo view > /dev/null 2>&1; then
+    echo "remote-ready"
+  else
+    echo "no-remote"
+  fi
   ```
 
-  If that check passes, create the follow-up issue with the tmpfile pattern rather than an inline `--body`. Generate a path, write the body with the Write tool, then invoke `gh` in a separate message:
+  This always exits 0 and prints a sentinel, because "no remote yet" is an expected outcome here, not a failure. Branch on the printed word rather than on the exit code.
+
+  **If it printed `remote-ready`**, create the follow-up issue with the tmpfile pattern rather than an inline `--body`:
 
   ```bash
   mktemp -u /tmp/gh-issue-body-XXXXXX
   ```
+
+  Record the path this prints, for example `/tmp/gh-issue-body-a1b2c3`, and substitute it wherever `TMPFILE` appears below. Write the issue body to that path with the Write tool, then, in a separate message:
 
   ```bash
   gh issue create --title "Set up HOMEBREW_TAP_TOKEN repository secret" --body-file TMPFILE
@@ -257,7 +265,7 @@ Print a summary of what was created:
 
   If the issue was created successfully, report its URL in the summary.
 
-  If no remote exists or the repo is not accessible via `gh`, print a reminder instead: the user should create the issue manually (or re-run the token setup) after pushing to GitHub for the first time.
+  **If it printed `no-remote`**, print a reminder instead: the user should create the issue manually (or re-run the token setup) after pushing to GitHub for the first time.
 
 ## Error Handling
 

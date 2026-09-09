@@ -34,7 +34,7 @@ This skill runs git, GitHub CLI, and Go commands that trigger permission prompts
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git init*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git config *)", "Bash(git remote *)", "Bash(gh api user*)", "Bash(gh repo view *)", "Bash(gh issue create *)", "Bash(go build*)", "Bash(go get *)", "Bash(go mod *)", "Bash(mktemp -u /tmp/gh-issue-body-*)", "Bash(rm -f /tmp/gh-issue-body-*)"]
+    "allow": ["Bash(git init*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git config *)", "Bash(git remote *)", "Bash(gh api user*)", "Bash(gh repo view*)", "Bash(gh issue create *)", "Bash(go build*)", "Bash(go get *)", "Bash(go mod *)", "Bash(mktemp -u /tmp/gh-issue-body-*)", "Bash(rm -f /tmp/gh-issue-body-*)"]
   }
 }
 ```
