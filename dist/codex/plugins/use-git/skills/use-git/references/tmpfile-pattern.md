@@ -10,7 +10,7 @@ Use tmpfiles when passing long content to git or `gh` CLI commands. This keeps B
 - Review replies (script `--body-file` flags)
 - Any `gh` subcommand that reads content from a file flag, such as `--body-file` or `--notes-file`, when the content runs to more than a few lines
 
-## Three-Step Workflow
+## Four-Step Workflow
 
 ### 1. Create the tmpfile
 
@@ -39,6 +39,30 @@ Run the `gh` command with `--body-file` (or `--notes-file`, for `gh release crea
 gh pr create --title "Add user authentication" --body-file TMPFILE
 ```
 
+### 4. Verify the stored body
+
+A zero exit from `gh` says nothing about whether the body landed. If the file was missing or empty when `gh` read it, the pull request, issue, or release is created anyway, with an empty body, and still prints a URL. Confirm the stored body is non-empty before cleaning up.
+
+**Run this step only when the create command succeeded and printed a URL.** If it failed, nothing was created, there is no identifier to pass, and you must skip straight to cleanup. Never substitute a placeholder or a URL left over from an earlier run.
+
+Pass the URL the create command just returned, shown below as `<url>`:
+
+```bash
+gh pr view <url> --json body --jq '.body | length'
+```
+
+```bash
+gh issue view <url> --json body --jq '.body | length'
+```
+
+If the length is `0`, re-write `TMPFILE` with the Write tool and then, as a separate call, edit the body in place:
+
+```bash
+gh pr edit <url> --body-file TMPFILE
+```
+
+Re-run the length check to confirm the recovery worked. Cleanup comes after verification, since recovery needs the file to still exist.
+
 ## Never Batch the Write With the Command
 
 Issue the Write call (step 2) and the `gh` call (step 3) as two separate, sequential messages. Wait for Write to return before invoking `gh`.
@@ -49,7 +73,7 @@ This is a deliberate exception to the general preference for parallel tool calls
 
 ## Cleanup
 
-Issue cleanup as a **separate Bash tool call** after the `gh` command:
+Issue cleanup as a **separate Bash tool call** after the `gh` command, and after the verification above when one ran:
 
 ```bash
 rm -f TMPFILE

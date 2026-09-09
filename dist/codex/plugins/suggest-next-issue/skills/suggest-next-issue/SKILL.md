@@ -88,7 +88,7 @@ Present the top N issues (default 5) organized by category:
 
 **Categories** (use whichever apply, skip empty categories):
 
-- **Quick Wins**: Small, well-defined issues that can be resolved quickly
+- **Narrow Scope**: Small, well-defined issues that touch few files and carry no open dependencies
 - **High Impact**: Important features, critical bugs, or heavily requested items
 - **Unblocks Others**: Issues that other open issues depend on
 - **Overdue**: Old issues that have been neglected (use judgment based on repo's typical issue age)
@@ -119,7 +119,7 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
 ```markdown
 ## Suggested Next Issues
 
-### Quick Wins
+### Narrow Scope
 
 1. **#23 - Fix typo in help output** (bug, 2 days old)
    The `--version` flag prints "verison" instead of "version" in the CLI help text.
@@ -156,10 +156,10 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
 
 **Already in progress:**
 
-- #14 — feature/improve-notifications (branch)
-- #16 — fix/search-pagination (branch, assigned)
-- #21 — Add export feature (label: "in progress")
-- #25 — Fix auth timeout (assigned)
+- #14 -- feature/improve-notifications (branch)
+- #16 -- fix/search-pagination (branch, assigned)
+- #21 -- Add export feature (label: "in progress")
+- #25 -- Fix auth timeout (assigned)
 
 Ready to start on one of these? Just say "start issue #N".
 ```

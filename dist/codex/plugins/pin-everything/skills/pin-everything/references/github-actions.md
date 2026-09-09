@@ -4,7 +4,7 @@ How to SHA-pin every `uses:` ref in a repository's workflows and composite actio
 
 ## Why SHA-Pin
 
-Tag refs (`@v6`, `@v6.0.2`) are mutable. An attacker (or a careless maintainer) who controls the upstream repo can repoint any tag to a different commit. The published `tj-actions/changed-files` compromise in March 2025 was a notable example: a popular action's tags were rewritten to inject token-exfiltration code, and every consumer pinned by tag was instantly affected. SHA pins are immutable — Git's content-addressable storage guarantees the commit hash refers to one specific tree forever — so the consumer takes the upgrade only when they explicitly bump the SHA.
+Tag refs (`@v6`, `@v6.0.2`) are mutable. An attacker (or a careless maintainer) who controls the upstream repo can repoint any tag to a different commit. The published `tj-actions/changed-files` compromise in March 2025 was a notable example: a popular action's tags were rewritten to inject token-exfiltration code, and every consumer pinned by tag was instantly affected. SHA pins are immutable -- Git's content-addressable storage guarantees the commit hash refers to one specific tree forever -- so the consumer takes the upgrade only when they explicitly bump the SHA.
 
 ## Resolving a Tag to a Commit SHA
 
@@ -42,9 +42,9 @@ Use this only if `commits/<tag>` is unavailable for some reason.
 
 Some actions expose a moving channel ref instead of (or alongside) a release tag. Examples:
 
-- `dtolnay/rust-toolchain@stable` — pin the action repo, not the toolchain
-- `dtolnay/rust-toolchain@1.76.0` — also valid; pins both
-- `actions/setup-node@main` — generally not what you want; pin to a release tag if available
+- `dtolnay/rust-toolchain@stable` -- pin the action repo, not the toolchain
+- `dtolnay/rust-toolchain@1.76.0` -- also valid; pins both
+- `actions/setup-node@main` -- generally not what you want; pin to a release tag if available
 
 For channel refs, pin the action repo to the SHA of the named branch's HEAD:
 
@@ -86,14 +86,14 @@ Composite actions referenced from inside the same repo:
 uses: ./.github/actions/local-action
 ```
 
-Leave these unpinned. They resolve to the current commit by definition — there is no separate version to pin.
+Leave these unpinned. They resolve to the current commit by definition -- there is no separate version to pin.
 
 ## Comment Format
 
 Always append `# vX.Y.Z` (or `# stable`, or `# branch-name`) after the SHA:
 
 ```yaml
-uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 ```
 
 This serves two purposes:
@@ -105,7 +105,7 @@ If a release tag is unavailable (channel ref, branch ref), use the channel or br
 
 ## Held Major Versions
 
-Sometimes you want to hold an action at a specific major because the next major has a breaking change you have not migrated yet. The pin is the same — SHA + comment — but the comment captures the intent:
+Sometimes you want to hold an action at a specific major because the next major has a breaking change you have not migrated yet. The pin is the same -- SHA + comment -- but the comment captures the intent:
 
 ```yaml
 uses: owner/action@<sha> # v2.3.4, held at v2 pending v3 migration; see ISSUE-NUMBER

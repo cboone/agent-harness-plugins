@@ -158,7 +158,7 @@ For the canonical Mathlib-downstream shape (bootstrap script, Makefile target se
 - [ ] `/- -/` for technical notes and TODOs
 - [ ] `--` for inline comments
 - [ ] No hardwrapping in comments or docstrings -- each paragraph is a single long line, blank lines separate paragraphs
-- [ ] Comments in proof bodies explain WHY, not WHAT — calibrated to the audience. Strip phase markers (`-- Step 1:`, `-- **Step N.**`, `-- Now we...`) and WHAT-narration; the tactic names describe the block. Keep comments that surface hidden constraints, unusual lemma choices, load-bearing invariants, or — if the expected reader is still learning Lean — a brief framing near a specialized lemma/tactic they would not recognize (see `../comprehensive/style-and-formatting.md#comments`).
+- [ ] Comments in proof bodies explain WHY, not WHAT -- calibrated to the audience. Strip phase markers (`-- Step 1:`, `-- **Step N.**`, `-- Now we...`) and WHAT-narration; the tactic names describe the block. Keep comments that surface hidden constraints, unusual lemma choices, load-bearing invariants, or -- if the expected reader is still learning Lean -- a brief framing near a specialized lemma/tactic they would not recognize (see `../comprehensive/style-and-formatting.md#comments`).
 
 ## Documentation
 
@@ -180,7 +180,7 @@ For the canonical Mathlib-downstream shape (bootstrap script, Makefile target se
 ## Proof Performance
 
 - [ ] Default `maxHeartbeats` is 200000. Soft review threshold: 400000 (2×). Mathlib tech-debt line: 800000 (4×).
-- [ ] Before bumping `maxHeartbeats`, extract sub-lemmas. `maxHeartbeats` is per-declaration, so splitting an over-budget proof into N named lemmas gives each its own fresh 200000 budget — order-of-magnitude improvement (see `../comprehensive/mathlib.md#heartbeats-and-build-performance`).
+- [ ] Before bumping `maxHeartbeats`, extract sub-lemmas. `maxHeartbeats` is per-declaration, so splitting an over-budget proof into N named lemmas gives each its own fresh 200000 budget -- order-of-magnitude improvement (see `../comprehensive/mathlib.md#heartbeats-and-build-performance`).
 - [ ] Tactical tweaks (`simp only`, merging `simp`s, narrower `rw` chains) are tens-of-percent improvements. Apply _after_ extraction, not instead.
 - [ ] Any surviving `set_option maxHeartbeats` needs a one-line WHY comment; anything above 800000 is a TODO to split further.
 - [ ] When extracting from a `classical`-prefixed proof, add `classical` to each extracted sub-lemma. The parent's `classical` does not propagate, and product-type `DecidableEq` synthesis fails silently without it.

@@ -1,6 +1,6 @@
 # Lint and Fix
 
-Detect available linters and formatters in the project, run them with auto-fix, resolve remaining issues, then commit and push the fixes.
+Detect project linters and formatters, run them with auto-fix, resolve remaining issues, then commit and push the fixes.
 
 **Type:** Skill
 **Trigger:** `/lint-and-fix`

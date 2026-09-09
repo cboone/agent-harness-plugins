@@ -1,6 +1,6 @@
 # Release
 
-Prepare a versioned release or Claude Code marketplace catalog state tag: analyze commits, update release files, create a release commit, tag locally, and optionally publish a GitHub Release.
+Prepare a versioned release or Claude Code marketplace catalog state tag: update release files, create a release commit, tag locally, and optionally publish a GitHub Release.
 
 **Type:** Skill
 **Trigger:** `/release`

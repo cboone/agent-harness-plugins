@@ -169,7 +169,7 @@ After all tools run, display a summary:
 |------|--------|-------|-----------|
 | eslint | Ran with fixes | 3 files | 2 errors |
 | prettier | All formatted | 5 files | 0 |
-| shellcheck | Check only | — | 4 warnings |
+| shellcheck | Check only | n/a | 4 warnings |
 ```
 
 If **--check** was specified, show results and stop here.
@@ -192,7 +192,7 @@ For each remaining issue that auto-fix could not resolve:
 If a remaining issue is ambiguous or risky to fix automatically (e.g., removing a dependency that might be used dynamically, or a lint rule that conflicts with project intent), skip it and report:
 
 ```text
-Skipped: <file>:<line> — <rule> — <reason>
+Skipped: <file>:<line> -- <rule> -- <reason>
 ```
 
 ### 6. Final Verification

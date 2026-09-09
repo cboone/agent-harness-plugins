@@ -1,6 +1,6 @@
 # Pin Everything
 
-Pin every version surface in a repository to commit hashes, integrity digests, or specific versions as a one-shot supply-chain hardening pass.
+Pin every version surface in a repository (action SHAs, packageManager integrity digests, dependency exact-pins, runtime version files, install commands) for one-shot supply-chain hardening.
 
 **Type:** Skill
 **Trigger:** `/pin-everything` (also activates automatically)
@@ -13,13 +13,13 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 Walks an existing repository through a one-shot hardening pass that closes the surfaces an attacker can reach via mutable version refs. The skill audits the repo, presents the findings, confirms scope with the user, then pins each category in turn:
 
-- **GitHub Actions `uses:` refs** — replaced with 40-char commit SHAs and `# vX.Y.Z` comments (covers reusable workflows and channel refs too).
-- **Yarn via Corepack** — `packageManager: yarn@X.Y.Z` rewritten to `yarn@X.Y.Z+sha512.<hash>`; `.yarnrc.yml` strict defaults made explicit.
-- **Package-manager dependencies** — exact-pinned in application context (Node.js, Ruby, Python, Rust); left as ranges in library context to avoid breaking downstream version unification.
-- **Language runtimes in CI** — inline `node-version: "X"` etc. swapped for `node-version-file: ".tool-versions"` and friends; missing version files created with current LTS / stable values.
-- **Install commands** — `go install`, `cargo install`, `pip install`, `uv add`, `npx <tool>` rewritten with explicit pinned forms (skipping placeholder paths in scaffolded templates).
-- **Dependabot** — `.github/dependabot.yml` created or merged with weekly schedule, split groups by update-type, 10-PR cap per ecosystem.
-- **Drift audit (optional)** — bundled `version-audit` script and weekly workflow cover the four surfaces Dependabot does not (`.tool-versions`, `packageManager`, action SHAs in `.md` templates, install-command pins inside scripts).
+- **GitHub Actions `uses:` refs** -- replaced with 40-char commit SHAs and `# vX.Y.Z` comments (covers reusable workflows and channel refs too).
+- **Yarn via Corepack** -- `packageManager: yarn@X.Y.Z` rewritten to `yarn@X.Y.Z+sha512.<hash>`; `.yarnrc.yml` strict defaults made explicit.
+- **Package-manager dependencies** -- exact-pinned in application context (Node.js, Ruby, Python, Rust); left as ranges in library context to avoid breaking downstream version unification.
+- **Language runtimes in CI** -- inline `node-version: "X"` etc. swapped for `node-version-file: ".tool-versions"` and friends; missing version files created with current LTS / stable values.
+- **Install commands** -- `go install`, `cargo install`, `pip install`, `uv add`, `npx <tool>` rewritten with explicit pinned forms (skipping placeholder paths in scaffolded templates).
+- **Dependabot** -- `.github/dependabot.yml` created or merged with weekly schedule, split groups by update-type, 10-PR cap per ecosystem.
+- **Drift audit (optional)** -- bundled `version-audit` script and weekly workflow cover the four surfaces Dependabot does not (`.tool-versions`, `packageManager`, action SHAs in `.md` templates, install-command pins inside scripts).
 
 The skill confirms scope before each batch and supports per-category opt-out, so adopters who only want SHA-pinned actions can stop after the first batch. A `--dry-run` mode reports findings without editing.
 
@@ -72,11 +72,11 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 ## Examples
 
-- "pin everything in this repo" — full hardening pass
-- "harden against supply-chain attacks" — same behavior
-- "SHA-pin all the actions" — actions-only scope
-- "audit version pins" — `--dry-run` style audit only
-- `/pin-everything --scope actions,dependabot` — actions + Dependabot only
+- "pin everything in this repo" -- full hardening pass
+- "harden against supply-chain attacks" -- same behavior
+- "SHA-pin all the actions" -- actions-only scope
+- "audit version pins" -- `--dry-run` style audit only
+- `/pin-everything --scope actions,dependabot` -- actions + Dependabot only
 
 ## See Also
 

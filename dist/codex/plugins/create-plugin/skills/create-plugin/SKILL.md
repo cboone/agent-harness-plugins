@@ -37,7 +37,7 @@ If the user provided a name, use it. Otherwise, generate a descriptive name from
 
 ### 3. Create Directory Structure
 
-No manual `mkdir` is needed — the Write tool creates parent directories automatically when writing files. The directories below are created implicitly when their first file is written in the subsequent steps.
+No manual `mkdir` is needed -- the Write tool creates parent directories automatically when writing files. The directories below are created implicitly when their first file is written in the subsequent steps.
 
 #### Skills Plugin
 

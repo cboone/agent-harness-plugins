@@ -38,13 +38,13 @@ Scenario: a brand-new repository with Lean code under `src/`, Python scripts und
    - Structural-group annotation covering `**/.gitkeep`. Precedence `override`. License `MIT`.
    - No CoC block (no CoC).
    - No reference-material block (no bundle).
-   - The `REUSE.toml` file is covered by the config group — no inline header at its top.
+   - The `REUSE.toml` file is covered by the config group -- no inline header at its top.
 6. **SPDX placement (inline coverage only).**
    - `reuse annotate --copyright "2026 <user>" --license Apache-2.0 src/**/*.lean` -> inline `/- ... -/`.
    - `reuse annotate --copyright "2026 <user>" --license MIT bin/**/*.py` -> inline `#` after shebangs.
-   - No inline headers on `lakefile.toml`, `Makefile`, `pyproject.toml`, `.gitignore`, `.editorconfig`, `cspell-words.txt`, CI workflows — the REUSE.toml config group covers them.
-   - No sidecars on `lean-toolchain`, `lake-manifest.json`, generated `papers/*/main.tex` — the REUSE.toml generated group covers them.
-   - Prose Markdown (`papers/1-demo/main.md`, `README.md`, etc.) is covered by the REUSE.toml prose group — no inline headers, no sidecars.
+   - No inline headers on `lakefile.toml`, `Makefile`, `pyproject.toml`, `.gitignore`, `.editorconfig`, `cspell-words.txt`, CI workflows -- the REUSE.toml config group covers them.
+   - No sidecars on `lean-toolchain`, `lake-manifest.json`, generated `papers/*/main.tex` -- the REUSE.toml generated group covers them.
+   - Prose Markdown (`papers/1-demo/main.md`, `README.md`, etc.) is covered by the REUSE.toml prose group -- no inline headers, no sidecars.
 7. **Verification.**
    - `reuse lint` -> zero errors.
    - Repo lint -> clean.
@@ -68,10 +68,10 @@ Scenario: `zhang-yeung-inequality` is already covered (per-file sidecars on two 
 ### Run
 
 1. `reuse lint` reports: `bin/analyze.py has no copyright and licensing information.`
-2. Read `bin/analyze.py` — classify via the matrix: Python, commentable, hand-authored, not prose -> **inline `#`** comment block.
+2. Read `bin/analyze.py` -- classify via the matrix: Python, commentable, hand-authored, not prose -> **inline `#`** comment block.
 3. Apply: `reuse annotate --copyright "2026 <user>" --license MIT bin/analyze.py`.
-4. Re-run `reuse lint` — clean.
-5. Repo lint — clean (cspell and markdownlint untouched by the change).
+4. Re-run `reuse lint` -- clean.
+5. Repo lint -- clean (cspell and markdownlint untouched by the change).
 6. Commit: `chore(tooling): add SPDX header to bin/analyze.py`.
 
 ### What the skill did **not** do
@@ -79,7 +79,7 @@ Scenario: `zhang-yeung-inequality` is already covered (per-file sidecars on two 
 - Did not open the prose group in `REUSE.toml` (nothing in the prose path list changed).
 - Did not touch `NOTICE` or `README.md` (split unchanged).
 - Did not emit a plan document (Maintain mode, single-item scope).
-- Did not ask the user to confirm the license bucket — the matrix answered it.
+- Did not ask the user to confirm the license bucket -- the matrix answered it.
 
 ## Example C: Maintain mode catching structural drift
 
@@ -87,19 +87,19 @@ Scenario: `non-shannon-inequalities` has per-file sidecars scattered across conf
 
 ### Run
 
-1. `reuse lint` reports zero errors — but this is structural drift against the matrix, not a lint failure.
+1. `reuse lint` reports zero errors -- but this is structural drift against the matrix, not a lint failure.
 2. Punch list:
    - **Config sidecars.** Delete all seven. The REUSE.toml config group covers them; no inline headers needed.
    - **Generated-artifact sidecars.** Delete `uv.lock.license`, `lake-manifest.json.license`, `lean-toolchain.license`. Add `LICENSES/CC0-1.0.txt`. The REUSE.toml generated group covers them under CC0.
    - **Placeholder sidecars.** Delete six `.gitkeep.license` files. The REUSE.toml structural group covers them under the repo's code-bucket license.
    - **Prose sidecars and inline.** Delete `NOTICE.license` and every `*.md.license`; strip `<!-- SPDX-* -->` from project-authored Markdown. The REUSE.toml prose group covers them.
 3. Commit sequence, each commit leaves `reuse lint` clean:
-   - `docs: normalize LICENSES/` — add `LICENSES/CC0-1.0.txt`.
-   - `docs: extend REUSE.toml with config/generated/structural groups` — update `REUSE.toml` to cover all three bucket classes.
-   - `chore(tooling): fold config sidecars into config group` — delete the seven `.license` files.
-   - `chore: fold generated-artifact sidecars into CC0 group` — delete lock/toolchain `.license` files.
-   - `chore: fold .gitkeep sidecars into structural group` — delete the six placeholder `.license` files.
-   - `docs: fold Markdown sidecars and inline SPDX into prose group` — delete every `*.md.license`, strip every `<!-- SPDX-* -->` HTML-comment block in project-authored `.md`.
+   - `docs: normalize LICENSES/` -- add `LICENSES/CC0-1.0.txt`.
+   - `docs: extend REUSE.toml with config/generated/structural groups` -- update `REUSE.toml` to cover all three bucket classes.
+   - `chore(tooling): fold config sidecars into config group` -- delete the seven `.license` files.
+   - `chore: fold generated-artifact sidecars into CC0 group` -- delete lock/toolchain `.license` files.
+   - `chore: fold .gitkeep sidecars into structural group` -- delete the six placeholder `.license` files.
+   - `docs: fold Markdown sidecars and inline SPDX into prose group` -- delete every `*.md.license`, strip every `<!-- SPDX-* -->` HTML-comment block in project-authored `.md`.
 
 ### Why split into many commits
 

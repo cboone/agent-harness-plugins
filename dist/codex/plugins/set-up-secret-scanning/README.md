@@ -1,6 +1,6 @@
 # Set-Up Secret Scanning
 
-Set up secret scanning in a repository with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration.
+Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration.
 
 **Type:** Skill
 **Trigger:** `/set-up-secret-scanning`

@@ -1,7 +1,7 @@
 ---
 name: scaffold-go-library
 description: >-
-  Scaffold a Go library project with GoReleaser changelog releases,
+  Scaffold a Go library project with GoReleaser changelog-only releases,
   golangci-lint, GitHub Actions CI/CD, and Makefile.
 ---
 
