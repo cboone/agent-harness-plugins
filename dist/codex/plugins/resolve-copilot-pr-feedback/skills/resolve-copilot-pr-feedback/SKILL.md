@@ -160,7 +160,7 @@ Record the `OWNER`, `REPO`, and `PR_NUMBER` values used for the fetch. This esta
 ```
 
 - **`location`**: Uses the first non-null of `line`, `originalLine`, `startLine`, `originalStartLine`. If all line fields are null, reports `path:(no-line)`.
-- **Copilot detection**: Matches author logins `copilot-pull-request-reviewer`, `copilot`, `github-copilot[bot]`, and `github-actions[bot]` (with severity tag verification for the latter).
+- **Copilot detection**: Matches author logins `copilot-pull-request-reviewer`, `copilot-pull-request-reviewer[bot]`, `copilot`, `github-copilot[bot]`, and `github-actions[bot]` (with severity tag verification for the last). GraphQL and REST report the same Copilot account differently, without and with the `[bot]` suffix respectively, so both forms are matched and the same list serves `fetch` and `fetch-reviews`.
 
 An empty array `[]` means no unresolved Copilot threads remain.
 

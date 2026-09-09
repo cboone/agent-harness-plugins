@@ -353,17 +353,25 @@ function do_parse_reviews() {
         | join("\n")
         | trim;
 
-      # The section match is deliberately loose: any line mentioning the phrase
-      # opens the slice, rather than requiring a <summary> tag or a heading.
-      # Anchoring on the exact wrapper would be more precise, but a fourth
-      # layout would then slip through as an empty result, which is the silent
-      # miss this whole command exists to prevent. Loose matching can instead
-      # over-capture when a finding quotes the phrase in prose, and that
+      # The section match is deliberately loose: almost any line mentioning the
+      # phrase opens the slice, rather than requiring a <summary> tag or a
+      # heading. Anchoring on the exact wrapper would be more precise, but a
+      # fourth layout would then slip through as an empty result, which is the
+      # silent miss this whole command exists to prevent. Loose matching can
+      # instead over-capture when a review quotes the phrase in prose, and that
       # surfaces as a visible drift report. Failing loud beats failing quiet.
+      #
+      # Table rows are the one exception. Copilot opens most reviews with a
+      # "File summaries" table describing every changed file, so any PR that
+      # touches code about suppressed comments gets a row quoting the phrase.
+      # That fires on every such review, and a section is never announced from
+      # inside a table, so excluding rows costs no real coverage.
       def suppressed_slice:
         split("\n")
         | reduce .[] as $line ({inside: false, out: []};
-            if (.inside | not) and ($line | ascii_downcase | test("suppressed comments|comments suppressed"))
+            if (.inside | not)
+              and ($line | test("^[[:space:]]*\\|") | not)
+              and ($line | ascii_downcase | test("suppressed comments|comments suppressed"))
             then .inside = true
             elif .inside and ($line | test("^</?details>|^- \\*\\*Files reviewed:"))
             then .inside = false
