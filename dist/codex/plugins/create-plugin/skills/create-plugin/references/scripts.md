@@ -139,13 +139,13 @@ When a SKILL.md instructs Claude to run a script via the Bash tool, write the pa
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/script-name" arg1 arg2
 ```
 
-**How the path resolves:** `CLAUDE_PLUGIN_ROOT` is *not* a shell environment variable during skill execution; running `echo "${CLAUDE_PLUGIN_ROOT}"` from the Bash tool prints nothing. Instead, Claude Code substitutes it as **prompt text** when the skill loads, replacing it with the installed plugin's absolute, version-correct root before the file reaches the model. The agent therefore sees a ready-to-use absolute path and needs no locating step.
+**How the path resolves:** `CLAUDE_PLUGIN_ROOT` is _not_ a shell environment variable during skill execution; running `echo "${CLAUDE_PLUGIN_ROOT}"` from the Bash tool prints nothing. Instead, Claude Code substitutes it as **prompt text** when the skill loads, replacing it with the installed plugin's absolute, version-correct root before the file reaches the model. The agent therefore sees a ready-to-use absolute path and needs no locating step.
 
 **Never** instruct Claude to find the script by globbing for `**/plugin-name/scripts/script-name`. That shape describes the repository layout, not the installed one: the plugin cache interposes a version directory (`.../plugin-name/1.2.0/scripts/...`), so the glob cannot match the installed copy. It silently matches other copies instead (a marketplace checkout, a `dist/` build artifact, a stale backup), with nothing to choose between them.
 
 **Why the `bash` prefix:** Claude Code's Bash tool permission rules match the whole command text. If the script path were the command itself, the version-specific segment (`.../1.2.0/scripts/...`) would sit at the front of every rule and break it on each release. Prefixing with `bash` keeps the leading token stable, so a rule like `Bash(bash "*/script-name" *)` keeps working across versions.
 
-**Quote the wildcard in the rule.** The matcher does not normalise quotes, and a literal space in the rule must match a literal space in the command. Because the skill invokes a *quoted* path, `Bash(bash */script-name *)` does **not** match `bash "/abs/path/scripts/script-name" arg`: after `script-name` the command has a `"`, not the space the rule requires. Write the quotes into the rule instead:
+**Quote the wildcard in the rule.** The matcher does not normalise quotes, and a literal space in the rule must match a literal space in the command. Because the skill invokes a _quoted_ path, `Bash(bash */script-name *)` does **not** match `bash "/abs/path/scripts/script-name" arg`: after `script-name` the command has a `"`, not the space the rule requires. Write the quotes into the rule instead:
 
 ```json
 {
@@ -157,7 +157,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/script-name" arg1 arg2
 
 For a script invoked with no arguments, drop the trailing space-plus-wildcard entirely (`Bash(bash \"*/script-name\")`). Verified against Claude Code 2.1.266 with an isolated `--restricted` session; the unquoted forms were denied and the quoted forms allowed.
 
-**Caveat for SKILL.md prose:** the substitution is a global, unconditional text replacement, so a SKILL.md cannot *document* the literal variable; every occurrence is rewritten, including inside fenced code blocks. Use the literal only where substitution is the intent. To describe the variable itself, put that prose in a `references/` file, which is read from disk and left untouched.
+**Caveat for SKILL.md prose:** the substitution is a global, unconditional text replacement, so a SKILL.md cannot _document_ the literal variable; every occurrence is rewritten, including inside fenced code blocks. Use the literal only where substitution is the intent. To describe the variable itself, put that prose in a `references/` file, which is read from disk and left untouched.
 
 Other harnesses differ: Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. For a script-backed skill that must run there too, add a short fallback telling Claude that an unsubstituted path still begins with `$` rather than `/`, and to locate the script with `**/plugin-name/**/scripts/script-name` (note the `**` between the plugin name and `scripts`, which tolerates the version segment), preferring a match inside the harness's own installed-plugin directory.
 
