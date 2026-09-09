@@ -1,6 +1,6 @@
 # PR
 
-Commit all changes, push to remote, and create a GitHub pull request in one automated step.
+Lint, commit, push, and create a pull request in one step with no prompts.
 
 **Type:** Skill
 **Trigger:** `/pr`
@@ -29,7 +29,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git status*)", "Bash(git diff*)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git branch *)", "Bash(git reflog show *)", "Bash(git ls-remote --heads *)", "Bash(git rev-parse *)", "Bash(git remote *)", "Bash(git mv *)", "Bash(gh repo view *)", "Bash(gh issue view *)", "Bash(gh issue list *)", "Bash(gh pr create *)", "Bash(gh pr view *)", "Bash(gh pr list *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(mktemp -u /tmp/pr-body-*)", "Bash(rm -f /tmp/pr-body-*)"]
+    "allow": ["Bash(git status*)", "Bash(git diff*)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git branch *)", "Bash(git fetch *)", "Bash(git merge-base *)", "Bash(git reflog show *)", "Bash(git ls-remote --heads *)", "Bash(git rev-parse *)", "Bash(git remote *)", "Bash(git mv *)", "Bash(gh repo view *)", "Bash(gh issue view *)", "Bash(gh issue list *)", "Bash(gh pr create *)", "Bash(gh pr view *)", "Bash(gh pr list *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(mktemp -u /tmp/gh-pr-body-*)", "Bash(rm -f /tmp/gh-pr-body-*)"]
   }
 }
 ```

@@ -1,6 +1,6 @@
 # Create Worktree from Issue
 
-Find a GitHub issue and create a dedicated worktree, branch, and tmux window for working on it.
+Find a GitHub issue and create a worktree, branch, and tmux window for working on it, with issue context injected as a task prompt.
 
 **Type:** Skill
 **Trigger:** `/create-worktree-from-issue`

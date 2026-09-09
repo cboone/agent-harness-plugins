@@ -224,7 +224,7 @@ Tao distinguishes two fundamentally different ways a proof can fail.
 
 **Different diagnostic effort.** Local errors require line-by-line reading. Global errors can often be detected by skimming the large-scale structure and checking whether the claimed output is even plausible.
 
-**Different rigor standards at different stages.** When building a proof, use the highest rigor you can afford; a missed local error is expensive to debug later. When testing for errors in a finished draft, heuristics, hand-waving, and sanity checks (does this bound have the right scaling? is the conclusion even consistent with small cases?) are fine and often more efficient than formal re-verification.
+**Different rigor standards at different stages.** When building a proof, use the highest rigor you can afford; a missed local error is expensive to debug later. When testing for errors in a finished draft, heuristics, hand-waving, and plausibility checks (does this bound have the right scaling? is the conclusion even consistent with small cases?) are fine and often more efficient than formal re-verification.
 
 **Fault-tolerant structure.** As a writer, structure long proofs so that a local slip does not kill the global argument. Independent lemmas that each carry a named conclusion are safer than a chain where every step depends on the previous one's details. Tao's advice to break long proofs into lemmas (see `theorems-and-proofs.md`) is partly an error-containment measure: if Lemma 3.2 has a local bug, only Lemma 3.2 needs repair, not the two pages following it.
 

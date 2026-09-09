@@ -50,15 +50,15 @@ Storing credentials in files works when permissions are correct.
 ### Critical rules
 
 - **Create credential files with 0600 permissions from the start** using atomic file creation (e.g., `os.open()` with explicit mode bits)
-- **Never create-then-chmod** — this introduces a race condition where the file briefly has insecure permissions
+- **Never create-then-chmod** -- this introduces a race condition where the file briefly has insecure permissions
 - **Refuse to use files with insecure permissions** (SSH's model: _"Permissions 0644 for '/home/user/.ssh/id_rsa' are too open."_)
 
 ### Separate config from credentials
 
 Follow the AWS CLI pattern:
 
-- `~/.aws/config` for non-sensitive settings (region, output format) — safe to version-control
-- `~/.aws/credentials` for access keys — never shared
+- `~/.aws/config` for non-sensitive settings (region, output format) -- safe to version-control
+- `~/.aws/credentials` for access keys -- never shared
 
 ### XDG Base Directory conventions
 

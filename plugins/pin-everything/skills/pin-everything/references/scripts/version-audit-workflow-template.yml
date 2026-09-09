@@ -33,7 +33,7 @@ jobs:
       # REPLACE: refresh this SHA against current actions/checkout latest before
       # writing the workflow into the consuming repo. The skill's "Refresh own
       # SHAs at scaffold time" section in SKILL.md covers the lookup pattern.
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Ensure label exists
         run: |

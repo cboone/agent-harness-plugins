@@ -4,7 +4,7 @@ How to integrity-pin Yarn or pnpm via Corepack, make `.yarnrc.yml` security defa
 
 ## Why Integrity-Pin the `packageManager` Field
 
-`package.json`'s `"packageManager": "yarn@4.14.1"` (or `"pnpm@9.12.3"`) field tells Corepack which package manager to use, but the version alone is not enough — Corepack will fetch the matching artifact at install time: Yarn 2+'s standalone `yarn.js` bundle from `repo.yarnpkg.com`, or pnpm's `.tgz` tarball from `registry.npmjs.org`. If that artifact has been tampered with (or if the registry is compromised), every developer and every CI run silently picks up the malicious binary.
+`package.json`'s `"packageManager": "yarn@4.14.1"` (or `"pnpm@9.12.3"`) field tells Corepack which package manager to use, but the version alone is not enough -- Corepack will fetch the matching artifact at install time: Yarn 2+'s standalone `yarn.js` bundle from `repo.yarnpkg.com`, or pnpm's `.tgz` tarball from `registry.npmjs.org`. If that artifact has been tampered with (or if the registry is compromised), every developer and every CI run silently picks up the malicious binary.
 
 The `+sha512.<hash>` suffix turns the field into a cryptographic commitment to that specific artifact: `"packageManager": "yarn@4.14.1+sha512.64df448055..."`. Corepack verifies the downloaded artifact's hash against the suffix and refuses to activate if they don't match. Tampering becomes detectable. The same suffix mechanism applies to pnpm (over its tarball).
 
@@ -18,7 +18,7 @@ jq -r '.packageManager' package.json
 # → yarn@4.14.1+sha512.64df448055b2d37ba269d7db535a469b8da93f8ef1140c25fd7a83c00a8fbaacb214ca0e02553b92a2c54cef78bb67d0b4817fab02001df0e24fac0faccc3b42
 ```
 
-`corepack use` downloads the requested Yarn version, computes the integrity hash, and writes the suffixed form into `packageManager` — all in one command. This is the path Yarn's documentation recommends. The closely-named `corepack prepare yarn@X.Y.Z --activate` only prepares and activates the binary globally; it does not modify `package.json`, so it will not produce the integrity-pinned field on its own.
+`corepack use` downloads the requested Yarn version, computes the integrity hash, and writes the suffixed form into `packageManager` -- all in one command. This is the path Yarn's documentation recommends. The closely-named `corepack prepare yarn@X.Y.Z --activate` only prepares and activates the binary globally; it does not modify `package.json`, so it will not produce the integrity-pinned field on its own.
 
 ### Fallback: Compute by Hand
 
@@ -61,23 +61,23 @@ enableTelemetry: false
 defaultSemverRangePrefix: ""
 ```
 
-| Setting                    | Default | Pin to  | Why                                                                                                                                            |
-| -------------------------- | ------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enableScripts`            | `true`  | `false` | Blocks arbitrary `postinstall` scripts. Most supply-chain attacks against npm-style ecosystems run during install hooks; this disables them.   |
-| `enableTelemetry`          | `true`  | `false` | Yarn phones home with anonymized usage data by default. Disable as a matter of policy.                                                         |
-| `defaultSemverRangePrefix` | `^`     | `""`    | When `yarn add <pkg>` writes a new dependency, the empty prefix produces an exact pin instead of a caret range — keeps step 6 from regressing. |
+| Setting                    | Default | Pin to  | Why                                                                                                                                             |
+| -------------------------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enableScripts`            | `true`  | `false` | Blocks arbitrary `postinstall` scripts. Most supply-chain attacks against npm-style ecosystems run during install hooks; this disables them.    |
+| `enableTelemetry`          | `true`  | `false` | Yarn phones home with anonymized usage data by default. Disable as a matter of policy.                                                          |
+| `defaultSemverRangePrefix` | `^`     | `""`    | When `yarn add <pkg>` writes a new dependency, the empty prefix produces an exact pin instead of a caret range -- keeps step 6 from regressing. |
 
-Make these explicit even if they happen to match the default — explicit config survives `yarn set version`, Corepack migrations, and version bumps. Implicit defaults can change.
+Make these explicit even if they happen to match the default -- explicit config survives `yarn set version`, Corepack migrations, and version bumps. Implicit defaults can change.
 
 ## Harmful Corepack-Migration Additions
 
 Some Corepack workflows add settings that weaken security. Detect and revert these:
 
-| Setting                                      | Harm                                                                                        | Revert                                            |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `approvedGitRepositories: ["**"]`            | Whitelists arbitrary git sources for `yarn add <git-url>`, bypassing the registry entirely. | Remove the line or restrict to specific repos     |
-| `enableScripts: true`                        | Re-enables postinstall scripts.                                                             | Set to `false`                                    |
-| `npmAlwaysAuth: true` (with public packages) | Forces auth on public registry requests, often masking misconfigured tokens.                | Remove unless you actually use a private registry |
+| Setting                                      | Harm                                                                                     | Revert                                            |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `approvedGitRepositories: ["**"]`            | Permits arbitrary git sources for `yarn add <git-url>`, bypassing the registry entirely. | Remove the line or restrict to specific repos     |
+| `enableScripts: true`                        | Re-enables postinstall scripts.                                                          | Set to `false`                                    |
+| `npmAlwaysAuth: true` (with public packages) | Forces auth on public registry requests, often masking misconfigured tokens.             | Remove unless you actually use a private registry |
 
 Read `.yarnrc.yml` and warn the user before removing entries that look intentional (e.g. a private registry config).
 

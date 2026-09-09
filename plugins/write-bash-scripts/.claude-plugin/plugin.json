@@ -9,5 +9,5 @@
   "name": "write-bash-scripts",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "2.0.2"
+  "version": "2.0.3"
 }

@@ -1,6 +1,6 @@
 # Merge Main
 
-Fetch and merge the repository's base branch into the current feature branch.
+Fetch and merge the base branch into the current feature branch with automatic conflict resolution.
 
 **Type:** Skill
 **Trigger:** `/merge-main`

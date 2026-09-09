@@ -1,6 +1,6 @@
 # Address Review
 
-Parse a review document for actionable feedback items, work through them systematically, and track resolution progress.
+Parse a review document for actionable feedback, work through items systematically, and track resolution progress.
 
 **Type:** Skill
 **Trigger:** `/address-review <path>`

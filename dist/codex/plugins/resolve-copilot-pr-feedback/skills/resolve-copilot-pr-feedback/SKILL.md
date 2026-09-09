@@ -268,7 +268,7 @@ mktemp -u /tmp/copilot-reply-XXXXXX
 
 # Step 2: Write the response body to TMPFILE using the Write tool (not shown here as bash)
 
-# Step 3: Pass TMPFILE to the script — a SEPARATE call, issued after step 2 returns:
+# Step 3: Pass TMPFILE to the script -- a SEPARATE call, issued after step 2 returns:
 bash resolve-copilot-threads reply THREAD_ID --body-file TMPFILE
 
 # Or reply and resolve in one step:
@@ -276,7 +276,7 @@ bash resolve-copilot-threads reply-and-resolve THREAD_ID --body-file TMPFILE
 ```
 
 ```bash
-# Step 4: Clean up — issue this as a SEPARATE Bash tool call, not chained onto step 3:
+# Step 4: Clean up -- issue this as a SEPARATE Bash tool call, not chained onto step 3:
 rm -f TMPFILE
 ```
 
@@ -284,7 +284,7 @@ Replace `TMPFILE` with the actual path returned by `mktemp -u`. The `-u` flag is
 
 **Never batch step 2 and step 3 into one message.** The reply script reads the body file at invocation time, so a parallel batch can run step 3 before the file exists and post an empty reply. This is a deliberate exception to the general preference for parallel tool calls: these two steps are dependent, because step 3 consumes the file step 2 produces.
 
-The cleanup must be a separate Bash tool call: each tool invocation runs unconditionally, so the tmpfile is removed whether step 3 succeeded or failed, and the harness preserves step 3's exit code without any shell wrapping. Never combine the two with `; status=$?; rm -f TMPFILE; exit $status` — in zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status`. See `plugins/use-git/skills/use-git/references/tmpfile-pattern.md` for the full rationale.
+The cleanup must be a separate Bash tool call: each tool invocation runs unconditionally, so the tmpfile is removed whether step 3 succeeded or failed, and the harness preserves step 3's exit code without any shell wrapping. Never combine the two with `; status=$?; rm -f TMPFILE; exit $status` -- in zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status`. See the `use-git` skill's tmpfile pattern reference for the full rationale.
 
 **NEVER pass the reply body inline** (e.g., via `echo "..." |` or heredocs). Always use the Write tool + `--body-file` pattern.
 
@@ -478,12 +478,12 @@ mktemp -u /tmp/copilot-summary-XXXXXX
 
 # Step 2: Write comment body to TMPFILE using the Write tool (not shown here as bash)
 
-# Step 3: Post the comment — a SEPARATE call, issued after step 2 returns:
+# Step 3: Post the comment -- a SEPARATE call, issued after step 2 returns:
 gh pr comment PR_NUMBER --repo OWNER/REPO --body-file TMPFILE
 ```
 
 ```bash
-# Step 4: Clean up — issue this as a SEPARATE Bash tool call, not chained onto step 3:
+# Step 4: Clean up -- issue this as a SEPARATE Bash tool call, not chained onto step 3:
 rm -f TMPFILE
 ```
 
@@ -536,14 +536,14 @@ If PR context or GitHub authentication is unavailable, or if `gh pr comment` fai
 | Thread      | PRRT_xxx  | src/foo.ts:42 | Nitpick | Auto-resolved | Resolved |
 | Thread      | PRRT_yyy  | src/bar.ts:15 | Valid | Fixed null check | Resolved |
 | Thread      | PRRT_zzz  | lib/util.js:8 | Outdated | Code refactored | Resolved |
-| Review body | —         | src/ui.tsx:20 | Deferred | Tracked in PROJECT.md | Tracked |
-| Review body | —         | docs/plan.md:243 | Valid | Corrected phase status | Fixed |
+| Review body | n/a         | src/ui.tsx:20 | Deferred | Tracked in PROJECT.md | Tracked |
+| Review body | n/a         | docs/plan.md:243 | Valid | Corrected phase status | Fixed |
 ```
 
 **Column definitions:**
 
 - **Source**: `Thread` or `Review body`
-- **Thread ID**: GraphQL thread ID (truncated for readability); `—` for review-body findings, which have none
+- **Thread ID**: GraphQL thread ID (truncated for readability); `--` for review-body findings, which have none
 - **File:Line**: Location of the comment
 - **Category**: Nitpick, Valid, Outdated, Incorrect, or Deferred
 - **Action Taken**: Brief description of resolution (10 words max)

@@ -11,7 +11,7 @@ description: >-
 
 # PR
 
-Commit, push, and create a pull request in one automated step. Never prompt the user for input — make opinionated decisions at every step.
+Commit, push, and create a pull request in one automated step. Never prompt the user for input -- make opinionated decisions at every step.
 
 ## Workflow
 
@@ -77,10 +77,10 @@ git diff
 git log --oneline -10
 
 # Full diff of this branch against the base branch
-git diff < base-branch > ...HEAD
+git diff <base-branch>...HEAD
 
 # Commit history of this branch since diverging from the base branch
-git log --oneline < base-branch > ..HEAD
+git log --oneline <base-branch>..HEAD
 
 # Check remote tracking status
 git rev-parse --abbrev-ref --symbolic-full-name @{u} 2> /dev/null || echo "no upstream"
@@ -90,7 +90,7 @@ git rev-parse --abbrev-ref --symbolic-full-name @{u} 2> /dev/null || echo "no up
 
 Search for GitHub issues that this branch addresses. Combine results from the strategies below, deduplicate by issue number, and record the final list for use in the commit message (step 4) and PR body (step 7).
 
-#### Strategy 1 — Issue numbers in the branch name
+#### Strategy 1 -- Issue numbers in the branch name
 
 Extract the current branch name. Look for issue numbers in patterns like:
 
@@ -107,7 +107,7 @@ gh issue view NUMBER --json number,title,state --jq '.number' 2> /dev/null
 
 Only include it if the command succeeds (the issue exists).
 
-#### Strategy 2 — Issue references in commit messages
+#### Strategy 2 -- Issue references in commit messages
 
 Scan the `git log <base-branch>..HEAD` output (already gathered in step 1) for `#N` references. Collect all unique issue numbers. For each, verify it refers to an actual issue:
 
@@ -115,7 +115,7 @@ Scan the `git log <base-branch>..HEAD` output (already gathered in step 1) for `
 gh issue view NUMBER --json number,title,state --jq '.number' 2> /dev/null
 ```
 
-#### Strategy 3 — GitHub issue search by branch slug
+#### Strategy 3 -- GitHub issue search by branch slug
 
 Only run this strategy if strategies 1 and 2 found zero issues.
 
@@ -310,8 +310,8 @@ If no connected issues were detected, omit the `## Closes` section entirely.
 First, generate a unique temporary file path using `mktemp -u`:
 
 ```bash
-mktemp -u /tmp/pr-body-XXXXXX
-# Returns a unique path that does NOT exist on disk, e.g.: /tmp/pr-body-x4y5z6
+mktemp -u /tmp/gh-pr-body-XXXXXX
+# Returns a unique path that does NOT exist on disk, e.g.: /tmp/gh-pr-body-x4y5z6
 ```
 
 The `-u` flag is required. Plain `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first, so the write fails with `File has not been read yet`. With `-u` the path is unique but unoccupied, so Write creates it fresh.
@@ -354,7 +354,7 @@ Always remove the tmpfile after the PR creation attempt, regardless of whether i
 rm -f TMPFILE
 ```
 
-Each Bash tool call runs unconditionally and the prior call's exit code is preserved by the harness, so a separate call cleans up after both successful and failed PR creations without any shell-level wrapping. Never combine the two with `;` followed by an exit-code preservation idiom such as `gh pr create ...; status=$?; rm -f TMPFILE; exit $status`. In zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status` and falsely reports a successful PR creation as failed. See `plugins/use-git/skills/use-git/references/tmpfile-pattern.md` for the full rationale.
+Each Bash tool call runs unconditionally and the prior call's exit code is preserved by the harness, so a separate call cleans up after both successful and failed PR creations without any shell-level wrapping. Never combine the two with `;` followed by an exit-code preservation idiom such as `gh pr create ...; status=$?; rm -f TMPFILE; exit $status`. In zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status` and falsely reports a successful PR creation as failed. See the `use-git` skill's tmpfile pattern reference for the full rationale.
 
 ### 8. Verify the Title Check
 
@@ -401,7 +401,7 @@ Plan files live under `docs/plans/` and its subdirectories (`todo/`, `done/`). L
 
 ### Plan Name Cleanup
 
-Well-named plans follow the pattern `YYYY-MM-DD-meaningful-description.md`. Auto-generated names use nonsensical word combinations (e.g., `ethereal-booping-sunbeam.md`, `quizzical-imagining-cerf.md`).
+Well-named plans follow the pattern `YYYY-MM-DD-meaningful-description.md`. Auto-generated names are nonsensical word combinations with no datestamp (e.g., `wandering-copper-lantern.md`, `quizzical-amber-turnstile.md`).
 
 **Every time a plan file is part of a commit, check its filename.** If the name lacks a datestamp prefix or uses a nonsensical auto-generated name:
 

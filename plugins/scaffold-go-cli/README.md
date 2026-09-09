@@ -1,6 +1,6 @@
 # Scaffold Go CLI
 
-Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions CI/CD, and Homebrew tap support.
+Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions, and Homebrew tap support.
 
 **Type:** Skill
 **Trigger:** `/scaffold-go-cli`
@@ -26,6 +26,18 @@ The skill prompts for project name, module path, description, and optional featu
 - "scaffold go cli": starts the interactive scaffolding process
 - "new go cli": same behavior
 - "start a go cli project": same behavior
+
+## Recommended Permissions
+
+This skill runs git, GitHub CLI, and Go commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(git init*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git config *)", "Bash(git remote *)", "Bash(gh api user*)", "Bash(gh repo view*)", "Bash(gh issue create *)", "Bash(go build*)", "Bash(go get *)", "Bash(go mod *)", "Bash(mktemp -u /tmp/gh-issue-body-*)", "Bash(rm -f /tmp/gh-issue-body-*)"]
+  }
+}
+```
 
 ## See Also
 

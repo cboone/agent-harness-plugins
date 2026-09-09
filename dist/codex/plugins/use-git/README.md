@@ -1,6 +1,6 @@
 # Use Git
 
-Git and GitHub CLI conventions for Claude Code.
+Git and GitHub CLI conventions for Claude Code: tmpfile patterns, HEREDOC commits, GPG signing, safe push practices, and permission-prompt avoidance.
 
 **Type:** Skill
 **Trigger:** `/use-git` (also activates automatically)

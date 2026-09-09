@@ -7,5 +7,5 @@
   "name": "add-community-files",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.0.3"
+  "version": "1.0.4"
 }

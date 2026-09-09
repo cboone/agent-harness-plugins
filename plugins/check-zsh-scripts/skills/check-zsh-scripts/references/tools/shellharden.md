@@ -21,7 +21,7 @@ shellharden --suggest <file>
 ## Installation
 
 ```bash
-cargo install --locked --version 4.3.1 shellharden
+cargo install --locked --version 4.3.2 shellharden
 ```
 
 Or via Homebrew:

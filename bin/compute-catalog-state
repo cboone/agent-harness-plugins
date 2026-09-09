@@ -19,13 +19,22 @@ fi
 
 jq -er '
   def parse_version:
-    capture("^(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)$")
+    . as $version
+    # capture emits an empty stream when the pattern does not match, which the
+    # array comprehension below would silently drop: a marketplace with one
+    # valid and one malformed version produced a plausible tag with the
+    # malformed plugin missing from both the sums and the count. "//" fires on
+    # an empty stream, so this turns a non-match into a hard failure.
+    | (capture("^(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)$")
+       // error("invalid plugin version \"\($version)\"; expected MAJOR.MINOR.PATCH"))
     | {
         major: (.major | tonumber),
         minor: (.minor | tonumber),
         patch: (.patch | tonumber)
       };
 
-  [.plugins[].version | parse_version] as $versions
+  (.plugins // error("marketplace has no .plugins array")) as $plugins
+  | (if ($plugins | length) == 0 then error("marketplace lists no plugins") else . end)
+  | [$plugins[].version | parse_version] as $versions
   | "catalog-M\($versions | map(.major) | add)-m\($versions | map(.minor) | add)-p\($versions | map(.patch) | add)-n\($versions | length)"
 ' "${MARKETPLACE}"

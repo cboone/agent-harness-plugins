@@ -20,28 +20,28 @@ Where use beyond local reference, quotation, or other applicable legal exception
 ## Path adjustments
 
 - Most repos: keep `references/papers/` and `references/transcriptions/` as in the canonical text.
-- If the repo uses different directory names, update only the first paragraph. Preserve the second and third paragraphs verbatim — they are the substantive statement.
+- If the repo uses different directory names, update only the first paragraph. Preserve the second and third paragraphs verbatim -- they are the substantive statement.
 
 ## Scope (what goes under `LicenseRef-Reference-Material`)
 
 Covered:
 
-1. `references/papers/**/*.pdf` — third-party source PDFs.
-2. `references/papers/**/*.html` — saved publisher HTML snapshots.
-3. `references/extractions/**` — Mathpix Markdown, per-line OCR JSON, legacy pdftotext caches. These faithfully reproduce third-party content.
-4. `references/transcriptions/**/*.md` — verbatim transcriptions of theorem statements, definitions, and excerpts.
+1. `references/papers/**/*.pdf` -- third-party source PDFs.
+2. `references/papers/**/*.html` -- saved publisher HTML snapshots.
+3. `references/extractions/**` -- Mathpix Markdown, per-line OCR JSON, legacy pdftotext caches. These faithfully reproduce third-party content.
+4. `references/transcriptions/**/*.md` -- verbatim transcriptions of theorem statements, definitions, and excerpts.
 
 Not covered (stays under project licenses, usually `CC-BY-4.0`):
 
-1. `references/summaries/**/*.md` — one-page editorial writeups.
-2. `references/reviews/**/*.md` — literature reviews.
-3. `references/datasets/**/*.md` — dataset cards.
-4. `references/papers.bib` — project-curated bibliography. Bibliographic facts are thin data and not independently copyrightable; curation and keying are project-authored.
+1. `references/summaries/**/*.md` -- one-page editorial writeups.
+2. `references/reviews/**/*.md` -- literature reviews.
+3. `references/datasets/**/*.md` -- dataset cards.
+4. `references/papers.bib` -- project-curated bibliography. Bibliographic facts are thin data and not independently copyrightable; curation and keying are project-authored.
 5. `references/README.md` and other navigation prose.
 
 Ambiguous:
 
-- `references/bibliographies/**/*.md` — parsed references from third-party papers. Thin factual data plus project-authored cleanup. Default to `CC-BY-4.0`. Demote individual files to `LicenseRef-Reference-Material` only if they contain substantial verbatim prose from a third-party paper.
+- `references/bibliographies/**/*.md` -- parsed references from third-party papers. Thin factual data plus project-authored cleanup. Default to `CC-BY-4.0`. Demote individual files to `LicenseRef-Reference-Material` only if they contain substantial verbatim prose from a third-party paper.
 
 ## Placement mechanism: scale-tiered
 

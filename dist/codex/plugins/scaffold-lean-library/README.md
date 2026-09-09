@@ -29,6 +29,18 @@ The skill prompts for project name, description, top-level Lean namespace, Lean 
 - "new Mathlib project" creates a Mathlib-downstream library.
 - "create a PFR downstream formalization" creates a Lean library depending on `teorth/pfr`.
 
+## Recommended Permissions
+
+This skill runs git, GitHub CLI, and Lake commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(git init*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git config *)", "Bash(git ls-remote *)", "Bash(gh api user*)", "Bash(lake *)", "Bash(make *)"]
+  }
+}
+```
+
 ## See Also
 
 - [Write Lean Code](../write-lean-code/README.md): Lean naming, proof, and module conventions

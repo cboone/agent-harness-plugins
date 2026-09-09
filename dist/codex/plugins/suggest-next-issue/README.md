@@ -1,6 +1,6 @@
 # Suggest Next Issue
 
-Review all open GitHub issues and recommend what to work on next with prioritized reasoning.
+Review open GitHub issues and recommend what to work on next with prioritized reasoning.
 
 **Type:** Skill
 **Trigger:** `/suggest-next-issue`
@@ -12,7 +12,7 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 ## What It Does
 
-Analyzes open issues in context (current branches, issue labels, assignments, recent work, project goals, and dependencies), excludes issues already marked in progress, then categorizes the remaining candidates as quick wins, high impact, unblocks others, or overdue. Provides specific reasoning for each recommendation so you can make an informed decision.
+Analyzes open issues in context (current branches, issue labels, assignments, recent work, project goals, and dependencies), excludes issues already marked in progress, then categorizes the remaining candidates as narrow scope, high impact, unblocks others, or overdue. Provides specific reasoning for each recommendation so you can make an informed decision.
 
 ## Usage
 

@@ -27,6 +27,18 @@ The command prompts for project name, description, and optional features during 
 - "new rust cli": same behavior
 - "start a rust cli project": same behavior
 
+## Recommended Permissions
+
+This skill runs git, GitHub CLI, and Cargo commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(git init*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git config *)", "Bash(gh api user*)", "Bash(cargo build*)"]
+  }
+}
+```
+
 ## See Also
 
 - [Scaffold New Repo](../scaffold-new-repo/README.md): language-agnostic repo boilerplate (included automatically)

@@ -9,5 +9,5 @@
   "name": "scaffold-new-repo",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.8.2"
+  "version": "1.8.3"
 }

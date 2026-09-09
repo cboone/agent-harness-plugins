@@ -1,6 +1,6 @@
 # Add Cobra Version
 
-Add a `version` subcommand with full build metadata to an existing Cobra-based Go CLI.
+Add a version subcommand with build metadata (version, commit hash, build date, Go runtime version, optional JSON output) to an existing Cobra-based Go CLI, wiring up ldflags in main.go, the cmd package, GoReleaser, and the Makefile.
 
 **Type:** Skill
 **Trigger:** `/add-cobra-version`

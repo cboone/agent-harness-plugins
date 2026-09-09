@@ -89,9 +89,9 @@ A single heading style should be used throughout the roadmap; mixing M\<N\> and 
 - `lake build <Module.Name>` (or equivalent) passes for the modules the milestone creates or modifies.
 - `lake lint` (or equivalent) is green on the new code.
 - `lake test` (or equivalent) is green, and the newly-added test module is part of the default test target.
-- Any milestone-specific sanity check: a small-model arithmetic check, a concrete witness verification, a paper-cross-check identity, a performance threshold. Be specific.
+- Any milestone-specific validity check: a small-model arithmetic check, a concrete witness verification, a paper-cross-check identity, a performance threshold. Be specific.
 
-The checkpoint is all-or-nothing. A milestone that compiles but fails lint is not done. A milestone that compiles and lints but whose test module is unfinished is not done. A milestone whose sanity check does not match the paper's derivation is not done.
+The checkpoint is all-or-nothing. A milestone that compiles but fails lint is not done. A milestone that compiles and lints but whose test module is unfinished is not done. A milestone whose validity check does not match the paper's derivation is not done.
 
 **Signals of a weak checkpoint gate.**
 

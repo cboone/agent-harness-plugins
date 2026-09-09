@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install zsh
         run: sudo apt-get update && sudo apt-get install -y zsh
@@ -50,7 +50,7 @@ jobs:
       - uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
 
       - name: Install shellharden
-        run: cargo install --locked --version 4.3.1 shellharden
+        run: cargo install --locked --version 4.3.2 shellharden
 
       - name: Run zsh checks
         env:

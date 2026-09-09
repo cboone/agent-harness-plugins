@@ -18,7 +18,7 @@ Known mistakes in secret handling with real-world examples.
 
 ## Base64 "encryption"
 
-Docker's canonical anti-pattern: storing `base64(username:password)` in `~/.docker/config.json`. Base64 is **encoding, not encryption** — it decodes trivially — yet it creates a false sense of security.
+Docker's canonical anti-pattern: storing `base64(username:password)` in `~/.docker/config.json`. Base64 is **encoding, not encryption** -- it decodes trivially -- yet it creates a false sense of security.
 
 **Rule:** If you store plaintext, tell users it's plaintext. Docker now warns: _"WARNING! Your password will be stored unencrypted."_
 
@@ -67,7 +67,7 @@ curl -H "Authorization: Bearer ${TOKEN}" https://api.example.com
 
 ```bash
 # ALSO DANGEROUS (and misleading): with inline assignment, $TOKEN is expanded
-# BEFORE the assignment takes effect — so $TOKEN uses its previous value
+# BEFORE the assignment takes effect -- so $TOKEN uses its previous value
 # (or empty if unset), not "secret"
 TOKEN=secret curl -H "Authorization: Bearer $TOKEN" https://api.example.com
 ```

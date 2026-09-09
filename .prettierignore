@@ -11,6 +11,7 @@ docs/plans/done/
 # Generated mirrors: rebuilt by bin/build-codex-marketplace and
 # bin/build-opencode-mirror, and CI fails if they drift from source.
 dist/
+.agents/
 
 # Shell scripts (formatted by shfmt, not prettier)
 bin/*

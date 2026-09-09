@@ -87,6 +87,8 @@ function truncate_body() {
   fi
 
   candidate="$(trim_trailing_space "${candidate}")"
+  # The backticks below are literal Markdown, not command substitution.
+  # shellcheck disable=SC2016
   printf '%s\n\n(Issue body truncated. Run `gh issue view %s` for full details.)' "${candidate}" "${number}"
 }
 

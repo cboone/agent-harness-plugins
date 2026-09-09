@@ -15,7 +15,12 @@
     "extends": ".markdownlint.jsonc",
   },
 
-  "ignores": [".workmux/", "**/node_modules/**"],
+  // dist/ holds the generated Codex and OpenCode mirrors. Linting them reports
+  // every finding a second time, and dist/opencode/skills/* are symlinks back
+  // into plugins/, so fast-glob followed them and linted each source file three
+  // times over. A finding there is also unfixable in place: the only remedy is
+  // to edit the source and rebuild.
+  "ignores": [".workmux/", "**/node_modules/**", "dist/"],
 
   // markdownlint-rule-force-align-table-columns was removed here. It supplied
   // MD060A, a duplicate of the built-in MD060 pinned to the aligned style, and

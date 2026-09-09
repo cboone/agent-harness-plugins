@@ -30,10 +30,10 @@ git rev-parse --abbrev-ref origin/HEAD | sed 's@^origin/@@'
 Find the merge base between the default branch and HEAD:
 
 ```bash
-git merge-base < default-branch > HEAD
+git merge-base <default-branch> HEAD
 ```
 
-If HEAD equals the merge base (on the default branch or no divergent commits), compare against the state before the most recent merge instead — use the most recent merge commit's first parent as the comparison base:
+If HEAD equals the merge base (on the default branch or no divergent commits), compare against the state before the most recent merge instead -- use the most recent merge commit's first parent as the comparison base:
 
 ```bash
 git rev-parse "$(git log --merges -1 --format='%H' HEAD)^1"
@@ -44,7 +44,7 @@ git rev-parse "$(git log --merges -1 --format='%H' HEAD)^1"
 List files changed since the comparison base and group them by plugin directory:
 
 ```bash
-git diff --name-only < base > ..HEAD
+git diff --name-only <base>..HEAD
 ```
 
 A file belongs to plugin `foo` if its path starts with `plugins/foo/`. For each plugin, track:
@@ -61,9 +61,9 @@ For each plugin with content changes:
 1. Read the current version from `plugins/<name>/.claude-plugin/plugin.json`
 1. Read the base version: `git show <base>:plugins/<name>/.claude-plugin/plugin.json`
 1. Compare:
-   - New plugin (file absent at base) — version should be `1.0.0`
-   - Content files changed but version unchanged — **flag as missing version bump**
-   - Version changed — verify the bump direction is forward, not a regression
+   - New plugin (file absent at base) -- version should be `1.0.0`
+   - Content files changed but version unchanged -- **flag as missing version bump**
+   - Version changed -- verify the bump direction is forward, not a regression
 
 Assess bump level (informational):
 
@@ -97,7 +97,7 @@ Output a structured report:
 ### Marketplace Sync
 - Plugin versions: ✅ All match / ⚠️ Mismatches listed
 - Coverage: ✅ All registered / ⚠️ Missing or orphaned entries
-- Metadata version: <base> → <current> — ✅ Correct / ⚠️ Issue described
+- Metadata version: <base> → <current> -- ✅ Correct / ⚠️ Issue described
 
 ### Recommended Actions
 1. <specific fix needed>

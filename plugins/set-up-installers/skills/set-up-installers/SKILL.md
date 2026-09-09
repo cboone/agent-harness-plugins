@@ -198,18 +198,23 @@ OWNER=$(gh repo view --json owner -q .owner.login)
 gh repo view "${OWNER}/homebrew-tap" --json name -q .name 2>/dev/null
 ```
 
-**If the tap repo exists**, offer to create an issue there with the formula and setup instructions. Write the issue body to a temp file (using `mktemp`) and use `gh issue create`:
+**If the tap repo exists**, offer to create an issue there with the formula and setup instructions. Use the tmpfile pattern: generate a path, write the body with the Write tool, then invoke `gh` in a separate message.
 
 ```bash
-tmp_issue_body="$(mktemp)"
-trap 'rm -f "${tmp_issue_body}"' EXIT
-
-# Write the issue body to "${tmp_issue_body}" here.
-
-gh issue create --repo "${OWNER}/homebrew-tap" \
-  --title "Add PROJECT-NAME formula" \
-  --body-file "${tmp_issue_body}"
+mktemp -u /tmp/gh-issue-body-XXXXXX
 ```
+
+The `-u` flag is required. Plain `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first. Write the issue body to the returned path, then, in a separate message:
+
+```bash
+gh issue create --repo "${OWNER}/homebrew-tap" --title "Add PROJECT-NAME formula" --body-file TMPFILE
+```
+
+```bash
+rm -f TMPFILE
+```
+
+Never batch the Write call with `gh issue create`: `gh` reads the body file at invocation time, so a parallel batch can file the issue with an empty body. Do not chain cleanup onto the `gh` call or wrap it in a `trap` either; keep `rm -f` in its own Bash call. See the `use-git` skill's tmpfile pattern reference for the full rationale.
 
 The issue body should contain:
 
@@ -319,9 +324,9 @@ jobs:
           - goos: darwin
             goarch: arm64
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
 
@@ -400,7 +405,7 @@ jobs:
       matrix:
         arch: [arm64, x86_64]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build
         run: |
@@ -498,7 +503,7 @@ jobs:
             os: darwin
             arch: arm64
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
@@ -581,7 +586,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Zig
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1

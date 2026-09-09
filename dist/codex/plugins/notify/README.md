@@ -1,6 +1,6 @@
 # Notify (macOS)
 
-Sends rich, harness-aware macOS notifications when Claude Code, OpenCode, or Codex CLI finishes a task or needs your attention. Click a notification to focus the originating terminal app and tmux pane.
+Sends macOS notifications when Claude Code, OpenCode, or Codex CLI finishes a task or needs your attention.
 
 **Type:** Hook
 **Requires:** [`alerter`](https://github.com/vjeantet/alerter) (>= 26.5). Install via [Homebrew](https://brew.sh): `brew install vjeantet/tap/alerter`. Also requires [`jq`](https://jqlang.github.io/jq/) and macOS `tmux` (only used when running inside a tmux session).
@@ -51,7 +51,7 @@ The standalone "Waiting for input…" notification (Claude Code's `Notification:
 
 `alerter` posts notifications by impersonating Terminal's bundle identity (the v26.4+ default) so it appears under "Terminal" in System Settings → Notifications, where you grant alert permission once. You will not see a separate "alerter" entry. The first notification after install may not appear until permission is granted; the second will.
 
-## What it does
+## What It Does
 
 Delivers native macOS notifications so you can work in other apps while an agent runs. Each notification carries:
 
@@ -117,6 +117,6 @@ Failures (closed pane, no client attached, missing terminal app) are silent: cli
 - The transcript-based extractors (last user message, last assistant message tail, pending tool use) iterate the transcript JSONL. Performance is fine for typical sessions; very long transcripts may add a small delay before the notification appears.
 - The `--app-icon` flag uses a private macOS API that `alerter` keeps working release to release. If a future macOS update breaks it, notifications will still fire but with the default Terminal icon.
 
-## See also
+## See Also
 
 - [All plugins](../../../../README.md)

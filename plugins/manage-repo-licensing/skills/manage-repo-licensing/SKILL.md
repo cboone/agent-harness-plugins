@@ -28,13 +28,13 @@ Encode the REUSE-style mixed-license workflow that has converged across four sib
 Every run, regardless of mode, honors these rules. They are the lessons from the four prior rollouts.
 
 1. **Policy is frozen before edits.** Surface the license split, the fork-lineage question, and the reference-material scope, and wait for user confirmation before touching any file.
-2. **License-text filenames are normalized first.** `LICENSES/<SPDX-ID>.txt` must match the SPDX identifier byte-for-byte (case-sensitive). Fix mis-cased filenames (`APACHE-2.0.txt` -> `Apache-2.0.txt`) before any annotation pass — otherwise `reuse lint` will flag every tag.
+2. **License-text filenames are normalized first.** `LICENSES/<SPDX-ID>.txt` must match the SPDX identifier byte-for-byte (case-sensitive). Fix mis-cased filenames (`APACHE-2.0.txt` -> `Apache-2.0.txt`) before any annotation pass -- otherwise `reuse lint` will flag every tag.
 3. **Placement is decided by file type, not by repo convention.** Use the standardized matrix in `references/file-type-matrix.md`. Existing divergence is drift to migrate.
 4. **`REUSE.toml` is the default coverage surface.** Every repo ships one with at least prose, config, generated, and structural groups (plus conditional CoC and reference-material blocks). Inline SPDX is reserved for substantive source code; per-file `.license` sidecars are a narrow residual. Config files (`Makefile`, `lakefile.toml`, `pyproject.toml`, `cspell-words.txt`, dotfiles, YAML, JSONC) and generated artifacts (lock files, `lean-toolchain`, Pandoc output, regenerated JSON/ICS) both fall in `REUSE.toml`, not inline or sidecar.
 5. **Rollouts advance in small, reviewable commits.** Use the ladder in `references/commit-sequence.md`. Do not squash.
 6. **`reuse lint` must be clean when done.** Plus any repo-local checks (e.g. `make lint`, `make check-proofs`).
-7. **Third-party bundled reference material is covered, not excluded.** It uses `LicenseRef-Reference-Material` (shared canonical text) with scale-tiered placement — per-file sidecars for small curated collections (~20 or fewer), a `REUSE.toml` glob for larger ones. Per-work `LicenseRef-*` exceptions require explicit justification in `NOTICE`.
-8. **Comments live where required, nowhere else.** No `NOTICE.license` sidecar. No `*.md.license` sidecars or HTML-comment SPDX inside project-authored Markdown — both are absorbed by the `REUSE.toml` prose group.
+7. **Third-party bundled reference material is covered, not excluded.** It uses `LicenseRef-Reference-Material` (shared canonical text) with scale-tiered placement -- per-file sidecars for small curated collections (~20 or fewer), a `REUSE.toml` glob for larger ones. Per-work `LicenseRef-*` exceptions require explicit justification in `NOTICE`.
+8. **Comments live where required, nowhere else.** No `NOTICE.license` sidecar. No `*.md.license` sidecars or HTML-comment SPDX inside project-authored Markdown -- both are absorbed by the `REUSE.toml` prose group.
 9. **`NOTICE` is a summary, not an override.** Never write wording that implies every file is under one license.
 10. **Prose that documents SPDX syntax is a hazard.** Any project-authored Markdown that contains the literal string `SPDX-License-Identifier` followed by a colon (or a similar tag) outside a REUSE-ignore region is parsed by `reuse` as a real declaration and usually corrupts the lint report. Wrap such passages in `<!-- REUSE-IgnoreStart -->` / `<!-- REUSE-IgnoreEnd -->` HTML comments. This applies to this skill's own documentation, to any plan document that describes the workflow, and to README sections that show SPDX examples. The code-block fence does not protect the content; REUSE scans code blocks.
 11. **Intentional deviations are data, not drift.** When running against a repo that is already REUSE-compliant, compare coverage to the matrix but do not flatten deliberate policy choices. Common legitimate deviations: (a) a fork preserving upstream attribution via per-file sidecars on unmodified files, dual-copyright MIT on lockfiles, or a compound license on the README; (b) a non-default code-bucket license (for example, Apache-2.0 rather than MIT for project-authored tooling); (c) per-work `LicenseRef-*` exceptions with justification in `NOTICE`; (d) explicit prose path lists instead of globs when auditability matters more than elasticity. Surface these as candidate cleanups and wait for user direction before normalizing. The defaults in Sections 2-6 are a starting point; once a repo has a working policy, changes should be additive and policy-preserving, not flattening.
@@ -43,7 +43,7 @@ Every run, regardless of mode, honors these rules. They are the lessons from the
 
 Pick the mode that matches the user's ask. Announce the mode before executing so the user can redirect.
 
-### Mode B — Bootstrap
+### Mode B -- Bootstrap
 
 For a repo with no or minimal SPDX coverage.
 
@@ -60,7 +60,7 @@ Flow:
 
 Execute in commits that follow `references/commit-sequence.md`.
 
-### Mode M — Maintain
+### Mode M -- Maintain
 
 For a repo that already has SPDX coverage and needs a drift audit or catch-up.
 
@@ -74,7 +74,7 @@ Flow:
 6. Apply approved fixes in small commits.
 7. Re-verify.
 
-### Mode N — New file drop
+### Mode N -- New file drop
 
 For one or more newly added files.
 
@@ -110,7 +110,7 @@ Before editing, propose and confirm:
 1. **License split.** Defaults (see `references/license-split.yaml`):
    - Lean code: `Apache-2.0`
    - Non-Lean substantive code (Python scripts, shell tools, vendored LaTeX macros): `MIT`
-   - Hand-authored infrastructure config (Makefile, TOML, YAML, JSONC, dotfiles, word lists): same code-bucket license (`MIT` when present), covered via the REUSE.toml config group — not inline.
+   - Hand-authored infrastructure config (Makefile, TOML, YAML, JSONC, dotfiles, word lists): same code-bucket license (`MIT` when present), covered via the REUSE.toml config group -- not inline.
    - Prose, mathematical exposition, planning notes: `CC-BY-4.0`
    - Generated artifacts (lock files, Pandoc output, tool-regenerated JSON/ICS): `CC0-1.0`, covered via the REUSE.toml generated group.
    - Contributor Covenant derivative `CODE_OF_CONDUCT.md`: `CC-BY-SA-4.0`
@@ -154,7 +154,7 @@ Template: `references/NOTICE.template.md`.
 Every repo ships one. `REUSE.toml` is the default coverage surface; inline SPDX and per-file sidecars are exceptions, not defaults. The required annotation groups are:
 
 1. **Project prose (`CC-BY-4.0`, `precedence = "aggregate"`).** Covers `NOTICE` and every project-authored `.md` path from the matrix. This group replaces per-file `.md` inline headers and `.license` sidecars for prose.
-2. **Project config (code-bucket license, `precedence = "aggregate"`).** Covers hand-authored infrastructure config: `Makefile`, `lakefile.toml`, `pyproject.toml`, `**/*.yaml`, `**/*.yml`, `**/*.jsonc`, `.editorconfig`, `.gitignore`, `.gitattributes`, `.ignore`, `cspell-words.txt`, and similar. License is the repo's code bucket — `MIT` if present, otherwise `Apache-2.0`. Replaces per-file sidecars and inline headers on config files.
+2. **Project config (code-bucket license, `precedence = "aggregate"`).** Covers hand-authored infrastructure config: `Makefile`, `lakefile.toml`, `pyproject.toml`, `**/*.yaml`, `**/*.yml`, `**/*.jsonc`, `.editorconfig`, `.gitignore`, `.gitattributes`, `.ignore`, `cspell-words.txt`, and similar. License is the repo's code bucket -- `MIT` if present, otherwise `Apache-2.0`. Replaces per-file sidecars and inline headers on config files.
 3. **Generated artifacts (`CC0-1.0`, `precedence = "override"`).** Covers auto-regenerated files whose content is mechanical: lock files, `lean-toolchain`, Pandoc-generated `.tex`, generated JSON/JSONL, `.ics` output, script-generated figure data. `CC0-1.0` is the honest framing (public-domain dedication on content the project does not originate) and adds `LICENSES/CC0-1.0.txt`.
 4. **Structural placeholders (code-bucket license, `precedence = "override"`).** Covers `**/.gitkeep`. One glob, no per-file sidecars.
 5. **Contributor Covenant derivative (`CC-BY-SA-4.0`, `precedence = "override"`).** Include only when `CODE_OF_CONDUCT.md` exists and is Contributor-Covenant-derived.
@@ -163,7 +163,7 @@ Every repo ships one. `REUSE.toml` is the default coverage surface; inline SPDX 
 Optional additional groups:
 
 - **Upstream fork trees** retained unchanged (upstream copyright, original license).
-- **Mixed-copyright paths** (for example, a fork's `README.md` under `MIT AND CC-BY-4.0`) — give them their own annotation block with multi-entry `SPDX-FileCopyrightText`.
+- **Mixed-copyright paths** (for example, a fork's `README.md` under `MIT AND CC-BY-4.0`) -- give them their own annotation block with multi-entry `SPDX-FileCopyrightText`.
 
 The `REUSE.toml` file itself is covered by group 2 (config), not inline. Do not add an inline SPDX block at its top.
 
@@ -280,7 +280,7 @@ Notes on the skeleton:
 `REUSE.toml` is the default; inline and sidecar are exceptions. Use `references/file-type-matrix.md` as the single source of truth. Summary:
 
 1. **REUSE.toml coverage** (most files): prose group, config group, generated group, structural group, reference-material group, CoC block. Covered in Section 5. No inline SPDX, no sidecar.
-2. **Inline always**: substantive hand-authored source code where the SPDX tag is part of the file's public interface and should travel with the file — `.lean`, `.py` (hand-authored), hand-authored `.tex`, `.lua`, `.js`, `.ts`, `.css`, `.less`, hand-authored `.html`, shebang scripts with substantive logic, `.sh`/`.zsh` beyond trivial wrappers, compiled-language sources (`.go`, `.rs`, `.c`, `.cpp`, `.h`, `.hpp`, `.swift`, `.kt`, `.java`). A consumer lifting one of these files elsewhere should read the SPDX header on it.
+2. **Inline always**: substantive hand-authored source code where the SPDX tag is part of the file's public interface and should travel with the file -- `.lean`, `.py` (hand-authored), hand-authored `.tex`, `.lua`, `.js`, `.ts`, `.css`, `.less`, hand-authored `.html`, shebang scripts with substantive logic, `.sh`/`.zsh` beyond trivial wrappers, compiled-language sources (`.go`, `.rs`, `.c`, `.cpp`, `.h`, `.hpp`, `.swift`, `.kt`, `.java`). A consumer lifting one of these files elsewhere should read the SPDX header on it.
 3. **Sidecar (narrow residual)**: per-file sidecars only where per-file metadata is substantive and the format blocks inline comments. Examples: individual bundled reference PDFs under the small-collection threshold (author/publisher-specific copyright lines); binary assets the project authors with distinct attribution. Everything else that was historically sidecared (lock files, `lean-toolchain`, `cspell-words.txt`, `.gitignore`, `Makefile`, etc.) now lives in a `REUSE.toml` block.
 
 Governing principle: **inline headers are load-bearing; REUSE.toml is ceremony.** If the SPDX tag on a file does not tell a downstream reader something they can't get from `REUSE.toml`, it should not be inline.
@@ -296,7 +296,7 @@ Inline syntax by format (for files that genuinely go inline):
 
 Every inline block includes both `SPDX-FileCopyrightText` and `SPDX-License-Identifier`. Prefer `reuse annotate` for batch insertion on recognized types and `reuse annotate --force-dot-license` for the narrow sidecar cases.
 
-**Anti-pattern to migrate**: inline SPDX on infrastructure config (`lakefile.toml`, `pyproject.toml`, `Makefile`, `cspell.jsonc`, `.gitignore`, `.editorconfig`, etc.). Strip the inline block; the REUSE.toml config group covers it. Inline SPDX on generated `.tex` or `.ics` outputs is the same anti-pattern — the generator regenerates the file and the header disappears anyway.
+**Anti-pattern to migrate**: inline SPDX on infrastructure config (`lakefile.toml`, `pyproject.toml`, `Makefile`, `cspell.jsonc`, `.gitignore`, `.editorconfig`, etc.). Strip the inline block; the REUSE.toml config group covers it. Inline SPDX on generated `.tex` or `.ics` outputs is the same anti-pattern -- the generator regenerates the file and the header disappears anyway.
 
 ## 7. Verification
 
@@ -311,7 +311,7 @@ Details: `references/verification.md`.
 
 Third-party reference materials are **not** carve-outs. They are SPDX-covered via `LicenseRef-Reference-Material` (see `references/reference-material-text.md`).
 
-True carve-outs — files the skill never tags, and that `NOTICE` names explicitly:
+True carve-outs -- files the skill never tags, and that `NOTICE` names explicitly:
 
 1. `LICENSES/` license texts themselves (tool convention).
 2. Vendored dependency state: `proofs/.lake/packages/**`, `.git/`, `.venv/`, `.ruff_cache/`, `node_modules/`, `vendor/`, and similar.
@@ -345,13 +345,13 @@ For the specific drift state of any given repo at a given time, write the audit 
 
 ## Reference Files
 
-- `references/file-type-matrix.md` — the placement decision table by file type
-- `references/license-split.yaml` — default three- or four-way split
-- `references/NOTICE.template.md` — fill-in-the-blanks NOTICE body
-- `references/reference-material-text.md` — canonical `LicenseRef-Reference-Material.txt` text and scope
-- `references/commit-sequence.md` — the rollout commit ladder
-- `references/verification.md` — `reuse lint` + repo-lint + build invariants
-- `references/example-flows.md` — end-to-end Bootstrap and single-file Maintain transcripts
+- `references/file-type-matrix.md` -- the placement decision table by file type
+- `references/license-split.yaml` -- default three- or four-way split
+- `references/NOTICE.template.md` -- fill-in-the-blanks NOTICE body
+- `references/reference-material-text.md` -- canonical `LicenseRef-Reference-Material.txt` text and scope
+- `references/commit-sequence.md` -- the rollout commit ladder
+- `references/verification.md` -- `reuse lint` + repo-lint + build invariants
+- `references/example-flows.md` -- end-to-end Bootstrap and single-file Maintain transcripts
 
 ## Refresh `cboone/gh-actions` SHAs before scaffolding
 

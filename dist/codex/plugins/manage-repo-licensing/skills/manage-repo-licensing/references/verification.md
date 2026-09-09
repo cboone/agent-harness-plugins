@@ -17,7 +17,7 @@ reuse lint
 
 (or `uvx reuse-tool lint` if not installed persistently.)
 
-Zero errors. Not "only low-severity" — zero. Common errors and what they mean:
+Zero errors. Not "only low-severity" -- zero. Common errors and what they mean:
 
 | Error                                                                 | Likely cause                                                                                              |
 | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -78,5 +78,5 @@ This prevents future drift from landing silently.
 1. **License text that doesn't match the canonical SPDX version.** `reuse download <SPDX-ID>` places canonical text; hand-downloaded text from a search engine may have extra whitespace, removed section numbers, or Unicode quirks that upset some tooling. Prefer `reuse download`.
 2. **Trailing-whitespace diffs when `reuse annotate` inserts headers.** Project formatters may strip or reformat. Run the formatter after annotating and before committing.
 3. **Sidecars with no target file.** Orphan `.license` sidecars are a `reuse lint` error. If you delete a file, delete its sidecar in the same commit.
-4. **`.lean` comment block vs. `lake build`.** Lean's `/- ... -/` at the very top of a file is fine. If the header comes before the module docstring (`/-! ... -/`), that is also fine. If it falls between imports and the first declaration, Lean may parse it but style will drift — keep SPDX strictly at the top.
+4. **`.lean` comment block vs. `lake build`.** Lean's `/- ... -/` at the very top of a file is fine. If the header comes before the module docstring (`/-! ... -/`), that is also fine. If it falls between imports and the first declaration, Lean may parse it but style will drift -- keep SPDX strictly at the top.
 5. **YAML front-matter clashes.** For Pandoc Markdown files that have YAML front matter (`--- ... ---` at the top), the REUSE.toml prose group is still the right coverage, not an inline HTML comment above the front matter. A leading `<!-- SPDX-* -->` block before the YAML breaks Pandoc's front-matter detection.

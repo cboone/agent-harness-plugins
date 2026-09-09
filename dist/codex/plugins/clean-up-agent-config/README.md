@@ -1,6 +1,6 @@
 # Clean Up Agent Config
 
-Review and reorganize AI coding agent configuration and instruction files.
+Review and reorganize AI coding agent configuration and instruction files across Claude Code, Codex, Copilot, and OpenCode.
 
 **Type:** Skill
 **Trigger:** `/clean-up-agent-config`

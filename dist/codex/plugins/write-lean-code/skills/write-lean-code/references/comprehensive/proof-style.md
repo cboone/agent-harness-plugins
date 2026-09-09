@@ -202,7 +202,7 @@ exact (h).symm
 - A `have` block is self-contained and non-trivial
 - A declaration is over the heartbeat budget. Extraction redistributes work across per-declaration budgets; see `mathlib.md#heartbeats-and-build-performance` for the order-of-magnitude-effectiveness argument and specific thresholds.
 
-**When extracting from inside a `classical`-prefixed proof**, add `classical` to each extracted sub-lemma unless every missing `DecidableEq` is already in the `variable` block or a section instance. The parent's `classical` does not propagate to extracted lemmas — they start with a fresh elaboration context. A common symptom is `failed to synthesize instance of type class DecidableEq (S₁ × S₃)` in an extracted reindex lemma whose main-proof twin worked without issue.
+**When extracting from inside a `classical`-prefixed proof**, add `classical` to each extracted sub-lemma unless every missing `DecidableEq` is already in the `variable` block or a section instance. The parent's `classical` does not propagate to extracted lemmas -- they start with a fresh elaboration context. A common symptom is `failed to synthesize instance of type class DecidableEq (S₁ × S₃)` in an extracted reindex lemma whose main-proof twin worked without issue.
 
 **When extracting from a proof that used local `set` abbreviations**, the sub-lemma can state its signature with the unfolded form. At the call site, the caller's `set pXZ := fun p => ...` still accepts the extracted fact through definitional equality: `pXZ (t.1, t.2.2.1)` and `(μ.map ⟨X, Z⟩).real {(t.1, t.2.2.1)}` are defeq via the `set`-local let-binding, so `have hEq := extracted_lemma ...` carries the ascription as the caller wrote it. This avoids having to parameterize the sub-lemma over the local abbreviation.
 

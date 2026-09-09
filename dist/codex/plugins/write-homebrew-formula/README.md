@@ -1,6 +1,6 @@
 # Write Homebrew Formula
 
-Write or update Homebrew formulae using current Homebrew guidance and `cboone/homebrew-tap` conventions.
+Write or update Homebrew formulae using current Homebrew guidance and cboone/homebrew-tap conventions.
 
 **Type:** Skill
 **Trigger:** `/write-homebrew-formula`

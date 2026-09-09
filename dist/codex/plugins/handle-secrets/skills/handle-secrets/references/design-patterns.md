@@ -6,10 +6,10 @@ Patterns that push users toward security by making the secure path the default.
 
 The core design pattern for CLI tools. Resolve credentials in this order:
 
-1. **Environment variable** (serves CI/CD — systems like GitHub Actions and Kubernetes inject secrets this way)
+1. **Environment variable** (serves CI/CD -- systems like GitHub Actions and Kubernetes inject secrets this way)
 1. **Credential helper / OS keychain** (serves interactive users with persistent, encrypted storage)
 1. **Config file** with 0600 permissions (fallback when keychains are unavailable)
-1. **Interactive TTY prompt** (safest default for humans — echo-suppressed, never stored)
+1. **Interactive TTY prompt** (safest default for humans -- echo-suppressed, never stored)
 
 Never fall through to accepting `--password <value>` as a command-line argument.
 
@@ -119,7 +119,7 @@ let f = std::fs::OpenOptions::new()
 **Never** use create-then-chmod:
 
 ```python
-# WRONG: race condition — file briefly has default permissions
+# WRONG: race condition -- file briefly has default permissions
 with open(cred_path, 'w') as f:
     f.write(credentials)
 os.chmod(cred_path, 0o600)

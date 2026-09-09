@@ -1,6 +1,6 @@
 # Review Branch
 
-Review and evaluate all work done on the current branch compared to the base branch.
+Review and evaluate all work done on the current branch: summarize changes, assess plan compliance, and evaluate code quality.
 
 **Type:** Skill
 **Trigger:** `/review-branch`
@@ -38,6 +38,18 @@ Summarizes changes by area/concern, lists new/modified/deleted files, and highli
 - "review branch": full summary of all changes
 - "where are we on this branch": same as above
 - "compare branch to plan": auto-detects a matching plan file
+
+## Recommended Permissions
+
+This skill runs git and GitHub CLI commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(git branch *)", "Bash(git diff*)", "Bash(git log *)", "Bash(git merge-base *)", "Bash(git rev-parse *)", "Bash(gh repo view *)", "Bash(mkdir -p docs/reviews)"]
+  }
+}
+```
 
 ## See Also
 

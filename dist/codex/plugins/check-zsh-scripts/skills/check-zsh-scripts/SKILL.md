@@ -158,13 +158,13 @@ Display a summary table:
 ```text
 | Tool | Status | Issues | Filtered |
 |------|--------|--------|----------|
-| zsh -n | Pass/Fail | N | -- |
-| zcompile | Pass/Fail | N | -- |
+| zsh -n | Pass/Fail | N | n/a |
+| zcompile | Pass/Fail | N | n/a |
 | shellcheck | Pass/Issues | N | M filtered |
 | checkbashisms | Pass/Info | N | M filtered |
 | shellharden | Pass/Suggestions | N | M filtered |
-| setopt warnings | Pass/Warnings | N | -- |
-| shfmt | Pass/Formatting | N files | -- |
+| setopt warnings | Pass/Warnings | N | n/a |
+| shfmt | Pass/Formatting | N files | n/a |
 ```
 
 Then list each genuine issue with:

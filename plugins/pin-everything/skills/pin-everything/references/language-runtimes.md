@@ -136,7 +136,7 @@ gh api repos/rust-lang/rust/releases --jq '.[0].tag_name'
 gh api repos/ziglang/zig/releases --jq '.[0].tag_name'
 ```
 
-For pre-release tracking (master), set `.minimum_zig_version = "0.X.Y-dev.NNNN+abcdef"` to the current master snapshot from `https://ziglang.org/download/index.json` — the unstable channel changes daily.
+For pre-release tracking (the development channel), set `.minimum_zig_version = "0.X.Y-dev.NNNN+abcdef"` to the current development snapshot from `https://ziglang.org/download/index.json` -- the unstable channel changes daily.
 
 ## Special Cases
 
@@ -158,8 +158,8 @@ The pattern depends on which surface is in use:
 | `.ruby-version` exists                             | `ruby-version-file: ".ruby-version"`  |
 | `Gemfile` exists AND has a `ruby` directive        | `ruby-version-file: "Gemfile"`        |
 
-A `.tool-versions` whose lines are all non-Ruby (e.g., `nodejs 22.10.0` only) does not satisfy the first row — point at `.ruby-version` or `Gemfile` instead, or add a `ruby` line to the existing `.tool-versions`. If none of the three conditions apply, create `.tool-versions` with `ruby <stable>` (or add a `ruby` line to an existing `.tool-versions`).
+A `.tool-versions` whose lines are all non-Ruby (e.g., `nodejs 22.10.0` only) does not satisfy the first row -- point at `.ruby-version` or `Gemfile` instead, or add a `ruby` line to the existing `.tool-versions`. If none of the three conditions apply, create `.tool-versions` with `ruby <stable>` (or add a `ruby` line to an existing `.tool-versions`).
 
 ### Python With `pyproject.toml`
 
-`astral-sh/setup-uv` reads `pyproject.toml`'s `[project] requires-python` automatically — no `python-version-file:` input is needed when uv handles the install, and **no `.python-version` should be created on top of it**. The established convention in this repo's set-up-ci templates (see `plugins/set-up-ci/skills/set-up-ci/SKILL.md` and `plugins/set-up-ci/skills/set-up-ci/references/ci-python.md`) is that `requires-python` is the only version source for uv workflows; introducing a parallel `.python-version` adds a second source uv ignores and lets local tooling drift apart from CI. If `requires-python` is missing, add it to `pyproject.toml`. For `actions/setup-python` workflows that have no equivalent automatic source, create `.python-version` with the explicit `X.Y.Z`.
+`astral-sh/setup-uv` reads `pyproject.toml`'s `[project] requires-python` automatically -- no `python-version-file:` input is needed when uv handles the install, and **no `.python-version` should be created on top of it**. The established convention in this repo's set-up-ci templates (see `plugins/set-up-ci/skills/set-up-ci/SKILL.md` and `plugins/set-up-ci/skills/set-up-ci/references/ci-python.md`) is that `requires-python` is the only version source for uv workflows; introducing a parallel `.python-version` adds a second source uv ignores and lets local tooling drift apart from CI. If `requires-python` is missing, add it to `pyproject.toml`. For `actions/setup-python` workflows that have no equivalent automatic source, create `.python-version` with the explicit `X.Y.Z`.

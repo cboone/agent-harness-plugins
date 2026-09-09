@@ -1,6 +1,6 @@
 # Write Bash Scripts
 
-Bash style conventions for creating and editing Bash scripts.
+Applies Bash style conventions when creating or editing Bash scripts.
 
 **Type:** Skill
 **Trigger:** `/write-bash-scripts` (also activates automatically)

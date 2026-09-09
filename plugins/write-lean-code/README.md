@@ -1,6 +1,6 @@
 # Write Lean Code
 
-Lean 4 style guide and Mathlib conventions.
+Lean 4 style guide and Mathlib conventions for naming, proofs, formatting, and metaprogramming.
 
 **Type:** Skill
 **Trigger:** `/write-lean-code` (also activates automatically)

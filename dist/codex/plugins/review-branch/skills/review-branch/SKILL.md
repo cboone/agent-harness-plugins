@@ -45,7 +45,7 @@ git rev-parse --abbrev-ref origin/HEAD | sed 's@^origin/@@'
 1. **Find the merge base** between the base reference and HEAD:
 
 ```bash
-git merge-base < base-ref > HEAD
+git merge-base <base-ref> HEAD
 ```
 
 Use this merge base as the actual comparison point for all subsequent commands. This ensures the diff only includes changes made on this branch, not changes made on the base branch since diverging.
@@ -58,13 +58,13 @@ Run these commands in parallel:
 
 ```bash
 # Commit history on this branch
-git log --oneline < merge-base > ..HEAD
+git log --oneline <merge-base>..HEAD
 
 # File-level summary (insertions, deletions, renames)
-git diff --stat < merge-base > ..HEAD
+git diff --stat <merge-base>..HEAD
 
 # Full diff for detailed analysis
-git diff < merge-base > ..HEAD
+git diff <merge-base>..HEAD
 
 # Current branch name
 git branch --show-current
@@ -76,7 +76,7 @@ git rev-parse --short HEAD
 Also read the commit messages in detail to understand the intent behind each change:
 
 ```bash
-git log --format='%h %s%n%n%b' --no-merges < merge-base > ..HEAD
+git log --format='%h %s%n%n%b' --no-merges <merge-base>..HEAD
 ```
 
 ### 3. Summarize the Work
@@ -89,7 +89,7 @@ Write a 2-4 sentence overview of what this branch accomplishes. Focus on the pur
 
 #### 3b. Group Changes by Area
 
-Organize all changes into logical groups based on what they affect. Use groups that fit the actual changes — common groupings include but are not limited to:
+Organize all changes into logical groups based on what they affect. Use groups that fit the actual changes -- common groupings include but are not limited to:
 
 - API / endpoints
 - UI / frontend
@@ -145,11 +145,13 @@ If the user specified `--plan <path>`, use that file. Otherwise, auto-detect:
 ```bash
 # Check common plan directory locations
 ls docs/plans/todo/ 2> /dev/null
-ls docs/plans/in-progress/ 2> /dev/null
 ls docs/plans/ 2> /dev/null
+ls docs/plans/done/ 2> /dev/null
 ```
 
-1. Search for plan files whose name matches the current branch name (with type prefixes and hyphens/underscores normalized). For example, branch `feature/add-dark-mode` would match a plan named `add-dark-mode.md`.
+`todo/` and `done/` are the directories the scaffolding skills create and the ones `commit` and `pr` recognize; check the `docs/plans/` root too, since older projects keep plans there unsorted.
+
+1. Search for plan files whose name matches the current branch name (with type prefixes and hyphens/underscores normalized). Plan files are named `YYYY-MM-DD-meaningful-description.md`, so match on the description portion after the datestamp: branch `feature/add-dark-mode` matches `2026-05-02-add-dark-mode.md`.
 
 1. If exactly one plan matches, use it. If multiple plans match, list them and ask the user which to use. If no plans match, skip the plan evaluation entirely.
 

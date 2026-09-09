@@ -12,6 +12,12 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # ubuntu-latest ships whatever ShellCheck its image happens to carry, so a
+  # runner bump can add or drop diagnostics with no change in this repository.
+  # Pin it like every other tool here.
+  SHELLCHECK_VERSION: "0.11.0"
+
 jobs:
   ci:
     name: Lint and validate
@@ -27,12 +33,19 @@ jobs:
       - run: yarn install --immutable
       - name: Lint Markdown
         run: yarn lint
-      - name: ShellCheck
-        run: shellcheck -S warning bin/* plugins/*/scripts/* tests/fixtures/*
+      - name: Set up ShellCheck
+        run: |
+          curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" \
+            | tar -xJf - -C /tmp
+          sudo install "/tmp/shellcheck-v${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
+          shellcheck --version
       - name: Set up shfmt
         uses: cboone/gh-actions/actions/set-up-shfmt@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
-      - name: shfmt
-        run: shfmt -d bin/* plugins/*/scripts/* tests/fixtures/*
+      # Runs at ShellCheck's default severity, so the optional checks enabled in
+      # .shellcheckrc are actually enforced, and covers every Bash script in the
+      # repository via bin/list-shell-scripts rather than a fixed glob.
+      - name: ShellCheck and shfmt
+        run: make lint-shell
       - uses: cboone/gh-actions/actions/set-up-actionlint@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
       - name: Actionlint
         run: actionlint
@@ -40,18 +53,40 @@ jobs:
         run: bin/validate-json
       - name: Validate plugin structure
         run: bin/validate-plugins
-      - name: Validate OpenCode mirror is up to date
+      - name: Validate generated mirrors are up to date
         run: |
+          bin/build-codex-marketplace
           bin/build-opencode-mirror
-          git diff --exit-code dist/
+          # `git diff` compares the worktree to the index and ignores untracked
+          # files, so a newly added plugin skill produced a brand-new untracked
+          # symlink under dist/opencode/skills/ and still reported clean.
+          # `git status --porcelain` catches additions as well as edits.
+          drift="$(git status --porcelain dist/ .agents/)"
+          if [[ -n "${drift}" ]]; then
+            echo "::error::Generated mirrors are out of date; run bin/build-codex-marketplace and bin/build-opencode-mirror"
+            printf '%s\n' "${drift}"
+            exit 1
+          fi
 
   test-scrut:
     name: Scrut tests
     uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+    # Every value below must start with "./". scrut runs each testcase from a
+    # temporary directory, and the reusable workflow rewrites only values
+    # matching ./* into absolute paths before exporting them. A bare "." is left
+    # untouched, so REPO_ROOT=. pointed at that temp dir: binaries still ran, but
+    # `cd "${REPO_ROOT}"` landed nowhere useful and the repository-wide grep
+    # guards scanned an empty directory and passed without checking anything.
+    #
+    # scrut-env is a literal block whose every line is parsed as KEY=value, and a
+    # comment inside it fails the job, which is why this note lives out here.
     with:
       scrut-env: |
         COMPOSE_ISSUE_PROMPT_BIN=./plugins/create-worktree-from-issue/scripts/compose-issue-prompt
         COPILOT_REVIEW_DATA_DIR=./tests/data/copilot-reviews
+        COMPUTE_CATALOG_STATE_BIN=./bin/compute-catalog-state
+        LIST_SHELL_SCRIPTS_BIN=./bin/list-shell-scripts
+        REPO_ROOT=./
         CREATE_WORKTREE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree/scripts/launch-workmux
         CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree-from-issue/scripts/launch-workmux
         GIT_WORKTREE_STUB_BIN=./tests/fixtures/git-worktree-stub

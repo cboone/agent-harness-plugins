@@ -49,7 +49,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 **External tools:**
 
 - _PR:_ [`gh`](https://cli.github.com/)
-- _Merge Main, Rebase Onto Main:_ [`gh`](https://cli.github.com/) (falls back to `git remote show origin` if unavailable)
+- _Merge Main, Rebase Onto Main, Review Branch:_ [`gh`](https://cli.github.com/) for default-branch detection; each falls back to a local git query if unavailable
 - _Release:_ [`jq`](https://jqlang.org/) for marketplace catalog releases; [`gh`](https://cli.github.com/) optional for GitHub Release creation
 
 ### Issues and Worktrees
@@ -75,6 +75,10 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Address Review](./plugins/address-review/README.md)                           | `/address-review <path>`       | Parse a review document for actionable feedback, work through items systematically, and track resolution progress. |
 | [Resolve Copilot PR Feedback](./plugins/resolve-copilot-pr-feedback/README.md) | `/resolve-copilot-pr-feedback` | Process and resolve GitHub Copilot automated PR review comments.                                                   |
 
+**External tools:**
+
+- _Resolve Copilot PR Feedback:_ [`gh`](https://cli.github.com/) (required; the skill reads review threads over the GitHub API and posts its summary comment)
+
 ### Code Quality
 
 | Plugin                                                         | Trigger                | What it does                                                                                                                                               |
@@ -94,7 +98,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 **External tools:**
 
-- _Add Scrut CLI Tests:_ [`scrut`](https://github.com/facebookincubator/scrut) (Makefile checks for availability and provides install instructions)
+- _Add Scrut CLI Tests, Write Scrut Tests:_ [`scrut`](https://github.com/facebookincubator/scrut) (Makefile checks for availability and provides install instructions)
 - _Check Zsh Scripts:_ [`shellcheck`](https://www.shellcheck.net/), [`shfmt`](https://github.com/mvdan/sh), [`shellharden`](https://github.com/anordal/shellharden), [`checkbashisms`](https://packages.debian.org/devscripts)
 
 ### Writing
@@ -115,7 +119,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Manage Repo Licensing](./plugins/manage-repo-licensing/README.md)             | `/manage-repo-licensing`       | Bootstrap, audit, and maintain REUSE-style mixed-license coverage in a repository: LICENSES/, NOTICE, REUSE.toml, SPDX headers, and reuse lint cleanliness. |
 | [Refresh Project Scaffolding](./plugins/refresh-project-scaffolding/README.md) | `/refresh-project-scaffolding` | Refresh existing project scaffolding against the latest plugin templates.                                                                                   |
 | [Scaffold Go CLI](./plugins/scaffold-go-cli/README.md)                         | `/scaffold-go-cli`             | Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions, and Homebrew tap support.                                                        |
-| [Scaffold Go Library](./plugins/scaffold-go-library/README.md)                 | `/scaffold-go-library`         | Scaffold a Go library project with GoReleaser changelog releases, golangci-lint, GitHub Actions CI/CD, and Makefile.                                        |
+| [Scaffold Go Library](./plugins/scaffold-go-library/README.md)                 | `/scaffold-go-library`         | Scaffold a Go library project with GoReleaser changelog-only releases, golangci-lint, GitHub Actions CI/CD, and Makefile.                                   |
 | [Scaffold Lean Library](./plugins/scaffold-lean-library/README.md)             | `/scaffold-lean-library`       | Scaffold a Lean 4 library project with Mathlib or PFR dependencies, Lake test/lint wiring, GitHub Actions CI, text linting, and agent instructions.         |
 | [Scaffold New Repo](./plugins/scaffold-new-repo/README.md)                     | `/scaffold-new-repo`           | Scaffold the universal boilerplate for a new repository: LICENSE, README, CHANGELOG, .gitignore, agent config files, and a plans directory.                 |
 | [Scaffold Rust CLI](./plugins/scaffold-rust-cli/README.md)                     | `/scaffold-rust-cli`           | Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest, git-cliff, GitHub Actions CI/CD, and Makefile.                                  |
@@ -123,6 +127,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 **External tools:**
 
 - _Manage Repo Licensing:_ [`reuse`](https://reuse.software/). Install via [Homebrew](https://brew.sh): `brew install reuse`
+- _Scaffold Go CLI, Scaffold Go Library, Scaffold Lean Library, Scaffold New Repo, Scaffold Rust CLI:_ [`gh`](https://cli.github.com/) to resolve the GitHub owner and create the repository. Each also needs its own toolchain: Go, [`elan`](https://github.com/leanprover/elan)/`lake` for Lean, and Cargo for Rust
 
 ### CI and Release
 
@@ -140,7 +145,9 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 **External tools:**
 
+- _Add GoReleaser Homebrew:_ [`gh`](https://cli.github.com/) and [`goreleaser`](https://goreleaser.com/)
 - _Pin Everything:_ [`gh`](https://cli.github.com/), [`jq`](https://jqlang.org/); optional [`corepack`](https://github.com/nodejs/corepack) (only when pinning Yarn or pnpm) and [`reuse`](https://reuse.software/) (only in REUSE-licensed repos)
+- _Set-Up Installers:_ [`gh`](https://cli.github.com/) to detect the repository owner and probe for a `homebrew-tap` repo
 - _Write Homebrew Formula:_ [Homebrew](https://brew.sh/) for formula audit, style, install, and test validation
 
 ### Agents
@@ -197,7 +204,7 @@ codex plugin marketplace remove agent-harness-plugins
 ### Codex CLI known limitations
 
 - **Plugin-bundled hooks are gated behind a feature flag.** `plugin_hooks` is `under development` in Codex CLI 0.128.0 and is `false` by default. Run `codex features enable plugin_hooks` once before expecting `notify` to fire on Codex; see above.
-- **`Notification` and `PreCompact` hook events are not supported.** Codex CLI's hook schema only supports `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, and `Stop`. The `notify` plugin therefore wires only the `Stop` and `PermissionRequest` events on Codex (turn completion plus permission requests with `Approve` / `Deny` buttons). Idle, elicitation, and compact-style banners have no Codex hook equivalent; for those, enable Codex's built-in `tui.notifications = true` in `~/.codex/config.toml`. The two are complementary and can run side by side. See the [`notify` plugin README](./plugins/notify/README.md) for details.
+- **`Notification` and `PreCompact` hook events are not supported.** Codex CLI's hook schema only supports `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, and `Stop`. The `notify` plugin therefore wires only the `Stop` event on Codex (turn completion). `PermissionRequest` is deliberately left unwired: it runs in the automatic-policy path before Codex shows its approval UI, so notifying on it would alert you about decisions Codex's internal approver is already making. Idle, elicitation, and compact-style banners have no Codex hook equivalent; for those, enable Codex's built-in `tui.notifications = true` in `~/.codex/config.toml`. The two are complementary and can run side by side. See the [`notify` plugin README](./plugins/notify/README.md) for details.
 - **`${CLAUDE_PLUGIN_ROOT}` is substituted only in hook commands.** Codex exposes the variable to plugin-bundled hook commands, but does not substitute it in skill bodies the way Claude Code does. The bundled script paths in `/create-worktree`, `/create-worktree-from-issue`, and `/resolve-copilot-pr-feedback` therefore arrive unsubstituted. Each of those skills carries a documented fallback that locates the script by glob, so they stay usable at the cost of an extra search step.
 - **No custom prompts shipped.** Codex's `~/.codex/prompts/` mechanism is officially deprecated in favor of skills. This repository ships skills (and hooks), not prompts.
 

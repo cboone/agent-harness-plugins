@@ -28,7 +28,7 @@ Create `knip.json` in the project root:
 
 ```json
 {
-  "$schema": "https://unpkg.com/knip@6.9.0/schema.json",
+  "$schema": "https://unpkg.com/knip@6.35.1/schema.json",
   "entry": ["src/index.{ts,js}"],
   "project": ["src/**/*.{ts,js}"]
 }

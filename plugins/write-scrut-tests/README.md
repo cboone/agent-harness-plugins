@@ -1,6 +1,6 @@
 # Write Scrut Tests
 
-Applies scrut test style conventions when creating or editing scrut CLI test files.
+Applies scrut test style conventions when creating or editing scrut test files for CLI binaries and zsh plugins.
 
 **Type:** Skill
 **Trigger:** `/write-scrut-tests` (also activates automatically)

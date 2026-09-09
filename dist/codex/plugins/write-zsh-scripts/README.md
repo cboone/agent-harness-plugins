@@ -1,6 +1,6 @@
 # Write Zsh Scripts
 
-Zsh style conventions for creating and editing zsh scripts, configurations, and completions.
+Applies zsh style conventions when creating or editing zsh scripts, configurations, and completions.
 
 **Type:** Skill
 **Trigger:** `/write-zsh-scripts` (also activates automatically)

@@ -79,7 +79,7 @@ Theorems vary in strength along several axes, even though all true theorems are 
 
 > The key amplification is the passage from a pointwise bound (Lemma 3.3) to a uniform bound (Lemma 3.4); everything else in this section is routine.
 
-This signposting doubles as a sanity check. A suspiciously large jump in strength without a corresponding idea often indicates an error.
+This signposting doubles as a plausibility check. A suspiciously large jump in strength without a corresponding idea often indicates an error.
 
 ### Accurate Scope: State Limitations Explicitly
 

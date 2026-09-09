@@ -265,7 +265,7 @@ else
   for ((i = 0; i < marketplace_count; i++)); do
     entry_name="$(jq -r ".plugins[${i}].name" "${CODEX_MARKETPLACE}")"
     entry_source="$(jq -r ".plugins[${i}].source" "${CODEX_MARKETPLACE}")"
-    expected_source="./dist/codex/plugins/${entry_name}"
+    expected_source="./${CODEX_DIST_DIR}/plugins/${entry_name}"
     if [[ "${entry_source}" != "${expected_source}" ]]; then
       error "Codex marketplace entry '${entry_name}': source '${entry_source}' must be '${expected_source}'"
     fi
@@ -280,7 +280,10 @@ function validate_codex_generated_output() {
   expected_marketplace="${expected_root}/.agents/plugins/marketplace.json"
   expected_dist="${expected_root}/dist/codex"
 
-  if ! env CODEX_MARKETPLACE="${expected_marketplace}" CODEX_DIST_DIR="${expected_dist}" bin/build-codex-marketplace > /dev/null; then
+  # The regenerated tree must be byte-identical to the committed one, so pin the
+  # label the build records inside its output (marketplace sources and README
+  # link depth) to the real location even though the files land in a temp dir.
+  if ! env CODEX_MARKETPLACE="${expected_marketplace}" CODEX_DIST_DIR="${expected_dist}" CODEX_DIST_LABEL="${CODEX_DIST_DIR}" bin/build-codex-marketplace > /dev/null; then
     error "Could not regenerate Codex marketplace for validation"
     rm -r "${expected_root}"
     return
@@ -303,7 +306,13 @@ function validate_codex_generated_output() {
 
 validate_codex_generated_output
 
-# ─── 17. Generated Codex skill descriptions stay within Codex limits ───────
+# ─── 17. Skill descriptions stay within harness limits ─────────────────────
+#
+# Two copies of every skill description ship. The canonical
+# plugins/*/skills/*/SKILL.md is what Claude Code loads; the dist/codex copy is
+# generated, and bin/build-codex-marketplace replaces its description with the
+# much shorter marketplace entry. Checking only the generated copy would measure
+# text that can never approach the cap, so both are checked here.
 
 function frontmatter_description() {
   local file="${1}"
@@ -349,6 +358,25 @@ function frontmatter_description() {
     }
   ' "${file}"
 }
+
+for skill_md in plugins/*/skills/*/SKILL.md; do
+  if [[ ! -f "${skill_md}" ]]; then
+    continue
+  fi
+
+  description="$(frontmatter_description "${skill_md}")"
+  description_length="${#description}"
+
+  if [[ -z "${description}" ]]; then
+    error "Skill '${skill_md}' has an empty description"
+  fi
+  # Canonical descriptions carry the trigger phrases that make a skill
+  # activate, so they are deliberately richer than the marketplace entry and
+  # get no 320-character preference. The hard cap still applies.
+  if [[ ${description_length} -gt 1024 ]]; then
+    error "Skill '${skill_md}' description is ${description_length} characters, exceeding the 1024-character limit"
+  fi
+done
 
 total_codex_description_length=0
 for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do

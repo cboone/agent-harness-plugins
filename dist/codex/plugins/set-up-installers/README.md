@@ -1,6 +1,6 @@
 # Set-Up Installers
 
-Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap formula, go/cargo install, and release workflow.
+Set up installer and distribution methods for Go, Swift, Rust, and Zig projects: Homebrew tap, go/cargo install, and release workflow.
 
 **Type:** Skill
 **Trigger:** `/set-up-installers`

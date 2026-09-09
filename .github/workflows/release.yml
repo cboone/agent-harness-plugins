@@ -48,9 +48,18 @@ jobs:
           # Rule 10 of bin/validate-plugins covers the metadata.version check
           # via bin/compute-catalog-state, so this also subsumes the previous
           # standalone metadata-version verification.
+          bin/validate-json
           bin/validate-plugins
+          bin/build-codex-marketplace
           bin/build-opencode-mirror
-          git diff --exit-code dist/
+          # `git diff` ignores untracked files, so an added skill's new symlink
+          # under dist/opencode/skills/ would slip through. Use git status.
+          drift="$(git status --porcelain dist/ .agents/)"
+          if [[ -n "${drift}" ]]; then
+            echo "::error::Generated mirrors are out of date; run bin/build-codex-marketplace and bin/build-opencode-mirror"
+            printf '%s\n' "${drift}"
+            exit 1
+          fi
 
       - name: Compute catalog state
         id: state

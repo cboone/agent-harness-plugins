@@ -36,10 +36,14 @@ jobs:
         id: audit
         run: |
           report="$(bin/version-audit)"
+          # The report is assembled from repository contents, so a fixed
+          # delimiter could in principle appear inside it and corrupt the step
+          # output. Generate a random one per run.
+          delimiter="AUDIT_REPORT_$(openssl rand -hex 16)"
           {
-            echo "report<<AUDIT_REPORT_EOF"
+            echo "report<<${delimiter}"
             printf '%s\n' "${report}"
-            echo "AUDIT_REPORT_EOF"
+            echo "${delimiter}"
           } >> "${GITHUB_OUTPUT}"
           if [[ -n "${report}" ]]; then
             echo "has_drift=true" >> "${GITHUB_OUTPUT}"

@@ -1,6 +1,6 @@
 # Rebase Onto Main
 
-Fetch and rebase the current feature branch onto the repository's base branch.
+Fetch and rebase the current feature branch onto the base branch with automatic conflict resolution and force-with-lease push.
 
 **Type:** Skill
 **Trigger:** `/rebase-onto-main`

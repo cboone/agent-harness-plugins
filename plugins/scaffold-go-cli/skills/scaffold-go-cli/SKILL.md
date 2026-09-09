@@ -242,18 +242,36 @@ Print a summary of what was created:
 - If `HOMEBREW_TAP_TOKEN` setup was deferred in step 20: check whether a GitHub remote exists and is accessible before creating a follow-up issue:
 
   ```bash
-  if git remote get-url origin >/dev/null 2>&1 && gh repo view >/dev/null 2>&1; then
-    gh issue create \
-      --title "Set up HOMEBREW_TAP_TOKEN repository secret" \
-      --body "The release workflow needs a HOMEBREW_TAP_TOKEN secret so GoReleaser can push Homebrew cask updates to the tap repository.
-
-  See the HOMEBREW_TAP_TOKEN Setup reference in the scaffold-go-cli skill documentation for step-by-step instructions."
+  if git remote get-url origin > /dev/null 2>&1 && gh repo view > /dev/null 2>&1; then
+    echo "remote-ready"
+  else
+    echo "no-remote"
   fi
   ```
 
+  This always exits 0 and prints a sentinel, because "no remote yet" is an expected outcome here, not a failure. Branch on the printed word rather than on the exit code.
+
+  **If it printed `remote-ready`**, create the follow-up issue with the tmpfile pattern rather than an inline `--body`:
+
+  ```bash
+  mktemp -u /tmp/gh-issue-body-XXXXXX
+  ```
+
+  Record the path this prints, for example `/tmp/gh-issue-body-a1b2c3`, and substitute it wherever `TMPFILE` appears below. Write the issue body to that path with the Write tool, then, in a separate message:
+
+  ```bash
+  gh issue create --title "Set up HOMEBREW_TAP_TOKEN repository secret" --body-file TMPFILE
+  ```
+
+  ```bash
+  rm -f TMPFILE
+  ```
+
+  The body should explain that the release workflow needs a `HOMEBREW_TAP_TOKEN` secret so GoReleaser can push Homebrew cask updates to the tap repository, and point at the HOMEBREW_TAP_TOKEN Setup reference in this skill's documentation. Never batch the Write call with `gh issue create`, and keep the `rm -f` in its own Bash call. See the `use-git` skill's tmpfile pattern reference for the full rationale.
+
   If the issue was created successfully, report its URL in the summary.
 
-  If no remote exists or the repo is not accessible via `gh`, print a reminder instead: the user should create the issue manually (or re-run the token setup) after pushing to GitHub for the first time.
+  **If it printed `no-remote`**, print a reminder instead: the user should create the issue manually (or re-run the token setup) after pushing to GitHub for the first time.
 
 ## Error Handling
 

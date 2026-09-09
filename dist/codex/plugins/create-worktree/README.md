@@ -1,6 +1,6 @@
 # Create Worktree
 
-Create a new git worktree, branch, and tmux window with a task prompt injected into the new agent session.
+Create a git worktree, branch, and tmux window with a task prompt using workmux.
 
 **Type:** Skill
 **Trigger:** `/create-worktree`

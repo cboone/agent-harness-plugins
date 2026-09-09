@@ -4,6 +4,7 @@ Process and resolve GitHub Copilot automated PR review comments.
 
 **Type:** Skill
 **Trigger:** `/resolve-copilot-pr-feedback`
+**Requires:** [`gh`](https://cli.github.com/) (authenticated)
 
 ## Installation
 

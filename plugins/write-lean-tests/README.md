@@ -1,6 +1,6 @@
 # Write Lean Tests
 
-Conventions for compile-time, `example`-based Lean 4 API regression tests that mirror a library's public surface.
+Conventions for compile-time, example-based Lean 4 API regression tests that mirror a library's public surface.
 
 **Type:** Skill
 **Trigger:** `/write-lean-tests` (also activates automatically)

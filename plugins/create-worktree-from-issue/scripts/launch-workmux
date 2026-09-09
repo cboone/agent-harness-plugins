@@ -100,13 +100,15 @@ function worktree_path_for_branch() {
       branch\ refs/heads/*)
         branch_ref="${line#branch refs/heads/}"
         ;;
-      "")
+      "") # End of one worktree record in `git worktree list --porcelain`.
         if [[ "${branch_ref}" == "${branch}" && -n "${path}" ]]; then
           printf '%s' "${path}"
           return 0
         fi
         path=""
         branch_ref=""
+        ;;
+      *) # Other porcelain fields (HEAD, bare, detached) are not needed here.
         ;;
     esac
   done < <(git worktree list --porcelain 2> /dev/null || true)
