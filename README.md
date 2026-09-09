@@ -198,6 +198,7 @@ codex plugin marketplace remove agent-harness-plugins
 
 - **Plugin-bundled hooks are gated behind a feature flag.** `plugin_hooks` is `under development` in Codex CLI 0.128.0 and is `false` by default. Run `codex features enable plugin_hooks` once before expecting `notify` to fire on Codex; see above.
 - **`Notification` and `PreCompact` hook events are not supported.** Codex CLI's hook schema only supports `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, and `Stop`. The `notify` plugin therefore wires only the `Stop` and `PermissionRequest` events on Codex (turn completion plus permission requests with `Approve` / `Deny` buttons). Idle, elicitation, and compact-style banners have no Codex hook equivalent; for those, enable Codex's built-in `tui.notifications = true` in `~/.codex/config.toml`. The two are complementary and can run side by side. See the [`notify` plugin README](./plugins/notify/README.md) for details.
+- **`${CLAUDE_PLUGIN_ROOT}` is substituted only in hook commands.** Codex exposes the variable to plugin-bundled hook commands, but does not substitute it in skill bodies the way Claude Code does. The bundled script paths in `/create-worktree`, `/create-worktree-from-issue`, and `/resolve-copilot-pr-feedback` therefore arrive unsubstituted. Each of those skills carries a documented fallback that locates the script by glob, so they stay usable at the cost of an extra search step.
 - **No custom prompts shipped.** Codex's `~/.codex/prompts/` mechanism is officially deprecated in favor of skills. This repository ships skills (and hooks), not prompts.
 
 ## Using with OpenCode
@@ -208,7 +209,7 @@ When adding or removing a plugin, regenerate the mirror with `bin/build-opencode
 
 ### OpenCode known limitations
 
-- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Some skills use Claude Code's `@${CLAUDE_PLUGIN_ROOT}/references/...` pattern to inline reference files at runtime. OpenCode does not expand this variable, so those inclusions appear to the agent as literal path strings rather than inlined content. The inline workflow text in each affected file still loads correctly. Affected skills: `/add-goreleaser-homebrew`, `/scaffold-go-cli`, `/scaffold-go-library`, `/scaffold-new-repo`, `/scaffold-rust-cli`, `/set-up-ci`, `/set-up-secret-scanning`, `/create-plugin`. For full fidelity in these cases, run them in Claude Code.
+- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Claude Code substitutes this placeholder in SKILL.md bodies when a skill loads, which is how `/create-worktree`, `/create-worktree-from-issue`, and `/resolve-copilot-pr-feedback` name their bundled helper scripts. OpenCode does not substitute it, so the path reaches the agent as a literal string starting with `$`. Each of those three skills carries a documented fallback that locates the script by glob instead, so they stay usable at the cost of an extra search step. For the direct path, run them in Claude Code.
 - **Hook event parity is approximate.** OpenCode's event model collapses several distinct Claude Code notification matchers (`idle_prompt`, `elicitation_dialog`, `permission_prompt`) and the `PreCompact` event is mapped to an experimental OpenCode hook. See each hook's README for the specific mapping.
 
 ## License

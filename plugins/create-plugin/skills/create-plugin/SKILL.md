@@ -114,7 +114,7 @@ Key points:
 - Add `argument-hint` if the command accepts arguments
 - Use `$ARGUMENTS` and `$1`/`$2` for argument access in the body
 - Structure the body with `## Workflow` numbered steps, `## Error Handling`, and `## Reference:` sections
-- For large commands, extract templates into `references/` files using `@${CLAUDE_PLUGIN_ROOT}/references/file.md`
+- For large commands, extract templates into `references/` files and include them with the plugin-root file-reference pattern documented in `./references/command-md.md`
 
 #### For Hooks
 
@@ -122,7 +122,7 @@ Create `hooks/hooks.json`. See `./references/hooks-json.md` for the JSON schema,
 
 Key points:
 
-- Use `${CLAUDE_PLUGIN_ROOT}` to reference scripts
+- Reference scripts with the plugin-root placeholder (see `./references/hooks-json.md` for the exact spelling)
 - Each hook entry has `"type": "command"`
 
 ### 6. Add Scripts (if needed)
@@ -145,7 +145,7 @@ Skills and commands that need supplementary documentation or templates should pl
 
 **For skills**: Reference files are plain Markdown. Point to them from SKILL.md with relative paths (e.g., `./references/checklist.md`).
 
-**For commands**: Reference files contain templates that the command uses at runtime. Include them in the command file using the `@${CLAUDE_PLUGIN_ROOT}/references/file.md` pattern. Place `references/` alongside `commands/` (not inside it). See `./references/command-md.md` for the extraction guidelines and file format.
+**For commands**: Reference files contain templates that the command uses at runtime. Include them in the command file using the plugin-root file-reference pattern (an `@` followed by the plugin-root placeholder and the file path). Place `references/` alongside `commands/` (not inside it). See `./references/command-md.md` for the exact spelling, extraction guidelines, and file format.
 
 ### 8. Register in marketplace.json
 
@@ -197,10 +197,11 @@ Before finishing, verify:
 - [ ] Command `.md` has `description` and `disable-model-invocation: true` in frontmatter (commands only)
 - [ ] Command filename matches the intended slash command name (commands only)
 - [ ] `plugin.json` includes `"commands": "./commands"` (commands only)
-- [ ] External file references use `@${CLAUDE_PLUGIN_ROOT}/references/` pattern (commands with extracted templates only)
+- [ ] External file references use the plugin-root file-reference pattern (commands with extracted templates only)
 - [ ] `$ARGUMENTS` handling is documented in the workflow if `argument-hint` is set (commands only)
 - [ ] Scripts (if any) are executable
-- [ ] Hooks (if any) reference scripts via `${CLAUDE_PLUGIN_ROOT}`
+- [ ] Hooks (if any) reference scripts with the plugin-root placeholder
+- [ ] Skills that invoke a bundled script use the plugin-root placeholder with a `bash` prefix, never a locator glob (see `./references/scripts.md`)
 
 ## Error Handling
 

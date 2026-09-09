@@ -5,12 +5,13 @@ __metadata:
   version: 9
   cacheKey: 10c0
 
-"@github/markdownlint-github@npm:0.8.0":
-  version: 0.8.0
-  resolution: "@github/markdownlint-github@npm:0.8.0"
+"@github/markdownlint-github@npm:0.8.3":
+  version: 0.8.3
+  resolution: "@github/markdownlint-github@npm:0.8.3"
   dependencies:
-    lodash-es: "npm:^4.17.15"
-  checksum: 10c0/4a5da82a660e741b8ec08987d8d66c27cdf373d11211d7984bfea99256adbdcf6986438fde6a0303fa2d3e649d2bfae2953f1a8110bb9c5009d8138be8b93fd2
+    lodash-es: "npm:^4.17.21"
+    markdown-it: "npm:14.2.0"
+  checksum: 10c0/fe907e01221465f814227e349f1d3e8f76ae22e2c0f240b1c536a0473b136159139cdd6967c44d0dece0bc5a4bc89a684e94c2e6fc761638bc3be88b8e9a419d
   languageName: node
   linkType: hard
 
@@ -338,16 +339,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"linkify-it@npm:^5.0.0":
-  version: 5.0.0
-  resolution: "linkify-it@npm:5.0.0"
-  dependencies:
-    uc.micro: "npm:^2.0.0"
-  checksum: 10c0/ff4abbcdfa2003472fc3eb4b8e60905ec97718e11e33cca52059919a4c80cc0e0c2a14d23e23d8c00e5402bc5a885cdba8ca053a11483ab3cc8b3c7a52f88e2d
-  languageName: node
-  linkType: hard
-
-"linkify-it@npm:^5.0.2":
+"linkify-it@npm:^5.0.1, linkify-it@npm:^5.0.2":
   version: 5.0.2
   resolution: "linkify-it@npm:5.0.2"
   dependencies:
@@ -356,26 +348,26 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash-es@npm:^4.17.15":
+"lodash-es@npm:^4.17.21":
   version: 4.18.1
   resolution: "lodash-es@npm:4.18.1"
   checksum: 10c0/35d4dcf87ef07f8d090f409447575800108057e360b445f590d0d25d09e3d1e33a163d2fc100d4d072b0f901d5e2fc533cd7c4bfd8eeb38a06abec693823c8b8
   languageName: node
   linkType: hard
 
-"markdown-it@npm:14.1.1":
-  version: 14.1.1
-  resolution: "markdown-it@npm:14.1.1"
+"markdown-it@npm:14.2.0":
+  version: 14.2.0
+  resolution: "markdown-it@npm:14.2.0"
   dependencies:
     argparse: "npm:^2.0.1"
     entities: "npm:^4.4.0"
-    linkify-it: "npm:^5.0.0"
+    linkify-it: "npm:^5.0.1"
     mdurl: "npm:^2.0.0"
     punycode.js: "npm:^2.3.1"
     uc.micro: "npm:^2.1.0"
   bin:
     markdown-it: bin/markdown-it.mjs
-  checksum: 10c0/c67f2a4c8069a307c78d8c15104bbcb15a2c6b17f4c904364ca218ec2eccf76a397eba1ea05f5ac5de72c4b67fcf115d422d22df0bfb86a09b663f55b9478d4f
+  checksum: 10c0/1d3a50061d2fe4efbcf317aac853dbee6892ed6f5a217570eead723f2ef2dd1c9baaeef5a687cd283480c45c2d20724a73e84a9ed72843cf7b3b719067af40ef
   languageName: node
   linkType: hard
 
@@ -423,13 +415,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"markdownlint-rule-relative-links@npm:5.1.0":
-  version: 5.1.0
-  resolution: "markdownlint-rule-relative-links@npm:5.1.0"
+"markdownlint-rule-relative-links@npm:5.1.2":
+  version: 5.1.2
+  resolution: "markdownlint-rule-relative-links@npm:5.1.2"
   dependencies:
-    markdown-it: "npm:14.1.1"
+    markdown-it: "npm:14.3.0"
     mime: "npm:4.1.0"
-  checksum: 10c0/1e0efca55797883cce9332d29ba2a75857b142dcf8b2396eff5730cdd196da3c67dcaadb583bb55942a5c8b28d75888d486ab02b9568d8c8cf73fb2573cc0aeb
+  checksum: 10c0/145b71e77aa838c195480744ac77e52511b41760f32be64cdb332fe75dfd9193c31397e6824c8e54bd2ed53a0ce824dea431958524f79f856012d31e9ff34bd0
   languageName: node
   linkType: hard
 
@@ -807,12 +799,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:3.8.3":
-  version: 3.8.3
-  resolution: "prettier@npm:3.8.3"
+"prettier@npm:3.9.6":
+  version: 3.9.6
+  resolution: "prettier@npm:3.9.6"
   bin:
     prettier: bin/prettier.cjs
-  checksum: 10c0/754816fd7593eb80f6376d7476d463e832c38a12f32775a82683adb6e35b772b1f484d65f19401507b983a8c8a7cd5a4a9f12006bd56491e8f35503473f77473
+  checksum: 10c0/9f7ddae234035868f3daab3dc34e6de7e54622185afb017378029f0c09a9c023248ccf6f34def0b17a0538e18c47aa1b3188bab72965d1bf735919baa0747e99
   languageName: node
   linkType: hard
 
@@ -841,10 +833,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "root-workspace-0b6124@workspace:."
   dependencies:
-    "@github/markdownlint-github": "npm:0.8.0"
+    "@github/markdownlint-github": "npm:0.8.3"
     markdownlint-cli2: "npm:0.23.2"
-    markdownlint-rule-relative-links: "npm:5.1.0"
-    prettier: "npm:3.8.3"
+    markdownlint-rule-relative-links: "npm:5.1.2"
+    prettier: "npm:3.9.6"
   languageName: unknown
   linkType: soft
 

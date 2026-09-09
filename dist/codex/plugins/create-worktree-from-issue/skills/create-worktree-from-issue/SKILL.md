@@ -93,9 +93,18 @@ BODY_CONTENT
 
 **Template escaping:** `workmux` renders the prompt body through MiniJinja, so any literal `{{`, `{%`, or `{#` token in the issue body (e.g. GitHub Actions `${{ inputs.x }}` expressions, Jinja/Liquid/Tera/Helm/Vue templates, Handlebars-style snippets) would otherwise be parsed as a template variable reference and rejected with `Template uses undefined variables`. The `launch-workmux` script reads the prompt from stdin, writes an escaped temporary prompt file for `workmux add -P`, and removes that temporary file after `workmux add` exits. Each escaped delimiter renders back to the literal characters, so the issue context stored at `<worktree>/.workmux/PROMPT-*.md` matches the original prompt.
 
-**Locating the scripts:** At the start of your session, locate the scripts by searching for `**/create-worktree-from-issue/scripts/compose-issue-prompt` and `**/create-worktree-from-issue/scripts/launch-workmux`. Note the absolute paths and use each with `bash` as the command prefix in all subsequent invocations. Do not use a shell variable, since shell state does not persist between commands.
+**Invoking the scripts:** Both scripts ship with this plugin. Invoke each via `bash` followed by the quoted path:
 
-In the example below, `SCRIPTS_DIR/compose-issue-prompt` and `SCRIPTS_DIR/launch-workmux` are placeholders for the scripts' **quoted absolute paths**. Always invoke them via `bash` followed by the quoted path. This ensures the command token is `bash`, which matches stable allowlist patterns regardless of the plugin's installed path or version.
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt"
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux" "BRANCH_NAME"
+```
+
+Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step and no need for a shell variable. Keeping `bash` as the command prefix keeps the command token stable across plugin versions, which is what permission allowlist rules match on.
+
+**If the paths were not substituted**, they still begin with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. In that case locate the scripts with `**/create-worktree-from-issue/**/scripts/compose-issue-prompt` and `**/create-worktree-from-issue/**/scripts/launch-workmux`, prefer matches inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm each with `test -x`, and use those absolute paths for the rest of the session.
+
+In the example below, `SCRIPTS_DIR/compose-issue-prompt` and `SCRIPTS_DIR/launch-workmux` are shorthand for the full **quoted paths** shown above.
 
 Do not specify a `--base` branch. Let `workmux` use its default.
 
