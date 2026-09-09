@@ -6,6 +6,7 @@ Tests for launcher stdin prompt handling, tmux recovery, and workmux argument co
 
 ```scrut
 $ function prepare_stubs() {
+>   unset TMUX TMUX_TMPDIR WORKMUX_TMUX WORKMUX_TERM
 >   state="$(mktemp -d)"
 >   stub_dir="$(mktemp -d)"
 >   cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux"
@@ -40,7 +41,7 @@ $ function prepare_stubs() {
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Prompt with {{ user }} and {% if ok %} and {# note #}' \
->     | env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/stdin-prompt" --base "main" \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/stdin-prompt" --base "main" \
 >   && sleep 0.1 \
 >   && prompt_file="$(cat "${state}/prompt_path")" \
 >   && if [[ -e "${prompt_file}" ]]; then echo "prompt cleanup: no"; else echo "prompt cleanup: yes"; fi
@@ -130,7 +131,7 @@ $ prepare_stubs \
 >   && panes="${socket}|%9|cx|${existing_worktree}|4242" \
 >   && porcelain="$(printf 'worktree %s\nHEAD abc123\nbranch refs/heads/feature/existing-worktree\n\n' "${existing_worktree}")" \
 >   && printf '%s\n' 'Issue body' \
->     | env PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${porcelain}" STUB_TMUX_LOG="${tmux_log}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" WORKMUX_TMUX="${socket},4242,%1" WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS=0 WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN}" "feature/existing-worktree" \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${porcelain}" STUB_TMUX_LOG="${tmux_log}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" WORKMUX_TMUX="${socket},4242,%1" WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS=0 WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN}" "feature/existing-worktree" \
 >   && sed "s|${existing_worktree}|<worktree>|g" "${tmux_log}"
 workmux add
 branch: feature/existing-worktree
@@ -156,7 +157,7 @@ $ prepare_stubs \
 >   && panes="${socket}|%9|cx|${existing_worktree}|4242" \
 >   && porcelain="$(printf 'worktree %s\nHEAD abc123\nbranch refs/heads/feature/existing-worktree-paste-fail\n\n' "${existing_worktree}")" \
 >   && printf '%s\n' 'Issue body' \
->     | env PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${porcelain}" STUB_TMUX_FAIL_COMMAND=paste-buffer STUB_TMUX_LOG="${tmux_log}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" WORKMUX_TMUX="${socket},4242,%1" WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS=0 WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN}" "feature/existing-worktree-paste-fail" \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${porcelain}" STUB_TMUX_FAIL_COMMAND=paste-buffer STUB_TMUX_LOG="${tmux_log}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" WORKMUX_TMUX="${socket},4242,%1" WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS=0 WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN}" "feature/existing-worktree-paste-fail" \
 >   && sed "s|${existing_worktree}|<worktree>|g" "${tmux_log}"
 workmux add
 branch: feature/existing-worktree-paste-fail
@@ -298,7 +299,7 @@ prompt-file-exists: yes
 ## Create worktree launcher rejects empty stdin
 
 ```scrut
-$ branch="feature/missing-prompt-${BASHPID}" && safe_name="${branch//\//-}" && exit_code=0 && env WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "${branch}" < /dev/null 2>&1 || exit_code=$?; if compgen -G "/tmp/workmux-${safe_name}.log.*" > /dev/null || compgen -G "/tmp/workmux-prompt-${safe_name}.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
+$ branch="feature/missing-prompt-${BASHPID}" && safe_name="${branch//\//-}" && exit_code=0 && env -u TMUX WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "${branch}" < /dev/null 2>&1 || exit_code=$?; if compgen -G "/tmp/workmux-${safe_name}.log.*" > /dev/null || compgen -G "/tmp/workmux-prompt-${safe_name}.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
 launch-workmux: expected prompt content on stdin
 temp cleanup: yes
 [1]
@@ -307,7 +308,7 @@ temp cleanup: yes
 ## Create worktree from issue launcher rejects empty stdin
 
 ```scrut
-$ branch="feature/missing-prompt-${BASHPID}" && safe_name="${branch//\//-}" && exit_code=0 && env WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN}" "${branch}" < /dev/null 2>&1 || exit_code=$?; if compgen -G "/tmp/workmux-${safe_name}.log.*" > /dev/null || compgen -G "/tmp/workmux-prompt-${safe_name}.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
+$ branch="feature/missing-prompt-${BASHPID}" && safe_name="${branch//\//-}" && exit_code=0 && env -u TMUX WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN}" "${branch}" < /dev/null 2>&1 || exit_code=$?; if compgen -G "/tmp/workmux-${safe_name}.log.*" > /dev/null || compgen -G "/tmp/workmux-prompt-${safe_name}.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
 launch-workmux: expected prompt content on stdin
 temp cleanup: yes
 [1]
