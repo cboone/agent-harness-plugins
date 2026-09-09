@@ -886,14 +886,19 @@ If `gh` is not available, skip the GitHub Release creation. Report that `gh` is 
 If `gh` is available, generate a temporary file for the release notes:
 
 ```bash
-mktemp /tmp/gh-release-notes-XXXXXX
+mktemp -u /tmp/gh-release-notes-XXXXXX
+# Returns a unique path that does NOT exist on disk, e.g.: /tmp/gh-release-notes-x4y5z6
 ```
 
-Write the extracted changelog section to the path returned by `mktemp` using the Write tool. Then create the release:
+The `-u` flag is required. Plain `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first, so the write fails with `File has not been read yet`. With `-u` the path is unique but unoccupied, so Write creates it fresh.
+
+Write the extracted changelog section to the path returned by `mktemp -u` using the Write tool. Then create the release:
 
 ```bash
 gh release create vVERSION --title "vVERSION" --notes-file TMPFILE --verify-tag
 ```
+
+**Never batch the Write call and `gh release create` into one message.** Issue them as two separate, sequential tool calls, and wait for the Write to return before invoking `gh`. `gh` reads the notes file at invocation time, so a parallel batch can start `gh release create` before the file exists and publish the release with empty notes. This is a deliberate exception to the general preference for parallel tool calls: these two calls are dependent, because `gh release create` consumes the file Write produces.
 
 The `--verify-tag` flag ensures the command fails if the tag was not pushed successfully (safety net for step 11b).
 
