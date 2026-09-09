@@ -1,4 +1,3 @@
-
 # Pandoc Markdown Essential Checklist
 
 Quick reference for reviews. For detailed guidance, see `../comprehensive/`.
@@ -31,8 +30,8 @@ Quick reference for reviews. For detailed guidance, see `../comprehensive/`.
 
 ## Raw LaTeX Blocks
 
-- [ ] Fenced syntax: `` ```{=latex} `` (critical: equals sign before `latex`)
-- [ ] NOT `` ```{latex} `` or `` ```latex `` (these are code blocks, not raw LaTeX)
+- [ ] Fenced syntax: ` ```{=latex} ` (critical: equals sign before `latex`)
+- [ ] NOT ` ```{latex} ` or ` ```latex ` (these are code blocks, not raw LaTeX)
 - [ ] Use for: theorem environments, complex tables, anything Pandoc cannot express
 - [ ] Inline raw spans: `` `\command{arg}`{=latex} ``
 - [ ] Raw LaTeX is ignored in non-LaTeX output (HTML, DOCX)

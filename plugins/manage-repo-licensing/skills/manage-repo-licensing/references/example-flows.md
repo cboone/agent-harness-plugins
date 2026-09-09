@@ -24,7 +24,7 @@ Scenario: a brand-new repository with Lean code under `src/`, Python scripts und
    - Generated artifacts (lock files, `lean-toolchain`, Pandoc `.tex`, `.ics`): `CC0-1.0` (REUSE.toml generated group)
    - No CoC today -> skip `CC-BY-SA-4.0`.
    - No reference material today -> skip `LicenseRef-Reference-Material`.
-   User confirms.
+     User confirms.
 3. **License-text normalization.**
    - Run `reuse download Apache-2.0 MIT CC-BY-4.0 CC0-1.0`. `LICENSES/` now has four canonical files, all with correct SPDX-identifier casing.
    - `reuse lint` reports "Missing X files have no licensing information" but no "bad license filename" errors.

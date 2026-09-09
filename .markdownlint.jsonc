@@ -1,9 +1,10 @@
 {
-  // MD003 - Heading style
-  // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md003.md
-  "MD003": { "style": "atx" },
-
   // MD004 - Unordered list style
+  // Prettier normalizes list markers to `-`. The one exception is two directly
+  // adjacent lists with no prose between them, where it deliberately alternates
+  // to `*` so CommonMark still reads them as two lists; MD004 reports that.
+  // The default `consistent` fails the same case, so it is no better. Rare
+  // enough to keep `dash`; set this to false if it ever actually bites.
   // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md004.md
   "MD004": { "style": "dash" },
 
@@ -23,10 +24,6 @@
   // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md024.md
   "MD024": { "siblings_only": true },
 
-  // MD029 - Ordered list item prefix
-  // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md029.md
-  "MD029": { "style": "one_or_ordered" },
-
   // MD033 - No inline HTML
   // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md033.md
   "MD033": false,
@@ -35,23 +32,39 @@
   // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md034.md
   "MD034": false,
 
-  // MD035 - Horizontal rule style
-  // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md035.md
-  "MD035": { "style": "---" },
-
-  // MD046 - Code block style
-  // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md046.md
-  "MD046": { "style": "fenced" },
-
-  // MD048 - Code fence style
-  // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md048.md
-  "MD048": { "style": "backtick" },
-
   // MD049 - Emphasis style
+  // Kept disabled. Prettier normalizes emphasis to `_`, so for files it formats
+  // the default `consistent` would pass. But not every Markdown file here is
+  // formatted by Prettier: `docs/plans/done/` and the generated `dist/` mirrors
+  // are both excluded, and they do carry mixed emphasis. Restoring the default
+  // fails on exactly those files, for no benefit.
   // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md049.md
   "MD049": false,
 
-  // MD050 - Strong style
-  // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md050.md
-  "MD050": { "style": "asterisk" },
+  // MD046 - Code block style
+  // Kept deliberately. Prettier does NOT convert indented code blocks to fenced
+  // ones, so unlike the style rules listed at the bottom of this file, this one
+  // still does real work.
+  // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md046.md
+  "MD046": { "style": "fenced" },
+
+  // MD060 - Table column style
+  // Prettier owns table alignment and fixes it automatically; markdownlint has
+  // no fixer for this rule at any version, and its default "any" style reports
+  // against whichever style is the closest match, which pushes a nearly-aligned
+  // table toward compact.
+  // https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md060.md
+  "MD060": false,
+
+  // Deliberately absent. Each of these is either already markdownlint's default
+  // or is enforced by Prettier, so setting it states a preference this config
+  // does not need to hold:
+  //
+  //   MD003  heading style     Prettier converts setext headings to ATX.
+  //   MD029  ordered list      `one_or_ordered` is already the default.
+  //   MD035  thematic break    Prettier normalizes `***` and `___` to `---`.
+  //   MD048  code fence style  Prettier normalizes `~~~` fences to backticks.
+  //   MD050  strong style      Prettier normalizes `__strong__` to `**strong**`.
+  //
+  // MD049 was considered for removal on the same grounds and kept; see above.
 }

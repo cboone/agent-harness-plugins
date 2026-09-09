@@ -1,4 +1,3 @@
-
 # Build Infrastructure
 
 Repeating patterns for Mathlib-downstream Lean 4 projects: the bootstrap script, Makefile target set, `lakefile.toml` options, entrypoint manifest, and test-library wiring. The guidance here is generic; project-local specifics (actual library names, additional dependencies, vendored packages to exclude) live in the invoking project's CLAUDE.md or AGENTS.md.

@@ -1,4 +1,3 @@
-
 # Citations, References, and Journal Selection
 
 Comprehensive reference for integrating citations into mathematical prose, providing specific and informative references, managing citation scope, and selecting journals. Based on Higham, Berndt, Cohn, Krantz, and Tao.
@@ -166,7 +165,7 @@ Tao suggests factoring in pricing and accessibility when selecting a venue. Open
 ## Sources
 
 - Tao, T. "Advice on Writing Papers" (Submit to Appropriate Journal, Write in Your Own Voice). terrytao.wordpress.com.
-- Higham, N. J. *Handbook of Writing for the Mathematical Sciences*. SIAM.
+- Higham, N. J. _Handbook of Writing for the Mathematical Sciences_. SIAM.
 - Berndt, B. C. "How to Write Mathematical Papers." UIUC.
 - Cohn, H. "Advice." cohn.mit.edu.
 - Krantz, S. G. "How to Write Your First Paper." AMS, 2007.

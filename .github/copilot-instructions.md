@@ -51,4 +51,13 @@ Files under `commands/` directories and `SKILL.md` files inside `skills/` direct
 
 - **Markdown tables use standard single-pipe syntax**: Tables in `README.md` and `SKILL.md` files use standard Markdown table syntax with single `|` pipe delimiters. Do not flag these as invalid or claim they use `||` double-pipe sequences.
 - **Bracket expressions can contain `[` as a literal**: In ERE/POSIX regex, an unescaped `[` inside an existing character class is a literal character, not a nested class opener. The pattern `[*[0-9]` is a valid bracket expression containing `*`, `[`, and digits. Do not flag such bracket expressions as having unmatched brackets or invalid regex syntax.
+- **A code-span delimiter may be shorter than the backtick run it contains**: CommonMark closes a code span only on a backtick run of the same length as the opener, so a single-backtick delimiter padded with one space on each side safely wraps a literal triple-backtick fence. The inner run cannot terminate the span early. Both of these are valid and render to byte-identical HTML on GitHub:
+
+  ````text
+  ` ```{=latex} `
+  `` ```{=latex} ``
+  ````
+
+  Prettier normalizes the second form to the first, which is a rendering no-op. This pattern appears throughout `plugins/write-pandoc-markdown/`, where the docs must show Pandoc fence syntax literally. Do not flag either form as terminating early or rendering incorrectly, and do not suggest HTML `<code>` wrappers or longer backtick delimiters.
+
 - **Leading SPDX HTML comment blocks in markdown do not violate MD041**: Reference and template markdown files under `plugins/manage-repo-licensing/` (and any other markdown that cannot carry a sidecar `.license` file) begin with a `<!-- SPDX-FileCopyrightText: ... / SPDX-License-Identifier: ... -->` block before the first ATX heading. This is the project's REUSE-style licensing convention. The repo's `.markdownlint.jsonc` does not customize MD041, and markdownlint v0.40 (via `markdownlint-cli2`) allows leading HTML comment blocks before the first heading by default; lint passes on these files. Do not suggest adding a `<!-- markdownlint-disable MD041 -->` directive, moving licensing metadata to `REUSE.toml`, or otherwise rewriting these headers.

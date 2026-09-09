@@ -1,4 +1,3 @@
-
 # Lean 4 Style Essential Checklist
 
 Quick reference for code reviews. For detailed guidance, see `../comprehensive/`.
@@ -175,14 +174,14 @@ For the canonical Mathlib-downstream shape (bootstrap script, Makefile target se
 - [ ] Before `induction`, `clear` unused variables from the local context to avoid unwanted generalization
 - [ ] Use `lake new` (not `lake init`) to create new projects; `lake init` does not create a new directory
 - [ ] Escape curly braces in docstrings that contain Lean syntax
-- [ ] `omit [instance] in` goes *before* the docstring and `private lemma`, not after. Parser rejects the inverse order.
+- [ ] `omit [instance] in` goes _before_ the docstring and `private lemma`, not after. Parser rejects the inverse order.
 - [ ] `Finset.sum_nbij'` takes simple functions `ι → κ`; `Finset.sum_bij'` takes dependent `∀ a ∈ s, κ`. Wrapping `embed` as `fun d _ => embed d` for `sum_nbij'` triggers a universe unification failure (see `../comprehensive/proof-style.md#reindexing-finset-sums`).
 
 ## Proof Performance
 
 - [ ] Default `maxHeartbeats` is 200000. Soft review threshold: 400000 (2×). Mathlib tech-debt line: 800000 (4×).
 - [ ] Before bumping `maxHeartbeats`, extract sub-lemmas. `maxHeartbeats` is per-declaration, so splitting an over-budget proof into N named lemmas gives each its own fresh 200000 budget — order-of-magnitude improvement (see `../comprehensive/mathlib.md#heartbeats-and-build-performance`).
-- [ ] Tactical tweaks (`simp only`, merging `simp`s, narrower `rw` chains) are tens-of-percent improvements. Apply *after* extraction, not instead.
+- [ ] Tactical tweaks (`simp only`, merging `simp`s, narrower `rw` chains) are tens-of-percent improvements. Apply _after_ extraction, not instead.
 - [ ] Any surviving `set_option maxHeartbeats` needs a one-line WHY comment; anything above 800000 is a TODO to split further.
 - [ ] When extracting from a `classical`-prefixed proof, add `classical` to each extracted sub-lemma. The parent's `classical` does not propagate, and product-type `DecidableEq` synthesis fails silently without it.
 

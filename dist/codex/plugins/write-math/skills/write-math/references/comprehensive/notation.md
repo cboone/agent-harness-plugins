@@ -1,4 +1,3 @@
-
 # Notation Principles for Mathematical Writing
 
 Good notation is invisible: it lets the reader focus on ideas rather than decoding symbols. Poor notation forces readers to maintain a mental lookup table, distracting from the mathematics itself. The principles below, drawn from Tao, Poonen, Wang, Conrad, and Cohn, provide concrete rules for choosing, introducing, and maintaining notation throughout a mathematical document.
