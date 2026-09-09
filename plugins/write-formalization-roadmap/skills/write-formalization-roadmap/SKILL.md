@@ -25,14 +25,14 @@ drafting or editing a multi-milestone formalization roadmap.
 
 ## When to Use
 
-A *formalization roadmap* is the long-lived planning document for a
+A _formalization roadmap_ is the long-lived planning document for a
 multi-milestone mechanization of a specific paper, theorem, or related
 cluster of results. It lives under `docs/plans/todo/` until the whole
 program ships, then moves to `docs/plans/done/`. It coordinates work
 that will span many sessions, many commits, and usually multiple
 worktrees or branches.
 
-Use this skill when the planning document is a *roadmap* in that
+Use this skill when the planning document is a _roadmap_ in that
 sense. Do not use it for:
 
 - Single-bounded implementation plans (one feature, one fix, one

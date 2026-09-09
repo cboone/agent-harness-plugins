@@ -1,4 +1,3 @@
-
 # Metaprogramming
 
 Guide to Lean 4 metaprogramming: macros, custom tactics, syntax extensions, and elaboration.

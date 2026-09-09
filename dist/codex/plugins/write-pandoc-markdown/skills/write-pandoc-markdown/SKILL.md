@@ -55,8 +55,8 @@ section starts at `##`.
 
 ## Sources
 
-- MacFarlane, J. *Pandoc User's Guide*. pandoc.org.
-- Yakimova, N. *pandoc-crossref*. GitHub.
-- Drescher, D. and Gessler, A. *Pandoc Scholar*.
+- MacFarlane, J. _Pandoc User's Guide_. pandoc.org.
+- Yakimova, N. _pandoc-crossref_. GitHub.
+- Drescher, D. and Gessler, A. _Pandoc Scholar_.
 - Programming Historian. "Sustainable Authorship in Plain Text Using Pandoc
   and Markdown."

@@ -1,4 +1,3 @@
-
 # LaTeX Math Essential Checklist
 
 Quick reference for reviews. For detailed guidance, see `../comprehensive/`.

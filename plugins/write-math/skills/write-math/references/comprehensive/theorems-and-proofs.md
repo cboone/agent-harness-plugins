@@ -1,4 +1,3 @@
-
 # Theorem Statements and Proof Structure
 
 The theorem-proof cycle is the backbone of mathematical writing. A well-designed theorem statement tells the reader exactly what is true and under what conditions; a well-structured proof convinces the reader why it is true without wasting their time. The principles below, drawn from Tao, Poonen, Berndt, Goldreich, Pak, Lee, and the Cambridge mathematics guide, cover both the architecture of results (how to decompose a paper into theorems, lemmas, and corollaries) and the mechanics of individual proofs.
@@ -36,10 +35,12 @@ Better: "Let $f \in L^\infty([0,1])$ with mean zero. Then $f$ satisfies the foll
 **Define all terms before the statement.** Every symbol, concept, and condition mentioned in the theorem must be defined or referenced before the reader encounters the formal statement. Never force the reader to look forward for a definition.
 
 Bad ordering:
+
 > **Theorem 3.1.** Every $\alpha$-regular graph is $\beta$-chromatic.
 > **Definition 3.2.** A graph is $\alpha$-regular if...
 
 Good ordering:
+
 > **Definition 3.1.** A graph is $\alpha$-regular if...
 > We can now state the main result of this section.
 > **Theorem 3.2.** Every $\alpha$-regular graph is $\beta$-chromatic.

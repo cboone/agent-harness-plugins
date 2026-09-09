@@ -1,4 +1,3 @@
-
 # Recommended LaTeX Packages
 
 A curated guide to essential LaTeX packages for academic and technical documents. Each section covers what the package does, why it matters, key usage patterns, and common pitfalls. The final section provides load order guidance. Based on Nicholas Higham's recommended packages post, package documentation, and community best practices.

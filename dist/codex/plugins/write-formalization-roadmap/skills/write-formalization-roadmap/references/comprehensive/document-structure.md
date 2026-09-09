@@ -1,4 +1,3 @@
-
 # Document Structure
 
 The 10 top-level sections of a formalization roadmap, in order. Every roadmap should carry these sections under these names. Sections may carry sub-headings and prose; the ordering and section names are fixed.
@@ -139,7 +138,7 @@ The 10 top-level sections of a formalization roadmap, in order. Every roadmap sh
 
 ## 9. Extensions (Future Work)
 
-**Purpose.** Record what the project explicitly does *not* do in the current roadmap but might do later. Helps future readers understand why the current scope stops where it stops.
+**Purpose.** Record what the project explicitly does _not_ do in the current roadmap but might do later. Helps future readers understand why the current scope stops where it stops.
 
 **Required content.**
 

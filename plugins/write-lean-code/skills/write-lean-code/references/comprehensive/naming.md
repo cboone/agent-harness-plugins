@@ -1,4 +1,3 @@
-
 # Naming Conventions
 
 Naming in Lean 4 follows conventions from the standard library and Mathlib. Good names make definitions discoverable via search tactics like `exact?` and `apply?`. Use American English for declaration names (`factorization`, `Localization`, `FiberBundle`, not British variants).

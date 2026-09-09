@@ -1,4 +1,3 @@
-
 # Revision, Process, and Reading Mathematics
 
 Comprehensive reference for the mathematical writing process, from first draft through submission. Covers drafting workflow, revision strategy, collaboration, feedback, and techniques for reading and debugging mathematical text. Based on Pak, Tao, Krantz, Cohn, Lee, Su, and Tsitsiklis.
