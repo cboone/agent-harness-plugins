@@ -31,7 +31,7 @@ Use a descriptive prefix that reflects the purpose (`gh-pr-body`, `gh-issue-body
 
 Use the Write tool (not `echo` or `cat`) to write the full content to the path returned by `mktemp -u`. The Write tool handles multiline content natively and keeps the subsequent Bash command short.
 
-### 3. Pass `--body-file` to the command
+### 3. Pass the file flag to the command
 
 Run the `gh` command with `--body-file` (or `--notes-file`, for `gh release create`) pointing to the path returned by `mktemp -u` (shown as `TMPFILE` below), in a **separate message** issued only after the Write tool has returned:
 
@@ -45,7 +45,7 @@ Issue the Write call (step 2) and the `gh` call (step 3) as two separate, sequen
 
 `gh` reads the body file at invocation time. If both calls go out in a single parallel batch, `gh` can run before the file exists and will create the pull request, issue, or release with an **empty body**. That is a silent failure: the command still succeeds and still prints a URL, so it is only caught later, by hand.
 
-This is a deliberate exception to the general preference for parallel tool calls. That preference applies to calls with no dependencies between them. These two have a dependency: `gh --body-file` consumes the file that Write produces.
+This is a deliberate exception to the general preference for parallel tool calls. That preference applies to calls with no dependencies between them. These two have a dependency: the `gh` file flag (`--body-file`, `--notes-file`, and the like) consumes the file that Write produces.
 
 ## Cleanup
 

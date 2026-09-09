@@ -10,9 +10,9 @@ Use HEREDOCs for short, predictable-length content passed to git commands. The p
 
 ## When NOT to Use
 
-- PR bodies, issue bodies, or review replies (use the tmpfile pattern instead)
+- PR bodies, issue bodies, release notes, or review replies (use the tmpfile pattern instead)
 - Any content that could grow beyond a few lines
-- Any `gh` CLI command with a `--body-file` alternative
+- Any `gh` CLI command offering a file flag such as `--body-file` or `--notes-file`
 
 ## The Pattern
 

@@ -4,7 +4,7 @@ description: >-
   Git and GitHub CLI conventions for Claude Code. Use when:
   (1) running git commands (commit, push, merge, rebase),
   (2) running gh CLI commands (pr create, issue create, pr review),
-  (3) passing long content to git or gh (PR bodies, issue bodies, review replies),
+  (3) passing long content to git or gh (PR bodies, issue bodies, release notes, review replies),
   (4) reviewing code that uses git or gh CLI patterns.
   Covers tmpfile patterns, HEREDOC commits, GPG signing, safe push practices,
   and permission-prompt avoidance.
@@ -16,25 +16,26 @@ Conventions for running git and GitHub CLI (`gh`) commands in Claude Code. These
 
 ## Core Principles
 
-1. **Tmpfiles for long content**: Write long strings (PR bodies, issue bodies, review replies) to a tmpfile via the Write tool, then pass `--body-file`. Keeps Bash commands short and avoids permission prompts. Generate the path with `mktemp -u` so the file does not already exist, and never batch the Write call together with the `gh` call that reads it. Both rules are scoped to this pattern, which carries non-secret content; `references/tmpfile-pattern.md` explains why `-u` is the wrong choice for security-sensitive temp files.
+1. **Tmpfiles for long content**: Write long strings (PR bodies, issue bodies, release notes, review replies) to a tmpfile via the Write tool, then pass the path to the command's file flag, such as `--body-file` or `--notes-file`. Keeps Bash commands short and avoids permission prompts. Generate the path with `mktemp -u` so the file does not already exist, and never batch the Write call together with the `gh` call that reads it. Both rules are scoped to this pattern, which carries non-secret content; `references/tmpfile-pattern.md` explains why `-u` is the wrong choice for security-sensitive temp files.
 1. **HEREDOCs for short content**: Commit messages use `$(cat << 'EOF' ... EOF)`. Single-quoted `'EOF'` prevents variable expansion.
 1. **GPG sign every commit**: Always `git commit -S`. The sandbox cannot access GPG keys, so resort immediately to the unsandboxed command.
 1. **Never amend**: Always create new commits. Pre-commit hook failures mean the commit did not happen, so `--amend` would modify the wrong commit.
 1. **Never use force or override flags**: Never use `git push --force`, `git push -f`, `--no-verify`, or similar override flags without explicit user instruction. If the user explicitly requests a force push, use `git push --force-with-lease` (add `--force-if-includes` when the installed Git version supports it, v2.30+). Investigate root causes rather than forcing through.
-1. **Parallel tool calls over chained commands**: Use separate Bash tool calls for independent commands instead of chaining with `;` or `&&`, which trigger permission prompts. This applies only to commands with no dependencies between them. A Write that produces a tmpfile and the `gh ... --body-file` call that consumes it are **dependent**: issue them in separate, sequential messages, never in one parallel batch. See `references/tmpfile-pattern.md`.
+1. **Parallel tool calls over chained commands**: Use separate Bash tool calls for independent commands instead of chaining with `;` or `&&`, which trigger permission prompts. This applies only to commands with no dependencies between them. A Write that produces a tmpfile and the `gh` call that consumes it through a file flag (`--body-file`, `--notes-file`, and the like) are **dependent**: issue them in separate, sequential messages, never in one parallel batch. See `references/tmpfile-pattern.md`.
 1. **Exclude secret files from staging**: Never stage `.env`, `credentials.json`, `*.pem`, `*.key`, or similar secret files.
 1. **Use clean diff output**: Always pass `--no-ext-diff --no-color` (and `--no-pager` before the subcommand) on diff-producing commands (`git diff`, `git log -p`, `git show`). User configs may route diffs through external tools like difftastic, producing output that is harder to parse. These flags ensure standard unified diff format.
 
 ## Quick Decision Table
 
-| Scenario                         | Pattern                 | Reason                                |
-| -------------------------------- | ----------------------- | ------------------------------------- |
-| Commit messages                  | HEREDOC                 | Short, predictable length             |
-| PR bodies (`gh pr create`)       | Tmpfile + `--body-file` | Can be long; HEREDOC triggers prompts |
-| Issue bodies (`gh issue create`) | Tmpfile + `--body-file` | Can be long                           |
-| Review replies                   | Tmpfile + `--body-file` | Variable length                       |
-| Worktree prompts                 | Write tool to `/tmp/`   | Avoids shell escaping                 |
-| Tag messages                     | Inline `-m`             | Typically one line                    |
+| Scenario                            | Pattern                  | Reason                                |
+| ----------------------------------- | ------------------------ | ------------------------------------- |
+| Commit messages                     | HEREDOC                  | Short, predictable length             |
+| PR bodies (`gh pr create`)          | Tmpfile + `--body-file`  | Can be long; HEREDOC triggers prompts |
+| Issue bodies (`gh issue create`)    | Tmpfile + `--body-file`  | Can be long                           |
+| Release notes (`gh release create`) | Tmpfile + `--notes-file` | Can be long                           |
+| Review replies                      | Tmpfile + `--body-file`  | Variable length                       |
+| Worktree prompts                    | Write tool to `/tmp/`    | Avoids shell escaping                 |
+| Tag messages                        | Inline `-m`              | Typically one line                    |
 
 ## Workflow
 
