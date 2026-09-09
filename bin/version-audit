@@ -16,13 +16,33 @@ set -euo pipefail
 
 TOOL_VERSIONS_FILE=".tool-versions"
 PACKAGE_JSON="package.json"
-readonly TOOL_VERSIONS_FILE PACKAGE_JSON
+# crates.io rejects requests that do not identify themselves with a descriptive
+# User-Agent (HTTP 403), so every outbound registry call sends one.
+USER_AGENT="agent-harness-plugins version-audit (+https://github.com/cboone/agent-harness-plugins)"
+readonly TOOL_VERSIONS_FILE PACKAGE_JSON USER_AGENT
 
 drift_rows=()
 
 function record_drift() {
   local category="${1}" name="${2}" current="${3}" latest="${4}" location="${5}"
   drift_rows+=("${category}|${name}|${current}|${latest}|${location}")
+}
+
+# Every lookup helper must swallow its own failures. Under `set -euo pipefail` a
+# bare `latest=$(curl ... | jq ...)` aborts the whole run on any network or HTTP
+# error, so the `if [[ -z "${latest}" ]]` guards at each call site never get to
+# run and the report is never printed.
+function fetch_json() {
+  curl -fsSL -H "User-Agent: ${USER_AGENT}" "${1}" 2> /dev/null || true
+}
+
+# Documentation comments in the scripts and templates this repository ships
+# spell out the very patterns these audits grep for (for example
+# `uv add --dev "pkg==1.2.3"`), so drop any line that is itself a comment.
+# The optional leading `path:` group lets this work on both bare `grep -h`
+# output and the `grep -r` output that carries a filename.
+function strip_comment_lines() {
+  grep -vE '^([^:]*:)?[[:space:]]*#' || true
 }
 
 function github_latest_release() {
@@ -43,9 +63,9 @@ function audit_node() {
     return
   fi
 
-  latest=$(curl -fsSL https://nodejs.org/dist/index.json 2> /dev/null \
+  latest=$(fetch_json https://nodejs.org/dist/index.json \
     | jq -r 'first(.[] | select(.lts != false)) | .version' \
-    | sed 's/^v//')
+    | sed 's/^v//' || true)
   if [[ -z "${latest}" ]]; then
     return
   fi
@@ -69,8 +89,8 @@ function audit_yarn() {
   fi
   current="${BASH_REMATCH[1]}"
 
-  latest=$(curl -fsSL https://repo.yarnpkg.com/tags 2> /dev/null \
-    | jq -r '.latest.stable // empty')
+  latest=$(fetch_json https://repo.yarnpkg.com/tags \
+    | jq -r '.latest.stable // empty' || true)
   if [[ -z "${latest}" ]]; then
     return
   fi
@@ -84,28 +104,33 @@ function audit_yarn() {
 
 function audit_actions() {
   declare -A seen=()
-  local line repo current latest
+  local line file repo current latest
   while IFS= read -r line; do
-    if [[ "${line}" =~ ([a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+)(/[^@]*)?@[a-f0-9]{40}[[:space:]]+#[[:space:]]+(v?[0-9]+(\.[0-9]+)*) ]]; then
+    # Anchor on `uses:` so the leading `path:` that grep -r prepends cannot be
+    # captured as the repository name.
+    if [[ "${line}" =~ uses:[[:space:]]+([a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+)(/[^@]*)?@[a-f0-9]{40}[[:space:]]+#[[:space:]]+(v?[0-9]+(\.[0-9]+)*) ]]; then
       repo="${BASH_REMATCH[1]}"
       current="${BASH_REMATCH[3]}"
       if [[ -n "${seen[${repo}]:-}" ]]; then
         continue
       fi
       seen[${repo}]=1
+      # The grep below spans both the repository's own workflows and the skill
+      # templates, so report where the pin actually lives instead of assuming.
+      file="${line%%:*}"
       latest=$(github_latest_release "${repo}")
       if [[ -n "${latest}" && "${latest#v}" != "${current#v}" ]]; then
-        record_drift "Actions" "${repo}" "${current}" "${latest}" "skill templates"
+        record_drift "Actions" "${repo}" "${current}" "${latest}" "${file}"
       fi
     fi
-  done < <(grep -rhE 'uses:[[:space:]]+[a-zA-Z0-9._/-]+@[a-f0-9]{40}' .github/ plugins/ 2> /dev/null || true)
+  done < <(grep -rE 'uses:[[:space:]]+[a-zA-Z0-9._/-]+@[a-f0-9]{40}' .github/ plugins/ 2> /dev/null | strip_comment_lines)
 }
 
 # ─── 4. Audit npx <tool>@<version> pins ──────────────────────────────────────
 
 function npm_latest() {
   local pkg="${1}"
-  curl -fsSL "https://registry.npmjs.org/${pkg}/latest" 2> /dev/null | jq -r '.version // empty'
+  fetch_json "https://registry.npmjs.org/${pkg}/latest" | jq -r '.version // empty' || true
 }
 
 function audit_npx_pins() {
@@ -124,7 +149,7 @@ function audit_npx_pins() {
         record_drift "npx pin" "${pkg}" "${current}" "${latest}" "skill templates"
       fi
     fi
-  done < <(grep -rhE 'npx[[:space:]]+@?[a-zA-Z0-9._/-]+@[0-9]+\.[0-9]+\.[0-9]+' plugins/ 2> /dev/null || true)
+  done < <(grep -rhE 'npx[[:space:]]+@?[a-zA-Z0-9._/-]+@[0-9]+\.[0-9]+\.[0-9]+' plugins/ 2> /dev/null | strip_comment_lines)
 }
 
 # ─── 5. Audit go install <path>@v<version> pins for known tools ──────────────
@@ -159,14 +184,14 @@ function audit_go_install_pins() {
         record_drift "go install" "${install_path}" "${current}" "${latest}" "skill templates"
       fi
     fi
-  done < <(grep -rhE 'go install [a-zA-Z0-9./-]+@v[0-9]+' plugins/ 2> /dev/null || true)
+  done < <(grep -rhE 'go install [a-zA-Z0-9./-]+@v[0-9]+' plugins/ 2> /dev/null | strip_comment_lines)
 }
 
 # ─── 6. Audit cargo install --version <X> <crate> pins ───────────────────────
 
 function crates_io_latest() {
   local crate="${1}"
-  curl -fsSL "https://crates.io/api/v1/crates/${crate}" 2> /dev/null | jq -r '.crate.max_stable_version // empty'
+  fetch_json "https://crates.io/api/v1/crates/${crate}" | jq -r '.crate.max_stable_version // empty' || true
 }
 
 function audit_cargo_install_pins() {
@@ -185,14 +210,14 @@ function audit_cargo_install_pins() {
         record_drift "cargo install" "${crate}" "${current}" "${latest}" "skill templates"
       fi
     fi
-  done < <(grep -rhE 'cargo install (--locked )?--version [0-9]+\.[0-9]+' plugins/ 2> /dev/null || true)
+  done < <(grep -rhE 'cargo install (--locked )?--version [0-9]+\.[0-9]+' plugins/ 2> /dev/null | strip_comment_lines)
 }
 
 # ─── 7. Audit pip / uv install <pkg>==<X> pins ───────────────────────────────
 
 function pypi_latest() {
   local pkg="${1}"
-  curl -fsSL "https://pypi.org/pypi/${pkg}/json" 2> /dev/null | jq -r '.info.version // empty'
+  fetch_json "https://pypi.org/pypi/${pkg}/json" | jq -r '.info.version // empty' || true
 }
 
 function audit_pip_install_pins() {
@@ -211,7 +236,7 @@ function audit_pip_install_pins() {
         record_drift "pip / uv install" "${pkg}" "${current}" "${latest}" "skill templates"
       fi
     fi
-  done < <(grep -rhE '(pip install|uv (pip install|add( --dev)?)) +.[a-zA-Z0-9_-]+==[0-9]' plugins/ 2> /dev/null || true)
+  done < <(grep -rhE '(pip install|uv (pip install|add( --dev)?)) +.?[a-zA-Z0-9_-]+==[0-9]' plugins/ 2> /dev/null | strip_comment_lines)
 }
 
 # ─── 8. Print Markdown report ────────────────────────────────────────────────
