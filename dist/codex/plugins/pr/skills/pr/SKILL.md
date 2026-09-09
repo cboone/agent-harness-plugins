@@ -302,14 +302,16 @@ If no connected issues were detected, omit the `## Closes` section entirely.
 
 #### Create the PR
 
-First, generate a unique temporary file path using `mktemp`:
+First, generate a unique temporary file path using `mktemp -u`:
 
 ```bash
-mktemp /tmp/pr-body-XXXXXX
-# Returns a unique path, e.g.: /tmp/pr-body-x4y5z6
+mktemp -u /tmp/pr-body-XXXXXX
+# Returns a unique path that does NOT exist on disk, e.g.: /tmp/pr-body-x4y5z6
 ```
 
-Then use the **Write** tool to write the full PR body (Summary, Test plan, and Closes sections) to the exact path returned by `mktemp`. In the examples below, `TMPFILE` is a placeholder for that path.
+The `-u` flag is required. Plain `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first, so the write fails with `File has not been read yet`. With `-u` the path is unique but unoccupied, so Write creates it fresh.
+
+Then use the **Write** tool to write the full PR body (Summary, Test plan, and Closes sections) to the exact path returned by `mktemp -u`. In the examples below, `TMPFILE` is a placeholder for that path.
 
 Then create the PR with `--body-file`:
 
@@ -319,7 +321,29 @@ gh pr create --title "the pr title" --body-file TMPFILE
 
 Pass `--base <base-branch>` if `<base-branch>` differs from `<default-branch>`. Do not pass `--draft`. Do not add labels or reviewers.
 
-Always remove the tmpfile after the PR creation attempt, regardless of whether it succeeded or failed. Issue the cleanup as a **separate Bash tool call**, not chained onto `gh pr create`:
+**Never batch the Write call and `gh pr create` into one message.** Issue them as two separate, sequential tool calls, and wait for the Write to return before invoking `gh`. `gh` reads the body file at invocation time, so a parallel batch can start `gh pr create` before the file exists and open the PR with an empty body. The command still succeeds and still prints a URL, so the failure is silent. This is a deliberate exception to the general preference for parallel tool calls: that preference covers calls with no dependencies between them, and these two are dependent, because `gh pr create` consumes the file Write produces.
+
+#### Verify the PR body
+
+**Run this step only if `gh pr create` succeeded and printed a PR URL.** If it failed, no PR exists and there is no URL to pass, so skip both verification and recovery, go straight to cleanup, and handle the failure per [Error Handling](#error-handling). Never substitute a placeholder or a URL left over from an earlier run.
+
+`gh pr create` prints the PR URL on success, but a successful exit says nothing about whether the body landed. Before cleaning up, confirm the stored body is non-empty. Pass the URL that `gh pr create` just returned, shown below as `<pr-url>`; it is the identifier this step is guaranteed to have. (`gh pr view` also accepts a bare PR number, or no argument at all, in which case it targets the current branch's PR.)
+
+```bash
+gh pr view <pr-url> --json body --jq '.body | length'
+```
+
+If the length is `0`, the body file was empty or missing when `gh` read it. Recover by re-writing `TMPFILE` with the Write tool and then, as a separate call:
+
+```bash
+gh pr edit <pr-url> --body-file TMPFILE
+```
+
+Re-run the length check to confirm the recovery worked.
+
+#### Clean up the tmpfile
+
+Always remove the tmpfile after the PR creation attempt, regardless of whether it succeeded or failed. When creation succeeded, run the cleanup only **after** the verification above, since recovery needs the file to still exist. When creation failed, verification is skipped, so clean up immediately. Issue the cleanup as a **separate Bash tool call**, not chained onto `gh pr create`:
 
 ```bash
 rm -f TMPFILE
