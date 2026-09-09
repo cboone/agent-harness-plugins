@@ -1,8 +1,16 @@
 ---
 name: set-up-linters
 description: >-
-  Detect project languages, recommend appropriate linters and formatters,
-  install them, and generate config files.
+  Detect project languages, recommend linters and formatters, install them, and
+  generate config files, including Pandoc-academic Markdown presets. Use when
+  the user says "set up linters", "add linters", "configure linters", "set up
+  formatters", "add a formatter", "add prettier", "add eslint", "add
+  golangci-lint", "add ruff", "add clippy", "add markdownlint", "generate
+  linter configs", "lint configuration", or wants linting and formatting wired
+  up for a project. Detects Go, JavaScript/TypeScript, Python, Ruby, Rust,
+  Shell, Swift, Zsh, Lean, and Markdown. Pairs with set-up-ci (CI workflows),
+  set-up-secret-scanning (gitleaks and TruffleHog), and lint-and-fix (running
+  the linters once they are configured).
 ---
 
 # Set-Up Linters

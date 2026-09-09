@@ -73,11 +73,11 @@ git rev-parse HEAD
 Record this as `<pre-rebase-head>`. Then:
 
 ```bash
-git fetch origin <base-branch>
-git rebase origin/<base-branch>
+git fetch origin <default-branch>
+git rebase origin/<default-branch>
 ```
 
-Where `<base-branch>` is the detected or overridden base branch name.
+Where `<default-branch>` is the detected or overridden base branch name.
 
 ### 4. Handle Rebase Result
 
@@ -89,7 +89,7 @@ If the rebase completes without conflicts:
 1. Show a summary of the replayed commits:
 
 ```bash
-git log origin/<base-branch>..HEAD --oneline
+git log origin/<default-branch>..HEAD --oneline
 ```
 
 This range lists exactly the commits that now sit on top of the rebased base, regardless of whether the branch has an upstream. Avoid `@{u}..HEAD` here: it fails when the branch has no upstream, and after a rebase it can also include base-branch commits the rebase moved onto, not just the replayed feature commits.

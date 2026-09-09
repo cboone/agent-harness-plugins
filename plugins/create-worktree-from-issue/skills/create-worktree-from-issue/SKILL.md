@@ -67,13 +67,15 @@ The "in progress" label is intentionally retained beyond worktree creation and l
 Construct a branch name in the format `TYPE/SLUG` where:
 
 - **TYPE**: Derive from issue labels. Use `fix` for labels containing "bug" or "fix". Use `feature` for everything else (including when no labels match).
-- **SLUG**: Slugify the issue title: lowercase, replace spaces and special characters with hyphens, collapse consecutive hyphens, trim leading/trailing hyphens, truncate to 50 characters at a word boundary.
+- **SLUG**: The issue number, a hyphen, then the slugified issue title: lowercase, replace spaces and special characters with hyphens, collapse consecutive hyphens, trim leading/trailing hyphens, truncate to 50 characters at a word boundary.
+
+Leading with the issue number is what lets the `pr` skill link the resulting pull request back to the issue: its primary detection strategy reads `TYPE/N-description` straight out of the branch name. Without the number, `pr` falls back to searching GitHub by branch slug, which is slower and can match the wrong issue or none at all.
 
 Examples:
 
-- Issue "Add dark mode support" with label "enhancement" -> `feature/add-dark-mode-support`
-- Issue "Login fails with special chars" with label "bug" -> `fix/login-fails-with-special-chars`
-- Issue "Update README" with no labels -> `feature/update-readme`
+- Issue #42 "Add dark mode support" with label "enhancement" -> `feature/42-add-dark-mode-support`
+- Issue #108 "Login fails with special chars" with label "bug" -> `fix/108-login-fails-with-special-chars`
+- Issue #7 "Update README" with no labels -> `feature/7-update-readme`
 
 ### 4. Compose the Issue Prompt
 

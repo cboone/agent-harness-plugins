@@ -114,6 +114,18 @@ Before generating a message, examine the output from `git log --oneline -10` to 
 
 Match the repository's existing style. If there is no clear convention, default to conventional commits format.
 
+#### Defer to a project-enforced convention
+
+The type list and length limit in the next step are this skill's default, not an override. A project that enforces its own commit convention wins. Check these signals in order and stop at the first match:
+
+1. **A commitlint config exists.** Look for `.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in `package.json`. Unlike the PR-title case, a commitlint config on its own **is** authoritative here, because linting commit messages is what commitlint does by default. Read the config it resolves and follow its `type-enum`, `scope-enum`, `subject-case`, and `header-max-length`. Where the config only extends a preset, the preset supplies those values; `@commitlint/config-conventional` sets `header-max-length` to 100, not 72.
+
+1. **A commit-msg hook enforces a format.** Check `.husky/commit-msg`, `.git/hooks/commit-msg`, and any `core.hooksPath` directory. Follow whatever it runs.
+
+1. **Project agent config states a commit message format.** Read whichever of these exist: `CLAUDE.md` and `AGENTS.md` in the repository root, and `copilot-instructions.md` under `.github/`. Any of them may be absent, which is normal, and `CLAUDE.md` is often a symlink to `AGENTS.md`, so read the target rather than treating it as a second source. Also honor any user-level instructions already in context.
+
+1. **Recent commits are consistent.** As a fallback, the `git log --oneline -10` output already gathered in step 1: if most subjects match `^[a-z]+(\([^)]+\))?!?:\s`, the project uses conventional commits. Match that style, including its apparent type vocabulary.
+
 ### 5. Generate Commit Message
 
 Analyze the diff to generate a commit message:
@@ -126,7 +138,7 @@ Analyze the diff to generate a commit message:
    - `test`: Adding or updating tests
    - `chore`: Build, tooling, or maintenance changes
    - `style`: Formatting, whitespace, or cosmetic changes
-1. **Write the description**: A concise summary (under 72 characters) focused on _why_ the change was made, not _what_ files changed.
+1. **Write the description**: A concise summary (under 72 characters, unless a project convention detected above sets a different limit) focused on _why_ the change was made, not _what_ files changed.
 1. **Add context when relevant**: Reference issue numbers if they appear in branch names (e.g., branch `fix/issue-42-login-bug` suggests `fixes #42`).
 
 ### 6. Create the Commit

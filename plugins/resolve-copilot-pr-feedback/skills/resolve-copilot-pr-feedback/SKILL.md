@@ -287,7 +287,7 @@ Replace `TMPFILE` with the actual path returned by `mktemp -u`. The `-u` flag is
 
 **Never batch step 2 and step 3 into one message.** The reply script reads the body file at invocation time, so a parallel batch can run step 3 before the file exists and post an empty reply. This is a deliberate exception to the general preference for parallel tool calls: these two steps are dependent, because step 3 consumes the file step 2 produces.
 
-The cleanup must be a separate Bash tool call: each tool invocation runs unconditionally, so the tmpfile is removed whether step 3 succeeded or failed, and the harness preserves step 3's exit code without any shell wrapping. Never combine the two with `; status=$?; rm -f TMPFILE; exit $status` — in zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status`. See `plugins/use-git/skills/use-git/references/tmpfile-pattern.md` for the full rationale.
+The cleanup must be a separate Bash tool call: each tool invocation runs unconditionally, so the tmpfile is removed whether step 3 succeeded or failed, and the harness preserves step 3's exit code without any shell wrapping. Never combine the two with `; status=$?; rm -f TMPFILE; exit $status` — in zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status`. See the `use-git` skill's tmpfile pattern reference for the full rationale.
 
 **NEVER pass the reply body inline** (e.g., via `echo "..." |` or heredocs). Always use the Write tool + `--body-file` pattern.
 

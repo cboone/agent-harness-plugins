@@ -59,11 +59,11 @@ If `git status` shows uncommitted changes (staged or unstaged):
 ### 3. Fetch and Merge
 
 ```bash
-git fetch origin <base-branch>
-git merge origin/<base-branch>
+git fetch origin <default-branch>
+git merge origin/<default-branch>
 ```
 
-Where `<base-branch>` is the detected or overridden base branch name.
+Where `<default-branch>` is the detected or overridden base branch name.
 
 ### 4. Handle Merge Result
 

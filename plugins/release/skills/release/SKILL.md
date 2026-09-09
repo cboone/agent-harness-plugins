@@ -919,7 +919,7 @@ Always remove the tmpfile after the command completes, regardless of success or 
 rm -f TMPFILE
 ```
 
-Each Bash tool call runs unconditionally and the prior call's exit code is preserved by the harness, so a separate call cleans up after both successful and failed releases without any shell-level wrapping. Never combine the two with a `; status=$?; rm -f TMPFILE; exit $status` wrapper: in zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status`. See `plugins/use-git/skills/use-git/references/tmpfile-pattern.md` for the full rationale.
+Each Bash tool call runs unconditionally and the prior call's exit code is preserved by the harness, so a separate call cleans up after both successful and failed releases without any shell-level wrapping. Never combine the two with a `; status=$?; rm -f TMPFILE; exit $status` wrapper: in zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status`. See the `use-git` skill's tmpfile pattern reference for the full rationale.
 
 ##### 11f. Report results
 

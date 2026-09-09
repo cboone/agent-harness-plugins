@@ -310,8 +310,8 @@ If no connected issues were detected, omit the `## Closes` section entirely.
 First, generate a unique temporary file path using `mktemp -u`:
 
 ```bash
-mktemp -u /tmp/pr-body-XXXXXX
-# Returns a unique path that does NOT exist on disk, e.g.: /tmp/pr-body-x4y5z6
+mktemp -u /tmp/gh-pr-body-XXXXXX
+# Returns a unique path that does NOT exist on disk, e.g.: /tmp/gh-pr-body-x4y5z6
 ```
 
 The `-u` flag is required. Plain `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first, so the write fails with `File has not been read yet`. With `-u` the path is unique but unoccupied, so Write creates it fresh.
@@ -354,7 +354,7 @@ Always remove the tmpfile after the PR creation attempt, regardless of whether i
 rm -f TMPFILE
 ```
 
-Each Bash tool call runs unconditionally and the prior call's exit code is preserved by the harness, so a separate call cleans up after both successful and failed PR creations without any shell-level wrapping. Never combine the two with `;` followed by an exit-code preservation idiom such as `gh pr create ...; status=$?; rm -f TMPFILE; exit $status`. In zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status` and falsely reports a successful PR creation as failed. See `plugins/use-git/skills/use-git/references/tmpfile-pattern.md` for the full rationale.
+Each Bash tool call runs unconditionally and the prior call's exit code is preserved by the harness, so a separate call cleans up after both successful and failed PR creations without any shell-level wrapping. Never combine the two with `;` followed by an exit-code preservation idiom such as `gh pr create ...; status=$?; rm -f TMPFILE; exit $status`. In zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status` and falsely reports a successful PR creation as failed. See the `use-git` skill's tmpfile pattern reference for the full rationale.
 
 ### 8. Verify the Title Check
 

@@ -100,7 +100,7 @@ Always remove the tmpfile after the issue creation attempt, regardless of whethe
 rm -f TMPFILE
 ```
 
-Each Bash tool call runs unconditionally and the prior call's exit code is preserved by the harness, so a separate call cleans up after both successful and failed issue creations without any shell-level wrapping. Never combine the two with `;` followed by an exit-code preservation idiom such as `gh issue create ...; status=$?; rm -f TMPFILE; exit $status`. In zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status` and falsely reports a successful issue creation as failed. See `plugins/use-git/skills/use-git/references/tmpfile-pattern.md` for the full rationale.
+Each Bash tool call runs unconditionally and the prior call's exit code is preserved by the harness, so a separate call cleans up after both successful and failed issue creations without any shell-level wrapping. Never combine the two with `;` followed by an exit-code preservation idiom such as `gh issue create ...; status=$?; rm -f TMPFILE; exit $status`. In zsh (the macOS default shell), `status` is a read-only built-in alias for `$?`, so the assignment fails with `read-only variable: status` and falsely reports a successful issue creation as failed. See the `use-git` skill's tmpfile pattern reference for the full rationale.
 
 ### 7. Report the Result
 

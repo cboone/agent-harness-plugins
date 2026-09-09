@@ -34,8 +34,9 @@ Conventions for running git and GitHub CLI (`gh`) commands in Claude Code. These
 | Issue bodies (`gh issue create`)    | Tmpfile + `--body-file`  | Can be long                           |
 | Release notes (`gh release create`) | Tmpfile + `--notes-file` | Can be long                           |
 | Review replies                      | Tmpfile + `--body-file`  | Variable length                       |
-| Worktree prompts                    | Write tool to `/tmp/`    | Avoids shell escaping                 |
+| Worktree prompts                    | Pipe through stdin       | Avoids shell escaping and a tmpfile   |
 | Tag messages                        | Inline `-m`              | Typically one line                    |
+| Listing API results                 | `gh api --paginate`      | One page silently truncates results   |
 
 ## Workflow
 
@@ -57,5 +58,5 @@ Conventions for running git and GitHub CLI (`gh`) commands in Claude Code. These
 - `references/tmpfile-pattern.md` - When and how to use tmpfiles for long content
 - `references/heredoc-pattern.md` - When and how to use HEREDOCs for commit messages
 - `references/safety-rules.md` - GPG signing, never amend, never force, secret exclusion, parallel calls
-- `references/common-operations.md` - Base branch detection, push with upstream fallback, conventional commits, branch naming
+- `references/common-operations.md` - Base branch detection, push with upstream fallback, conventional commits, branch naming, paginated `gh api` reads
 - `references/diff-output.md` - Clean diff output flags for bypassing external diff tools, colors, and pagers

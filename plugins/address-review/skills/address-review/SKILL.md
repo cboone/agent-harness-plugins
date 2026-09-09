@@ -25,7 +25,7 @@ The user may provide these options inline:
 
 ### 1. Identify the Review Document
 
-The user provides a path to a review document, typically as an `@`-reference or a file path argument. Common locations include `docs/reviews/`, `docs/plans/reviews/`, or any markdown file the user references.
+The user provides a path to a review document, typically as an `@`-reference or a file path argument. `docs/reviews/` is the canonical location, and it is where the `review-branch` skill saves its output. Older projects may keep them in `docs/plans/reviews/`; any markdown file the user references works too.
 
 Read the file. If the path does not exist, report that and stop.
 

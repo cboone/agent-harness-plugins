@@ -150,11 +150,13 @@ If the user specified `--plan <path>`, use that file. Otherwise, auto-detect:
 ```bash
 # Check common plan directory locations
 ls docs/plans/todo/ 2> /dev/null
-ls docs/plans/in-progress/ 2> /dev/null
 ls docs/plans/ 2> /dev/null
+ls docs/plans/done/ 2> /dev/null
 ```
 
-1. Search for plan files whose name matches the current branch name (with type prefixes and hyphens/underscores normalized). For example, branch `feature/add-dark-mode` would match a plan named `add-dark-mode.md`.
+`todo/` and `done/` are the directories the scaffolding skills create and the ones `commit` and `pr` recognize; check the `docs/plans/` root too, since older projects keep plans there unsorted.
+
+1. Search for plan files whose name matches the current branch name (with type prefixes and hyphens/underscores normalized). Plan files are named `YYYY-MM-DD-meaningful-description.md`, so match on the description portion after the datestamp: branch `feature/add-dark-mode` matches `2026-05-02-add-dark-mode.md`.
 
 1. If exactly one plan matches, use it. If multiple plans match, list them and ask the user which to use. If no plans match, skip the plan evaluation entirely.
 
