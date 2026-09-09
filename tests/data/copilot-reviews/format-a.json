@@ -1,0 +1,12 @@
+[
+  {
+    "id": 4215775295,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-09T12:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-4215775295",
+    "body": "## Pull request overview\n\nCopilot reviewed 13 out of 27 changed files in this pull request and generated 1 comment.\n\n\n<details>\n<summary>Comments suppressed due to low confidence (1)</summary>\n\n**plugins/notify/opencode/index.ts:252**\n* `truncate()` slices to `limit` and then appends an ellipsis, so the returned string can be `limit + 1` characters long. Since the `TASK_LIMIT_*` constants are treated as strict body-length budgets elsewhere in this file, adjust truncation to keep the final length within `limit` (and handle small limits consistently).\n```\nfunction truncate(text: string, limit: number): string {\n  if (text.length <= limit) return text;\n  return text.slice(0, limit) + \"…\";\n}\n```\n</details>\n\n\n"
+  }
+]

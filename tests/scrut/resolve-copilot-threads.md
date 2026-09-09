@@ -1,0 +1,111 @@
+# Resolve Copilot threads
+
+Tests for `parse-reviews`, which extracts Copilot findings from PR review bodies.
+
+Copilot files some findings in a review body instead of an inline thread. Those have no thread id, so a `reviewThreads` query cannot see them. The fixtures are real Copilot review bodies covering every layout observed in the wild.
+
+## Oldest layout: comments suppressed due to low confidence
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-a.json" | jq -c '[.[].findings[] | .location]'
+["plugins/notify/opencode/index.ts:252"]
+```
+
+## Mid layout: suppressed comments summary
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-b.json" | jq -c '[.[].findings[] | .location]'
+["src/ring_race.zig:395","src/ring_race.zig:378"]
+```
+
+## Current layout: suppressed comments heading inside review details
+
+The `**Previously missed (1)**` subheading sits between the section heading and the first finding. It must not be parsed as a finding of its own.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-c.json" | jq -c '[.[].findings[] | .location]'
+[".github/workflows/ci.yml:218",".github/workflows/ci.yml:225"]
+```
+
+## Path and line are split out of the heading
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-c.json" | jq -c '.[0].findings[0] | {path, line}'
+{"path":".github/workflows/ci.yml","line":218}
+```
+
+## Finding bodies keep their prose and fenced context
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-a.json" | jq -r '.[0].findings[0].body' | head -1
+* `truncate()` slices to `limit` and then appends an ellipsis, so the returned string can be `limit + 1` characters long. Since the `TASK_LIMIT_*` constants are treated as strict body-length budgets elsewhere in this file, adjust truncation to keep the final length within `limit` (and handle small limits consistently).
+```
+
+The trailing context block Copilot quotes under the prose is preserved, so the body carries an opening and a closing fence.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-a.json" | jq -r '.[0].findings[0].body' | grep -c '^```'
+2
+```
+
+## Headline captures the verdict and drops the boilerplate
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-c.json" | jq -r '.[0].headline' | head -1
+### 🟢 Approval recommended
+```
+
+## A review with no suppressed section reports no marker
+
+Its body still carries several `<details>` blocks, so this guards against a false positive on ordinary reviews.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/no-suppressed.json" | jq -c '[.[] | {hasSuppressedMarker, findings: (.findings | length)}]'
+[{"hasSuppressedMarker":false,"findings":0}]
+```
+
+## Format drift is reported, not swallowed
+
+A body that announces suppressed comments but uses an unrecognized interior layout yields a true marker with no structured findings. Callers must fall back to the raw `suppressed` slice rather than concluding there is no feedback.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/drift.json" | jq -c '[.[] | {hasSuppressedMarker, findings: (.findings | length)}]'
+[{"hasSuppressedMarker":true,"findings":0}]
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/drift.json" | jq -r '.[0].suppressed' | head -1
+- src/example.ts, line 42: the finding prose now lives in a plain list item
+```
+
+## Non-Copilot reviews are filtered out
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/non-copilot.json"
+[]
+```
+
+## Empty review list
+
+```scrut
+$ echo '[]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews
+[]
+```
+
+## parse-reviews takes no arguments
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews extra < /dev/null 2>&1
+Error: Usage: resolve-copilot-threads parse-reviews (reads review JSON on stdin)
+[1]
+```
+
+`fetch-reviews` is not exercised here: it requires an authenticated `gh`, which the test environment does not have. `parse-reviews` is the seam that makes the parsing testable without one.
+
+## Help lists the review-body commands
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" --help | grep -E '^  (fetch-reviews|parse-reviews)'
+  fetch-reviews <owner> <repo> <pr_number>            Fetch Copilot review-body findings
+  parse-reviews                                        Normalize review JSON read from stdin
+```

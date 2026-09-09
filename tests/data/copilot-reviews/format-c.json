@@ -1,0 +1,12 @@
+[
+  {
+    "id": 5072048110,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-09T12:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-5072048110",
+    "body": "### 🟢 Approval recommended\n\nThe functional changes are internally consistent and are paired with strengthened offscreen verification and updated tooling; only minor CI comment cleanups remain.\n\n<details>\n<summary>Review details</summary>\n\n### Suppressed comments (2)\n\n**Previously missed (1)** — in code that hasn't changed since the last review.\n\n**.github/workflows/ci.yml:218**\n* The CI log annotation still refers to a \"beam ray\" deviation, but the trace half now prints the scalar-deposit agreement from `checkDepositIsScalar` (the old `checkBeamIsOneColour` ray ratios are no longer reported). This makes the workflow comment misleading when someone compares expected output to logs.\n\nThis issue also appears on line 221 of the same file.\n```\n  # **Every number the step printed is identical to the development machine's**,\n  # on different silicon: row 269 for silence, row 26 for full scale, rail on row\n  # 5, twenty periods from twenty cycles, a beam ray with 0.00000 worst deviation,\n  # and one deposit peaking at exactly 1.0000. That last one is the interesting\n  # one, since it means the diamond-exit finding recorded in ADR 0013 holds on more\n```\n\n**.github/workflows/ci.yml:225**\n* This paragraph documents changes to the (now-removed) \"beam ray\" ratio figures, but `checkBeamIsOneColour` was replaced by `checkDepositIsScalar` and those numbers are no longer emitted. Consider updating/removing this block so it matches the current smoke-trace output and avoids confusion during CI triage.\n```\n  # The ray's own two figures were 0.2998 and 0.4500 and are now **0.0732 and\n  # 0.1705**, which is #60 rather than a drift: the drawable became\n  # `BGRA8Unorm_sRGB`, so the deposit is the sRGB decode of the colour phase 2\n  # wrote rather than that colour reused as linear light. The picture is unchanged\n  # and the numbers behind it moved, which is the one kind of change a recorded\n```\n\n- **Files reviewed:** 19/19 changed files\n- **Comments generated:** 0 new\n- **Review effort level:** Lite\n</details>\n"
+  }
+]
