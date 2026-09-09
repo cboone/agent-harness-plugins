@@ -34,7 +34,8 @@ function usage() {
   cat << USAGE_TEXT
 Usage: ${SCRIPT_NAME} <command> [arguments]
 
-Manage GitHub Copilot PR review threads via GraphQL.
+Manage GitHub Copilot PR review feedback: threads via GraphQL, review-body
+findings via REST.
 
 Commands:
   fetch <owner> <repo> <pr_number>                    Fetch unresolved Copilot threads
@@ -439,9 +440,13 @@ function do_fetch_reviews() {
 
   # gh merges paginated REST array responses into a single array, so the
   # normalizer receives one flat list of reviews.
+  # gh writes its own diagnostic to stderr, which passes through untouched, so
+  # this message adds the request context rather than guessing at the cause.
+  # A wrong owner, repo, or PR number is only one possibility; missing token
+  # scopes, unauthorized SSO, and rate limiting all land here too.
   local response
   if ! response="$(gh api --paginate "repos/${owner}/${repo}/pulls/${pr_number}/reviews")"; then
-    die "Failed to fetch reviews for ${owner}/${repo}#${pr_number}. Verify the owner, repo, and PR number are correct."
+    die "Failed to fetch reviews for ${owner}/${repo}#${pr_number}. See the gh error above for the cause."
   fi
 
   do_parse_reviews <<< "${response}"

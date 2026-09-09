@@ -20,7 +20,7 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 - Any GraphQL mutation that creates new reviews or PR-level comments - FORBIDDEN
 - Responding to human review comments - FORBIDDEN
 
-**This skill ONLY processes GitHub Copilot threads.** Never interact with threads created by human reviewers.
+**This skill ONLY processes Copilot-authored feedback**, whether it arrives as a review thread or as a finding in a Copilot review body. Never interact with threads created by human reviewers.
 
 **Permitted operations:**
 
