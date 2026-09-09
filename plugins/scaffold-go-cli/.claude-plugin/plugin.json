@@ -9,5 +9,5 @@
   "name": "scaffold-go-cli",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "2.7.4"
+  "version": "2.8.0"
 }

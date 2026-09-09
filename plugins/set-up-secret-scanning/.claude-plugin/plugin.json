@@ -9,5 +9,5 @@
   "name": "set-up-secret-scanning",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "3.0.1"
+  "version": "3.0.2"
 }

@@ -9,5 +9,5 @@
   "name": "add-scrut-cli-tests",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.6.3"
+  "version": "1.6.4"
 }
