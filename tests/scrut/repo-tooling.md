@@ -72,7 +72,11 @@ Prettier once rewrote `git diff <base-branch>...HEAD` into
 named `base-branch` and truncates the commit range. `embeddedLanguageFormatting`
 is off now; this guards the seven sites that were repaired.
 
+Checks every prose surface, not just `plugins/`: the repo-local `check-versions`
+skill carried two of these too, and a guard scoped to `plugins/` missed them.
+`docs/plans/done/` is excluded as a historical archive.
+
 ```scrut
-$ cd "${REPO_ROOT}" && grep -rlE '< (base-branch|base-ref|merge-base|default-branch|source-branch) >' plugins/ | wc -l | tr -d ' '
+$ cd "${REPO_ROOT}" && grep -rlE '< [a-z][a-z0-9-]+ >' plugins/ .claude/ .github/ README.md AGENTS.md 2>/dev/null | wc -l | tr -d ' '
 0
 ```
