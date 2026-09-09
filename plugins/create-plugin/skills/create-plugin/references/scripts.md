@@ -145,6 +145,18 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/script-name" arg1 arg2
 
 **Why the `bash` prefix:** Claude Code's Bash tool permission rules match the whole command text. If the script path were the command itself, the version-specific segment (`.../1.2.0/scripts/...`) would sit at the front of every rule and break it on each release. Prefixing with `bash` keeps the leading token stable, so a rule like `Bash(bash "*/script-name" *)` keeps working across versions.
 
+**Quote the wildcard in the rule.** The matcher does not normalise quotes, and a literal space in the rule must match a literal space in the command. Because the skill invokes a *quoted* path, `Bash(bash */script-name *)` does **not** match `bash "/abs/path/scripts/script-name" arg`: after `script-name` the command has a `"`, not the space the rule requires. Write the quotes into the rule instead:
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(bash \"*/script-name\" *)"]
+  }
+}
+```
+
+For a script invoked with no arguments, drop the trailing space-plus-wildcard entirely (`Bash(bash \"*/script-name\")`). Verified against Claude Code 2.1.266 with an isolated `--restricted` session; the unquoted forms were denied and the quoted forms allowed.
+
 **Caveat for SKILL.md prose:** the substitution is a global, unconditional text replacement, so a SKILL.md cannot *document* the literal variable; every occurrence is rewritten, including inside fenced code blocks. Use the literal only where substitution is the intent. To describe the variable itself, put that prose in a `references/` file, which is read from disk and left untouched.
 
 Other harnesses differ: Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. For a script-backed skill that must run there too, add a short fallback telling Claude that an unsubstituted path still begins with `$` rather than `/`, and to locate the script with `**/plugin-name/**/scripts/script-name` (note the `**` between the plugin name and `scripts`, which tolerates the version segment), preferring a match inside the harness's own installed-plugin directory.
