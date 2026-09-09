@@ -401,7 +401,7 @@ Plan files live under `docs/plans/` and its subdirectories (`todo/`, `done/`). L
 
 ### Plan Name Cleanup
 
-Well-named plans follow the pattern `YYYY-MM-DD-meaningful-description.md`. Auto-generated names use nonsensical word combinations (e.g., `ethereal-booping-sunbeam.md`, `quizzical-imagining-cerf.md`).
+Well-named plans follow the pattern `YYYY-MM-DD-meaningful-description.md`. Auto-generated names are nonsensical word combinations with no datestamp (e.g., `wandering-copper-lantern.md`, `quizzical-amber-turnstile.md`).
 
 **Every time a plan file is part of a commit, check its filename.** If the name lacks a datestamp prefix or uses a nonsensical auto-generated name:
 
