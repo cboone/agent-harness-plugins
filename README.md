@@ -2,6 +2,14 @@
 
 A collection of plugins (skills and hooks) for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI's Codex CLI](https://developers.openai.com/codex/cli), and [OpenCode](https://opencode.ai/docs/skills/), from [Christopher Boone](https://cboone.github.io).
 
+## Contents
+
+- [Install](#install): [Claude Code](#claude-code), [Codex CLI](#codex-cli), [OpenCode](#opencode)
+- [Skills](#skills): [Git](#git), [Issues and Worktrees](#issues-and-worktrees), [Code Review](#code-review), [Code Quality](#code-quality), [Writing](#writing), [Scaffolding](#scaffolding), [CI and Release](#ci-and-release), [Agents](#agents)
+- [Hooks](#hooks)
+- [Using with Codex CLI](#using-with-codex-cli), [Using with OpenCode](#using-with-opencode)
+- [License](#license)
+
 ## Install
 
 ### Claude Code
