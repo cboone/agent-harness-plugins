@@ -5,7 +5,13 @@ set -euo pipefail
 CLAUDE_MARKETPLACE="${CLAUDE_MARKETPLACE:-.claude-plugin/marketplace.json}"
 CODEX_MARKETPLACE="${CODEX_MARKETPLACE:-.agents/plugins/marketplace.json}"
 CODEX_DIST_DIR="${CODEX_DIST_DIR:-dist/codex}"
-readonly CLAUDE_MARKETPLACE CODEX_MARKETPLACE CODEX_DIST_DIR
+# Where the tree is written (CODEX_DIST_DIR) and the path it records inside its
+# own output (CODEX_DIST_LABEL) are normally the same. They separate only for
+# callers that regenerate the tree somewhere else purely to compare it:
+# bin/validate-plugins builds into a temp directory but must still produce
+# output byte-identical to the committed tree, so it pins the label.
+CODEX_DIST_LABEL="${CODEX_DIST_LABEL:-${CODEX_DIST_DIR}}"
+readonly CLAUDE_MARKETPLACE CODEX_MARKETPLACE CODEX_DIST_DIR CODEX_DIST_LABEL
 
 errors=0
 
@@ -118,6 +124,26 @@ function rewrite_skill_description() {
   mv "${tmp_file}" "${skill_md}"
 }
 
+# A source README at plugins/<name>/README.md reaches the root README with two
+# "../" hops. Its mirror sits that many levels deeper again, one per component
+# of CODEX_DIST_LABEL, so derive the prefix instead of hardcoding "../../../../"
+# and silently producing broken links if the output directory ever moves.
+function generated_readme_root_prefix() {
+  local depth component
+  depth=2
+  while IFS= read -r component; do
+    if [[ -n "${component}" ]]; then
+      depth=$((depth + 1))
+    fi
+  done < <(tr '/' '\n' <<< "${CODEX_DIST_LABEL}")
+
+  local prefix="" i
+  for ((i = 0; i < depth; i++)); do
+    prefix+="../"
+  done
+  printf '%s' "${prefix}"
+}
+
 function rewrite_generated_readme_links() {
   local readme="${1}"
 
@@ -125,7 +151,9 @@ function rewrite_generated_readme_links() {
     return
   fi
 
-  perl -0pi -e 's/\]\(\.\.\/\.\.\/README\.md/](..\/..\/..\/..\/README.md/g' "${readme}"
+  local prefix
+  prefix="$(generated_readme_root_prefix)"
+  README_ROOT_PREFIX="${prefix}" perl -0pi -e 'my $prefix = $ENV{"README_ROOT_PREFIX"}; s/\]\(\.\.\/\.\.\/README\.md/](${prefix}README.md/g' "${readme}"
 }
 
 function write_codex_marketplace() {
@@ -135,7 +163,7 @@ function write_codex_marketplace() {
   cp "${CLAUDE_MARKETPLACE}" "${CODEX_MARKETPLACE}"
 
   while IFS= read -r plugin_name; do
-    PLUGIN_NAME="${plugin_name}" perl -0pi -e 'my $name = $ENV{"PLUGIN_NAME"}; s/"source": "\.\/plugins\/\Q$name\E"/"source": ".\/dist\/codex\/plugins\/$name"/g' "${CODEX_MARKETPLACE}"
+    PLUGIN_NAME="${plugin_name}" DIST_DIR="${CODEX_DIST_LABEL}" perl -0pi -e 'my $name = $ENV{"PLUGIN_NAME"}; my $dist = $ENV{"DIST_DIR"}; s/"source": "\.\/plugins\/\Q$name\E"/"source": ".\/$dist\/plugins\/$name"/g' "${CODEX_MARKETPLACE}"
   done < <(jq -r '.plugins[].name' "${CLAUDE_MARKETPLACE}")
 }
 
@@ -190,7 +218,7 @@ function validate_outputs() {
   local plugin_name expected_source actual_source
 
   while IFS= read -r plugin_name; do
-    expected_source="./dist/codex/plugins/${plugin_name}"
+    expected_source="./${CODEX_DIST_LABEL}/plugins/${plugin_name}"
     actual_source="$(jq -r --arg name "${plugin_name}" '.plugins[] | select(.name == $name) | .source' "${CODEX_MARKETPLACE}")"
     if [[ "${actual_source}" != "${expected_source}" ]]; then
       error "Codex marketplace entry '${plugin_name}' source '${actual_source}' does not match '${expected_source}'"
@@ -198,9 +226,26 @@ function validate_outputs() {
   done < <(jq -r '.plugins[].name' "${CLAUDE_MARKETPLACE}")
 }
 
+# plugin_source_path reads both the string and the {"path": ...} object form,
+# but write_codex_marketplace only rewrites the string form, so an object-form
+# entry would be copied correctly and then left pointing at ./plugins/<name>.
+# All 51 entries are strings today; fail loudly rather than emit a bad source.
+function validate_source_forms() {
+  local plugin_name source_type
+
+  while IFS= read -r plugin_name; do
+    source_type="$(marketplace_value "${plugin_name}" '.source | type')"
+    if [[ "${source_type}" != "string" ]]; then
+      error "Marketplace entry '${plugin_name}' uses a ${source_type} source; only the string form is supported"
+    fi
+  done < <(jq -r '.plugins[].name' "${CLAUDE_MARKETPLACE}")
+}
+
 function main() {
   if [[ ! -f "${CLAUDE_MARKETPLACE}" ]]; then
     error "Canonical marketplace '${CLAUDE_MARKETPLACE}' does not exist"
+  else
+    validate_source_forms
   fi
 
   if [[ ${errors} -gt 0 ]]; then
