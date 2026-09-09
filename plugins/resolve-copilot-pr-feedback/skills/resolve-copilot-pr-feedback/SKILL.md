@@ -194,14 +194,14 @@ Copilot does not always open a thread. When it declines to comment on a line the
     "submittedAt": "2026-08-21T18:02:11Z",
     "headline": "### 🔵 Needs a closer look\n\nThe Phase 2 plan section is internally inconsistent...",
     "hasSuppressedMarker": true,
-    "suppressed": "**docs/plans/todo/phased-build-plan.md:243**\n* This section now states...",
+    "suppressed": "### Suppressed comments (1)\n\n**docs/plans/todo/phased-build-plan.md:243**\n* This section now states...",
     "findings": [{ "location": "docs/plans/todo/phased-build-plan.md:243", "path": "docs/plans/todo/phased-build-plan.md", "line": 243, "body": "* This section now states..." }]
   }
 ]
 ```
 
 - **`findings`**: the structured parse. Treat each entry exactly like a thread comment, except that it cannot be replied to or resolved.
-- **`suppressed`**: the raw section, verbatim.
+- **`suppressed`**: the raw section, verbatim, beginning with the line that announced it.
 - **`headline`**: Copilot's verdict and lead paragraph. Sometimes the only place a finding is stated; read it.
 
 **Format-drift rule (CRITICAL):** if `hasSuppressedMarker` is `true` but `findings` is empty, Copilot has changed its review-body layout. Read the `suppressed` field directly and extract the findings yourself; it always retains the line that announced the section, so it tells you what the parser saw. If it holds only that announcing line, open the review at `url` and read the body there. **Never treat that combination as "no findings."** Report the drift in the step 7 summary so it gets fixed.
@@ -217,8 +217,10 @@ Copilot re-emits the same suppressed finding in **every** later review until the
 Before acting on any review-body finding, read the PR's existing summary comments:
 
 ```bash
-gh api repos/OWNER/REPO/issues/PR_NUMBER/comments --jq '.[] | select(.body | startswith("## Copilot Feedback Summary")) | .body'
+gh api --paginate repos/OWNER/REPO/issues/PR_NUMBER/comments --jq '.[] | select(.body | startswith("## Copilot Feedback Summary")) | .body'
 ```
+
+`--paginate` is required. Without it only the first page of comments is inspected, so on a PR with a long comment history the prior summaries fall out of view and every review-body finding looks new again, which is exactly the re-processing this step exists to prevent.
 
 This reads comments; it never writes one, so it does not violate the PR Comments Prohibition. Then, for each finding:
 
