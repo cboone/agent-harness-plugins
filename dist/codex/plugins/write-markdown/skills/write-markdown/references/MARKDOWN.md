@@ -335,8 +335,8 @@ Either numbering style is acceptable for ordered lists: repeating `1.` for every
 1. Third item
 
 1. First item
-1. Second item
-1. Third item
+2. Second item
+3. Third item
 ```
 
 Do not mix styles within a single list.
@@ -543,10 +543,10 @@ Pad cell content so that pipe characters align vertically across all rows. Fill 
 ```markdown
 <!-- Avoid: ragged columns -->
 
-| Name    | Type   | Default |
-| ------- | ------ | ------- |
-| timeout | number | 30      |
-| retries | number | 3       |
+| Name | Type | Default |
+| --- | --- | --- |
+| timeout | number | 30 |
+| retries | number | 3 |
 ```
 
 To align a table:

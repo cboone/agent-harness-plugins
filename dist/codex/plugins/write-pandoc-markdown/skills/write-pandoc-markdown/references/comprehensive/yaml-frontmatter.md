@@ -384,13 +384,16 @@ A Pandoc document may contain more than one YAML metadata block. Later blocks ov
 title: "My Paper"
 author: Alice
 ---
+
 Some content...
+
 ---
 date: "2025-01-15"
 keywords:
   - security
   - passwords
 ---
+
 More content...
 ```
 

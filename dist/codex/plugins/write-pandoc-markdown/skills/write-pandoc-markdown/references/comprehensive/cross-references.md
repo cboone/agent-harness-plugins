@@ -16,9 +16,7 @@ title: "Password Strength as Survival Analysis"
 ---
 
 ## Introduction {#sec:introduction}
-
 ## Background and Related Work {#sec:background}
-
 ## Formal Model {#sec:formal-model}
 ```
 
@@ -30,7 +28,6 @@ When no explicit identifier is provided, Pandoc auto-generates one from the head
 
 ```markdown
 ## Background and Related Work
-
 <!-- auto-generates id: background-and-related-work -->
 ```
 
@@ -42,7 +39,6 @@ Add the `.unnumbered` class to suppress the section number.
 
 ```markdown
 ## References {.unnumbered}
-
 ## Acknowledgments {.unnumbered}
 ```
 
@@ -72,28 +68,23 @@ The backtick-delimited content is a raw LaTeX span. The `{=latex}` attribute tel
 
 ```markdown
 <!-- Section references -->
-
-`\cref{sec:formal-model}`{=latex} --> "Section 3" (lowercase)
-`\Cref{sec:formal-model}`{=latex} --> "Section 3" (capitalized, sentence start)
+`\cref{sec:formal-model}`{=latex}         --> "Section 3" (lowercase)
+`\Cref{sec:formal-model}`{=latex}         --> "Section 3" (capitalized, sentence start)
 
 <!-- Equation references -->
-
-`\eqref{eq:survival}`{=latex} --> "(1)" (with parentheses)
-`\cref{eq:survival}`{=latex} --> "Equation 1"
+`\eqref{eq:survival}`{=latex}             --> "(1)" (with parentheses)
+`\cref{eq:survival}`{=latex}              --> "Equation 1"
 
 <!-- Figure references -->
-
-`\cref{fig:architecture}`{=latex} --> "Figure 2"
-`\Cref{fig:architecture}`{=latex} --> "Figure 2" (capitalized)
+`\cref{fig:architecture}`{=latex}         --> "Figure 2"
+`\Cref{fig:architecture}`{=latex}         --> "Figure 2" (capitalized)
 
 <!-- Table references -->
-
-`\cref{tbl:comparison}`{=latex} --> "Table 1"
+`\cref{tbl:comparison}`{=latex}           --> "Table 1"
 
 <!-- Theorem-like environments -->
-
-`\cref{def:password-space}`{=latex} --> "Definition 1"
-`\cref{thm:survival}`{=latex} --> "Theorem 2"
+`\cref{def:password-space}`{=latex}       --> "Definition 1"
+`\cref{thm:survival}`{=latex}             --> "Theorem 2"
 ```
 
 ### Requirements
@@ -154,7 +145,7 @@ The `{#eq:label}` attribute follows the display math block. Note the space betwe
 
 ```markdown
 | Column A | Column B |
-| -------- | -------- |
+| ---------- | ---------- |
 | 1        | 2        |
 
 : Comparison of approaches {#tbl:comparison}
@@ -186,8 +177,8 @@ See @lst:example for the implementation.
 ### Multiple references
 
 ```markdown
-[@fig:a; @fig:b; @fig:c] --> "Figures 1-3" (compressed range)
-[@eq:first; @eq:second] --> "Equations 1, 2"
+[@fig:a; @fig:b; @fig:c]       --> "Figures 1-3" (compressed range)
+[@eq:first; @eq:second]        --> "Equations 1, 2"
 ```
 
 ### Capitalized prefix
@@ -195,8 +186,8 @@ See @lst:example for the implementation.
 Use a capital letter at the start of the prefix for sentence beginnings.
 
 ```markdown
-@fig:architecture shows... --> "fig. 1 shows..."
-@Fig:architecture shows... --> "Figure 1 shows..."
+@fig:architecture shows...     --> "fig. 1 shows..."
+@Fig:architecture shows...     --> "Figure 1 shows..."
 ```
 
 ### Subfigures
@@ -303,7 +294,6 @@ When placing labels inside raw LaTeX blocks (theorem environments, equations, et
 A \emph{password space} $\pspace$ is the set of all strings
 accepted by the verification mechanism.
 \end{definition}
-```
 ````
 
 Reference it from Markdown with:
@@ -319,23 +309,19 @@ The label is set inside the raw LaTeX block. The reference is a raw LaTeX inline
 ### Missing `=` in raw attribute
 
 ```markdown
-Wrong: `\cref{sec:intro}`{latex} (creates a code span with class "latex")
-Right: `\cref{sec:intro}`{=latex} (raw LaTeX span)
+Wrong: `\cref{sec:intro}`{latex}       (creates a code span with class "latex")
+Right: `\cref{sec:intro}`{=latex}      (raw LaTeX span)
 ```
 
 ### Referencing auto-generated IDs
 
 ```markdown
 Fragile:
-
 ## Background and Related Work
-
 ... see `\cref{background-and-related-work}`{=latex} ...
 
 Stable:
-
 ## Background and Related Work {#sec:background}
-
 ... see `\cref{sec:background}`{=latex} ...
 ```
 
@@ -343,7 +329,6 @@ Stable:
 
 ````markdown
 Wrong (inside a raw LaTeX block):
-
 ```{=latex}
 \begin{theorem}
 See [@shannon1948] for details.          % Pandoc citation inside raw LaTeX

@@ -16,8 +16,8 @@ Use `$...$` for math within a sentence. Pandoc imposes stricter rules than LaTeX
 Correct: The function $f(x) = x^2$ is continuous.
 Correct: We define $n \ge 1$ as the iteration count.
 
-Wrong: The value $ x $ is positive. (spaces around content)
-Wrong: The cost is $20,000$ per year. (closing $ followed by digit)
+Wrong:   The value $ x $ is positive.     (spaces around content)
+Wrong:   The cost is $20,000$ per year.    (closing $ followed by digit)
 ```
 
 ### All standard LaTeX commands work inside delimiters
@@ -54,13 +54,11 @@ Both styles work:
 
 ```markdown
 <!-- Opening/closing on their own lines (preferred for readability) -->
-
 $$
 f(x) = \int_0^x g(t)\,\mathrm{d}t
 $$
 
 <!-- Opening/closing on the same lines as content -->
-
 $$f(x) = \int_0^x g(t)\,\mathrm{d}t$$
 ```
 
@@ -79,8 +77,8 @@ Correct: The breach cost \$438M in damages.
 Correct: Users pay \$2.9M annually.
 Correct: The budget is \$20,000 per quarter.
 
-Wrong: The breach cost $438M in damages. (parsed as math)
-Wrong: Users pay $2.9M annually. (parsed as math)
+Wrong:   The breach cost $438M in damages.     (parsed as math)
+Wrong:   Users pay $2.9M annually.              (parsed as math)
 ```
 
 ### Why `$20,000` usually survives
@@ -96,10 +94,10 @@ Pandoc supports a rich citation syntax that works with both `--natbib` and `--ci
 A citation key in square brackets produces a parenthetical citation.
 
 ```markdown
-[@shannon1948] --> (Shannon, 1948) or [1]
-[@shannon1948, p. 10] --> (Shannon, 1948, p. 10)
-[@shannon1948, pp. 10-15] --> (Shannon, 1948, pp. 10-15)
-[@shannon1948, Thm. 3.1] --> (Shannon, 1948, Thm. 3.1)
+[@shannon1948]                  --> (Shannon, 1948)  or  [1]
+[@shannon1948, p. 10]           --> (Shannon, 1948, p. 10)
+[@shannon1948, pp. 10-15]       --> (Shannon, 1948, pp. 10-15)
+[@shannon1948, Thm. 3.1]       --> (Shannon, 1948, Thm. 3.1)
 ```
 
 With `--natbib`, `[@shannon1948]` becomes `\cite{shannon1948}` in the `.tex` output. With `--citeproc`, the citation is resolved inline using the specified CSL style.
@@ -121,7 +119,7 @@ Separate multiple keys with semicolons inside a single bracket pair.
 
 ```markdown
 [@shannon1948; @bonneau2012; @weir2009]
---> (Shannon, 1948; Bonneau, 2012; Weir et al., 2009) or [1, 5, 12]
+--> (Shannon, 1948; Bonneau, 2012; Weir et al., 2009)  or  [1, 5, 12]
 ```
 
 With `--natbib`, this becomes `\cite{shannon1948,bonneau2012,weir2009}`.
@@ -142,8 +140,8 @@ With `--natbib`, this becomes `\citeyear{shannon1948}`.
 Add text before the `@` inside the brackets.
 
 ```markdown
-[See @shannon1948] --> (See Shannon, 1948)
-[cf. @shannon1948, p. 47] --> (cf. Shannon, 1948, p. 47)
+[See @shannon1948]              --> (See Shannon, 1948)
+[cf. @shannon1948, p. 47]      --> (cf. Shannon, 1948, p. 47)
 [e.g., @shannon1948; @weir2009] --> (e.g., Shannon, 1948; Weir et al., 2009)
 ```
 
@@ -216,8 +214,8 @@ Most CS conference venues (IEEE, ACM, USENIX) ship `.bst` style files and expect
 ### Math delimiter spacing
 
 ```markdown
-Wrong: $ f(x) = x^2 $ (spaces inside delimiters)
-Right: $f(x) = x^2$ (no spaces inside delimiters)
+Wrong: $ f(x) = x^2 $        (spaces inside delimiters)
+Right: $f(x) = x^2$           (no spaces inside delimiters)
 ```
 
 ### Unescaped currency
@@ -231,7 +229,6 @@ Right: The cost was \$2.5M.
 
 ```markdown
 Wrong:
-
 $$
 x^2 + y^2 = z^2
 
@@ -239,7 +236,6 @@ x^2 + y^2 = z^2
 $$
 
 Right:
-
 $$
 x^2 + y^2 = z^2
 \text{ for integers } x, y, z
@@ -249,8 +245,8 @@ $$
 ### Missing semicolons in multiple citations
 
 ```markdown
-Wrong: [@key1, @key2, @key3] (commas between keys)
-Right: [@key1; @key2; @key3] (semicolons between keys)
+Wrong: [@key1, @key2, @key3]        (commas between keys)
+Right: [@key1; @key2; @key3]        (semicolons between keys)
 ```
 
 ### Mixing `--natbib` and `--citeproc`

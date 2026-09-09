@@ -125,7 +125,7 @@ function audit_bun() {
 }
 ```
 
-For grep-based surface functions, follow the existing audit\__ pattern: use `grep -rHE` so each match line is prefixed with its filename, then split with `file="${line%%:_}"; content="${line#*:}"` and pass `${file}`as the location argument to`record_drift`.
+For grep-based surface functions, follow the existing `audit_*` pattern: use `grep -rHE` so each match line is prefixed with its filename, then split with `file="${line%%:*}"; content="${line#*:}"` and pass `${file}` as the location argument to `record_drift`.
 
 Then add `audit_bun` to the call list at the bottom of the script. The `record_drift` helper handles the row formatting.
 
