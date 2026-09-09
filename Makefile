@@ -6,6 +6,9 @@ SCRUT_TEST_DIR := tests/scrut/
 # reusable scrut workflow.
 SCRUT_ENV := \
 	COMPOSE_ISSUE_PROMPT_BIN="$(CURDIR)/plugins/create-worktree-from-issue/scripts/compose-issue-prompt" \
+	COMPUTE_CATALOG_STATE_BIN="$(CURDIR)/bin/compute-catalog-state" \
+	LIST_SHELL_SCRIPTS_BIN="$(CURDIR)/bin/list-shell-scripts" \
+	REPO_ROOT="$(CURDIR)" \
 	COPILOT_REVIEW_DATA_DIR="$(CURDIR)/tests/data/copilot-reviews" \
 	CREATE_WORKTREE_LAUNCH_WORKMUX_BIN="$(CURDIR)/plugins/create-worktree/scripts/launch-workmux" \
 	CREATE_WORKTREE_FROM_ISSUE_LAUNCH_WORKMUX_BIN="$(CURDIR)/plugins/create-worktree-from-issue/scripts/launch-workmux" \
