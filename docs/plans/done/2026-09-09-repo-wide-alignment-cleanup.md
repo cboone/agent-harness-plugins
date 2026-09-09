@@ -371,3 +371,18 @@ gh run watch "$(gh run list --workflow=version-audit.yml --limit 1 --json databa
 ```
 
 A green run that files or updates no issue means both the script fix (Phase 1.1) and the pin bumps (Phase 3) are complete.
+
+---
+
+## Outcome
+
+All nine phases landed. Three things surfaced during execution that the plan did not anticipate:
+
+- **`bin/compute-catalog-state` silently dropped malformed versions.** Writing its first test exposed it: `capture` emits an empty stream on a non-match, so a marketplace with one valid and one malformed version produced a plausible-looking tag with the malformed plugin missing from both the sums and the count, and exit 0. This gates the release tag. Fixed and covered.
+- **The audit under-reported drift.** Its `seen` maps were keyed by dependency name alone, so only the first version of a given dependency was ever checked. `actions/checkout` was pinned at v7.0.0 in three workflow files and v6.0.2 in 27 template files, and the v6.0.2 drift was invisible. Nine distinct action bumps were needed, not the six the first report showed.
+- **`corepack use yarn@4.18.0` disabled a new supply-chain protection.** It wrote `npmMinimalAgeGate: 0` into `.yarnrc.yml`, overriding Yarn 4.18's `1d` default, and dropped the comment block recording the security-strict posture. Reverted to the default.
+
+Deliberately not done:
+
+- **`--check` mode for the build scripts** (2.7). The drift check moved to `git status --porcelain`, which closes the detection gap the `--check` flag was meant to address, so the flag would add a second code path for no additional coverage.
+- **Deleting the five stale remote branches and the abandoned `feature/add-strunk-and-white-skill` worktree** (Phase 8). Both are reported rather than executed: remote deletion is outward-facing, and the worktree lives outside this working directory.

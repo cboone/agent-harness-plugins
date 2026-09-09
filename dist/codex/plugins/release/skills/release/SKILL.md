@@ -420,7 +420,8 @@ For all other M4 cases, or when release files changed, stage only the files chan
 
 ```bash
 git add <FILES>
-git commit -S -m "$(cat <<'EOF'
+git commit -S -m "$(
+  cat << 'EOF'
 <commit subject per the rule above>
 EOF
 )"
@@ -769,7 +770,8 @@ Stage all modified files and create a GPG-signed commit:
 
 ```bash
 git add <FILES>
-git commit -S -m "$(cat <<'EOF'
+git commit -S -m "$(
+  cat << 'EOF'
 release: vVERSION
 EOF
 )"
