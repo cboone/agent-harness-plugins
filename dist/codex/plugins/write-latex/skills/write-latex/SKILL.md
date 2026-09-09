@@ -57,13 +57,13 @@ editing LaTeX source.
 
 ## Sources
 
-- Downes, M. and Beeton, B. *Short Math Guide for LaTeX*. AMS, 2017.
-- IEEE. *Math Typesetting Guide for LaTeX Users*.
+- Downes, M. and Beeton, B. _Short Math Guide for LaTeX_. AMS, 2017.
+- IEEE. _Math Typesetting Guide for LaTeX Users_.
 - Higham, N. J. Blog posts on tables, BibTeX, packages, spacing, ISO
   typesetting, ellipses, lists, and book writing. 2013--2021.
-- Beeton, B. "How to Typeset Equations in LaTeX." *TUGboat* 18(1), 1997.
-- Chen, E. *LaTeX Style Guide*. web.evanchen.cc.
-- Ensenbach, M. et al. *l2tabu: A List of Don'ts in LaTeX*.
-- Voss, H. *Mathmode*. CTAN.
-- Mittelbach, F. and Fischer, U. *The LaTeX Companion*. 3rd ed., 2024.
-- MathSciNet. *Serials Abbreviations*.
+- Beeton, B. "How to Typeset Equations in LaTeX." _TUGboat_ 18(1), 1997.
+- Chen, E. _LaTeX Style Guide_. web.evanchen.cc.
+- Ensenbach, M. et al. _l2tabu: A List of Don'ts in LaTeX_.
+- Voss, H. _Mathmode_. CTAN.
+- Mittelbach, F. and Fischer, U. _The LaTeX Companion_. 3rd ed., 2024.
+- MathSciNet. _Serials Abbreviations_.

@@ -1,4 +1,3 @@
-
 # Cross-References in Pandoc Markdown
 
 Comprehensive reference for cross-referencing sections, figures, equations, and tables in Pandoc Markdown. Covers native Pandoc heading IDs, raw LaTeX spans with cleveref, and the pandoc-crossref filter. Based on the Pandoc User's Guide and pandoc-crossref documentation.
@@ -289,13 +288,13 @@ Prefer raw LaTeX spans with cleveref when the project's only output target is La
 
 When placing labels inside raw LaTeX blocks (theorem environments, equations, etc.), use standard LaTeX `\label` commands, not Pandoc syntax.
 
-```markdown
+````markdown
 ```{=latex}
 \begin{definition}[Password Space]\label{def:password-space}
 A \emph{password space} $\pspace$ is the set of all strings
 accepted by the verification mechanism.
 \end{definition}
-```
+````
 
 Reference it from Markdown with:
 

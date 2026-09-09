@@ -1,4 +1,3 @@
-
 # PFR Downstream Conventions
 
 Conventions for Lean 4 projects that depend on the Polynomial Freiman-Ruzsa (PFR) formalization's entropy API (`H[·]`, `I[·:·]`, `I[·:·|·]`, `condMutualInfo_eq`, `mutualInfo_comm`, `condMutualInfo_comm`, and friends). PFR is one of the few projects with a mature Mathlib-adjacent Shannon-entropy surface, but its lemmas carry side conditions along three axes (discrete/countable codomain, measurable-singleton class, `FiniteRange` on the random variables) that can be discharged uniformly with a single specialization pattern. This file documents that pattern so each downstream project does not re-derive it.

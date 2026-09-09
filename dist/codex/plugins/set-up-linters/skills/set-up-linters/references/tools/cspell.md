@@ -70,7 +70,7 @@ Use this preset when the project contains `references/papers/`, `references/extr
 
 Create `cspell.jsonc` in the project root:
 
-```jsonc
+````jsonc
 {
   "version": "0.2",
   "language": "en",
@@ -114,7 +114,7 @@ Create `cspell.jsonc` in the project root:
     "/\\\\[a-zA-Z]+/g", // LaTeX commands
   ],
 }
-```
+````
 
 Create `cspell-words.txt` with the baseline Lean/math vocabulary, then append author surnames from citations the project actually uses (usually from `references/papers.bib`):
 

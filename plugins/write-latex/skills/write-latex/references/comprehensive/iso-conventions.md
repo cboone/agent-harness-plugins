@@ -1,4 +1,3 @@
-
 # ISO 80000-2 Mathematical Typesetting Conventions
 
 Reference for the ISO 80000-2 standard governing the typesetting of mathematical symbols. This standard specifies when to use italic, upright, bold, and bold italic fonts in mathematical notation. Adopting it produces consistent, unambiguous documents and satisfies many journal style requirements. Based on the standard itself, Nicholas Higham's posts on ISO conventions, and the IEEE Math Typesetting Guide.

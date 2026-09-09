@@ -1,4 +1,3 @@
-
 # Style and Formatting
 
 Formatting rules for Lean 4 code, drawn primarily from the Mathlib community style guide. Where the community guide and other sources disagree, the community guide takes precedence.
@@ -360,9 +359,9 @@ Place comments above the code they describe, not inline, when the explanation is
 
 **Do not hardwrap comment text.** This applies to all comment forms (`/-- -/`, `/-! -/`, `/- -/`, `--`) and to docstrings. Each paragraph is a single long line; blank lines separate paragraphs. Let the editor handle visual wrapping. Mathlib source itself often hardwraps comments, but for this style guide the no-hardwrap rule applies to comments as well as code.
 
-**Comments in proof bodies explain WHY, not WHAT — calibrated to the audience.** The WHY-not-WHAT rule applies with extra force inside tactic proofs because tactic names already *are* the description. Phase markers (`-- Step 1:`, `-- **Step N.**`), announcements of what a block does (`-- Rewrite p̂/p̃ as a single fraction`), and restatements of intermediate goal states (`-- Now both sides are combinations of …`) are almost always cuttable — they narrate what the next few tactics will accomplish, which those tactics will accomplish whether or not the comment describes them first.
+**Comments in proof bodies explain WHY, not WHAT — calibrated to the audience.** The WHY-not-WHAT rule applies with extra force inside tactic proofs because tactic names already _are_ the description. Phase markers (`-- Step 1:`, `-- **Step N.**`), announcements of what a block does (`-- Rewrite p̂/p̃ as a single fraction`), and restatements of intermediate goal states (`-- Now both sides are combinations of …`) are almost always cuttable — they narrate what the next few tactics will accomplish, which those tactics will accomplish whether or not the comment describes them first.
 
-What survives depends on the reader you are writing for. Three kinds of comment reliably earn their place regardless of audience: hidden constraints, load-bearing invariants, and unusual lemma choices that a reader would not derive from the tactics themselves. A fourth kind earns its place *audience-dependently*: a brief framing near a tactic or lemma name the expected reader would not recognize.
+What survives depends on the reader you are writing for. Three kinds of comment reliably earn their place regardless of audience: hidden constraints, load-bearing invariants, and unusual lemma choices that a reader would not derive from the tactics themselves. A fourth kind earns its place _audience-dependently_: a brief framing near a tactic or lemma name the expected reader would not recognize.
 
 ```lean
 -- Bad: narrates the tactics, which already say what they do.
@@ -385,8 +384,8 @@ rw [show a * b * c * d * pZU (z, u) = a * (b * (c * (d * pZU (z, u)))) from by r
 
 Two calibration tests:
 
-- *If this comment disappeared, would the expected reader still be able to trace the proof?* If yes for an expert but no for a learner, the answer depends on who the reader is. Err on the side of keeping the comment when the project's documentation indicates a less-experienced audience, or the user or project CLAUDE.md requests more thorough comments.
-- *Does the comment describe WHAT the next few tactics will do, or WHY this approach rather than the obvious alternative?* WHAT is cuttable if tactic names suffice. WHY is a keeper.
+- _If this comment disappeared, would the expected reader still be able to trace the proof?_ If yes for an expert but no for a learner, the answer depends on who the reader is. Err on the side of keeping the comment when the project's documentation indicates a less-experienced audience, or the user or project CLAUDE.md requests more thorough comments.
+- _Does the comment describe WHAT the next few tactics will do, or WHY this approach rather than the obvious alternative?_ WHAT is cuttable if tactic names suffice. WHY is a keeper.
 
 Phase markers — `-- **Step 1.**`, `-- **Step 2.**`, `-- N.`, `-- Now …`, `-- Combine …`, `-- Use that …` — are the most common offenders and usually cuttable. If a long proof has genuine structural phases (a multi-phase reduction the reader needs to orient through), prefer section headers via `/-! ### Phase N -/` inside the proof file, or a sentence in the declaration's docstring describing the plan, over inline `--` narration.
 

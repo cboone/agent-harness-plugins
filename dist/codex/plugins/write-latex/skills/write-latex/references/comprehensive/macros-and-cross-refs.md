@@ -1,4 +1,3 @@
-
 # Macro Design and Cross-References
 
 ## Part 1: Macro Design
@@ -26,7 +25,7 @@
 
 ### Semantic Names
 
-Choose macro names that describe the *concept*, not the *appearance*.
+Choose macro names that describe the _concept_, not the _appearance_.
 This makes the source readable and allows you to change the presentation later without rewriting every usage.
 
 ```latex
@@ -90,7 +89,7 @@ Use `\renewcommand` when you intentionally want to override an existing command:
 \renewcommand{\qedsymbol}{$\blacksquare$}
 ```
 
-`\renewcommand` raises an error if the command does *not* already exist, which is the opposite of `\newcommand`.
+`\renewcommand` raises an error if the command does _not_ already exist, which is the opposite of `\newcommand`.
 This safety check ensures you are actually overriding something.
 
 ### Separate Macros File
@@ -322,7 +321,7 @@ When defining theorem-like environments with amsthm, set up the corresponding cl
 
 ## Sources
 
-- Mittelbach, F. and Fischer, U. *The LaTeX Companion*. 3rd ed., 2024.
-- Niederberger, T. *cleveref* package documentation. CTAN.
-- Downes, M. and Beeton, B. *Short Math Guide for LaTeX*. AMS, 2017.
-- Wright, J. *mathtools* package documentation. CTAN.
+- Mittelbach, F. and Fischer, U. _The LaTeX Companion_. 3rd ed., 2024.
+- Niederberger, T. _cleveref_ package documentation. CTAN.
+- Downes, M. and Beeton, B. _Short Math Guide for LaTeX_. AMS, 2017.
+- Wright, J. _mathtools_ package documentation. CTAN.

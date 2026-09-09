@@ -105,7 +105,6 @@ Two parallel insertions:
 1. **Top-of-README pointer** (after the existing OpenCode subsection at lines 78-86). New "Using with Codex CLI" subsection: a heading, a one-sentence description, a fenced `bash` block with `codex plugin marketplace add cboone/agent-harness-plugins`, and a "see below" pointer linking to the detailed section and to the codex known-limitations subsection.
 
 2. **Tail-of-README detailed section** (new section after the existing OpenCode section at lines 487-500, before `## License`). Sibling to "Using with OpenCode," same depth and structure, **separate** "Known limitations" subsection (no merge with the OpenCode one). Includes:
-
    - `codex plugin marketplace add` example (Codex CLI 0.128.0 has no separate `codex plugin install` subcommand; `marketplace add` is the activation step). Note that plugin-bundled hooks require `codex features enable plugin_hooks` (the flag is `under development` and `false` by default in 0.128.0).
    - Note that codex reads `.claude-plugin/marketplace.json` and `.claude-plugin/plugin.json` natively (cite the upstream source paths once for credibility), and sets `CLAUDE_PLUGIN_ROOT` for hook commands "for OOTB compat with existing plugins."
    - **Codex CLI known limitations** subsection (scoped to this section only):

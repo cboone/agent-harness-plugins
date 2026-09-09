@@ -17,5 +17,14 @@
 
   "ignores": [".workmux/", "**/node_modules/**"],
 
-  "customRules": ["@github/markdownlint-github", "markdownlint-rule-force-align-table-columns", "markdownlint-rule-relative-links"],
+  // markdownlint-rule-force-align-table-columns was removed here. It supplied
+  // MD060A, a duplicate of the built-in MD060 pinned to the aligned style, and
+  // because MD060 itself was never set the two ran together on every table and
+  // emitted opposing instructions: MD060 said remove the padding, MD060A said
+  // add it. Prettier performs the alignment now, and .markdownlint.jsonc sets
+  // MD060 to false.
+  //
+  // This file still has to exist: @github/markdownlint-github is also ESM, so
+  // the VS Code limitation above is unchanged by that removal.
+  "customRules": ["@github/markdownlint-github", "markdownlint-rule-relative-links"],
 }

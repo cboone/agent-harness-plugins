@@ -1,4 +1,3 @@
-
 # Milestone Entry Anatomy
 
 Every milestone in Section 6 of a formalization roadmap is a short, fixed-shape summary. The full elaboration lives in a spun-out plan file under `docs/plans/todo/`. The summary has five parts; this file documents each in detail.
@@ -108,8 +107,8 @@ From the Zhang-Yeung roadmap's M2 entry:
 >
 > - `ZhangYeung/CopyLemma.lean`: state and prove the generalized copy lemma.
 > - **Statement:** given a probability measure mu on Omega with four RVs X, Y, Z, U ... (elaborated)
-> - **Construction:** nu = mu otimes\_m (condDistrib (X, Y) (Z, U) mu), a two-step kernel composition.
-> - **Supporting lemmas:** `IdentDistrib` for (X, Z, U) vs (X\_1, Z, U) and symmetrically.
+> - **Construction:** nu = mu otimes_m (condDistrib (X, Y) (Z, U) mu), a two-step kernel composition.
+> - **Supporting lemmas:** `IdentDistrib` for (X, Z, U) vs (X_1, Z, U) and symmetrically.
 > - **Key Mathlib deps:** `Kernel.compProd`, `condDistrib`, `condExpKernel`. Measurability bookkeeping concentrates here.
 > - **Design for Mathlib:** parametrize over any four RVs on Fintype (not specialized to the paper). Clean statement, no paper-specific notation.
 > - **Testing:** `ZhangYeungTest/CopyLemma.lean` should restate the public theorem in example form and exercise the intended downstream APIs (`IdentDistrib`, conditional independence, and the projection laws) without reaching into proof internals.

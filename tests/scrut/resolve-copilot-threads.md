@@ -43,10 +43,10 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 
 The trailing context block Copilot quotes under the prose is preserved, so the body carries an opening and a closing fence.
 
-```scrut
+````scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-a.json" | jq -r '.[0].findings[0].body' | grep -c '^```'
 2
-```
+````
 
 ## Headline captures the verdict and drops the boilerplate
 
