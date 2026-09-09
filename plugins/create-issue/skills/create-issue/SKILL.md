@@ -76,6 +76,8 @@ gh issue create --repo owner/repo --title "Issue title here" --body-file TMPFILE
 
 ### 5. Verify the Issue Body
 
+**Run this step only if `gh issue create` succeeded and printed an issue URL.** If it failed, no issue exists and there is no URL to pass, so skip both verification and recovery, go straight to cleanup, and handle the failure per [Error Handling](#error-handling). Never substitute a placeholder or a URL left over from an earlier run.
+
 `gh issue create` prints the issue URL on success, but a successful exit says nothing about whether the body landed. Before cleaning up, confirm the stored body is non-empty. Pass the URL that `gh issue create` just returned, shown below as `<issue-url>`; it is the identifier this step is guaranteed to have. (`gh issue view` also accepts a bare issue number when the issue lives in the current repository.)
 
 ```bash
@@ -92,7 +94,7 @@ Re-run the length check to confirm the recovery worked. The URL already identifi
 
 ### 6. Clean Up
 
-Always remove the tmpfile after the issue creation attempt, regardless of whether it succeeded or failed, and only **after** the verification above, since recovery needs the file to still exist. Issue the cleanup as a **separate Bash tool call**, not chained onto `gh issue create`:
+Always remove the tmpfile after the issue creation attempt, regardless of whether it succeeded or failed. When creation succeeded, run the cleanup only **after** the verification above, since recovery needs the file to still exist. When creation failed, verification is skipped, so clean up immediately. Issue the cleanup as a **separate Bash tool call**, not chained onto `gh issue create`:
 
 ```bash
 rm -f TMPFILE

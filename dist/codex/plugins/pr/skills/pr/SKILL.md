@@ -285,6 +285,8 @@ Pass `--base <base-branch>` if `<base-branch>` differs from `<default-branch>`. 
 
 #### Verify the PR body
 
+**Run this step only if `gh pr create` succeeded and printed a PR URL.** If it failed, no PR exists and there is no URL to pass, so skip both verification and recovery, go straight to cleanup, and handle the failure per [Error Handling](#error-handling). Never substitute a placeholder or a URL left over from an earlier run.
+
 `gh pr create` prints the PR URL on success, but a successful exit says nothing about whether the body landed. Before cleaning up, confirm the stored body is non-empty. Pass the URL that `gh pr create` just returned, shown below as `<pr-url>`; it is the identifier this step is guaranteed to have. (`gh pr view` also accepts a bare PR number, or no argument at all, in which case it targets the current branch's PR.)
 
 ```bash
@@ -301,7 +303,7 @@ Re-run the length check to confirm the recovery worked.
 
 #### Clean up the tmpfile
 
-Always remove the tmpfile after the PR creation attempt, regardless of whether it succeeded or failed, and only **after** the verification above, since recovery needs the file to still exist. Issue the cleanup as a **separate Bash tool call**, not chained onto `gh pr create`:
+Always remove the tmpfile after the PR creation attempt, regardless of whether it succeeded or failed. When creation succeeded, run the cleanup only **after** the verification above, since recovery needs the file to still exist. When creation failed, verification is skipped, so clean up immediately. Issue the cleanup as a **separate Bash tool call**, not chained onto `gh pr create`:
 
 ```bash
 rm -f TMPFILE
