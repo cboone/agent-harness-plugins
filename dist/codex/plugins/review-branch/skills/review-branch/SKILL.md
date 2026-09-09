@@ -45,7 +45,7 @@ git rev-parse --abbrev-ref origin/HEAD | sed 's@^origin/@@'
 1. **Find the merge base** between the base reference and HEAD:
 
 ```bash
-git merge-base < base-ref > HEAD
+git merge-base <base-ref> HEAD
 ```
 
 Use this merge base as the actual comparison point for all subsequent commands. This ensures the diff only includes changes made on this branch, not changes made on the base branch since diverging.
@@ -58,13 +58,13 @@ Run these commands in parallel:
 
 ```bash
 # Commit history on this branch
-git log --oneline < merge-base > ..HEAD
+git log --oneline <merge-base>..HEAD
 
 # File-level summary (insertions, deletions, renames)
-git diff --stat < merge-base > ..HEAD
+git diff --stat <merge-base>..HEAD
 
 # Full diff for detailed analysis
-git diff < merge-base > ..HEAD
+git diff <merge-base>..HEAD
 
 # Current branch name
 git branch --show-current
@@ -76,7 +76,7 @@ git rev-parse --short HEAD
 Also read the commit messages in detail to understand the intent behind each change:
 
 ```bash
-git log --format='%h %s%n%n%b' --no-merges < merge-base > ..HEAD
+git log --format='%h %s%n%n%b' --no-merges <merge-base>..HEAD
 ```
 
 ### 3. Summarize the Work

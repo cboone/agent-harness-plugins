@@ -191,18 +191,23 @@ OWNER=$(gh repo view --json owner -q .owner.login)
 gh repo view "${OWNER}/homebrew-tap" --json name -q .name 2>/dev/null
 ```
 
-**If the tap repo exists**, offer to create an issue there with the formula and setup instructions. Write the issue body to a temp file (using `mktemp`) and use `gh issue create`:
+**If the tap repo exists**, offer to create an issue there with the formula and setup instructions. Use the tmpfile pattern: generate a path, write the body with the Write tool, then invoke `gh` in a separate message.
 
 ```bash
-tmp_issue_body="$(mktemp)"
-trap 'rm -f "${tmp_issue_body}"' EXIT
-
-# Write the issue body to "${tmp_issue_body}" here.
-
-gh issue create --repo "${OWNER}/homebrew-tap" \
-  --title "Add PROJECT-NAME formula" \
-  --body-file "${tmp_issue_body}"
+mktemp -u /tmp/gh-issue-body-XXXXXX
 ```
+
+The `-u` flag is required. Plain `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first. Write the issue body to the returned path, then, in a separate message:
+
+```bash
+gh issue create --repo "${OWNER}/homebrew-tap" --title "Add PROJECT-NAME formula" --body-file TMPFILE
+```
+
+```bash
+rm -f TMPFILE
+```
+
+Never batch the Write call with `gh issue create`: `gh` reads the body file at invocation time, so a parallel batch can file the issue with an empty body. Do not chain cleanup onto the `gh` call or wrap it in a `trap` either; keep `rm -f` in its own Bash call. See the `use-git` skill's tmpfile pattern reference for the full rationale.
 
 The issue body should contain:
 

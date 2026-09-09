@@ -236,14 +236,24 @@ Print a summary of what was created:
 - If `HOMEBREW_TAP_TOKEN` setup was deferred in step 20: check whether a GitHub remote exists and is accessible before creating a follow-up issue:
 
   ```bash
-  if git remote get-url origin >/dev/null 2>&1 && gh repo view >/dev/null 2>&1; then
-    gh issue create \
-      --title "Set up HOMEBREW_TAP_TOKEN repository secret" \
-      --body "The release workflow needs a HOMEBREW_TAP_TOKEN secret so GoReleaser can push Homebrew cask updates to the tap repository.
-
-  See the HOMEBREW_TAP_TOKEN Setup reference in the scaffold-go-cli skill documentation for step-by-step instructions."
-  fi
+  git remote get-url origin > /dev/null 2>&1 && gh repo view > /dev/null 2>&1
   ```
+
+  If that check passes, create the follow-up issue with the tmpfile pattern rather than an inline `--body`. Generate a path, write the body with the Write tool, then invoke `gh` in a separate message:
+
+  ```bash
+  mktemp -u /tmp/gh-issue-body-XXXXXX
+  ```
+
+  ```bash
+  gh issue create --title "Set up HOMEBREW_TAP_TOKEN repository secret" --body-file TMPFILE
+  ```
+
+  ```bash
+  rm -f TMPFILE
+  ```
+
+  The body should explain that the release workflow needs a `HOMEBREW_TAP_TOKEN` secret so GoReleaser can push Homebrew cask updates to the tap repository, and point at the HOMEBREW_TAP_TOKEN Setup reference in this skill's documentation. Never batch the Write call with `gh issue create`, and keep the `rm -f` in its own Bash call. See the `use-git` skill's tmpfile pattern reference for the full rationale.
 
   If the issue was created successfully, report its URL in the summary.
 
