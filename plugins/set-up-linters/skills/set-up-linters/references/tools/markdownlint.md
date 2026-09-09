@@ -91,7 +91,19 @@ Create `.markdownlint-cli2.jsonc` in the project root:
     // Dense academic tables are acceptable.
     "MD060": false,
   },
-  "ignores": ["node_modules/", "vendor/", ".venv/", "dist/", "build/", "CHANGELOG.md", ".lake/**", "references/papers/**", "references/papers.bib", "references/extractions/**", "references/transcriptions/**"],
+  "ignores": [
+    "node_modules/",
+    "vendor/",
+    ".venv/",
+    "dist/",
+    "build/",
+    "CHANGELOG.md",
+    ".lake/**",
+    "references/papers/**",
+    "references/papers.bib",
+    "references/extractions/**",
+    "references/transcriptions/**",
+  ],
 }
 ````
 

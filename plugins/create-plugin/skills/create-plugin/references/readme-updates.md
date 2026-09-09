@@ -7,8 +7,8 @@ When adding a new plugin, update the compact category table in the root `README.
 The root `README.md` lists skills and command-style plugins under `## Skills`, grouped by category. Each category has a 3-column table:
 
 ```markdown
-| Plugin                                         | Trigger        | What it does                       |
-| ---------------------------------------------- | -------------- | ---------------------------------- |
+| Plugin | Trigger | What it does |
+| --- | --- | --- |
 | [Plugin Name](./plugins/plugin-name/README.md) | `/plugin-name` | Canonical marketplace description. |
 ```
 
@@ -49,8 +49,8 @@ Use this guide to choose the root README category and the matching marketplace `
 Hooks are listed under `## Hooks` in a 2-column table because they have no slash-command trigger:
 
 ```markdown
-| Plugin                                     | What it does                       |
-| ------------------------------------------ | ---------------------------------- |
+| Plugin | What it does |
+| --- | --- |
 | [Hook Name](./plugins/hook-name/README.md) | Canonical marketplace description. |
 ```
 
@@ -80,8 +80,8 @@ If a plugin requires external tools, update the `**External tools:**` bullet lis
 ```markdown
 **External tools:**
 
-- _Plugin Name:_ [`tool`](https://example.com/)
-- _Plugin A, Plugin B:_ [`tool`](https://example.com/)
+- *Plugin Name:* [`tool`](https://example.com/)
+- *Plugin A, Plugin B:* [`tool`](https://example.com/)
 ```
 
 Omit the external-tools list for categories where no listed plugin requires external tools.

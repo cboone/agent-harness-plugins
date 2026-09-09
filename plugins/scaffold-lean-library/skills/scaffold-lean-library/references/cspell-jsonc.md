@@ -10,12 +10,28 @@ Use this template for `cspell.jsonc`.
     {
       "name": "project-words",
       "path": "./cspell-words.txt",
-      "addWords": true,
-    },
+      "addWords": true
+    }
   ],
   "dictionaries": ["project-words"],
-  "ignorePaths": [".git", ".git/", ".git/**", ".lake/**", "lake-manifest.json", "references/extractions/**", "references/transcriptions/**"],
-  "ignoreRegExpList": ["/`[^`]*`/g", "/\\$[^$]*\\$/g", "/\\$\\$[\\s\\S]*?\\$\\$/g", "/\\\\\\[[\\s\\S]*?\\\\\\]/g", "/\\\\\\([\\s\\S]*?\\\\\\)/g", "/@[A-Za-z][A-Za-z0-9_:-]*/g", "/\\\\cite[a-zA-Z*]*\\{[^}]+\\}/g"],
+  "ignorePaths": [
+    ".git",
+    ".git/",
+    ".git/**",
+    ".lake/**",
+    "lake-manifest.json",
+    "references/extractions/**",
+    "references/transcriptions/**"
+  ],
+  "ignoreRegExpList": [
+    "/`[^`]*`/g",
+    "/\\$[^$]*\\$/g",
+    "/\\$\\$[\\s\\S]*?\\$\\$/g",
+    "/\\\\\\[[\\s\\S]*?\\\\\\]/g",
+    "/\\\\\\([\\s\\S]*?\\\\\\)/g",
+    "/@[A-Za-z][A-Za-z0-9_:-]*/g",
+    "/\\\\cite[a-zA-Z*]*\\{[^}]+\\}/g"
+  ]
 }
 ```
 

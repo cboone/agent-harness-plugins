@@ -28,10 +28,10 @@ These two issues cause the most lint failures. Check every Markdown file for the
 ```markdown
 <!-- Wrong: ragged pipes, no padding -->
 
-| Name    | Type   | Default |
-| ------- | ------ | ------- |
-| timeout | number | 30      |
-| retries | number | 3       |
+| Name | Type | Default |
+| --- | --- | --- |
+| timeout | number | 30 |
+| retries | number | 3 |
 ```
 
 Procedure: write all rows, find the longest content per column, pad every cell to that width, fill delimiter hyphens to match, then verify all pipes line up.

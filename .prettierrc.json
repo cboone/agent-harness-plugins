@@ -1,4 +1,5 @@
 {
+  "embeddedLanguageFormatting": "off",
   "printWidth": 10000,
   "proseWrap": "preserve",
   "tabWidth": 2

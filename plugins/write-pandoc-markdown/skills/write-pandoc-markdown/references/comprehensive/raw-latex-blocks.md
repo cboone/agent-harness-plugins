@@ -35,7 +35,6 @@ The `=` before `latex` is critical. It tells Pandoc that this is raw content in 
 
 ````markdown
 <!-- WRONG: creates a syntax-highlighted code block, not raw LaTeX -->
-
 ```{latex}
 \begin{theorem}
 ...
@@ -43,7 +42,6 @@ The `=` before `latex` is critical. It tells Pandoc that this is raw content in 
 ```
 
 <!-- WRONG: same problem, just a different syntax for code highlighting -->
-
 ```latex
 \begin{theorem}
 ...
@@ -51,7 +49,6 @@ The `=` before `latex` is critical. It tells Pandoc that this is raw content in 
 ```
 
 <!-- CORRECT: the equals sign makes it raw LaTeX -->
-
 ```{=latex}
 \begin{theorem}
 ...
@@ -96,18 +93,15 @@ The backtick-delimited content is the raw LaTeX command. The `{=latex}` attribut
 
 ```markdown
 <!-- Cross-references -->
-
 `\cref{sec:model}`{=latex}
 `\Cref{fig:architecture}`{=latex}
 `\eqref{eq:entropy}`{=latex}
 
 <!-- Inline formatting -->
-
 `\textsc{Small Caps Text}`{=latex}
 `\textsuperscript{1}`{=latex}
 
 <!-- Custom macros -->
-
 `\pspace`{=latex}
 `\aspace`{=latex}
 ```
@@ -130,13 +124,11 @@ With `+raw_tex` enabled, Pandoc passes through any LaTeX command it encounters (
 
 ```markdown
 <!-- With +raw_tex, this works without {=latex} fences -->
-
 \begin{definition}
 A password space is the set of all accepted strings.
 \end{definition}
 
 <!-- LaTeX commands in running text also pass through -->
-
 This is \textbf{bold} via raw LaTeX.
 ```
 
@@ -305,7 +297,6 @@ Inside a `{=latex}` block, everything is raw LaTeX. Pandoc syntax does not work.
 
 ````markdown
 <!-- WRONG: Pandoc Markdown inside raw LaTeX -->
-
 ```{=latex}
 \begin{theorem}
 This uses **bold** and [@citation].
@@ -313,7 +304,6 @@ This uses **bold** and [@citation].
 ```
 
 <!-- RIGHT: LaTeX syntax inside raw LaTeX -->
-
 ```{=latex}
 \begin{theorem}
 This uses \textbf{bold} and \cite{citation}.

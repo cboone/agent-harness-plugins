@@ -51,7 +51,19 @@ This skill runs `gh api` queries to resolve action tags to SHAs, `curl` lookups 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh api:*)", "Bash(gh release view:*)", "Bash(curl:*)", "Bash(corepack use:*)", "Bash(corepack enable)", "Bash(yarn --version)", "Bash(pnpm --version)", "Bash(shasum:*)", "Bash(chmod +x:*)", "Bash(git add:*)", "Bash(git commit:*)"]
+    "allow": [
+      "Bash(gh api:*)",
+      "Bash(gh release view:*)",
+      "Bash(curl:*)",
+      "Bash(corepack use:*)",
+      "Bash(corepack enable)",
+      "Bash(yarn --version)",
+      "Bash(pnpm --version)",
+      "Bash(shasum:*)",
+      "Bash(chmod +x:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
   }
 }
 ```
