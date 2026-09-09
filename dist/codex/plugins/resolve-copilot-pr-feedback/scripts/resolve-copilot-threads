@@ -317,6 +317,24 @@ function do_fetch() {
 # Outputs:
 #   JSON array of Copilot reviews with parsed findings to stdout
 function do_parse_reviews() {
+  local input
+  input="$(cat)"
+
+  # Validate the shape before filtering. A failed gh call, or a hand-piped
+  # error payload, otherwise surfaces as an opaque jq indexing error.
+  local input_type
+  if ! input_type="$(jq -r 'type' 2> /dev/null <<< "${input}")"; then
+    die "Invalid review JSON: could not parse input as JSON."
+  fi
+
+  if [[ "${input_type}" != "array" ]]; then
+    die "Invalid review JSON: expected an array of review objects, got ${input_type}. Pass the output of: gh api repos/OWNER/REPO/pulls/N/reviews"
+  fi
+
+  if ! jq -e 'all(type == "object")' > /dev/null <<< "${input}"; then
+    die "Invalid review JSON: every element must be a review object."
+  fi
+
   # shellcheck disable=SC2016
   # $variables in the filter are jq bindings, not shell variables
   jq \
@@ -335,6 +353,13 @@ function do_parse_reviews() {
         | join("\n")
         | trim;
 
+      # The section match is deliberately loose: any line mentioning the phrase
+      # opens the slice, rather than requiring a <summary> tag or a heading.
+      # Anchoring on the exact wrapper would be more precise, but a fourth
+      # layout would then slip through as an empty result, which is the silent
+      # miss this whole command exists to prevent. Loose matching can instead
+      # over-capture when a finding quotes the phrase in prose, and that
+      # surfaces as a visible drift report. Failing loud beats failing quiet.
       def suppressed_slice:
         split("\n")
         | reduce .[] as $line ({inside: false, out: []};
@@ -389,7 +414,7 @@ function do_parse_reviews() {
             findings: ($slice | findings)
           }
       ]
-    '
+    ' <<< "${input}"
 }
 
 # Fetches Copilot review bodies for a PR and extracts their findings.
@@ -406,8 +431,12 @@ function do_fetch_reviews() {
 
   # gh merges paginated REST array responses into a single array, so the
   # normalizer receives one flat list of reviews.
-  gh api --paginate "repos/${owner}/${repo}/pulls/${pr_number}/reviews" \
-    | do_parse_reviews
+  local response
+  if ! response="$(gh api --paginate "repos/${owner}/${repo}/pulls/${pr_number}/reviews")"; then
+    die "Failed to fetch reviews for ${owner}/${repo}#${pr_number}. Verify the owner, repo, and PR number are correct."
+  fi
+
+  do_parse_reviews <<< "${response}"
 }
 
 # Resolves a review thread via GraphQL mutation.

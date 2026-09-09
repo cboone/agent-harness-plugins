@@ -92,6 +92,28 @@ $ echo '[]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews
 []
 ```
 
+## Malformed input fails with a usable message
+
+A failed `gh` call or a hand-piped error payload would otherwise surface as an opaque jq indexing error.
+
+```scrut
+$ printf '{' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews 2>&1
+Error: Invalid review JSON: could not parse input as JSON.
+[1]
+```
+
+```scrut
+$ echo '{"message":"Not Found"}' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews 2>&1
+Error: Invalid review JSON: expected an array of review objects, got object. Pass the output of: gh api repos/OWNER/REPO/pulls/N/reviews
+[1]
+```
+
+```scrut
+$ echo '[1,2]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews 2>&1
+Error: Invalid review JSON: every element must be a review object.
+[1]
+```
+
 ## parse-reviews takes no arguments
 
 ```scrut
