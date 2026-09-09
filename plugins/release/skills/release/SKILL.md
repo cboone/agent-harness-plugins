@@ -598,13 +598,24 @@ command -v gh
 
 If `gh` is not available, skip GitHub Release creation. Report that `gh` is required for GitHub Releases and show the manual `gh release create` command. Do not create a tmpfile.
 
-If `gh` is available, write the notes to a tmpfile and create the GitHub Release:
+If `gh` is available, generate a temporary file for the release notes:
+
+```bash
+mktemp -u /tmp/gh-release-notes-XXXXXX
+# Returns a unique path that does NOT exist on disk, e.g.: /tmp/gh-release-notes-x4y5z6
+```
+
+The `-u` flag is required. Plain `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first, so the write fails with `File has not been read yet`. With `-u` the path is unique but unoccupied, so Write creates it fresh.
+
+Write the release notes to the path returned by `mktemp -u` using the Write tool. Then create the release:
 
 ```bash
 gh release create CATALOG-STATE --title "Marketplace CATALOG-STATE" --notes-file TMPFILE --verify-tag
 ```
 
-Always remove the tmpfile after the command completes, regardless of success or failure. Issue the cleanup (`rm -f TMPFILE`) as a **separate Bash tool call**, not chained onto `gh release create`. The harness preserves the prior call's exit code, and a chained `; status=$?; rm -f ...; exit $status` wrapper breaks under zsh because `status` is a read-only built-in alias for `$?`. See `plugins/use-git/skills/use-git/references/tmpfile-pattern.md` for the full rationale.
+**Never batch the Write call and `gh release create` into one message.** Issue them as two separate, sequential tool calls, and wait for the Write to return before invoking `gh`. `gh` reads the notes file at invocation time, so a parallel batch can start `gh release create` before the file exists and publish the release with empty notes. This is a deliberate exception to the general preference for parallel tool calls: these two calls are dependent, because `gh release create` consumes the file Write produces.
+
+Always remove the tmpfile after the command completes, regardless of success or failure. Issue the cleanup (`rm -f TMPFILE`) as a **separate Bash tool call**, not chained onto `gh release create`. The harness preserves the prior call's exit code, and a chained `; status=$?; rm -f ...; exit $status` wrapper breaks under zsh because `status` is a read-only built-in alias for `$?`. See the `use-git` skill's tmpfile pattern reference for the full rationale.
 
 Report:
 
