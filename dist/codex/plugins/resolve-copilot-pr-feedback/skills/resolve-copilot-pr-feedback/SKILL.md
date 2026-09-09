@@ -193,7 +193,9 @@ Copilot does not always open a thread. When it declines to comment on a line the
 - **`suppressed`**: the raw section, verbatim.
 - **`headline`**: Copilot's verdict and lead paragraph. Sometimes the only place a finding is stated; read it.
 
-**Format-drift rule (CRITICAL):** if `hasSuppressedMarker` is `true` but `findings` is empty, Copilot has changed its review-body layout. Read the `suppressed` field directly and extract the findings yourself. **Never treat that combination as "no findings."** Report the drift in the step 7 summary so it gets fixed.
+**Format-drift rule (CRITICAL):** if `hasSuppressedMarker` is `true` but `findings` is empty, Copilot has changed its review-body layout. Read the `suppressed` field directly and extract the findings yourself; it always retains the line that announced the section, so it tells you what the parser saw. If it holds only that announcing line, open the review at `url` and read the body there. **Never treat that combination as "no findings."** Report the drift in the step 7 summary so it gets fixed.
+
+`hasSuppressedMarker` is computed from the review body itself, not from what the slice captured, so an announced-but-empty section still reports drift rather than looking like a clean review.
 
 An entry with `hasSuppressedMarker: false` and an empty `findings` array carries no review-body findings. If every entry looks like that, and `fetch` returned `[]`, only then is there genuinely nothing to process.
 

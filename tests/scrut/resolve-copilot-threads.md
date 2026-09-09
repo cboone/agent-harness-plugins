@@ -1,6 +1,6 @@
-# Resolve Copilot threads
+# Copilot review-body parsing
 
-Tests for `parse-reviews`, which extracts Copilot findings from PR review bodies.
+Tests for `resolve-copilot-threads parse-reviews`, which extracts Copilot findings from PR review bodies.
 
 Copilot files some findings in a review body instead of an inline thread. Those have no thread id, so a `reviewThreads` query cannot see them. The fixtures are real Copilot review bodies covering every layout observed in the wild.
 
@@ -82,9 +82,27 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/d
 [{"hasSuppressedMarker":true,"findings":0}]
 ```
 
+The slice keeps the line that announced the section, so a caller reading it can see what opened it.
+
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/drift.json" | jq -r '.[0].suppressed' | head -1
-- src/example.ts, line 42: the finding prose now lives in a plain list item
+### Suppressed comments (1)
+```
+
+## An announced section with no interior still reports drift
+
+`hasSuppressedMarker` is computed from the body, not from the slice contents. Deriving it from the slice would report `false` whenever a section is announced but captures no interior lines, silently disarming the drift detector in exactly the case it exists to catch.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/empty-section.json" | jq -c '[.[] | {hasSuppressedMarker, findings: (.findings | length)}]'
+[{"hasSuppressedMarker":true,"findings":0}]
+```
+
+Even then the slice is non-empty, because the announcing line is retained.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/empty-section.json" | jq -r '.[0].suppressed'
+### Suppressed comments (1)
 ```
 
 ## Non-Copilot reviews are filtered out

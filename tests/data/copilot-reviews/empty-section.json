@@ -1,0 +1,12 @@
+[
+  {
+    "id": 5157607789,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-09T12:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-5157607789",
+    "body": "### 🔵 Needs a closer look\n\nSummary.\n\n<details>\n<summary>Review details</summary>\n\n### Suppressed comments (1)\n\n- **Files reviewed:** 3/3 changed files\n- **Comments generated:** 0 new\n\n</details>\n"
+  }
+]

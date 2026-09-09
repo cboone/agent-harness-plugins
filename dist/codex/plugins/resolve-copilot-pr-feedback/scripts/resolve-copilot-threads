@@ -367,13 +367,25 @@ function do_parse_reviews() {
       # touches code about suppressed comments gets a row quoting the phrase.
       # That fires on every such review, and a section is never announced from
       # inside a table, so excluding rows costs no real coverage.
+      def announces_section($line):
+        ($line | test("^[[:space:]]*\\|") | not)
+        and ($line | ascii_downcase | test("suppressed comments|comments suppressed"));
+
+      # Derived from the body rather than from the slice. Deriving it from the
+      # slice would report false whenever a section is announced but captures
+      # no interior lines (an empty section, or a marker sitting directly above
+      # the trailer), which silently disarms the drift detector in exactly the
+      # case it exists to catch.
+      def has_suppressed_marker:
+        split("\n") | any(announces_section(.));
+
       def suppressed_slice:
         split("\n")
         | reduce .[] as $line ({inside: false, out: []};
-            if (.inside | not)
-              and ($line | test("^[[:space:]]*\\|") | not)
-              and ($line | ascii_downcase | test("suppressed comments|comments suppressed"))
-            then .inside = true
+            if (.inside | not) and announces_section($line)
+            # The announcing line is kept so the slice is never empty when a
+            # section exists, and so a caller reading it can see what opened it.
+            then .inside = true | .out += [$line]
             elif .inside and ($line | test("^</?details>|^- \\*\\*Files reviewed:"))
             then .inside = false
             elif .inside
@@ -418,7 +430,7 @@ function do_parse_reviews() {
             url: .html_url,
             submittedAt: .submitted_at,
             headline: (.body | headline),
-            hasSuppressedMarker: ($slice != ""),
+            hasSuppressedMarker: (.body | has_suppressed_marker),
             suppressed: $slice,
             findings: ($slice | findings)
           }
