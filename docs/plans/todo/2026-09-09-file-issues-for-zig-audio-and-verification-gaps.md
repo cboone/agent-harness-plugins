@@ -12,6 +12,39 @@ Mining the Claude Code transcripts for both projects (260 typed human turns acro
 
 The outcome of this plan is a set of GitHub issues, twenty in `cboone/agent-harness-plugins` and four in `cboone/gh-actions`, each carrying enough measured detail lifted from the two source repositories that an implementer can build the skill without rediscovering what fosforo already paid for.
 
+### Filed
+
+All twenty-four were filed on 2026-09-09. This section is the record; the group sections below are the reasoning behind each.
+
+| Group | Plan ref | Issue                                                              | Title                                                                                       |
+| ----- | -------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| A     | A1       | [#338](https://github.com/cboone/agent-harness-plugins/issues/338) | New skill: write-zig-code                                                                   |
+| A     | A2       | [#339](https://github.com/cboone/agent-harness-plugins/issues/339) | New skill: scaffold-zig-cli                                                                 |
+| B     | B3       | [#340](https://github.com/cboone/agent-harness-plugins/issues/340) | New skill: set-up-macos-signing                                                             |
+| B     | B4       | [#341](https://github.com/cboone/agent-harness-plugins/issues/341) | New skill: stamp-build-provenance                                                           |
+| B     | B2       | [#342](https://github.com/cboone/agent-harness-plugins/issues/342) | New skill: set-up-clap-validation                                                           |
+| B     | B5       | [#343](https://github.com/cboone/agent-harness-plugins/issues/343) | New skill: write-realtime-audio-code                                                        |
+| B     | B1       | [#344](https://github.com/cboone/agent-harness-plugins/issues/344) | New skill: scaffold-clap-audio-plugin                                                       |
+| C     | C1       | [#345](https://github.com/cboone/agent-harness-plugins/issues/345) | New skill: plant-defects                                                                    |
+| C     | C2       | [#346](https://github.com/cboone/agent-harness-plugins/issues/346) | New skill: check-ci-workflows                                                               |
+| E     | E2       | [#347](https://github.com/cboone/agent-harness-plugins/issues/347) | New skill: write-phased-build-plan                                                          |
+| E     | E1       | [#348](https://github.com/cboone/agent-harness-plugins/issues/348) | New skill: write-adr                                                                        |
+| D     | D1       | [#349](https://github.com/cboone/agent-harness-plugins/issues/349) | New skill: review-project-status                                                            |
+| D     | D2       | [#350](https://github.com/cboone/agent-harness-plugins/issues/350) | New skill: create-deferred-issues                                                           |
+| D     | D3       | [#351](https://github.com/cboone/agent-harness-plugins/issues/351) | New skill: write-manual-verification-plan                                                   |
+| F     | F1       | [#352](https://github.com/cboone/agent-harness-plugins/issues/352) | feat: close the Zig gaps left by #223 across the plugin ecosystem                           |
+| F     | F2       | [#353](https://github.com/cboone/agent-harness-plugins/issues/353) | set-up-linters: make typos a cross-language option instead of Rust-only                     |
+| F     | F3       | [#354](https://github.com/cboone/agent-harness-plugins/issues/354) | write-bash-scripts: add verification-aware script conventions                               |
+| F     | F4       | [#355](https://github.com/cboone/agent-harness-plugins/issues/355) | optimize-runner-usage: derive timeout-minutes from measured run history                     |
+| F     | F5       | [#356](https://github.com/cboone/agent-harness-plugins/issues/356) | chore: validate skill and path cross-references in bin/validate-plugins                     |
+| F     | F6       | [#357](https://github.com/cboone/agent-harness-plugins/issues/357) | create-worktree: record and respect an exclusive-resource claim                             |
+| G     | G1       | [gh-actions#85](https://github.com/cboone/gh-actions/issues/85)    | fix: shellcheck is unpinned and actionlint fails open without it                            |
+| G     | G2       | [gh-actions#86](https://github.com/cboone/gh-actions/issues/86)    | fix: lint-shell.yml discovery misses extension-less scripts outside bin, scripts and script |
+| G     | G3       | [gh-actions#87](https://github.com/cboone/gh-actions/issues/87)    | feat: extract the pinned-tool install into one composite action                             |
+| G     | G4       | [gh-actions#88](https://github.com/cboone/gh-actions/issues/88)    | feat: add a shared clap-validator install action                                            |
+
+One correction made during filing. G1 was planned as "`lint-github-actions.yml` never installs shellcheck, so actionlint skips every `run:` block". That overstated it: `ubuntu-latest` ships ShellCheck, which `lint-shell.yml` running a bare `shellcheck` with no install step confirms. The filed issue is the accurate narrower one, that `shellcheck` is the only unpinned tool in two otherwise checksum-pinned workflows and that `actionlint` fails open if it is ever absent.
+
 ### Decisions taken
 
 - **Split by generality.** Audio-specific skills are filed alongside Go, Rust, Lean and Zig support, but the genuinely general parts (macOS signing and notarization, build provenance, planted-defect verification) are extracted as standalone skills rather than buried inside a CLAP scaffolder.
@@ -373,7 +406,7 @@ The rebase onto main brought in 24 commits, three of which overlap this research
 
 **Markdown table alignment is solved.** [#325](https://github.com/cboone/agent-harness-plugins/pull/325) set `MD060: false`, dropped `markdownlint-rule-force-align-table-columns`, and handed alignment to Prettier, which has a fixer where markdownlint has none at any version. [#334](https://github.com/cboone/agent-harness-plugins/issues/334), [#335](https://github.com/cboone/agent-harness-plugins/issues/335) and [#336](https://github.com/cboone/agent-harness-plugins/issues/336) are already open to propagate that through `write-markdown`, `set-up-linters` and `refresh-project-scaffolding`.
 
-The transcript mining produced hard numbers that belong on #334 as a comment, since they quantify the cost the fix removes: **1,940 `MD060` violations across 48 of roughly 65 transcript files**, 16x the next-most-common rule, and a throwaway `align_tables.py` written from scratch **25 times** to do the padding by hand.
+The transcript mining produced hard numbers that belong on #334 as a comment, since they quantify the cost the fix removes: **1,940 `MD060` violations across 48 of roughly 65 transcript files**, 16x the next-most-common rule, and a throwaway `align_tables.py` written from scratch **25 times** to do the padding by hand. That comment is [posted](https://github.com/cboone/agent-harness-plugins/issues/334#issuecomment-5606377130).
 
 The same mining supports #334's stated constraint that the manual procedure cannot simply be deleted, because it still serves repos with markdownlint and no Prettier. **Fosforo and springer are both exactly that case**: fosforo has no Prettier at all, and springer's `.prettierignore` excludes `*.md` outright with the recorded reason that "markdownlint owns Markdown, uncontested … Two formatters with opinions about the same file is one more than can be satisfied." Both still carry `"MD060": { "style": "aligned" }`. They are the concrete instances of the seven repos #334 counts, and migrating them is downstream repository work rather than a plugin issue.
 
@@ -384,13 +417,17 @@ Two further exclusions, unchanged:
 
 ## Verification
 
-This plan produces issues, not code, so verification is that the filed set is complete, correct and non-duplicative.
+This plan produced issues, not code, so verification is that the filed set is complete, correct and non-duplicative. All of the following were run after filing.
 
-1. `gh issue list --repo cboone/agent-harness-plugins --state open --limit 100` returns the twenty new issues plus the twenty that were open at the time of the rebase (#11, #23, #28, #29, #31, #35, #59, #60, #309, #313-#316, #323, #324, #326, #330, #334-#336).
-1. `gh issue list --repo cboone/gh-actions --state open` returns the four new issues plus the six that were already open, and none duplicates `#83`, `#81` or `#61`.
-1. `gh issue list --repo cboone/agent-harness-plugins --search "zig" --state all`, and the same for `audio`, `clap` and `adr`, show the new issues and no duplicates of `#223`, `#248`, `#249` or `#271`.
-1. Every new-plugin issue carries the `new skill` label, and every proposed name is verb-first kebab-case; `gh label list` shows `zig` and `audio`.
-1. Spot-check three bodies for the marketplace checklist and for at least one measured figure lifted from a source repository, since the citations are the point of filing these at all.
-1. Confirm the dependency cross-references resolve: B1 names A2, B3 and B4 by number; F1 names A2; D1 names E2, #11 and #23; C2 names the gh-actions shellcheck issue.
-1. Confirm #334 carries the transcript-evidence comment and that no duplicate MD060 issue was filed.
-1. `npx --no-install prettier --check docs/plans/todo/` passes, since `docs/plans/todo/` is no longer Prettier-excluded.
+1. **Done.** `gh issue list --repo cboone/agent-harness-plugins --state open --limit 100` returns 38: the twenty new ones (#338-#357) plus eighteen previously open. The plan predicted twenty previously open; #323 and #326 were closed by other work at 17:29Z, mid-filing, which accounts for the difference.
+1. **Done.** `gh issue list --repo cboone/gh-actions --state open` returns 10: the four new ones (#85-#88) plus the six that were already open. None duplicates `#83` (which is `lint-text.yml`, not shell discovery), `#81` or `#61`; #87 and #85 both cite #61 rather than restating it.
+1. **Done.** No duplicates of `#223`, `#248`, `#249` or `#271`; #352 supersedes none of them and cites #223 as the work it continues.
+1. **Done.** All fourteen new-plugin issues carry `new skill`. `gh label list` shows `zig` and `audio`, both created for this batch.
+1. **Done.** Every proposed name is verb-first kebab-case inside an existing family; see [Naming](#naming) for the eight corrected during planning.
+1. **Done.** Cross-reference comments posted where a body said "filed separately": #338, #339, #340, #341, #342, #343, #345, #346, #347, #348, #349, #351 and #354.
+1. **Done.** #334 carries the transcript-evidence comment and no duplicate MD060 issue was filed.
+1. **Done.** `npx --no-install prettier --check` and `npx --no-install markdownlint-cli2` both pass on this file.
+
+Remaining, for whoever picks up the work rather than for this plan:
+
+- Recompute the catalog state with `bin/compute-catalog-state` at implementation time rather than trusting the projected `catalog-M77-m80-p146-n65`, since main moves.
