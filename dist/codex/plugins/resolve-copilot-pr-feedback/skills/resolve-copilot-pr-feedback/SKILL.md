@@ -22,6 +22,8 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 **Permitted operations:**
 
 - Fetch unresolved Copilot threads using the script's `fetch` command
+- Fetch Copilot review-body findings using the script's `fetch-reviews` command
+- Read existing PR comments (never write them) to check for prior summaries
 - Reply to EXISTING Copilot threads using the script's `reply` command
 - Resolve Copilot threads using the script's `resolve` command
 - Reply and resolve in one step using the script's `reply-and-resolve` command
@@ -128,15 +130,20 @@ Reserve for repo-wide conventions that apply to all file types:
 
 ## Core Workflow
 
-### 1. Fetch ALL Unresolved Copilot Threads
+### 1. Fetch ALL Unresolved Copilot Feedback
+
+Copilot leaves feedback in two places, and **you MUST check both**. Fetching only threads is how real feedback gets missed.
 
 ```bash
 bash resolve-copilot-threads fetch OWNER REPO PR_NUMBER
+bash resolve-copilot-threads fetch-reviews OWNER REPO PR_NUMBER
 ```
 
-The script automatically handles pagination and filters for unresolved Copilot-authored threads.
+The script automatically handles pagination and filters for Copilot-authored content.
 
 Record the `OWNER`, `REPO`, and `PR_NUMBER` values used for the fetch. This establishes PR context for the required final workflow summary in step 7. If PR context or GitHub authentication cannot be established, report that the required final summary could not be posted and do not mark the workflow complete.
+
+#### 1a. Threads (`fetch`)
 
 **Output format** (JSON array):
 
@@ -157,11 +164,61 @@ Record the `OWNER`, `REPO`, and `PR_NUMBER` values used for the fetch. This esta
 
 An empty array `[]` means no unresolved Copilot threads remain.
 
-Treat `[]` as "no currently unresolved Copilot threads," not proof that no work happened in a previous attempt. Before using the no-op summary form, check whether this invocation is recovering from a prior failed summary-post step. If a previous run resolved threads or made code changes but failed to post the required final summary, reuse the preserved summary body from that run or reconstruct it from the prior local output, resolved review threads, branch commits, and branch diff. Do not downgrade that recovery summary to the no-op form just because a later fetch returns `[]`.
+**`[]` from `fetch` is a statement about threads only. It is never proof that Copilot left no feedback.** Two separate things can hide behind it:
+
+- Copilot may have filed findings in a review body instead of a thread. That is what `fetch-reviews` in step 1b is for, and you must run it before concluding anything.
+- A previous attempt may have already done the work. Before using the no-op summary form, check whether this invocation is recovering from a prior failed summary-post step. If a previous run resolved threads or made code changes but failed to post the required final summary, reuse the preserved summary body from that run or reconstruct it from the prior local output, resolved review threads, branch commits, and branch diff. Do not downgrade that recovery summary to the no-op form just because a later fetch returns `[]`.
+
+#### 1b. Review-body findings (`fetch-reviews`)
+
+Copilot does not always open a thread. When it declines to comment on a line the latest push did not touch, it files the finding in the **review body** under a "suppressed comments" section and reports `Comments generated: 0 new`. Those findings are real and actionable, they have no thread id, and `fetch` cannot see them.
+
+**Output format** (JSON array, one entry per Copilot review that has a body):
+
+```json
+[
+  {
+    "id": 5035762218,
+    "url": "https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762218",
+    "submittedAt": "2026-08-21T18:02:11Z",
+    "headline": "### 🔵 Needs a closer look\n\nThe Phase 2 plan section is internally inconsistent...",
+    "hasSuppressedMarker": true,
+    "suppressed": "**docs/plans/todo/phased-build-plan.md:243**\n* This section now states...",
+    "findings": [{ "location": "docs/plans/todo/phased-build-plan.md:243", "path": "docs/plans/todo/phased-build-plan.md", "line": 243, "body": "* This section now states..." }]
+  }
+]
+```
+
+- **`findings`**: the structured parse. Treat each entry exactly like a thread comment, except that it cannot be replied to or resolved.
+- **`suppressed`**: the raw section, verbatim.
+- **`headline`**: Copilot's verdict and lead paragraph. Sometimes the only place a finding is stated; read it.
+
+**Format-drift rule (CRITICAL):** if `hasSuppressedMarker` is `true` but `findings` is empty, Copilot has changed its review-body layout. Read the `suppressed` field directly and extract the findings yourself. **Never treat that combination as "no findings."** Report the drift in the step 7 summary so it gets fixed.
+
+An entry with `hasSuppressedMarker: false` and an empty `findings` array carries no review-body findings. If every entry looks like that, and `fetch` returned `[]`, only then is there genuinely nothing to process.
+
+#### 1c. Check for findings handled in a previous run
+
+Copilot re-emits the same suppressed finding in **every** later review until the underlying code changes. Review bodies are immutable, so a finding you fixed last run will still be there this run. Without a check, the skill would re-report or re-fix it forever.
+
+Before acting on any review-body finding, read the PR's existing summary comments:
+
+```bash
+gh api repos/OWNER/REPO/issues/PR_NUMBER/comments --jq '.[] | select(.body | startswith("## Copilot Feedback Summary")) | .body'
+```
+
+This reads comments; it never writes one, so it does not violate the PR Comments Prohibition. Then, for each finding:
+
+1. **Recorded before, and no longer applies.** A prior summary has a `Review body` row for this `path:line`, and reading the current code confirms the finding is addressed. Record it as `Previously handled` and change nothing.
+1. **Recorded before, but still applies.** The earlier run deferred it, or a fix regressed. Process it normally.
+1. **Path matches, line does not.** Line numbers drift as files change. Treat it as a candidate and let the code check decide, rather than assuming it is new.
+1. **No match.** Process it normally.
+
+Always verify against the current code before deciding. Verification is what keeps this correct when someone edits or deletes a summary comment: the cost is a re-check, not a wrong answer.
 
 ### 2. Categorize Each Comment
 
-For each unresolved Copilot comment:
+For each unresolved Copilot comment **and each review-body finding**:
 
 | Category      | Indicator                            | Action                                                       |
 | ------------- | ------------------------------------ | ------------------------------------------------------------ |
@@ -170,6 +227,8 @@ For each unresolved Copilot comment:
 | **Incorrect** | Misunderstands project conventions   | Reply with explanation, resolve, update Copilot instructions |
 | **Valid**     | Current, actionable concern          | Fix directly, push, and resolve thread                       |
 | **Deferred**  | Valid but out of scope for this PR   | Track in PROJECT.md, reply, resolve                          |
+
+The same five categories apply to review-body findings, but the Action column does not: they have no thread to reply to or resolve. See [Review-Body Findings](#review-body-findings-no-thread) for what to do instead. Note also that review-body findings carry **no `[nitpick]` prefix**, so judge Nitpick from the prose rather than looking for a tag.
 
 ### 3. Resolve Threads
 
@@ -247,6 +306,24 @@ Replace `TMPFILE` with the actual path returned by `mktemp`. The cleanup must be
 
 **CRITICAL:** Never defer feedback without tracking it. "Acknowledged for follow-up" without creating a trackable task is INCOMPLETE WORK.
 
+#### Review-Body Findings (no thread)
+
+Findings from `fetch-reviews` have **no thread id**. Do not attempt `reply`, `resolve`, or `reply-and-resolve` for them; there is nothing to address those commands to, and the calls will fail. Do not invent a thread by opening a PR comment either: the PR Comments Prohibition still applies, and the step 7 summary is the only reporting channel these findings have.
+
+Apply the same categories, minus the thread operations:
+
+| Category      | What to do                                                                    | Outcome recorded |
+| ------------- | ----------------------------------------------------------------------------- | ---------------- |
+| **Valid**     | Read the flagged line, fix the issue, commit (do not push; step 5 runs first) | `Fixed`          |
+| **Incorrect** | Update the Copilot instructions file so it stops recurring                    | `Noted`          |
+| **Deferred**  | Track the follow-up work in a GitHub issue, PROJECT.md, or similar            | `Tracked`        |
+| **Outdated**  | Confirm against current code, then record it; no code change                  | `Noted`          |
+| **Nitpick**   | Record it; no code change                                                     | `Noted`          |
+
+Every review-body finding gets a row in the step 7 summary and in the local audit table, whatever its category. Since Copilot will keep re-emitting it and there is no thread to resolve, that row **is** the record that it was handled, and step 1c reads it back on the next run.
+
+If step 1b reported format drift (`hasSuppressedMarker: true`, empty `findings`), extract what you can from the raw `suppressed` text, process those findings normally, and add a workflow-level failure noting that the review-body format changed and the parser needs updating.
+
 ### 5. Lint and Fix
 
 **After all code changes are made (from Valid or Incorrect categories), run the `lint-and-fix` skill to catch lint errors before pushing.**
@@ -284,12 +361,14 @@ Do not run this step if step 5 recorded a lint failure or skipped required lint 
 
    Expected output: `[]` (empty array)
 
+   **Do not re-run `fetch-reviews` as a completion check.** Review bodies are immutable, so a review-body finding you just fixed still appears in the old body and always will. It will never go empty, and treating it as a verification signal produces a false Partial forever. Only the thread `fetch` is expected to reach `[]`.
+
 1. Determine terminal workflow status and counts:
-   - **No unresolved Copilot feedback**: The initial fetch returned `[]`
-   - **Completed**: Every fetched thread was handled according to its category, no failed or pending items remain, and any required code changes were pushed
-   - **Partial**: At least one fetched thread was handled, but one or more fetched threads, replies, resolutions, tracking items, instruction updates, lint runs, pushes, or verification checks failed or remain pending
-   - **Failed**: The workflow could not fetch or process threads, or no required processing step succeeded
-1. Track thread metrics separately from workflow-level failures. Thread metrics cover fetched, resolved, pending, failed, deferred, and code-change threads. Workflow-level failures cover non-thread steps such as instruction updates, follow-up tracking, lint runs, pushes, and verification checks.
+   - **No unresolved Copilot feedback**: the initial `fetch` returned `[]` **and** `fetch-reviews` surfaced no findings needing attention (every entry had `hasSuppressedMarker: false`, or every finding was `Previously handled`). Never use this status without having run `fetch-reviews`.
+   - **Completed**: Every fetched thread and every review-body finding was handled according to its category, no failed or pending items remain, and any required code changes were pushed
+   - **Partial**: At least one fetched thread or review-body finding was handled, but one or more items, replies, resolutions, tracking items, instruction updates, lint runs, pushes, or verification checks failed or remain pending
+   - **Failed**: The workflow could not fetch or process feedback, or no required processing step succeeded
+1. Track feedback metrics separately from workflow-level failures. Feedback metrics cover fetched, resolved, pending, failed, deferred, code-change, review-body, and previously handled items. Workflow-level failures cover non-thread steps such as instruction updates, follow-up tracking, lint runs, pushes, verification checks, and review-body format drift.
 1. Proceed to step 7 before claiming completion
 
 ### 7. Post PR Summary Comment
@@ -306,26 +385,30 @@ Post a summary comment to the PR so reviewers can see the workflow outcome at a 
 Status: Completed
 Head SHA: `abc1234`
 
-| File            | Category  | Outcome  | Action                                            |
-| --------------- | --------- | -------- | ------------------------------------------------- |
-| `src/foo.ts:42` | Valid     | Resolved | Fixed null check                                  |
-| `lib/util.js:8` | Incorrect | Resolved | Updated error handling; added Copilot instruction |
-| `src/ui.tsx:20` | Deferred  | Resolved | Tracked follow-up work                            |
-| `docs/api.md:5` | Nitpick   | Resolved | Auto-resolved                                     |
+| Source      | File               | Category  | Outcome            | Action                                            |
+| ----------- | ------------------ | --------- | ------------------ | ------------------------------------------------- |
+| Thread      | `src/foo.ts:42`    | Valid     | Resolved           | Fixed null check                                  |
+| Thread      | `lib/util.js:8`    | Incorrect | Resolved           | Updated error handling; added Copilot instruction |
+| Thread      | `docs/api.md:5`    | Nitpick   | Resolved           | Auto-resolved                                     |
+| Review body | `docs/plan.md:243` | Valid     | Fixed              | Corrected phase status                            |
+| Review body | `src/ui.tsx:20`    | Deferred  | Tracked            | Follow-up issue filed                             |
+| Review body | `src/ring.zig:196` | Valid     | Previously handled | Recorded in an earlier run                        |
 
-Counts: 4 fetched, 3 resolved, 1 deferred, 2 code-change threads.
+Counts: 6 fetched, 3 resolved, 3 review-body findings, 1 deferred, 1 previously handled, 2 code-change threads.
 ```
 
 - Status must be one of `Completed`, `No unresolved Copilot feedback`, `Partial`, or `Failed`
-- The trailing `Counts:` line is one short sentence at the end of the comment. Include only non-zero counts from this set: fetched, resolved, pending, failed, deferred, code-change threads, workflow failures. Omit zero-valued metrics; do not render an empty table or "0" entries. If every count is zero, omit the `Counts:` line entirely.
-- Pluralize naturally (`1 fetched`, `2 fetched`; `1 code-change thread`, `2 code-change threads`; `1 workflow failure`, `2 workflow failures`).
-- Table includes all processed threads when the comment remains safely postable, not only Valid and Incorrect threads
-- If the processed-thread table would make the PR comment too large, replace detailed rows with aggregate category/outcome rows and state how many thread detail rows were omitted. Keep the full thread-by-thread table in the local final output for the agent/user audit trail.
+- **`Source`** is `Thread` or `Review body`. Review-body findings have no thread, so this column is what makes a thread-less row legible instead of implied.
+- **`Outcome`** for `Thread` rows is `Resolved`, `Failed`, or `Pending`. `Resolved` means a thread was actually resolved, so it is never correct for a `Review body` row. Those use `Fixed`, `Tracked`, `Noted`, `Previously handled`, or `Failed`.
+- The trailing `Counts:` line is one short sentence at the end of the comment. Include only non-zero counts from this set: fetched, resolved, pending, failed, deferred, code-change threads, review-body findings, previously handled, workflow failures. Omit zero-valued metrics; do not render an empty table or "0" entries. If every count is zero, omit the `Counts:` line entirely.
+- Pluralize naturally (`1 fetched`, `2 fetched`; `1 code-change thread`, `2 code-change threads`; `1 review-body finding`, `2 review-body findings`; `1 workflow failure`, `2 workflow failures`).
+- Table includes all processed threads and review-body findings when the comment remains safely postable, not only Valid and Incorrect items
+- If the table would make the PR comment too large, replace detailed rows with aggregate category/outcome rows and state how many detail rows were omitted. Keep the full row-by-row table in the local final output for the agent/user audit trail. **Never aggregate away a `Review body` row's `path:line`**, since step 1c reads those back to avoid re-processing on the next run.
 - Incorrect category notes Copilot instruction additions in the Action column
 - Thread IDs omitted (meaningless to human reviewers)
-- Non-thread failures must be described in a failure details section, not forced into the thread table
+- Non-thread failures, including review-body format drift, must be described in a failure details section, not forced into the feedback table
 
-If no unresolved Copilot comments were found, use this no-op form:
+If neither the thread fetch nor the review-body fetch surfaced anything needing attention, use this no-op form:
 
 ```markdown
 ## Copilot Feedback Summary
@@ -333,8 +416,10 @@ If no unresolved Copilot comments were found, use this no-op form:
 Status: No unresolved Copilot feedback
 Head SHA: `abc1234`
 
-No unresolved Copilot comments were found.
+No unresolved Copilot threads and no review-body findings were found.
 ```
+
+**Only use this form after running `fetch-reviews`.** An empty `fetch` alone does not justify it.
 
 If processing was partial or failed, include failure details, the remaining required action, and the trailing counts line:
 
@@ -344,11 +429,12 @@ If processing was partial or failed, include failure details, the remaining requ
 Status: Partial
 Head SHA: `abc1234`
 
-| File            | Category | Outcome  | Action                        |
-| --------------- | -------- | -------- | ----------------------------- |
-| `src/foo.ts:42` | Valid    | Resolved | Fixed null check              |
-| `src/bar.ts:7`  | Outdated | Failed   | Reply failed                  |
-| `lib/baz.ts:9`  | Nitpick  | Pending  | Resolution still required     |
+| Source      | File               | Category | Outcome  | Action                    |
+| ----------- | ------------------ | -------- | -------- | ------------------------- |
+| Thread      | `src/foo.ts:42`    | Valid    | Resolved | Fixed null check          |
+| Thread      | `src/bar.ts:7`     | Outdated | Failed   | Reply failed              |
+| Thread      | `lib/baz.ts:9`     | Nitpick  | Pending  | Resolution still required |
+| Review body | `docs/plan.md:243` | Valid    | Fixed    | Corrected phase status    |
 
 ### Failure Details
 
@@ -362,10 +448,10 @@ Head SHA: `abc1234`
 - Resolve the pending nitpick at `lib/baz.ts:9`
 - Push branch changes
 
-Counts: 3 fetched, 2 resolved, 1 pending, 1 failed, 1 code-change thread, 1 workflow failure.
+Counts: 4 fetched, 2 resolved, 1 pending, 1 failed, 1 review-body finding, 2 code-change threads, 1 workflow failure.
 ```
 
-**No-op summary idempotency:** Before posting a `No unresolved Copilot feedback` summary, inspect existing top-level PR comments for a `## Copilot Feedback Summary` comment with the same head SHA and no-op status. If one already exists and this invocation did not recover a failed summary-post attempt, do not add another no-op comment. Report the existing summary comment URL locally and treat that existing same-head no-op summary as satisfying the final summary requirement for this no-op run. This idempotency exception applies only to empty-fetch no-op runs; if this invocation processed threads, made code changes, or is recovering a failed summary-post attempt, post the required outcome summary.
+**No-op summary idempotency:** Before posting a `No unresolved Copilot feedback` summary, inspect existing top-level PR comments for a `## Copilot Feedback Summary` comment with the same head SHA and no-op status. If one already exists and this invocation did not recover a failed summary-post attempt, do not add another no-op comment. Report the existing summary comment URL locally and treat that existing same-head no-op summary as satisfying the final summary requirement for this no-op run. This idempotency exception applies only to runs where **both** the thread fetch and the review-body fetch came back with nothing needing attention; if this invocation processed threads or review-body findings, made code changes, or is recovering a failed summary-post attempt, post the required outcome summary.
 
 **Mechanics:**
 
@@ -411,43 +497,51 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 **Task is INCOMPLETE until ALL of these are done:**
 
 1. All code changes pushed to the PR branch
+1. **BOTH `fetch` and `fetch-reviews` were run** (a thread fetch alone cannot see review-body findings)
 1. **EVERY addressed thread resolved via the script** (not just code fixed!)
+1. **EVERY review-body finding handled and recorded** in the step 7 summary, since there is no thread to resolve and the summary row is the only record
 1. **For INCORRECT feedback: Copilot instructions updated** (path-specific `*.instructions.md` preferred, or `copilot-instructions.md` for repo-wide conventions)
 1. **For DEFERRED feedback: Task tracked** (GitHub issue, PROJECT.md, or similar)
 1. **Linters and formatters pass** (via `lint-and-fix` skill, if any files were changed while addressing feedback)
-1. Re-fetch confirms empty array `[]` for all processed threads
+1. Re-fetch confirms empty array `[]` for all processed **threads**. This does not apply to `fetch-reviews`, which never empties.
 1. Output summary table (see format below)
 1. **Final PR summary comment posted via step 7** after terminal workflow state, once PR context exists. For empty-fetch no-op runs only, an existing same-head no-op summary may satisfy this requirement without adding a duplicate comment.
 
 If PR context or GitHub authentication is unavailable, or if `gh pr comment` fails, the workflow is incomplete. Report the failure locally and include the remaining action needed to post the required summary.
 
-### Required Output: Thread Summary Table
+### Required Output: Feedback Summary Table
 
-**You MUST output this table after processing all threads:**
+**You MUST output this table after processing all threads and review-body findings:**
 
 ```text
-| Thread ID | File:Line | Category | Action Taken | Status |
-|-----------|-----------|----------|--------------|--------|
-| PRRT_xxx  | src/foo.ts:42 | Nitpick | Auto-resolved | Resolved |
-| PRRT_yyy  | src/bar.ts:15 | Valid | Fixed null check | Resolved |
-| PRRT_zzz  | lib/util.js:8 | Outdated | Code refactored | Resolved |
-| PRRT_aaa  | src/ui.tsx:20 | Deferred | Tracked in PROJECT.md | Resolved |
+| Source      | Thread ID | File:Line | Category | Action Taken | Status |
+|-------------|-----------|-----------|----------|--------------|--------|
+| Thread      | PRRT_xxx  | src/foo.ts:42 | Nitpick | Auto-resolved | Resolved |
+| Thread      | PRRT_yyy  | src/bar.ts:15 | Valid | Fixed null check | Resolved |
+| Thread      | PRRT_zzz  | lib/util.js:8 | Outdated | Code refactored | Resolved |
+| Review body | —         | src/ui.tsx:20 | Deferred | Tracked in PROJECT.md | Tracked |
+| Review body | —         | docs/plan.md:243 | Valid | Corrected phase status | Fixed |
 ```
 
 **Column definitions:**
 
-- **Thread ID**: GraphQL thread ID (truncated for readability)
+- **Source**: `Thread` or `Review body`
+- **Thread ID**: GraphQL thread ID (truncated for readability); `—` for review-body findings, which have none
 - **File:Line**: Location of the comment
 - **Category**: Nitpick, Valid, Outdated, Incorrect, or Deferred
 - **Action Taken**: Brief description of resolution (10 words max)
-- **Status**: Resolved, Failed, or Pending
+- **Status**: `Resolved`, `Failed`, or `Pending` for threads; `Fixed`, `Tracked`, `Noted`, `Previously handled`, or `Failed` for review-body findings
 
-**Common failure mode:** Fixing code but forgetting to resolve the threads. This leaves the PR with unresolved conversations even though the issues are fixed. ALWAYS run the resolution command after pushing code.
+**Common failure modes:**
+
+- Fixing code but forgetting to resolve the threads. This leaves the PR with unresolved conversations even though the issues are fixed. ALWAYS run the resolution command after pushing code.
+- Reporting `No unresolved Copilot feedback` on the strength of an empty `fetch` alone. Copilot regularly files findings in review bodies where a thread query cannot see them, and this reads as success while real feedback goes unread. ALWAYS run `fetch-reviews` too.
 
 ## Error Handling
 
 - API failures: Retry with proper auth
 - Thread ID issues: Use alternative queries
+- Review-body format drift (`hasSuppressedMarker: true` with empty `findings`): read the raw `suppressed` text, process the findings from it, and record a workflow failure so the parser gets updated. Never report this as "no findings."
 - Fix failures: Retry with alternative approach or defer if out of scope
 - Summary comment failures: Log the error, preserve the intended summary Markdown in the local final output, and treat the workflow as incomplete until the required final summary posts successfully
 - Partial resolution is better than none, but a partial or failed terminal state still requires the final PR summary once PR context exists
