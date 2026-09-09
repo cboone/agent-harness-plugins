@@ -54,9 +54,9 @@ gh label create "in progress" --description "Work is actively being done" --colo
 gh issue edit NUMBER --add-label "in progress"
 ```
 
-The `gh label create` command is safe to run even if the label already exists — `2>/dev/null` suppresses the "already exists" error and `|| true` ensures a zero exit code so the subsequent command always runs. This ensures the label is available before `gh issue edit --add-label` attempts to use it, since `gh` does **not** auto-create labels.
+The `gh label create` command is safe to run even if the label already exists -- `2>/dev/null` suppresses the "already exists" error and `|| true` ensures a zero exit code so the subsequent command always runs. This ensures the label is available before `gh issue edit --add-label` attempts to use it, since `gh` does **not** auto-create labels.
 
-Self-assignment is idempotent — safe to re-run if the assignee already exists.
+Self-assignment is idempotent -- safe to re-run if the assignee already exists.
 
 If any command fails, warn the user but continue with worktree creation. Status marking is best-effort and must never block the primary workflow.
 
@@ -95,7 +95,7 @@ BODY_CONTENT
 
 ### 5. Create the Worktree
 
-**Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is alive. The `launch-workmux` script handles backgrounding, detaching, waiting, and outputting the log.
+**Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is still running. The `launch-workmux` script handles backgrounding, detaching, waiting, and outputting the log.
 
 **Template escaping:** `workmux` renders the prompt body through MiniJinja, so any literal `{{`, `{%`, or `{#` token in the issue body (e.g. GitHub Actions `${{ inputs.x }}` expressions, Jinja/Liquid/Tera/Helm/Vue templates, Handlebars-style snippets) would otherwise be parsed as a template variable reference and rejected with `Template uses undefined variables`. The `launch-workmux` script reads the prompt from stdin, writes an escaped temporary prompt file for `workmux add -P`, and removes that temporary file after `workmux add` exits. Each escaped delimiter renders back to the literal characters, so the issue context stored at `<worktree>/.workmux/PROMPT-*.md` matches the original prompt.
 
@@ -142,4 +142,4 @@ After confirming the worktree exists in `git worktree list`, report:
 - If `gh` is not authenticated, instruct the user to run `gh auth login`
 - If `workmux` is not installed, inform the user
 - If the issue is closed, warn the user and ask if they want to proceed anyway
-- If status marking fails (assignment or labeling), warn the user but continue with worktree creation — status marking is best-effort
+- If status marking fails (assignment or labeling), warn the user but continue with worktree creation -- status marking is best-effort

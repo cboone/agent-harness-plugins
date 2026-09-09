@@ -183,7 +183,7 @@ omit [MeasurableSingletonClass S₁] in
 private lemma my_lemma : ... := ...
 ```
 
-Multi-instance omits stack on one line or wrap across lines; either works. Do not wrap `omit` at arbitrary column counts — use `in` on the final line to anchor the scope:
+Multi-instance omits stack on one line or wrap across lines; either works. Do not wrap `omit` at arbitrary column counts -- use `in` on the final line to anchor the scope:
 
 ```lean
 omit [MeasurableSingletonClass S₁] [MeasurableSingletonClass S₂]
@@ -359,7 +359,7 @@ Place comments above the code they describe, not inline, when the explanation is
 
 **Do not hardwrap comment text.** This applies to all comment forms (`/-- -/`, `/-! -/`, `/- -/`, `--`) and to docstrings. Each paragraph is a single long line; blank lines separate paragraphs. Let the editor handle visual wrapping. Mathlib source itself often hardwraps comments, but for this style guide the no-hardwrap rule applies to comments as well as code.
 
-**Comments in proof bodies explain WHY, not WHAT — calibrated to the audience.** The WHY-not-WHAT rule applies with extra force inside tactic proofs because tactic names already _are_ the description. Phase markers (`-- Step 1:`, `-- **Step N.**`), announcements of what a block does (`-- Rewrite p̂/p̃ as a single fraction`), and restatements of intermediate goal states (`-- Now both sides are combinations of …`) are almost always cuttable — they narrate what the next few tactics will accomplish, which those tactics will accomplish whether or not the comment describes them first.
+**Comments in proof bodies explain WHY, not WHAT -- calibrated to the audience.** The WHY-not-WHAT rule applies with extra force inside tactic proofs because tactic names already _are_ the description. Phase markers (`-- Step 1:`, `-- **Step N.**`), announcements of what a block does (`-- Rewrite p̂/p̃ as a single fraction`), and restatements of intermediate goal states (`-- Now both sides are combinations of …`) are almost always cuttable -- they narrate what the next few tactics will accomplish, which those tactics will accomplish whether or not the comment describes them first.
 
 What survives depends on the reader you are writing for. Three kinds of comment reliably earn their place regardless of audience: hidden constraints, load-bearing invariants, and unusual lemma choices that a reader would not derive from the tactics themselves. A fourth kind earns its place _audience-dependently_: a brief framing near a tactic or lemma name the expected reader would not recognize.
 
@@ -374,20 +374,20 @@ have hHZ := entropy_eq_sum_joint ...
 rw [delta_eq_entropy hZ hU hX hY μ, chain_rule'' μ hZ hX, ...]
 have hHZ := entropy_eq_sum_joint ...
 
--- Good (non-obvious invariant — earns its place regardless of audience):
+-- Good (non-obvious invariant, so it earns its place regardless of audience):
 -- Rearranges the factors to keep `pZU (z, u)` adjacent so `Real.log_mul` succeeds with
 -- `hZU_pos.ne'` rather than needing a separate `positivity` call.
 rw [show a * b * c * d * pZU (z, u) = a * (b * (c * (d * pZU (z, u)))) from by ring]
 ```
 
-**Calibrating to the audience.** In a Mathlib PR reviewed by experts, self-evident tactics (`rfl`, `ring`, `positivity`, `linarith`, `simp`, plain `rw`, `intro`, `cases`, `omega`) never need commentary, and structural narration is noise. In a project whose primary reader is still learning Lean — or learning formalization — the threshold for "obvious" is lower: a specialized lemma name (`Finset.sum_nbij'`, `condIndepFun_iff_condIndepSet`), an unusual `simp_rw` argument list, a `measurability` call in an unexpected place, or a tactic combination that encodes a specific rewriting strategy may warrant a one-line WHY framing. Docstrings on declarations lean longer in learner-facing projects too: a few sentences explaining the role of the lemma in the broader proof is appropriate where a Mathlib-PR docstring would be a terse reference-style one-liner.
+**Calibrating to the audience.** In a Mathlib PR reviewed by experts, self-evident tactics (`rfl`, `ring`, `positivity`, `linarith`, `simp`, plain `rw`, `intro`, `cases`, `omega`) never need commentary, and structural narration is noise. In a project whose primary reader is still learning Lean -- or learning formalization -- the threshold for "obvious" is lower: a specialized lemma name (`Finset.sum_nbij'`, `condIndepFun_iff_condIndepSet`), an unusual `simp_rw` argument list, a `measurability` call in an unexpected place, or a tactic combination that encodes a specific rewriting strategy may warrant a one-line WHY framing. Docstrings on declarations lean longer in learner-facing projects too: a few sentences explaining the role of the lemma in the broader proof is appropriate where a Mathlib-PR docstring would be a terse reference-style one-liner.
 
 Two calibration tests:
 
 - _If this comment disappeared, would the expected reader still be able to trace the proof?_ If yes for an expert but no for a learner, the answer depends on who the reader is. Err on the side of keeping the comment when the project's documentation indicates a less-experienced audience, or the user or project CLAUDE.md requests more thorough comments.
 - _Does the comment describe WHAT the next few tactics will do, or WHY this approach rather than the obvious alternative?_ WHAT is cuttable if tactic names suffice. WHY is a keeper.
 
-Phase markers — `-- **Step 1.**`, `-- **Step 2.**`, `-- N.`, `-- Now …`, `-- Combine …`, `-- Use that …` — are the most common offenders and usually cuttable. If a long proof has genuine structural phases (a multi-phase reduction the reader needs to orient through), prefer section headers via `/-! ### Phase N -/` inside the proof file, or a sentence in the declaration's docstring describing the plan, over inline `--` narration.
+Phase markers -- `-- **Step 1.**`, `-- **Step 2.**`, `-- N.`, `-- Now …`, `-- Combine …`, `-- Use that …` -- are the most common offenders and usually cuttable. If a long proof has genuine structural phases (a multi-phase reduction the reader needs to orient through), prefer section headers via `/-! ### Phase N -/` inside the proof file, or a sentence in the declaration's docstring describing the plan, over inline `--` narration.
 
 ## Terminal Simp
 

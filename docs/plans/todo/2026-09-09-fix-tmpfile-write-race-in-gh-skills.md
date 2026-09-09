@@ -6,9 +6,9 @@ Addresses [#309](https://github.com/cboone/agent-harness-plugins/issues/309).
 
 Five plugins tell the agent to build long `gh` payloads with the same three-step pattern: run `mktemp` to get a path, populate it with the **Write** tool, then pass it via `--body-file` / `--notes-file`. The pattern has two defects that have repeatedly produced PRs and issues with **empty bodies**, which the user then has to notice and ask the agent to repair.
 
-**Failure mode A — `mktemp` creates the file, so `Write` errors.** `mktemp /tmp/pr-body-XXXXXX` creates a real (empty) file at the path it prints. The Write tool refuses to overwrite an existing file the agent has not Read first, so the Write fails with `File has not been read yet`. The agent has no reason to Read a file it just created empty, so it either bolts on a counterintuitive Read or retries into a racy state.
+**Failure mode A -- `mktemp` creates the file, so `Write` errors.** `mktemp /tmp/pr-body-XXXXXX` creates a real (empty) file at the path it prints. The Write tool refuses to overwrite an existing file the agent has not Read first, so the Write fails with `File has not been read yet`. The agent has no reason to Read a file it just created empty, so it either bolts on a counterintuitive Read or retries into a racy state.
 
-**Failure mode B — `Write` and the `gh` call get batched in parallel.** The harness actively encourages issuing independent tool calls in one message, and `plugins/use-git/skills/use-git/SKILL.md:24` states that preference as a core principle. The skills present Write and `gh pr create` as two unordered calls, so the agent batches them. `gh` reads the body file at invocation time, so it can run before Write lands (or after Write failed per mode A) and open the PR with a zero-byte body.
+**Failure mode B -- `Write` and the `gh` call get batched in parallel.** The harness actively encourages issuing independent tool calls in one message, and `plugins/use-git/skills/use-git/SKILL.md:24` states that preference as a core principle. The skills present Write and `gh pr create` as two unordered calls, so the agent batches them. `gh` reads the body file at invocation time, so it can run before Write lands (or after Write failed per mode A) and open the PR with a zero-byte body.
 
 These two are not independent calls, and the skills never say so. The fix makes the dependency explicit, removes the file-creation conflict, and adds a post-creation check so the remaining silent failure becomes self-healing.
 
@@ -32,7 +32,7 @@ Per the scope decision, steps 1, 2, 3, and 5 apply to all five plugins; step 4 (
 
 ## Changes
 
-### 1. `plugins/use-git` — the canonical reference (patch: 1.1.4 → 1.1.5)
+### 1. `plugins/use-git` -- the canonical reference (patch: 1.1.4 → 1.1.5)
 
 `skills/use-git/references/tmpfile-pattern.md` is the source of truth that the other four skills cross-reference by path. Fix it first, then make the others consistent with it.
 
@@ -59,13 +59,13 @@ Per the scope decision, steps 1, 2, 3, and 5 apply to all five plugins; step 4 (
 
 - L287-293: keep the separate-Bash-call cleanup and its zsh rationale verbatim, but state that cleanup must come **after** verification, since recovery needs the file to still exist.
 
-`README.md:32` — the recommended permission allowlist. `Bash(mktemp /tmp/pr-body-*)` will no longer match once the command gains `-u`, so replace it with `Bash(mktemp -u /tmp/pr-body-*)` and add `Bash(gh pr edit *)` for the recovery path. `Bash(gh pr view *)` is already present.
+`README.md:32` -- the recommended permission allowlist. `Bash(mktemp /tmp/pr-body-*)` will no longer match once the command gains `-u`, so replace it with `Bash(mktemp -u /tmp/pr-body-*)` and add `Bash(gh pr edit *)` for the recovery path. `Bash(gh pr view *)` is already present.
 
 ### 3. `plugins/create-issue` (minor: 1.0.5 → 1.1.0)
 
 `skills/create-issue/SKILL.md`, steps 3-5 (L40-79): same treatment as `pr`. `mktemp -u /tmp/gh-issue-body-XXXXXX`, the sequencing directive before `gh issue create`, and a verification block using `gh issue view <n> --json body --jq '.body | length'` with `gh issue edit <n> --body-file TMPFILE` recovery, placed before cleanup.
 
-`README.md:37` — replace `Bash(mktemp /tmp/gh-issue-body-*)` with the `-u` form and add `Bash(gh issue view *)` and `Bash(gh issue edit *)`.
+`README.md:37` -- replace `Bash(mktemp /tmp/gh-issue-body-*)` with the `-u` form and add `Bash(gh issue view *)` and `Bash(gh issue edit *)`.
 
 ### 4. `plugins/release` (patch: 1.5.10 → 1.5.11)
 
@@ -116,7 +116,7 @@ Found during exploration, worth separate issues rather than widening this change
    bin/validate-json
    ```
 
-1. **Mirror freshness** — must produce no diff after the regeneration commit:
+1. **Mirror freshness** -- must produce no diff after the regeneration commit:
 
    ```bash
    bin/build-codex-marketplace && bin/build-opencode-mirror && git diff --exit-code dist/ .agents/

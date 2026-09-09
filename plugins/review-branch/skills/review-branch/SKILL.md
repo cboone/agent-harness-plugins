@@ -94,7 +94,7 @@ Write a 2-4 sentence overview of what this branch accomplishes. Focus on the pur
 
 #### 3b. Group Changes by Area
 
-Organize all changes into logical groups based on what they affect. Use groups that fit the actual changes — common groupings include but are not limited to:
+Organize all changes into logical groups based on what they affect. Use groups that fit the actual changes -- common groupings include but are not limited to:
 
 - API / endpoints
 - UI / frontend

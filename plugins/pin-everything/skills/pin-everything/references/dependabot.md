@@ -8,10 +8,10 @@ SHA-pinning is a one-shot hardening pass; without something keeping pins current
 
 The configuration below is structured around the post-pinning workflow:
 
-- **Weekly schedule** — daily is too noisy when every action and every dep gets its own PR.
-- **Split groups by update-type** — minor/patch can auto-merge later (separate concern); majors get human review.
-- **10-PR cap per ecosystem** — raised from the default of 5 because SHA-pinning produces finer-grained PRs than tag-pinning.
-- **`versioning-strategy: increase` for `npm`** — tells Dependabot to bump the existing exact pin instead of widening the range. Without this, Dependabot will rewrite `"prettier": "3.8.3"` as `"prettier": "^3.9.0"` on the next bump, undoing step 6.
+- **Weekly schedule** -- daily is too noisy when every action and every dep gets its own PR.
+- **Split groups by update-type** -- minor/patch can auto-merge later (separate concern); majors get human review.
+- **10-PR cap per ecosystem** -- raised from the default of 5 because SHA-pinning produces finer-grained PRs than tag-pinning.
+- **`versioning-strategy: increase` for `npm`** -- tells Dependabot to bump the existing exact pin instead of widening the range. Without this, Dependabot will rewrite `"prettier": "3.8.3"` as `"prettier": "^3.9.0"` on the next bump, undoing step 6.
 
 ## Template
 
@@ -63,7 +63,7 @@ Add additional `- package-ecosystem:` blocks for whichever package ecosystems ar
 | Composer (PHP)    | `composer.json`                        | `composer`                          |
 | Docker            | `Dockerfile`                           | `docker`                            |
 
-The same shape applies — weekly schedule, split groups, 10-PR cap, `commit-message` prefix.
+The same shape applies -- weekly schedule, split groups, 10-PR cap, `commit-message` prefix.
 
 ## `versioning-strategy` Per Ecosystem
 
@@ -80,12 +80,12 @@ The same shape applies — weekly schedule, split groups, 10-PR cap, `commit-mes
 
 Four surface families are outside Dependabot's scope:
 
-1. **Language version files** — `.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `.python-version`. There's no Dependabot ecosystem for any of these per-language pin files (asdf-style `.tool-versions` and the per-language fallback files are silent surfaces). Drift accumulates until something triggers a manual bump.
-2. **`packageManager` field** — Dependabot recognizes the field but does not propose updates to it.
-3. **Action SHAs in `.md` templates** — Dependabot only scans workflow files, not markdown.
-4. **Install-command pins inside scripts** — `go install`, `cargo install`, `pip install`, `npx <tool>@X.Y.Z` lines in shell scripts and Makefiles are invisible to Dependabot.
+1. **Language version files** -- `.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `.python-version`. There's no Dependabot ecosystem for any of these per-language pin files (asdf-style `.tool-versions` and the per-language fallback files are silent surfaces). Drift accumulates until something triggers a manual bump.
+2. **`packageManager` field** -- Dependabot recognizes the field but does not propose updates to it.
+3. **Action SHAs in `.md` templates** -- Dependabot only scans workflow files, not markdown.
+4. **Install-command pins inside scripts** -- `go install`, `cargo install`, `pip install`, `npx <tool>@X.Y.Z` lines in shell scripts and Makefiles are invisible to Dependabot.
 
-These four surface families are exactly what the bundled `version-audit-template` covers (step 10 of the skill). After enabling Dependabot, generate the audit script too — together they cover everything.
+These four surface families are exactly what the bundled `version-audit-template` covers (step 10 of the skill). After enabling Dependabot, generate the audit script too -- together they cover everything.
 
 ## Conflicting Existing Config
 

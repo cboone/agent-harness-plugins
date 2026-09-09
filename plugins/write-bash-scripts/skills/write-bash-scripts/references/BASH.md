@@ -12,7 +12,7 @@ Include filename, author, date, and purpose at the top of scripts.
 
 ```bash
 #!/usr/bin/env bash
-# script-name.sh — Brief description of purpose
+# script-name.sh -- Brief description of purpose
 # Author: Name
 # Date: 2024-01-15
 ```
@@ -983,9 +983,9 @@ Support optional debug tracing with a `TRACE` environment variable.
 
 Compiled by [Christopher Boone](https://cboone.github.io). Based on some of each of the following:
 
-- [BashGuide/Practices](https://mywiki.wooledge.org/BashGuide/Practices) — Greg's Wiki
-- [Bash Best Practices](https://bertvv.github.io/cheat-sheets/Bash.html) — Bert Van Vreckem
-- [bash-best-practices](https://github.com/imoisharma/bash_best_practices) — Moi Sharma
-- [ShellCheck](https://www.shellcheck.net/) — optional checks enabled in `.shellcheckrc`
-- [Unofficial Shell Scripting Stylesheet](https://tldp.org/LDP/abs/html/unofficialst.html) — ABS Guide
+- [BashGuide/Practices](https://mywiki.wooledge.org/BashGuide/Practices) -- Greg's Wiki
+- [Bash Best Practices](https://bertvv.github.io/cheat-sheets/Bash.html) -- Bert Van Vreckem
+- [bash-best-practices](https://github.com/imoisharma/bash_best_practices) -- Moi Sharma
+- [ShellCheck](https://www.shellcheck.net/) -- optional checks enabled in `.shellcheckrc`
+- [Unofficial Shell Scripting Stylesheet](https://tldp.org/LDP/abs/html/unofficialst.html) -- ABS Guide
 - [Google Shell Style Guide](https://google.github.io/styleguide/shellguide.html)

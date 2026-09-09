@@ -29,7 +29,7 @@ Why this bundle:
 - **`Fintype`** gives the alphabet a finite list of elements, which is the assumption PFR actually wants at the semantic level ("Shannon entropy of a random variable with finite alphabet").
 - **`MeasurableSpace`** is a prerequisite for any talk of measurable random variables at all.
 - **`MeasurableSingletonClass`** makes the `{x}` sets measurable for each `x : Sᵢ`, which is what PFR's entropy-theoretic lemmas need when they enumerate over point-masses.
-- **`FiniteRange`** of each random variable — which PFR lemmas require — comes for free via PFR's instance `{Ω G : Type*} (X : Ω → G) [Finite G] : FiniteRange X`. Because `Fintype Sᵢ` implies `Finite Sᵢ`, the `FiniteRange` obligations are discharged automatically; they never appear explicitly in lemma statements.
+- **`FiniteRange`** of each random variable -- which PFR lemmas require -- comes for free via PFR's instance `{Ω G : Type*} (X : Ω → G) [Finite G] : FiniteRange X`. Because `Fintype Sᵢ` implies `Finite Sᵢ`, the `FiniteRange` obligations are discharged automatically; they never appear explicitly in lemma statements.
 
 The bundle is honest about the assumption: downstream proofs are stating "this holds for finite-alphabet random variables," not "this holds for arbitrary random variables." That is the right default for non-Shannon information inequality work and for downstream theorems that mechanize finite-alphabet Shannon-theory results. When a theorem genuinely needs a weaker hypothesis (e.g. `Countable` + `MeasurableSingletonClass` but not `Fintype`), make that the exceptional case and state it locally rather than weakening the module default.
 
@@ -122,7 +122,7 @@ PFR uses the anonymous-constructor syntax `⟨Z, U⟩` to denote the pair random
 I[X : ⟨Z, U⟩ ; μ]
 ```
 
-Mirror this usage in downstream lemmas. The anonymous-constructor form reads closer to mathematical notation `(Z, U)` than the explicit `fun ω => (Z ω, U ω)` and keeps lemma statements compact. Fall back to `(fun ω => (Z ω, U ω))` only when Lean cannot elaborate `⟨Z, U⟩` — typically when the expected type is not concrete enough for the anonymous constructor to dispatch to `Prod.mk`.
+Mirror this usage in downstream lemmas. The anonymous-constructor form reads closer to mathematical notation `(Z, U)` than the explicit `fun ω => (Z ω, U ω)` and keeps lemma statements compact. Fall back to `(fun ω => (Z ω, U ω))` only when Lean cannot elaborate `⟨Z, U⟩` -- typically when the expected type is not concrete enough for the anonymous constructor to dispatch to `Prod.mk`.
 
 ## Notation Deferral
 

@@ -57,7 +57,7 @@ Six conventions that every formalization roadmap should follow. These are not st
 
 ## 4. Buildable-Linted-Testable Checkpoint Gates
 
-**The rule.** Every milestone's checkpoint is a three-way gate: `lake build` passes, `lake lint` passes, `lake test` passes. Plus any milestone-specific sanity check.
+**The rule.** Every milestone's checkpoint is a three-way gate: `lake build` passes, `lake lint` passes, `lake test` passes. Plus any milestone-specific validity check.
 
 **What "passes" means.**
 

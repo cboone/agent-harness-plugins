@@ -31,7 +31,7 @@ Single-page rapid-reference for the pin-everything skill. One row per surface: w
 
 ## User-Facing vs Tool-Install Discriminator
 
-Skip pinning when the install path matches any of these patterns — it's a placeholder for the downstream user's project, not a real install:
+Skip pinning when the install path matches any of these patterns -- it's a placeholder for the downstream user's project, not a real install:
 
 - `OWNER/REPO`
 - `GITHUB-USERNAME/PROJECT-NAME`
@@ -40,14 +40,14 @@ Skip pinning when the install path matches any of these patterns — it's a plac
 
 ## Library vs Application Discriminator
 
-Application context — pin the manifest:
+Application context -- pin the manifest:
 
 - Node.js: lockfile committed AND (`"private": true` OR no library-style export config)
 - Ruby: no `*.gemspec`; `Gemfile.lock` committed
 - Python: `requirements.txt` or `uv.lock` committed; no published distribution
 - Rust: `Cargo.lock` committed AND has a binary target (any of: `[[bin]]` in `Cargo.toml`, `src/main.rs` or `src/bin/*.rs`, or `cargo metadata` reports a `bin` kind). `publish = false` is also a strong app signal.
 
-Library context — pin the lockfile only, leave the manifest with caret / pessimistic ranges:
+Library context -- pin the lockfile only, leave the manifest with caret / pessimistic ranges:
 
 - Node.js: package configured for distribution (`name`, `exports`, public)
 - Ruby: `*.gemspec` present

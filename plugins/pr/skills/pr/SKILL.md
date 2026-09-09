@@ -11,7 +11,7 @@ description: >-
 
 # PR
 
-Commit, push, and create a pull request in one automated step. Never prompt the user for input — make opinionated decisions at every step.
+Commit, push, and create a pull request in one automated step. Never prompt the user for input -- make opinionated decisions at every step.
 
 ## Workflow
 
@@ -90,7 +90,7 @@ git rev-parse --abbrev-ref --symbolic-full-name @{u} 2> /dev/null || echo "no up
 
 Search for GitHub issues that this branch addresses. Combine results from the strategies below, deduplicate by issue number, and record the final list for use in the commit message (step 4) and PR body (step 7).
 
-#### Strategy 1 — Issue numbers in the branch name
+#### Strategy 1 -- Issue numbers in the branch name
 
 Extract the current branch name. Look for issue numbers in patterns like:
 
@@ -107,7 +107,7 @@ gh issue view NUMBER --json number,title,state --jq '.number' 2> /dev/null
 
 Only include it if the command succeeds (the issue exists).
 
-#### Strategy 2 — Issue references in commit messages
+#### Strategy 2 -- Issue references in commit messages
 
 Scan the `git log <base-branch>..HEAD` output (already gathered in step 1) for `#N` references. Collect all unique issue numbers. For each, verify it refers to an actual issue:
 
@@ -115,7 +115,7 @@ Scan the `git log <base-branch>..HEAD` output (already gathered in step 1) for `
 gh issue view NUMBER --json number,title,state --jq '.number' 2> /dev/null
 ```
 
-#### Strategy 3 — GitHub issue search by branch slug
+#### Strategy 3 -- GitHub issue search by branch slug
 
 Only run this strategy if strategies 1 and 2 found zero issues.
 

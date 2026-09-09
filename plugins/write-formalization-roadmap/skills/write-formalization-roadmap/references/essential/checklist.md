@@ -25,7 +25,7 @@ For every milestone in Section 6:
 - [ ] **Deliverables.** Files created or modified, key definitions, theorems, and tests that land. Not "work on X" but "file Y exists with theorem Z."
 - [ ] **Why-now reasoning.** Which dependencies are satisfied at this point, and what downstream milestones this unblocks. Explicit, not inferred from ordering.
 - [ ] **Testing approach.** Which `<Name>Test/<Module>.lean` (or equivalent for other proof assistants) mirrors this milestone, and what the test module covers.
-- [ ] **Checkpoint gate.** The concrete buildable-linted-testable condition that declares the milestone shipped: `lake build <Module>` passes, `lake lint` is green on the new code, `lake test` is green, plus any milestone-specific sanity check.
+- [ ] **Checkpoint gate.** The concrete buildable-linted-testable condition that declares the milestone shipped: `lake build <Module>` passes, `lake lint` is green on the new code, `lake test` is green, plus any milestone-specific validity check.
 
 ## Mandated Conventions
 

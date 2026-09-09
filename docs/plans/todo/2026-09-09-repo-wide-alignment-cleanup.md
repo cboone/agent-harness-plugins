@@ -24,8 +24,8 @@ The problems are elsewhere: a dead audit job, corrupted command examples shipped
 
 `gh run list --workflow=version-audit.yml` shows `failure` for every run back to at least 2026-06-22. Two independent causes in `bin/version-audit`:
 
-- **crates.io rejects the default curl User-Agent.** `crates_io_latest` (`bin/version-audit:167-170`) calls the crates.io API with no `User-Agent` header. crates.io's crawler policy returns **HTTP 403**, and `curl -f` turns that into exit 56. Verified directly against `shellharden`, `cargo-deny`, `typos-cli`, `cargo-nextest`, and `taplo` — all 403.
-- **`set -euo pipefail` aborts before the report prints.** `crates_io_latest`, `npm_latest` (`:106-109`), and `pypi_latest` (`:193-196`) are bare `curl | jq` pipelines assigned via command substitution, with no `|| true`. Under `set -e` a failing lookup terminates the whole script, so the `if [[ -z "${latest}" ]]` guards that were clearly written to handle failure can never be reached. `github_latest_release` (`:28-31`) already has the correct `|| true` guard — the other three were missed.
+- **crates.io rejects the default curl User-Agent.** `crates_io_latest` (`bin/version-audit:167-170`) calls the crates.io API with no `User-Agent` header. crates.io's crawler policy returns **HTTP 403**, and `curl -f` turns that into exit 56. Verified directly against `shellharden`, `cargo-deny`, `typos-cli`, `cargo-nextest`, and `taplo` -- all 403.
+- **`set -euo pipefail` aborts before the report prints.** `crates_io_latest`, `npm_latest` (`:106-109`), and `pypi_latest` (`:193-196`) are bare `curl | jq` pipelines assigned via command substitution, with no `|| true`. Under `set -e` a failing lookup terminates the whole script, so the `if [[ -z "${latest}" ]]` guards that were clearly written to handle failure can never be reached. `github_latest_release` (`:28-31`) already has the correct `|| true` guard -- the other three were missed.
 
 The workflow does `report="$(bin/version-audit)"` (`.github/workflows/version-audit.yml:38`), so the step fails and no drift issue is ever filed.
 
@@ -41,10 +41,10 @@ Verify the fix reproduces this full drift table before moving on (run the script
 
 Commit `b3bdc08` ("style: reformat files with now-working prettier config", 2026-02-19) padded angle-bracket placeholders inside fenced `bash` blocks into shell redirects. An agent copying these literally would try to read a file named `base-branch` and truncate the `..HEAD` range:
 
-- `plugins/pr/skills/pr/SKILL.md:80` — `git diff < base-branch > ...HEAD`
-- `plugins/pr/skills/pr/SKILL.md:83` — `git log --oneline < base-branch > ..HEAD`
-- `plugins/review-branch/skills/review-branch/SKILL.md:53` — `git merge-base < base-ref > HEAD`
-- `plugins/review-branch/skills/review-branch/SKILL.md:66`, `:69`, `:72`, `:84` — same pattern with `< merge-base >`
+- `plugins/pr/skills/pr/SKILL.md:80` -- `git diff < base-branch > ...HEAD`
+- `plugins/pr/skills/pr/SKILL.md:83` -- `git log --oneline < base-branch > ..HEAD`
+- `plugins/review-branch/skills/review-branch/SKILL.md:53` -- `git merge-base < base-ref > HEAD`
+- `plugins/review-branch/skills/review-branch/SKILL.md:66`, `:69`, `:72`, `:84` -- same pattern with `< merge-base >`
 
 The correct unpadded form survives elsewhere in the same files (`pr/SKILL.md:112`, `:230`) and in `merge-main`, `rebase-onto-main`, and `use-git/references/diff-output.md`, which confirms these seven are corruption rather than intent.
 
@@ -66,8 +66,8 @@ Commit `36de9ce` (today) added `"embeddedLanguageFormatting": "off"` to `.pretti
 
 Both also deferred in the same plan, both still live:
 
-- `plugins/scaffold-go-cli/skills/scaffold-go-cli/SKILL.md:246-252` — multiline inline `gh issue create --body "..."`, which `use-git/references/tmpfile-pattern.md:123-128` labels an anti-pattern.
-- `plugins/set-up-installers/skills/set-up-installers/SKILL.md:203-211` — plain `mktemp` (no `-u`) plus a `trap 'rm -f ...' EXIT` chained into the same shell invocation, violating both the `-u` rule and the "cleanup is a separate Bash call" rule.
+- `plugins/scaffold-go-cli/skills/scaffold-go-cli/SKILL.md:246-252` -- multiline inline `gh issue create --body "..."`, which `use-git/references/tmpfile-pattern.md:123-128` labels an anti-pattern.
+- `plugins/set-up-installers/skills/set-up-installers/SKILL.md:203-211` -- plain `mktemp` (no `-u`) plus a `trap 'rm -f ...' EXIT` chained into the same shell invocation, violating both the `-u` rule and the "cleanup is a separate Bash call" rule.
 
 ---
 
@@ -84,7 +84,7 @@ git diff --exit-code dist/
 
 `bin/build-opencode-mirror:155` does `rm -rf "${OUTPUT_DIR}"` and recreates the symlinks. `git diff` compares the worktree to the index and **ignores untracked files**, so a newly added plugin skill produces a brand-new untracked symlink under `dist/opencode/skills/` and the check reports clean. Deletions and retargets are caught; additions are not.
 
-**Fix**: replace with `git status --porcelain dist/` (fail if non-empty), or `git add -A dist/ && git diff --cached --exit-code`. The Codex tree does not share this hole — `bin/validate-plugins:277-304` regenerates into a `mktemp -d` and uses `diff -qr`, which catches both directions.
+**Fix**: replace with `git status --porcelain dist/` (fail if non-empty), or `git add -A dist/ && git diff --cached --exit-code`. The Codex tree does not share this hole -- `bin/validate-plugins:277-304` regenerates into a `mktemp -d` and uses `diff -qr`, which catches both directions.
 
 ### 2.2 `.shellcheckrc`'s optional checks are inert
 
@@ -94,7 +94,7 @@ git diff --exit-code dist/
 
 ### 2.3 CI's shellcheck/shfmt globs miss a real bash script
 
-`ci.yml:31,35` glob `plugins/*/scripts/*`, which does not reach `plugins/pin-everything/skills/pin-everything/references/scripts/version-audit-template` — a 33 KB executable `#!/usr/bin/env bash` file. It passes both tools today (verified), so this is latent, not broken. Widen the glob to `plugins/**/scripts/*`.
+`ci.yml:31,35` glob `plugins/*/scripts/*`, which does not reach `plugins/pin-everything/skills/pin-everything/references/scripts/version-audit-template` -- a 33 KB executable `#!/usr/bin/env bash` file. It passes both tools today (verified), so this is latent, not broken. Widen the glob to `plugins/**/scripts/*`.
 
 ### 2.4 `shellcheck` is the only unpinned tool in the repo
 
@@ -102,13 +102,13 @@ git diff --exit-code dist/
 
 ### 2.5 `dist/` is Prettier-ignored but not markdownlint-ignored
 
-`.prettierignore:11-13` excludes `dist/`; neither `.markdownlint-cli2.jsonc:9` nor `cli.markdownlint-cli2.jsonc:18` does (both ignore only `.workmux/` and `**/node_modules/**`). Of 763 real markdown files, **337 are under `dist/`**, and fast-glob follows the `dist/opencode/skills/*` symlinks back into `plugins/`, so markdownlint reports linting 1051 files — every source `SKILL.md` gets linted three times. It passes today, but a failure inside `dist/codex` would be unfixable except by editing source and rebuilding.
+`.prettierignore:11-13` excludes `dist/`; neither `.markdownlint-cli2.jsonc:9` nor `cli.markdownlint-cli2.jsonc:18` does (both ignore only `.workmux/` and `**/node_modules/**`). Of 763 real markdown files, **337 are under `dist/`**, and fast-glob follows the `dist/opencode/skills/*` symlinks back into `plugins/`, so markdownlint reports linting 1051 files -- every source `SKILL.md` gets linted three times. It passes today, but a failure inside `dist/codex` would be unfixable except by editing source and rebuilding.
 
 **Fix**: add `dist/` to both markdownlint configs' `ignores`. Also add `.agents/` to `.prettierignore` for consistency with its sibling generated tree.
 
 ### 2.6 Makefile and entry-point consolidation
 
-`Makefile` has only `test-scrut`, `test-scrut-update`, and `test-all` (`:3`, `:31`) — and `test-all` runs only scrut, no lint and no validate. There is no `make lint`, `make validate`, or `make build`. Three entry points (Makefile for tests, `yarn` for markdown/prettier, bare `bin/*` for validate/build) are unified nowhere, and `ci.yml` reproduces the third by hand. `package.json:13` defines `"validate": "bin/validate-plugins"` which nothing calls.
+`Makefile` has only `test-scrut`, `test-scrut-update`, and `test-all` (`:3`, `:31`) -- and `test-all` runs only scrut, no lint and no validate. There is no `make lint`, `make validate`, or `make build`. Three entry points (Makefile for tests, `yarn` for markdown/prettier, bare `bin/*` for validate/build) are unified nowhere, and `ci.yml` reproduces the third by hand. `package.json:13` defines `"validate": "bin/validate-plugins"` which nothing calls.
 
 Add `lint`, `validate`, `build`, and a `test-all` that genuinely runs everything. The 9-entry scrut env list is currently duplicated three times (`Makefile:7-15`, `Makefile:20-28`, `ci.yml:53-61`) with nothing enforcing agreement; collapse the two Makefile copies into one variable.
 
@@ -125,7 +125,7 @@ Add `lint`, `validate`, `build`, and a `test-all` that genuinely runs everything
 
 All three scrut suites test plugin-bundled scripts only. Untested: `build-codex-marketplace`, `build-opencode-mirror`, `compute-catalog-state`, `validate-json`, `validate-plugins` (423 lines, 18 rules), `version-audit`. `compute-catalog-state` alone determines the release tag name. These are pure stdin/stdout/exit-code scripts, so scrut coverage is cheap.
 
-**Add at minimum**: a `compute-catalog-state` test (known fixture → known tag) and a `version-audit` test that asserts a non-zero exit does not silently produce empty output — the exact failure mode of Phase 1.1. Also add a guard test for the Phase 1.2 corruption class: assert no `SKILL.md` contains `< base-` or `< merge-` inside a fenced block.
+**Add at minimum**: a `compute-catalog-state` test (known fixture → known tag) and a `version-audit` test that asserts a non-zero exit does not silently produce empty output -- the exact failure mode of Phase 1.1. Also add a guard test for the Phase 1.2 corruption class: assert no `SKILL.md` contains `< base-` or `< merge-` inside a fenced block.
 
 `plugins/notify/scripts/notify` (15 KB) and `focus-pane` are also shellchecked but never executed.
 
@@ -163,7 +163,7 @@ Notes for execution:
 
 - **`actions/setup-go` v6→v7 and `astral-sh/setup-uv` v8→v10 are major bumps.** Read their release notes for breaking changes before updating the templates; these are instructions handed to other projects, so a bad template propagates. If a major bump needs template changes beyond the version string, do it and say so.
 - Every action pin is a **SHA with a trailing `# vX.Y.Z` comment**. Resolve the new SHA per tag (`gh api repos/OWNER/REPO/git/ref/tags/vX.Y.Z --jq '.object.sha'`, dereferencing annotated tags) rather than hand-editing the comment.
-- Bump `.tool-versions` and `package.json`'s `packageManager` (which carries an integrity hash — regenerate it, do not hand-edit).
+- Bump `.tool-versions` and `package.json`'s `packageManager` (which carries an integrity hash -- regenerate it, do not hand-edit).
 - Bump `markdownlint-cli2` and `prettier` in the templates to match what `package.json` already pins, so the repo's own versions and the versions it teaches agree.
 
 Re-run `bin/version-audit` afterward; a clean run prints nothing.
@@ -178,7 +178,7 @@ Re-run `bin/version-audit` afterward; a clean run prints nothing.
 
 **Add a "Running tests and linters" section.** `make`, `make test-scrut`, `yarn lint`, and `yarn validate` appear **zero times** in either `AGENTS.md` or `README.md`. This is the single largest onboarding gap.
 
-**Correct `AGENTS.md:14`**: it calls `bin/version-audit` "pre-merge validation". It is not — it runs on a Monday cron and files a labelled issue. Only `validate-plugins` and `validate-json` gate merges. Note its `gh`/`jq`/`curl` requirements.
+**Correct `AGENTS.md:14`**: it calls `bin/version-audit` "pre-merge validation". It is not -- it runs on a Monday cron and files a labelled issue. Only `validate-plugins` and `validate-json` gate merges. Note its `gh`/`jq`/`curl` requirements.
 
 **Extend "Plugin layout" (`:17-67`)** with a skill-plus-`scripts/` variant. Line 67 frames `scripts/` as hook-specific, but three skill plugins ship one (`create-worktree`, `create-worktree-from-issue`, `resolve-copilot-pr-feedback`) and `bin/validate-plugins` rule 18 exists specifically to validate `${CLAUDE_PLUGIN_ROOT}/scripts/...` references inside SKILL.md bodies.
 
@@ -206,14 +206,14 @@ Re-run `bin/version-audit` afterward; a clean run prints nothing.
 
 Roughly 11 are semantically stale rather than merely reworded, and these are the ones that matter most:
 
-| Plugin                                                                                                                              | Problem                                                                                                                                                                                         |
-| ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pr`                                                                                                                                | README:3 drops the lint step entirely; the skill _does_ lint (`SKILL.md:190`, and an unresolved lint state is a hard stop at `:202-210`). The **SKILL.md frontmatter is stale too** — fix both. |
-| `create-worktree`                                                                                                                   | Never names workmux, which it requires.                                                                                                                                                         |
-| `write-scrut-tests`                                                                                                                 | Drops the zsh-plugin half of its scope.                                                                                                                                                         |
-| `write-markdown`                                                                                                                    | Describes markdownlint alignment instead of what the skill does.                                                                                                                                |
-| `scaffold-new-repo`                                                                                                                 | Omits the concrete file list.                                                                                                                                                                   |
-| `add-cobra-version`, `add-goreleaser-homebrew`, `create-worktree-from-issue`, `scaffold-go-library`, `set-up-installers`, `release` | Wording that contradicts or under-describes the catalog entry.                                                                                                                                  |
+| Plugin                                                                                                                              | Problem                                                                                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pr`                                                                                                                                | README:3 drops the lint step entirely; the skill _does_ lint (`SKILL.md:190`, and an unresolved lint state is a hard stop at `:202-210`). The **SKILL.md frontmatter is stale too** -- fix both. |
+| `create-worktree`                                                                                                                   | Never names workmux, which it requires.                                                                                                                                                          |
+| `write-scrut-tests`                                                                                                                 | Drops the zsh-plugin half of its scope.                                                                                                                                                          |
+| `write-markdown`                                                                                                                    | Describes markdownlint alignment instead of what the skill does.                                                                                                                                 |
+| `scaffold-new-repo`                                                                                                                 | Omits the concrete file list.                                                                                                                                                                    |
+| `add-cobra-version`, `add-goreleaser-homebrew`, `create-worktree-from-issue`, `scaffold-go-library`, `set-up-installers`, `release` | Wording that contradicts or under-describes the catalog entry.                                                                                                                                   |
 
 **Also normalize while here**: `plugins/notify/README.md:54,120` uses `## What it does` / `## See also`; all 50 others use title case. `plugins/address-issue/README.md:32-39` lists permissions as prose bullets; the other 13 use a copy-pasteable JSON block.
 
@@ -258,7 +258,7 @@ Fix `use-git` first, then propagate.
 
 ### 6.5 Commit messages do not defer to project config, but PR titles now do
 
-`pr/SKILL.md:234-270` (from #322) builds a full detection ladder for PR titles: commitlint `type-enum`/`header-max-length`, agent config, merged-PR sampling. The commit path has no equivalent — `commit/SKILL.md:121-129`, `pr/SKILL.md:175-177`, and `use-git/references/common-operations.md:53-65` all hardcode a seven-type list and "under 72 characters". Extend the same ladder to commit subjects, or extract it into `use-git` and have both cite it.
+`pr/SKILL.md:234-270` (from #322) builds a full detection ladder for PR titles: commitlint `type-enum`/`header-max-length`, agent config, merged-PR sampling. The commit path has no equivalent -- `commit/SKILL.md:121-129`, `pr/SKILL.md:175-177`, and `use-git/references/common-operations.md:53-65` all hardcode a seven-type list and "under 72 characters". Extend the same ladder to commit subjects, or extract it into `use-git` and have both cite it.
 
 ### 6.6 Terminology collisions
 
@@ -290,17 +290,17 @@ Bring the repo in line with the global preferences, and **document them in the p
 
 ## Phase 8: Plans and branch housekeeping
 
-**`docs/plans/todo/` — two of three plans are done:**
+**`docs/plans/todo/` -- two of three plans are done:**
 
-- `2026-09-09-fix-tmpfile-write-race-in-gh-skills.md` — complete once Phase 1.4 and 1.5 land (those are exactly its three deferred items). Move to `done/`.
-- `2026-05-02-codex-cli-native-plugins.md` — every deliverable exists, and the plan is now factually wrong: line 126 says `dist/codex/` and a codex build script "are unnecessary and have been dropped", yet both ship. Move to `done/`.
-- `2026-09-09-file-issues-for-zig-audio-and-verification-gaps.md` — its sole deliverable (filing #338-#357 and `gh-actions#85`-`#88`) is met. Move to `done/` unless deliberately held open.
+- `2026-09-09-fix-tmpfile-write-race-in-gh-skills.md` -- complete once Phase 1.4 and 1.5 land (those are exactly its three deferred items). Move to `done/`.
+- `2026-05-02-codex-cli-native-plugins.md` -- every deliverable exists, and the plan is now factually wrong: line 126 says `dist/codex/` and a codex build script "are unnecessary and have been dropped", yet both ship. Move to `done/`.
+- `2026-09-09-file-issues-for-zig-audio-and-verification-gaps.md` -- its sole deliverable (filing #338-#357 and `gh-actions#85`-`#88`) is met. Move to `done/` unless deliberately held open.
 
 **Rename the eight `done/` plans that violate the repo's own naming rule**, four of which are auto-generated nonsense: `declarative-noodling-pudding.md`, `ethereal-booping-sunbeam.md`, `memoized-purring-pie.md`, `quizzical-imagining-cerf.md`, plus `add-create-worktree-skill-with-prompt-injection.md`, `create-create-plugin-skill.md`, `extract-copilot-graphql-into-script.md`, `fix-marketplace-structure.md`. Derive datestamps from `git log --diff-filter=A --format=%cs -1 -- <file>`.
 
 Note the irony worth resolving: `commit/SKILL.md:174` and `pr/SKILL.md:404` cite `ethereal-booping-sunbeam.md` and `quizzical-imagining-cerf.md` **by name** as examples of bad plan names, and both files still sit in `done/` under exactly those names. Update those citations after renaming.
 
-**Branches**: `feature/add-strunk-and-white-skill` is fully merged into `main` with zero unique commits and an abandoned worktree (last touched 2026-05-06) — remove the worktree and delete the branch. Five remote branches are 844-1192 commits behind with work from January and February (`claude/review-marketplace-plugin-setup-Gjjmz`, `feature/new-skill-create-tmux-plugin`, `feature/update-golangci-lint-action-to-v9-in-scaffold`, `fix/create-worktree-skills`, `fix/lint-discrepancies`) — confirm each is abandoned before deleting. Leave `test/330-fix-scrut-bug` alone; it has active work for #330.
+**Branches**: `feature/add-strunk-and-white-skill` is fully merged into `main` with zero unique commits and an abandoned worktree (last touched 2026-05-06) -- remove the worktree and delete the branch. Five remote branches are 844-1192 commits behind with work from January and February (`claude/review-marketplace-plugin-setup-Gjjmz`, `feature/new-skill-create-tmux-plugin`, `feature/update-golangci-lint-action-to-v9-in-scaffold`, `fix/create-worktree-skills`, `fix/lint-discrepancies`) -- confirm each is abandoned before deleting. Leave `test/330-fix-scrut-bug` alone; it has active work for #330.
 
 **Close resolved issues**: #330's fix is in flight on its own branch. Check whether any of #334, #335, #336 are resolved by Phase 3's markdownlint bump.
 
@@ -359,7 +359,7 @@ bin/validate-plugins    # rule 17 now covers plugins/*/skills/*/SKILL.md
 touch dist/opencode/skills/__probe && git status --porcelain dist/ && rm dist/opencode/skills/__probe
 
 # Phase 7: terminology
-grep -rn '—' plugins/ docs/ --include='*.md' | grep -v 'docs/plans/done/'    # must be empty
+grep -rn ' -- ' plugins/ docs/ --include='*.md' | grep -v 'docs/plans/done/'    # must be empty
 grep -rni 'sanity check\|whitelist\|blacklist' plugins/                       # must be empty
 ```
 
