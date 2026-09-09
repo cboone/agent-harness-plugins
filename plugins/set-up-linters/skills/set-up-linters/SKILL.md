@@ -216,17 +216,17 @@ For **Lean projects**, scan `.github/workflows/*.yml` for the `leanprover/lean-a
 
 | Tool          | CI Setup                                                                                                                  |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| shfmt         | `mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1` or `go install mvdan.cc/sh/v3/cmd/shfmt@v3.13.1` |
+| shfmt         | `mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1` or `go install mvdan.cc/sh/v3/cmd/shfmt@v3.14.1` |
 | shellcheck    | `ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0`                                              |
-| golangci-lint | `golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0`                                         |
+| golangci-lint | `golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0`                                         |
 | swiftlint     | `brew install swiftlint` (macOS runner)                                                                                   |
 | swiftformat   | `brew install swiftformat` (macOS runner)                                                                                 |
 | checkbashisms | `apt-get install devscripts` (Ubuntu runner)                                                                              |
-| shellharden   | `cargo install --locked --version 4.3.1 shellharden` (Ubuntu runner)                                                      |
-| cargo-deny    | `taiki-e/install-action@b651345a718c8f44efa2460560b3dbf29cbd7ee1 # v2.75.26` (with `tool: cargo-deny`)                    |
-| typos         | `crate-ci/typos@7c572958218557a3272c2d6719629443b5cc26fd # v1.45.2`                                                       |
-| hadolint      | `hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0`                                              |
-| actionlint    | `raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2`                                              |
+| shellharden   | `cargo install --locked --version 4.3.2 shellharden` (Ubuntu runner)                                                      |
+| cargo-deny    | `taiki-e/install-action@c3ec0de9ae7f1019cea21aa96aa0a895b9552063 # v2.87.9` (with `tool: cargo-deny`)                    |
+| typos         | `crate-ci/typos@d43b6c087ac471e2ea7b8af622ff15f05c0c365b # v1.50.1`                                                       |
+| hadolint      | `hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0`                                              |
+| actionlint    | `raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0`                                              |
 | cspell        | `cboone/gh-actions/actions/run-cspell@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0`                                  |
 | lake lint     | `leanprover/lean-action@<sha> # <tag>` (with `lint: true`); refresh both SHA and tag to current latest before emitting    |
 

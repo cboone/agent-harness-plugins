@@ -60,7 +60,7 @@ If the user requested `--dry-run`, or invoked the skill with audit-only phrasing
 For every `uses:` ref to a third-party or org-owned action:
 
 1. Resolve the ref to a 40-character commit SHA. Prefer `gh api repos/<repo>/commits/<tag>` (always returns the commit SHA directly, even for annotated tags). If that fails, fall back to `gh api repos/<repo>/git/ref/tags/<tag>` and recurse through the tag object until a commit SHA is found.
-2. Replace the tag with the SHA and append a `# vX.Y.Z` comment. Example: `uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2`.
+2. Replace the tag with the SHA and append a `# vX.Y.Z` comment. Example: `uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`.
 3. Channel-style refs (e.g. `dtolnay/rust-toolchain@stable`): pin to the SHA of the named branch's HEAD (`gh api repos/<repo>/commits/<branch>`) and use `# stable` (or the branch name) as the comment.
 4. Reusable workflow refs (`org/repo/.github/workflows/foo.yml@vN`): pin them too. Tag immutability is not a function of repo ownership.
 5. First-party `./` refs (e.g. `uses: ./.github/actions/local`): leave unpinned; they resolve to the current commit by definition.

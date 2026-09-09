@@ -55,7 +55,7 @@ For paths under `golang.org/x/`, the upstream is `golang/<name>`. For paths star
 Always pass `--locked` alongside `--version`. Without `--locked`, cargo resolves the dependency graph fresh from the registry at install time, which means CI installs whatever transitive deps are current — not the deps the crate authors tested against.
 
 ```bash
-cargo install --locked --version 0.19.4 cargo-deny
+cargo install --locked --version 0.20.2 cargo-deny
 ```
 
 Crates.io's API exposes `max_stable_version` (excludes pre-releases) and `max_version` (includes them); prefer `max_stable_version` for default lookups.
@@ -65,11 +65,11 @@ Crates.io's API exposes `max_stable_version` (excludes pre-releases) and `max_ve
 Single-quote the requirement spec for consistency with version specs that contain shell-special characters. The `==` operator itself is not shell-special, but specs commonly use `>`, `<`, `*`, or `!` (for example, `'pkg>=1.0,<2.0'` or `'pkg!=1.4.*'`), and quoting every spec the same way keeps the recipe safe when the operator changes:
 
 ```bash
-pip install 'ruff==0.15.12'
-uv pip install 'ruff==0.15.12'
-uv add 'ruff==0.15.12'
-uv tool install 'ruff==0.15.12'
-uvx 'ruff==0.15.12' check .
+pip install 'ruff==0.16.6'
+uv pip install 'ruff==0.16.6'
+uv add 'ruff==0.16.6'
+uv tool install 'ruff==0.16.6'
+uvx 'ruff==0.16.6' check .
 ```
 
 `uv` is preferred over `pip` for newly written install commands: it resolves and installs an order of magnitude faster and (in the case of `uv add`) writes to `uv.lock` for reproducibility. **Do not convert existing `pip install` lines to `uv add` (or any other uv verb) as part of pin-everything.** Each verb has a distinct destination — see the per-verb breakdown below — so swapping verbs silently changes which surface is touched. Pin in place: a `pip install foo` line becomes `pip install 'foo==X.Y.Z'`, not `uv add 'foo==X.Y.Z'`.
@@ -88,8 +88,8 @@ Preserve the verb when adding a pin: rewriting `uv add` as `uv pip install` drop
 `npx <tool>` without a version uses the highest version cached locally, falling back to a fresh registry resolve. In CI without a local install, that fresh resolve picks up whatever `latest` tags to right now. Pin both for CI invocations and for one-off invocations in scripts:
 
 ```bash
-npx prettier@3.8.3 --check .
-npx markdownlint-cli2@0.22.1 '**/*.md'
+npx prettier@3.9.6 --check .
+npx markdownlint-cli2@0.23.2 '**/*.md'
 ```
 
 If the tool is already a `devDependency` in a `package.json` repo (the common case for `prettier`, `eslint`, etc.), `npx` resolves it via the lockfile. Don't add a version pin in that case — the lockfile is the version of record. Only pin standalone `npx` invocations in CI templates and scripts.

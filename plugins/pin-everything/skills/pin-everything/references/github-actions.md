@@ -93,7 +93,7 @@ Leave these unpinned. They resolve to the current commit by definition — there
 Always append `# vX.Y.Z` (or `# stable`, or `# branch-name`) after the SHA:
 
 ```yaml
-uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 ```
 
 This serves two purposes:
