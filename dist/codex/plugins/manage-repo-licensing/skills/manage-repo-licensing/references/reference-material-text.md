@@ -46,8 +46,10 @@ Ambiguous:
 ## Placement mechanism: scale-tiered
 
 <!-- REUSE-IgnoreStart -->
+
 1. **Small curated collections (~20 files or fewer).** Per-file `.license` sidecars. Each sidecar carries actual `SPDX-FileCopyrightText` lines for author(s) and publisher where known, plus `SPDX-License-Identifier: LicenseRef-Reference-Material`.
 2. **Larger collections (more than ~20 files).** A single `REUSE.toml` `[[annotations]]` block covering the path glob with `SPDX-FileCopyrightText = "Original authors and publishers"` and `SPDX-License-Identifier = "LicenseRef-Reference-Material"`. Per-paper authorial attribution already lives in `references/papers.bib`.
+
 <!-- REUSE-IgnoreEnd -->
 
 Threshold is soft. Prefer the `REUSE.toml` approach whenever per-file sidecar maintenance would drift from the bibliography.

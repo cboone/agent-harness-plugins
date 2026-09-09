@@ -9,5 +9,5 @@
   "name": "write-pandoc-markdown",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.0.2"
+  "version": "1.0.3"
 }

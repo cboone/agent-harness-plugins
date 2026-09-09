@@ -374,6 +374,44 @@ if [[ "${CODEX_SKILL_DESCRIPTION_BUDGET}" =~ ^[0-9]+$ ]] && [[ ${total_codex_des
   error "Generated Codex skill descriptions total ${total_codex_description_length} characters, exceeding budget ${CODEX_SKILL_DESCRIPTION_BUDGET}"
 fi
 
+# ─── 18. Skill script references resolve to a shipped, executable script ────
+#
+# A skill invokes a bundled script by writing "${CLAUDE_PLUGIN_ROOT}/scripts/NAME",
+# which Claude Code substitutes with the installed plugin root when the skill loads.
+# Two things can go wrong silently, so both are checked here:
+#
+#   a. The referenced script does not exist (or is not executable) in the plugin.
+#   b. The skill uses a version-blind locator glob ("**/PLUGIN/scripts/NAME") instead.
+#      That shape matches this repository's layout but never the installed cache,
+#      which interposes a version directory. The corrected fallback form,
+#      "**/PLUGIN/**/scripts/NAME", is allowed because it tolerates that segment.
+#
+# Only SKILL.md bodies are scanned. Files under references/ legitimately contain
+# both spellings as documentation.
+
+for skill_md in plugins/*/skills/*/SKILL.md; do
+  [[ -f "${skill_md}" ]] || continue
+
+  skill_plugin="${skill_md#plugins/}"
+  skill_plugin="${skill_plugin%%/*}"
+
+  while IFS= read -r script_name; do
+    [[ -n "${script_name}" ]] || continue
+
+    script_path="plugins/${skill_plugin}/scripts/${script_name}"
+    if [[ ! -f "${script_path}" ]]; then
+      error "${skill_md} references \${CLAUDE_PLUGIN_ROOT}/scripts/${script_name} but ${script_path} does not exist"
+    elif [[ ! -x "${script_path}" ]]; then
+      error "${skill_md} references \${CLAUDE_PLUGIN_ROOT}/scripts/${script_name} but ${script_path} is not executable"
+    fi
+  done < <(grep -oE '\$\{CLAUDE_PLUGIN_ROOT\}/scripts/[A-Za-z0-9._-]+' "${skill_md}" \
+    | sed 's|.*/scripts/||' | sort -u)
+
+  if grep -qE '\*\*/[a-z0-9-]+/scripts/' "${skill_md}"; then
+    error "${skill_md} uses a version-blind locator glob (**/<plugin>/scripts/...); use \${CLAUDE_PLUGIN_ROOT}/scripts/... instead, with **/<plugin>/**/scripts/... only as a fallback"
+  fi
+done
+
 # ─── Summary ────────────────────────────────────────────────────────────────
 
 if [[ ${errors} -gt 0 ]]; then

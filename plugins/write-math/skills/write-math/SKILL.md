@@ -65,7 +65,7 @@ drafting or editing mathematical content in any format.
 ## Sources
 
 - Tao, T. "Advice on Writing Papers" (6 posts). terrytao.wordpress.com.
-- Knuth, D., Larrabee, T., and Roberts, P. *Mathematical Writing*. 1989.
+- Knuth, D., Larrabee, T., and Roberts, P. _Mathematical Writing_. 1989.
 - Cohn, H. "Advice." cohn.mit.edu.
 - Poonen, B. "Practical Suggestions for Mathematical Writing." MIT.
 - Conrad, K. "Advice on Mathematical Writing." UConn.
@@ -74,7 +74,7 @@ drafting or editing mathematical content in any format.
 - Lagarias, J. C. "How to Write a Math Paper."
 - Goldreich, O. "How to Write a Paper."
 - Pak, I. "How to Write a Clear Math Paper: Some 21st Century Tips."
-- Trzeciak, J. *Writing Mathematical Papers in English*. EMS, 1995.
+- Trzeciak, J. _Writing Mathematical Papers in English_. EMS, 1995.
 - Berndt, B. C. "How to Write Mathematical Papers." UIUC.
 - Krantz, S. G. "How to Write Your First Paper." AMS, 2007.
 - Wang, R. "Suggestions for Writing Mathematics in Scientific Papers." 2024.

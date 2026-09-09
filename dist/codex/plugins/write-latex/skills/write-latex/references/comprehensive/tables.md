@@ -1,4 +1,3 @@
-
 # Tables in LaTeX with Booktabs
 
 Comprehensive reference for creating professional tables in LaTeX using the booktabs package. Based on the booktabs philosophy of clean, readable tables; Nicholas Higham's posts on tables; and the Chicago Manual of Style (17th edition) guidance on table formatting.

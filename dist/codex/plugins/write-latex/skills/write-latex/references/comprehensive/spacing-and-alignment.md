@@ -1,10 +1,9 @@
-
 # Spacing and Alignment in LaTeX Equations
 
 ## Standard Math Spaces
 
 LaTeX provides six built-in spacing commands for fine-tuning mathematical expressions.
-The fundamental unit is the *mu* (math unit): 1 mu = 1/18 em at the current math font size.
+The fundamental unit is the _mu_ (math unit): 1 mu = 1/18 em at the current math font size.
 
 | Command  | Width | Usage                                           |
 | -------- | ----- | ----------------------------------------------- |
@@ -79,7 +78,7 @@ No space between function name and parenthesized argument is the default and cor
 
 ## Knuth's @ Active Character Technique
 
-In *Digital Typography*, Knuth describes making `@` an active character that inserts 1 mu of space.
+In _Digital Typography_, Knuth describes making `@` an active character that inserts 1 mu of space.
 This allows extremely fine adjustments:
 
 ```latex
@@ -234,7 +233,7 @@ The blank line inserts `\parskip` plus `\abovedisplayskip`, creating a gap that 
 
 ## Sources
 
-- Downes, M. and Beeton, B. *Short Math Guide for LaTeX*. AMS, 2017.
+- Downes, M. and Beeton, B. _Short Math Guide for LaTeX_. AMS, 2017.
 - Higham, N. J. "Typesetting Mathematics According to the ISO Standard." Blog post, 2020.
-- Knuth, D. E. *Digital Typography*. Chapter on fine-tuning mathematical spacing.
-- Wright, J. *mathtools* package documentation. CTAN.
+- Knuth, D. E. _Digital Typography_. Chapter on fine-tuning mathematical spacing.
+- Wright, J. _mathtools_ package documentation. CTAN.

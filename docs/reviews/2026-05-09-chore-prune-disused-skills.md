@@ -154,7 +154,6 @@ Overall quality: not ready to merge until the Markdown lint issue is fixed. The 
 1. **Blocking: `yarn lint:md` fails on the touched `create-plugin` hook table.**
 
    The examples column was shortened from `notify, update-docs-reminder` to `notify`, but the table remains padded to the old width. The custom MD060A table-alignment rule reports errors for the source file, the generated Codex copy, and the OpenCode symlinked view:
-
    - `plugins/create-plugin/skills/create-plugin/references/readme-updates.md:65`
    - `plugins/create-plugin/skills/create-plugin/references/readme-updates.md:66`
    - `plugins/create-plugin/skills/create-plugin/references/readme-updates.md:67`

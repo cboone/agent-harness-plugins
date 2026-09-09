@@ -1,4 +1,3 @@
-
 # Proof Style
 
 Guide to writing proofs in Lean 4, covering tactic mode, term mode, structured proofs, and automation.
@@ -264,7 +263,7 @@ theorem my_thm (h : a = b) (h2 : a > 0) : b > 0 := by
 
 Two near-identical lemmas trip up newcomers. Pick by what the bijection looks like:
 
-- `Finset.sum_nbij'` takes **simple** functions `i : ι → κ` and `j : κ → ι`. The hypotheses verify that `i` maps `s` into `t` and `j` maps `t` into `s` plus mutual inverse laws *on those finsets*.
+- `Finset.sum_nbij'` takes **simple** functions `i : ι → κ` and `j : κ → ι`. The hypotheses verify that `i` maps `s` into `t` and `j` maps `t` into `s` plus mutual inverse laws _on those finsets_.
 - `Finset.sum_bij'` takes **dependent** functions `i : ∀ a ∈ s, κ` and `j : ∀ a ∈ t, ι`. Use when the bijection needs the membership witness to type-check.
 
 ```lean

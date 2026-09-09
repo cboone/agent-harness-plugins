@@ -1,4 +1,3 @@
-
 # Formalization Roadmap Essential Checklist
 
 Quick reference for reviews. For detailed guidance, see `../comprehensive/`.
@@ -11,7 +10,7 @@ Quick reference for reviews. For detailed guidance, see `../comprehensive/`.
 - [ ] Section 4: **Scope** -- explicit resolution line (e.g., "resolved: S2 + Theorem 5 stretch") so later sessions know which options were settled; every open question here should be answered, not parked
 - [ ] Section 5: **File Layout** -- `<Name>/`, `<Name>Test/`, namespace conventions, where shared helpers live versus per-milestone modules
 - [ ] Section 6: **Milestone-by-Milestone Plan** -- M0 through M\<N\>, one short entry per milestone, each entry following the 5-part anatomy below
-- [ ] Section 7: **Key Risks and Unknowns** -- numbered, each with a brief *assessment* (not just a list of worries); every risk has a mitigation line
+- [ ] Section 7: **Key Risks and Unknowns** -- numbered, each with a brief _assessment_ (not just a list of worries); every risk has a mitigation line
 - [ ] Section 8: **Verification Plan** -- per-milestone checkpoints plus aggregate CI gate
 - [ ] Section 9: **Extensions** -- future work, post-release, explicitly out of scope for the current roadmap
 - [ ] Section 10: **Critical Files** -- exhaustive mapping of file to milestone that lands it, separating files this project creates from external dependencies the project relies on

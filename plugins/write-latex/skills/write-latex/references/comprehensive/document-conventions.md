@@ -1,10 +1,9 @@
-
 # Document Conventions for Mathematical LaTeX
 
 ## Punctuating Displayed Equations
 
 Displayed equations are grammatically part of the surrounding sentence.
-They must be punctuated accordingly: commas, periods, and semicolons go at the end of the display, *inside* the math environment.
+They must be punctuated accordingly: commas, periods, and semicolons go at the end of the display, _inside_ the math environment.
 
 ```latex
 % CORRECT: period inside the display ends the sentence
@@ -79,8 +78,8 @@ A good test: if you can remove the number without breaking any `\eqref` or `\cre
 
 ## Commas and Math in Running Text
 
-When listing mathematical expressions in running text, place commas *outside* math mode.
-This is Knuth's advice from *Mathematical Writing*: commas belong to the sentence, not to the formula.
+When listing mathematical expressions in running text, place commas _outside_ math mode.
+This is Knuth's advice from _Mathematical Writing_: commas belong to the sentence, not to the formula.
 
 ```latex
 % CORRECT: commas outside math mode
@@ -131,7 +130,7 @@ log-normal distribution~\cite{smith2023}.
 Guidelines:
 
 - Mention the author by name when their identity is relevant ("Bonneau~\cite{bonneau2012} introduced...").
-- Describe the contribution when the *what* matters more than the *who* ("The guessing-entropy metric~\cite{bonneau2012} measures...").
+- Describe the contribution when the _what_ matters more than the _who_ ("The guessing-entropy metric~\cite{bonneau2012} measures...").
 - Avoid chains of bare citations: "[1], [2], [3] showed that..." gives the reader no way to distinguish the references.
 - For background citations that support a general claim, a parenthetical is acceptable: "Password reuse remains common~\cite{das2014, wash2016}."
 
@@ -427,7 +426,7 @@ This avoids duplication and ensures the PDF metadata matches the document.
 ### Load Order
 
 hyperref should be loaded **near-last** in the preamble because it redefines many internal LaTeX commands.
-Most packages should be loaded before hyperref. The main exception is cleveref, which must be loaded *after* hyperref:
+Most packages should be loaded before hyperref. The main exception is cleveref, which must be loaded _after_ hyperref:
 
 ```latex
 % Typical load order
@@ -444,9 +443,9 @@ Most packages should be loaded before hyperref. The main exception is cleveref, 
 
 ## Sources
 
-- Knuth, D. E., Larrabee, T., and Roberts, P. M. *Mathematical Writing*. MAA Notes, 1989.
-- Higham, N. J. *Handbook of Writing for the Mathematical Sciences*. 3rd ed., SIAM, 2020.
+- Knuth, D. E., Larrabee, T., and Roberts, P. M. _Mathematical Writing_. MAA Notes, 1989.
+- Higham, N. J. _Handbook of Writing for the Mathematical Sciences_. 3rd ed., SIAM, 2020.
 - Higham, N. J. "How to Prepare Lists in LaTeX." Blog post, 2015.
 - Higham, N. J. "How to Typeset a Book or Thesis." Blog post, 2016.
-- Rahtz, S. and Oberdiek, H. *hyperref* package documentation. CTAN.
-- Bezos, J. *enumitem* package documentation. CTAN.
+- Rahtz, S. and Oberdiek, H. _hyperref_ package documentation. CTAN.
+- Bezos, J. _enumitem_ package documentation. CTAN.

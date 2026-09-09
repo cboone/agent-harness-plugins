@@ -1,4 +1,3 @@
-
 # Figures, Graphics, and Float Placement
 
 ## Graphics Format Rules
@@ -192,7 +191,7 @@ If `\label` appears before `\caption`, it captures the section counter instead.
 
 ## Float Specifiers
 
-The float placement specifier tells LaTeX where it is *allowed* to place the float.
+The float placement specifier tells LaTeX where it is _allowed_ to place the float.
 It is a permission list, not a command.
 
 | Specifier | Meaning                                                |
@@ -238,7 +237,7 @@ Loading `flafter` ensures that floats never appear before their source position 
 \usepackage{flafter}
 ```
 
-Without `flafter`, a float defined near the bottom of a page may appear at the top of the *same* page (before the paragraph that references it).
+Without `flafter`, a float defined near the bottom of a page may appear at the top of the _same_ page (before the paragraph that references it).
 This package prevents that behavior.
 
 ### The `placeins` Package and `\FloatBarrier`
@@ -312,6 +311,6 @@ This ensures visual consistency without manual adjustment.
 ## Sources
 
 - Overleaf. "Inserting Images," "How to Write a Thesis in LaTeX: Figures, Tables, and Captions." Guides.
-- Mittelbach, F. and Fischer, U. *The LaTeX Companion*. 3rd ed., 2024. Chapters on floats and graphics.
-- Carlisle, D. *graphicx* package documentation. CTAN.
-- Sommerfeldt, A. *caption* and *subcaption* package documentation. CTAN.
+- Mittelbach, F. and Fischer, U. _The LaTeX Companion_. 3rd ed., 2024. Chapters on floats and graphics.
+- Carlisle, D. _graphicx_ package documentation. CTAN.
+- Sommerfeldt, A. _caption_ and _subcaption_ package documentation. CTAN.

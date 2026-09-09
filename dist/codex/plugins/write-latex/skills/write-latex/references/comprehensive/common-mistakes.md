@@ -1,4 +1,3 @@
-
 # Common LaTeX Mistakes and Their Fixes
 
 Each section presents a wrong/right pair with an explanation of why the wrong form causes problems.
@@ -260,8 +259,8 @@ $ab$, \quad $a \cdot b$, \quad $a \times b$
 
 ## Sources
 
-- Ensenbach, M. et al. *l2tabu: A List of Don'ts in LaTeX*. CTAN.
-- Chen, E. *LaTeX Style Guide*. web.evanchen.cc.
+- Ensenbach, M. et al. _l2tabu: A List of Don'ts in LaTeX_. CTAN.
+- Chen, E. _LaTeX Style Guide_. web.evanchen.cc.
 - Higham, N. J. "Top Tips for New LaTeX Users." Blog post.
-- Mittelbach, F. and Fischer, U. *The LaTeX Companion*. 3rd ed., 2024.
-- Wright, J. *mathtools* package documentation. CTAN.
+- Mittelbach, F. and Fischer, U. _The LaTeX Companion_. 3rd ed., 2024.
+- Wright, J. _mathtools_ package documentation. CTAN.

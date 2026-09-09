@@ -1,4 +1,3 @@
-
 # General Programming
 
 Lean 4 as a general-purpose functional programming language, covering type classes, monads, pattern matching, dependent types, and project management.

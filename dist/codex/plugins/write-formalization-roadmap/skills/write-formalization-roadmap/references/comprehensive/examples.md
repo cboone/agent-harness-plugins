@@ -1,4 +1,3 @@
-
 # Annotated Examples
 
 Fragments of working formalization roadmaps, annotated to show how the 10-section schema, the 5-part milestone anatomy, and the mandated conventions show up in practice.
@@ -160,7 +159,7 @@ Shannon's 1948 finite-alphabet characterization theorem. ...
 
 1. **Title and one-line summary.** "M3: Theorem 3." The heading level and the single-sentence deliverable summary together carry this.
 1. **Deliverables.** `ZhangYeung/Theorem3.lean` with the main inequality, its dual, and the averaged corollary. Plus the test module.
-1. **Why-now reasoning.** Implicit through the roadmap's dependency graph (M3 consumes the copy lemma from M2). The entry carries the *proof strategy* why-now: specifically, that the two applications of Lemma 2 plus Shannon basics close the chase, and that the non-Shannon character enters only through M2.
+1. **Why-now reasoning.** Implicit through the roadmap's dependency graph (M3 consumes the copy lemma from M2). The entry carries the _proof strategy_ why-now: specifically, that the two applications of Lemma 2 plus Shannon basics close the chase, and that the non-Shannon character enters only through M2.
 1. **Testing approach.** `ZhangYeungTest/Theorem3.lean`, independent-variable smoke test plus averaged-form-derivation test.
 1. **Checkpoint gate.** Exact theorem statement with all hypotheses explicit, averaged corollary follows mechanically, test module builds.
 

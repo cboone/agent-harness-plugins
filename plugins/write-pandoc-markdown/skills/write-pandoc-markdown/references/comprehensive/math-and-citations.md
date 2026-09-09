@@ -1,4 +1,3 @@
-
 # Math Delimiters and Citations in Pandoc Markdown
 
 Comprehensive reference for inline and display math syntax, currency escaping, citation syntax, and the choice between `--natbib` and `--citeproc` processing modes. Based on the Pandoc User's Guide and BibTeX documentation.

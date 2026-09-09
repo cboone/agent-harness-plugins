@@ -12,7 +12,7 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 ## What It Does
 
-Stages everything, generates a conventional commit message from the diff, runs project linters to catch issues before pushing, pushes the branch, and opens a PR with an auto-generated title and summary. Detects connected GitHub issues from branch names and commit messages, and adds closing references automatically. Handles branches with no upstream, skips the commit step when the working tree is clean, and detects when a PR already exists.
+Stages everything, generates a conventional commit message from the diff, runs project linters to catch issues before pushing, pushes the branch, and opens a PR with an auto-generated title and summary. The title follows the project's own convention when one is enforced in CI (for example, commitlint run against the PR title) or documented in its agent config, and falls back to a house style otherwise. Detects connected GitHub issues from branch names and commit messages, and adds closing references automatically. Handles branches with no upstream, skips the commit step when the working tree is clean, and detects when a PR already exists.
 
 ## Usage
 
@@ -29,7 +29,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git status*)", "Bash(git diff*)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git branch *)", "Bash(git reflog show *)", "Bash(git ls-remote --heads *)", "Bash(git rev-parse *)", "Bash(git remote *)", "Bash(git mv *)", "Bash(gh repo view *)", "Bash(gh issue view *)", "Bash(gh issue list *)", "Bash(gh pr create *)", "Bash(gh pr view *)", "Bash(gh pr edit *)", "Bash(mktemp -u /tmp/pr-body-*)", "Bash(rm -f /tmp/pr-body-*)"]
+    "allow": ["Bash(git status*)", "Bash(git diff*)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(git branch *)", "Bash(git reflog show *)", "Bash(git ls-remote --heads *)", "Bash(git rev-parse *)", "Bash(git remote *)", "Bash(git mv *)", "Bash(gh repo view *)", "Bash(gh issue view *)", "Bash(gh issue list *)", "Bash(gh pr create *)", "Bash(gh pr view *)", "Bash(gh pr list *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(mktemp -u /tmp/pr-body-*)", "Bash(rm -f /tmp/pr-body-*)"]
   }
 }
 ```

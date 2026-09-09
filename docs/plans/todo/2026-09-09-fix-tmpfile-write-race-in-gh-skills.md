@@ -37,11 +37,11 @@ Per the scope decision, steps 1, 2, 3, and 5 apply to all five plugins; step 4 (
 `skills/use-git/references/tmpfile-pattern.md` is the source of truth that the other four skills cross-reference by path. Fix it first, then make the others consistent with it.
 
 - Step 1 (L16-23): change `mktemp /tmp/gh-pr-body-XXXXXX` to `mktemp -u /tmp/gh-pr-body-XXXXXX`; update the `# Returns` comment to state the path does **not** exist on disk. Add a short paragraph explaining why `-u` is required (the Write tool's read-before-overwrite precondition) and noting the BSD/GNU difference. Keep the existing macOS trailing-`X` guidance.
-- Add a new section, **Never batch the Write with the command**, between steps 2 and 3: the Write call and the `gh` call must go in separate, sequential messages. State the consequence (`gh` reads the file at invocation time; a parallel batch yields an empty body) and frame it explicitly as an exception to the general parallel-tool-call preference, because these calls are *not* independent.
+- Add a new section, **Never batch the Write with the command**, between steps 2 and 3: the Write call and the `gh` call must go in separate, sequential messages. State the consequence (`gh` reads the file at invocation time; a parallel batch yields an empty body) and frame it explicitly as an exception to the general parallel-tool-call preference, because these calls are _not_ independent.
 - Update the three worked examples (L61, L78, L95) to `mktemp -u`.
 - Leave the existing zsh `status` cleanup rationale (L37-54) and the anti-patterns section (L101-131) unchanged.
 
-`skills/use-git/SKILL.md:24` states core principle #6, *"Parallel tool calls over chained commands"*. Add a one-clause carve-out so this principle stops licensing failure mode B: independent commands may be parallelized, but a Write feeding a `--body-file` call is a dependency and must be sequential. Cross-reference the new section in `tmpfile-pattern.md`.
+`skills/use-git/SKILL.md:24` states core principle #6, _"Parallel tool calls over chained commands"_. Add a one-clause carve-out so this principle stops licensing failure mode B: independent commands may be parallelized, but a Write feeding a `--body-file` call is a dependency and must be sequential. Cross-reference the new section in `tmpfile-pattern.md`.
 
 ### 2. `plugins/pr` (minor: 1.5.5 → 1.6.0)
 

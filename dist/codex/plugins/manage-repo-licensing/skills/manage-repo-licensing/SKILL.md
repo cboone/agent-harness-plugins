@@ -5,6 +5,7 @@ description: >-
   repository: LICENSES/, NOTICE, REUSE.toml, SPDX headers, and reuse lint
   cleanliness.
 ---
+
 <!--
 SPDX-FileCopyrightText: 2026 Christopher Boone
 SPDX-License-Identifier: CC-BY-4.0
@@ -322,7 +323,7 @@ For Maintain mode, New-file drop, or a small Bootstrap against a tiny repo, skip
 
 ## Common Drift Patterns
 
-When run in Maintain mode, the skill typically surfaces drift in one or more of these categories. The list is an empirical synthesis of patterns observed across the four prior rollouts; treat it as a checklist of *what to look for*, not as an exhaustive enumeration.
+When run in Maintain mode, the skill typically surfaces drift in one or more of these categories. The list is an empirical synthesis of patterns observed across the four prior rollouts; treat it as a checklist of _what to look for_, not as an exhaustive enumeration.
 
 - **License-file casing and naming.** `LICENSES/APACHE-2.0.txt` should be `Apache-2.0.txt`; `MIT.txt` should be `MIT.txt` (already correct); etc. SPDX expects the canonical SPDX-License-Identifier capitalization. Use `git mv` so history follows.
 - **Missing root `REUSE.toml`.** Repos that started with per-file SPDX headers everywhere often lack a `REUSE.toml`. Adding it lets prose / config / generated / structural groups cover whole subtrees by glob, eliminating most sidecar files.

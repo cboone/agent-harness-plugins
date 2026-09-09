@@ -1,4 +1,3 @@
-
 # Organizing a Mathematics Paper
 
 A mathematics paper is not a chronological record of the author's discoveries; it is an optimized communication artifact designed to convey results and their justifications to a reader who starts with zero context. The principles below, drawn from Tsitsiklis, Lagarias, Krantz, Berndt, Goldreich, and Pak, cover the structural components of a paper from title to appendix.

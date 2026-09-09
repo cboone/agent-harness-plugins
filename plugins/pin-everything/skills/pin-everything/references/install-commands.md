@@ -4,7 +4,7 @@ Per-package-manager pinning recipes for tool-install commands embedded in CI wor
 
 ## Why Pin Install Commands
 
-A `go install some/tool@latest` in CI installs whatever the upstream maintainer most recently tagged. If they tag a malicious release, CI runs the malicious binary on the next push. Pinning the install command to an explicit version means CI runs only the version that was reviewed when the line was added, so any upgrade is intentional. Note: install-command pins inside scripts, Makefiles, and skill prose are *not* tracked by Dependabot (it only scans manifest/lockfile ecosystems and workflow `uses:` refs). For drift coverage of these surfaces, pair this step with the bundled `version-audit` script (step 10).
+A `go install some/tool@latest` in CI installs whatever the upstream maintainer most recently tagged. If they tag a malicious release, CI runs the malicious binary on the next push. Pinning the install command to an explicit version means CI runs only the version that was reviewed when the line was added, so any upgrade is intentional. Note: install-command pins inside scripts, Makefiles, and skill prose are _not_ tracked by Dependabot (it only scans manifest/lockfile ecosystems and workflow `uses:` refs). For drift coverage of these surfaces, pair this step with the bundled `version-audit` script (step 10).
 
 ## Per-Manager Recipes
 
@@ -99,7 +99,7 @@ If the tool is already a `devDependency` in a `package.json` repo (the common ca
 Homebrew formulae don't accept an inline `@version` argument; reproducible installs require a custom tap with versioned cask blocks. This skill leaves `brew install <formula>` unpinned by default because:
 
 1. The pinning mechanism (a tap) lives in a separate repo, owned by the publisher.
-2. Most CI doesn't use Homebrew (Linux runners use apt, ubuntu-latest's preinstalled tooling, or the project's own setup-* actions).
+2. Most CI doesn't use Homebrew (Linux runners use apt, ubuntu-latest's preinstalled tooling, or the project's own setup-\* actions).
 3. Pinning Homebrew on macOS dev machines is a workstation concern, not a CI hardening one.
 
 When the consuming project owns its own tap (for example, via `add-goreleaser-homebrew`), the cask `version` field is the pinning surface and falls under that tap's release process.

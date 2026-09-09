@@ -28,6 +28,7 @@ Files under `commands/` directories and `SKILL.md` files inside `skills/` direct
 
 ## Tooling and CI conventions
 
+- **`grep` inside a process substitution does not abort under `set -euo pipefail`**: `bin/validate-plugins` reads matches with `while IFS= read -r x; do ... done < <(grep ... | sed ... | sort -u)`. A no-match `grep` exits 1, but a process substitution's exit status is not the `while` loop's status and does not trigger `set -e`, and the pipeline ends in `sort`, which succeeds. This no-match path executes for the 47 of 50 `SKILL.md` files that reference no script, on every validator run. Do not flag it as an abort risk or suggest adding `|| true`.
 - **HEREDOC with `-m` is intentional**: The pattern `git commit -m "$(cat <<'EOF' ... EOF)"` is a project convention for commit messages. The `$(cat ...)` command substitution correctly preserves internal newlines. Do not suggest replacing it with `git commit -F -` or other alternatives.
 - **`corepack enable` before `setup-node` is intentional**: In GitHub Actions workflows, `corepack enable` runs before `actions/setup-node` so that the Yarn shim exists when `setup-node` computes the cache key for `cache: "yarn"`. This is the documented pattern for Yarn Berry with Corepack. Do not suggest reordering these steps.
 - **golangci-lint templates use v2 configuration format**: Config templates with `version: "2"` use the golangci-lint v2 schema. In v2, `formatters:` is a valid top-level section (separate from `linters:`), and linter settings are nested as `linters.settings:` (not the v1-era `linters-settings:` top-level key). Do not suggest restructuring v2 configs to match the deprecated v1 layout.
@@ -51,4 +52,13 @@ Files under `commands/` directories and `SKILL.md` files inside `skills/` direct
 
 - **Markdown tables use standard single-pipe syntax**: Tables in `README.md` and `SKILL.md` files use standard Markdown table syntax with single `|` pipe delimiters. Do not flag these as invalid or claim they use `||` double-pipe sequences.
 - **Bracket expressions can contain `[` as a literal**: In ERE/POSIX regex, an unescaped `[` inside an existing character class is a literal character, not a nested class opener. The pattern `[*[0-9]` is a valid bracket expression containing `*`, `[`, and digits. Do not flag such bracket expressions as having unmatched brackets or invalid regex syntax.
+- **A code-span delimiter may be shorter than the backtick run it contains**: CommonMark closes a code span only on a backtick run of the same length as the opener, so a single-backtick delimiter padded with one space on each side safely wraps a literal triple-backtick fence. The inner run cannot terminate the span early. Both of these are valid and render to byte-identical HTML on GitHub:
+
+  ````text
+  ` ```{=latex} `
+  `` ```{=latex} ``
+  ````
+
+  Prettier normalizes the second form to the first, which is a rendering no-op. This pattern appears throughout `plugins/write-pandoc-markdown/`, where the docs must show Pandoc fence syntax literally. Do not flag either form as terminating early or rendering incorrectly, and do not suggest HTML `<code>` wrappers or longer backtick delimiters.
+
 - **Leading SPDX HTML comment blocks in markdown do not violate MD041**: Reference and template markdown files under `plugins/manage-repo-licensing/` (and any other markdown that cannot carry a sidecar `.license` file) begin with a `<!-- SPDX-FileCopyrightText: ... / SPDX-License-Identifier: ... -->` block before the first ATX heading. This is the project's REUSE-style licensing convention. The repo's `.markdownlint.jsonc` does not customize MD041, and markdownlint v0.40 (via `markdownlint-cli2`) allows leading HTML comment blocks before the first heading by default; lint passes on these files. Do not suggest adding a `<!-- markdownlint-disable MD041 -->` directive, moving licensing metadata to `REUSE.toml`, or otherwise rewriting these headers.
