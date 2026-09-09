@@ -11,7 +11,7 @@ See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 
-Fetches unresolved Copilot review threads via GraphQL, categorizes them (nitpick, outdated, incorrect, valid, deferred), resolves threads, and updates Copilot instruction files under `.github/` when Copilot feedback is incorrect. After reaching a terminal workflow state, posts a required final summary comment to the PR for every outcome, including no unresolved feedback, non-code-change resolutions, code-change resolutions, partial processing, and failures when PR context and GitHub authentication are available. If the summary cannot be posted, the workflow reports that incomplete state and preserves the intended summary for retry instead of claiming success. Empty-fetch no-op runs reuse an existing same-head no-op summary instead of adding duplicate comments. Helps you quickly triage automated suggestions after opening a PR.
+Fetches unresolved Copilot review threads via GraphQL, categorizes them (nitpick, outdated, incorrect, valid, deferred), resolves threads, and updates Copilot instruction files under `.github/` when Copilot feedback is incorrect. Also fetches Copilot's **review bodies**, where Copilot files findings under a "suppressed comments" section instead of opening a thread, typically on lines the latest push did not touch. Those findings have no thread to reply to or resolve, so a thread-only query cannot see them; the skill parses them out of the review body, handles them like any other feedback, and records each one in the summary comment. It never reports "no unresolved Copilot feedback" without having checked both places. Because Copilot re-emits the same suppressed finding in every later review, the skill reads back its own prior summary comments and verifies each finding against the current code before acting, so already-handled findings are noted rather than re-fixed. After reaching a terminal workflow state, posts a required final summary comment to the PR for every outcome, including no unresolved feedback, non-code-change resolutions, code-change resolutions, partial processing, and failures when PR context and GitHub authentication are available. If the summary cannot be posted, the workflow reports that incomplete state and preserves the intended summary for retry instead of claiming success. No-op runs reuse an existing same-head no-op summary instead of adding duplicate comments. Helps you quickly triage automated suggestions after opening a PR.
 
 ## Usage
 
@@ -26,7 +26,7 @@ This skill runs custom scripts and git commands that trigger permission prompts.
 ```json
 {
   "permissions": {
-    "allow": ["Bash(bash */resolve-copilot-threads *)", "Bash(git push*)", "Bash(mktemp /tmp/copilot-reply-*)", "Bash(rm -f /tmp/copilot-reply-*)", "Bash(gh pr comment *)", "Bash(mktemp /tmp/copilot-summary-*)", "Bash(rm -f /tmp/copilot-summary-*)"]
+    "allow": ["Bash(bash */resolve-copilot-threads *)", "Bash(git push*)", "Bash(gh api repos/*/issues/*/comments*)", "Bash(mktemp /tmp/copilot-reply-*)", "Bash(rm -f /tmp/copilot-reply-*)", "Bash(gh pr comment *)", "Bash(mktemp /tmp/copilot-summary-*)", "Bash(rm -f /tmp/copilot-summary-*)"]
   }
 }
 ```
