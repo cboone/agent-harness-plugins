@@ -6,7 +6,9 @@
     "extends": ".markdownlint.jsonc",
   },
 
-  "ignores": [".workmux/", "**/node_modules/**"],
+  // dist/ holds the generated mirrors; see cli.markdownlint-cli2.jsonc for why
+  // they are excluded rather than linted.
+  "ignores": [".workmux/", "**/node_modules/**", "dist/"],
 
   // customRules are in cli.markdownlint-cli2.jsonc, loaded via --config in
   // package.json scripts. They cannot live here because the VSCode

@@ -135,27 +135,27 @@ All three scrut suites test plugin-bundled scripts only. Untested: `build-codex-
 
 With the audit repaired, this is the backlog it should have been reporting since June. Confirmed live against upstream:
 
-| Category | Name | Current | Latest |
-| --- | --- | --- | --- |
-| Node.js | nodejs (LTS) | 24.15.0 | 24.21.0 |
-| Yarn | yarn (Corepack) | 4.14.1 | 4.18.0 |
-| Actions | `actions/checkout` | v7.0.0 | v7.0.1 |
-| Actions | `astral-sh/setup-uv` | v8.1.0 | v10.0.1 |
-| Actions | `ruby/setup-ruby` | v1.306.0 | v1.321.0 |
-| Actions | `raven-actions/actionlint` | v2.1.2 | v2.2.0 |
-| Actions | `hadolint/hadolint-action` | v3.3.0 | v3.5.0 |
-| Actions | `actions/setup-go` | v6.4.0 | v7.0.0 |
-| npx | `markdownlint-cli2` | 0.22.1 | 0.23.2 |
-| npx | `knip` | 6.9.0 | 6.35.1 |
-| npx | `prettier` | 3.8.3 | 3.9.6 |
-| npx | `stylelint` | 17.9.1 | 17.15.0 |
-| go install | `shfmt` | v3.13.1 | v3.14.1 |
-| go install | `golangci-lint` | v2.12.1 | v2.13.2 |
-| go install | `goreleaser/v2` | v2.15.4 | v2.18.1 |
-| cargo | `shellharden` | 4.3.1 | 4.3.2 |
-| cargo | `cargo-deny` | 0.19.4 | 0.20.2 |
-| cargo | `typos-cli` | 1.45.2 | 1.50.1 |
-| pip / uv | `ruff` | 0.15.12 | 0.16.6 |
+| Category   | Name                       | Current  | Latest   |
+| ---------- | -------------------------- | -------- | -------- |
+| Node.js    | nodejs (LTS)               | 24.15.0  | 24.21.0  |
+| Yarn       | yarn (Corepack)            | 4.14.1   | 4.18.0   |
+| Actions    | `actions/checkout`         | v7.0.0   | v7.0.1   |
+| Actions    | `astral-sh/setup-uv`       | v8.1.0   | v10.0.1  |
+| Actions    | `ruby/setup-ruby`          | v1.306.0 | v1.321.0 |
+| Actions    | `raven-actions/actionlint` | v2.1.2   | v2.2.0   |
+| Actions    | `hadolint/hadolint-action` | v3.3.0   | v3.5.0   |
+| Actions    | `actions/setup-go`         | v6.4.0   | v7.0.0   |
+| npx        | `markdownlint-cli2`        | 0.22.1   | 0.23.2   |
+| npx        | `knip`                     | 6.9.0    | 6.35.1   |
+| npx        | `prettier`                 | 3.8.3    | 3.9.6    |
+| npx        | `stylelint`                | 17.9.1   | 17.15.0  |
+| go install | `shfmt`                    | v3.13.1  | v3.14.1  |
+| go install | `golangci-lint`            | v2.12.1  | v2.13.2  |
+| go install | `goreleaser/v2`            | v2.15.4  | v2.18.1  |
+| cargo      | `shellharden`              | 4.3.1    | 4.3.2    |
+| cargo      | `cargo-deny`               | 0.19.4   | 0.20.2   |
+| cargo      | `typos-cli`                | 1.45.2   | 1.50.1   |
+| pip / uv   | `ruff`                     | 0.15.12  | 0.16.6   |
 
 The pins concentrate in a small set of files: `set-up-ci/references/ci-*.md`, `set-up-linters/references/tools/github-actions-ci.md` and `references/languages/*.md`, `set-up-installers/SKILL.md`, `pin-everything/references/*`, `check-zsh-scripts/references/tools/shfmt.md`, `scaffold-go-cli` and `scaffold-go-library` `references/makefile.md`, and `release/references/version-patterns.md`. The repo's own `.github/workflows/*` and `.github/copilot-instructions.md:25` also carry `actions/checkout` pins.
 
@@ -172,7 +172,7 @@ Re-run `bin/version-audit` afterward; a clean run prints nothing.
 
 ## Phase 4: `AGENTS.md` and repo-level docs
 
-`AGENTS.md` (symlinked as `CLAUDE.md`) never mentions a large part of the repo. Nothing it *does* mention is missing, so this is purely additive except where noted.
+`AGENTS.md` (symlinked as `CLAUDE.md`) never mentions a large part of the repo. Nothing it _does_ mention is missing, so this is purely additive except where noted.
 
 **Add to "Where to find things"**: `tests/` (scrut suites, fixtures, `tests/data/copilot-reviews/`), the `Makefile`, `package.json`/yarn/Corepack, `.github/workflows/`, `.claude/skills/check-versions/` (referenced at `AGENTS.md:112` but never located), `docs/reviews/`, and the lint/format config surface (`.markdownlint*.jsonc`, `cli.markdownlint-cli2.jsonc`, `.prettierrc.json`, `.prettierignore`, `.editorconfig`, `.shellcheckrc`, `.tool-versions`, `.yarnrc.yml`), plus `.github/copilot-instructions.md`.
 
@@ -206,14 +206,14 @@ Re-run `bin/version-audit` afterward; a clean run prints nothing.
 
 Roughly 11 are semantically stale rather than merely reworded, and these are the ones that matter most:
 
-| Plugin | Problem |
-| --- | --- |
-| `pr` | README:3 drops the lint step entirely; the skill *does* lint (`SKILL.md:190`, and an unresolved lint state is a hard stop at `:202-210`). The **SKILL.md frontmatter is stale too** — fix both. |
-| `create-worktree` | Never names workmux, which it requires. |
-| `write-scrut-tests` | Drops the zsh-plugin half of its scope. |
-| `write-markdown` | Describes markdownlint alignment instead of what the skill does. |
-| `scaffold-new-repo` | Omits the concrete file list. |
-| `add-cobra-version`, `add-goreleaser-homebrew`, `create-worktree-from-issue`, `scaffold-go-library`, `set-up-installers`, `release` | Wording that contradicts or under-describes the catalog entry. |
+| Plugin                                                                                                                              | Problem                                                                                                                                                                                         |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pr`                                                                                                                                | README:3 drops the lint step entirely; the skill _does_ lint (`SKILL.md:190`, and an unresolved lint state is a hard stop at `:202-210`). The **SKILL.md frontmatter is stale too** — fix both. |
+| `create-worktree`                                                                                                                   | Never names workmux, which it requires.                                                                                                                                                         |
+| `write-scrut-tests`                                                                                                                 | Drops the zsh-plugin half of its scope.                                                                                                                                                         |
+| `write-markdown`                                                                                                                    | Describes markdownlint alignment instead of what the skill does.                                                                                                                                |
+| `scaffold-new-repo`                                                                                                                 | Omits the concrete file list.                                                                                                                                                                   |
+| `add-cobra-version`, `add-goreleaser-homebrew`, `create-worktree-from-issue`, `scaffold-go-library`, `set-up-installers`, `release` | Wording that contradicts or under-describes the catalog entry.                                                                                                                                  |
 
 **Also normalize while here**: `plugins/notify/README.md:54,120` uses `## What it does` / `## See also`; all 50 others use title case. `plugins/address-issue/README.md:32-39` lists permissions as prose bullets; the other 13 use a copy-pasteable JSON block.
 
@@ -229,9 +229,9 @@ These are conflicts where two skills teach incompatible things. Each needs a dec
 
 ### 6.1 Branch naming conflict that breaks `pr`'s issue detection
 
-- `use-git/references/common-operations.md:76-87` defines six prefixes and says *"Include issue numbers when working from an issue: `fix/42-login-timeout`."*
+- `use-git/references/common-operations.md:76-87` defines six prefixes and says _"Include issue numbers when working from an issue: `fix/42-login-timeout`."_
 - `create-worktree/SKILL.md:27` and `create-worktree-from-issue/SKILL.md:69-76` define only two types, make `feature/` primary (`use-git` calls it an alternative to `feat/`), and their examples **omit the issue number**.
-- `pr/SKILL.md:95-101` parses issue numbers out of the branch name as its *primary* detection strategy.
+- `pr/SKILL.md:95-101` parses issue numbers out of the branch name as its _primary_ detection strategy.
 
 So branches created by `create-worktree-from-issue` are unparseable by `pr`, silently forcing a fallback path. Pick one scheme, make `create-worktree-from-issue` embed the issue number, and align all four skills.
 

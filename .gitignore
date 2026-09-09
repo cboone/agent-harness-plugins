@@ -1,3 +1,5 @@
 .claude/settings.local.json
+.DS_Store
+.workmux/
 .yarn/install-state.gz
 node_modules/

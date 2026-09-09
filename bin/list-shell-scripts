@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Lists every Bash script this repository lints and formats, one path per line.
+#
+# A script qualifies when it is tracked by git, executable, and starts with a
+# bash shebang. Detecting scripts this way rather than globbing fixed
+# directories keeps new scripts covered automatically: the previous
+# `plugins/*/scripts/*` glob silently skipped
+# plugins/pin-everything/skills/pin-everything/references/scripts/version-audit-template,
+# and widening it by hand would have swept in a sibling .yml file.
+#
+# Generated mirrors under dist/ are excluded: they are byte-identical copies of
+# files already listed from plugins/, so linting them reports every finding
+# twice and cannot be fixed in place.
+set -euo pipefail
+
+function is_bash_script() {
+  local file="${1}"
+
+  if [[ ! -x "${file}" || -d "${file}" ]]; then
+    return 1
+  fi
+
+  local first_line
+  IFS= read -r first_line < "${file}" || true
+  [[ "${first_line}" == '#!'*bash* ]]
+}
+
+function main() {
+  local file
+  while IFS= read -r -d '' file; do
+    case "${file}" in
+      dist/*) continue ;;
+      *) ;;
+    esac
+    if is_bash_script "${file}"; then
+      printf '%s\n' "${file}"
+    fi
+    # --others --exclude-standard adds new, not-yet-committed scripts so a local
+    # `make lint` covers them before they ever reach CI.
+  done < <(git ls-files -z --cached --others --exclude-standard)
+}
+
+main
