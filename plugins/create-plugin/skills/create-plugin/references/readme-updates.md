@@ -1,6 +1,6 @@
 # README.md Updates Reference
 
-When adding a new plugin, update the compact category table in the root `README.md` and create a per-plugin `README.md` in the plugin directory. Do not add a root README table of contents or H3 plugin-description sections unless the root README is intentionally redesigned again.
+When adding a new plugin, update the compact category table in the root `README.md` and create a per-plugin `README.md` in the plugin directory. Do not add H3 plugin-description sections, and do not add the plugin to the root README's `## Contents` section: that section links to headings rather than to individual plugins, so a new plugin never changes it. Adding a whole new category does.
 
 ## Root README Category Tables
 
