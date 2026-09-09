@@ -13,26 +13,36 @@ Use tmpfiles when passing long content to git or `gh` CLI commands. This keeps B
 
 ### 1. Create the tmpfile
 
-Generate a unique path with `mktemp`:
+Generate a unique path with `mktemp -u`:
 
 ```bash
-mktemp /tmp/gh-pr-body-XXXXXX
-# Returns a unique path, e.g.: /tmp/gh-pr-body-x4y5z6
+mktemp -u /tmp/gh-pr-body-XXXXXX
+# Returns a unique path that does NOT exist on disk, e.g.: /tmp/gh-pr-body-x4y5z6
 ```
+
+**The `-u` flag is required.** Without it, `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first (`File has not been read yet. Read it first before writing to it.`). Since the file is empty by construction there is no reason to Read it, so plain `mktemp` forces a pointless Read or leaves the write to fail. With `-u`, the path is unique but unoccupied, so Write creates it fresh. The flag is portable for this purpose: BSD/macOS `mktemp -u` creates the file and then unlinks it, GNU `mktemp -u` only prints a name, and both leave nothing on disk.
 
 Use a descriptive prefix that reflects the purpose (`gh-pr-body`, `gh-issue-body`, `copilot-reply`, etc.). On macOS/BSD, `mktemp` only replaces trailing `X` characters, so the template must end with the `XXXXXX` run (do not add suffixes like `.md` after it). That trailing `XXXXXX` is replaced by `mktemp` with random characters. Always capture the returned path and use it in subsequent commands.
 
 ### 2. Write content with the Write tool
 
-Use the Write tool (not `echo` or `cat`) to write the full content to the path returned by `mktemp`. The Write tool handles multiline content natively and keeps the subsequent Bash command short.
+Use the Write tool (not `echo` or `cat`) to write the full content to the path returned by `mktemp -u`. The Write tool handles multiline content natively and keeps the subsequent Bash command short.
 
 ### 3. Pass `--body-file` to the command
 
-Run the `gh` command with `--body-file` pointing to the path returned by `mktemp` (shown as `TMPFILE` below):
+Run the `gh` command with `--body-file` pointing to the path returned by `mktemp -u` (shown as `TMPFILE` below), in a **separate message** issued only after the Write tool has returned:
 
 ```bash
 gh pr create --title "Add user authentication" --body-file TMPFILE
 ```
+
+## Never Batch the Write With the Command
+
+Issue the Write call (step 2) and the `gh` call (step 3) as two separate, sequential messages. Wait for Write to return before invoking `gh`.
+
+`gh` reads the body file at invocation time. If both calls go out in a single parallel batch, `gh` can run before the file exists and will create the pull request, issue, or release with an **empty body**. That is a silent failure: the command still succeeds and still prints a URL, so it is only caught later, by hand.
+
+This is a deliberate exception to the general preference for parallel tool calls. That preference applies to calls with no dependencies between them. These two have a dependency: `gh --body-file` consumes the file that Write produces.
 
 ## Cleanup
 
@@ -58,11 +68,11 @@ In zsh (the macOS default shell), `status` and `pipestatus` are read-only built-
 ### GitHub issue
 
 ```bash
-mktemp /tmp/gh-issue-body-XXXXXX
+mktemp -u /tmp/gh-issue-body-XXXXXX
 # Returns: /tmp/gh-issue-body-a1b2c3
 ```
 
-Write body content via the Write tool to the returned path, then:
+Write body content via the Write tool to the returned path, then, in a separate message:
 
 ```bash
 gh issue create --title "Fix login timeout" --body-file /tmp/gh-issue-body-a1b2c3 --label "bug"
@@ -75,11 +85,11 @@ rm -f /tmp/gh-issue-body-a1b2c3
 ### Pull request
 
 ```bash
-mktemp /tmp/gh-pr-body-XXXXXX
+mktemp -u /tmp/gh-pr-body-XXXXXX
 # Returns: /tmp/gh-pr-body-x4y5z6
 ```
 
-Write PR body via the Write tool to the returned path, then:
+Write PR body via the Write tool to the returned path, then, in a separate message:
 
 ```bash
 gh pr create --title "Add retry logic to API client" --body-file /tmp/gh-pr-body-x4y5z6
@@ -92,11 +102,11 @@ rm -f /tmp/gh-pr-body-x4y5z6
 ### Review reply
 
 ```bash
-mktemp /tmp/copilot-reply-XXXXXX
+mktemp -u /tmp/copilot-reply-XXXXXX
 # Returns a unique path, e.g.: /tmp/copilot-reply-r7s8t9
 ```
 
-Write reply via the Write tool to the returned path, then pass to the reply command with `--body-file`.
+Write reply via the Write tool to the returned path, then, in a separate message, pass it to the reply command with `--body-file`.
 
 ## Anti-Patterns
 

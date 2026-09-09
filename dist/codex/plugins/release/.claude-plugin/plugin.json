@@ -9,5 +9,5 @@
   "name": "release",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.5.10"
+  "version": "1.5.11"
 }
