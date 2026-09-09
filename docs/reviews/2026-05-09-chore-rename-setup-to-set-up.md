@@ -75,8 +75,8 @@ The change is mechanical (a global rename plus catalog-state and version bookkee
 
 **Issues to address**:
 
-- *(Optional)* Drop or replace the lingering `"setup"` keyword in `plugins/set-up-linters/.claude-plugin/plugin.json` if you want full naming consistency.
-- *(Optional)* Reflow column padding in the example tables in `plugins/bootstrap-project/skills/bootstrap-project/SKILL.md` if you care about source-level alignment in addition to rendered alignment.
+- _(Optional)_ Drop or replace the lingering `"setup"` keyword in `plugins/set-up-linters/.claude-plugin/plugin.json` if you want full naming consistency.
+- _(Optional)_ Reflow column padding in the example tables in `plugins/bootstrap-project/skills/bootstrap-project/SKILL.md` if you care about source-level alignment in addition to rendered alignment.
 
 **Suggestions**:
 

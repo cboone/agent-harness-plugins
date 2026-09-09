@@ -1,4 +1,3 @@
-
 # Math Typesetting in LaTeX
 
 Comprehensive reference for mathematical typesetting covering display and inline math, environments, numbering, operators, delimiters, fractions, ellipsis, and subscripts/superscripts. Based on the AMS Short Math Guide, IEEE Math Typesetting Guide, Evan Chen's style guide, and Herbert Voss's Mathmode document.
@@ -40,8 +39,8 @@ Move an expression to display mode when it:
 
 When breaking a long equation across lines, the placement of the break differs between display and inline contexts:
 
-- **Display mode:** Break *before* the relation or binary operator, so the operator starts the new line and signals continuation. This is the standard convention in `split` and `align` environments (the `&` goes before `=`).
-- **Inline text:** If a formula must break within running text, the break goes *after* the operator. The operator stays with the left fragment to signal that more is coming.
+- **Display mode:** Break _before_ the relation or binary operator, so the operator starts the new line and signals continuation. This is the standard convention in `split` and `align` environments (the `&` goes before `=`).
+- **Inline text:** If a formula must break within running text, the break goes _after_ the operator. The operator stays with the left fragment to signal that more is coming.
 
 ```latex
 % Display: break BEFORE the equals sign

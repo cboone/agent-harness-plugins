@@ -1,4 +1,3 @@
-
 # English Usage in Mathematical Writing
 
 Mathematics is communicated in English (or another natural language), not in pure symbols. The quality of the English directly affects the reader's ability to understand the mathematics. The principles below, drawn from Tao, Trzeciak, Wang, Poonen, Su, Berndt, and MIT writing resources, cover logical connectives, sentence construction, word choice, common errors, the integration of symbols into prose, and punctuation of mathematical expressions.
@@ -245,10 +244,12 @@ These abbreviations are acceptable in blackboard lectures and personal notes but
 **Displayed equations are part of the sentence.** Punctuate them accordingly.
 
 If the sentence ends with the equation, place a period after it:
+
 > The quadratic formula gives
 > $$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}.$$
 
 If the sentence continues after the equation, place a comma:
+
 > Since
 > $$f(x) = x^2 + 1,$$
 > we have $f(x) \ge 1$ for all $x$.

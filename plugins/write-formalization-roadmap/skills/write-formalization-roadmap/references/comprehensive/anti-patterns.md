@@ -1,4 +1,3 @@
-
 # Anti-Patterns
 
 Patterns the skill flags when reviewing a formalization roadmap. Each is paired with its positive counterexample. When reviewing, enumerate these explicitly; when drafting, re-read this file before calling the draft finished.

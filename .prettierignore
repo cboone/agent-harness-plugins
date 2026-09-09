@@ -4,8 +4,13 @@ node_modules/
 # Package manager lockfiles
 yarn.lock
 
-# Markdown (formatted by markdownlint-cli2, not prettier)
-*.md
+# Historical plan snapshots: records of what was decided, not living docs.
+# Reformatting them rewrites history and can mangle template syntax in fences.
+docs/plans/done/
+
+# Generated mirrors: rebuilt by bin/build-codex-marketplace and
+# bin/build-opencode-mirror, and CI fails if they drift from source.
+dist/
 
 # Shell scripts (formatted by shfmt, not prettier)
 bin/*

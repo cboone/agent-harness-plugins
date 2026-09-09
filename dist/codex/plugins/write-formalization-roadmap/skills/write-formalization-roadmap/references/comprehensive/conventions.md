@@ -1,4 +1,3 @@
-
 # Mandated Conventions
 
 Six conventions that every formalization roadmap should follow. These are not style preferences; they are structural contracts that make roadmaps portable between sessions, worktrees, and contributors.

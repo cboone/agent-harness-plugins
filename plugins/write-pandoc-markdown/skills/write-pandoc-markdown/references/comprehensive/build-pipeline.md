@@ -1,4 +1,3 @@
-
 # The Pandoc-to-LaTeX Build Pipeline
 
 Comprehensive reference for the two-stage build pipeline that converts Pandoc Markdown to venue-formatted PDFs. Covers the Pandoc conversion step, latexmk compilation, key flags, templates, Lua filters, and debugging techniques. Based on the Pandoc User's Guide.
@@ -366,8 +365,8 @@ less main.tex
 #### Raw LaTeX appearing as source code
 
 **Symptom:** LaTeX commands appear literally in the PDF instead of being executed.
-**Cause:** Using `` ```{latex} `` or `` ```latex `` instead of `` ```{=latex} ``.
-**Fix:** Add the `=` sign: `` ```{=latex} ``.
+**Cause:** Using ` ```{latex} ` or ` ```latex ` instead of ` ```{=latex} `.
+**Fix:** Add the `=` sign: ` ```{=latex} `.
 
 #### Missing extensions
 

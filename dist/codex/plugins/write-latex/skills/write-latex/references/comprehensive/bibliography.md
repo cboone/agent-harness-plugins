@@ -1,4 +1,3 @@
-
 # BibTeX and Bibliography Management
 
 Comprehensive reference for managing bibliographies in LaTeX, covering BibTeX best practices, entry formatting, capital protection, author names, DOIs, journal abbreviations, and the comparison between BibTeX and BibLaTeX. Based on Nicholas Higham's BibTeX posts (2015 and 2021) and standard LaTeX bibliography conventions.

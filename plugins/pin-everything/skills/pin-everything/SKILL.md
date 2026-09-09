@@ -110,7 +110,7 @@ Strip `^`/`~` ranges from manifests, replacing each with the exact version locke
 | Python    | `requirements.txt` or `uv.lock` committed; no library distribution name                                                                           | `pyproject.toml` declares a published distribution                 | Pin to `==`        |
 | Rust      | `Cargo.lock` committed AND crate has a binary target (`[[bin]]`, `src/main.rs`, or `src/bin/*.rs`; `publish = false` is also a strong app signal) | Crate exposes `[lib]`; `Cargo.lock` typically not committed        | Exact-pin manifest |
 
-When the discriminator is ambiguous (monorepo workspaces, hybrid crates, gems with bin entrypoints), prompt the user. **Always pin the lockfile** even for libraries — that is what `yarn install --frozen-lockfile` and friends consume in CI. Only the *manifest* changes between app and library treatment.
+When the discriminator is ambiguous (monorepo workspaces, hybrid crates, gems with bin entrypoints), prompt the user. **Always pin the lockfile** even for libraries — that is what `yarn install --frozen-lockfile` and friends consume in CI. Only the _manifest_ changes between app and library treatment.
 
 **Never exact-pin Node.js `peerDependencies`.** They express the range of host versions a package is compatible with; rewriting them to `==X.Y.Z` overconstrains downstream installers and can break otherwise compatible consumers. Leave the existing range (caret, pessimistic, or `>=`) intact even when pinning `dependencies` and `devDependencies`. The same logic applies to `optionalPeerDependencies`. The audit in step 1 already excludes `peerDependencies`; do not reintroduce them here.
 

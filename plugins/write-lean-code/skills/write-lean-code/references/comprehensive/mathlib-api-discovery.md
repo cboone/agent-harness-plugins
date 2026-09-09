@@ -1,4 +1,3 @@
-
 # Mathlib API Discovery
 
 How to find existing Mathlib lemmas, navigate the module hierarchy, and avoid reinventing what Mathlib already provides. This is the usage-side complement to `mathlib.md` (documentation and API design conventions) and `naming.md` (the compositional naming scheme).
