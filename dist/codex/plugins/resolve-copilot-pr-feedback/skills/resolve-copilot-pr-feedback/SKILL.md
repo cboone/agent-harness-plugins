@@ -32,9 +32,17 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 
 All GraphQL operations use a dedicated script that handles pagination, variable binding, and Copilot author filtering automatically.
 
-**At the start of your session**, locate the script by searching for `**/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads`. Note the absolute path and use it with `bash` as the command prefix in all subsequent invocations. Do not use a shell variable, since shell state does not persist between commands.
+The script ships with this plugin. Invoke it via `bash` followed by the quoted path:
 
-In the examples below, `resolve-copilot-threads` is a placeholder for the script's **quoted absolute path** (e.g., `"/absolute/path/to/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads"`). Always invoke via `bash` followed by the quoted path, e.g., `bash "/absolute/path/to/scripts/resolve-copilot-threads" fetch ...`. This ensures the command token is `bash`, which matches stable allowlist patterns regardless of the plugin's installed path or version.
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads" fetch OWNER REPO PR_NUMBER
+```
+
+Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step and no need for a shell variable. Keeping `bash` as the command prefix keeps the command token stable across plugin versions, which is what permission allowlist rules match on.
+
+**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. In that case locate the script with `**/resolve-copilot-pr-feedback/**/scripts/resolve-copilot-threads`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
+
+The examples below abbreviate that path to just `resolve-copilot-threads` for readability. They are not literal commands: expand the abbreviation when you run one, so every invocation is `bash`, then the **double-quoted** absolute path, then the arguments shown.
 
 ## CRITICAL REQUIREMENTS
 
