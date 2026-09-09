@@ -1,9 +1,10 @@
 # Address Issue
 
-Fetch a GitHub issue, analyze it, plan and execute the work in the current branch, and commit with issue references.
+Fetch a GitHub issue, plan the work, execute changes, and commit with issue references.
 
 **Type:** Skill
 **Trigger:** `/address-issue`
+**Requires:** [`gh`](https://cli.github.com/)
 
 ## Installation
 
@@ -31,12 +32,15 @@ Fetches a GitHub issue by number or search text, classifies it (bug fix, feature
 
 ## Recommended Permissions
 
-Allow these `gh` commands so the skill can run without repeated permission prompts:
+This skill runs GitHub CLI commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
-- `gh issue view *`
-- `gh issue list *`
-- `gh issue edit *`
-- `gh label create *`
+```json
+{
+  "permissions": {
+    "allow": ["Bash(gh issue view *)", "Bash(gh issue list *)", "Bash(gh issue edit *)", "Bash(gh label create *)"]
+  }
+}
+```
 
 ## Examples
 

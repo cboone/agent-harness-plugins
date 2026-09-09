@@ -27,6 +27,18 @@ The skill prompts for project name, description, minimum Go version, and whether
 - "new go package" -- same behavior
 - "create go library" -- same behavior
 
+## Recommended Permissions
+
+This skill runs git, GitHub CLI, and Go commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(git init*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git config *)", "Bash(gh api user*)", "Bash(go build*)", "Bash(go mod *)"]
+  }
+}
+```
+
 ## See Also
 
 - [Scaffold Go CLI](../scaffold-go-cli/README.md) -- scaffold a Go CLI project with Cobra and Homebrew

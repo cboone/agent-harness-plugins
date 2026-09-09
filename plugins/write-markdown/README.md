@@ -1,6 +1,6 @@
 # Write Markdown
 
-Markdown style conventions targeting GitHub Flavored Markdown (GFM), aligned with markdownlint-cli2 rules.
+Applies Markdown style conventions when creating or editing Markdown files.
 
 **Type:** Skill
 **Trigger:** `/write-markdown` (also activates automatically)
@@ -11,7 +11,7 @@ See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 
-Provides Markdown formatting conventions for document structure, headings, links, lists, tables, code blocks, and HTML usage. Activates automatically when creating, editing, or reviewing Markdown files, ensuring consistent formatting across the project.
+Provides Markdown formatting conventions for document structure, headings, links, lists, tables, code blocks, and HTML usage. The conventions target GitHub Flavored Markdown (GFM) and align with `markdownlint-cli2` rules, so following them keeps a project's lint run clean. Activates automatically when creating, editing, or reviewing Markdown files, ensuring consistent formatting across the project.
 
 Includes a reference guide covering all conventions with markdownlint rule identifiers.
 

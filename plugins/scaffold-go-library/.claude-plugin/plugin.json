@@ -2,7 +2,7 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Scaffold a Go library project with GoReleaser changelog releases, golangci-lint, GitHub Actions CI/CD, and Makefile.",
+  "description": "Scaffold a Go library project with GoReleaser changelog-only releases, golangci-lint, GitHub Actions CI/CD, and Makefile.",
   "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["go", "golang", "goreleaser", "library", "scaffolding"],
   "license": "MIT",

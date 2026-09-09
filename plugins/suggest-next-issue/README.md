@@ -1,6 +1,6 @@
 # Suggest Next Issue
 
-Review all open GitHub issues and recommend what to work on next with prioritized reasoning.
+Review open GitHub issues and recommend what to work on next with prioritized reasoning.
 
 **Type:** Skill
 **Trigger:** `/suggest-next-issue`

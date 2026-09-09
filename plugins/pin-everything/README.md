@@ -1,6 +1,6 @@
 # Pin Everything
 
-Pin every version surface in a repository to commit hashes, integrity digests, or specific versions as a one-shot supply-chain hardening pass.
+Pin every version surface in a repository (action SHAs, packageManager integrity digests, dependency exact-pins, runtime version files, install commands) for one-shot supply-chain hardening.
 
 **Type:** Skill
 **Trigger:** `/pin-everything` (also activates automatically)

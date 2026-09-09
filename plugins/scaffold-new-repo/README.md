@@ -1,6 +1,6 @@
 # Scaffold New Repo
 
-Scaffold the universal boilerplate for any new repository, regardless of language.
+Scaffold the universal boilerplate for a new repository: LICENSE, README, CHANGELOG, .gitignore, agent config files, and a plans directory.
 
 **Type:** Skill
 **Trigger:** `/scaffold-new-repo`
@@ -26,6 +26,18 @@ The skill prompts for project name, description, and type during setup.
 - "scaffold a new repo": starts the interactive scaffolding process
 - "new repo": same behavior
 - "start a new project": same behavior
+
+## Recommended Permissions
+
+This skill runs git and GitHub CLI commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(git init*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git config *)", "Bash(gh api user*)"]
+  }
+}
+```
 
 ## See Also
 

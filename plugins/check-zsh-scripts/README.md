@@ -1,6 +1,6 @@
 # Check Zsh Scripts
 
-Check and evaluate zsh scripts using multiple static analysis, syntax checking, and formatting tools.
+Check and evaluate zsh scripts using shellcheck, shfmt, shellharden, zsh -n, zcompile, setopt warn_create_global/warn_nested_var, and checkbashisms.
 
 **Type:** Skill
 **Trigger:** `/check-zsh-scripts` (also activates automatically)

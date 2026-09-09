@@ -1,6 +1,6 @@
 # Add GoReleaser Homebrew
 
-Add GoReleaser configuration and a GitHub Actions release workflow to an existing Go CLI project with Homebrew tap publishing.
+Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with conditional support for completions, man pages, and macOS-only builds.
 
 **Type:** Skill
 **Trigger:** `/add-goreleaser-homebrew`

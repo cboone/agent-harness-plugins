@@ -1,6 +1,6 @@
 # Set-Up Linters
 
-Detect project languages, recommend appropriate linters and formatters, install them, and generate config files.
+Detect project languages, recommend linters and formatters, install them, and generate config files, including Pandoc-academic Markdown presets.
 
 **Type:** Skill
 **Trigger:** `/set-up-linters`

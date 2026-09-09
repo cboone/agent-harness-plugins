@@ -4,6 +4,7 @@ Set up scrut snapshot-based CLI integration testing for a CLI project.
 
 **Type:** Skill
 **Trigger:** `/add-scrut-cli-tests`
+**Requires:** [`scrut`](https://github.com/facebookincubator/scrut) to run the generated tests. The generated Makefile checks for it and prints install instructions.
 
 ## Installation
 

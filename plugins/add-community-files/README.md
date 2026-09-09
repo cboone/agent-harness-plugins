@@ -1,6 +1,6 @@
 # Add Community Files
 
-Add standard community files to a project preparing for public release: CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and a pull request template.
+Add standard community files to a project: CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, and PR template.
 
 **Type:** Skill
 **Trigger:** `/add-community-files`

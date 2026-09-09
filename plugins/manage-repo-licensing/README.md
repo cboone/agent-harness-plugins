@@ -1,6 +1,6 @@
 # Manage Repo Licensing
 
-Bootstrap, audit, and maintain REUSE-style mixed-license coverage in a repository.
+Bootstrap, audit, and maintain REUSE-style mixed-license coverage in a repository: LICENSES/, NOTICE, REUSE.toml, SPDX headers, and reuse lint cleanliness.
 
 **Type:** Skill
 **Trigger:** `/manage-repo-licensing` (also activates automatically)

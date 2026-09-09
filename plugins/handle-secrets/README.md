@@ -1,6 +1,6 @@
 # Handle Secrets
 
-Best practices for handling user-provided secrets in CLI tools.
+Best practices for handling user-provided secrets in CLI tools: secure input methods, credential storage, secret masking, and language-specific libraries.
 
 **Type:** Skill
 **Trigger:** `/handle-secrets`
