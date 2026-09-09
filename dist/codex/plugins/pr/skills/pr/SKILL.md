@@ -327,13 +327,15 @@ Each Bash tool call runs unconditionally and the prior call's exit code is prese
 Skip this step entirely unless step 7 found a workflow that lints the PR title. When it did, confirm the title passed:
 
 ```bash
-gh pr checks --json name,state,link 2> /dev/null || true
+gh pr checks --json name,state,link,description,workflow 2> /dev/null || true
 ```
 
 `gh pr checks` exits non-zero when checks are failing **or** still pending, so a non-zero exit is not an error here. Checks also frequently have not registered yet immediately after `gh pr create`.
 
+This command returns **every** check on the PR, so narrow the result to the title lint before judging it. Match the `workflow` field against the workflow file identified in step 7, falling back to the `name` field when the workflow name is ambiguous. Only that check's state matters here; a red check belonging to any other workflow is out of scope for this step and belongs in the step 9 report as an ordinary CI failure.
+
 - **Title check passed**: continue to step 9.
-- **Title check failed**: report the failing check name and the reason, then give the user the exact remediation command with a corrected title:
+- **Title check failed**: report that check's `name`, its `description` (the short summary the check itself supplies; `gh pr checks` exposes no fuller reason, so link out rather than inventing one), and its `link`. Then give the user the exact remediation command with a corrected title:
 
   ```bash
   gh pr edit --title "<corrected title>"
@@ -341,7 +343,7 @@ gh pr checks --json name,state,link 2> /dev/null || true
 
   Do not run `gh pr edit` automatically.
 
-- **Checks pending or none reported**: report that the title check has not reported yet and continue.
+- **Checks pending, or the title check is not among those returned**: report that the title check has not reported yet and continue.
 
 This step is best-effort and must never block the workflow.
 
