@@ -72,19 +72,19 @@ gh issue create --repo owner/repo --title "Issue title here" --body-file TMPFILE
 
 ### 5. Verify the Issue Body
 
-`gh issue create` prints the issue URL on success, but a successful exit says nothing about whether the body landed. Before cleaning up, confirm the stored body is non-empty:
+`gh issue create` prints the issue URL on success, but a successful exit says nothing about whether the body landed. Before cleaning up, confirm the stored body is non-empty. Pass the URL that `gh issue create` just returned, shown below as `<issue-url>`; it is the identifier this step is guaranteed to have. (`gh issue view` also accepts a bare issue number when the issue lives in the current repository.)
 
 ```bash
-gh issue view <issue-number> --json body --jq '.body | length'
+gh issue view <issue-url> --json body --jq '.body | length'
 ```
 
 If the length is `0`, the body file was empty or missing when `gh` read it. Recover by re-writing `TMPFILE` with the Write tool and then, as a separate call:
 
 ```bash
-gh issue edit <issue-number> --body-file TMPFILE
+gh issue edit <issue-url> --body-file TMPFILE
 ```
 
-Re-run the length check to confirm the recovery worked. Add `--repo owner/repo` to both commands when the issue was filed in a different repository.
+Re-run the length check to confirm the recovery worked. The URL already identifies the repository, so no `--repo` flag is needed even when the issue was filed elsewhere.
 
 ### 6. Clean Up
 

@@ -285,16 +285,16 @@ Pass `--base <base-branch>` if `<base-branch>` differs from `<default-branch>`. 
 
 #### Verify the PR body
 
-`gh pr create` prints the PR URL on success, but a successful exit says nothing about whether the body landed. Before cleaning up, confirm the stored body is non-empty:
+`gh pr create` prints the PR URL on success, but a successful exit says nothing about whether the body landed. Before cleaning up, confirm the stored body is non-empty. Pass the URL that `gh pr create` just returned, shown below as `<pr-url>`; it is the identifier this step is guaranteed to have. (`gh pr view` also accepts a bare PR number, or no argument at all, in which case it targets the current branch's PR.)
 
 ```bash
-gh pr view <pr-number> --json body --jq '.body | length'
+gh pr view <pr-url> --json body --jq '.body | length'
 ```
 
 If the length is `0`, the body file was empty or missing when `gh` read it. Recover by re-writing `TMPFILE` with the Write tool and then, as a separate call:
 
 ```bash
-gh pr edit <pr-number> --body-file TMPFILE
+gh pr edit <pr-url> --body-file TMPFILE
 ```
 
 Re-run the length check to confirm the recovery worked.
