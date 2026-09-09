@@ -12,6 +12,7 @@ readonly SCRIPT_NAME
 # =============================================================================
 # Author logins matched unconditionally:
 #   - copilot-pull-request-reviewer: Copilot code review bot (primary)
+#   - copilot-pull-request-reviewer[bot]: same bot as reported by the REST API
 #   - copilot: Legacy/alternative Copilot login
 #   - github-copilot[bot]: GitHub Copilot bot account
 #
@@ -19,8 +20,13 @@ readonly SCRIPT_NAME
 #   - github-actions[bot]: Copilot sometimes posts via GitHub Actions;
 #     matched only when the comment body starts with a severity tag
 #     (e.g., [nitpick], [suggestion], [important], [critical], [note])
+#
+# GraphQL and REST disagree on the suffix for the same account: GraphQL
+# author.login reports "copilot-pull-request-reviewer" while REST user.login
+# reports "copilot-pull-request-reviewer[bot]". Both forms are listed so the
+# same constant serves the thread fetch and the review-body fetch.
 # =============================================================================
-readonly COPILOT_DIRECT_LOGINS='["copilot-pull-request-reviewer", "copilot", "github-copilot[bot]"]'
+readonly COPILOT_DIRECT_LOGINS='["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"]'
 readonly COPILOT_ACTIONS_LOGIN="github-actions[bot]"
 readonly COPILOT_SEVERITY_PATTERN="^\\s*\\[(nitpick|suggestion|important|critical|note)\\]"
 
@@ -32,6 +38,8 @@ Manage GitHub Copilot PR review threads via GraphQL.
 
 Commands:
   fetch <owner> <repo> <pr_number>                    Fetch unresolved Copilot threads
+  fetch-reviews <owner> <repo> <pr_number>            Fetch Copilot review-body findings
+  parse-reviews                                        Normalize review JSON read from stdin
   resolve <thread_id>                                  Resolve a review thread
   reply <thread_id> [--body-file <path>]               Reply to a review thread
   reply-and-resolve <thread_id> [--body-file <path>]   Reply and resolve
@@ -42,8 +50,15 @@ Options:
 The reply and reply-and-resolve commands read the reply body from --body-file
 or stdin if --body-file is not specified.
 
+Copilot files some findings in a review body instead of an inline thread, where
+they have no thread id and cannot be replied to or resolved. fetch-reviews
+surfaces those. parse-reviews is the same normalization over review JSON on
+stdin, for testing and for reprocessing a saved response.
+
 Examples:
   ${SCRIPT_NAME} fetch octocat hello-world 42
+  ${SCRIPT_NAME} fetch-reviews octocat hello-world 42
+  gh api repos/octocat/hello-world/pulls/42/reviews | ${SCRIPT_NAME} parse-reviews
   ${SCRIPT_NAME} resolve PRRT_kwDONZ...
   echo "Explanation here" | ${SCRIPT_NAME} reply PRRT_kwDONZ...
   ${SCRIPT_NAME} reply PRRT_kwDONZ... --body-file response.md
@@ -56,18 +71,28 @@ function die() {
   exit "${2:-1}"
 }
 
-function check_dependencies() {
-  if ! command -v gh > /dev/null 2>&1; then
-    die "gh (GitHub CLI) is required but not found. Install it: https://cli.github.com"
-  fi
-
+function require_jq() {
   if ! command -v jq > /dev/null 2>&1; then
     die "jq is required but not found. Install it: https://jqlang.github.io/jq/download/"
+  fi
+}
+
+# Checks the GitHub CLI is installed and authenticated. Kept separate from
+# require_jq so parse-reviews, which only transforms JSON on stdin, runs in
+# environments with no GitHub credentials (the test suite, for example).
+function require_gh() {
+  if ! command -v gh > /dev/null 2>&1; then
+    die "gh (GitHub CLI) is required but not found. Install it: https://cli.github.com"
   fi
 
   if ! gh auth status > /dev/null 2>&1; then
     die "Not authenticated with GitHub. Run: gh auth login"
   fi
+}
+
+function check_dependencies() {
+  require_gh
+  require_jq
 }
 
 # Reads reply body from --body-file argument or stdin.
@@ -260,6 +285,131 @@ function do_fetch() {
       '
 }
 
+# =============================================================================
+# Review-body findings
+# =============================================================================
+# Copilot does not always open an inline thread. When it declines to comment on
+# a line the latest push did not touch, it files the finding in the review body
+# under a "suppressed comments" section instead. Those findings have no thread
+# id, so they cannot be replied to or resolved, and a reviewThreads query cannot
+# see them at all.
+#
+# Three body layouts have shipped so far. They differ only in how the section is
+# announced:
+#
+#   <summary>Comments suppressed due to low confidence (N)</summary>
+#   <summary>Suppressed comments (N)</summary>
+#   ### Suppressed comments (N)
+#
+# The interior is stable across all three: a bold-only "**path:line**" heading,
+# then the finding prose, then an optional fenced context block. The section
+# ends at a details tag or at the "- **Files reviewed:" trailer.
+#
+# Both the raw slice and a structured parse are emitted. A true
+# hasSuppressedMarker with an empty findings array means Copilot changed the
+# layout again and the caller should read the raw slice directly, which keeps a
+# format change visible instead of silently reporting no feedback.
+# =============================================================================
+
+# Normalizes an array of GitHub review objects into Copilot review-body findings.
+# Arguments:
+#   None; reads REST review JSON on stdin
+# Outputs:
+#   JSON array of Copilot reviews with parsed findings to stdout
+function do_parse_reviews() {
+  # shellcheck disable=SC2016
+  # $variables in the filter are jq bindings, not shell variables
+  jq \
+    --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" \
+    '
+      def trim: sub("^[[:space:]]+"; "") | sub("[[:space:]]+$"; "");
+
+      # Copilot puts its verdict heading and lead paragraph before the first
+      # <details> block. The "Once you have addressed..." call to action is
+      # boilerplate on every review and carries no finding.
+      def headline:
+        split("\n")
+        | (map(test("^<details>")) | index(true)) as $stop
+        | (if $stop then .[0:$stop] else . end)
+        | map(select(test("^\\*Once you") | not))
+        | join("\n")
+        | trim;
+
+      def suppressed_slice:
+        split("\n")
+        | reduce .[] as $line ({inside: false, out: []};
+            if (.inside | not) and ($line | ascii_downcase | test("suppressed comments|comments suppressed"))
+            then .inside = true
+            elif .inside and ($line | test("^</?details>|^- \\*\\*Files reviewed:"))
+            then .inside = false
+            elif .inside
+            then .out += [$line]
+            else .
+            end)
+        | .out
+        | join("\n")
+        | trim;
+
+      # The trailing $ anchor is load-bearing: it keeps the
+      # "**Previously missed (1)** - in code that..." subheading from parsing
+      # as a finding, since that line continues past the closing asterisks.
+      def findings:
+        split("\n")
+        | reduce .[] as $line ({current: null, out: []};
+            if $line | test("^\\*\\*[^*]+:[0-9]+\\*\\*$")
+            then (if .current then .out += [.current] else . end)
+              | .current = {heading: ($line | ltrimstr("**") | rtrimstr("**")), lines: []}
+            elif .current != null
+            then .current.lines += [$line]
+            else .
+            end)
+        | (if .current then .out + [.current] else .out end)
+        | map(
+            (.heading | split(":")) as $parts
+            | {
+                location: .heading,
+                path: ($parts[0:-1] | join(":")),
+                line: ($parts[-1] | tonumber),
+                body: (.lines | join("\n") | trim)
+              }
+          );
+
+      [
+        .[]
+        | select(.user.login as $login | $direct_logins | any(. == $login))
+        | select((.body // "") != "")
+        | (.body | suppressed_slice) as $slice
+        | {
+            id: .id,
+            url: .html_url,
+            submittedAt: .submitted_at,
+            headline: (.body | headline),
+            hasSuppressedMarker: ($slice != ""),
+            suppressed: $slice,
+            findings: ($slice | findings)
+          }
+      ]
+    '
+}
+
+# Fetches Copilot review bodies for a PR and extracts their findings.
+# Arguments:
+#   $1 - Repository owner
+#   $2 - Repository name
+#   $3 - Pull request number
+# Outputs:
+#   JSON array of Copilot reviews with parsed findings to stdout
+function do_fetch_reviews() {
+  local owner="${1}"
+  local repo="${2}"
+  local pr_number="${3}"
+
+  # gh merges paginated REST array responses into a single array, so the
+  # normalizer receives one flat list of reviews.
+  gh api --paginate "repos/${owner}/${repo}/pulls/${pr_number}/reviews" \
+    | do_parse_reviews
+}
+
 # Resolves a review thread via GraphQL mutation.
 # Arguments:
 #   $1 - Thread ID (e.g., PRRT_kwDONZ...)
@@ -351,8 +501,13 @@ function main() {
   # Validate command before checking dependencies so that missing/unknown
   # commands show usage errors rather than confusing dependency failures.
   case "${command}" in
-    fetch | resolve | reply | reply-and-resolve)
+    fetch | fetch-reviews | resolve | reply | reply-and-resolve)
       check_dependencies
+      ;;
+    parse-reviews)
+      # Reads stdin and touches no GitHub API, so it needs neither the CLI nor
+      # credentials.
+      require_jq
       ;;
     "")
       usage
@@ -368,6 +523,14 @@ function main() {
       [[ $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} fetch <owner> <repo> <pr_number>"
       do_fetch "$1" "$2" "$3"
       ;;
+    fetch-reviews)
+      [[ $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} fetch-reviews <owner> <repo> <pr_number>"
+      do_fetch_reviews "$1" "$2" "$3"
+      ;;
+    parse-reviews)
+      [[ $# -ne 0 ]] && die "Usage: ${SCRIPT_NAME} parse-reviews (reads review JSON on stdin)"
+      do_parse_reviews
+      ;;
     resolve)
       [[ $# -ne 1 ]] && die "Usage: ${SCRIPT_NAME} resolve <thread_id>"
       do_resolve "$1"
@@ -381,6 +544,7 @@ function main() {
       do_reply_and_resolve "$@"
       ;;
     *)
+      # Unreachable: the validation case above dies on unknown commands.
       die "Unknown command: ${command}"
       ;;
   esac
