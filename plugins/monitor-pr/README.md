@@ -4,7 +4,7 @@ Monitor a pull request until its checks pass, Copilot signs off on the current h
 
 **Type:** Skill
 **Trigger:** `/monitor-pr [<pr-number>]`
-**Requires:** [`gh`](https://cli.github.com/) (authenticated)
+**Requires:** [`gh`](https://cli.github.com/) (authenticated), [`jq`](https://jqlang.org/)
 
 ## Installation
 
@@ -65,7 +65,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr merge *)", "Bash(gh api --paginate --slurp repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(git status*)", "Bash(git add *)", "Bash(git commit -S *)", "Bash(git push*)", "Bash(bin/build-codex-marketplace)", "Bash(bin/build-opencode-mirror)"]
+    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr merge *)", "Bash(gh api --paginate --slurp repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(jq *)", "Bash(git status*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(bin/build-codex-marketplace)", "Bash(bin/build-opencode-mirror)"]
   }
 }
 ```

@@ -7,7 +7,7 @@ description: >-
   "monitor pr", "monitor the pr", "watch the pr", "keep an eye on the pr",
   "wait for ci", "wait for checks", "monitor pr 361", or any variant
   involving watching a pull request until it is ready to merge. Requires the
-  gh CLI to be installed and authenticated.
+  gh CLI to be installed and authenticated, and jq.
 ---
 
 # Monitor PR
