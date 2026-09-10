@@ -43,6 +43,14 @@ If the search returns multiple results, present them to the user and ask which o
 
 If no results, try broadening the search or ask the user to refine their query.
 
+**Save the issue JSON to a temporary file and reuse it** for steps 3 and 4 rather than fetching again later:
+
+```bash
+gh issue view NUMBER --json number,title,labels,body,state > /tmp/issue-NUMBER.json
+```
+
+Step 2 adds an "in progress" label. A second fetch after that point would pick the new label up and inject `Labels: in progress, ...` into the prompt, telling the new session about a label this skill just added. Reading the cached file keeps the prompt describing the issue as the user filed it, and saves a redundant API call. Delete the file once the worktree exists.
+
 ### 2. Mark Issue In Progress
 
 If the issue is open, signal that work is starting. Skip this step for closed issues.
@@ -73,7 +81,16 @@ The "in progress" label is intentionally retained beyond worktree creation and l
 Construct a branch name in the format `TYPE/SLUG` where:
 
 - **TYPE**: Derive from issue labels. Use `fix` for labels containing "bug" or "fix". Use `feature` for everything else (including when no labels match).
-- **SLUG**: The issue number, a hyphen, then the slugified issue title: lowercase, replace spaces and special characters with hyphens, collapse consecutive hyphens, trim leading/trailing hyphens, truncate to 50 characters at a word boundary.
+- **SLUG**: The issue number, a hyphen, then the slugified issue title.
+
+**Slugify the title in this order:**
+
+1. **Strip a leading conventional-commit prefix**, with or without a scope: `chore:`, `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `build:`, `ci:`, `perf:`, `style:`, and the scoped forms such as `fix(auth):`. TYPE already carries that meaning, so leaving the prefix in produces contradictions like `feature/356-chore-validate-...`.
+1. Lowercase, replace spaces and special characters with hyphens, collapse consecutive hyphens, trim leading and trailing hyphens.
+1. Truncate to 50 characters at a word boundary, never mid-word.
+1. **Only if step 3 actually truncated**, drop the dangling fragment it left behind. Filler words are `a`, `an`, `and`, `as`, `at`, `before`, `but`, `by`, `for`, `from`, `in`, `into`, `of`, `on`, `or`, `the`, `to`, `when`, `while`, `with`, `without`. If either of the last two words is a filler word, cut from that filler word onward, and repeat. A branch ending in `-before`, `-in`, or `-in-bin` reads as if the name were cut off, because it was.
+
+   The truncation guard matters: issue #108 below is under 50 characters, so nothing is dropped and `-with-special-chars` survives intact. Trimming unconditionally would mangle short titles that legitimately end in a prepositional phrase.
 
 Leading with the issue number is what lets the `pr` skill link the resulting pull request back to the issue: its primary detection strategy reads `TYPE/N-description` straight out of the branch name. Without the number, `pr` falls back to searching GitHub by branch slug, which is slower and can match the wrong issue or none at all.
 
@@ -82,6 +99,8 @@ Examples:
 - Issue #42 "Add dark mode support" with label "enhancement" -> `feature/42-add-dark-mode-support`
 - Issue #108 "Login fails with special chars" with label "bug" -> `fix/108-login-fails-with-special-chars`
 - Issue #7 "Update README" with no labels -> `feature/7-update-readme`
+- Issue #356 "chore: validate skill and path cross-references in bin/validate-plugins" with label "maintenance" -> `feature/356-validate-skill-and-path-cross-references` (`chore:` stripped, dangling `in bin` dropped)
+- Issue #358 "lint-and-fix: consult project agent config before running a destructive auto-fix" with label "bug" -> `fix/358-lint-and-fix-consult-project-agent-config` (dangling `before` dropped; `lint-and-fix:` is a component name, not a conventional-commit type, so it stays)
 
 ### 4. Compose the Issue Prompt
 
@@ -126,21 +145,33 @@ Claude Code replaces the plugin-root placeholder with the installed plugin's abs
 
 In the example below, `SCRIPTS_DIR/compose-issue-prompt` and `SCRIPTS_DIR/launch-workmux` are shorthand for the full **quoted paths** shown above.
 
-Do not specify a `--base` branch. Let `workmux` use its default.
+**Always pass `--base`.** `workmux`'s default base is the _current_ branch, not the repository's default branch, so running this skill from a feature branch silently stacks the new worktree on top of that branch and carries its commits along. Detect the default branch and pass it explicitly:
 
 ```bash
-gh issue view NUMBER --json number,title,labels,body,state \
-  | bash "SCRIPTS_DIR/compose-issue-prompt" --chain-command "/address-issue NUMBER" \
-  | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME"
+gh repo view --json defaultBranchRef -q '.defaultBranchRef.name'
+```
+
+**If `gh` is not available**, fall back to:
+
+```bash
+git remote show origin | grep 'HEAD branch' | sed 's/.*: //'
+```
+
+If the user asked for a specific base branch, use that instead. If both detection methods fail, tell the user which branch `workmux` would default to and ask before proceeding.
+
+```bash
+bash "SCRIPTS_DIR/compose-issue-prompt" --chain-command "/address-issue NUMBER" < /tmp/issue-NUMBER.json \
+  | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH"
 ```
 
 If the user passed `--no-approval`, the chained command carries it through:
 
 ```bash
-gh issue view NUMBER --json number,title,labels,body,state \
-  | bash "SCRIPTS_DIR/compose-issue-prompt" --chain-command "/address-issue NUMBER --no-approval" \
-  | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME"
+bash "SCRIPTS_DIR/compose-issue-prompt" --chain-command "/address-issue NUMBER --no-approval" < /tmp/issue-NUMBER.json \
+  | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH"
 ```
+
+Read the cached JSON from step 1 rather than calling `gh issue view` again here, so the "in progress" label added in step 2 does not leak into the prompt. Remove the temporary file afterwards.
 
 The script outputs the workmux log directly and cleans up its own log file. Verify success:
 

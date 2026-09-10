@@ -37,7 +37,7 @@ Either way, it creates the worktree via `workmux add` and stops. It does not sta
 | ------------------ | --------------------------------------------------------------------------- |
 | `--issue <number>` | Force issue lookup, for when a task description is itself a number          |
 | `--no-issue`       | Force description handling, even if the argument looks like an issue number |
-| `--base <branch>`  | Base the worktree on a specific branch instead of the workmux default       |
+| `--base <branch>`  | Base the worktree on a specific branch instead of the repository's default  |
 
 ## Recommended Permissions
 

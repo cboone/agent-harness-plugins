@@ -21,7 +21,7 @@ The user may provide these options inline:
 
 - **--issue `<number>`**: Force issue lookup, for when a task description is itself a number
 - **--no-issue**: Force description handling, even if the argument looks like an issue number
-- **--base `<branch>`**: Base the worktree on a specific branch instead of the workmux default
+- **--base `<branch>`**: Base the worktree on a specific branch instead of the repository's default branch
 
 ## Workflow
 
@@ -58,13 +58,22 @@ Examples:
 
 - issue 42 "Add dark mode support" labeled `enhancement` -> `feature/42-add-dark-mode-support`
 - issue 108 "Login fails with special chars" labeled `bug` -> `fix/108-login-fails-with-special-chars`
+- issue 356 "chore: validate skill and path cross-references in bin/validate-plugins" labeled `maintenance` -> `feature/356-validate-skill-and-path-cross-references`
+- issue 358 "lint-and-fix: consult project agent config before running a destructive auto-fix" labeled `bug` -> `fix/358-lint-and-fix-consult-project-agent-config`
 
 **From a task description**, build `TYPE/SLUG`:
 
 - **TYPE**: Use `fix` if the user mentions "fix", "bug", "patch", or similar. Use `feature` for everything else.
 - **SLUG**: Slugify the description.
 
-**Slugify rules**: lowercase, replace spaces and special characters with hyphens, collapse consecutive hyphens, trim leading/trailing hyphens, truncate to 50 characters at a word boundary.
+**Slugify rules**, applied in this order:
+
+1. **Strip a leading conventional-commit prefix**, with or without a scope: `chore:`, `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `build:`, `ci:`, `perf:`, `style:`, and scoped forms such as `fix(auth):`. TYPE already carries that meaning, so leaving the prefix in produces contradictions like `feature/356-chore-validate-...`. A component name followed by a colon, such as `lint-and-fix:`, is not a conventional-commit type and stays.
+1. Lowercase, replace spaces and special characters with hyphens, collapse consecutive hyphens, trim leading and trailing hyphens.
+1. Truncate to 50 characters at a word boundary, never mid-word.
+1. **Only if step 3 actually truncated**, drop the dangling fragment it left behind. Filler words are `a`, `an`, `and`, `as`, `at`, `before`, `but`, `by`, `for`, `from`, `in`, `into`, `of`, `on`, `or`, `the`, `to`, `when`, `while`, `with`, `without`. If either of the last two words is a filler word, cut from that filler word onward, and repeat. A branch ending in `-before`, `-in`, or `-in-bin` reads as if the name were cut off, because it was.
+
+   The truncation guard matters: `Login fails with special chars` is under 50 characters, so nothing is dropped and `-with-special-chars` survives intact. Trimming unconditionally would mangle short titles that legitimately end in a prepositional phrase.
 
 Examples:
 
@@ -117,7 +126,19 @@ Claude Code replaces the plugin-root placeholder with the installed plugin's abs
 
 In the examples below, `SCRIPTS_DIR/launch-workmux` is shorthand for the full **quoted path** shown above.
 
-Do not specify `--base`. Let workmux use its default. Only pass `--base BRANCH` if the user explicitly requests a specific base branch.
+**Always pass `--base`.** `workmux`'s default base is the _current_ branch, not the repository's default branch, so running this skill from a feature branch silently stacks the new worktree on top of that branch and carries its commits along. Detect the default branch and pass it explicitly:
+
+```bash
+gh repo view --json defaultBranchRef -q '.defaultBranchRef.name'
+```
+
+**If `gh` is not available**, fall back to:
+
+```bash
+git remote show origin | grep 'HEAD branch' | sed 's/.*: //'
+```
+
+If the user passed `--base BRANCH`, use that instead. If both detection methods fail, tell the user which branch `workmux` would default to and ask before proceeding.
 
 Then launch the worktree.
 
@@ -126,22 +147,14 @@ Then launch the worktree.
 ```bash
 gh issue view NUMBER --json number,title,labels,body,state \
   | bash "SCRIPTS_DIR/compose-issue-prompt" \
-  | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME"
+  | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH"
 ```
 
 Do not pass `--chain-command` here. This skill creates the worktree and stops; `address-issue-in-worktree` is the skill that chains into `address-issue`.
 
+This skill also does not self-assign the issue or label it "in progress". Creating a worktree is not a commitment to do the work, and the user may be setting up several at once. `address-issue-in-worktree` does claim the issue, because it starts the work.
+
 **From a task description**, feed the prompt in directly:
-
-```bash
-bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" <<'WORKMUX_PROMPT'
-Work on: [user's task description]
-
-Branch: [BRANCH_NAME]
-WORKMUX_PROMPT
-```
-
-If the user requested a specific base branch:
 
 ```bash
 bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH" <<'WORKMUX_PROMPT'
