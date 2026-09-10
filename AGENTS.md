@@ -99,7 +99,7 @@ plugins/create-worktree/
 
 `create-worktree` and `address-issue-in-worktree` ship byte-identical copies of both scripts. Rule 18 requires every `${CLAUDE_PLUGIN_ROOT}/scripts/NAME` reference to resolve inside its own plugin, so the scripts cannot be shared across plugins. Two testcases in `tests/scrut/repo-tooling.md` fail if the copies drift, so change one and copy it to the other.
 
-The skill refers to the script as `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux`, which Claude Code substitutes with the installed plugin root. Rule 18 of `bin/validate-plugins` checks that every such reference resolves to a shipped, executable file and rejects version-blind locator globs like `**/PLUGIN/scripts/NAME`. Bundled scripts belong in `tests/scrut/`.
+A skill refers to each script it ships by its plugin-root path, so `create-worktree` names both `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt` and `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux`, and `resolve-copilot-pr-feedback` names `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads`. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` checks that every such reference resolves to a shipped, executable file and rejects version-blind locator globs like `**/PLUGIN/scripts/NAME`. Bundled scripts belong in `tests/scrut/`.
 
 A hook plugin that targets all three harnesses (Claude Code, Codex CLI, and OpenCode) carries split manifests, harness-specific entry points, and any helper scripts or assets:
 

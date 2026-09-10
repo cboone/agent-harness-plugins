@@ -118,7 +118,9 @@ If there are no task list items, treat the entire issue as a single task.
 
 **Do not create, modify, or delete any file until the plan is approved.** This is a hard gate, not a suggestion. Asking the user a clarifying question is allowed; editing is not.
 
-**If your harness provides plan mode** (Claude Code): call `EnterPlanMode` before exploring, keep the exploration read-only, then call `ExitPlanMode` with the plan below and wait for the approval result.
+**Check the flags before doing anything else in this step.** `--dry-run` and `--no-approval` both bypass plan mode, so read their paragraphs at the end of this step first.
+
+**If your harness provides plan mode** (Claude Code) and neither flag was given: call `EnterPlanMode` before exploring, keep the exploration read-only, then call `ExitPlanMode` with the plan below and wait for the approval result.
 
 **Otherwise** (Codex CLI, OpenCode, or any harness without those tools): present the plan below, then stop and wait for the user to confirm, adjust, or reject it.
 
@@ -141,9 +143,11 @@ Enter plan mode here rather than at step 1. Steps 1 and 4 are read-only, but ste
 1. Update `README.md` - document the new behavior
 ```
 
-**If `--dry-run` was specified**: Stop here permanently. Do not make any changes even if the user approves.
+**If `--dry-run` was specified**: Present the plan, then stop permanently. Do not make any changes.
 
-**If `--no-approval` was specified**: Skip the stop and continue to step 7. Do not call `EnterPlanMode`.
+**If `--no-approval` was specified**: Skip the stop and continue to step 7.
+
+**Either flag bypasses plan mode entirely.** With `--dry-run` or `--no-approval` set, call neither `EnterPlanMode` nor `ExitPlanMode`, and present the plan as plain output instead. Skipping only `EnterPlanMode` while still following the instruction above to call `ExitPlanMode` would leave the harness exiting a mode it never entered. Neither flag has an approval for those tools to gate: `--dry-run` ends at the plan, and `--no-approval` proceeds past it without asking.
 
 ### 7. Execute the Changes
 
