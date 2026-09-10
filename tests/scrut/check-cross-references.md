@@ -117,10 +117,30 @@ $ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Create `lean-toolch
 All skill cross-references resolve.
 ```
 
+## The default scan discovers the files itself
+
+Every case above names the file to check, but `bin/validate-plugins` passes no
+arguments at all, so `find` decides what gets looked at. A discovery bug there
+reports success having scanned nothing, which is the exact shape of failure this
+check exists to catch, so the default path is exercised on its own.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Read `plugins/other/missing.md` first.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1 | head -1
+::error::plugins/demo/skills/demo/SKILL.md references plugins/other/missing.md but no such path exists in this repository
+```
+
+Reference material nested under a topic directory is reached too, which the
+`write-*` skills and `set-up-linters` rely on.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && mkdir -p plugins/demo/skills/demo/references/tools && printf '%s\n' 'See `plugins/other/gone.md`.' > plugins/demo/skills/demo/references/tools/nested.md && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1 | head -1
+::error::plugins/demo/skills/demo/references/tools/nested.md references plugins/other/gone.md but no such path exists in this repository
+```
+
 ## A findings run exits non-zero
 
 ```scrut
-$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Read `plugins/other/missing.md` first.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md > /dev/null 2>&1
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Read `plugins/other/missing.md` first.' > plugins/demo/skills/demo/SKILL.md && "${CHECK_CROSS_REFERENCES_BIN}" > /dev/null 2>&1
 [1]
 ```
 
