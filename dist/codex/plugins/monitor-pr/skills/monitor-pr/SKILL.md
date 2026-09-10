@@ -23,12 +23,12 @@ The user may provide these options inline:
 
 The watch ends when all four axes are clean at the same time. Partial greenness is not readiness.
 
-| Axis         | Clean when                                                                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| Checks       | Every check in `statusCheckRollup` has concluded successfully, or the repository has no checks configured                      |
+| Axis         | Clean when                                                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Checks       | Every check in `statusCheckRollup` has concluded successfully, or the repository has no checks configured                       |
 | Copilot      | A Copilot review exists whose commit SHA equals the current head, `fetch` returns `[]`, and `fetch-reviews` has no open finding |
-| Mergeability | `mergeable` is `MERGEABLE` and `mergeStateStatus` is neither `DIRTY` nor `BEHIND`                                              |
-| PR state     | `OPEN` and not merged or closed                                                                                                |
+| Mergeability | `mergeable` is `MERGEABLE` and `mergeStateStatus` is neither `DIRTY` nor `BEHIND`                                               |
+| PR state     | `OPEN` and not merged or closed                                                                                                 |
 
 Two rules that follow from this and are easy to get wrong:
 
