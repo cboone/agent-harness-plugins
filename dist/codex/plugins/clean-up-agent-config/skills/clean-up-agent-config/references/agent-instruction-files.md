@@ -1,5 +1,8 @@
 # LLM Coding Agent Instruction Files: Complete Comparison & Recommendations
 
+<!-- `/init` and `/skills` are built-in commands of the harnesses compared below, and `/slash-command` stands in for whatever name a custom command is given. None is a skill in this repository. -->
+<!-- validate-plugins: ignore /init /skills /slash-command -->
+
 Last updated: February 15, 2026
 
 ## The Landscape

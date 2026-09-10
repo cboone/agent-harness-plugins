@@ -1,5 +1,8 @@
 # marketplace.json Reference
 
+<!-- The bin/ and docs/ paths below name files in this repository, not in a project a skill runs against. -->
+<!-- validate-plugins: repository-paths -->
+
 The root `.claude-plugin/marketplace.json` is the canonical plugin registry for this repository. It lists all available plugins so Claude Code can discover and install them, and it is the source for the generated Codex marketplace.
 
 ## File Location

@@ -7,6 +7,9 @@ description: >-
 
 # Monitor PR
 
+<!-- The bin/ and docs/ paths below name files in this repository, not in a project a skill runs against. -->
+<!-- validate-plugins: repository-paths -->
+
 Watch a pull request until it is ready to merge, fixing what can be fixed and pausing for what cannot.
 
 This skill starts where `pr` stops. It is not a passive observer: it repairs failing checks, syncs a stale branch, and drives Copilot feedback to resolution. It is also not a continue-at-all-costs skill. When a decision is genuinely the user's, it stops and asks.

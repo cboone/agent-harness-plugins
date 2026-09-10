@@ -127,12 +127,12 @@ Skills name each other and point at files by path, and a stale one fails only in
 
 Four spellings are resolved:
 
-| Spelling                            | Resolved against         |
-| ----------------------------------- | ------------------------ |
-| `plugins/…`, `dist/codex/…`, `dist/opencode/…` | the repository root      |
-| `${CLAUDE_PLUGIN_ROOT}/…`           | the plugin shipping the skill |
-| `./references/…`                    | the skill directory      |
-| `` `/name` `` and a backticked name beside the word "skill" | a directory under `plugins/` |
+| Spelling                                                    | Resolved against              |
+| ----------------------------------------------------------- | ----------------------------- |
+| `plugins/…`, `dist/codex/…`, `dist/opencode/…`              | the repository root           |
+| `${CLAUDE_PLUGIN_ROOT}/…`                                   | the plugin shipping the skill |
+| `./references/…`                                            | the skill directory           |
+| `` `/name` `` and a backticked name beside the word "skill" | a directory under `plugins/`  |
 
 `${CLAUDE_PLUGIN_ROOT}/scripts/…` is left to rule 18, which also checks the executable bit. A bare backticked name is not checked: nothing distinguishes `set-up-ci` from `lean-toolchain` without reading the sentence around it.
 
@@ -143,7 +143,7 @@ A string with a stand-in segment is skipped, so `plugins/PLUGIN-NAME/README.md`,
 <!-- validate-plugins: ignore /config ./references/BASH.md -->
 ```
 
-`repository-paths` declares that the `bin/` and `docs/` paths in this file name files in this repository. Without it they are skipped, because most of them name a file the skill *creates* in the project it is run against (`bin/version-audit`, `docs/plans/todo/`), and because this repository's own layout matches, checking them everywhere would pass by coincidence rather than by correctness. Only `create-plugin`, `monitor-pr`, and `release` declare it today.
+`repository-paths` declares that the `bin/` and `docs/` paths in this file name files in this repository. Without it they are skipped, because most of them name a file the skill _creates_ in the project it is run against (`bin/version-audit`, `docs/plans/todo/`), and because this repository's own layout matches, checking them everywhere would pass by coincidence rather than by correctness. Only `create-plugin`, `monitor-pr`, and `release` declare it today.
 
 `ignore` exempts individual references, written exactly as the checker reports them, for illustrations that are neither. Several such comments may appear in one file, and an entry that matches nothing is itself reported, so an exemption cannot outlive the reference it was written for. Exemptions are file-scoped rather than line-scoped because most of the references that need one sit inside an ordered list or a table row, where an HTML comment would break the Markdown.
 
