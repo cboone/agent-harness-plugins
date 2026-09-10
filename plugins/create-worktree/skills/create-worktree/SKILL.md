@@ -6,7 +6,7 @@ description: >-
   into the new session. Use when the user says "create worktree", "new
   worktree", "start working on", "spin up a worktree", or asks to create a
   worktree for an issue number or a general task. Requires workmux, plus the
-  gh CLI when given an issue number.
+  gh CLI and jq when given an issue number.
 ---
 
 # Create Worktree

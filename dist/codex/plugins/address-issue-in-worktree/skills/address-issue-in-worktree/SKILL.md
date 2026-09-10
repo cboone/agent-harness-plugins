@@ -43,11 +43,18 @@ If the search returns multiple results, present them to the user and ask which o
 
 If no results, try broadening the search or ask the user to refine their query.
 
-**Save the issue JSON to a temporary file and reuse it** for steps 3 and 4 rather than fetching again later:
+**Save the issue JSON to a temporary file and reuse it** for steps 3 and 4 rather than fetching again later. Generate a unique path first, then write to it:
 
 ```bash
-gh issue view NUMBER --json number,title,labels,body,state > /tmp/issue-NUMBER.json
+mktemp /tmp/issue-json-XXXXXX
+# Prints a unique path, e.g. /tmp/issue-json-a1b2c3
 ```
+
+```bash
+gh issue view NUMBER --json number,title,labels,body,state > ISSUE_JSON
+```
+
+`ISSUE_JSON` stands for the exact path `mktemp` printed. Substitute that literal path here and in step 5; shell variables do not survive between separate command invocations, so a `${issue_json}` set in one call is empty in the next. A fixed path such as `/tmp/issue-NUMBER.json` would collide between concurrent runs against the same issue and leave the issue body behind when a run fails partway.
 
 Step 2 adds an "in progress" label. A second fetch after that point would pick the new label up and inject `Labels: in progress, ...` into the prompt, telling the new session about a label this skill just added. Reading the cached file keeps the prompt describing the issue as the user filed it, and saves a redundant API call. Delete the file once the worktree exists.
 
@@ -162,18 +169,18 @@ git remote show origin | grep 'HEAD branch' | sed 's/.*: //'
 If the user asked for a specific base branch, use that instead. If both detection methods fail, tell the user which branch `workmux` would default to and ask before proceeding.
 
 ```bash
-bash "SCRIPTS_DIR/compose-issue-prompt" --chain-command "/address-issue NUMBER" < /tmp/issue-NUMBER.json \
+bash "SCRIPTS_DIR/compose-issue-prompt" --chain-command "/address-issue NUMBER" < ISSUE_JSON \
   | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH"
 ```
 
 If the user passed `--no-approval`, the chained command carries it through:
 
 ```bash
-bash "SCRIPTS_DIR/compose-issue-prompt" --chain-command "/address-issue NUMBER --no-approval" < /tmp/issue-NUMBER.json \
+bash "SCRIPTS_DIR/compose-issue-prompt" --chain-command "/address-issue NUMBER --no-approval" < ISSUE_JSON \
   | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH"
 ```
 
-Read the cached JSON from step 1 rather than calling `gh issue view` again here, so the "in progress" label added in step 2 does not leak into the prompt. Remove the temporary file afterwards.
+`ISSUE_JSON` is the path `mktemp` printed in step 1; substitute that literal path. Read the cached JSON rather than calling `gh issue view` again here, so the "in progress" label added in step 2 does not leak into the prompt. Remove the file with `rm -f ISSUE_JSON` once the worktree exists.
 
 The script outputs the workmux log directly and cleans up its own log file. Verify success:
 

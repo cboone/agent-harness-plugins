@@ -8,7 +8,7 @@ Create a git worktree, branch, and tmux window from an issue number or a task de
 ## Requirements
 
 - [`workmux`](https://github.com/paiml/workmux), always.
-- [`gh`](https://cli.github.com/), authenticated, only when you pass an issue number. Task descriptions and explicit branch names need no GitHub access.
+- [`gh`](https://cli.github.com/), authenticated, and [`jq`](https://jqlang.org/), both only when you pass an issue number. The bundled `compose-issue-prompt` script parses the issue JSON with `jq` and exits if it is missing. Task descriptions and explicit branch names need neither.
 
 ## Installation
 
