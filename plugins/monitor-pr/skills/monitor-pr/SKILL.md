@@ -190,13 +190,26 @@ Stop the watch, report, and ask when any of these hold. These are hard rules, no
 
 Wait and return to step 3. Copilot re-reviews automatically on push in most repository configurations, so the review usually arrives without prompting.
 
-**After two consecutive Copilot-phase ticks with no review at the current head**, request one explicitly:
+Before deciding whether to request one, check whether Copilot is already working. Its review runs as a workflow named `Copilot`, so an in-progress run against the current head means a review is coming and requesting another would only duplicate it:
+
+```bash
+gh run list --branch <branch> --limit 5 --json headSha,workflowName,status \
+  --jq '.[] | select(.workflowName == "Copilot") | "\(.headSha[0:7]) \(.status)"'
+```
+
+- **A run against the current head is `in_progress` or `queued`**: keep waiting, however many ticks it takes. Do not request a review, and do not count these ticks toward the two below.
+- **A run against the current head `completed`, but no review is visible yet**: wait one more tick for the review to land before treating it as missing.
+- **No run against the current head at all**: nothing was triggered. This is the case the explicit request exists for.
+
+**After two consecutive Copilot-phase ticks with no review and no run at the current head**, request one explicitly:
 
 ```bash
 gh pr edit PR_NUMBER --add-reviewer "@copilot"
 ```
 
 This is the correct mechanism. Do **not** request a review by posting an `@copilot` mention with `gh pr comment`: that adds PR comment noise, and `resolve-copilot-pr-feedback` treats writing PR comments as forbidden outside its own single summary. Request the review at most once per head SHA. If none arrives after a further two ticks, escalate per step 9.
+
+The run check is what separates "Copilot has not started" from "Copilot is mid-review", which the review list alone cannot distinguish: both look like an absent review. Without it, a slow review gets a redundant request, and a review that was never triggered waits out the same two ticks as one that is already running.
 
 #### 7b. Reviewed at the Current Head
 
