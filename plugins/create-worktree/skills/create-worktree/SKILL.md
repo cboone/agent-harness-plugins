@@ -117,8 +117,10 @@ If the user provided only a branch name with no description, derive a human-read
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt"
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux" "BRANCH_NAME"
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux"
 ```
+
+These show the path form only. The runnable invocations, with their arguments, are further down.
 
 Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step and no need for a shell variable. Keeping `bash` as the command prefix keeps the command token stable across plugin versions, which is what permission allowlist rules match on.
 
