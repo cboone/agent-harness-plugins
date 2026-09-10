@@ -28,7 +28,22 @@ UNAMBIGUOUS_PREFIXES="plugins|dist/codex|dist/opencode"
 #   <!-- validate-plugins: repository-paths -->
 DECLARED_PREFIXES="bin|docs"
 
-readonly UNAMBIGUOUS_PREFIXES DECLARED_PREFIXES
+# Over half the reference files carry nothing this script can act on, and each
+# one otherwise costs five extraction pipelines to find that out. This pattern
+# is the cheap first pass that skips them.
+#
+# Every branch is the loosest form of an extraction below, and the directive
+# comments are included so a file holding only a stale ignore entry is still
+# reported. It may therefore over-match, admitting a file that turns out to have
+# no candidate; it must never under-match, which would silently stop checking a
+# file. Widen it whenever an extraction is added or widened.
+#
+# tests/scrut/check-cross-references.md exercises every extraction end to end,
+# so each one passes through here: narrowing this pattern past an extraction
+# fails that suite rather than quietly reducing what gets checked.
+CANDIDATE_PREFILTER='\$\{CLAUDE_PLUGIN_ROOT\}/|\./references/|(plugins|dist/codex|dist/opencode|bin|docs)/|`/|skill|validate-plugins:'
+
+readonly UNAMBIGUOUS_PREFIXES DECLARED_PREFIXES CANDIDATE_PREFILTER
 
 errors=0
 
@@ -67,7 +82,8 @@ function declares_repository_paths() {
 }
 
 # The declaration comments are dropped before extraction so an entry listed in
-# an ignore comment is not itself mistaken for a reference.
+# an ignore comment is not itself mistaken for a reference. A declaration
+# therefore belongs on a line of its own: prose sharing the line goes with it.
 function scannable_lines() {
   grep -v '<!--[[:space:]]*validate-plugins:' "${1}" || true
 }
@@ -184,6 +200,8 @@ function check_file() {
   local plugin skill_dir prefixes candidates ignores matched
   local kind reference resolved entry
 
+  grep -qE "${CANDIDATE_PREFILTER}" "${file}" || return 0
+
   plugin="${file#plugins/}"
   plugin="${plugin%%/*}"
 
@@ -202,7 +220,7 @@ function check_file() {
   while IFS=$'\t' read -r kind reference resolved; do
     [[ -n "${kind}" ]] || continue
 
-    if contains_line "${ignores}" "${reference}"; then
+    if [[ -n "${ignores}" ]] && contains_line "${ignores}" "${reference}"; then
       matched="${matched}${reference}"$'\n'
       continue
     fi
