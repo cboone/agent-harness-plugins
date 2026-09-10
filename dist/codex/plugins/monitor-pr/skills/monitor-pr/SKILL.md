@@ -188,9 +188,11 @@ Wait and return to step 3. Copilot re-reviews automatically on push in most repo
 Before deciding whether to request one, check whether Copilot is already working. Its review runs as a workflow named `Copilot`, so an in-progress run against the current head means a review is coming and requesting another would only duplicate it:
 
 ```bash
-gh run list --branch <branch> --limit 5 --json headSha,workflowName,status \
-  --jq '.[] | select(.workflowName == "Copilot") | "\(.headSha[0:7]) \(.status)"'
+gh run list --branch <branch> --limit 10 --json headSha,workflowName,status |
+  jq -r --arg head <head-sha> '.[] | select(.workflowName == "Copilot" and .headSha == $head) | .status'
 ```
+
+Filter on the head SHA inside the query, using the `headRefOid` from the step 3 snapshot. Selecting on `workflowName` alone returns runs for earlier commits too, and a completed run for a superseded commit then reads as though it belonged to the current head. Empty output means no run for this head, which is the distinction the whole check exists to draw.
 
 - **A run against the current head is `in_progress` or `queued`**: keep waiting, however many ticks it takes. Do not request a review, and do not count these ticks toward the two below.
 - **A run against the current head `completed`, but no review is visible yet**: wait one more tick for the review to land before treating it as missing.
