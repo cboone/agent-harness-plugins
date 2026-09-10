@@ -132,7 +132,7 @@ gh pr checks PR_NUMBER --json name,state,link,description,workflow
 
 `gh pr checks` exits non-zero when checks are failing **or** still pending, so the exit code is not a reliable signal. Classify from the JSON.
 
-To read the failing job's output, resolve the run id first. Either take it from the failing check's `link` (the trailing path segment of `.../actions/runs/<run-id>/job/<job-id>`), or query the branch directly:
+To read the failing job's output, resolve the run id first. A check's `link` has the shape `https://github.com/OWNER/REPO/actions/runs/<run-id>/job/<job-id>`, so the run id is the segment **after `/runs/`**, not the trailing segment, which is the job id. Several checks usually share one run id, because they are jobs within the same run. Either read it from that URL, or query the branch directly:
 
 ```bash
 gh run list --branch <branch> --limit 5 --json databaseId,conclusion,workflowName \
