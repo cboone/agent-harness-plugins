@@ -45,18 +45,18 @@ Quiet ticks print a single line and are collapsed by the harness where it suppor
 
 ## Usage
 
-```
+```text
 /monitor-pr
 /monitor-pr 361
 /monitor-pr --interval 10m
 /monitor-pr --no-fix
 ```
 
-| Option | Description |
-| --- | --- |
-| `<pr-number>` | Monitor a specific PR instead of the current branch's PR |
-| `--interval <d>` | Override adaptive pacing with a fixed wait |
-| `--no-fix` | Observe and report only: never push, invoke a fixing skill, or request a review |
+| Option           | Description                                                                     |
+| ---------------- | ------------------------------------------------------------------------------- |
+| `<pr-number>`    | Monitor a specific PR instead of the current branch's PR                        |
+| `--interval <d>` | Override adaptive pacing with a fixed wait                                      |
+| `--no-fix`       | Observe and report only: never push, invoke a fixing skill, or request a review |
 
 ## Recommended Permissions
 
