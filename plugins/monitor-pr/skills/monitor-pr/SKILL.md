@@ -34,13 +34,14 @@ The watch ends when all four axes are clean at the same time. Partial greenness 
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Checks       | Every check in `statusCheckRollup` has concluded successfully, or the repository has no checks configured                                                                                                     |
 | Copilot      | A Copilot review exists whose commit SHA equals the current head, `fetch` returns `[]`, and `fetch-reviews` has no open finding. Under `--confirm-clean`, two consecutive such reviews against that same head |
-| Mergeability | `mergeable` is `MERGEABLE` and `mergeStateStatus` is neither `DIRTY` nor `BEHIND`                                                                                                                             |
+| Mergeability | `mergeable` is `MERGEABLE` and `mergeStateStatus` is neither `DIRTY` nor `BEHIND`. `BLOCKED` counts as clean but must be reported, per the rule below                                                         |
 | PR state     | `OPEN` and not merged or closed                                                                                                                                                                               |
 
-Two rules that follow from this and are easy to get wrong:
+Three rules that follow from this and are easy to get wrong:
 
 - **A Copilot review against an older SHA does not count.** Copilot reviews are pinned to the commit they ran against, so every push this skill makes invalidates the previous review by construction. A fix always sends the loop back around.
 - **`reviewDecision` does not gate.** A human `CHANGES_REQUESTED` will not stop this skill from declaring the PR ready. Report `reviewDecision` in every status line and in the terminal report so an outstanding human objection stays visible, but never wait on it.
+- **`BLOCKED` does not gate either, but it must be reported.** Requiring `mergeStateStatus` to be `CLEAN` would be the stricter reading of "ready to merge", and it is deliberately not what this skill does: on a repository whose branch protection requires an approving review, nothing the skill can do will ever satisfy it, so the watch would run until its round budget expired and then report failure on a PR that is finished. Treat `BLOCKED` as ready-with-a-caveat instead. **A terminal report that omits an active `BLOCKED` state is wrong**, because it tells the user the PR is ready to merge when GitHub will refuse the merge. Name the state and say what is unsatisfied.
 
 ## Workflow
 
@@ -98,6 +99,7 @@ Evaluate in this order and take the first match. The ordering is deliberate: syn
 1. **PR is `MERGED` or `CLOSED`**: terminal. Report and stop.
 1. **`mergeStateStatus` is `DIRTY`**: conflicts with the base branch. Go to step 5.
 1. **`mergeStateStatus` is `BEHIND`**: go to step 5.
+1. **`mergeStateStatus` is `BLOCKED`**: do not treat this as a blocker and do not wait on it, but record it. It means a branch protection rule is unsatisfied, most often a required approving review. Continue evaluating the remaining conditions, and carry the `BLOCKED` state into every status line and into the terminal report per step 8.
 1. **Any check concluded with a failure**: go to step 6.
 1. **Checks pending or running**: wait, then return to step 3.
 1. **Checks pass and Copilot is missing or stale**: go to step 7.
@@ -251,6 +253,7 @@ Each review in a confirmation pair counts as its own round against the step 7c b
 
 1. Stop the wait loop. On the `ScheduleWakeup` path, that means `ScheduleWakeup({stop: true})`.
 1. Print the full status table: every check with its state, the Copilot verdict with the SHA it was rendered against, `mergeable`, `mergeStateStatus`, and `reviewDecision` labelled as informational.
+1. **If `mergeStateStatus` is `BLOCKED`, say so before offering to merge.** State that GitHub will refuse the merge until the branch protection requirement is met, and name it if `reviewDecision` identifies it (a required approving review being the usual case). Offering a merge without that caveat presents a PR as ready when it is not yet mergeable.
 1. Ask the user how to proceed: merge now (squash, merge, or rebase), enable auto-merge with `gh pr merge --auto`, or leave it as is.
 
 Do not merge without asking, and do not enable auto-merge without asking.
