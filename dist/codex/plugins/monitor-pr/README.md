@@ -65,14 +65,14 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr merge *)", "Bash(gh api --paginate repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(git push*)"]
+    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr merge *)", "Bash(gh api --paginate --slurp repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(git status*)", "Bash(git add *)", "Bash(git commit -S *)", "Bash(git push*)", "Bash(bin/build-codex-marketplace)", "Bash(bin/build-opencode-mirror)"]
   }
 }
 ```
 
 If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
-Note that flag position matters in these rules: `Bash(gh api repos/*)` does not match `gh api --paginate repos/*`, because the flag comes first.
+Two notes on these rules. **Flag position matters**: `Bash(gh api repos/*)` does not match `gh api --paginate --slurp repos/*`, because the flags come first, so the rule has to spell them out in order. **The repair paths need write rules**: step 6 stages, commits, and pushes fixes, and rebuilds generated trees, so `git add`, `git commit`, and the build scripts belong in the list alongside `git push`. The two `bin/build-*` entries are specific to this repository; substitute whatever build or codegen commands your own project's checks enforce.
 
 ## Examples
 

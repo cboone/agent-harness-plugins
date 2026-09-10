@@ -70,13 +70,17 @@ There is no wall-clock cap and no give-up tick count. The watch ends on a termin
 Re-run the `gh pr view` call from step 1, and probe Copilot's latest review:
 
 ```bash
-gh api --paginate "repos/OWNER/REPO/pulls/PR_NUMBER/reviews" \
-  --jq '[.[] | select(.user.login == "copilot-pull-request-reviewer[bot]")] | last | {commit_id, submitted_at, state}'
+gh api --paginate --slurp "repos/OWNER/REPO/pulls/PR_NUMBER/reviews" \
+  | jq '[.[][] | select(.user.login | IN("copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"))] | last | {commit_id, submitted_at, state}'
 ```
 
-`--paginate` is required. Note that the flag comes before the path, which matters for permission rules: a `Bash(gh api repos/*)` rule does not match `gh api --paginate repos/*`.
+Three details in that command are load-bearing:
 
-REST reports Copilot as `copilot-pull-request-reviewer[bot]`; GraphQL reports the same account as `copilot-pull-request-reviewer`. Copilot's review `state` is always `COMMENTED`, never `APPROVED`, so never treat an approval state as the pass signal.
+- **`--slurp`, and no `--jq`.** Without `--slurp`, `--paginate` emits one JSON array per page and `gh` applies `--jq` to each page separately, so a filter like `[...] | last` returns the last match _per page_ rather than the last overall. On a PR with enough reviews to paginate, that silently reads the wrong review and the skill compares the wrong SHA against the head. `--slurp` collects the pages into an array of arrays, which `.[][]` then flattens. `gh` rejects `--slurp` together with `--jq` (`the --slurp option is not supported with --jq or --template`), so the filtering has to move to a standalone `jq` after a pipe.
+- **Every Copilot login, not just one.** REST reports the account as `copilot-pull-request-reviewer[bot]` while GraphQL reports it as `copilot-pull-request-reviewer`, and `copilot` and `github-copilot[bot]` also appear. Matching a single login makes a real review invisible, which reads as "Copilot has not reviewed yet" and sends the skill into a pointless wait and then an escalation. This is the same login set that `resolve-copilot-pr-feedback` matches on.
+- **Flag position.** `--paginate` and `--slurp` come before the path, which matters for permission rules: a `Bash(gh api repos/*)` rule does not match `gh api --paginate repos/*`.
+
+Copilot's review `state` is always `COMMENTED`, never `APPROVED`, so never treat an approval state as the pass signal.
 
 Reduce the snapshot to the four axes in [Ready Criteria](#ready-criteria).
 
@@ -119,10 +123,19 @@ After a clean merge and push, resume at step 3. The head SHA has moved, so Copil
 
 ```bash
 gh pr checks PR_NUMBER --json name,state,link,description,workflow
-gh run view <run-id> --log-failed
 ```
 
 `gh pr checks` exits non-zero when checks are failing **or** still pending, so the exit code is not a reliable signal. Classify from the JSON.
+
+To read the failing job's output, resolve the run id first. Either take it from the failing check's `link` (the trailing path segment of `.../actions/runs/<run-id>/job/<job-id>`), or query the branch directly:
+
+```bash
+gh run list --branch <branch> --limit 5 --json databaseId,conclusion,workflowName \
+  --jq '[.[] | select(.conclusion == "failure")][0].databaseId'
+gh run view <run-id> --log-failed
+```
+
+**A failing check under-reports.** Jobs stop at the first failing step, so later steps in the same job never run and their violations never surface. Treat the log as a lower bound: after repairing what it names, re-run the project's full check locally before pushing, or expect a second failure for something the first log never mentioned.
 
 #### 6b. Repair by Category
 
@@ -142,6 +155,11 @@ gh run view <run-id> --log-failed
 
 - **Generated-tree drift**: run the repository's own build scripts and commit the result. In this repository that is `bin/build-codex-marketplace` and `bin/build-opencode-mirror`.
 - **Test or build failure**: read the logs, diagnose the cause, fix it, and commit.
+
+Two ways this step goes wrong in practice:
+
+- **A repair can cause the next failure.** Editing a source file that a generated tree mirrors leaves that tree stale, so a lint fix turns into a generated-tree drift failure on the following run. After repairing anything under a mirrored path, rebuild the generated trees in the same commit rather than waiting for CI to catch it.
+- **A chained auto-fix stops at the first unfixable error.** Where a project's fix target chains tools (`markdownlint --fix` then `prettier --write`, say), a violation that has no auto-fix exits non-zero and the later tools never run, so the pass repairs nothing and hides everything downstream of it. Resolve the unfixable violation by hand, then run the fix target again so the remaining tools get their turn.
 
 #### 6c. Push and Resume
 
@@ -175,7 +193,7 @@ This is the correct mechanism. Do **not** request a review by posting an `@copil
 Invoke the `resolve-copilot-pr-feedback` skill using the Skill tool:
 
 ```text
-resolve-copilot-pr-feedback
+resolve-copilot-pr-feedback OWNER=<owner> REPO=<repo> PR_NUMBER=<number>
 
 Parent continuation:
 - Caller: monitor-pr
@@ -183,6 +201,8 @@ Parent continuation:
 - On Completed or No unresolved Copilot feedback: Continue immediately to Step 3 without asking the user for confirmation.
 - On Partial or Failed: Stop the watch and escalate per Step 9.
 ```
+
+Pass the `OWNER`, `REPO`, and `PR_NUMBER` recorded in step 1. That skill's script calls require all three and it does not document how to derive them, so supplying them here saves it from re-deriving them or asking the user.
 
 Only invoke it once a review exists at the current head. Invoking it earlier makes it report `No unresolved Copilot feedback` and post a no-op summary comment, which reads as a clean bill of health for code Copilot never saw.
 
