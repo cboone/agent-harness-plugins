@@ -17,18 +17,20 @@ The user may provide these options inline:
 
 - **`<pr-number>`**: Monitor a specific PR instead of the current branch's PR (e.g., `/monitor-pr 361`)
 - **--interval `<duration>`**: Override adaptive pacing with a fixed wait (e.g., `--interval 10m`)
+- **--rounds `<n|unlimited>`**: Change the Copilot round budget from its default of 10. `--rounds unlimited` commits to running until the PR is genuinely clean, however many rounds that takes, and never pauses to ask for more
+- **--confirm-clean**: Require two consecutive clean Copilot reviews rather than one. After the first clean review, request another explicitly and wait for it
 - **--no-fix**: Observe and report only. Never push, never invoke a fixing skill, never request a review
 
 ## Ready Criteria
 
 The watch ends when all four axes are clean at the same time. Partial greenness is not readiness.
 
-| Axis         | Clean when                                                                                                                      |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| Checks       | Every check in `statusCheckRollup` has concluded successfully, or the repository has no checks configured                       |
-| Copilot      | A Copilot review exists whose commit SHA equals the current head, `fetch` returns `[]`, and `fetch-reviews` has no open finding |
-| Mergeability | `mergeable` is `MERGEABLE` and `mergeStateStatus` is neither `DIRTY` nor `BEHIND`                                               |
-| PR state     | `OPEN` and not merged or closed                                                                                                 |
+| Axis         | Clean when                                                                                                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Checks       | Every check in `statusCheckRollup` has concluded successfully, or the repository has no checks configured                                                                                                     |
+| Copilot      | A Copilot review exists whose commit SHA equals the current head, `fetch` returns `[]`, and `fetch-reviews` has no open finding. Under `--confirm-clean`, two consecutive such reviews against that same head |
+| Mergeability | `mergeable` is `MERGEABLE` and `mergeStateStatus` is neither `DIRTY` nor `BEHIND`                                                                                                                             |
+| PR state     | `OPEN` and not merged or closed                                                                                                                                                                               |
 
 Two rules that follow from this and are easy to get wrong:
 
@@ -63,7 +65,7 @@ Adaptive intervals by phase, unless `--interval` overrides them:
 | Awaiting a Copilot review at the current head | 5 to 10 minutes  |
 | Checks queued, or nothing moving              | 20 to 30 minutes |
 
-There is no wall-clock cap and no give-up tick count. The watch ends on a terminal state or an escalation, not on a timer. The user can interrupt at any point.
+There is no wall-clock cap and no limit on ticks: waiting is free, so a watch may tick as many times as it needs to. The only budget is on Copilot rounds, per step 7c, and it counts completed reviews rather than elapsed time or poll count. The watch ends on a terminal state, an escalation, or an exhausted round budget, never on a timer. The user can interrupt at any point.
 
 ### 3. Take a State Snapshot
 
@@ -95,6 +97,7 @@ Evaluate in this order and take the first match. The ordering is deliberate: syn
 1. **Checks pending or running**: wait, then return to step 3.
 1. **Checks pass and Copilot is missing or stale**: go to step 7.
 1. **Copilot reviewed the current head with open threads or findings**: go to step 7.
+1. **Copilot reviewed the current head cleanly, `--confirm-clean` is set, and this is the first such review**: go to step 7d to request and await the confirming review.
 1. **All four axes clean**: terminal. Go to step 8.
 
 Under `--no-fix`, replace steps 5, 6, and 7 with a report of what would have been done, then continue waiting.
@@ -206,9 +209,38 @@ Pass the `OWNER`, `REPO`, and `PR_NUMBER` recorded in step 1. That skill's scrip
 
 Only invoke it once a review exists at the current head. Invoking it earlier makes it report `No unresolved Copilot feedback` and post a no-op summary comment, which reads as a clean bill of health for code Copilot never saw.
 
-#### 7c. Convergence Guard
+#### 7c. Round Budget
 
-Count Copilot rounds for this watch. After three rounds that have not converged, stop and report rather than looping indefinitely.
+Count Copilot rounds for this watch. The default budget is **10**. On reaching it, stop and report per step 9, then ask whether to continue and for how many more rounds.
+
+This is a budget, not a verdict about progress. **Do not treat the shape of the finding counts as a signal.** Copilot swings: a round with many findings is regularly followed by a quiet one and then a busy one again, and the count going up does not mean the work is diverging. Four rounds is often not enough to finish, so a watch that is still finding real defects at round 6 or 8 is behaving normally, not thrashing.
+
+What matters is whether the findings are real. Keep going while each round produces valid, fixable defects, and escalate early per step 9 only when a round produces something that needs the user's judgment, per the escalation rules in step 6d. The budget exists to bound an unattended watch, not to second-guess a productive one.
+
+`--rounds <n>` sets a different budget. `--rounds unlimited` removes it: the watch then runs until the PR is genuinely clean and never pauses to ask for more rounds, though every other escalation rule still applies.
+
+#### 7d. Confirming a Clean Review
+
+A single clean review is the default finish. It is also the weakest link in the ready criteria, because Copilot's output varies between runs over identical code: a review that surfaces nothing is not proof that there is nothing to surface.
+
+Under **--confirm-clean**, require two consecutive clean reviews instead:
+
+1. The first clean review at the current head does **not** end the watch. Record it, along with the head SHA it was rendered against.
+1. Request another review explicitly, exactly as in step 7a:
+
+   ```bash
+   gh pr edit PR_NUMBER --add-reviewer "@copilot"
+   ```
+
+   This is a re-review of unchanged code, so the request is what produces it. Waiting will not.
+
+1. Wait for a review newer than the recorded one, then judge it by the same standard: no open threads, and no review-body findings that are not already recorded in a prior summary comment.
+1. **Two consecutive clean reviews against the same head SHA** satisfy the Copilot axis. Report both, with their timestamps, so the terminal report shows the confirmation actually happened.
+1. **If the second review surfaces anything real**, the confirmation earned its keep. Handle it per step 7b, and reset the count: the next clean review is again only the first of two.
+
+Any push resets the confirmation, whatever its source. Both clean reviews must be against the current head, so a fix, a merge from step 5, or a commit someone else pushes all send the count back to zero.
+
+Each review in a confirmation pair counts as its own round against the step 7c budget.
 
 ### 8. Terminal Report, Then Ask
 
@@ -233,8 +265,10 @@ Then tell the user that `/monitor-pr` resumes the watch once they have decided.
 Every tick prints one compact line. On the `ScheduleWakeup` path, pass `noop: true` on a tick where nothing changed, so quiet ticks collapse in the user's terminal:
 
 ```text
-▸ 361 · checks 4/5 · copilot stale · mergeable CLEAN · review NONE
+▸ 361 · checks 4/5 · copilot stale · mergeable CLEAN · review NONE · round 3/10
 ```
+
+Carry the round counter once any Copilot round has run, so the remaining budget stays visible without having to count back through the transcript. Show `round 3/unlimited` under `--rounds unlimited`, and mark a pending confirmation as `round 3/10 (confirming 1/2)` under `--confirm-clean`.
 
 Any state change prints the full table and passes `noop: false`:
 

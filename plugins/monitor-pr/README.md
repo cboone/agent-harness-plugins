@@ -31,13 +31,21 @@ This is not a continue-at-all-costs skill. It halts the watch and puts the quest
 
 Copilot reviews are always `COMMENTED`, never `APPROVED`, so an approval state is never the pass signal. A sign-off means a Copilot review exists whose commit SHA equals the current head, the review-thread fetch returns nothing, and no review-body findings are left open. A review against an older SHA does not count.
 
+Copilot's output varies between runs over identical code, so a review that surfaces nothing is not proof that there was nothing to surface. `--confirm-clean` requires two consecutive clean reviews instead of one: the first clean review does not end the watch, a second is requested explicitly (a re-review of unchanged code has to be asked for, since nothing triggers it), and only two in a row against the same head satisfy the Copilot axis. Any push resets the pair, and if the confirming review turns something up, the count starts over after it is fixed.
+
+### How long it runs
+
+The Copilot round budget defaults to 10. On reaching it the skill stops and asks whether to continue and for how many more rounds; `--rounds <n>` sets a different budget and `--rounds unlimited` removes the question entirely, committing to run until the PR is genuinely clean.
+
+The budget bounds an unattended watch. It is not a judgement about whether the work is going well, and the skill does not read the finding counts as a trend. Copilot swings between busy and quiet rounds over the same code, so a rising count does not mean divergence, and four rounds is often not enough to finish. A watch still turning up real defects at round 8 is working, not thrashing. What ends a watch early is a finding that needs your judgement, not an unflattering shape in the numbers.
+
 ### What does not gate
 
 `reviewDecision` is reported in every status line but never blocks. A human `CHANGES_REQUESTED` will not stop this skill from declaring the PR ready, so that an outstanding human objection stays visible without stalling a watch on solo repositories that have no required reviewers.
 
 ### Pacing and harness support
 
-Intervals adapt to the phase: shorter while checks are actively running, longer while waiting on Copilot, longest when nothing is moving. There is no wall-clock cap and no give-up count. The watch ends on a terminal state or an escalation, and you can interrupt it at any point.
+Intervals adapt to the phase: shorter while checks are actively running, longer while waiting on Copilot, longest when nothing is moving. There is no wall-clock cap and no limit on ticks; the only budget is on Copilot rounds, described above. The watch ends on a terminal state, an escalation, or an exhausted round budget, and you can interrupt it at any point.
 
 On Claude Code the skill paces itself with the harness scheduler, which returns control between ticks and keeps the transcript small. `/loop /monitor-pr` is the recommended invocation there. Codex CLI and OpenCode have no scheduler, so the skill falls back to a blocking wait between polls inside a single turn. It works, but the whole watch accumulates in one turn's context.
 
@@ -49,14 +57,18 @@ Quiet ticks print a single line and are collapsed by the harness where it suppor
 /monitor-pr
 /monitor-pr 361
 /monitor-pr --interval 10m
+/monitor-pr --rounds unlimited
+/monitor-pr --confirm-clean
 /monitor-pr --no-fix
 ```
 
-| Option           | Description                                                                     |
-| ---------------- | ------------------------------------------------------------------------------- |
-| `<pr-number>`    | Monitor a specific PR instead of the current branch's PR                        |
-| `--interval <d>` | Override adaptive pacing with a fixed wait                                      |
-| `--no-fix`       | Observe and report only: never push, invoke a fixing skill, or request a review |
+| Option                    | Description                                                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------------- |
+| `<pr-number>`             | Monitor a specific PR instead of the current branch's PR                                           |
+| `--interval <d>`          | Override adaptive pacing with a fixed wait                                                         |
+| `--rounds <n\|unlimited>` | Change the Copilot round budget from its default of 10; `unlimited` commits to running until clean |
+| `--confirm-clean`         | Require two consecutive clean Copilot reviews rather than one                                      |
+| `--no-fix`                | Observe and report only: never push, invoke a fixing skill, or request a review                    |
 
 ## Recommended Permissions
 
