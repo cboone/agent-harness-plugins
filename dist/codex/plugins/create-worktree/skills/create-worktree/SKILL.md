@@ -122,7 +122,7 @@ Claude Code replaces the plugin-root placeholder with the installed plugin's abs
 
 **If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. In that case locate the scripts with `**/create-worktree/**/scripts/compose-issue-prompt` and `**/create-worktree/**/scripts/launch-workmux`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use those absolute paths for the rest of the session.
 
-In the examples below, `SCRIPTS_DIR/launch-workmux` is shorthand for the full **quoted path** shown above.
+In the examples below, `SCRIPTS_DIR/compose-issue-prompt` and `SCRIPTS_DIR/launch-workmux` are shorthand for the full **quoted paths** shown above.
 
 **Always pass `--base`.** `workmux`'s default base is the _current_ branch, not the repository's default branch, so running this skill from a feature branch silently stacks the new worktree on top of that branch and carries its commits along. Detect the default branch and pass it explicitly:
 
