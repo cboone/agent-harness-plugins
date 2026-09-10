@@ -167,7 +167,7 @@ Add the new plugin to the current compact category-table format in root `README.
 1. **External tools**: If the plugin requires external tools, add or update the category's `**External tools:**` bullet list.
 1. **Per-plugin README**: Create `plugins/PLUGIN-NAME/README.md` with user-facing install, usage, requirements, examples, and related-plugin details.
 
-Do not add a root README table of contents, H3 plugin-description section, or individual install command. The root README now uses category tables, and the marketplace flow handles installation.
+Do not add an H3 plugin-description section or an individual install command to the root README, and do not list the plugin in the root README's `## Contents` section. That section navigates headings, not plugins, so a new plugin never changes it. The root README uses category tables, and the marketplace flow handles installation.
 
 ### 10. Regenerate Generated Mirrors
 
