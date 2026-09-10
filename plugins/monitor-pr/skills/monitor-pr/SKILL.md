@@ -205,11 +205,15 @@ That command answers with exactly one line, or none. Three details make it so:
 
 Empty output means no run for this head. The discarded stderr matters for that: on a repository where Copilot review is not enabled there is no `Copilot` workflow at all, and `gh` then exits non-zero with `could not find any workflows named Copilot`. That is the no-run case, not a failure, so let it read as empty rather than treating it as an error.
 
-- **A run against the current head is `in_progress` or `queued`**: keep waiting, however many ticks it takes. Do not request a review, and do not count these ticks toward the two below.
-- **A run against the current head `completed`, but no review is visible yet**: wait one tick for the review to land, since the run finishing and the review appearing are not simultaneous. If it is still absent on the next tick, the run produced no review and waiting will not change that, so treat this exactly like the no-run case below and request one.
-- **No run against the current head at all**: nothing was triggered. This is the case the explicit request exists for.
+Classify each Copilot-phase tick as **working** or **quiet**, and count only the quiet ones:
 
-**After two consecutive Copilot-phase ticks with no review at the current head**, request one explicitly, whether the cause was no run or a completed run that produced nothing:
+- **A run against the current head is `in_progress` or `queued`**: working. Copilot is mid-review, so keep waiting however many ticks it takes, and reset the quiet count to zero.
+- **A run against the current head `completed`, but no review is visible yet**: quiet. The run finishing and the review appearing are not simultaneous, so one quiet tick here is normal.
+- **No run against the current head at all**: quiet. Nothing was triggered.
+
+Both quiet cases are counted the same way and lead to the same remedy, because in both of them nothing further is coming on its own.
+
+**After two consecutive quiet ticks**, request a review explicitly:
 
 ```bash
 gh pr edit PR_NUMBER --add-reviewer "@copilot"
