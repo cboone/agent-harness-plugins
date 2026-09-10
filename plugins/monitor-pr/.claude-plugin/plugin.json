@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Monitor a pull request until its checks pass, Copilot signs off on the current head, and it is mergeable, fixing failures along the way.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["ci", "copilot", "github", "pull-requests", "workflow"],
+  "license": "MIT",
+  "name": "monitor-pr",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
