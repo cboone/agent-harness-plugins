@@ -95,7 +95,7 @@ Use `TYPE/SLUG` format:
 
 The slug should be a lowercase, hyphen-separated description (e.g., `fix/login-timeout`, `feature/add-retry-logic`).
 
-`feature/` is the primary spelling because it is what the `create-worktree` and `create-worktree-from-issue` skills emit; `feat/` is accepted everywhere `feature/` is.
+`feature/` is the primary spelling because it is what the `create-worktree` and `address-issue-in-worktree` skills emit; `feat/` is accepted everywhere `feature/` is.
 
 **Include the issue number when working from an issue**, immediately after the type prefix: `fix/42-login-timeout`. The `pr` skill's primary issue-detection strategy parses `TYPE/N-description` out of the branch name, so a branch without the number forces a slower GitHub search that can match the wrong issue or none at all.
 
