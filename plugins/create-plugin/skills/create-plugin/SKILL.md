@@ -12,6 +12,12 @@ description: >-
 
 Create a new plugin for this repository following established conventions.
 
+<!-- The bin/ and docs/ paths below name files in this repository, not in a project a skill runs against. -->
+<!-- validate-plugins: repository-paths -->
+
+<!-- The reference filenames below name the layout conventions a plugin being authored should follow; they are not this skill's own reference files. `/example-command` and `/something` stand in for a command not yet written. -->
+<!-- validate-plugins: ignore ./references/BASH.md ./references/MARKDOWN.md ./references/checklist.md ./references/github.md ./references/comprehensive ./references/essential ./references/languages ./references/scripts ./references/tools /example-command /something -->
+
 ## Workflow
 
 ### 1. Determine Plugin Type

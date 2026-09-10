@@ -13,6 +13,9 @@ description: >-
 
 Prepare a versioned release or Claude Code marketplace catalog state tag: analyze commits, update release files, create a release commit, tag locally, and optionally publish a GitHub Release.
 
+<!-- The bin/ and docs/ paths below name files in this repository, not in a project a skill runs against. -->
+<!-- validate-plugins: repository-paths -->
+
 ## Options
 
 The user may provide these options inline:
