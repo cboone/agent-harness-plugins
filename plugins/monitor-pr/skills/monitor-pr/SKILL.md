@@ -190,13 +190,38 @@ Stop the watch, report, and ask when any of these hold. These are hard rules, no
 
 Wait and return to step 3. Copilot re-reviews automatically on push in most repository configurations, so the review usually arrives without prompting.
 
-**After two consecutive Copilot-phase ticks with no review at the current head**, request one explicitly:
+Before deciding whether to request one, check whether Copilot is already working. Its review runs as a workflow named `Copilot`, so an in-progress run against the current head means a review is coming and requesting another would only duplicate it:
+
+```bash
+gh run list --branch <branch> --workflow Copilot --limit 10 --json headSha,status 2> /dev/null |
+  jq -r --arg head <head-sha> 'first(.[] | select(.headSha == $head) | .status)'
+```
+
+That command answers with exactly one line, or none. Three details make it so:
+
+- **`--workflow Copilot`, not a client-side name filter.** `--limit` applies to runs across every workflow on the branch, so on a repository with several workflows the Copilot run for the current head can fall outside the window and look like no run at all, which then triggers a redundant review request. Narrowing server-side makes the limit count Copilot runs alone.
+- **Filter on the head SHA**, using the `headRefOid` from the step 3 snapshot. A completed run for a superseded commit otherwise reads as though it belonged to the current head, which is precisely the distinction this check exists to draw.
+- **`first(...)`, because a SHA can have several runs.** A re-run adds another Copilot run for the same commit, and a bare `select` emits one line per match, so the reader gets `completed` and `in_progress` together with no way to tell which governs. `gh run list` returns newest-first, so the first match is the current one. `first` over an empty stream emits nothing and still exits 0.
+
+Empty output means no run for this head. The discarded stderr matters for that: on a repository where Copilot review is not enabled there is no `Copilot` workflow at all, and `gh` then exits non-zero with `could not find any workflows named Copilot`. That is the no-run case, not a failure, so let it read as empty rather than treating it as an error.
+
+Classify each Copilot-phase tick as **working** or **quiet**, and count only the quiet ones:
+
+- **A run against the current head is `in_progress` or `queued`**: working. Copilot is mid-review, so keep waiting however many ticks it takes, and reset the quiet count to zero.
+- **A run against the current head `completed`, but no review is visible yet**: quiet. The run finishing and the review appearing are not simultaneous, so one quiet tick here is normal.
+- **No run against the current head at all**: quiet. Nothing was triggered.
+
+Both quiet cases are counted the same way and lead to the same remedy, because in both of them nothing further is coming on its own.
+
+**After two consecutive quiet ticks**, request a review explicitly:
 
 ```bash
 gh pr edit PR_NUMBER --add-reviewer "@copilot"
 ```
 
 This is the correct mechanism. Do **not** request a review by posting an `@copilot` mention with `gh pr comment`: that adds PR comment noise, and `resolve-copilot-pr-feedback` treats writing PR comments as forbidden outside its own single summary. Request the review at most once per head SHA. If none arrives after a further two ticks, escalate per step 9.
+
+The run check is what separates "Copilot has not started" from "Copilot is mid-review", which the review list alone cannot distinguish: both look like an absent review. Without it, a slow review gets a redundant request, and a review that was never triggered waits out the same two ticks as one that is already running.
 
 #### 7b. Reviewed at the Current Head
 

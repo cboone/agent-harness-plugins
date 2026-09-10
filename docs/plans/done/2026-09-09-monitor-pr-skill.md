@@ -173,6 +173,8 @@ Invoke `merge-main` via the Skill tool. Note that `merge-main` has no `Parent Co
 1. **Copilot is `at-head`**: invoke `resolve-copilot-pr-feedback` via the Skill tool with a `Parent continuation:` block. Consume its terminal status (`Completed` / `No unresolved Copilot feedback` / `Partial` / `Failed`). On `Partial` or `Failed`, escalate. On success, resume at step 3.
 1. **Convergence guard**: count Copilot rounds. After three rounds that have not converged, stop and report rather than looping indefinitely.
 
+   **Superseded during implementation.** This shipped as a plain round budget defaulting to 10, not a convergence judgment. Watching PR #379 take seven rounds to reach a clean review, with finding counts of 6, 1, 4, 1, 3, 2, 0, showed that Copilot swings between busy and quiet rounds over the same code, so the count carries no signal about whether the work is converging. The skill now keeps going while rounds produce valid defects and escalates only on findings that need the user. `--rounds <n|unlimited>` adjusts or removes the budget, and `--confirm-clean` requires two consecutive clean reviews rather than one.
+
 Note the built-in reset: every push the skill makes invalidates Copilot's review, so the pass criterion is genuinely three-part and a fix always sends the loop back around.
 
 #### Step 6. Terminal report, then ask
@@ -244,6 +246,8 @@ No scrut coverage and no `SCRUT_ENV` / `scrut-env` changes: this plugin bundles 
 `ScheduleWakeup` is documented as the mechanism for `/loop` dynamic mode ("Schedule when to resume work in /loop dynamic mode"). Whether it can be called from a skill invoked bare as `/monitor-pr`, rather than as `/loop /monitor-pr`, is not established by the tool documentation and needs a live check during implementation.
 
 Design so this does not matter much: attempt `ScheduleWakeup`; if it is unavailable or rejected, fall back to the blocking-`sleep` path that Codex CLI and OpenCode use anyway. Document `/loop /monitor-pr` in the README as the recommended Claude Code invocation. Verify the bare `/monitor-pr` path against a real PR before considering the skill done, and record the actual behavior in the README rather than the assumed behavior.
+
+**Resolved during implementation.** `ScheduleWakeup` works when called from a skill invoked outside `/loop`. It was exercised repeatedly against PR #379, both to schedule wakeups with a delay and prompt and to end the watch with `stop: true`, and it neither errored nor required loop mode. `/loop /monitor-pr` remains a reasonable invocation but is not a requirement, and the blocking-`sleep` fallback is needed only on harnesses with no scheduler at all.
 
 ## Out of scope
 
