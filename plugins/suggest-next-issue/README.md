@@ -42,5 +42,5 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 ## See Also
 
-- [Create Worktree from Issue](../create-worktree-from-issue/README.md): start working on the suggested issue
+- [Address Issue in Worktree](../address-issue-in-worktree/README.md): start working on the suggested issue
 - [All plugins](../../README.md)

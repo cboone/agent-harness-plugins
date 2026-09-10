@@ -87,3 +87,24 @@ zero meaningless, fails the test instead of passing it.
 $ cd "${REPO_ROOT}" && corrupted="$(grep -rlE '< [a-z][a-z0-9-]+ >' plugins/ .claude/ .github/ README.md AGENTS.md 2>/dev/null | wc -l)" && scanned="$(grep -rl 'git ' plugins/ .claude/ 2>/dev/null | wc -l)" && printf 'corrupted=%d scanned_enough=%s\n' "${corrupted}" "$([ "${scanned}" -gt 20 ] && echo yes || echo no)"
 corrupted=0 scanned_enough=yes
 ```
+
+## The duplicated worktree scripts stay byte-identical
+
+`create-worktree` and `address-issue-in-worktree` ship the same
+`compose-issue-prompt` and `launch-workmux`. Rule 18 of `bin/validate-plugins`
+requires every `${CLAUDE_PLUGIN_ROOT}/scripts/NAME` reference to resolve inside
+its own plugin, so the two plugins cannot share one copy.
+
+The copies drifted once before: one grew `--base` support while the other grew
+Codex-pane prompt resending, and neither gained the other's feature. These
+guards fail the build instead of letting that happen again.
+
+```scrut
+$ cd "${REPO_ROOT}" && cmp plugins/create-worktree/scripts/compose-issue-prompt plugins/address-issue-in-worktree/scripts/compose-issue-prompt && echo identical
+identical
+```
+
+```scrut
+$ cd "${REPO_ROOT}" && cmp plugins/create-worktree/scripts/launch-workmux plugins/address-issue-in-worktree/scripts/launch-workmux && echo identical
+identical
+```

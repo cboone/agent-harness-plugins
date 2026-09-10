@@ -82,7 +82,7 @@ plugins/handle-secrets/
             └── ...
 ```
 
-A skill can ship executable helpers too. `create-worktree`, `create-worktree-from-issue`, and `resolve-copilot-pr-feedback` each bundle a `scripts/` directory that the skill body invokes:
+A skill can ship executable helpers too. `address-issue-in-worktree`, `create-worktree`, and `resolve-copilot-pr-feedback` each bundle a `scripts/` directory that the skill body invokes:
 
 ```text
 plugins/create-worktree/
@@ -90,13 +90,16 @@ plugins/create-worktree/
 │   └── plugin.json
 ├── README.md
 ├── scripts/
+│   ├── compose-issue-prompt
 │   └── launch-workmux
 └── skills/
     └── create-worktree/
         └── SKILL.md
 ```
 
-The skill refers to the script as `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux`, which Claude Code substitutes with the installed plugin root. Rule 18 of `bin/validate-plugins` checks that every such reference resolves to a shipped, executable file and rejects version-blind locator globs like `**/PLUGIN/scripts/NAME`. Bundled scripts belong in `tests/scrut/`.
+`create-worktree` and `address-issue-in-worktree` ship byte-identical copies of both scripts. Rule 18 requires every `${CLAUDE_PLUGIN_ROOT}/scripts/NAME` reference to resolve inside its own plugin, so the scripts cannot be shared across plugins. Two testcases in `tests/scrut/repo-tooling.md` fail if the copies drift, so change one and copy it to the other.
+
+A skill refers to each script it ships by its plugin-root path, so `create-worktree` names both `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt` and `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux`, and `resolve-copilot-pr-feedback` names `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads`. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` checks that every such reference resolves to a shipped, executable file and rejects version-blind locator globs like `**/PLUGIN/scripts/NAME`. Bundled scripts belong in `tests/scrut/`.
 
 A hook plugin that targets all three harnesses (Claude Code, Codex CLI, and OpenCode) carries split manifests, harness-specific entry points, and any helper scripts or assets:
 

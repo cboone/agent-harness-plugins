@@ -2,12 +2,12 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Create a git worktree, branch, and tmux window with a task prompt using workmux.",
+  "description": "Create a git worktree, branch, and tmux window from an issue number or a task description, with a prompt injected using workmux.",
   "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["git", "tmux", "workmux", "worktree"],
   "license": "MIT",
   "name": "create-worktree",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.1.5"
+  "version": "1.2.4"
 }
