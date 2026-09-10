@@ -194,10 +194,15 @@ Before deciding whether to request one, check whether Copilot is already working
 
 ```bash
 gh run list --branch <branch> --limit 10 --json headSha,workflowName,status |
-  jq -r --arg head <head-sha> '.[] | select(.workflowName == "Copilot" and .headSha == $head) | .status'
+  jq -r --arg head <head-sha> 'first(.[] | select(.workflowName == "Copilot" and .headSha == $head) | .status)'
 ```
 
-Filter on the head SHA inside the query, using the `headRefOid` from the step 3 snapshot. Selecting on `workflowName` alone returns runs for earlier commits too, and a completed run for a superseded commit then reads as though it belonged to the current head. Empty output means no run for this head, which is the distinction the whole check exists to draw.
+That command answers with exactly one line, or none. Two details make it so:
+
+- **Filter on the head SHA**, using the `headRefOid` from the step 3 snapshot. Selecting on `workflowName` alone returns runs for earlier commits too, and a completed run for a superseded commit then reads as though it belonged to the current head, which is precisely the distinction this check exists to draw.
+- **`first(...)`, because a SHA can have several runs.** A re-run adds another Copilot run for the same commit, and a bare `select` emits one line per match, so the reader gets `completed` and `in_progress` together with no way to tell which governs. `gh run list` returns newest-first, so the first match is the current one. `first` over an empty stream emits nothing and still exits 0, so the no-run case stays distinguishable rather than becoming an error.
+
+Empty output means no run for this head.
 
 - **A run against the current head is `in_progress` or `queued`**: keep waiting, however many ticks it takes. Do not request a review, and do not count these ticks toward the two below.
 - **A run against the current head `completed`, but no review is visible yet**: wait one more tick for the review to land before treating it as missing.
