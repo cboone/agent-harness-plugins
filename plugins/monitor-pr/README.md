@@ -37,7 +37,7 @@ Copilot's output varies between runs over identical code, so a review that surfa
 
 The Copilot round budget defaults to 10. On reaching it the skill stops and asks whether to continue and for how many more rounds; `--rounds <n>` sets a different budget and `--rounds unlimited` removes the question entirely, committing to run until the PR is genuinely clean.
 
-The budget bounds an unattended watch. It is not a judgement about whether the work is going well, and the skill does not read the finding counts as a trend. Copilot swings between busy and quiet rounds over the same code, so a rising count does not mean divergence, and four rounds is often not enough to finish. A watch still turning up real defects at round 8 is working, not thrashing. What ends a watch early is a finding that needs your judgement, not an unflattering shape in the numbers.
+The budget bounds an unattended watch. It is not a judgment about whether the work is going well, and the skill does not read the finding counts as a trend. Copilot swings between busy and quiet rounds over the same code, so a rising count does not mean divergence, and four rounds is often not enough to finish. A watch still turning up real defects at round 8 is working, not thrashing. What ends a watch early is a finding that needs your judgment, not an unflattering shape in the numbers.
 
 ### What does not gate
 
@@ -77,14 +77,14 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr merge *)", "Bash(gh api --paginate --slurp repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(jq *)", "Bash(git status*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(bin/build-codex-marketplace)", "Bash(bin/build-opencode-mirror)"]
+    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr merge *)", "Bash(gh api --paginate --slurp repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(jq *)", "Bash(sleep *)", "Bash(git status*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(bin/build-codex-marketplace)", "Bash(bin/build-opencode-mirror)"]
   }
 }
 ```
 
 If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
-Two notes on these rules. **Flag position matters**: `Bash(gh api repos/*)` does not match `gh api --paginate --slurp repos/*`, because the flags come first, so the rule has to spell them out in order. **The repair paths need write rules**: step 6 stages, commits, and pushes fixes, and rebuilds generated trees, so `git add`, `git commit`, and the build scripts belong in the list alongside `git push`. The two `bin/build-*` entries are specific to this repository; substitute whatever build or codegen commands your own project's checks enforce.
+Three notes on these rules. **Flag position matters**: `Bash(gh api repos/*)` does not match `gh api --paginate --slurp repos/*`, because the flags come first, so the rule has to spell them out in order. **The repair paths need write rules**: step 6 stages, commits, and pushes fixes, and rebuilds generated trees, so `git add`, `git commit`, and the build scripts belong in the list alongside `git push`. The two `bin/build-*` entries are specific to this repository; substitute whatever build or codegen commands your own project's checks enforce. **`sleep` is only needed off Claude Code**: it covers the blocking-wait fallback used where no harness scheduler exists, and without it a long watch prompts on every tick.
 
 ## Examples
 
