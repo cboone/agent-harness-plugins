@@ -46,7 +46,7 @@ This skill runs workmux, git, and (for the issue path) GitHub CLI commands that 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh issue view *)", "Bash(bash \"*/compose-issue-prompt\")", "Bash(bash \"*/compose-issue-prompt\" *)", "Bash(bash \"*/launch-workmux\" *)", "Bash(git worktree list*)"]
+    "allow": ["Bash(gh issue view *)", "Bash(gh repo view *)", "Bash(bash \"*/compose-issue-prompt\")", "Bash(bash \"*/compose-issue-prompt\" *)", "Bash(bash \"*/launch-workmux\" *)", "Bash(git remote show origin*)", "Bash(git worktree list*)"]
   }
 }
 ```
