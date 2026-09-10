@@ -2,12 +2,12 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Find a GitHub issue and create a worktree, branch, and tmux window for working on it, with issue context injected as a task prompt.",
+  "description": "Create a worktree, branch, and tmux window for a GitHub issue, then have the new session run address-issue to plan the work and stop for approval.",
   "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["git", "github", "issues", "tmux", "workmux", "worktree"],
   "license": "MIT",
-  "name": "create-worktree-from-issue",
+  "name": "address-issue-in-worktree",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.4.0"
+  "version": "2.0.0"
 }

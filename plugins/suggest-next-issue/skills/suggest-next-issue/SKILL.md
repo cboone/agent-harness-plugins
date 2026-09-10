@@ -113,7 +113,7 @@ After recommendations, briefly list issues detected as in progress. For each, no
 
 ### 6. Offer to Start Work
 
-End with an offer to create a worktree for the chosen issue via the `create-worktree-from-issue` skill. Example:
+End with an offer to create a worktree for the chosen issue via the `address-issue-in-worktree` skill. Example:
 
 ```text
 Ready to start on one of these? Just say "start issue #N" or pick a number from the list.

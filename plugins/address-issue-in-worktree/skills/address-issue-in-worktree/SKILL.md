@@ -1,17 +1,28 @@
 ---
-name: create-worktree-from-issue
+name: address-issue-in-worktree
 description: >-
-  Find a GitHub issue in the current repository and create a new git worktree,
-  branch, and tmux window for working on it using workmux. Use when the user
-  says "start issue", "create worktree from issue", "create worktree for
-  issue", or references starting work on a GitHub issue by number (e.g.,
-  "#42") or by description (e.g., "the dark mode issue") in a new worktree.
-  Requires the gh CLI and workmux to be installed.
+  Create a git worktree, branch, and tmux window for a GitHub issue using
+  workmux, then have the new session run address-issue to plan the work and
+  stop for approval. Use when the user says "address issue in worktree",
+  "start issue", "work on issue #42 in a worktree", or references starting
+  work on a GitHub issue by number (e.g., "#42") or by description (e.g.,
+  "the dark mode issue") in a new worktree. Requires the gh CLI and workmux
+  to be installed.
 ---
 
-# Create Worktree from Issue
+# Address Issue in Worktree
 
-Find a GitHub issue and create a dedicated worktree + tmux window via `workmux add`.
+Create a worktree, branch, and tmux window for a GitHub issue, then have the new session run `address-issue` to plan the work and stop for approval.
+
+The approval gate lives in `address-issue`, not here. This skill creates the worktree and injects a prompt telling the new session which command to run; the plan is produced and approved in that session, not in this one.
+
+To create the worktree without chaining into `address-issue`, use `create-worktree` instead.
+
+## Options
+
+The user may provide these options inline:
+
+- **--no-approval**: Pass `--no-approval` through to the chained `address-issue` command, so the new session plans and executes without stopping
 
 ## Workflow
 
@@ -79,7 +90,7 @@ Examples:
 
 ### 4. Compose the Issue Prompt
 
-Use the bundled `compose-issue-prompt` helper to convert `gh issue view --json number,title,labels,body,state` output into this prompt format:
+Use the bundled `compose-issue-prompt` helper to convert `gh issue view --json number,title,labels,body,state` output into the prompt. Pass `--chain-command` so the helper appends the instruction that points the new session at `address-issue`:
 
 ```text
 Work on issue #NUMBER: TITLE
@@ -87,11 +98,19 @@ Work on issue #NUMBER: TITLE
 Labels: LABEL1, LABEL2
 
 BODY_CONTENT
+
+---
+
+Start by running this command:
+
+/address-issue NUMBER
 ```
 
 - If the issue body exceeds approximately 2000 characters, truncate it at the nearest paragraph or sentence boundary and append: "(Issue body truncated. Run `gh issue view NUMBER` for full details.)"
 - If the issue body is empty, omit it.
 - If there are no labels, omit the labels line.
+
+The chained command is `/address-issue NUMBER`, or `/address-issue NUMBER --no-approval` when the user passed `--no-approval`. The footer deliberately says nothing about stopping for approval: that is `address-issue`'s default behavior, and keeping the gate defined in one place stops the two skills from drifting apart.
 
 ### 5. Create the Worktree
 
@@ -108,7 +127,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux" "BRANCH_NAME"
 
 Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step and no need for a shell variable. Keeping `bash` as the command prefix keeps the command token stable across plugin versions, which is what permission allowlist rules match on.
 
-**If the paths were not substituted**, they still begin with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. In that case locate the scripts with `**/create-worktree-from-issue/**/scripts/compose-issue-prompt` and `**/create-worktree-from-issue/**/scripts/launch-workmux`, prefer matches inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm each with `test -x`, and use those absolute paths for the rest of the session.
+**If the paths were not substituted**, they still begin with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. In that case locate the scripts with `**/address-issue-in-worktree/**/scripts/compose-issue-prompt` and `**/address-issue-in-worktree/**/scripts/launch-workmux`, prefer matches inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm each with `test -x`, and use those absolute paths for the rest of the session.
 
 In the example below, `SCRIPTS_DIR/compose-issue-prompt` and `SCRIPTS_DIR/launch-workmux` are shorthand for the full **quoted paths** shown above.
 
@@ -116,7 +135,15 @@ Do not specify a `--base` branch. Let `workmux` use its default.
 
 ```bash
 gh issue view NUMBER --json number,title,labels,body,state \
-  | bash "SCRIPTS_DIR/compose-issue-prompt" \
+  | bash "SCRIPTS_DIR/compose-issue-prompt" --chain-command "/address-issue NUMBER" \
+  | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME"
+```
+
+If the user passed `--no-approval`, the chained command carries it through:
+
+```bash
+gh issue view NUMBER --json number,title,labels,body,state \
+  | bash "SCRIPTS_DIR/compose-issue-prompt" --chain-command "/address-issue NUMBER --no-approval" \
   | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME"
 ```
 
@@ -133,9 +160,11 @@ After confirming the worktree exists in `git worktree list`, report:
 - The issue number and title
 - The branch name created
 - The tmux window name (to help the user switch to it)
-- A note that the issue context was injected into the new session
+- A note that the issue context was injected into the new session, and that the new session will run `/address-issue NUMBER`, produce a plan, and stop for approval there
 - Whether the issue was marked in progress (assigned and labeled), or if status marking was skipped/failed
 - If status marking succeeded, a note that the "in progress" label is retained until PR merge or explicit abandonment
+
+Then stop. The plan and its approval happen in the new session, so do not wait for them here.
 
 ## Error Handling
 

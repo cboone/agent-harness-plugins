@@ -62,19 +62,19 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Issues and Worktrees
 
-| Plugin                                                                       | Trigger                       | What it does                                                                                                                        |
-| ---------------------------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| [Address Issue](./plugins/address-issue/README.md)                           | `/address-issue`              | Fetch a GitHub issue, plan the work, execute changes, and commit with issue references.                                             |
-| [Create Issue](./plugins/create-issue/README.md)                             | `/create-issue`               | Create GitHub issues using tmpfiles to avoid permission prompts from large multiline Bash arguments.                                |
-| [Create Worktree](./plugins/create-worktree/README.md)                       | `/create-worktree`            | Create a git worktree, branch, and tmux window with a task prompt using workmux.                                                    |
-| [Create Worktree from Issue](./plugins/create-worktree-from-issue/README.md) | `/create-worktree-from-issue` | Find a GitHub issue and create a worktree, branch, and tmux window for working on it, with issue context injected as a task prompt. |
-| [Suggest Next Issue](./plugins/suggest-next-issue/README.md)                 | `/suggest-next-issue`         | Review open GitHub issues and recommend what to work on next with prioritized reasoning.                                            |
+| Plugin                                                                     | Trigger                                   | What it does                                                                                                                                       |
+| -------------------------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Address Issue](./plugins/address-issue/README.md)                         | `/address-issue <issue>`                  | Fetch a GitHub issue, plan the work, stop for approval, then execute changes and commit with issue references.                                     |
+| [Address Issue in Worktree](./plugins/address-issue-in-worktree/README.md) | `/address-issue-in-worktree <issue>`      | Create a worktree, branch, and tmux window for a GitHub issue, then have the new session run address-issue to plan the work and stop for approval. |
+| [Create Issue](./plugins/create-issue/README.md)                           | `/create-issue`                           | Create GitHub issues using tmpfiles to avoid permission prompts from large multiline Bash arguments.                                               |
+| [Create Worktree](./plugins/create-worktree/README.md)                     | `/create-worktree <issue-or-description>` | Create a git worktree, branch, and tmux window from an issue number or a task description, with a prompt injected using workmux.                   |
+| [Suggest Next Issue](./plugins/suggest-next-issue/README.md)               | `/suggest-next-issue`                     | Review open GitHub issues and recommend what to work on next with prioritized reasoning.                                                           |
 
 **External tools:**
 
 - _Address Issue, Create Issue, Suggest Next Issue:_ [`gh`](https://cli.github.com/)
-- _Create Worktree:_ [`workmux`](https://github.com/paiml/workmux)
-- _Create Worktree from Issue:_ [`gh`](https://cli.github.com/), [`workmux`](https://github.com/paiml/workmux)
+- _Address Issue in Worktree:_ [`gh`](https://cli.github.com/), [`workmux`](https://github.com/paiml/workmux)
+- _Create Worktree:_ [`workmux`](https://github.com/paiml/workmux), plus [`gh`](https://cli.github.com/) when given an issue number
 
 ### Code Review
 
@@ -213,7 +213,7 @@ codex plugin marketplace remove agent-harness-plugins
 
 - **Plugin-bundled hooks are gated behind a feature flag.** `plugin_hooks` is `under development` in Codex CLI 0.128.0 and is `false` by default. Run `codex features enable plugin_hooks` once before expecting `notify` to fire on Codex; see above.
 - **`Notification` and `PreCompact` hook events are not supported.** Codex CLI's hook schema only supports `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, and `Stop`. The `notify` plugin therefore wires only the `Stop` event on Codex (turn completion). `PermissionRequest` is deliberately left unwired: it runs in the automatic-policy path before Codex shows its approval UI, so notifying on it would alert you about decisions Codex's internal approver is already making. Idle, elicitation, and compact-style banners have no Codex hook equivalent; for those, enable Codex's built-in `tui.notifications = true` in `~/.codex/config.toml`. The two are complementary and can run side by side. See the [`notify` plugin README](./plugins/notify/README.md) for details.
-- **`${CLAUDE_PLUGIN_ROOT}` is substituted only in hook commands.** Codex exposes the variable to plugin-bundled hook commands, but does not substitute it in skill bodies the way Claude Code does. The bundled script paths in `/create-worktree`, `/create-worktree-from-issue`, and `/resolve-copilot-pr-feedback` therefore arrive unsubstituted. Each of those skills carries a documented fallback that locates the script by glob, so they stay usable at the cost of an extra search step.
+- **`${CLAUDE_PLUGIN_ROOT}` is substituted only in hook commands.** Codex exposes the variable to plugin-bundled hook commands, but does not substitute it in skill bodies the way Claude Code does. The bundled script paths in `/address-issue-in-worktree`, `/create-worktree`, and `/resolve-copilot-pr-feedback` therefore arrive unsubstituted. Each of those skills carries a documented fallback that locates the script by glob, so they stay usable at the cost of an extra search step.
 - **No custom prompts shipped.** Codex's `~/.codex/prompts/` mechanism is officially deprecated in favor of skills. This repository ships skills (and hooks), not prompts.
 
 ## Using with OpenCode
@@ -224,7 +224,7 @@ When adding or removing a plugin, regenerate the mirror with `bin/build-opencode
 
 ### OpenCode known limitations
 
-- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Claude Code substitutes this placeholder in SKILL.md bodies when a skill loads, which is how `/create-worktree`, `/create-worktree-from-issue`, and `/resolve-copilot-pr-feedback` name their bundled helper scripts. OpenCode does not substitute it, so the path reaches the agent as a literal string starting with `$`. Each of those three skills carries a documented fallback that locates the script by glob instead, so they stay usable at the cost of an extra search step. For the direct path, run them in Claude Code.
+- **`${CLAUDE_PLUGIN_ROOT}` references do not expand.** Claude Code substitutes this placeholder in SKILL.md bodies when a skill loads, which is how `/address-issue-in-worktree`, `/create-worktree`, and `/resolve-copilot-pr-feedback` name their bundled helper scripts. OpenCode does not substitute it, so the path reaches the agent as a literal string starting with `$`. Each of those three skills carries a documented fallback that locates the script by glob instead, so they stay usable at the cost of an extra search step. For the direct path, run them in Claude Code.
 - **Hook event parity is approximate.** OpenCode's event model collapses several distinct Claude Code notification matchers (`idle_prompt`, `elicitation_dialog`, `permission_prompt`) and the `PreCompact` event is mapped to an experimental OpenCode hook. See each hook's README for the specific mapping.
 
 ## License
