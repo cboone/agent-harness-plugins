@@ -76,7 +76,7 @@ Self-assignment is idempotent, safe to re-run if the assignee already exists.
 
 If any command fails, warn the user but continue. Status marking is best-effort and must never block the primary workflow. Record whether this step succeeded for the completion summary.
 
-If the session is already in plan mode when the skill starts, both commands write to GitHub and will be blocked. Skip this step, note that the issue was not marked in progress, and continue.
+If the session is already in plan mode when the skill starts, all three commands above write to GitHub and will be blocked: the self-assign, the label creation, and the label add. Skip this step, note that the issue was not marked in progress, and continue.
 
 ### 4. Display Issue Context
 
