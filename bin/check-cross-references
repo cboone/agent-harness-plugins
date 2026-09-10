@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+# Checks that the cross-references inside skill bodies resolve.
+#
+# Skills point at each other by name and at files by repository-relative path,
+# and nothing used to check that either target existed. A rename or a move left
+# the stale reference in place, and it failed only in the downstream project
+# that loaded the skill: bootstrap-project sent agents to
+# plugins/set-up-ci/commands/set-up-ci.md long after commands/ became skills/,
+# under a plugin name (setup-ci) that no longer existed either.
+#
+# Paths resolve against the current working directory, which must be the
+# repository root. Pass explicit files to check only those; the scrut suite does
+# that against fixture trees.
+set -euo pipefail
+
+# Path prefixes that can only mean a file in this repository. A project a skill
+# is being run against has no plugins/ or dist/codex/ of its own, so these
+# resolve everywhere without asking the author what they meant.
+UNAMBIGUOUS_PREFIXES="plugins|dist/codex|dist/opencode"
+
+# Prefixes a skill body shares with the project it is scaffolding. Most bin/ and
+# docs/ mentions here name a file the skill *creates* in the target project
+# (bin/version-audit, docs/plans/todo/), not one that lives in this repository,
+# and because the two layouts match, some of those resolve against this
+# repository by coincidence rather than by correctness. They are checked only in
+# a file that declares its frame with
+#
+#   <!-- validate-plugins: repository-paths -->
+DECLARED_PREFIXES="bin|docs"
+
+readonly UNAMBIGUOUS_PREFIXES DECLARED_PREFIXES
+
+errors=0
+
+function error() {
+  echo "::error::$1"
+  errors=$((errors + 1))
+}
+
+# The skill bodies to scan: every SKILL.md plus the reference material beside
+# it, at any depth, since set-up-linters and the write-* skills nest their
+# references under topic directories.
+function skill_markdown_files() {
+  find plugins -type f -name '*.md' -path 'plugins/*/skills/*' | sort
+}
+
+# Exemptions are declared per file rather than per line, because most of the
+# references that need one sit inside an ordered list or a table row where an
+# HTML comment would break the Markdown. An entry is the reference exactly as
+# this script reports it:
+#
+#   <!-- validate-plugins: ignore /config ./references/BASH.md -->
+#
+# Several such comments may appear in one file. An entry that matches nothing is
+# an error in its own right, so a stale exemption cannot quietly hollow out the
+# check the way a stale reference hollowed out the review process.
+function declared_ignores() {
+  { grep -oE '<!--[[:space:]]*validate-plugins:[[:space:]]*ignore[[:space:]]+[^>]*-->' "${1}" || true; } \
+    | sed -E -e 's|^.*ignore[[:space:]]+||' -e 's|[[:space:]]*-->$||' \
+    | tr -s '[:space:]' '\n' \
+    | { grep -v '^$' || true; } \
+    | sort -u
+}
+
+function declares_repository_paths() {
+  grep -qE '<!--[[:space:]]*validate-plugins:[[:space:]]*repository-paths([^A-Za-z0-9-]|$)' "${1}"
+}
+
+# The declaration comments are dropped before extraction so an entry listed in
+# an ignore comment is not itself mistaken for a reference.
+function scannable_lines() {
+  grep -v '<!--[[:space:]]*validate-plugins:' "${1}" || true
+}
+
+# A path- or name-shaped string is a stand-in rather than a reference when a
+# segment is a glob, an angle-bracket or shell-variable slot, an ellipsis, an
+# all-caps token such as PLUGIN-NAME, or a date placeholder.
+function is_placeholder() {
+  local candidate="${1}"
+
+  case "${candidate}" in
+    *'*'* | *'<'* | *'>'* | *'$'* | *'{'* | *'}'*) return 0 ;;
+    *) ;;
+  esac
+
+  if [[ "${candidate}" =~ (^|/)(\.\.\.|[A-Z][A-Z0-9_-]*)(/|$) ]] || [[ "${candidate}" =~ YYYY ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+function contains_line() {
+  printf '%s\n' "${1}" | grep -Fxq -- "${2}"
+}
+
+# Emits one "kind<TAB>reference<TAB>resolved path" record per distinct candidate
+# in the file. Collecting them before judging any of them lets an ignore entry
+# be matched against what was actually found.
+#
+# ${CLAUDE_PLUGIN_ROOT}/... resolves against the plugin that ships the skill.
+# Its scripts/ subtree is left alone: rule 18 of bin/validate-plugins already
+# resolves those and checks the executable bit besides, and the reference
+# material explaining how to bundle a script names example scripts that were
+# never meant to exist.
+#
+# ./references/... is how a SKILL.md points at the material beside it, so it
+# resolves against the skill directory rather than the repository root.
+#
+# Two spellings carry a skill name in prose: the slash-command form a user
+# types, and a backticked name sitting next to the word "skill". Both name a
+# directory under plugins/. A bare backticked name is not checked, because
+# nothing distinguishes `set-up-ci` from `lean-toolchain` without reading the
+# sentence around it.
+function collect_candidates() {
+  local file="${1}" plugin="${2}" skill_dir="${3}" prefixes="${4}"
+  local body rest candidate name
+
+  body="$(scannable_lines "${file}")"
+
+  # The ${CLAUDE_PLUGIN_ROOT} and the backticks in the extractions below are
+  # literal text this script matches, not an expansion or a substitution.
+  # shellcheck disable=SC2016
+  {
+    while IFS= read -r rest; do
+      [[ -n "${rest}" ]] || continue
+      [[ "${rest}" == scripts/* ]] && continue
+      is_placeholder "${rest}" && continue
+      printf 'plugin-root\t${CLAUDE_PLUGIN_ROOT}/%s\tplugins/%s/%s\n' "${rest}" "${plugin}" "${rest}"
+    done < <(printf '%s\n' "${body}" \
+      | grep -oE '\$\{CLAUDE_PLUGIN_ROOT\}/[A-Za-z0-9._${}/*<>-]+' \
+      | sed -e 's|^\${CLAUDE_PLUGIN_ROOT}/||' -e 's|/*$||' \
+      | sort -u)
+
+    while IFS= read -r rest; do
+      [[ -n "${rest}" ]] || continue
+      is_placeholder "${rest}" && continue
+      printf 'references\t./references/%s\t%s/references/%s\n' "${rest}" "${skill_dir}" "${rest}"
+    done < <(printf '%s\n' "${body}" \
+      | grep -oE '(^|[^A-Za-z0-9._/-])\./references/[A-Za-z0-9._*<>-]+(/[A-Za-z0-9._*<>-]+)*' \
+      | sed -E -e 's|^.*\./references/||' -e 's|/*$||' \
+      | sort -u)
+
+    while IFS= read -r candidate; do
+      [[ -n "${candidate}" ]] || continue
+      is_placeholder "${candidate}" && continue
+      printf 'path\t%s\t%s\n' "${candidate}" "${candidate}"
+    done < <(printf '%s\n' "${body}" \
+      | grep -oE "(^|[^A-Za-z0-9._/-])(${prefixes})/[A-Za-z0-9._*<>-]+(/[A-Za-z0-9._*<>-]+)*" \
+      | sed -E -e 's|^[^A-Za-z0-9._/-]||' -e 's|/*$||' \
+      | sort -u)
+
+    while IFS= read -r name; do
+      [[ -n "${name}" ]] || continue
+      printf 'skill\t/%s\tplugins/%s\n' "${name}" "${name}"
+    done < <(printf '%s\n' "${body}" \
+      | grep -oE '`/[a-z][a-z0-9-]*`' \
+      | tr -d '`' \
+      | sed 's|^/||' \
+      | sort -u)
+
+    while IFS= read -r name; do
+      [[ -n "${name}" ]] || continue
+      printf 'skill\t%s\tplugins/%s\n' "${name}" "${name}"
+    done < <({
+      printf '%s\n' "${body}" | grep -oE '`[a-z][a-z0-9-]+`[[:space:]]+skills?([^A-Za-z0-9-]|$)'
+      printf '%s\n' "${body}" | grep -oE 'skills?[[:space:]]+`[a-z][a-z0-9-]+`'
+    } | grep -oE '`[a-z0-9-]+`' | tr -d '`' | sort -u)
+  } | sort -u
+}
+
+function report_unresolved() {
+  local file="${1}" kind="${2}" reference="${3}" resolved="${4}"
+
+  case "${kind}" in
+    path) error "${file} references ${reference} but no such path exists in this repository" ;;
+    skill) error "${file} references the skill ${reference} but ${resolved} does not exist" ;;
+    *) error "${file} references ${reference} but ${resolved} does not exist" ;;
+  esac
+}
+
+function check_file() {
+  local file="${1}"
+  local plugin skill_dir prefixes candidates ignores matched
+  local kind reference resolved entry
+
+  plugin="${file#plugins/}"
+  plugin="${plugin%%/*}"
+
+  skill_dir="${file%/references/*}"
+  skill_dir="${skill_dir%/SKILL.md}"
+
+  prefixes="${UNAMBIGUOUS_PREFIXES}"
+  if declares_repository_paths "${file}"; then
+    prefixes="${prefixes}|${DECLARED_PREFIXES}"
+  fi
+
+  candidates="$(collect_candidates "${file}" "${plugin}" "${skill_dir}" "${prefixes}")"
+  ignores="$(declared_ignores "${file}")"
+  matched=""
+
+  while IFS=$'\t' read -r kind reference resolved; do
+    [[ -n "${kind}" ]] || continue
+
+    if contains_line "${ignores}" "${reference}"; then
+      matched="${matched}${reference}"$'\n'
+      continue
+    fi
+
+    if [[ "${kind}" == "skill" ]]; then
+      [[ -d "${resolved}" ]] || report_unresolved "${file}" "${kind}" "${reference}" "${resolved}"
+    else
+      [[ -e "${resolved}" ]] || report_unresolved "${file}" "${kind}" "${reference}" "${resolved}"
+    fi
+  done <<< "${candidates}"
+
+  while IFS= read -r entry; do
+    [[ -n "${entry}" ]] || continue
+    if ! contains_line "${matched}" "${entry}"; then
+      error "${file} ignores ${entry} but no reference by that name was found; drop the stale ignore entry"
+    fi
+  done <<< "${ignores}"
+}
+
+function main() {
+  if [[ ! -d plugins ]]; then
+    echo "check-cross-references: no plugins/ directory in $(pwd)" >&2
+    exit 2
+  fi
+
+  local file
+  if [[ ${#} -gt 0 ]]; then
+    for file in "${@}"; do
+      check_file "${file}"
+    done
+  else
+    while IFS= read -r file; do
+      check_file "${file}"
+    done < <(skill_markdown_files)
+  fi
+
+  if [[ ${errors} -gt 0 ]]; then
+    echo "::notice::A reference that illustrates the project a skill runs against, rather than naming something in this repository, is exempted by listing it exactly as reported above in a <!-- validate-plugins: ignore ... --> comment in the same file."
+    exit 1
+  fi
+
+  echo "All skill cross-references resolve."
+}
+
+main "${@}"
