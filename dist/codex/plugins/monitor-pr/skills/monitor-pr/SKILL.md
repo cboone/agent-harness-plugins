@@ -188,16 +188,17 @@ Wait and return to step 3. Copilot re-reviews automatically on push in most repo
 Before deciding whether to request one, check whether Copilot is already working. Its review runs as a workflow named `Copilot`, so an in-progress run against the current head means a review is coming and requesting another would only duplicate it:
 
 ```bash
-gh run list --branch <branch> --limit 10 --json headSha,workflowName,status |
-  jq -r --arg head <head-sha> 'first(.[] | select(.workflowName == "Copilot" and .headSha == $head) | .status)'
+gh run list --branch <branch> --workflow Copilot --limit 10 --json headSha,status 2> /dev/null |
+  jq -r --arg head <head-sha> 'first(.[] | select(.headSha == $head) | .status)'
 ```
 
-That command answers with exactly one line, or none. Two details make it so:
+That command answers with exactly one line, or none. Three details make it so:
 
-- **Filter on the head SHA**, using the `headRefOid` from the step 3 snapshot. Selecting on `workflowName` alone returns runs for earlier commits too, and a completed run for a superseded commit then reads as though it belonged to the current head, which is precisely the distinction this check exists to draw.
-- **`first(...)`, because a SHA can have several runs.** A re-run adds another Copilot run for the same commit, and a bare `select` emits one line per match, so the reader gets `completed` and `in_progress` together with no way to tell which governs. `gh run list` returns newest-first, so the first match is the current one. `first` over an empty stream emits nothing and still exits 0, so the no-run case stays distinguishable rather than becoming an error.
+- **`--workflow Copilot`, not a client-side name filter.** `--limit` applies to runs across every workflow on the branch, so on a repository with several workflows the Copilot run for the current head can fall outside the window and look like no run at all, which then triggers a redundant review request. Narrowing server-side makes the limit count Copilot runs alone.
+- **Filter on the head SHA**, using the `headRefOid` from the step 3 snapshot. A completed run for a superseded commit otherwise reads as though it belonged to the current head, which is precisely the distinction this check exists to draw.
+- **`first(...)`, because a SHA can have several runs.** A re-run adds another Copilot run for the same commit, and a bare `select` emits one line per match, so the reader gets `completed` and `in_progress` together with no way to tell which governs. `gh run list` returns newest-first, so the first match is the current one. `first` over an empty stream emits nothing and still exits 0.
 
-Empty output means no run for this head.
+Empty output means no run for this head. The discarded stderr matters for that: on a repository where Copilot review is not enabled there is no `Copilot` workflow at all, and `gh` then exits non-zero with `could not find any workflows named Copilot`. That is the no-run case, not a failure, so let it read as empty rather than treating it as an error.
 
 - **A run against the current head is `in_progress` or `queued`**: keep waiting, however many ticks it takes. Do not request a review, and do not count these ticks toward the two below.
 - **A run against the current head `completed`, but no review is visible yet**: wait one more tick for the review to land before treating it as missing.
