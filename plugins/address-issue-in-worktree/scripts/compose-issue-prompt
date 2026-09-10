@@ -8,6 +8,20 @@ readonly SCRIPT_NAME
 BODY_LIMIT=2000
 readonly BODY_LIMIT
 
+function usage() {
+  cat << 'USAGE_TEXT'
+Usage: compose-issue-prompt [--chain-command <command>]
+
+Read `gh issue view --json number,title,labels,body,state` output on stdin
+and write a workmux prompt to stdout.
+
+Options:
+  --chain-command <command>  Append a footer telling the new session to run
+                             <command> first, e.g. "/address-issue 42"
+  -h, --help                 Show this help
+USAGE_TEXT
+}
+
 function die() {
   echo "${SCRIPT_NAME}: ${1}" >&2
   exit "${2:-1}"
@@ -93,6 +107,28 @@ function truncate_body() {
 }
 
 function main() {
+  local chain_command=""
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      --chain-command)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          die "--chain-command requires a command"
+        fi
+        chain_command="${2}"
+        shift 2
+        ;;
+      *)
+        usage >&2
+        die "unexpected argument: ${1}"
+        ;;
+    esac
+  done
+
   command -v jq > /dev/null || die "jq is required"
 
   local issue_json number title labels body prompt_body
@@ -114,6 +150,10 @@ function main() {
   if [[ -n "${body}" ]]; then
     prompt_body="$(truncate_body "${body}" "${number}")"
     printf '\n%s\n' "${prompt_body}"
+  fi
+
+  if [[ -n "${chain_command}" ]]; then
+    printf '\n---\n\nStart by running this command:\n\n%s\n' "${chain_command}"
   fi
 }
 
