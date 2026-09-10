@@ -1,26 +1,29 @@
 ---
 name: address-issue
 description: >-
-  Fetch a GitHub issue, analyze it, plan and execute the work in the current
-  branch, and commit with issue references. Use when the user says
-  "address issue", "address issue #42", "address #42", "fix issue #42",
-  "work on issue #42", "handle issue #42", "resolve issue #42",
-  "tackle issue #42", "implement issue #42", or references addressing a
+  Fetch a GitHub issue, analyze it, plan the work and stop for approval, then
+  execute the changes in the current branch and commit with issue references.
+  Use when the user says "address issue", "address issue #42", "address #42",
+  "fix issue #42", "work on issue #42", "handle issue #42", "resolve issue
+  #42", "tackle issue #42", "implement issue #42", or references addressing a
   GitHub issue by number or description. Requires the gh CLI to be installed
   and authenticated.
 ---
 
 # Address Issue
 
-Fetch a GitHub issue, analyze it, plan and execute the work in the current branch, and commit with issue references.
+Fetch a GitHub issue, plan the work, stop for approval, then execute changes and commit with issue references.
 
 ## Options
 
 The user may provide these options inline:
 
 - **--dry-run**: Fetch and analyze the issue, present the plan, but do not make changes
+- **--no-approval**: Skip the approval stop in step 6 and go straight from the plan to execution
 - **--no-commit**: Make changes but do not commit them
 - **--commit-per-change**: Commit after each logical change instead of grouping at the end
+
+`--dry-run` and `--no-approval` are opposite ends of the same gate: `--dry-run` stops permanently after the plan, the default stops and resumes once the user approves, and `--no-approval` never stops.
 
 ## Workflow
 
@@ -73,6 +76,8 @@ Self-assignment is idempotent, safe to re-run if the assignee already exists.
 
 If any command fails, warn the user but continue. Status marking is best-effort and must never block the primary workflow. Record whether this step succeeded for the completion summary.
 
+If the session is already in plan mode when the skill starts, both commands write to GitHub and will be blocked. Skip this step, note that the issue was not marked in progress, and continue.
+
 ### 4. Display Issue Context
 
 Show the issue details to establish shared context:
@@ -116,6 +121,14 @@ If there are no task list items, treat the entire issue as a single task.
 
 ### 6. Plan the Work
 
+**Do not create, modify, or delete any file until the plan is approved.** This is a hard gate, not a suggestion. Asking the user a clarifying question is allowed; editing is not.
+
+**If your harness provides plan mode** (Claude Code): call `EnterPlanMode` before exploring, keep the exploration read-only, then call `ExitPlanMode` with the plan below and wait for the approval result.
+
+**Otherwise** (Codex CLI, OpenCode, or any harness without those tools): present the plan below, then stop and wait for the user to confirm, adjust, or reject it.
+
+Enter plan mode here rather than at step 1. Steps 1 and 4 are read-only, but step 3 writes to GitHub, and plan mode would block it.
+
 1. Explore the codebase to understand the relevant areas
 1. Identify the files that need to be created, modified, or deleted
 1. Present a plan to the user:
@@ -133,9 +146,9 @@ If there are no task list items, treat the entire issue as a single task.
 1. Update `README.md` - document the new behavior
 ```
 
-Wait for the user to confirm, adjust, or reject the plan before proceeding.
+**If `--dry-run` was specified**: Stop here permanently. Do not make any changes even if the user approves.
 
-**If `--dry-run` was specified**: Stop here after displaying the plan. Do not make any changes.
+**If `--no-approval` was specified**: Skip the stop and continue to step 7. Do not call `EnterPlanMode`.
 
 ### 7. Execute the Changes
 
@@ -213,5 +226,7 @@ Suggest logical follow-up actions:
 - If the issue is not found, report that and stop
 - If the issue is closed, warn and ask before proceeding
 - If status marking fails (assignment or labeling), warn but continue with the work
+- If the session is already in plan mode, step 3 is blocked; skip it, say so, and continue
+- If the user rejects the plan in step 6, stop without making changes and report that the issue is still marked in progress
 - If a planned change cannot be made (file not found, ambiguous requirement), skip it with an explanation and continue with the remaining changes
 - If commits fail, report the error and leave changes uncommitted for the user to handle
