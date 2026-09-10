@@ -17,7 +17,8 @@ Never edit anything under `dist/` or `.agents/` by hand. Both are excluded from 
 
 ### Scripts
 
-- `bin/validate-json` and `bin/validate-plugins`: pre-merge validation, both run by `.github/workflows/ci.yml`. `validate-plugins` enforces 18 rules covering manifest fields, marketplace agreement, alphabetical ordering, Codex hook manifests, skill description limits, and generated-tree freshness.
+- `bin/validate-json` and `bin/validate-plugins`: pre-merge validation, both run by `.github/workflows/ci.yml`. `validate-plugins` enforces 19 rules covering manifest fields, marketplace agreement, alphabetical ordering, Codex hook manifests, skill description limits, generated-tree freshness, and skill cross-references.
+- `bin/check-cross-references`: resolves the paths and skill names a skill body points at. Rule 19 of `bin/validate-plugins` delegates to it; run it on its own for a fast check while editing a skill. See [Skill cross-references](#skill-cross-references).
 - `bin/compute-catalog-state`: canonical implementation of the marketplace catalog state tag (`metadata.version` in `marketplace.json`). Consumed by `bin/validate-plugins` and `.github/workflows/release.yml`.
 - `bin/version-audit`: a weekly upstream-drift audit, not a merge gate. `.github/workflows/version-audit.yml` runs it on a Monday cron and files or updates a `version-audit`-labelled issue. Requires `gh` (authenticated), `jq`, and `curl`. Empty output means no drift.
 - `bin/list-shell-scripts`: the single source of truth for which Bash scripts get linted. Used by the `Makefile` and CI so a new script is covered without widening a glob.
@@ -122,6 +123,32 @@ plugins/notify/
 ```
 
 `hooks/codex.hooks.json` carries only the events Codex understands (a subset of the full Claude Code set in `hooks/hooks.json`). `opencode/index.ts` is the OpenCode TypeScript plugin; `bin/build-opencode-mirror` mirrors it to `dist/opencode/plugins/`. Anything under `assets/` and `scripts/` is bundled with the plugin and reachable from hook commands via `${CLAUDE_PLUGIN_ROOT}`.
+
+## Skill cross-references
+
+Skills name each other and point at files by path, and a stale one fails only in the downstream project that loads the skill, long after the rename that broke it. `bin/check-cross-references` resolves them; rule 19 of `bin/validate-plugins` runs it over every `SKILL.md` and every file under a skill's `references/`.
+
+What gets resolved, and against what:
+
+| Spelling                                                    | Resolved against              |
+| ----------------------------------------------------------- | ----------------------------- |
+| `plugins/…`, `dist/codex/…`, `dist/opencode/…`              | the repository root           |
+| `${CLAUDE_PLUGIN_ROOT}/…`                                   | the plugin shipping the skill |
+| `./references/…`                                            | the skill directory           |
+| `` `/name` `` and a backticked name beside the word "skill" | a directory under `plugins/`  |
+
+`${CLAUDE_PLUGIN_ROOT}/scripts/…` is left to rule 18, which also checks the executable bit. A bare backticked name is not checked: nothing distinguishes `set-up-ci` from `lean-toolchain` without reading the sentence around it.
+
+A string with a stand-in segment is skipped, so `plugins/PLUGIN-NAME/README.md`, `plugins/<name>/README.md`, and `./references/ci-<language>.md` need nothing. Two HTML comments cover the rest:
+
+```markdown
+<!-- validate-plugins: repository-paths -->
+<!-- validate-plugins: ignore /config ./references/BASH.md -->
+```
+
+`repository-paths` declares that the `bin/` and `docs/` paths in this file name files in this repository. Without it they are skipped, because most of them name a file the skill _creates_ in the project it is run against (`bin/version-audit`, `docs/plans/todo/`), and because this repository's own layout matches, checking them everywhere would pass by coincidence rather than by correctness. Few files qualify: `create-plugin` is one, since its whole subject is this repository. Run `grep -rl 'validate-plugins: repository-paths' plugins/` for the current set.
+
+`ignore` exempts an individual reference that resolves nowhere because it is an illustration rather than a reference at all: Claude Code's own `/config`, Cargo's `/target` gitignore pattern, a reference filename naming a layout convention a plugin being authored should follow. Write the entry exactly as the checker reports it. Several such comments may appear in one file, and an entry that matches nothing is itself reported, so an exemption cannot outlive the reference it was written for. Exemptions are file-scoped rather than line-scoped because most of the references that need one sit inside an ordered list or a table row, where an HTML comment would break the Markdown.
 
 ## Adding a plugin
 

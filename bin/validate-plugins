@@ -440,6 +440,23 @@ for skill_md in plugins/*/skills/*/SKILL.md; do
   fi
 done
 
+# ─── 19. Skill cross-references resolve ─────────────────────────────────────
+# bin/check-cross-references owns the path and skill-name checks and emits its
+# own ::error:: annotations, so its findings are relayed and counted rather than
+# re-derived here. It is a separate script for the same reason
+# bin/compute-catalog-state is: it can then be exercised on its own against the
+# fixture trees in tests/scrut/.
+
+if ! cross_reference_output="$(bin/check-cross-references 2>&1)"; then
+  printf '%s\n' "${cross_reference_output}"
+  cross_reference_errors="$(grep -c '^::error::' <<< "${cross_reference_output}" || true)"
+  if [[ "${cross_reference_errors}" -gt 0 ]]; then
+    errors=$((errors + cross_reference_errors))
+  else
+    error "bin/check-cross-references failed without reporting a finding"
+  fi
+fi
+
 # ─── Summary ────────────────────────────────────────────────────────────────
 
 if [[ ${errors} -gt 0 ]]; then

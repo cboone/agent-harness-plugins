@@ -82,10 +82,12 @@ jobs:
     # comment inside it fails the job, which is why this note lives out here.
     with:
       scrut-env: |
+        CHECK_CROSS_REFERENCES_BIN=./bin/check-cross-references
         COMPOSE_ISSUE_PROMPT_BIN=./plugins/address-issue-in-worktree/scripts/compose-issue-prompt
         CREATE_WORKTREE_COMPOSE_ISSUE_PROMPT_BIN=./plugins/create-worktree/scripts/compose-issue-prompt
         COPILOT_REVIEW_DATA_DIR=./tests/data/copilot-reviews
         COMPUTE_CATALOG_STATE_BIN=./bin/compute-catalog-state
+        CROSS_REFERENCE_FIXTURE_BIN=./tests/fixtures/cross-reference-fixture
         LIST_SHELL_SCRIPTS_BIN=./bin/list-shell-scripts
         REPO_ROOT=./
         CREATE_WORKTREE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree/scripts/launch-workmux

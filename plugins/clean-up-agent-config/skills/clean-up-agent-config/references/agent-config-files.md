@@ -1,5 +1,8 @@
 # LLM Coding Agent Configuration Files: Complete Comparison & Recommendations
 
+<!-- `/config` is a built-in Claude Code command, not a skill in this repository. -->
+<!-- validate-plugins: ignore /config -->
+
 Last updated: February 15, 2026
 
 _Companion to: [Agent Instruction Files Comparison](agent-instruction-files.md)_

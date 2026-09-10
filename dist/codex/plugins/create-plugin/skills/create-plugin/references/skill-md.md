@@ -1,5 +1,11 @@
 # SKILL.md Reference
 
+<!-- The bin/ and docs/ paths below name files in this repository, not in a project a skill runs against. -->
+<!-- validate-plugins: repository-paths -->
+
+<!-- The reference paths below illustrate how a skill being authored points at its own material; they are not this skill's reference files. -->
+<!-- validate-plugins: ignore ./references/BASH.md ./references/languages/go.md ./references/tools/actionlint.md -->
+
 Each skill has a canonical `SKILL.md` file that defines how Claude Code should behave when the skill is triggered. Codex consumes generated copies under `dist/codex/plugins/*`; do not edit those copies by hand.
 
 ## File Location
