@@ -123,7 +123,15 @@ else
               elif $issue.sameBranchAs == $issue.number then "\($at) shares a branch with itself"
               elif ($issue.sameBranchAs | known) | not then "\($at) shares a branch with #\($issue.sameBranchAs), which is not in issues"
               elif (issue($issue.sameBranchAs) | .sameBranchAs) != null then "\($at) shares a branch with #\($issue.sameBranchAs), which shares a branch with another issue; point both at the same one"
-              else empty end)
+              else empty end),
+             (if $issue.after == null then empty
+              elif ($issue.after | is_int_list) | not then "\($at): after must be a list of issue numbers"
+              else
+                ($issue.after[] | select(. == $issue.number) | "\($at) is better after itself"),
+                ($issue.after[] | select(. != $issue.number and (known | not)) | "\($at) is better after #\(.), which is not an open issue on this board; drop it"),
+                ($issue.after[] | . as $a | select($waits | if type == "array" then any(.[]; . == $a) else false end) | "\($at) waits on #\(.) and is also better after it; keep only waitingOn"),
+                ($issue.after[] | select(. == $issue.sameBranchAs) | "\($at) shares a branch with #\(.), so it cannot also come after it")
+              end)
          end
      end),
     ($numbers | duplicates | "issues: #\(.) appears more than once"),
@@ -156,6 +164,18 @@ else
        | select($lane_of[.number | tostring] != $lane_of[.sameBranchAs | tostring])
        | "#\(.number) shares a branch with #\(.sameBranchAs), but they sit in different lanes"),
 
+    ([$issue_list[] | select(.number | is_int) | .number as $num
+      | {key: ($num | tostring), value: ((.after // []) | if type == "array" then map(select(is_int and . != $num)) else [] end)}]
+     | from_entries) as $after_of
+    | ($issue_list[] | select(.number | is_int) | .number as $start
+       | {todo: ($after_of[$start | tostring] // []), seen: []}
+       | until((.todo | length) == 0;
+           .todo[0] as $n
+           | .todo |= .[1:]
+           | if any(.seen[]; . == $n) then . else .seen += [$n] | .todo += ($after_of[$n | tostring] // []) end)
+       | select(any(.seen[]; . == $start))
+       | "#\($start) is part of a better-after loop; break it"),
+
     (if ($d.startNow | type) != "array" then "startNow: expected a list, empty when nothing can start"
      else
        ($d.startNow | to_entries[]) as {key: $i, value: $pick}
@@ -169,7 +189,10 @@ else
                check($pick.touches | absent_or(is_text); "\($at): touches must be text"),
                (if (($target.waitingOn // []) | length) > 0 then "\($at) waits on \($target.waitingOn | map(ref_text) | join(", ")) and cannot start" else empty end),
                (if $target.inProgress != null then "\($at) is already in progress on \($target.inProgress)" else empty end),
-               (if $target.sameBranchAs != null then "\($at) shares a branch with #\($target.sameBranchAs); list #\($target.sameBranchAs) instead" else empty end)
+               (if $target.sameBranchAs != null then "\($at) shares a branch with #\($target.sameBranchAs); list #\($target.sameBranchAs) instead" else empty end),
+               (if (($target.after // []) | type == "array" and length > 0) then "\($at) is better after \($target.after | map("#\(.)") | join(", ")) and should not start before it lands" else empty end),
+               ([$issue_list[] | select(.sameBranchAs == $pick.issue) | select((.after // []) | type == "array" and any(.[]; . != $pick.issue)) | "#\(.number)"] as $held
+                | if ($held | length) > 0 then "\($at) shares its branch with \($held | join(", ")), which should wait for another open issue" else empty end)
              end
          end
      end),
@@ -243,6 +266,8 @@ $previous[0] as $old
     entry("Opened"; [($new.issues // [])[] | select($was[.number | tostring] == null) | describe]),
     entry("Newly blocked"; [$kept[] | select(is_blocked and ($was[.number | tostring] | is_blocked | not)) | "\(describe) (waits on \(blockers))"]),
     entry("Unblocked"; [$kept[] | select((is_blocked | not) and ($was[.number | tostring] | is_blocked)) | describe]),
+    entry("Now better after"; [$kept[] | select(((.after // []) | length) > 0 and ((($was[.number | tostring].after // []) | length) == 0)) | "\(describe) (after \(.after | map("#\(.)") | join(", ")))"]),
+    entry("No longer better after"; [$kept[] | select(((.after // []) | length) == 0 and ((($was[.number | tostring].after // []) | length) > 0)) | describe]),
     entry("Started"; [($new.issues // [])[] | select(.inProgress != null and ($was[.number | tostring].inProgress == null)) | "\(describe) (\(.inProgress))"]),
     entry("No longer in progress"; [$kept[] | select(.inProgress == null and $was[.number | tostring].inProgress != null) | describe]),
     entry("Added to start now"; [($new | picks) - ($old | picks) | .[] | $now[tostring] | describe]),

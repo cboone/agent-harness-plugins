@@ -42,6 +42,8 @@ Scan each body for references to other open issues, such as "blocked by #N", "de
 
 An issue can also wait on something that is not an open issue on this board: a pull request, a branch that has to merge, an issue in another repository, or anything else with a URL. Record each as a reference, as [Blocker References](#blocker-references) describes, rather than in a lane note, so the board counts the issue as blocked and links to what it waits on. Drop blockers that have closed or merged: a finished blocker is no longer a reason.
 
+Some constraints are soft: an issue could start now, but starting it before another open issue lands would repeat work or force a rebase. Record those in `after` rather than `waitingOn`. The board shows the relation, counts the issue as queued rather than blocked, and never picks it to start now. Within a serial lane the listed order already says this, so `after` earns its place mostly across lanes.
+
 ### 3. Footprints and Contention
 
 For each issue, work out what it will edit: plugins, packages, directories, or shared files, from the paths and names in its body. A component that two or more issues will edit is a claim, and each claim is a rebase waiting to happen.
@@ -68,7 +70,7 @@ Give each lane a short `key` (`L1`, `L2`, and so on), a `name` a reader recogniz
 
 ### 5. Start Now
 
-Pick the branches to open today: at most one per serial or head lane, and never an issue that is blocked, in progress, or riding on another issue's branch. A serial or head lane whose single slot is held by an issue in progress gets no pick. Prefer issues that unblock others, carry the most risk while they stay open, or head a contended lane, and use the signals the `suggest-next-issue` skill weighs (priority labels, dependencies, age, activity) to break ties. Order the picks by value, and give each a `why` and a `touches` naming what it edits.
+Pick the branches to open today: at most one per serial or head lane, and never an issue that is blocked, in progress, better after another open issue, or riding on another issue's branch. A serial or head lane whose single slot is held by an issue in progress gets no pick. Prefer issues that unblock others, carry the most risk while they stay open, or head a contended lane, and use the signals the `suggest-next-issue` skill weighs (priority labels, dependencies, age, activity) to break ties. Order the picks by value, and give each a `why` and a `touches` naming what it edits.
 
 Staffing is a judgment, not a maximum. The header already shows how many branches could run at once; the picks say how many are worth running. When the two differ, say why in `notes.startNow`.
 
@@ -97,16 +99,17 @@ Write `summary`, each lane's `note`, each `blockedBecause`, and any section note
 
 ### Issues
 
-| Field            | Required         | Contents                                                                                  |
-| ---------------- | ---------------- | ----------------------------------------------------------------------------------------- |
-| `number`         | Yes              | The issue number                                                                          |
-| `title`          | Yes              | The GitHub title, verbatim                                                                |
-| `milestone`      | Yes              | The milestone title verbatim, or `null`                                                   |
-| `short`          | No               | A shorter title for the start and blocked lists, such as one without a prefix             |
-| `waitingOn`      | No               | What this one waits on: issue numbers on this board, or [references](#blocker-references) |
-| `blockedBecause` | With `waitingOn` | Why it cannot start yet                                                                   |
-| `sameBranchAs`   | No               | The issue whose branch this one ships on                                                  |
-| `inProgress`     | No               | The branch or pull request carrying the work                                              |
+| Field            | Required         | Contents                                                                                                      |
+| ---------------- | ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| `number`         | Yes              | The issue number                                                                                              |
+| `title`          | Yes              | The GitHub title, verbatim                                                                                    |
+| `milestone`      | Yes              | The milestone title verbatim, or `null`                                                                       |
+| `short`          | No               | A shorter title for the start and blocked lists, such as one without a prefix                                 |
+| `waitingOn`      | No               | What this one waits on: issue numbers on this board, or [references](#blocker-references)                     |
+| `blockedBecause` | With `waitingOn` | Why it cannot start yet                                                                                       |
+| `sameBranchAs`   | No               | The issue whose branch this one ships on                                                                      |
+| `after`          | No               | Open issues on this board that this one is better started after, as [Dependencies](#2-dependencies) describes |
+| `inProgress`     | No               | The branch or pull request carrying the work                                                                  |
 
 ### Blocker References
 
@@ -147,7 +150,7 @@ Any form but `url` may add a `title`, which the Blocked section shows beside the
 | Blocked           | Each blocked issue, what it waits on, why, and which lanes free it  | The order, fewest blockers first; the freeing lanes                                                    |
 | Footer            | The sync line and counts                                            | The milestone count                                                                                    |
 
-Capacity follows the lane's mode: one branch at a time for a serial or head lane, and every unblocked issue at once for an any-order lane. A head lane also shows how many issues its head frees. "Branches at once" in the header is the sum across lanes.
+Capacity follows the lane's mode: one branch at a time for a serial or head lane, and every unblocked issue at once for an any-order lane. A head lane also shows how many issues its head frees. "Branches at once" in the header is the sum across lanes. An issue better after another open issue counts as queued rather than runnable, so it adds nothing to capacity until its target lands, unless its work has already started.
 
 When no open issue has a milestone, the page drops the milestone column and chips, heads the contention matrix's single column "Claimed by", and says so in the footer rather than counting zero milestones.
 
@@ -159,8 +162,9 @@ When nothing is blocked, the Blocked section shrinks to its heading and the word
 
 - Every open issue sits in exactly one lane, and lanes list only issues on the board.
 - `waitingOn` lists open issues on the board, never the issue itself, or well-formed references, and always comes with `blockedBecause`.
+- `after` lists open issues on the board, never the issue itself, never an issue it already waits on or shares a branch with, and never forms a loop.
 - `sameBranchAs` names an issue in the same lane that does not itself ship on another branch.
-- A start pick is on the board, and is not blocked, not in progress, and not riding on another issue's branch.
+- A start pick is on the board, and is not blocked, not in progress, not better after another open issue, and not riding on another issue's branch; nothing riding on its own branch is better after another open issue either.
 - Required fields are present and well formed, issue numbers and lane keys are unique, and every `mode` is `serial`, `head`, or `any`.
 
 ## Example

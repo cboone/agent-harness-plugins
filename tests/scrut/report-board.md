@@ -147,6 +147,56 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## An issue better after another
+
+`after` records that an issue could start now but would repeat work if it
+started before another open issue lands. It is not a block.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"after": [104]}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is valid: 7 issues in 3 lanes (glob)
+```
+
+## Start now rejects an issue better after an open one
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 106)) += {"after": [104]}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - startNow #106 is better after #104 and should not start before it lands
+[1]
+```
+
+## Start now rejects a pick whose branch carries a better-after issue
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 103)) += {"after": [104]}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - startNow #101 shares its branch with #103, which should wait for another open issue
+[1]
+```
+
+## Malformed better-after relations
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"after": [107, 99]} | (.issues[] | select(.number == 102)) += {"after": [101]} | (.issues[] | select(.number == 103)) += {"after": [101]}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #102 waits on #101 and is also better after it; keep only waitingOn
+  - #103 shares a branch with #101, so it cannot also come after it
+  - #107 is better after itself
+  - #107 is better after #99, which is not an open issue on this board; drop it
+[1]
+```
+
+## A better-after loop
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 105)) += {"after": [107]} | (.issues[] | select(.number == 107)) += {"after": [105]}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #105 is part of a better-after loop; break it
+  - #107 is part of a better-after loop; break it
+[1]
+```
+
 ## Issues that share a branch share a lane
 
 ```scrut
@@ -228,6 +278,13 @@ $ page="$(mktemp -d)/board.html" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD
 ```scrut
 $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"branch": "feature/palette"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/data.json" | tail -n 1
 - Newly blocked: #107 cli: color output (waits on branch feature/palette)
+```
+
+## Compare reports better-after changes
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"after": [104]}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/data.json" | tail -n 1
+- Now better after: #107 cli: color output (after #104)
 ```
 
 ## Compare with nothing changed

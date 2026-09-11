@@ -19,6 +19,7 @@ Every state a reader acts on has a shape as well as a hue, so it survives a colo
 
 - Blocked lane segments carry a hatch.
 - An issue with no milestone gets a dashed chip.
+- A soft ordering link, "better after" or "eases", gets a dashed underline; a hard one, "waits on" or "unblocks", keeps a solid one.
 - An issue in progress carries an "In progress" tag that names its branch.
 - Order is numbered only where it is real. Serial lanes number their steps; lanes with no order show a dot.
 

@@ -198,6 +198,12 @@
     color: var(--link-active);
   }
 
+  /* A soft ordering link, "better after" or "eases", is dashed: the same mark
+     the page uses for a missing milestone. Hard links stay solid. */
+  .ref--soft {
+    border-bottom-style: dashed;
+  }
+
   /* Slate surfaces: lane keys and capacity boxes share the Catamount button face. */
   .badge,
   .cap {
@@ -1084,17 +1090,20 @@
     const byNumber = new Map(issues.map((issue) => [issue.number, issue]));
     const anyMilestone = issues.some((issue) => issue.milestone);
     const waits = (n) => byNumber.get(n)?.waitingOn ?? [];
+    const afters = (n) => byNumber.get(n)?.after ?? [];
     const isBlocked = (n) => waits(n).length > 0;
     const partnerOf = (n) => byNumber.get(n)?.sameBranchAs ?? null;
     const rides = (n) => partnerOf(n) !== null;
     const shortTitle = (n) => byNumber.get(n)?.short || byNumber.get(n)?.title || "";
 
     const unblocks = new Map();
+    const eases = new Map();
     const riders = new Map();
     for (const issue of issues) {
       for (const waited of issue.waitingOn ?? []) {
         if (typeof waited === "number") listAt(unblocks, waited).push(issue.number);
       }
+      for (const target of issue.after ?? []) listAt(eases, target).push(issue.number);
       if (issue.sameBranchAs != null) listAt(riders, issue.sameBranchAs).push(issue.number);
     }
 
@@ -1129,14 +1138,24 @@
     // runs its head, then whatever the head frees; an any-order lane runs every
     // unblocked issue at once. An issue that shares a branch travels with it.
     const lanes = data.lanes.map((lane) => {
-      const free = lane.issues.filter((n) => !isBlocked(n) && !rides(n));
+      // An issue better after another open issue waits in the queue unless its
+      // work has already started.
+      const free = lane.issues.filter(
+        (n) => !isBlocked(n) && !rides(n) && (afters(n).length === 0 || byNumber.get(n).inProgress),
+      );
       const started = free.find((n) => byNumber.get(n).inProgress);
       const running = lane.mode === "any" ? free : free.length ? [started ?? free[0]] : [];
       const now = new Set(running.flatMap((n) => [n, ...(riders.get(n) ?? [])]));
       const headUnit = lane.mode === "head" ? now : new Set();
       const freedAfter =
         lane.mode === "head"
-          ? lane.issues.filter((n) => !headUnit.has(n) && !rides(n) && waits(n).every((b) => headUnit.has(b))).length
+          ? lane.issues.filter(
+              (n) =>
+                !headUnit.has(n) &&
+                !rides(n) &&
+                waits(n).every((b) => headUnit.has(b)) &&
+                afters(n).every((b) => headUnit.has(b)),
+            ).length
           : 0;
       const ranks = new Map();
       if (lane.mode === "serial") {
@@ -1154,13 +1173,15 @@
 
     function tokens(parts) {
       const out = [];
-      for (const [label, entries] of parts) {
+      for (const [label, entries, soft] of parts) {
         if (!entries.length) continue;
         if (out.length) out.push(" · ");
         out.push(`${label} `);
         entries.forEach((entry, index) => {
           if (index) out.push(", ");
-          out.push(typeof entry === "number" ? ref(entry) : blocker(entry).link);
+          const node = typeof entry === "number" ? ref(entry) : blocker(entry).link;
+          if (soft) node.classList.add("ref--soft");
+          out.push(node);
         });
       }
       return out;
@@ -1323,7 +1344,9 @@
           tokens([
             ["same branch as", partner === null ? [] : [partner]],
             ["waits on", waits(n)],
+            ["better after", afters(n), true],
             ["unblocks", unblocks.get(n) ?? []],
+            ["eases", eases.get(n) ?? [], true],
           ]),
         ),
       ]);
