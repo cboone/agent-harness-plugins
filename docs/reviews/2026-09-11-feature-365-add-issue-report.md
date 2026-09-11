@@ -9,7 +9,7 @@ Reviewed through: `2f5dc7b4`
 
 This branch adds the `publish-report-board` skill plugin for issue #365. A report board is an analysis published as a private Artifact with a stable URL and re-synced in place as its source data changes. The Catamount backlog report from Claude Design is implemented as the first board type, and a bundled `report-board` script validates board data, renders it into a self-contained page template, reads it back out of a published page, and compares two syncs.
 
-The plugin is registered in the catalog, documented, mirrored to Codex CLI and OpenCode, and covered by 55 scrut cases. The review found correctness bugs in the script and the page, plus layout, accessibility, and documentation gaps; all of them are fixed in the last three commits.
+The plugin is registered in the catalog, documented, mirrored to Codex CLI and OpenCode, and covered by scrut tests. The review found correctness bugs in the script and the page, plus layout, accessibility, and documentation gaps; all of them are fixed in `79cfd742`, `2f5dc7b4`, and `4ff72784`.
 
 ## Changes by Area
 
@@ -38,7 +38,7 @@ Four subcommands. `validate` enforces the rules every board relies on, most impo
 
 ### Tests
 
-55 scrut cases cover validation messages, rendering and escaping, standalone output, the extract round trip, the change report, file-handling edge cases, and usage errors.
+Scrut cases cover validation messages, rendering and escaping, standalone output, the extract round trip, the change report, file-handling edge cases, and usage errors.
 
 - `tests/scrut/report-board.md`
 - `tests/data/report-board/backlog-triage.json`
@@ -168,7 +168,7 @@ Two independent reviewers examined the script and the template, alongside a docu
 
 - `make lint`: markdownlint, Prettier, shellcheck, shfmt, and actionlint are clean.
 - `make validate`: every JSON file and plugin rule passes.
-- `make test-scrut`: 135 cases across 6 suites pass, 55 of them in `tests/scrut/report-board.md`.
+- `make test-scrut`: every suite passes, `tests/scrut/report-board.md` included.
 - Both preview boards validate, render, and are published on the final template.
 
 ## Decisions
