@@ -86,6 +86,9 @@ def ref_text:
   elif .branch != null then "branch \(.branch)"
   elif .ref != null then .ref
   else (.label // .url // "a reference") end;
+# What a waitingOn or after entry points at, without its display title or
+# label, so two entries naming the same thing compare equal.
+def ref_key: if type == "object" then {pr, branch, ref, url} else . end;
 # Problems with one reference object in waitingOn or after. $article is "a"
 # or "an", to agree with the field name.
 def ref_problems($at; $field; $article):
@@ -194,7 +197,7 @@ else
                 ($issue.after[] | select(is_int) | select(. != $issue.number and (known | not)) | "\($at) is better after #\(.), which is not an open issue on this board; drop it if it has closed, or name it as a reference"),
                 ($issue.after[] | select(type != "number" and type != "object") | "\($at): each after entry is an issue number or a reference object"),
                 ($issue.after[] | objects | ref_problems($at; "after"; "an")),
-                ($issue.after[] | . as $a | select($waits | as_list | any(.[]; . == $a)) | "\($at) waits on \($a | ref_text) and is also better after it; keep only waitingOn"),
+                ($issue.after[] | . as $a | select($waits | as_list | any(.[]; ref_key == ($a | ref_key))) | "\($at) waits on \($a | ref_text) and is also better after it; keep only waitingOn"),
                 ($issue.after[] | select(is_int) | select(. != $issue.number and known and root(.) == root($issue.number)) | "\($at) shares a branch with #\(.), so it cannot also come after it")
               end)
          end

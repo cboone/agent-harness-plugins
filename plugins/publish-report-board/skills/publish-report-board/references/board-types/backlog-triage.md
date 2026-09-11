@@ -15,7 +15,7 @@ A backlog triage board answers three questions about a repository's open issues:
 
 ```bash
 gh repo view --json nameWithOwner,url,defaultBranchRef
-git fetch --quiet origin DEFAULT_BRANCH
+git fetch --quiet --prune origin
 git rev-parse origin/DEFAULT_BRANCH
 gh issue list --state open --limit 500 --json number,title,body,labels,milestone,assignees,createdAt,updatedAt
 gh api 'repos/OWNER/REPO/milestones?state=open&per_page=100'
@@ -29,7 +29,7 @@ date -u +%Y-%m-%dT%H:%M:%SZ
 
 Every open issue goes on the board, and every open pull request can mark work in progress. If either list returns exactly as many items as `--limit` allows, raise the limit and run it again rather than working from a truncated list.
 
-The unmerged remote branches catch work pushed from another machine or session, and they are what a branch blocker points at: a branch holding unmerged work with no pull request is often the reason an issue cannot finish.
+The unmerged remote branches catch work pushed from another machine or session, which is why the fetch takes every branch and prunes the deleted ones. They are also what a branch blocker points at: a branch holding unmerged work with no pull request is often the reason an issue cannot finish.
 
 ## Analyze
 
@@ -157,7 +157,7 @@ Capacity follows the lane's mode: one branch at a time for a serial or head lane
 
 When no open issue has a milestone, the page drops the milestone column and chips, heads the contention matrix's single column "Claimed by", and says so in the footer rather than counting zero milestones.
 
-When nothing is blocked, the Blocked section shrinks to its heading and the words "Nothing is blocked." An empty `startNow` shrinks the Start now section the same way, to a line saying whether anything could have started.
+When nothing is blocked, the Blocked section shrinks to its heading and the words "Nothing is blocked." An empty `startNow` shrinks the Start now section the same way, to a line saying whether anything could have started. `notes.blocked` and `notes.startNow` replace either line when set.
 
 ## Validation
 

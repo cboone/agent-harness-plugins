@@ -1119,7 +1119,7 @@
       origin = "https://github.com";
     }
     // Encodes a branch name for a URL path, including "#" and "?".
-    const pathPart = (text) => encodeURI(text).replace(/[#?]/g, encodeURIComponent);
+    const pathPart = (text) => String(text).split("/").map(encodeURIComponent).join("/");
     const issueUrl = (n) => `${repoUrl}/issues/${n}`;
     const searchUrl = (query) => `${repoUrl}/issues?q=${encodeURIComponent(query)}`;
     const milestoneUrl = (title) => searchUrl(title ? `is:open milestone:"${title}"` : "is:open no:milestone");
@@ -1400,9 +1400,11 @@
     const emptyStartNote = idle
       ? "No branches picked today."
       : "Nothing can start today: every issue is blocked, queued behind another, or already in progress.";
-    const startNote = startNow.length
-      ? notes.startNow || `${capitalize(word(startNow.length))} ${startNow.length === 1 ? "branch" : "branches"} to open today.`
-      : emptyStartNote;
+    const startNote =
+      notes.startNow ||
+      (startNow.length
+        ? `${capitalize(word(startNow.length))} ${startNow.length === 1 ? "branch" : "branches"} to open today.`
+        : emptyStartNote);
     const startSection = section(
       "start-now",
       "Start now",
@@ -1436,10 +1438,17 @@
       const partner = partnerOf(n);
       const rank = model.ranks.get(n);
       return h("li", { class: "item" }, [
-        h("span", { class: "item-rank", "aria-hidden": rank === "·" ? "true" : null }, rank),
+        // The column headings are drawn for sighted readers only, so each
+        // field that does not name itself carries a visually hidden label.
+        h("span", { class: "item-rank", "aria-hidden": rank === "·" ? "true" : null }, [
+          h("span", { class: "visually-hidden" }, "Step "),
+          rank,
+        ]),
         h("span", { class: "item-num" }, ref(n)),
         h("span", { class: "item-title" }, [issue.title, issue.inProgress ? progressTag(issue.inProgress) : null]),
-        anyMilestone ? h("span", { class: "item-ms" }, chip(issue.milestone)) : null,
+        anyMilestone
+          ? h("span", { class: "item-ms" }, [h("span", { class: "visually-hidden" }, "Milestone: "), chip(issue.milestone)])
+          : null,
         h(
           "span",
           { class: "item-deps" },
@@ -1628,7 +1637,7 @@
         ])
       : // With nothing blocked the section keeps one line, so an empty result
         // reads as a finding rather than as a missing section.
-        section("blocked", "Blocked", "Nothing is blocked.", 0, null);
+        section("blocked", "Blocked", notes.blocked || "Nothing is blocked.", 0, null);
 
     // Sync footer: when, against what, and how much.
     const milestoneCount = new Set(issues.map((issue) => issue.milestone).filter(Boolean)).size;

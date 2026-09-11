@@ -52,15 +52,17 @@ Name the working files after the repository and the board type, such as `agent-h
 
 Establish whether this is a first publish or a re-sync before gathering anything. `./references/artifact-mechanics.md` covers each case, and each one has a silent failure mode.
 
-- **Published earlier in this conversation**: reuse the same working files; the `.json` holds the previous data. If they are gone, as they are once a session restart clears the scratchpad, recover the data from the published board the way the next case does.
+- **Published earlier in this conversation**: the working `.json` holds the previous data; copy it to `PREVIOUS_JSON`. If the working files are gone, as they are once a session restart clears the scratchpad, recover the data from the published board the way the next case does.
 - **Published in an earlier conversation**: use the URL the user gives, or find it with the Artifact `list` action by the board's exact title. Read the artifact, save the HTML it returns, and recover the data the page was built from:
 
   ```bash
   bash REPORT_BOARD extract PAGE_HTML > PREVIOUS_JSON
   ```
 
-- **Local fallback**: the previous board is the HTML at the stable path, and `extract` reads it the same way.
+- **Local fallback**: the previous board is the HTML at the stable path; `extract` it to `PREVIOUS_JSON` the same way.
 - **Nothing found**: this is a first publish.
+
+Keep `PREVIOUS_JSON` apart from the working files, such as `agent-harness-plugins-backlog-triage.previous.json`. Steps 6 and 7 overwrite the working files with this sync, so a comparison against them finds nothing to report.
 
 On a re-sync, the previous data is a draft, not a source. Its lanes and reasons are a starting point; GitHub decides what is true now.
 
@@ -93,10 +95,10 @@ Never edit the rendered page. Change the data and render again.
 Skip this step on a first publish. On a re-sync:
 
 ```bash
-bash REPORT_BOARD compare PREVIOUS DATA_JSON
+bash REPORT_BOARD compare PREVIOUS_JSON DATA_JSON
 ```
 
-`PREVIOUS` may be the previous data or a rendered page. Keep the output: it is the change report, and a sync that silently overwrites the board is indistinguishable from one that did nothing.
+`PREVIOUS_JSON` is the copy step 4 saved, never a working file this sync has already overwritten. Keep the output: it is the change report, and a sync that silently overwrites the board is indistinguishable from one that did nothing.
 
 ### 9. Publish
 

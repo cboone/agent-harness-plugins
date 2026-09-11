@@ -230,6 +230,17 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## Waiting on and better after the same reference
+
+A title on one entry and not the other still names the same pull request.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"pr": 12}], "blockedBecause": "x", "after": [{"pr": 12, "title": "palette"}]}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #107 waits on PR #12 and is also better after it; keep only waitingOn
+[1]
+```
+
 ## A better-after loop
 
 ```scrut
