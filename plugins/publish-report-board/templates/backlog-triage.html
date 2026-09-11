@@ -44,9 +44,11 @@
     --bar-now: #f59e0b;
     --bar-queued: #fde68a;
     --bar-blocked: #c3ccce;
+    --bar-edge: rgb(180 83 9 / 45%);
     --hatch: rgb(30 33 35 / 18%);
     --hit: #fef3c7;
     --selection: #fde68a;
+    --selection-ink: #000000;
     --heading-shadow: none;
     --warn: #b45309;
     --alert: #b91c1c;
@@ -79,6 +81,7 @@
       --bar-now: #fde68a;
       --bar-queued: #8d999d;
       --bar-blocked: #485054;
+      --bar-edge: rgb(255 255 255 / 40%);
       --hatch: rgb(255 255 255 / 16%);
       --hit: #3d4447;
       --selection: #8d999d;
@@ -114,6 +117,7 @@
     --bar-now: #fde68a;
     --bar-queued: #8d999d;
     --bar-blocked: #485054;
+    --bar-edge: rgb(255 255 255 / 40%);
     --hatch: rgb(255 255 255 / 16%);
     --hit: #3d4447;
     --selection: #8d999d;
@@ -139,10 +143,10 @@
 
   ::selection {
     background: var(--selection);
-    color: #000000;
+    color: var(--selection-ink);
   }
 
-  :where(.board) :where(p, h1, h2, dl, dd, ol) {
+  :where(.board) :where(p, h1, h2, h3, dl, dd, ol) {
     margin: 0;
   }
 
@@ -352,11 +356,13 @@
 
   .when {
     text-align: right;
-    font-variant-numeric: tabular-nums;
   }
 
+  /* Tabular figures on the date only: in this face they also space out the
+     colon in the time. */
   .when-date {
     display: block;
+    font-variant-numeric: tabular-nums;
     font-size: 26px;
     font-weight: 800;
     letter-spacing: -0.02em;
@@ -456,11 +462,6 @@
     max-width: 88ch;
     color: var(--muted);
     font-size: 12.5px;
-  }
-
-  .empty {
-    color: var(--muted);
-    font-size: 13px;
   }
 
   /* Start now */
@@ -564,6 +565,12 @@
     background-color: var(--bar-now);
   }
 
+  /* Queued segments keep an outline, so the three states read as solid,
+     outlined, and hatched rather than by fill alone. */
+  .seg--queued {
+    box-shadow: inset 0 0 0 1px var(--bar-edge);
+  }
+
   /* Blocked segments carry a hatch so the state reads without color. */
   .seg--blocked {
     background-color: var(--bar-blocked);
@@ -643,7 +650,7 @@
   }
 
   .cap-unit {
-    max-width: 7ch;
+    width: min-content;
     font-size: 10.5px;
     font-weight: 800;
     letter-spacing: 0.05em;
@@ -687,7 +694,7 @@
   }
 
   /* A board with no milestones drops the milestone column entirely. */
-  @media (min-width: 721px) {
+  @media (min-width: 801px) {
     .no-milestones .cols,
     .no-milestones .item {
       grid-template-columns: 28px 58px minmax(0, 1fr) 240px;
@@ -727,6 +734,7 @@
   .item-title {
     font-size: 13.5px;
     line-height: 1.3;
+    overflow-wrap: anywhere;
   }
 
   .item-deps {
@@ -857,6 +865,17 @@
     font-size: 11px;
   }
 
+  /* Each blocked cell names its column: always to a screen reader, and on
+     screen once the header row is hidden at narrow widths. */
+  .cell-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   /* Sync footer */
   .sync {
     margin-top: -6px;
@@ -920,15 +939,41 @@
       gap: 8px;
     }
 
-    .blocked-row [data-label]::before {
-      content: attr(data-label);
+    .cell-label {
+      position: static;
       display: block;
+      width: auto;
+      height: auto;
       margin-bottom: 3px;
+      overflow: visible;
+      clip-path: none;
       color: var(--muted);
       font-size: 9.5px;
       font-weight: 800;
       letter-spacing: 0.1em;
       text-transform: uppercase;
+      white-space: normal;
+    }
+  }
+
+  /* Lane rows stack below 800px, where five columns leave titles too narrow. */
+  @media (max-width: 800px) {
+    .cols {
+      display: none;
+    }
+
+    .item {
+      grid-template-columns: 22px 48px minmax(0, 1fr);
+      gap: 5px 10px;
+    }
+
+    .item-ms,
+    .item-deps {
+      grid-column: 3;
+    }
+
+    .item-deps:empty {
+      display: none;
     }
   }
 
@@ -976,24 +1021,6 @@
 
     .key {
       padding-left: 0;
-    }
-
-    .cols {
-      display: none;
-    }
-
-    .item {
-      grid-template-columns: 22px 48px minmax(0, 1fr);
-      gap: 5px 10px;
-    }
-
-    .item-ms,
-    .item-deps {
-      grid-column: 3;
-    }
-
-    .item-deps:empty {
-      display: none;
     }
   }
 
@@ -1067,22 +1094,46 @@
     const word = (n) => WORDS[n] ?? String(n);
     const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
     const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+    const plural = (text) =>
+      /[^aeiou]y$/i.test(text) ? `${text.slice(0, -1)}ies` : /(s|x|z|ch|sh)$/i.test(text) ? `${text}es` : `${text}s`;
     const listAt = (map, key) => {
       if (!map.has(key)) map.set(key, []);
       return map.get(key);
     };
 
     const repoUrl = (data.repoUrl || `https://github.com/${data.repo}`).replace(/\/+$/, "");
+    // An address the URL parser rejects must not stop the page, so links to
+    // other repositories fall back to github.com.
+    let origin = "https://github.com";
+    try {
+      origin = new URL(repoUrl).origin;
+    } catch {
+      origin = "https://github.com";
+    }
+    // Encodes a branch name for a URL path, including "#" and "?".
+    const pathPart = (text) => encodeURI(text).replace(/[#?]/g, encodeURIComponent);
     const issueUrl = (n) => `${repoUrl}/issues/${n}`;
     const searchUrl = (query) => `${repoUrl}/issues?q=${encodeURIComponent(query)}`;
     const milestoneUrl = (title) => searchUrl(title ? `is:open milestone:"${title}"` : "is:open no:milestone");
     const link = (href, text) => h("a", { class: "ref", href }, text);
     const ref = (n) => h("a", { class: "ref num", href: issueUrl(n) }, `#${n}`);
-    // Links every "#123" in a prose field to that issue or pull request.
-    const prose = (text) =>
-      String(text ?? "")
-        .split(/(#\d+)/)
-        .map((part) => (/^#\d+$/.test(part) ? ref(Number(part.slice(1))) : part));
+    // Links "#123", and "owner/repo#123" for another repository, in a prose
+    // field. A "#" inside a word, such as "C#1", stays text.
+    const PROSE_REF = /([\w.-]+\/[\w.-]+)?#(\d+)(?![\w#])/g;
+    const prose = (text) => {
+      const source = String(text ?? "");
+      const out = [];
+      let last = 0;
+      for (const match of source.matchAll(PROSE_REF)) {
+        const before = source[match.index - 1];
+        if (!match[1] && before && /[\w&]/.test(before)) continue;
+        out.push(source.slice(last, match.index));
+        out.push(match[1] ? link(`${origin}/${match[1]}/issues/${match[2]}`, match[0]) : ref(Number(match[2])));
+        last = match.index + match[0].length;
+      }
+      out.push(source.slice(last));
+      return out;
+    };
 
     const issues = data.issues;
     const startNow = data.startNow ?? [];
@@ -1114,7 +1165,6 @@
     // A blocker is an open issue on this board or a reference to something else
     // that has to land first: a pull request, a branch, an issue in another
     // repository, or any linked page. `from` names where the freeing work lives.
-    const origin = new URL(repoUrl).origin;
     function blocker(b) {
       if (typeof b === "number") {
         return { link: ref(b), title: shortTitle(b), from: laneOf.has(b) ? laneLabel(laneOf.get(b)) : "" };
@@ -1124,7 +1174,7 @@
         return { link: h("a", { class: "ref num", href }, `PR #${b.pr}`), title: b.title, from: "a pull request" };
       }
       if (b.branch != null) {
-        const href = `${repoUrl}/compare/${encodeURI(data.sync.branch)}...${encodeURI(b.branch)}`;
+        const href = `${repoUrl}/compare/${pathPart(data.sync.branch)}...${pathPart(b.branch)}`;
         return { link: link(href, b.branch), title: b.title, from: "a branch merge" };
       }
       if (b.ref != null) {
@@ -1212,20 +1262,25 @@
 
     // Header: repository, sync time, live age, and the six counts.
     const syncedAt = new Date(data.sync.at);
+    // A time no calendar has, such as 24:30, shows as written and gets no age,
+    // rather than stopping the page.
+    const validTime = !Number.isNaN(syncedAt.getTime());
     function formatSync(locale, options) {
+      if (!validTime) return "";
       try {
         return new Intl.DateTimeFormat(locale, { ...options, timeZone: data.sync.timeZone || undefined }).format(syncedAt);
       } catch {
         return new Intl.DateTimeFormat(locale, options).format(syncedAt);
       }
     }
-    const dateText = formatSync("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    const dateText = validTime ? formatSync("en-GB", { day: "numeric", month: "long", year: "numeric" }) : data.sync.at;
     const timeText = formatSync("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "short" });
 
     const age = h("p", { class: "when-age" });
     // Amber once a full day has passed, red after three. The wording counts
     // whole units, so it never says "1 day ago" before the color changes.
     function refreshAge() {
+      if (!validTime) return;
       const minutes = Math.max(0, Math.floor((Date.now() - syncedAt.getTime()) / 60000));
       const hours = Math.floor(minutes / 60);
       const days = Math.floor(hours / 24);
@@ -1297,16 +1352,23 @@
       ]);
     }
 
-    const startNote =
-      notes.startNow || `${capitalize(word(startNow.length))} ${startNow.length === 1 ? "branch" : "branches"} to open today.`;
+    // With no picks the section keeps one line, which says whether anything
+    // could have started.
+    const idle = issues.some(
+      (issue) => !isBlocked(issue.number) && !rides(issue.number) && !issue.inProgress && afters(issue.number).length === 0,
+    );
+    const emptyStartNote = idle
+      ? "No branches picked today."
+      : "Nothing can start today: every issue is blocked, queued behind another, or already in progress.";
+    const startNote = startNow.length
+      ? notes.startNow || `${capitalize(word(startNow.length))} ${startNow.length === 1 ? "branch" : "branches"} to open today.`
+      : emptyStartNote;
     const startSection = section(
       "start-now",
       "Start now",
       startNote,
-      2,
-      startNow.length
-        ? h("ol", { class: "start", role: "list" }, startNow.map(startRow))
-        : h("p", { class: "empty" }, "Nothing can start today: every unblocked issue is already in progress."),
+      startNow.length ? 2 : 0,
+      startNow.length ? h("ol", { class: "start", role: "list" }, startNow.map(startRow)) : null,
     );
 
     // Lanes
@@ -1370,7 +1432,7 @@
           : "";
       return h("li", { class: "lane" }, [
         h("div", { class: "lane-meta" }, [
-          h("p", { class: "lane-title" }, [h("span", { class: "badge" }, lane.key), h("span", null, lane.name)]),
+          h("h3", { class: "lane-title" }, [h("span", { class: "badge" }, lane.key), h("span", null, lane.name)]),
           h("div", { class: "cap" }, [
             h("p", { class: "cap-line" }, [
               h("span", { class: "cap-figure" }, String(model.cap)),
@@ -1406,7 +1468,7 @@
     const lanesSection = section(
       "lanes",
       "Lanes",
-      "Order matters inside a lane and nowhere else. One segment per issue: how many can run at once today, against what is queued behind them.",
+      "Each lane's order is the order to work in, and anything that waits across lanes is linked in its row. One segment per issue: how many can run at once today, against what is queued behind them.",
       14,
       [
         h("div", { class: "bars" }, lanes.map(barRow)),
@@ -1439,7 +1501,7 @@
       const across = claims.filter((claim) => new Set(claim.issues.map(milestoneKey)).size > 1).length;
       const within = claims.length - across;
       const noun = rowLabel.toLowerCase();
-      const lead = `${capitalize(word(claims.length))} ${claims.length === 1 ? `${noun} is` : `${noun}s are`} claimed by more than one issue`;
+      const lead = `${capitalize(word(claims.length))} ${claims.length === 1 ? `${noun} is` : `${plural(noun)} are`} claimed by more than one issue`;
       let split = anyClaimMilestone ? ", each within one milestone." : ".";
       if (across && within) split = `: ${word(across)} across milestones, ${word(within)} within one.`;
       else if (across) split = claims.length === 1 ? ", across milestones." : ", all across milestones.";
@@ -1455,7 +1517,7 @@
           h(
             "div",
             { class: "matrix-scroll" },
-            h("table", { class: "matrix", style: `min-width: ${220 + columns.length * 92}px` }, [
+            h("table", { class: "matrix", style: `min-width: ${230 + columns.length * 92}px` }, [
               h("colgroup", null, [h("col", { class: "matrix-first" }), columns.map(() => h("col"))]),
               h(
                 "thead",
@@ -1495,20 +1557,20 @@
     function blockedRow(issue) {
       const refs = issue.waitingOn.map(blocker);
       const freeing = [...new Set(refs.map((r) => r.from).filter(Boolean))];
+      const label = (text) => h("span", { class: "cell-label" }, text);
       return h("li", { class: "blocked-row" }, [
         h("p", { class: "blocked-issue" }, [ref(issue.number), " ", shortTitle(issue.number)]),
-        h(
-          "div",
-          { class: "waiting", "data-label": "Waiting on" },
+        h("div", { class: "waiting" }, [
+          label("Waiting on"),
           refs.map((r) =>
             h("p", { class: "waiting-item" }, [
               r.link,
               r.title ? [" ", h("span", { class: "waiting-title" }, r.title)] : null,
             ]),
           ),
-        ),
-        h("p", { class: "blocked-why", "data-label": "Why it cannot start" }, prose(issue.blockedBecause)),
-        h("p", { class: "blocked-lane", "data-label": "Freed from" }, freeing.join(" + ")),
+        ]),
+        h("p", { class: "blocked-why" }, [label("Why it cannot start"), prose(issue.blockedBecause)]),
+        h("p", { class: "blocked-lane" }, [label("Freed from"), freeing.join(" + ")]),
       ]);
     }
 
@@ -1533,9 +1595,9 @@
     const withoutMilestone = issues.filter((issue) => !issue.milestone).length;
     const footer = h("footer", { class: "sync" }, [
       "Synced ",
-      h("strong", null, `${dateText}, ${timeText}`),
+      h("strong", null, [dateText, timeText].filter(Boolean).join(", ")),
       " against ",
-      link(`${repoUrl}/tree/${encodeURI(data.sync.branch)}`, data.sync.branch),
+      link(`${repoUrl}/tree/${pathPart(data.sync.branch)}`, data.sync.branch),
       " at ",
       link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8)),
       ". ",

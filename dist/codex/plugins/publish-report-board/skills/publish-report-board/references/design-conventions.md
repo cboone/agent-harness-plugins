@@ -17,7 +17,7 @@ Boards read as one system because they share one design. The `backlog-triage` te
 
 Every state a reader acts on has a shape as well as a hue, so it survives a colorblind reader, a grayscale printout, and a glance:
 
-- Blocked lane segments carry a hatch.
+- Lane segments that can run now are solid, queued ones are outlined, and blocked ones carry a hatch.
 - An issue with no milestone gets a dashed chip.
 - A soft ordering link, "better after" or "eases", gets a dashed underline; a hard one, "waits on" or "unblocks", keeps a solid one.
 - An issue in progress carries an "In progress" tag that names its branch.
@@ -35,5 +35,5 @@ The template renders the prose fields as written, so they carry the board's voic
 - **`why`**, for each start pick: one or two sentences with concrete references, such as what the issue frees or what it collides with. Never restate the title.
 - **Lane notes**: what is true of the group, usually why its order is what it is.
 - **`blockedBecause`**: why the issue cannot start yet, in terms of what its blocker settles.
-- Write issue numbers as `#123`; the page links each one.
+- Write issue numbers as `#123`, or `OWNER/REPO#123` for another repository; the page links each one.
 - No em dashes, no time or effort estimates, and neutral technical terms throughout.

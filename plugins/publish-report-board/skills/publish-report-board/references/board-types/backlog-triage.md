@@ -157,7 +157,7 @@ Capacity follows the lane's mode: one branch at a time for a serial or head lane
 
 When no open issue has a milestone, the page drops the milestone column and chips, heads the contention matrix's single column "Claimed by", and says so in the footer rather than counting zero milestones.
 
-When nothing is blocked, the Blocked section shrinks to its heading and the words "Nothing is blocked."
+When nothing is blocked, the Blocked section shrinks to its heading and the words "Nothing is blocked." An empty `startNow` shrinks the Start now section the same way, to a line saying whether anything could have started.
 
 ## Validation
 
