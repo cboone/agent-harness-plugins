@@ -190,6 +190,36 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## A serial lane passes over a branch that is better after another issue
+
+Issue #103 rides the branch of #101 and is better after #104, so that whole
+branch waits and #107 is the first issue in the lane that can start.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 103)) += {"after": [104]} | .startNow = [{"issue": 107, "why": "x"}, {"issue": 106, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is valid: 7 issues in 3 lanes (glob)
+```
+
+## A lane can show more than one branch in progress
+
+Validation accepts it, so the board shows the overlap rather than hiding it.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 101)).inProgress = "feature/101-tokenizer" | (.issues[] | select(.number == 107)).inProgress = "feature/107-color" | .startNow = [{"issue": 106, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is valid: 7 issues in 3 lanes (glob)
+```
+
+## A repository URL with a query
+
+The page appends paths such as `/issues` to the repository URL.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com/widgets?view=1"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - repoUrl: expected an https:// URL with no query or fragment
+[1]
+```
+
 ## An issue better after another
 
 `after` records that an issue could start now but would repeat work if it
@@ -528,13 +558,14 @@ report-board: */data.json is not valid board data: (glob)
 ## Duplicate numbers, lane keys, picks, and claims
 
 ```scrut
-$ dir="$(mktemp -d)" && jq '.issues += [{"number": 101, "title": "again", "milestone": null}] | .lanes[1].key = "L1" | .startNow += [{"issue": 106, "why": "again"}] | .contention.claims[0].issues += [101] | .contention.claims[1].issues = [107, 107]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+$ dir="$(mktemp -d)" && jq '.issues += [{"number": 101, "title": "again", "milestone": null}] | .lanes[1].key = "L1" | .startNow += [{"issue": 106, "why": "again"}] | .contention.claims[0].issues += [101] | .contention.claims[1].issues = [107, 107] | .contention.claims += [{"name": "cli", "issues": [103, 107]}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
   - issues: #101 appears more than once
   - lanes: key L1 is used more than once
   - startNow: #106 is listed more than once
   - contention parser lists #101 more than once
   - contention cli: issues must list at least two different issue numbers
+  - contention: claim cli is listed more than once
 [1]
 ```
 
@@ -543,7 +574,7 @@ report-board: */data.json is not valid board data: (glob)
 ```scrut
 $ dir="$(mktemp -d)" && jq '.repoUrl = "http://example.com/widgets" | .sync.timeZone = 5 | .sync.extra = "12 packages" | .milestones = [{"short": "x"}] | .contention.rowLabel = 7 | .contention.claims += [{"name": "docs", "issues": [1, 2], "query": 3}] | .notes.blocked = 3' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
-  - repoUrl: expected an https:// URL
+  - repoUrl: expected an https:// URL with no query or fragment
   - sync.timeZone: expected an IANA zone name, such as America/New_York
   - sync.extra: expected a list of text
   - milestones[0]: expected an object with a title

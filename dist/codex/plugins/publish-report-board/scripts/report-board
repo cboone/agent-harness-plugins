@@ -127,13 +127,15 @@ else
     # inProgress}, or null. Work on an issue riding the branch counts.
     def progress_of($n): [($n, riders($n)[]) as $m | issue($m) | select(.inProgress | is_text) | {number, inProgress}] | first;
     def rides($n): issue($n) | .sameBranchAs | is_int;
-    # Not blocked, not riding another branch, and not queued behind an issue
-    # it is better after, unless its work has already started.
+    # A branch is queued while any issue on it is better after another open
+    # issue or reference.
+    def queued($n): [($n, riders($n)[]) as $m | issue($m) | .after | as_list | .[] | select(. != $n)] | length > 0;
+    # Not blocked, not riding another branch, and not queued, unless its work
+    # has already started.
     def startable($n):
-      issue($n) as $it
-      | ($it.waitingOn | as_list | length) == 0
+      (issue($n) | .waitingOn | as_list | length) == 0
         and (rides($n) | not)
-        and (($it.after | as_list | length) == 0 or progress_of($n) != null);
+        and ((queued($n) | not) or progress_of($n) != null);
     def lane_of($n): first($d.lanes | as_list | .[] | objects | select(.issues | as_list | any(.[]; . == $n))) // null;
     def roots($lane): [$lane.issues | as_list | .[] | select(is_int) | select(rides(.) | not)];
     def head_of($lane):
@@ -143,7 +145,7 @@ else
     check($d.board | is_text and test("^[a-z0-9][a-z0-9-]*$"); "board: expected a board type such as \"backlog-triage\""),
     check($d.title | is_text; "title: expected text naming the board, such as \"agent-harness-plugins backlog\""),
     check($d.repo | is_text and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"); "repo: expected owner/name"),
-    check($d.repoUrl | absent_or(is_text and test("^https://[^\\s\"<>]+$")); "repoUrl: expected an https:// URL"),
+    check($d.repoUrl | absent_or(is_text and test("^https://[^\\s\"<>?#]+$")); "repoUrl: expected an https:// URL with no query or fragment"),
     check($d.summary | is_text; "summary: expected one or two sentences"),
 
     (if ($d.sync | type) != "object" then "sync: expected an object with at, branch, and commit"
@@ -298,16 +300,17 @@ else
        check($d.contention.rowLabel | absent_or(is_text); "contention.rowLabel: expected text"),
        (if ($d.contention.claims | type) != "array" then "contention.claims: expected a list"
         else
-          ($d.contention.claims | to_entries[]) as {key: $i, value: $claim}
-          | if ($claim | type) != "object" or (($claim.name | is_text) | not) then "contention.claims[\($i)]: expected an object with a name"
-            else
-              "contention \($claim.name)" as $at
-              | check($claim.query | absent_or(is_text); "\($at): query must be text"),
-                (if ($claim.issues | type == "array" and all(.[]; is_int) and (unique | length) >= 2) | not then "\($at): issues must list at least two different issue numbers"
-                 else ($claim.issues[] | select(known | not) | "\($at) lists #\(.), which is not in issues"),
-                      ($claim.issues | duplicates | "\($at) lists #\(.) more than once")
-                 end)
-            end
+          (($d.contention.claims | to_entries[]) as {key: $i, value: $claim}
+           | if ($claim | type) != "object" or (($claim.name | is_text) | not) then "contention.claims[\($i)]: expected an object with a name"
+             else
+               "contention \($claim.name)" as $at
+               | check($claim.query | absent_or(is_text); "\($at): query must be text"),
+                 (if ($claim.issues | type == "array" and all(.[]; is_int) and (unique | length) >= 2) | not then "\($at): issues must list at least two different issue numbers"
+                  else ($claim.issues[] | select(known | not) | "\($at) lists #\(.), which is not in issues"),
+                       ($claim.issues | duplicates | "\($at) lists #\(.) more than once")
+                  end)
+             end),
+          ([$d.contention.claims[] | objects | .name | select(is_text)] | duplicates | "contention: claim \(.) is listed more than once")
         end)
      end),
 

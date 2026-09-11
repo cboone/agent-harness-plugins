@@ -65,7 +65,7 @@ Give each lane a mode:
 | `head`   | The first issue alone, then everything it frees at once                  | One issue settles something the rest read, and after it they are independent |
 | `any`    | Every unblocked issue at once                                            | Nothing in the lane shares a component                                       |
 
-In a serial lane the listed order is the recommended sequence, with an issue already in progress first; an issue that cannot start yet is passed over for the next one that can. In a head lane the head comes first, and while it cannot start, nothing else in the lane does. In either, work already in progress holds the lane's single slot, including work on an issue riding another's branch. In an any-order lane the order is only for reading.
+In a serial lane the listed order is the recommended sequence, with an issue already in progress first; an issue that cannot start yet is passed over for the next one that can. In a head lane the head comes first, and while it cannot start, nothing else in the lane does. In either, work already in progress holds the lane's single slot, including work on an issue riding another's branch. When more than one branch in such a lane is already in progress, the page shows each one running, so the overlap stays visible. In an any-order lane the order is only for reading.
 
 When two issues should ship on one branch, usually because neither makes sense without the other, set `sameBranchAs` on one of them to the other. Both must sit in the same lane, and the page draws them as one unit.
 
@@ -90,7 +90,7 @@ Write `summary`, each lane's `note`, each `blockedBecause`, and any section note
 | `board`      | Yes      | `backlog-triage`                                                                                                                    |
 | `title`      | Yes      | The board's name, identical across syncs                                                                                            |
 | `repo`       | Yes      | `OWNER/NAME`                                                                                                                        |
-| `repoUrl`    | No       | The repository URL, when it is not on github.com                                                                                    |
+| `repoUrl`    | No       | The repository URL, when it is not on github.com, with no query or fragment                                                         |
 | `sync`       | Yes      | Sync metadata, as `./references/sync-metadata.md` describes                                                                         |
 | `summary`    | Yes      | One or two sentences                                                                                                                |
 | `milestones` | No       | `{ "title", "short" }` per milestone, in the order the contention matrix lists them; `short` labels the matrix column               |
@@ -153,7 +153,7 @@ Any form but `url` may add a `title`, which the Blocked section shows beside the
 | Blocked           | Each blocked issue, what it waits on, why, and what frees it        | The order, fewest blockers first; the freeing lane, or the kind of reference                                                    |
 | Footer            | The sync line and counts                                            | The milestone count                                                                                                             |
 
-Capacity follows the lane's mode: one branch at a time for a serial or head lane, and every unblocked issue at once for an any-order lane. A serial lane runs its first issue that can start, and a head lane only its head, so a head that cannot start holds its whole lane at zero. A head lane also shows how many issues its head frees. "Branches at once" in the header is the sum across lanes. An issue better after another open issue counts as queued rather than runnable, so it adds nothing to capacity until its target lands, unless its work has already started.
+Capacity follows the lane's mode: one branch at a time for a serial or head lane, and every unblocked issue at once for an any-order lane. A serial lane runs its first issue that can start, and a head lane only its head, so a head that cannot start holds its whole lane at zero. A head lane also shows how many issues its head frees. "Branches at once" in the header is the sum across lanes. A branch carrying an issue that is better after another open issue counts as queued rather than runnable, so it adds nothing to capacity until its target lands, unless its work has already started.
 
 When no open issue has a milestone, the page drops the milestone column and chips, heads the contention matrix's single column "Claimed by", and says so in the footer rather than counting zero milestones.
 
@@ -170,7 +170,7 @@ When nothing is blocked, the Blocked section shrinks to its heading and the word
 - A start pick is on the board, and is not blocked, not in progress (counting work on an issue riding its branch), not better after another open issue, and not riding on another issue's branch; nothing riding on its own branch is better after another open issue either.
 - A serial or head lane gets at most one pick, none while work in progress holds its slot, and only the issue the page runs there: a head lane's head, or a serial lane's first issue that can start.
 - `sync.at` falls on a real calendar date, `sync.commit` is a full SHA, and `sync.timeZone`, when set, is a zone the time zone database has, wherever one is installed.
-- Required fields are present and well formed, including each issue's `milestone`, which is `null` when it has none. Issue numbers and lane keys are unique, and every `mode` is `serial`, `head`, or `any`.
+- Required fields are present and well formed, including each issue's `milestone`, which is `null` when it has none. Issue numbers, lane keys, and claim names are unique, and every `mode` is `serial`, `head`, or `any`.
 
 ## Example
 

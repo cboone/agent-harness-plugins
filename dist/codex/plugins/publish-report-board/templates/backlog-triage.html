@@ -1202,20 +1202,26 @@
     // whatever the head frees, and nothing in it starts before the head. An
     // any-order lane runs every unblocked issue at once. An issue that shares a
     // branch travels with it, and work in progress holds a serial or head
-    // lane's single slot. report-board validate holds the start picks to the
-    // same rules, so the two agree.
+    // lane's single slot; when more than one branch there is already in
+    // progress, each one shows as running, so the overlap stays visible.
+    // report-board validate holds the start picks to the same rules, so the
+    // two agree.
     const lanes = data.lanes.map((lane) => {
       const roots = lane.issues.filter((n) => !rides(n));
-      // An issue better after another open issue waits in the queue unless its
-      // work has already started.
-      const canRun = (n) => !isBlocked(n) && (afters(n).length === 0 || progressOf(n) !== undefined);
+      // A branch waits in the queue while any issue on it is better after
+      // another open issue, unless its work has already started.
+      const queued = (n) => [n, ...(riders.get(n) ?? [])].some((m) => afters(m).some((target) => target !== n));
+      const canRun = (n) => !isBlocked(n) && (!queued(n) || progressOf(n) !== undefined);
       const first = lane.issues[0];
       const head = lane.mode === "head" ? (rides(first) ? partnerOf(first) : first) : null;
-      const held = roots.find((n) => progressOf(n) !== undefined);
-      const next = held ?? (lane.mode === "head" ? head : roots.find(canRun));
+      const held = roots.filter((n) => progressOf(n) !== undefined);
       let running = [];
       if (lane.mode === "any") running = roots.filter(canRun);
-      else if (next != null && canRun(next)) running = [next];
+      else if (held.length) running = held.filter(canRun);
+      else {
+        const next = lane.mode === "head" ? head : roots.find(canRun);
+        if (next != null && canRun(next)) running = [next];
+      }
       const now = new Set(running.flatMap((n) => [n, ...(riders.get(n) ?? [])]));
       const headUnit = lane.mode === "head" ? new Set([head, ...(riders.get(head) ?? [])]) : new Set();
       const freedAfter =
