@@ -21,6 +21,8 @@ Give the user the URL the tool returns.
 
 Render to the same path and publish the same `file_path` again. The same path keeps the same URL. Rendering to a different path silently creates a second board with its own URL, and the first one stops updating with no sign on the page that it has.
 
+Pass the board's `url` as well. It does no harm within the conversation, and it keeps the update on the same board if the session has restarted since the first publish. If the tool then refuses because this conversation has no record of the board, read it first, as the next section describes.
+
 Omit `favicon` and `icon`. The board keeps the ones it has, and a changed favicon makes it read as a different page.
 
 ## Re-sync From a Later Conversation
@@ -30,7 +32,7 @@ A later conversation has no record of the path it published from, so a plain pub
 1. **Get the URL.** Use the one the user gives. Otherwise run the `list` action and pick the entry whose title matches the board's title exactly. Recovering a URL is a lookup, never a guess: if no title matches, say so and ask whether to publish a new board.
 2. **Read the board** with the `read` action and that URL. It returns the page's HTML, and saves a large page to a local file. The tool refuses a publish to an artifact the current conversation has not read, so this step is required.
 3. **Recover the previous data** from that HTML with `report-board extract`. Use it as the draft for this sync and as `PREVIOUS` for `report-board compare`.
-4. **Publish** the new render with `file_path` and with `url` set to the board's URL. Later republishes in the same conversation then use the same `file_path` and need no `url`.
+4. **Publish** the new render with `file_path` and with `url` set to the board's URL. Later republishes in the same conversation then use the same `file_path` and the same `url`.
 
 ## Shared Boards
 

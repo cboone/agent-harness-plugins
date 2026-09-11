@@ -22,11 +22,14 @@ gh api 'repos/OWNER/REPO/milestones?state=open&per_page=100'
 gh pr list --state open --json number,title,headRefName,closingIssuesReferences
 git worktree list
 git branch --list --format='%(refname:short)'
+git branch --remotes --no-merged origin/DEFAULT_BRANCH
 gh api user --jq '.login'
 date -u +%Y-%m-%dT%H:%M:%SZ
 ```
 
 Every open issue goes on the board. If the issue list returns exactly as many issues as `--limit` allows, raise the limit and run it again rather than working from a truncated backlog.
+
+The unmerged remote branches catch work pushed from another machine or session, and they are what a branch blocker points at: a branch holding unmerged work with no pull request is often the reason an issue cannot finish.
 
 ## Analyze
 
@@ -140,15 +143,15 @@ Any form but `url` may add a `title`, which the Blocked section shows beside the
 
 ## What the Page Draws
 
-| Section           | Shows                                                               | Derived by the page                                                                                    |
-| ----------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Header            | Repository, sync time, live age, and six counts                     | Open, ready (open minus blocked), blocked, lanes, branches at once, and picks                          |
-| Summary           | `summary`                                                           | Nothing                                                                                                |
-| Start now         | Each pick with its reasons, lane, footprint, and milestone          | The issues that share its branch                                                                       |
-| Lanes             | A bar per lane with one segment per issue, then each lane in detail | Capacity from the mode; which segments can run now; "waits on", "unblocks", and "same branch as" links |
-| Contention matrix | Claimed components down the side, milestones across                 | The columns, from the milestones of the claiming issues; the counts in the note                        |
-| Blocked           | Each blocked issue, what it waits on, why, and which lanes free it  | The order, fewest blockers first; the freeing lanes                                                    |
-| Footer            | The sync line and counts                                            | The milestone count                                                                                    |
+| Section           | Shows                                                               | Derived by the page                                                                                                             |
+| ----------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Header            | Repository, sync time, live age, and six counts                     | Open, ready (open minus blocked), blocked, lanes, branches at once, and picks                                                   |
+| Summary           | `summary`                                                           | Nothing                                                                                                                         |
+| Start now         | Each pick with its reasons, lane, footprint, and milestone          | The issues that share its branch                                                                                                |
+| Lanes             | A bar per lane with one segment per issue, then each lane in detail | Capacity from the mode; which segments can run now; "waits on", "unblocks", "better after", "eases", and "same branch as" links |
+| Contention matrix | Claimed components down the side, milestones across                 | The columns, from the milestones of the claiming issues; the counts in the note                                                 |
+| Blocked           | Each blocked issue, what it waits on, why, and what frees it        | The order, fewest blockers first; the freeing lane, or the kind of reference                                                    |
+| Footer            | The sync line and counts                                            | The milestone count                                                                                                             |
 
 Capacity follows the lane's mode: one branch at a time for a serial or head lane, and every unblocked issue at once for an any-order lane. A head lane also shows how many issues its head frees. "Branches at once" in the header is the sum across lanes. An issue better after another open issue counts as queued rather than runnable, so it adds nothing to capacity until its target lands, unless its work has already started.
 

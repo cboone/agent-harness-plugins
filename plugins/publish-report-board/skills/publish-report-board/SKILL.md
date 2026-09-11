@@ -59,7 +59,7 @@ Name the working files after the repository and the board type, such as `agent-h
 
 Establish whether this is a first publish or a re-sync before gathering anything. `./references/artifact-mechanics.md` covers each case, and each one has a silent failure mode.
 
-- **Published earlier in this conversation**: reuse the same working files. The `.json` holds the previous data.
+- **Published earlier in this conversation**: reuse the same working files; the `.json` holds the previous data. If they are gone, as they are once a session restart clears the scratchpad, recover the data from the published board the way the next case does.
 - **Published in an earlier conversation**: use the URL the user gives, or find it with the Artifact `list` action by the board's exact title. Read the artifact, save the HTML it returns, and recover the data the page was built from:
 
   ```bash

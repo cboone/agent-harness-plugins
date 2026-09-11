@@ -31,7 +31,7 @@ Each sync:
 | ---------------- | ----------------------------------------------------------------- |
 | `backlog-triage` | What to start next, what can run in parallel, and what is blocked |
 
-The backlog board opens with the sync time and six counts, then the issues to start now and why, the lanes of issues that can run in parallel with each lane's capacity and order, a contention matrix of components claimed by more than one issue, and the blocked issues with what frees each one. It follows the viewer's light or dark theme and reflows to phone width.
+The backlog board opens with the sync time and six counts, then the issues to start now and why, the lanes of issues that can run in parallel with each lane's capacity and order, a contention matrix of components claimed by more than one issue, and the blocked issues with what frees each one. A blocker can be another issue, a pull request, a branch that has to merge, or an issue in another repository, and a softer "better after" relation keeps an issue out of the picks without blocking it. The board follows the viewer's light or dark theme and reflows to phone width.
 
 Other board types, such as CI health or release readiness, do not have templates yet. Asked for one, the skill says so and answers in the terminal.
 
@@ -77,6 +77,7 @@ This skill runs GitHub CLI, git, and bundled-script commands that trigger permis
       "Bash(git rev-parse *)",
       "Bash(git worktree list*)",
       "Bash(git branch --list*)",
+      "Bash(git branch --remotes *)",
       "Bash(date -u *)",
       "Bash(readlink /etc/localtime)",
       "Bash(mktemp -d*)"
