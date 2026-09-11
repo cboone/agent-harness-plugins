@@ -1,0 +1,1480 @@
+<title>__BOARD_TITLE__</title>
+<meta name="color-scheme" content="light dark" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;800&display=swap" />
+<style>
+  /* Catamount palette: the donkey ramp for ink, rails, and slate surfaces;
+     amber marks what is current; blue is reserved for interaction. The light
+     theme is the Catamount report; the dark theme follows Catamount Dark,
+     whose ground is the site's own donkey-600. */
+  :root {
+    color-scheme: light;
+    --face: "Schibsted Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --gutter: clamp(16px, 4.1vw, 44px);
+    --ground: #fcfdfd;
+    --panel: #ffffff;
+    --ink: #1e2123;
+    --muted: #5e686c;
+    --rail: #5e686c;
+    --eyebrow: #b45309;
+    --marker: #d97706;
+    --hairline: rgb(217 119 6 / 50%);
+    --link-hover: #2563eb;
+    --link-active: #1d4ed8;
+    --focus: #2563eb;
+    --zebra: #eff2f3;
+    --rule: rgb(30 33 35 / 20%);
+    --grid: rgb(30 33 35 / 25%);
+    --rule-strong: rgb(30 33 35 / 40%);
+    --slate: #485054;
+    --slate-fade: rgb(94 104 108 / 50%);
+    --slate-edge: #33393b;
+    --slate-ink: #ffffff;
+    --slate-figure: #fde68a;
+    --chip: #e0e5e7;
+    --chip-edge: #a7b2b6;
+    --chip-ink: #1e2123;
+    --chip-hover: #bfdbfe;
+    --chip-hover-edge: #60a5fa;
+    --chip-hover-ink: #1e3a8a;
+    --chip-active: #93c5fd;
+    --chip-active-edge: #3b82f6;
+    --chip-active-ink: #000000;
+    --bar-now: #f59e0b;
+    --bar-queued: #fde68a;
+    --bar-blocked: #c3ccce;
+    --hatch: rgb(30 33 35 / 18%);
+    --hit: #fef3c7;
+    --selection: #fde68a;
+    --heading-shadow: none;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #5e686c;
+      --panel: #485054;
+      --ink: #ffffff;
+      --muted: #e6eaeb;
+      --rail: #e0e5e7;
+      --eyebrow: #fde68a;
+      --marker: #fde68a;
+      --hairline: rgb(253 230 138 / 50%);
+      --link-hover: #bfdbfe;
+      --link-active: #93c5fd;
+      --focus: #bfdbfe;
+      --zebra: #535c61;
+      --rule: rgb(255 255 255 / 22%);
+      --grid: rgb(255 255 255 / 28%);
+      --rule-strong: rgb(255 255 255 / 45%);
+      --slate: #3d4447;
+      --slate-fade: rgb(72 80 84 / 60%);
+      --slate-edge: #2b3032;
+      --chip: #485054;
+      --chip-edge: #8d999d;
+      --chip-ink: #ffffff;
+      --bar-now: #fde68a;
+      --bar-queued: #8d999d;
+      --bar-blocked: #485054;
+      --hatch: rgb(255 255 255 / 16%);
+      --hit: #3d4447;
+      --selection: #8d999d;
+      --heading-shadow: 1px 1px 0 rgb(31 33 35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #5e686c;
+    --panel: #485054;
+    --ink: #ffffff;
+    --muted: #e6eaeb;
+    --rail: #e0e5e7;
+    --eyebrow: #fde68a;
+    --marker: #fde68a;
+    --hairline: rgb(253 230 138 / 50%);
+    --link-hover: #bfdbfe;
+    --link-active: #93c5fd;
+    --focus: #bfdbfe;
+    --zebra: #535c61;
+    --rule: rgb(255 255 255 / 22%);
+    --grid: rgb(255 255 255 / 28%);
+    --rule-strong: rgb(255 255 255 / 45%);
+    --slate: #3d4447;
+    --slate-fade: rgb(72 80 84 / 60%);
+    --slate-edge: #2b3032;
+    --chip: #485054;
+    --chip-edge: #8d999d;
+    --chip-ink: #ffffff;
+    --bar-now: #fde68a;
+    --bar-queued: #8d999d;
+    --bar-blocked: #485054;
+    --hatch: rgb(255 255 255 / 16%);
+    --hit: #3d4447;
+    --selection: #8d999d;
+    --heading-shadow: 1px 1px 0 rgb(31 33 35);
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--face);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  ::selection {
+    background: var(--selection);
+    color: #000000;
+  }
+
+  :where(.board) :where(p, h1, h2, dl, dd, ol) {
+    margin: 0;
+  }
+
+  :where(.board) :where(ol) {
+    padding: 0;
+    list-style: none;
+  }
+
+  a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .board {
+    max-width: 1080px;
+    margin-inline: auto;
+  }
+
+  .board-message {
+    padding: 40px var(--gutter);
+    color: var(--muted);
+  }
+
+  /* Links rest at ink over an amber hairline and turn blue on hover and press. */
+  .ref {
+    border-bottom: 1px solid var(--hairline);
+    color: var(--ink);
+    text-decoration: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ref:hover {
+    border-bottom-color: var(--link-hover);
+    color: var(--link-hover);
+  }
+
+  .ref:active {
+    border-bottom-color: var(--link-active);
+    color: var(--link-active);
+  }
+
+  /* Slate surfaces: lane keys and capacity boxes share the Catamount button face. */
+  .badge,
+  .cap {
+    border: 1px solid var(--slate-edge);
+    border-radius: 6px;
+    background-color: var(--slate);
+    background-image: linear-gradient(to top left, var(--slate), var(--slate-fade));
+    color: var(--slate-ink);
+  }
+
+  .badge {
+    display: inline-block;
+    flex: none;
+    padding: 3px 7px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    line-height: 1.15;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .badge--small {
+    font-size: 10.5px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+    padding: 3px 8px;
+    border: 1px solid var(--chip-edge);
+    border-radius: 6px;
+    background: var(--chip);
+    color: var(--chip-ink);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-decoration: none;
+  }
+
+  .chip::before {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    background: var(--marker);
+  }
+
+  .chip--none {
+    border-style: dashed;
+    background: transparent;
+  }
+
+  .chip--none::before {
+    border: 1px solid currentColor;
+    background: transparent;
+  }
+
+  .chip:hover {
+    border-color: var(--chip-hover-edge);
+    background: var(--chip-hover);
+    color: var(--chip-hover-ink);
+  }
+
+  .chip:active {
+    border-color: var(--chip-active-edge);
+    background: var(--chip-active);
+    color: var(--chip-active-ink);
+  }
+
+  .tag {
+    display: inline-block;
+    margin-left: 7px;
+    padding: 1px 5px;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    color: var(--eyebrow);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    line-height: 1.3;
+    text-transform: uppercase;
+    vertical-align: 1px;
+    white-space: nowrap;
+  }
+
+  /* Header band */
+  .head {
+    padding: 34px var(--gutter) 0;
+    border-left: 6px solid var(--rail);
+    background: var(--panel);
+  }
+
+  .head-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 40px;
+    align-items: end;
+    padding-bottom: 26px;
+  }
+
+  .head-title {
+    min-width: 0;
+    container-type: inline-size;
+  }
+
+  .eyebrow {
+    margin-bottom: 12px;
+    color: var(--eyebrow);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .title {
+    font-size: 40px;
+    font-size: min(48px, 6.4cqw);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 0.98;
+    text-shadow: var(--heading-shadow);
+  }
+
+  .repo-link {
+    display: inline-block;
+    max-width: 100%;
+    border-bottom: 2px solid var(--rail);
+    color: var(--ink);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+
+  .repo-link:hover {
+    border-bottom-color: var(--link-hover);
+    color: var(--link-hover);
+  }
+
+  .repo-link:active {
+    border-bottom-color: var(--link-active);
+    color: var(--link-active);
+  }
+
+  .when {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .when-date {
+    display: block;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .when-time {
+    margin-top: 6px;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .when-age {
+    margin-top: 9px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .when-age.is-stale {
+    color: var(--eyebrow);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    padding-bottom: 6px;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    padding: 0 16px 22px 0;
+  }
+
+  .stat-value {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-label {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  /* Body */
+  .body {
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+    padding: 34px var(--gutter);
+  }
+
+  .summary {
+    max-width: 74ch;
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.4;
+    text-wrap: pretty;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: var(--head-gap, 12px);
+  }
+
+  .section-title {
+    flex: none;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-shadow: var(--heading-shadow);
+    text-wrap: balance;
+  }
+
+  .section-note {
+    min-width: 0;
+    max-width: 88ch;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+
+  .empty {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* Start now */
+  .start-row {
+    display: grid;
+    grid-template-columns: 44px 268px minmax(0, 1fr) 222px;
+    gap: 20px;
+    align-items: start;
+    padding: 17px 0 15px;
+  }
+
+  .start-rank {
+    color: var(--marker);
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .start-title {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+  }
+
+  .start-with {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .start-why {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .start-lane {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+  }
+
+  .start-lane-name {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .start-touches {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .mini-label {
+    margin: 9px 0 4px;
+    color: var(--muted);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Lane bars */
+  .bars {
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+
+  .bar-row {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr) 108px;
+    gap: 26px;
+    align-items: center;
+  }
+
+  .bar-name {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+
+  .bar {
+    display: flex;
+    gap: 2px;
+    height: 18px;
+  }
+
+  .seg {
+    flex: 1 1 0;
+    background-color: var(--bar-queued);
+  }
+
+  .seg--now {
+    background-color: var(--bar-now);
+  }
+
+  /* Blocked segments carry a hatch so the state reads without color. */
+  .seg--blocked {
+    background-color: var(--bar-blocked);
+    background-image: repeating-linear-gradient(135deg, transparent 0 3px, var(--hatch) 3px 5px);
+  }
+
+  .bar-legend {
+    color: var(--muted);
+    font-size: 11.5px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    align-items: center;
+    padding: 20px 0 6px 158px;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .key-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .key .seg {
+    flex: none;
+    width: 16px;
+    height: 10px;
+  }
+
+  /* Lanes */
+  .lane {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr);
+    gap: 26px;
+    padding: 22px 0 20px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .lane-title {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    font-size: 13.5px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  .cap {
+    display: inline-block;
+    min-width: 112px;
+    margin-top: 15px;
+    padding: 9px 11px 10px;
+  }
+
+  .cap-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cap-figure {
+    color: var(--slate-figure);
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cap-unit {
+    max-width: 7ch;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .cap-then {
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .lane-count {
+    margin-top: 13px;
+    color: var(--muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lane-owns {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  .lane-note {
+    max-width: 88ch;
+    margin-bottom: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .cols,
+  .item {
+    display: grid;
+    grid-template-columns: 28px 58px minmax(0, 1fr) 200px 190px;
+    gap: 14px;
+  }
+
+  .cols {
+    padding: 0 10px 6px;
+    color: var(--muted);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .item {
+    align-items: baseline;
+    padding: 7px 10px;
+  }
+
+  .item:nth-child(even) {
+    background: var(--zebra);
+  }
+
+  .item-rank {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .item-num {
+    font-size: 13.5px;
+    font-weight: 800;
+  }
+
+  .item-title {
+    font-size: 13.5px;
+    line-height: 1.3;
+  }
+
+  .item-deps {
+    color: var(--muted);
+    font-size: 11.5px;
+  }
+
+  .item-deps .ref,
+  .start-with .ref {
+    font-weight: 600;
+  }
+
+  /* Contention matrix */
+  .matrix-scroll {
+    overflow-x: auto;
+  }
+
+  .matrix {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .matrix-first {
+    width: 230px;
+  }
+
+  .matrix th,
+  .matrix td {
+    padding: 9px 10px;
+    border: 1px solid var(--grid);
+    background: var(--ground);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .matrix thead th {
+    padding: 8px 10px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .matrix tbody th {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .matrix .hit {
+    background: var(--hit);
+  }
+
+  .hit-refs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .hit-refs .ref {
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  /* Blocked */
+  .blocked-cols,
+  .blocked-row {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr) 330px 150px;
+    gap: 16px;
+  }
+
+  .blocked-cols {
+    padding: 12px 10px 8px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .blocked-row {
+    align-items: baseline;
+    padding: 11px 10px;
+  }
+
+  .blocked-row:nth-child(even) {
+    background: var(--zebra);
+  }
+
+  .blocked-issue {
+    font-size: 13.5px;
+    line-height: 1.3;
+  }
+
+  .blocked-issue .ref {
+    font-weight: 800;
+  }
+
+  .waiting {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .waiting-item {
+    font-size: 12.5px;
+    line-height: 1.3;
+  }
+
+  .waiting-item .ref {
+    font-weight: 600;
+  }
+
+  .waiting-title {
+    color: var(--muted);
+  }
+
+  .blocked-why {
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .blocked-lane {
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  /* Sync footer */
+  .sync {
+    margin-top: -6px;
+    padding-top: 14px;
+    border-top: 2px solid var(--rule-strong);
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+
+  .sync strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  @media (max-width: 960px) {
+    .start-row {
+      grid-template-columns: 44px minmax(0, 1fr);
+      row-gap: 10px;
+    }
+
+    .start-why,
+    .start-lane {
+      grid-column: 2;
+    }
+
+    .lane {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .lane-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 20px;
+    }
+
+    .lane-title {
+      flex-basis: 100%;
+    }
+
+    .cap {
+      margin-top: 0;
+    }
+
+    .lane-facts {
+      flex: 1 1 180px;
+    }
+
+    .lane-count {
+      margin-top: 0;
+    }
+
+    .blocked-cols {
+      display: none;
+    }
+
+    .blocked-row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+    }
+
+    .blocked-row [data-label]::before {
+      content: attr(data-label);
+      display: block;
+      margin-bottom: 3px;
+      color: var(--muted);
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .head-top {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .when {
+      text-align: left;
+    }
+
+    .when-date {
+      font-size: 22px;
+    }
+
+    .when-time {
+      font-size: 17px;
+    }
+
+    .stats {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .section-head {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    .bars {
+      gap: 14px;
+    }
+
+    .bar-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px 12px;
+    }
+
+    .bar {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+
+    .key {
+      padding-left: 0;
+    }
+
+    .cols {
+      display: none;
+    }
+
+    .item {
+      grid-template-columns: 22px 48px minmax(0, 1fr);
+      gap: 5px 10px;
+    }
+
+    .item-ms,
+    .item-deps {
+      grid-column: 3;
+    }
+
+    .item-deps:empty {
+      display: none;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .summary {
+      font-size: 17px;
+    }
+
+    .start-row {
+      grid-template-columns: 30px minmax(0, 1fr);
+      column-gap: 12px;
+    }
+
+    .start-rank {
+      font-size: 20px;
+    }
+  }
+</style>
+<div class="board" id="board">
+  <noscript>
+    <p class="board-message">This board draws itself from data embedded in the page, so it needs JavaScript to display.</p>
+  </noscript>
+</div>
+<script type="application/json" id="board-data">
+  "__BOARD_DATA__"
+</script>
+<script>
+  // Draws the board from the JSON in #board-data. The report-board script
+  // checks that JSON before writing it into this template, so the code below
+  // trusts its shape. Every string from the data reaches the page through text
+  // nodes and attributes, never through innerHTML, because issue titles and
+  // notes come from GitHub.
+  (() => {
+    "use strict";
+
+    const EYEBROW = "Backlog review";
+    const STALE_AFTER_DAYS = 7;
+    const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
+    const NO_MILESTONE = Symbol("no milestone");
+
+    const root = document.getElementById("board");
+
+    function h(tag, attributes, children) {
+      const element = document.createElement(tag);
+      for (const [name, value] of Object.entries(attributes ?? {})) {
+        if (value === null || value === undefined || value === false) continue;
+        if (name === "class") element.className = value;
+        else element.setAttribute(name, value === true ? "" : String(value));
+      }
+      for (const child of [children ?? []].flat(Infinity)) {
+        if (child === null || child === undefined || child === false || child === "") continue;
+        element.append(child instanceof Node ? child : String(child));
+      }
+      return element;
+    }
+
+    let data = null;
+    try {
+      data = JSON.parse(document.getElementById("board-data").textContent);
+    } catch {
+      data = null;
+    }
+    if (data === null || typeof data !== "object" || !Array.isArray(data.issues)) {
+      root.replaceChildren(
+        h("p", { class: "board-message" }, "This page holds no board data yet. Render it with the report-board script."),
+      );
+      return;
+    }
+
+    const word = (n) => WORDS[n] ?? String(n);
+    const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+    const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+    const listAt = (map, key) => {
+      if (!map.has(key)) map.set(key, []);
+      return map.get(key);
+    };
+
+    const repoUrl = (data.repoUrl || `https://github.com/${data.repo}`).replace(/\/+$/, "");
+    const issueUrl = (n) => `${repoUrl}/issues/${n}`;
+    const searchUrl = (query) => `${repoUrl}/issues?q=${encodeURIComponent(query)}`;
+    const milestoneUrl = (title) => searchUrl(title ? `is:open milestone:"${title}"` : "is:open no:milestone");
+    const link = (href, text) => h("a", { class: "ref", href }, text);
+    const ref = (n) => link(issueUrl(n), `#${n}`);
+    // Links every "#123" in a prose field to that issue or pull request.
+    const prose = (text) =>
+      String(text ?? "")
+        .split(/(#\d+)/)
+        .map((part) => (/^#\d+$/.test(part) ? ref(Number(part.slice(1))) : part));
+
+    const issues = data.issues;
+    const startNow = data.startNow ?? [];
+    const notes = data.notes ?? {};
+    const byNumber = new Map(issues.map((issue) => [issue.number, issue]));
+    const waits = (n) => byNumber.get(n)?.waitingOn ?? [];
+    const isBlocked = (n) => waits(n).length > 0;
+    const partnerOf = (n) => byNumber.get(n)?.sameBranchAs ?? null;
+    const rides = (n) => partnerOf(n) !== null;
+    const shortTitle = (n) => byNumber.get(n)?.short || byNumber.get(n)?.title || "";
+
+    const unblocks = new Map();
+    const riders = new Map();
+    for (const issue of issues) {
+      for (const blocker of issue.waitingOn ?? []) listAt(unblocks, blocker).push(issue.number);
+      if (issue.sameBranchAs != null) listAt(riders, issue.sameBranchAs).push(issue.number);
+    }
+
+    const laneOf = new Map();
+    for (const lane of data.lanes) for (const n of lane.issues) laneOf.set(n, lane);
+    const laneLabel = (lane) => `${lane.key} ${lane.name}`;
+
+    // Capacity per lane. A serial lane runs one branch at a time; a head lane
+    // runs its head, then whatever the head frees; an any-order lane runs every
+    // unblocked issue at once. An issue that shares a branch travels with it.
+    const lanes = data.lanes.map((lane) => {
+      const free = lane.issues.filter((n) => !isBlocked(n) && !rides(n));
+      const started = free.find((n) => byNumber.get(n).inProgress);
+      const running = lane.mode === "any" ? free : free.length ? [started ?? free[0]] : [];
+      const now = new Set(running.flatMap((n) => [n, ...(riders.get(n) ?? [])]));
+      const headUnit = lane.mode === "head" ? now : new Set();
+      const freedAfter =
+        lane.mode === "head"
+          ? lane.issues.filter((n) => !headUnit.has(n) && !rides(n) && waits(n).every((b) => headUnit.has(b))).length
+          : 0;
+      const ranks = new Map();
+      if (lane.mode === "serial") {
+        let step = 0;
+        for (const n of lane.issues) {
+          if (!(rides(n) && lane.issues.includes(partnerOf(n)))) ranks.set(n, String(++step));
+        }
+        for (const n of lane.issues) if (!ranks.has(n)) ranks.set(n, ranks.get(partnerOf(n)) ?? "·");
+      } else {
+        for (const n of lane.issues) ranks.set(n, headUnit.has(n) ? "1" : "·");
+      }
+      const state = (n) => (isBlocked(n) ? "blocked" : now.has(n) ? "now" : "queued");
+      return { lane, cap: running.length, freedAfter, ranks, state, blocked: lane.issues.filter(isBlocked).length };
+    });
+
+    function tokens(parts) {
+      const out = [];
+      for (const [label, numbers] of parts) {
+        if (!numbers.length) continue;
+        if (out.length) out.push(" · ");
+        out.push(`${label} `);
+        numbers.forEach((n, index) => {
+          if (index) out.push(", ");
+          out.push(ref(n));
+        });
+      }
+      return out;
+    }
+
+    function chip(milestone) {
+      return milestone
+        ? h("a", { class: "chip", href: milestoneUrl(milestone) }, milestone)
+        : h("a", { class: "chip chip--none", href: milestoneUrl(null) }, "No milestone");
+    }
+
+    function progressTag(where) {
+      return h("span", { class: "tag", title: `In progress on ${where}` }, [
+        "In progress",
+        h("span", { class: "visually-hidden" }, ` on ${where}`),
+      ]);
+    }
+
+    function section(id, title, note, gap, body) {
+      return h("section", { class: "section", id, "aria-labelledby": `${id}-heading` }, [
+        h("div", { class: "section-head", style: `--head-gap: ${gap}px` }, [
+          h("h2", { class: "section-title", id: `${id}-heading` }, title),
+          note ? h("p", { class: "section-note" }, prose(note)) : null,
+        ]),
+        body,
+      ]);
+    }
+
+    // Header: repository, sync time, live age, and the six counts.
+    const syncedAt = new Date(data.sync.at);
+    function formatSync(locale, options) {
+      try {
+        return new Intl.DateTimeFormat(locale, { ...options, timeZone: data.sync.timeZone || undefined }).format(syncedAt);
+      } catch {
+        return new Intl.DateTimeFormat(locale, options).format(syncedAt);
+      }
+    }
+    const dateText = formatSync("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    const timeText = formatSync("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "short" });
+
+    const age = h("p", { class: "when-age" });
+    function refreshAge() {
+      const minutes = Math.max(0, Math.round((Date.now() - syncedAt.getTime()) / 60000));
+      const hours = Math.round(minutes / 60);
+      const days = Math.round(hours / 24);
+      let text = "Synced just now";
+      if (minutes >= 1 && minutes < 60) text = `Synced ${count(minutes, "minute", "minutes")} ago`;
+      else if (minutes >= 60 && hours < 24) text = `Synced ${count(hours, "hour", "hours")} ago`;
+      else if (hours >= 24) text = `Synced ${count(days, "day", "days")} ago`;
+      age.textContent = text;
+      age.classList.toggle("is-stale", hours >= 24 && days >= STALE_AFTER_DAYS);
+    }
+    refreshAge();
+    window.setInterval(refreshAge, 60000);
+
+    const blockedCount = issues.filter((issue) => isBlocked(issue.number)).length;
+    const stats = [
+      [issues.length, "open"],
+      [issues.length - blockedCount, "ready"],
+      [blockedCount, "blocked"],
+      [data.lanes.length, "lanes open"],
+      [lanes.reduce((sum, model) => sum + model.cap, 0), "branches at once"],
+      [startNow.length, "staff today"],
+    ];
+
+    const header = h("header", { class: "head" }, [
+      h("div", { class: "head-top" }, [
+        h("div", { class: "head-title" }, [
+          h("p", { class: "eyebrow" }, EYEBROW),
+          h("h1", { class: "title" }, h("a", { class: "repo-link", href: repoUrl }, data.repo)),
+        ]),
+        h("div", { class: "when" }, [
+          h("time", { class: "when-date", datetime: data.sync.at }, dateText),
+          h("p", { class: "when-time" }, timeText),
+          age,
+        ]),
+      ]),
+      h(
+        "dl",
+        { class: "stats" },
+        stats.map(([value, label]) =>
+          h("div", { class: "stat" }, [
+            h("dt", { class: "stat-label" }, label),
+            h("dd", { class: "stat-value" }, String(value)),
+          ]),
+        ),
+      ),
+    ]);
+
+    // Start now
+    function startRow(pick, index) {
+      const n = pick.issue;
+      const lane = laneOf.get(n);
+      const companions = riders.get(n) ?? [];
+      return h("li", { class: "start-row" }, [
+        h("span", { class: "start-rank", "aria-hidden": "true" }, String(index + 1)),
+        h("div", null, [
+          h("p", { class: "start-title" }, [ref(n), " ", shortTitle(n)]),
+          companions.length ? h("p", { class: "start-with" }, tokens([["share a branch with", companions]])) : null,
+        ]),
+        h("p", { class: "start-why" }, prose(pick.why)),
+        h("div", { class: "start-lane" }, [
+          h("span", { class: "badge" }, lane.key),
+          h("div", null, [
+            h("p", { class: "start-lane-name" }, lane.name),
+            pick.touches ? h("p", { class: "start-touches" }, pick.touches) : null,
+            h("p", { class: "mini-label" }, "Milestone"),
+            chip(byNumber.get(n).milestone),
+          ]),
+        ]),
+      ]);
+    }
+
+    const startNote =
+      notes.startNow || `${capitalize(word(startNow.length))} ${startNow.length === 1 ? "branch" : "branches"} to open today.`;
+    const startSection = section(
+      "start-now",
+      "Start now",
+      startNote,
+      2,
+      startNow.length
+        ? h("ol", { class: "start", role: "list" }, startNow.map(startRow))
+        : h("p", { class: "empty" }, "Nothing can start today: every unblocked issue is already in progress."),
+    );
+
+    // Lanes
+    function barRow(model) {
+      const { lane } = model;
+      const states = lane.issues.map(model.state);
+      const tally = (state) => states.filter((value) => value === state).length;
+      return h("div", { class: "bar-row" }, [
+        h("p", { class: "bar-name" }, [h("span", { class: "badge badge--small" }, lane.key), h("span", null, lane.name)]),
+        h(
+          "div",
+          {
+            class: "bar",
+            role: "img",
+            "aria-label": `${laneLabel(lane)}: ${tally("now")} can run now, ${tally("queued")} queued, ${tally("blocked")} blocked`,
+          },
+          states.map((state) => h("span", { class: `seg seg--${state}` })),
+        ),
+        h("p", { class: "bar-legend" }, `${tally("now")} of ${count(states.length, "issue", "issues")}`),
+      ]);
+    }
+
+    function laneItem(n, model) {
+      const issue = byNumber.get(n);
+      const partner = partnerOf(n);
+      const rank = model.ranks.get(n);
+      return h("li", { class: "item" }, [
+        h("span", { class: "item-rank", "aria-hidden": rank === "·" ? "true" : null }, rank),
+        h("span", { class: "item-num" }, ref(n)),
+        h("span", { class: "item-title" }, [issue.title, issue.inProgress ? progressTag(issue.inProgress) : null]),
+        h("span", { class: "item-ms" }, chip(issue.milestone)),
+        h(
+          "span",
+          { class: "item-deps" },
+          tokens([
+            ["same branch as", partner === null ? [] : [partner]],
+            ["waits on", waits(n)],
+            ["unblocks", unblocks.get(n) ?? []],
+          ]),
+        ),
+      ]);
+    }
+
+    function laneBlock(model) {
+      const { lane } = model;
+      const unit =
+        lane.mode === "any"
+          ? model.cap === 1
+            ? "branch at once"
+            : "branches at once"
+          : model.cap === 1
+            ? "branch at a time"
+            : "branches at a time";
+      const then =
+        lane.mode === "head" && model.freedAfter > 0
+          ? model.freedAfter === 1
+            ? "then one more"
+            : `then ${word(model.freedAfter)} at once`
+          : "";
+      return h("li", { class: "lane" }, [
+        h("div", { class: "lane-meta" }, [
+          h("p", { class: "lane-title" }, [h("span", { class: "badge" }, lane.key), h("span", null, lane.name)]),
+          h("div", { class: "cap" }, [
+            h("p", { class: "cap-line" }, [
+              h("span", { class: "cap-figure" }, String(model.cap)),
+              h("span", { class: "cap-unit" }, unit),
+            ]),
+            then ? h("p", { class: "cap-then" }, then) : null,
+          ]),
+          h("div", { class: "lane-facts" }, [
+            h("p", { class: "lane-count" }, `${count(lane.issues.length, "issue", "issues")} · ${model.blocked} blocked`),
+            lane.owns ? h("p", { class: "lane-owns" }, lane.owns) : null,
+          ]),
+        ]),
+        h("div", null, [
+          lane.note ? h("p", { class: "lane-note" }, prose(lane.note)) : null,
+          h(
+            "div",
+            { class: "cols", "aria-hidden": "true" },
+            ["#", "Issue", "Title", "Milestone", "Dependency"].map((label) => h("span", null, label)),
+          ),
+          h(
+            "ol",
+            { class: "items", role: "list" },
+            lane.issues.map((n) => laneItem(n, model)),
+          ),
+        ]),
+      ]);
+    }
+
+    const keyItem = (state, label) =>
+      h("span", { class: "key-item" }, [h("span", { class: `seg seg--${state}` }), label]);
+    const lanesSection = section(
+      "lanes",
+      "Lanes",
+      "Order matters inside a lane and nowhere else. One segment per issue: how many can run at once today, against what is queued behind them.",
+      14,
+      [
+        h("div", { class: "bars" }, lanes.map(barRow)),
+        h("div", { class: "key", "aria-hidden": "true" }, [
+          keyItem("now", "can run now"),
+          keyItem("queued", "queued behind it"),
+          keyItem("blocked", "blocked"),
+        ]),
+        h("ol", { class: "lanes", role: "list" }, lanes.map(laneBlock)),
+      ],
+    );
+
+    // Contention matrix: shared components down the side, milestones across.
+    const claims = data.contention?.claims ?? [];
+    const rowLabel = data.contention?.rowLabel || "Plugin";
+    const milestoneKey = (n) => byNumber.get(n)?.milestone || NO_MILESTONE;
+    const listed = (data.milestones ?? []).map((milestone) => milestone.title);
+    const shortName = new Map((data.milestones ?? []).map((milestone) => [milestone.title, milestone.short || milestone.title]));
+    const seen = [];
+    for (const claim of claims) {
+      for (const n of claim.issues) if (!seen.includes(milestoneKey(n))) seen.push(milestoneKey(n));
+    }
+    const position = (key) =>
+      key === NO_MILESTONE ? Number.MAX_SAFE_INTEGER : listed.includes(key) ? listed.indexOf(key) : listed.length + seen.indexOf(key);
+    const columns = [...seen].sort((a, b) => position(a) - position(b));
+
+    function contentionNote() {
+      if (notes.contention) return notes.contention;
+      const across = claims.filter((claim) => new Set(claim.issues.map(milestoneKey)).size > 1).length;
+      const within = claims.length - across;
+      const noun = rowLabel.toLowerCase();
+      const lead = `${capitalize(word(claims.length))} ${claims.length === 1 ? `${noun} is` : `${noun}s are`} claimed by more than one issue`;
+      let split = ", each within one milestone.";
+      if (across && within) split = `: ${word(across)} across milestones, ${word(within)} within one.`;
+      else if (across) split = claims.length === 1 ? ", across milestones." : ", all across milestones.";
+      return `${lead}${split} A filled cell is a rebase waiting to happen, and ${noun} names link to every open issue that mentions them.`;
+    }
+
+    const matrixSection = claims.length
+      ? section(
+          "contention",
+          "Contention matrix",
+          contentionNote(),
+          16,
+          h(
+            "div",
+            { class: "matrix-scroll" },
+            h("table", { class: "matrix", style: `min-width: ${220 + columns.length * 92}px` }, [
+              h("colgroup", null, [h("col", { class: "matrix-first" }), columns.map(() => h("col"))]),
+              h(
+                "thead",
+                null,
+                h("tr", null, [
+                  h("th", { scope: "col" }, `${rowLabel} \\ milestone`),
+                  columns.map((key) =>
+                    key === NO_MILESTONE
+                      ? h("th", { scope: "col" }, "No milestone")
+                      : h("th", { scope: "col", title: key }, shortName.get(key) ?? key),
+                  ),
+                ]),
+              ),
+              h(
+                "tbody",
+                null,
+                claims.map((claim) =>
+                  h("tr", null, [
+                    h("th", { scope: "row" }, link(searchUrl(claim.query || `is:open ${claim.name}`), claim.name)),
+                    columns.map((key) => {
+                      const hits = claim.issues.filter((n) => milestoneKey(n) === key);
+                      return hits.length ? h("td", { class: "hit" }, h("div", { class: "hit-refs" }, hits.map(ref))) : h("td");
+                    }),
+                  ]),
+                ),
+              ),
+            ]),
+          ),
+        )
+      : null;
+
+    // Blocked
+    const blockedIssues = issues
+      .filter((issue) => isBlocked(issue.number))
+      .sort((a, b) => a.waitingOn.length - b.waitingOn.length || a.number - b.number);
+
+    function blockedRow(issue) {
+      const freeing = [...new Set(issue.waitingOn.map((b) => laneOf.get(b)).filter(Boolean))].map(laneLabel);
+      return h("li", { class: "blocked-row" }, [
+        h("p", { class: "blocked-issue" }, [ref(issue.number), " ", shortTitle(issue.number)]),
+        h(
+          "div",
+          { class: "waiting", "data-label": "Waiting on" },
+          issue.waitingOn.map((b) =>
+            h("p", { class: "waiting-item" }, [ref(b), " ", h("span", { class: "waiting-title" }, shortTitle(b))]),
+          ),
+        ),
+        h("p", { class: "blocked-why", "data-label": "Why it cannot start" }, prose(issue.blockedBecause)),
+        h("p", { class: "blocked-lane", "data-label": "Freed from" }, freeing.join(" + ")),
+      ]);
+    }
+
+    const blockedNote =
+      notes.blocked ||
+      `${capitalize(word(blockedIssues.length))} ${blockedIssues.length === 1 ? "issue waits" : "issues wait"} on other open work.`;
+    const blockedSection = blockedIssues.length
+      ? section("blocked", "Blocked", blockedNote, 4, [
+          h(
+            "div",
+            { class: "blocked-cols", "aria-hidden": "true" },
+            ["Issue", "Waiting on", "Why it cannot start", "Freed from"].map((label) => h("span", null, label)),
+          ),
+          h("ol", { class: "blocked-list", role: "list" }, blockedIssues.map(blockedRow)),
+        ])
+      : null;
+
+    // Sync footer: when, against what, and how much.
+    const milestoneCount = new Set(issues.map((issue) => issue.milestone).filter(Boolean)).size;
+    const withoutMilestone = issues.filter((issue) => !issue.milestone).length;
+    const footer = h("footer", { class: "sync" }, [
+      "Synced ",
+      h("strong", null, `${dateText}, ${timeText}`),
+      " against ",
+      link(`${repoUrl}/tree/${encodeURI(data.sync.branch)}`, data.sync.branch),
+      " at ",
+      link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8)),
+      ". ",
+      `${count(issues.length, "open issue", "open issues")} across `,
+      link(`${repoUrl}/milestones`, count(milestoneCount, "milestone", "milestones")),
+      withoutMilestone ? `, ${withoutMilestone} without one` : "",
+      typeof data.sync.openPullRequests === "number"
+        ? `, ${count(data.sync.openPullRequests, "open PR", "open PRs")}`
+        : "",
+      (data.sync.extra ?? []).map((fact) => `, ${fact}`),
+      ". Re-run publish-report-board after any issue, milestone or PR change. GitHub is the source of truth; this page is a snapshot.",
+    ]);
+
+    root.replaceChildren(
+      header,
+      h("main", { class: "body" }, [
+        h("p", { class: "summary" }, prose(data.summary)),
+        startSection,
+        lanesSection,
+        matrixSection,
+        blockedSection,
+        footer,
+      ]),
+    );
+  })();
+</script>
