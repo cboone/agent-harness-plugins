@@ -301,7 +301,8 @@ else
               "contention \($claim.name)" as $at
               | check($claim.query | absent_or(is_text); "\($at): query must be text"),
                 (if ($claim.issues | type == "array" and all(.[]; is_int) and (unique | length) >= 2) | not then "\($at): issues must list at least two different issue numbers"
-                 else ($claim.issues[] | select(known | not) | "\($at) lists #\(.), which is not in issues")
+                 else ($claim.issues[] | select(known | not) | "\($at) lists #\(.), which is not in issues"),
+                      ($claim.issues | duplicates | "\($at) lists #\(.) more than once")
                  end)
             end
         end)
@@ -337,7 +338,10 @@ def waits: .waitingOn | as_list;
 def afters: .after | as_list;
 def is_blocked: (waits | length) > 0;
 def names($list): $list | map(ref_text) | join(", ");
-def same_set($a; $b): ($a | map(tojson) | sort) == ($b | map(tojson) | sort);
+# jq orders and compares objects by content, so a reference written with its
+# keys in another order is the same reference.
+def same_set($a; $b): ($a | sort) == ($b | sort);
+def shown: if . == null then "none" else tojson end;
 def picks: [.startNow | as_list | .[] | objects | .issue];
 def synced: (.sync | if type == "object" then . else {} end) as $s | "\($s.branch // "unknown branch") at \(($s.commit // "unknown") | tostring | .[0:8]), \($s.at // "unknown time")";
 def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($items | join("; "))" else empty end;
@@ -367,6 +371,7 @@ $previous[0] as $old
 | ($old | pick_map) as $old_picks
 | ($new | pick_map) as $new_picks
 | [
+    entry("Changed board identity"; [("board", "title", "repo", "repoUrl") as $field | select(($old[$field] // null) != ($new[$field] // null)) | "\($field) (\($old[$field] // null | shown) to \($new[$field] // null | shown))"]),
     entry("Closed"; [$old | issues_of | .[] | select($now[.number | tostring] == null) | describe]),
     entry("Opened"; [$new | issues_of | .[] | select($was[.number | tostring] == null) | describe]),
     entry("Newly blocked"; [$kept[] | select(is_blocked and ($was[.number | tostring] | is_blocked | not)) | "\(describe) (waits on \(names(waits)))"]),
@@ -394,6 +399,7 @@ $previous[0] as $old
       ($new_claims | to_entries[] | select($old_claims[.key] == null) | "claim \(.key) added (\(.value.issues | as_list | numbers))"),
       ($old_claims | to_entries[] | select($new_claims[.key] == null) | "claim \(.key) removed"),
       ($new_claims | to_entries[] | $old_claims[.key] as $o | select($o != null and (same_set(.value.issues | as_list; $o.issues | as_list) | not)) | "claim \(.key) (\($o.issues | as_list | numbers) to \(.value.issues | as_list | numbers))"),
+      ($new_claims | to_entries[] | $old_claims[.key] as $o | select($o != null and ($o.query // null) != (.value.query // null)) | "claim \(.key) search (\($o.query // null | shown) to \(.value.query // null | shown))"),
       (select(($old.contention | type) == "object" and ($new.contention | type) == "object" and ($old.contention.rowLabel // null) != ($new.contention.rowLabel // null)) | "row label (\($old.contention.rowLabel // "none") to \($new.contention.rowLabel // "none"))")
     ]),
     entry("Changed milestones"; [select(($old.milestones | as_list) != ($new.milestones | as_list)) | $new.milestones | as_list | map(objects | .title // "") | join(", ") | if . == "" then "none" else "now \(.)" end]),

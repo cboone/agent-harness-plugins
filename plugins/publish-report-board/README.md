@@ -80,6 +80,7 @@ This skill runs GitHub CLI, git, and bundled-script commands that trigger permis
       "Bash(git branch --remotes *)",
       "Bash(date -u *)",
       "Bash(readlink /etc/localtime)",
+      "Bash(mkdir -p *report-boards/*)",
       "Bash(mktemp -d*)"
     ]
   }

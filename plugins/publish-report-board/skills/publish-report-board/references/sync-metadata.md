@@ -4,11 +4,11 @@ Every board states when it was synced and against what revision. Without that, a
 
 ## Required Fields
 
-| Field         | Value                                                | Source                                                   |
-| ------------- | ---------------------------------------------------- | -------------------------------------------------------- |
-| `sync.at`     | The moment the data was gathered, in UTC             | `date -u +%Y-%m-%dT%H:%M:%SZ`                            |
-| `sync.branch` | The default branch the board was synced against      | `gh repo view --json defaultBranchRef`                   |
-| `sync.commit` | The full SHA at the tip of that branch on the remote | `git fetch origin BRANCH && git rev-parse origin/BRANCH` |
+| Field         | Value                                                                                        | Source                                                   |
+| ------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `sync.at`     | The moment the data was gathered, as an ISO 8601 time with a zone or offset; UTC is simplest | `date -u +%Y-%m-%dT%H:%M:%SZ`                            |
+| `sync.branch` | The default branch the board was synced against                                              | `gh repo view --json defaultBranchRef`                   |
+| `sync.commit` | The full SHA at the tip of that branch on the remote                                         | `git fetch origin BRANCH && git rev-parse origin/BRANCH` |
 
 Take the commit from the remote-tracking branch after a fetch, never from the local checkout. A worktree on a feature branch, or a local default branch that has fallen behind, reports a revision the board was not synced against.
 

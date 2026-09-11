@@ -281,6 +281,14 @@
     color: var(--chip-active-ink);
   }
 
+  a.tag {
+    text-decoration: none;
+  }
+
+  a.tag:hover {
+    text-decoration: underline;
+  }
+
   .tag {
     display: inline-block;
     margin-left: 7px;
@@ -1264,8 +1272,19 @@
         : h("a", { class: "chip chip--none", href: milestoneUrl(null) }, "No milestone");
     }
 
+    // Work in progress links to where it lives: "PR #390" to the pull request,
+    // and a branch name to its comparison with the synced branch. Anything else
+    // stays text.
+    function progressHref(where) {
+      const pr = /^PR #(\d+)$/.exec(where);
+      if (pr) return `${repoUrl}/pull/${pr[1]}`;
+      if (/^\S+$/.test(where)) return `${repoUrl}/compare/${pathPart(data.sync.branch)}...${pathPart(where)}`;
+      return null;
+    }
+
     function progressTag(where) {
-      return h("span", { class: "tag", title: `In progress on ${where}` }, [
+      const href = progressHref(where);
+      return h(href ? "a" : "span", { class: "tag", href, title: `In progress on ${where}` }, [
         "In progress",
         h("span", { class: "visually-hidden" }, ` on ${where}`),
       ]);

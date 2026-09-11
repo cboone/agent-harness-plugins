@@ -447,6 +447,16 @@ $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"title": "c
 - Reworded: the blocked note; why to start #101
 ```
 
+## Compare reports identity and search changes, but not key order
+
+A reference written with its keys in another order is the same reference.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"pr": 12, "title": "palette"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq '.title = "gadgets backlog" | .repo = "example/gadgets" | .contention.claims[0].query = "label:parser" | (.issues[] | select(.number == 107)) += {"waitingOn": [{"title": "palette", "pr": 12}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n +4
+- Changed board identity: title ("widgets backlog" to "gadgets backlog"); repo ("example/widgets" to "example/gadgets")
+- Changed contention: claim parser search (none to "label:parser")
+```
+
 ## Compare with nothing changed
 
 ```scrut
@@ -507,11 +517,12 @@ report-board: */data.json is not valid board data: (glob)
 ## Duplicate numbers, lane keys, picks, and claims
 
 ```scrut
-$ dir="$(mktemp -d)" && jq '.issues += [{"number": 101, "title": "again", "milestone": null}] | .lanes[1].key = "L1" | .startNow += [{"issue": 106, "why": "again"}] | .contention.claims[1].issues = [107, 107]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+$ dir="$(mktemp -d)" && jq '.issues += [{"number": 101, "title": "again", "milestone": null}] | .lanes[1].key = "L1" | .startNow += [{"issue": 106, "why": "again"}] | .contention.claims[0].issues += [101] | .contention.claims[1].issues = [107, 107]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
   - issues: #101 appears more than once
   - lanes: key L1 is used more than once
   - startNow: #106 is listed more than once
+  - contention parser lists #101 more than once
   - contention cli: issues must list at least two different issue numbers
 [1]
 ```
