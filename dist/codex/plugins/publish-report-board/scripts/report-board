@@ -1,0 +1,449 @@
+#!/usr/bin/env bash
+# report-board -- Validate, render, extract, and compare report board data.
+#
+# A report board is a self-contained HTML page drawn from one JSON document.
+# The page templates ship beside this script in ../templates/<board>.html.
+# This script checks the data against the rules every board relies on, writes
+# it into the template, and reads it back out of a rendered page so a re-sync
+# can report what changed since the last one.
+#
+# Usage:
+#   report-board validate DATA
+#   report-board render [--standalone] DATA OUTPUT
+#   report-board extract PAGE
+#   report-board compare PREVIOUS CURRENT
+#
+# Exit codes:
+#   0 - Success
+#   1 - Invalid board data, or a file that could not be read or written
+#   2 - Usage error, or jq is missing
+set -euo pipefail
+
+SCRIPT_NAME="${0##*/}"
+readonly SCRIPT_NAME
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+readonly TEMPLATE_DIR="${SCRIPT_DIR}/../templates"
+
+readonly E_INVALID=1
+readonly E_USAGE=2
+
+# The template carries these two placeholders. The data placeholder is a JSON
+# string so the unrendered template still parses, both for Prettier and for
+# the page's own script, which then shows a "no board data" message.
+readonly TITLE_PLACEHOLDER='__BOARD_TITLE__'
+readonly DATA_PLACEHOLDER='"__BOARD_DATA__"'
+readonly DATA_MARKER='id="board-data"'
+readonly SCRIPT_CLOSE='</script>'
+
+# Prepended by --standalone. The Artifact tool supplies its own document
+# skeleton, so the default output is a fragment without these lines.
+readonly STANDALONE_OPENING='<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">'
+
+# Emits one line per problem and nothing when the data is valid. Messages avoid
+# apostrophes because the filter lives inside a single-quoted shell string.
+# The $names in the filter are jq bindings, not shell expansions.
+# shellcheck disable=SC2016
+readonly VALIDATE_FILTER='
+def is_int: type == "number" and . == floor;
+def is_text: type == "string" and test("\\S");
+def is_int_list: type == "array" and all(.[]; is_int);
+def absent_or(f): . == null or f;
+def check(condition; message): if condition then empty else message end;
+def duplicates: group_by(.) | map(select(length > 1) | .[0]) | .[];
+
+if type != "object" then "the top level must be a JSON object"
+else
+  . as $d
+  | ($d.issues | if type == "array" then [.[] | objects] else [] end) as $issue_list
+  | [$issue_list[] | .number | select(is_int)] as $numbers
+  | ($d.lanes | if type == "array" then [.[] | objects | (.issues | if type == "array" then .[] else empty end)] else [] end) as $placed
+  | def known: . as $n | any($numbers[]; . == $n);
+    def issue($n): first($issue_list[] | select(.number == $n)) // null;
+  (
+    check($d.board | is_text and test("^[a-z0-9][a-z0-9-]*$"); "board: expected a board type such as \"backlog-triage\""),
+    check($d.title | is_text; "title: expected text naming the board, such as \"agent-harness-plugins backlog\""),
+    check($d.repo | is_text and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"); "repo: expected owner/name"),
+    check($d.repoUrl | absent_or(is_text and test("^https://[^\\s\"<>]+$")); "repoUrl: expected an https:// URL"),
+    check($d.summary | is_text; "summary: expected one or two sentences"),
+
+    (if ($d.sync | type) != "object" then "sync: expected an object with at, branch, and commit"
+     else
+       check($d.sync.at | is_text and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?(Z|[+-][0-9]{2}:[0-9]{2})$"); "sync.at: expected an ISO 8601 time with a zone, such as 2026-09-10T19:43:00-04:00"),
+       check($d.sync.timeZone | absent_or(is_text); "sync.timeZone: expected an IANA zone name, such as America/New_York"),
+       check($d.sync.branch | is_text; "sync.branch: expected the branch the board was synced against"),
+       check($d.sync.commit | is_text and test("^[0-9a-f]{7,40}$"); "sync.commit: expected a commit SHA"),
+       check($d.sync.openPullRequests | absent_or(is_int and . >= 0); "sync.openPullRequests: expected a count"),
+       check($d.sync.extra | absent_or(type == "array" and all(.[]; is_text)); "sync.extra: expected a list of text")
+     end),
+
+    (if ($d.issues | type) != "array" or ($d.issues | length) == 0 then "issues: expected a non-empty list of open issues"
+     else
+       ($d.issues | to_entries[]) as {key: $i, value: $issue}
+       | if ($issue | type) != "object" then "issues[\($i)]: expected an object"
+         elif ($issue.number | is_int and . > 0) | not then "issues[\($i)].number: expected a positive integer"
+         else
+           "#\($issue.number)" as $at
+           | ($issue.waitingOn // []) as $waits
+           | check($issue.title | is_text; "\($at): title is required"),
+             check($issue.milestone | absent_or(is_text); "\($at): milestone must be text or null"),
+             check($issue.short | absent_or(is_text); "\($at): short must be text"),
+             check($issue.inProgress | absent_or(is_text); "\($at): inProgress must name the branch or pull request"),
+             (if ($issue.waitingOn | absent_or(is_int_list)) | not then "\($at): waitingOn must be a list of issue numbers"
+              else
+                ($waits[] | select(. == $issue.number) | "\($at) waits on itself"),
+                ($waits[] | select(. != $issue.number and (known | not)) | "\($at) waits on #\(.), which is not in issues; drop closed blockers"),
+                (if ($waits | length) > 0 and (($issue.blockedBecause | is_text) | not) then "\($at): blockedBecause is required when waitingOn is set"
+                 elif ($waits | length) == 0 and $issue.blockedBecause != null then "\($at): blockedBecause is set but waitingOn is empty"
+                 else empty end)
+              end),
+             (if $issue.sameBranchAs == null then empty
+              elif ($issue.sameBranchAs | is_int) | not then "\($at): sameBranchAs must be an issue number"
+              elif $issue.sameBranchAs == $issue.number then "\($at) shares a branch with itself"
+              elif ($issue.sameBranchAs | known) | not then "\($at) shares a branch with #\($issue.sameBranchAs), which is not in issues"
+              elif (issue($issue.sameBranchAs) | .sameBranchAs) != null then "\($at) shares a branch with #\($issue.sameBranchAs), which shares a branch with another issue; point both at the same one"
+              else empty end)
+         end
+     end),
+    ($numbers | duplicates | "issues: #\(.) appears more than once"),
+
+    (if ($d.lanes | type) != "array" or ($d.lanes | length) == 0 then "lanes: expected a non-empty list"
+     else
+       ($d.lanes | to_entries[]) as {key: $i, value: $lane}
+       | if ($lane | type) != "object" then "lanes[\($i)]: expected an object"
+         else
+           (if ($lane.key | is_text) then "lane \($lane.key)" else "lanes[\($i)]" end) as $at
+           | check($lane.key | is_text; "\($at): key is required, such as \"L1\""),
+             check($lane.name | is_text; "\($at): name is required"),
+             check($lane.mode | IN("serial", "head", "any"); "\($at): mode must be serial, head, or any"),
+             check($lane.owns | absent_or(is_text); "\($at): owns must be text"),
+             check($lane.note | absent_or(is_text); "\($at): note must be text"),
+             (if ($lane.issues | type == "array" and length > 0 and all(.[]; is_int)) | not then "\($at): issues must be a non-empty list of issue numbers"
+              else ($lane.issues[] | select(known | not) | "\($at) lists #\(.), which is not in issues")
+              end)
+         end
+     end),
+    ([$d.lanes | if type == "array" then .[] | objects | .key | select(is_text) else empty end] | duplicates | "lanes: key \(.) is used more than once"),
+    ($numbers[] as $n
+     | ([$placed[] | select(. == $n)] | length) as $times
+     | if $times == 0 then "#\($n) is not in any lane; every open issue belongs to exactly one"
+       elif $times > 1 then "#\($n) is in more than one lane"
+       else empty end),
+    ([$d.lanes | if type == "array" then .[] | objects | select(.key | is_text) | .key as $k | (.issues | if type == "array" then .[] else empty end) | {key: tostring, value: $k} else empty end] | from_entries) as $lane_of
+    | ($issue_list[]
+       | select((.sameBranchAs | is_int) and $lane_of[.number | tostring] != null and $lane_of[.sameBranchAs | tostring] != null)
+       | select($lane_of[.number | tostring] != $lane_of[.sameBranchAs | tostring])
+       | "#\(.number) shares a branch with #\(.sameBranchAs), but they sit in different lanes"),
+
+    (if ($d.startNow | type) != "array" then "startNow: expected a list, empty when nothing can start"
+     else
+       ($d.startNow | to_entries[]) as {key: $i, value: $pick}
+       | if ($pick | type) != "object" or (($pick.issue | is_int) | not) then "startNow[\($i)]: expected an object with an issue number"
+         else
+           "startNow #\($pick.issue)" as $at
+           | issue($pick.issue) as $target
+           | if $target == null then "\($at) is not in issues"
+             else
+               check($pick.why | is_text; "\($at): why is required"),
+               check($pick.touches | absent_or(is_text); "\($at): touches must be text"),
+               (if (($target.waitingOn // []) | length) > 0 then "\($at) waits on \($target.waitingOn | map("#\(.)") | join(", ")) and cannot start" else empty end),
+               (if $target.inProgress != null then "\($at) is already in progress on \($target.inProgress)" else empty end),
+               (if $target.sameBranchAs != null then "\($at) shares a branch with #\($target.sameBranchAs); list #\($target.sameBranchAs) instead" else empty end)
+             end
+         end
+     end),
+    ([$d.startNow | if type == "array" then .[] | objects | .issue else empty end] | duplicates | "startNow: #\(.) is listed more than once"),
+
+    (if $d.milestones == null then empty
+     elif ($d.milestones | type) != "array" then "milestones: expected a list"
+     else
+       ($d.milestones | to_entries[]) as {key: $i, value: $m}
+       | if ($m | type) != "object" or (($m.title | is_text) | not) then "milestones[\($i)]: expected an object with a title"
+         else check($m.short | absent_or(is_text); "milestones[\($i)]: short must be text")
+         end
+     end),
+
+    (if $d.contention == null then empty
+     elif ($d.contention | type) != "object" then "contention: expected an object"
+     else
+       check($d.contention.rowLabel | absent_or(is_text); "contention.rowLabel: expected text"),
+       (if ($d.contention.claims | type) != "array" then "contention.claims: expected a list"
+        else
+          ($d.contention.claims | to_entries[]) as {key: $i, value: $claim}
+          | if ($claim | type) != "object" or (($claim.name | is_text) | not) then "contention.claims[\($i)]: expected an object with a name"
+            else
+              "contention \($claim.name)" as $at
+              | check($claim.query | absent_or(is_text); "\($at): query must be text"),
+                (if ($claim.issues | type == "array" and length >= 2 and all(.[]; is_int)) | not then "\($at): issues must list at least two issue numbers"
+                 else ($claim.issues[] | select(known | not) | "\($at) lists #\(.), which is not in issues")
+                 end)
+            end
+        end)
+     end),
+
+    (if $d.notes == null then empty
+     elif ($d.notes | type) != "object" then "notes: expected an object"
+     else ($d.notes | to_entries[] | select((.value | is_text) | not) | "notes.\(.key): expected text")
+     end)
+  )
+end
+'
+
+# Reads two boards bound as $previous and $current (each a one-element array
+# from --slurpfile) and emits a plain-text change report. As above, the $names
+# are jq bindings.
+# shellcheck disable=SC2016
+readonly COMPARE_FILTER='
+def by_number: map({key: (.number | tostring), value: .}) | from_entries;
+def lanes_by_issue: [(.lanes // [])[] | .key as $key | (.issues // [])[] | {key: tostring, value: $key}] | from_entries;
+def describe: "#\(.number) \(.short // .title)";
+def is_blocked: ((.waitingOn // []) | length) > 0;
+def blockers: (.waitingOn // []) | map("#\(.)") | join(", ");
+def picks: [(.startNow // [])[] | .issue];
+def synced: "\(.sync.branch // "unknown branch") at \((.sync.commit // "unknown")[0:8]), \(.sync.at // "unknown time")";
+def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($items | join("; "))" else empty end;
+
+$previous[0] as $old
+| $current[0] as $new
+| ($old.issues // [] | by_number) as $was
+| ($new.issues // [] | by_number) as $now
+| ($old | lanes_by_issue) as $old_lane
+| ($new | lanes_by_issue) as $new_lane
+| [($new.issues // [])[] | select($was[.number | tostring] != null)] as $kept
+| [
+    entry("Closed"; [($old.issues // [])[] | select($now[.number | tostring] == null) | describe]),
+    entry("Opened"; [($new.issues // [])[] | select($was[.number | tostring] == null) | describe]),
+    entry("Newly blocked"; [$kept[] | select(is_blocked and ($was[.number | tostring] | is_blocked | not)) | "\(describe) (waits on \(blockers))"]),
+    entry("Unblocked"; [$kept[] | select((is_blocked | not) and ($was[.number | tostring] | is_blocked)) | describe]),
+    entry("Started"; [($new.issues // [])[] | select(.inProgress != null and ($was[.number | tostring].inProgress == null)) | "\(describe) (\(.inProgress))"]),
+    entry("No longer in progress"; [$kept[] | select(.inProgress == null and $was[.number | tostring].inProgress != null) | describe]),
+    entry("Added to start now"; [($new | picks) - ($old | picks) | .[] | $now[tostring] | describe]),
+    entry("Dropped from start now"; [($old | picks) - ($new | picks) | .[] | ($now[tostring] // $was[tostring]) | describe]),
+    entry("Changed lanes"; [$kept[] | (.number | tostring) as $k | select($old_lane[$k] != null and $new_lane[$k] != null and $old_lane[$k] != $new_lane[$k]) | "\(describe) (\($old_lane[$k]) to \($new_lane[$k]))"]),
+    entry("Changed milestone"; [$kept[] | (.number | tostring) as $k | select((.milestone // null) != ($was[$k].milestone // null)) | "\(describe) (\($was[$k].milestone // "none") to \(.milestone // "none"))"])
+  ] as $changes
+| "Previous sync: \($old | synced)",
+  "This sync: \($new | synced)",
+  "",
+  (if ($changes | length) > 0 then $changes[] else "- No changes to issues, blockers, lanes, or start picks." end)
+'
+
+function usage() {
+  cat << 'USAGE'
+Usage:
+  report-board validate DATA
+  report-board render [--standalone] DATA OUTPUT
+  report-board extract PAGE
+  report-board compare PREVIOUS CURRENT
+
+DATA and CURRENT are board data JSON files. PAGE is a rendered board, such as
+the HTML an Artifact read returns. PREVIOUS may be either.
+
+render writes an HTML fragment for the Artifact tool, which supplies its own
+document skeleton. --standalone writes a complete document to open from disk.
+USAGE
+}
+
+function die() {
+  local exit_code="${1}"
+  shift
+  printf '%s: %s\n' "${SCRIPT_NAME}" "${*}" >&2
+  exit "${exit_code}"
+}
+
+function usage_error() {
+  printf '%s: %s\n\n' "${SCRIPT_NAME}" "${1}" >&2
+  usage >&2
+  exit "${E_USAGE}"
+}
+
+function require_jq() {
+  command -v jq > /dev/null 2>&1 || die "${E_USAGE}" "jq is required but not found: https://jqlang.org/download/"
+}
+
+function require_file() {
+  local path="${1}"
+  [[ -f "${path}" && -r "${path}" ]] || die "${E_INVALID}" "cannot read ${path}"
+}
+
+# Prints "N issues in M lanes" for a data file already known to be valid.
+function board_summary() {
+  local data_file="${1}"
+  jq -r '
+    def counted($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
+    "\(counted(.issues | length; "issue"; "issues")) in \(counted(.lanes | length; "lane"; "lanes"))"
+  ' "${data_file}"
+}
+
+# Exits with every problem listed when the data breaks a board rule.
+function validate_data() {
+  local data_file="${1}"
+  local problems line
+
+  jq empty "${data_file}" 2> /dev/null || die "${E_INVALID}" "${data_file} is not valid JSON"
+  problems="$(jq -r "${VALIDATE_FILTER}" "${data_file}")"
+  [[ -z "${problems}" ]] && return 0
+
+  printf '%s: %s is not valid board data:\n' "${SCRIPT_NAME}" "${data_file}" >&2
+  while IFS= read -r line; do
+    printf '  - %s\n' "${line}" >&2
+  done <<< "${problems}"
+  exit "${E_INVALID}"
+}
+
+function available_boards() {
+  local template names=()
+  for template in "${TEMPLATE_DIR}"/*.html; do
+    [[ -f "${template}" ]] && names+=("$(basename -- "${template}" .html)")
+  done
+  printf '%s' "${names[*]:-none}"
+}
+
+# Writes the page to stdout: the template with the escaped title and the
+# compact JSON payload in place of the two placeholders.
+function fill_template() {
+  local template_file="${1}"
+  local title_html="${2}"
+  local payload="${3}"
+  local template
+
+  template="$(< "${template_file}")"
+  if [[ "${template}" != *"${TITLE_PLACEHOLDER}"* || "${template}" != *"${DATA_PLACEHOLDER}"* ]]; then
+    die "${E_INVALID}" "${template_file} is missing the ${TITLE_PLACEHOLDER} or ${DATA_PLACEHOLDER} placeholder"
+  fi
+
+  template="${template%%"${TITLE_PLACEHOLDER}"*}${title_html}${template#*"${TITLE_PLACEHOLDER}"}"
+  printf '%s%s%s\n' "${template%%"${DATA_PLACEHOLDER}"*}" "${payload}" "${template#*"${DATA_PLACEHOLDER}"}"
+}
+
+# Replaces the output file in one step, so a republish never reads a
+# half-written page.
+function write_output() {
+  local output_file="${1}"
+  local content="${2}"
+  local output_dir temp_file
+
+  output_dir="$(dirname -- "${output_file}")"
+  [[ -d "${output_dir}" ]] || die "${E_INVALID}" "directory ${output_dir} does not exist"
+  temp_file="$(mktemp "${output_dir}/.report-board.XXXXXX")" || die "${E_INVALID}" "cannot write to ${output_dir}"
+  printf '%s' "${content}" > "${temp_file}"
+  if ! mv -- "${temp_file}" "${output_file}"; then
+    rm -f -- "${temp_file}"
+    die "${E_INVALID}" "cannot write ${output_file}"
+  fi
+}
+
+# Prints the raw payload of a rendered page's board-data script element.
+# Returns 1 when the page has none.
+function extract_payload() {
+  local page_file="${1}"
+  local page payload
+
+  page="$(< "${page_file}")"
+  [[ "${page}" == *"${DATA_MARKER}"* ]] || return 1
+  payload="${page#*"${DATA_MARKER}"}"
+  payload="${payload#*>}"
+  [[ "${payload}" == *"${SCRIPT_CLOSE}"* ]] || return 1
+  printf '%s\n' "${payload%%"${SCRIPT_CLOSE}"*}"
+}
+
+# Prints board data as formatted JSON, reading it out of a rendered page when
+# the file is not board data itself.
+function read_board_data() {
+  local source_file="${1}"
+  local payload
+
+  require_file "${source_file}"
+  if jq -e 'type == "object"' "${source_file}" > /dev/null 2>&1; then
+    jq '.' "${source_file}"
+    return 0
+  fi
+  payload="$(extract_payload "${source_file}")" || die "${E_INVALID}" "${source_file} is neither board data nor a rendered board"
+  jq 'if type == "object" then . else error("not an object") end' <<< "${payload}" 2> /dev/null \
+    || die "${E_INVALID}" "${source_file} holds no board data; render it with report-board first"
+}
+
+function cmd_validate() {
+  [[ $# -eq 1 ]] || usage_error "validate takes one data file"
+  local data_file="${1}"
+
+  require_file "${data_file}"
+  validate_data "${data_file}"
+  printf '%s: %s is valid: %s\n' "${SCRIPT_NAME}" "${data_file}" "$(board_summary "${data_file}")" >&2
+}
+
+function cmd_render() {
+  local standalone=false
+  if [[ "${1:-}" == "--standalone" ]]; then
+    standalone=true
+    shift
+  fi
+  [[ $# -eq 2 ]] || usage_error "render takes a data file and an output path"
+  local data_file="${1}"
+  local output_file="${2}"
+  local board template_file title_html payload page
+
+  require_file "${data_file}"
+  validate_data "${data_file}"
+
+  board="$(jq -r '.board' "${data_file}")"
+  template_file="${TEMPLATE_DIR}/${board}.html"
+  [[ -f "${template_file}" ]] || die "${E_INVALID}" "no template for board type ${board}; available: $(available_boards)"
+
+  title_html="$(jq -r '.title | @html' "${data_file}")"
+  # Escaping "<" keeps any "</script>" inside a title or note from closing the
+  # data element early. "<" is still valid JSON for the same character.
+  payload="$(jq -r 'tojson | gsub("<"; "\\u003c")' "${data_file}")"
+  page="$(fill_template "${template_file}" "${title_html}" "${payload}")"
+  if [[ "${standalone}" == true ]]; then
+    page="${STANDALONE_OPENING}"$'\n'"${page}"$'\n''</html>'
+  fi
+
+  write_output "${output_file}" "${page}"$'\n'
+  printf '%s: rendered %s to %s\n' "${SCRIPT_NAME}" "$(board_summary "${data_file}")" "${output_file}" >&2
+}
+
+function cmd_extract() {
+  [[ $# -eq 1 ]] || usage_error "extract takes one rendered page"
+  read_board_data "${1}"
+}
+
+function cmd_compare() {
+  [[ $# -eq 2 ]] || usage_error "compare takes the previous board and the current data"
+  local previous current
+
+  previous="$(read_board_data "${1}")"
+  current="$(read_board_data "${2}")"
+  jq -n -r \
+    --slurpfile previous <(printf '%s\n' "${previous}") \
+    --slurpfile current <(printf '%s\n' "${current}") \
+    "${COMPARE_FILTER}"
+}
+
+function main() {
+  local command="${1:-}"
+  [[ $# -gt 0 ]] && shift
+
+  case "${command}" in
+    -h | --help | help)
+      usage
+      return 0
+      ;;
+    "") usage_error "a command is required" ;;
+    *) ;;
+  esac
+
+  require_jq
+  case "${command}" in
+    validate) cmd_validate "${@}" ;;
+    render) cmd_render "${@}" ;;
+    extract) cmd_extract "${@}" ;;
+    compare) cmd_compare "${@}" ;;
+    *) usage_error "unknown command: ${command}" ;;
+  esac
+}
+
+main "${@}"

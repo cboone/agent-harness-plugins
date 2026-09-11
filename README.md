@@ -111,12 +111,17 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Writing
 
-| Plugin                                                                         | Trigger                        | What it does                                                                                                                  |
-| ------------------------------------------------------------------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| [Write Formalization Roadmap](./plugins/write-formalization-roadmap/README.md) | `/write-formalization-roadmap` | Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants. |
-| [Write Markdown](./plugins/write-markdown/README.md)                           | `/write-markdown`              | Applies Markdown style conventions when creating or editing Markdown files.                                                   |
-| [Write Math](./plugins/write-math/README.md)                                   | `/write-math`                  | Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references.                          |
-| [Write Pandoc Markdown](./plugins/write-pandoc-markdown/README.md)             | `/write-pandoc-markdown`       | Pandoc-flavored Markdown conventions for academic papers with LaTeX output.                                                   |
+| Plugin                                                                         | Trigger                        | What it does                                                                                                                                              |
+| ------------------------------------------------------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Publish Report Board](./plugins/publish-report-board/README.md)               | `/publish-report-board`        | Publish a recurring analysis, starting with backlog triage, as a live report board with a stable URL, and re-sync it in place as the source data changes. |
+| [Write Formalization Roadmap](./plugins/write-formalization-roadmap/README.md) | `/write-formalization-roadmap` | Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants.                             |
+| [Write Markdown](./plugins/write-markdown/README.md)                           | `/write-markdown`              | Applies Markdown style conventions when creating or editing Markdown files.                                                                               |
+| [Write Math](./plugins/write-math/README.md)                                   | `/write-math`                  | Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references.                                                      |
+| [Write Pandoc Markdown](./plugins/write-pandoc-markdown/README.md)             | `/write-pandoc-markdown`       | Pandoc-flavored Markdown conventions for academic papers with LaTeX output.                                                                               |
+
+**External tools:**
+
+- _Publish Report Board:_ [`jq`](https://jqlang.org/) (required; the bundled `report-board` script validates and renders board data with it), [`gh`](https://cli.github.com/) (required for the backlog board, which reads issues, milestones, and pull requests)
 
 ### Scaffolding
 

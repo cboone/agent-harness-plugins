@@ -1,0 +1,51 @@
+# Artifact Mechanics
+
+The Artifact tool publishes a local HTML file as a private page on claude.ai, with a URL the user can keep. Most of what can go wrong here is silent: the wrong call does not fail, it creates a second board or leaves the first one stale, and nobody notices until someone acts on it.
+
+## First Publish
+
+Publish the rendered page with these parameters:
+
+| Parameter     | Value                                            |
+| ------------- | ------------------------------------------------ |
+| `file_path`   | The rendered page in the working directory       |
+| `favicon`     | The board type's emoji, from its reference       |
+| `icon`        | The board type's icon word, from its reference   |
+| `description` | One sentence naming the board and the repository |
+
+Do not pass `url` on a first publish. The page's name comes from the `<title>` the template writes from the data's `title` field. Keep that title identical across syncs, because it is how a later conversation finds the board.
+
+Give the user the URL the tool returns.
+
+## Re-sync in the Same Conversation
+
+Render to the same path and publish the same `file_path` again. The same path keeps the same URL. Rendering to a different path silently creates a second board with its own URL, and the first one stops updating with no sign on the page that it has.
+
+Omit `favicon` and `icon`. The board keeps the ones it has, and a changed favicon makes it read as a different page.
+
+## Re-sync From a Later Conversation
+
+A later conversation has no record of the path it published from, so a plain publish creates a new board instead of updating the old one.
+
+1. **Get the URL.** Use the one the user gives. Otherwise run the `list` action and pick the entry whose title matches the board's title exactly. Recovering a URL is a lookup, never a guess: if no title matches, say so and ask whether to publish a new board.
+2. **Read the board** with the `read` action and that URL. It returns the page's HTML, and saves a large page to a local file. The tool refuses a publish to an artifact the current conversation has not read, so this step is required.
+3. **Recover the previous data** from that HTML with `report-board extract`. Use it as the draft for this sync and as `PREVIOUS` for `report-board compare`.
+4. **Publish** the new render with `file_path` and with `url` set to the board's URL. Later republishes in the same conversation then use the same `file_path` and need no `url`.
+
+## Conflicts
+
+If a publish is refused because the page changed since this conversation read it, read it again, rebuild from what comes back, and publish again. Never pass `force`. It discards whatever version is newer than yours, and a board has no legitimate reason to overwrite a version nobody here has seen.
+
+## Runtime Capabilities
+
+Never declare `capabilities` on a board, and omit the field on every republish so nothing changes. A board holds no state of its own. Anything a later sync would contradict, such as a ticked checkbox or an edited status, does not belong on the page, and a page that saved its own versions would conflict with every republish.
+
+## Without the Artifact Tool
+
+Codex CLI and OpenCode have no Artifact tool. There the board is the standalone HTML file at its stable path under `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/`:
+
+1. Render with `--standalone` to that path.
+2. Give the user the absolute path; the file opens in any browser.
+3. On the next sync, run `report-board compare` against the existing file before rendering over it.
+
+Everything else in the skill is unchanged.
