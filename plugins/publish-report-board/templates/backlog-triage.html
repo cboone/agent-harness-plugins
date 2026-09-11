@@ -1154,7 +1154,9 @@
       for (const waited of issue.waitingOn ?? []) {
         if (typeof waited === "number") listAt(unblocks, waited).push(issue.number);
       }
-      for (const target of issue.after ?? []) listAt(eases, target).push(issue.number);
+      for (const target of issue.after ?? []) {
+        if (typeof target === "number") listAt(eases, target).push(issue.number);
+      }
       if (issue.sameBranchAs != null) listAt(riders, issue.sameBranchAs).push(issue.number);
     }
 

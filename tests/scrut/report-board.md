@@ -183,7 +183,7 @@ report-board: */data.json is not valid board data: (glob)
   - #102 waits on #101 and is also better after it; keep only waitingOn
   - #103 shares a branch with #101, so it cannot also come after it
   - #107 is better after itself
-  - #107 is better after #99, which is not an open issue on this board; drop it
+  - #107 is better after #99, which is not an open issue on this board; drop it if it has closed, or name it as a reference
 [1]
 ```
 
@@ -194,6 +194,35 @@ $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 105)) += {"after": [1
 report-board: */data.json is not valid board data: (glob)
   - #105 is part of a better-after loop; break it
   - #107 is part of a better-after loop; break it
+[1]
+```
+
+## Better after a reference beyond the board
+
+`after` takes the same reference forms as `waitingOn`.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"after": [{"ref": "example/themes#3", "title": "theme tokens"}, {"pr": 12}]}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is valid: 7 issues in 3 lanes (glob)
+```
+
+## Start now rejects an issue better after a reference
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 106)) += {"after": [{"ref": "example/themes#3"}]}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - startNow #106 is better after example/themes#3 and should not start before it lands
+[1]
+```
+
+## Malformed better-after references
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"after": [{"pr": "12"}, {"branch": "b", "ref": "o/r#1"}, "soon"]}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #107: each after entry is an issue number or a reference object
+  - #107: an after pr must be a pull request number
+  - #107: each after reference names exactly one of pr, branch, ref, or url
 [1]
 ```
 

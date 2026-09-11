@@ -65,7 +65,6 @@ readonly STANDALONE_OPENING='<!DOCTYPE html>
 readonly VALIDATE_FILTER='
 def is_int: type == "number" and . == floor;
 def is_text: type == "string" and test("\\S");
-def is_int_list: type == "array" and all(.[]; is_int);
 def as_list: if type == "array" then . else [] end;
 def absent_or(f): . == null or f;
 def check(condition; message): if condition then empty else message end;
@@ -77,6 +76,17 @@ def ref_text:
   elif .branch != null then "branch \(.branch)"
   elif .ref != null then .ref
   else (.label // .url // "a reference") end;
+# Problems with one reference object in waitingOn or after. $article is "a"
+# or "an", to agree with the field name.
+def ref_problems($at; $field; $article):
+  ([.pr, .branch, .ref, .url] | map(select(. != null)) | length) as $kinds
+  | if $kinds != 1 then "\($at): each \($field) reference names exactly one of pr, branch, ref, or url"
+    elif .pr != null then check(.pr | is_int and . > 0; "\($at): \($article) \($field) pr must be a pull request number")
+    elif .branch != null then check(.branch | is_text and test("^\\S+$"); "\($at): \($article) \($field) branch must be a branch name")
+    elif .ref != null then check(.ref | is_text and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$"); "\($at): \($article) \($field) ref must look like owner/repo#123")
+    else check((.url | is_text and test("^https://[^\\s\"<>]+$")) and (.label | is_text); "\($at): \($article) \($field) url needs an https:// address and a label")
+    end,
+    check(.title | absent_or(is_text); "\($at): \($article) \($field) title must be text");
 
 if type != "object" then "the top level must be a JSON object"
 else
@@ -133,15 +143,7 @@ else
                 ($waits[] | select(is_int) | select(. == $issue.number) | "\($at) waits on itself"),
                 ($waits[] | select(is_int) | select(. != $issue.number and (known | not)) | "\($at) waits on #\(.), which is not an open issue on this board; drop it if it has closed, or name it as a reference"),
                 ($waits[] | select(type != "number" and type != "object") | "\($at): each waitingOn entry is an issue number or a reference object"),
-                ($waits[] | objects
-                 | ([.pr, .branch, .ref, .url] | map(select(. != null)) | length) as $kinds
-                 | if $kinds != 1 then "\($at): each waitingOn reference names exactly one of pr, branch, ref, or url"
-                   elif .pr != null then check(.pr | is_int and . > 0; "\($at): a waitingOn pr must be a pull request number")
-                   elif .branch != null then check(.branch | is_text and test("^\\S+$"); "\($at): a waitingOn branch must be a branch name")
-                   elif .ref != null then check(.ref | is_text and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$"); "\($at): a waitingOn ref must look like owner/repo#123")
-                   else check((.url | is_text and test("^https://[^\\s\"<>]+$")) and (.label | is_text); "\($at): a waitingOn url needs an https:// address and a label")
-                   end,
-                   check(.title | absent_or(is_text); "\($at): a waitingOn title must be text")),
+                ($waits[] | objects | ref_problems($at; "waitingOn"; "a")),
                 (if ($waits | length) > 0 and (($issue.blockedBecause | is_text) | not) then "\($at): blockedBecause is required when waitingOn is set"
                  elif ($waits | length) == 0 and $issue.blockedBecause != null then "\($at): blockedBecause is set but waitingOn is empty"
                  else empty end)
@@ -153,12 +155,15 @@ else
               elif (issue($issue.sameBranchAs) | .sameBranchAs) != null then "\($at) shares a branch with #\($issue.sameBranchAs), which shares a branch with another issue; point both at the same one"
               else empty end),
              (if $issue.after == null then empty
-              elif ($issue.after | is_int_list) | not then "\($at): after must be a list of issue numbers"
+              elif ($issue.after | type) != "array" then "\($at): after must be a list"
               else
-                ($issue.after[] | select(. == $issue.number) | "\($at) is better after itself"),
-                ($issue.after[] | select(. != $issue.number and (known | not)) | "\($at) is better after #\(.), which is not an open issue on this board; drop it"),
-                ($issue.after[] | . as $a | select($waits | as_list | any(.[]; . == $a)) | "\($at) waits on #\(.) and is also better after it; keep only waitingOn"),
-                ($issue.after[] | select(. != $issue.number and known and root(.) == root($issue.number)) | "\($at) shares a branch with #\(.), so it cannot also come after it")
+                ($issue.after[] | select(type == "number") | select(is_int | not) | "\($at): after issue numbers must be whole numbers"),
+                ($issue.after[] | select(is_int) | select(. == $issue.number) | "\($at) is better after itself"),
+                ($issue.after[] | select(is_int) | select(. != $issue.number and (known | not)) | "\($at) is better after #\(.), which is not an open issue on this board; drop it if it has closed, or name it as a reference"),
+                ($issue.after[] | select(type != "number" and type != "object") | "\($at): each after entry is an issue number or a reference object"),
+                ($issue.after[] | objects | ref_problems($at; "after"; "an")),
+                ($issue.after[] | . as $a | select($waits | as_list | any(.[]; . == $a)) | "\($at) waits on \($a | ref_text) and is also better after it; keep only waitingOn"),
+                ($issue.after[] | select(is_int) | select(. != $issue.number and known and root(.) == root($issue.number)) | "\($at) shares a branch with #\(.), so it cannot also come after it")
               end)
          end
      end),
@@ -210,7 +215,7 @@ else
                (if ($target.waitingOn | type == "array" and length > 0) then "\($at) waits on \($target.waitingOn | map(ref_text) | join(", ")) and cannot start" else empty end),
                (if $target.inProgress != null then "\($at) is already in progress on \($target.inProgress)" else empty end),
                (if $target.sameBranchAs != null then "\($at) shares a branch with #\($target.sameBranchAs); list #\($target.sameBranchAs) instead" else empty end),
-               (if ($target.after | type == "array" and length > 0) then "\($at) is better after \($target.after | map("#\(.)") | join(", ")) and should not start before it lands" else empty end),
+               (if ($target.after | type == "array" and length > 0) then "\($at) is better after \($target.after | map(ref_text) | join(", ")) and should not start before it lands" else empty end),
                ([$issue_list[] | select(.sameBranchAs == $pick.issue) | select(.after | type == "array" and any(.[]; . != $pick.issue)) | "#\(.number)"] as $held
                 | if ($held | length) > 0 then "\($at) shares its branch with \($held | join(", ")), which should wait for another open issue" else empty end)
              end
