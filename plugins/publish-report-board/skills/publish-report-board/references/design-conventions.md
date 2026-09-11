@@ -36,4 +36,5 @@ The template renders the prose fields as written, so they carry the board's voic
 - **Lane notes**: what is true of the group, usually why its order is what it is.
 - **`blockedBecause`**: why the issue cannot start yet, in terms of what its blocker settles.
 - Write issue numbers as `#123`, or `OWNER/REPO#123` for another repository; the page links each one.
+- Write about branches and work to start, never about staff or staffing. A board's reader is usually a single maintainer, not a team with people to assign.
 - No em dashes, no time or effort estimates, and neutral technical terms throughout.

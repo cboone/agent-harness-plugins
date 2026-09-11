@@ -10,7 +10,7 @@
     "openPullRequests": 1,
     "extra": ["12 packages"]
   },
-  "summary": "Three lanes can run at once and two are worth staffing today. The tokenizer rewrite gates everything in the parser lane, so start there.",
+  "summary": "Three lanes can run at once and two are worth starting today. The tokenizer rewrite gates everything in the parser lane, so start there.",
   "milestones": [{ "title": "Parser rewrite", "short": "Parser" }, { "title": "Documentation" }],
   "issues": [
     { "number": 101, "title": "parser: replace the tokenizer", "milestone": "Parser rewrite" },

@@ -75,7 +75,7 @@ Give each lane a short `key` (`L1`, `L2`, and so on), a `name` a reader recogniz
 
 Pick the branches to open today: at most one per serial or head lane, and never an issue that is blocked, in progress, better after another open issue, or riding on another issue's branch. A serial or head lane whose single slot is held by an issue in progress gets no pick. Prefer issues that unblock others, carry the most risk while they stay open, or head a contended lane, and use the signals the `suggest-next-issue` skill weighs (priority labels, dependencies, age, activity) to break ties. Order the picks by value, and give each a `why` and a `touches` naming what it edits.
 
-Staffing is a judgment, not a maximum. The header already shows how many branches could run at once; the picks say how many are worth running. When the two differ, say why in `notes.startNow`.
+How many branches to start is a judgment, not a maximum. The header already shows how many could run at once; the picks say how many are worth starting. When the two differ, say why in `notes.startNow`.
 
 ### 6. Prose
 
