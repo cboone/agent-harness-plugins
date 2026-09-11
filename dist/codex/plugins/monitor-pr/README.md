@@ -25,7 +25,7 @@ Every push it makes invalidates Copilot's previous review, so the loop naturally
 
 ### It stops and asks
 
-This is not a continue-at-all-costs skill. It halts the watch and puts the question to you when the fix is a judgment call about intended behavior, when the same check fails again after a fix attempt for it, when the fix would reach outside what the branch already changes, when the logs do not identify a cause, when `merge-main` or `resolve-copilot-pr-feedback` reports something it could not finish, or when Copilot feedback comes back reportedly resolved while the same threads are still open.
+This is not a continue-at-all-costs skill. It halts the watch and puts the question to you when the fix is a judgment call about intended behavior, when the same check fails again after a fix attempt for it, when the fix would reach outside what the branch already changes, when the logs do not identify a cause, when `merge-main` or `resolve-copilot-pr-feedback` reports something it could not finish, or when Copilot feedback comes back reportedly resolved while the same review still reads as unresolved. That last one covers both forms Copilot's feedback takes. An inline thread clears when it is resolved, but a finding filed in a review body has no thread and the body is immutable, so it stays visible in that review permanently and is recorded as handled in a summary comment instead.
 
 ### What counts as a Copilot sign-off
 

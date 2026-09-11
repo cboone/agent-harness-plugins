@@ -246,7 +246,9 @@ Pass the `OWNER`, `REPO`, and `PR_NUMBER` recorded in step 1. That skill's scrip
 
 Only invoke it once a review exists at the current head. Invoking it earlier makes it report `No unresolved Copilot feedback` and post a no-op summary comment, which reads as a clean bill of health for code Copilot never saw.
 
-**Invoke it at most once per review.** If it reports `Completed` or `No unresolved Copilot feedback` and the next snapshot still shows the same threads open against the same head, nothing further will change on its own: a second invocation has no new input to work from, and the step 7c budget will not stop the cycle because it counts completed reviews rather than invocations. Escalate per step 9 instead. A new review or a push is what makes another invocation meaningful.
+**Invoke it at most once per review.** Record the review each invocation is made against, by id or by the head SHA it was rendered against. If it reports `Completed` or `No unresolved Copilot feedback` and the next snapshot still matches step 4's findings condition against that same review, nothing further will change on its own: a second invocation has no new input to work from, and the step 7c budget will not stop the cycle because it counts completed reviews rather than invocations. Escalate per step 9 instead. A new review or a push is what makes another invocation meaningful.
+
+**Both feedback sources count here, and the review body is the one that traps.** An open thread at least clears when it is resolved, so a repeat there means something genuinely failed. A review-body finding has no thread to resolve and review bodies are immutable, so it stays visible in that review permanently: `resolve-copilot-pr-feedback` records it as handled in its own summary comment and reads that record back on its next run. A guard keyed on open threads alone would never fire in precisely the case that loops.
 
 #### 7c. Round Budget
 
@@ -339,6 +341,6 @@ The terminal report uses the same table plus the readiness verdict for all four 
 - **No checks configured on the repository**: Not an error. Treat the checks axis as clean and say so explicitly in the report.
 - **`merge-main` stops on conflicts it cannot resolve**: Escalate with the conflicted file list.
 - **`resolve-copilot-pr-feedback` reports `Partial` or `Failed`**: Escalate with its failure details.
-- **`resolve-copilot-pr-feedback` reports `Completed` or `No unresolved Copilot feedback` but the same threads are still open**: Escalate per step 9. Do not invoke it again against the same review, per step 7b.
+- **`resolve-copilot-pr-feedback` reports `Completed` or `No unresolved Copilot feedback` but step 4's findings condition still matches the same review**: Escalate per step 9. This covers an open thread and a review-body finding alike, and the body case is the one that cannot clear on its own. Do not invoke the skill again against the same review, per step 7b.
 - **Copilot never reviews despite an explicit request**: Escalate. Copilot review may be disabled for the repository, in which case the user must decide whether to proceed without it.
 - **Push rejected because the remote moved**: Someone else pushed to the branch. Re-poll, sync per step 5, and retry once. If it is rejected again, escalate.
