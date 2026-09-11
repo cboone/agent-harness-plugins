@@ -119,6 +119,7 @@ Tell the user:
 2. The sync line: when, against which branch, and at which commit.
 3. On a re-sync, the `compare` output under a "Changes since the last sync" heading, unedited.
 4. The board's summary.
+5. When the board is shared by link, that link viewers keep seeing the pinned version until the user moves the pin, as `./references/artifact-mechanics.md` describes.
 
 Then stop. Publishing a board does not start work on anything it recommends.
 

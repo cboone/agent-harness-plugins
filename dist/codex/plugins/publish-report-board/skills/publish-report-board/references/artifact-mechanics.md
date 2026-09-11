@@ -32,6 +32,10 @@ A later conversation has no record of the path it published from, so a plain pub
 3. **Recover the previous data** from that HTML with `report-board extract`. Use it as the draft for this sync and as `PREVIOUS` for `report-board compare`.
 4. **Publish** the new render with `file_path` and with `url` set to the board's URL. Later republishes in the same conversation then use the same `file_path` and need no `url`.
 
+## Shared Boards
+
+A board the user has shared by link carries a share pin, and the `read` and publish results say which version link viewers see. A republish does not move that pin: the owner sees the new version, while everyone holding the link keeps seeing the pinned one. When the tool reports a pin, tell the user after every republish that link viewers still see the earlier version until the pin is moved from the page's share menu. Never report a re-sync as reaching everyone when the tool says it has not.
+
 ## Conflicts
 
 If a publish is refused because the page changed since this conversation read it, read it again, rebuild from what comes back, and publish again. Never pass `force`. It discards whatever version is newer than yours, and a board has no legitimate reason to overwrite a version nobody here has seen.
