@@ -79,7 +79,7 @@ Re-run the `gh pr view` call from step 1, and probe Copilot's latest review:
 
 ```bash
 gh api --paginate --slurp repos/OWNER/REPO/pulls/PR_NUMBER/reviews |
-  jq '[.[][] | select((.user.login? // "") as $login | ["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"] | any(. == $login))] | last | {commit_id, submitted_at, state}'
+  jq '[.[][] | select((.user.login? // "") as $login | ["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"] | any(. == $login))] | last | {id, commit_id, submitted_at, state}'
 ```
 
 Three details in that command are load-bearing:
@@ -89,6 +89,8 @@ Three details in that command are load-bearing:
 - **Flag position, and no quotes around the endpoint.** `--paginate` and `--slurp` come before the path, so a `Bash(gh api repos/*)` rule does not match `gh api --paginate repos/*`; the rule has to spell the flags out in order. Leave the endpoint unquoted as shown: the recommended allow rule matches an unquoted path, and a quoted one begins with `"` where the pattern expects `r`, so it fails to match and prompts. Nothing in the endpoint needs quoting, since owner, repo, and PR number contain no shell metacharacters. The trailing `|` ends the line without a continuation backslash, which keeps the command intact when copied.
 
 Copilot's review `state` is always `COMMENTED`, never `APPROVED`, so never treat an approval state as the pass signal.
+
+`id` is the review's stable key, and step 7b's once-per-review guard records it. Project it even though nothing in this step reads it: `commit_id` cannot stand in for it, because `--confirm-clean` produces two reviews against the same head and only the `id` tells them apart.
 
 Reduce the snapshot to the four axes in [Ready Criteria](#ready-criteria).
 
@@ -246,7 +248,7 @@ Pass the `OWNER`, `REPO`, and `PR_NUMBER` recorded in step 1. That skill's scrip
 
 Only invoke it once a review exists at the current head. Invoking it earlier makes it report `No unresolved Copilot feedback` and post a no-op summary comment, which reads as a clean bill of health for code Copilot never saw.
 
-**Invoke it at most once per review.** Record the review each invocation is made against, by id or by the head SHA it was rendered against. If it reports `Completed` or `No unresolved Copilot feedback` and the next snapshot still matches step 4's findings condition against that same review, nothing further will change on its own: a second invocation has no new input to work from, and the step 7c budget will not stop the cycle because it counts completed reviews rather than invocations. Escalate per step 9 instead. A new review or a push is what makes another invocation meaningful.
+**Invoke it at most once per review.** Record the review `id` each invocation is made against, taken from the step 3 probe. **Do not key this on the head SHA.** Step 7d deliberately requests a second review against the same head, so a SHA key conflates two distinct reviews: it would either suppress the confirming review's findings as already processed or escalate it as a repeat when it is genuinely new. The `id` is the only field that separates them. If it reports `Completed` or `No unresolved Copilot feedback` and the next snapshot still matches step 4's findings condition against that same review id, nothing further will change on its own: a second invocation has no new input to work from, and the step 7c budget will not stop the cycle because it counts completed reviews rather than invocations. Escalate per step 9 instead. A new review or a push is what makes another invocation meaningful.
 
 **Both feedback sources count here, and the review body is the one that traps.** An open thread at least clears when it is resolved, so a repeat there means something genuinely failed. A review-body finding has no thread to resolve and review bodies are immutable, so it stays visible in that review permanently: `resolve-copilot-pr-feedback` records it as handled in its own summary comment and reads that record back on its next run. A guard keyed on open threads alone would never fire in precisely the case that loops.
 
