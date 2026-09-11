@@ -180,6 +180,11 @@
     border-bottom: 1px solid var(--hairline);
     color: var(--ink);
     text-decoration: none;
+  }
+
+  /* Issue numbers line up in columns. Other links stay proportional, because
+     in this face tabular figures also space out the period in lint-shell.yml. */
+  .num {
     font-variant-numeric: tabular-nums;
   }
 
@@ -675,6 +680,14 @@
     gap: 14px;
   }
 
+  /* A board with no milestones drops the milestone column entirely. */
+  @media (min-width: 721px) {
+    .no-milestones .cols,
+    .no-milestones .item {
+      grid-template-columns: 28px 58px minmax(0, 1fr) 240px;
+    }
+  }
+
   .cols {
     padding: 0 10px 6px;
     color: var(--muted);
@@ -1058,7 +1071,7 @@
     const searchUrl = (query) => `${repoUrl}/issues?q=${encodeURIComponent(query)}`;
     const milestoneUrl = (title) => searchUrl(title ? `is:open milestone:"${title}"` : "is:open no:milestone");
     const link = (href, text) => h("a", { class: "ref", href }, text);
-    const ref = (n) => link(issueUrl(n), `#${n}`);
+    const ref = (n) => h("a", { class: "ref num", href: issueUrl(n) }, `#${n}`);
     // Links every "#123" in a prose field to that issue or pull request.
     const prose = (text) =>
       String(text ?? "")
@@ -1069,6 +1082,7 @@
     const startNow = data.startNow ?? [];
     const notes = data.notes ?? {};
     const byNumber = new Map(issues.map((issue) => [issue.number, issue]));
+    const anyMilestone = issues.some((issue) => issue.milestone);
     const waits = (n) => byNumber.get(n)?.waitingOn ?? [];
     const isBlocked = (n) => waits(n).length > 0;
     const partnerOf = (n) => byNumber.get(n)?.sameBranchAs ?? null;
@@ -1231,8 +1245,7 @@
           h("div", null, [
             h("p", { class: "start-lane-name" }, lane.name),
             pick.touches ? h("p", { class: "start-touches" }, pick.touches) : null,
-            h("p", { class: "mini-label" }, "Milestone"),
-            chip(byNumber.get(n).milestone),
+            anyMilestone ? [h("p", { class: "mini-label" }, "Milestone"), chip(byNumber.get(n).milestone)] : null,
           ]),
         ]),
       ]);
@@ -1278,7 +1291,7 @@
         h("span", { class: "item-rank", "aria-hidden": rank === "·" ? "true" : null }, rank),
         h("span", { class: "item-num" }, ref(n)),
         h("span", { class: "item-title" }, [issue.title, issue.inProgress ? progressTag(issue.inProgress) : null]),
-        h("span", { class: "item-ms" }, chip(issue.milestone)),
+        anyMilestone ? h("span", { class: "item-ms" }, chip(issue.milestone)) : null,
         h(
           "span",
           { class: "item-deps" },
@@ -1327,7 +1340,9 @@
           h(
             "div",
             { class: "cols", "aria-hidden": "true" },
-            ["#", "Issue", "Title", "Milestone", "Dependency"].map((label) => h("span", null, label)),
+            ["#", "Issue", "Title", anyMilestone ? "Milestone" : null, "Dependency"]
+              .filter(Boolean)
+              .map((label) => h("span", null, label)),
           ),
           h(
             "ol",
@@ -1369,6 +1384,7 @@
     const position = (key) =>
       key === NO_MILESTONE ? Number.MAX_SAFE_INTEGER : listed.includes(key) ? listed.indexOf(key) : listed.length + seen.indexOf(key);
     const columns = [...seen].sort((a, b) => position(a) - position(b));
+    const anyClaimMilestone = columns.some((key) => key !== NO_MILESTONE);
 
     function contentionNote() {
       if (notes.contention) return notes.contention;
@@ -1376,7 +1392,7 @@
       const within = claims.length - across;
       const noun = rowLabel.toLowerCase();
       const lead = `${capitalize(word(claims.length))} ${claims.length === 1 ? `${noun} is` : `${noun}s are`} claimed by more than one issue`;
-      let split = ", each within one milestone.";
+      let split = anyClaimMilestone ? ", each within one milestone." : ".";
       if (across && within) split = `: ${word(across)} across milestones, ${word(within)} within one.`;
       else if (across) split = claims.length === 1 ? ", across milestones." : ", all across milestones.";
       return `${lead}${split} A filled cell is a rebase waiting to happen, and ${noun} names link to every open issue that mentions them.`;
@@ -1397,10 +1413,10 @@
                 "thead",
                 null,
                 h("tr", null, [
-                  h("th", { scope: "col" }, `${rowLabel} \\ milestone`),
+                  h("th", { scope: "col" }, anyClaimMilestone ? `${rowLabel} \\ milestone` : rowLabel),
                   columns.map((key) =>
                     key === NO_MILESTONE
-                      ? h("th", { scope: "col" }, "No milestone")
+                      ? h("th", { scope: "col" }, anyClaimMilestone ? "No milestone" : "Claimed by")
                       : h("th", { scope: "col", title: key }, shortName.get(key) ?? key),
                   ),
                 ]),
@@ -1469,9 +1485,13 @@
       " at ",
       link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8)),
       ". ",
-      `${count(issues.length, "open issue", "open issues")} across `,
-      link(`${repoUrl}/milestones`, count(milestoneCount, "milestone", "milestones")),
-      withoutMilestone ? `, ${withoutMilestone} without one` : "",
+      milestoneCount
+        ? [
+            `${count(issues.length, "open issue", "open issues")} across `,
+            link(`${repoUrl}/milestones`, count(milestoneCount, "milestone", "milestones")),
+            withoutMilestone ? `, ${withoutMilestone} without one` : "",
+          ]
+        : `${count(issues.length, "open issue", "open issues")}, none in a milestone`,
       typeof data.sync.openPullRequests === "number"
         ? `, ${count(data.sync.openPullRequests, "open PR", "open PRs")}`
         : "",
@@ -1479,6 +1499,7 @@
       ". Re-run publish-report-board after any issue, milestone or PR change. GitHub is the source of truth; this page is a snapshot.",
     ]);
 
+    root.classList.toggle("no-milestones", !anyMilestone);
     root.replaceChildren(
       header,
       h("main", { class: "body" }, [

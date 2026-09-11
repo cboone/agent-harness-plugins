@@ -134,6 +134,8 @@ Write `summary`, each lane's `note`, each `blockedBecause`, and any section note
 
 Capacity follows the lane's mode: one branch at a time for a serial or head lane, and every unblocked issue at once for an any-order lane. A head lane also shows how many issues its head frees. "Branches at once" in the header is the sum across lanes.
 
+When no open issue has a milestone, the page drops the milestone column and chips, heads the contention matrix's single column "Claimed by", and says so in the footer rather than counting zero milestones.
+
 ## Validation
 
 `report-board validate` rejects data that breaks any of these rules, and lists every problem at once:
