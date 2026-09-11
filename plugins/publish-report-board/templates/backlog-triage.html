@@ -48,6 +48,8 @@
     --hit: #fef3c7;
     --selection: #fde68a;
     --heading-shadow: none;
+    --warn: #b45309;
+    --alert: #b91c1c;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -81,6 +83,8 @@
       --hit: #3d4447;
       --selection: #8d999d;
       --heading-shadow: 1px 1px 0 rgb(31 33 35);
+      --warn: #fde68a;
+      --alert: #fecaca;
     }
   }
 
@@ -114,6 +118,8 @@
     --hit: #3d4447;
     --selection: #8d999d;
     --heading-shadow: 1px 1px 0 rgb(31 33 35);
+    --warn: #fde68a;
+    --alert: #fecaca;
   }
 
   *,
@@ -362,8 +368,12 @@
     text-transform: uppercase;
   }
 
+  .when-age.is-aging {
+    color: var(--warn);
+  }
+
   .when-age.is-stale {
-    color: var(--eyebrow);
+    color: var(--alert);
   }
 
   .stats {
@@ -1001,7 +1011,8 @@
     "use strict";
 
     const EYEBROW = "Backlog review";
-    const STALE_AFTER_DAYS = 7;
+    const AGING_AFTER_DAYS = 1;
+    const STALE_AFTER_DAYS = 3;
     const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
     const NO_MILESTONE = Symbol("no milestone");
 
@@ -1152,16 +1163,19 @@
     const timeText = formatSync("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "short" });
 
     const age = h("p", { class: "when-age" });
+    // Amber once a full day has passed, red after three. The wording counts
+    // whole units, so it never says "1 day ago" before the color changes.
     function refreshAge() {
-      const minutes = Math.max(0, Math.round((Date.now() - syncedAt.getTime()) / 60000));
-      const hours = Math.round(minutes / 60);
-      const days = Math.round(hours / 24);
+      const minutes = Math.max(0, Math.floor((Date.now() - syncedAt.getTime()) / 60000));
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
       let text = "Synced just now";
-      if (minutes >= 1 && minutes < 60) text = `Synced ${count(minutes, "minute", "minutes")} ago`;
-      else if (minutes >= 60 && hours < 24) text = `Synced ${count(hours, "hour", "hours")} ago`;
-      else if (hours >= 24) text = `Synced ${count(days, "day", "days")} ago`;
+      if (days >= 1) text = `Synced ${count(days, "day", "days")} ago`;
+      else if (hours >= 1) text = `Synced ${count(hours, "hour", "hours")} ago`;
+      else if (minutes >= 1) text = `Synced ${count(minutes, "minute", "minutes")} ago`;
       age.textContent = text;
-      age.classList.toggle("is-stale", hours >= 24 && days >= STALE_AFTER_DAYS);
+      age.classList.toggle("is-aging", days >= AGING_AFTER_DAYS && days < STALE_AFTER_DAYS);
+      age.classList.toggle("is-stale", days >= STALE_AFTER_DAYS);
     }
     refreshAge();
     window.setInterval(refreshAge, 60000);

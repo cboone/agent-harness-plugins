@@ -26,7 +26,7 @@ Use `extra` for anything else that pins what the board reflects, such as a catal
 
 ## What the Page Shows
 
-- The header shows the sync date and time, and a live age, such as "Synced 3 hours ago", that the page recomputes every minute from the viewer's clock. After seven days the age turns amber.
+- The header shows the sync date and time, and a live age, such as "Synced 3 hours ago", that the page recomputes every minute from the viewer's clock. After a full day the age turns amber, and after three days it turns red.
 - The footer repeats the time, links the branch and the short commit, lists the counts and every `extra` entry, and reminds the reader that the source, not the page, is authoritative.
 
 ## When to Re-sync
