@@ -69,6 +69,8 @@ Adaptive intervals by phase, unless `--interval` overrides them:
 | Awaiting a Copilot review at the current head | 5 to 10 minutes  |
 | Checks queued, or nothing moving              | 20 to 30 minutes |
 
+When more than one row applies, take the shorter wait. The step 4 fallthrough can reach a tick with checks still running and a Copilot review outstanding at once, and the shorter interval is the one that governs.
+
 There is no wall-clock cap and no limit on ticks: waiting is free, so a watch may tick as many times as it needs to. The only budget is on Copilot rounds, per step 7c, and it counts completed reviews rather than elapsed time or poll count. The watch ends on a terminal state, an escalation, or an exhausted round budget, never on a timer. The user can interrupt at any point.
 
 ### 3. Take a State Snapshot
@@ -77,7 +79,7 @@ Re-run the `gh pr view` call from step 1, and probe Copilot's latest review:
 
 ```bash
 gh api --paginate --slurp repos/OWNER/REPO/pulls/PR_NUMBER/reviews |
-  jq '[.[][] | select((.user.login? // "") as $login | ["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"] | any(. == $login))] | last | {commit_id, submitted_at, state}'
+  jq '[.[][] | select((.user.login? // "") as $login | ["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"] | any(. == $login))] | last | {id, commit_id, submitted_at, state}'
 ```
 
 Three details in that command are load-bearing:
@@ -88,22 +90,29 @@ Three details in that command are load-bearing:
 
 Copilot's review `state` is always `COMMENTED`, never `APPROVED`, so never treat an approval state as the pass signal.
 
+`id` is the review's stable key, and step 7b's once-per-review guard records it. Project it even though nothing in this step reads it: `commit_id` cannot stand in for it, because `--confirm-clean` produces two reviews against the same head and only the `id` tells them apart.
+
 Reduce the snapshot to the four axes in [Ready Criteria](#ready-criteria).
 
 ### 4. Classify and Dispatch
 
-Evaluate in this order and take the first match. The ordering is deliberate: sync the branch before diagnosing check failures, because a stale branch is a common cause of them.
+Evaluate in this order and take the first match. Every condition below is work the skill can do now. Waiting is not, so it sits at the end as the fallthrough rather than in the middle of the list: a pending check is nothing the skill can act on, and it must never displace a condition that is.
+
+Two orderings are deliberate:
+
+- **Sync the branch before diagnosing check failures**, because a stale branch is a common cause of them.
+- **Act on Copilot findings without waiting for in-flight checks**, because that work is durable: the fixes land whatever the checks go on to do. Requesting a review is perishable by comparison, so both request paths keep a passing-checks precondition. Every push invalidates a review rendered against the old head, which makes a review requested mid-check one that a check fix would throw away, and it spends a round against the step 7c budget either way.
 
 1. **PR is `MERGED` or `CLOSED`**: terminal. Report and stop.
 1. **`mergeStateStatus` is `DIRTY`**: conflicts with the base branch. Go to step 5.
 1. **`mergeStateStatus` is `BEHIND`**: go to step 5.
 1. **`mergeStateStatus` is `BLOCKED`**: do not treat this as a blocker and do not wait on it, but record it. It means a branch protection rule is unsatisfied, most often a required approving review. Continue evaluating the remaining conditions, and carry the `BLOCKED` state into every status line and into the terminal report per step 8.
 1. **Any check concluded with a failure**: go to step 6.
-1. **Checks pending or running**: wait, then return to step 3.
-1. **Checks pass and Copilot is missing or stale**: go to step 7.
-1. **Copilot reviewed the current head with open threads or findings**: go to step 7.
-1. **Copilot reviewed the current head cleanly, `--confirm-clean` is set, and this is the first such review**: go to step 7d to request and await the confirming review.
+1. **Copilot reviewed the current head with open threads or findings**: go to step 7b. Checks still running do not hold this back.
+1. **Checks pass and Copilot is missing or stale**: go to step 7a.
+1. **Checks pass, Copilot reviewed the current head cleanly, `--confirm-clean` is set, and this is the first such review**: go to step 7d to request and await the confirming review.
 1. **All four axes clean**: terminal. Go to step 8.
+1. **Nothing above matched**: wait, then return to step 3. Checks pending or running with nothing else to act on is the usual case.
 
 Under `--no-fix`, replace steps 5, 6, and 7 with a report of what would have been done, then continue waiting.
 
@@ -239,6 +248,10 @@ Pass the `OWNER`, `REPO`, and `PR_NUMBER` recorded in step 1. That skill's scrip
 
 Only invoke it once a review exists at the current head. Invoking it earlier makes it report `No unresolved Copilot feedback` and post a no-op summary comment, which reads as a clean bill of health for code Copilot never saw.
 
+**Invoke it at most once per review.** Record the review `id` each invocation is made against, taken from the step 3 probe. **Do not key this on the head SHA.** Step 7d deliberately requests a second review against the same head, so a SHA key conflates two distinct reviews: it would either suppress the confirming review's findings as already processed or escalate it as a repeat when it is genuinely new. The `id` is the only field that separates them. If it reports `Completed` or `No unresolved Copilot feedback` and the next snapshot still matches step 4's findings condition against that same review id, nothing further will change on its own: a second invocation has no new input to work from, and the step 7c budget will not stop the cycle because it counts completed reviews rather than invocations. Escalate per step 9 instead. A new review or a push is what makes another invocation meaningful.
+
+**Both feedback sources count here, and the review body is the one that traps.** An open thread at least clears when it is resolved, so a repeat there means something genuinely failed. A review-body finding has no thread to resolve and review bodies are immutable, so it stays visible in that review permanently: `resolve-copilot-pr-feedback` records it as handled in its own summary comment and reads that record back on its next run. A guard keyed on open threads alone would never fire in precisely the case that loops.
+
 #### 7c. Round Budget
 
 Count Copilot rounds for this watch. The default budget is **10**. On reaching it, stop and report per step 9, then ask whether to continue and for how many more rounds.
@@ -330,5 +343,6 @@ The terminal report uses the same table plus the readiness verdict for all four 
 - **No checks configured on the repository**: Not an error. Treat the checks axis as clean and say so explicitly in the report.
 - **`merge-main` stops on conflicts it cannot resolve**: Escalate with the conflicted file list.
 - **`resolve-copilot-pr-feedback` reports `Partial` or `Failed`**: Escalate with its failure details.
+- **`resolve-copilot-pr-feedback` reports `Completed` or `No unresolved Copilot feedback` but step 4's findings condition still matches the same review**: Escalate per step 9. This covers an open thread and a review-body finding alike, and the body case is the one that cannot clear on its own. Do not invoke the skill again against the same review, per step 7b.
 - **Copilot never reviews despite an explicit request**: Escalate. Copilot review may be disabled for the repository, in which case the user must decide whether to proceed without it.
 - **Push rejected because the remote moved**: Someone else pushed to the branch. Re-poll, sync per step 5, and retry once. If it is rejected again, escalate.
