@@ -20,7 +20,7 @@ Each sync:
 
 1. Finds the previous board, whether it was published in this conversation or an earlier one, so the same URL updates instead of a second board appearing.
 2. Gathers the source data and writes the board's analysis as JSON.
-3. Validates it with the bundled `report-board` script, which rejects a board that leaves an open issue out of every lane, cites a blocker that has closed, or recommends starting work already in progress.
+3. Validates it with the bundled `report-board` script, which rejects a board that leaves an open issue out of every lane, waits on an issue that has closed, or recommends starting work already in progress.
 4. Renders it into the board type's page template.
 5. On a re-sync, compares it with the previous board and reports what changed.
 6. Publishes it, then reports the URL, the revision it was synced against, and the changes.

@@ -78,7 +78,7 @@ Write the data as JSON to the working `.json` path with the Write tool, then val
 bash REPORT_BOARD validate DATA_JSON
 ```
 
-Fix every problem it lists, then validate again. The rules catch a stale board: an open issue left out of every lane, a blocker that has since closed, a start pick that is already in progress. Resolve each by placing or correcting the item, never by deleting an open issue from the data.
+Fix every problem it lists, then validate again. The rules catch a stale board: an open issue left out of every lane, a blocking issue that has since closed, a start pick that is already in progress. They check pull request, branch, and cross-repository references only for their shape, so confirm those are still open while gathering. Resolve each by placing or correcting the item, never by deleting an open issue from the data.
 
 ### 7. Render
 

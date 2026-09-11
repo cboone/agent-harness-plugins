@@ -146,7 +146,7 @@ else
     check($d.title | is_text; "title: expected text naming the board, such as \"agent-harness-plugins backlog\""),
     check($d.repo | is_text and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"); "repo: expected owner/name"),
     check($d.repoUrl | absent_or(is_text and test("^https://[^\\s\"<>?#]+$")); "repoUrl: expected an https:// URL with no query or fragment"),
-    check($d.summary | is_text; "summary: expected one or two sentences"),
+    check($d.summary | is_text; "summary: expected text summarizing the board"),
 
     (if ($d.sync | type) != "object" then "sync: expected an object with at, branch, and commit"
      else
@@ -349,16 +349,18 @@ def names($list): $list | map(ref_text) | join(", ");
 def same_set($a; $b): ($a | sort) == ($b | sort);
 def shown: if . == null then "none" else tojson end;
 def picks: [.startNow | as_list | .[] | objects | .issue];
-# The sync line, with the open pull request count and extra markers the
-# footer shows, so a change to either reaches the report.
+# The sync line, with the zone, open pull request count, and extra markers
+# the page shows, so a change to any of them reaches the report.
 def synced: (.sync | if type == "object" then . else {} end) as $s
+  | ($s.timeZone | if type == "string" then " in \(.)" else "" end) as $zone
   | ($s.openPullRequests | if type == "number" then ", \(.) open pull \(if . == 1 then "request" else "requests" end)" else "" end) as $prs
   | ($s.extra | if type == "array" then map(", \(.)") | join("") else "" end) as $extra
-  | "\($s.branch // "unknown branch") at \(($s.commit // "unknown") | tostring | .[0:8]), \($s.at // "unknown time")\($prs)\($extra)";
+  | "\($s.branch // "unknown branch") at \(($s.commit // "unknown") | tostring | .[0:8]), \($s.at // "unknown time")\($zone)\($prs)\($extra)";
 def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($items | join("; "))" else empty end;
 def lanes_of: [.lanes | as_list | .[] | objects | select(.key != null)];
 def lane_map: lanes_of | map({key: (.key | tostring), value: .}) | from_entries;
 def claim_map: [.contention | objects | .claims | as_list | .[] | objects | select(.name != null) | {key: (.name | tostring), value: .}] | from_entries;
+def claim_names: [.contention | objects | .claims | as_list | .[] | objects | .name | select(. != null) | tostring];
 def pick_map: [.startNow | as_list | .[] | objects | select(.issue != null) | {key: (.issue | tostring), value: .}] | from_entries;
 def notes_of: .notes | if type == "object" then . else {} end;
 def numbers: map("#\(.)") | join(", ");
@@ -409,8 +411,10 @@ $previous[0] as $old
     entry("Changed contention"; [
       ($new_claims | to_entries[] | select($old_claims[.key] == null) | "claim \(.key) added (\(.value.issues | as_list | numbers))"),
       ($old_claims | to_entries[] | select($new_claims[.key] == null) | "claim \(.key) removed"),
-      ($new_claims | to_entries[] | $old_claims[.key] as $o | select($o != null and (same_set(.value.issues | as_list; $o.issues | as_list) | not)) | "claim \(.key) (\($o.issues | as_list | numbers) to \(.value.issues | as_list | numbers))"),
+      # The page draws the claims, and the issues in each, in the order given.
+      ($new_claims | to_entries[] | $old_claims[.key] as $o | select($o != null and ($o.issues | as_list) != (.value.issues | as_list)) | "claim \(.key) (\($o.issues | as_list | numbers) to \(.value.issues | as_list | numbers))"),
       ($new_claims | to_entries[] | $old_claims[.key] as $o | select($o != null and ($o.query // null) != (.value.query // null)) | "claim \(.key) search (\($o.query // null | shown) to \(.value.query // null | shown))"),
+      (select(reordered($old | claim_names; $new | claim_names)) | "claim order (now \($new | claim_names | join(", ")))"),
       (select(($old.contention | type) == "object" and ($new.contention | type) == "object" and ($old.contention.rowLabel // null) != ($new.contention.rowLabel // null)) | "row label (\($old.contention.rowLabel // "none") to \($new.contention.rowLabel // "none"))")
     ]),
     entry("Changed milestones"; [select(($old.milestones | as_list) != ($new.milestones | as_list)) | $new.milestones | as_list | map(objects | .title // "") | join(", ") | if . == "" then "none" else "now \(.)" end]),
@@ -562,14 +566,17 @@ function write_output() {
   [[ -d "${output_dir}" ]] || die "${E_INVALID}" "directory ${output_dir} does not exist"
   temp_file="$(mktemp "${output_dir}/.report-board.XXXXXX")" || die "${E_INVALID}" "cannot write to ${output_dir}"
 
-  # mktemp creates the file readable by its owner alone. Give the page the
-  # mode any other new file gets under the current umask.
+  # mktemp creates the file for its owner alone, or for nobody under a umask
+  # that denies the owner too. Fill it in as the owner, then give the page
+  # the mode any other new file gets under the current umask.
   current_umask="$(umask)"
   mode="$(printf '%o' "$((8#666 & ~8#${current_umask}))")"
-  chmod -- "${mode}" "${temp_file}"
-
-  printf '%s' "${content}" > "${temp_file}"
-  if ! mv -- "${temp_file}" "${output_file}"; then
+  if ! {
+    chmod -- 600 "${temp_file}" \
+      && printf '%s' "${content}" > "${temp_file}" \
+      && chmod -- "${mode}" "${temp_file}" \
+      && mv -- "${temp_file}" "${output_file}"
+  }; then
     rm -f -- "${temp_file}"
     die "${E_INVALID}" "cannot write ${output_file}"
   fi

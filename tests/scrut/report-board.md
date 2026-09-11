@@ -324,7 +324,7 @@ report-board: */data.json is not valid board data: (glob)
 ```scrut
 $ dir="$(mktemp -d)" && jq 'del(.summary, .sync.commit) | .lanes[1].mode = "parallel"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
-  - summary: expected one or two sentences
+  - summary: expected text summarizing the board
   - sync.commit: expected the full commit SHA
   - lane L2: mode must be serial, head, or any
 [1]
@@ -434,8 +434,8 @@ report-board: */page.html holds more than one JSON document in its board data (g
 
 ```scrut
 $ "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${REPORT_BOARD_DATA_DIR}/backlog-triage-next.json"
-Previous sync: main at 01234567, 2026-09-01T09:30:00-04:00, 1 open pull request, 12 packages
-This sync: main at 89abcdef, 2026-09-08T10:15:00-04:00, 0 open pull requests
+Previous sync: main at 01234567, 2026-09-01T09:30:00-04:00 in America/New_York, 1 open pull request, 12 packages
+This sync: main at 89abcdef, 2026-09-08T10:15:00-04:00 in America/New_York, 0 open pull requests
 
 - Closed: #101 parser: replace the tokenizer; #103 cli: report parse errors with columns; #105 docs: fix broken links
 - Opened: #108 parser: benchmark suite
@@ -506,6 +506,19 @@ A reference written with its keys in another order is the same reference.
 $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"pr": 12, "title": "palette"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq '.title = "gadgets backlog" | .repo = "example/gadgets" | .contention.claims[0].query = "label:parser" | (.issues[] | select(.number == 107)) += {"waitingOn": [{"title": "palette", "pr": 12}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n +4
 - Changed board identity: title ("widgets backlog" to "gadgets backlog"); repo ("example/widgets" to "example/gadgets")
 - Changed contention: claim parser search (none to "label:parser")
+```
+
+## Compare reports a changed zone and the order of claims
+
+The page draws the sync time in its zone, and each claim and its issues in
+the order given.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.sync.timeZone = "Europe/Lisbon" | .contention.claims |= reverse | .contention.claims[1].issues = [102, 101, 104]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/data.json"
+Previous sync: main at 01234567, 2026-09-01T09:30:00-04:00 in America/New_York, 1 open pull request, 12 packages
+This sync: main at 01234567, 2026-09-01T09:30:00-04:00 in Europe/Lisbon, 1 open pull request, 12 packages
+
+- Changed contention: claim parser (#101, #102, #104 to #102, #101, #104); claim order (now cli, parser)
 ```
 
 ## Compare with nothing changed
@@ -631,6 +644,15 @@ report-board: * is a directory; name the page file to write (glob)
 ```scrut
 $ page="$(mktemp -d)/board.html" && (umask 022 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" 2> /dev/null) && ls -l "${page}" | cut -c1-10
 -rw-r--r--
+```
+
+## A umask that denies even the owner
+
+The page still renders, and like any new file under that umask, it has no permissions.
+
+```scrut
+$ page="$(mktemp -d)/board.html" && (umask 0777 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" 2> /dev/null) && ls -l "${page}" | cut -c1-10
+----------
 ```
 
 ## A data file whose name starts with a dash
