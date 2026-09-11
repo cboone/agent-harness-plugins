@@ -107,7 +107,7 @@ No plan file exists for this branch, so the review measures it against issue #36
 
 ### Deviations
 
-- **Scope reduction: one board type instead of four.** The issue proposed references for backlog triage, CI health, release readiness, and verification gaps. Only backlog triage ships, as agreed when the work began, and the skill says plainly that other board types are not built. No follow-up issues are filed yet.
+- **Scope reduction: one board type instead of four.** The issue proposed references for backlog triage, CI health, release readiness, and verification gaps. Only backlog triage ships, as agreed when the work began, and the skill says plainly that other board types are not built. By decision after the review, no follow-up issues are filed for the others.
 - **Scope additions.** The Catamount template, the `extract` and `compare` subcommands, blocker references, the "better after" relation, the milestone-free layout, and the sync-age thresholds all go beyond the issue text. Each came from an explicit request during the work, and each serves the issue's own goals of trustworthy re-syncs and scannable boards.
 
 ### Fidelity Concerns
@@ -162,7 +162,6 @@ Two independent reviewers examined the script and the template, alongside a docu
 
 ### Suggestions
 
-- File follow-up issues for the remaining board types, so the scope reduction is tracked.
 - Run the `check-versions` skill immediately before opening the pull request, in case `main` moves.
 
 ## Verification
@@ -171,3 +170,9 @@ Two independent reviewers examined the script and the template, alongside a docu
 - `make validate`: every JSON file and plugin rule passes.
 - `make test-scrut`: 135 cases across 6 suites pass, 55 of them in `tests/scrut/report-board.md`.
 - Both preview boards validate, render, and are published on the final template.
+
+## Decisions
+
+- **Remaining board types**: no follow-up issues. The skill's own statement that only backlog triage ships is the record.
+- **Pull request**: held until the design rounds on typefaces and colors are done.
+- **References in `after`**: accepted after the review. `after` now takes the same forms as `waitingOn`, so a pull request, a branch, or another repository's issue can be what an issue is better started after.
