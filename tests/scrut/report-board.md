@@ -90,7 +90,7 @@ report-board: */data.json is not valid board data: (glob)
 ```scrut
 $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 102) | .waitingOn) = [99]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
-  - #102 waits on #99, which is not in issues; drop closed blockers
+  - #102 waits on #99, which is not an open issue on this board; drop it if it has closed, or name it as a reference
 [1]
 ```
 
@@ -100,6 +100,39 @@ report-board: */data.json is not valid board data: (glob)
 $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 102)) |= del(.blockedBecause)' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
   - #102: blockedBecause is required when waitingOn is set
+[1]
+```
+
+## Blockers that are not issues on the board
+
+A blocker can also be a pull request, a branch that has to merge, an issue in
+another repository, or any linked page.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"pr": 12, "title": "palette API"}, {"branch": "feature/palette"}, {"ref": "example/themes#3"}, {"url": "https://example.com/spec", "label": "the color spec"}], "blockedBecause": "Needs the palette."}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is valid: 7 issues in 3 lanes (glob)
+```
+
+## Malformed blocker references
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"pr": "12"}, {"branch": "has space"}, {"ref": "themes#3"}, {"url": "http://example.com", "label": "spec"}, {"pr": 1, "branch": "x"}, "soon"], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #107: each waitingOn entry is an issue number or a reference object
+  - #107: a waitingOn pr must be a pull request number
+  - #107: a waitingOn branch must be a branch name
+  - #107: a waitingOn ref must look like owner/repo#123
+  - #107: a waitingOn url needs an https:// address and a label
+  - #107: each waitingOn reference names exactly one of pr, branch, ref, or url
+[1]
+```
+
+## Start now rejects an issue blocked by a reference
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"pr": 12}], "blockedBecause": "x"} | .startNow += [{"issue": 107, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - startNow #107 waits on PR #12 and cannot start
 [1]
 ```
 
@@ -188,6 +221,13 @@ This sync: main at 89abcdef, 2026-09-08T10:15:00-04:00
 ```scrut
 $ page="$(mktemp -d)/board.html" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" 2> /dev/null && "${REPORT_BOARD_BIN}" compare "${page}" "${REPORT_BOARD_DATA_DIR}/backlog-triage-next.json" | tail -n 1
 - Changed milestone: #107 cli: color output (none to Parser rewrite)
+```
+
+## Compare names reference blockers
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"branch": "feature/palette"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/data.json" | tail -n 1
+- Newly blocked: #107 cli: color output (waits on branch feature/palette)
 ```
 
 ## Compare with nothing changed

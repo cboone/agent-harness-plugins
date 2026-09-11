@@ -54,6 +54,13 @@ def is_int_list: type == "array" and all(.[]; is_int);
 def absent_or(f): . == null or f;
 def check(condition; message): if condition then empty else message end;
 def duplicates: group_by(.) | map(select(length > 1) | .[0]) | .[];
+def ref_text:
+  if type == "number" then "#\(.)"
+  elif type != "object" then tostring
+  elif .pr != null then "PR #\(.pr)"
+  elif .branch != null then "branch \(.branch)"
+  elif .ref != null then .ref
+  else (.label // .url // "a reference") end;
 
 if type != "object" then "the top level must be a JSON object"
 else
@@ -92,10 +99,21 @@ else
              check($issue.milestone | absent_or(is_text); "\($at): milestone must be text or null"),
              check($issue.short | absent_or(is_text); "\($at): short must be text"),
              check($issue.inProgress | absent_or(is_text); "\($at): inProgress must name the branch or pull request"),
-             (if ($issue.waitingOn | absent_or(is_int_list)) | not then "\($at): waitingOn must be a list of issue numbers"
+             (if ($issue.waitingOn | absent_or(type == "array")) | not then "\($at): waitingOn must be a list"
               else
-                ($waits[] | select(. == $issue.number) | "\($at) waits on itself"),
-                ($waits[] | select(. != $issue.number and (known | not)) | "\($at) waits on #\(.), which is not in issues; drop closed blockers"),
+                ($waits[] | select(type == "number") | select(is_int | not) | "\($at): waitingOn issue numbers must be whole numbers"),
+                ($waits[] | select(is_int) | select(. == $issue.number) | "\($at) waits on itself"),
+                ($waits[] | select(is_int) | select(. != $issue.number and (known | not)) | "\($at) waits on #\(.), which is not an open issue on this board; drop it if it has closed, or name it as a reference"),
+                ($waits[] | select(type != "number" and type != "object") | "\($at): each waitingOn entry is an issue number or a reference object"),
+                ($waits[] | objects
+                 | ([.pr, .branch, .ref, .url] | map(select(. != null)) | length) as $kinds
+                 | if $kinds != 1 then "\($at): each waitingOn reference names exactly one of pr, branch, ref, or url"
+                   elif .pr != null then check(.pr | is_int and . > 0; "\($at): a waitingOn pr must be a pull request number")
+                   elif .branch != null then check(.branch | is_text and test("^\\S+$"); "\($at): a waitingOn branch must be a branch name")
+                   elif .ref != null then check(.ref | is_text and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$"); "\($at): a waitingOn ref must look like owner/repo#123")
+                   else check((.url | is_text and test("^https://[^\\s\"<>]+$")) and (.label | is_text); "\($at): a waitingOn url needs an https:// address and a label")
+                   end,
+                   check(.title | absent_or(is_text); "\($at): a waitingOn title must be text")),
                 (if ($waits | length) > 0 and (($issue.blockedBecause | is_text) | not) then "\($at): blockedBecause is required when waitingOn is set"
                  elif ($waits | length) == 0 and $issue.blockedBecause != null then "\($at): blockedBecause is set but waitingOn is empty"
                  else empty end)
@@ -149,7 +167,7 @@ else
              else
                check($pick.why | is_text; "\($at): why is required"),
                check($pick.touches | absent_or(is_text); "\($at): touches must be text"),
-               (if (($target.waitingOn // []) | length) > 0 then "\($at) waits on \($target.waitingOn | map("#\(.)") | join(", ")) and cannot start" else empty end),
+               (if (($target.waitingOn // []) | length) > 0 then "\($at) waits on \($target.waitingOn | map(ref_text) | join(", ")) and cannot start" else empty end),
                (if $target.inProgress != null then "\($at) is already in progress on \($target.inProgress)" else empty end),
                (if $target.sameBranchAs != null then "\($at) shares a branch with #\($target.sameBranchAs); list #\($target.sameBranchAs) instead" else empty end)
              end
@@ -201,7 +219,14 @@ def by_number: map({key: (.number | tostring), value: .}) | from_entries;
 def lanes_by_issue: [(.lanes // [])[] | .key as $key | (.issues // [])[] | {key: tostring, value: $key}] | from_entries;
 def describe: "#\(.number) \(.short // .title)";
 def is_blocked: ((.waitingOn // []) | length) > 0;
-def blockers: (.waitingOn // []) | map("#\(.)") | join(", ");
+def ref_text:
+  if type == "number" then "#\(.)"
+  elif type != "object" then tostring
+  elif .pr != null then "PR #\(.pr)"
+  elif .branch != null then "branch \(.branch)"
+  elif .ref != null then .ref
+  else (.label // .url // "a reference") end;
+def blockers: (.waitingOn // []) | map(ref_text) | join(", ");
 def picks: [(.startNow // [])[] | .issue];
 def synced: "\(.sync.branch // "unknown branch") at \((.sync.commit // "unknown")[0:8]), \(.sync.at // "unknown time")";
 def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($items | join("; "))" else empty end;

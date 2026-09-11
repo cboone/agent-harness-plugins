@@ -38,7 +38,9 @@ Detect it the way the `suggest-next-issue` skill does. An issue is in progress w
 
 ### 2. Dependencies
 
-Scan each body for references to other open issues, such as "blocked by #N", "depends on #N", "after #N", or "needs #N", and confirm that each is an ordering constraint rather than a passing mention. Record it as `waitingOn`, with `blockedBecause` saying what the blocker settles. Drop blockers that have closed: a closed blocker is no longer a reason.
+Scan each body for references to other open issues, such as "blocked by #N", "depends on #N", "after #N", or "needs #N", and confirm that each is an ordering constraint rather than a passing mention. Record it as `waitingOn`, with `blockedBecause` saying what the blocker settles.
+
+An issue can also wait on something that is not an open issue on this board: a pull request, a branch that has to merge, an issue in another repository, or anything else with a URL. Record each as a reference, as [Blocker References](#blocker-references) describes, rather than in a lane note, so the board counts the issue as blocked and links to what it waits on. Drop blockers that have closed or merged: a finished blocker is no longer a reason.
 
 ### 3. Footprints and Contention
 
@@ -95,16 +97,29 @@ Write `summary`, each lane's `note`, each `blockedBecause`, and any section note
 
 ### Issues
 
-| Field            | Required         | Contents                                                                      |
-| ---------------- | ---------------- | ----------------------------------------------------------------------------- |
-| `number`         | Yes              | The issue number                                                              |
-| `title`          | Yes              | The GitHub title, verbatim                                                    |
-| `milestone`      | Yes              | The milestone title verbatim, or `null`                                       |
-| `short`          | No               | A shorter title for the start and blocked lists, such as one without a prefix |
-| `waitingOn`      | No               | The open issues this one waits on                                             |
-| `blockedBecause` | With `waitingOn` | Why it cannot start yet                                                       |
-| `sameBranchAs`   | No               | The issue whose branch this one ships on                                      |
-| `inProgress`     | No               | The branch or pull request carrying the work                                  |
+| Field            | Required         | Contents                                                                                  |
+| ---------------- | ---------------- | ----------------------------------------------------------------------------------------- |
+| `number`         | Yes              | The issue number                                                                          |
+| `title`          | Yes              | The GitHub title, verbatim                                                                |
+| `milestone`      | Yes              | The milestone title verbatim, or `null`                                                   |
+| `short`          | No               | A shorter title for the start and blocked lists, such as one without a prefix             |
+| `waitingOn`      | No               | What this one waits on: issue numbers on this board, or [references](#blocker-references) |
+| `blockedBecause` | With `waitingOn` | Why it cannot start yet                                                                   |
+| `sameBranchAs`   | No               | The issue whose branch this one ships on                                                  |
+| `inProgress`     | No               | The branch or pull request carrying the work                                              |
+
+### Blocker References
+
+Each `waitingOn` entry is an open issue number on this board, or an object naming exactly one of these:
+
+| Form                                       | Waits on                                       | Links to                                   |
+| ------------------------------------------ | ---------------------------------------------- | ------------------------------------------ |
+| `{ "pr": 390 }`                            | A pull request in this repository              | The pull request                           |
+| `{ "branch": "fix/remove-floating-tags" }` | A branch in this repository that has to merge  | The branch compared with the synced branch |
+| `{ "ref": "OWNER/REPO#17" }`               | An issue or pull request in another repository | That issue or pull request                 |
+| `{ "url": "https://…", "label": "…" }`     | Anything else                                  | The URL, under the label                   |
+
+Any form but `url` may add a `title`, which the Blocked section shows beside the link. That section's "Freed from" column names the lane for an issue on the board, and the kind of reference otherwise.
 
 ### Lanes and Picks
 
@@ -136,12 +151,14 @@ Capacity follows the lane's mode: one branch at a time for a serial or head lane
 
 When no open issue has a milestone, the page drops the milestone column and chips, heads the contention matrix's single column "Claimed by", and says so in the footer rather than counting zero milestones.
 
+When nothing is blocked, the Blocked section shrinks to its heading and the words "Nothing is blocked."
+
 ## Validation
 
 `report-board validate` rejects data that breaks any of these rules, and lists every problem at once:
 
 - Every open issue sits in exactly one lane, and lanes list only issues on the board.
-- `waitingOn` names only issues on the board, never the issue itself, and always comes with `blockedBecause`.
+- `waitingOn` lists open issues on the board, never the issue itself, or well-formed references, and always comes with `blockedBecause`.
 - `sameBranchAs` names an issue in the same lane that does not itself ship on another branch.
 - A start pick is on the board, and is not blocked, not in progress, and not riding on another issue's branch.
 - Required fields are present and well formed, issue numbers and lane keys are unique, and every `mode` is `serial`, `head`, or `any`.
