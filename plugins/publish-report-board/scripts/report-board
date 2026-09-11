@@ -19,9 +19,22 @@
 #   2 - Usage error, or jq is missing
 set -euo pipefail
 
+# Prints the directory holding this script, following symlinks so the
+# templates are found beside the real script rather than beside a link to it.
+function resolve_script_dir() {
+  local path="${BASH_SOURCE[0]}"
+  local link_dir
+  while [[ -L "${path}" ]]; do
+    link_dir="$(cd -P -- "$(dirname -- "${path}")" && pwd)"
+    path="$(readlink "${path}")"
+    [[ "${path}" == /* ]] || path="${link_dir}/${path}"
+  done
+  cd -P -- "$(dirname -- "${path}")" && pwd
+}
+
 SCRIPT_NAME="${0##*/}"
 readonly SCRIPT_NAME
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(resolve_script_dir)"
 readonly SCRIPT_DIR
 readonly TEMPLATE_DIR="${SCRIPT_DIR}/../templates"
 
@@ -45,12 +58,15 @@ readonly STANDALONE_OPENING='<!DOCTYPE html>
 
 # Emits one line per problem and nothing when the data is valid. Messages avoid
 # apostrophes because the filter lives inside a single-quoted shell string.
+# Every field is type-checked before it is used, so malformed data produces a
+# message rather than a jq error.
 # The $names in the filter are jq bindings, not shell expansions.
 # shellcheck disable=SC2016
 readonly VALIDATE_FILTER='
 def is_int: type == "number" and . == floor;
 def is_text: type == "string" and test("\\S");
 def is_int_list: type == "array" and all(.[]; is_int);
+def as_list: if type == "array" then . else [] end;
 def absent_or(f): . == null or f;
 def check(condition; message): if condition then empty else message end;
 def duplicates: group_by(.) | map(select(length > 1) | .[0]) | .[];
@@ -67,9 +83,21 @@ else
   . as $d
   | ($d.issues | if type == "array" then [.[] | objects] else [] end) as $issue_list
   | [$issue_list[] | .number | select(is_int)] as $numbers
-  | ($d.lanes | if type == "array" then [.[] | objects | (.issues | if type == "array" then .[] else empty end)] else [] end) as $placed
+  | [$d.lanes | as_list | .[] | objects | .issues | as_list | unique[]] as $placed
   | def known: . as $n | any($numbers[]; . == $n);
     def issue($n): first($issue_list[] | select(.number == $n)) // null;
+    def root($n): (issue($n) | .sameBranchAs | select(is_int)) // $n;
+    def graph($field):
+      [$issue_list[] | select(.number | is_int) | .number as $num
+       | {key: ($num | tostring), value: (.[$field] | as_list | map(select(is_int and . != $num)))}]
+      | from_entries;
+    def in_loop($g; $start):
+      {todo: ($g[$start | tostring] // []), seen: []}
+      | until((.todo | length) == 0;
+          .todo[0] as $n
+          | .todo |= .[1:]
+          | if any(.seen[]; . == $n) then . else .seen += [$n] | .todo += ($g[$n | tostring] // []) end)
+      | any(.seen[]; . == $start);
   (
     check($d.board | is_text and test("^[a-z0-9][a-z0-9-]*$"); "board: expected a board type such as \"backlog-triage\""),
     check($d.title | is_text; "title: expected text naming the board, such as \"agent-harness-plugins backlog\""),
@@ -79,7 +107,7 @@ else
 
     (if ($d.sync | type) != "object" then "sync: expected an object with at, branch, and commit"
      else
-       check($d.sync.at | is_text and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?(Z|[+-][0-9]{2}:[0-9]{2})$"); "sync.at: expected an ISO 8601 time with a zone, such as 2026-09-10T19:43:00-04:00"),
+       check($d.sync.at | is_text and test("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9](\\.[0-9]+)?)?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$"); "sync.at: expected an ISO 8601 time with a zone, such as 2026-09-10T19:43:00-04:00"),
        check($d.sync.timeZone | absent_or(is_text); "sync.timeZone: expected an IANA zone name, such as America/New_York"),
        check($d.sync.branch | is_text; "sync.branch: expected the branch the board was synced against"),
        check($d.sync.commit | is_text and test("^[0-9a-f]{7,40}$"); "sync.commit: expected a commit SHA"),
@@ -129,8 +157,8 @@ else
               else
                 ($issue.after[] | select(. == $issue.number) | "\($at) is better after itself"),
                 ($issue.after[] | select(. != $issue.number and (known | not)) | "\($at) is better after #\(.), which is not an open issue on this board; drop it"),
-                ($issue.after[] | . as $a | select($waits | if type == "array" then any(.[]; . == $a) else false end) | "\($at) waits on #\(.) and is also better after it; keep only waitingOn"),
-                ($issue.after[] | select(. == $issue.sameBranchAs) | "\($at) shares a branch with #\(.), so it cannot also come after it")
+                ($issue.after[] | . as $a | select($waits | as_list | any(.[]; . == $a)) | "\($at) waits on #\(.) and is also better after it; keep only waitingOn"),
+                ($issue.after[] | select(. != $issue.number and known and root(.) == root($issue.number)) | "\($at) shares a branch with #\(.), so it cannot also come after it")
               end)
          end
      end),
@@ -148,7 +176,9 @@ else
              check($lane.owns | absent_or(is_text); "\($at): owns must be text"),
              check($lane.note | absent_or(is_text); "\($at): note must be text"),
              (if ($lane.issues | type == "array" and length > 0 and all(.[]; is_int)) | not then "\($at): issues must be a non-empty list of issue numbers"
-              else ($lane.issues[] | select(known | not) | "\($at) lists #\(.), which is not in issues")
+              else
+                ($lane.issues[] | select(known | not) | "\($at) lists #\(.), which is not in issues"),
+                ($lane.issues | duplicates | "\($at) lists #\(.) more than once")
               end)
          end
      end),
@@ -163,18 +193,8 @@ else
        | select((.sameBranchAs | is_int) and $lane_of[.number | tostring] != null and $lane_of[.sameBranchAs | tostring] != null)
        | select($lane_of[.number | tostring] != $lane_of[.sameBranchAs | tostring])
        | "#\(.number) shares a branch with #\(.sameBranchAs), but they sit in different lanes"),
-
-    ([$issue_list[] | select(.number | is_int) | .number as $num
-      | {key: ($num | tostring), value: ((.after // []) | if type == "array" then map(select(is_int and . != $num)) else [] end)}]
-     | from_entries) as $after_of
-    | ($issue_list[] | select(.number | is_int) | .number as $start
-       | {todo: ($after_of[$start | tostring] // []), seen: []}
-       | until((.todo | length) == 0;
-           .todo[0] as $n
-           | .todo |= .[1:]
-           | if any(.seen[]; . == $n) then . else .seen += [$n] | .todo += ($after_of[$n | tostring] // []) end)
-       | select(any(.seen[]; . == $start))
-       | "#\($start) is part of a better-after loop; break it"),
+    (graph("after") as $g | $numbers[] | select(in_loop($g; .)) | "#\(.) is part of a better-after loop; break it"),
+    (graph("waitingOn") as $g | $numbers[] | select(in_loop($g; .)) | "#\(.) is part of a blocking loop; break it"),
 
     (if ($d.startNow | type) != "array" then "startNow: expected a list, empty when nothing can start"
      else
@@ -187,11 +207,11 @@ else
              else
                check($pick.why | is_text; "\($at): why is required"),
                check($pick.touches | absent_or(is_text); "\($at): touches must be text"),
-               (if (($target.waitingOn // []) | length) > 0 then "\($at) waits on \($target.waitingOn | map(ref_text) | join(", ")) and cannot start" else empty end),
+               (if ($target.waitingOn | type == "array" and length > 0) then "\($at) waits on \($target.waitingOn | map(ref_text) | join(", ")) and cannot start" else empty end),
                (if $target.inProgress != null then "\($at) is already in progress on \($target.inProgress)" else empty end),
                (if $target.sameBranchAs != null then "\($at) shares a branch with #\($target.sameBranchAs); list #\($target.sameBranchAs) instead" else empty end),
-               (if (($target.after // []) | type == "array" and length > 0) then "\($at) is better after \($target.after | map("#\(.)") | join(", ")) and should not start before it lands" else empty end),
-               ([$issue_list[] | select(.sameBranchAs == $pick.issue) | select((.after // []) | type == "array" and any(.[]; . != $pick.issue)) | "#\(.number)"] as $held
+               (if ($target.after | type == "array" and length > 0) then "\($at) is better after \($target.after | map("#\(.)") | join(", ")) and should not start before it lands" else empty end),
+               ([$issue_list[] | select(.sameBranchAs == $pick.issue) | select(.after | type == "array" and any(.[]; . != $pick.issue)) | "#\(.number)"] as $held
                 | if ($held | length) > 0 then "\($at) shares its branch with \($held | join(", ")), which should wait for another open issue" else empty end)
              end
          end
@@ -218,7 +238,7 @@ else
             else
               "contention \($claim.name)" as $at
               | check($claim.query | absent_or(is_text); "\($at): query must be text"),
-                (if ($claim.issues | type == "array" and length >= 2 and all(.[]; is_int)) | not then "\($at): issues must list at least two issue numbers"
+                (if ($claim.issues | type == "array" and all(.[]; is_int) and (unique | length) >= 2) | not then "\($at): issues must list at least two different issue numbers"
                  else ($claim.issues[] | select(known | not) | "\($at) lists #\(.), which is not in issues")
                  end)
             end
@@ -234,14 +254,12 @@ end
 '
 
 # Reads two boards bound as $previous and $current (each a one-element array
-# from --slurpfile) and emits a plain-text change report. As above, the $names
-# are jq bindings.
+# from --slurpfile) and emits a plain-text change report. Fields of the wrong
+# type count as empty, so an older or damaged board still compares.
+# As above, the $names are jq bindings.
 # shellcheck disable=SC2016
 readonly COMPARE_FILTER='
-def by_number: map({key: (.number | tostring), value: .}) | from_entries;
-def lanes_by_issue: [(.lanes // [])[] | .key as $key | (.issues // [])[] | {key: tostring, value: $key}] | from_entries;
-def describe: "#\(.number) \(.short // .title)";
-def is_blocked: ((.waitingOn // []) | length) > 0;
+def as_list: if type == "array" then . else [] end;
 def ref_text:
   if type == "number" then "#\(.)"
   elif type != "object" then tostring
@@ -249,29 +267,40 @@ def ref_text:
   elif .branch != null then "branch \(.branch)"
   elif .ref != null then .ref
   else (.label // .url // "a reference") end;
-def blockers: (.waitingOn // []) | map(ref_text) | join(", ");
-def picks: [(.startNow // [])[] | .issue];
-def synced: "\(.sync.branch // "unknown branch") at \((.sync.commit // "unknown")[0:8]), \(.sync.at // "unknown time")";
+def issues_of: .issues | as_list | map(objects | select(.number != null));
+def by_number: map({key: (.number | tostring), value: .}) | from_entries;
+def lanes_by_issue: [.lanes | as_list | .[] | objects | .key as $key | .issues | as_list | .[] | {key: tostring, value: $key}] | from_entries;
+def describe: "#\(.number) \(.short // .title)";
+def waits: .waitingOn | as_list;
+def afters: .after | as_list;
+def is_blocked: (waits | length) > 0;
+def names($list): $list | map(ref_text) | join(", ");
+def same_set($a; $b): ($a | map(tojson) | sort) == ($b | map(tojson) | sort);
+def picks: [.startNow | as_list | .[] | objects | .issue];
+def synced: (.sync | if type == "object" then . else {} end) as $s | "\($s.branch // "unknown branch") at \(($s.commit // "unknown") | tostring | .[0:8]), \($s.at // "unknown time")";
 def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($items | join("; "))" else empty end;
 
 $previous[0] as $old
 | $current[0] as $new
-| ($old.issues // [] | by_number) as $was
-| ($new.issues // [] | by_number) as $now
+| ($old | issues_of | by_number) as $was
+| ($new | issues_of | by_number) as $now
 | ($old | lanes_by_issue) as $old_lane
 | ($new | lanes_by_issue) as $new_lane
-| [($new.issues // [])[] | select($was[.number | tostring] != null)] as $kept
+| [$new | issues_of | .[] | select($was[.number | tostring] != null)] as $kept
 | [
-    entry("Closed"; [($old.issues // [])[] | select($now[.number | tostring] == null) | describe]),
-    entry("Opened"; [($new.issues // [])[] | select($was[.number | tostring] == null) | describe]),
-    entry("Newly blocked"; [$kept[] | select(is_blocked and ($was[.number | tostring] | is_blocked | not)) | "\(describe) (waits on \(blockers))"]),
+    entry("Closed"; [$old | issues_of | .[] | select($now[.number | tostring] == null) | describe]),
+    entry("Opened"; [$new | issues_of | .[] | select($was[.number | tostring] == null) | describe]),
+    entry("Newly blocked"; [$kept[] | select(is_blocked and ($was[.number | tostring] | is_blocked | not)) | "\(describe) (waits on \(names(waits)))"]),
     entry("Unblocked"; [$kept[] | select((is_blocked | not) and ($was[.number | tostring] | is_blocked)) | describe]),
-    entry("Now better after"; [$kept[] | select(((.after // []) | length) > 0 and ((($was[.number | tostring].after // []) | length) == 0)) | "\(describe) (after \(.after | map("#\(.)") | join(", ")))"]),
-    entry("No longer better after"; [$kept[] | select(((.after // []) | length) == 0 and ((($was[.number | tostring].after // []) | length) > 0)) | describe]),
-    entry("Started"; [($new.issues // [])[] | select(.inProgress != null and ($was[.number | tostring].inProgress == null)) | "\(describe) (\(.inProgress))"]),
+    entry("Blockers changed"; [$kept[] | $was[.number | tostring] as $w | select(is_blocked and ($w | is_blocked) and (same_set(waits; $w | waits) | not)) | "\(describe) (was waiting on \(names($w | waits)), now \(names(waits)))"]),
+    entry("Now better after"; [$kept[] | select((afters | length) > 0 and (($was[.number | tostring] | afters | length) == 0)) | "\(describe) (after \(names(afters)))"]),
+    entry("No longer better after"; [$kept[] | select((afters | length) == 0 and (($was[.number | tostring] | afters | length) > 0)) | describe]),
+    entry("Better after changed"; [$kept[] | $was[.number | tostring] as $w | select((afters | length) > 0 and (($w | afters | length) > 0) and (same_set(afters; $w | afters) | not)) | "\(describe) (was after \(names($w | afters)), now \(names(afters)))"]),
+    entry("Started"; [$kept[] | select(.inProgress != null and $was[.number | tostring].inProgress == null) | "\(describe) (\(.inProgress))"]),
+    entry("Progress moved"; [$kept[] | $was[.number | tostring] as $w | select(.inProgress != null and $w.inProgress != null and .inProgress != $w.inProgress) | "\(describe) (\($w.inProgress) to \(.inProgress))"]),
     entry("No longer in progress"; [$kept[] | select(.inProgress == null and $was[.number | tostring].inProgress != null) | describe]),
-    entry("Added to start now"; [($new | picks) - ($old | picks) | .[] | $now[tostring] | describe]),
-    entry("Dropped from start now"; [($old | picks) - ($new | picks) | .[] | ($now[tostring] // $was[tostring]) | describe]),
+    entry("Added to start now"; [($new | picks) - ($old | picks) | .[] | ($now[tostring] // {number: ., title: "not on the board"}) | describe]),
+    entry("Dropped from start now"; [($old | picks) - ($new | picks) | .[] | ($now[tostring] // $was[tostring] // {number: ., title: "not on the board"}) | describe]),
     entry("Changed lanes"; [$kept[] | (.number | tostring) as $k | select($old_lane[$k] != null and $new_lane[$k] != null and $old_lane[$k] != $new_lane[$k]) | "\(describe) (\($old_lane[$k]) to \($new_lane[$k]))"]),
     entry("Changed milestone"; [$kept[] | (.number | tostring) as $k | select((.milestone // null) != ($was[$k].milestone // null)) | "\(describe) (\($was[$k].milestone // "none") to \(.milestone // "none"))"])
   ] as $changes
@@ -319,6 +348,22 @@ function require_file() {
   [[ -f "${path}" && -r "${path}" ]] || die "${E_INVALID}" "cannot read ${path}"
 }
 
+# Prints a path so that jq and awk read it as a file, never as an option.
+function operand() {
+  case "${1}" in
+    -*) printf './%s' "${1}" ;;
+    *) printf '%s' "${1}" ;;
+  esac
+}
+
+# Exits unless the file holds exactly one JSON document. jq accepts an empty
+# file, or several documents back to back, without complaint.
+function require_single_document() {
+  local data_file="${1}"
+  jq empty "${data_file}" 2> /dev/null || die "${E_INVALID}" "${data_file} is not valid JSON"
+  jq -e -s 'length == 1' "${data_file}" > /dev/null 2>&1 || die "${E_INVALID}" "${data_file} must hold exactly one JSON document"
+}
+
 # Prints "N issues in M lanes" for a data file already known to be valid.
 function board_summary() {
   local data_file="${1}"
@@ -333,7 +378,7 @@ function validate_data() {
   local data_file="${1}"
   local problems line
 
-  jq empty "${data_file}" 2> /dev/null || die "${E_INVALID}" "${data_file} is not valid JSON"
+  require_single_document "${data_file}"
   problems="$(jq -r "${VALIDATE_FILTER}" "${data_file}")"
   [[ -z "${problems}" ]] && return 0
 
@@ -374,11 +419,19 @@ function fill_template() {
 function write_output() {
   local output_file="${1}"
   local content="${2}"
-  local output_dir temp_file
+  local output_dir temp_file current_umask mode
 
+  [[ -d "${output_file}" ]] && die "${E_INVALID}" "${output_file} is a directory; name the page file to write"
   output_dir="$(dirname -- "${output_file}")"
   [[ -d "${output_dir}" ]] || die "${E_INVALID}" "directory ${output_dir} does not exist"
   temp_file="$(mktemp "${output_dir}/.report-board.XXXXXX")" || die "${E_INVALID}" "cannot write to ${output_dir}"
+
+  # mktemp creates the file readable by its owner alone. Give the page the
+  # mode any other new file gets under the current umask.
+  current_umask="$(umask)"
+  mode="$(printf '%o' "$((8#666 & ~8#${current_umask}))")"
+  chmod -- "${mode}" "${temp_file}"
+
   printf '%s' "${content}" > "${temp_file}"
   if ! mv -- "${temp_file}" "${output_file}"; then
     rm -f -- "${temp_file}"
@@ -386,18 +439,32 @@ function write_output() {
   fi
 }
 
-# Prints the raw payload of a rendered page's board-data script element.
-# Returns 1 when the page has none.
+# Prints the raw payload of a rendered page's board-data script element. It
+# reads line by line, so a large page costs time in proportion to its size.
+# Returns 1 when the page has no board data.
 function extract_payload() {
   local page_file="${1}"
-  local page payload
-
-  page="$(< "${page_file}")"
-  [[ "${page}" == *"${DATA_MARKER}"* ]] || return 1
-  payload="${page#*"${DATA_MARKER}"}"
-  payload="${payload#*>}"
-  [[ "${payload}" == *"${SCRIPT_CLOSE}"* ]] || return 1
-  printf '%s\n' "${payload%%"${SCRIPT_CLOSE}"*}"
+  awk -v marker="${DATA_MARKER}" -v close_tag="${SCRIPT_CLOSE}" '
+    !started {
+      at = index($0, marker)
+      if (at == 0) next
+      rest = substr($0, at)
+      open_end = index(rest, ">")
+      if (open_end == 0) next
+      $0 = substr(rest, open_end + 1)
+      started = 1
+    }
+    {
+      end_at = index($0, close_tag)
+      if (end_at > 0) {
+        print substr($0, 1, end_at - 1)
+        found = 1
+        exit
+      }
+      print
+    }
+    END { exit found ? 0 : 1 }
+  ' "${page_file}"
 }
 
 # Prints board data as formatted JSON, reading it out of a rendered page when
@@ -408,6 +475,7 @@ function read_board_data() {
 
   require_file "${source_file}"
   if jq -e 'type == "object"' "${source_file}" > /dev/null 2>&1; then
+    require_single_document "${source_file}"
     jq '.' "${source_file}"
     return 0
   fi
@@ -418,7 +486,8 @@ function read_board_data() {
 
 function cmd_validate() {
   [[ $# -eq 1 ]] || usage_error "validate takes one data file"
-  local data_file="${1}"
+  local data_file
+  data_file="$(operand "${1}")"
 
   require_file "${data_file}"
   validate_data "${data_file}"
@@ -432,9 +501,9 @@ function cmd_render() {
     shift
   fi
   [[ $# -eq 2 ]] || usage_error "render takes a data file and an output path"
-  local data_file="${1}"
-  local output_file="${2}"
-  local board template_file title_html payload page
+  local data_file output_file board template_file title_html payload page
+  data_file="$(operand "${1}")"
+  output_file="$(operand "${2}")"
 
   require_file "${data_file}"
   validate_data "${data_file}"
@@ -458,15 +527,19 @@ function cmd_render() {
 
 function cmd_extract() {
   [[ $# -eq 1 ]] || usage_error "extract takes one rendered page"
-  read_board_data "${1}"
+  local page_file
+  page_file="$(operand "${1}")"
+  read_board_data "${page_file}"
 }
 
 function cmd_compare() {
   [[ $# -eq 2 ]] || usage_error "compare takes the previous board and the current data"
-  local previous current
+  local previous_file current_file previous current
+  previous_file="$(operand "${1}")"
+  current_file="$(operand "${2}")"
 
-  previous="$(read_board_data "${1}")"
-  current="$(read_board_data "${2}")"
+  previous="$(read_board_data "${previous_file}")"
+  current="$(read_board_data "${current_file}")"
   jq -n -r \
     --slurpfile previous <(printf '%s\n' "${previous}") \
     --slurpfile current <(printf '%s\n' "${current}") \

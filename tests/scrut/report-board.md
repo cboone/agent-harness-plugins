@@ -217,6 +217,15 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## A sync time that is not a real time
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.sync.at = "2026-09-10T24:30:00Z"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - sync.at: expected an ISO 8601 time with a zone, such as 2026-09-10T19:43:00-04:00
+[1]
+```
+
 ## Invalid JSON
 
 ```scrut
@@ -287,11 +296,186 @@ $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"after": [1
 - Now better after: #107 cli: color output (after #104)
 ```
 
+## Compare reports changed blockers, soft links, and progress
+
+A change inside a relation that is still set is a change, not a non-event.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)).after = [104]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq '(.issues[] | select(.number == 107)).after = [101] | (.issues[] | select(.number == 102)).waitingOn = [104] | (.issues[] | select(.number == 105)).inProgress = "PR #9"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n 3
+- Blockers changed: #102 parser: stream large inputs (was waiting on #101, now #104)
+- Better after changed: #107 cli: color output (was after #104, now #101)
+- Progress moved: #105 docs: fix broken links (fix/105-broken-links to PR #9)
+```
+
 ## Compare with nothing changed
 
 ```scrut
 $ "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" | tail -n 1
 - No changes to issues, blockers, lanes, or start picks.
+```
+
+## Empty data
+
+```scrut
+$ dir="$(mktemp -d)" && : > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json must hold exactly one JSON document (glob)
+[1]
+```
+
+## More than one document
+
+```scrut
+$ dir="$(mktemp -d)" && cat "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json must hold exactly one JSON document (glob)
+[1]
+```
+
+## A top level that is not an object
+
+```scrut
+$ dir="$(mktemp -d)" && printf '[]' > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - the top level must be a JSON object
+[1]
+```
+
+## A waitingOn that is not a list, on a start pick
+
+Validation reports the shape rather than failing inside jq.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 106)) += {"waitingOn": "soon", "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #106: waitingOn must be a list
+[1]
+```
+
+## Branch and lane structure
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 105)) += {"sameBranchAs": 105} | (.issues[] | select(.number == 106)) += {"sameBranchAs": 99} | (.issues[] | select(.number == 107)) += {"sameBranchAs": 103} | .lanes[2].issues += [98, 106]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #105 shares a branch with itself
+  - #106 shares a branch with #99, which is not in issues
+  - #107 shares a branch with #103, which shares a branch with another issue; point both at the same one
+  - lane L3 lists #98, which is not in issues
+  - lane L3 lists #106 more than once
+  - startNow #106 shares a branch with #99; list #99 instead
+[1]
+```
+
+## Duplicate numbers, lane keys, picks, and claims
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.issues += [{"number": 101, "title": "again", "milestone": null}] | .lanes[1].key = "L1" | .startNow += [{"issue": 106, "why": "again"}] | .contention.claims[1].issues = [107, 107]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - issues: #101 appears more than once
+  - lanes: key L1 is used more than once
+  - startNow: #106 is listed more than once
+  - contention cli: issues must list at least two different issue numbers
+[1]
+```
+
+## Optional sections and sync fields
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.repoUrl = "http://example.com/widgets" | .sync.timeZone = 5 | .sync.extra = "12 packages" | .milestones = [{"short": "x"}] | .contention.rowLabel = 7 | .contention.claims += [{"name": "docs", "issues": [1, 2], "query": 3}] | .notes.blocked = 3' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - repoUrl: expected an https:// URL
+  - sync.timeZone: expected an IANA zone name, such as America/New_York
+  - sync.extra: expected a list of text
+  - milestones[0]: expected an object with a title
+  - contention.rowLabel: expected text
+  - contention docs: query must be text
+  - contention docs lists #1, which is not in issues
+  - contention docs lists #2, which is not in issues
+  - notes.blocked: expected text
+[1]
+```
+
+## A blocking loop
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [102], "blockedBecause": "x"} | (.issues[] | select(.number == 102)).waitingOn += [107]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #102 is part of a blocking loop; break it
+  - #107 is part of a blocking loop; break it
+[1]
+```
+
+## Better after an issue on the same branch
+
+Issue #103 ships on the branch of #101, so #101 cannot come after it.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 101)) += {"after": [103]}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #101 shares a branch with #103, so it cannot also come after it
+  - startNow #101 is better after #103 and should not start before it lands
+[1]
+```
+
+## Render refuses a directory as the output
+
+```scrut
+$ dir="$(mktemp -d)" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}" 2>&1
+report-board: * is a directory; name the page file to write (glob)
+[1]
+```
+
+## The rendered page follows the umask
+
+```scrut
+$ page="$(mktemp -d)/board.html" && (umask 022 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" 2> /dev/null) && ls -l "${page}" | cut -c1-10
+-rw-r--r--
+```
+
+## A data file whose name starts with a dash
+
+```scrut
+$ dir="$(mktemp -d)" && cp "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/-data.json" && (cd "${dir}" && "${REPORT_BOARD_BIN}" validate -data.json 2>&1)
+report-board: ./-data.json is valid: 7 issues in 3 lanes
+```
+
+## A symlink to the script still finds the templates
+
+```scrut
+$ dir="$(mktemp -d)" && ln -s "${REPORT_BOARD_BIN}" "${dir}/report-board" && "${dir}/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1
+report-board: rendered 7 issues in 3 lanes to */board.html (glob)
+```
+
+## A template missing a placeholder
+
+The render stops before writing anything.
+
+```scrut
+$ dir="$(mktemp -d)" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && printf '<title>x</title>\n' > "${dir}/templates/backlog-triage.html" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; ls "${dir}"
+report-board: */backlog-triage.html is missing the __BOARD_TITLE__ or "__BOARD_DATA__" placeholder (glob)
+scripts
+templates
+```
+
+## Extract from a page inside a host skeleton
+
+An Artifact read returns the page wrapped in the host's own document.
+
+```scrut
+$ dir="$(mktemp -d)" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/page.html" 2> /dev/null && { printf '<!doctype html><html><head></head><body>\n'; cat "${dir}/page.html"; printf '</body></html>\n'; } > "${dir}/wrapped.html" && "${REPORT_BOARD_BIN}" extract "${dir}/wrapped.html" | jq -r .title
+widgets backlog
+```
+
+## Render usage error
+
+```scrut
+$ "${REPORT_BOARD_BIN}" render only-one.json 2>&1 | head -n 1
+report-board: render takes a data file and an output path
+```
+
+## Compare usage error
+
+```scrut
+$ "${REPORT_BOARD_BIN}" compare only-one.json 2>&1 | head -n 1
+report-board: compare takes the previous board and the current data
 ```
 
 ## Help
