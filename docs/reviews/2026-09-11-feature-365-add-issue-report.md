@@ -174,5 +174,6 @@ Two independent reviewers examined the script and the template, alongside a docu
 ## Decisions
 
 - **Remaining board types**: no follow-up issues. The skill's own statement that only backlog triage ships is the record.
-- **Pull request**: held until the design rounds on typefaces and colors are done.
+- **Pull request**: opened once the review fixes landed. Design changes to typefaces and colors will come as separate pull requests.
+- **Wording**: the header count reads "start now" rather than "staff today", and the skill's writing rules rule out staffing language, because the reader of a board on these projects is a single maintainer.
 - **References in `after`**: accepted after the review. `after` now takes the same forms as `waitingOn`, so a pull request, a branch, or another repository's issue can be what an issue is better started after.
