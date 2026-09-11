@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Creates a throwaway plugin tree for the bin/check-cross-references suite and
+# prints its root.
+#
+# The checker resolves every reference against the working directory, so it
+# needs a real plugins/ layout rather than a lone Markdown file. Each testcase
+# cds into the printed directory, writes the skill body it wants to exercise
+# over plugins/demo/skills/demo/SKILL.md, and runs the checker against it.
+#
+# What the tree provides:
+#
+#   plugins/demo/                     the plugin under test, named by `/demo`
+#   plugins/demo/.../references/real.md   a sibling reference that resolves
+#   plugins/demo/scripts/real-script  a bundled script for ${CLAUDE_PLUGIN_ROOT}
+#   plugins/other/                    a second plugin, for cross-plugin paths
+#   bin/real-tool                     an ambiguous-prefix path that resolves
+set -euo pipefail
+
+function main() {
+  local root
+  root="$(mktemp -d "${TMPDIR:-/tmp}/cross-reference-fixture.XXXXXX")"
+
+  mkdir -p \
+    "${root}/plugins/demo/skills/demo/references" \
+    "${root}/plugins/demo/scripts" \
+    "${root}/plugins/other" \
+    "${root}/bin"
+
+  : > "${root}/plugins/demo/skills/demo/SKILL.md"
+  : > "${root}/plugins/demo/skills/demo/references/real.md"
+  : > "${root}/plugins/demo/scripts/real-script"
+  : > "${root}/plugins/other/README.md"
+  : > "${root}/bin/real-tool"
+
+  printf '%s\n' "${root}"
+}
+
+main "${@}"

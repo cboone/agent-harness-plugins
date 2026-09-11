@@ -43,6 +43,6 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 ## See Also
 
-- [Create Worktree from Issue](../create-worktree-from-issue/README.md): Start working on an existing issue in an isolated worktree
+- [Address Issue in Worktree](../address-issue-in-worktree/README.md): Start working on an existing issue in an isolated worktree
 - [Suggest Next Issue](../suggest-next-issue/README.md): Get recommendations on which issue to tackle next
 - [All plugins](../../../../README.md)

@@ -1,5 +1,8 @@
 # .gitignore Template
 
+<!-- `/target` is Cargo's build output directory written as a gitignore pattern, not a slash command. -->
+<!-- validate-plugins: ignore /target -->
+
 Create `.gitignore` in the project root with the following content. If a `.gitignore` already exists, merge these entries into it rather than overwriting.
 
 ```gitignore

@@ -1,5 +1,8 @@
 # Command .md Reference
 
+<!-- Every name below illustrates a command plugin being authored rather than one that exists here, except `command-development`, which is a skill of the separately distributed `plugin-dev` plugin. -->
+<!-- validate-plugins: ignore /command-name /example-command command-development plugins/example-command/commands/example-command.md ${CLAUDE_PLUGIN_ROOT}/references/file.md ${CLAUDE_PLUGIN_ROOT}/references/template-name.md -->
+
 Each command plugin has a Markdown file that defines a slash command Claude Code can execute. Commands are user-invoked (via `/command-name`) and run a structured workflow.
 
 ## File Location

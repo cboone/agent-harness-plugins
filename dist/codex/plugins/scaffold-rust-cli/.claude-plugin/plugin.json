@@ -9,5 +9,5 @@
   "name": "scaffold-rust-cli",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.2.4"
+  "version": "1.2.5"
 }
