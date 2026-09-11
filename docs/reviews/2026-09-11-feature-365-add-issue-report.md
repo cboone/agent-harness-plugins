@@ -46,7 +46,7 @@ Four subcommands. `validate` enforces the rules every board relies on, most impo
 
 ### Catalog, CI, and Agent Config
 
-The plugin enters the marketplace at 1.0.0 under `writing`, moving the catalog tag to `catalog-M66-m92-p154-n53`. The root README gains a Writing row and an external-tools note. The `Makefile` and `ci.yml` register the scrut environment, and `AGENTS.md` documents the plugin-root `templates/` directory and drops a slug-link count that had drifted.
+The plugin enters the marketplace at 1.0.0 under `writing`, adding one to the catalog tag's major sum and to its plugin count. The root README gains a Writing row and an external-tools note. The `Makefile` and `ci.yml` register the scrut environment, and `AGENTS.md` documents the plugin-root `templates/` directory and drops a slug-link count that had drifted.
 
 - `.claude-plugin/marketplace.json`
 - `README.md`
