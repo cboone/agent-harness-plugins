@@ -71,7 +71,7 @@ Adaptive intervals by phase, unless `--interval` overrides them:
 | Awaiting a Copilot review at the current head | 5 to 10 minutes  |
 | Checks queued, or nothing moving              | 20 to 30 minutes |
 
-When more than one row applies, take the shorter wait. The step 4 fallthrough reaches a tick with checks still running and a Copilot review outstanding at the same time, and the shorter interval is the one that governs.
+When more than one row applies, take the shorter wait. The step 4 fallthrough can reach a tick with checks still running and a Copilot review outstanding at once, and the shorter interval is the one that governs.
 
 There is no wall-clock cap and no limit on ticks: waiting is free, so a watch may tick as many times as it needs to. The only budget is on Copilot rounds, per step 7c, and it counts completed reviews rather than elapsed time or poll count. The watch ends on a terminal state, an escalation, or an exhausted round budget, never on a timer. The user can interrupt at any point.
 
@@ -248,7 +248,7 @@ Pass the `OWNER`, `REPO`, and `PR_NUMBER` recorded in step 1. That skill's scrip
 
 Only invoke it once a review exists at the current head. Invoking it earlier makes it report `No unresolved Copilot feedback` and post a no-op summary comment, which reads as a clean bill of health for code Copilot never saw.
 
-**Invoke it at most once per review.** If it reports success and the next snapshot still shows the same threads open against the same head, nothing further will change on its own: a second invocation has no new input to work from, and the step 7c budget will not stop the cycle because it counts completed reviews rather than invocations. Escalate per step 9 instead. A new review or a push is what makes another invocation meaningful.
+**Invoke it at most once per review.** If it reports `Completed` or `No unresolved Copilot feedback` and the next snapshot still shows the same threads open against the same head, nothing further will change on its own: a second invocation has no new input to work from, and the step 7c budget will not stop the cycle because it counts completed reviews rather than invocations. Escalate per step 9 instead. A new review or a push is what makes another invocation meaningful.
 
 #### 7c. Round Budget
 
@@ -341,6 +341,6 @@ The terminal report uses the same table plus the readiness verdict for all four 
 - **No checks configured on the repository**: Not an error. Treat the checks axis as clean and say so explicitly in the report.
 - **`merge-main` stops on conflicts it cannot resolve**: Escalate with the conflicted file list.
 - **`resolve-copilot-pr-feedback` reports `Partial` or `Failed`**: Escalate with its failure details.
-- **`resolve-copilot-pr-feedback` reports success but the same threads are still open**: Escalate per step 9. Do not invoke it again against the same review, per step 7b.
+- **`resolve-copilot-pr-feedback` reports `Completed` or `No unresolved Copilot feedback` but the same threads are still open**: Escalate per step 9. Do not invoke it again against the same review, per step 7b.
 - **Copilot never reviews despite an explicit request**: Escalate. Copilot review may be disabled for the repository, in which case the user must decide whether to proceed without it.
 - **Push rejected because the remote moved**: Someone else pushed to the branch. Re-poll, sync per step 5, and retry once. If it is rejected again, escalate.
