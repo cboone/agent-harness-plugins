@@ -20,7 +20,7 @@ Take the commit from the remote-tracking branch after a fetch, never from the lo
 | `sync.openPullRequests` | The count of open pull requests                                  |
 | `sync.extra`            | Further revision markers the repository has, each a short phrase |
 
-With `timeZone` set, every viewer sees the sync time the user sees. On macOS and most Linux systems, `readlink /etc/localtime` ends in the zone name. When the zone cannot be determined, omit the field and each viewer sees the time in their own zone.
+With `timeZone` set, every viewer sees the sync time the user sees. On macOS and most Linux systems, `readlink /etc/localtime` ends in the zone name. When the zone cannot be determined, omit the field and each viewer sees the time in their own zone. Validation rejects a name the time zone database does not have, and a page given one anyway shows the time in UTC, so its viewers still agree.
 
 Use `extra` for anything else that pins what the board reflects, such as a catalog version tag, a release, or a count of packages. The footer lists each entry after the issue counts, so keep them short.
 

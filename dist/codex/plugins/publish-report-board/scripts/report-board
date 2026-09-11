@@ -56,10 +56,16 @@ readonly STANDALONE_OPENING='<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">'
 
+# The shape a sync.timeZone must have. It also keeps the lookup in zone_status
+# inside the time zone database directory.
+readonly ZONE_PATTERN='^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+)*$'
+readonly ZONEINFO_DIR="${TZDIR:-/usr/share/zoneinfo}"
+
 # Emits one line per problem and nothing when the data is valid. Messages avoid
 # apostrophes because the filter lives inside a single-quoted shell string.
 # Every field is type-checked before it is used, so malformed data produces a
-# message rather than a jq error.
+# message rather than a jq error. It takes $zone_pattern, and $zone_known from
+# zone_status.
 # The $names in the filter are jq bindings, not shell expansions.
 # shellcheck disable=SC2016
 readonly VALIDATE_FILTER='
@@ -69,6 +75,10 @@ def as_list: if type == "array" then . else [] end;
 def absent_or(f): . == null or f;
 def check(condition; message): if condition then empty else message end;
 def duplicates: group_by(.) | map(select(length > 1) | .[0]) | .[];
+# True when an ISO 8601 time falls on a day the calendar has. strptime takes
+# February 31 and mktime rolls it into March, so a real date survives the
+# round trip and an impossible one does not.
+def calendar_date: .[0:10] as $day | ($day | try (strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d")) catch null) == $day;
 def ref_text:
   if type == "number" then "#\(.)"
   elif type != "object" then tostring
@@ -108,6 +118,24 @@ else
           | .todo |= .[1:]
           | if any(.seen[]; . == $n) then . else .seen += [$n] | .todo += ($g[$n | tostring] // []) end)
       | any(.seen[]; . == $start);
+    # The lane model the page draws, so start picks can be held to it.
+    def riders($n): [$issue_list[] | select(.sameBranchAs == $n) | .number | select(is_int)];
+    # The issue carrying work in progress on the branch of $n, as {number,
+    # inProgress}, or null. Work on an issue riding the branch counts.
+    def progress_of($n): [($n, riders($n)[]) as $m | issue($m) | select(.inProgress | is_text) | {number, inProgress}] | first;
+    def rides($n): issue($n) | .sameBranchAs | is_int;
+    # Not blocked, not riding another branch, and not queued behind an issue
+    # it is better after, unless its work has already started.
+    def startable($n):
+      issue($n) as $it
+      | ($it.waitingOn | as_list | length) == 0
+        and (rides($n) | not)
+        and (($it.after | as_list | length) == 0 or progress_of($n) != null);
+    def lane_of($n): first($d.lanes | as_list | .[] | objects | select(.issues | as_list | any(.[]; . == $n))) // null;
+    def roots($lane): [$lane.issues | as_list | .[] | select(is_int) | select(rides(.) | not)];
+    def head_of($lane):
+      ($lane.issues | as_list | map(select(is_int)) | first) as $first
+      | if $first != null and rides($first) then (issue($first) | .sameBranchAs) else $first end;
   (
     check($d.board | is_text and test("^[a-z0-9][a-z0-9-]*$"); "board: expected a board type such as \"backlog-triage\""),
     check($d.title | is_text; "title: expected text naming the board, such as \"agent-harness-plugins backlog\""),
@@ -117,10 +145,13 @@ else
 
     (if ($d.sync | type) != "object" then "sync: expected an object with at, branch, and commit"
      else
-       check($d.sync.at | is_text and test("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9](\\.[0-9]+)?)?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$"); "sync.at: expected an ISO 8601 time with a zone, such as 2026-09-10T19:43:00-04:00"),
-       check($d.sync.timeZone | absent_or(is_text); "sync.timeZone: expected an IANA zone name, such as America/New_York"),
+       (if ($d.sync.at | is_text and test("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9](\\.[0-9]+)?)?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$")) | not then "sync.at: expected an ISO 8601 time with a zone, such as 2026-09-10T19:43:00-04:00"
+        elif ($d.sync.at | calendar_date | not) then "sync.at: \($d.sync.at[0:10]) is not a date on the calendar"
+        else empty end),
+       check($d.sync.timeZone | absent_or(is_text and test($zone_pattern)); "sync.timeZone: expected an IANA zone name, such as America/New_York"),
+       check($zone_known != false; "sync.timeZone: \($d.sync.timeZone) is not a zone in the time zone database"),
        check($d.sync.branch | is_text; "sync.branch: expected the branch the board was synced against"),
-       check($d.sync.commit | is_text and test("^[0-9a-f]{7,40}$"); "sync.commit: expected a commit SHA"),
+       check($d.sync.commit | is_text and test("^([0-9a-f]{40}|[0-9a-f]{64})$"); "sync.commit: expected the full commit SHA"),
        check($d.sync.openPullRequests | absent_or(is_int and . >= 0); "sync.openPullRequests: expected a count"),
        check($d.sync.extra | absent_or(type == "array" and all(.[]; is_text)); "sync.extra: expected a list of text")
      end),
@@ -134,7 +165,8 @@ else
            "#\($issue.number)" as $at
            | ($issue.waitingOn // []) as $waits
            | check($issue.title | is_text; "\($at): title is required"),
-             check($issue.milestone | absent_or(is_text); "\($at): milestone must be text or null"),
+             (if ($issue | has("milestone")) | not then "\($at): milestone is required; use null for an issue without one"
+              else check($issue.milestone | absent_or(is_text); "\($at): milestone must be text or null") end),
              check($issue.short | absent_or(is_text); "\($at): short must be text"),
              check($issue.inProgress | absent_or(is_text); "\($at): inProgress must name the branch or pull request"),
              (if ($issue.waitingOn | absent_or(type == "array")) | not then "\($at): waitingOn must be a list"
@@ -213,14 +245,39 @@ else
                check($pick.why | is_text; "\($at): why is required"),
                check($pick.touches | absent_or(is_text); "\($at): touches must be text"),
                (if ($target.waitingOn | type == "array" and length > 0) then "\($at) waits on \($target.waitingOn | map(ref_text) | join(", ")) and cannot start" else empty end),
-               (if $target.inProgress != null then "\($at) is already in progress on \($target.inProgress)" else empty end),
+               (progress_of($pick.issue) as $work
+                | if $work == null then empty
+                  elif $work.number == $pick.issue then "\($at) is already in progress on \($work.inProgress)"
+                  else "\($at) is already in progress on \($work.inProgress), through #\($work.number) on the same branch" end),
                (if $target.sameBranchAs != null then "\($at) shares a branch with #\($target.sameBranchAs); list #\($target.sameBranchAs) instead" else empty end),
                (if ($target.after | type == "array" and length > 0) then "\($at) is better after \($target.after | map(ref_text) | join(", ")) and should not start before it lands" else empty end),
                ([$issue_list[] | select(.sameBranchAs == $pick.issue) | select(.after | type == "array" and any(.[]; . != $pick.issue)) | "#\(.number)"] as $held
-                | if ($held | length) > 0 then "\($at) shares its branch with \($held | join(", ")), which should wait for another open issue" else empty end)
+                | if ($held | length) > 0 then "\($at) shares its branch with \($held | join(", ")), which should wait for another open issue" else empty end),
+               # A pick that cannot start is reported above. One that can must
+               # still be the issue its serial or head lane runs.
+               (lane_of($pick.issue) as $lane
+                | if $lane == null or ($lane.mode | IN("serial", "head") | not) or (startable($pick.issue) | not) then empty
+                  else
+                    (first(roots($lane)[] | select(progress_of(.) != null)) // null) as $holder
+                    | if $holder == $pick.issue then empty
+                      elif $holder != null then
+                        progress_of($holder) as $work
+                        | "\($at): lane \($lane.key) already has #\($work.number) in progress on \($work.inProgress), and a \($lane.mode) lane runs one branch at a time"
+                      elif $lane.mode == "head" then
+                        head_of($lane) as $head
+                        | check($head == $pick.issue; "\($at): lane \($lane.key) is a head lane, and nothing in it starts before its head, #\($head)")
+                      else
+                        (first(roots($lane)[] | select(startable(.))) // null) as $next
+                        | check($next == $pick.issue; "\($at): lane \($lane.key) is serial, and #\($next) is the first issue in it that can start; pick that, or reorder the lane")
+                      end
+                  end)
              end
          end
      end),
+    ($d.lanes | as_list | .[] | objects | select(.mode | IN("serial", "head")) | . as $lane
+     | [$d.startNow | as_list | .[] | objects | .issue | select(is_int) | . as $n | select($lane.issues | as_list | any(.[]; . == $n))] | unique
+     | select(length > 1)
+     | "lane \($lane.key) runs one branch at a time, but startNow picks \(length) of its issues: \(map("#\(.)") | join(", "))"),
     ([$d.startNow | if type == "array" then .[] | objects | .issue else empty end] | duplicates | "startNow: #\(.) is listed more than once"),
 
     (if $d.milestones == null then empty
@@ -284,6 +341,16 @@ def same_set($a; $b): ($a | map(tojson) | sort) == ($b | map(tojson) | sort);
 def picks: [.startNow | as_list | .[] | objects | .issue];
 def synced: (.sync | if type == "object" then . else {} end) as $s | "\($s.branch // "unknown branch") at \(($s.commit // "unknown") | tostring | .[0:8]), \($s.at // "unknown time")";
 def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($items | join("; "))" else empty end;
+def lanes_of: [.lanes | as_list | .[] | objects | select(.key != null)];
+def lane_map: lanes_of | map({key: (.key | tostring), value: .}) | from_entries;
+def claim_map: [.contention | objects | .claims | as_list | .[] | objects | select(.name != null) | {key: (.name | tostring), value: .}] | from_entries;
+def pick_map: [.startNow | as_list | .[] | objects | select(.issue != null) | {key: (.issue | tostring), value: .}] | from_entries;
+def notes_of: .notes | if type == "object" then . else {} end;
+def numbers: map("#\(.)") | join(", ");
+def branch_of: if . == null then "its own branch" else "the branch of #\(.)" end;
+# The items of this list that are also in $other, in the order of this list.
+def shared_with($other): . - (. - $other);
+def reordered($a; $b): ($a | shared_with($b)) != ($b | shared_with($a));
 
 $previous[0] as $old
 | $current[0] as $new
@@ -292,6 +359,13 @@ $previous[0] as $old
 | ($old | lanes_by_issue) as $old_lane
 | ($new | lanes_by_issue) as $new_lane
 | [$new | issues_of | .[] | select($was[.number | tostring] != null)] as $kept
+| ($old | lane_map) as $old_lanes
+| ($new | lane_map) as $new_lanes
+| [$new | lanes_of | .[] | {key, now: ., was: $old_lanes[.key | tostring]} | select(.was != null)] as $kept_lanes
+| ($old | claim_map) as $old_claims
+| ($new | claim_map) as $new_claims
+| ($old | pick_map) as $old_picks
+| ($new | pick_map) as $new_picks
 | [
     entry("Closed"; [$old | issues_of | .[] | select($now[.number | tostring] == null) | describe]),
     entry("Opened"; [$new | issues_of | .[] | select($was[.number | tostring] == null) | describe]),
@@ -307,12 +381,36 @@ $previous[0] as $old
     entry("Added to start now"; [($new | picks) - ($old | picks) | .[] | ($now[tostring] // {number: ., title: "not on the board"}) | describe]),
     entry("Dropped from start now"; [($old | picks) - ($new | picks) | .[] | ($now[tostring] // $was[tostring] // {number: ., title: "not on the board"}) | describe]),
     entry("Changed lanes"; [$kept[] | (.number | tostring) as $k | select($old_lane[$k] != null and $new_lane[$k] != null and $old_lane[$k] != $new_lane[$k]) | "\(describe) (\($old_lane[$k]) to \($new_lane[$k]))"]),
-    entry("Changed milestone"; [$kept[] | (.number | tostring) as $k | select((.milestone // null) != ($was[$k].milestone // null)) | "\(describe) (\($was[$k].milestone // "none") to \(.milestone // "none"))"])
+    entry("Changed milestone"; [$kept[] | (.number | tostring) as $k | select((.milestone // null) != ($was[$k].milestone // null)) | "\(describe) (\($was[$k].milestone // "none") to \(.milestone // "none"))"]),
+    entry("Retitled"; [$kept[] | $was[.number | tostring] as $w | select(.title != $w.title) | "#\(.number) (\($w.title | tojson) to \(.title | tojson))"]),
+    entry("Changed branch"; [$kept[] | $was[.number | tostring] as $w | select((.sameBranchAs // null) != ($w.sameBranchAs // null)) | "\(describe) (\($w.sameBranchAs // null | branch_of) to \(.sameBranchAs // null | branch_of))"]),
+    entry("Lanes added"; [$new | lanes_of | .[] | select($old_lanes[.key | tostring] == null) | "\(.key) \(.name // "")"]),
+    entry("Lanes removed"; [$old | lanes_of | .[] | select($new_lanes[.key | tostring] == null) | "\(.key) \(.name // "")"]),
+    entry("Changed lane mode"; [$kept_lanes[] | select(.now.mode != .was.mode) | "\(.key) (\(.was.mode) to \(.now.mode))"]),
+    entry("Changed lane order"; [$kept_lanes[] | select(reordered(.was.issues | as_list; .now.issues | as_list)) | "\(.key) (now \(.now.issues | as_list | numbers))"]),
+    entry("Changed lane details"; [$kept_lanes[] | . as $pair | [("name", "owns", "note") | select(($pair.now[.] // null) != ($pair.was[.] // null))] | select(length > 0) | "\($pair.key) (\(join(", ")))"]),
+    entry("Changed start order"; [select(reordered($old | picks; $new | picks)) | $new | picks | numbers]),
+    entry("Changed contention"; [
+      ($new_claims | to_entries[] | select($old_claims[.key] == null) | "claim \(.key) added (\(.value.issues | as_list | numbers))"),
+      ($old_claims | to_entries[] | select($new_claims[.key] == null) | "claim \(.key) removed"),
+      ($new_claims | to_entries[] | $old_claims[.key] as $o | select($o != null and (same_set(.value.issues | as_list; $o.issues | as_list) | not)) | "claim \(.key) (\($o.issues | as_list | numbers) to \(.value.issues | as_list | numbers))"),
+      (select(($old.contention | type) == "object" and ($new.contention | type) == "object" and ($old.contention.rowLabel // null) != ($new.contention.rowLabel // null)) | "row label (\($old.contention.rowLabel // "none") to \($new.contention.rowLabel // "none"))")
+    ]),
+    entry("Changed milestones"; [select(($old.milestones | as_list) != ($new.milestones | as_list)) | $new.milestones | as_list | map(objects | .title // "") | join(", ") | if . == "" then "none" else "now \(.)" end]),
+    entry("Reworded"; [
+      (select(($old.summary // null) != ($new.summary // null)) | "summary"),
+      (($old | notes_of) as $was_notes | ($new | notes_of) as $now_notes | ($was_notes + $now_notes) | keys_unsorted[] | select(($was_notes[.] // null) != ($now_notes[.] // null)) | "the \(.) note"),
+      ($kept[] | $was[.number | tostring] as $w | select((.short // null) != ($w.short // null)) | "the short title of #\(.number)"),
+      ($kept[] | $was[.number | tostring] as $w | select(is_blocked and ($w | is_blocked) and (.blockedBecause // null) != ($w.blockedBecause // null)) | "why #\(.number) is blocked"),
+      ($new_picks | to_entries[] | $old_picks[.key] as $o | select($o != null)
+       | (select((.value.why // null) != ($o.why // null)) | "why to start #\(.key)"),
+         (select((.value.touches // null) != ($o.touches // null)) | "what #\(.key) touches"))
+    ])
   ] as $changes
 | "Previous sync: \($old | synced)",
   "This sync: \($new | synced)",
   "",
-  (if ($changes | length) > 0 then $changes[] else "- No changes to issues, blockers, lanes, or start picks." end)
+  (if ($changes | length) > 0 then $changes[] else "- No changes beyond the sync metadata." end)
 '
 
 function usage() {
@@ -378,13 +476,29 @@ function board_summary() {
   ' "${data_file}"
 }
 
+# Prints whether the time zone database has the data's sync.timeZone: true or
+# false, or null when there is no zone to look up, it is not shaped like a zone
+# name, or no database is installed to look in.
+function zone_status() {
+  local data_file="${1}"
+  local zone
+  zone="$(jq -r '(try .sync.timeZone catch null) | strings' "${data_file}")"
+  if [[ -z "${zone}" || ! -d "${ZONEINFO_DIR}" || ! "${zone}" =~ ${ZONE_PATTERN} ]]; then
+    printf 'null'
+  elif [[ -f "${ZONEINFO_DIR}/${zone}" ]]; then
+    printf 'true'
+  else
+    printf 'false'
+  fi
+}
+
 # Exits with every problem listed when the data breaks a board rule.
 function validate_data() {
   local data_file="${1}"
   local problems line
 
   require_single_document "${data_file}"
-  problems="$(jq -r "${VALIDATE_FILTER}" "${data_file}")"
+  problems="$(jq -r --arg zone_pattern "${ZONE_PATTERN}" --argjson zone_known "$(zone_status "${data_file}")" "${VALIDATE_FILTER}" "${data_file}")"
   [[ -z "${problems}" ]] && return 0
 
   printf '%s: %s is not valid board data:\n' "${SCRIPT_NAME}" "${data_file}" >&2

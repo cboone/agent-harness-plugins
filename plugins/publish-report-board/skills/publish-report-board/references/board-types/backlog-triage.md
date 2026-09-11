@@ -17,9 +17,9 @@ A backlog triage board answers three questions about a repository's open issues:
 gh repo view --json nameWithOwner,url,defaultBranchRef
 git fetch --quiet origin DEFAULT_BRANCH
 git rev-parse origin/DEFAULT_BRANCH
-gh issue list --state open --limit 500 --json number,title,body,labels,milestone,assignees
+gh issue list --state open --limit 500 --json number,title,body,labels,milestone,assignees,createdAt,updatedAt
 gh api 'repos/OWNER/REPO/milestones?state=open&per_page=100'
-gh pr list --state open --json number,title,headRefName,closingIssuesReferences
+gh pr list --state open --limit 500 --json number,title,headRefName,closingIssuesReferences
 git worktree list
 git branch --list --format='%(refname:short)'
 git branch --remotes --no-merged origin/DEFAULT_BRANCH
@@ -27,7 +27,7 @@ gh api user --jq '.login'
 date -u +%Y-%m-%dT%H:%M:%SZ
 ```
 
-Every open issue goes on the board. If the issue list returns exactly as many issues as `--limit` allows, raise the limit and run it again rather than working from a truncated backlog.
+Every open issue goes on the board, and every open pull request can mark work in progress. If either list returns exactly as many items as `--limit` allows, raise the limit and run it again rather than working from a truncated list.
 
 The unmerged remote branches catch work pushed from another machine or session, and they are what a branch blocker points at: a branch holding unmerged work with no pull request is often the reason an issue cannot finish.
 
@@ -59,13 +59,13 @@ Group the issues into lanes so that two issues in different lanes never edit the
 
 Give each lane a mode:
 
-| Mode     | Meaning                                                 | Use when                                                                     |
-| -------- | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `serial` | One branch at a time, in the listed order               | Every issue edits something another issue in the lane also edits             |
-| `head`   | The first issue alone, then everything it frees at once | One issue settles something the rest read, and after it they are independent |
-| `any`    | Every unblocked issue at once                           | Nothing in the lane shares a component                                       |
+| Mode     | Meaning                                                                  | Use when                                                                     |
+| -------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `serial` | One branch at a time: the first issue in the listed order that can start | Every issue edits something another issue in the lane also edits             |
+| `head`   | The first issue alone, then everything it frees at once                  | One issue settles something the rest read, and after it they are independent |
+| `any`    | Every unblocked issue at once                                            | Nothing in the lane shares a component                                       |
 
-In a serial lane the listed order is the recommended sequence, with an issue already in progress first. In a head lane the head comes first. In an any-order lane the order is only for reading.
+In a serial lane the listed order is the recommended sequence, with an issue already in progress first; an issue that cannot start yet is passed over for the next one that can. In a head lane the head comes first, and while it cannot start, nothing else in the lane does. In either, work already in progress holds the lane's single slot, including work on an issue riding another's branch. In an any-order lane the order is only for reading.
 
 When two issues should ship on one branch, usually because neither makes sense without the other, set `sameBranchAs` on one of them to the other. Both must sit in the same lane, and the page draws them as one unit.
 
@@ -73,7 +73,7 @@ Give each lane a short `key` (`L1`, `L2`, and so on), a `name` a reader recogniz
 
 ### 5. Start Now
 
-Pick the branches to open today: at most one per serial or head lane, and never an issue that is blocked, in progress, better after another open issue, or riding on another issue's branch. A serial or head lane whose single slot is held by an issue in progress gets no pick. Prefer issues that unblock others, carry the most risk while they stay open, or head a contended lane, and use the signals the `suggest-next-issue` skill weighs (priority labels, dependencies, age, activity) to break ties. Order the picks by value, and give each a `why` and a `touches` naming what it edits.
+Pick the branches to open today: at most one per serial or head lane, and never an issue that is blocked, in progress, better after another open issue, or riding on another issue's branch. A serial or head lane whose single slot is held by an issue in progress gets no pick, and otherwise its pick is the issue the page runs there: a head lane's head, or a serial lane's first issue that can start. Prefer issues that unblock others, carry the most risk while they stay open, or head a contended lane, and use the signals the `suggest-next-issue` skill weighs to break ties: priority labels, dependencies, age from `createdAt`, and recent activity from `updatedAt`. Order the picks by value, and give each a `why` and a `touches` naming what it edits.
 
 How many branches to start is a judgment, not a maximum. The header already shows how many could run at once; the picks say how many are worth starting. When the two differ, say why in `notes.startNow`.
 
@@ -153,7 +153,7 @@ Any form but `url` may add a `title`, which the Blocked section shows beside the
 | Blocked           | Each blocked issue, what it waits on, why, and what frees it        | The order, fewest blockers first; the freeing lane, or the kind of reference                                                    |
 | Footer            | The sync line and counts                                            | The milestone count                                                                                                             |
 
-Capacity follows the lane's mode: one branch at a time for a serial or head lane, and every unblocked issue at once for an any-order lane. A head lane also shows how many issues its head frees. "Branches at once" in the header is the sum across lanes. An issue better after another open issue counts as queued rather than runnable, so it adds nothing to capacity until its target lands, unless its work has already started.
+Capacity follows the lane's mode: one branch at a time for a serial or head lane, and every unblocked issue at once for an any-order lane. A serial lane runs its first issue that can start, and a head lane only its head, so a head that cannot start holds its whole lane at zero. A head lane also shows how many issues its head frees. "Branches at once" in the header is the sum across lanes. An issue better after another open issue counts as queued rather than runnable, so it adds nothing to capacity until its target lands, unless its work has already started.
 
 When no open issue has a milestone, the page drops the milestone column and chips, heads the contention matrix's single column "Claimed by", and says so in the footer rather than counting zero milestones.
 
@@ -167,8 +167,10 @@ When nothing is blocked, the Blocked section shrinks to its heading and the word
 - `waitingOn` lists open issues on the board, never the issue itself, or well-formed references, and always comes with `blockedBecause`.
 - `after` lists open issues on the board or well-formed references, never the issue itself, never an issue it already waits on or shares a branch with, and never forms a loop.
 - `sameBranchAs` names an issue in the same lane that does not itself ship on another branch.
-- A start pick is on the board, and is not blocked, not in progress, not better after another open issue, and not riding on another issue's branch; nothing riding on its own branch is better after another open issue either.
-- Required fields are present and well formed, issue numbers and lane keys are unique, and every `mode` is `serial`, `head`, or `any`.
+- A start pick is on the board, and is not blocked, not in progress (counting work on an issue riding its branch), not better after another open issue, and not riding on another issue's branch; nothing riding on its own branch is better after another open issue either.
+- A serial or head lane gets at most one pick, none while work in progress holds its slot, and only the issue the page runs there: a head lane's head, or a serial lane's first issue that can start.
+- `sync.at` falls on a real calendar date, `sync.commit` is a full SHA, and `sync.timeZone`, when set, is a zone the time zone database has, wherever one is installed.
+- Required fields are present and well formed, including each issue's `milestone`, which is `null` when it has none. Issue numbers and lane keys are unique, and every `mode` is `serial`, `head`, or `any`.
 
 ## Example
 

@@ -1159,6 +1159,9 @@
       }
       if (issue.sameBranchAs != null) listAt(riders, issue.sameBranchAs).push(issue.number);
     }
+    // The issue carrying work in progress on the branch of n, counting any
+    // issue that rides on it, or undefined.
+    const progressOf = (n) => [n, ...(riders.get(n) ?? [])].find((m) => byNumber.get(m)?.inProgress);
 
     const laneOf = new Map();
     for (const lane of data.lanes) for (const n of lane.issues) laneOf.set(n, lane);
@@ -1186,19 +1189,27 @@
       return { link: link(b.url, b.label), title: b.title, from: "outside the repository" };
     }
 
-    // Capacity per lane. A serial lane runs one branch at a time; a head lane
-    // runs its head, then whatever the head frees; an any-order lane runs every
-    // unblocked issue at once. An issue that shares a branch travels with it.
+    // Capacity per lane. A serial lane runs one branch at a time: the first
+    // issue in its listed order that can start. A head lane runs its head, then
+    // whatever the head frees, and nothing in it starts before the head. An
+    // any-order lane runs every unblocked issue at once. An issue that shares a
+    // branch travels with it, and work in progress holds a serial or head
+    // lane's single slot. report-board validate holds the start picks to the
+    // same rules, so the two agree.
     const lanes = data.lanes.map((lane) => {
+      const roots = lane.issues.filter((n) => !rides(n));
       // An issue better after another open issue waits in the queue unless its
       // work has already started.
-      const free = lane.issues.filter(
-        (n) => !isBlocked(n) && !rides(n) && (afters(n).length === 0 || byNumber.get(n).inProgress),
-      );
-      const started = free.find((n) => byNumber.get(n).inProgress);
-      const running = lane.mode === "any" ? free : free.length ? [started ?? free[0]] : [];
+      const canRun = (n) => !isBlocked(n) && (afters(n).length === 0 || progressOf(n) !== undefined);
+      const first = lane.issues[0];
+      const head = lane.mode === "head" ? (rides(first) ? partnerOf(first) : first) : null;
+      const held = roots.find((n) => progressOf(n) !== undefined);
+      const next = held ?? (lane.mode === "head" ? head : roots.find(canRun));
+      let running = [];
+      if (lane.mode === "any") running = roots.filter(canRun);
+      else if (next != null && canRun(next)) running = [next];
       const now = new Set(running.flatMap((n) => [n, ...(riders.get(n) ?? [])]));
-      const headUnit = lane.mode === "head" ? now : new Set();
+      const headUnit = lane.mode === "head" ? new Set([head, ...(riders.get(head) ?? [])]) : new Set();
       const freedAfter =
         lane.mode === "head"
           ? lane.issues.filter(
@@ -1220,7 +1231,15 @@
         for (const n of lane.issues) ranks.set(n, headUnit.has(n) ? "1" : "·");
       }
       const state = (n) => (isBlocked(n) ? "blocked" : now.has(n) ? "now" : "queued");
-      return { lane, cap: running.length, freedAfter, ranks, state, blocked: lane.issues.filter(isBlocked).length };
+      return {
+        lane,
+        running,
+        cap: running.length,
+        freedAfter,
+        ranks,
+        state,
+        blocked: lane.issues.filter(isBlocked).length,
+      };
     });
 
     function tokens(parts) {
@@ -1267,12 +1286,14 @@
     // A time no calendar has, such as 24:30, shows as written and gets no age,
     // rather than stopping the page.
     const validTime = !Number.isNaN(syncedAt.getTime());
+    // A zone the browser does not know falls back to UTC, which the time line
+    // then names, so every viewer still sees the same time.
     function formatSync(locale, options) {
       if (!validTime) return "";
       try {
         return new Intl.DateTimeFormat(locale, { ...options, timeZone: data.sync.timeZone || undefined }).format(syncedAt);
       } catch {
-        return new Intl.DateTimeFormat(locale, options).format(syncedAt);
+        return new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" }).format(syncedAt);
       }
     }
     const dateText = validTime ? formatSync("en-GB", { day: "numeric", month: "long", year: "numeric" }) : data.sync.at;
@@ -1356,9 +1377,7 @@
 
     // With no picks the section keeps one line, which says whether anything
     // could have started.
-    const idle = issues.some(
-      (issue) => !isBlocked(issue.number) && !rides(issue.number) && !issue.inProgress && afters(issue.number).length === 0,
-    );
+    const idle = lanes.some((model) => model.running.some((n) => progressOf(n) === undefined));
     const emptyStartNote = idle
       ? "No branches picked today."
       : "Nothing can start today: every issue is blocked, queued behind another, or already in progress.";

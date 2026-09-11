@@ -133,6 +133,7 @@ report-board: */data.json is not valid board data: (glob)
 $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"pr": 12}], "blockedBecause": "x"} | .startNow += [{"issue": 107, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
   - startNow #107 waits on PR #12 and cannot start
+  - lane L1 runs one branch at a time, but startNow picks 2 of its issues: #101, #107
 [1]
 ```
 
@@ -144,6 +145,48 @@ report-board: */data.json is not valid board data: (glob)
   - startNow #102 waits on #101 and cannot start
   - startNow #105 is already in progress on fix/105-broken-links
   - startNow #103 shares a branch with #101; list #101 instead
+  - lane L1 runs one branch at a time, but startNow picks 3 of its issues: #101, #102, #103
+[1]
+```
+
+## Start now sees work in progress on a shared branch
+
+Issue #103 rides on the branch of #101, so work on it is work on #101.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 103)).inProgress = "feature/103-columns"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - startNow #101 is already in progress on feature/103-columns, through #103 on the same branch
+[1]
+```
+
+## A serial lane runs its first issue that can start
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.startNow += [{"issue": 107, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - startNow #107: lane L1 is serial, and #101 is the first issue in it that can start; pick that, or reorder the lane
+  - lane L1 runs one branch at a time, but startNow picks 2 of its issues: #101, #107
+[1]
+```
+
+## Work in progress holds a lane
+
+Lane L2 is a head lane, and #105 is in progress in it.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 104)) |= del(.waitingOn, .blockedBecause) | .startNow += [{"issue": 104, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - startNow #104: lane L2 already has #105 in progress on fix/105-broken-links, and a head lane runs one branch at a time
+[1]
+```
+
+## Nothing in a head lane starts before its head
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 105)) |= del(.inProgress) | (.issues[] | select(.number == 104)) |= del(.waitingOn, .blockedBecause) | .startNow += [{"issue": 104, "why": "x"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - startNow #104: lane L2 is a head lane, and nothing in it starts before its head, #105
 [1]
 ```
 
@@ -241,7 +284,7 @@ report-board: */data.json is not valid board data: (glob)
 $ dir="$(mktemp -d)" && jq 'del(.summary, .sync.commit) | .lanes[1].mode = "parallel"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
   - summary: expected one or two sentences
-  - sync.commit: expected a commit SHA
+  - sync.commit: expected the full commit SHA
   - lane L2: mode must be serial, head, or any
 [1]
 ```
@@ -252,6 +295,55 @@ report-board: */data.json is not valid board data: (glob)
 $ dir="$(mktemp -d)" && jq '.sync.at = "2026-09-10T24:30:00Z"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
   - sync.at: expected an ISO 8601 time with a zone, such as 2026-09-10T19:43:00-04:00
+[1]
+```
+
+## A sync date the calendar does not have
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.sync.at = "2026-02-31T10:00:00Z"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - sync.at: 2026-02-31 is not a date on the calendar
+[1]
+```
+
+## A short commit SHA
+
+A short SHA can name more than one commit, so the board records the full one.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.sync.commit = "0123456"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - sync.commit: expected the full commit SHA
+[1]
+```
+
+## A time zone that is not a zone name
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.sync.timeZone = "New York"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - sync.timeZone: expected an IANA zone name, such as America/New_York
+[1]
+```
+
+## A time zone the database does not have
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.sync.timeZone = "Mars/Olympus_Mons"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - sync.timeZone: Mars/Olympus_Mons is not a zone in the time zone database
+[1]
+```
+
+## An issue without a milestone
+
+A `null` milestone records an issue without one; leaving the field out is a mistake.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) |= del(.milestone)' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #107: milestone is required; use null for an issue without one
 [1]
 ```
 
@@ -302,13 +394,17 @@ This sync: main at 89abcdef, 2026-09-08T10:15:00-04:00
 - Dropped from start now: #101 parser: replace the tokenizer; #106 ci: cache dependencies
 - Changed lanes: #107 cli: color output (L1 to L3)
 - Changed milestone: #107 cli: color output (none to Parser rewrite)
+- Changed lane mode: L2 (head to any)
+- Changed lane details: L1 (owns, note); L2 (note)
+- Changed contention: claim parser removed; claim cli removed
+- Reworded: summary; the startNow note
 ```
 
 ## Compare reads the previous board out of a rendered page
 
 ```scrut
 $ page="$(mktemp -d)/board.html" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${page}" 2> /dev/null && "${REPORT_BOARD_BIN}" compare "${page}" "${REPORT_BOARD_DATA_DIR}/backlog-triage-next.json" | tail -n 1
-- Changed milestone: #107 cli: color output (none to Parser rewrite)
+- Reworded: summary; the startNow note
 ```
 
 ## Compare names reference blockers
@@ -336,11 +432,26 @@ $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)).after = [104]' 
 - Progress moved: #105 docs: fix broken links (fix/105-broken-links to PR #9)
 ```
 
+## Compare reports titles, branches, lanes, contention, and wording
+
+Anything the page draws differently is a change worth reporting.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"title": "cli: colored output", "sameBranchAs": 101} | .lanes[0].issues = [101, 103, 107, 102] | .lanes[2].mode = "serial" | .lanes += [{"key": "L4", "name": "Themes", "mode": "any", "issues": []}] | .contention.claims[0].issues += [107] | .notes.blocked = "x" | .startNow[0].why = "y"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/data.json" | tail -n +4
+- Retitled: #107 ("cli: color output" to "cli: colored output")
+- Changed branch: #107 cli: colored output (its own branch to the branch of #101)
+- Lanes added: L4 Themes
+- Changed lane mode: L3 (any to serial)
+- Changed lane order: L1 (now #101, #103, #107, #102)
+- Changed contention: claim parser (#101, #102, #104 to #101, #102, #104, #107)
+- Reworded: the blocked note; why to start #101
+```
+
 ## Compare with nothing changed
 
 ```scrut
 $ "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" | tail -n 1
-- No changes to issues, blockers, lanes, or start picks.
+- No changes beyond the sync metadata.
 ```
 
 ## Empty data
