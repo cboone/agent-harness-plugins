@@ -1222,7 +1222,8 @@
         const next = lane.mode === "head" ? head : roots.find(canRun);
         if (next != null && canRun(next)) running = [next];
       }
-      const now = new Set(running.flatMap((n) => [n, ...(riders.get(n) ?? [])]));
+      // A rider with a blocker of its own stays blocked while its branch runs.
+      const now = new Set(running.flatMap((n) => [n, ...(riders.get(n) ?? []).filter((r) => !isBlocked(r))]));
       const headUnit = lane.mode === "head" ? new Set([head, ...(riders.get(head) ?? [])]) : new Set();
       const freedAfter =
         lane.mode === "head"
@@ -1443,29 +1444,22 @@
       const issue = byNumber.get(n);
       const partner = partnerOf(n);
       const rank = model.ranks.get(n);
+      const deps = tokens([
+        ["same branch as", partner === null ? [] : [partner]],
+        ["waits on", waits(n)],
+        ["better after", afters(n), true],
+        ["unblocks", unblocks.get(n) ?? []],
+        ["eases", eases.get(n) ?? [], true],
+      ]);
+      // The column headings are drawn for sighted readers only, so each field
+      // carries a visually hidden label; the title reads as part of "Issue #N".
+      const hidden = (text) => h("span", { class: "visually-hidden" }, text);
       return h("li", { class: "item" }, [
-        // The column headings are drawn for sighted readers only, so each
-        // field that does not name itself carries a visually hidden label.
-        h("span", { class: "item-rank", "aria-hidden": rank === "·" ? "true" : null }, [
-          h("span", { class: "visually-hidden" }, "Step "),
-          rank,
-        ]),
-        h("span", { class: "item-num" }, ref(n)),
+        h("span", { class: "item-rank", "aria-hidden": rank === "·" ? "true" : null }, [hidden("Step "), rank]),
+        h("span", { class: "item-num" }, [hidden("Issue "), ref(n)]),
         h("span", { class: "item-title" }, [issue.title, issue.inProgress ? progressTag(issue.inProgress) : null]),
-        anyMilestone
-          ? h("span", { class: "item-ms" }, [h("span", { class: "visually-hidden" }, "Milestone: "), chip(issue.milestone)])
-          : null,
-        h(
-          "span",
-          { class: "item-deps" },
-          tokens([
-            ["same branch as", partner === null ? [] : [partner]],
-            ["waits on", waits(n)],
-            ["better after", afters(n), true],
-            ["unblocks", unblocks.get(n) ?? []],
-            ["eases", eases.get(n) ?? [], true],
-          ]),
-        ),
+        anyMilestone ? h("span", { class: "item-ms" }, [hidden("Milestone: "), chip(issue.milestone)]) : null,
+        h("span", { class: "item-deps" }, deps.length ? [hidden("Dependencies: "), ...deps] : deps),
       ]);
     }
 

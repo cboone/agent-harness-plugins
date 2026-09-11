@@ -349,7 +349,12 @@ def names($list): $list | map(ref_text) | join(", ");
 def same_set($a; $b): ($a | sort) == ($b | sort);
 def shown: if . == null then "none" else tojson end;
 def picks: [.startNow | as_list | .[] | objects | .issue];
-def synced: (.sync | if type == "object" then . else {} end) as $s | "\($s.branch // "unknown branch") at \(($s.commit // "unknown") | tostring | .[0:8]), \($s.at // "unknown time")";
+# The sync line, with the open pull request count and extra markers the
+# footer shows, so a change to either reaches the report.
+def synced: (.sync | if type == "object" then . else {} end) as $s
+  | ($s.openPullRequests | if type == "number" then ", \(.) open pull \(if . == 1 then "request" else "requests" end)" else "" end) as $prs
+  | ($s.extra | if type == "array" then map(", \(.)") | join("") else "" end) as $extra
+  | "\($s.branch // "unknown branch") at \(($s.commit // "unknown") | tostring | .[0:8]), \($s.at // "unknown time")\($prs)\($extra)";
 def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($items | join("; "))" else empty end;
 def lanes_of: [.lanes | as_list | .[] | objects | select(.key != null)];
 def lane_map: lanes_of | map({key: (.key | tostring), value: .}) | from_entries;
@@ -602,7 +607,7 @@ function extract_payload() {
 # the file is not board data itself.
 function read_board_data() {
   local source_file="${1}"
-  local payload
+  local payload count
 
   require_file "${source_file}"
   if jq -e 'type == "object"' "${source_file}" > /dev/null 2>&1; then
@@ -611,8 +616,14 @@ function read_board_data() {
     return 0
   fi
   payload="$(extract_payload "${source_file}")" || die "${E_INVALID}" "${source_file} is neither board data nor a rendered board"
-  jq 'if type == "object" then . else error("not an object") end' <<< "${payload}" 2> /dev/null \
-    || die "${E_INVALID}" "${source_file} holds no board data; render it with report-board first"
+  # Exactly one JSON object: compare reads only the first document, so a
+  # second would be dropped without a word.
+  count="$(jq -s 'length' <<< "${payload}" 2> /dev/null)" || count=0
+  [[ "${count}" -le 1 ]] || die "${E_INVALID}" "${source_file} holds more than one JSON document in its board data"
+  if [[ "${count}" -ne 1 ]] || ! jq -e 'type == "object"' <<< "${payload}" > /dev/null 2>&1; then
+    die "${E_INVALID}" "${source_file} holds no board data; render it with report-board first"
+  fi
+  jq '.' <<< "${payload}"
 }
 
 function cmd_validate() {

@@ -420,12 +420,22 @@ report-board: */templates/backlog-triage.html holds no board data; render it wit
 [1]
 ```
 
+## Extract from a page with two documents in its data
+
+`compare` reads only the first, so a second would be dropped without a word.
+
+```scrut
+$ dir="$(mktemp -d)" && printf '<script type="application/json" id="board-data">{"a": 1}{"b": 2}</script>\n' > "${dir}/page.html" && "${REPORT_BOARD_BIN}" extract "${dir}/page.html" 2>&1
+report-board: */page.html holds more than one JSON document in its board data (glob)
+[1]
+```
+
 ## Compare two syncs
 
 ```scrut
 $ "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${REPORT_BOARD_DATA_DIR}/backlog-triage-next.json"
-Previous sync: main at 01234567, 2026-09-01T09:30:00-04:00
-This sync: main at 89abcdef, 2026-09-08T10:15:00-04:00
+Previous sync: main at 01234567, 2026-09-01T09:30:00-04:00, 1 open pull request, 12 packages
+This sync: main at 89abcdef, 2026-09-08T10:15:00-04:00, 0 open pull requests
 
 - Closed: #101 parser: replace the tokenizer; #103 cli: report parse errors with columns; #105 docs: fix broken links
 - Opened: #108 parser: benchmark suite
