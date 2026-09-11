@@ -1222,8 +1222,17 @@
         const next = lane.mode === "head" ? head : roots.find(canRun);
         if (next != null && canRun(next)) running = [next];
       }
-      // A rider with a blocker of its own stays blocked while its branch runs.
-      const now = new Set(running.flatMap((n) => [n, ...(riders.get(n) ?? []).filter((r) => !isBlocked(r))]));
+      // A rider stays out of the running set while it has a blocker of its own,
+      // or is better after something that has not landed, unless its own work
+      // has started.
+      const now = new Set(
+        running.flatMap((n) => [
+          n,
+          ...(riders.get(n) ?? []).filter(
+            (r) => !isBlocked(r) && (afters(r).every((target) => target === n) || byNumber.get(r)?.inProgress),
+          ),
+        ]),
+      );
       const headUnit = lane.mode === "head" ? new Set([head, ...(riders.get(head) ?? [])]) : new Set();
       const freedAfter =
         lane.mode === "head"

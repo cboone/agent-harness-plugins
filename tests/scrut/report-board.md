@@ -521,6 +521,15 @@ This sync: main at 01234567, 2026-09-01T09:30:00-04:00 in Europe/Lisbon, 1 open 
 - Changed contention: claim parser (#101, #102, #104 to #102, #101, #104); claim order (now cli, parser)
 ```
 
+## Compare reports reordered blockers
+
+The page lists what an issue waits on in the order given.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 102)).waitingOn = [101, 104]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq '(.issues[] | select(.number == 102)).waitingOn = [104, 101]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n 1
+- Blockers changed: #102 parser: stream large inputs (was waiting on #101, #104, now #104, #101)
+```
+
 ## Compare with nothing changed
 
 ```scrut

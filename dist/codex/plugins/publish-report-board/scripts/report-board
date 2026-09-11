@@ -344,9 +344,10 @@ def waits: .waitingOn | as_list;
 def afters: .after | as_list;
 def is_blocked: (waits | length) > 0;
 def names($list): $list | map(ref_text) | join(", ");
-# jq orders and compares objects by content, so a reference written with its
-# keys in another order is the same reference.
-def same_set($a; $b): ($a | sort) == ($b | sort);
+# The page draws blockers and better-after links in the order given, so a
+# reordered list is a change. jq compares objects by content, so a reference
+# written with its keys in another order is still the same reference.
+def same_list($a; $b): $a == $b;
 def shown: if . == null then "none" else tojson end;
 def picks: [.startNow | as_list | .[] | objects | .issue];
 # The sync line, with the zone, open pull request count, and extra markers
@@ -389,10 +390,10 @@ $previous[0] as $old
     entry("Opened"; [$new | issues_of | .[] | select($was[.number | tostring] == null) | describe]),
     entry("Newly blocked"; [$kept[] | select(is_blocked and ($was[.number | tostring] | is_blocked | not)) | "\(describe) (waits on \(names(waits)))"]),
     entry("Unblocked"; [$kept[] | select((is_blocked | not) and ($was[.number | tostring] | is_blocked)) | describe]),
-    entry("Blockers changed"; [$kept[] | $was[.number | tostring] as $w | select(is_blocked and ($w | is_blocked) and (same_set(waits; $w | waits) | not)) | "\(describe) (was waiting on \(names($w | waits)), now \(names(waits)))"]),
+    entry("Blockers changed"; [$kept[] | $was[.number | tostring] as $w | select(is_blocked and ($w | is_blocked) and (same_list(waits; $w | waits) | not)) | "\(describe) (was waiting on \(names($w | waits)), now \(names(waits)))"]),
     entry("Now better after"; [$kept[] | select((afters | length) > 0 and (($was[.number | tostring] | afters | length) == 0)) | "\(describe) (after \(names(afters)))"]),
     entry("No longer better after"; [$kept[] | select((afters | length) == 0 and (($was[.number | tostring] | afters | length) > 0)) | describe]),
-    entry("Better after changed"; [$kept[] | $was[.number | tostring] as $w | select((afters | length) > 0 and (($w | afters | length) > 0) and (same_set(afters; $w | afters) | not)) | "\(describe) (was after \(names($w | afters)), now \(names(afters)))"]),
+    entry("Better after changed"; [$kept[] | $was[.number | tostring] as $w | select((afters | length) > 0 and (($w | afters | length) > 0) and (same_list(afters; $w | afters) | not)) | "\(describe) (was after \(names($w | afters)), now \(names(afters)))"]),
     entry("Started"; [$kept[] | select(.inProgress != null and $was[.number | tostring].inProgress == null) | "\(describe) (\(.inProgress))"]),
     entry("Progress moved"; [$kept[] | $was[.number | tostring] as $w | select(.inProgress != null and $w.inProgress != null and .inProgress != $w.inProgress) | "\(describe) (\($w.inProgress) to \(.inProgress))"]),
     entry("No longer in progress"; [$kept[] | select(.inProgress == null and $was[.number | tostring].inProgress != null) | describe]),
