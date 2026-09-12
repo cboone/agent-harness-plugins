@@ -101,7 +101,7 @@ def ref_problems($at; $field; $article):
   | if $kinds != 1 then "\($at): each \($field) reference names exactly one of pr, branch, ref, or url"
     elif .pr != null then check(.pr | is_int and . > 0; "\($at): \($article) \($field) pr must be a pull request number")
     elif .branch != null then check(.branch | is_text and test("^\\S+$"); "\($at): \($article) \($field) branch must be a branch name")
-    elif .ref != null then check(.ref | is_text and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[1-9][0-9]*$"); "\($at): \($article) \($field) ref must look like owner/repo#123")
+    elif .ref != null then check(.ref | is_text and test("^(?!\\.{1,2}/)[A-Za-z0-9_.-]+/(?!\\.{1,2}#)[A-Za-z0-9_.-]+#[1-9][0-9]*$"); "\($at): \($article) \($field) ref must look like owner/repo#123")
     else check((.url | is_text and test("^https://" + host_re + port_re + "([/?#][^\\s\"<>]*)?$")) and (.label | is_text); "\($at): \($article) \($field) url needs an https:// address with a host, and a label")
     end,
     check(.title | absent_or(is_text); "\($at): \($article) \($field) title must be text");
@@ -150,12 +150,16 @@ else
     check($d.board | is_text and test("^[a-z0-9][a-z0-9-]*$"); "board: expected a board type such as \"backlog-triage\""),
     check($d.title | is_text; "title: expected text naming the board, such as \"agent-harness-plugins backlog\""),
     check($d.repo | is_text and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"); "repo: expected owner/name"),
-    check($d.repoUrl | absent_or(is_text and test("^https://" + host_re + port_re + "(/[^\\s\"<>?#/]+)+/?$")); "repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name"),
+    # The page builds every same-repository link from repoUrl and derives the
+    # base for other repositories by removing the repo from its end, so a URL
+    # naming a different repository sends every link somewhere else. The repo
+    # guard keeps a malformed repo from being reported twice.
+    check($d.repoUrl | absent_or(is_text and test("^https://" + host_re + port_re + "(/[^\\s\"<>?#/]+)+/?$") and (($d.repo | type) != "string" or (sub("/$"; "") | endswith("/" + $d.repo)))); "repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name"),
     check($d.summary | is_text; "summary: expected text summarizing the board"),
     # Every string on a board comes from GitHub, and compare prints them to a
     # terminal. A control character in one could rewrite the change report as it
     # is read, so no string on a board may carry one.
-    check([$d | .. | strings | select(test("[[:cntrl:]]"))] | length == 0; "board data must not hold control characters in any of its text"),
+    check((([$d | .. | strings] + [$d | .. | objects | keys[]]) | map(select(test("[[:cntrl:]]"))) | length) == 0; "board data must not hold control characters in its text or field names"),
 
     (if ($d.sync | type) != "object" then "sync: expected an object with at, branch, and commit"
      else
@@ -722,6 +726,18 @@ function cmd_render() {
   page="$(fill_template "${template_file}" "${title_html}" "${payload}")"
   if [[ "${standalone}" == true ]]; then
     page="${STANDALONE_OPENING}"$'\n'"${page}"$'\n''</html>'
+  fi
+
+  # Writing the page over the data file destroys the board it was built from,
+  # and the summary below reads that file again once the page is written. stat
+  # follows a symlink, so a link to the data file is caught here too.
+  if [[ -e "${output_file}" ]]; then
+    local data_id page_id
+    data_id="$(stat -c '%d:%i' "${data_file}" 2> /dev/null || stat -f '%d:%i' "${data_file}" 2> /dev/null)" || data_id=""
+    page_id="$(stat -c '%d:%i' "${output_file}" 2> /dev/null || stat -f '%d:%i' "${output_file}" 2> /dev/null)" || page_id=""
+    if [[ -n "${data_id}" && "${data_id}" == "${page_id}" ]]; then
+      die "${E_INVALID}" "${output_file} is the data file; name a page file to write instead"
+    fi
   fi
 
   write_output "${output_file}" "${page}"$'\n'

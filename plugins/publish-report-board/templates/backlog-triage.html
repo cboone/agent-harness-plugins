@@ -1145,6 +1145,10 @@
         // belongs to that address rather than to this repository.
         const head = source.slice(0, match.index);
         if (/:\/\//.test(head.slice(head.search(/\S*$/)))) continue;
+        // "../target#1" is not a repository reference. A browser normalizes the
+        // path, so linking it would reach another repository, or climb out of a
+        // repository URL that carries a path prefix.
+        if (match[1] && match[1].split("/").some((part) => part === "." || part === "..")) continue;
         out.push(source.slice(last, match.index));
         out.push(match[1] ? link(`${repoBase}/${match[1]}/issues/${match[2]}`, match[0]) : ref(Number(match[2])));
         last = match.index + match[0].length;

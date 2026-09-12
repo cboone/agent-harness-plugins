@@ -79,6 +79,17 @@ $ dir="$(mktemp -d)" && (umask 077 && "${REPORT_BOARD_BIN}" render "${REPORT_BOA
 600
 ```
 
+## Render refuses to write over its own data
+
+Writing the page onto the data file destroys the board it was built from, and
+the summary is read from that file once the page is written.
+
+```scrut
+$ dir="$(mktemp -d)" && cp "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.json" && "${REPORT_BOARD_BIN}" render "${dir}/board.json" "${dir}/board.json" 2>&1
+report-board: */board.json is the data file; name a page file to write instead (glob)
+[1]
+```
+
 ## Standalone output is a complete document
 
 ```scrut
@@ -188,7 +199,7 @@ terminal, where a control character could rewrite the report as it is read.
 ```scrut
 $ dir="$(mktemp -d)" && jq '.title = "widgets " + ([1] | implode) + " backlog"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
-  - board data must not hold control characters in any of its text
+  - board data must not hold control characters in its text or field names
 [1]
 ```
 
@@ -200,6 +211,30 @@ is a change the reader sees even though the previous board named none.
 ```scrut
 $ dir="$(mktemp -d)" && jq 'del(.contention.rowLabel)' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq '.contention.rowLabel = "Area"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n 1
 - Changed contention: row label (Plugin to Area)
+```
+
+## A cross-repository reference with a dot segment
+
+Neither `.` nor `..` is an owner or a repository name, and the page would build
+a path that a browser normalizes into some other repository.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"ref": "../target#1"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #107: a waitingOn ref must look like owner/repo#123
+[1]
+```
+
+## A control character in a field name
+
+`compare` prints the name of a note as well as its text, so a field name
+carrying a control character reaches the terminal by the same route.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.notes = {("start" + ([1]|implode) + "Now"): "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - board data must not hold control characters in its text or field names
+[1]
 ```
 
 ## A cross-repository reference to issue zero
@@ -333,7 +368,7 @@ report-board: */data.json is not valid board data: (glob)
 A self-hosted instance can serve the repository on an explicit port.
 
 ```scrut
-$ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com:8443/widgets"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+$ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com:8443/example/widgets"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is valid: 7 issues in 3 lanes (glob)
 ```
 
@@ -357,6 +392,19 @@ as a link.
 $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"url": "https://specs.example.com:99999/a", "label": "spec"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
   - #107: a waitingOn url needs an https:// address with a host, and a label
+[1]
+```
+
+## A repository URL naming a different repository
+
+Every same-repository link is built from this address, and the base for other
+repositories comes from removing the repository from its end, so a URL naming
+something else sends all of them astray.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com/other/widgets"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name
 [1]
 ```
 
