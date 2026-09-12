@@ -37,7 +37,7 @@ Work through these steps in order; each one uses the results of the one before.
 
 ### 1. Work in Progress
 
-Detect it the way the `suggest-next-issue` skill does. An issue is in progress when a branch or worktree name contains its number, when it carries an "in progress" label, or when it is assigned to the current user. An open pull request that closes it also counts. Set `inProgress` to what carries the work, such as a branch name or `PR #390`.
+Detect it the way the `suggest-next-issue` skill does. An issue is in progress when a branch or worktree name contains its number, when it carries an "in progress" label, or when it is assigned to the current user. An open pull request that closes it also counts. Set `inProgress` to what carries the work: a branch name, `PR #390`, or, when only a label or an assignment says so, that signal itself, such as `the in progress label` or `assigned to you`. Every issue the board counts as in progress needs the field, because the page and validation read nothing else.
 
 ### 2. Dependencies
 
@@ -112,7 +112,7 @@ Write `summary`, each lane's `note`, each `blockedBecause`, and any section note
 | `blockedBecause` | With `waitingOn` | Why it cannot start yet                                                                          |
 | `sameBranchAs`   | No               | The issue whose branch this one ships on                                                         |
 | `after`          | No               | What this one is better started after: issue numbers on this board, or [references](#references) |
-| `inProgress`     | No               | The branch or pull request carrying the work                                                     |
+| `inProgress`     | No               | What carries the work: a branch, a pull request, or the signal that says it is underway          |
 
 ### References
 

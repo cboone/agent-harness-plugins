@@ -1234,8 +1234,10 @@
         ]),
       );
       const headUnit = lane.mode === "head" ? new Set([head, ...(riders.get(head) ?? [])]) : new Set();
+      // A head that cannot start frees nothing yet, so the lane counts zero
+      // rather than promising what the head would unlock.
       const freedAfter =
-        lane.mode === "head"
+        lane.mode === "head" && head != null && canRun(head)
           ? lane.issues.filter(
               (n) =>
                 !headUnit.has(n) &&

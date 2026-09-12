@@ -127,6 +127,17 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## A cross-repository reference to issue zero
+
+GitHub has no issue zero, so `/issues/0` would reach nothing.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"ref": "example/themes#0"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #107: a waitingOn ref must look like owner/repo#123
+[1]
+```
+
 ## Start now rejects an issue blocked by a reference
 
 ```scrut
@@ -537,6 +548,15 @@ The lane row links the reference without its title.
 ```scrut
 $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)).after = [{"pr": 12}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq '(.issues[] | select(.number == 107)).after = [{"pr": 12, "title": "palette"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n 1
 - No changes beyond the sync metadata.
+```
+
+## Compare reports reordered lanes
+
+The page draws its lane sections in the order the data lists them.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.lanes |= reverse' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/data.json" | tail -n 1
+- Reordered lanes: now L3, L2, L1
 ```
 
 ## Compare with nothing changed
