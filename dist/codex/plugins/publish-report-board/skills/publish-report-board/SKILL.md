@@ -88,7 +88,9 @@ bash REPORT_BOARD render DATA_JSON PAGE_HTML
 
 Add `--standalone` when there is no Artifact tool. It writes a complete HTML document that opens straight from disk; the default output is a fragment, because the Artifact tool supplies its own document skeleton.
 
-Without the Artifact tool this render overwrites the board itself, so check before it that nothing else already has. Extract the board at its path once more and confirm it still holds the data step 4 recovered. If it differs, another session published while this one was gathering: start again from that newer board rather than writing over it. The Artifact tool refuses a publish to a page that changed since this conversation read it; on disk nothing refuses anything, and this check is what stands in for that.
+Without the Artifact tool this render overwrites the board itself, so on a re-sync check before it that nothing else already has. Skip the check on a first publish: step 4 found no board, and there is nothing to extract. Otherwise extract the board at its path once more and confirm it still holds the data step 4 recovered. If it differs, another session published while this one was gathering, so start again from that newer board rather than writing over it.
+
+This is weaker than what the Artifact tool does, and it is worth knowing by how much. That tool refuses a publish outright to a page that changed since this conversation read it. Nothing on disk refuses anything, and this check does not hold the file between confirming it and writing over it, so two sessions can still interleave. It catches the ordinary case and turns a silent overwrite into a stop. `./references/artifact-mechanics.md` states what it leaves uncovered.
 
 Never edit the rendered page. Change the data and render again.
 

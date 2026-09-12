@@ -152,6 +152,13 @@ else
     def head_of($lane):
       ($lane.issues | as_list | map(select(is_int)) | first) as $first
       | if $first != null and rides($first) then (issue($first) | .sameBranchAs) else $first end;
+  # Several messages below quote the value they reject: a time zone, a claim
+  # name, a note key, a blocker branch or label. A control character anywhere in
+  # the data would reach the terminal through one of those even though the check
+  # for it had already failed, so that check answers alone and stops the rest.
+  if ((([$d | .. | strings] + [$d | .. | objects | keys[]]) | map(select(test("[[:cntrl:]]"))) | length) > 0) then
+    "board data must not hold control characters in its text or field names"
+  else
   (
     check($d.board | is_text and test("^[a-z0-9][a-z0-9-]*$"); "board: expected a board type such as \"backlog-triage\""),
     check($d.title | is_text; "title: expected text naming the board, such as \"agent-harness-plugins backlog\""),
@@ -339,9 +346,13 @@ else
 
     (if $d.notes == null then empty
      elif ($d.notes | type) != "object" then "notes: expected an object"
-     else ($d.notes | to_entries[] | select((.value | is_text) | not) | "notes.\(.key): expected text")
+     else ($d.notes | to_entries[] | select((.value | is_text) | not) | "notes.\(.key): expected text"),
+          # The page reads these three and no others, so a fourth key is a typo:
+          # it renders nowhere, and compare reports it as a change every sync.
+          ($d.notes | keys[] | . as $k | select(["startNow", "blocked", "contention"] | any(. == $k) | not) | "notes.\($k): expected startNow, blocked, or contention")
      end)
   )
+  end
 end
 '
 

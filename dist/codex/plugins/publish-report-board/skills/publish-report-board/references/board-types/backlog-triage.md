@@ -31,6 +31,8 @@ Every open issue goes on the board, and every open pull request can mark work in
 
 The unmerged remote branches catch work pushed from another machine or session, which is why the fetch takes every branch and prunes the deleted ones. They are also what a branch blocker points at: a branch holding unmerged work with no pull request is often the reason an issue cannot finish.
 
+Those names arrive carrying their remote, as `origin/feature`. Record a branch blocker as the branch alone, `feature`, because the page builds a compare link from it and `origin/feature` names no branch on GitHub.
+
 ## Analyze
 
 Work through these steps in order; each one uses the results of the one before.

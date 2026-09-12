@@ -225,6 +225,44 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## A control character answers alone
+
+Several messages quote the value they reject, so a board carrying a control
+character would reach the terminal through one of those even after the check
+for it had failed. That check answers by itself and the rest stand down.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.title = "widgets " + ([1] | implode) + " backlog" | .summary = 7' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - board data must not hold control characters in its text or field names
+[1]
+```
+
+## Other problems still report together
+
+Without a control character the quoting messages behave as before, so the
+guard above narrows nothing else.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.summary = 7 | .sync.timeZone = "Not/AZone"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - summary: expected text summarizing the board
+  - sync.timeZone: Not/AZone is not a zone in the time zone database
+[1]
+```
+
+## A note the page never reads
+
+The page reads `startNow`, `blocked`, and `contention`. Any other key is a
+typo that renders nowhere and then reports as a change on every later sync.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.notes = {"start_now": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - notes.start_now: expected startNow, blocked, or contention
+[1]
+```
+
 ## A control character in a field name
 
 `compare` prints the name of a note as well as its text, so a field name
