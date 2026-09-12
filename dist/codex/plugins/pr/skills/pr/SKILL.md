@@ -120,11 +120,19 @@ Extract the slug portion of the branch name (everything after the first `/`). Co
 gh issue list --search "KEYWORDS" --state open --json number,title --limit 5
 ```
 
-Evaluate the results:
+If **zero** issues are returned, skip.
 
-- If **exactly one** issue is returned, include it.
-- If **multiple** issues are returned, compare each issue title against the branch slug. Include an issue only if its title, when slugified (lowercased, spaces and special characters replaced with hyphens), is a near-exact match with the branch slug. If no single issue clearly matches, include none.
-- If **zero** issues are returned, skip.
+Otherwise, evaluate every result against the branch slug, whatever the result count. A search hit is a candidate, not a match: `gh issue list --search` ranks by keyword overlap and knows nothing about whether the hit concerns the same work, so a tracker full of similarly-themed issues returns a weak hit for almost any slug. One hit is evidence of scarcity, not of relevance, and gets the same test as five.
+
+For each issue returned, slugify its title (lowercase it, replace spaces and special characters with hyphens) and compare that against the branch slug. Include the issue only if the two are a near-exact match:
+
+- The **distinctive** words line up: the words naming the specific subject of the work. Generic tracker vocabulary such as `add`, `new`, `fix`, `update`, `skill`, `ci`, or `test` does not count toward a match, so overlap on those alone is not a match.
+- Word order may differ, and one side may carry a prefix or a connecting word the other lacks. Nothing else may.
+- If no single issue clearly matches, include none. That is the expected outcome for most searches.
+
+For example, branch slug `add-monitor-copilot-skill` against slugified title `new-skill-triage-ci-failure` shares only the generic word `skill`, and the distinctive words (`monitor` and `copilot` against `triage`, `ci`, and `failure`) do not line up at all. Include none, even when that issue was the only hit.
+
+When the comparison is ambiguous, include none. The two errors are not symmetric: a missing reference costs a cross-reference that anyone can add to the PR by hand, while a wrong one closes an unrelated open issue at merge, quietly, from a PR body that reads plausibly.
 
 #### Combine results
 
