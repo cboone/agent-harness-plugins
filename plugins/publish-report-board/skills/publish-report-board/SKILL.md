@@ -95,6 +95,8 @@ bash REPORT_BOARD render DATA_JSON PAGE_HTML
 
 Add `--standalone` when there is no Artifact tool. It writes a complete HTML document that opens straight from disk; the default output is a fragment, because the Artifact tool supplies its own document skeleton.
 
+Without the Artifact tool this render overwrites the board itself, so check before it that nothing else already has. Extract the board at its path once more and confirm it still holds the data step 4 recovered. If it differs, another session published while this one was gathering: start again from that newer board rather than writing over it. The Artifact tool refuses a publish to a page that changed since this conversation read it; on disk nothing refuses anything, and this check is what stands in for that.
+
 Never edit the rendered page. Change the data and render again.
 
 ### 8. Compare With the Previous Sync

@@ -53,7 +53,10 @@ Codex CLI and OpenCode have no Artifact tool. There the board is the standalone 
 1. Render with `--standalone` to that path, creating the directory if it does not exist.
 2. Give the user the absolute path; the file opens in any browser.
 3. On the next sync, look for the previous board at that exact path, run `report-board compare` against it, and render over it only afterwards.
+4. Immediately before that render, extract the board at that path again and confirm it still holds the data this sync started from. A difference means another session published while this one was gathering, so begin again from the newer board instead of overwriting it.
 
 The name is what makes this work. Nothing else on disk identifies a board, so a session that renders to a name of its own reads a re-sync as a first publish: it compares against nothing, reports no changes, and leaves the earlier board beside the new one.
+
+That last step narrows a gap rather than closing it, and it is worth being plain about which. Two sessions re-syncing one board on the same machine can still interleave between the check and the write, because nothing here holds a lock across gathering and rendering, and bash has no primitive for one that works the same way on every platform this skill runs on. The Artifact tool refuses a publish to a page that changed since the conversation read it, and the local fallback has no equivalent to lean on. The check is a deliberate stand-in: it catches the ordinary case, where one session finishes while another is still gathering, and it turns a silent stale overwrite into a sync that stops and starts again from what is actually on disk.
 
 Everything else in the skill is unchanged.
