@@ -1135,6 +1135,10 @@
       for (const match of source.matchAll(PROSE_REF)) {
         const before = source[match.index - 1];
         if (!match[1] && before && /[\w&]/.test(before)) continue;
+        // Inside a URL, such as https://example.com/owner/repo#3, the match
+        // belongs to that address rather than to this repository.
+        const head = source.slice(0, match.index);
+        if (/:\/\//.test(head.slice(head.search(/\S*$/)))) continue;
         out.push(source.slice(last, match.index));
         out.push(match[1] ? link(`${origin}/${match[1]}/issues/${match[2]}`, match[0]) : ref(Number(match[2])));
         last = match.index + match[0].length;

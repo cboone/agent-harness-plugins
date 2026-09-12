@@ -227,7 +227,18 @@ The page appends paths such as `/issues` to the repository URL.
 ```scrut
 $ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com/widgets?view=1"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
-  - repoUrl: expected an https:// URL with no query or fragment
+  - repoUrl: expected an https:// URL with a host and no query or fragment
+[1]
+```
+
+## A repository URL with no host
+
+Every same-repository link on the page is built from this address.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.repoUrl = "https:///widgets"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - repoUrl: expected an https:// URL with a host and no query or fragment
 [1]
 ```
 
@@ -635,7 +646,7 @@ report-board: */data.json is not valid board data: (glob)
 ```scrut
 $ dir="$(mktemp -d)" && jq '.repoUrl = "http://example.com/widgets" | .sync.timeZone = 5 | .sync.extra = "12 packages" | .milestones = [{"short": "x"}] | .contention.rowLabel = 7 | .contention.claims += [{"name": "docs", "issues": [1, 2], "query": 3}] | .notes.blocked = 3' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
-  - repoUrl: expected an https:// URL with no query or fragment
+  - repoUrl: expected an https:// URL with a host and no query or fragment
   - sync.timeZone: expected an IANA zone name, such as America/New_York
   - sync.extra: expected a list of text
   - milestones[0]: expected an object with a title
