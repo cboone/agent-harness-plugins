@@ -393,7 +393,12 @@ $previous[0] as $old
     entry("Blockers changed"; [$kept[] | $was[.number | tostring] as $w | select(is_blocked and ($w | is_blocked) and (same_list(waits; $w | waits) | not)) | "\(describe) (was waiting on \(names($w | waits)), now \(names(waits)))"]),
     entry("Now better after"; [$kept[] | select((afters | length) > 0 and (($was[.number | tostring] | afters | length) == 0)) | "\(describe) (after \(names(afters)))"]),
     entry("No longer better after"; [$kept[] | select((afters | length) == 0 and (($was[.number | tostring] | afters | length) > 0)) | describe]),
-    entry("Better after changed"; [$kept[] | $was[.number | tostring] as $w | select((afters | length) > 0 and (($w | afters | length) > 0) and (same_list(afters; $w | afters) | not)) | "\(describe) (was after \(names($w | afters)), now \(names(afters)))"]),
+    entry("Better after changed"; [
+      # A lane row links an after entry without its title, so a title by itself
+      # is not a change the page draws.
+      def linked: map(if type == "object" then del(.title) else . end);
+      $kept[] | $was[.number | tostring] as $w | select((afters | length) > 0 and (($w | afters | length) > 0) and (same_list(afters | linked; $w | afters | linked) | not)) | "\(describe) (was after \(names($w | afters)), now \(names(afters)))"
+    ]),
     entry("Started"; [$kept[] | select(.inProgress != null and $was[.number | tostring].inProgress == null) | "\(describe) (\(.inProgress))"]),
     entry("Progress moved"; [$kept[] | $was[.number | tostring] as $w | select(.inProgress != null and $w.inProgress != null and .inProgress != $w.inProgress) | "\(describe) (\($w.inProgress) to \(.inProgress))"]),
     entry("No longer in progress"; [$kept[] | select(.inProgress == null and $was[.number | tostring].inProgress != null) | describe]),

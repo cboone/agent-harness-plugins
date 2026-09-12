@@ -25,7 +25,7 @@ Every state a reader acts on has a shape as well as a hue, so it survives a colo
 
 ## Links
 
-Every issue number, milestone, component, branch, and commit links to its source, including issue numbers written into prose. The board summarizes; the reader acts in the source, so every row is one click away from it.
+Every issue number, milestone, branch, and commit links to its source, including issue numbers written into prose, and the contention matrix links every component it lists. The footprint beside a lane or a pick stays prose, naming components the matrix links. The board summarizes; the reader acts in the source, so every row is one click away from it.
 
 ## Writing the Board Data
 

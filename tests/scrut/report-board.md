@@ -530,6 +530,15 @@ $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 102)).waitingOn = [10
 - Blockers changed: #102 parser: stream large inputs (was waiting on #101, #104, now #104, #101)
 ```
 
+## A title on a better-after reference is not a change
+
+The lane row links the reference without its title.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)).after = [{"pr": 12}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq '(.issues[] | select(.number == 107)).after = [{"pr": 12, "title": "palette"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n 1
+- No changes beyond the sync metadata.
+```
+
 ## Compare with nothing changed
 
 ```scrut

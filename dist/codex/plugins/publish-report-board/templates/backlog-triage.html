@@ -1585,7 +1585,7 @@
                   columns.map((key) =>
                     key === NO_MILESTONE
                       ? h("th", { scope: "col" }, anyClaimMilestone ? "No milestone" : "Claimed by")
-                      : h("th", { scope: "col", title: key }, shortName.get(key) ?? key),
+                      : h("th", { scope: "col", title: key }, link(milestoneUrl(key), shortName.get(key) ?? key)),
                   ),
                 ]),
               ),
