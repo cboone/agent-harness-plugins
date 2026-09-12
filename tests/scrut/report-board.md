@@ -59,6 +59,26 @@ $ dir="$(mktemp -d)" && jq '.title = "a <b> & \"c\"" | .summary = "</script><scr
 </script><script>alert(1)</script>
 ```
 
+## Replacing a page keeps the mode it had
+
+The local fallback board holds issue data. A page written under a strict umask
+stays as strict when a later session runs under a looser one.
+
+```scrut
+$ dir="$(mktemp -d)" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null 2>&1 && chmod 600 "${dir}/board.html" && (umask 022 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null 2>&1) && { stat -f '%Lp' "${dir}/board.html" 2> /dev/null || stat -c '%a' "${dir}/board.html"; }
+600
+```
+
+## A new page takes the mode of a new file
+
+Only a page that does not exist yet follows the umask, so preserving a mode
+never makes every board private by accident.
+
+```scrut
+$ dir="$(mktemp -d)" && (umask 077 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null 2>&1) && { stat -f '%Lp' "${dir}/board.html" 2> /dev/null || stat -c '%a' "${dir}/board.html"; }
+600
+```
+
 ## Standalone output is a complete document
 
 ```scrut

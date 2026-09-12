@@ -590,7 +590,7 @@ function fill_template() {
 function write_output() {
   local output_file="${1}"
   local content="${2}"
-  local output_dir temp_file current_umask mode
+  local output_dir temp_file current_umask mode=""
 
   [[ -d "${output_file}" ]] && die "${E_INVALID}" "${output_file} is a directory; name the page file to write"
   output_dir="$(dirname -- "${output_file}")"
@@ -598,10 +598,18 @@ function write_output() {
   temp_file="$(mktemp "${output_dir}/.report-board.XXXXXX")" || die "${E_INVALID}" "cannot write to ${output_dir}"
 
   # mktemp creates the file for its owner alone, or for nobody under a umask
-  # that denies the owner too. Fill it in as the owner, then give the page
-  # the mode any other new file gets under the current umask.
-  current_umask="$(umask)"
-  mode="$(printf '%o' "$((8#666 & ~8#${current_umask}))")"
+  # that denies the owner too. Fill it in as the owner, then give the page its
+  # mode. Replacing a page keeps the mode that page already has, so a board
+  # written under a strict umask is never widened by a later session running
+  # under a looser one. Only a page that does not exist yet takes the mode a
+  # new file gets under the current umask.
+  if [[ -f "${output_file}" ]]; then
+    mode="$(stat -f '%Lp' "${output_file}" 2> /dev/null || stat -c '%a' "${output_file}" 2> /dev/null)" || mode=""
+  fi
+  if [[ -z "${mode}" ]]; then
+    current_umask="$(umask)"
+    mode="$(printf '%o' "$((8#666 & ~8#${current_umask}))")"
+  fi
   if ! {
     chmod -- 600 "${temp_file}" \
       && printf '%s' "${content}" > "${temp_file}" \
