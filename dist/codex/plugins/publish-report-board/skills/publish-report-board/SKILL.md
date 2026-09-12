@@ -46,7 +46,7 @@ In the commands below, `REPORT_BOARD` is shorthand for that full **quoted path**
 Name the working files `REPO-BOARD.json` and `REPO-BOARD.html`, where `REPO` is the repository name without its owner and `BOARD` is the board type: `agent-harness-plugins-backlog-triage.json` and `agent-harness-plugins-backlog-triage.html`. Those two names are fixed rather than illustrative, and the same names are used wherever the files live. The local fallback has no Artifact to recover a board from and finds the previous one by this name alone, so a session that invents its own name reads a re-sync as a first publish: it reports no changes and leaves the earlier board sitting beside the new one.
 
 - **With the Artifact tool** (Claude Code): keep both files in the session scratchpad directory when the system prompt lists one, and otherwise in a directory from `mktemp -d`. The published Artifact is the board; the local files are this conversation's working copies.
-- **Without the Artifact tool** (Codex CLI, OpenCode): keep both files in `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/HOST/OWNER/REPO/`, creating it if needed. `HOST` is the host of `repoUrl`, or `github.com` when the board carries none, so two repositories that share an owner and a name on different hosts keep separate boards. The rendered `REPO-BOARD.html` there is the board, and the next session finds it at that exact path.
+- **Without the Artifact tool** (Codex CLI, OpenCode): keep both files in `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/REPO-PATH/`, creating it if needed. `REPO-PATH` is the host and path of `repoUrl` together, such as `git.example.com/enterprise/owner/name`, or `github.com/OWNER/REPO` when the board carries none. The whole address is the key because a host alone is not unique: two repositories can share an owner and a name under different path prefixes on one host. The rendered `REPO-BOARD.html` there is the board, and the next session finds it at that exact path.
 
 ### 4. Find the Previous Board
 
@@ -82,9 +82,7 @@ Fix every problem it lists, then validate again. The rules catch a stale board: 
 
 ### 7. Render
 
-Without the Artifact tool the render below overwrites the board itself, so make this check first, before running it. Skip the check on a first publish: step 4 found no board, and there is nothing to extract. Otherwise extract the board at its path once more and confirm it still holds the data step 4 recovered. If it differs, another session published while this one was gathering, so start again from that newer board rather than writing over it.
-
-With that settled, render:
+Render to a working path, never straight onto a board that is already published:
 
 ```bash
 bash REPORT_BOARD render DATA_JSON PAGE_HTML
@@ -92,7 +90,7 @@ bash REPORT_BOARD render DATA_JSON PAGE_HTML
 
 Add `--standalone` when there is no Artifact tool. It writes a complete HTML document that opens straight from disk; the default output is a fragment, because the Artifact tool supplies its own document skeleton.
 
-This is weaker than what the Artifact tool does, and it is worth knowing by how much. That tool refuses a publish outright to a page that changed since this conversation read it. Nothing on disk refuses anything, and this check does not hold the file between confirming it and writing over it, so two sessions can still interleave. It catches the ordinary case and turns a silent overwrite into a stop. `./references/artifact-mechanics.md` states what it leaves uncovered.
+Without the Artifact tool, make `PAGE_HTML` a temporary path beside the working files rather than the board itself. Rendering onto the board would publish it here, before step 8 has compared anything, so a sync that step 8 tells you to abandon would already have replaced what was there. Step 9 installs the file once the checks have passed.
 
 Never edit the rendered page. Change the data and render again.
 
@@ -106,13 +104,17 @@ bash REPORT_BOARD compare PREVIOUS_JSON DATA_JSON
 
 `PREVIOUS_JSON` is the copy step 4 saved, never a working file this sync has already overwritten. Keep the output: it is the change report, and a sync that silently overwrites the board is indistinguishable from one that did nothing.
 
-Stop before publishing if the report carries a `Changed board identity` line naming `title`, `repo`, or `repoUrl`. A later conversation finds this board by its exact title, so a rebuilt title leaves the old board stranded and publishes a second one beside it, with nothing on either page saying so. The local fallback finds the board by the host of `repoUrl` as well, so a move between hosts reads as a first publish and strands the board at the old path. These fields change only when the repository itself has been renamed or moved; confirm that is what happened, and move the old board to the new path, before going on.
+Stop before publishing if the report carries a `Changed board identity` line naming `title`, `repo`, or `repoUrl`. A later conversation finds this board by its exact title, so a rebuilt title leaves the old board stranded and publishes a second one beside it, with nothing on either page saying so. The local fallback finds the board by the host and path of `repoUrl` as well, so a move between hosts, or to a different path prefix on one host, reads as a first publish and strands the board at the old path. These fields change only when the repository itself has been renamed or moved; confirm that is what happened, and move the old board to the new path, before going on.
 
 ### 9. Publish
 
 **With the Artifact tool**, publish the rendered page as `./references/artifact-mechanics.md` describes: the same file path within a conversation, the board's URL from a later one, and the favicon and icon only on the first publish. Never pass `force`, and never declare runtime capabilities.
 
-**Without it**, the render in step 7 already wrote the board. Nothing else needs publishing.
+**Without it**, install the file step 7 rendered. This comes last, after step 8, so that a re-sync which has to stop stops with the published board untouched.
+
+Skip the freshness check on a first publish, since step 4 found no board and there is nothing to extract. Otherwise extract the board at its path once more and confirm it still holds the data step 4 recovered. A difference means another session published while this one was gathering, so begin again from that newer board rather than writing over it. Then move the rendered file onto the board path and give the user that path.
+
+This is weaker than what the Artifact tool does, and it is worth knowing by how much. That tool refuses a publish outright to a page that changed since this conversation read it. Nothing on disk refuses anything, and this check does not hold the file between confirming it and moving over it, so two sessions can still interleave. It catches the ordinary case and turns a silent overwrite into a stop. `./references/artifact-mechanics.md` states what it leaves uncovered.
 
 ### 10. Report
 

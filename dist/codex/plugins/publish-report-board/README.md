@@ -37,7 +37,7 @@ Other board types, such as CI health or release readiness, do not have templates
 
 ## Harness Support
 
-Claude Code publishes boards with its Artifact tool. Codex CLI and OpenCode have no equivalent, so there the skill renders a complete standalone HTML file to `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/HOST/OWNER/REPO/` and reports its path, where `HOST` is the host of the board's `repoUrl` so that same-named repositories on different hosts stay apart. The file opens in any browser, and the next sync compares against it before rendering over it.
+Claude Code publishes boards with its Artifact tool. Codex CLI and OpenCode have no equivalent, so there the skill renders a complete standalone HTML file under `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/`, in a directory named for the host and path of the board's `repoUrl`, and reports its path. Keying on the whole address keeps same-named repositories apart across hosts and across path prefixes on one host. The file opens in any browser, and the next sync compares against it before rendering over it.
 
 The plugin therefore ships unchanged to all three harnesses: only the publish step differs, and the skill chooses it by whether the Artifact tool is present.
 

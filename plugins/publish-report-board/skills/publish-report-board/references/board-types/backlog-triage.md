@@ -65,7 +65,7 @@ Give each lane a mode:
 | -------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | `serial` | One branch at a time: the first issue in the listed order that can start | Every issue edits something another issue in the lane also edits             |
 | `head`   | The first issue alone, then everything it frees at once                  | One issue settles something the rest read, and after it they are independent |
-| `any`    | Every unblocked issue at once                                            | Nothing in the lane shares a component                                       |
+| `any`    | Every issue that can start at once, so blocked and queued work waits     | Nothing in the lane shares a component                                       |
 
 In a serial lane the listed order is the recommended sequence, with an issue already in progress first; an issue that cannot start yet is passed over for the next one that can. In a head lane the head comes first, and while it cannot start, nothing else in the lane does. In either, work already in progress holds the lane's single slot, including work on an issue riding another's branch. When more than one branch in such a lane is already in progress, the page shows each one running, so the overlap stays visible. In an any-order lane the order is only for reading.
 
