@@ -39,7 +39,7 @@ The artifact. Four columns, one row per planted defect:
 | ------------------------------------------- | ------------------------------- | ------------------------------------------ | --------------------------------------- |
 | Divide x by `count` rather than `count - 1` | The silence check               | `TraceNotDrawn`, 959 of 960 columns lit    | `silence`, at one column dark           |
 | The same, with the silence check relaxed    | The span check                  | `TraceEndsEarly`, columns 0 to 639 of 959  | `horizontalMapping`, both edges reached |
-| Bind the target rather than the source      | Any of them                     | Refused by the compiler as an unused local | Not coverable, and the better outcome   |
+| Bind the target rather than the source      | Any of them                     | Refused by the compiler as an unused local | This spelling cannot be written         |
 
 The fourth column is what makes the table regress rather than describing a check nobody re-runs. Without it, every row was verified once, by hand, and then written down, so a later refactor can make an assertion vacuous while the table goes on describing it.
 

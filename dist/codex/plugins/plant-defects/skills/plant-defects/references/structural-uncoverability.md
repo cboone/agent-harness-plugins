@@ -89,7 +89,7 @@ A procedure, cheapest first:
 
 1. **Grep for configuration predicates that mention the test flag**, the test feature, or a debug-only mode. Each hit is a candidate for structural uncoverability.
 1. **Plant a type error** in each declaration you believe is covered, one at a time, and confirm the build fails. A clean build means nothing is analyzing it.
-1. **Plant a behavioural defect** in each declaration whose build did fail, and confirm a named test fails. A clean run over a compiled declaration is either an unvisited branch or a missing arm.
+1. **Plant a behavioural defect** in each declaration whose build did fail, and confirm a named test fails. A clean run over a compiled declaration has three readings, not two: an unvisited branch, a missing arm, or a false negative where the instrument you used cannot observe this defect at all. Consult the blindness matrix before assigning a class, since the third reading calls for a different instrument rather than a new arm. See `./references/instrument-blindness.md`.
 1. **Check the artifact, as supporting evidence only.** Searching the test binary for a string unique to the code in question is cheap and suggestive, and it is not a discriminator on its own: optimization, dead-code elimination, symbol stripping, and string pooling can each drop or retain a literal independently of whether the branch was compiled and reachable. Let step 2's compile-time plant decide the class, and use the string search to corroborate it.
 1. **Record the class** in the plant table, because the remedy differs by class and a row that only says "not caught" invites the wrong fix.
 

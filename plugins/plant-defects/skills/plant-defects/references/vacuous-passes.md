@@ -32,7 +32,9 @@ The same tool resolves local action references through the git project root, so 
 
 Two decay checks divided a measured peak by a first peak nothing validated. A blank readback gives `0 / 0`, and `nan > 0.02 * want` is **false**, so a run in which nothing was drawn at all read as a healthy fade and reported one. It had been passing for two issues.
 
-Every comparison against a not-a-number value is false, including `==` against itself. **Which way that lands depends on how the check is phrased, and only one of the two phrasings is vacuous:**
+Every ordering comparison against a not-a-number value is false, and so is `==` against itself. **`!=` is the exception and is true**, including `nan != nan`, so a check that tests for inequality behaves the opposite way from the rest and is worth reading twice wherever it appears.
+
+**For the ordering operators, which way that lands depends on how the check is phrased, and only one of the two phrasings is vacuous:**
 
 | Phrasing                     | On a not-a-number value    |
 | ---------------------------- | -------------------------- |

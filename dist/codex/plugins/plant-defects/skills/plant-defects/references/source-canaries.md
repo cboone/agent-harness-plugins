@@ -6,7 +6,7 @@ Reading a file's own source as text, so a declaration nothing can check as behav
 
 All three conditions, together:
 
-- **The failure mode is a weakening rather than a break.** A releasing store simplified to relaxed, a constructor swapped for its sibling, two correct lines put in the wrong order. Each compiles, and each passes a suite that never exercises the concurrency.
+- **The failure mode is a weakening rather than a break.** A releasing store simplified to relaxed, or two correct lines put in the wrong order. Each compiles, and each passes a suite that never exercises the concurrency. Note which weakenings do **not** belong on this list: swapping a constructor for its sibling is recorded in the plant table below as a compile error, so the compiler already refuses it and a canary adds nothing. Check that the weakening you are guarding actually builds before writing a canary for it.
 - **The instrument that would catch it is unavailable.** It needs a platform this machine cannot be, or hardware nobody has, or it does not exist.
 - **The correct spelling is short and stable.** A canary over code that is legitimately edited every week is noise.
 

@@ -37,7 +37,9 @@ Plant into a tree where the check is already committed. Then reverting the plant
 
 Planting first and writing the check second means the two edits are tangled in the working tree, and the revert that cleans up the plant either removes the check or leaves a partial one behind.
 
-**Plant only from an otherwise clean worktree**, and confirm it with `git status --porcelain` before each plant. A path-level revert such as `git restore <file>` discards every uncommitted change in that file, not just the plant, so a plant that shares a file with work in progress takes that work with it when it goes. Where the worktree cannot be clean, keep the plant as a patch (`git diff > plant.patch`, then `git apply -R plant.patch`) so the revert is scoped to the plant itself rather than to the file.
+**Plant only from an otherwise clean worktree**, and confirm it with `git status --porcelain` before each plant. A path-level revert such as `git restore <file>` discards every uncommitted change in that file, not just the plant, so a plant that shares a file with work in progress takes that work with it when it goes.
+
+Where you cannot stop mid-task to reach a clean tree, get a second tree rather than a cleverer revert. `git worktree add` gives the campaign its own checkout, in which the plant is the only uncommitted change; committing the work in progress on a branch first has the same effect. What does not work is capturing the plant as a patch with `git diff`, because that records every unstaged change in the tree, so reversing the patch reverses the unrelated work along with the plant. That is the same failure one step further along, and it is harder to notice because the patch file looks like it scoped something.
 
 ## Rows that must stay green
 

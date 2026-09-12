@@ -15,7 +15,7 @@ Planted defects down the side, instruments across the top, one cell per pair. Th
 | A release call stops being sent, still counted | no                 | no         | no             | no              | no              |
 | A plain allocation this project owns           | no                 | yes        | no             | no              | on tested paths |
 
-Its opening line is the theory in one sentence: each instrument blind to something different, and **the differences are what matter rather than how thorough each one is**.
+Its opening line is the theory in one sentence: each instrument is blind to something different, and **the differences are what matter rather than how thorough each one is**.
 
 Four conclusions the matrix produced, none of which was available from reading any instrument's documentation:
 
@@ -118,7 +118,7 @@ Worth recording beside the rest, because both of these were expected to be posit
 - A texture descriptor missing its render-target usage flag.
 - A pipeline compiled against the wrong pixel format.
 
-Neither is a leak and neither is a lifecycle error. Both are a binding the API accepts and the hardware ignores. Name the class when you find one, because it will not appear in any instrument's output and it will not appear as a gap either.
+Neither is a leak and neither is a lifecycle error. Both are bindings the API accepts and the hardware ignores. Name the class when you find one, because it will not appear in any instrument's output and it will not appear as a gap either.
 
 ## Structural guards beat instruments where one is available
 
