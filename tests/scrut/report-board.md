@@ -242,6 +242,26 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## A repository URL with a malformed port
+
+Every same-repository link resolves against the host and port.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com:bad/widgets"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - repoUrl: expected an https:// URL with a host and no query or fragment
+[1]
+```
+
+## A repository URL with a port
+
+A self-hosted instance can serve the repository on an explicit port.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com:8443/widgets"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is valid: 7 issues in 3 lanes (glob)
+```
+
 ## An issue better after another
 
 `after` records that an issue could start now but would repeat work if it

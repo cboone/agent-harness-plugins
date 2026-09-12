@@ -18,7 +18,7 @@ gh repo view --json nameWithOwner,url,defaultBranchRef
 git fetch --quiet --prune origin
 git rev-parse origin/DEFAULT_BRANCH
 gh issue list --state open --limit 500 --json number,title,body,labels,milestone,assignees,createdAt,updatedAt
-gh api 'repos/OWNER/REPO/milestones?state=open&per_page=100'
+gh api --paginate --slurp 'repos/OWNER/REPO/milestones?state=open&per_page=100' | jq 'add'
 gh pr list --state open --limit 500 --json number,title,headRefName,closingIssuesReferences
 git worktree list
 git branch --list --format='%(refname:short)'
@@ -27,7 +27,7 @@ gh api user --jq '.login'
 date -u +%Y-%m-%dT%H:%M:%SZ
 ```
 
-Every open issue goes on the board, and every open pull request can mark work in progress. If either list returns exactly as many items as `--limit` allows, raise the limit and run it again rather than working from a truncated list.
+Every open issue goes on the board, and every open pull request can mark work in progress. If either list returns exactly as many items as `--limit` allows, raise the limit and run it again rather than working from a truncated list. The milestones call is paginated for the same reason: GitHub caps a page at 100 and returns only the first one otherwise, so `--slurp` gathers the pages and `add` flattens them into a single list.
 
 The unmerged remote branches catch work pushed from another machine or session, which is why the fetch takes every branch and prunes the deleted ones. They are also what a branch blocker points at: a branch holding unmerged work with no pull request is often the reason an issue cannot finish.
 

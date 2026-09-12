@@ -66,7 +66,7 @@ Rebuilt with `bin/build-codex-marketplace` and `bin/build-opencode-mirror`; `bin
 
 ## File Inventory
 
-- **New files**: 24, of which 13 are source and 11 are generated mirror copies.
+- **New files**: 25, of which 13 are source, 11 are generated mirror copies, and one is this review document.
 - **Modified files**: `.claude-plugin/marketplace.json`, `.github/copilot-instructions.md`, `.github/workflows/ci.yml`, `AGENTS.md`, `Makefile`, `README.md`, and the generated `.agents/plugins/marketplace.json`.
 - **Deleted files**: none.
 - **Renamed files**: none.
