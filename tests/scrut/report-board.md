@@ -508,6 +508,19 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## A synced branch carrying whitespace
+
+A branch name holds no whitespace, and the footer links this value through
+`/tree/` while every branch comparison starts from it, so a name with a space in
+it builds a link to a ref that cannot exist.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.sync.branch = "main branch"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - sync.branch: expected the branch the board was synced against
+[1]
+```
+
 ## An in-progress value with a dot segment
 
 The page turns a single unspaced `inProgress` value into a branch comparison, so

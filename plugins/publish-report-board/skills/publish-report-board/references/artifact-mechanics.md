@@ -48,9 +48,9 @@ Never declare `capabilities` on a board, and omit the field on every republish s
 
 ## Without the Artifact Tool
 
-Codex CLI and OpenCode have no Artifact tool. There the board is the standalone HTML file at `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/REPO-PATH/REPO-BOARD.html`, where `REPO-PATH` is the host and path of `repoUrl` together, or `github.com/OWNER/REPO` when the board carries none, under the name the skill gives every working file:
+Codex CLI and OpenCode have no Artifact tool. There the board is the standalone HTML file at `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/REPO-PATH/REPO-BOARD.html`, where `REPO-PATH` is the host and path of `repoUrl` together, or `github.com/OWNER/REPO` when the board carries none. That name belongs to the published board alone; the page rendered before the checks is a separate file beside it:
 
-1. Render with `--standalone` to a working path rather than onto the board, creating the board directory if it does not exist.
+1. Render with `--standalone` to a working page beside the board, `REPO-BOARD.next.html`, rather than onto the board itself, creating the board directory if it does not exist.
 2. On a re-sync, look for the previous board at that exact path and run `report-board compare` against it before publishing anything. Stop here if the report names a changed `title`, `repo`, or `repoUrl`: the board has moved, and publishing would strand it.
 3. Immediately before publishing, extract the board at that path again and confirm it still holds the data this sync started from. A difference means another session published while this one was gathering, so begin again from the newer board instead of overwriting it.
 4. Render again with `--standalone`, this time onto the board path, then give the user the absolute path; the file opens in any browser. Render rather than move the file from step 1: replacing a page keeps the mode that page already has, while a move would carry the mode of the file being moved and could widen a board written under a stricter umask.

@@ -190,7 +190,7 @@ else
         else empty end),
        check($d.sync.timeZone | absent_or(is_text and test($zone_pattern)); "sync.timeZone: expected an IANA zone name, such as America/New_York"),
        check($zone_known != false; "sync.timeZone: \($d.sync.timeZone) is not a zone in the time zone database"),
-       check($d.sync.branch | is_text and (test("(^|/)\\.{1,2}(/|$)") | not); "sync.branch: expected the branch the board was synced against"),
+       check($d.sync.branch | is_text and test("^\\S+$") and (test("(^|/)\\.{1,2}(/|$)") | not); "sync.branch: expected the branch the board was synced against"),
        check($d.sync.commit | is_text and test("^([0-9a-f]{40}|[0-9a-f]{64})$"); "sync.commit: expected the full commit SHA"),
        check($d.sync.openPullRequests | absent_or(is_int and . >= 0); "sync.openPullRequests: expected a count"),
        check($d.sync.extra | absent_or(type == "array" and all(.[]; is_text)); "sync.extra: expected a list of text")

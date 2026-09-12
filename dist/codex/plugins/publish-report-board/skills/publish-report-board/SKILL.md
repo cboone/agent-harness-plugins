@@ -43,7 +43,9 @@ In the commands below, `REPORT_BOARD` is shorthand for that full **quoted path**
 
 ### 3. Choose Where the Board Lives
 
-Name the working files `REPO-BOARD.json` and `REPO-BOARD.html`, where `REPO` is the repository name without its owner and `BOARD` is the board type: `agent-harness-plugins-backlog-triage.json` and `agent-harness-plugins-backlog-triage.html`. Those two names are fixed rather than illustrative, and the same names are used wherever the files live. The local fallback has no Artifact to recover a board from and finds the previous one by this name alone, so a session that invents its own name reads a re-sync as a first publish: it reports no changes and leaves the earlier board sitting beside the new one.
+Name the data file `REPO-BOARD.json` and the board `REPO-BOARD.html`, where `REPO` is the repository name without its owner and `BOARD` is the board type: `agent-harness-plugins-backlog-triage.json` and `agent-harness-plugins-backlog-triage.html`. Those two names are fixed rather than illustrative, and the same names are used wherever the files live. The local fallback has no Artifact to recover a board from and finds the previous one by this name alone, so a session that invents its own name reads a re-sync as a first publish: it reports no changes and leaves the earlier board sitting beside the new one.
+
+`REPO-BOARD.html` names the published board, not every page this sync renders. Without the Artifact tool the two are separate files: step 7 renders a working page that step 8 is still free to reject, and step 9 renders the board itself once the checks have passed. Give that working page any other name in the same directory, such as `REPO-BOARD.next.html`, and leave `REPO-BOARD.html` alone until step 9. The fixed name governs discovery, which is what the rule above protects; it does not mean a sync may write only one file.
 
 - **With the Artifact tool** (Claude Code): keep both files in the session scratchpad directory when the system prompt lists one, and otherwise in a directory from `mktemp -d`. The published Artifact is the board; the local files are this conversation's working copies.
 - **Without the Artifact tool** (Codex CLI, OpenCode): keep both files in `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/REPO-PATH/`, creating it if needed. `REPO-PATH` is the host and path of `repoUrl` together, such as `git.example.com/enterprise/owner/name`, or `github.com/OWNER/REPO` when the board carries none. The whole address is the key because a host alone is not unique: two repositories can share an owner and a name under different path prefixes on one host. The rendered `REPO-BOARD.html` there is the board, and the next session finds it at that exact path.
@@ -90,7 +92,7 @@ bash REPORT_BOARD render DATA_JSON PAGE_HTML
 
 Add `--standalone` when there is no Artifact tool. It writes a complete HTML document that opens straight from disk; the default output is a fragment, because the Artifact tool supplies its own document skeleton.
 
-Without the Artifact tool, make `PAGE_HTML` a working path beside the data file rather than the board itself. Rendering onto the board would publish it here, before step 8 has compared anything, so a sync that step 8 tells you to abandon would already have replaced what was there. Step 9 renders onto the board once the checks have passed.
+Without the Artifact tool, make `PAGE_HTML` the working page from step 3, `REPO-BOARD.next.html` beside the data file, rather than the board itself. Rendering onto the board would publish it here, before step 8 has compared anything, so a sync that step 8 tells you to abandon would already have replaced what was there. Step 9 renders onto `REPO-BOARD.html` once the checks have passed.
 
 Never edit the rendered page. Change the data and render again.
 
