@@ -805,6 +805,18 @@ $ dir="$(mktemp -d)" && jq '(.milestones[0]).short = "P1"' "${REPORT_BOARD_DATA_
 - Changed milestones: now Parser rewrite (P1), Documentation
 ```
 
+## Compare ignores a milestone the matrix never draws
+
+The matrix draws a column only for a milestone that a claimed issue carries, and
+orders the columns by where their titles sit in this list. An entry no claim
+reaches heads no column and shifts no other column, so a change to it is not a
+change the reader sees.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.milestones += [{title: "Packaging", short: "Pkg"}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/current.json" | tail -n 1
+- No changes beyond the sync metadata.
+```
+
 ## Compare names a blocker whose title changed
 
 The Blocked section draws a reference blocker's title, so a change to the title
