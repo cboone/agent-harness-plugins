@@ -2,7 +2,7 @@
 
 Base: `origin/main` (merge base: `6761dc22`)
 Commits: 11
-Files changed: 30 (24 added, 6 modified, 0 deleted, 0 renamed), 12 of them generated mirror copies
+Files changed: the plugin and its generated mirrors, the catalog, the tests, and the repository docs; the pull request carries the current list
 Reviewed through: `2f5dc7b4`
 
 ## Summary
@@ -67,7 +67,7 @@ Rebuilt with `bin/build-codex-marketplace` and `bin/build-opencode-mirror`; `bin
 ## File Inventory
 
 - **New files**: 24, of which 13 are source and 11 are generated mirror copies.
-- **Modified files**: 6: `.claude-plugin/marketplace.json`, `.github/workflows/ci.yml`, `AGENTS.md`, `Makefile`, `README.md`, and the generated `.agents/plugins/marketplace.json`.
+- **Modified files**: `.claude-plugin/marketplace.json`, `.github/copilot-instructions.md`, `.github/workflows/ci.yml`, `AGENTS.md`, `Makefile`, `README.md`, and the generated `.agents/plugins/marketplace.json`.
 - **Deleted files**: none.
 - **Renamed files**: none.
 
