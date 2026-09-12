@@ -590,7 +590,7 @@ Previous sync: main at 01234567, 2026-09-01T09:30:00-04:00 in America/New_York, 
 This sync: main at 89abcdef, 2026-09-08T10:15:00-04:00 in America/New_York, 0 open pull requests
 
 - Closed: #101 parser: replace the tokenizer; #103 cli: report parse errors with columns; #105 docs: fix broken links
-- Opened: #108 parser: benchmark suite (L1; Parser rewrite; waits on #102)
+- Opened: #108 parser: benchmark suite (L1; Parser rewrite; waits on #102: Benchmarks measure the streaming path that #102 adds.)
 - Unblocked: #102 parser: stream large inputs; #104 parser tutorial
 - Started: #106 ci: cache dependencies (feature/106-cache)
 - Added to start now: #102 parser: stream large inputs; #104 parser tutorial
@@ -614,7 +614,7 @@ $ page="$(mktemp -d)/board.html" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD
 
 ```scrut
 $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"branch": "feature/palette"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/data.json" | tail -n 1
-- Newly blocked: #107 cli: color output (waits on branch feature/palette)
+- Newly blocked: #107 cli: color output (waits on branch feature/palette: x)
 ```
 
 ## Compare reports better-after changes

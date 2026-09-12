@@ -1102,8 +1102,6 @@
     const word = (n) => WORDS[n] ?? String(n);
     const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
     const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-    const plural = (text) =>
-      /[^aeiou]y$/i.test(text) ? `${text.slice(0, -1)}ies` : /(s|x|z|ch|sh)$/i.test(text) ? `${text}es` : `${text}s`;
     const listAt = (map, key) => {
       if (!map.has(key)) map.set(key, []);
       return map.get(key);
@@ -1593,12 +1591,14 @@
       if (notes.contention) return notes.contention;
       const across = claims.filter((claim) => new Set(claim.issues.map(milestoneKey)).size > 1).length;
       const within = claims.length - across;
-      const noun = rowLabel.toLowerCase();
-      const lead = `${capitalize(word(claims.length))} ${claims.length === 1 ? `${noun} is` : `${plural(noun)} are`} claimed by more than one issue`;
+      // The row label is arbitrary text, so it modifies "row" rather than
+      // being pluralized itself: no short rule turns every noun a board might
+      // use into a correct plural, and "Analysis" alone defeats the usual one.
+      const lead = `${capitalize(word(claims.length))} ${rowLabel} ${claims.length === 1 ? "row is" : "rows are"} claimed by more than one issue`;
       let split = anyClaimMilestone ? ", each within one milestone." : ".";
       if (across && within) split = `: ${word(across)} across milestones, ${word(within)} within one.`;
       else if (across) split = claims.length === 1 ? ", across milestones." : ", all across milestones.";
-      return `${lead}${split} A filled cell is a rebase waiting to happen, and ${noun} names link to every open issue that mentions them.`;
+      return `${lead}${split} A filled cell is a rebase waiting to happen, and ${rowLabel.toLowerCase()} names link to every open issue that mentions them.`;
     }
 
     const matrixSection = claims.length
