@@ -77,7 +77,9 @@ Then pin the configuration and give the pin a control of its own. On the source 
 
 The fourth class, and the hardest to notice.
 
-The code compiles in a plain build, an instrument that could reach it exists, and no arm was ever written to steer it there. What makes it hard to see is that **every counter it moved was read by something, so nothing looked absent.** There is no gap in the coverage report, no stub in the source, and no configuration predicate to grep for. The branch is simply never taken by any input the suite supplies.
+The code compiles in a plain build, an instrument that could reach it exists, and no arm was ever written to steer it there. What makes it hard to see is that **every counter it moved was read by something, so nothing looked absent.** There is no stub in the source and no configuration predicate to grep for. The branch is simply never taken by any input the suite supplies.
+
+**Coverage tooling can see this one, and that is the difference from the third class.** Line coverage cannot: the line holding the branch is executed, so it reports as covered whichever direction is taken. Branch or condition coverage reports a branch with zero executions and names it directly, which makes it the cheapest instrument for this class and a reason to turn it on rather than settling for line percentages. Contrast structural uncoverability, where no coverage mode helps because the code is not in the analyzed program at all.
 
 Finding these is a matter of enumerating the arms an instrument has rather than trusting that the instrument exists. Ask, for each check: which inputs does it actually run on, and which branch does each one take?
 

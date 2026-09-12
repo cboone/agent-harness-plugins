@@ -28,14 +28,14 @@ Use this when a check's own correctness is in question rather than the code's. T
 
 - **The claim is an absence.** No leak, no race, no unused import, no warning, nothing left behind. A search for absence succeeds for the wrong reason when the instrument was never running.
 - **The check is an external instrument.** A sanitizer, a linter, a formatter, a leak checker, a conformance validator. Its exit code answers a question you did not ask, and its silence has two readings.
-- **The failure mode is a weakening rather than a break.** A release store simplified to relaxed, a tolerance widened, a constructor swapped for its sibling, two correct lines put in the wrong order. Each compiles and each passes.
+- **The failure mode is a weakening rather than a break.** A release store simplified to relaxed, a tolerance widened, two correct lines put in the wrong order. Each compiles and each passes, which is what separates this from a defect the compiler already refuses.
 
 Do not use this to re-derive coverage for ordinary code whose failure is a legible compile error or an obviously failing test. The compiler is already telling you.
 
 ## Core Principles
 
 1. **The second property has a bad default answer.** "This test would catch that" is a claim about the test. Until it has been run against the defect it names, it is a prediction.
-1. **Order the assertions.** Positive control first, then a progress or parse check, then the absence. Three steps, always in that order.
+1. **Order the assertions.** Proof that the instrument was running first, then a progress or parse check, then the absence. Three steps, always in that order. The first step has a strong form and a weak one, and knowing which you have is part of the result.
 1. **Record what happened, not what was expected.** A result column filled in from the issue that filed the work is not a measurement. Several of the findings behind this skill are cases where the two differed.
 1. **Encoding a plant is not the same as covering it.** A plant far enough outside a bound is caught by a sibling check, so the arm that names it is asserting only that the error had a detectable sign. Weaken each assertion in turn and confirm something still fails.
 1. **A plant that does not compile is not a passing plant.** Judge on the build's exit code, not the shape of its output, or a grep for failures reads a compile error as a pass.
@@ -69,7 +69,7 @@ Four, not two. The third and fourth are the ones that survive a coverage report.
 1. **Name the claim and the instrument.** Write down which check is supposed to be asserting the property, in the form "if X broke, Y would fail".
 1. **Write the table first**, with the result column empty. Filling it in later is the work.
 1. **Commit the check before planting against it**, so reverting the plant reverts the plant and not the check it was testing.
-1. **Confirm the unmodified tree passes, and stand up a positive control.** See `./references/ordered-assertions.md`. If nothing can be made to fail on purpose, stop: there is no evidence the instrument is running.
+1. **Confirm the unmodified tree passes, and stand up a positive control.** See `./references/ordered-assertions.md`. If nothing can be made to fail on purpose, fall back to a marker proving the instrument produced output, and record that the weaker form is what you have.
 1. **Plant one defect at a time**, revert between plants, and prefer the real code over a replica. A control that models the defect is not the subject exhibiting it.
 1. **Record what happened**, and confirm the assertion you named is the one that fired rather than a neighbour catching it first.
 1. **Plant against the judge as well as the subject.** Weaken each assertion and confirm something still fails. This is the step that finds arms which look like tests of the thing they name and are tests of something weaker.

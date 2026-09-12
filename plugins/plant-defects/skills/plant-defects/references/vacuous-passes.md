@@ -1,6 +1,8 @@
 # Vacuous Passes
 
-A check that runs on nothing passes. It is indistinguishable, from the outside, from a check that ran and found nothing.
+A check that runs on nothing tends to pass, and when it does it is indistinguishable from the outside from a check that ran and found nothing.
+
+"Tends to" rather than "does", because some tools refuse an empty selection instead: pytest exits 5 on collecting nothing, and Jest and Vitest fail with no tests found. Where a tool refuses, the vacuity is introduced by whatever normalizes the refusal into success, which is usually a wrapper or a flag rather than the tool. The catalogue below covers both shapes, and the toolchain table at the end says which kind each runner is.
 
 ## The catalogue
 

@@ -6,11 +6,13 @@ An absence has to be told apart from an instrument that was not running, and the
 
 Always these three, in this order:
 
-1. **The positive control ran and was flagged.** Something built to fail did fail. Without this, everything below passes vacuously.
+1. **The instrument was running.** In the strongest form, something built to fail did fail. Where the subject cannot be weakened into failing, the fallback is a marker proving the instrument produced output at all. Without one or the other, everything below passes vacuously.
 1. **The subject ran to completion, its output parses, and its progress counter moved.** A clean result now describes work that actually happened.
 1. **The absence.** No race, no leak, no match, nothing left behind.
 
-Everything the subject proves is an absence, and a search for absence succeeds for the wrong reason when the instrument was never running. An unlinked runtime, an uninstrumented access, a thread the sanitizer never saw, a job that built the wrong module: each makes every arm silent, and only the control tells that apart from a correct subject.
+Everything the subject proves is an absence, and a search for absence succeeds for the wrong reason when the instrument was never running. An unlinked runtime, an uninstrumented access, a thread the sanitizer never saw, a job that built the wrong module: each makes every arm silent, and only step 1 tells that apart from a correct subject.
+
+The two forms of step 1 are not equally strong, and the gap between them is where the plant table earns its place. A failing arm proves the instrument can see this class of defect. A proof-of-output marker proves only that the instrument ran. The two worked examples below are one of each, and the second says explicitly what it therefore cannot establish on its own.
 
 ## Worked example: a two-arm sanitizer judge
 
@@ -70,6 +72,17 @@ A leak checker exits non-zero whenever it finds anything at all, and it always f
 1. **The total leaked bytes are inside the bound.**
 
 The class filter comes before the byte bound deliberately, because it can say **what** leaked. "These objects belong to this project, here they are" is a strictly better first thing to read than "some number of bytes went missing", so the bound is the catch-all for what the filter cannot name.
+
+**Notice how this example departs from the three-step order, because the difference is the useful part.** There is no deliberately failing arm here. You cannot weaken a leak checker into reporting a leak that is not there, so the positive control of the two-arm kind is unavailable, and assertion 2 stands in for it: a parseable report with a nonzero total proves the instrument ran and produced output, which is the most this script can establish from inside itself.
+
+That is weaker than a control arm, and it is weaker in a specific way worth naming: it proves the instrument ran, not that the instrument can see the defect you care about. Only a planted leak proves the second, and it has to be run **outside** the script, by hand, as a row in the plant table. So the two halves divide like this:
+
+| Establishes                            | Where it lives                                     |
+| -------------------------------------- | -------------------------------------------------- |
+| The instrument ran and produced output | Assertion 2, on every run, forever                 |
+| The instrument can see this defect     | A planted leak, run by hand, recorded in the table |
+
+The general rule, then, is not "always start with a failing arm". It is **start with whatever proves the instrument was running, and use the strongest form available to you**: a deliberately failing arm where the subject can be weakened, a proof-of-output marker where it cannot. Where you settle for the weaker form, the plant table is what carries the claim the script cannot.
 
 Two implementation details that are really assertions:
 
