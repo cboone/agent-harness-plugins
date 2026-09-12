@@ -47,7 +47,7 @@ Body sections: the principle as a block quote, `## When to Use`, `## Core Princi
 The plant table template, generalized from fosforo's twelve-row instance:
 
 | Planted defect | Instrument expected to catch it | What actually happened | Test that covers it now |
-| -------------- | ------------------------------ | ---------------------- | ----------------------- |
+| -------------- | ------------------------------- | ---------------------- | ----------------------- |
 
 The workflow, nine steps:
 
@@ -89,7 +89,19 @@ For an ordering a single-threaded suite cannot see, where the failure is a weake
 
 ### `plugins/plant-defects/README.md`
 
-The 52-plugin template exactly: H1, the description paragraph verbatim, a `**Type:** Skill` and `**Trigger:** \`/plant-defects\`` block, then `## Installation` with the single line `See the [marketplace install instructions](../../README.md#install).`, `## What It Does`, `## Usage`, `## Examples`, `## See Also` ending with `- [All plugins](../../README.md)`.
+The 52-plugin template exactly, in this order:
+
+```text
+# Plant Defects
+<the description paragraph, verbatim>
+**Type:** Skill
+**Trigger:** `/plant-defects` (also activates automatically)
+## Installation      -> the one-line pointer to the marketplace install section
+## What It Does
+## Usage
+## Examples
+## See Also          -> ending with the all-plugins link
+```
 
 No `## Requirements` and no `## Recommended Permissions`: the skill runs no command of its own, and 31 of 52 plugins omit the permissions section. See Also links only to plugins that exist, namely `write-lean-tests`, `write-scrut-tests`, `set-up-ci`, and `review-branch`. The pairings with the two skills the issue names are still unbuilt, so they get a plain prose mention in the README and no link.
 
@@ -103,13 +115,13 @@ No `## Requirements` and no `## Recommended Permissions`: the skill runs no comm
 
 Worth recording, since the issue will be read alongside the result.
 
-| Issue says                                                       | Actually                                                                                  |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| The program plan is at `docs/plans/todo/2026-09-04-...`           | It is in `docs/plans/done/`                                                               |
-| A theory-of-instruments table in fosforo's `AGENTS.md`            | That phrase is an ADR 0013 heading; the matrix lives in `docs/notes/leak-instruments.md`  |
-| Six planted defects against six instruments                      | Six against five                                                                          |
-| Three failure classes                                            | Four; the fourth is the unvisited branch                                                   |
-| springer states the principle in the quoted wording               | springer paraphrases it and credits fosforo; the verbatim sentence is fosforo's            |
+| Issue says                                              | Actually                                                                                 |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| The program plan is at `docs/plans/todo/2026-09-04-...` | It is in `docs/plans/done/`                                                              |
+| A theory-of-instruments table in fosforo's `AGENTS.md`  | That phrase is an ADR 0013 heading; the matrix lives in `docs/notes/leak-instruments.md` |
+| Six planted defects against six instruments             | Six against five                                                                         |
+| Three failure classes                                   | Four; the fourth is the unvisited branch                                                 |
+| springer states the principle in the quoted wording     | springer paraphrases it and credits fosforo; the verbatim sentence is fosforo's          |
 
 Every measurement the issue quotes checks out: the `nan` readback, 297 of 297, the five orderings of which two flag, 44.1 MB to 44.3 MB against nearly two gigabytes, 232 and 328 against a clean 288, and the 137 KB command queue, which is 137,152 bytes exactly.
 
