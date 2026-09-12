@@ -12,7 +12,7 @@ Always these three, in this order:
 
 Everything the subject proves is an absence, and a search for absence succeeds for the wrong reason when the instrument was never running. An unlinked runtime, an uninstrumented access, a thread the sanitizer never saw, a job that built the wrong module: each makes every arm silent, and only step 1 tells that apart from a correct subject.
 
-The two forms of step 1 are not equally strong, and the gap between them is where the plant table earns its place. A failing arm proves the instrument can see this class of defect. A proof-of-output marker proves only that the instrument ran. The two worked examples below are one of each, and the second says explicitly what it therefore cannot establish on its own.
+The two forms of step 1 are not equally strong, and the gap between them is where the plant table earns its place. A failing arm proves the instrument can see **the one defect the arm plants**, on the inputs that arm supplies. A proof-of-output marker proves only that the instrument ran. Neither proves visibility for a class, which is the same caution the blindness matrix raises about variants of one defect, and it is why a campaign plants several spellings rather than one. The two worked examples below are one form each, and the second says explicitly what it therefore cannot establish on its own.
 
 ## Worked example: a two-arm sanitizer judge
 

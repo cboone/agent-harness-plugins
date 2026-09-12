@@ -45,7 +45,7 @@ The fourth column is what makes the table regress rather than describing a check
 
 ## Failure Classes
 
-Four, not two. The third and fourth are the ones that survive a coverage report.
+Four, not two. The third survives every coverage mode, because the code is not in the analyzed program at all. The fourth survives line coverage and is reported by branch or condition coverage, which makes that the cheapest instrument for it.
 
 | Class                     | What it is                                                                               | Why more tests do not help                                                              |
 | ------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |

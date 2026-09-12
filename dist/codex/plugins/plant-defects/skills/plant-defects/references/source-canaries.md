@@ -6,11 +6,19 @@ Reading a file's own source as text, so a declaration nothing can check as behav
 
 All three conditions, together:
 
-- **The failure mode is a weakening rather than a break.** A releasing store simplified to relaxed, or two correct lines put in the wrong order. Each compiles, and each passes a suite that never exercises the concurrency. Note which weakenings do **not** belong on this list: swapping a constructor for its sibling is recorded in the plant table below as a compile error, so the compiler already refuses it and a canary adds nothing. Check that the weakening you are guarding actually builds before writing a canary for it.
+- **The failure mode is a weakening rather than a break.** A releasing store simplified to relaxed, a constructor swapped for its sibling, two correct lines put in the wrong order. Each compiles, and each passes a suite that never exercises the concurrency.
 - **The instrument that would catch it is unavailable.** It needs a platform this machine cannot be, or hardware nobody has, or it does not exist.
 - **The correct spelling is short and stable.** A canary over code that is legitimately edited every week is noise.
 
 The motivating measurement: replacing one releasing store with a relaxed one passed all 139 tests of the module it was in. The suite could not discriminate a correct ordering from an incorrect one, and reading the module was the only check that existed. The realistic failure is not a wrong design but someone simplifying an atomic, watching the suite pass, and shipping it.
+
+### The constructor case, which is about plants rather than canaries
+
+The first condition above lists a constructor swap, and the plant table below records that the direct substitution **does not compile**: a container-level initializer must be evaluable at compile time, and the sibling constructor calls into the platform, so the type system refuses it outright.
+
+**That refusal is about one spelling and not about the defect.** The restructure that reaches the same place, an undefined initializer plus a runtime setup call, compiles cleanly, passes the suite, and is exactly what the canary catches, through an assertion that the term appears zero times. So the canary does guard the constructor change.
+
+Concluding otherwise from the first spelling would have discarded a working guard, which is the plant-table rule applied to a canary: try the second spelling before deciding a defect cannot be written.
 
 ## What it is
 

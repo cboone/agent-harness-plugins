@@ -69,7 +69,7 @@ Run the suite in the configuration that ships, not only in the one that is conve
 
 - Assertions may be compiled out in release, so a suite that passes in debug is silent about the artifact users receive.
 - Optimization can remove the very branch a plant targets.
-- A free positive control that the modes really differ: search each test binary for a panic message the compiler only emits in checked modes, and confirm it is present in some and absent in others. If every binary looks the same, the matrix is not actually testing different modes.
+- A cheap hint that the modes really differ: search each test binary for a panic message the compiler only emits in checked modes, and see whether it is present in some and absent in others. Treat it as a hint and not as a control, for the reason given below about artifact strings: optimization, dead-code elimination, stripping and string pooling each change string retention on their own, so the search can differ when the modes do not and match when they do. The control that does settle it is a planted assertion failure built in each mode, where the build's own result answers rather than a search over its output.
 
 Then pin the configuration and give the pin a control of its own. On the source project a build option carries the mode the build system asked for and a compile-time block fails the build if the artifact was produced at another. Planted, by swapping the mode at the call site, it fails and names both modes. Without it, a refactor that drops the pin leaves a green job testing the same mode twice.
 

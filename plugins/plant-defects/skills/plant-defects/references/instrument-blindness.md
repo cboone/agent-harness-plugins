@@ -108,7 +108,8 @@ Five orderings were planted in a teardown gate, in the real type rather than in 
 
 Two things follow:
 
-- **The three that come back clean are not thereby shown to be unnecessary.** They are shown to be outside what any sanitizer can see, which is a different statement, and the reason a source canary still pins all five. See `./references/source-canaries.md`.
+- **The three that come back clean are not thereby shown to be unnecessary.** They are shown to be outside what **this** sanitizer, in this configuration, against these inputs, can see. That is a different statement from being unnecessary, and it is the reason a source canary still pins all five. See `./references/source-canaries.md`.
+- **Generalizing past the measurement takes the rule, not the result.** The three are outside what any happens-before sanitizer can see, but the measurement alone does not show that: the rule above does, because none of the three guards non-atomic memory and that is the only thing such a sanitizer can key on. Keep the two claims separate in the table, so a later configuration change is read against the measurement rather than against the generalization.
 - **The issue that filed the work named one of the three that do not flag** as the control arm. Had the control been built that way it would have reported nothing, the judging script would have refused the run, and the failure would have read as a broken sanitizer rather than as the wrong defect to plant. This is why the plants are run rather than assumed.
 
 ## A class of defect with no instrument at all
