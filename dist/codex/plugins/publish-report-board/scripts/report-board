@@ -160,7 +160,11 @@ else
     # base for other repositories by removing the repo from its end, so a URL
     # naming a different repository sends every link somewhere else. The repo
     # guard keeps a malformed repo from being reported twice.
-    check($d.repoUrl | absent_or(is_text and test("^https://" + host_re + port_re + "(/[^\\s\"<>?#/]+)+/?$") and (($d.repo | type) != "string" or (sub("/$"; "") | endswith("/" + $d.repo)))); "repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name"),
+    # A dot segment in the path would pass validation and then be normalized
+    # away by the browser, which is how a link escapes a path prefix. The path
+    # is held to unreserved characters, so a percent-encoded dot segment cannot
+    # slip through either, and no segment may be . or .. anywhere along it.
+    check($d.repoUrl | absent_or(is_text and test("^https://" + host_re + port_re + "(/(?!\\.{1,2}(/|$))[A-Za-z0-9_.~-]+)+/?$") and (($d.repo | type) != "string" or (sub("/$"; "") | endswith("/" + $d.repo)))); "repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name"),
     check($d.summary | is_text; "summary: expected text summarizing the board"),
     # Every string on a board comes from GitHub, and compare prints them to a
     # terminal. A control character in one could rewrite the change report as it

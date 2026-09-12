@@ -408,6 +408,19 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## A repository URL with a dot segment
+
+A browser normalizes `..` out of a path, so a URL ending in the right
+repository can still send every other-repository link elsewhere, climbing out
+of the prefix an enterprise install is served under.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com/enterprise/../example/widgets"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name
+[1]
+```
+
 ## A repository URL naming a different repository
 
 Every same-repository link is built from this address, and the base for other
