@@ -8,7 +8,7 @@ Code that no test binary compiles is not uncovered. It is absent from the progra
 | ------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | False negative            | A defect one instrument cannot see                                                       | Plant it and watch the instrument stay green; name a second one |
 | False positive            | Nothing was broken and a required check said something was                               | The check fails on an unmodified tree                           |
-| Structural uncoverability | Code no test binary compiles, so it is not in the analyzed program                       | Plant a defect in it and watch the whole suite pass             |
+| Structural uncoverability | Code that no test binary compiles, so it is not in the analyzed program                  | Plant a defect in it and watch the whole suite pass             |
 | Unvisited branch          | It compiles, an instrument could reach it, and no arm was ever written to steer it there | Plant a defect in it and watch the whole suite pass             |
 
 The first is closed by adding an instrument. The second is closed by fixing the check. The third and fourth are closed by changing what the test build contains or where its arms go, and neither is closed by writing more tests of the kind already there.
@@ -35,18 +35,23 @@ Two lessons, both transferable:
 
 ## Causes, by mechanism
 
-| Mechanism                          | Spelling                                                                  |
-| ---------------------------------- | ------------------------------------------------------------------------- |
-| Compile-time branch on a test flag | `if (comptime is_test) Stub else Real`                                    |
-| Build tags                         | `//go:build !test`, or a tag the test command never sets                  |
-| Conditional compilation            | `#[cfg(not(test))]`, `#ifdef NDEBUG`, `#if DEBUG`                         |
-| Feature flags                      | A default feature set that excludes the module under test                 |
-| Build-mode branches                | Code behind a debug-only or release-only path                             |
-| Type-check-only imports            | `if TYPE_CHECKING:`, where the runtime branch is never exercised          |
-| Dependency injection at build time | A fake wired in for every test target, with no arm using the real one     |
-| Dead-code elimination              | A declaration the linker drops, so a planted defect has nothing to affect |
+| Mechanism                          | Spelling                                                              |
+| ---------------------------------- | --------------------------------------------------------------------- |
+| Compile-time branch on a test flag | `if (comptime is_test) Stub else Real`                                |
+| Build tags                         | `//go:build production`, with the test command never passing that tag |
+| Conditional compilation            | `#[cfg(not(test))]`, `#ifdef NDEBUG`, `#if DEBUG`                     |
+| Feature flags                      | A default feature set that excludes the module under test             |
+| Build-mode branches                | Code behind a debug-only or release-only path                         |
+| Dependency injection at build time | A fake wired in for every test target, with no arm using the real one |
 
-The pattern to watch for is any predicate that mentions the test configuration. A stub selected for tests is a reasonable design; a stub selected for tests with no other arm reaching the real implementation is this failure.
+The pattern to watch for is any predicate that mentions the test configuration, or a tag the test command does not pass. A stub selected for tests is a reasonable design; a stub selected for tests with no other arm reaching the real implementation is this failure.
+
+Note the Go row's shape, because the obvious spelling of it is wrong: `go test` does not define a `test` build tag, so a file guarded by `//go:build !test` is compiled by the test build like any other. What produces the failure is a tag the test command never passes, so name the tag your own build uses rather than assuming a conventional one exists.
+
+**Two mechanisms that look like this class and are not.** Both are worth naming, because miscategorizing them sends you to the wrong remedy:
+
+- **A type-check-only branch**, such as Python's `if TYPE_CHECKING:`, is false at runtime by design and normally guards imports and annotations rather than an implementation. A static type checker does analyze it, so it is covered by a different instrument rather than absent from the analyzed program.
+- **Linker dead-code elimination** happens after compilation, so a planted type error in a declaration the linker later drops is still analyzed and still fails the build. It can remove the code from the artifact, which matters for the artifact check below, but it does not make the code uncoverable by a compile-time plant.
 
 ## Lazy and per-declaration analysis
 
@@ -56,7 +61,7 @@ Measured rather than reasoned about: a type error planted in one accessor built 
 
 **The build cache cannot answer this question for you**, because a manifest lists the files the compiler read rather than the declarations it checked. The check that does answer it is a planted type error in the specific declaration you care about, which still produces a binary if nothing references it.
 
-The closing move is a sweep that references every public declaration from a test, so the analysis reaches them. Then plant a type error in a declaration nothing calls and confirm the build now fails, which is the control on the sweep.
+The closing move is a sweep that references every public declaration from a test, so the analysis reaches them. The control on the sweep is to plant a type error in a declaration that was uncalled **before** the sweep existed, and confirm the build now fails where it previously built clean. Note the ordering, because it is what makes the control mean anything: once the sweep is in place no declaration is uncalled any more, so "plant it in something nothing calls" describes a set that the sweep just emptied. Pick the declaration first, from the pre-sweep tree, and keep its name in the plant table.
 
 ## The optimize-mode matrix
 
@@ -85,7 +90,7 @@ A procedure, cheapest first:
 1. **Grep for configuration predicates that mention the test flag**, the test feature, or a debug-only mode. Each hit is a candidate for structural uncoverability.
 1. **Plant a type error** in each declaration you believe is covered, one at a time, and confirm the build fails. A clean build means nothing is analyzing it.
 1. **Plant a behavioural defect** in each declaration whose build did fail, and confirm a named test fails. A clean run over a compiled declaration is either an unvisited branch or a missing arm.
-1. **Check the artifact.** Search the test binary for a string unique to the code in question. Absent, it is structural; present, the branch is merely unvisited.
+1. **Check the artifact, as supporting evidence only.** Searching the test binary for a string unique to the code in question is cheap and suggestive, and it is not a discriminator on its own: optimization, dead-code elimination, symbol stripping, and string pooling can each drop or retain a literal independently of whether the branch was compiled and reachable. Let step 2's compile-time plant decide the class, and use the string search to corroborate it.
 1. **Record the class** in the plant table, because the remedy differs by class and a row that only says "not caught" invites the wrong fix.
 
 ## The remedy

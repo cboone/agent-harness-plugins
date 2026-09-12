@@ -13,7 +13,7 @@ See the [marketplace install instructions](../../README.md#install).
 
 A test asserts a property of the code. Planting a defect asserts a property of the test, and the second does not follow from the first. Where a check is an external instrument, or where its claim is an absence, the second property has a bad default answer and reading the source cannot improve it.
 
-This skill teaches the manual, targeted, documented form of that verification: the plant table as a committed artifact with a column naming the test that covers each row, the assertion order that separates an absence from an instrument that was not running, the ways a check comes to run on nothing, the code no test binary compiles, the matrix that records what each instrument cannot see, and source canaries for orderings a single-threaded suite cannot reach.
+This skill teaches the manual, targeted, documented form of that verification: the plant table as a committed artifact with a column naming the test that covers each row, the assertion order that separates an absence from an instrument that was not running, the ways a check comes to run on nothing, code that no test binary compiles, the matrix that records what each instrument cannot see, and source canaries for orderings a single-threaded suite cannot reach.
 
 It is adjacent to mutation testing and differs in four ways: it is targeted rather than exhaustive, it covers external instruments that no mutation operator can address, its output is a committed document rather than a run, and it records the negatives, including the rows nothing covers and the instruments deliberately not built.
 

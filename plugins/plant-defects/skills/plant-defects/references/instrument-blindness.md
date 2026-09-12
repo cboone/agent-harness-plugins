@@ -15,14 +15,14 @@ Planted defects down the side, instruments across the top, one cell per pair. Th
 | A release call stops being sent, still counted | no                 | no         | no             | no              | no              |
 | A plain allocation this project owns           | no                 | yes        | no             | no              | on tested paths |
 
-Its opening line is the theory in one sentence: three instruments, each blind to something different, and **the differences are what matter rather than how thorough each one is**.
+Its opening line is the theory in one sentence: each instrument blind to something different, and **the differences are what matter rather than how thorough each one is**.
 
 Four conclusions the matrix produced, none of which was available from reading any instrument's documentation:
 
 - **The heap walker sees objects with a runtime class and misses both a graphics buffer's storage and a block with no class at all.**
 - **The byte bound sees anything large**, which is why it is the one that reaches the project's own allocations.
 - **The counters are exact**, and they are the only instrument for either kind of texture. They cannot name which resource, which is why the message says "textures" rather than "accumulation textures": a counter that cannot tell two kinds apart must not claim to.
-- **The bottom row is covered by nothing, deliberately.** A release path that decrements without releasing balances every counter and leaks storage no instrument here can see.
+- **One row is covered by nothing, deliberately:** `A release call stops being sent, still counted`. A release path that decrements without releasing balances every counter and leaks storage no instrument here can see. Name the row rather than its position, since a row's position moves as the table grows and the claim then attaches to the wrong defect.
 
 ## The row nothing covers
 

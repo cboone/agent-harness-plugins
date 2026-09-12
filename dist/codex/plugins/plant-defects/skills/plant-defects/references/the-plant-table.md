@@ -33,9 +33,11 @@ The rule that falls out: **an acceptance criterion written against the tree as i
 
 ## Commit the check before planting against it
 
-Plant into a tree where the check is already committed. Then reverting the plant is `git restore`, and it cannot take the check with it.
+Plant into a tree where the check is already committed. Then reverting the plant is a checkout of the committed file, and it cannot take the check with it.
 
 Planting first and writing the check second means the two edits are tangled in the working tree, and the revert that cleans up the plant either removes the check or leaves a partial one behind.
+
+**Plant only from an otherwise clean worktree**, and confirm it with `git status --porcelain` before each plant. A path-level revert such as `git restore <file>` discards every uncommitted change in that file, not just the plant, so a plant that shares a file with work in progress takes that work with it when it goes. Where the worktree cannot be clean, keep the plant as a patch (`git diff > plant.patch`, then `git apply -R plant.patch`) so the revert is scoped to the plant itself rather than to the file.
 
 ## Rows that must stay green
 
@@ -51,7 +53,7 @@ Both belong in the table, for different reasons.
 
 **A row nothing covers** is a decision, not an oversight. Written down, it stops being rediscovered later as a gap that justifies an instrument which would not close it. Left out, it comes back as a proposal every few months.
 
-**A row the compiler refuses** is a better outcome than a caught defect and still worth its line. One plant could not be applied at all because the language's unused-local rule rejected it before any check ran. That row now records why the defect is impossible rather than merely uncaught, which is a stronger claim than any test could make. The row also records what had to be added to exercise the surrounding path at all.
+**A row the compiler refuses** is a better outcome than a caught defect and still worth its line. One plant could not be applied at all because the language's unused-local rule rejected it before any check ran. Record what that establishes and no more: **this spelling** of the defect cannot be written, which is why the row has no result rather than a green one. It is not proof that the underlying defect is unreachable by some other edit, and a row that claims the stronger thing invites the reader to stop looking. Where the weaker claim matters, try a second spelling before concluding, and say which ones were tried. The row also records what had to be added to exercise the surrounding path at all.
 
 **A retired row** is the third case. When the claim a row asserted moves elsewhere, say so and name its successor rather than deleting the row. One plant asserted that a beam's colour did not vary across a fragment; a later change removed the colour from that stage entirely, so the row now reads as retired and points at the assertion that replaced it.
 

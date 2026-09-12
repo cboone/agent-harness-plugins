@@ -51,7 +51,7 @@ Four, not two. The third and fourth are the ones that survive a coverage report.
 | ------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | False negative            | A defect one instrument cannot see, closed by naming a second that can                   | The suite is fine; the instrument is the wrong one for this defect                      |
 | False positive            | Nothing was broken and a required check said something was                               | Belongs to the check's scaffolding, not the code; no number of instruments addresses it |
-| Structural uncoverability | Code no test binary compiles, so it is absent from the analyzed program                  | No test written in that suite could reach it, however it was written                    |
+| Structural uncoverability | Code that no test binary compiles, so it is absent from the analyzed program             | No test written in that suite could reach it, however it was written                    |
 | Unvisited branch          | It compiles, an instrument could reach it, and no arm was ever written to steer it there | Every counter it moved was read by something, so nothing looked absent                  |
 
 ## Workflow
@@ -76,7 +76,7 @@ Four, not two. The third and fourth are the ones that survive a coverage report.
 **By symptom:**
 
 - `./references/vacuous-passes.md`: a check that runs on nothing passes, and the catalogue of ways that happens
-- `./references/structural-uncoverability.md`: the four failure classes, and code no test binary compiles
+- `./references/structural-uncoverability.md`: the four failure classes, and code that no test binary compiles
 - `./references/instrument-blindness.md`: tabulating defect against instrument, complementary versus redundant assertions, and refusing an instrument
 - `./references/source-canaries.md`: asserting a file's own source text when the behaviour cannot be reached
 
