@@ -145,7 +145,7 @@ else
     check($d.board | is_text and test("^[a-z0-9][a-z0-9-]*$"); "board: expected a board type such as \"backlog-triage\""),
     check($d.title | is_text; "title: expected text naming the board, such as \"agent-harness-plugins backlog\""),
     check($d.repo | is_text and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"); "repo: expected owner/name"),
-    check($d.repoUrl | absent_or(is_text and test("^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*(:[0-9]+)?(/[^\\s\"<>?#]*)?$")); "repoUrl: expected an https:// URL with a host and no query or fragment"),
+    check($d.repoUrl | absent_or(is_text and test("^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*(:[0-9]+)?(/[^\\s\"<>?#/]+)+/?$")); "repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name"),
     check($d.summary | is_text; "summary: expected text summarizing the board"),
 
     (if ($d.sync | type) != "object" then "sync: expected an object with at, branch, and commit"
@@ -344,6 +344,9 @@ def waits: .waitingOn | as_list;
 def afters: .after | as_list;
 def is_blocked: (waits | length) > 0;
 def names($list): $list | map(ref_text) | join(", ");
+# The Blocked section draws a reference blocker title beside its link, so a
+# title that changed is a change the page draws even when the link is the same.
+def titled($list): $list | map(if type == "object" and (.title // null) != null then "\(ref_text) (\(.title))" else ref_text end) | join(", ");
 # The page draws blockers and better-after links in the order given, so a
 # reordered list is a change. jq compares objects by content, so a reference
 # written with its keys in another order is still the same reference.
@@ -390,7 +393,7 @@ $previous[0] as $old
     entry("Opened"; [$new | issues_of | .[] | select($was[.number | tostring] == null) | describe]),
     entry("Newly blocked"; [$kept[] | select(is_blocked and ($was[.number | tostring] | is_blocked | not)) | "\(describe) (waits on \(names(waits)))"]),
     entry("Unblocked"; [$kept[] | select((is_blocked | not) and ($was[.number | tostring] | is_blocked)) | describe]),
-    entry("Blockers changed"; [$kept[] | $was[.number | tostring] as $w | select(is_blocked and ($w | is_blocked) and (same_list(waits; $w | waits) | not)) | "\(describe) (was waiting on \(names($w | waits)), now \(names(waits)))"]),
+    entry("Blockers changed"; [$kept[] | $was[.number | tostring] as $w | select(is_blocked and ($w | is_blocked) and (same_list(waits; $w | waits) | not)) | "\(describe) (was waiting on \(titled($w | waits)), now \(titled(waits)))"]),
     entry("Now better after"; [$kept[] | select((afters | length) > 0 and (($was[.number | tostring] | afters | length) == 0)) | "\(describe) (after \(names(afters)))"]),
     entry("No longer better after"; [$kept[] | select((afters | length) == 0 and (($was[.number | tostring] | afters | length) > 0)) | describe]),
     entry("Better after changed"; [
@@ -425,7 +428,9 @@ $previous[0] as $old
       (select(reordered($old | claim_names; $new | claim_names)) | "claim order (now \($new | claim_names | join(", ")))"),
       (select(($old.contention | type) == "object" and ($new.contention | type) == "object" and ($old.contention.rowLabel // null) != ($new.contention.rowLabel // null)) | "row label (\($old.contention.rowLabel // "none") to \($new.contention.rowLabel // "none"))")
     ]),
-    entry("Changed milestones"; [select(($old.milestones | as_list) != ($new.milestones | as_list)) | $new.milestones | as_list | map(objects | .title // "") | join(", ") | if . == "" then "none" else "now \(.)" end]),
+    # The matrix heads a milestone column with its short label, so a short
+    # label that changed is a change the page draws.
+    entry("Changed milestones"; [select(($old.milestones | as_list) != ($new.milestones | as_list)) | $new.milestones | as_list | map(objects | (.title // "") as $t | if (.short // null) != null then "\($t) (\(.short))" else $t end) | join(", ") | if . == "" then "none" else "now \(.)" end]),
     entry("Reworded"; [
       (select(($old.summary // null) != ($new.summary // null)) | "summary"),
       (($old | notes_of) as $was_notes | ($new | notes_of) as $now_notes | ($was_notes + $now_notes) | keys_unsorted[] | select(($was_notes[.] // null) != ($now_notes[.] // null)) | "the \(.) note"),
@@ -558,8 +563,18 @@ function fill_template() {
     die "${E_INVALID}" "${template_file} is missing the ${TITLE_PLACEHOLDER} or ${DATA_PLACEHOLDER} placeholder"
   fi
 
-  template="${template%%"${TITLE_PLACEHOLDER}"*}${title_html}${template#*"${TITLE_PLACEHOLDER}"}"
-  printf '%s%s%s\n' "${template%%"${DATA_PLACEHOLDER}"*}" "${payload}" "${template#*"${DATA_PLACEHOLDER}"}"
+  # Both values are board data, so either can hold the other's placeholder.
+  # Splitting the original template on both markers first keeps a title that
+  # contains the data placeholder from capturing the data slot.
+  local before_title rest before_data after_data
+  before_title="${template%%"${TITLE_PLACEHOLDER}"*}"
+  rest="${template#*"${TITLE_PLACEHOLDER}"}"
+  if [[ "${rest}" != *"${DATA_PLACEHOLDER}"* ]]; then
+    die "${E_INVALID}" "${template_file} places ${DATA_PLACEHOLDER} before ${TITLE_PLACEHOLDER}"
+  fi
+  before_data="${rest%%"${DATA_PLACEHOLDER}"*}"
+  after_data="${rest#*"${DATA_PLACEHOLDER}"}"
+  printf '%s%s%s%s%s\n' "${before_title}" "${title_html}" "${before_data}" "${payload}" "${after_data}"
 }
 
 # Replaces the output file in one step, so a republish never reads a

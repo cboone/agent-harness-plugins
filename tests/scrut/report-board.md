@@ -36,6 +36,17 @@ $ page="$(mktemp -d)/board.html" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD
 identical
 ```
 
+## A title that holds the data placeholder
+
+The title and the payload both come from board data, so a title carrying the
+data placeholder must not capture the data slot.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.title = "widgets __BOARD_DATA__ backlog"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" render "${dir}/data.json" "${dir}/board.html" 2> /dev/null && head -n 1 "${dir}/board.html" && diff <(jq -S . "${dir}/data.json") <("${REPORT_BOARD_BIN}" extract "${dir}/board.html" | jq -S .) && echo identical
+<title>widgets __BOARD_DATA__ backlog</title>
+identical
+```
+
 ## Markup in the data cannot escape
 
 The title is HTML-escaped, and a `</script>` inside any string stays inside the
@@ -227,7 +238,7 @@ The page appends paths such as `/issues` to the repository URL.
 ```scrut
 $ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com/widgets?view=1"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
-  - repoUrl: expected an https:// URL with a host and no query or fragment
+  - repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name
 [1]
 ```
 
@@ -238,7 +249,7 @@ Every same-repository link on the page is built from this address.
 ```scrut
 $ dir="$(mktemp -d)" && jq '.repoUrl = "https:///widgets"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
-  - repoUrl: expected an https:// URL with a host and no query or fragment
+  - repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name
 [1]
 ```
 
@@ -249,7 +260,7 @@ Every same-repository link resolves against the host and port.
 ```scrut
 $ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com:bad/widgets"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
-  - repoUrl: expected an https:// URL with a host and no query or fragment
+  - repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name
 [1]
 ```
 
@@ -260,6 +271,18 @@ A self-hosted instance can serve the repository on an explicit port.
 ```scrut
 $ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com:8443/widgets"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is valid: 7 issues in 3 lanes (glob)
+```
+
+## A repository URL with no repository path
+
+Every same-repository link appends a path to this address, so a bare host
+sends all of them somewhere else.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name
+[1]
 ```
 
 ## An issue better after another
@@ -525,6 +548,26 @@ $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)).after = [104]' 
 - Progress moved: #105 docs: fix broken links (fix/105-broken-links to PR #9)
 ```
 
+## Compare reports a milestone whose short label changed
+
+The matrix heads a milestone column with its short label, so a new short label
+under an unchanged title is still a change the page draws.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.milestones[0]).short = "P1"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/current.json" | tail -n 1
+- Changed milestones: now Parser rewrite (P1), Documentation
+```
+
+## Compare names a blocker whose title changed
+
+The Blocked section draws a reference blocker's title, so a change to the title
+alone is still a change the page draws.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"pr": 12, "title": "packaging rewrite"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"pr": 12, "title": "packaging rewrite, phase 2"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n 1
+- Blockers changed: #107 cli: color output (was waiting on PR #12 (packaging rewrite), now PR #12 (packaging rewrite, phase 2))
+```
+
 ## Compare reports titles, branches, lanes, contention, and wording
 
 Anything the page draws differently is a change worth reporting.
@@ -666,7 +709,7 @@ report-board: */data.json is not valid board data: (glob)
 ```scrut
 $ dir="$(mktemp -d)" && jq '.repoUrl = "http://example.com/widgets" | .sync.timeZone = 5 | .sync.extra = "12 packages" | .milestones = [{"short": "x"}] | .contention.rowLabel = 7 | .contention.claims += [{"name": "docs", "issues": [1, 2], "query": 3}] | .notes.blocked = 3' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
 report-board: */data.json is not valid board data: (glob)
-  - repoUrl: expected an https:// URL with a host and no query or fragment
+  - repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name
   - sync.timeZone: expected an IANA zone name, such as America/New_York
   - sync.extra: expected a list of text
   - milestones[0]: expected an object with a title

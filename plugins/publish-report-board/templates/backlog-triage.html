@@ -1122,7 +1122,11 @@
     const pathPart = (text) => String(text).split("/").map(encodeURIComponent).join("/");
     const issueUrl = (n) => `${repoUrl}/issues/${n}`;
     const searchUrl = (query) => `${repoUrl}/issues?q=${encodeURIComponent(query)}`;
-    const milestoneUrl = (title) => searchUrl(title ? `is:open milestone:"${title}"` : "is:open no:milestone");
+    // A milestone title is arbitrary text, so a quote or a backslash in one
+    // would end the qualifier early and search for something else.
+    const searchQuoted = (text) => `"${String(text).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+    const milestoneUrl = (title) =>
+      searchUrl(title ? `is:open milestone:${searchQuoted(title)}` : "is:open no:milestone");
     const link = (href, text) => h("a", { class: "ref", href }, text);
     const ref = (n) => h("a", { class: "ref num", href: issueUrl(n) }, `#${n}`);
     // Links "#123", and "owner/repo#123" for another repository, in a prose
