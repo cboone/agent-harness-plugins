@@ -13,7 +13,7 @@ PROJECT-NAME = "PROJECT-NAME"
 
 - `typos` is a fast source code spell checker.
 - The `[default.extend-words]` section allows project-specific words that would otherwise be flagged as typos. The project name is added by default since kebab-case names are commonly flagged.
-- Add additional words as needed when `typos` flags legitimate terms in your codebase. Zig code accumulates them quickly: `comptime`, `zon`, `aarch64` and target triples such as `x86_64-macos` are all common false positives.
+- Add additional words as needed when `typos` flags legitimate terms in your codebase. Zig code accumulates a long list of them: `comptime`, `zon`, `aarch64` and target triples such as `x86_64-macos` are all common false positives.
 - To exclude entire files or directories, add a `[files]` section with `extend-exclude`:
 
 ```toml

@@ -16,7 +16,7 @@ Generates the full boilerplate for a new Zig CLI project: `build.zig`, `build.zi
 
 The project is split into a library module (`src/root.zig`) and a CLI module (`src/main.zig`), so the logic stays testable without a process around it and downstream packages can depend on it directly.
 
-Four details exist because getting them wrong costs real time:
+Four details exist because each one has a recorded failure behind it, repeated across four Zig repositories:
 
 - **The compiler emits the fingerprint.** `build.zig.zon` is written without a `.fingerprint` field, the first `zig build` prints the value to use, and the skill writes it back. Guessing the value, or copying one from another project, is the single most common way to stall a new Zig repository.
 - **`minimum_zig_version` is always written.** CI resolves the toolchain by reading `build.zig.zon`, so a manifest without it leaves CI with nothing to install. The version is detected from the local toolchain and normalized, so a development build does not become the pin.

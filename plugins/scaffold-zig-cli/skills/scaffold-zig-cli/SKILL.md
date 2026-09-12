@@ -25,7 +25,7 @@ If the user provided a project name in their request, use it as the project name
 Ask the user for these parameters:
 
 - **Project name** -- kebab-case, used as the binary name and directory name (e.g., `my-tool`)
-- **Short description** -- one sentence, used in `build.zig.zon` comments and README
+- **Short description** -- one sentence, used in the README
 
 Derive the **package name** from the project name rather than asking: replace every hyphen with an underscore (`my-tool` becomes `my_tool`). Zig rejects a hyphenated package name outright with `error: name must be a valid bare zig identifier`, and quoting it as `.@"my-tool"` does not help. Wherever templates reference `PACKAGE-NAME`, use this underscored form; wherever they reference `PROJECT-NAME`, use the kebab-case form. The binary keeps the hyphens.
 
@@ -119,7 +119,7 @@ Read `./references/makefile.md` for the template and create `Makefile` from it.
 
 Read `./references/gitignore.md` for the template and create `.gitignore` from it.
 
-- Replace `PROJECT-NAME` with the project name
+No replacements needed.
 
 If a `.gitignore` already exists, merge the template entries into it rather than overwriting.
 
@@ -200,7 +200,7 @@ If the file does not exist, create it:
 }
 ```
 
-`Bash(zig build*)` has no space before the asterisk on purpose, so it covers bare `zig build` as well as `zig build test` and `zig build -Dtarget=...`. These belong in the tracked `settings.json` rather than the untracked `settings.local.json`: every contributor runs the same two commands, so there is nothing machine-specific about them.
+`Bash(zig build*)` has no space before the asterisk on purpose, so it covers bare `zig build` as well as `zig build test` and `zig build -Dtarget=...`. These belong in the tracked `settings.json` rather than the untracked `settings.local.json`: every contributor runs the same commands, so there is nothing machine-specific about them.
 
 ### 20. Create Directory Stubs
 
