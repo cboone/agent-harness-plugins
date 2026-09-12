@@ -130,7 +130,7 @@ For each issue returned, slugify its title (lowercase it, replace spaces and spe
 - Word order may differ, and one side may carry a prefix or a connecting word the other lacks. Nothing else may.
 - If no single issue clearly matches, include none. That is the expected outcome for most searches.
 
-For example, branch slug `add-monitor-copilot-skill` against slugified title `new-skill-triage-ci-failure` shares only the generic word `skill`, and the distinctive words (`monitor` and `copilot` against `triage`, `ci`, and `failure`) do not line up at all. Include none, even when that issue was the only hit.
+For example, branch slug `add-monitor-copilot-skill` against slugified title `new-skill-triage-ci-failure` shares only the generic word `skill`, and the distinctive words (`monitor` and `copilot` against `triage` and `failure`) do not line up at all. Include none, even when that issue was the only hit.
 
 When the comparison is ambiguous, include none. The two errors are not symmetric: a missing reference costs a cross-reference that anyone can add to the PR by hand, while a wrong one closes an unrelated open issue at merge, quietly, from a PR body that reads plausibly.
 
