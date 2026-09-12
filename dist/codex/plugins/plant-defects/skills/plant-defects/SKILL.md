@@ -16,7 +16,7 @@ The discipline of deliberately breaking code to prove a test can see it.
 
 Use this when a check's own correctness is in question rather than the code's. The three signals, in descending order of urgency:
 
-- **The claim is an absence.** No leak, no race, no unused import, no hung note, nothing left behind. A search for absence succeeds for the wrong reason when the instrument was never running.
+- **The claim is an absence.** No leak, no race, no unused import, no warning, nothing left behind. A search for absence succeeds for the wrong reason when the instrument was never running.
 - **The check is an external instrument.** A sanitizer, a linter, a formatter, a leak checker, a conformance validator. Its exit code answers a question you did not ask, and its silence has two readings.
 - **The failure mode is a weakening rather than a break.** A release store simplified to relaxed, a tolerance widened, a constructor swapped for its sibling, two correct lines put in the wrong order. Each compiles and each passes.
 
@@ -47,12 +47,12 @@ The fourth column is what makes the table regress rather than describing a check
 
 Four, not two. The third and fourth are the ones that survive a coverage report.
 
-| Class                     | What it is                                                                               | Why more tests do not help                                                                |
-| ------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| False negative            | A defect one instrument cannot see, closed by naming a second that can                   | The suite is fine; the instrument is the wrong one for this defect                        |
-| False positive            | Nothing was broken and a required check said something was                               | Belongs to the check's scaffolding, not the code; adding instruments adds false positives |
-| Structural uncoverability | Code no test binary compiles, so it is absent from the analyzed program                  | No test written in that suite could reach it, however it was written                      |
-| Unvisited branch          | It compiles, an instrument could reach it, and no arm was ever written to steer it there | Every counter it moved was read by something, so nothing looked absent                    |
+| Class                     | What it is                                                                               | Why more tests do not help                                                              |
+| ------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| False negative            | A defect one instrument cannot see, closed by naming a second that can                   | The suite is fine; the instrument is the wrong one for this defect                      |
+| False positive            | Nothing was broken and a required check said something was                               | Belongs to the check's scaffolding, not the code; no number of instruments addresses it |
+| Structural uncoverability | Code no test binary compiles, so it is absent from the analyzed program                  | No test written in that suite could reach it, however it was written                    |
+| Unvisited branch          | It compiles, an instrument could reach it, and no arm was ever written to steer it there | Every counter it moved was read by something, so nothing looked absent                  |
 
 ## Workflow
 

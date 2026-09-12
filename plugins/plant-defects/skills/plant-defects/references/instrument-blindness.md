@@ -76,7 +76,7 @@ Write the bound and its adversary in the same place. Then a later widening has t
 
 And prefer a deliberately loose bound where looseness is the property that makes it portable. The one-mebibyte bound above sits 56 times above the observed baseline and 40 times below the smallest leak it is for, so a hosted runner's own noise has two orders of magnitude to differ by before it matters. A threshold with that much room on both sides needs no calibration against the machine it runs on, which is precisely what the refused instrument would have needed and could not have.
 
-Quote spread as a ratio rather than a percentage, and say which. Nine runs of that baseline gave a low of 9,728 against a high of 18,816: `(max - min) / max` is 47% and `(max - min) / min` is 93%, and as a ratio it is 1.93x. Those are not the same measure, and a comment that says "a 25% spread" without saying which one has already lost the argument.
+Quote spread as a ratio rather than a percentage, and say which. Nine runs of that baseline gave a low of 9,728 against a high of 18,816: `(max - min) / max` is 48% and `(max - min) / min` is 93%, and as a ratio it is 1.93x. Those are not the same measure, and a comment that says "a 25% spread" without saying which one has already lost the argument.
 
 ## Whether an instrument can discriminate at all
 
