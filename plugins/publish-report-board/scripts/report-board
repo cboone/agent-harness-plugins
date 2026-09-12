@@ -111,7 +111,7 @@ def ref_problems($at; $field; $article):
   ([.pr, .branch, .ref, .url] | map(select(. != null)) | length) as $kinds
   | if $kinds != 1 then "\($at): each \($field) reference names exactly one of pr, branch, ref, or url"
     elif .pr != null then check(.pr | is_int and . > 0; "\($at): \($article) \($field) pr must be a pull request number")
-    elif .branch != null then check(.branch | is_text and test("^\\S+$"); "\($at): \($article) \($field) branch must be a branch name")
+    elif .branch != null then check(.branch | is_text and test("^\\S+$") and (test("(^|/)\\.{1,2}(/|$)") | not); "\($at): \($article) \($field) branch must be a branch name")
     elif .ref != null then check(.ref | is_text and test("^(?!\\.{1,2}/)[A-Za-z0-9_.-]+/(?!\\.{1,2}#)[A-Za-z0-9_.-]+#[1-9][0-9]*$"); "\($at): \($article) \($field) ref must look like owner/repo#123")
     else check((.url | is_text and test("^https://" + host_re + port_re + "([/?#][^\\s\"<>]*)?$")) and (.label | is_text); "\($at): \($article) \($field) url needs an https:// address with a host, and a label")
     end,
@@ -190,7 +190,7 @@ else
         else empty end),
        check($d.sync.timeZone | absent_or(is_text and test($zone_pattern)); "sync.timeZone: expected an IANA zone name, such as America/New_York"),
        check($zone_known != false; "sync.timeZone: \($d.sync.timeZone) is not a zone in the time zone database"),
-       check($d.sync.branch | is_text; "sync.branch: expected the branch the board was synced against"),
+       check($d.sync.branch | is_text and (test("(^|/)\\.{1,2}(/|$)") | not); "sync.branch: expected the branch the board was synced against"),
        check($d.sync.commit | is_text and test("^([0-9a-f]{40}|[0-9a-f]{64})$"); "sync.commit: expected the full commit SHA"),
        check($d.sync.openPullRequests | absent_or(is_int and . >= 0); "sync.openPullRequests: expected a count"),
        check($d.sync.extra | absent_or(type == "array" and all(.[]; is_text)); "sync.extra: expected a list of text")

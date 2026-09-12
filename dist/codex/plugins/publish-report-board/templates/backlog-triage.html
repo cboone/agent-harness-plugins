@@ -1453,8 +1453,11 @@
     // contradict a row beside it. A rider joins the running unit whether or not
     // its own work has started, so a lane whose root is in progress can still
     // draw a rider as able to run now while running holds only that root.
+    // Progress is read on the branch a rider travels with, because riders maps
+    // a root to its riders and never the reverse, so a rider on its own
+    // reports no progress even while its branch is running.
     const idle = lanes.some((model) =>
-      model.lane.issues.some((n) => model.state(n) === "now" && progressOf(n) === undefined),
+      model.lane.issues.some((n) => model.state(n) === "now" && progressOf(rides(n) ? partnerOf(n) : n) === undefined),
     );
     const emptyStartNote = idle
       ? "No branches picked today."

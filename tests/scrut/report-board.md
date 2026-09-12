@@ -483,6 +483,31 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## A blocker branch with a dot segment
+
+A branch blocker becomes a `/compare/` link, and the page encodes each path
+segment with `encodeURIComponent`, which leaves a dot alone. A browser then
+normalizes the link out of the repository.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"branch": "../../target"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #107: a waitingOn branch must be a branch name
+[1]
+```
+
+## A synced branch with a dot segment
+
+The footer links the synced branch through `/tree/`, and every branch
+comparison on the page starts from it, so the same normalization applies.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.sync.branch = "../target"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - sync.branch: expected the branch the board was synced against
+[1]
+```
+
 ## A repository URL naming a different repository
 
 Every same-repository link is built from this address, and the base for other
