@@ -1249,16 +1249,31 @@
         ]),
       );
       const headUnit = lane.mode === "head" ? new Set([head, ...(riders.get(head) ?? [])]) : new Set();
-      // A head that cannot start frees nothing yet, so the lane counts zero
-      // rather than promising what the head would unlock.
+      // Rows and ranks draw the whole head unit, but only the riders that
+      // travel with the head finish alongside it. A rider held back by its own
+      // blocker frees nothing, so it cannot count toward what the head unlocks.
+      // This is the rule that admits a rider to the running set.
+      const freeingUnit =
+        lane.mode === "head" && head != null
+          ? new Set([
+              head,
+              ...(riders.get(head) ?? []).filter(
+                (r) => !isBlocked(r) && (afters(r).every((target) => target === head) || byNumber.get(r)?.inProgress),
+              ),
+            ])
+          : new Set();
+      // A head that is not the running branch frees nothing yet, so the lane
+      // counts zero rather than promising what the head would unlock. A branch
+      // already in progress holds the slot, and the head is running only when
+      // it is that branch.
       const freedAfter =
-        lane.mode === "head" && head != null && canRun(head)
+        lane.mode === "head" && head != null && running.includes(head)
           ? lane.issues.filter(
               (n) =>
                 !headUnit.has(n) &&
                 !rides(n) &&
-                waits(n).every((b) => headUnit.has(b)) &&
-                afters(n).every((b) => headUnit.has(b)),
+                waits(n).every((b) => freeingUnit.has(b)) &&
+                afters(n).every((b) => freeingUnit.has(b)),
             ).length
           : 0;
       const ranks = new Map();

@@ -73,6 +73,7 @@ This skill runs GitHub CLI, git, and bundled-script commands that trigger permis
       "Bash(gh pr list *)",
       "Bash(gh api --paginate --slurp 'repos/*/milestones?state=open*')",
       "Bash(gh api user *)",
+      "Bash(jq *)",
       "Bash(git fetch *)",
       "Bash(git rev-parse *)",
       "Bash(git worktree list*)",
