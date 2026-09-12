@@ -61,6 +61,12 @@ readonly STANDALONE_OPENING='<!DOCTYPE html>
 readonly ZONE_PATTERN='^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+)*$'
 readonly ZONEINFO_DIR="${TZDIR:-/usr/share/zoneinfo}"
 
+# True when no string and no field name carries a control character. validate
+# and render apply this through VALIDATE_FILTER, but compare reads a previous
+# board out of a published page, which never went through that check here, and
+# compare is the command that prints board text to a terminal.
+readonly NO_CONTROL_FILTER='([.. | strings] + [.. | objects | keys[]] | map(select(test("[[:cntrl:]]"))) | length) == 0'
+
 # Emits one line per problem and nothing when the data is valid. Messages avoid
 # apostrophes because the filter lives inside a single-quoted shell string.
 # Every field is type-checked before it is used, so malformed data produces a
@@ -677,6 +683,8 @@ function read_board_data() {
   require_file "${source_file}"
   if jq -e 'type == "object"' "${source_file}" > /dev/null 2>&1; then
     require_single_document "${source_file}"
+    jq -e "${NO_CONTROL_FILTER}" "${source_file}" > /dev/null 2>&1 \
+      || die "${E_INVALID}" "${source_file} holds control characters in its board data"
     jq '.' "${source_file}"
     return 0
   fi
@@ -688,6 +696,8 @@ function read_board_data() {
   if [[ "${count}" -ne 1 ]] || ! jq -e 'type == "object"' <<< "${payload}" > /dev/null 2>&1; then
     die "${E_INVALID}" "${source_file} holds no board data; render it with report-board first"
   fi
+  jq -e "${NO_CONTROL_FILTER}" <<< "${payload}" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "${source_file} holds control characters in its board data"
   jq '.' <<< "${payload}"
 }
 

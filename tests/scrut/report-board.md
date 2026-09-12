@@ -651,6 +651,17 @@ This sync: main at 89abcdef, 2026-09-08T10:15:00-04:00 in America/New_York, 0 op
 - Reworded: summary; the startNow note
 ```
 
+## Compare refuses a previous board holding control characters
+
+A previous board comes from a published page rather than from this sync, so it
+never passed validation here, and `compare` prints its text to a terminal.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.title = "widgets " + ([1] | implode) + " backlog"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" 2>&1
+report-board: */previous.json holds control characters in its board data (glob)
+[1]
+```
+
 ## Compare reads the previous board out of a rendered page
 
 ```scrut
