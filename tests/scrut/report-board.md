@@ -133,9 +133,31 @@ report-board: */data.json is not valid board data: (glob)
   - #107: a waitingOn pr must be a pull request number
   - #107: a waitingOn branch must be a branch name
   - #107: a waitingOn ref must look like owner/repo#123
-  - #107: a waitingOn url needs an https:// address and a label
+  - #107: a waitingOn url needs an https:// address with a host, and a label
   - #107: each waitingOn reference names exactly one of pr, branch, ref, or url
 [1]
+```
+
+## A blocker URL with no host
+
+`https://` followed straight by a path is not an address, and the Blocked
+section would draw it as a link that reaches nothing.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"url": "https:///foo", "label": "spec"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #107: a waitingOn url needs an https:// address with a host, and a label
+[1]
+```
+
+## A blocker URL with a port, a query, and a fragment
+
+A blocker can point at any page, so the host is what validation requires; what
+follows it is the page's own business.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"url": "https://specs.example.com:8443/a/b?v=2#top", "label": "spec"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is valid: 7 issues in 3 lanes (glob)
 ```
 
 ## A cross-repository reference to issue zero
@@ -503,7 +525,7 @@ Previous sync: main at 01234567, 2026-09-01T09:30:00-04:00 in America/New_York, 
 This sync: main at 89abcdef, 2026-09-08T10:15:00-04:00 in America/New_York, 0 open pull requests
 
 - Closed: #101 parser: replace the tokenizer; #103 cli: report parse errors with columns; #105 docs: fix broken links
-- Opened: #108 parser: benchmark suite
+- Opened: #108 parser: benchmark suite (waits on #102)
 - Unblocked: #102 parser: stream large inputs; #104 parser tutorial
 - Started: #106 ci: cache dependencies (feature/106-cache)
 - Added to start now: #102 parser: stream large inputs; #104 parser tutorial

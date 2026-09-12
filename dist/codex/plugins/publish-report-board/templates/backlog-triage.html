@@ -1118,6 +1118,10 @@
     } catch {
       origin = "https://github.com";
     }
+    // A repository URL can carry a path prefix, as an enterprise install at
+    // https://git.example.com/enterprise/owner/name does. Another repository
+    // sits beside this one under that prefix, which origin alone would drop.
+    const repoBase = data.repo && repoUrl.endsWith(`/${data.repo}`) ? repoUrl.slice(0, -(data.repo.length + 1)) : origin;
     // Encodes a branch name for a URL path, including "#" and "?".
     const pathPart = (text) => String(text).split("/").map(encodeURIComponent).join("/");
     const issueUrl = (n) => `${repoUrl}/issues/${n}`;
@@ -1144,7 +1148,7 @@
         const head = source.slice(0, match.index);
         if (/:\/\//.test(head.slice(head.search(/\S*$/)))) continue;
         out.push(source.slice(last, match.index));
-        out.push(match[1] ? link(`${origin}/${match[1]}/issues/${match[2]}`, match[0]) : ref(Number(match[2])));
+        out.push(match[1] ? link(`${repoBase}/${match[1]}/issues/${match[2]}`, match[0]) : ref(Number(match[2])));
         last = match.index + match[0].length;
       }
       out.push(source.slice(last));
@@ -1200,7 +1204,7 @@
       }
       if (b.ref != null) {
         const [repo, number] = b.ref.split("#");
-        return { link: link(`${origin}/${repo}/issues/${number}`, b.ref), title: b.title, from: repo };
+        return { link: link(`${repoBase}/${repo}/issues/${number}`, b.ref), title: b.title, from: repo };
       }
       return { link: link(b.url, b.label), title: b.title, from: "outside the repository" };
     }
@@ -1473,9 +1477,12 @@
       // The column headings are drawn for sighted readers only, so each field
       // carries a visually hidden label; the title reads as part of "Issue #N".
       const hidden = (text) => h("span", { class: "visually-hidden" }, text);
+      // The bar above the list carries each issue's state as a colour alone, so
+      // the row states it in words for a reader who cannot see the bar.
+      const stateWord = { now: "can run now", queued: "queued", blocked: "blocked" }[model.state(n)] ?? "";
       return h("li", { class: "item" }, [
         h("span", { class: "item-rank", "aria-hidden": rank === "·" ? "true" : null }, [hidden("Step "), rank]),
-        h("span", { class: "item-num" }, [hidden("Issue "), ref(n)]),
+        h("span", { class: "item-num" }, [hidden("Issue "), ref(n), stateWord ? hidden(`, ${stateWord}.`) : null]),
         h("span", { class: "item-title" }, [issue.title, issue.inProgress ? progressTag(issue.inProgress) : null]),
         anyMilestone ? h("span", { class: "item-ms" }, [hidden("Milestone: "), chip(issue.milestone)]) : null,
         h("span", { class: "item-deps" }, deps.length ? [hidden("Dependencies: "), ...deps] : deps),
