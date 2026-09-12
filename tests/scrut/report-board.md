@@ -817,6 +817,54 @@ $ dir="$(mktemp -d)" && jq '.milestones += [{title: "Packaging", short: "Pkg"}]'
 - No changes beyond the sync metadata.
 ```
 
+## Compare ignores a milestone short label equal to its title
+
+The matrix heads a column with `short` when there is one and the title otherwise,
+so a `short` that repeats the title renders the same column either way.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.milestones[] | select(.title == "Documentation")).short = "Documentation"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/current.json" | tail -n 1
+- No changes beyond the sync metadata.
+```
+
+## Compare ignores a contention note that no matrix carries
+
+The page draws the contention note inside the matrix, which appears only where
+there are claims.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.contention.claims = [] | .notes.contention = "before"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq '.contention.claims = [] | .notes.contention = "after"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n 1
+- No changes beyond the sync metadata.
+```
+
+## Compare reports a contention note the matrix carries
+
+The same note changes a page that draws a matrix, so it is reported there.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.notes.contention = "before"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq '.notes.contention = "after"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n 1
+- Reworded: the contention note
+```
+
+## Compare ignores a short title the page never draws
+
+Start now draws the short title of a pick, and the Blocked section draws it for
+a blocked issue and for a blocker named by number. Issue #107 is none of those.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)).short = "color"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/current.json" | tail -n 1
+- No changes beyond the sync metadata.
+```
+
+## Compare reports a short title Start now draws
+
+Issue #101 is a pick, so its short title heads a Start now row.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 101)).short = "tokenizer"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/current.json" | tail -n 1
+- Reworded: the short title of #101
+```
+
 ## Compare names a blocker whose title changed
 
 The Blocked section draws a reference blocker's title, so a change to the title

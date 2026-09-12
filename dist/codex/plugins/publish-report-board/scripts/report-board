@@ -420,12 +420,25 @@ def claim_names: [.contention | objects | .claims | as_list | .[] | objects | .n
 # claim carries, heads it with the short label of that entry, and orders the
 # columns by where their titles sit in this list. A milestone no claimed issue
 # carries is drawn nowhere, so a change to one is not a change the page shows.
+# Each entry reduces to what the page renders, its title and its effective
+# label, so metadata the page never draws is not a change either.
 def drawn_milestones:
   . as $d
   | ($d | issues_of | by_number) as $by
   | [$d.contention | objects | .claims | as_list | .[] | objects | .issues | as_list | .[] | tostring | $by[.] | objects | .milestone | select(. != null)] as $claimed
-  | [$d.milestones | as_list | .[] | objects | select((.title // null) != null and (.title as $t | $claimed | any(. == $t)))];
+  | [$d.milestones | as_list | .[] | objects | select((.title // null) != null and (.title as $t | $claimed | any(. == $t))) | {title: ((.title // "") | tostring), label: (((.short // .title) // "") | tostring)}];
 def pick_map: [.startNow | as_list | .[] | objects | select(.issue != null) | {key: (.issue | tostring), value: .}] | from_entries;
+# Start now draws the short title of a pick, and the Blocked section draws it
+# for a blocked issue and for a blocker named by number. Nowhere else renders
+# it, so a short title that changed outside those places is not a change the
+# page shows. A plain number is selected by type because this filter rebinds
+# the name numbers to a formatter.
+def shows_short:
+  . as $d
+  | (($d | picks)
+     + [$d | issues_of | .[] | select(is_blocked) | .number]
+     + [$d | issues_of | .[] | waits | .[] | select(type == "number")])
+  | unique;
 def notes_of: .notes | if type == "object" then . else {} end;
 def numbers: map("#\(.)") | join(", ");
 def branch_of: if . == null then "its own branch" else "the branch of #\(.)" end;
@@ -495,11 +508,14 @@ $previous[0] as $old
     # label that changed is a change the page draws. Only a drawn column
     # counts, and only while both syncs draw a matrix: a board with no claims
     # has no columns, and the claim lines above already report that.
-    entry("Changed milestones"; [select((($old | claim_names) | length) > 0 and (($new | claim_names) | length) > 0 and ($old | drawn_milestones) != ($new | drawn_milestones)) | ($new | drawn_milestones) | map(((.title // "") | tostring) as $t | if (.short // null) != null then "\($t) (\(.short))" else $t end) | join(", ") | if . == "" then "none" else "now \(.)" end]),
+    entry("Changed milestones"; [select((($old | claim_names) | length) > 0 and (($new | claim_names) | length) > 0 and ($old | drawn_milestones) != ($new | drawn_milestones)) | ($new | drawn_milestones) | map(if .label != .title then "\(.title) (\(.label))" else .title end) | join(", ") | if . == "" then "none" else "now \(.)" end]),
     entry("Reworded"; [
       (select(($old.summary // null) != ($new.summary // null)) | "summary"),
-      (($old | notes_of) as $was_notes | ($new | notes_of) as $now_notes | ($was_notes + $now_notes) | keys_unsorted[] | select(($was_notes[.] // null) != ($now_notes[.] // null)) | "the \(.) note"),
-      ($kept[] | $was[.number | tostring] as $w | select((.short // null) != ($w.short // null)) | "the short title of #\(.number)"),
+      # The page draws the contention note inside the matrix, which appears
+      # only where there are claims, so a note neither page shows is not a
+      # change the reader sees.
+      (($old | notes_of) as $was_notes | ($new | notes_of) as $now_notes | ($was_notes + $now_notes) | keys_unsorted[] | . as $k | select(($was_notes[$k] // null) != ($now_notes[$k] // null)) | select($k != "contention" or ((($old | claim_names) | length) > 0 and (($new | claim_names) | length) > 0)) | "the \($k) note"),
+      ((($old | shows_short) + ($new | shows_short) | unique) as $short_shown | $kept[] | $was[.number | tostring] as $w | select((.short // null) != ($w.short // null)) | select(.number as $n | $short_shown | any(. == $n)) | "the short title of #\(.number)"),
       ($kept[] | $was[.number | tostring] as $w | select(is_blocked and ($w | is_blocked) and (.blockedBecause // null) != ($w.blockedBecause // null)) | "why #\(.number) is blocked"),
       ($new_picks | to_entries[] | $old_picks[.key] as $o | select($o != null)
        | (select((.value.why // null) != ($o.why // null)) | "why to start #\(.key)"),

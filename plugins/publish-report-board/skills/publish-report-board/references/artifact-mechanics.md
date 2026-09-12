@@ -48,7 +48,7 @@ Never declare `capabilities` on a board, and omit the field on every republish s
 
 ## Without the Artifact Tool
 
-Codex CLI and OpenCode have no Artifact tool. There the board is the standalone HTML file at `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/OWNER/REPO/REPO-BOARD.html`, under the name the skill gives every working file:
+Codex CLI and OpenCode have no Artifact tool. There the board is the standalone HTML file at `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/HOST/OWNER/REPO/REPO-BOARD.html`, where `HOST` is the host of `repoUrl` or `github.com` when the board carries none, under the name the skill gives every working file:
 
 1. Render with `--standalone` to that path, creating the directory if it does not exist.
 2. Give the user the absolute path; the file opens in any browser.

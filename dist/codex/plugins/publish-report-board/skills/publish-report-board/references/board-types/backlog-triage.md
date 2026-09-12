@@ -127,7 +127,7 @@ Each `waitingOn` or `after` entry is an open issue number on this board, or an o
 | `{ "ref": "OWNER/REPO#17" }`               | An issue or pull request in another repository | That issue or pull request                 |
 | `{ "url": "https://…", "label": "…" }`     | Anything else                                  | The URL, under the label                   |
 
-Any form but `url` may add a `title`, which the Blocked section shows beside the link. That section's "Freed from" column names the lane for an issue on the board, and the kind of reference otherwise. In `after`, the same forms name what an issue is better started after, and its lane row links each one.
+Any form may add a `title`, which the Blocked section shows beside the link, and a `url` reference carries its required `label` as well. That section's "Freed from" column names the lane for an issue on the board, and the kind of reference otherwise. In `after`, the same forms name what an issue is better started after, and its lane row links each one.
 
 ### Lanes and Picks
 

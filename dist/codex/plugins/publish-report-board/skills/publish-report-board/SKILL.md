@@ -46,7 +46,7 @@ In the commands below, `REPORT_BOARD` is shorthand for that full **quoted path**
 Name the working files `REPO-BOARD.json` and `REPO-BOARD.html`, where `REPO` is the repository name without its owner and `BOARD` is the board type: `agent-harness-plugins-backlog-triage.json` and `agent-harness-plugins-backlog-triage.html`. Those two names are fixed rather than illustrative, and the same names are used wherever the files live. The local fallback has no Artifact to recover a board from and finds the previous one by this name alone, so a session that invents its own name reads a re-sync as a first publish: it reports no changes and leaves the earlier board sitting beside the new one.
 
 - **With the Artifact tool** (Claude Code): keep both files in the session scratchpad directory when the system prompt lists one, and otherwise in a directory from `mktemp -d`. The published Artifact is the board; the local files are this conversation's working copies.
-- **Without the Artifact tool** (Codex CLI, OpenCode): keep both files in `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/OWNER/REPO/`, creating it if needed. The rendered `REPO-BOARD.html` there is the board, and the next session finds it at that exact path.
+- **Without the Artifact tool** (Codex CLI, OpenCode): keep both files in `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/HOST/OWNER/REPO/`, creating it if needed. `HOST` is the host of `repoUrl`, or `github.com` when the board carries none, so two repositories that share an owner and a name on different hosts keep separate boards. The rendered `REPO-BOARD.html` there is the board, and the next session finds it at that exact path.
 
 ### 4. Find the Previous Board
 
