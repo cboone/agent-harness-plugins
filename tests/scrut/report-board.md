@@ -180,6 +180,28 @@ $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn"
 report-board: */data.json is valid: 7 issues in 3 lanes (glob)
 ```
 
+## A control character in board text
+
+Every string on a board comes from GitHub, and `compare` prints them to a
+terminal, where a control character could rewrite the report as it is read.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.title = "widgets " + ([1] | implode) + " backlog"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - board data must not hold control characters in any of its text
+[1]
+```
+
+## A row label added where there was none
+
+The matrix falls back to the same default the page uses, so adding a row label
+is a change the reader sees even though the previous board named none.
+
+```scrut
+$ dir="$(mktemp -d)" && jq 'del(.contention.rowLabel)' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq '.contention.rowLabel = "Area"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n 1
+- Changed contention: row label (Plugin to Area)
+```
+
 ## A cross-repository reference to issue zero
 
 GitHub has no issue zero, so `/issues/0` would reach nothing.

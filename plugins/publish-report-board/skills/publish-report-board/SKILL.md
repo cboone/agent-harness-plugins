@@ -107,6 +107,8 @@ bash REPORT_BOARD compare PREVIOUS_JSON DATA_JSON
 
 `PREVIOUS_JSON` is the copy step 4 saved, never a working file this sync has already overwritten. Keep the output: it is the change report, and a sync that silently overwrites the board is indistinguishable from one that did nothing.
 
+Stop before publishing if the report carries a `Changed board identity` line naming `title` or `repo`. A later conversation finds this board by its exact title, so a rebuilt title leaves the old board stranded and publishes a second one beside it, with nothing on either page saying so. Those two fields change only when the repository itself has been renamed; confirm that is what happened before going on.
+
 ### 9. Publish
 
 **With the Artifact tool**, publish the rendered page as `./references/artifact-mechanics.md` describes: the same file path within a conversation, the board's URL from a later one, and the favicon and icon only on the first publish. Never pass `force`, and never declare runtime capabilities.

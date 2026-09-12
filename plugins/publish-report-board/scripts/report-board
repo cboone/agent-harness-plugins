@@ -152,6 +152,10 @@ else
     check($d.repo | is_text and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"); "repo: expected owner/name"),
     check($d.repoUrl | absent_or(is_text and test("^https://" + host_re + port_re + "(/[^\\s\"<>?#/]+)+/?$")); "repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name"),
     check($d.summary | is_text; "summary: expected text summarizing the board"),
+    # Every string on a board comes from GitHub, and compare prints them to a
+    # terminal. A control character in one could rewrite the change report as it
+    # is read, so no string on a board may carry one.
+    check([$d | .. | strings | select(test("[[:cntrl:]]"))] | length == 0; "board data must not hold control characters in any of its text"),
 
     (if ($d.sync | type) != "object" then "sync: expected an object with at, branch, and commit"
      else
@@ -357,6 +361,13 @@ def titled($list): $list | map(if type == "object" and (.title // null) != null 
 # written with its keys in another order is still the same reference.
 def same_list($a; $b): $a == $b;
 def shown: if . == null then "none" else tojson end;
+# The matrix heads its first column with this, falling back to the same default
+# the page uses, so a board that leaves rowLabel out still compares against the
+# header its reader sees. A board with no claims draws no matrix at all, which
+# is why the entry below asks for claims on both sides before reporting a
+# header change: without them the claims are already reported as removed, and
+# the label names a column nobody is shown.
+def row_label: (.contention | if type == "object" then .rowLabel else null end) as $r | if ($r | type) == "string" and $r != "" then $r else "Plugin" end;
 def picks: [.startNow | as_list | .[] | objects | .issue];
 # The sync line, with the zone, open pull request count, and extra markers
 # the page shows, so a change to any of them reaches the report.
@@ -434,7 +445,7 @@ $previous[0] as $old
       ($new_claims | to_entries[] | $old_claims[.key] as $o | select($o != null and ($o.issues | as_list) != (.value.issues | as_list)) | "claim \(.key) (\($o.issues | as_list | numbers) to \(.value.issues | as_list | numbers))"),
       ($new_claims | to_entries[] | $old_claims[.key] as $o | select($o != null and ($o.query // null) != (.value.query // null)) | "claim \(.key) search (\($o.query // null | shown) to \(.value.query // null | shown))"),
       (select(reordered($old | claim_names; $new | claim_names)) | "claim order (now \($new | claim_names | join(", ")))"),
-      (select(($old.contention | type) == "object" and ($new.contention | type) == "object" and ($old.contention.rowLabel // null) != ($new.contention.rowLabel // null)) | "row label (\($old.contention.rowLabel // "none") to \($new.contention.rowLabel // "none"))")
+      (select((($old | claim_names) | length) > 0 and (($new | claim_names) | length) > 0 and ($old | row_label) != ($new | row_label)) | "row label (\($old | row_label) to \($new | row_label))")
     ]),
     # The matrix heads a milestone column with its short label, so a short
     # label that changed is a change the page draws.
