@@ -1670,7 +1670,7 @@
         ? `, ${count(data.sync.openPullRequests, "open PR", "open PRs")}`
         : "",
       (data.sync.extra ?? []).map((fact) => `, ${fact}`),
-      ". Re-run publish-report-board after any issue, milestone or PR change. GitHub is the source of truth; this page is a snapshot.",
+      ". Re-run publish-report-board after any issue, milestone, pull request, branch, or worktree change. GitHub and the repository are the source of truth; this page is a snapshot.",
     ]);
 
     root.classList.toggle("no-milestones", !anyMilestone);
