@@ -508,6 +508,28 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## An in-progress value with a dot segment
+
+The page turns a single unspaced `inProgress` value into a branch comparison, so
+it reaches `/compare/` the same way a branch blocker does.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 105)).inProgress = "../other"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #105: inProgress must name the branch or pull request
+[1]
+```
+
+## An in-progress phrase carrying a dot segment
+
+A value with a space in it stays text on the page and reaches no URL, so the
+guard above applies to single unspaced values alone and a phrase passes.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 105)).inProgress = "waiting on ../foo"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is valid: 7 issues in 3 lanes (glob)
+```
+
 ## A repository URL naming a different repository
 
 Every same-repository link is built from this address, and the base for other

@@ -208,7 +208,9 @@ else
              (if ($issue | has("milestone")) | not then "\($at): milestone is required; use null for an issue without one"
               else check($issue.milestone | absent_or(is_text); "\($at): milestone must be text or null") end),
              check($issue.short | absent_or(is_text); "\($at): short must be text"),
-             check($issue.inProgress | absent_or(is_text); "\($at): inProgress must name the branch or pull request"),
+             # A single unspaced value becomes a branch comparison on the page,
+             # so it must not carry a dot path segment. A phrase stays text.
+             check($issue.inProgress | absent_or(is_text and ((test("^\\S+$") and test("(^|/)\\.{1,2}(/|$)")) | not)); "\($at): inProgress must name the branch or pull request"),
              (if ($issue.waitingOn | absent_or(type == "array")) | not then "\($at): waitingOn must be a list"
               else
                 ($waits[] | select(type == "number") | select(is_int | not) | "\($at): waitingOn issue numbers must be whole numbers"),
