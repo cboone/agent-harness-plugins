@@ -65,7 +65,7 @@ The local fallback board holds issue data. A page written under a strict umask
 stays as strict when a later session runs under a looser one.
 
 ```scrut
-$ dir="$(mktemp -d)" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null 2>&1 && chmod 600 "${dir}/board.html" && (umask 022 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null 2>&1) && { stat -f '%Lp' "${dir}/board.html" 2> /dev/null || stat -c '%a' "${dir}/board.html"; }
+$ dir="$(mktemp -d)" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null 2>&1 && chmod 600 "${dir}/board.html" && (umask 022 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null 2>&1) && { stat -c '%a' "${dir}/board.html" 2> /dev/null || stat -f '%Lp' "${dir}/board.html"; }
 600
 ```
 
@@ -75,7 +75,7 @@ Only a page that does not exist yet follows the umask, so preserving a mode
 never makes every board private by accident.
 
 ```scrut
-$ dir="$(mktemp -d)" && (umask 077 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null 2>&1) && { stat -f '%Lp' "${dir}/board.html" 2> /dev/null || stat -c '%a' "${dir}/board.html"; }
+$ dir="$(mktemp -d)" && (umask 077 && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" > /dev/null 2>&1) && { stat -c '%a' "${dir}/board.html" 2> /dev/null || stat -f '%Lp' "${dir}/board.html"; }
 600
 ```
 

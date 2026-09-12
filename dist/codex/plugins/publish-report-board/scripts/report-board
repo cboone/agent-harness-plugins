@@ -604,7 +604,11 @@ function write_output() {
   # under a looser one. Only a page that does not exist yet takes the mode a
   # new file gets under the current umask.
   if [[ -f "${output_file}" ]]; then
-    mode="$(stat -f '%Lp' "${output_file}" 2> /dev/null || stat -c '%a' "${output_file}" 2> /dev/null)" || mode=""
+    # GNU stat first: its -c prints the mode, and BSD stat has no -c at all, so
+    # it fails without printing. The other order is not safe, because GNU reads
+    # -f as --file-system and writes filesystem details to stdout before it
+    # fails, which would land in mode alongside the real value.
+    mode="$(stat -c '%a' "${output_file}" 2> /dev/null || stat -f '%Lp' "${output_file}" 2> /dev/null)" || mode=""
   fi
   if [[ -z "${mode}" ]]; then
     current_umask="$(umask)"
