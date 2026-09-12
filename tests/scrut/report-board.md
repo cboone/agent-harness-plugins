@@ -295,6 +295,29 @@ $ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com:8443/widgets"' "
 report-board: */data.json is valid: 7 issues in 3 lanes (glob)
 ```
 
+## A repository URL with a port out of range
+
+A port above 65535 names no port at all, so the address cannot be opened.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.repoUrl = "https://git.example.com:99999/widgets"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name
+[1]
+```
+
+## A blocker URL with a port out of range
+
+The same bound holds for a reference blocker, which the Blocked section draws
+as a link.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)) += {"waitingOn": [{"url": "https://specs.example.com:99999/a", "label": "spec"}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #107: a waitingOn url needs an https:// address with a host, and a label
+[1]
+```
+
 ## A repository URL with no repository path
 
 Every same-repository link appends a path to this address, so a bare host
@@ -525,7 +548,7 @@ Previous sync: main at 01234567, 2026-09-01T09:30:00-04:00 in America/New_York, 
 This sync: main at 89abcdef, 2026-09-08T10:15:00-04:00 in America/New_York, 0 open pull requests
 
 - Closed: #101 parser: replace the tokenizer; #103 cli: report parse errors with columns; #105 docs: fix broken links
-- Opened: #108 parser: benchmark suite (waits on #102)
+- Opened: #108 parser: benchmark suite (L1; Parser rewrite; waits on #102)
 - Unblocked: #102 parser: stream large inputs; #104 parser tutorial
 - Started: #106 ci: cache dependencies (feature/106-cache)
 - Added to start now: #102 parser: stream large inputs; #104 parser tutorial
