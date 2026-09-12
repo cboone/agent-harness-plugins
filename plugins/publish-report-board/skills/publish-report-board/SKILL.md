@@ -97,7 +97,7 @@ bash REPORT_BOARD render DATA_JSON PAGE_HTML
 
 Add `--standalone` when there is no Artifact tool. It writes a complete HTML document that opens straight from disk; the default output is a fragment, because the Artifact tool supplies its own document skeleton.
 
-Without the Artifact tool, make `PAGE_HTML` a temporary path beside the working files rather than the board itself. Rendering onto the board would publish it here, before step 8 has compared anything, so a sync that step 8 tells you to abandon would already have replaced what was there. Step 9 installs the file once the checks have passed.
+Without the Artifact tool, make `PAGE_HTML` a working path beside the data file rather than the board itself. Rendering onto the board would publish it here, before step 8 has compared anything, so a sync that step 8 tells you to abandon would already have replaced what was there. Step 9 renders onto the board once the checks have passed.
 
 Never edit the rendered page. Change the data and render again.
 
@@ -117,11 +117,13 @@ Stop before publishing if the report carries a `Changed board identity` line nam
 
 **With the Artifact tool**, publish the rendered page as `./references/artifact-mechanics.md` describes: the same file path within a conversation, the board's URL from a later one, and the favicon and icon only on the first publish. Never pass `force`, and never declare runtime capabilities.
 
-**Without it**, install the file step 7 rendered. This comes last, after step 8, so that a re-sync which has to stop stops with the published board untouched.
+**Without it**, publishing is a second render, this time onto the board path itself. It comes last, after step 8, so that a re-sync which has to stop stops with the published board untouched.
 
-Skip the freshness check on a first publish, since step 4 found no board and there is nothing to extract. Otherwise extract the board at its path once more and confirm it still holds the data step 4 recovered. A difference means another session published while this one was gathering, so begin again from that newer board rather than writing over it. Then move the rendered file onto the board path and give the user that path.
+Skip the freshness check on a first publish, since step 4 found no board and there is nothing to extract. Otherwise extract the board at its path once more and confirm it still holds the data step 4 recovered. A difference means another session published while this one was gathering, so begin again from that newer board rather than writing over it. Then run `render` again, giving it the board path as its output, and give the user that path.
 
-This is weaker than what the Artifact tool does, and it is worth knowing by how much. That tool refuses a publish outright to a page that changed since this conversation read it. Nothing on disk refuses anything, and this check does not hold the file between confirming it and moving over it, so two sessions can still interleave. It catches the ordinary case and turns a silent overwrite into a stop. `./references/artifact-mechanics.md` states what it leaves uncovered.
+Render onto the board rather than moving the file step 7 produced. `render` replaces a page in place: it writes through a temporary file in the board's own directory and gives it the mode the board already has, so a board written under a strict umask is not widened by a later session running under a looser one. Moving a file carries the mode of the file being moved, which would lose that.
+
+This is weaker than what the Artifact tool does, and it is worth knowing by how much. That tool refuses a publish outright to a page that changed since this conversation read it. Nothing on disk refuses anything, and this check does not hold the file between confirming it and writing over it, so two sessions can still interleave. It catches the ordinary case and turns a silent overwrite into a stop. `./references/artifact-mechanics.md` states what it leaves uncovered.
 
 ### 10. Report
 

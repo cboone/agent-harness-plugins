@@ -1391,12 +1391,16 @@
     window.setInterval(refreshAge, 60000);
 
     const blockedCount = issues.filter((issue) => isBlocked(issue.number)).length;
+    const runningCapacity = lanes.reduce((sum, model) => sum + model.cap, 0);
+    // Each label sits in its own element beside its value, so it carries the
+    // noun alone and has to agree with the number itself. open, ready, and
+    // blocked are adjectives and read the same at any count.
     const stats = [
       [issues.length, "open"],
       [issues.length - blockedCount, "ready"],
       [blockedCount, "blocked"],
-      [data.lanes.length, "lanes open"],
-      [lanes.reduce((sum, model) => sum + model.cap, 0), "branches at once"],
+      [data.lanes.length, data.lanes.length === 1 ? "lane open" : "lanes open"],
+      [runningCapacity, runningCapacity === 1 ? "branch at once" : "branches at once"],
       [startNow.length, "start now"],
     ];
 
