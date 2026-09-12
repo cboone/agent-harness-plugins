@@ -225,6 +225,30 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## A malformed reference is reported, not fatal
+
+Validation exists to report a problem. A reference holding an object rather
+than text once reached `join`, which adds its elements and fails on anything
+that is not a string, so the command died instead of describing the data.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 101)) += {"waitingOn": [{"ref": {}}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - #101: a waitingOn ref must look like owner/repo#123
+  - startNow #101 waits on {} and cannot start
+[1]
+```
+
+## Compare survives a damaged previous board
+
+A previous board comes from a published page and never passed validation here,
+so `compare` has to describe one that is malformed rather than abort on it.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 102)) += {"waitingOn": [{"ref": {}}], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && jq '(.issues[] | select(.number == 102)) += {"waitingOn": [104], "blockedBecause": "x"}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/current.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${dir}/current.json" | tail -n 1
+- Blockers changed: #102 parser: stream large inputs (was waiting on {}, now #104)
+```
+
 ## A control character answers alone
 
 Several messages quote the value they reject, so a board carrying a control
