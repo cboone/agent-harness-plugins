@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Scaffold a complete Zig CLI project with build.zig, build.zig.zon, cross-compiled releases, GitHub Actions CI/CD, and Makefile.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["cli", "scaffolding", "zig", "ziglang"],
+  "license": "MIT",
+  "name": "scaffold-zig-cli",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

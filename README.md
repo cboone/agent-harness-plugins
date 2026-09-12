@@ -131,11 +131,12 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Scaffold Lean Library](./plugins/scaffold-lean-library/README.md)             | `/scaffold-lean-library`       | Scaffold a Lean 4 library project with Mathlib or PFR dependencies, Lake test/lint wiring, GitHub Actions CI, text linting, and agent instructions.         |
 | [Scaffold New Repo](./plugins/scaffold-new-repo/README.md)                     | `/scaffold-new-repo`           | Scaffold the universal boilerplate for a new repository: LICENSE, README, CHANGELOG, .gitignore, agent config files, and a plans directory.                 |
 | [Scaffold Rust CLI](./plugins/scaffold-rust-cli/README.md)                     | `/scaffold-rust-cli`           | Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest, git-cliff, GitHub Actions CI/CD, and Makefile.                                  |
+| [Scaffold Zig CLI](./plugins/scaffold-zig-cli/README.md)                       | `/scaffold-zig-cli`            | Scaffold a complete Zig CLI project with build.zig, build.zig.zon, cross-compiled releases, GitHub Actions CI/CD, and Makefile.                             |
 
 **External tools:**
 
 - _Manage Repo Licensing:_ [`reuse`](https://reuse.software/). Install via [Homebrew](https://brew.sh): `brew install reuse`
-- _Scaffold Go CLI, Scaffold Go Library, Scaffold Lean Library, Scaffold New Repo, Scaffold Rust CLI:_ [`gh`](https://cli.github.com/) to resolve the GitHub owner and create the repository. Each also needs its own toolchain: Go, [`elan`](https://github.com/leanprover/elan)/`lake` for Lean, and Cargo for Rust
+- _Scaffold Go CLI, Scaffold Go Library, Scaffold Lean Library, Scaffold New Repo, Scaffold Rust CLI, Scaffold Zig CLI:_ [`gh`](https://cli.github.com/) to resolve the GitHub owner and create the repository. Each also needs its own toolchain: Go, [`elan`](https://github.com/leanprover/elan)/`lake` for Lean, Cargo for Rust, and [Zig](https://ziglang.org/download/) 0.16 or later for Zig
 
 ### CI and Release
 
