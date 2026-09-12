@@ -1230,7 +1230,10 @@
       const head = lane.mode === "head" ? (rides(first) ? partnerOf(first) : first) : null;
       const held = roots.filter((n) => progressOf(n) !== undefined);
       let running = [];
-      if (lane.mode === "any") running = roots.filter(canRun);
+      // A branch already in progress is running whether or not its issue is
+      // blocked, the same as in a serial or head lane. state() still draws that
+      // issue as blocked, so the bar and the row stay truthful.
+      if (lane.mode === "any") running = roots.filter((n) => canRun(n) || progressOf(n) !== undefined);
       // A branch already in progress holds the slot even when its issue is
       // blocked, so the lane still cannot start another one. state() draws that
       // issue as blocked regardless, so the bar and the row stay truthful.

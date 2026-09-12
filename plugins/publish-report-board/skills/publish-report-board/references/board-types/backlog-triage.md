@@ -39,7 +39,7 @@ Work through these steps in order; each one uses the results of the one before.
 
 ### 1. Work in Progress
 
-Detect it the way the `suggest-next-issue` skill does. An issue is in progress when a branch or worktree name contains its number, when it carries an "in progress" label, or when it is assigned to the current user. An open pull request that closes it also counts. Set `inProgress` to what carries the work: a branch name, `PR #390`, or, when only a label or an assignment says so, that signal itself, such as `the in progress label` or `assigned to you`. Every issue the board counts as in progress needs the field, because the page and validation read nothing else.
+Detect it the way the `suggest-next-issue` skill does. An issue is in progress when a branch or worktree name contains its number, when it carries an "in progress" label, or when it is assigned to the current user. An open pull request that closes it also counts. Set `inProgress` to what carries the work: a branch name, `PR #390`, or, when only a label or an assignment says so, that signal itself, such as `the in progress label` or `assigned to you`. Write a signal as a phrase rather than one word. The page links `PR #390` to its pull request and any single unspaced value to a branch comparison, so a bare `in-progress` is drawn as a branch that does not exist, while a phrase stays as text. Every issue the board counts as in progress needs the field, because the page and validation read nothing else.
 
 ### 2. Dependencies
 
@@ -114,7 +114,7 @@ Write `summary`, each lane's `note`, each `blockedBecause`, and any section note
 | `blockedBecause` | With `waitingOn` | Why it cannot start yet                                                                          |
 | `sameBranchAs`   | No               | The issue whose branch this one ships on                                                         |
 | `after`          | No               | What this one is better started after: issue numbers on this board, or [references](#references) |
-| `inProgress`     | No               | What carries the work: a branch, a pull request, or the signal that says it is underway          |
+| `inProgress`     | No               | What carries the work: a branch, a pull request, or a phrase naming the signal that says so      |
 
 ### References
 
