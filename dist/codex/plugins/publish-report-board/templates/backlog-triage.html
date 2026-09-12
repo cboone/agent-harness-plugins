@@ -1449,7 +1449,13 @@
 
     // With no picks the section keeps one line, which says whether anything
     // could have started.
-    const idle = lanes.some((model) => model.running.some((n) => progressOf(n) === undefined));
+    // The note keys off the same state() the lane rows use, so it cannot
+    // contradict a row beside it. A rider joins the running unit whether or not
+    // its own work has started, so a lane whose root is in progress can still
+    // draw a rider as able to run now while running holds only that root.
+    const idle = lanes.some((model) =>
+      model.lane.issues.some((n) => model.state(n) === "now" && progressOf(n) === undefined),
+    );
     const emptyStartNote = idle
       ? "No branches picked today."
       : "Nothing can start today: every issue is blocked, queued behind another, or already in progress.";

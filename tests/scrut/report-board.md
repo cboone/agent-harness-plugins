@@ -782,6 +782,19 @@ $ dir="$(mktemp -d)" && jq '(.issues[] | select(.number == 107)).after = [104]' 
 - Progress moved: #105 docs: fix broken links (fix/105-broken-links to PR #9)
 ```
 
+## Compare survives wrong-typed fields on a newly opened issue
+
+A previous board comes from a published page rather than from this sync, so
+`compare` meets values that never passed validation here. jq's `join` folds with
+`+` and aborts on an object, so the `Opened` entry converts a lane key and a
+milestone to text before joining them into the state it reports.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.issues += [{number: 109, title: "parser: measure the tokenizer", milestone: {title: "Parser rewrite", number: 3}}] | .lanes += [{key: {group: "L4"}, name: "Measurement", mode: "any", issues: [109]}]' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/data.json" | tail -n 2
+- Opened: #109 parser: measure the tokenizer ({"group":"L4"}; {"title":"Parser rewrite","number":3})
+- Lanes added: {"group":"L4"} Measurement
+```
+
 ## Compare reports a milestone whose short label changed
 
 The matrix heads a milestone column with its short label, so a new short label
