@@ -395,6 +395,19 @@ report-board: */data.json is not valid board data: (glob)
 [1]
 ```
 
+## A repository name with a dot segment
+
+Neither `.` nor `..` is an owner or a repository name. A board that omits
+`repoUrl` builds every link from `https://github.com/OWNER/REPO`, and a browser
+normalizes such a path clean out of the owner.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.repo = "../target"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" validate "${dir}/data.json" 2>&1
+report-board: */data.json is not valid board data: (glob)
+  - repo: expected owner/name
+[1]
+```
+
 ## A repository URL naming a different repository
 
 Every same-repository link is built from this address, and the base for other

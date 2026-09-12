@@ -48,10 +48,12 @@ Never declare `capabilities` on a board, and omit the field on every republish s
 
 ## Without the Artifact Tool
 
-Codex CLI and OpenCode have no Artifact tool. There the board is the standalone HTML file at its stable path under `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/`:
+Codex CLI and OpenCode have no Artifact tool. There the board is the standalone HTML file at `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/OWNER/REPO/REPO-BOARD.html`, under the name the skill gives every working file:
 
-1. Render with `--standalone` to that path.
+1. Render with `--standalone` to that path, creating the directory if it does not exist.
 2. Give the user the absolute path; the file opens in any browser.
-3. On the next sync, run `report-board compare` against the existing file before rendering over it.
+3. On the next sync, look for the previous board at that exact path, run `report-board compare` against it, and render over it only afterwards.
+
+The name is what makes this work. Nothing else on disk identifies a board, so a session that renders to a name of its own reads a re-sync as a first publish: it compares against nothing, reports no changes, and leaves the earlier board beside the new one.
 
 Everything else in the skill is unchanged.

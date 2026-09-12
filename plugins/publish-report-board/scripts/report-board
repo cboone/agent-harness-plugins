@@ -155,7 +155,7 @@ else
   (
     check($d.board | is_text and test("^[a-z0-9][a-z0-9-]*$"); "board: expected a board type such as \"backlog-triage\""),
     check($d.title | is_text; "title: expected text naming the board, such as \"agent-harness-plugins backlog\""),
-    check($d.repo | is_text and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"); "repo: expected owner/name"),
+    check($d.repo | is_text and test("^(?!\\.{1,2}/)[A-Za-z0-9_.-]+/(?!\\.{1,2}$)[A-Za-z0-9_.-]+$"); "repo: expected owner/name"),
     # The page builds every same-repository link from repoUrl and derives the
     # base for other repositories by removing the repo from its end, so a URL
     # naming a different repository sends every link somewhere else. The repo

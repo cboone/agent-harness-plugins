@@ -43,10 +43,10 @@ In the commands below, `REPORT_BOARD` is shorthand for that full **quoted path**
 
 ### 3. Choose Where the Board Lives
 
-Name the working files after the repository and the board type, such as `agent-harness-plugins-backlog-triage.json` and `agent-harness-plugins-backlog-triage.html`.
+Name the working files `REPO-BOARD.json` and `REPO-BOARD.html`, where `REPO` is the repository name without its owner and `BOARD` is the board type: `agent-harness-plugins-backlog-triage.json` and `agent-harness-plugins-backlog-triage.html`. Those two names are fixed rather than illustrative, and the same names are used wherever the files live. The local fallback has no Artifact to recover a board from and finds the previous one by this name alone, so a session that invents its own name reads a re-sync as a first publish: it reports no changes and leaves the earlier board sitting beside the new one.
 
 - **With the Artifact tool** (Claude Code): keep both files in the session scratchpad directory when the system prompt lists one, and otherwise in a directory from `mktemp -d`. The published Artifact is the board; the local files are this conversation's working copies.
-- **Without the Artifact tool** (Codex CLI, OpenCode): keep both files in `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/OWNER/REPO/`, creating it if needed. The rendered HTML there is the board, and the next session finds it at the same path.
+- **Without the Artifact tool** (Codex CLI, OpenCode): keep both files in `${XDG_CACHE_HOME:-$HOME/.cache}/report-boards/OWNER/REPO/`, creating it if needed. The rendered `REPO-BOARD.html` there is the board, and the next session finds it at that exact path.
 
 ### 4. Find the Previous Board
 
@@ -59,10 +59,10 @@ Establish whether this is a first publish or a re-sync before gathering anything
   bash REPORT_BOARD extract PAGE_HTML > PREVIOUS_JSON
   ```
 
-- **Local fallback**: the previous board is the HTML at the stable path; `extract` it to `PREVIOUS_JSON` the same way.
+- **Local fallback**: the previous board is `REPO-BOARD.html` in that directory; `extract` it to `PREVIOUS_JSON` the same way. Look for that name rather than for whatever HTML the directory happens to hold, and treat its absence as a first publish rather than reaching for a near match.
 - **Nothing found**: this is a first publish.
 
-Keep `PREVIOUS_JSON` apart from the working files, such as `agent-harness-plugins-backlog-triage.previous.json`. Steps 6 and 7 overwrite the working files with this sync, so a comparison against them finds nothing to report.
+Keep `PREVIOUS_JSON` apart from the working files, as `REPO-BOARD.previous.json`. Steps 6 and 7 overwrite the working files with this sync, so a comparison against them finds nothing to report.
 
 On a re-sync, the previous data is a draft, not a source. Its lanes and reasons are a starting point; GitHub decides what is true now.
 
