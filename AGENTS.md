@@ -83,7 +83,7 @@ plugins/handle-secrets/
             └── ...
 ```
 
-A skill can ship executable helpers too. `address-issue-in-worktree`, `create-worktree`, and `resolve-copilot-pr-feedback` each bundle a `scripts/` directory that the skill body invokes:
+A skill can ship executable helpers too. `address-issue-in-worktree`, `create-worktree`, `publish-report-board`, and `resolve-copilot-pr-feedback` each bundle a `scripts/` directory that the skill body invokes:
 
 ```text
 plugins/create-worktree/
@@ -101,6 +101,8 @@ plugins/create-worktree/
 `create-worktree` and `address-issue-in-worktree` ship byte-identical copies of both scripts. Rule 18 requires every `${CLAUDE_PLUGIN_ROOT}/scripts/NAME` reference to resolve inside its own plugin, so the scripts cannot be shared across plugins. Two testcases in `tests/scrut/repo-tooling.md` fail if the copies drift, so change one and copy it to the other.
 
 A skill refers to each script it ships by its plugin-root path, so `create-worktree` names both `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt` and `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux`, and `resolve-copilot-pr-feedback` names `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads`. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` checks that every such reference resolves to a shipped, executable file and rejects version-blind locator globs like `**/PLUGIN/scripts/NAME`. Bundled scripts belong in `tests/scrut/`.
+
+A script can carry files of its own. `publish-report-board` keeps its page templates in a plugin-root `templates/` directory, and its `report-board` script finds them relative to its own location rather than through `${CLAUDE_PLUGIN_ROOT}`, so the same lookup works in Codex CLI and OpenCode, where the placeholder is not substituted. Prettier formats those templates like any other HTML, which is why the data placeholder in each is a JSON string that still parses before rendering.
 
 A hook plugin that targets all three harnesses (Claude Code, Codex CLI, and OpenCode) carries split manifests, harness-specific entry points, and any helper scripts or assets:
 
@@ -169,7 +171,7 @@ The root `README.md` lists plugins in a compact 3-column table (Plugin, Trigger,
 
 A `## Contents` section sits between the intro paragraph and `## Install`. It is section-level navigation over the file's H2s: the `Install` and `Skills` bullets name their H3s inline, and the two `Using with` guides share a bullet. It never lists individual plugins, so adding a plugin does not touch it. Update it only when an H2 or a skills category is added, renamed, or removed, and keep every anchor resolvable, because markdownlint's MD051 checks them.
 
-Do not rename `## Install`, `## Using with OpenCode`, or `### Codex CLI known limitations`, and do not add a second heading that slugifies to one of those. 53 plugin READMEs link to those three slugs (`../../README.md#install` alone accounts for 51), and the `markdownlint-rule-relative-links` custom rule fails the build if a target fragment disappears.
+Do not rename `## Install`, `## Using with OpenCode`, or `### Codex CLI known limitations`, and do not add a second heading that slugifies to one of those. Every plugin README links to `../../README.md#install`, some also link the other two, and the `markdownlint-rule-relative-links` custom rule fails the build if a target fragment disappears.
 
 Use the canonical `description` field from `marketplace.json` for the "What it does" column, verbatim, so the README stays a thin mirror of the catalog of record.
 

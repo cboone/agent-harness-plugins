@@ -1,0 +1,54 @@
+{
+  "board": "backlog-triage",
+  "title": "widgets backlog",
+  "repo": "example/widgets",
+  "sync": {
+    "at": "2026-09-08T10:15:00-04:00",
+    "timeZone": "America/New_York",
+    "branch": "main",
+    "commit": "89abcdef0123456789abcdef0123456789abcdef",
+    "openPullRequests": 0
+  },
+  "summary": "The tokenizer landed, so streaming and the tutorial are both free. Start them in their own lanes.",
+  "milestones": [{ "title": "Parser rewrite", "short": "Parser" }, { "title": "Documentation" }],
+  "issues": [
+    { "number": 102, "title": "parser: stream large inputs", "milestone": "Parser rewrite" },
+    {
+      "number": 104,
+      "title": "docs: tutorial for the new parser",
+      "short": "parser tutorial",
+      "milestone": "Documentation"
+    },
+    {
+      "number": 106,
+      "title": "ci: cache dependencies",
+      "milestone": null,
+      "inProgress": "feature/106-cache"
+    },
+    { "number": 107, "title": "cli: color output", "milestone": "Parser rewrite" },
+    {
+      "number": 108,
+      "title": "parser: benchmark suite",
+      "milestone": "Parser rewrite",
+      "waitingOn": [102],
+      "blockedBecause": "Benchmarks measure the streaming path that #102 adds."
+    }
+  ],
+  "startNow": [
+    {
+      "issue": 102,
+      "why": "Heads the parser lane now that the tokenizer has landed, and frees #108.",
+      "touches": "parser"
+    },
+    {
+      "issue": 104,
+      "why": "Documents the tokenizer as it shipped; nothing else touches docs.",
+      "touches": "docs"
+    }
+  ],
+  "lanes": [
+    { "key": "L1", "name": "Parser core", "owns": "parser", "mode": "serial", "issues": [102, 108] },
+    { "key": "L2", "name": "Docs", "owns": "docs", "mode": "any", "issues": [104] },
+    { "key": "L3", "name": "Standalone", "mode": "any", "issues": [106, 107] }
+  ]
+}

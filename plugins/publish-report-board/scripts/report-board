@@ -1,0 +1,865 @@
+#!/usr/bin/env bash
+# report-board -- Validate, render, extract, and compare report board data.
+#
+# A report board is a self-contained HTML page drawn from one JSON document.
+# The page templates ship beside this script in ../templates/<board>.html.
+# This script checks the data against the rules every board relies on, writes
+# it into the template, and reads it back out of a rendered page so a re-sync
+# can report what changed since the last one.
+#
+# Usage:
+#   report-board validate DATA
+#   report-board render [--standalone] DATA OUTPUT
+#   report-board extract PAGE
+#   report-board compare PREVIOUS CURRENT
+#
+# Exit codes:
+#   0 - Success
+#   1 - Invalid board data, or a file that could not be read or written
+#   2 - Usage error, or jq is missing
+set -euo pipefail
+
+# Prints the directory holding this script, following symlinks so the
+# templates are found beside the real script rather than beside a link to it.
+function resolve_script_dir() {
+  local path="${BASH_SOURCE[0]}"
+  local link_dir
+  while [[ -L "${path}" ]]; do
+    link_dir="$(cd -P -- "$(dirname -- "${path}")" && pwd)"
+    path="$(readlink "${path}")"
+    [[ "${path}" == /* ]] || path="${link_dir}/${path}"
+  done
+  cd -P -- "$(dirname -- "${path}")" && pwd
+}
+
+SCRIPT_NAME="${0##*/}"
+readonly SCRIPT_NAME
+SCRIPT_DIR="$(resolve_script_dir)"
+readonly SCRIPT_DIR
+readonly TEMPLATE_DIR="${SCRIPT_DIR}/../templates"
+
+readonly E_INVALID=1
+readonly E_USAGE=2
+
+# The template carries these two placeholders. The data placeholder is a JSON
+# string so the unrendered template still parses, both for Prettier and for
+# the page's own script, which then shows a "no board data" message.
+readonly TITLE_PLACEHOLDER='__BOARD_TITLE__'
+readonly DATA_PLACEHOLDER='"__BOARD_DATA__"'
+readonly DATA_MARKER='id="board-data"'
+readonly SCRIPT_CLOSE='</script>'
+
+# Prepended by --standalone. The Artifact tool supplies its own document
+# skeleton, so the default output is a fragment without these lines.
+readonly STANDALONE_OPENING='<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">'
+
+# The shape a sync.timeZone must have. It also keeps the lookup in zone_status
+# inside the time zone database directory.
+readonly ZONE_PATTERN='^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+)*$'
+readonly ZONEINFO_DIR="${TZDIR:-/usr/share/zoneinfo}"
+
+# True when no string and no field name carries a control character. validate
+# and render apply this through VALIDATE_FILTER, but compare reads a previous
+# board out of a published page, which never went through that check here, and
+# compare is the command that prints board text to a terminal.
+readonly NO_CONTROL_FILTER='([.. | strings] + [.. | objects | keys[]] | map(select(test("[[:cntrl:]]"))) | length) == 0'
+
+# Emits one line per problem and nothing when the data is valid. Messages avoid
+# apostrophes because the filter lives inside a single-quoted shell string.
+# Every field is type-checked before it is used, so malformed data produces a
+# message rather than a jq error. It takes $zone_pattern, and $zone_known from
+# zone_status.
+# The $names in the filter are jq bindings, not shell expansions.
+# shellcheck disable=SC2016
+readonly VALIDATE_FILTER='
+def is_int: type == "number" and . == floor;
+def is_text: type == "string" and test("\\S");
+def as_list: if type == "array" then . else [] end;
+def absent_or(f): . == null or f;
+def check(condition; message): if condition then empty else message end;
+def duplicates: group_by(.) | map(select(length > 1) | .[0]) | .[];
+# The host and port of an https address, shared by every URL this file checks.
+# A port is 1 to 65535: an unbounded run of digits satisfies a pattern but names
+# no port, and the page would build a link no browser can open.
+def host_re: "[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*";
+def port_re: "(:(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3}))?";
+# True when an ISO 8601 time falls on a day the calendar has. strptime takes
+# February 31 and mktime rolls it into March, so a real date survives the
+# round trip and an impossible one does not.
+def calendar_date: .[0:10] as $day | ($day | try (strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d")) catch null) == $day;
+# Always text, whatever the reference holds. A previous board reaches compare
+# without being validated, and validate itself is meant to report a malformed
+# reference rather than die on one; both feed this to join, which adds its
+# elements and fails on anything that is not a string.
+def ref_text:
+  (if type == "number" then "#\(.)"
+   elif type != "object" then tostring
+   elif .pr != null then "PR #\(.pr)"
+   elif .branch != null then "branch \(.branch)"
+   elif .ref != null then .ref
+   else (.label // .url // "a reference") end)
+  | if type == "string" then . else tojson end;
+# What a waitingOn or after entry points at, without its display title or
+# label, so two entries naming the same thing compare equal.
+def ref_key: if type == "object" then {pr, branch, ref, url} else . end;
+# Problems with one reference object in waitingOn or after. $article is "a"
+# or "an", to agree with the field name.
+def ref_problems($at; $field; $article):
+  ([.pr, .branch, .ref, .url] | map(select(. != null)) | length) as $kinds
+  | if $kinds != 1 then "\($at): each \($field) reference names exactly one of pr, branch, ref, or url"
+    elif .pr != null then check(.pr | is_int and . > 0; "\($at): \($article) \($field) pr must be a pull request number")
+    elif .branch != null then check(.branch | is_text and test("^\\S+$") and (test("(^|/)\\.{1,2}(/|$)") | not); "\($at): \($article) \($field) branch must be a branch name")
+    elif .ref != null then check(.ref | is_text and test("^(?!\\.{1,2}/)[A-Za-z0-9_.-]+/(?!\\.{1,2}#)[A-Za-z0-9_.-]+#[1-9][0-9]*$"); "\($at): \($article) \($field) ref must look like owner/repo#123")
+    else check((.url | is_text and test("^https://" + host_re + port_re + "([/?#][^\\s\"<>]*)?$")) and (.label | is_text); "\($at): \($article) \($field) url needs an https:// address with a host, and a label")
+    end,
+    check(.title | absent_or(is_text); "\($at): \($article) \($field) title must be text");
+
+if type != "object" then "the top level must be a JSON object"
+else
+  . as $d
+  | ($d.issues | if type == "array" then [.[] | objects] else [] end) as $issue_list
+  | [$issue_list[] | .number | select(is_int)] as $numbers
+  | [$d.lanes | as_list | .[] | objects | .issues | as_list | unique[]] as $placed
+  | def known: . as $n | any($numbers[]; . == $n);
+    def issue($n): first($issue_list[] | select(.number == $n)) // null;
+    def root($n): (issue($n) | .sameBranchAs | select(is_int)) // $n;
+    def graph($field):
+      [$issue_list[] | select(.number | is_int) | .number as $num
+       | {key: ($num | tostring), value: (.[$field] | as_list | map(select(is_int and . != $num)))}]
+      | from_entries;
+    def in_loop($g; $start):
+      {todo: ($g[$start | tostring] // []), seen: []}
+      | until((.todo | length) == 0;
+          .todo[0] as $n
+          | .todo |= .[1:]
+          | if any(.seen[]; . == $n) then . else .seen += [$n] | .todo += ($g[$n | tostring] // []) end)
+      | any(.seen[]; . == $start);
+    # The lane model the page draws, so start picks can be held to it.
+    def riders($n): [$issue_list[] | select(.sameBranchAs == $n) | .number | select(is_int)];
+    # The issue carrying work in progress on the branch of $n, as {number,
+    # inProgress}, or null. Work on an issue riding the branch counts.
+    def progress_of($n): [($n, riders($n)[]) as $m | issue($m) | select(.inProgress | is_text) | {number, inProgress}] | first;
+    def rides($n): issue($n) | .sameBranchAs | is_int;
+    # A branch is queued while any issue on it is better after another open
+    # issue or reference.
+    def queued($n): [($n, riders($n)[]) as $m | issue($m) | .after | as_list | .[] | select(. != $n)] | length > 0;
+    # Not blocked, not riding another branch, and not queued, unless its work
+    # has already started.
+    def startable($n):
+      (issue($n) | .waitingOn | as_list | length) == 0
+        and (rides($n) | not)
+        and ((queued($n) | not) or progress_of($n) != null);
+    def lane_of($n): first($d.lanes | as_list | .[] | objects | select(.issues | as_list | any(.[]; . == $n))) // null;
+    def roots($lane): [$lane.issues | as_list | .[] | select(is_int) | select(rides(.) | not)];
+    def head_of($lane):
+      ($lane.issues | as_list | map(select(is_int)) | first) as $first
+      | if $first != null and rides($first) then (issue($first) | .sameBranchAs) else $first end;
+  # Several messages below quote the value they reject: a time zone, a claim
+  # name, a note key, a blocker branch or label. A control character anywhere in
+  # the data would reach the terminal through one of those even though the check
+  # for it had already failed, so that check answers alone and stops the rest.
+  if ((([$d | .. | strings] + [$d | .. | objects | keys[]]) | map(select(test("[[:cntrl:]]"))) | length) > 0) then
+    "board data must not hold control characters in its text or field names"
+  else
+  (
+    check($d.board | is_text and test("^[a-z0-9][a-z0-9-]*$"); "board: expected a board type such as \"backlog-triage\""),
+    check($d.title | is_text; "title: expected text naming the board, such as \"agent-harness-plugins backlog\""),
+    check($d.repo | is_text and test("^(?!\\.{1,2}/)[A-Za-z0-9_.-]+/(?!\\.{1,2}$)[A-Za-z0-9_.-]+$"); "repo: expected owner/name"),
+    # The page builds every same-repository link from repoUrl and derives the
+    # base for other repositories by removing the repo from its end, so a URL
+    # naming a different repository sends every link somewhere else. The repo
+    # guard keeps a malformed repo from being reported twice.
+    # A dot segment in the path would pass validation and then be normalized
+    # away by the browser, which is how a link escapes a path prefix. The path
+    # is held to unreserved characters, so a percent-encoded dot segment cannot
+    # slip through either, and no segment may be . or .. anywhere along it.
+    check($d.repoUrl | absent_or(is_text and test("^https://" + host_re + port_re + "(/(?!\\.{1,2}(/|$))[A-Za-z0-9_.~-]+)+/?$") and (($d.repo | type) != "string" or (sub("/$"; "") | endswith("/" + $d.repo)))); "repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name"),
+    check($d.summary | is_text; "summary: expected text summarizing the board"),
+    # Every string on a board comes from GitHub, and compare prints them to a
+    # terminal. A control character in one could rewrite the change report as it
+    # is read, so no string on a board may carry one.
+    check((([$d | .. | strings] + [$d | .. | objects | keys[]]) | map(select(test("[[:cntrl:]]"))) | length) == 0; "board data must not hold control characters in its text or field names"),
+
+    (if ($d.sync | type) != "object" then "sync: expected an object with at, branch, and commit"
+     else
+       (if ($d.sync.at | is_text and test("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9](\\.[0-9]+)?)?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$")) | not then "sync.at: expected an ISO 8601 time with a zone, such as 2026-09-10T19:43:00-04:00"
+        elif ($d.sync.at | calendar_date | not) then "sync.at: \($d.sync.at[0:10]) is not a date on the calendar"
+        else empty end),
+       check($d.sync.timeZone | absent_or(is_text and test($zone_pattern)); "sync.timeZone: expected an IANA zone name, such as America/New_York"),
+       check($zone_known != false; "sync.timeZone: \($d.sync.timeZone) is not a zone in the time zone database"),
+       check($d.sync.branch | is_text and test("^\\S+$") and (test("(^|/)\\.{1,2}(/|$)") | not); "sync.branch: expected the branch the board was synced against"),
+       check($d.sync.commit | is_text and test("^([0-9a-f]{40}|[0-9a-f]{64})$"); "sync.commit: expected the full commit SHA"),
+       check($d.sync.openPullRequests | absent_or(is_int and . >= 0); "sync.openPullRequests: expected a count"),
+       check($d.sync.extra | absent_or(type == "array" and all(.[]; is_text)); "sync.extra: expected a list of text")
+     end),
+
+    (if ($d.issues | type) != "array" or ($d.issues | length) == 0 then "issues: expected a non-empty list of open issues"
+     else
+       ($d.issues | to_entries[]) as {key: $i, value: $issue}
+       | if ($issue | type) != "object" then "issues[\($i)]: expected an object"
+         elif ($issue.number | is_int and . > 0) | not then "issues[\($i)].number: expected a positive integer"
+         else
+           "#\($issue.number)" as $at
+           | ($issue.waitingOn // []) as $waits
+           | check($issue.title | is_text; "\($at): title is required"),
+             (if ($issue | has("milestone")) | not then "\($at): milestone is required; use null for an issue without one"
+              else check($issue.milestone | absent_or(is_text); "\($at): milestone must be text or null") end),
+             check($issue.short | absent_or(is_text); "\($at): short must be text"),
+             # A single unspaced value becomes a branch comparison on the page,
+             # so it must not carry a dot path segment. A phrase stays text.
+             check($issue.inProgress | absent_or(is_text and ((test("^\\S+$") and test("(^|/)\\.{1,2}(/|$)")) | not)); "\($at): inProgress must name the branch or pull request"),
+             (if ($issue.waitingOn | absent_or(type == "array")) | not then "\($at): waitingOn must be a list"
+              else
+                ($waits[] | select(type == "number") | select(is_int | not) | "\($at): waitingOn issue numbers must be whole numbers"),
+                ($waits[] | select(is_int) | select(. == $issue.number) | "\($at) waits on itself"),
+                ($waits[] | select(is_int) | select(. != $issue.number and (known | not)) | "\($at) waits on #\(.), which is not an open issue on this board; drop it if it has closed, or name it as a reference"),
+                ($waits[] | select(type != "number" and type != "object") | "\($at): each waitingOn entry is an issue number or a reference object"),
+                ($waits[] | objects | ref_problems($at; "waitingOn"; "a")),
+                (if ($waits | length) > 0 and (($issue.blockedBecause | is_text) | not) then "\($at): blockedBecause is required when waitingOn is set"
+                 elif ($waits | length) == 0 and $issue.blockedBecause != null then "\($at): blockedBecause is set but waitingOn is empty"
+                 else empty end)
+              end),
+             (if $issue.sameBranchAs == null then empty
+              elif ($issue.sameBranchAs | is_int) | not then "\($at): sameBranchAs must be an issue number"
+              elif $issue.sameBranchAs == $issue.number then "\($at) shares a branch with itself"
+              elif ($issue.sameBranchAs | known) | not then "\($at) shares a branch with #\($issue.sameBranchAs), which is not in issues"
+              elif (issue($issue.sameBranchAs) | .sameBranchAs) != null then "\($at) shares a branch with #\($issue.sameBranchAs), which shares a branch with another issue; point both at the same one"
+              else empty end),
+             (if $issue.after == null then empty
+              elif ($issue.after | type) != "array" then "\($at): after must be a list"
+              else
+                ($issue.after[] | select(type == "number") | select(is_int | not) | "\($at): after issue numbers must be whole numbers"),
+                ($issue.after[] | select(is_int) | select(. == $issue.number) | "\($at) is better after itself"),
+                ($issue.after[] | select(is_int) | select(. != $issue.number and (known | not)) | "\($at) is better after #\(.), which is not an open issue on this board; drop it if it has closed, or name it as a reference"),
+                ($issue.after[] | select(type != "number" and type != "object") | "\($at): each after entry is an issue number or a reference object"),
+                ($issue.after[] | objects | ref_problems($at; "after"; "an")),
+                ($issue.after[] | . as $a | select($waits | as_list | any(.[]; ref_key == ($a | ref_key))) | "\($at) waits on \($a | ref_text) and is also better after it; keep only waitingOn"),
+                ($issue.after[] | select(is_int) | select(. != $issue.number and known and root(.) == root($issue.number)) | "\($at) shares a branch with #\(.), so it cannot also come after it")
+              end)
+         end
+     end),
+    ($numbers | duplicates | "issues: #\(.) appears more than once"),
+
+    (if ($d.lanes | type) != "array" or ($d.lanes | length) == 0 then "lanes: expected a non-empty list"
+     else
+       ($d.lanes | to_entries[]) as {key: $i, value: $lane}
+       | if ($lane | type) != "object" then "lanes[\($i)]: expected an object"
+         else
+           (if ($lane.key | is_text) then "lane \($lane.key)" else "lanes[\($i)]" end) as $at
+           | check($lane.key | is_text; "\($at): key is required, such as \"L1\""),
+             check($lane.name | is_text; "\($at): name is required"),
+             check($lane.mode | IN("serial", "head", "any"); "\($at): mode must be serial, head, or any"),
+             check($lane.owns | absent_or(is_text); "\($at): owns must be text"),
+             check($lane.note | absent_or(is_text); "\($at): note must be text"),
+             (if ($lane.issues | type == "array" and length > 0 and all(.[]; is_int)) | not then "\($at): issues must be a non-empty list of issue numbers"
+              else
+                ($lane.issues[] | select(known | not) | "\($at) lists #\(.), which is not in issues"),
+                ($lane.issues | duplicates | "\($at) lists #\(.) more than once")
+              end)
+         end
+     end),
+    ([$d.lanes | if type == "array" then .[] | objects | .key | select(is_text) else empty end] | duplicates | "lanes: key \(.) is used more than once"),
+    ($numbers[] as $n
+     | ([$placed[] | select(. == $n)] | length) as $times
+     | if $times == 0 then "#\($n) is not in any lane; every open issue belongs to exactly one"
+       elif $times > 1 then "#\($n) is in more than one lane"
+       else empty end),
+    ([$d.lanes | if type == "array" then .[] | objects | select(.key | is_text) | .key as $k | (.issues | if type == "array" then .[] else empty end) | {key: tostring, value: $k} else empty end] | from_entries) as $lane_of
+    | ($issue_list[]
+       | select((.sameBranchAs | is_int) and $lane_of[.number | tostring] != null and $lane_of[.sameBranchAs | tostring] != null)
+       | select($lane_of[.number | tostring] != $lane_of[.sameBranchAs | tostring])
+       | "#\(.number) shares a branch with #\(.sameBranchAs), but they sit in different lanes"),
+    (graph("after") as $g | $numbers[] | select(in_loop($g; .)) | "#\(.) is part of a better-after loop; break it"),
+    (graph("waitingOn") as $g | $numbers[] | select(in_loop($g; .)) | "#\(.) is part of a blocking loop; break it"),
+
+    (if ($d.startNow | type) != "array" then "startNow: expected a list, empty when nothing can start"
+     else
+       ($d.startNow | to_entries[]) as {key: $i, value: $pick}
+       | if ($pick | type) != "object" or (($pick.issue | is_int) | not) then "startNow[\($i)]: expected an object with an issue number"
+         else
+           "startNow #\($pick.issue)" as $at
+           | issue($pick.issue) as $target
+           | if $target == null then "\($at) is not in issues"
+             else
+               check($pick.why | is_text; "\($at): why is required"),
+               check($pick.touches | absent_or(is_text); "\($at): touches must be text"),
+               (if ($target.waitingOn | type == "array" and length > 0) then "\($at) waits on \($target.waitingOn | map(ref_text) | join(", ")) and cannot start" else empty end),
+               (progress_of($pick.issue) as $work
+                | if $work == null then empty
+                  elif $work.number == $pick.issue then "\($at) is already in progress on \($work.inProgress)"
+                  else "\($at) is already in progress on \($work.inProgress), through #\($work.number) on the same branch" end),
+               (if $target.sameBranchAs != null then "\($at) shares a branch with #\($target.sameBranchAs); list #\($target.sameBranchAs) instead" else empty end),
+               (if ($target.after | type == "array" and length > 0) then "\($at) is better after \($target.after | map(ref_text) | join(", ")) and should not start before it lands" else empty end),
+               ([$issue_list[] | select(.sameBranchAs == $pick.issue) | select(.after | type == "array" and any(.[]; . != $pick.issue)) | "#\(.number)"] as $held
+                | if ($held | length) > 0 then "\($at) shares its branch with \($held | join(", ")), which should wait for another open issue" else empty end),
+               # A pick that cannot start is reported above. One that can must
+               # still be the issue its serial or head lane runs.
+               (lane_of($pick.issue) as $lane
+                | if $lane == null or ($lane.mode | IN("serial", "head") | not) or (startable($pick.issue) | not) then empty
+                  else
+                    (first(roots($lane)[] | select(progress_of(.) != null)) // null) as $holder
+                    | if $holder == $pick.issue then empty
+                      elif $holder != null then
+                        progress_of($holder) as $work
+                        | "\($at): lane \($lane.key) already has #\($work.number) in progress on \($work.inProgress), and a \($lane.mode) lane runs one branch at a time"
+                      elif $lane.mode == "head" then
+                        head_of($lane) as $head
+                        | check($head == $pick.issue; "\($at): lane \($lane.key) is a head lane, and nothing in it starts before its head, #\($head)")
+                      else
+                        (first(roots($lane)[] | select(startable(.))) // null) as $next
+                        | check($next == $pick.issue; "\($at): lane \($lane.key) is serial, and #\($next) is the first issue in it that can start; pick that, or reorder the lane")
+                      end
+                  end)
+             end
+         end
+     end),
+    ($d.lanes | as_list | .[] | objects | select(.mode | IN("serial", "head")) | . as $lane
+     | [$d.startNow | as_list | .[] | objects | .issue | select(is_int) | . as $n | select($lane.issues | as_list | any(.[]; . == $n))] | unique
+     | select(length > 1)
+     | "lane \($lane.key) runs one branch at a time, but startNow picks \(length) of its issues: \(map("#\(.)") | join(", "))"),
+    ([$d.startNow | if type == "array" then .[] | objects | .issue else empty end] | duplicates | "startNow: #\(.) is listed more than once"),
+
+    (if $d.milestones == null then empty
+     elif ($d.milestones | type) != "array" then "milestones: expected a list"
+     else
+       ($d.milestones | to_entries[]) as {key: $i, value: $m}
+       | if ($m | type) != "object" or (($m.title | is_text) | not) then "milestones[\($i)]: expected an object with a title"
+         else check($m.short | absent_or(is_text); "milestones[\($i)]: short must be text")
+         end
+     end),
+
+    (if $d.contention == null then empty
+     elif ($d.contention | type) != "object" then "contention: expected an object"
+     else
+       check($d.contention.rowLabel | absent_or(is_text); "contention.rowLabel: expected text"),
+       (if ($d.contention.claims | type) != "array" then "contention.claims: expected a list"
+        else
+          (($d.contention.claims | to_entries[]) as {key: $i, value: $claim}
+           | if ($claim | type) != "object" or (($claim.name | is_text) | not) then "contention.claims[\($i)]: expected an object with a name"
+             else
+               "contention \($claim.name)" as $at
+               | check($claim.query | absent_or(is_text); "\($at): query must be text"),
+                 (if ($claim.issues | type == "array" and all(.[]; is_int) and (unique | length) >= 2) | not then "\($at): issues must list at least two different issue numbers"
+                  else ($claim.issues[] | select(known | not) | "\($at) lists #\(.), which is not in issues"),
+                       ($claim.issues | duplicates | "\($at) lists #\(.) more than once")
+                  end)
+             end),
+          ([$d.contention.claims[] | objects | .name | select(is_text)] | duplicates | "contention: claim \(.) is listed more than once")
+        end)
+     end),
+
+    (if $d.notes == null then empty
+     elif ($d.notes | type) != "object" then "notes: expected an object"
+     else ($d.notes | to_entries[] | select((.value | is_text) | not) | "notes.\(.key): expected text"),
+          # The page reads these three and no others, so a fourth key is a typo:
+          # it renders nowhere, and compare reports it as a change every sync.
+          ($d.notes | keys[] | . as $k | select(["startNow", "blocked", "contention"] | any(. == $k) | not) | "notes.\($k): expected startNow, blocked, or contention")
+     end)
+  )
+  end
+end
+'
+
+# Reads two boards bound as $previous and $current (each a one-element array
+# from --slurpfile) and emits a plain-text change report. Fields of the wrong
+# type count as empty, so an older or damaged board still compares.
+# As above, the $names are jq bindings.
+# shellcheck disable=SC2016
+readonly COMPARE_FILTER='
+def as_list: if type == "array" then . else [] end;
+# Always text, whatever the reference holds. A previous board reaches compare
+# without being validated, and validate itself is meant to report a malformed
+# reference rather than die on one; both feed this to join, which adds its
+# elements and fails on anything that is not a string.
+def ref_text:
+  (if type == "number" then "#\(.)"
+   elif type != "object" then tostring
+   elif .pr != null then "PR #\(.pr)"
+   elif .branch != null then "branch \(.branch)"
+   elif .ref != null then .ref
+   else (.label // .url // "a reference") end)
+  | if type == "string" then . else tojson end;
+def issues_of: .issues | as_list | map(objects | select(.number != null));
+def by_number: map({key: (.number | tostring), value: .}) | from_entries;
+def lanes_by_issue: [.lanes | as_list | .[] | objects | .key as $key | .issues | as_list | .[] | {key: tostring, value: $key}] | from_entries;
+def describe: "#\(.number) \(.short // .title)";
+def waits: .waitingOn | as_list;
+def afters: .after | as_list;
+def is_blocked: (waits | length) > 0;
+def names($list): $list | map(ref_text) | join(", ");
+# The Blocked section draws a reference blocker title beside its link, so a
+# title that changed is a change the page draws even when the link is the same.
+def titled($list): $list | map(if type == "object" and (.title // null) != null then "\(ref_text) (\(.title))" else ref_text end) | join(", ");
+# The page draws blockers and better-after links in the order given, so a
+# reordered list is a change. jq compares objects by content, so a reference
+# written with its keys in another order is still the same reference.
+def same_list($a; $b): $a == $b;
+def shown: if . == null then "none" else tojson end;
+# The matrix heads its first column with this, falling back to the same default
+# the page uses, so a board that leaves rowLabel out still compares against the
+# header its reader sees. A board with no claims draws no matrix at all, which
+# is why the entry below asks for claims on both sides before reporting a
+# header change: without them the claims are already reported as removed, and
+# the label names a column nobody is shown.
+def row_label: (.contention | if type == "object" then .rowLabel else null end) as $r | if ($r | type) == "string" and $r != "" then $r else "Plugin" end;
+def picks: [.startNow | as_list | .[] | objects | .issue];
+# The sync line, with the zone, open pull request count, and extra markers
+# the page shows, so a change to any of them reaches the report.
+def synced: (.sync | if type == "object" then . else {} end) as $s
+  | ($s.timeZone | if type == "string" then " in \(.)" else "" end) as $zone
+  | ($s.openPullRequests | if type == "number" then ", \(.) open pull \(if . == 1 then "request" else "requests" end)" else "" end) as $prs
+  | ($s.extra | if type == "array" then map(", \(.)") | join("") else "" end) as $extra
+  | "\($s.branch // "unknown branch") at \(($s.commit // "unknown") | tostring | .[0:8]), \($s.at // "unknown time")\($zone)\($prs)\($extra)";
+def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($items | join("; "))" else empty end;
+def lanes_of: [.lanes | as_list | .[] | objects | select(.key != null)];
+def lane_map: lanes_of | map({key: (.key | tostring), value: .}) | from_entries;
+def claim_map: [.contention | objects | .claims | as_list | .[] | objects | select(.name != null) | {key: (.name | tostring), value: .}] | from_entries;
+def claim_names: [.contention | objects | .claims | as_list | .[] | objects | .name | select(. != null) | tostring];
+# The matrix draws a column only for a milestone that an issue in a contention
+# claim carries, heads it with the short label of that entry, and orders the
+# columns by where their titles sit in this list. A milestone no claimed issue
+# carries is drawn nowhere, so a change to one is not a change the page shows.
+# Each entry reduces to what the page renders, its title and its effective
+# label, so metadata the page never draws is not a change either.
+def drawn_milestones:
+  . as $d
+  | ($d | issues_of | by_number) as $by
+  | [$d.contention | objects | .claims | as_list | .[] | objects | .issues | as_list | .[] | tostring | $by[.] | objects | .milestone | select(. != null)] as $claimed
+  | [$d.milestones | as_list | .[] | objects | select((.title // null) != null and (.title as $t | $claimed | any(. == $t))) | {title: ((.title // "") | tostring), label: (((.short // .title) // "") | tostring)}];
+def pick_map: [.startNow | as_list | .[] | objects | select(.issue != null) | {key: (.issue | tostring), value: .}] | from_entries;
+# Start now draws the short title of a pick, and the Blocked section draws it
+# for a blocked issue and for a blocker named by number. Nowhere else renders
+# it, so a short title that changed outside those places is not a change the
+# page shows. A plain number is selected by type because this filter rebinds
+# the name numbers to a formatter.
+def shows_short:
+  . as $d
+  | (($d | picks)
+     + [$d | issues_of | .[] | select(is_blocked) | .number]
+     + [$d | issues_of | .[] | waits | .[] | select(type == "number")])
+  | unique;
+def notes_of: .notes | if type == "object" then . else {} end;
+def numbers: map("#\(.)") | join(", ");
+def branch_of: if . == null then "its own branch" else "the branch of #\(.)" end;
+# The items of this list that are also in $other, in the order of this list.
+def shared_with($other): . - (. - $other);
+def reordered($a; $b): ($a | shared_with($b)) != ($b | shared_with($a));
+
+$previous[0] as $old
+| $current[0] as $new
+| ($old | issues_of | by_number) as $was
+| ($new | issues_of | by_number) as $now
+| ($old | lanes_by_issue) as $old_lane
+| ($new | lanes_by_issue) as $new_lane
+| [$new | issues_of | .[] | select($was[.number | tostring] != null)] as $kept
+| ($old | lane_map) as $old_lanes
+| ($new | lane_map) as $new_lanes
+| [$new | lanes_of | .[] | {key, now: ., was: $old_lanes[.key | tostring]} | select(.was != null)] as $kept_lanes
+| ($old | claim_map) as $old_claims
+| ($new | claim_map) as $new_claims
+| ($old | pick_map) as $old_picks
+| ($new | pick_map) as $new_picks
+| [
+    # The page builds every same-repository link from repoUrl, falling back to
+    # https://github.com/REPO and dropping a trailing slash, so an omitted
+    # repoUrl and that exact address are one board rather than a move. When
+    # neither side states one, the address follows repo alone and a changed
+    # repo already reports itself, so there is no separate repoUrl change to
+    # report. The message quotes what each side actually held.
+    entry("Changed board identity"; [("board", "title", "repo", "repoUrl") as $field
+      | (if $field == "repoUrl" then ((if ($old.repoUrl | type) == "string" then $old.repoUrl else "https://github.com/\($old.repo // "")" end) | sub("/+$"; "")) else ($old[$field] // null) end) as $was
+      | (if $field == "repoUrl" then ((if ($new.repoUrl | type) == "string" then $new.repoUrl else "https://github.com/\($new.repo // "")" end) | sub("/+$"; "")) else ($new[$field] // null) end) as $now
+      | select($was != $now and ($field != "repoUrl" or ($old.repoUrl // null) != null or ($new.repoUrl // null) != null))
+      | "\($field) (\($old[$field] // null | shown) to \($new[$field] // null | shown))"]),
+    entry("Closed"; [$old | issues_of | .[] | select($now[.number | tostring] == null) | describe]),
+    # A new issue reaches none of the transition entries below, which compare
+    # against a previous state it does not have, so its placement and its state
+    # are reported here or nowhere.
+    entry("Opened"; [$new | issues_of | .[] | select($was[.number | tostring] == null) | . as $i | (.number | tostring) as $k | ([(select($new_lane[$k] != null) | "\($new_lane[$k])"), (select(($i.milestone // null) != null) | "\($i.milestone)"), (select(($i.sameBranchAs // null) != null) | "same branch as #\($i.sameBranchAs)"), (select($i | is_blocked) | "waits on \(titled($i | waits))\(if ($i.blockedBecause // null) != null then ": \($i.blockedBecause)" else "" end)"), (select(($i | afters | length) > 0) | "after \(titled($i | afters))"), (select($i.inProgress != null) | "\($i.inProgress)")] | join("; ")) as $state | "\(describe)\(if $state == "" then "" else " (\($state))" end)"]),
+    entry("Newly blocked"; [$kept[] | select(is_blocked and ($was[.number | tostring] | is_blocked | not)) | "\(describe) (waits on \(titled(waits))\(if (.blockedBecause // null) != null then ": \(.blockedBecause)" else "" end))"]),
+    entry("Unblocked"; [$kept[] | select((is_blocked | not) and ($was[.number | tostring] | is_blocked)) | describe]),
+    entry("Blockers changed"; [$kept[] | $was[.number | tostring] as $w | select(is_blocked and ($w | is_blocked) and (same_list(waits; $w | waits) | not)) | "\(describe) (was waiting on \(titled($w | waits)), now \(titled(waits)))"]),
+    entry("Now better after"; [$kept[] | select((afters | length) > 0 and (($was[.number | tostring] | afters | length) == 0)) | "\(describe) (after \(names(afters)))"]),
+    entry("No longer better after"; [$kept[] | select((afters | length) == 0 and (($was[.number | tostring] | afters | length) > 0)) | describe]),
+    entry("Better after changed"; [
+      # A lane row links an after entry without its title, so a title by itself
+      # is not a change the page draws.
+      def linked: map(if type == "object" then del(.title) else . end);
+      $kept[] | $was[.number | tostring] as $w | select((afters | length) > 0 and (($w | afters | length) > 0) and (same_list(afters | linked; $w | afters | linked) | not)) | "\(describe) (was after \(names($w | afters)), now \(names(afters)))"
+    ]),
+    entry("Started"; [$kept[] | select(.inProgress != null and $was[.number | tostring].inProgress == null) | "\(describe) (\(.inProgress))"]),
+    entry("Progress moved"; [$kept[] | $was[.number | tostring] as $w | select(.inProgress != null and $w.inProgress != null and .inProgress != $w.inProgress) | "\(describe) (\($w.inProgress) to \(.inProgress))"]),
+    entry("No longer in progress"; [$kept[] | select(.inProgress == null and $was[.number | tostring].inProgress != null) | describe]),
+    entry("Added to start now"; [($new | picks) - ($old | picks) | .[] | ($now[tostring] // {number: ., title: "not on the board"}) | describe]),
+    entry("Dropped from start now"; [($old | picks) - ($new | picks) | .[] | ($now[tostring] // $was[tostring] // {number: ., title: "not on the board"}) | describe]),
+    entry("Changed lanes"; [$kept[] | (.number | tostring) as $k | select($old_lane[$k] != null and $new_lane[$k] != null and $old_lane[$k] != $new_lane[$k]) | "\(describe) (\($old_lane[$k]) to \($new_lane[$k]))"]),
+    entry("Changed milestone"; [$kept[] | (.number | tostring) as $k | select((.milestone // null) != ($was[$k].milestone // null)) | "\(describe) (\($was[$k].milestone // "none") to \(.milestone // "none"))"]),
+    entry("Retitled"; [$kept[] | $was[.number | tostring] as $w | select(.title != $w.title) | "#\(.number) (\($w.title | tojson) to \(.title | tojson))"]),
+    entry("Changed branch"; [$kept[] | $was[.number | tostring] as $w | select((.sameBranchAs // null) != ($w.sameBranchAs // null)) | "\(describe) (\($w.sameBranchAs // null | branch_of) to \(.sameBranchAs // null | branch_of))"]),
+    entry("Lanes added"; [$new | lanes_of | .[] | select($old_lanes[.key | tostring] == null) | "\(.key) \(.name // "")"]),
+    entry("Lanes removed"; [$old | lanes_of | .[] | select($new_lanes[.key | tostring] == null) | "\(.key) \(.name // "")"]),
+    entry("Changed lane mode"; [$kept_lanes[] | select(.now.mode != .was.mode) | "\(.key) (\(.was.mode) to \(.now.mode))"]),
+    entry("Changed lane order"; [$kept_lanes[] | select(reordered(.was.issues | as_list; .now.issues | as_list)) | "\(.key) (now \(.now.issues | as_list | numbers))"]),
+    # The page draws its lane sections in the order the data lists them.
+    entry("Reordered lanes"; [($old | lanes_of | map(.key | tostring)) as $was_keys | ($new | lanes_of | map(.key | tostring)) as $now_keys | select(reordered($was_keys; $now_keys)) | "now \($now_keys | join(", "))"]),
+    entry("Changed lane details"; [$kept_lanes[] | . as $pair | [("name", "owns", "note") | select(($pair.now[.] // null) != ($pair.was[.] // null))] | select(length > 0) | "\($pair.key) (\(join(", ")))"]),
+    entry("Changed start order"; [select(reordered($old | picks; $new | picks)) | $new | picks | numbers]),
+    entry("Changed contention"; [
+      ($new_claims | to_entries[] | select($old_claims[.key] == null) | "claim \(.key) added (\(.value.issues | as_list | numbers))"),
+      ($old_claims | to_entries[] | select($new_claims[.key] == null) | "claim \(.key) removed"),
+      # The page draws the claims, and the issues in each, in the order given.
+      ($new_claims | to_entries[] | $old_claims[.key] as $o | select($o != null and ($o.issues | as_list) != (.value.issues | as_list)) | "claim \(.key) (\($o.issues | as_list | numbers) to \(.value.issues | as_list | numbers))"),
+      ($new_claims | to_entries[] | $old_claims[.key] as $o | select($o != null and ($o.query // null) != (.value.query // null)) | "claim \(.key) search (\($o.query // null | shown) to \(.value.query // null | shown))"),
+      (select(reordered($old | claim_names; $new | claim_names)) | "claim order (now \($new | claim_names | join(", ")))"),
+      (select((($old | claim_names) | length) > 0 and (($new | claim_names) | length) > 0 and ($old | row_label) != ($new | row_label)) | "row label (\($old | row_label) to \($new | row_label))")
+    ]),
+    # The matrix heads a milestone column with its short label, so a short
+    # label that changed is a change the page draws. Only a drawn column
+    # counts, and only while both syncs draw a matrix: a board with no claims
+    # has no columns, and the claim lines above already report that.
+    entry("Changed milestones"; [select((($old | claim_names) | length) > 0 and (($new | claim_names) | length) > 0 and ($old | drawn_milestones) != ($new | drawn_milestones)) | ($new | drawn_milestones) | map(if .label != .title then "\(.title) (\(.label))" else .title end) | join(", ") | if . == "" then "none" else "now \(.)" end]),
+    entry("Reworded"; [
+      (select(($old.summary // null) != ($new.summary // null)) | "summary"),
+      # The page draws the contention note inside the matrix, which appears
+      # only where there are claims, so a note neither page shows is not a
+      # change the reader sees.
+      (($old | notes_of) as $was_notes | ($new | notes_of) as $now_notes | ($was_notes + $now_notes) | keys_unsorted[] | . as $k | select(($was_notes[$k] // null) != ($now_notes[$k] // null)) | select($k != "contention" or ((($old | claim_names) | length) > 0 and (($new | claim_names) | length) > 0)) | "the \($k) note"),
+      ((($old | shows_short) + ($new | shows_short) | unique) as $short_shown | $kept[] | $was[.number | tostring] as $w | select((.short // null) != ($w.short // null)) | select(.number as $n | $short_shown | any(. == $n)) | "the short title of #\(.number)"),
+      ($kept[] | $was[.number | tostring] as $w | select(is_blocked and ($w | is_blocked) and (.blockedBecause // null) != ($w.blockedBecause // null)) | "why #\(.number) is blocked"),
+      ($new_picks | to_entries[] | $old_picks[.key] as $o | select($o != null)
+       | (select((.value.why // null) != ($o.why // null)) | "why to start #\(.key)"),
+         (select((.value.touches // null) != ($o.touches // null)) | "what #\(.key) touches"))
+    ])
+  ] as $changes
+| "Previous sync: \($old | synced)",
+  "This sync: \($new | synced)",
+  "",
+  (if ($changes | length) > 0 then $changes[] else "- No changes beyond the sync metadata." end)
+'
+
+function usage() {
+  cat << 'USAGE'
+Usage:
+  report-board validate DATA
+  report-board render [--standalone] DATA OUTPUT
+  report-board extract PAGE
+  report-board compare PREVIOUS CURRENT
+
+DATA and CURRENT are board data JSON files. PAGE is a rendered board, such as
+the HTML an Artifact read returns. PREVIOUS may be either.
+
+render writes an HTML fragment for the Artifact tool, which supplies its own
+document skeleton. --standalone writes a complete document to open from disk.
+USAGE
+}
+
+function die() {
+  local exit_code="${1}"
+  shift
+  printf '%s: %s\n' "${SCRIPT_NAME}" "${*}" >&2
+  exit "${exit_code}"
+}
+
+function usage_error() {
+  printf '%s: %s\n\n' "${SCRIPT_NAME}" "${1}" >&2
+  usage >&2
+  exit "${E_USAGE}"
+}
+
+function require_jq() {
+  command -v jq > /dev/null 2>&1 || die "${E_USAGE}" "jq is required but not found: https://jqlang.org/download/"
+}
+
+function require_file() {
+  local path="${1}"
+  [[ -f "${path}" && -r "${path}" ]] || die "${E_INVALID}" "cannot read ${path}"
+}
+
+# Prints a path so that jq and awk read it as a file, never as an option.
+function operand() {
+  case "${1}" in
+    -*) printf './%s' "${1}" ;;
+    *) printf '%s' "${1}" ;;
+  esac
+}
+
+# Exits unless the file holds exactly one JSON document. jq accepts an empty
+# file, or several documents back to back, without complaint.
+function require_single_document() {
+  local data_file="${1}"
+  jq empty "${data_file}" 2> /dev/null || die "${E_INVALID}" "${data_file} is not valid JSON"
+  jq -e -s 'length == 1' "${data_file}" > /dev/null 2>&1 || die "${E_INVALID}" "${data_file} must hold exactly one JSON document"
+}
+
+# Prints "N issues in M lanes" for a data file already known to be valid.
+function board_summary() {
+  local data_file="${1}"
+  jq -r '
+    def counted($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
+    "\(counted(.issues | length; "issue"; "issues")) in \(counted(.lanes | length; "lane"; "lanes"))"
+  ' "${data_file}"
+}
+
+# Prints whether the time zone database has the data's sync.timeZone: true or
+# false, or null when there is no zone to look up, it is not shaped like a zone
+# name, or no database is installed to look in.
+function zone_status() {
+  local data_file="${1}"
+  local zone
+  zone="$(jq -r '(try .sync.timeZone catch null) | strings' "${data_file}")"
+  if [[ -z "${zone}" || ! -d "${ZONEINFO_DIR}" || ! "${zone}" =~ ${ZONE_PATTERN} ]]; then
+    printf 'null'
+  elif [[ -f "${ZONEINFO_DIR}/${zone}" ]]; then
+    printf 'true'
+  else
+    printf 'false'
+  fi
+}
+
+# Exits with every problem listed when the data breaks a board rule.
+function validate_data() {
+  local data_file="${1}"
+  local problems line
+
+  require_single_document "${data_file}"
+  problems="$(jq -r --arg zone_pattern "${ZONE_PATTERN}" --argjson zone_known "$(zone_status "${data_file}")" "${VALIDATE_FILTER}" "${data_file}")"
+  [[ -z "${problems}" ]] && return 0
+
+  printf '%s: %s is not valid board data:\n' "${SCRIPT_NAME}" "${data_file}" >&2
+  while IFS= read -r line; do
+    printf '  - %s\n' "${line}" >&2
+  done <<< "${problems}"
+  exit "${E_INVALID}"
+}
+
+function available_boards() {
+  local template names=()
+  for template in "${TEMPLATE_DIR}"/*.html; do
+    [[ -f "${template}" ]] && names+=("$(basename -- "${template}" .html)")
+  done
+  printf '%s' "${names[*]:-none}"
+}
+
+# Writes the page to stdout: the template with the escaped title and the
+# compact JSON payload in place of the two placeholders.
+function fill_template() {
+  local template_file="${1}"
+  local title_html="${2}"
+  local payload="${3}"
+  local template
+
+  template="$(< "${template_file}")"
+  if [[ "${template}" != *"${TITLE_PLACEHOLDER}"* || "${template}" != *"${DATA_PLACEHOLDER}"* ]]; then
+    die "${E_INVALID}" "${template_file} is missing the ${TITLE_PLACEHOLDER} or ${DATA_PLACEHOLDER} placeholder"
+  fi
+
+  # Both values are board data, so either can hold the other's placeholder.
+  # Splitting the original template on both markers first keeps a title that
+  # contains the data placeholder from capturing the data slot.
+  local before_title rest before_data after_data
+  before_title="${template%%"${TITLE_PLACEHOLDER}"*}"
+  rest="${template#*"${TITLE_PLACEHOLDER}"}"
+  if [[ "${rest}" != *"${DATA_PLACEHOLDER}"* ]]; then
+    die "${E_INVALID}" "${template_file} places ${DATA_PLACEHOLDER} before ${TITLE_PLACEHOLDER}"
+  fi
+  before_data="${rest%%"${DATA_PLACEHOLDER}"*}"
+  after_data="${rest#*"${DATA_PLACEHOLDER}"}"
+  printf '%s%s%s%s%s\n' "${before_title}" "${title_html}" "${before_data}" "${payload}" "${after_data}"
+}
+
+# Replaces the output file in one step, so a republish never reads a
+# half-written page.
+function write_output() {
+  local output_file="${1}"
+  local content="${2}"
+  local output_dir temp_file current_umask mode=""
+
+  [[ -d "${output_file}" ]] && die "${E_INVALID}" "${output_file} is a directory; name the page file to write"
+  output_dir="$(dirname -- "${output_file}")"
+  [[ -d "${output_dir}" ]] || die "${E_INVALID}" "directory ${output_dir} does not exist"
+  temp_file="$(mktemp "${output_dir}/.report-board.XXXXXX")" || die "${E_INVALID}" "cannot write to ${output_dir}"
+
+  # mktemp creates the file for its owner alone, or for nobody under a umask
+  # that denies the owner too. Fill it in as the owner, then give the page its
+  # mode. Replacing a page keeps the mode that page already has, so a board
+  # written under a strict umask is never widened by a later session running
+  # under a looser one. Only a page that does not exist yet takes the mode a
+  # new file gets under the current umask.
+  if [[ -f "${output_file}" ]]; then
+    # GNU stat first: its -c prints the mode, and BSD stat has no -c at all, so
+    # it fails without printing. The other order is not safe, because GNU reads
+    # -f as --file-system and writes filesystem details to stdout before it
+    # fails, which would land in mode alongside the real value.
+    mode="$(stat -c '%a' "${output_file}" 2> /dev/null || stat -f '%Lp' "${output_file}" 2> /dev/null)" || mode=""
+  fi
+  if [[ -z "${mode}" ]]; then
+    current_umask="$(umask)"
+    mode="$(printf '%o' "$((8#666 & ~8#${current_umask}))")"
+  fi
+  if ! {
+    chmod -- 600 "${temp_file}" \
+      && printf '%s' "${content}" > "${temp_file}" \
+      && chmod -- "${mode}" "${temp_file}" \
+      && mv -- "${temp_file}" "${output_file}"
+  }; then
+    rm -f -- "${temp_file}"
+    die "${E_INVALID}" "cannot write ${output_file}"
+  fi
+}
+
+# Prints the raw payload of a rendered page's board-data script element. It
+# reads line by line, so a large page costs time in proportion to its size.
+# Returns 1 when the page has no board data.
+function extract_payload() {
+  local page_file="${1}"
+  awk -v marker="${DATA_MARKER}" -v close_tag="${SCRIPT_CLOSE}" '
+    !started {
+      at = index($0, marker)
+      if (at == 0) next
+      rest = substr($0, at)
+      open_end = index(rest, ">")
+      if (open_end == 0) next
+      $0 = substr(rest, open_end + 1)
+      started = 1
+    }
+    {
+      end_at = index($0, close_tag)
+      if (end_at > 0) {
+        print substr($0, 1, end_at - 1)
+        found = 1
+        exit
+      }
+      print
+    }
+    END { exit found ? 0 : 1 }
+  ' "${page_file}"
+}
+
+# Prints board data as formatted JSON, reading it out of a rendered page when
+# the file is not board data itself.
+function read_board_data() {
+  local source_file="${1}"
+  local payload count
+
+  require_file "${source_file}"
+  if jq -e 'type == "object"' "${source_file}" > /dev/null 2>&1; then
+    require_single_document "${source_file}"
+    jq -e "${NO_CONTROL_FILTER}" "${source_file}" > /dev/null 2>&1 \
+      || die "${E_INVALID}" "${source_file} holds control characters in its board data"
+    jq '.' "${source_file}"
+    return 0
+  fi
+  payload="$(extract_payload "${source_file}")" || die "${E_INVALID}" "${source_file} is neither board data nor a rendered board"
+  # Exactly one JSON object: a page carrying a second document is rejected
+  # rather than read, since compare would otherwise see only the first.
+  count="$(jq -s 'length' <<< "${payload}" 2> /dev/null)" || count=0
+  [[ "${count}" -le 1 ]] || die "${E_INVALID}" "${source_file} holds more than one JSON document in its board data"
+  if [[ "${count}" -ne 1 ]] || ! jq -e 'type == "object"' <<< "${payload}" > /dev/null 2>&1; then
+    die "${E_INVALID}" "${source_file} holds no board data; render it with report-board first"
+  fi
+  jq -e "${NO_CONTROL_FILTER}" <<< "${payload}" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "${source_file} holds control characters in its board data"
+  jq '.' <<< "${payload}"
+}
+
+function cmd_validate() {
+  [[ $# -eq 1 ]] || usage_error "validate takes one data file"
+  local data_file
+  data_file="$(operand "${1}")"
+
+  require_file "${data_file}"
+  validate_data "${data_file}"
+  printf '%s: %s is valid: %s\n' "${SCRIPT_NAME}" "${data_file}" "$(board_summary "${data_file}")" >&2
+}
+
+function cmd_render() {
+  local standalone=false
+  if [[ "${1:-}" == "--standalone" ]]; then
+    standalone=true
+    shift
+  fi
+  [[ $# -eq 2 ]] || usage_error "render takes a data file and an output path"
+  local data_file output_file board template_file title_html payload page
+  data_file="$(operand "${1}")"
+  output_file="$(operand "${2}")"
+
+  require_file "${data_file}"
+  validate_data "${data_file}"
+
+  board="$(jq -r '.board' "${data_file}")"
+  template_file="${TEMPLATE_DIR}/${board}.html"
+  [[ -f "${template_file}" ]] || die "${E_INVALID}" "no template for board type ${board}; available: $(available_boards)"
+
+  title_html="$(jq -r '.title | @html' "${data_file}")"
+  # Escaping "<" keeps any "</script>" inside a title or note from closing the
+  # data element early. "<" is still valid JSON for the same character.
+  payload="$(jq -r 'tojson | gsub("<"; "\\u003c")' "${data_file}")"
+  page="$(fill_template "${template_file}" "${title_html}" "${payload}")"
+  if [[ "${standalone}" == true ]]; then
+    page="${STANDALONE_OPENING}"$'\n'"${page}"$'\n''</html>'
+  fi
+
+  # Writing the page over the data file destroys the board it was built from,
+  # and the summary below reads that file again once the page is written. stat
+  # follows a symlink, so a link to the data file is caught here too.
+  if [[ -e "${output_file}" ]]; then
+    local data_id page_id
+    data_id="$(stat -c '%d:%i' "${data_file}" 2> /dev/null || stat -f '%d:%i' "${data_file}" 2> /dev/null)" || data_id=""
+    page_id="$(stat -c '%d:%i' "${output_file}" 2> /dev/null || stat -f '%d:%i' "${output_file}" 2> /dev/null)" || page_id=""
+    if [[ -n "${data_id}" && "${data_id}" == "${page_id}" ]]; then
+      die "${E_INVALID}" "${output_file} is the data file; name a page file to write instead"
+    fi
+  fi
+
+  write_output "${output_file}" "${page}"$'\n'
+  printf '%s: rendered %s to %s\n' "${SCRIPT_NAME}" "$(board_summary "${data_file}")" "${output_file}" >&2
+}
+
+function cmd_extract() {
+  [[ $# -eq 1 ]] || usage_error "extract takes one rendered page"
+  local page_file
+  page_file="$(operand "${1}")"
+  read_board_data "${page_file}"
+}
+
+function cmd_compare() {
+  [[ $# -eq 2 ]] || usage_error "compare takes the previous board and the current data"
+  local previous_file current_file previous current
+  previous_file="$(operand "${1}")"
+  current_file="$(operand "${2}")"
+
+  previous="$(read_board_data "${previous_file}")"
+  current="$(read_board_data "${current_file}")"
+  jq -n -r \
+    --slurpfile previous <(printf '%s\n' "${previous}") \
+    --slurpfile current <(printf '%s\n' "${current}") \
+    "${COMPARE_FILTER}"
+}
+
+function main() {
+  local command="${1:-}"
+  [[ $# -gt 0 ]] && shift
+
+  case "${command}" in
+    -h | --help | help)
+      usage
+      return 0
+      ;;
+    "") usage_error "a command is required" ;;
+    *) ;;
+  esac
+
+  require_jq
+  case "${command}" in
+    validate) cmd_validate "${@}" ;;
+    render) cmd_render "${@}" ;;
+    extract) cmd_extract "${@}" ;;
+    compare) cmd_compare "${@}" ;;
+    *) usage_error "unknown command: ${command}" ;;
+  esac
+}
+
+main "${@}"

@@ -10,7 +10,8 @@ SCRUT_TEST_DIR := tests/scrut/
 SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u WORKMUX_LAUNCH_WAIT_SECONDS -u WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS \
 	-u STUB_CAPTURE_TERM -u STUB_CAPTURE_TMUX -u STUB_GIT_WORKTREE_PORCELAIN \
-	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES
+	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES \
+	-u TZDIR
 
 # Every scrut test resolves the script or fixture it exercises through one of
 # these variables. Defining them once keeps the test and update targets from
@@ -28,6 +29,8 @@ SCRUT_ENV := \
 	CREATE_WORKTREE_LAUNCH_WORKMUX_BIN="$(CURDIR)/plugins/create-worktree/scripts/launch-workmux" \
 	ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN="$(CURDIR)/plugins/address-issue-in-worktree/scripts/launch-workmux" \
 	GIT_WORKTREE_STUB_BIN="$(CURDIR)/tests/fixtures/git-worktree-stub" \
+	REPORT_BOARD_BIN="$(CURDIR)/plugins/publish-report-board/scripts/report-board" \
+	REPORT_BOARD_DATA_DIR="$(CURDIR)/tests/data/report-board" \
 	RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads" \
 	TMUX_STUB_BIN="$(CURDIR)/tests/fixtures/tmux-stub" \
 	UNIX_SOCKET_FIXTURE_BIN="$(CURDIR)/tests/fixtures/create-unix-socket" \
