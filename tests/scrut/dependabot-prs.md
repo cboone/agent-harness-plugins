@@ -281,6 +281,13 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.jso
 [{"number":205,"alerts":[{"number":37,"cleared":false}]},{"number":206,"alerts":[{"number":31,"cleared":true}]}]
 ```
 
+A grouped PR that moves one package to different versions in different directories cannot say which target applies to an alert's manifest, so `cleared` is null.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 208) | {alerts: [.alerts[] | {number, cleared}]}'
+{"alerts":[{"number":38,"cleared":null}]}
+```
+
 ## Patched versions sort by version, not as strings
 
 ```scrut

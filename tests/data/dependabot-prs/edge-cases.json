@@ -15,7 +15,11 @@
       "body": "Bumps node from `6f7ab5c` to `0e9c10a`.\n",
       "createdAt": "2026-09-12T00:00:00Z",
       "updatedAt": "2026-09-12T00:00:00Z",
-      "files": [{ "path": "docker/Dockerfile" }]
+      "files": [
+        {
+          "path": "docker/Dockerfile"
+        }
+      ]
     },
     {
       "number": 202,
@@ -27,7 +31,11 @@
       "body": "Bumps [vendor/lib](https://github.com/example-org/lib) from 08c6903 to 11bd719.\n",
       "createdAt": "2026-09-12T00:00:00Z",
       "updatedAt": "2026-09-12T00:00:00Z",
-      "files": [{ "path": "vendor/lib" }]
+      "files": [
+        {
+          "path": "vendor/lib"
+        }
+      ]
     },
     {
       "number": 203,
@@ -39,7 +47,11 @@
       "body": "Updates the requirements on [rake](https://github.com/ruby/rake) to permit the latest version.\n",
       "createdAt": "2026-09-12T00:00:00Z",
       "updatedAt": "2026-09-12T00:00:00Z",
-      "files": [{ "path": "example.gemspec" }]
+      "files": [
+        {
+          "path": "example.gemspec"
+        }
+      ]
     },
     {
       "number": 204,
@@ -51,7 +63,11 @@
       "body": "Bumps foo.\nUpdates `foo` from 1.0.0 to 1.2.0   \n",
       "createdAt": "2026-09-12T00:00:00Z",
       "updatedAt": "2026-09-12T00:00:00Z",
-      "files": [{ "path": "package.json" }]
+      "files": [
+        {
+          "path": "package.json"
+        }
+      ]
     },
     {
       "number": 205,
@@ -64,14 +80,53 @@
       "createdAt": "2026-09-12T00:00:00Z",
       "updatedAt": "2026-09-12T00:00:00Z",
       "statusCheckRollup": [
-        { "__typename": "CheckRun", "name": "neutral", "status": "COMPLETED", "conclusion": "NEUTRAL", "completedAt": "2026-09-12T01:00:00Z" },
-        { "__typename": "CheckRun", "name": "cancelled", "status": "COMPLETED", "conclusion": "CANCELLED", "completedAt": "2026-09-12T02:00:00Z" },
-        { "__typename": "CheckRun", "name": "stale", "status": "COMPLETED", "conclusion": "STALE", "completedAt": "2026-09-12T01:30:00Z" },
-        { "__typename": "CheckRun", "name": "running", "status": "IN_PROGRESS", "conclusion": "", "completedAt": "0001-01-01T00:00:00Z" },
-        { "__typename": "StatusContext", "context": "errored", "state": "ERROR" },
-        { "__typename": "StatusContext", "context": "expected", "state": "EXPECTED" }
+        {
+          "__typename": "CheckRun",
+          "name": "neutral",
+          "status": "COMPLETED",
+          "conclusion": "NEUTRAL",
+          "completedAt": "2026-09-12T01:00:00Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "cancelled",
+          "status": "COMPLETED",
+          "conclusion": "CANCELLED",
+          "completedAt": "2026-09-12T02:00:00Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "stale",
+          "status": "COMPLETED",
+          "conclusion": "STALE",
+          "completedAt": "2026-09-12T01:30:00Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "running",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "completedAt": "0001-01-01T00:00:00Z"
+        },
+        {
+          "__typename": "StatusContext",
+          "context": "errored",
+          "state": "ERROR"
+        },
+        {
+          "__typename": "StatusContext",
+          "context": "expected",
+          "state": "EXPECTED"
+        }
       ],
-      "files": [{ "path": "Cargo.toml" }, { "path": "Cargo.lock" }]
+      "files": [
+        {
+          "path": "Cargo.toml"
+        },
+        {
+          "path": "Cargo.lock"
+        }
+      ]
     },
     {
       "number": 206,
@@ -83,7 +138,11 @@
       "body": "Bumps [lodash](https://github.com/lodash/lodash) from 4.17.20 to 4.17.21.\n",
       "createdAt": "2026-09-12T00:00:00Z",
       "updatedAt": "2026-09-12T00:00:00Z",
-      "files": [{ "path": "web/package-lock.json" }]
+      "files": [
+        {
+          "path": "web/package-lock.json"
+        }
+      ]
     },
     {
       "number": 207,
@@ -95,7 +154,30 @@
       "body": "Bumps [left-pad](https://github.com/left-pad/left-pad) from 1.3.0 to 1.3.1.\n",
       "createdAt": "2026-09-12T00:00:00Z",
       "updatedAt": "2026-09-12T00:00:00Z",
-      "files": [{ "path": "README.md" }]
+      "files": [
+        {
+          "path": "README.md"
+        }
+      ]
+    },
+    {
+      "number": 208,
+      "title": "chore(deps): bump the npm-security group across 2 directories with 2 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/208",
+      "headRefName": "dependabot/npm_and_yarn/npm-security-abc1234567",
+      "headRefOid": "2080808080808080808080808080808080808080",
+      "baseRefName": "main",
+      "body": "Bumps the npm-security group with 1 update in the / directory and 1 update in the /api directory.\n\nUpdates `minimist` from 1.2.5 to 1.2.6\n\nUpdates `minimist` from 0.2.1 to 0.2.4\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "package-lock.json"
+        },
+        {
+          "path": "api/package-lock.json"
+        }
+      ]
     }
   ],
   "alerts": {
@@ -104,45 +186,155 @@
     "items": [
       {
         "number": 31,
-        "dependency": { "package": { "ecosystem": "npm", "name": "lodash" }, "manifest_path": "web/package.json" },
-        "security_advisory": { "ghsa_id": "GHSA-1111-1111-1111", "severity": "high" },
-        "security_vulnerability": { "first_patched_version": { "identifier": "4.17.21" } }
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "lodash"
+          },
+          "manifest_path": "web/package.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-1111-1111-1111",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "4.17.21"
+          }
+        }
       },
       {
         "number": 32,
-        "dependency": { "package": { "ecosystem": "npm", "name": "lodash" }, "manifest_path": "api/package-lock.json" },
-        "security_advisory": { "ghsa_id": "GHSA-2222-2222-2222", "severity": "high" },
-        "security_vulnerability": { "first_patched_version": { "identifier": "4.17.21" } }
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "lodash"
+          },
+          "manifest_path": "api/package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-2222-2222-2222",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "4.17.21"
+          }
+        }
       },
       {
         "number": 33,
-        "dependency": { "package": { "ecosystem": "pip", "name": "lodash" }, "manifest_path": "web/requirements.txt" },
-        "security_advisory": { "ghsa_id": "GHSA-3333-3333-3333", "severity": "low" },
-        "security_vulnerability": { "first_patched_version": { "identifier": "1.0.0" } }
+        "dependency": {
+          "package": {
+            "ecosystem": "pip",
+            "name": "lodash"
+          },
+          "manifest_path": "web/requirements.txt"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-3333-3333-3333",
+          "severity": "low"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "1.0.0"
+          }
+        }
       },
       {
         "number": 34,
-        "dependency": { "package": { "ecosystem": "npm", "name": "left-pad" }, "manifest_path": "package-lock.json" },
-        "security_advisory": { "ghsa_id": "GHSA-4444-4444-4444", "severity": "medium" },
-        "security_vulnerability": { "first_patched_version": { "identifier": "1.3.1" } }
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "left-pad"
+          },
+          "manifest_path": "package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-4444-4444-4444",
+          "severity": "medium"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "1.3.1"
+          }
+        }
       },
       {
         "number": 35,
-        "dependency": { "package": { "ecosystem": "npm", "name": "qs" }, "manifest_path": "package-lock.json" },
-        "security_advisory": { "ghsa_id": "GHSA-5555-5555-5555", "severity": "medium" },
-        "security_vulnerability": { "first_patched_version": { "identifier": "6.10.0" } }
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "qs"
+          },
+          "manifest_path": "package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-5555-5555-5555",
+          "severity": "medium"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "6.10.0"
+          }
+        }
       },
       {
         "number": 36,
-        "dependency": { "package": { "ecosystem": "npm", "name": "qs" }, "manifest_path": "package-lock.json" },
-        "security_advisory": { "ghsa_id": "GHSA-6666-6666-6666", "severity": "medium" },
-        "security_vulnerability": { "first_patched_version": { "identifier": "6.2.4" } }
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "qs"
+          },
+          "manifest_path": "package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-6666-6666-6666",
+          "severity": "medium"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "6.2.4"
+          }
+        }
       },
       {
         "number": 37,
-        "dependency": { "package": { "ecosystem": "rust", "name": "tiny" }, "manifest_path": "Cargo.lock" },
-        "security_advisory": { "ghsa_id": "GHSA-7777-7777-7777", "severity": "high" },
-        "security_vulnerability": { "first_patched_version": { "identifier": "0.1.0" } }
+        "dependency": {
+          "package": {
+            "ecosystem": "rust",
+            "name": "tiny"
+          },
+          "manifest_path": "Cargo.lock"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-7777-7777-7777",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "0.1.0"
+          }
+        }
+      },
+      {
+        "number": 38,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "minimist"
+          },
+          "manifest_path": "package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-8888-8888-8888",
+          "severity": "critical"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "1.2.6"
+          }
+        }
       }
     ]
   }

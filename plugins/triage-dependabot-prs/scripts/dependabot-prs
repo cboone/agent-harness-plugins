@@ -537,12 +537,15 @@ function do_summarize() {
           }
         | . as $pr
         # cleared says whether the version this PR moves to reaches the first patched
-        # version. A PR can update a vulnerable package without leaving its range.
+        # version. A PR can update a vulnerable package without leaving its range. A
+        # grouped PR can move one package to different versions in different
+        # directories, and with no directory on each update, cleared is then null.
         | .alerts = [
             $alerts[]
             | select(alert_matches($pr))
             | . as $alert
-            | (first($pr.updates[] | select(.name | lower == ($alert.package | lower)) | .to) // null) as $to
+            | ([$pr.updates[] | select(.name | lower == ($alert.package | lower)) | .to] | unique) as $targets
+            | (if ($targets | length) == 1 then $targets[0] else null end) as $to
             | . + {cleared: (if $to == null or $alert.patched == "" or ($to | is_sha) then null else (($to | version_key) >= ($alert.patched | version_key)) end)}
           ]
       ] as $prs
