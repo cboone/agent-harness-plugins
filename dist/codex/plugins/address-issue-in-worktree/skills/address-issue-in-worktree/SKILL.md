@@ -97,7 +97,7 @@ Leading with the issue number is what lets the `pr` skill link the resulting pul
 
 The type prefix comes from workmux's naming prompt, not from this skill, so it reflects the user's own `auto_name.system_prompt` and is not derived from the issue labels. Do not add, correct, or second-guess it.
 
-**Reruns reuse the existing branch.** The launcher first looks for a local branch already carrying the issue number and reuses it, so running this skill twice for the same issue reopens the same worktree instead of generating a second name. It reports `Reusing branch <name> for issue <number>`. If more than one local branch matches, it lists them and exits; ask the user which to use and re-run with that name in the positional form.
+**Reruns reuse the existing branch.** The launcher first looks for a local branch already carrying the issue number and reuses it, so running this skill twice for the same issue reopens the same worktree instead of generating a second name. It reports `Reusing branch <name> for issue <number>`. If more than one local branch matches, it lists them and exits; ask the user which to use and re-run the launcher with that name in the positional form.
 
 #### If the generator is unavailable
 

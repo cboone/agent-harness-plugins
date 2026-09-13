@@ -322,8 +322,11 @@ function existing_branch_for_issue() {
   local line match=""
   local count=0
   # Any number of path segments may precede the number, so "feature/42-x" and
-  # "user/feature/42-x" both count as branches for issue 42.
-  local pattern='^([^/]+/)*'"${issue}"'(-|$)'
+  # "user/feature/42-x" both count as branches for issue 42. A slash ends the
+  # number too: normalize_branch_name turns "feature/issue-42/ui" into
+  # "feature/42/ui", so without it the launcher could not find a branch it
+  # had itself created.
+  local pattern='^([^/]+/)*'"${issue}"'(-|/|$)'
   local -a candidates=()
 
   while IFS= read -r line || [[ -n "${line}" ]]; do

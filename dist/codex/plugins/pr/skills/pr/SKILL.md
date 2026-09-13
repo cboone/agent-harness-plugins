@@ -136,7 +136,7 @@ When the comparison is ambiguous, include none. The two errors are not symmetric
 
 #### Combine results
 
-Merge issue numbers from all three strategies into a single deduplicated list. Preserve the order: branch-name issues first, then commit-message issues, then search-matched issues. Note the branch type prefix (`fix/*` vs other) for choosing the closing keyword later.
+Merge issue numbers from all three strategies into a single deduplicated list. Preserve the order: branch-name issues first, then commit-message issues, then search-matched issues. Do not record the branch prefix: the closing keyword comes from the nature of the change, not from how the branch is named.
 
 ### 3. Validate Preconditions
 
@@ -303,8 +303,10 @@ Keep the summary to 1-4 bullet points. Focus on what changed and why.
 
 If connected issues were detected in step 2, add a `## Closes` section after `## Test plan`. Use one line per issue with the appropriate keyword:
 
-- For issues detected from a `fix/*` branch: `Fixes #N`
-- For all other issues: `Closes #N`
+- When the changes fix a bug: `Fixes #N`
+- Otherwise: `Closes #N`
+
+Use the same nature-of-change test as the commit message, so the two never disagree. A branch prefix does not decide it, and a branch may carry none.
 
 If no connected issues were detected, omit the `## Closes` section entirely.
 

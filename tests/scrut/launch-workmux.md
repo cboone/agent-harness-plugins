@@ -569,6 +569,25 @@ Body
 prompt-file-exists: yes
 ```
 
+## Create worktree launcher reuses a branch whose issue number ends at a slash
+
+`feature/issue-42/ui` normalizes to `feature/42/ui`, so the number can be a
+whole path segment. Without a slash boundary the launcher would fail to find a
+branch it had itself created and would generate a second one.
+
+```scrut
+$ prepare_stubs \
+>   && printf '%s\n' 'Body' \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/42/ui\nmain' STUB_AUTO_NAME="feature/should-not-be-used" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 42
+Reusing branch feature/42/ui for issue 42
+workmux add
+branch: feature/42/ui
+open-if-exists: true
+prompt:
+Body
+prompt-file-exists: yes
+```
+
 ## Create worktree launcher does not treat branch 420 as issue 42
 
 ```scrut

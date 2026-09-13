@@ -21,6 +21,7 @@ The user may provide these options inline:
 
 - **--issue `<number>`**: Force issue lookup, for when a task description is itself a number
 - **--no-issue**: Force description handling, even if the argument looks like an issue number
+- **--branch `<name>`**: Use this exact branch name and skip generation, for a name that does not look like one
 - **--base `<branch>`**: Base the worktree on a specific branch instead of the repository's default branch
 
 ## Workflow
@@ -30,10 +31,12 @@ The user may provide these options inline:
 Decide what the user gave you, in this order:
 
 1. **An issue number**: a bare integer or `#N` (e.g. `/create-worktree 42`, `/create-worktree #42`), or anything passed via `--issue N`
-2. **An explicit branch name**: a string containing `/` that looks like `type/slug` (e.g. `/create-worktree feature/my-thing`) -- use as-is
+2. **An explicit branch name**: anything passed via `--branch NAME`, or a string containing `/` that looks like `type/slug` (e.g. `/create-worktree feature/my-thing`) -- use as-is
 3. **A task description**: anything else (e.g. `/create-worktree Fix a bug`)
 
 `--no-issue` forces a bare integer down the description path.
+
+The generator can return a name with no `/` in it, so a prefixless branch such as `make-things-better` is indistinguishable from a task description by shape alone. `--branch` is how the user names one: without it, passing a prefixless branch back would generate a second branch rather than reopening the first. Prefer it whenever you are echoing a name the launcher reported earlier, and offer it by name when you ask the user to choose between candidate branches.
 
 If an issue number was given but `gh` is not installed or not authenticated, say so and ask whether to treat the argument as a task description instead. Do not silently fall back.
 
@@ -62,11 +65,11 @@ Leading with the issue number is what lets the `pr` skill link the resulting pul
 
 The type prefix comes from workmux's naming prompt, not from this skill, so it reflects the user's own `auto_name.system_prompt`. Do not add, correct, or second-guess it, and do not pass a branch name alongside `--auto-name`: the launcher rejects that combination.
 
-**An explicit branch name** given by the user (an argument containing `/` that looks like `type/slug`) is used as-is, with the positional form and no `--auto-name`.
+**An explicit branch name**, whether passed via `--branch NAME` or recognized by its `type/slug` shape, is used as-is, with the positional form and no `--auto-name`.
 
-**Reruns reuse the existing branch, on the issue path only.** With `--issue NUMBER`, the launcher first looks for a local branch already carrying that number and reuses it, so running this skill twice for the same issue reopens the same worktree instead of generating a second name. It reports `Reusing branch <name> for issue <number>`. If more than one local branch matches, it lists them and exits; pass an explicit branch name to choose between them.
+**Reruns reuse the existing branch, on the issue path only.** With `--issue NUMBER`, the launcher first looks for a local branch already carrying that number and reuses it, so running this skill twice for the same issue reopens the same worktree instead of generating a second name. It reports `Reusing branch <name> for issue <number>`. If more than one local branch matches, it lists them and exits; ask the user which to use and re-run with `--branch NAME`.
 
-A task description has no such identifier, and the generator is not deterministic, so rerunning the same description generally produces a differently worded name and therefore a second worktree. When the user is returning to work they already started from a description, ask for the branch name and pass it in the positional form instead.
+A task description has no such identifier, and the generator is not deterministic, so rerunning the same description generally produces a differently worded name and therefore a second worktree. When the user is returning to work they already started from a description, ask for the branch name and pass it with `--branch NAME` instead.
 
 #### If the generator is unavailable
 
