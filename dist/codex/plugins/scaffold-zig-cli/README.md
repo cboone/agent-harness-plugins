@@ -44,12 +44,12 @@ This skill runs git, GitHub CLI, and Zig commands that trigger permission prompt
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git init*)", "Bash(git rev-parse *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git config *)", "Bash(git status*)", "Bash(gh api user*)", "Bash(gh api \"repos/*)", "Bash(gh release view*)", "Bash(zig build*)", "Bash(zig fmt*)", "Bash(zig version)", "Bash(cd *)", "Bash(date +%Y)", "Bash(echo *)", "Bash(ls -d *)", "Bash(mkdir -p*)", "Bash(touch *)"]
+    "allow": ["Bash(git init*)", "Bash(git rev-parse *)", "Bash(git check-ignore *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git config *)", "Bash(git status*)", "Bash(gh api user*)", "Bash(gh api \"repos/*)", "Bash(gh release view*)", "Bash(zig build*)", "Bash(zig fmt*)", "Bash(zig version)", "Bash(cd *)", "Bash(date +%Y)", "Bash(echo *)", "Bash(ls -d *)", "Bash(mkdir -p*)", "Bash(touch *)"]
   }
 }
 ```
 
-This covers every command the workflow runs, not only the Zig ones: `cd` and `ls -d` for the step 3 target selection and overwrite preflight, `git rev-parse` for the step 4 repository-root test, `echo` for the SHA-refresh output, `date +%Y` for the LICENSE year, `gh release view` and `gh api` for the `cboone/gh-actions` SHA refresh, and `mkdir -p` plus `touch` for the directory stubs.
+This covers every command the workflow runs, not only the Zig ones: `cd` and `ls -d` for the step 3 target selection and overwrite preflight, `git rev-parse` for the step 4 repository-root test, `git check-ignore` for the step 23 ignore probe, `echo` for the SHA-refresh output, `date +%Y` for the LICENSE year, `gh release view` and `gh api` for the `cboone/gh-actions` SHA refresh, and `mkdir -p` plus `touch` for the directory stubs.
 
 The escaped quote in `Bash(gh api \"repos/*)` is deliberate. Permission rules match the command text before the shell expands it, and the SHA-refresh step runs `gh api "repos/cboone/gh-actions/commits/${TAG}"` with the endpoint quoted, because it interpolates a variable. A rule written as `Bash(gh api repos/*)` expects `r` where the command has `"`, so it does not match and the step prompts anyway.
 

@@ -121,11 +121,13 @@ Any output means the repository carries work that is not this scaffold's. Report
 
 ### 4. Initialize Git
 
-Skip `git init` only when the **target itself** is the root of a repository:
+Skip `git init` only when the **target itself** is the root of a repository. Ask git where the root is and compare it to the target:
 
 ```bash
-test "$(git rev-parse --show-toplevel 2> /dev/null)" = "$(pwd)"
+git rev-parse --show-toplevel 2> /dev/null
 ```
+
+Skip `git init` only if that prints the target directory. No output means there is no repository here, and a different path means the target sits inside someone else's.
 
 Being merely _inside_ a repository is not the same thing and must not skip it. Step 3 may have created the target as a subdirectory of wherever the skill was invoked, and if that was a repository, the new directory is inside it while having none of its own. Skipping `git init` there leaves the scaffold with no repository, and step 23's `git add` and signed `git commit` then land in the caller's repository instead. Initialize a nested target like any other:
 
@@ -358,7 +360,22 @@ If `.github/copilot-instructions.md` does not exist, skip this step.
 
 ### 23. Create Initial Commit
 
-Stage the files this run generated, **each by its full path**, and create the initial commit:
+First, when the target was an existing repository, check whether any generated path is covered by an ignore rule:
+
+```bash
+git check-ignore -v \
+  build.zig build.zig.zon \
+  src/root.zig src/main.zig \
+  typos.toml Makefile .gitignore .editorconfig \
+  .github/workflows/ci.yml .github/workflows/release.yml \
+  .claude/settings.json \
+  LICENSE README.md CHANGELOG.md \
+  docs/plans/todo/.gitkeep docs/plans/done/.gitkeep tests/.gitkeep
+```
+
+Anything it prints would make `git add` refuse that path and abort the commit. It reports the rule alongside the file, so show the user both and ask what they want, rather than forcing the file in. A repository that ignores `.claude/` or `docs/` usually means it, and overriding that silently is not the skill's call: committing the rest and naming what was left out is the better default. Adding a path the user does want is `git add -f <that path>`, which they can ask for.
+
+Then stage the files this run generated, **each by its full path**, and create the initial commit:
 
 ```bash
 git add \
