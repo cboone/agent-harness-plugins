@@ -315,7 +315,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"resource": "logic"}]}' > "${claim_file}" \
 >   && claims list 2>&1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty, and issue must be a number when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a number when present (glob)
 [1]
 ```
 
@@ -326,7 +326,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":"x"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty, and issue must be a number when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a number when present (glob)
 ```
 
 ## Concurrent claims on different resources both survive
@@ -408,7 +408,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"resource":"a b","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty, and issue must be a number when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a number when present (glob)
 ```
 
 ## Outside a git repository the claim file cannot be resolved
@@ -596,7 +596,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"resource":"-logic","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty, and issue must be a number when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a number when present (glob)
 ```
 
 ## A stored branch carrying whitespace is refused
@@ -606,7 +606,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"resource":"a","worktree":"/repo/wt-live","branch":"b c","claimed_at":"t"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty, and issue must be a number when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a number when present (glob)
 ```
 
 ## A worktree path containing spaces is still accepted
@@ -618,4 +618,37 @@ $ setup_claims \
 >   && claims claim logic --worktree "/repo/with space" --branch feature/live > /dev/null \
 >   && claims_list
 resource=logic state=stale branch=feature/live claimed=TIMESTAMP worktree=/repo/with space
+```
+
+## Two claims on one resource are refused
+
+One claim per resource is the invariant every lookup assumes. `claim_for_resource` answers with the first match, so a duplicate would let a stale record hide a live holder behind it and slip a takeover past the guard in `claim`.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version":1,"claims":[{"resource":"logic","worktree":"/repo/wt-gone","branch":"a","claimed_at":"t"},{"resource":"logic","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
+>   && claims list 2>&1
+manage-resource-claims: */.claude/worktree-resources.local.json holds more than one claim on the same resource; remove the duplicates (glob)
+[1]
+```
+
+## A control character in the worktree path is refused on write
+
+`list` prints one claim per line, so a newline inside a path would let one record print as several and forge claims that are not in the file. Spaces stay legal, since a path may legitimately contain them.
+
+```scrut
+$ setup_claims && claims_tail claim logic --worktree "$(printf '/a\n/b')" --branch feature/live
+manage-resource-claims: --worktree must not contain control characters
+[1]
+```
+
+## A control character in a stored worktree path is refused on read
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version":1,"claims":[{"resource":"a","worktree":"/a\\n/b","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
+>   && claims list 2>&1 | tail -1
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a number when present (glob)
 ```

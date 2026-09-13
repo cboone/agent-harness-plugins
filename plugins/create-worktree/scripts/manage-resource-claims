@@ -161,11 +161,18 @@ function read_claims() {
   # that it cannot be confused with a following field.
   if ! jq -e 'all(.claims[];
         ((.resource | type) == "string") and (.resource | test("^[^-[:space:][:cntrl:]][^[:space:][:cntrl:]]*$"))
-        and ((.worktree | type) == "string") and (.worktree | length > 0)
+        and ((.worktree | type) == "string") and (.worktree | test("^[^[:cntrl:]]+$"))
         and ((.branch | type) == "string") and (.branch | test("^[^[:space:][:cntrl:]]+$"))
         and ((.claimed_at | type) == "string") and (.claimed_at | test("^[^[:space:][:cntrl:]]+$"))
         and ((has("issue") | not) or ((.issue | type) == "number")))' > /dev/null 2>&1 <<< "${document}"; then
-    die "${file} holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty, and issue must be a number when present"
+    die "${file} holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a number when present"
+  fi
+
+  # One claim per resource is the invariant every lookup assumes: claim_for_resource
+  # answers with the first match, so a duplicate would let a stale record hide a
+  # live holder behind it and slip a takeover past the guard in cmd_claim.
+  if ! jq -e '(.claims | map(.resource)) as $names | ($names | length) == ($names | unique | length)' > /dev/null 2>&1 <<< "${document}"; then
+    die "${file} holds more than one claim on the same resource; remove the duplicates"
   fi
 
   jq -c '.claims' <<< "${document}"
@@ -294,6 +301,18 @@ function valid_token() {
 
   [[ -n "${value}" ]] || return 1
   [[ "${value}" != *[[:space:][:cntrl:]]* ]] || return 1
+
+  return 0
+}
+
+# A worktree is a path, so spaces are legitimate and list emits it last for
+# that reason. Control characters are not: a newline in a path would let one
+# record print as several, forging claims that are not in the file.
+function valid_path() {
+  local value="${1}"
+
+  [[ -n "${value}" ]] || return 1
+  [[ "${value}" != *[[:cntrl:]]* ]] || return 1
 
   return 0
 }
@@ -436,9 +455,11 @@ function report_claim_outcome() {
   fi
 }
 
-# Records the claim whether or not the resource is already held. The gate lives
-# in check and in the skill that asks the user, so refusing here would leave a
-# user who has decided to override with no way to say so.
+# Refuses a resource a different worktree still holds, and takes it only when
+# --take-over says the user was asked and agreed. The decision is made while
+# the lock is held, which is what makes it sound: check runs earlier and is a
+# separate operation, so its answer can be out of date by the time this writes.
+# Keep the refusal inside the lock if this is ever restructured.
 function cmd_claim() {
   local resource worktree="" branch="" issue="" take_over="no"
   local file claims decorated existing now updated
@@ -493,6 +514,7 @@ function cmd_claim() {
   # and keeps claim from writing a record that the read contract would then
   # refuse, which would leave the file unusable by the next command.
   valid_token "${branch}" || die "--branch must not contain whitespace"
+  valid_path "${worktree}" || die "--worktree must not contain control characters"
 
   if [[ -n "${issue}" && ! "${issue}" =~ ^[0-9]+$ ]]; then
     die "--issue must be a number, got: ${issue}"
