@@ -51,6 +51,15 @@ git config user.name
 
 If either command fails or produces no output, ask the user to provide the value. Use the GitHub username wherever templates reference `GITHUB-USERNAME` and the full name wherever they reference `COPYRIGHT-HOLDER`.
 
+`git config user.name` is read here as template input, which is not the same as git being configured to commit. Step 23 makes a GPG-signed commit, and that needs `user.email` and a signing key as well:
+
+```bash
+git config user.email
+git config user.signingkey || git config gpg.format
+```
+
+A value supplied by the user for `COPYRIGHT-HOLDER` does not configure anything. If either of these is unset, say so now rather than at step 23, where the commit fails after every file has already been written.
+
 ### 3. Verify the Target Directory
 
 The project should be scaffolded in a directory named after the project. If the current directory is already named after the project and is empty (or nearly empty), use it. Otherwise, create a subdirectory.
@@ -62,10 +71,11 @@ Before generating anything, check what is already there. Two separate checks, be
 ```bash
 ls -d build.zig build.zig.zon src README.md LICENSE CHANGELOG.md Makefile \
   typos.toml .gitignore .editorconfig .github/workflows/ci.yml \
-  .github/workflows/release.yml .claude/settings.json 2> /dev/null
+  .github/workflows/release.yml .claude/settings.json \
+  .github/copilot-instructions.md 2> /dev/null
 ```
 
-Anything listed will be replaced. `.gitignore`, `.editorconfig` and `.claude/settings.json` are merged rather than overwritten, per steps 12, 13 and 19, so name them separately when reporting. For the rest, show the user what would be lost and ask before continuing. A directory holding someone's `README.md` and `Makefile` is the case this exists for, and it does not have to be a git repository to lose work.
+Anything listed will be replaced. Four are merged rather than overwritten: `.gitignore`, `.editorconfig` and `.claude/settings.json` per steps 12, 13 and 19, and `.github/copilot-instructions.md` per step 22. Name those separately when reporting, since an existing one is appended to rather than lost. For the rest, show the user what would be lost and ask before continuing. A directory holding someone's `README.md` and `Makefile` is the case this exists for, and it does not have to be a git repository to lose work.
 
 **Uncommitted work, when the target is a git repository:**
 

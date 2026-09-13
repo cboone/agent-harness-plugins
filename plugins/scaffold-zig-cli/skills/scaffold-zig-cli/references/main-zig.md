@@ -59,6 +59,10 @@ pub fn main(init: std.process.Init) !u8 {
         return 0;
     }
 
+    // Validate every argument before doing any work. Acting on operands as
+    // they are encountered would mean `PROJECT-NAME world --nope` printed a
+    // greeting and then exited 2, so a rejected command line would still have
+    // written to stdout.
     for (args[1..]) |arg| switch (classify(arg)) {
         .help => {
             try stdout.writeAll(usage);
@@ -71,15 +75,16 @@ pub fn main(init: std.process.Init) !u8 {
             return 0;
         },
         .unknown_option => {
-            // Flush first: whatever earlier arguments printed should land on
-            // stdout before the diagnostic lands on stderr.
-            try stdout.flush();
             std.log.err("unrecognized option: '{s}'", .{arg});
             try Io.File.stderr().writeStreamingAll(io, usage);
             return 2;
         },
-        .operand => try PACKAGE-NAME.greet(stdout, arg),
+        .operand => {},
     };
+
+    for (args[1..]) |arg| {
+        if (classify(arg) == .operand) try PACKAGE-NAME.greet(stdout, arg);
+    }
 
     try stdout.flush();
     return 0;
@@ -103,4 +108,5 @@ test classify {
 - Returning `u8` instead of calling `std.process.exit` matters because `exit` goes straight to the syscall and discards anything still sitting in the stdout buffer. Every exit path here flushes first.
 - Stdout is buffered through `Io.File.stdout().writer(io, &buf)`, and writes go to its `.interface`. `std.fs.File` no longer exists in 0.16.
 - `classify` is a separate function so the flag table is unit-testable without spawning the binary, which is also what keeps the test from touching stdout.
-- An unknown option exits 2 with a clean stdout and the diagnostic on stderr. If the project later adds snapshot tests, that exit code becomes a recorded expectation, so change it deliberately rather than by accident.
+- An unknown option exits 2 with a clean stdout and the diagnostic on stderr, **wherever it appears in the line**. That is why `main` walks the arguments twice: validating first and acting second is what makes `PROJECT-NAME world --nope` exit 2 having written nothing, instead of greeting `world` and then failing. A single loop that acted on each argument as it classified it would honor the guarantee only when the bad flag came first.
+- If the project later adds snapshot tests, that exit code and the empty stdout become recorded expectations, so change them deliberately rather than by accident.
