@@ -2,7 +2,7 @@
 
 Create `src/main.zig` with the following content.
 
-Replace `PROJECT-NAME` with the project name and `PACKAGE-NAME` with the underscored package name.
+Replace `PROJECT-NAME` with the project name. There is no `PACKAGE-NAME` in this file: the library module arrives under the fixed import name `lib` that `build.zig` registers, so nothing here depends on what the package is called.
 
 This is the CLI entry point: argument handling and nothing else, so the logic in `src/root.zig` stays testable.
 
@@ -17,10 +17,11 @@ const Io = std.Io;
 
 const build_options = @import("build_options");
 
-// Bound to a fixed name rather than to the package name. The import string is
-// the package name, but the binding is not, so a package called `std`, `Io`,
-// `main` or anything else this file already declares cannot collide with it.
-const lib = @import("PACKAGE-NAME");
+// Imported and bound as "lib", neither of which is derived from the package
+// name. build.zig registers the module under this fixed import name, so a
+// package called `std`, `main`, `build_options` or anything else already
+// spoken for here cannot collide with it.
+const lib = @import("lib");
 
 const usage =
     \\Usage: PROJECT-NAME [options] [name]...
@@ -120,5 +121,5 @@ test classify {
 - `classify` is a separate function so the flag table is unit-testable without spawning the binary, which is also what keeps the test from touching stdout.
 - An unknown option exits 2 with a clean stdout and the diagnostic on stderr, **wherever it appears among the operands**. That is why `main` walks the arguments twice: scanning first and acting second is what makes `PROJECT-NAME world --nope` exit 2 having written nothing, instead of greeting `world` and then failing. A single loop that acted on each argument as it classified it would honor the guarantee only when the bad flag came first.
 - `--help` and `--version` are the exception: they return from the first pass, so `PROJECT-NAME --help --nope` prints help and exits 0 rather than rejecting `--nope`. That matches how most tools behave, and the comment in the code says how to change it. The distinction is worth knowing before writing a snapshot test against either case.
-- The package module is bound as `lib` rather than as the package name. `@import` takes the package name as a string, so the binding is free, and a fixed one cannot collide with `std`, `Io`, `build_options`, `Arg`, `classify` or `main` when a project happens to be named after one of them. Step 1's validation guarantees a legal identifier, not an unused one.
+- The package module is imported and bound as `lib`, and neither name comes from the package name. `build.zig` registers it under that fixed import name, so nothing here has to avoid colliding with `std`, `Io`, `build_options`, `Arg`, `classify` or `main` when a project happens to be named after one of them. Two namespaces are at stake and a fixed name settles both: the declarations in this file, and the executable's import names, which it shares with `build_options`. Step 1's validation guarantees a legal identifier, not an unused one. The public module name downstream consumers see is the one `b.addModule` is given, and it is still the package name.
 - If the project later adds snapshot tests, that exit code and the empty stdout become recorded expectations, so change them deliberately rather than by accident.

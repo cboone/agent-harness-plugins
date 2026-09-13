@@ -36,7 +36,13 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
-                .{ .name = "PACKAGE-NAME", .module = mod },
+                // Imported as "lib" rather than under the package name. The
+                // executable's import names share one namespace with
+                // "build_options" below, so deriving this one from the
+                // package name would collide for a package called
+                // `build_options`. The public name downstream consumers see
+                // is the one given to b.addModule above, and is unaffected.
+                .{ .name = "lib", .module = mod },
             },
         }),
     });

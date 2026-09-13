@@ -59,7 +59,7 @@ git config gpg.format
 git config user.signingkey
 ```
 
-A value supplied by the user for `COPYRIGHT-HOLDER` does not configure anything. If `user.email` is unset, say so now rather than at step 23, where the commit fails after every file has already been written.
+A value supplied by the user for `COPYRIGHT-HOLDER` does not configure anything. Step 23 needs git's own committer identity, so **both `user.name` and `user.email` must be configured**, not merely known. If either is unset, say so now rather than at step 23, where the commit fails after every file has already been written. A name the user typed when `git config user.name` returned nothing satisfies the LICENSE and not the commit.
 
 Read the signing pair together rather than accepting either one alone. `gpg.format` selects the backend, not a key, so `gpg.format=ssh` with no `user.signingkey` looks configured and still fails at `git commit -S`. The two cases differ:
 
@@ -331,6 +331,8 @@ git commit -S -m "feat: scaffold Zig CLI project" -- \
   LICENSE README.md CHANGELOG.md \
   docs/plans/todo/.gitkeep docs/plans/done/.gitkeep tests/.gitkeep
 ```
+
+Drop any `.gitkeep` that step 20 found already present, from both the `git add` and the pathspec. `touch` leaves an existing file's contents alone, so a pre-existing one may hold someone's data, and staging it would put that data in the scaffold commit. Step 3's preflight reports which of the three exist; commit only the ones this run created.
 
 The pathspec after `--` is not redundant with the `git add`. A bare `git commit` commits the whole index, so anything the user had already staged before this run would go into the signed commit no matter how narrow the `git add` was, since staging generated files does not unstage theirs. Repeating the paths on the commit confines it to them and leaves unrelated staged work in the index untouched.
 
