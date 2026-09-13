@@ -22,6 +22,15 @@ readonly SCHEMA_VERSION
 E_HELD=3
 readonly E_HELD
 
+LOCK_WAIT_SECONDS=10
+readonly LOCK_WAIT_SECONDS
+
+LOCK_STALE_MINUTES=1
+readonly LOCK_STALE_MINUTES
+
+# Set while a lock is held so the EXIT trap knows what to remove.
+LOCK_DIRECTORY=""
+
 function usage() {
   cat << 'USAGE_TEXT'
 Usage: manage-resource-claims <subcommand> [options]
@@ -99,11 +108,13 @@ function live_worktrees() {
 }
 
 # A missing or empty file means no claims, which is the ordinary state and not
-# an error. A file that parses as something else is an error: silently resetting
-# a file the user may have hand-edited loses more than it saves.
+# an error. Anything else is validated before it is returned, because every
+# caller that reads also writes: a document that passes here is one this script
+# will rewrite, and rewriting what it does not understand is how a newer format
+# gets silently downgraded and a hand-edited record silently discarded.
 function read_claims() {
   local file="${1}"
-  local document
+  local document declared
 
   if [[ ! -e "${file}" ]]; then
     printf '[]'
@@ -121,16 +132,80 @@ function read_claims() {
     die "${file} is not valid JSON; fix or remove it"
   fi
 
-  if ! jq -e '(type == "object") and ((.claims | type) == "array")' > /dev/null 2>&1 <<< "${document}"; then
-    die "${file} is not a claim file; expected an object with a \"claims\" array"
+  if ! jq -e '(type == "object") and ((.version | type) == "number") and ((.claims | type) == "array")' > /dev/null 2>&1 <<< "${document}"; then
+    die "${file} is not a claim file; expected an object with a numeric \"version\" and a \"claims\" array"
+  fi
+
+  declared="$(jq -r '.version' <<< "${document}")"
+
+  if ((declared > SCHEMA_VERSION)); then
+    die "${file} declares version ${declared}, newer than this script understands (${SCHEMA_VERSION}); upgrade the script rather than letting it overwrite the file"
+  fi
+
+  if ! jq -e 'all(.claims[];
+        ((.resource | type) == "string") and (.resource | length > 0)
+        and ((.worktree | type) == "string") and (.worktree | length > 0)
+        and ((.branch | type) == "string") and (.branch | length > 0)
+        and ((.claimed_at | type) == "string")
+        and ((has("issue") | not) or ((.issue | type) == "number")))' > /dev/null 2>&1 <<< "${document}"; then
+    die "${file} holds a malformed claim; each needs a non-empty resource, worktree and branch, a claimed_at string, and a numeric issue when present"
   fi
 
   jq -c '.claims' <<< "${document}"
 }
 
+function release_lock() {
+  [[ -n "${LOCK_DIRECTORY}" ]] || return 0
+
+  rmdir "${LOCK_DIRECTORY}" 2> /dev/null || true
+  LOCK_DIRECTORY=""
+}
+
+function lock_is_abandoned() {
+  local lock="${1}"
+
+  [[ -n "$(find "${lock}" -maxdepth 0 -mmin "+${LOCK_STALE_MINUTES}" 2> /dev/null)" ]]
+}
+
+# Serializes a whole read-modify-write. Atomic replacement alone stops a reader
+# seeing half a document, but not two worktrees reading the same snapshot and
+# the later write discarding the earlier claim, which is a likely sequence here
+# because parallel worktrees are the case this feature exists for.
+#
+# This serializes access to the file; it does not make the claim an enforced
+# lock on the resource, which stays advisory. mkdir is the portable mutex: it
+# is atomic everywhere this runs, and flock is absent on macOS. An abandoned
+# lock is broken rather than waited on forever, for the same reason a stale
+# claim is cleared rather than honored.
+function acquire_lock() {
+  local file="${1}"
+  local lock="${file}.lock"
+  local directory waited=0
+
+  directory="$(dirname "${file}")"
+  mkdir -p "${directory}" || die "cannot create ${directory}"
+
+  while ! mkdir "${lock}" 2> /dev/null; do
+    if lock_is_abandoned "${lock}"; then
+      rmdir "${lock}" 2> /dev/null || true
+      continue
+    fi
+
+    if ((waited >= LOCK_WAIT_SECONDS)); then
+      die "another claim operation is holding ${lock}; remove it if nothing is in progress"
+    fi
+
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  LOCK_DIRECTORY="${lock}"
+  trap release_lock EXIT
+}
+
 # Replaces the file in one step so a reader never sees a half-written document.
-# Two worktrees claiming at the same instant can still race; the claim is
-# advisory by design, and a lock would contradict that.
+# Callers that mutate hold the lock from acquire_lock across their read and
+# this write, which is what keeps a concurrent claim from being lost.
 function write_claims() {
   local file="${1}"
   local claims="${2}"
@@ -343,6 +418,7 @@ function cmd_claim() {
   fi
 
   file="$(claim_file_path)"
+  acquire_lock "${file}"
   claims="$(read_claims "${file}")"
   decorated="$(decorate_claims "${claims}")"
   existing="$(claim_for_resource "${decorated}" "${resource}")"
@@ -404,6 +480,7 @@ function cmd_release() {
   fi
 
   file="$(claim_file_path)"
+  acquire_lock "${file}"
   claims="$(read_claims "${file}")"
 
   removed="$(jq -c --arg resource "${resource}" --arg worktree "${worktree}" \
@@ -436,6 +513,7 @@ function cmd_prune() {
     || die "cannot list worktrees; run prune inside a git repository"
 
   file="$(claim_file_path)"
+  acquire_lock "${file}"
   claims="$(read_claims "${file}")"
   decorated="$(decorate_claims "${claims}")"
   stale="$(jq -c 'map(select(.stale))' <<< "${decorated}")"

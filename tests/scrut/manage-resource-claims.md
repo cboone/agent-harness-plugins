@@ -264,8 +264,81 @@ manage-resource-claims: */.claude/worktree-resources.local.json is not valid JSO
 
 ```scrut
 $ setup_claims && mkdir -p "$(dirname "${claim_file}")" && printf '{"hello": 1}' > "${claim_file}" && claims list 2>&1
-manage-resource-claims: */.claude/worktree-resources.local.json is not a claim file; expected an object with a "claims" array (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json is not a claim file; expected an object with a numeric "version" and a "claims" array (glob)
 [1]
+```
+
+## A file from a newer schema version is refused rather than downgraded
+
+The `version` field exists so a later format change has something to branch on. Accepting any value and rewriting it as version 1 would make an older copy of this script silently destroy a newer file it did not understand.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version": 999, "claims": []}' > "${claim_file}" \
+>   && { claims list 2>&1; echo "exit=$?"; } \
+>   && jq -r '.version' "${claim_file}"
+manage-resource-claims: */.claude/worktree-resources.local.json declares version 999, newer than this script understands (1); upgrade the script rather than letting it overwrite the file (glob)
+exit=1
+999
+```
+
+## A malformed claim record is refused
+
+The skill promises not to rewrite a file it cannot read. Validating only the envelope broke that promise for records inside it: a claim missing `worktree` passed, and the next mutation rewrote the file around it.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version": 1, "claims": [{"resource": "logic"}]}' > "${claim_file}" \
+>   && claims list 2>&1
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; each needs a non-empty resource, worktree and branch, a claimed_at string, and a numeric issue when present (glob)
+[1]
+```
+
+## A stored claim with a non-numeric issue is refused
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version": 1, "claims": [{"resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":"x"}]}' > "${claim_file}" \
+>   && claims list 2>&1 | tail -1
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; each needs a non-empty resource, worktree and branch, a claimed_at string, and a numeric issue when present (glob)
+```
+
+## Concurrent claims on different resources both survive
+
+Atomic replacement alone stops a reader seeing half a document, but not two worktrees reading the same snapshot and the later write discarding the earlier claim. Parallel worktrees are the case this feature exists for, so that sequence is likely rather than exotic.
+
+```scrut
+$ setup_claims \
+>   && { claims claim logic --worktree /repo/wt-live --branch feature/a > /dev/null 2>&1 & } \
+>   && { claims claim simulator --worktree /repo/wt-live --branch feature/b > /dev/null 2>&1 & } \
+>   && wait \
+>   && claims list | cut -d' ' -f1
+resource=logic
+resource=simulator
+```
+
+## The lock is released when the operation finishes
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/a > /dev/null \
+>   && if [[ -d "${claim_file}.lock" ]]; then echo "lock leaked"; else echo "lock released"; fi
+lock released
+```
+
+## An abandoned lock is broken rather than waited on forever
+
+A process terminated mid-write leaves its lock directory behind. Honoring it indefinitely would block every later claim, which is the same failure a stale claim would cause and is ruled out for the same reason.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "${claim_file}.lock" \
+>   && touch -t 200001010000 "${claim_file}.lock" \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/a
+claimed "logic" for feature/a
 ```
 
 ## Outside a git repository the claim file cannot be resolved

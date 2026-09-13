@@ -28,10 +28,14 @@ The user may provide these options inline:
 
 `--list-resources` and `--release-resource` are about claims, not worktrees. Handle them here and stop: do not classify an argument, build a branch name, or create anything.
 
+**Resolve the name first for `--release-resource`**, exactly as step 4a does. The user releases a resource by the name they call it, so "release the DAW" has to reach `release logic`; passing `DAW` through verbatim finds no claim and reports success at having done nothing.
+
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims" list
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims" release "RESOURCE_NAME"
 ```
+
+`release` reports `no claim to release` when nothing matched. Treat that as a signal to check the name rather than as success: show the user what `list` reports, so a resource held under a different name is visible instead of silently missed.
 
 `list` prints one `key=value` line per claim and nothing at all when there are none, so report "no resources are claimed" rather than showing empty output. A line carrying `state=stale` names a worktree git no longer lists; say so, and offer `prune` to clear it:
 
@@ -103,11 +107,13 @@ Skip this step entirely when `--resource` was not given.
 
 Some work cannot run in parallel across worktrees because it needs an exclusive resource: a DAW, a simulator, a device, a database, a port, a shared install location. A claim records which worktree holds one. It is advisory: it makes the constraint visible, it does not enforce it.
 
-**Resolve the name against the project's own list first.** Read whichever of `CLAUDE.md` and `AGENTS.md` exist in the repository root, and `copilot-instructions.md` under `.github/`. Any of them may be absent, which is normal, and `CLAUDE.md` is often a symlink to `AGENTS.md`, so read the target rather than treating it as a second source. Check any plan under `docs/plans/todo/` too. Look for a heading containing "exclusive resource" and take the backticked names beneath it as the project's declared list.
+**4a. Resolve the name against the project's own list first.** Read whichever of `CLAUDE.md` and `AGENTS.md` exist in the repository root, and `copilot-instructions.md` under `.github/`. Any of them may be absent, which is normal, and `CLAUDE.md` is often a symlink to `AGENTS.md`, so read the target rather than treating it as a second source. Check any plan under `docs/plans/todo/` too. Look for a heading containing "exclusive resource" and take the backticked names beneath it as the project's declared list.
 
 Use that list to map a loose phrase onto a declared name, so "the DAW" becomes `logic` without the user retyping it. If the name the user gave is not on the list, say so once and carry on. The resource name is a free string chosen per project, with no registry, so an undeclared name is not an error.
 
-**Then check the claim:**
+Step 1 resolves names the same way, so a release reaches the claim it means.
+
+**4b. Then check the claim:**
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims" check "RESOURCE_NAME"
