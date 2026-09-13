@@ -27,6 +27,10 @@ Ask the user for these parameters:
 - **Project name** -- kebab-case, used as the binary name and directory name (e.g., `my-tool`)
 - **Short description** -- one sentence, used in the README
 
+**Validate the project name before using it anywhere.** It becomes a directory name and a binary name, and step 3 passes it to `mkdir` and `cd`, so it must match `[a-z0-9]+(-[a-z0-9]+)*`: lowercase alphanumeric segments joined by single hyphens, nothing else. Reject anything else and ask again rather than repairing it.
+
+That pattern is doing real work, not tidiness. A name beginning with a hyphen, `-tool` for instance, reads as options to `mkdir -p` and `cd` instead of as a path. A name containing `/` scaffolds into a different directory than the one reported. `.` and `..` escape the target entirely. A name with whitespace or a shell metacharacter splits into several arguments. Quote the name wherever it reaches a command as well, so the pattern is the guarantee rather than the only defence.
+
 Derive the **package name** from the project name rather than asking: replace every hyphen with an underscore (`my-tool` becomes `my_tool`). Wherever templates reference `PACKAGE-NAME`, use this form; wherever they reference `PROJECT-NAME`, use the kebab-case form. The binary keeps the hyphens.
 
 Then **validate the derived name**, because replacing hyphens is necessary and not sufficient. `build.zig.zon`'s `.name` must be a bare Zig identifier that is not a reserved word, which means it matches `[A-Za-z_][A-Za-z0-9_]*` and is none of Zig's keywords (`test`, `error`, `fn`, `async`, `export`, `struct`, and the rest). Quoting does not rescue a name that fails either rule. One of these four is accepted and three are not:
@@ -40,7 +44,7 @@ Then **validate the derived name**, because replacing hyphens is necessary and n
 
 If the derived name fails either rule, stop and ask the user for a package name that passes, keeping their chosen project name for the binary and the directory. Do not silently rewrite it: the package name is half of the package's permanent identity, so the user should choose it.
 
-**The name they supply replaces the derived one from here on.** Validate it the same way, and use it for every `PACKAGE-NAME` substitution in steps 6, 7 and 8. Those steps say "the underscored package name" as shorthand for whichever name survived this step, not for a value re-derived from the project name: re-deriving it would write the rejected name back into `build.zig.zon` and fail the same way at step 21.
+**The name they supply replaces the derived one from here on.** Validate it the same way, and use it for **every** `PACKAGE-NAME` substitution: steps 6, 7 and 8, and step 10, which keys `typos.toml`'s identifier entry on it. Those steps say "the underscored package name" as shorthand for whichever name survived this step, not for a value re-derived from the project name. Re-deriving it would write the rejected name back into `build.zig.zon` and fail the same way at step 21, and would leave the typo allowlist keyed to a name that appears nowhere in the project.
 
 If the user already provided some or all of these in their initial request, do not re-ask. Derive what you can from context.
 
@@ -62,7 +66,9 @@ git config user.name
 
 So treat the values here as provisional: good enough to fill `COPYRIGHT-HOLDER`, not good enough to conclude anything about whether step 23 can commit. Step 4 re-reads them in the target, which is the only place the answer is authoritative.
 
-If either command fails or produces no output, ask the user to provide the value. Use the GitHub username wherever templates reference `GITHUB-USERNAME` and the full name wherever they reference `COPYRIGHT-HOLDER`.
+Use the GitHub username wherever templates reference `GITHUB-USERNAME` and the full name wherever they reference `COPYRIGHT-HOLDER`.
+
+The two failures are not handled alike. If `gh api user` fails or returns nothing, ask the user for the value: it is account-level, so nothing later in the workflow will answer it any better. If `git config user.name` returns nothing, **do not ask yet**. Note it and move on, for the reason below: step 4 reads the target's own config, and an empty answer here is as likely to mean the skill was invoked from the wrong place as it is to mean the value is unset.
 
 `git config user.name` is read here as template input, which is not the same as git being configured to commit. Step 23 makes a GPG-signed commit, and that needs `user.email` and a signing key as well:
 
@@ -89,8 +95,8 @@ The project is scaffolded in a directory named after the project. Establish that
 - Otherwise, create it and enter it:
 
 ```bash
-mkdir -p PROJECT-NAME
-cd PROJECT-NAME
+mkdir -p "PROJECT-NAME"
+cd "PROJECT-NAME"
 ```
 
 Every path from here on is relative to the target, in this step and in every later one: the preflight below, `git init`, `zig build`, and each generated file. Entering the directory is therefore not optional. Creating it and staying put scaffolds the whole project into the parent, and the preflight would report on the wrong directory while doing it.
@@ -153,6 +159,8 @@ git config user.signingkey
 ```
 
 Judge them by step 2's rules, and let these answers win where they differ. If `user.name` differs from the value already used for `COPYRIGHT-HOLDER`, point that out rather than silently rewriting the LICENSE: the committer and the copyright holder are allowed to differ, and which one the user wants in the LICENSE is theirs to say.
+
+If step 2 came back with no `user.name` and left `COPYRIGHT-HOLDER` unfilled, fill it from `user.name` here. Ask the user only if it is still empty at this point, which is the first moment the question is worth asking.
 
 **This is where an unset identity stops the run**, not step 2. If `user.name` or `user.email` is unset here, stop before generating anything: step 23 cannot commit without them, these values are the ones it will use, and stopping now costs nothing. A value that looked missing in step 2 and is present here was never missing; the earlier read was just looking in the wrong place.
 
