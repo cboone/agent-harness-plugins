@@ -103,7 +103,7 @@ The question: what does the update actually change, and does any of it reach thi
 
   ```bash
   gh api repos/UPSTREAM_OWNER/UPSTREAM_REPO/releases/tags/vX.Y.Z --jq .body
-  gh api "repos/UPSTREAM_OWNER/UPSTREAM_REPO/compare/vA...vB" --jq '.commits[].commit.message | split("\n")[0]'
+  gh api repos/UPSTREAM_OWNER/UPSTREAM_REPO/compare/vA...vB --jq '.commits[].commit.message | split("\n")[0]'
   ```
 
 - **Look for**: removed or renamed APIs, changed defaults, dropped runtime or platform support, new peer requirements, changed config formats, security fixes, and migration guides.
@@ -128,7 +128,7 @@ Applies when `ecosystem` is `github_actions`.
 - **The runtime.** Read `runs.using` at the new SHA:
 
   ```bash
-  gh api "repos/ACTION_OWNER/ACTION_REPO/contents/action.yml?ref=NEW_SHA" --jq .content | base64 --decode | grep -A 2 '^runs:'
+  gh api 'repos/ACTION_OWNER/ACTION_REPO/contents/action.yml?ref=NEW_SHA' --jq .content | base64 --decode | grep -A 2 '^runs:'
   ```
 
   A change such as `node20` to `node24` matters for self-hosted runners.

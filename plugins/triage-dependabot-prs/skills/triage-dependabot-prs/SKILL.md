@@ -124,9 +124,10 @@ The examples below abbreviate the path to `dependabot-prs`. Expand it when you r
 
 ### 3. Collect Evidence
 
-Start by fetching every PR head in scope into a triage ref, and predicting conflicts, because the freshness checks and two of the categories depend on the result:
+Start by fetching every PR head in scope into a triage ref, and predicting conflicts, because the freshness checks and two of the categories depend on the result. Clear refs left by an earlier run first: a Dependabot rebase rewrites the PR head, so fetching onto a stale triage ref is refused as a non-fast-forward update.
 
 ```bash
+git for-each-ref --format='delete %(refname)' refs/dependabot-triage/ | git update-ref --stdin
 git fetch origin "pull/N/head:refs/dependabot-triage/N"
 git merge-tree --write-tree origin/BASE refs/dependabot-triage/N
 git merge-tree --write-tree refs/dependabot-triage/N refs/dependabot-triage/M

@@ -169,7 +169,7 @@ function do_fetch() {
   local listed
   listed="$(jq '[(.dependabot | length), (.open | length)] | max' "${work_dir}/bundle.json")"
   if [[ "${listed}" -ge "${limit}" ]]; then
-    echo "Warning: a PR list returned ${listed} items, the --limit. Raise --limit to be sure nothing was cut off." >&2
+    echo "Warning: a PR list returned ${listed} items, reaching --limit ${limit}. Re-run with a higher --limit to be sure nothing was cut off." >&2
   fi
 
   if [[ "${raw}" == "true" ]]; then
@@ -197,14 +197,14 @@ function fetch_comparisons() {
   local number
   local head_sha
   local base_ref
-  local comparison
   while IFS=$'\t' read -r number head_sha base_ref; do
-    if comparison="$(
-      gh api "repos/${repo}/compare/${base_ref}...${head_sha}" \
-        --jq '{status, aheadBy: .ahead_by, behindBy: .behind_by, authors: [.commits[] | (.author.login // .commit.author.name // "")]}' \
-        2> /dev/null
-    )"; then
-      jq -c --arg number "${number}" '{key: $number, value: .}' <<< "${comparison}" >> "${lines_file}"
+    # The commit list is paginated, so authors are gathered across every page;
+    # a non-Dependabot commit on a later page would otherwise go uncounted.
+    if gh api --paginate --slurp "repos/${repo}/compare/${base_ref}...${head_sha}?per_page=100" \
+      > "${work_dir}/compare.pages" 2> /dev/null; then
+      jq -c --arg number "${number}" \
+        '{key: $number, value: {status: .[0].status, aheadBy: .[0].ahead_by, behindBy: .[0].behind_by, authors: [.[].commits[] | (.author.login // .commit.author.name // "")]}}' \
+        "${work_dir}/compare.pages" >> "${lines_file}"
     else
       jq -nc --arg number "${number}" '{key: $number, value: null}' >> "${lines_file}"
     fi
