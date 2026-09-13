@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Review a repository's Dependabot setup (dependabot.yml coverage and validity, grouping, labels, commit messages, and the repository settings and secrets Dependabot depends on), then apply the fixes the user selects.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["configuration", "dependabot", "dependencies", "github", "security"],
+  "license": "MIT",
+  "name": "review-dependabot-config",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

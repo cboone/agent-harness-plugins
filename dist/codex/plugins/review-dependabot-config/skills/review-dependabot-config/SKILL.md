@@ -1,0 +1,190 @@
+---
+name: review-dependabot-config
+description: >-
+  Review a repository's Dependabot setup (dependabot.yml coverage and validity,
+  grouping, labels, commit messages, and the repository settings and secrets
+  Dependabot depends on), then apply the fixes the user selects.
+---
+
+# Review Dependabot Config
+
+Review how Dependabot is set up for the current repository, in the file and in the repository settings around it, and fix what the user selects.
+
+A Dependabot config fails quietly. An ecosystem nobody listed gets no updates and no warning. A label that does not exist is dropped from every PR. A directory added after the config was written is never scanned. A job that needs a secret fails on every Dependabot PR, which teaches everyone to ignore red checks on those PRs. None of it shows up until someone goes looking, so this skill goes looking.
+
+This skill reviews configuration. To work through the open Dependabot PRs themselves, use the `triage-dependabot-prs` skill. To write a first config from the house baseline, this skill hands off to the `pin-everything` skill.
+
+## Options
+
+The user may provide these options inline:
+
+- **--repo `OWNER/REPO`**: Review this repository's settings instead of the one the `origin` remote points at. File checks still read the local checkout, so pair it with a checkout of that repository
+- **--report-only**: Report and stop. Offer no fixes
+
+## Ground Rules
+
+- **Report first, fix second.** Nothing is edited, created, or changed until the user selects it in step 6.
+- **Verify before calling a key invalid.** Dependabot gains options regularly, and a key missing from a model's memory or a lagging schema may be perfectly valid. Check the current GitHub documentation before reporting one. `directories`, `exclude-paths`, `cooldown`, `multi-ecosystem-groups`, and group `applies-to` and `group-by` are all valid.
+- **Merge, never overwrite.** Edits to `dependabot.yml` keep the user's comments, groups, and schedules, change only what a selected finding names, and show the diff before writing.
+- **Outward-facing changes are confirmed one by one.** Creating a label or changing a repository setting affects everyone working in the repository.
+- **Never handle secret values.** When a Dependabot secret is missing, tell the user the command to run themselves.
+- **A refused API call is not a pass.** When an endpoint returns 403 or 404 for lack of permission, report the check as not visible with the current permissions.
+- **Every `gh` call names the repository explicitly**, with `--repo OWNER/REPO` or a `repos/OWNER/REPO/...` path. Inside a fork, a bare `gh` command resolves to the upstream project.
+
+## Workflow
+
+### 1. Pre-flight
+
+1. Run `date`. The Dependabot documentation and the repository's alerts are date-sensitive, and the report states the date.
+1. Resolve the repository. Use `--repo` when given. Otherwise take `OWNER/REPO` from the `origin` remote in `git remote -v`. If an `upstream` remote exists, say so: this is a fork, and the review covers the fork's configuration. Dependabot version updates do not run on forks by default, so note that the config may be inert there.
+1. Read the repository's state:
+
+   ```bash
+   gh repo view OWNER/REPO --json nameWithOwner,isArchived,isFork,parent,defaultBranchRef,viewerPermission
+   ```
+
+   An archived repository runs no Dependabot updates and accepts no changes: report that and stop. Without `ADMIN` permission, several settings checks in step 4 will be refused; say so up front.
+
+1. Find the config. Look for `.github/dependabot.yml` and `.github/dependabot.yaml` in the working tree, and read the default branch copy with `git fetch origin` then `git show origin/DEFAULT:.github/dependabot.yml`.
+   - **Both files exist**: an Error. Dependabot expects a single configuration file, and a reader cannot tell which copy is in force. Keep one.
+   - **The working tree differs from the default branch**: report the drift. Dependabot runs the default branch copy, so review that one, and note the local changes separately.
+
+### 2. No Config
+
+When neither file exists on the default branch:
+
+1. Inventory the repository as in step 3, so the report can say which ecosystems and directories a config would cover.
+1. Check whether security updates are running without a config, which they do when the repository setting is on:
+
+   ```bash
+   gh pr list --repo OWNER/REPO --author app/dependabot --state all --limit 20 --json number,title,state,createdAt
+   ```
+
+1. Report what is missing, what is covered today (security updates only, or nothing), and what the config would add.
+1. Offer to invoke the `pin-everything` skill with `--scope dependabot`, which writes the house baseline: a weekly schedule, split minor-and-patch and major groups per ecosystem, and coverage for every ecosystem present. Then stop. Under `--report-only`, stop after the report.
+
+### 3. Inventory the Repository
+
+Build the list the config is reviewed against, using `./references/ecosystems.md`:
+
+1. **Manifests and lockfiles, with their directories.** Exclude `.git/`, `node_modules/`, `vendor/`, `dist/`, `build/`, `target/`, `.venv/`, `.yarn/`, and test fixture directories. Treat a git subtree whose dependencies another repository manages as out of scope, and say so.
+1. **Workflows and actions.** `.github/workflows/*.yml` and `*.yaml`, plus every `action.yml` or `action.yaml` outside `.github/workflows/`. A composite action that references other actions with `uses:` needs its own directory in the config; one with no external `uses:` does not.
+1. **Install trees.** A workspace root (npm, Yarn, or pnpm workspaces, a Cargo workspace, a `go.work`) covers its members from one directory. A separate install tree with its own lockfile needs its own directory.
+1. **Pins Dependabot does not track**: `.tool-versions`, `.nvmrc`, `.python-version`, `packageManager` in `package.json`, tool versions set in workflow `env:` or action inputs, install commands with versions, and action references inside Markdown.
+1. **Version comments on SHA-pinned actions.** Note any major-only comment (`# v6`) beside a full SHA.
+
+### 4. Review
+
+Work through `./references/checklist.md` against the default-branch config and the inventory, and `./references/repository-settings.md` for the settings around it. Run independent API calls in parallel.
+
+Every finding records:
+
+- **Severity**: Error (updates are missed, broken, or rejected), Warning (likely unintended, or noisy), or Suggestion (a policy improvement the repository may not want)
+- **Area**: Coverage, Validity, Grouping and volume, Update behavior, Repository settings, or Untracked surfaces
+- **Evidence**: the file and line, API response, or PR comment that shows it
+- **Fix**: the concrete change, and whether it is a local edit or an outward-facing change
+
+When the repository has open Dependabot PRs, glance at them for evidence of config problems: comments from Dependabot saying labels could not be found, PRs for directories that should be excluded, or checks that fail only on Dependabot runs. Leave triaging the PRs to the `triage-dependabot-prs` skill.
+
+### 5. Report
+
+Print the report in the terminal, in the shape shown in [Reporting Format](#reporting-format):
+
+1. Header with repository, date, and the config file reviewed.
+1. **Coverage matrix**: one row per ecosystem present, with the directories found, the directories configured, and a status.
+1. **Settings table**: alerts, security updates, Dependabot secrets, merge rules.
+1. **Findings**, grouped by severity, numbered for selection.
+1. **Untracked surfaces**, with a pointer to the `pin-everything` skill's version-audit step and the `upgrade-everything` skill.
+1. **Open PRs**, if step 4 saw config symptoms in them, pointing to the `triage-dependabot-prs` skill.
+
+When there are no findings above Suggestion, say so plainly.
+
+### 6. Ask Which Fixes to Apply
+
+Skip this step under `--report-only`.
+
+Offer the fixes in two groups, because they carry different consequences:
+
+- **Local edits** to `dependabot.yml`, and to `CODEOWNERS` when replacing `reviewers`: offer "all Errors and Warnings", "selected numbers", or "none".
+- **Outward-facing changes**, each confirmed on its own: creating a missing label, enabling alerts or security updates, adding a Dependabot secret (which the user runs), editing a workflow to skip a secret-dependent job on Dependabot runs.
+
+Use `AskUserQuestion` where it exists. Without it (Codex CLI, OpenCode), print the options as a numbered list and wait for the answer.
+
+### 7. Apply
+
+1. **Edit `dependabot.yml`** with targeted edits that keep comments and ordering. Show the resulting diff with `git diff -- .github/dependabot.yml` before moving on.
+1. **Re-validate** the edited file:
+
+   ```bash
+   uvx check-jsonschema --builtin-schema vendor.dependabot .github/dependabot.yml
+   ```
+
+   When `uv` is unavailable, skip this and say so. The schema can lag new Dependabot options, so an "additional properties" error on an option the documentation lists is schema lag, not a defect.
+
+1. **Apply the confirmed outward-facing changes**, for example:
+
+   ```bash
+   gh label create dependencies --repo OWNER/REPO --color 0366d6 --description "Dependency updates"
+   ```
+
+   For a missing Dependabot secret, give the user the command rather than running it: `gh secret set NAME --repo OWNER/REPO --app dependabot`.
+
+1. **Invoke the `lint-and-fix` skill** on the edited files, since YAML and Markdown formatters may apply.
+1. **Summarize** under Applied, Skipped, Needs user action, and Follow-up, and suggest `/commit` or `/pr` for the local edits. Changes to `dependabot.yml` take effect once they reach the default branch.
+
+## Reporting Format
+
+```text
+## Dependabot config review: example-org/example-repo (2026-09-13)
+
+Config: .github/dependabot.yml on main (3 update entries)
+
+### Coverage
+
+| Ecosystem      | Directories present           | Configured | Status          |
+| -------------- | ----------------------------- | ---------- | --------------- |
+| github-actions | /, /.github/actions/setup     | /          | Missing a directory |
+| npm            | /                             | /          | Covered         |
+| gomod          | /, /benchmarks                | /          | Missing a directory |
+| pip            | none (migrated to uv)         | /          | Stale entry     |
+| uv             | /                             | none       | Not configured  |
+
+### Settings
+
+| Setting                   | State                                     |
+| ------------------------- | ----------------------------------------- |
+| Dependabot alerts         | Enabled                                   |
+| Security updates          | Enabled, not paused                       |
+| Dependabot secrets        | none; CI job `deploy-preview` needs DEPLOY_TOKEN |
+| Rules on main             | 1 approving review required               |
+
+### Errors
+
+1. **Coverage**: `uv` is not configured, and `uv.lock` exists at `/`. The `pip` entry targets a `requirements.txt` that no longer exists. Fix: replace the `pip` entry with a `uv` entry.
+2. **Coverage**: `/.github/actions/setup/action.yml` uses `actions/cache` but its directory is not listed. Fix: switch `directory: /` to `directories: ["/", "/.github/actions/setup"]`.
+
+### Warnings
+
+3. **Validity**: label `dependencies` does not exist; Dependabot commented on #41 that it could not be found. Fix: create the label (outward-facing).
+
+### Suggestions
+
+4. **Grouping and volume**: npm has no groups, and 6 npm PRs are open. Fix: add `npm-minor-patch` and `npm-major` groups.
+
+Untracked: `.tool-versions` (node, python) and `CSPELL_VERSION` in ci.yml. See pin-everything's version audit.
+```
+
+## Error Handling
+
+- **`gh` missing or not authenticated**: Report and stop.
+- **YAML does not parse**: Report an Error with the parser's line and column, and review nothing else in the file until it parses.
+- **A settings endpoint returns 403 or 404 for permissions**: Record the check as not visible, name the permission it needs (repository admin, or the `security_events` scope for alerts), and continue.
+- **The docs cannot be reached to confirm an unfamiliar key**: Report it as "unverified" rather than invalid.
+- **Archived repository**: Report and stop. Never unarchive to apply a fix.
+- **The working directory is not a checkout of the repository**: Read files with `gh api 'repos/OWNER/REPO/contents/PATH?ref=DEFAULT'`, skip the fixes that need a local edit, and say so.
+
+## Reference Navigation
+
+- `./references/checklist.md`: every check, with its severity, evidence, and fix
+- `./references/ecosystems.md`: manifest to `package-ecosystem` mapping, directory rules, and what Dependabot does not track
+- `./references/repository-settings.md`: the API calls for alerts, security updates, secrets, labels, rules, and automation workflows, and how to read them
