@@ -42,6 +42,8 @@ Thread Sanitizer reported nothing against an arm built to race, so it is not det
 every check below would pass vacuously; this run's clean result means nothing
 ```
 
+**The exit status in that first message is context, not the test.** It has to be, because a flagged control arm exits non-zero by design, so reading the status as the completion signal would reject every correct run. Completion is judged by a marker line the harness prints when it finishes, and the status is interpolated into the message only to save the reader a second lookup. Any judge over an instrument that signals through its exit code needs the same separation: decide on the output, report the status alongside it.
+
 `check_subject` gates on three, in order: the arm completed, the progress counter moved, then the absence.
 
 ```text

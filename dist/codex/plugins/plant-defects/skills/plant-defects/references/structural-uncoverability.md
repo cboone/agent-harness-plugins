@@ -79,7 +79,12 @@ The fourth class, and the hardest to notice.
 
 The code compiles in a plain build, an instrument that could reach it exists, and no arm was ever written to steer it there. What makes it hard to see is that **every counter it moved was read by something, so nothing looked absent.** There is no stub in the source and no configuration predicate to grep for. The branch is simply never taken by any input the suite supplies.
 
-**Coverage tooling can see this one, and that is the difference from the third class.** Line coverage cannot: the line holding the branch is executed, so it reports as covered whichever direction is taken. Branch or condition coverage reports a branch with zero executions and names it directly, which makes it the cheapest instrument for this class and a reason to turn it on rather than settling for line percentages. Contrast structural uncoverability, where no coverage mode helps because the code is not in the analyzed program at all.
+**Coverage tooling can see this one, and that is the difference from the third class.** Which mode you need depends on the shape of the branch, and the distinction is worth keeping straight rather than dismissing line coverage wholesale:
+
+- **Where the untaken arm has body lines of its own**, line coverage does report them as uncovered, and that is enough.
+- **Where it has no lines to report**, line coverage shows nothing missing: a condition that is never false in an `if` with no `else`, a short-circuited operand, a ternary, a single-line guard, a `switch` arm sharing a line with its neighbour. The decision line executes, so it counts as covered whichever way it went.
+
+Branch or condition coverage reports a branch with zero executions in both shapes and names it directly, which makes it the cheapest instrument for this class and a reason to turn it on rather than settling for line percentages. Contrast structural uncoverability, where no coverage mode helps because the code is not in the analyzed program at all.
 
 Finding these is a matter of enumerating the arms an instrument has rather than trusting that the instrument exists. Ask, for each check: which inputs does it actually run on, and which branch does each one take?
 
