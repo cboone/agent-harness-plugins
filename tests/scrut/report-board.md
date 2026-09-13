@@ -866,6 +866,18 @@ $ dir="$(mktemp -d)" && jq '.issues += [{number: 109, title: "parser: measure th
 - Lanes added: {"group":"L4"} Measurement
 ```
 
+## Compare survives a wrong-typed repository URL
+
+Board identity compares the address the page builds, which means stripping a
+trailing slash from `repoUrl`. A previous board comes from a published page and
+never passed validation here, so a `repoUrl` that is not text has to fall back
+to the same address the page uses rather than end the run.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.repoUrl = {}' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/previous.json" && "${REPORT_BOARD_BIN}" compare "${dir}/previous.json" "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" | tail -n 1
+- No changes beyond the sync metadata.
+```
+
 ## Compare reports a milestone whose short label changed
 
 The matrix heads a milestone column with its short label, so a new short label
