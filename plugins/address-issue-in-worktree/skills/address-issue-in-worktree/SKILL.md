@@ -108,7 +108,7 @@ The type prefix comes from workmux's naming prompt, not from this skill, so it r
 
 `workmux add -A` needs a naming command: the configured agent's CLI, an `auto_name.command`, or the `llm` CLI. When none is reachable the launcher exits non-zero, printing workmux's error followed by `launch-workmux: workmux could not generate a branch name`.
 
-Only then, build the name yourself as `TYPE/NUMBER-SLUG` and re-run with the positional form, `launch-workmux "BRANCH_NAME" --base "BASE_BRANCH"`.
+Only then, build the name yourself as `TYPE/SLUG` and re-run with the positional form, `launch-workmux "BRANCH_NAME" --base "BASE_BRANCH"`. SLUG already begins with the issue number, so the finished name reads `feature/42-add-dark-mode-support`.
 
 - **TYPE**: Derive from issue labels. Use `fix` for labels containing "bug" or "fix". Use `feature` for everything else (including when no labels match).
 - **SLUG**: The issue number, a hyphen, then the slugified issue title.

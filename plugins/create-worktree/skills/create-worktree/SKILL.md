@@ -64,7 +64,9 @@ The type prefix comes from workmux's naming prompt, not from this skill, so it r
 
 **An explicit branch name** given by the user (an argument containing `/` that looks like `type/slug`) is used as-is, with the positional form and no `--auto-name`.
 
-**Reruns reuse the existing branch.** With `--issue NUMBER`, the launcher first looks for a local branch already carrying that number and reuses it, so running this skill twice for the same issue reopens the same worktree instead of generating a second name. It reports `Reusing branch <name> for issue <number>`. If more than one local branch matches, it lists them and exits; pass an explicit branch name to choose between them.
+**Reruns reuse the existing branch, on the issue path only.** With `--issue NUMBER`, the launcher first looks for a local branch already carrying that number and reuses it, so running this skill twice for the same issue reopens the same worktree instead of generating a second name. It reports `Reusing branch <name> for issue <number>`. If more than one local branch matches, it lists them and exits; pass an explicit branch name to choose between them.
+
+A task description has no such identifier, and the generator is not deterministic, so rerunning the same description generally produces a differently worded name and therefore a second worktree. When the user is returning to work they already started from a description, ask for the branch name and pass it in the positional form instead.
 
 #### If the generator is unavailable
 
@@ -181,7 +183,7 @@ Work on: [description derived from the branch name]
 WORKMUX_PROMPT
 ```
 
-The script prints the branch name it settled on, as either `Generated branch name: NAME` or `Reusing branch NAME for issue NUMBER`, then outputs the workmux log and cleans up its own log file. Read the branch name from that line rather than assuming one. Verify success:
+With `--auto-name` the script prints the branch name it settled on, as either `Generated branch name: NAME` or `Reusing branch NAME for issue NUMBER`. Read the branch name from that line rather than assuming one. The positional form prints neither line, because there the name is the one you passed. Either way the script then outputs the workmux log and cleans up its own log file. Verify success:
 
 ```bash
 git worktree list
@@ -191,8 +193,8 @@ git worktree list
 
 After confirming the worktree exists in `git worktree list`, report:
 
-- The branch name, taken from the launcher's `Generated branch name:` or `Reusing branch` line
-- Whether the branch was newly generated or reused from an earlier run
+- The branch name. For `--auto-name` take it from the launcher's `Generated branch name:` or `Reusing branch` line; for an explicit branch name it is the one the user gave
+- For `--auto-name`, whether the branch was newly generated or reused from an earlier run
 - The tmux window name (to help the user switch to it)
 - A note that the prompt was injected into the new session
 - For the issue path, the issue number and title

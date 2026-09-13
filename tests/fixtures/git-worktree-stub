@@ -25,7 +25,18 @@ function main() {
     return 0
   fi
 
-  die "expected git worktree list --porcelain or git for-each-ref invocation"
+  # `git check-ref-format --branch <name>`, used to reject a generated name
+  # that git would not accept. Delegated to the real git so the stub cannot
+  # disagree with it; STUB_GIT_INVALID_REF=1 forces a rejection instead.
+  if [[ $# -eq 3 && "${1}" == "check-ref-format" && "${2}" == "--branch" ]]; then
+    if [[ "${STUB_GIT_INVALID_REF:-}" == "1" ]]; then
+      return 1
+    fi
+    /usr/bin/git check-ref-format --branch "${3}" > /dev/null 2>&1
+    return $?
+  fi
+
+  die "expected git worktree list --porcelain, for-each-ref, or check-ref-format invocation"
 }
 
 main "$@"

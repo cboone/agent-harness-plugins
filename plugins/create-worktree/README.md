@@ -7,7 +7,7 @@ Create a git worktree, branch, and tmux window from an issue number or a task de
 
 ## Requirements
 
-- [`workmux`](https://github.com/paiml/workmux), always.
+- [`workmux`](https://github.com/paiml/workmux) 0.1.233 or newer, always. `workmux add --dry-run` arrived in 0.1.220 and slash-separated generated names such as `fix/issue-123` stopped being flattened in 0.1.233; the branch naming here needs both. Verified against 0.1.261. On an older version every run fails naming and falls back to deriving the name from the issue title.
 - A naming command workmux can reach, unless you always pass an explicit branch name. `workmux add -A` uses `auto_name.command` if set, otherwise the configured agent's CLI, otherwise the [`llm`](https://llm.datasette.io/) CLI. With `agent: claude` that resolves to `claude --model haiku -p` and needs no extra setup. When none is reachable, the skill falls back to deriving a name from the issue title.
 - [`gh`](https://cli.github.com/), authenticated, and [`jq`](https://jqlang.org/), both only when you pass an issue number. The bundled `compose-issue-prompt` script parses the issue JSON with `jq` and exits if it is missing. Task descriptions and explicit branch names need neither.
 

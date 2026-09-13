@@ -374,7 +374,27 @@ function strip_issue_number() {
   # the name itself, as in "migrate-to-python-3" for issue 3.
   slug="${slug%"-issue-${issue}"}"
 
+  # The prompt says "Work on issue #N", so the generator often works the number
+  # into the middle of the name too. An interior "-N-" is always the issue
+  # reference, unlike a trailing "-N", and repeating it reads as a mistake.
+  while [[ "${slug}" == *-"${issue}"-* ]]; do
+    slug="${slug/-"${issue}"-/-}"
+  done
+
   printf '%s' "${slug}"
+}
+
+function validate_branch_name() {
+  local name="${1}"
+
+  # A leading hyphen would reach `workmux add` in option position.
+  if [[ "${name}" == -* ]]; then
+    die "workmux returned a branch name starting with a hyphen: ${name}"
+  fi
+
+  if command -v git > /dev/null && ! git check-ref-format --branch "${name}" > /dev/null 2>&1; then
+    die "workmux returned a name git rejects as a branch: ${name}"
+  fi
 }
 
 function normalize_branch_name() {
@@ -396,6 +416,7 @@ function normalize_branch_name() {
   fi
 
   if [[ -z "${issue}" ]]; then
+    validate_branch_name "${name}"
     printf '%s' "${name}"
     return 0
   fi
@@ -419,10 +440,13 @@ function normalize_branch_name() {
   fi
 
   if [[ -n "${prefix}" ]]; then
-    printf '%s/%s' "${prefix}" "${slug}"
+    name="${prefix}/${slug}"
   else
-    printf '%s' "${slug}"
+    name="${slug}"
   fi
+
+  validate_branch_name "${name}"
+  printf '%s' "${name}"
 }
 
 function generate_branch_name() {
@@ -434,8 +458,11 @@ function generate_branch_name() {
   out="$(mktemp "/tmp/workmux-autoname.out.XXXXXX")"
   err="$(mktemp "/tmp/workmux-autoname.err.XXXXXX")"
 
+  # Called directly rather than through run_workmux_command: a dry run creates
+  # no tmux target, so it needs neither the TMUX plumbing nor the pane scan
+  # that resolving it costs.
   set +e
-  run_workmux_command add -A -P "${prompt_file}" --dry-run < /dev/null > "${out}" 2> "${err}"
+  workmux add -A -P "${prompt_file}" --dry-run < /dev/null > "${out}" 2> "${err}"
   status=$?
   set -e
 

@@ -114,7 +114,7 @@ gh issue view NUMBER --json number,title,state --jq '.number' 2> /dev/null
 
 Only run this strategy if strategies 1 and 2 found zero issues.
 
-Extract the slug portion of the branch name (everything after the first `/`). Convert hyphens to spaces to form search keywords. Search for matching open issues:
+Extract the slug portion of the branch name: everything after the first `/`, or the whole name when it has no `/`, since a branch may carry no type prefix. Convert hyphens to spaces to form search keywords. Search for matching open issues:
 
 ```bash
 gh issue list --search "KEYWORDS" --state open --json number,title --limit 5
@@ -177,7 +177,7 @@ For each chunk:
    - Examine `git log --oneline -10` output to match the repository's commit message style.
    - Determine the commit type (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `style`) based on the changes.
    - Write a concise description (under 72 characters) focused on _why_ the change was made.
-   - Reference connected issues detected in step 2. For `fix/*` branches, use `fixes #N`; for other branch types, use `closes #N`. If no connected issues were detected, omit issue references from the commit message. Only reference issues in the commit that most directly addresses them.
+   - Reference connected issues detected in step 2. Use `fixes #N` for a `fix/*` branch, or for any branch whose changes are a bug fix when the branch carries no type prefix; use `closes #N` otherwise. A branch name need not have a prefix, because the worktree skills preserve whatever workmux's generator returns, so fall back to the nature of the change rather than assuming a prefix is present. If no connected issues were detected, omit issue references from the commit message. Only reference issues in the commit that most directly addresses them.
 1. **Create the commit** using GPG signing and a HEREDOC:
 
 ```bash
