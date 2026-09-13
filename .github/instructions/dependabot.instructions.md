@@ -11,3 +11,5 @@ These were checked against live GitHub data and the GitHub documentation. Do not
 - **Dependabot alert `manifest_path` is repository-relative** (`go.mod`, `web/package-lock.json`), with no leading `/`.
 - **Default labels.** With `labels` unset, Dependabot applies `dependencies`, and adds an ecosystem label only when more than one package ecosystem is configured.
 - **`jq` on empty or whitespace-only input emits nothing and exits 0**, so `dependabot-prs summarize < /dev/null` reaches the "input is empty" check. `tests/scrut/dependabot-prs.md` covers that case.
+- **`refs/dependabot-triage/` belongs to the triage skill.** Only `triage-dependabot-prs` creates refs there, so clearing the whole namespace before fetching and at wrap-up is intended.
+- **`gh api --paginate ENDPOINT --jq FILTER` is valid.** `gh` rejects `--jq` only together with `--slurp`. Without `--slurp`, the filter runs per page, which is correct for a filter that emits items rather than aggregating them.
