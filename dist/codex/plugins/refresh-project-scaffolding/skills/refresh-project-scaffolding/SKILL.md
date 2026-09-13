@@ -10,7 +10,7 @@ Refresh the current repository's existing scaffolding against the latest templat
 
 This is the maintenance companion to `bootstrap-project`: bootstrap sets things up, this keeps them current.
 
-**Scope**: This skill audits tools already in use and updates their files to match current templates. For tools that are partially configured, it can restore missing expected files. It does not set up tools that were never used; for initial setup, use the bootstrap-project skill or the individual tool.
+**Scope**: This skill audits tools already in use and updates their files to match current templates. For tools that are partially configured, it can restore missing expected files. It does not set up tools that were never used; for initial setup, use the bootstrap-project skill or the individual tool. The one exception is a missing Dependabot config, which step 2 explains.
 
 ## Workflow
 
@@ -49,8 +49,11 @@ For each tool in the ecosystem, check for its signature artifacts. Only tools wh
 | `set-up-installers`       | `Formula/`                                                                |
 | `optimize-runner-usage`   | `concurrency:` key in any `.github/workflows/*.yml`                       |
 | `clean-up-agent-config`   | `AGENTS.md` or (`CLAUDE.md` + `.claude/settings.json`)                    |
+| `pin-everything`          | `.github/dependabot.yml` or `.github/dependabot.yaml`                     |
 
 For each detected tool, record which artifacts were found and which expected artifacts are missing (for "Partially set up" status).
+
+**A missing Dependabot config is actionable even though no artifact detected the tool.** The workflows the scaffolding skills write pin every action to a commit SHA, and those pins stay current only while Dependabot proposes updates. So when the repository has any `.github/workflows/` file, or a manifest Dependabot supports (see [Reference: Dependabot Config Checks](#reference-dependabot-config-checks-pin-everything)), and has no Dependabot config, report `pin-everything` as `Needs update` with the issue "no `.github/dependabot.yml`" rather than `Not detected`.
 
 ### 3. Compare Against Latest Templates
 
@@ -107,18 +110,20 @@ If no items need updating (everything is up to date), congratulate the user and 
 
 For each confirmed update item, choose a strategy based on scope:
 
-| Scenario                                       | Strategy                                                                             |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Action version outdated                        | **Targeted**: find and replace the version string in the workflow file               |
-| Missing config entry (e.g., .gitignore line)   | **Targeted**: add the missing entry to the appropriate section                       |
-| Missing workflow key (e.g., `timeout-minutes`) | **Targeted**: add the key to each job in the workflow file                           |
-| Missing `concurrency:` group                   | **Targeted**: add the concurrency block below the `on:` trigger block                |
-| Missing `permissions:` block                   | **Targeted**: add the permissions block at the workflow level                        |
-| CLAUDE.md is regular file, not symlink         | **Full re-run**: invoke `clean-up-agent-config` to reconcile CLAUDE.md and AGENTS.md |
-| Community file outdated (e.g., CoC version)    | **Full re-run**: invoke the `add-community-files` skill via the Skill tool           |
-| Missing file from a detected tool              | **Full re-run**: invoke the original skill via the Skill tool                        |
+| Scenario                                           | Strategy                                                                                                 |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Action version outdated                            | **Targeted**: find and replace the version string in the workflow file                                   |
+| Missing config entry (e.g., .gitignore line)       | **Targeted**: add the missing entry to the appropriate section                                           |
+| Missing workflow key (e.g., `timeout-minutes`)     | **Targeted**: add the key to each job in the workflow file                                               |
+| Missing `concurrency:` group                       | **Targeted**: add the concurrency block below the `on:` trigger block                                    |
+| Missing `permissions:` block                       | **Targeted**: add the permissions block at the workflow level                                            |
+| CLAUDE.md is regular file, not symlink             | **Full re-run**: invoke `clean-up-agent-config` to reconcile CLAUDE.md and AGENTS.md                     |
+| Community file outdated (e.g., CoC version)        | **Full re-run**: invoke the `add-community-files` skill via the Skill tool                               |
+| Missing file from a detected tool                  | **Full re-run**: invoke the original skill via the Skill tool                                            |
+| No Dependabot config                               | **Full re-run**: invoke the `pin-everything` skill with `--scope dependabot`                             |
+| Dependabot config misses an ecosystem or directory | **Delegate**: invoke the `review-dependabot-config` skill, which merges the fix into the existing config |
 
-For full tool re-runs, all detected tools are skills. Invoke them via the Skill tool. Relevant skills include `add-community-files`, `set-up-linters`, `set-up-ci`, `set-up-secret-scanning`, `add-goreleaser-homebrew`, `set-up-installers`, `add-scrut-cli-tests`, `scaffold-new-repo`, and `optimize-runner-usage`.
+For full tool re-runs, all detected tools are skills. Invoke them via the Skill tool. Relevant skills include `add-community-files`, `set-up-linters`, `set-up-ci`, `set-up-secret-scanning`, `add-goreleaser-homebrew`, `set-up-installers`, `add-scrut-cli-tests`, `scaffold-new-repo`, `pin-everything`, and `optimize-runner-usage`. Dependabot coverage gaps go to `review-dependabot-config` instead of a `pin-everything` re-run, because that skill reviews the existing config and merges into it rather than regenerating it.
 
 Process updates in this order (matching the bootstrap-project execution order):
 
@@ -131,6 +136,7 @@ Process updates in this order (matching the bootstrap-project execution order):
 1. `add-community-files` (community files)
 1. `set-up-installers` (distribution)
 1. `add-scrut-cli-tests` (testing)
+1. `pin-everything` or `review-dependabot-config` (Dependabot config, once every workflow and manifest above is in place)
 1. `optimize-runner-usage` (CI optimization)
 1. `clean-up-agent-config` (agent config)
 
@@ -430,6 +436,35 @@ Must include language-specific entries appropriate for the detected project type
 - Secret scanning workflows
 - Workflows with existing `paths:` positive filters
 - Reusable workflows
+
+## Reference: Dependabot Config Checks (pin-everything)
+
+### Files
+
+- `.github/dependabot.yml` or `.github/dependabot.yaml`
+
+### Checks
+
+- A config exists whenever the repository has `.github/workflows/` files or a manifest from the table below. Absent: `Needs update`, fixed by `pin-everything --scope dependabot`
+- Only one of the two file names exists
+- `version: 2` is set
+- Every ecosystem present has an `updates` entry, and its manifest directory is covered by `directory` or `directories`:
+
+| Found                                                     | Expected `package-ecosystem` |
+| --------------------------------------------------------- | ---------------------------- |
+| `.github/workflows/*.yml`                                 | `github-actions`             |
+| `package.json` with an npm, Yarn, or pnpm lockfile        | `npm`                        |
+| `uv.lock`                                                 | `uv`                         |
+| `pyproject.toml` or `requirements*.txt` without `uv.lock` | `pip`                        |
+| `go.mod`                                                  | `gomod`                      |
+| `Cargo.toml`                                              | `cargo`                      |
+| `Gemfile`                                                 | `bundler`                    |
+| `composer.json`                                           | `composer`                   |
+| `Dockerfile`                                              | `docker`                     |
+
+- A composite action outside `.github/workflows/` whose `action.yml` references other actions has its directory in the `github-actions` entry
+
+These checks only establish that the config exists and covers what is present. For anything deeper (validity, groups, labels, commit messages, and the repository settings Dependabot depends on), and for the fix itself when coverage is incomplete, invoke the `review-dependabot-config` skill.
 
 ## Reference: Agent Config Checks (clean-up-agent-config)
 

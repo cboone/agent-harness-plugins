@@ -15,7 +15,7 @@ Scans the current repository for files created by other plugins in this ecosyste
 
 The maintenance companion to [Bootstrap Project](../bootstrap-project/README.md): bootstrap asks "what needs to be set up?", this asks "what needs to be updated?"
 
-**Scope**: This command audits tools already in use and refreshes their files to match current templates. For tools that are partially configured, it can restore missing expected files. It does not set up tools that were never used; for initial setup, use `/bootstrap-project` or the individual tool.
+**Scope**: This command audits tools already in use and refreshes their files to match current templates. For tools that are partially configured, it can restore missing expected files. It does not set up tools that were never used; for initial setup, use `/bootstrap-project` or the individual tool. The one exception is Dependabot: a repository with workflows or manifests but no `.github/dependabot.yml` is reported as needing one, because SHA-pinned actions go stale without it, and [Pin Everything](../pin-everything/README.md) creates it.
 
 ## Usage
 
@@ -33,10 +33,13 @@ The maintenance companion to [Bootstrap Project](../bootstrap-project/README.md)
 - **Foundation files**: LICENSE year, .gitignore entries, agent config symlinks
 - **GoReleaser**: Release workflow and config currency
 - **Runner optimization**: Concurrency, timeouts, paths-ignore across all workflows
+- **Dependabot config**: A config exists and covers every ecosystem and directory present. Deeper review goes to [Review Dependabot Config](../review-dependabot-config/README.md)
 
 ## See Also
 
 - [Bootstrap Project](../bootstrap-project/README.md): initial project setup
 - [Optimize Runner Usage](../optimize-runner-usage/README.md): CI optimization only
 - [Clean Up Agent Config](../clean-up-agent-config/README.md): agent config audit only
+- [Review Dependabot Config](../review-dependabot-config/README.md): full Dependabot config and settings review
+- [Pin Everything](../pin-everything/README.md): creates the Dependabot config this skill checks for
 - [All plugins](../../../../README.md)
