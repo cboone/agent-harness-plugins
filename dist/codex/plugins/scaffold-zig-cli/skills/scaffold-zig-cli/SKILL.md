@@ -84,13 +84,15 @@ Carry both observations into step 4 and judge them there, once the target's own 
 
 The project is scaffolded in a directory named after the project. Establish that directory and **change into it** before anything else in this step:
 
-- If the current directory is already named after the project and is empty (or nearly empty), it is the target and no move is needed.
+- If the current directory is already named after the project, it **is** the target and no move is needed, whether or not it is empty. Its contents are the preflight's business, not this branch's.
 - Otherwise, create it and enter it:
 
 ```bash
 mkdir -p "PROJECT-NAME"
 cd "PROJECT-NAME"
 ```
+
+Emptiness is deliberately not part of the first test. The recommended order runs `scaffold-new-repo` first, which leaves a populated directory named after the project, and requiring emptiness there sends that case down the second branch to create `PROJECT-NAME/PROJECT-NAME` inside it. That nests the project one level too deep and steps straight past the preflight whose whole purpose is to notice the boilerplate already sitting there. A directory with the project's name is the project's directory.
 
 Every path from here on is relative to the target, in this step and in every later one: the preflight below, `git init`, `zig build`, and each generated file. Entering the directory is therefore not optional. Creating it and staying put scaffolds the whole project into the parent, and the preflight would report on the wrong directory while doing it.
 
@@ -389,7 +391,9 @@ git check-ignore -v \
 
 Anything it prints would make `git add` refuse that path and abort the commit. It reports the rule alongside the file, so show the user both and ask what they want, rather than forcing the file in. A repository that ignores `.claude/` or `docs/` usually means it, and overriding that silently is not the skill's call: committing the rest and naming what was left out is the better default. Adding a path the user does want is `git add -f <that path>`, which they can ask for.
 
-Then stage the files this run generated, **each by its full path**, and create the initial commit:
+Then stage the files this run generated, **each by its full path**, and create the initial commit.
+
+The two lists below are the standalone case, where step 22 found no `.github/copilot-instructions.md` and skipped. **When step 22 did modify that file, add `.github/copilot-instructions.md` to both lists**; when it did not, leave it out of both. `git add` aborts with `pathspec ... did not match any files` on a path that is not there, so an unconditional entry would break the commit in exactly the case the file is absent.
 
 ```bash
 git add \
@@ -416,7 +420,7 @@ The pathspec after `--` is not redundant with the `git add`. A bare `git commit`
 
 Skip this step entirely if `git init` failed in step 4. There is no repository to commit to, and `git add` and `git commit` will both fail. Say plainly in the summary that the files were generated but no initial commit was created.
 
-Add `.github/copilot-instructions.md` to that list when step 22 modified it. Drop only a path this run neither created **nor modified**: steps 12, 13 and 19 merge into an existing `.gitignore`, `.editorconfig` or `.claude/settings.json` rather than replacing it, and those edits still belong in the commit. Dropping them because the file predates the run would leave the Zig ignore rules and the build permissions unstaged.
+Drop only a path this run neither created **nor modified**: steps 12, 13 and 19 merge into an existing `.gitignore`, `.editorconfig` or `.claude/settings.json` rather than replacing it, and those edits still belong in the commit. Dropping them because the file predates the run would leave the Zig ignore rules and the build permissions unstaged.
 
 **Do not use `git add -A`, and do not name a directory.** Step 3 allows scaffolding into a directory that is already a git repository, and step 4 skips `git init` when it is. `-A` sweeps the whole working tree, and `git add` applied to a directory is recursive, so naming `src`, `.github`, `.claude`, `docs`, or `tests` stages whatever else happens to be under them. Either way the user's unrelated work lands in a signed commit they did not ask for. Full paths are what make the set exact.
 
