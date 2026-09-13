@@ -347,6 +347,16 @@ manage-resource-claims: claim requires a resource name
 [1]
 ```
 
+## check refuses an option in place of a resource name
+
+Without this guard a mistyped flag is read as a resource nobody has claimed, so `check` reports it free and exits 0. A caller branching on that exit code would then proceed as though the resource were available.
+
+```scrut
+$ setup_claims && claims_tail check --json
+manage-resource-claims: check requires a resource name
+[1]
+```
+
 ## claim without --worktree
 
 ```scrut

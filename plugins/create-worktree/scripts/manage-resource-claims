@@ -229,7 +229,7 @@ function cmd_check() {
   local resource="${1:-}"
   local file claims decorated match state
 
-  if [[ -z "${resource}" ]]; then
+  if [[ -z "${resource}" || "${resource}" == -* ]]; then
     usage >&2
     die "check requires a resource name"
   fi
