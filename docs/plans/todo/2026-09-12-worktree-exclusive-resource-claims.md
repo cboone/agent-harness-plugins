@@ -42,18 +42,18 @@ A Bash script following the conventions already established in `compose-issue-pr
 
 Subcommands:
 
-| Subcommand                                                    | Behavior                                                                            |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `list [--json]`                                               | One `key=value` line per claim, `stale=yes` on claims whose worktree is gone         |
-| `check <resource>`                                            | Silent exit 0 when free; holder line and exit 3 when held; stale reported as free    |
-| `claim <resource> --worktree PATH --branch NAME [--issue N]`  | Records the claim, replacing any stale claim on the same resource                    |
-| `release <resource>` or `release --worktree PATH`             | Removes the named claim, or every claim held by one worktree                         |
-| `prune`                                                       | Drops every stale claim and reports what it dropped                                  |
-| `-h`, `--help`                                                | Usage                                                                                |
+| Subcommand                                                   | Behavior                                                                          |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `list [--json]`                                              | One `key=value` line per claim, `state=stale` on claims whose worktree is gone    |
+| `check <resource>`                                           | Silent exit 0 when free; holder line and exit 3 when held; stale reported as free |
+| `claim <resource> --worktree PATH --branch NAME [--issue N]` | Records the claim, replacing any stale claim on the same resource                 |
+| `release <resource>` or `release --worktree PATH`            | Removes the named claim, or every claim held by one worktree                      |
+| `prune`                                                      | Drops every stale claim and reports what it dropped                               |
+| `-h`, `--help`                                               | Usage                                                                             |
 
 Exit codes: 0 success, 1 usage or environment error, 3 resource held. The distinct code is what lets the skill branch without parsing prose.
 
-The claim file path comes from `WORKTREE_RESOURCES_FILE` when set, otherwise `<main worktree>/.claude/worktree-resources.local.json`, with the main worktree read from the first `worktree ` record of `git worktree list --porcelain`. The override exists so scrut can exercise the script against a temp file; it is why `SCRUT_UNSET` grows an entry.
+The claim file path comes from `WORKTREE_RESOURCES_FILE` when set, otherwise `<main worktree>/.claude/worktree-resources.local.json`, with the main worktree read from the first `worktree` record of `git worktree list --porcelain`. The override exists so scrut can exercise the script against a temp file; it is why `SCRUT_UNSET` grows an entry.
 
 A missing file means no claims, which is not an error. An unparseable file is an error rather than a silent reset, because overwriting a file the user may have hand-edited is worse than stopping.
 
@@ -140,11 +140,11 @@ A third `cmp` guard beside the two that already keep `compose-issue-prompt` and 
 
 ### 10. Versioning and generated trees
 
-| Plugin                      | Version         | Reason                                    |
-| --------------------------- | --------------- | ----------------------------------------- |
-| `create-worktree`           | 1.2.4 -> 1.3.0  | New capability: claim, check, release     |
-| `address-issue-in-worktree` | 2.0.3 -> 2.1.0  | New capability: claim and check           |
-| `suggest-next-issue`        | 1.1.7 -> 1.2.0  | New capability: parallel-safety reasoning |
+| Plugin                      | Version        | Reason                                    |
+| --------------------------- | -------------- | ----------------------------------------- |
+| `create-worktree`           | 1.2.4 -> 1.3.0 | New capability: claim, check, release     |
+| `address-issue-in-worktree` | 2.0.3 -> 2.1.0 | New capability: claim and check           |
+| `suggest-next-issue`        | 1.1.7 -> 1.2.0 | New capability: parallel-safety reasoning |
 
 Each bump lands in both `plugins/<name>/.claude-plugin/plugin.json` and its `.claude-plugin/marketplace.json` entry, which rule 8 requires to match.
 
