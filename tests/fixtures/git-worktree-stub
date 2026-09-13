@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# git-worktree-stub -- Test stub for git worktree list.
+# git-worktree-stub -- Test stub for git worktree list and for-each-ref.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
@@ -16,7 +16,16 @@ function main() {
     return 0
   fi
 
-  die "expected git worktree list --porcelain invocation"
+  # `git for-each-ref --format=... refs/heads/`, used to find an existing
+  # branch for an issue number. One branch name per line in STUB_GIT_BRANCHES.
+  if [[ $# -eq 3 && "${1}" == "for-each-ref" && "${2}" == --format=* && "${3}" == "refs/heads/" ]]; then
+    if [[ -n "${STUB_GIT_BRANCHES:-}" ]]; then
+      printf '%s\n' "${STUB_GIT_BRANCHES}"
+    fi
+    return 0
+  fi
+
+  die "expected git worktree list --porcelain or git for-each-ref invocation"
 }
 
 main "$@"
