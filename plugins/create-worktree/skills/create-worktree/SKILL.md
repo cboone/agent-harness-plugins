@@ -37,7 +37,7 @@ Decide what the user gave you, in this order:
 
 If an issue number was given but `gh` is not installed or not authenticated, say so and ask whether to treat the argument as a task description instead. Do not silently fall back.
 
-### 2. Determine the Branch Name
+### 2. Let the Launcher Name the Branch
 
 **From an issue number**, fetch the issue first:
 
