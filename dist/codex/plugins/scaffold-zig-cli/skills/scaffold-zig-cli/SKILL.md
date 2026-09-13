@@ -142,6 +142,8 @@ git init
 
 **If `git init` failed, stop here.** Skip the rest of this step, including the reads below, which need a repository and would fail too. Carry on to the generation steps, and skip step 23 per the Error Handling entry.
 
+One thing this path must still settle: if step 2 left `COPYRIGHT-HOLDER` unfilled because `git config user.name` was empty, **ask for it now**. Step 2 deferred that question to the re-read below, and the re-read is the thing that just got skipped, so nothing else will answer it. Step 16 would otherwise write a LICENSE with the placeholder still in it, which is worse than asking.
+
 Otherwise re-read the committer identity, from inside the target, because only here does its own local config apply. Do this **every time**, including when `git init` was skipped: an existing target repository has its own config, and that is the one step 23 commits with. Step 2's values came from wherever the skill was invoked, and step 3 has since changed into the target:
 
 ```bash
@@ -253,7 +255,7 @@ Read `./references/release-workflow.md` for the template and create `.github/wor
 Read `./references/license.md` for the LICENSE template and create `LICENSE` from it.
 
 - Replace `YEAR` with the current year (run `date +%Y` to get it)
-- Replace `COPYRIGHT-HOLDER` with the detected full name
+- Replace `COPYRIGHT-HOLDER` with the detected full name. It is settled by step 4 on every path, including the one where `git init` failed, so it should never still be a placeholder here. If it is, ask before writing the file rather than emitting the placeholder
 
 Generate `LICENSE` before running any build. `build.zig.zon` lists it in `.paths`, and that list determines the package hash a downstream consumer computes.
 
