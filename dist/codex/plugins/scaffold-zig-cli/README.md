@@ -57,7 +57,7 @@ The skill also writes the three `zig` rules into the scaffolded project's own `.
 
 ## See Also
 
-- [Scaffold New Repo](../scaffold-new-repo/README.md): language-agnostic repo boilerplate. Run it separately, before or after this skill. This one does not invoke it, and does not generate `AGENTS.md`, `CLAUDE.md`, or `.github/copilot-instructions.md` on its own
+- [Scaffold New Repo](../scaffold-new-repo/README.md): language-agnostic repo boilerplate, including `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`, none of which this skill generates. Run it separately and **run it first**: it writes its own `LICENSE`, `README.md` and `CHANGELOG.md`, and a `.claude/settings.json` with an empty allowlist, so running it afterwards overwrites the Zig-specific versions and drops the seeded `zig build` and `zig fmt` permissions
 - [Set-Up CI](../set-up-ci/README.md): the same Zig CI workflow for a project that already exists
 - [Set-Up Installers](../set-up-installers/README.md): set up Homebrew formula and shell install script after scaffolding
 - [Add Scrut CLI Tests](../add-scrut-cli-tests/README.md): snapshot tests for the generated binary

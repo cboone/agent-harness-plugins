@@ -65,14 +65,14 @@ git config gpg.format
 git config user.signingkey
 ```
 
-A value supplied by the user for `COPYRIGHT-HOLDER` does not configure anything. Step 23 needs git's own committer identity, so **both `user.name` and `user.email` must be configured**, not merely known. If either is unset, say so now rather than at step 23, where the commit fails after every file has already been written. A name the user typed when `git config user.name` returned nothing satisfies the LICENSE and not the commit.
+A value supplied by the user for `COPYRIGHT-HOLDER` does not configure anything, and step 23 needs git's own committer identity rather than a name someone typed. **Do not stop here on an unset value.** These reads are provisional, and stopping on them rejects a perfectly good target: invoked from a directory with no global identity, they come back empty even when the target repository has a local `user.name` and `user.email` of its own. Note what is missing and carry on; step 4 decides.
 
-Read the signing pair together rather than accepting either one alone. `gpg.format` selects the backend, not a key, so `gpg.format=ssh` with no `user.signingkey` looks configured and still fails at `git commit -S`. The two cases differ:
+The same applies to signing. Read the pair together rather than accepting either alone, because `gpg.format` selects the backend and not a key, so `gpg.format=ssh` with no `user.signingkey` looks configured and still fails at `git commit -S`. The two cases differ:
 
 - **`gpg.format` is `ssh`**: `user.signingkey` is required. Unset means signing will fail.
 - **`gpg.format` is unset or `openpgp`**: `user.signingkey` is optional, because GnuPG can select a key from the committer identity. Unset is not conclusive either way.
 
-Report what is missing in the first case, and in the second say only that signing could not be confirmed ahead of time. Confirm all of it again in step 4, once the target exists, before treating any of it as settled.
+Carry both observations into step 4 and judge them there, once the target's own config is the one being read.
 
 ### 3. Verify the Target Directory
 
@@ -141,7 +141,9 @@ git config user.signingkey
 
 Judge them by step 2's rules, and let these answers win where they differ. If `user.name` differs from the value already used for `COPYRIGHT-HOLDER`, point that out rather than silently rewriting the LICENSE: the committer and the copyright holder are allowed to differ, and which one the user wants in the LICENSE is theirs to say.
 
-If `user.name` or `user.email` is unset here, stop before generating anything. Step 23 cannot commit without them, and stopping now costs nothing.
+**This is where an unset identity stops the run**, not step 2. If `user.name` or `user.email` is unset here, stop before generating anything: step 23 cannot commit without them, these values are the ones it will use, and stopping now costs nothing. A value that looked missing in step 2 and is present here was never missing; the earlier read was just looking in the wrong place.
+
+Apply step 2's signing rules here too, against these values.
 
 ### 5. Detect the Zig Toolchain
 
@@ -353,7 +355,7 @@ If `.github/copilot-instructions.md` does not exist, skip this step.
 
 ### 23. Create Initial Commit
 
-First, when the target was an existing repository, check whether any generated path is covered by an ignore rule:
+First check whether any generated path is covered by an ignore rule. Run this **every time**, not only for a target that was already a repository: a fresh `git init` still reads whatever `.gitignore` the directory already held, and a global `core.excludesFile` applies to any repository at all.
 
 ```bash
 git check-ignore -v \
@@ -361,10 +363,13 @@ git check-ignore -v \
   src/root.zig src/main.zig \
   typos.toml Makefile .gitignore .editorconfig \
   .github/workflows/ci.yml .github/workflows/release.yml \
+  .github/copilot-instructions.md \
   .claude/settings.json \
   LICENSE README.md CHANGELOG.md \
   docs/plans/todo/.gitkeep docs/plans/done/.gitkeep tests/.gitkeep
 ```
+
+`.github/copilot-instructions.md` is in the list because step 22 may have modified it and this step stages it. Drop the paths this run did not touch before running the probe, or accept that it reports on a file you are not about to stage.
 
 Anything it prints would make `git add` refuse that path and abort the commit. It reports the rule alongside the file, so show the user both and ask what they want, rather than forcing the file in. A repository that ignores `.claude/` or `docs/` usually means it, and overriding that silently is not the skill's call: committing the rest and naming what was left out is the better default. Adding a path the user does want is `git add -f <that path>`, which they can ask for.
 
@@ -411,6 +416,7 @@ Print a summary of what was created:
   - Run `make help` to see available Makefile targets
   - Run `make check` before pushing, which runs the format check, the build and the tests together
   - Run the add-community-files skill to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
+  - Not the scaffold-new-repo skill, if it has not already run. It writes its own LICENSE, README.md and CHANGELOG.md, and a `.claude/settings.json` with an empty allowlist, so running it now would overwrite the Zig-specific files and drop the permissions step 19 seeded. It belongs before this skill, not after
   - Run the set-up-installers skill when ready to set up a Homebrew formula and shell install script
   - Run the add-scrut-cli-tests skill to add snapshot tests for the CLI. It adds its own `run-scrut-tests.yml` job and does not touch the `run-zig-ci.yml` call, so the CI workflow's own `run-scrut` input stays off. Keep one or the other rather than both
   - Add a `.github/dependabot.yml` with the `github-actions` ecosystem if the workflow pins should keep themselves current. The scaffold pins them to the SHA that was latest when it ran, and nothing updates them on its own
