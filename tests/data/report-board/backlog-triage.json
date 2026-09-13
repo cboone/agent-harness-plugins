@@ -1,0 +1,84 @@
+{
+  "board": "backlog-triage",
+  "title": "widgets backlog",
+  "repo": "example/widgets",
+  "sync": {
+    "at": "2026-09-01T09:30:00-04:00",
+    "timeZone": "America/New_York",
+    "branch": "main",
+    "commit": "0123456789abcdef0123456789abcdef01234567",
+    "openPullRequests": 1,
+    "extra": ["12 packages"]
+  },
+  "summary": "Three lanes can run at once and two are worth starting today. The tokenizer rewrite gates everything in the parser lane, so start there.",
+  "milestones": [{ "title": "Parser rewrite", "short": "Parser" }, { "title": "Documentation" }],
+  "issues": [
+    { "number": 101, "title": "parser: replace the tokenizer", "milestone": "Parser rewrite" },
+    {
+      "number": 102,
+      "title": "parser: stream large inputs",
+      "milestone": "Parser rewrite",
+      "waitingOn": [101],
+      "blockedBecause": "Streaming reads the token format that #101 replaces."
+    },
+    {
+      "number": 103,
+      "title": "cli: report parse errors with columns",
+      "milestone": "Parser rewrite",
+      "sameBranchAs": 101
+    },
+    {
+      "number": 104,
+      "title": "docs: tutorial for the new parser",
+      "short": "parser tutorial",
+      "milestone": "Documentation",
+      "waitingOn": [101],
+      "blockedBecause": "The tutorial documents the tokenizer that #101 is rewriting."
+    },
+    {
+      "number": 105,
+      "title": "docs: fix broken links",
+      "milestone": "Documentation",
+      "inProgress": "fix/105-broken-links"
+    },
+    { "number": 106, "title": "ci: cache dependencies", "milestone": null },
+    { "number": 107, "title": "cli: color output", "milestone": null }
+  ],
+  "startNow": [
+    {
+      "issue": 101,
+      "why": "Gates both blocked issues, and #103 rides on the same branch.",
+      "touches": "parser, cli"
+    },
+    { "issue": 106, "why": "Touches only the CI workflow, so it collides with nothing.", "touches": "ci" }
+  ],
+  "lanes": [
+    {
+      "key": "L1",
+      "name": "Parser core",
+      "owns": "parser · cli",
+      "mode": "serial",
+      "note": "Every item edits the parser, so a second branch here is a rebase, not parallelism.",
+      "issues": [101, 103, 102, 107]
+    },
+    {
+      "key": "L2",
+      "name": "Docs",
+      "owns": "docs",
+      "mode": "head",
+      "note": "The link fix lands first; the tutorial waits on #101 over in L1.",
+      "issues": [105, 104]
+    },
+    { "key": "L3", "name": "Standalone", "mode": "any", "issues": [106] }
+  ],
+  "contention": {
+    "rowLabel": "Package",
+    "claims": [
+      { "name": "parser", "issues": [101, 102, 104] },
+      { "name": "cli", "issues": [103, 107] }
+    ]
+  },
+  "notes": {
+    "startNow": "Two branches, two lanes, no shared files between them."
+  }
+}

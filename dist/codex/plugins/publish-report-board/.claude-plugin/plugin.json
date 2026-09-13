@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Publish a recurring analysis, starting with backlog triage, as a live report board with a stable URL, and re-sync it in place as the source data changes.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["artifacts", "backlog", "github", "issues", "reports", "triage"],
+  "license": "MIT",
+  "name": "publish-report-board",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
