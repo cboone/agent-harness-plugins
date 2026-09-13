@@ -47,8 +47,8 @@ Report these as Warnings with the likely cause. Fixing the dependency is outside
 A workflow Dependabot triggers through `push`, `pull_request`, `pull_request_review`, or `pull_request_review_comment` runs like a fork PR: its `GITHUB_TOKEN` is read-only, and it receives Dependabot secrets, not Actions secrets. A job on one of those events that needs an Actions secret fails on every Dependabot PR. `pull_request_target` runs are not restricted this way.
 
 ```bash
-gh api repos/OWNER/REPO/dependabot/secrets --jq '[.secrets[].name]'
-gh api repos/OWNER/REPO/actions/secrets --jq '[.secrets[].name]'
+gh api --paginate --slurp 'repos/OWNER/REPO/dependabot/secrets?per_page=100' | jq '[.[].secrets[].name]'
+gh api --paginate --slurp 'repos/OWNER/REPO/actions/secrets?per_page=100' | jq '[.[].secrets[].name]'
 ```
 
 Then find the jobs that run on Dependabot PRs and use secrets:
@@ -65,7 +65,7 @@ For each secret referenced by a job that runs on `push`, `pull_request`, `pull_r
 
 Evidence from open PRs strengthens the finding: a check that fails on Dependabot PRs and passes on the default branch, with a log line such as `Input required and not supplied: token`.
 
-Organization-level secrets (`gh api orgs/ORG/dependabot/secrets`) need organization admin rights. When that call is refused, say the organization's Dependabot secrets were not checked.
+Organization-level secrets (`gh api --paginate --slurp 'orgs/ORG/dependabot/secrets?per_page=100' | jq '[.[].secrets[].name]'`) need organization admin rights. When that call is refused, say the organization's Dependabot secrets were not checked.
 
 Also check `registries` in `dependabot.yml`: every `${{secrets.NAME}}` it references must be a Dependabot secret.
 

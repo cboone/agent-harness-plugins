@@ -57,7 +57,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(date)", "Bash(git remote -v)", "Bash(gh repo view *)", "Bash(gh pr list *)", "Bash(gh label list *)", "Bash(gh label create *)", "Bash(gh api repos/*)", "Bash(gh api 'repos/*)", "Bash(gh api -i repos/*)", "Bash(gh api --paginate --slurp repos/*)", "Bash(gh api --paginate --slurp 'repos/*)", "Bash(gh api orgs/*)", "Bash(git fetch *)", "Bash(git show *)", "Bash(git diff *)", "Bash(grep *)", "Bash(uvx check-jsonschema *)", "Bash(jq *)"]
+    "allow": ["Bash(date)", "Bash(git remote -v)", "Bash(gh repo view *)", "Bash(gh pr list *)", "Bash(gh label list *)", "Bash(gh label create *)", "Bash(gh api repos/*)", "Bash(gh api 'repos/*)", "Bash(gh api -i repos/*)", "Bash(gh api --paginate --slurp repos/*)", "Bash(gh api --paginate --slurp 'repos/*)", "Bash(gh api orgs/*)", "Bash(gh api --paginate --slurp 'orgs/*)", "Bash(git fetch *)", "Bash(git ls-tree *)", "Bash(git show *)", "Bash(git diff *)", "Bash(grep *)", "Bash(uvx check-jsonschema *)", "Bash(jq *)"]
   }
 }
 ```

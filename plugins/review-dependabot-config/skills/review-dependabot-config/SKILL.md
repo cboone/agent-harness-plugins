@@ -55,7 +55,7 @@ The user may provide these options inline:
 
    An archived repository runs no Dependabot updates and accepts no changes: report that and stop. Without `ADMIN` permission, several settings checks in step 4 will be refused; say so up front.
 
-1. Find the config. Look for `.github/dependabot.yml` and `.github/dependabot.yaml` in the working tree, and read the default branch copy with `git fetch origin` then `git show origin/DEFAULT:.github/dependabot.yml`.
+1. Find the config. Run `git fetch origin`, then check both names on the default branch with `git ls-tree --name-only origin/DEFAULT .github/dependabot.yml .github/dependabot.yaml`. Whichever exists is `CONFIG_PATH` for the rest of the review. Read it with `git show origin/DEFAULT:CONFIG_PATH`, and compare it with the working-tree copy at the same path.
    - **Both files exist**: an Error. Dependabot expects a single configuration file, and a reader cannot tell which copy is in force. Keep one.
    - **The working tree differs from the default branch**: report the drift. Dependabot runs the default branch copy, so review that one, and note the local changes separately.
 
@@ -122,11 +122,11 @@ Use `AskUserQuestion` where it exists. Without it (Codex CLI, OpenCode), print t
 
 ### 7. Apply
 
-1. **Edit `dependabot.yml`** with targeted edits that keep comments and ordering. Show the resulting diff with `git diff -- .github/dependabot.yml` before moving on.
+1. **Edit `dependabot.yml`** with targeted edits that keep comments and ordering. Show the resulting diff with `git diff -- CONFIG_PATH` before moving on.
 1. **Re-validate** the edited file:
 
    ```bash
-   uvx check-jsonschema --builtin-schema vendor.dependabot .github/dependabot.yml
+   uvx check-jsonschema --builtin-schema vendor.dependabot CONFIG_PATH
    ```
 
    When `uv` is unavailable, skip this and say so. The schema can lag new Dependabot options, so an "additional properties" error on an option the documentation lists is schema lag, not a defect.
