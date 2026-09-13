@@ -83,7 +83,19 @@ Report what is missing in the first case, and in the second say only that signin
 
 ### 3. Verify the Target Directory
 
-The project should be scaffolded in a directory named after the project. If the current directory is already named after the project and is empty (or nearly empty), use it. Otherwise, create a subdirectory.
+The project is scaffolded in a directory named after the project. Establish that directory and **change into it** before anything else in this step:
+
+- If the current directory is already named after the project and is empty (or nearly empty), it is the target and no move is needed.
+- Otherwise, create it and enter it:
+
+```bash
+mkdir -p PROJECT-NAME
+cd PROJECT-NAME
+```
+
+Every path from here on is relative to the target, in this step and in every later one: the preflight below, `git init`, `zig build`, and each generated file. Entering the directory is therefore not optional. Creating it and staying put scaffolds the whole project into the parent, and the preflight would report on the wrong directory while doing it.
+
+If a later step reports the wrong directory, check this one first.
 
 Before generating anything, check what is already there. Two separate checks, because they catch different things.
 
@@ -115,13 +127,15 @@ Skip if already inside a git repository.
 git init
 ```
 
-Now re-read the committer identity, this time from inside the target, because only here does its own local config apply. Step 2's values came from wherever the skill was invoked:
+**If `git init` failed, stop here.** Skip the rest of this step, including the reads below, which need a repository and would fail too. Carry on to the generation steps, and skip step 23 per the Error Handling entry.
+
+Otherwise re-read the committer identity, this time from inside the target, because only here does its own local config apply. Step 2's values came from wherever the skill was invoked, and step 3 has since changed into the target:
 
 ```bash
-git -C <target> config user.name
-git -C <target> config user.email
-git -C <target> config gpg.format
-git -C <target> config user.signingkey
+git config user.name
+git config user.email
+git config gpg.format
+git config user.signingkey
 ```
 
 Judge them by step 2's rules, and let these answers win where they differ. If `user.name` differs from the value already used for `COPYRIGHT-HOLDER`, point that out rather than silently rewriting the LICENSE: the committer and the copyright holder are allowed to differ, and which one the user wants in the LICENSE is theirs to say.
@@ -393,7 +407,7 @@ Print a summary of what was created:
 - If `zig build` reports `name must be a valid bare zig identifier`, or `expected expression, found '.'` on the `.name` line, the package name is not a bare non-keyword identifier. Go back to step 1's validation table: a hyphen, a leading digit, and a Zig keyword each produce one of those two errors, and `.@"..."` quoting fixes none of them. The binary name in `build.zig` is unaffected and keeps its hyphens.
 - If `zig build` reports a missing or invalid fingerprint after step 21, the value was transcribed incorrectly. Re-read the diagnostic and take the last `0x` value on the line.
 - If step 3's preflight listed any existing path, ask the user before overwriting. That covers every path this run writes, not only the Zig ones: `README.md`, `LICENSE`, `CHANGELOG.md`, `Makefile` and `typos.toml` are the ones most likely to already exist, and losing them is what the preflight is for
-- If `git init` fails, continue generating files but warn the user, and **skip step 23**. There is no repository, so `git add` and `git commit` fail too. Report that the files were generated and no initial commit was created, rather than letting the commit fail at the end of the run
+- If `git init` fails, continue generating files but warn the user, and **skip both the rest of step 4 and all of step 23**. With no repository the identity re-reads, `git add` and `git commit` all fail. Report that the files were generated and no initial commit was created, rather than letting those commands fail one after another through the run
 - If `git commit -S` fails because signing is not configured, tell the user rather than retrying without `-S`. Signing is deliberate, and dropping it is the user's call.
 - If the build verification fails, show the error and attempt to fix it before continuing
 
