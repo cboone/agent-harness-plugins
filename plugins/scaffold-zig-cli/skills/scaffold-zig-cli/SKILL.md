@@ -155,7 +155,8 @@ Read `./references/root-zig.md` for the template and create `src/root.zig` from 
 Read `./references/main-zig.md` for the template and create `src/main.zig` from it.
 
 - Replace `PROJECT-NAME` with the project name
-- Replace `PACKAGE-NAME` with the underscored package name
+
+There is no `PACKAGE-NAME` in this template. `build.zig` registers the library module under the fixed import name `lib`, so nothing in `src/main.zig` depends on what the package is called.
 
 ### 10. Generate typos.toml
 
@@ -362,7 +363,8 @@ Print a summary of what was created:
   - Run `make check` before pushing, which runs the format check, the build and the tests together
   - Run the add-community-files skill to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
   - Run the set-up-installers skill when ready to set up a Homebrew formula and shell install script
-  - Run the add-scrut-cli-tests skill to add snapshot tests for the CLI
+  - Run the add-scrut-cli-tests skill to add snapshot tests for the CLI, which also turns on the CI workflow's `run-scrut` input
+  - Add a `.github/dependabot.yml` with the `github-actions` ecosystem if the workflow pins should keep themselves current. The scaffold pins them to the SHA that was latest when it ran, and nothing updates them on its own
   - Tag a release with `git tag v0.1.0 && git push origin v0.1.0` to trigger the release workflow
 
 ## Error Handling
@@ -402,3 +404,5 @@ echo "${SHA} # ${TAG}"
 ```
 
 Replace each `cboone/gh-actions/.../<workflow>.yml@<old-sha> # <old-tag>` in the emitted workflow with the new SHA and tag. Dependabot in the user's repo keeps them in sync afterwards.
+
+That last sentence assumes a Dependabot configuration this skill does not generate. A scaffolded project has no `.github/dependabot.yml`, so nothing updates the pins until one exists with the `github-actions` ecosystem enabled. Say so in the summary: the refresh above is what makes the pin current at scaffold time, and it is the only thing keeping it current until the user adds that configuration.
