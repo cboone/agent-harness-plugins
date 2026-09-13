@@ -54,14 +54,15 @@ updates:
 
 Add additional `- package-ecosystem:` blocks for whichever package ecosystems are present in the repo:
 
-| Ecosystem present | Detection                              | Add block with `package-ecosystem:` |
-| ----------------- | -------------------------------------- | ----------------------------------- |
-| Cargo (Rust)      | `Cargo.toml`                           | `cargo`                             |
-| Pip / uv (Python) | `pyproject.toml` or `requirements.txt` | `pip`                               |
-| Bundler (Ruby)    | `Gemfile`                              | `bundler`                           |
-| Go modules        | `go.mod`                               | `gomod`                             |
-| Composer (PHP)    | `composer.json`                        | `composer`                          |
-| Docker            | `Dockerfile`                           | `docker`                            |
+| Ecosystem present | Detection                                                 | Add block with `package-ecosystem:` |
+| ----------------- | --------------------------------------------------------- | ----------------------------------- |
+| Cargo (Rust)      | `Cargo.toml`                                              | `cargo`                             |
+| uv (Python)       | `uv.lock`                                                 | `uv`                                |
+| Pip (Python)      | `pyproject.toml` or `requirements.txt`, without `uv.lock` | `pip`                               |
+| Bundler (Ruby)    | `Gemfile`                                                 | `bundler`                           |
+| Go modules        | `go.mod`                                                  | `gomod`                             |
+| Composer (PHP)    | `composer.json`                                           | `composer`                          |
+| Docker            | `Dockerfile`                                              | `docker`                            |
 
 The same shape applies -- weekly schedule, split groups, 10-PR cap, `commit-message` prefix.
 
@@ -72,6 +73,7 @@ The same shape applies -- weekly schedule, split groups, 10-PR cap, `commit-mess
 | `npm`            | `versioning-strategy: increase` (preserves exact pins from step 6)               |
 | `cargo`          | _no strategy needed_ (cargo is exact-version-by-default for `=X.Y.Z` pins)       |
 | `pip`            | `versioning-strategy: increase` if you've pinned to `==X.Y.Z`; default otherwise |
+| `uv`             | _leave the default_; `uv.lock` records the exact resolution                      |
 | `bundler`        | _no strategy field_; uses the lockfile as the source of truth                    |
 | `gomod`          | _no strategy field_; uses `go.sum` as the source of truth                        |
 | `github-actions` | _no strategy field_; SHA pins with `# vX.Y.Z` comments are bumped one-for-one    |
@@ -95,6 +97,8 @@ If `.github/dependabot.yml` already exists, do not overwrite. Merge:
 2. For each ecosystem block already present: keep the user's `schedule`, `directory`, and any `groups` they've defined. If their `open-pull-requests-limit` is below 10, suggest raising it. If `versioning-strategy` is missing for `npm` or `pip` (after step 6 pinning), suggest adding `increase`.
 3. For each ecosystem present in the repo but missing from the config: add a new block from the template.
 4. Show the diff before writing. Let the user accept, modify, or skip.
+
+To audit an existing config in depth instead (coverage of every directory, validity against current Dependabot options, labels, commit messages, and the repository settings and secrets Dependabot depends on), use the `review-dependabot-config` skill.
 
 ## Auto-Merge Wiring (Optional, Out of Scope for This Skill)
 

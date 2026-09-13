@@ -159,9 +159,11 @@ Create or merge `.github/dependabot.yml` with:
 - Per-ecosystem split groups (`<ecosystem>-minor-patch` and `<ecosystem>-major`) so minor/patch can auto-merge later while majors get human review.
 - 10-PR cap per ecosystem (raised from the default of 5 -- SHA-pinning produces finer-grained PRs than tag-pinning).
 - `versioning-strategy: increase` for `npm` (and for `pip` if step 6 exact-pinned Python requirements to `==X.Y.Z`) so existing exact pins are not widened on the first Dependabot bump.
-- Coverage for `github-actions` plus whichever package ecosystems are present in the repo (`npm`, `cargo`, `pip`, `bundler`, `gomod`).
+- Coverage for `github-actions` plus whichever package ecosystems are present in the repo (`npm`, `cargo`, `uv`, `pip`, `bundler`, `gomod`). A Python project with `uv.lock` gets `uv`, not `pip`.
 
 Skip this step if `--no-dependabot` was passed. Reference: `./references/dependabot.md`.
+
+This step writes or merges the baseline. To review an existing config against everything the repository contains and the settings around it, use the `review-dependabot-config` skill; to work through the PRs Dependabot opens afterwards, use the `triage-dependabot-prs` skill.
 
 ### 10. Optionally Generate a Version-Audit Script
 
@@ -194,7 +196,7 @@ Skip this step if `--no-audit` was passed. Reference: `./references/version-audi
 - **Tag does not resolve to a commit.** Annotated tags resolve via the tag object; lightweight tags resolve directly. If `gh api repos/<r>/git/ref/tags/<t>` returns a `tag` type, recurse through `.object.sha` to find the commit. The `gh api repos/<r>/commits/<tag>` endpoint sidesteps this entirely and is the preferred path.
 - **Action does not support a version-file input.** For action-direct `mlugg/setup-zig`, omit the version input entirely -- the action reads `build.zig.zon`'s `minimum_zig_version` by default. The `cboone/gh-actions/.../run-zig-ci.yml` wrapper (v2.2.0+) exposes a real `zig-version-file: "build.zig.zon"` input. For other languages without a `*-version-file` input, pin inline to the value from the version file rather than dropping pinning entirely.
 - **Ambiguous user-facing vs tool-install distinction.** If the install path looks like a real tool but lives in a scaffolded README under a `Usage:` heading or similar, prompt the user. Default to leaving placeholder-shaped paths unpinned.
-- **Conflicting existing Dependabot config.** If `.github/dependabot.yml` already exists, do not overwrite -- merge: keep user-specific groups and schedules, add only the missing ecosystems and the standard split-group structure for ecosystems that lacked it. Show the diff before writing.
+- **Conflicting existing Dependabot config.** If `.github/dependabot.yml` already exists, do not overwrite -- merge: keep user-specific groups and schedules, add only the missing ecosystems and the standard split-group structure for ecosystems that lacked it. Show the diff before writing. For a full review of an existing config, point the user at the `review-dependabot-config` skill.
 - **Library detected when user expected an app pin.** Surface the library discriminator explicitly ("`Cargo.lock` not committed and crate exposes `[lib]` only -- treating as a library and skipping manifest exact-pinning"). Let the user override per-ecosystem if the heuristic is wrong.
 
 ## Reference Templates
