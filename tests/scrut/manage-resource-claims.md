@@ -177,7 +177,7 @@ refreshed the claim on "logic" for feature/live
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
 >   && claims_tail claim logic --worktree /repo/main --branch main
-resource "logic" is held by feature/live at /repo/wt-live, claimed *; pass --take-over to claim it anyway (glob)
+resource "logic" is held by feature/live at /repo/wt-live, claimed *; pass --take-over /repo/wt-live to claim it anyway (glob)
 [3]
 ```
 
@@ -188,7 +188,7 @@ The claim stays advisory: a user who has been asked and said yes needs a way thr
 ```scrut
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
->   && claims claim logic --worktree /repo/main --branch main --take-over \
+>   && claims claim logic --worktree /repo/main --branch main --take-over /repo/wt-live \
 >   && claims list | wc -l | tr -d ' '
 claimed "logic" for main, taking it over from feature/live
 1
@@ -651,4 +651,24 @@ $ setup_claims \
 >   && printf '{"version":1,"claims":[{"resource":"a","worktree":"/a\\n/b","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
 manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a number when present (glob)
+```
+
+## --take-over naming a holder that no longer holds it is refused
+
+Approval is about a particular holder. If a third worktree takes the resource between the check and the write, consent to displace the first says nothing about displacing it, and a boolean flag could not tell the two apart.
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
+>   && claims_tail claim logic --worktree /repo/main --branch main --take-over /repo/somewhere-else
+resource "logic" is held by feature/live at /repo/wt-live, claimed *; --take-over named /repo/somewhere-else, which no longer holds it, so nothing was changed (glob)
+[3]
+```
+
+## --take-over requires the holder path
+
+```scrut
+$ setup_claims && claims_tail claim logic --worktree /repo/main --branch main --take-over
+manage-resource-claims: --take-over requires the worktree path of the holder being displaced
+[1]
 ```

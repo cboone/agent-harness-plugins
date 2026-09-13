@@ -36,16 +36,19 @@ function usage() {
 Usage: manage-resource-claims <subcommand> [options]
 
 Record and report the exclusive resources held by git worktrees, so work that
-cannot run in parallel is visible instead of remembered. Claims are advisory:
-nothing here refuses a conflicting claim, it only reports one.
+cannot run in parallel is visible instead of remembered. A claim is advisory
+about the resource: nothing here stops anyone using a DAW or a port. It is not
+advisory about the file, so claim refuses a resource another worktree still
+holds, and --take-over names the holder the user agreed to displace.
 
 Subcommands:
   list [--json]              Print every claim, one "key=value" line each
   check <resource>           Report the holder of <resource>, if any
   claim <resource> --worktree <path> --branch <name> [--issue <number>]
+        [--take-over <holder-path>]
                              Record a claim on <resource>. Refuses with exit 3
                              when another worktree holds it, unless
-                             --take-over is given
+                             --take-over names that exact holder
   release <resource>         Remove the claim on <resource>
   release --worktree <path>  Remove every claim held by <path>
   prune                      Drop claims whose worktree no longer exists
@@ -192,9 +195,17 @@ function release_lock() {
 #
 # The age check remains as a fallback for the one window where no owner can be
 # read: between mkdir creating the directory and the owner file landing in it.
+function lock_is_older_than() {
+  local lock="${1}"
+
+  [[ -n "$(find "${lock}" -maxdepth 0 -mmin "+${LOCK_STALE_MINUTES}" 2> /dev/null)" ]]
+}
+
 function lock_is_abandoned() {
   local lock="${1}"
   local owner
+
+  [[ -d "${lock}" ]] || return 1
 
   owner="$(< "${lock}/owner")" 2> /dev/null || owner=""
 
@@ -203,7 +214,7 @@ function lock_is_abandoned() {
     return 0
   fi
 
-  [[ -n "$(find "${lock}" -maxdepth 0 -mmin "+${LOCK_STALE_MINUTES}" 2> /dev/null)" ]]
+  lock_is_older_than "${lock}"
 }
 
 # Serializes a whole read-modify-write. Atomic replacement alone stops a reader
@@ -211,6 +222,38 @@ function lock_is_abandoned() {
 # the later write discarding the earlier claim, which is a likely sequence here
 # because parallel worktrees are the case this feature exists for.
 #
+# Removes an abandoned lock, and returns 0 when it is worth retrying mkdir.
+#
+# The check and the removal have to be one step. Two waiters that both saw the
+# same lock as abandoned would otherwise both remove it, and the second would
+# delete the fresh lock the first had just taken, putting both inside the
+# read-modify-write section. So reclamation is itself serialized, and the
+# abandonment test is repeated inside that second lock: by then the lock may
+# belong to a live process that reclaimed it first, and a live owner is never
+# removed.
+#
+# The reclaim lock is held for the length of one stat, so an age check alone is
+# enough to clear it if a process dies mid-reclaim. It guards nothing on its
+# own; the inner re-test is what protects the real lock.
+function reclaim_abandoned_lock() {
+  local lock="${1}"
+  local reclaim="${lock}.reclaim"
+  local reclaimed=1
+
+  if ! mkdir "${reclaim}" 2> /dev/null; then
+    lock_is_older_than "${reclaim}" && rm -rf "${reclaim}"
+    return 1
+  fi
+
+  if lock_is_abandoned "${lock}"; then
+    rm -rf "${lock}"
+    reclaimed=0
+  fi
+
+  rmdir "${reclaim}" 2> /dev/null || true
+  return "${reclaimed}"
+}
+
 # This serializes access to the file; it does not make the claim an enforced
 # lock on the resource, which stays advisory. mkdir is the portable mutex: it
 # is atomic everywhere this runs, and flock is absent on macOS. A lock whose
@@ -225,10 +268,7 @@ function acquire_lock() {
   mkdir -p "${directory}" || die "cannot create ${directory}"
 
   while ! mkdir "${lock}" 2> /dev/null; do
-    if lock_is_abandoned "${lock}"; then
-      rm -rf "${lock}"
-      continue
-    fi
+    reclaim_abandoned_lock "${lock}" && continue
 
     if ((waited >= LOCK_WAIT_SECONDS)); then
       die "another claim operation is holding ${lock}; remove it if nothing is in progress"
@@ -354,6 +394,17 @@ function holder_is_live_and_foreign() {
     '(.stale | not) and (.worktree != $worktree)' > /dev/null 2>&1 <<< "${existing}"
 }
 
+# True when the holder is the one the caller was approved to displace. An empty
+# approval matches nothing, so no approval is never mistaken for blanket consent.
+function holder_matches() {
+  local existing="${1}"
+  local approved="${2}"
+
+  [[ -n "${approved}" ]] || return 1
+
+  jq -e --arg approved "${approved}" '.worktree == $approved' > /dev/null 2>&1 <<< "${existing}"
+}
+
 function claim_for_resource() {
   local decorated="${1}"
   local resource="${2}"
@@ -461,7 +512,7 @@ function report_claim_outcome() {
 # separate operation, so its answer can be out of date by the time this writes.
 # Keep the refusal inside the lock if this is ever restructured.
 function cmd_claim() {
-  local resource worktree="" branch="" issue="" take_over="no"
+  local resource worktree="" branch="" issue="" take_over=""
   local file claims decorated existing now updated
 
   resource="${1:-}"
@@ -497,8 +548,11 @@ function cmd_claim() {
         shift 2
         ;;
       --take-over)
-        take_over="yes"
-        shift
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          die "--take-over requires the worktree path of the holder being displaced"
+        fi
+        take_over="${2}"
+        shift 2
         ;;
       *)
         usage >&2
@@ -529,12 +583,18 @@ function cmd_claim() {
   # check and claim are separate operations, so a resource that was free when
   # the caller checked can be held by the time it writes. Refusing a live
   # holder here, under the lock, is what makes the answer the caller acted on
-  # still true at the moment of the write. --take-over is how a user who has
-  # been asked and said yes gets through, which keeps the claim advisory
-  # without letting a takeover happen that nobody saw.
-  if [[ "${take_over}" == "no" ]] && holder_is_live_and_foreign "${existing}" "${worktree}"; then
-    jq -r --arg resource "${resource}" \
-      '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at); pass --take-over to claim it anyway"' <<< "${existing}"
+  # still true at the moment of the write.
+  #
+  # --take-over carries the worktree the user agreed to displace rather than a
+  # bare yes. Approval is about a particular holder: if a third worktree took
+  # the resource in the meantime, consent to displace the first says nothing
+  # about displacing it, and a boolean flag could not tell the two apart.
+  if holder_is_live_and_foreign "${existing}" "${worktree}" \
+    && ! holder_matches "${existing}" "${take_over}"; then
+    jq -r --arg resource "${resource}" --arg approved "${take_over}" \
+      '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at)"
+       + (if $approved == "" then "; pass --take-over \(.worktree) to claim it anyway"
+          else "; --take-over named \($approved), which no longer holds it, so nothing was changed" end)' <<< "${existing}"
     exit "${E_HELD}"
   fi
 
