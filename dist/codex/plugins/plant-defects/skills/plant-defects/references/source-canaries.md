@@ -39,9 +39,20 @@ Each call site does the embedding itself, because the path resolves relative to 
 
 **The fallback widens the scope.** The `orelse` cannot tell an intentionally banner-less file from one whose banner was renamed or removed. Where the tests are co-located, the second case silently includes the test section, so the assertions begin reading the canary's own string literals and can report on the canary text rather than on the implementation.
 
-**A first occurrence earlier than the banner narrows it, which is the worse direction.** `indexOf` returns the first match, not the banner, so an implementation that happens to contain that byte sequence in a string literal or a comment cuts the source there. Everything after it goes unchecked, and every assertion over the truncated text still passes: a false pass that looks exactly like a healthy canary.
+**A first occurrence earlier than the banner narrows it, and that direction is the dangerous one.** `indexOf` returns the first match, not the banner, so an implementation that happens to contain that byte sequence in a string literal or a comment cuts the source there, and everything after the cut is no longer being read.
 
-**Presence is not the control; exactly once is.** Asserting the marker appears at least once catches the renamed banner and misses the early duplicate entirely, so assert the count is exactly one before slicing, and pick a marker unlikely to occur in ordinary code. Then both readings fail loudly instead of quietly changing what is being measured.
+Be exact about how that shows up, because it is not uniform. A presence assertion for a statement **after** the cut fails loudly, which is the harmless case. The dangerous case is the one where it does not: every pinned statement happens to sit **before** the cut, so all of them still pass, while the region after it is silently unguarded and any weakening introduced there goes unseen. An absence assertion is worse still, since `mentions(...) == 0` over truncated text passes for the reason the file exists to refuse.
+
+**Presence is not the control; a pinned count is.** Asserting the marker appears at least once catches the renamed banner and misses the early duplicate entirely, because one occurrence in the wrong place satisfies it.
+
+The count to assert depends on which regime the file is in, and the file has to say which, since the two are indistinguishable from the text alone:
+
+| Regime                     | Assert                 | What it catches                                         |
+| -------------------------- | ---------------------- | ------------------------------------------------------- |
+| Tests co-located below it  | Exactly **one** marker | A renamed banner, and an accidental earlier occurrence  |
+| Tests live in another file | Exactly **zero**       | A banner arriving later and silently cutting the source |
+
+Either way the count is pinned rather than merely non-zero, so both readings fail loudly instead of quietly changing what is being measured. Pick a marker unlikely to occur in ordinary code, which makes both assertions cheap to keep true.
 
 ## Three primitives, and why all three
 
@@ -143,10 +154,10 @@ Note what the first row establishes: the plant the issue asked for could not be 
 
 **Controls that must stay green.** These are what prove the two matching properties are live:
 
-| Control                                                              | Result                                   |
-| -------------------------------------------------------------------- | ---------------------------------------- |
-| A statement re-indented into a conditional block, no semantic change | Green. The indentation flaw is gone      |
-| A doc comment naming the pinned identifier, added above the banner   | Green. The comment-counting flaw is gone |
+| Control                                                            | Result                                   |
+| ------------------------------------------------------------------ | ---------------------------------------- |
+| A whole block re-indented by a formatter, no statement moved       | Green. The indentation flaw is gone      |
+| A doc comment naming the pinned identifier, added above the banner | Green. The comment-counting flaw is gone |
 
 And commit the canary before planting against it, so reverting the plant reverts the plant and not the check.
 

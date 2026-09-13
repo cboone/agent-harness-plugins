@@ -6,7 +6,7 @@ A check that runs on nothing tends to pass, and when it does it is indistinguish
 
 ## The catalogue
 
-Every entry in this catalogue is a measured instance rather than a hypothetical: each one was observed passing over nothing in a real run. The toolchain table at the end of the file is different in kind, and says so there: those rows generalize the same shapes to runners the source programs never used, so treat them as leads to check rather than as findings.
+Every entry in this catalogue is a measured instance rather than a hypothetical: each one was observed passing when it should not have. Note that "runs on nothing" is the commonest shape and not the only one collected here: a snapshot accepted by wildcards runs on real output and discriminates nothing, and an assertion compiled out never runs at all. What the entries share is a green result that carries no information. The toolchain table at the end of the file is different in kind, and says so there: those rows generalize the same shapes to runners the source programs never used, so treat them as leads to check rather than as findings.
 
 ### The instrument read zero files
 
@@ -24,7 +24,7 @@ The same branch produced the same failure shape twice. A spell checker needed `e
 
 ### A delegated check the instrument skips when its dependency is absent
 
-A workflow linter delegates shell checking inside `run:` blocks to an external shell linter. With that linter absent from `PATH`, it skips every `run:` block **and exits 0**. A planted quoting violation exits 1 with the dependency present and 0 without, and pointing the tool at a nonexistent path behaves like the latter.
+A workflow linter delegates shell checking inside `run:` blocks to an external shell linter. With that linter absent from `PATH`, it skips every `run:` block **and exits 0**. A planted quoting violation exits 1 with the dependency present and 0 without, and pointing its `-shellcheck` flag at a nonexistent executable behaves the same way as the absent dependency. Note which path that is: an unreadable **input** file is an ordinary read error rather than this fail-open, so do not treat a malformed invocation as evidence that the delegated check was skipped.
 
 The same tool resolves local action references through the git project root, so run outside a checkout it skips every local-action check in the same silence and exits 0. A first attempt at measuring its coverage produced three false negatives for exactly that reason.
 
@@ -43,7 +43,7 @@ Every ordering comparison against a not-a-number value is false, and so is `==` 
 | `if error > tolerance: fail` | Does not fire. **Passes.** |
 | `assert error <= tolerance`  | Is false. Correctly fails. |
 
-So this is not a hazard of floating-point bounds in general. It is a hazard of expressing a bound as a **failure condition**, which is the natural way to write one in a shell script, a CI gate, or any check that reports rather than asserts. The assertion form is safe here by construction, which is a reason to prefer it where the language offers both.
+So this is not a hazard of floating-point bounds in general. It is a hazard of expressing a bound as a **failure condition**, which is the natural way to write one in a shell script, a CI gate, or any check that reports rather than asserts. The assertion form is safe **against this hazard** by construction, which is a reason to prefer it where the language offers both, with one caveat the next section covers: where the toolchain compiles assertions out of the shipped build, the assertion form is not a bound check in the artifact users receive. Prefer it while assertions are enabled in the mode that ships, and keep an explicit check where they are not.
 
 **Control:** assert the value is a number, or assert the denominator, before comparing it. Where the check must stay in failure-condition form, add the not-a-number case as its own arm rather than relying on the comparison to catch it.
 
@@ -113,16 +113,16 @@ Ask of each assertion: which trivial implementation passes it? `return true`, `r
 
 ## Instances by toolchain
 
-| Toolchain              | The vacuous pass                                                                          |
-| ---------------------- | ----------------------------------------------------------------------------------------- |
-| pytest                 | Exit 5 on `collected 0 items`, normalized to success by a wrapper or a `\|\| true`        |
-| Jest or Vitest         | `--passWithNoTests` over a pattern matching no file; a suite with every case skipped      |
-| Go                     | `no test files` per package, and a package excluded from a build tag the suite never sets |
-| Cargo                  | A test target with no tests, or a `#[cfg(feature)]` test the CI feature set never enables |
-| Swift                  | A test plan that excludes the target; `#if DEBUG` assertions absent from a release run    |
-| Markdown or prose lint | A config whose `ignore` list has grown to cover the files being changed                   |
-| Coverage tools         | A report over a binary that does not contain the code, which shows as absent, not as 0%   |
-| Any containerized job  | A mounted path that is empty, so the tool runs correctly over nothing                     |
+| Toolchain              | The vacuous pass                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| pytest                 | Exit 5 on `collected 0 items`, normalized to success by a wrapper or a `&#124;&#124; true` |
+| Jest or Vitest         | `--passWithNoTests` over a pattern matching no file; a suite with every case skipped       |
+| Go                     | `no test files` per package, and a package excluded from a build tag the suite never sets  |
+| Cargo                  | A test target with no tests, or a `#[cfg(feature)]` test the CI feature set never enables  |
+| Swift                  | A test plan that excludes the target; `#if DEBUG` assertions absent from a release run     |
+| Markdown or prose lint | A config whose `ignore` list has grown to cover the files being changed                    |
+| Coverage tools         | A report over a binary that does not contain the code, which shows as absent, not as 0%    |
+| Any containerized job  | A mounted path that is empty, so the tool runs correctly over nothing                      |
 
 The last one generalizes: any indirection between the instrument and the files it is meant to read is a place where the set can become empty without the instrument noticing.
 
