@@ -61,14 +61,16 @@ Reads the bundle on stdin and emits a compact JSON document with no bodies:
 
 ```json
 {
-  "repo": "", "defaultBranch": "", "isArchived": false, "count": 0,
-  "limitReached": false, "alertsAvailable": true, "unmatchedAlerts": [],
+  "repo": "", "defaultBranch": "", "isArchived": false, "fetchedAt": "", "count": 0,
+  "limit": 200, "limitReached": false, "alertsAvailable": true, "alertsReason": null,
+  "unmatchedAlerts": [{ "package": "", "manifest": "", "count": 0, "highestSeverity": "", "patched": [], "numbers": [] }],
   "prs": [{
     "number": 0, "title": "", "url": "", "branch": "", "base": "", "baseIsDefault": true,
-    "ecosystem": "github_actions", "kind": "security|version", "shape": "single|group|multi",
+    "ecosystem": "github_actions", "kind": "security|version|unknown", "shape": "single|group|multi",
     "group": null,
-    "updates": [{ "name": "", "from": "", "to": "", "type": "major|minor|patch|digest|unknown" }],
-    "branchAgrees": true, "commandsFooter": true, "rebasesDisabled": false, "draft": false,
+    "updates": [{ "name": "", "from": "", "to": "", "type": "major|minor|patch|digest|unknown", "semverBreaking": true }],
+    "updatesExpected": null, "branchAgrees": true, "commandsFooter": true, "bodyTruncated": false,
+    "rebasesDisabled": false, "draft": false, "labels": [],
     "ageDays": 0, "updatedDaysAgo": 0,
     "mergeable": "", "mergeStateStatus": "", "reviewDecision": "", "autoMerge": false,
     "checks": { "total": 0, "success": 0, "failure": 0, "pending": 0, "skipped": 0, "neutral": 0, "failing": [], "newestCompletedAt": null },
@@ -83,7 +85,7 @@ Reads the bundle on stdin and emits a compact JSON document with no bodies:
 Parsing rules, each covered by a test:
 
 - **`ecosystem`**: the second segment of `dependabot/<ecosystem>/...`.
-- **`kind`**: `security` when the body contains `disable automated security fix PRs`; otherwise `version`.
+- **`kind`**: `security` when the body contains `disable automated security fix PRs`, `version` when it has the commands footer without that line, and `unknown` when the footer is gone. A rebase can rewrite the body without its footer (observed on a live PR during implementation), so an absent footer is never evidence of a version update.
 - **`shape`**:
   - `group` when the title matches `the <name> group` (the name goes into `group`)
   - `multi` when the last branch segment is `multi-<10 hex>`
@@ -98,19 +100,20 @@ Parsing rules, each covered by a test:
 - **`type`**:
   - strip a leading `v` from both versions
   - `digest` when both values are hex SHAs
-  - `major` when the major versions differ, or when both are `0.x` and the minors differ (SemVer pre-1.0 rule)
-  - otherwise `minor` or `patch`
-  - `unknown` when the versions do not parse
+  - otherwise the position that changed: `major`, `minor`, or `patch`
+  - `unknown` when the versions do not parse, or only a suffix changed
+- **`semverBreaking`**: true for a major, a 0.x minor, or a 0.0.x patch; null for digests and unparseable versions. Reported beside `type` rather than folded into it, because some ecosystems (Go x/ modules, for one) ship stable 0.x releases and a folded `major` would over-flag them.
+- **`updatesExpected`**: the count a grouped title announces (`with N updates`). A parsed list shorter than it means the body was truncated.
 - **`branchAgrees`**: `false` when the version suffix on a single-dependency branch differs from the title's target version. A title updated in place leaves a stale branch name, so the diff is the truth.
-- **`commandsFooter`**: `false` when `You can trigger Dependabot actions` is missing or the body contains `_Description has been truncated_`.
+- **`commandsFooter`** and **`bodyTruncated`**: whether `You can trigger Dependabot actions` survived, and whether the body contains `_Description has been truncated_`.
 - **`rebasesDisabled`**: the body contains `Automatic rebases have been disabled`.
 - **`checks`**: CheckRun entries map through `status` and `conclusion`. `FAILURE`, `TIMED_OUT`, `CANCELLED`, `ACTION_REQUIRED` and `STARTUP_FAILURE` count as failures. StatusContext entries map through `state`.
 - **`overlaps`**: other open PRs, of any author, whose file paths intersect this PR's.
-- **`alerts`**: open alerts whose package name matches an update name and whose manifest path is in `files` or shares a directory with one. Alerts that match no PR go to `unmatchedAlerts`, which are alerts with no fix path.
+- **`alerts`**: open alerts whose package name matches an update name and whose manifest path is in `files` or shares a directory with one. Alerts that match no PR go to `unmatchedAlerts`, grouped by package and manifest with a count and the highest severity, since a repository can carry dozens of alerts for a handful of packages.
 
 ### Errors
 
-Unknown subcommand, malformed JSON, or a missing required field exits 1 with a message on stderr. `--help` prints usage.
+Unknown subcommand, malformed JSON, or a missing required field exits 1 with a message on stderr. `--help` prints usage. `fetch` validates its arguments before checking for `gh`, so usage errors are testable without credentials.
 
 ## 2. Plugin: `triage-dependabot-prs` (1.0.0)
 
@@ -454,9 +457,7 @@ Write cross-references as ``the `name` skill`` or `` `/name` `` so `bin/check-cr
 Conventional Commits, GPG-signed, via the `commit` skill:
 
 1. `docs: plan Dependabot triage and config review skills`
-1. `feat: add dependabot-prs script with scrut coverage`
-1. `feat: add triage-dependabot-prs skill`
-1. `feat: add review-dependabot-config skill`
+1. `feat: add triage-dependabot-prs and review-dependabot-config skills`, together with the script and its scrut coverage. The two skills name each other as skills, which `bin/check-cross-references` resolves, and the script lives inside the triage plugin, which rule 1 requires to have a manifest, so no smaller split validates on its own.
 1. `feat: handle Dependabot PRs in monitor-pr`
 1. `feat: detect Dependabot config gaps in refresh-project-scaffolding` (`Closes #388`)
 1. `feat: add Dependabot config to bootstrap-project` (`Closes #389`)
