@@ -58,6 +58,10 @@ gh api user -q .login
 git config user.name
 ```
 
+**Every `git config` read in this step resolves against the current directory**, and this step runs before step 3 has chosen the target. Invoked from inside some other repository, these read that repository's local config, which may not be what the scaffolded project will commit with. `gh api user` is account-level and unaffected.
+
+So treat the values here as provisional: good enough to fill `COPYRIGHT-HOLDER`, not good enough to conclude anything about whether step 23 can commit. Step 4 re-reads them in the target, which is the only place the answer is authoritative.
+
 If either command fails or produces no output, ask the user to provide the value. Use the GitHub username wherever templates reference `GITHUB-USERNAME` and the full name wherever they reference `COPYRIGHT-HOLDER`.
 
 `git config user.name` is read here as template input, which is not the same as git being configured to commit. Step 23 makes a GPG-signed commit, and that needs `user.email` and a signing key as well:
@@ -75,7 +79,7 @@ Read the signing pair together rather than accepting either one alone. `gpg.form
 - **`gpg.format` is `ssh`**: `user.signingkey` is required. Unset means signing will fail.
 - **`gpg.format` is unset or `openpgp`**: `user.signingkey` is optional, because GnuPG can select a key from the committer identity. Unset is not conclusive either way.
 
-Report what is missing in the first case, and in the second say only that signing could not be confirmed ahead of time.
+Report what is missing in the first case, and in the second say only that signing could not be confirmed ahead of time. Confirm all of it again in step 4, once the target exists, before treating any of it as settled.
 
 ### 3. Verify the Target Directory
 
@@ -110,6 +114,19 @@ Skip if already inside a git repository.
 ```bash
 git init
 ```
+
+Now re-read the committer identity, this time from inside the target, because only here does its own local config apply. Step 2's values came from wherever the skill was invoked:
+
+```bash
+git -C <target> config user.name
+git -C <target> config user.email
+git -C <target> config gpg.format
+git -C <target> config user.signingkey
+```
+
+Judge them by step 2's rules, and let these answers win where they differ. If `user.name` differs from the value already used for `COPYRIGHT-HOLDER`, point that out rather than silently rewriting the LICENSE: the committer and the copyright holder are allowed to differ, and which one the user wants in the LICENSE is theirs to say.
+
+If `user.name` or `user.email` is unset here, stop before generating anything. Step 23 cannot commit without them, and stopping now costs nothing.
 
 ### 5. Detect the Zig Toolchain
 
@@ -313,7 +330,7 @@ If `.github/copilot-instructions.md` exists (created by the scaffold-new-repo sk
 
 To locate the PR review section: look for an existing heading whose text includes "PR Review" or "Code Review" (e.g., `## PR Review`, `## Code Review`, `## PR Review Checklist (CRITICAL)`). If no matching heading exists, append a new `## PR Review` section at the end of the file and place the entries there.
 
-- **The fingerprint is compiler-generated**: `.fingerprint` in `build.zig.zon` was emitted by Zig for this package and is half of its globally unique identity. Do not suggest changing, regenerating, or copying it from another project.
+- **The fingerprint is compiler-generated**: `.fingerprint` in `build.zig.zon` was emitted by Zig for this package and is half of its globally unique identity, paired with `.name`. Do not suggest copying one from another project, editing it by hand, or changing it while the package name stays the same. Regenerating it is correct in exactly one case: the package identity itself changes, as when the project is forked or `.name` is changed. Then delete the field and let `zig build` emit a new value, and use the value the compiler reports rather than any other.
 - **`minimum_zig_version` is the only Zig version pin**: CI resolves the toolchain by reading `build.zig.zon`. Do not suggest restating the version in a workflow file.
 - **Tests must not write to stdout**: `zig build test` runs the test binary with stdout wired to the build runner's IPC channel. Suggest writing into a buffer, as `src/root.zig` does, rather than printing.
 
