@@ -465,19 +465,37 @@ launch-workmux: workmux returned a branch name starting with a hyphen: --base
 [1]
 ```
 
-## Create worktree launcher drops an issue number the generator repeated mid-name
+## Create worktree launcher drops an explicit issue marker from mid-name
 
 The prompt says "Work on issue #N", so the generator often works the number into
-the middle of the name. A trailing `-N` is left alone, since it can belong to
-the name itself.
+the middle of the name. An explicit `issue-N` marker there is unambiguous.
 
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="fix/login-42-timeout" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="fix/login-issue-42-timeout" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 42
 Generated branch name: fix/42-login-timeout
 workmux add
 branch: fix/42-login-timeout
+open-if-exists: true
+prompt:
+Body
+prompt-file-exists: yes
+```
+
+## Create worktree launcher keeps a bare number in the middle of the name
+
+A bare `-N-` is not necessarily the issue reference. Removing it from
+`python-3-support` for issue 3 would leave `python-support`, so it stays even
+though the number then appears twice.
+
+```scrut
+$ prepare_stubs \
+>   && printf '%s\n' 'Body' \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="feature/python-3-support" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 3
+Generated branch name: feature/3-python-3-support
+workmux add
+branch: feature/3-python-3-support
 open-if-exists: true
 prompt:
 Body

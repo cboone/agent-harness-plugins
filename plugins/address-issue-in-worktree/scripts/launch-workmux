@@ -374,11 +374,15 @@ function strip_issue_number() {
   # the name itself, as in "migrate-to-python-3" for issue 3.
   slug="${slug%"-issue-${issue}"}"
 
-  # The prompt says "Work on issue #N", so the generator often works the number
-  # into the middle of the name too. An interior "-N-" is always the issue
-  # reference, unlike a trailing "-N", and repeating it reads as a mistake.
-  while [[ "${slug}" == *-"${issue}"-* ]]; do
-    slug="${slug/-"${issue}"-/-}"
+  # Only an explicit "issue-N" marker is dropped from the middle of the name. A
+  # bare interior "-N-" carries meaning often enough that removing it loses
+  # more than it saves: "python-3-support" for issue 3 would become
+  # "python-support". The cost of leaving it is the number appearing twice.
+  while [[ "${slug}" == *-"issue-${issue}"-* ]]; do
+    slug="${slug/-"issue-${issue}"-/-}"
+  done
+  while [[ "${slug}" == *-"issue${issue}"-* ]]; do
+    slug="${slug/-"issue${issue}"-/-}"
   done
 
   printf '%s' "${slug}"
