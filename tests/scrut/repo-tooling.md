@@ -91,9 +91,10 @@ corrupted=0 scanned_enough=yes
 ## The duplicated worktree scripts stay byte-identical
 
 `create-worktree` and `address-issue-in-worktree` ship the same
-`compose-issue-prompt` and `launch-workmux`. Rule 18 of `bin/validate-plugins`
-requires every `${CLAUDE_PLUGIN_ROOT}/scripts/NAME` reference to resolve inside
-its own plugin, so the two plugins cannot share one copy.
+`compose-issue-prompt`, `launch-workmux` and `manage-resource-claims`. Rule 18
+of `bin/validate-plugins` requires every `${CLAUDE_PLUGIN_ROOT}/scripts/NAME`
+reference to resolve inside its own plugin, so the two plugins cannot share one
+copy.
 
 The copies drifted once before: one grew `--base` support while the other grew
 Codex-pane prompt resending, and neither gained the other's feature. These
@@ -106,5 +107,10 @@ identical
 
 ```scrut
 $ cd "${REPO_ROOT}" && cmp plugins/create-worktree/scripts/launch-workmux plugins/address-issue-in-worktree/scripts/launch-workmux && echo identical
+identical
+```
+
+```scrut
+$ cd "${REPO_ROOT}" && cmp plugins/create-worktree/scripts/manage-resource-claims plugins/address-issue-in-worktree/scripts/manage-resource-claims && echo identical
 identical
 ```

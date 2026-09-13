@@ -1,0 +1,486 @@
+#!/usr/bin/env bash
+# manage-resource-claims -- Record and report the exclusive resources held by git worktrees.
+#
+# Every jq program below is a single-quoted filter, and the $names inside them
+# are jq variables bound with --arg or --argjson, not shell expansions. SC2016
+# flags that shape at every one of them, so it is disabled here once rather
+# than at each site.
+# shellcheck disable=SC2016
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+CLAIM_FILE_NAME=".claude/worktree-resources.local.json"
+readonly CLAIM_FILE_NAME
+
+SCHEMA_VERSION=1
+readonly SCHEMA_VERSION
+
+# check reports a held resource with its own exit code so a caller can branch
+# on the outcome without parsing the message.
+E_HELD=3
+readonly E_HELD
+
+function usage() {
+  cat << 'USAGE_TEXT'
+Usage: manage-resource-claims <subcommand> [options]
+
+Record and report the exclusive resources held by git worktrees, so work that
+cannot run in parallel is visible instead of remembered. Claims are advisory:
+nothing here refuses a conflicting claim, it only reports one.
+
+Subcommands:
+  list [--json]              Print every claim, one "key=value" line each
+  check <resource>           Report the holder of <resource>, if any
+  claim <resource> --worktree <path> --branch <name> [--issue <number>]
+                             Record a claim on <resource>
+  release <resource>         Remove the claim on <resource>
+  release --worktree <path>  Remove every claim held by <path>
+  prune                      Drop claims whose worktree no longer exists
+  -h, --help                 Show this help
+
+A claim is stale when git no longer lists its worktree. Stale claims are
+flagged by list, reported as free by check, replaced by claim, and removed by
+prune, so a worktree that has been removed never blocks a resource forever.
+
+Claims live in the main worktree's .claude/worktree-resources.local.json, which
+every worktree in the repository resolves to the same path. Set
+WORKTREE_RESOURCES_FILE to read and write somewhere else.
+
+Exit codes:
+  0  Success, including a resource that is free
+  1  Usage or environment error
+  3  check found the resource held
+USAGE_TEXT
+}
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+# Prints the main worktree's absolute path. The first record of
+# `git worktree list --porcelain` is always the main worktree, which is what
+# makes one shared claim file reachable from every linked worktree.
+function main_worktree_path() {
+  local porcelain first
+
+  porcelain="$(git worktree list --porcelain 2> /dev/null)" || return 1
+  first="$(printf '%s\n' "${porcelain}" | sed -n '1s|^worktree ||p')"
+  [[ -n "${first}" ]] || return 1
+
+  printf '%s' "${first}"
+}
+
+function claim_file_path() {
+  local main_worktree
+
+  if [[ -n "${WORKTREE_RESOURCES_FILE:-}" ]]; then
+    printf '%s' "${WORKTREE_RESOURCES_FILE}"
+    return
+  fi
+
+  main_worktree="$(main_worktree_path)" \
+    || die "not inside a git repository; set WORKTREE_RESOURCES_FILE to override"
+
+  printf '%s/%s' "${main_worktree}" "${CLAIM_FILE_NAME}"
+}
+
+# Prints one absolute worktree path per line. Returns 1 when git cannot answer,
+# which leaves staleness undetermined rather than reporting every claim stale.
+function live_worktrees() {
+  local porcelain
+
+  porcelain="$(git worktree list --porcelain 2> /dev/null)" || return 1
+  [[ -n "${porcelain}" ]] || return 1
+
+  printf '%s\n' "${porcelain}" | sed -n 's|^worktree ||p'
+}
+
+# A missing or empty file means no claims, which is the ordinary state and not
+# an error. A file that parses as something else is an error: silently resetting
+# a file the user may have hand-edited loses more than it saves.
+function read_claims() {
+  local file="${1}"
+  local document
+
+  if [[ ! -e "${file}" ]]; then
+    printf '[]'
+    return
+  fi
+
+  document="$(< "${file}")"
+
+  if [[ -z "${document//[[:space:]]/}" ]]; then
+    printf '[]'
+    return
+  fi
+
+  if ! jq empty > /dev/null 2>&1 <<< "${document}"; then
+    die "${file} is not valid JSON; fix or remove it"
+  fi
+
+  if ! jq -e '(type == "object") and ((.claims | type) == "array")' > /dev/null 2>&1 <<< "${document}"; then
+    die "${file} is not a claim file; expected an object with a \"claims\" array"
+  fi
+
+  jq -c '.claims' <<< "${document}"
+}
+
+# Replaces the file in one step so a reader never sees a half-written document.
+# Two worktrees claiming at the same instant can still race; the claim is
+# advisory by design, and a lock would contradict that.
+function write_claims() {
+  local file="${1}"
+  local claims="${2}"
+  local directory temp_file
+
+  directory="$(dirname "${file}")"
+  mkdir -p "${directory}" || die "cannot create ${directory}"
+
+  temp_file="$(mktemp "${file}.XXXXXX")" || die "cannot write next to ${file}"
+
+  if ! jq -n --argjson claims "${claims}" --argjson version "${SCHEMA_VERSION}" \
+    '{version: $version, claims: ($claims | map(del(.stale)))}' > "${temp_file}"; then
+    rm -f "${temp_file}"
+    die "cannot serialize claims"
+  fi
+
+  if ! mv "${temp_file}" "${file}"; then
+    rm -f "${temp_file}"
+    die "cannot replace ${file}"
+  fi
+}
+
+# Adds a derived "stale" boolean to each claim. Staleness is never stored, so a
+# claim cannot outlive the worktree that made it and nothing has to hook
+# worktree removal, which this script's callers do not perform.
+function decorate_claims() {
+  local claims="${1}"
+  local live_known="no"
+  local live_paths=""
+
+  if live_paths="$(live_worktrees)"; then
+    live_known="yes"
+  fi
+
+  jq -c --arg live_known "${live_known}" --arg live_paths "${live_paths}" '
+    ($live_paths | split("\n") | map(select(length > 0))) as $live
+    | map(
+        .worktree as $worktree
+        | . + {stale: ($live_known == "yes" and (($live | index($worktree)) == null))}
+      )
+  ' <<< "${claims}"
+}
+
+# One "key=value" line per claim. worktree= comes last because a path may
+# contain spaces, and trailing it keeps every earlier field parseable.
+function format_claims() {
+  local decorated="${1}"
+
+  jq -r '
+    .[]
+    | ["resource=\(.resource)", "state=\(if .stale then "stale" else "held" end)", "branch=\(.branch)"]
+      + (if (.issue // null) == null then [] else ["issue=\(.issue)"] end)
+      + ["claimed=\(.claimed_at)", "worktree=\(.worktree)"]
+    | join(" ")
+  ' <<< "${decorated}"
+}
+
+function claim_for_resource() {
+  local decorated="${1}"
+  local resource="${2}"
+
+  jq -c --arg resource "${resource}" \
+    'map(select(.resource == $resource)) | first // empty' <<< "${decorated}"
+}
+
+function cmd_list() {
+  local emit_json="no"
+  local file claims decorated
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --json)
+        emit_json="yes"
+        shift
+        ;;
+      *)
+        usage >&2
+        die "unexpected argument: ${1}"
+        ;;
+    esac
+  done
+
+  file="$(claim_file_path)"
+  claims="$(read_claims "${file}")"
+  decorated="$(decorate_claims "${claims}")"
+
+  if [[ "${emit_json}" == "yes" ]]; then
+    jq '.' <<< "${decorated}"
+    return
+  fi
+
+  format_claims "${decorated}"
+}
+
+function cmd_check() {
+  local resource="${1:-}"
+  local file claims decorated match state
+
+  if [[ -z "${resource}" ]]; then
+    usage >&2
+    die "check requires a resource name"
+  fi
+
+  shift
+
+  if [[ $# -gt 0 ]]; then
+    usage >&2
+    die "unexpected argument: ${1}"
+  fi
+
+  file="$(claim_file_path)"
+  claims="$(read_claims "${file}")"
+  decorated="$(decorate_claims "${claims}")"
+  match="$(claim_for_resource "${decorated}" "${resource}")"
+
+  if [[ -z "${match}" ]]; then
+    return 0
+  fi
+
+  state="$(jq -r 'if .stale then "stale" else "held" end' <<< "${match}")"
+
+  if [[ "${state}" == "stale" ]]; then
+    jq -r --arg resource "${resource}" \
+      '"resource \"\($resource)\" has a stale claim from \(.branch) at \(.worktree), claimed \(.claimed_at); that worktree no longer exists"' <<< "${match}"
+    return 0
+  fi
+
+  jq -r --arg resource "${resource}" \
+    '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at)"' <<< "${match}"
+
+  exit "${E_HELD}"
+}
+
+function report_claim_outcome() {
+  local resource="${1}"
+  local branch="${2}"
+  local worktree="${3}"
+  local existing="${4}"
+  local previous_branch previous_worktree previous_state
+
+  if [[ -z "${existing}" ]]; then
+    printf 'claimed "%s" for %s\n' "${resource}" "${branch}"
+    return
+  fi
+
+  previous_branch="$(jq -r '.branch' <<< "${existing}")"
+  previous_worktree="$(jq -r '.worktree' <<< "${existing}")"
+  previous_state="$(jq -r 'if .stale then "stale" else "held" end' <<< "${existing}")"
+
+  if [[ "${previous_worktree}" == "${worktree}" ]]; then
+    printf 'refreshed the claim on "%s" for %s\n' "${resource}" "${branch}"
+  elif [[ "${previous_state}" == "stale" ]]; then
+    printf 'claimed "%s" for %s, clearing a stale claim from %s\n' "${resource}" "${branch}" "${previous_branch}"
+  else
+    printf 'claimed "%s" for %s, taking it over from %s\n' "${resource}" "${branch}" "${previous_branch}"
+  fi
+}
+
+# Records the claim whether or not the resource is already held. The gate lives
+# in check and in the skill that asks the user, so refusing here would leave a
+# user who has decided to override with no way to say so.
+function cmd_claim() {
+  local resource worktree="" branch="" issue=""
+  local file claims decorated existing now updated
+
+  resource="${1:-}"
+
+  if [[ -z "${resource}" || "${resource}" == -* ]]; then
+    usage >&2
+    die "claim requires a resource name"
+  fi
+
+  shift
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --worktree)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          die "--worktree requires a path"
+        fi
+        worktree="${2}"
+        shift 2
+        ;;
+      --branch)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          die "--branch requires a branch name"
+        fi
+        branch="${2}"
+        shift 2
+        ;;
+      --issue)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          die "--issue requires a number"
+        fi
+        issue="${2}"
+        shift 2
+        ;;
+      *)
+        usage >&2
+        die "unexpected argument: ${1}"
+        ;;
+    esac
+  done
+
+  [[ -n "${worktree}" ]] || die "claim requires --worktree"
+  [[ -n "${branch}" ]] || die "claim requires --branch"
+
+  if [[ -n "${issue}" && ! "${issue}" =~ ^[0-9]+$ ]]; then
+    die "--issue must be a number, got: ${issue}"
+  fi
+
+  file="$(claim_file_path)"
+  claims="$(read_claims "${file}")"
+  decorated="$(decorate_claims "${claims}")"
+  existing="$(claim_for_resource "${decorated}" "${resource}")"
+
+  now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  updated="$(jq -c \
+    --arg resource "${resource}" \
+    --arg worktree "${worktree}" \
+    --arg branch "${branch}" \
+    --arg issue "${issue}" \
+    --arg now "${now}" \
+    'map(select(.resource != $resource))
+     + [{resource: $resource, worktree: $worktree, branch: $branch}
+        + (if $issue == "" then {} else {issue: ($issue | tonumber)} end)
+        + {claimed_at: $now}]
+     | sort_by(.resource)' <<< "${decorated}")"
+
+  write_claims "${file}" "${updated}"
+  report_claim_outcome "${resource}" "${branch}" "${worktree}" "${existing}"
+}
+
+function cmd_release() {
+  local resource="" worktree=""
+  local file claims removed updated
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --worktree)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          die "--worktree requires a path"
+        fi
+        worktree="${2}"
+        shift 2
+        ;;
+      -*)
+        usage >&2
+        die "unknown option: ${1}"
+        ;;
+      *)
+        if [[ -n "${resource}" ]]; then
+          usage >&2
+          die "unexpected argument: ${1}"
+        fi
+        resource="${1}"
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "${resource}" && -z "${worktree}" ]]; then
+    usage >&2
+    die "release requires a resource name or --worktree"
+  fi
+
+  if [[ -n "${resource}" && -n "${worktree}" ]]; then
+    usage >&2
+    die "release takes a resource name or --worktree, not both"
+  fi
+
+  file="$(claim_file_path)"
+  claims="$(read_claims "${file}")"
+
+  removed="$(jq -c --arg resource "${resource}" --arg worktree "${worktree}" \
+    'map(select((($resource != "") and .resource == $resource)
+                or (($worktree != "") and .worktree == $worktree)))' <<< "${claims}")"
+
+  if [[ "$(jq -r 'length' <<< "${removed}")" -eq 0 ]]; then
+    printf 'no claim to release\n'
+    return
+  fi
+
+  updated="$(jq -c --arg resource "${resource}" --arg worktree "${worktree}" \
+    'map(select((($resource == "") or .resource != $resource)
+                and (($worktree == "") or .worktree != $worktree)))' <<< "${claims}")"
+
+  write_claims "${file}" "${updated}"
+
+  jq -r '.[] | "released \"\(.resource)\" held by \(.branch)"' <<< "${removed}"
+}
+
+function cmd_prune() {
+  local file claims decorated stale updated
+
+  if [[ $# -gt 0 ]]; then
+    usage >&2
+    die "unexpected argument: ${1}"
+  fi
+
+  live_worktrees > /dev/null \
+    || die "cannot list worktrees; run prune inside a git repository"
+
+  file="$(claim_file_path)"
+  claims="$(read_claims "${file}")"
+  decorated="$(decorate_claims "${claims}")"
+  stale="$(jq -c 'map(select(.stale))' <<< "${decorated}")"
+
+  if [[ "$(jq -r 'length' <<< "${stale}")" -eq 0 ]]; then
+    printf 'no stale claims\n'
+    return
+  fi
+
+  updated="$(jq -c 'map(select(.stale | not))' <<< "${decorated}")"
+  write_claims "${file}" "${updated}"
+
+  jq -r '.[] | "pruned \"\(.resource)\" from \(.branch) at \(.worktree)"' <<< "${stale}"
+}
+
+function main() {
+  local subcommand="${1:-}"
+
+  case "${subcommand}" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    "")
+      usage >&2
+      die "expected a subcommand"
+      ;;
+    *) ;;
+  esac
+
+  shift
+
+  command -v jq > /dev/null || die "jq is required"
+
+  case "${subcommand}" in
+    list) cmd_list "$@" ;;
+    check) cmd_check "$@" ;;
+    claim) cmd_claim "$@" ;;
+    release) cmd_release "$@" ;;
+    prune) cmd_prune "$@" ;;
+    *)
+      usage >&2
+      die "unknown subcommand: ${subcommand}"
+      ;;
+  esac
+}
+
+main "$@"
