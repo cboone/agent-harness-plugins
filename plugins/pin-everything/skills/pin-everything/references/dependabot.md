@@ -63,6 +63,7 @@ Add additional `- package-ecosystem:` blocks for whichever package ecosystems ar
 | Go modules        | `go.mod`                                                  | `gomod`                             |
 | Composer (PHP)    | `composer.json`                                           | `composer`                          |
 | Docker            | `Dockerfile`                                              | `docker`                            |
+| Rust toolchain    | `rust-toolchain.toml` or `rust-toolchain`                 | `rust-toolchain`                    |
 
 The same shape applies -- weekly schedule, split groups, 10-PR cap, `commit-message` prefix.
 
@@ -91,7 +92,7 @@ These four surface families are exactly what the bundled `version-audit-template
 
 ## Conflicting Existing Config
 
-If `.github/dependabot.yml` already exists, do not overwrite. Merge:
+If `.github/dependabot.yml` (or `.github/dependabot.yaml`) already exists, do not overwrite, and do not add a second file beside it. Merge:
 
 1. Read the existing config.
 2. For each ecosystem block already present: keep the user's `schedule`, `directory`, and any `groups` they've defined. If their `open-pull-requests-limit` is below 10, suggest raising it. If `versioning-strategy` is missing for `npm` or `pip` (after step 6 pinning), suggest adding `increase`.

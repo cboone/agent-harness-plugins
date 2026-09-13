@@ -94,7 +94,7 @@ Status values:
 | Not detected     | Tool was never used (run bootstrap-project or the individual skill) |
 | Not applicable   | Tool does not apply to this project type                            |
 
-Items with status "Not detected" and "Not applicable" are informational only and are not actionable in this command.
+Items with status "Not detected" and "Not applicable" are informational only and are not actionable in this command. The one exception is a missing Dependabot config, which step 2 reports as "Needs update" even though no file exists.
 
 ### 5. User Confirmation
 
@@ -110,18 +110,18 @@ If no items need updating (everything is up to date), congratulate the user and 
 
 For each confirmed update item, choose a strategy based on scope:
 
-| Scenario                                           | Strategy                                                                                                 |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Action version outdated                            | **Targeted**: find and replace the version string in the workflow file                                   |
-| Missing config entry (e.g., .gitignore line)       | **Targeted**: add the missing entry to the appropriate section                                           |
-| Missing workflow key (e.g., `timeout-minutes`)     | **Targeted**: add the key to each job in the workflow file                                               |
-| Missing `concurrency:` group                       | **Targeted**: add the concurrency block below the `on:` trigger block                                    |
-| Missing `permissions:` block                       | **Targeted**: add the permissions block at the workflow level                                            |
-| CLAUDE.md is regular file, not symlink             | **Full re-run**: invoke `clean-up-agent-config` to reconcile CLAUDE.md and AGENTS.md                     |
-| Community file outdated (e.g., CoC version)        | **Full re-run**: invoke the `add-community-files` skill via the Skill tool                               |
-| Missing file from a detected tool                  | **Full re-run**: invoke the original skill via the Skill tool                                            |
-| No Dependabot config                               | **Full re-run**: invoke the `pin-everything` skill with `--scope dependabot`                             |
-| Dependabot config misses an ecosystem or directory | **Delegate**: invoke the `review-dependabot-config` skill, which merges the fix into the existing config |
+| Scenario                                                                                                        | Strategy                                                                                                 |
+| --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Action version outdated                                                                                         | **Targeted**: find and replace the version string in the workflow file                                   |
+| Missing config entry (e.g., .gitignore line)                                                                    | **Targeted**: add the missing entry to the appropriate section                                           |
+| Missing workflow key (e.g., `timeout-minutes`)                                                                  | **Targeted**: add the key to each job in the workflow file                                               |
+| Missing `concurrency:` group                                                                                    | **Targeted**: add the concurrency block below the `on:` trigger block                                    |
+| Missing `permissions:` block                                                                                    | **Targeted**: add the permissions block at the workflow level                                            |
+| CLAUDE.md is regular file, not symlink                                                                          | **Full re-run**: invoke `clean-up-agent-config` to reconcile CLAUDE.md and AGENTS.md                     |
+| Community file outdated (e.g., CoC version)                                                                     | **Full re-run**: invoke the `add-community-files` skill via the Skill tool                               |
+| Missing file from a detected tool                                                                               | **Full re-run**: invoke the original skill via the Skill tool                                            |
+| No Dependabot config                                                                                            | **Full re-run**: invoke the `pin-everything` skill with `--scope dependabot`                             |
+| Dependabot config fails a check (a missing ecosystem or directory, no `version: 2`, or both file names present) | **Delegate**: invoke the `review-dependabot-config` skill, which merges the fix into the existing config |
 
 For full tool re-runs, all detected tools are skills. Invoke them via the Skill tool. Relevant skills include `add-community-files`, `set-up-linters`, `set-up-ci`, `set-up-secret-scanning`, `add-goreleaser-homebrew`, `set-up-installers`, `add-scrut-cli-tests`, `scaffold-new-repo`, `pin-everything`, and `optimize-runner-usage`. Dependabot coverage gaps go to `review-dependabot-config` instead of a `pin-everything` re-run, because that skill reviews the existing config and merges into it rather than regenerating it.
 
