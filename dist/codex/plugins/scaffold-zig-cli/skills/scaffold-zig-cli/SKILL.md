@@ -114,7 +114,13 @@ Any output means the repository carries work that is not this scaffold's. Report
 
 ### 4. Initialize Git
 
-Skip if already inside a git repository.
+Skip `git init` only when the **target itself** is the root of a repository:
+
+```bash
+test "$(git rev-parse --show-toplevel 2> /dev/null)" = "$(pwd)"
+```
+
+Being merely _inside_ a repository is not the same thing and must not skip it. Step 3 may have created the target as a subdirectory of wherever the skill was invoked, and if that was a repository, the new directory is inside it while having none of its own. Skipping `git init` there leaves the scaffold with no repository, and step 23's `git add` and signed `git commit` then land in the caller's repository instead. Initialize a nested target like any other:
 
 ```bash
 git init
@@ -122,7 +128,7 @@ git init
 
 **If `git init` failed, stop here.** Skip the rest of this step, including the reads below, which need a repository and would fail too. Carry on to the generation steps, and skip step 23 per the Error Handling entry.
 
-Otherwise re-read the committer identity, this time from inside the target, because only here does its own local config apply. Step 2's values came from wherever the skill was invoked, and step 3 has since changed into the target:
+Otherwise re-read the committer identity, from inside the target, because only here does its own local config apply. Do this **every time**, including when `git init` was skipped: an existing target repository has its own config, and that is the one step 23 commits with. Step 2's values came from wherever the skill was invoked, and step 3 has since changed into the target:
 
 ```bash
 git config user.name
@@ -188,7 +194,7 @@ There is no `PACKAGE-NAME` in this template. `build.zig` registers the library m
 
 Read `./references/typos.md` for the template and create `typos.toml` from it.
 
-- Replace `PROJECT-NAME` with the project name
+- Replace `PACKAGE-NAME` with the underscored package name
 
 ### 11. Generate Makefile
 
