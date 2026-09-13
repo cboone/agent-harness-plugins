@@ -458,19 +458,20 @@ Must include language-specific entries appropriate for the detected project type
 - A config exists whenever the repository has `.github/workflows/` files or a manifest from the table below. Absent: `Needs update`, fixed by `pin-everything --scope dependabot`
 - Only one of the two file names exists
 - `version: 2` is set
-- Every ecosystem present has an `updates` entry, and its manifest directory is covered by `directory` or `directories`:
+- Every ecosystem in the table below that the repository uses has an `updates` entry, and its manifest directory is covered by `directory` or `directories`. The table covers the common ecosystems only; the `review-dependabot-config` skill checks the full set:
 
-| Found                                                     | Expected `package-ecosystem` |
-| --------------------------------------------------------- | ---------------------------- |
-| `.github/workflows/*.yml` or `*.yaml`                     | `github-actions`             |
-| `package.json` with an npm, Yarn, or pnpm lockfile        | `npm`                        |
-| `uv.lock`                                                 | `uv`                         |
-| `pyproject.toml` or `requirements*.txt` without `uv.lock` | `pip`                        |
-| `go.mod`                                                  | `gomod`                      |
-| `Cargo.toml`                                              | `cargo`                      |
-| `Gemfile`                                                 | `bundler`                    |
-| `composer.json`                                           | `composer`                   |
-| `Dockerfile`                                              | `docker`                     |
+| Found                                                                  | Expected `package-ecosystem` |
+| ---------------------------------------------------------------------- | ---------------------------- |
+| `.github/workflows/*.yml` or `*.yaml`                                  | `github-actions`             |
+| `package.json` without `bun.lock`                                      | `npm`                        |
+| `uv.lock`                                                              | `uv`                         |
+| `pyproject.toml`, `setup.py`, or `requirements*.txt` without `uv.lock` | `pip`                        |
+| `go.mod`                                                               | `gomod`                      |
+| `Cargo.toml`                                                           | `cargo`                      |
+| `rust-toolchain.toml` or `rust-toolchain`                              | `rust-toolchain`             |
+| `Gemfile`                                                              | `bundler`                    |
+| `composer.json`                                                        | `composer`                   |
+| `Dockerfile`                                                           | `docker`                     |
 
 - A composite action outside `.github/workflows/` whose `action.yml` references other actions has its directory in the `github-actions` entry
 
