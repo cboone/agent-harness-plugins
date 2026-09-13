@@ -62,10 +62,18 @@ If either command fails or produces no output, ask the user to provide the value
 
 ```bash
 git config user.email
-git config user.signingkey || git config gpg.format
+git config gpg.format
+git config user.signingkey
 ```
 
-A value supplied by the user for `COPYRIGHT-HOLDER` does not configure anything. If either of these is unset, say so now rather than at step 23, where the commit fails after every file has already been written.
+A value supplied by the user for `COPYRIGHT-HOLDER` does not configure anything. If `user.email` is unset, say so now rather than at step 23, where the commit fails after every file has already been written.
+
+Read the signing pair together rather than accepting either one alone. `gpg.format` selects the backend, not a key, so `gpg.format=ssh` with no `user.signingkey` looks configured and still fails at `git commit -S`. The two cases differ:
+
+- **`gpg.format` is `ssh`**: `user.signingkey` is required. Unset means signing will fail.
+- **`gpg.format` is unset or `openpgp`**: `user.signingkey` is optional, because GnuPG can select a key from the committer identity. Unset is not conclusive either way.
+
+Report what is missing in the first case, and in the second say only that signing could not be confirmed ahead of time.
 
 ### 3. Verify the Target Directory
 
@@ -79,10 +87,11 @@ Before generating anything, check what is already there. Two separate checks, be
 ls -d build.zig build.zig.zon src README.md LICENSE CHANGELOG.md Makefile \
   typos.toml .gitignore .editorconfig .github/workflows/ci.yml \
   .github/workflows/release.yml .claude/settings.json \
-  .github/copilot-instructions.md 2> /dev/null
+  .github/copilot-instructions.md \
+  docs/plans/todo/.gitkeep docs/plans/done/.gitkeep tests/.gitkeep 2> /dev/null
 ```
 
-Anything listed will be replaced. Four are merged rather than overwritten: `.gitignore`, `.editorconfig` and `.claude/settings.json` per steps 12, 13 and 19, and `.github/copilot-instructions.md` per step 22. Name those separately when reporting, since an existing one is appended to rather than lost. For the rest, show the user what would be lost and ask before continuing. A directory holding someone's `README.md` and `Makefile` is the case this exists for, and it does not have to be a git repository to lose work.
+Anything listed will be replaced, except the `.gitkeep` files, which step 20 creates with `touch` and therefore leaves intact if they already exist. Step 23 stages them either way, so an existing one with content in it would go into the scaffold commit; report it rather than staging it blind. Four paths are merged rather than overwritten: `.gitignore`, `.editorconfig` and `.claude/settings.json` per steps 12, 13 and 19, and `.github/copilot-instructions.md` per step 22. Name those separately when reporting, since an existing one is appended to rather than lost. For the rest, show the user what would be lost and ask before continuing. A directory holding someone's `README.md` and `Makefile` is the case this exists for, and it does not have to be a git repository to lose work.
 
 **Uncommitted work, when the target is a git repository:**
 
@@ -320,8 +329,19 @@ git add \
   .claude/settings.json \
   LICENSE README.md CHANGELOG.md \
   docs/plans/todo/.gitkeep docs/plans/done/.gitkeep tests/.gitkeep
-git commit -S -m "feat: scaffold Zig CLI project"
+git commit -S -m "feat: scaffold Zig CLI project" -- \
+  build.zig build.zig.zon \
+  src/root.zig src/main.zig \
+  typos.toml Makefile .gitignore .editorconfig \
+  .github/workflows/ci.yml .github/workflows/release.yml \
+  .claude/settings.json \
+  LICENSE README.md CHANGELOG.md \
+  docs/plans/todo/.gitkeep docs/plans/done/.gitkeep tests/.gitkeep
 ```
+
+The pathspec after `--` is not redundant with the `git add`. A bare `git commit` commits the whole index, so anything the user had already staged before this run would go into the signed commit no matter how narrow the `git add` was, since staging generated files does not unstage theirs. Repeating the paths on the commit confines it to them and leaves unrelated staged work in the index untouched.
+
+Skip this step entirely if `git init` failed in step 4. There is no repository to commit to, and `git add` and `git commit` will both fail. Say plainly in the summary that the files were generated but no initial commit was created.
 
 Add `.github/copilot-instructions.md` to that list when step 22 modified it. Drop only a path this run neither created **nor modified**: steps 12, 13 and 19 merge into an existing `.gitignore`, `.editorconfig` or `.claude/settings.json` rather than replacing it, and those edits still belong in the commit. Dropping them because the file predates the run would leave the Zig ignore rules and the build permissions unstaged.
 
@@ -350,7 +370,7 @@ Print a summary of what was created:
 - If `zig build` reports `name must be a valid bare zig identifier`, or `expected expression, found '.'` on the `.name` line, the package name is not a bare non-keyword identifier. Go back to step 1's validation table: a hyphen, a leading digit, and a Zig keyword each produce one of those two errors, and `.@"..."` quoting fixes none of them. The binary name in `build.zig` is unaffected and keeps its hyphens.
 - If `zig build` reports a missing or invalid fingerprint after step 21, the value was transcribed incorrectly. Re-read the diagnostic and take the last `0x` value on the line.
 - If the target directory already contains Zig files (`build.zig`, `build.zig.zon`, `src/`), ask the user before overwriting
-- If `git init` fails, continue generating files but warn the user
+- If `git init` fails, continue generating files but warn the user, and **skip step 23**. There is no repository, so `git add` and `git commit` fail too. Report that the files were generated and no initial commit was created, rather than letting the commit fail at the end of the run
 - If `git commit -S` fails because signing is not configured, tell the user rather than retrying without `-S`. Signing is deliberate, and dropping it is the user's call.
 - If the build verification fails, show the error and attempt to fix it before continuing
 

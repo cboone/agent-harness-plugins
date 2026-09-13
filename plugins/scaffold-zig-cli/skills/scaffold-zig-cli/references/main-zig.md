@@ -16,7 +16,11 @@ const std = @import("std");
 const Io = std.Io;
 
 const build_options = @import("build_options");
-const PACKAGE-NAME = @import("PACKAGE-NAME");
+
+// Bound to a fixed name rather than to the package name. The import string is
+// the package name, but the binding is not, so a package called `std`, `Io`,
+// `main` or anything else this file already declares cannot collide with it.
+const lib = @import("PACKAGE-NAME");
 
 const usage =
     \\Usage: PROJECT-NAME [options] [name]...
@@ -59,10 +63,16 @@ pub fn main(init: std.process.Init) !u8 {
         return 0;
     }
 
-    // Validate every argument before doing any work. Acting on operands as
-    // they are encountered would mean `PROJECT-NAME world --nope` printed a
+    // Scan the whole line before doing any work. Acting on operands as they
+    // are encountered would mean `PROJECT-NAME world --nope` printed a
     // greeting and then exited 2, so a rejected command line would still have
     // written to stdout.
+    //
+    // `--help` and `--version` return from this loop rather than finishing it,
+    // so `PROJECT-NAME --help --nope` prints help and exits 0 instead of
+    // rejecting the bad flag. That is the usual convention and it is
+    // deliberate; move the two early returns into the second pass if this
+    // program should reject everything it does not recognize.
     for (args[1..]) |arg| switch (classify(arg)) {
         .help => {
             try stdout.writeAll(usage);
@@ -83,7 +93,7 @@ pub fn main(init: std.process.Init) !u8 {
     };
 
     for (args[1..]) |arg| {
-        if (classify(arg) == .operand) try PACKAGE-NAME.greet(stdout, arg);
+        if (classify(arg) == .operand) try lib.greet(stdout, arg);
     }
 
     try stdout.flush();
@@ -108,5 +118,7 @@ test classify {
 - Returning `u8` instead of calling `std.process.exit` matters because `exit` goes straight to the syscall and discards anything still sitting in the stdout buffer. Every exit path here flushes first.
 - Stdout is buffered through `Io.File.stdout().writer(io, &buf)`, and writes go to its `.interface`. `std.fs.File` no longer exists in 0.16.
 - `classify` is a separate function so the flag table is unit-testable without spawning the binary, which is also what keeps the test from touching stdout.
-- An unknown option exits 2 with a clean stdout and the diagnostic on stderr, **wherever it appears in the line**. That is why `main` walks the arguments twice: validating first and acting second is what makes `PROJECT-NAME world --nope` exit 2 having written nothing, instead of greeting `world` and then failing. A single loop that acted on each argument as it classified it would honor the guarantee only when the bad flag came first.
+- An unknown option exits 2 with a clean stdout and the diagnostic on stderr, **wherever it appears among the operands**. That is why `main` walks the arguments twice: scanning first and acting second is what makes `PROJECT-NAME world --nope` exit 2 having written nothing, instead of greeting `world` and then failing. A single loop that acted on each argument as it classified it would honor the guarantee only when the bad flag came first.
+- `--help` and `--version` are the exception: they return from the first pass, so `PROJECT-NAME --help --nope` prints help and exits 0 rather than rejecting `--nope`. That matches how most tools behave, and the comment in the code says how to change it. The distinction is worth knowing before writing a snapshot test against either case.
+- The package module is bound as `lib` rather than as the package name. `@import` takes the package name as a string, so the binding is free, and a fixed one cannot collide with `std`, `Io`, `build_options`, `Arg`, `classify` or `main` when a project happens to be named after one of them. Step 1's validation guarantees a legal identifier, not an unused one.
 - If the project later adds snapshot tests, that exit code and the empty stdout become recorded expectations, so change them deliberately rather than by accident.
