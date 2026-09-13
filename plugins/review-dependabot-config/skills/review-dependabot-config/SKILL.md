@@ -64,14 +64,18 @@ The user may provide these options inline:
 When neither file exists on the default branch:
 
 1. Inventory the repository as in step 3, so the report can say which ecosystems and directories a config would cover.
-1. Check whether security updates are running without a config, which they do when the repository setting is on:
+1. Check whether security updates run without a config, which they do when the repository setting is on. Read the two settings, as `./references/repository-settings.md` describes, and list recent Dependabot PRs as supporting evidence:
 
    ```bash
+   gh api -i repos/OWNER/REPO/vulnerability-alerts
+   gh api -i repos/OWNER/REPO/automated-security-fixes
    gh pr list --repo OWNER/REPO --author app/dependabot --state all --limit 20 --json number,title,state,createdAt
    ```
 
+   The settings decide the answer. An empty PR list alone cannot tell disabled security updates from enabled ones with nothing to fix.
+
 1. Report what is missing, what is covered today (security updates only, or nothing), and what the config would add.
-1. Offer to invoke the `pin-everything` skill with `--scope dependabot`, which writes the house baseline: a weekly schedule, split minor-and-patch and major groups per ecosystem, and coverage for every ecosystem present. Then stop. Under `--report-only`, stop after the report.
+1. Offer to invoke the `pin-everything` skill with `--scope dependabot`, which writes the house baseline: a weekly schedule, split minor-and-patch and major groups per ecosystem, and entries for the ecosystems its reference covers (`github-actions`, `npm`, `cargo`, `rust-toolchain`, `uv`, `pip`, `bundler`, `gomod`, `composer`, `docker`). Name any other ecosystem the inventory found as one to add by hand afterwards, so the hand-off is not reported as full coverage. Then stop. Under `--report-only`, stop after the report.
 
 ### 3. Inventory the Repository
 
@@ -123,6 +127,7 @@ Use `AskUserQuestion` where it exists. Without it (Codex CLI, OpenCode), print t
 ### 7. Apply
 
 1. **Edit `dependabot.yml`** with targeted edits that keep comments and ordering. Show the resulting diff with `git diff -- CONFIG_PATH` before moving on.
+1. **Replace `reviewers` with code owners** when that fix was selected, in the same local change. Find the code owners file (`.github/CODEOWNERS`, `CODEOWNERS`, or `docs/CODEOWNERS`, in that order; create `.github/CODEOWNERS` when none exists), add an entry that assigns the former reviewers to each manifest and lockfile path the entry covered, and show `git diff` for both files. Remove `reviewers` from the config only once the code owners entries are written, so review coverage never lapses.
 1. **Re-validate** the edited file:
 
    ```bash
