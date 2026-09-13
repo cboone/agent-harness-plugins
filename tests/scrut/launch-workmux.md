@@ -502,6 +502,43 @@ Body
 prompt-file-exists: yes
 ```
 
+## Create worktree launcher keeps path segments below the type prefix
+
+workmux preserves slash-separated refs, so only the segment right after the
+type prefix takes the issue number. Flattening the rest would rewrite a name
+the generator chose.
+
+```scrut
+$ prepare_stubs \
+>   && printf '%s\n' 'Body' \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="feat/search/ui" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 42
+Generated branch name: feat/42-search/ui
+workmux add
+branch: feat/42-search/ui
+open-if-exists: true
+prompt:
+Body
+prompt-file-exists: yes
+```
+
+## Create worktree launcher keeps the case workmux returned
+
+git refs are case-sensitive and workmux preserves the case of a valid one, so
+the generated name is not lowercased on its way through.
+
+```scrut
+$ prepare_stubs \
+>   && printf '%s\n' 'Body' \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="Feature/Add-Dark-Mode" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 42
+Generated branch name: Feature/42-Add-Dark-Mode
+workmux add
+branch: Feature/42-Add-Dark-Mode
+open-if-exists: true
+prompt:
+Body
+prompt-file-exists: yes
+```
+
 ## Create worktree launcher keeps a trailing number that is part of the name
 
 ```scrut

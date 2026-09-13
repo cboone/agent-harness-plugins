@@ -4,7 +4,7 @@ Create a worktree, branch, and tmux window for a GitHub issue, then have the new
 
 **Type:** Skill
 **Trigger:** `/address-issue-in-worktree <issue>`
-**Requires:** [`gh`](https://cli.github.com/), [`workmux`](https://github.com/paiml/workmux), [`jq`](https://jqlang.org/)
+**Requires:** [`gh`](https://cli.github.com/), [`workmux`](https://github.com/raine/workmux), [`jq`](https://jqlang.org/)
 
 ## Installation
 

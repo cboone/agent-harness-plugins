@@ -404,10 +404,11 @@ function validate_branch_name() {
 function normalize_branch_name() {
   local raw="${1}"
   local issue="${2:-}"
-  local name prefix slug
+  local name prefix slug rest
 
+  # Case is left as workmux returned it. workmux preserves the case of a valid
+  # ref, and the contract here is to use the generated name as it stands.
   name="${raw//$'\r'/}"
-  name="$(printf '%s' "${name}" | tr '[:upper:]' '[:lower:]')"
   while [[ "${name}" == [[:space:]]* ]]; do
     name="${name#?}"
   done
@@ -433,8 +434,16 @@ function normalize_branch_name() {
     slug="${name}"
   fi
 
-  # Only the first slash separates the type prefix; the rest belong to the slug.
-  slug="${slug//\//-}"
+  # The number goes into the segment right after the type prefix. Any deeper
+  # segments are part of the name workmux returned, so they are carried through
+  # rather than flattened: feat/search/ui for issue 42 is feat/42-search/ui.
+  if [[ "${slug}" == */* ]]; then
+    rest="/${slug#*/}"
+    slug="${slug%%/*}"
+  else
+    rest=""
+  fi
+
   slug="$(strip_issue_number "${slug}" "${issue}")"
 
   if [[ -z "${slug}" ]]; then
@@ -444,9 +453,9 @@ function normalize_branch_name() {
   fi
 
   if [[ -n "${prefix}" ]]; then
-    name="${prefix}/${slug}"
+    name="${prefix}/${slug}${rest}"
   else
-    name="${slug}"
+    name="${slug}${rest}"
   fi
 
   validate_branch_name "${name}"
