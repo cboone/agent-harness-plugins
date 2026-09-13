@@ -57,6 +57,14 @@ The project should be scaffolded in a directory named after the project. If the 
 
 If the directory already contains Zig files (`build.zig`, `build.zig.zon`, `src/`), warn the user before proceeding.
 
+If the target is already a git repository, check whether it is clean before generating anything:
+
+```bash
+git status --porcelain
+```
+
+Any output means the repository carries work that is not this scaffold's. Report it and ask whether to continue, because step 23's commit is GPG-signed and should contain only generated files. This check belongs here rather than at the commit: afterwards it can only describe what already happened.
+
 ### 4. Initialize Git
 
 Skip if already inside a git repository.
@@ -274,17 +282,25 @@ If `.github/copilot-instructions.md` does not exist, skip this step.
 
 ### 23. Create Initial Commit
 
-Stage the files this run generated and create the initial commit:
+Stage the files this run generated, **each by its full path**, and create the initial commit:
 
 ```bash
-git add build.zig build.zig.zon src typos.toml Makefile .gitignore .editorconfig \
-  .github .claude LICENSE README.md CHANGELOG.md docs tests
+git add \
+  build.zig build.zig.zon \
+  src/root.zig src/main.zig \
+  typos.toml Makefile .gitignore .editorconfig \
+  .github/workflows/ci.yml .github/workflows/release.yml \
+  .claude/settings.json \
+  LICENSE README.md CHANGELOG.md \
+  docs/plans/todo/.gitkeep docs/plans/done/.gitkeep tests/.gitkeep
 git commit -S -m "feat: scaffold Zig CLI project"
 ```
 
-**Do not use `git add -A` here.** Step 3 allows scaffolding into a directory that is already a git repository, and step 4 skips `git init` when it is. In that case `-A` sweeps every unrelated tracked and untracked change in the working tree into a signed commit the user did not ask for. Name the generated paths instead, and drop any that this run did not create.
+Add `.github/copilot-instructions.md` to that list when step 22 modified it, and drop any path this run did not create.
 
-If `git status --porcelain` shows changes outside that list, mention them in the summary rather than committing them.
+**Do not use `git add -A`, and do not name a directory.** Step 3 allows scaffolding into a directory that is already a git repository, and step 4 skips `git init` when it is. `-A` sweeps the whole working tree, and `git add` applied to a directory is recursive, so naming `src`, `.github`, `.claude`, `docs`, or `tests` stages whatever else happens to be under them. Either way the user's unrelated work lands in a signed commit they did not ask for. Full paths are what make the set exact.
+
+Check the working tree **before** generating anything, in step 3, not here. Run `git status --porcelain` then, and if the repository already carries changes, tell the user and let them decide whether to continue. A check at this point is too late to help: by the time this step runs, anything swept in has already been committed.
 
 ### 24. Summary
 
