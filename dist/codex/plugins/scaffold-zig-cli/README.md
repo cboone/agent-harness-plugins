@@ -19,7 +19,7 @@ The project is split into a library module (`src/root.zig`) and a CLI module (`s
 Four details exist because each one has a recorded failure behind it, repeated across four Zig repositories:
 
 - **The compiler emits the fingerprint.** `build.zig.zon` is written without a `.fingerprint` field, the first `zig build` prints the value to use, and the skill writes it back. Guessing the value, or copying one from another project, is the single most common way to stall a new Zig repository.
-- **`minimum_zig_version` is always written.** CI resolves the toolchain by reading `build.zig.zon`, so a manifest without it leaves CI with nothing to install. The version is detected from the local toolchain and normalized, so a development build does not become the pin.
+- **`minimum_zig_version` is always written.** CI resolves the toolchain by reading `build.zig.zon`, so a manifest without it leaves CI with nothing to install. The version is taken from the local toolchain exactly as printed, development snapshots included, because `mlugg/setup-zig` installs precisely that value and a truncated one names a release that does not exist.
 - **`.claude/settings.json` is seeded.** `Bash(zig build*)`, `Bash(zig fmt*)` and `Bash(zig version)` go into the tracked allowlist, because every contributor runs them and an empty allowlist means every build prompts.
 - **`make check` is a real target.** One command runs the format check, the build and the tests, instead of a hand-spelled `zig fmt --check ... && zig build && zig build test` that comes out differently every time.
 
@@ -44,10 +44,12 @@ This skill runs git, GitHub CLI, and Zig commands that trigger permission prompt
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git init*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git config *)", "Bash(gh api user*)", "Bash(zig build*)", "Bash(zig fmt*)", "Bash(zig version)"]
+    "allow": ["Bash(git init*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git config *)", "Bash(git status*)", "Bash(gh api user*)", "Bash(gh api repos/*)", "Bash(gh release view*)", "Bash(zig build*)", "Bash(zig fmt*)", "Bash(zig version)", "Bash(date +%Y)", "Bash(mkdir -p*)", "Bash(touch *)"]
   }
 }
 ```
+
+This covers every command the workflow runs, not only the Zig ones: `date +%Y` for the LICENSE year, `gh release view` and `gh api repos/...` for the `cboone/gh-actions` SHA refresh, and `mkdir -p` plus `touch` for the directory stubs.
 
 The skill also writes the three `zig` rules into the scaffolded project's own `.claude/settings.json`, so a project created this way does not need them added by hand.
 

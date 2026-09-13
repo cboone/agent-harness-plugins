@@ -51,10 +51,10 @@ test-scrut-update: build ## Update scrut test expectations
 test-all: test test-scrut ## Run all tests (unit + scrut)
 
 lint-md: ## Lint Markdown files
-	yarn lint
+	markdownlint-cli2 "**/*.md"
 
 format-md: ## Format Markdown and other non-Zig files
-	yarn lint:fix
+	prettier --write .
 
 lint-actions: ## Lint GitHub Actions workflows
 	actionlint
@@ -72,4 +72,4 @@ help: ## Show this help
 - `release` writes per-target directories under `release/`, which the `.gitignore` template excludes. Zig cross-compiles all five targets from one machine with no extra toolchains.
 - `release` installs each target straight into its own prefix with `zig build --prefix`, and clears `release/` first. Building into the default `zig-out/` and copying from it instead puts every target's leftovers in every directory: `zig build` does not clear the install prefix between runs, so a Windows build leaves a `.exe` and a `.pdb` behind that the next target's copy picks up.
 - The scrut targets are a starting point; run the add-scrut-cli-tests skill to wire up the test files and the binary variable properly.
-- `lint-md`, `format-md` and `lint-actions` cover the non-Zig files. They need the tooling that `set-up-linters` installs, so they fail until that skill has run.
+- `lint-md`, `format-md` and `lint-actions` cover the non-Zig files. They invoke `markdownlint-cli2`, `prettier` and `actionlint` directly rather than through package-manager scripts, matching `scaffold-rust-cli`'s Makefile: a scaffolded Zig project has no `package.json`, so a `yarn lint` target would fail on a fresh scaffold with nothing to run. They still need the tooling that `set-up-linters` installs, so they fail until that skill has run.

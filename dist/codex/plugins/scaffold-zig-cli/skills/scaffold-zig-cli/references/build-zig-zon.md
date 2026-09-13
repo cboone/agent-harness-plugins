@@ -2,7 +2,7 @@
 
 Create `build.zig.zon` in the project root with the following content.
 
-Replace `PACKAGE-NAME` with the underscored package name and `ZIG-VERSION` with the normalized Zig version.
+Replace `PACKAGE-NAME` with the underscored package name and `ZIG-VERSION` with the detected Zig version, exactly as printed.
 
 Emit the file exactly as shown, **without** a `.fingerprint` field. The compiler generates that value and prints it on the first build; the "Verify the Build and Fill In the Fingerprint" step writes it back.
 
@@ -29,7 +29,7 @@ After the first `zig build`, the file gains one line between `.version` and `.mi
 
 ## Notes
 
-- `.name` is an enum literal and must be a valid bare Zig identifier. A hyphenated name fails with `error: name must be a valid bare zig identifier`, and quoting it as `.@"my-tool"` does not help. Use underscores here; the binary name in `build.zig` keeps its hyphens.
+- `.name` is an enum literal and must be a bare Zig identifier that is not a reserved word: it matches `[A-Za-z_][A-Za-z0-9_]*` and is none of Zig's keywords. Use underscores here; the binary name in `build.zig` keeps its hyphens. Three ways this goes wrong, all rejected: a hyphen (`my-tool`) and a leading digit (`123_tool`) both fail to parse as an enum literal, and a keyword (`test`, `error`, `fn`) does too. Quoting rescues none of them, because `.@"my-tool"` fails with `error: name must be a valid bare zig identifier`.
 - `.fingerprint` is half of the package's globally unique identifier, paired with `.name`. It is generated once and then never changes. Copying one from another project claims that project's identity, which is why the trailing comment exists: it makes any later edit to the field visible in review.
 - `.minimum_zig_version` is the project's single Zig version pin. The CI and release workflows both read this file rather than restating the version, so there is only one string to keep current. Despite the field name, `mlugg/setup-zig` installs exactly this version.
 - `.dependencies` is left empty. Adding a dependency writes a multihash into this file, which gitleaks reads as a credential; `set-up-secret-scanning` covers the allowlist entry once the project has one.

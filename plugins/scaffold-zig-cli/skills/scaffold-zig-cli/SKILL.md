@@ -27,7 +27,18 @@ Ask the user for these parameters:
 - **Project name** -- kebab-case, used as the binary name and directory name (e.g., `my-tool`)
 - **Short description** -- one sentence, used in the README
 
-Derive the **package name** from the project name rather than asking: replace every hyphen with an underscore (`my-tool` becomes `my_tool`). Zig rejects a hyphenated package name outright with `error: name must be a valid bare zig identifier`, and quoting it as `.@"my-tool"` does not help. Wherever templates reference `PACKAGE-NAME`, use this underscored form; wherever they reference `PROJECT-NAME`, use the kebab-case form. The binary keeps the hyphens.
+Derive the **package name** from the project name rather than asking: replace every hyphen with an underscore (`my-tool` becomes `my_tool`). Wherever templates reference `PACKAGE-NAME`, use this form; wherever they reference `PROJECT-NAME`, use the kebab-case form. The binary keeps the hyphens.
+
+Then **validate the derived name**, because replacing hyphens is necessary and not sufficient. `build.zig.zon`'s `.name` must be a bare Zig identifier that is not a reserved word, which means it matches `[A-Za-z_][A-Za-z0-9_]*` and is none of Zig's keywords (`test`, `error`, `fn`, `async`, `export`, `struct`, and the rest). Quoting does not rescue a name that fails either rule. All four of these are rejected:
+
+| Project name | Derived    | Result                                            |
+| ------------ | ---------- | ------------------------------------------------- |
+| `my-tool`    | `my_tool`  | accepted                                          |
+| `test`       | `test`     | `error: expected expression, found '.'` (keyword) |
+| `123-tool`   | `123_tool` | `error: expected expression, found '.'` (digit)   |
+| `@"test"`    | `@"test"`  | `error: name must be a valid bare zig identifier` |
+
+If the derived name fails either rule, stop and ask the user for a package name that passes, keeping their chosen project name for the binary and the directory. Do not silently rewrite it: the package name is half of the package's permanent identity, so the user should choose it.
 
 If the user already provided some or all of these in their initial request, do not re-ask. Derive what you can from context.
 
@@ -69,7 +80,13 @@ The templates target Zig 0.16 and later. Read the installed version:
 zig version
 ```
 
-Normalize the output to `MAJOR.MINOR.PATCH` and use it wherever templates reference `ZIG-VERSION`. A development toolchain prints something like `0.16.0-dev.164+bc7955306`; strip the prerelease and build metadata, because `minimum_zig_version` is what CI installs and a dev build is not reproducible. If the installed version is older than `0.16.0`, stop and tell the user: 0.16 removed `std.io` and `std.fs.File` and changed `main`'s signature, so these templates do not compile on 0.15.
+Use the version **exactly as printed** wherever templates reference `ZIG-VERSION`. Do not strip anything.
+
+A development toolchain prints something like `0.17.0-dev.164+bc7955306`. Write that whole string. `mlugg/setup-zig` installs precisely the value in `minimum_zig_version`, so truncating it to `0.17.0` pins CI to a release that does not exist yet and the workflow fails on its first run. Setting a dev-channel pin to the full `0.X.Y-dev.NNNN+abcdef` snapshot is what `pin-everything`'s language-runtime guidance prescribes.
+
+When the version carries a `-dev` component, say so in the summary: the development channel changes daily and old snapshots leave the download index, so the pin will need attention sooner than a release pin would. That is the user's call to make, not a reason to rewrite their toolchain version.
+
+If the installed version is older than `0.16.0`, stop and tell the user: 0.16 removed `std.io` and `std.fs.File` and changed `main`'s signature, so these templates do not compile on 0.15.
 
 If `zig version` fails, Zig is not installed or not on the PATH. Ask the user to install it before continuing.
 
@@ -78,7 +95,7 @@ If `zig version` fails, Zig is not installed or not on the PATH. Ask the user to
 Read `./references/build-zig-zon.md` for the template and create `build.zig.zon` from it.
 
 - Replace `PACKAGE-NAME` with the underscored package name
-- Replace `ZIG-VERSION` with the normalized Zig version
+- Replace `ZIG-VERSION` with the detected Zig version, exactly as printed
 
 Leave the `.fingerprint` field out entirely. Step 21 fills it in from the compiler's own output. Never copy a fingerprint from another project: it is half of a package's globally unique identity, and reusing one claims another package's identity.
 
@@ -159,7 +176,7 @@ Read `./references/readme.md` for the README template and create `README.md` fro
 - Replace `PROJECT-NAME` with the project name (kebab-case)
 - Replace `PROJECT-DESCRIPTION` with the short description
 - Replace `GITHUB-USERNAME` with the detected GitHub username
-- Replace `ZIG-VERSION` with the normalized Zig version
+- Replace `ZIG-VERSION` with the detected Zig version, exactly as printed
 
 ### 18. Generate CHANGELOG.md
 
@@ -248,16 +265,9 @@ zig build fmt-check
 
 All three must succeed before continuing. The comment on the fingerprint line is deliberate: it makes any later change to the field visible in code review.
 
-### 22. Create Initial Commit
+### 22. Update Copilot Instructions
 
-Stage all generated files and create the initial commit:
-
-```bash
-git add -A
-git commit -S -m "feat: scaffold Zig CLI project"
-```
-
-### 23. Update Copilot Instructions
+Do this **before** the initial commit, so the edit lands in it. Running it afterwards leaves a freshly scaffolded repository dirty on its very first `git status`.
 
 If `.github/copilot-instructions.md` exists (created by the scaffold-new-repo skill when running in the bootstrap flow, or already present in an existing repo), append the following entries to the PR review section. Before appending each entry, check whether the bold key text already exists in the file; skip entries that are already present.
 
@@ -268,6 +278,20 @@ To locate the PR review section: look for an existing heading whose text include
 - **Tests must not write to stdout**: `zig build test` runs the test binary with stdout wired to the build runner's IPC channel. Suggest writing into a buffer, as `src/root.zig` does, rather than printing.
 
 If `.github/copilot-instructions.md` does not exist, skip this step.
+
+### 23. Create Initial Commit
+
+Stage the files this run generated and create the initial commit:
+
+```bash
+git add build.zig build.zig.zon src typos.toml Makefile .gitignore .editorconfig \
+  .github .claude LICENSE README.md CHANGELOG.md docs tests
+git commit -S -m "feat: scaffold Zig CLI project"
+```
+
+**Do not use `git add -A` here.** Step 3 allows scaffolding into a directory that is already a git repository, and step 4 skips `git init` when it is. In that case `-A` sweeps every unrelated tracked and untracked change in the working tree into a signed commit the user did not ask for. Name the generated paths instead, and drop any that this run did not create.
+
+If `git status --porcelain` shows changes outside that list, mention them in the summary rather than committing them.
 
 ### 24. Summary
 
@@ -287,7 +311,7 @@ Print a summary of what was created:
 
 - If `zig version` fails, Zig is not installed or not on the PATH. Point the user at [ziglang.org/download](https://ziglang.org/download/) and stop.
 - If the installed Zig is older than 0.16, stop. These templates use `std.Io` and the `std.process.Init` form of `main`, neither of which exists in 0.15.
-- If `zig build` reports `name must be a valid bare zig identifier`, the package name in `build.zig.zon` still contains a hyphen. Replace it with an underscore; the binary name in `build.zig` keeps the hyphen.
+- If `zig build` reports `name must be a valid bare zig identifier`, or `expected expression, found '.'` on the `.name` line, the package name is not a bare non-keyword identifier. Go back to step 1's validation table: a hyphen, a leading digit, and a Zig keyword each produce one of those two errors, and `.@"..."` quoting fixes none of them. The binary name in `build.zig` is unaffected and keeps its hyphens.
 - If `zig build` reports a missing or invalid fingerprint after step 21, the value was transcribed incorrectly. Re-read the diagnostic and take the last `0x` value on the line.
 - If the target directory already contains Zig files (`build.zig`, `build.zig.zon`, `src/`), ask the user before overwriting
 - If `git init` fails, continue generating files but warn the user
