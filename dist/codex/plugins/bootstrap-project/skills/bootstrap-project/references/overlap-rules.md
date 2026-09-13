@@ -89,20 +89,30 @@ Both `scaffold-go-cli` and `scaffold-go-library` generate LICENSE, README, .giti
 
 - `.claude/settings.json`
 
+### pin-everything during bootstrap
+
+`pin-everything` covers several surfaces: action SHAs, package-manager integrity pins, exact dependency pins, runtime version files, install commands, a Dependabot config, and an optional version-audit script. During a bootstrap it runs with `--scope dependabot` only, for two reasons:
+
+- `set-up-ci`, `set-up-secret-scanning`, and the language scaffolders already emit SHA-pinned actions, so a full pinning pass would repeat their work on files written moments earlier.
+- Exact-pinning dependencies and adding a version audit are choices about how the project manages versions, which the user should make deliberately rather than as a side effect of setup.
+
+The Dependabot config is what a freshly scaffolded repository is missing: without it, every SHA pin the other tools wrote stays frozen at the version current on the day of the bootstrap. It runs last so the config covers every workflow and manifest the earlier tools created. When a config already exists, `pin-everything` merges into it rather than overwriting it.
+
 ## Applicability Rules
 
 Some tools only apply to certain project types:
 
-| Tool                      | Applicable when                                                                 |
-| ------------------------- | ------------------------------------------------------------------------------- |
-| `scaffold-go-cli`         | Go CLI project (go.mod + main.go or cmd/)                                       |
-| `scaffold-go-library`     | Go library project (go.mod, no main.go or cmd/)                                 |
-| `scaffold-lean-library`   | Lean library or formalization project without Lean executable targets           |
-| `scaffold-rust-cli`       | Rust CLI project (Cargo.toml + src/main.rs, src/bin/\*.rs, or `[[bin]]` target) |
-| `add-goreleaser-homebrew` | Go CLI project without existing GoReleaser                                      |
-| `set-up-installers`       | Project produces a distributable binary (CLI)                                   |
-| `add-scrut-cli-tests`     | Project produces a CLI binary                                                   |
-| `set-up-ci`               | Any project without existing CI workflow                                        |
-| `set-up-linters`          | Any project                                                                     |
-| `set-up-secret-scanning`  | Any project                                                                     |
-| `scaffold-new-repo`       | Any project missing foundational files                                          |
+| Tool                      | Applicable when                                                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `scaffold-go-cli`         | Go CLI project (go.mod + main.go or cmd/)                                                                                 |
+| `scaffold-go-library`     | Go library project (go.mod, no main.go or cmd/)                                                                           |
+| `scaffold-lean-library`   | Lean library or formalization project without Lean executable targets                                                     |
+| `scaffold-rust-cli`       | Rust CLI project (Cargo.toml + src/main.rs, src/bin/\*.rs, or `[[bin]]` target)                                           |
+| `add-goreleaser-homebrew` | Go CLI project without existing GoReleaser                                                                                |
+| `set-up-installers`       | Project produces a distributable binary (CLI)                                                                             |
+| `add-scrut-cli-tests`     | Project produces a CLI binary                                                                                             |
+| `set-up-ci`               | Any project without existing CI workflow                                                                                  |
+| `set-up-linters`          | Any project                                                                                                               |
+| `set-up-secret-scanning`  | Any project                                                                                                               |
+| `scaffold-new-repo`       | Any project missing foundational files                                                                                    |
+| `pin-everything`          | Any project with `.github/workflows/` files or a manifest Dependabot supports; always scoped down to `--scope dependabot` |
