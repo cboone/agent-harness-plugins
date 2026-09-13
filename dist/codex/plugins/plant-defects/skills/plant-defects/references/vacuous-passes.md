@@ -6,7 +6,7 @@ A check that runs on nothing tends to pass, and when it does it is indistinguish
 
 ## The catalogue
 
-Every entry below is a measured instance rather than a hypothetical.
+Every entry in this catalogue is a measured instance rather than a hypothetical: each one was observed passing over nothing in a real run. The toolchain table at the end of the file is different in kind, and says so there: those rows generalize the same shapes to runners the source programs never used, so treat them as leads to check rather than as findings.
 
 ### The instrument read zero files
 

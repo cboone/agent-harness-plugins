@@ -4,7 +4,7 @@ An absence has to be told apart from an instrument that was not running, and the
 
 ## The order
 
-Always these three, in this order:
+Three default stages, in this order. A given instrument may split one of them or add another, and the second worked example below does both, but nothing may move ahead of what it depends on:
 
 1. **The instrument was running.** In the strongest form, something built to fail did fail. Where the subject cannot be weakened into failing, the fallback is a marker proving the instrument produced output at all. Without one or the other, everything below passes vacuously.
 1. **The subject ran to completion, its output parses, and its progress counter moved.** A clean result now describes work that actually happened.

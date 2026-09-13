@@ -35,7 +35,13 @@ pub fn implementation(source: []const u8) []const u8 {
 
 Each call site does the embedding itself, because the path resolves relative to the importing file. A file with no banner is returned whole, which is correct for one whose tests live elsewhere.
 
-**That fallback is itself a vacuity hazard, and it is worth a control.** The `orelse` cannot tell an intentionally banner-less file from one whose banner was renamed or removed. Where the tests are co-located, the second case silently widens the canary's scope to include the test section, so the assertions start reading the canary's own string literals and can report a result about the canary text rather than about the implementation. Assert the marker's presence separately in any file whose tests sit below it, so a renamed banner fails loudly instead of quietly changing what is being measured.
+**The cut is itself a vacuity hazard, in two directions, and both need a control.**
+
+**The fallback widens the scope.** The `orelse` cannot tell an intentionally banner-less file from one whose banner was renamed or removed. Where the tests are co-located, the second case silently includes the test section, so the assertions begin reading the canary's own string literals and can report on the canary text rather than on the implementation.
+
+**A first occurrence earlier than the banner narrows it, which is the worse direction.** `indexOf` returns the first match, not the banner, so an implementation that happens to contain that byte sequence in a string literal or a comment cuts the source there. Everything after it goes unchecked, and every assertion over the truncated text still passes: a false pass that looks exactly like a healthy canary.
+
+**Presence is not the control; exactly once is.** Asserting the marker appears at least once catches the renamed banner and misses the early duplicate entirely, so assert the count is exactly one before slicing, and pick a marker unlikely to occur in ordinary code. Then both readings fail loudly instead of quietly changing what is being measured.
 
 ## Three primitives, and why all three
 

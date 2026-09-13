@@ -52,7 +52,7 @@ Four, not two. The third survives every coverage mode, because the code is not i
 | False negative            | A defect one instrument cannot see                                                       | A second instrument that can. The suite is not the problem                     |
 | False positive            | Nothing was broken and a required check said something was                               | Fixing the check. No number of instruments addresses it                        |
 | Structural uncoverability | Code that no test binary compiles, so it is absent from the analyzed program             | Changing what the test build contains. No test against this build can reach it |
-| Unvisited branch          | It compiles, an instrument could reach it, and no arm was ever written to steer it there | One new arm, with an input that steers there. More of the same will not        |
+| Unvisited branch          | It compiles, an instrument could reach it, and no arm was ever written to steer it there | One new arm, with an input that steers there. More of the same inputs will not |
 
 ## Workflow
 
