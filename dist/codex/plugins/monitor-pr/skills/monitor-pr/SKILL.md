@@ -28,18 +28,36 @@ The user may provide these options inline:
 
 The watch ends when all four axes are clean at the same time. Partial greenness is not readiness.
 
-| Axis         | Clean when                                                                                                                                                                                                    |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Checks       | Every check in `statusCheckRollup` has concluded successfully, or the repository has no checks configured                                                                                                     |
-| Copilot      | A Copilot review exists whose commit SHA equals the current head, `fetch` returns `[]`, and `fetch-reviews` has no open finding. Under `--confirm-clean`, two consecutive such reviews against that same head |
-| Mergeability | `mergeable` is `MERGEABLE` and `mergeStateStatus` is neither `DIRTY` nor `BEHIND`. `BLOCKED` counts as clean but must be reported, per the rule below                                                         |
-| PR state     | `OPEN` and not merged or closed                                                                                                                                                                               |
+| Axis         | Clean when                                                                                                                                                                                                                                                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Checks       | Every check in `statusCheckRollup` has concluded successfully, or the repository has no checks configured                                                                                                                                                                                                      |
+| Copilot      | A Copilot review exists whose commit SHA equals the current head, `fetch` returns `[]`, and `fetch-reviews` has no open finding. Under `--confirm-clean`, two consecutive such reviews against that same head. Not applicable to a Dependabot PR with no Copilot review, per [Dependabot PRs](#dependabot-prs) |
+| Mergeability | `mergeable` is `MERGEABLE` and `mergeStateStatus` is neither `DIRTY` nor `BEHIND`. `BLOCKED` counts as clean but must be reported, per the rule below                                                                                                                                                          |
+| PR state     | `OPEN` and not merged or closed                                                                                                                                                                                                                                                                                |
 
 Three rules that follow from this and are easy to get wrong:
 
 - **A Copilot review against an older SHA does not count.** Copilot reviews are pinned to the commit they ran against, so every push this skill makes invalidates the previous review by construction. A fix always sends the loop back around.
 - **`reviewDecision` does not gate.** A human `CHANGES_REQUESTED` will not stop this skill from declaring the PR ready. Report `reviewDecision` in every status line and in the terminal report so an outstanding human objection stays visible, but never wait on it.
 - **`BLOCKED` does not gate either, but it must be reported.** Requiring `mergeStateStatus` to be `CLEAN` would be the stricter reading of "ready to merge", and it is deliberately not what this skill does: on a repository whose branch protection requires an approving review, nothing the skill can do will ever satisfy it, so the watch would run until its round budget expired and then report failure on a PR that is finished. Treat `BLOCKED` as ready-with-a-caveat instead. **A terminal report that omits an active `BLOCKED` state is wrong**, because it tells the user the PR is ready to merge when GitHub will refuse the merge. Name the state and say what is unsatisfied.
+
+## Dependabot PRs
+
+A PR whose `author.login` in the step 1 snapshot is `app/dependabot` belongs to Dependabot, and Dependabot owns its branch. Once anyone else pushes to that branch, Dependabot stops rebasing it, and a later `@dependabot recreate` discards the push. So on a Dependabot PR this skill never pushes, and four steps change:
+
+- **Step 5, syncing the branch**: do not invoke `merge-main`. Ask Dependabot instead, once per head SHA:
+
+  ```bash
+  gh pr comment PR_NUMBER --repo OWNER/REPO --body "@dependabot rebase"
+  ```
+
+  Then wait for the head SHA to change, and resume at step 3. The request works even on a PR whose automatic rebases Dependabot disabled after 30 days. If Dependabot replies that it will not rebase, usually because someone else pushed to the branch, escalate per step 9: `@dependabot recreate` would rebuild the PR but discards those commits, so that is the user's decision.
+
+- **Step 6, failing checks**: diagnose as in step 6a, but do not repair. A failure caused by a secret the Dependabot run cannot read (`Input required and not supplied: token`, an empty cloud credential, a refused OIDC exchange) says nothing about the update: report it as an environment problem and point the user at the `review-dependabot-config` skill. Escalate any other failure per step 9 and point at the `triage-dependabot-prs` skill, which decides whether the update needs work, a migration, or an ignore.
+- **Step 7, the Copilot cycle**: automatic Copilot review does not reliably run on Dependabot PRs, so never request one. With no Copilot review on the PR, the Copilot axis is not applicable: report it as `n/a (Dependabot)`. If a Copilot review does exist at the current head with findings, report them and escalate rather than invoking `resolve-copilot-pr-feedback`, whose fixes would be pushes.
+- **Step 8, the terminal report**: say the PR is a Dependabot PR, and merge only with a method the repository allows, as for any other PR.
+
+Under `--no-fix`, report the rebase request that would have been posted instead of posting it.
 
 ## Workflow
 
@@ -48,10 +66,12 @@ Three rules that follow from this and are easy to get wrong:
 If the user supplied a PR number, use it. Otherwise derive the PR from the current branch. Take the opening snapshot with one call:
 
 ```bash
-gh pr view <number-or-omitted> --json number,url,headRefName,headRefOid,baseRefName,isDraft,state,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup
+gh pr view <number-or-omitted> --json number,url,author,headRefName,headRefOid,baseRefName,isDraft,state,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup
 ```
 
 Record `OWNER`, `REPO`, and `PR_NUMBER`. The `resolve-copilot-pr-feedback` skill needs all three and does not document how to derive them, so pass them explicitly when invoking it.
+
+Also record whether `author.login` is `app/dependabot`, which switches on the rules in [Dependabot PRs](#dependabot-prs).
 
 **If the branch has no PR**, report that and stop, pointing the user at `/pr`.
 
@@ -115,6 +135,8 @@ Two orderings are deliberate:
 1. **Nothing above matched**: wait, then return to step 3. Checks pending or running with nothing else to act on is the usual case.
 
 Under `--no-fix`, replace steps 5, 6, and 7 with a report of what would have been done, then continue waiting.
+
+On a Dependabot PR, steps 5 to 8 follow [Dependabot PRs](#dependabot-prs), and the three Copilot conditions above do not apply while the PR has no Copilot review.
 
 ### 5. Sync the Branch
 
@@ -346,3 +368,4 @@ The terminal report uses the same table plus the readiness verdict for all four 
 - **`resolve-copilot-pr-feedback` reports `Completed` or `No unresolved Copilot feedback` but step 4's findings condition still matches the same review**: Escalate per step 9. This covers an open thread and a review-body finding alike, and the body case is the one that cannot clear on its own. Do not invoke the skill again against the same review, per step 7b.
 - **Copilot never reviews despite an explicit request**: Escalate. Copilot review may be disabled for the repository, in which case the user must decide whether to proceed without it.
 - **Push rejected because the remote moved**: Someone else pushed to the branch. Re-poll, sync per step 5, and retry once. If it is rejected again, escalate.
+- **Dependabot does not act on a rebase request**: After two quiet ticks with the head SHA unchanged and no reply from Dependabot on the PR, escalate. Do not post the request again for the same head.

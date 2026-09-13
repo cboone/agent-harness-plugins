@@ -39,6 +39,14 @@ The Copilot round budget defaults to 10. On reaching it the skill stops and asks
 
 The budget bounds an unattended watch. It is not a judgment about whether the work is going well, and the skill does not read the finding counts as a trend. Copilot swings between busy and quiet rounds over the same code, so a rising count does not mean divergence, and four rounds is often not enough to finish. A watch still turning up real defects at round 8 is working, not thrashing. What ends a watch early is a finding that needs your judgment, not an unflattering shape in the numbers.
 
+### Dependabot PRs
+
+Dependabot owns its branches. Once anyone else pushes to one, Dependabot stops rebasing it, and a later `@dependabot recreate` throws the push away. So on a PR authored by Dependabot the skill never pushes:
+
+- A conflicted or out-of-date branch gets a `@dependabot rebase` comment, once per head, instead of `merge-main`.
+- A failing check is diagnosed but not repaired. A failure caused by a secret that Dependabot runs cannot read is reported as an environment problem, pointing at [Review Dependabot Config](../review-dependabot-config/README.md). Anything else escalates, pointing at [Triage Dependabot PRs](../triage-dependabot-prs/README.md).
+- The Copilot axis is not applicable unless Copilot has already reviewed the PR, and the skill never requests a review.
+
 ### What does not gate
 
 `reviewDecision` is reported in every status line but never blocks. A human `CHANGES_REQUESTED` will not stop this skill from declaring the PR ready, so that an outstanding human objection stays visible without stalling a watch on solo repositories that have no required reviewers.
@@ -77,7 +85,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr merge *)", "Bash(gh api --paginate --slurp repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(jq *)", "Bash(sleep *)", "Bash(git status*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(bin/build-codex-marketplace)", "Bash(bin/build-opencode-mirror)"]
+    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr comment *)", "Bash(gh pr merge *)", "Bash(gh api --paginate --slurp repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(jq *)", "Bash(sleep *)", "Bash(git status*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(bin/build-codex-marketplace)", "Bash(bin/build-opencode-mirror)"]
   }
 }
 ```
@@ -100,4 +108,5 @@ Three notes on these rules. **Flag position matters**: `Bash(gh api repos/*)` do
 - [Resolve Copilot PR Feedback](../resolve-copilot-pr-feedback/README.md): the Copilot half of the loop, invoked once a review lands on the current head
 - [Merge Main](../merge-main/README.md): invoked when the branch falls behind or conflicts with its base
 - [Lint and Fix](../lint-and-fix/README.md): invoked to repair lint and format failures
+- [Triage Dependabot PRs](../triage-dependabot-prs/README.md): decide what to do with a Dependabot PR before watching it
 - [All plugins](../../../../README.md)
