@@ -168,11 +168,12 @@ The chained command is `/address-issue NUMBER`, or `/address-issue NUMBER --no-a
 
 **Template escaping:** `workmux` renders the prompt body through MiniJinja, so any literal `{{`, `{%`, or `{#` token in the issue body (e.g. GitHub Actions `${{ inputs.x }}` expressions, Jinja/Liquid/Tera/Helm/Vue templates, Handlebars-style snippets) would otherwise be parsed as a template variable reference and rejected with `Template uses undefined variables`. The `launch-workmux` script reads the prompt from stdin, writes an escaped temporary prompt file for `workmux add -P`, and removes that temporary file after `workmux add` exits. Each escaped delimiter renders back to the literal characters, so the issue context stored at `<worktree>/.workmux/PROMPT-*.md` matches the original prompt.
 
-**Invoking the scripts:** Both scripts ship with this plugin. Invoke each via `bash` followed by the quoted path:
+**Invoking the scripts:** All three scripts ship with this plugin. Invoke each via `bash` followed by the quoted path:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt"
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux"
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims"
 ```
 
 These show the path form only. The runnable invocations, with their arguments, are further down.

@@ -61,6 +61,8 @@ git worktree list --porcelain
 
 A missing file means no claims, which is the ordinary state and not an error. Each claim carries `resource`, `worktree`, `branch`, `claimed_at`, and an optional `issue`.
 
+**Check the `version` field before reading the claims.** This reads the file directly rather than through `manage-resource-claims`, so it does not inherit that script's schema guard, and reading a newer format as though it were version 1 would produce confident parallel-safety advice from data it has misunderstood. Only version `1` is known. On anything else, say the claim file is a newer format than this skill reads, make the recommendations without the resource signal, and say that is what happened.
+
 **Discount stale claims.** A claim whose `worktree` is absent from the `git worktree list` output already gathered above belongs to a worktree that has been removed. Treat it as free, and mention it so the user can clear it. Nothing that no longer exists should keep a resource reserved.
 
 **Read the project's declared resources too.** Read whichever of `CLAUDE.md` and `AGENTS.md` exist in the repository root, and `copilot-instructions.md` under `.github/`. Any of them may be absent, which is normal, and `CLAUDE.md` is often a symlink to `AGENTS.md`, so read the target rather than treating it as a second source. Check any plan under `docs/plans/todo/` too. A heading containing "exclusive resource" names the project's resources and, usually, what kind of work needs each one. That list is what lets an issue be matched to a resource before anyone has claimed it.
@@ -163,21 +165,16 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
    Most-requested feature. Pairs well with the theme work done in #15.
    Start: Add CSS variables for color scheme, then add a toggle component.
 
-4. **#11 - Add manage-plan skill** (enhancement, 1 day old)
-   Create a skill that can list, rename, archive, and delete saved plans from within a session.
-   High-frequency workflow pattern from session analysis.
-   Start: Review existing plan-related commands and design the skill interface.
-
 ### Unblocks Others
 
-5. **#7 - Refactor config loading** (enhancement, 20 days old)
+4. **#7 - Refactor config loading** (enhancement, 20 days old)
    Replace the ad-hoc JSON parsing with a centralized, schema-validated config module that supports defaults and env overrides.
    Issues #8 and #9 both depend on the new config system.
    Start: Extract config into a dedicated module with typed schema.
 
 ### Overdue
 
-6. **#3 - Update installation docs** (documentation, 45 days old)
+5. **#3 - Update installation docs** (documentation, 45 days old)
    The install guide still references the old `curl | bash` method; needs updating for the new package manager install flow.
    Open since v0.2. Quick update needed for current install process.
    Start: Compare current docs against actual install steps.

@@ -53,6 +53,11 @@ A claim is stale when git no longer lists its worktree. Stale claims are
 flagged by list, reported as free by check, replaced by claim, and removed by
 prune, so a worktree that has been removed never blocks a resource forever.
 
+A resource name is any string without whitespace, chosen per project: logic,
+simulator, port-5432. There is no registry. list writes one key=value line per
+claim with worktree= last, since a path may contain spaces; consume list --json
+where the output is parsed rather than read.
+
 Claims live in the main worktree's .claude/worktree-resources.local.json, which
 every worktree in the repository resolves to the same path. Set
 WORKTREE_RESOURCES_FILE to read and write somewhere else.
@@ -143,12 +148,12 @@ function read_claims() {
   fi
 
   if ! jq -e 'all(.claims[];
-        ((.resource | type) == "string") and (.resource | length > 0)
+        ((.resource | type) == "string") and (.resource | test("^[^[:space:][:cntrl:]]+$"))
         and ((.worktree | type) == "string") and (.worktree | length > 0)
         and ((.branch | type) == "string") and (.branch | length > 0)
         and ((.claimed_at | type) == "string")
         and ((has("issue") | not) or ((.issue | type) == "number")))' > /dev/null 2>&1 <<< "${document}"; then
-    die "${file} holds a malformed claim; each needs a non-empty resource, worktree and branch, a claimed_at string, and a numeric issue when present"
+    die "${file} holds a malformed claim; each needs a whitespace-free resource, a non-empty worktree and branch, a claimed_at string, and a numeric issue when present"
   fi
 
   jq -c '.claims' <<< "${document}"
@@ -157,12 +162,27 @@ function read_claims() {
 function release_lock() {
   [[ -n "${LOCK_DIRECTORY}" ]] || return 0
 
-  rmdir "${LOCK_DIRECTORY}" 2> /dev/null || true
+  rm -rf "${LOCK_DIRECTORY}"
   LOCK_DIRECTORY=""
 }
 
+# A lock is abandoned only when the process that took it is gone. Age alone is
+# not proof of that: a claim that is merely slow or suspended still holds the
+# section it is in, and breaking its lock on a timer would readmit the second
+# writer this whole mechanism exists to keep out.
+#
+# The age check remains as a fallback for the one window where no owner can be
+# read: between mkdir creating the directory and the owner file landing in it.
 function lock_is_abandoned() {
   local lock="${1}"
+  local owner
+
+  owner="$(< "${lock}/owner")" 2> /dev/null || owner=""
+
+  if [[ -n "${owner}" ]]; then
+    kill -0 "${owner}" 2> /dev/null && return 1
+    return 0
+  fi
 
   [[ -n "$(find "${lock}" -maxdepth 0 -mmin "+${LOCK_STALE_MINUTES}" 2> /dev/null)" ]]
 }
@@ -174,9 +194,9 @@ function lock_is_abandoned() {
 #
 # This serializes access to the file; it does not make the claim an enforced
 # lock on the resource, which stays advisory. mkdir is the portable mutex: it
-# is atomic everywhere this runs, and flock is absent on macOS. An abandoned
-# lock is broken rather than waited on forever, for the same reason a stale
-# claim is cleared rather than honored.
+# is atomic everywhere this runs, and flock is absent on macOS. A lock whose
+# owner has exited is broken rather than waited on forever, for the same reason
+# a stale claim is cleared rather than honored.
 function acquire_lock() {
   local file="${1}"
   local lock="${file}.lock"
@@ -187,7 +207,7 @@ function acquire_lock() {
 
   while ! mkdir "${lock}" 2> /dev/null; do
     if lock_is_abandoned "${lock}"; then
-      rmdir "${lock}" 2> /dev/null || true
+      rm -rf "${lock}"
       continue
     fi
 
@@ -198,6 +218,8 @@ function acquire_lock() {
     sleep 1
     waited=$((waited + 1))
   done
+
+  printf '%s' "$$" > "${lock}/owner" || true
 
   LOCK_DIRECTORY="${lock}"
   trap release_lock EXIT
@@ -249,8 +271,25 @@ function decorate_claims() {
   ' <<< "${claims}"
 }
 
+# A resource name is free-form but must survive the key=value output unaltered.
+# Whitespace would make that line ambiguous, and a name like "logic state=stale"
+# or one carrying a newline could forge a field or a whole extra claim line. The
+# names this is for (logic, simulator, port-5432) never contain whitespace, so
+# refusing it costs nothing and removes the ambiguity by construction rather
+# than by escaping.
+function valid_resource_name() {
+  local resource="${1}"
+
+  [[ -n "${resource}" ]] || return 1
+  [[ "${resource}" != *[[:space:][:cntrl:]]* ]] || return 1
+  [[ "${resource}" != -* ]] || return 1
+
+  return 0
+}
+
 # One "key=value" line per claim. worktree= comes last because a path may
-# contain spaces, and trailing it keeps every earlier field parseable.
+# contain spaces, and trailing it keeps every earlier field parseable. Every
+# other value is whitespace-free by validation, so no escaping is needed.
 function format_claims() {
   local decorated="${1}"
 
@@ -304,9 +343,9 @@ function cmd_check() {
   local resource="${1:-}"
   local file claims decorated match state
 
-  if [[ -z "${resource}" || "${resource}" == -* ]]; then
+  if ! valid_resource_name "${resource}"; then
     usage >&2
-    die "check requires a resource name"
+    die "check requires a resource name with no whitespace"
   fi
 
   shift
@@ -373,9 +412,9 @@ function cmd_claim() {
 
   resource="${1:-}"
 
-  if [[ -z "${resource}" || "${resource}" == -* ]]; then
+  if ! valid_resource_name "${resource}"; then
     usage >&2
-    die "claim requires a resource name"
+    die "claim requires a resource name with no whitespace"
   fi
 
   shift
@@ -477,6 +516,11 @@ function cmd_release() {
   if [[ -n "${resource}" && -n "${worktree}" ]]; then
     usage >&2
     die "release takes a resource name or --worktree, not both"
+  fi
+
+  if [[ -n "${resource}" ]] && ! valid_resource_name "${resource}"; then
+    usage >&2
+    die "release requires a resource name with no whitespace"
   fi
 
   file="$(claim_file_path)"

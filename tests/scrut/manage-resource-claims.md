@@ -292,7 +292,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"resource": "logic"}]}' > "${claim_file}" \
 >   && claims list 2>&1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; each needs a non-empty resource, worktree and branch, a claimed_at string, and a numeric issue when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; each needs a whitespace-free resource, a non-empty worktree and branch, a claimed_at string, and a numeric issue when present (glob)
 [1]
 ```
 
@@ -303,7 +303,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":"x"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; each needs a non-empty resource, worktree and branch, a claimed_at string, and a numeric issue when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; each needs a whitespace-free resource, a non-empty worktree and branch, a claimed_at string, and a numeric issue when present (glob)
 ```
 
 ## Concurrent claims on different resources both survive
@@ -329,16 +329,63 @@ $ setup_claims \
 lock released
 ```
 
-## An abandoned lock is broken rather than waited on forever
+## A lock whose owner has exited is broken rather than waited on forever
 
 A process terminated mid-write leaves its lock directory behind. Honoring it indefinitely would block every later claim, which is the same failure a stale claim would cause and is ruled out for the same reason.
+
+`sh -c 'echo $$'` reports the PID of a shell that has already exited by the time the owner file is read, which is the condition being tested.
 
 ```scrut
 $ setup_claims \
 >   && mkdir -p "${claim_file}.lock" \
->   && touch -t 200001010000 "${claim_file}.lock" \
+>   && sh -c 'echo $$' > "${claim_file}.lock/owner" \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/a
 claimed "logic" for feature/a
+```
+
+## An old lock whose owner is still running is honored
+
+Age is not proof that the owner exited. A claim that is merely slow or suspended still holds the section it is in, so breaking its lock on a timer would readmit the second writer the lock exists to keep out. Here the lock is backdated to the year 2000 and still respected, because its recorded owner is alive.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "${claim_file}.lock" \
+>   && printf '%s' "$$" > "${claim_file}.lock/owner" \
+>   && touch -t 200001010000 "${claim_file}.lock" \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/a 2>&1 | tail -1
+manage-resource-claims: another claim operation is holding */.claude/worktree-resources.local.json.lock; remove it if nothing is in progress (glob)
+```
+
+## A resource name carrying whitespace is refused
+
+`resource` is free-form, and the output is space-delimited `key=value`. A name like `logic state=stale` would forge a field and one carrying a newline would fake an entire claim line. The names this is for never contain whitespace, so refusing it removes the ambiguity by construction rather than by escaping.
+
+```scrut
+$ setup_claims && claims_tail claim "logic state=stale" --worktree /repo/wt-live --branch feature/a
+manage-resource-claims: claim requires a resource name with no whitespace
+[1]
+```
+
+## check and release refuse a whitespace name too
+
+```scrut
+$ setup_claims \
+>   && { claims_tail check "logic state=stale"; claims_tail release "logic state=stale"; } 2>&1
+manage-resource-claims: check requires a resource name with no whitespace
+manage-resource-claims: release requires a resource name with no whitespace
+[1]
+```
+
+## A stored resource name carrying whitespace is refused
+
+Validation on write and on read agree, so a hand-edited file cannot reintroduce what the CLI rejects.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version": 1, "claims": [{"resource":"a b","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
+>   && claims list 2>&1 | tail -1
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; each needs a whitespace-free resource, a non-empty worktree and branch, a claimed_at string, and a numeric issue when present (glob)
 ```
 
 ## Outside a git repository the claim file cannot be resolved
@@ -408,7 +455,7 @@ manage-resource-claims: unknown subcommand: bogus
 
 ```scrut
 $ setup_claims && claims_tail check
-manage-resource-claims: check requires a resource name
+manage-resource-claims: check requires a resource name with no whitespace
 [1]
 ```
 
@@ -416,7 +463,7 @@ manage-resource-claims: check requires a resource name
 
 ```scrut
 $ setup_claims && claims_tail claim --worktree /repo/wt-live
-manage-resource-claims: claim requires a resource name
+manage-resource-claims: claim requires a resource name with no whitespace
 [1]
 ```
 
@@ -426,7 +473,7 @@ Without this guard a mistyped flag is read as a resource nobody has claimed, so 
 
 ```scrut
 $ setup_claims && claims_tail check --json
-manage-resource-claims: check requires a resource name
+manage-resource-claims: check requires a resource name with no whitespace
 [1]
 ```
 
