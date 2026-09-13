@@ -12,7 +12,11 @@ See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 
-Finds a GitHub issue by number or fuzzy text search, derives a branch name from the issue title and labels, self-assigns the issue, labels it "in progress", and creates a worktree via `workmux add` with the full issue context injected as a prompt. The injected prompt ends with an instruction telling the new session to run `/address-issue <number>` first, so the work begins with a plan that stops for your approval.
+Finds a GitHub issue by number or fuzzy text search, self-assigns the issue, labels it "in progress", and creates a worktree via `workmux add` with the full issue context injected as a prompt. The injected prompt ends with an instruction telling the new session to run `/address-issue <number>` first, so the work begins with a plan that stops for your approval.
+
+The branch name comes from workmux's own generator, which reads the issue prompt: the launcher runs `workmux add -A --dry-run`, which returns a name without creating anything. Whatever it returns is used as-is, with the issue number inserted after the type prefix, so `feature/make-things-better` for issue 387 becomes `feature/387-make-things-better`. Leading with the issue number is what lets the [PR](../pr/README.md) skill link the resulting pull request back to the issue. Rerunning for the same issue reuses a local branch that already carries that number.
+
+Generation needs a naming command workmux can reach: `auto_name.command` if set, otherwise the configured agent's CLI, otherwise the [`llm`](https://llm.datasette.io/) CLI. With `agent: claude` that resolves to `claude --model haiku -p` and needs no extra setup. When none is reachable, the skill falls back to deriving a name from the issue title and labels. The type prefix reflects your own `auto_name.system_prompt`; see [Create Worktree](../create-worktree/README.md#choosing-the-type-prefix) for a snippet.
 
 The approval gate itself lives in [Address Issue](../address-issue/README.md). This skill creates the worktree and stops; the plan is produced and approved in the new session.
 

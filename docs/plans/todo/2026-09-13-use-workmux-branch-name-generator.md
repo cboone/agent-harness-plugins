@@ -14,11 +14,11 @@ This plan moves naming out of skill prose and into `launch-workmux`, which asks 
 
 Verified with `workmux add -A -P <file> --dry-run`, which runs the generator and creates nothing:
 
-| Input                            | Generated name                            |
-| -------------------------------- | ----------------------------------------- |
-| Issue 356 prompt, `maintenance`  | `chore/validate-cross-references`         |
-| Issue 358 prompt, `bug`          | `fix/consult-config-before-auto-fix`      |
-| Issue 358 prompt, second run     | `fix/consult-agent-config-before-auto-fix` |
+| Input                           | Generated name                             |
+| ------------------------------- | ------------------------------------------ |
+| Issue 356 prompt, `maintenance` | `chore/validate-cross-references`          |
+| Issue 358 prompt, `bug`         | `fix/consult-config-before-auto-fix`       |
+| Issue 358 prompt, second run    | `fix/consult-agent-config-before-auto-fix` |
 
 Two facts follow. The generator is non-deterministic, so a rerun for the same issue will not reproduce the earlier name. And the type prefix comes from the user's own `auto_name.system_prompt`, not from workmux: the built-in prompt asks for bare kebab-case such as `dark-mode`.
 
@@ -28,12 +28,12 @@ The plugin cannot ship a naming prompt of its own. The only per-invocation confi
 
 Take whatever workmux returns and insert the issue number. Do not invent a prefix, do not re-slugify, do not second-guess the wording.
 
-| Generated                     | Issue | Result                            |
-| ----------------------------- | ----- | --------------------------------- |
-| `feature/make-things-better`  | 387   | `feature/387-make-things-better`  |
-| `fix/fix-the-login-page`      | 42    | `fix/42-fix-the-login-page`       |
-| `make-things-better`          | 387   | `387-make-things-better`          |
-| `feature/make-things-better`  | none  | `feature/make-things-better`      |
+| Generated                    | Issue | Result                           |
+| ---------------------------- | ----- | -------------------------------- |
+| `feature/make-things-better` | 387   | `feature/387-make-things-better` |
+| `fix/fix-the-login-page`     | 42    | `fix/42-fix-the-login-page`      |
+| `make-things-better`         | 387   | `387-make-things-better`         |
+| `feature/make-things-better` | none  | `feature/make-things-better`     |
 
 A bare slug stays bare. The `pr` skill's strategy 1 already matches `N-description` alongside `TYPE/N-description`, so linkage holds either way, and a user who wants prefixes configures `auto_name.system_prompt` in workmux.
 
@@ -50,7 +50,7 @@ launch-workmux <branch-name> [--base <branch>]
 launch-workmux --auto-name [--issue <n>] [--base <branch>]
 ```
 
-`--issue` requires `--auto-name` and must match `^[0-9]+$`, so `#42` and leading zeros are rejected before anything runs.
+`--issue` requires `--auto-name` and must match `^[1-9][0-9]*$`, so `#42` and leading zeros are rejected before anything runs.
 
 Flow when `--auto-name` is given, inside `do_launch`:
 
@@ -71,7 +71,7 @@ Flow when `--auto-name` is given, inside `do_launch`:
 
    Pass neither `--base` nor `--open-if-exists`: neither affects the name, and a `--base` that is not present locally fails the dry run. The `< /dev/null` redirect is required, because workmux treats readable stdin as multi-worktree mode.
 
-1. Parse the name from stdout. workmux prints two matching lines, `  Branch: <name>` from the generator and `Branch:   <name>` from the dry-run summary, so take the last line matching `^[[:space:]]*Branch:[[:space:]]+(.+)$`. Keep the pattern in a variable for `[[ =~ ]]`, and avoid `${x,,}`, `mapfile`, and `declare -A`, since macOS ships Bash 3.2.
+1. Parse the name from stdout. workmux prints two matching lines, an indented `Branch:` line from the generator and a padded one from the dry-run summary, so take the last line matching `^[[:space:]]*Branch:[[:space:]]+(.+)$`. Keep the pattern in a variable for `[[ =~ ]]`, and avoid `${x,,}`, `mapfile`, and `declare -A`, since macOS ships Bash 3.2.
 1. Normalize and insert the number. Trim trailing whitespace and `\r`, lowercase with `tr`, split on the first `/` only, and replace any remaining `/` in the slug with `-`. Strip a leading `issue-<n>-`, `issue<n>-`, or `<n>-` the generator may already have produced, and a trailing `-issue-<n>`. Do not strip a bare trailing `-<n>`: for issue 3 that would turn `migrate-to-python-3` into `3-migrate-to-python`. Rebuild as `<prefix>/<n>-<slug>`, or `<n>-<slug>` with no prefix, falling back to `<prefix>/<n>` if the slug empties. Exit non-zero on an empty result.
 1. Print one line, `Generated branch name: <name>`, then compute the real `safe_name`, call `worktree_path_for_branch`, and continue into the existing backgrounded launch path unchanged.
 
@@ -81,7 +81,7 @@ The real `workmux add` still runs without `-A`, so it makes no second LLM call, 
 
 ### 2. Test fixtures
 
-- `tests/fixtures/workmux-stub`: parsing currently assumes `add <branch>` and dies on any unknown argument, so it misreads `add -A --dry-run`. Make the positional branch optional, accept `-A` and `--dry-run`, and on a dry run print `  Branch: ${STUB_AUTO_NAME}` followed by the summary block and exit 0. Add `STUB_AUTO_NAME_FAIL=1` to write an error to stderr and exit 1. Record the naming input under `${STUB_STATE}/auto_name_input`, leaving `prompt_path` for the real invocation.
+- `tests/fixtures/workmux-stub`: parsing currently assumes `add <branch>` and dies on any unknown argument, so it misreads `add -A --dry-run`. Make the positional branch optional, accept `-A` and `--dry-run`, and on a dry run print an indented `Branch:` line carrying `${STUB_AUTO_NAME}`, followed by the summary block, and exit 0. Add `STUB_AUTO_NAME_FAIL=1` to write an error to stderr and exit 1. Record the naming input under `${STUB_STATE}/auto_name_input`, leaving `prompt_path` for the real invocation.
 - `tests/fixtures/git-worktree-stub`: it dies on anything but `worktree list --porcelain`. Add a `for-each-ref` branch printing `STUB_GIT_BRANCHES` one entry per line. No conflict with `worktree_path_for_branch`, which already tolerates stub failures.
 
 ### 3. Test coverage

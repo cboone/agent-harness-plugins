@@ -8,15 +8,24 @@ readonly SCRIPT_NAME
 function usage() {
   cat << 'USAGE_TEXT'
 Usage: launch-workmux <branch-name> [--base <branch>]
+       launch-workmux --auto-name [--issue <n>] [--base <branch>]
 
 Create a worktree and tmux window via workmux, fully detached from the
 calling process. Waits briefly for workmux to initialize, then outputs
 the log and cleans up. Reads the workmux prompt from stdin.
 
+With --auto-name, the branch name comes from workmux's own generator
+(`workmux add -A --dry-run`), which reads the prompt. Whatever it returns
+is used as-is, apart from inserting the issue number when --issue is given.
+
 Arguments:
   branch-name      Name of the git branch to create/open
 
 Options:
+  --auto-name      Ask workmux to generate the branch name from the prompt
+  --issue <n>      Insert issue number <n> into the generated name; reuse an
+                   existing local branch for that issue when one exists.
+                   Requires --auto-name.
   --base <branch>  Specify the base branch for the worktree
   -h, --help       Show this help
 USAGE_TEXT
@@ -308,14 +317,190 @@ function run_workmux_with_existing_prompt_fallback() {
   return "${status}"
 }
 
+function existing_branch_for_issue() {
+  local issue="${1}"
+  local line match=""
+  local count=0
+  local pattern='^([^/]+/)?'"${issue}"'(-|$)'
+  local -a candidates=()
+
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    [[ -n "${line}" ]] || continue
+    if [[ "${line}" =~ ${pattern} ]]; then
+      candidates+=("${line}")
+      match="${line}"
+      count=$((count + 1))
+    fi
+  done < <(git for-each-ref --format='%(refname:short)' refs/heads/ 2> /dev/null || true)
+
+  if ((count > 1)); then
+    printf '%s: issue %s matches more than one local branch:\n' "${SCRIPT_NAME}" "${issue}" >&2
+    printf '  %s\n' "${candidates[@]}" >&2
+    printf '%s: pass an explicit branch name instead\n' "${SCRIPT_NAME}" >&2
+    return 1
+  fi
+
+  printf '%s' "${match}"
+}
+
+function last_branch_line() {
+  local file="${1}"
+  local line result=""
+  local pattern='^[[:space:]]*Branch:[[:space:]]+(.+)$'
+
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    if [[ "${line}" =~ ${pattern} ]]; then
+      result="${BASH_REMATCH[1]}"
+    fi
+  done < "${file}"
+
+  printf '%s' "${result}"
+}
+
+function strip_issue_number() {
+  local slug="${1}"
+  local issue="${2}"
+
+  if [[ "${slug}" == "${issue}" || "${slug}" == "issue-${issue}" || "${slug}" == "issue${issue}" ]]; then
+    return 0
+  fi
+
+  slug="${slug#"${issue}"-}"
+  slug="${slug#"issue-${issue}"-}"
+  slug="${slug#"issue${issue}"-}"
+  # Only a trailing "-issue-N" is dropped. A bare trailing "-N" can belong to
+  # the name itself, as in "migrate-to-python-3" for issue 3.
+  slug="${slug%"-issue-${issue}"}"
+
+  printf '%s' "${slug}"
+}
+
+function normalize_branch_name() {
+  local raw="${1}"
+  local issue="${2:-}"
+  local name prefix slug
+
+  name="${raw//$'\r'/}"
+  name="$(printf '%s' "${name}" | tr '[:upper:]' '[:lower:]')"
+  while [[ "${name}" == [[:space:]]* ]]; do
+    name="${name#?}"
+  done
+  while [[ "${name}" == *[[:space:]] ]]; do
+    name="${name%?}"
+  done
+
+  if [[ -z "${name}" ]]; then
+    die "workmux returned an empty branch name"
+  fi
+
+  if [[ -z "${issue}" ]]; then
+    printf '%s' "${name}"
+    return 0
+  fi
+
+  if [[ "${name}" == */* ]]; then
+    prefix="${name%%/*}"
+    slug="${name#*/}"
+  else
+    prefix=""
+    slug="${name}"
+  fi
+
+  # Only the first slash separates the type prefix; the rest belong to the slug.
+  slug="${slug//\//-}"
+  slug="$(strip_issue_number "${slug}" "${issue}")"
+
+  if [[ -z "${slug}" ]]; then
+    slug="${issue}"
+  else
+    slug="${issue}-${slug}"
+  fi
+
+  if [[ -n "${prefix}" ]]; then
+    printf '%s/%s' "${prefix}" "${slug}"
+  else
+    printf '%s' "${slug}"
+  fi
+}
+
+function generate_branch_name() {
+  local prompt_file="${1}"
+  local issue="${2:-}"
+  local out err raw
+  local status=0
+
+  out="$(mktemp "/tmp/workmux-autoname.out.XXXXXX")"
+  err="$(mktemp "/tmp/workmux-autoname.err.XXXXXX")"
+
+  set +e
+  run_workmux_command add -A -P "${prompt_file}" --dry-run < /dev/null > "${out}" 2> "${err}"
+  status=$?
+  set -e
+
+  if ((status != 0)); then
+    cat "${err}" >&2
+    remove_file_if_present "${out}"
+    remove_file_if_present "${err}"
+    printf '%s: workmux could not generate a branch name\n' "${SCRIPT_NAME}" >&2
+    return "${status}"
+  fi
+
+  raw="$(last_branch_line "${out}")"
+  remove_file_if_present "${out}"
+  remove_file_if_present "${err}"
+
+  if [[ -z "${raw}" ]]; then
+    die "could not read a branch name from workmux --dry-run output"
+  fi
+
+  normalize_branch_name "${raw}" "${issue}"
+}
+
 function do_launch() {
   local branch="${1}"
   local base_branch="${2:-}"
-  local safe_name="${branch//\//-}"
-  local existing_worktree_path log prompt_file
-  prompt_file="$(mktemp "/tmp/workmux-prompt-${safe_name}.md.XXXXXX")"
+  local auto_name="${3:-false}"
+  local issue="${4:-}"
+  local safe_name existing_worktree_path log prompt_file
+  local provisional_name
+
+  if [[ "${auto_name}" == "true" ]]; then
+    if [[ -n "${issue}" ]]; then
+      provisional_name="issue-${issue}"
+    else
+      provisional_name="auto-name"
+    fi
+  else
+    provisional_name="${branch//\//-}"
+  fi
+
+  prompt_file="$(mktemp "/tmp/workmux-prompt-${provisional_name}.md.XXXXXX")"
 
   write_escaped_prompt "${prompt_file}"
+
+  if [[ "${auto_name}" == "true" ]]; then
+    local reused=""
+
+    if [[ -n "${issue}" ]]; then
+      if ! reused="$(existing_branch_for_issue "${issue}")"; then
+        remove_file_if_present "${prompt_file}"
+        return 1
+      fi
+    fi
+
+    if [[ -n "${reused}" ]]; then
+      branch="${reused}"
+      printf 'Reusing branch %s for issue %s\n' "${branch}" "${issue}"
+    else
+      if ! branch="$(generate_branch_name "${prompt_file}" "${issue}")"; then
+        remove_file_if_present "${prompt_file}"
+        return 1
+      fi
+      printf 'Generated branch name: %s\n' "${branch}"
+    fi
+  fi
+
+  safe_name="${branch//\//-}"
   existing_worktree_path="$(worktree_path_for_branch "${branch}" || true)"
 
   log="$(mktemp "/tmp/workmux-${safe_name}.log.XXXXXX")"
@@ -344,6 +529,8 @@ function main() {
   fi
 
   local base_branch=""
+  local auto_name="false"
+  local issue=""
   local -a positional=()
 
   while [[ $# -gt 0 ]]; do
@@ -356,6 +543,18 @@ function main() {
         base_branch="${2}"
         shift 2
         ;;
+      --auto-name)
+        auto_name="true"
+        shift
+        ;;
+      --issue)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          usage >&2
+          die "--issue requires an issue number"
+        fi
+        issue="${2}"
+        shift 2
+        ;;
       -*)
         die "unknown option: ${1}"
         ;;
@@ -366,12 +565,32 @@ function main() {
     esac
   done
 
+  if [[ "${auto_name}" == "true" ]]; then
+    if [[ ${#positional[@]} -ne 0 ]]; then
+      usage >&2
+      die "--auto-name takes no branch-name argument, got ${#positional[@]}"
+    fi
+
+    if [[ -n "${issue}" && ! "${issue}" =~ ^[1-9][0-9]*$ ]]; then
+      usage >&2
+      die "--issue requires a positive integer, got: ${issue}"
+    fi
+
+    do_launch "" "${base_branch}" "true" "${issue}"
+    return
+  fi
+
+  if [[ -n "${issue}" ]]; then
+    usage >&2
+    die "--issue requires --auto-name"
+  fi
+
   if [[ ${#positional[@]} -ne 1 ]]; then
     usage >&2
     die "expected 1 argument (branch-name), got ${#positional[@]}"
   fi
 
-  do_launch "${positional[0]}" "${base_branch}"
+  do_launch "${positional[0]}" "${base_branch}" "false" ""
 }
 
 main "$@"
