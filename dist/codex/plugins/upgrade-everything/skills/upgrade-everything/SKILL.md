@@ -58,7 +58,7 @@ Then check whether Dependabot already proposes any of these upgrades. List its o
 gh pr list --repo OWNER/REPO --author app/dependabot --state open --limit 200 --json number,title,headRefName,files
 ```
 
-Match each candidate to a PR by dependency name and by a file the PR touches, and record the PR number and the version it targets. A single-dependency title names the target (`bump NAME from A to B`); a grouped PR lists its updates in the body (``Updates `NAME` from A to B``), which `gh pr view N --repo OWNER/REPO --json body` returns. When `gh` is unavailable or the repository has no GitHub remote, skip this check and say so in the audit summary.
+Match each candidate to a PR by dependency name and by a file the PR touches, and record the PR number and the version it targets. A single-dependency title names the target (`bump NAME from A to B`); a grouped PR lists its updates in the body (``Updates `NAME` from A to B``), which `gh pr view N --repo OWNER/REPO --json body` returns. When `gh` is unavailable or unauthenticated, the repository has no GitHub remote, or the command fails for any other reason, skip this check and say so in the audit summary. It is supporting evidence, so its failure never stops the audit.
 
 ### 5. Classify Candidates
 
