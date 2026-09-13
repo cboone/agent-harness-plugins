@@ -142,7 +142,8 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 **External tools:**
 
 - _Manage Repo Licensing:_ [`reuse`](https://reuse.software/). Install via [Homebrew](https://brew.sh): `brew install reuse`
-- _Scaffold Go CLI, Scaffold Go Library, Scaffold Lean Library, Scaffold New Repo, Scaffold Rust CLI, Scaffold Zig CLI:_ [`gh`](https://cli.github.com/) to resolve the GitHub owner and create the repository. Each also needs its own toolchain: Go, [`elan`](https://github.com/leanprover/elan)/`lake` for Lean, Cargo for Rust, and [Zig](https://ziglang.org/download/) 0.16 or later for Zig
+- _Scaffold Go CLI, Scaffold Go Library, Scaffold Lean Library, Scaffold New Repo, Scaffold Rust CLI:_ [`gh`](https://cli.github.com/) to resolve the GitHub owner and create the repository. Each also needs its own toolchain: Go, [`elan`](https://github.com/leanprover/elan)/`lake` for Lean, and Cargo for Rust
+- _Scaffold Zig CLI:_ [`gh`](https://cli.github.com/) to resolve the GitHub owner, and [Zig](https://ziglang.org/download/) 0.16 or later. It does not create the repository
 
 ### CI and Release
 

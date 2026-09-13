@@ -22,7 +22,7 @@ Ask the user for these parameters:
 
 Derive the **package name** from the project name rather than asking: replace every hyphen with an underscore (`my-tool` becomes `my_tool`). Wherever templates reference `PACKAGE-NAME`, use this form; wherever they reference `PROJECT-NAME`, use the kebab-case form. The binary keeps the hyphens.
 
-Then **validate the derived name**, because replacing hyphens is necessary and not sufficient. `build.zig.zon`'s `.name` must be a bare Zig identifier that is not a reserved word, which means it matches `[A-Za-z_][A-Za-z0-9_]*` and is none of Zig's keywords (`test`, `error`, `fn`, `async`, `export`, `struct`, and the rest). Quoting does not rescue a name that fails either rule. All four of these are rejected:
+Then **validate the derived name**, because replacing hyphens is necessary and not sufficient. `build.zig.zon`'s `.name` must be a bare Zig identifier that is not a reserved word, which means it matches `[A-Za-z_][A-Za-z0-9_]*` and is none of Zig's keywords (`test`, `error`, `fn`, `async`, `export`, `struct`, and the rest). Quoting does not rescue a name that fails either rule. One of these four is accepted and three are not:
 
 | Project name | Derived    | Result                                            |
 | ------------ | ---------- | ------------------------------------------------- |
@@ -55,15 +55,25 @@ If either command fails or produces no output, ask the user to provide the value
 
 The project should be scaffolded in a directory named after the project. If the current directory is already named after the project and is empty (or nearly empty), use it. Otherwise, create a subdirectory.
 
-If the directory already contains Zig files (`build.zig`, `build.zig.zon`, `src/`), warn the user before proceeding.
+Before generating anything, check what is already there. Two separate checks, because they catch different things.
 
-If the target is already a git repository, check whether it is clean before generating anything:
+**Files this run would overwrite.** Later steps write all of these, and most are not Zig-specific, so a check limited to `build.zig` and `src/` misses the ones most likely to already exist:
+
+```bash
+ls -d build.zig build.zig.zon src README.md LICENSE CHANGELOG.md Makefile \
+  typos.toml .gitignore .editorconfig .github/workflows/ci.yml \
+  .github/workflows/release.yml .claude/settings.json 2> /dev/null
+```
+
+Anything listed will be replaced. `.gitignore`, `.editorconfig` and `.claude/settings.json` are merged rather than overwritten, per steps 12, 13 and 19, so name them separately when reporting. For the rest, show the user what would be lost and ask before continuing. A directory holding someone's `README.md` and `Makefile` is the case this exists for, and it does not have to be a git repository to lose work.
+
+**Uncommitted work, when the target is a git repository:**
 
 ```bash
 git status --porcelain
 ```
 
-Any output means the repository carries work that is not this scaffold's. Report it and ask whether to continue, because step 23's commit is GPG-signed and should contain only generated files. This check belongs here rather than at the commit: afterwards it can only describe what already happened.
+Any output means the repository carries work that is not this scaffold's. Report it and ask whether to continue, because step 23's commit is GPG-signed and should contain only generated files. This check belongs here rather than at the commit: afterwards it can only describe what already happened. Note that a clean tree says nothing about the first check, since committed files are exactly the ones `git status` stays quiet about.
 
 ### 4. Initialize Git
 
@@ -296,7 +306,7 @@ git add \
 git commit -S -m "feat: scaffold Zig CLI project"
 ```
 
-Add `.github/copilot-instructions.md` to that list when step 22 modified it, and drop any path this run did not create.
+Add `.github/copilot-instructions.md` to that list when step 22 modified it. Drop only a path this run neither created **nor modified**: steps 12, 13 and 19 merge into an existing `.gitignore`, `.editorconfig` or `.claude/settings.json` rather than replacing it, and those edits still belong in the commit. Dropping them because the file predates the run would leave the Zig ignore rules and the build permissions unstaged.
 
 **Do not use `git add -A`, and do not name a directory.** Step 3 allows scaffolding into a directory that is already a git repository, and step 4 skips `git init` when it is. `-A` sweeps the whole working tree, and `git add` applied to a directory is recursive, so naming `src`, `.github`, `.claude`, `docs`, or `tests` stages whatever else happens to be under them. Either way the user's unrelated work lands in a signed commit they did not ask for. Full paths are what make the set exact.
 
