@@ -9,8 +9,6 @@ Recipe lines must be indented with literal tabs, not spaces.
 ```makefile
 .PHONY: build test fmt format lint check run clean release test-scrut test-scrut-update test-all lint-md format-md lint-actions help
 
-BIN := $(CURDIR)/zig-out/bin/PROJECT-NAME
-
 build: ## Build the project
 	zig build
 
@@ -42,11 +40,11 @@ release: ## Cross-compile release binaries for all targets
 
 test-scrut: build ## Run scrut CLI tests
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }
-	BIN="$(BIN)" scrut test tests/scrut/
+	scrut test tests/scrut/
 
 test-scrut-update: build ## Update scrut test expectations
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }
-	BIN="$(BIN)" scrut update --replace --assume-yes tests/scrut/
+	scrut update --replace --assume-yes tests/scrut/
 
 test-all: test test-scrut ## Run all tests (unit + scrut)
 
@@ -71,5 +69,5 @@ help: ## Show this help
 - `lint` is `fmt` plus `build` because Zig has no separate linter. The compiler catches most of what a linter would, so a debug build is the closest equivalent.
 - `release` writes per-target directories under `release/`, which the `.gitignore` template excludes. Zig cross-compiles all five targets from one machine with no extra toolchains.
 - `release` installs each target straight into its own prefix with `zig build --prefix`, and clears `release/` first. Building into the default `zig-out/` and copying from it instead puts every target's leftovers in every directory: `zig build` does not clear the install prefix between runs, so a Windows build leaves a `.exe` and a `.pdb` behind that the next target's copy picks up.
-- The scrut targets are a starting point; run the add-scrut-cli-tests skill to wire up the test files and the binary variable properly.
+- The scrut targets are a starting point and deliberately export no binary variable, matching `scaffold-rust-cli`'s Makefile. The add-scrut-cli-tests skill derives that variable from the binary name, uppercased with hyphens replaced by underscores and suffixed `_BIN` (`my-tool` becomes `MY_TOOL_BIN`), and uses the same name in the snapshots and in CI. Pre-seeding a different one here, `BIN` for instance, would leave the generated tests referring to a variable these recipes never set. Run that skill to add the test files and the variable together.
 - `lint-md`, `format-md` and `lint-actions` cover the non-Zig files. They invoke `markdownlint-cli2`, `prettier` and `actionlint` directly rather than through package-manager scripts, matching `scaffold-rust-cli`'s Makefile: a scaffolded Zig project has no `package.json`, so a `yarn lint` target would fail on a fresh scaffold with nothing to run. They still need the tooling that `set-up-linters` installs, so they fail until that skill has run.

@@ -358,7 +358,7 @@ Print a summary of what was created:
   - Run `make check` before pushing, which runs the format check, the build and the tests together
   - Run the add-community-files skill to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
   - Run the set-up-installers skill when ready to set up a Homebrew formula and shell install script
-  - Run the add-scrut-cli-tests skill to add snapshot tests for the CLI, which also turns on the CI workflow's `run-scrut` input
+  - Run the add-scrut-cli-tests skill to add snapshot tests for the CLI. It adds its own `run-scrut-tests.yml` job and does not touch the `run-zig-ci.yml` call, so the CI workflow's own `run-scrut` input stays off. Keep one or the other rather than both
   - Add a `.github/dependabot.yml` with the `github-actions` ecosystem if the workflow pins should keep themselves current. The scaffold pins them to the SHA that was latest when it ran, and nothing updates them on its own
   - Tag a release with `git tag v0.1.0 && git push origin v0.1.0` to trigger the release workflow
 
