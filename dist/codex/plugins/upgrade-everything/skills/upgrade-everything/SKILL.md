@@ -55,10 +55,10 @@ Use `./references/upgrade-sources.md` for source-of-truth selection. Record the 
 Then check whether Dependabot already proposes any of these upgrades. List its open PRs once, naming the repository explicitly:
 
 ```bash
-gh pr list --repo OWNER/REPO --author app/dependabot --state open --limit 200 --json number,title,headRefName,files
+gh pr list --repo OWNER/REPO --author app/dependabot --state open --limit 500 --json number,title,headRefName,files
 ```
 
-Match each candidate to a PR by dependency name and by a file the PR touches, and record the PR number and the version it targets. A single-dependency title names the target (`bump NAME from A to B`); a grouped PR lists its updates in the body (``Updates `NAME` from A to B``), which `gh pr view N --repo OWNER/REPO --json body` returns. When `gh` is unavailable or unauthenticated, the repository has no GitHub remote, or the command fails for any other reason, skip this check and say so in the audit summary. It is supporting evidence, so its failure never stops the audit.
+If the list returns exactly as many PRs as `--limit` allows, it may be cut off: re-run with a higher limit before matching, so an open proposal is not missed. Match each candidate to a PR by dependency name and by a file the PR touches, and record the PR number and the version it targets. A single-dependency title names the target (`bump NAME from A to B`); a grouped PR lists its updates in the body (``Updates `NAME` from A to B``), which `gh pr view N --repo OWNER/REPO --json body` returns. When `gh` is unavailable or unauthenticated, the repository has no GitHub remote, or the command fails for any other reason, skip this check and say so in the audit summary. It is supporting evidence, so its failure never stops the audit.
 
 ### 5. Classify Candidates
 
