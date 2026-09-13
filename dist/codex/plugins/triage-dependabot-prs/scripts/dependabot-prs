@@ -120,9 +120,13 @@ function do_fetch() {
 
   local work_dir
   work_dir="$(mktemp -d)"
+  # Expand now, because work_dir is local and gone by the time the trap fires.
+  # printf %q escapes the path, so a TMPDIR holding quotes or shell
+  # metacharacters cannot break out of the trap command.
+  local quoted_work_dir
+  printf -v quoted_work_dir '%q' "${work_dir}"
   # shellcheck disable=SC2064
-  # Expand now: work_dir is local and gone by the time the trap fires.
-  trap "rm -rf '${work_dir}'" EXIT
+  trap "rm -rf ${quoted_work_dir}" EXIT
 
   if ! gh repo view "${repo}" --json nameWithOwner,defaultBranchRef,isArchived > "${work_dir}/repo.json"; then
     die "Failed to read ${repo}. See the gh error above for the cause."

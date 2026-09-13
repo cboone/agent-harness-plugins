@@ -115,7 +115,7 @@ The examples below abbreviate the path to `dependabot-prs`. Expand it when you r
 
 ### 3. Collect Evidence
 
-Start by fetching every PR head in scope into a triage ref, and predicting conflicts, because the freshness checks and two of the categories depend on the result. Clear refs left by an earlier run first: a Dependabot rebase rewrites the PR head, so fetching onto a stale triage ref is refused as a non-fast-forward update.
+Start by fetching every PR head in scope into a triage ref, and predicting conflicts, because the freshness checks and two of the categories depend on the result. Clear refs left by an earlier run first: a Dependabot rebase rewrites the PR head, so fetching onto a stale triage ref is refused as a non-fast-forward update. This step, and every later step that reads `refs/dependabot-triage/` or `origin/`, needs a checkout of `OWNER/REPO`. When step 1 found the working directory is not one (for example, `--repo` names another repository), skip the ref fetch and the `git merge-tree` checks, judge freshness and conflicts from `compare` and `mergeStateStatus` alone, skip local verification, and say which checks were skipped in the report.
 
 ```bash
 git for-each-ref --format='delete %(refname)' refs/dependabot-triage/ | git update-ref --stdin
