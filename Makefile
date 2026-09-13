@@ -10,7 +10,8 @@ SCRUT_TEST_DIR := tests/scrut/
 SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u WORKMUX_LAUNCH_WAIT_SECONDS -u WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS \
 	-u STUB_CAPTURE_TERM -u STUB_CAPTURE_TMUX -u STUB_GIT_WORKTREE_PORCELAIN \
-	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES
+	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES \
+	-u TZDIR
 
 # Every scrut test resolves the script or fixture it exercises through one of
 # these variables. Defining them once keeps the test and update targets from
