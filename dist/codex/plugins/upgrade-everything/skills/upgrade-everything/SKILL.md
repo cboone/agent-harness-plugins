@@ -52,6 +52,14 @@ Resolve current upstream versions from authoritative sources for each ecosystem.
 
 Use `./references/upgrade-sources.md` for source-of-truth selection. Record the source URL or command, lookup date, latest value, and confidence. If upstream resolution fails, keep the candidate in the plan with status `Blocked` or `Unknown` instead of dropping it.
 
+Then check whether Dependabot already proposes any of these upgrades. List its open PRs once, naming the repository explicitly:
+
+```bash
+gh pr list --repo OWNER/REPO --author app/dependabot --state open --limit 200 --json number,title,headRefName,files
+```
+
+Match each candidate to a PR by dependency name and by a file the PR touches, and record the PR number and the version it targets. A single-dependency title names the target (`bump NAME from A to B`); a grouped PR lists its updates in the body (``Updates `NAME` from A to B``), which `gh pr view N --repo OWNER/REPO --json body` returns. When `gh` is unavailable or the repository has no GitHub remote, skip this check and say so in the audit summary.
+
 ### 5. Classify Candidates
 
 Build one numbered candidate record for every discovered upgrade opportunity. If a version surface is already current, summarize it separately as up to date unless the user asked for a full inventory.
@@ -64,6 +72,7 @@ Each candidate must include:
 - Reward rating and reasons
 - Risk rating and reasons
 - Required validation
+- Open Dependabot PR, if any, and the version it targets
 - Recommendation
 
 Use `./references/risk-reward.md` for the reward and risk model. Risk affects ordering and recommendation, not inclusion.
@@ -75,11 +84,13 @@ Present a Markdown matrix grouped by ecosystem and surface. Include every candid
 Use this shape:
 
 ```text
-| # | Ecosystem | Surface | Current | Latest | Type | Reward | Risk | Confidence | Recommendation | Validation |
-|---|-----------|---------|---------|--------|------|--------|------|------------|----------------|------------|
+| # | Ecosystem | Surface | Current | Latest | Type | Reward | Risk | Confidence | Open PR | Recommendation | Validation |
+|---|-----------|---------|---------|--------|------|--------|------|------------|---------|----------------|------------|
 ```
 
 After the matrix, list up-to-date surfaces and unresolved upstream lookups separately. Make the distinction between "not selected yet", "not recommended", and "blocked" explicit.
+
+When an open Dependabot PR already targets the latest value, the upgrade is already proposed. Recommend handling that PR with the `triage-dependabot-prs` skill rather than applying the upgrade locally, and say so in the Recommendation cell (for example, `Recommended: triage #42`). When the PR targets an older version than the latest, note that a local upgrade will supersede it.
 
 ### 7. Ask for Selection
 
@@ -90,6 +101,7 @@ Ask the user which upgrades to apply. Offer these choices:
 - Apply only selected candidate numbers
 - Audit only
 - Apply all except custom exclusions
+- Triage the open Dependabot PRs instead, for the candidates that have one (invokes the `triage-dependabot-prs` skill)
 
 Do not apply upgrades until the user explicitly selects a scope. If the user asks for audit-only, stop after reporting the matrix.
 
@@ -117,8 +129,9 @@ Summarize the result under these headings:
 - Failed
 - Already up to date
 - Follow-up validation
+- Dependabot PRs superseded
 
-Include any commands that failed and the concrete candidate numbers affected.
+Include any commands that failed and the concrete candidate numbers affected. Under "Dependabot PRs superseded", list each open Dependabot PR that an applied upgrade makes redundant, and suggest closing them with the `triage-dependabot-prs` skill once the upgrade merges.
 
 ## Reference Navigation
 
