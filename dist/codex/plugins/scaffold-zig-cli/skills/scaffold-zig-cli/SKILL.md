@@ -436,7 +436,7 @@ Print a summary of what was created:
   - Run `make help` to see available Makefile targets
   - Run `make check` before pushing, which runs the format check, the build and the tests together
   - Run the add-community-files skill to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
-  - Not the scaffold-new-repo skill, if it has not already run. It writes its own LICENSE, README.md and CHANGELOG.md, and a `.claude/settings.json` with an empty allowlist, so running it now would overwrite the Zig-specific files and drop the permissions step 19 seeded. It belongs before this skill, not after
+  - Avoid running the scaffold-new-repo skill from here on. It belongs before this one, never after: it writes its own LICENSE, README.md and CHANGELOG.md, and a `.claude/settings.json` with an empty allowlist, so running it now overwrites the Zig-specific files and drops the permissions step 19 seeded. If it has not run yet and its agent config files are wanted, say so and let the user decide, rather than running it and undoing this scaffold
   - Run the set-up-installers skill when ready to set up a Homebrew formula and shell install script
   - Run the add-scrut-cli-tests skill to add snapshot tests for the CLI. It adds its own `run-scrut-tests.yml` job and does not touch the `run-zig-ci.yml` call, so the CI workflow's own `run-scrut` input stays off. Keep one or the other rather than both
   - Add a `.github/dependabot.yml` with the `github-actions` ecosystem if the workflow pins should keep themselves current. The scaffold pins them to the SHA that was latest when it ran, and nothing updates them on its own
