@@ -19,6 +19,8 @@ The user may provide these options inline:
 - **include PRs**: Also consider open PRs needing attention (reviews, conflicts, CI failures)
 - **--parallel-only**: Recommend only issues that can run beside the work already under way, excluding any whose verification needs an exclusive resource another worktree holds
 
+Treat a request that asks for parallel-safe work in its own words as `--parallel-only`, whether or not the flag was typed: "what can I work on in parallel", "what can I start alongside this", "anything that does not need the DAW". The user asked for the restriction; requiring the flag as well would answer a question they did not ask.
+
 ## Workflow
 
 ### 1. Gather Context

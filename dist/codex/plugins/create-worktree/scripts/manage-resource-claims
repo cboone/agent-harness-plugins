@@ -43,7 +43,9 @@ Subcommands:
   list [--json]              Print every claim, one "key=value" line each
   check <resource>           Report the holder of <resource>, if any
   claim <resource> --worktree <path> --branch <name> [--issue <number>]
-                             Record a claim on <resource>
+                             Record a claim on <resource>. Refuses with exit 3
+                             when another worktree holds it, unless
+                             --take-over is given
   release <resource>         Remove the claim on <resource>
   release --worktree <path>  Remove every claim held by <path>
   prune                      Drop claims whose worktree no longer exists
@@ -65,7 +67,7 @@ WORKTREE_RESOURCES_FILE to read and write somewhere else.
 Exit codes:
   0  Success, including a resource that is free
   1  Usage or environment error
-  3  check found the resource held
+  3  The resource is held: check found a holder, or claim refused one
 USAGE_TEXT
 }
 
@@ -137,8 +139,12 @@ function read_claims() {
     die "${file} is not valid JSON; fix or remove it"
   fi
 
-  if ! jq -e '(type == "object") and ((.version | type) == "number") and ((.claims | type) == "array")' > /dev/null 2>&1 <<< "${document}"; then
-    die "${file} is not a claim file; expected an object with a numeric \"version\" and a \"claims\" array"
+  # The version is required to be an integer here rather than merely a number,
+  # because it is about to be compared with Bash arithmetic: a JSON 1.5 would
+  # otherwise pass and then fail as an arithmetic syntax error instead of the
+  # schema error this is meant to report.
+  if ! jq -e '(type == "object") and ((.version | type) == "number") and ((.version | floor) == .version) and ((.claims | type) == "array")' > /dev/null 2>&1 <<< "${document}"; then
+    die "${file} is not a claim file; expected an object with an integer \"version\" and a \"claims\" array"
   fi
 
   declared="$(jq -r '.version' <<< "${document}")"
@@ -147,13 +153,19 @@ function read_claims() {
     die "${file} declares version ${declared}, newer than this script understands (${SCHEMA_VERSION}); upgrade the script rather than letting it overwrite the file"
   fi
 
+  # These match what the CLI accepts, field for field. A looser read contract
+  # would let a hand-edited file hold a claim no command can name (a resource
+  # starting with "-") or one that forges columns in the space-delimited list
+  # output (whitespace in branch or claimed_at). worktree is the exception: it
+  # is a path, it may legitimately contain spaces, and list emits it last so
+  # that it cannot be confused with a following field.
   if ! jq -e 'all(.claims[];
-        ((.resource | type) == "string") and (.resource | test("^[^[:space:][:cntrl:]]+$"))
+        ((.resource | type) == "string") and (.resource | test("^[^-[:space:][:cntrl:]][^[:space:][:cntrl:]]*$"))
         and ((.worktree | type) == "string") and (.worktree | length > 0)
-        and ((.branch | type) == "string") and (.branch | length > 0)
-        and ((.claimed_at | type) == "string")
+        and ((.branch | type) == "string") and (.branch | test("^[^[:space:][:cntrl:]]+$"))
+        and ((.claimed_at | type) == "string") and (.claimed_at | test("^[^[:space:][:cntrl:]]+$"))
         and ((has("issue") | not) or ((.issue | type) == "number")))' > /dev/null 2>&1 <<< "${document}"; then
-    die "${file} holds a malformed claim; each needs a whitespace-free resource, a non-empty worktree and branch, a claimed_at string, and a numeric issue when present"
+    die "${file} holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty, and issue must be a number when present"
   fi
 
   jq -c '.claims' <<< "${document}"
@@ -277,11 +289,19 @@ function decorate_claims() {
 # names this is for (logic, simulator, port-5432) never contain whitespace, so
 # refusing it costs nothing and removes the ambiguity by construction rather
 # than by escaping.
+function valid_token() {
+  local value="${1}"
+
+  [[ -n "${value}" ]] || return 1
+  [[ "${value}" != *[[:space:][:cntrl:]]* ]] || return 1
+
+  return 0
+}
+
 function valid_resource_name() {
   local resource="${1}"
 
-  [[ -n "${resource}" ]] || return 1
-  [[ "${resource}" != *[[:space:][:cntrl:]]* ]] || return 1
+  valid_token "${resource}" || return 1
   [[ "${resource}" != -* ]] || return 1
 
   return 0
@@ -300,6 +320,19 @@ function format_claims() {
       + ["claimed=\(.claimed_at)", "worktree=\(.worktree)"]
     | join(" ")
   ' <<< "${decorated}"
+}
+
+# True when a claim exists, is not stale, and belongs to a different worktree.
+# A stale claim is free by definition, and the same worktree reclaiming its own
+# resource is a refresh, so neither needs the user's permission to overwrite.
+function holder_is_live_and_foreign() {
+  local existing="${1}"
+  local worktree="${2}"
+
+  [[ -n "${existing}" ]] || return 1
+
+  jq -e --arg worktree "${worktree}" \
+    '(.stale | not) and (.worktree != $worktree)' > /dev/null 2>&1 <<< "${existing}"
 }
 
 function claim_for_resource() {
@@ -407,7 +440,7 @@ function report_claim_outcome() {
 # in check and in the skill that asks the user, so refusing here would leave a
 # user who has decided to override with no way to say so.
 function cmd_claim() {
-  local resource worktree="" branch="" issue=""
+  local resource worktree="" branch="" issue="" take_over="no"
   local file claims decorated existing now updated
 
   resource="${1:-}"
@@ -442,6 +475,10 @@ function cmd_claim() {
         issue="${2}"
         shift 2
         ;;
+      --take-over)
+        take_over="yes"
+        shift
+        ;;
       *)
         usage >&2
         die "unexpected argument: ${1}"
@@ -452,6 +489,11 @@ function cmd_claim() {
   [[ -n "${worktree}" ]] || die "claim requires --worktree"
   [[ -n "${branch}" ]] || die "claim requires --branch"
 
+  # git refuses whitespace in a branch name, so rejecting it here costs nothing
+  # and keeps claim from writing a record that the read contract would then
+  # refuse, which would leave the file unusable by the next command.
+  valid_token "${branch}" || die "--branch must not contain whitespace"
+
   if [[ -n "${issue}" && ! "${issue}" =~ ^[0-9]+$ ]]; then
     die "--issue must be a number, got: ${issue}"
   fi
@@ -461,6 +503,18 @@ function cmd_claim() {
   claims="$(read_claims "${file}")"
   decorated="$(decorate_claims "${claims}")"
   existing="$(claim_for_resource "${decorated}" "${resource}")"
+
+  # check and claim are separate operations, so a resource that was free when
+  # the caller checked can be held by the time it writes. Refusing a live
+  # holder here, under the lock, is what makes the answer the caller acted on
+  # still true at the moment of the write. --take-over is how a user who has
+  # been asked and said yes gets through, which keeps the claim advisory
+  # without letting a takeover happen that nobody saw.
+  if [[ "${take_over}" == "no" ]] && holder_is_live_and_foreign "${existing}" "${worktree}"; then
+    jq -r --arg resource "${resource}" \
+      '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at); pass --take-over to claim it anyway"' <<< "${existing}"
+    exit "${E_HELD}"
+  fi
 
   now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 

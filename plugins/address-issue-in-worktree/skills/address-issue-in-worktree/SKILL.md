@@ -94,6 +94,14 @@ Branch on the exit code:
 
 **Never refuse.** If the user says to proceed, proceed: they always have a reason, and taking a claim over is recorded in step 6.
 
+**If the user declines, clean up before stopping.** Step 1 has already written the issue body to `ISSUE_JSON`, and the only other instruction to remove it is in step 6, which this exit never reaches:
+
+```bash
+rm -f ISSUE_JSON
+```
+
+Substitute the literal path `mktemp` printed. Leaving it behind is the partial-run leak the temp-file handling in step 1 exists to avoid.
+
 ### 3. Mark Issue In Progress
 
 If the issue is open, signal that work is starting. Skip this step for closed issues.
@@ -232,11 +240,19 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims" claim "RESOURCE_NAME
   --worktree "WORKTREE_PATH" --branch "BRANCH_NAME" --issue NUMBER
 ```
 
-The script prints what it did: a fresh claim, a stale claim cleared, or a takeover from a live holder. Relay that line rather than restating it.
+The script prints what it did: a fresh claim or a stale claim cleared. Relay that line rather than restating it.
+
+**Add `--take-over` only if the user approved a takeover in step 2.** Without it, `claim` exits 3 and refuses when another worktree holds the resource, which is deliberate: step 2's check and this write are separate operations, so a resource that was free at the check can be held by now. An exit 3 here means exactly that happened. Report the holder the script names and ask; re-run with `--take-over` only if the user says to.
 
 If the claim cannot be written, say so and carry on. The worktree exists and the claim is advisory, so a failure here is worth reporting but is not worth unwinding the work.
 
-**Offer a gitignore entry** when the claim file was created and nothing in the project's `.gitignore` covers `.claude/worktree-resources.local.json`. It is machine-local state, and committing it puts one worktree's claims on every branch.
+**Offer a gitignore entry** when the claim file was created and nothing in the project's `.gitignore` covers it. Ignore the whole prefix rather than the one filename:
+
+```text
+.claude/worktree-resources.local.json*
+```
+
+The trailing `*` matters. The script writes a `.lock` directory beside the file while it mutates, and an interrupted write can leave a `.XXXXXX` temporary file. Ignoring only the exact filename leaves both committable.
 
 ### 7. Report Success
 

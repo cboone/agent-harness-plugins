@@ -1,5 +1,5 @@
 .claude/settings.local.json
-.claude/worktree-resources.local.json
+.claude/worktree-resources.local.json*
 .DS_Store
 .workmux/
 .yarn/install-state.gz

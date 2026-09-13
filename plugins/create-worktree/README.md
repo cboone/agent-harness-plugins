@@ -31,7 +31,9 @@ Some work cannot run in parallel across worktrees because it needs a resource on
 
 Claims live in the main worktree's `.claude/worktree-resources.local.json`, which every linked worktree resolves to the same path. Each claim records the resource, worktree, branch, and a timestamp, plus the issue number when the worktree came from an issue. The file is machine-local state and belongs in `.gitignore`; the skill offers to add the entry when it first creates the file.
 
-Claiming a resource another worktree already holds reports the holder and asks rather than proceeding. It never refuses: the claim is advisory, and a user who wants to override always has a reason.
+Claiming a resource another worktree already holds reports the holder and asks rather than proceeding. Answering yes proceeds: the claim is advisory, and a user who wants to override always has a reason. What it will not do is take a resource over without asking, including in the window between the check and the write, where another worktree may have claimed it in the meantime.
+
+A resource name is any string without whitespace, chosen per project. There is no registry.
 
 A claim whose worktree git no longer lists is stale. Stale claims are flagged by `--list-resources`, read as free when a new claim is checked, and replaced when one is recorded, so a worktree that has been removed never holds a resource forever.
 
