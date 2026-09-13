@@ -25,7 +25,7 @@ The user may provide these options inline:
 
 - **Report first, fix second.** Nothing is edited, created, or changed until the user selects it in step 6.
 - **Verify before calling a key invalid.** Dependabot gains options regularly, and a key missing from a model's memory or a lagging schema may be perfectly valid. Check the current GitHub documentation before reporting one. `directories`, `exclude-paths`, `cooldown`, `multi-ecosystem-groups`, and group `applies-to` and `group-by` are all valid.
-- **Merge, never overwrite.** Edits to `dependabot.yml` keep the user's comments, groups, and schedules, change only what a selected finding names, and show the diff before writing.
+- **Merge, never overwrite.** Edits to the config file keep the user's comments, groups, and schedules, change only what a selected finding names, and show the diff before writing.
 - **Outward-facing changes are confirmed one by one.** Creating a label or changing a repository setting affects everyone working in the repository.
 - **Never handle secret values.** When a Dependabot secret is missing, tell the user the command to run themselves.
 - **A refused API call is not a pass.** When an endpoint returns 403 or 404 for lack of permission, report the check as not visible with the current permissions.
@@ -110,14 +110,14 @@ Skip this step under `--report-only`.
 
 Offer the fixes in two groups, because they carry different consequences:
 
-- **Local edits** to `dependabot.yml`, and to `CODEOWNERS` when replacing `reviewers`: offer "all Errors and Warnings", "selected numbers", or "none".
+- **Local edits** to `CONFIG_PATH`, and to `CODEOWNERS` when replacing `reviewers`: offer "all Errors and Warnings", "selected numbers", or "none".
 - **Outward-facing changes**, each confirmed on its own: creating a missing label, enabling alerts or security updates, adding a Dependabot secret (which the user runs), editing a workflow to skip a secret-dependent job on Dependabot runs.
 
 Use `AskUserQuestion` where it exists. Without it (Codex CLI, OpenCode), print the options as a numbered list and wait for the answer.
 
 ### 7. Apply
 
-1. **Edit `dependabot.yml`** with targeted edits that keep comments and ordering. Show the resulting diff with `git diff -- CONFIG_PATH` before moving on.
+1. **Edit `CONFIG_PATH`**, the config file found in step 1, with targeted edits that keep comments and ordering. Show the resulting diff with `git diff -- CONFIG_PATH` before moving on.
 1. **Replace `reviewers` with code owners** when that fix was selected, in the same local change. Find the code owners file (`.github/CODEOWNERS`, `CODEOWNERS`, or `docs/CODEOWNERS`, in that order; create `.github/CODEOWNERS` when none exists), add an entry that assigns the former reviewers to each manifest and lockfile path the entry covered, and show `git diff` for both files. Remove `reviewers` from the config only once the code owners entries are written, so review coverage never lapses.
 1. **Re-validate** the edited file:
 
@@ -147,7 +147,7 @@ Use `AskUserQuestion` where it exists. Without it (Codex CLI, OpenCode), print t
    - On lint failure or skipped required lint work: Continue to the summary, and report the unresolved lint state under Follow-up.
    ```
 
-1. **Summarize** under Applied, Skipped, Needs user action, and Follow-up, and suggest `/commit` or `/pr` for the local edits. Changes to `dependabot.yml` take effect once they reach the default branch.
+1. **Summarize** under Applied, Skipped, Needs user action, and Follow-up, and suggest `/commit` or `/pr` for the local edits. Changes to the config take effect once they reach the default branch.
 
 ## Reporting Format
 
