@@ -8,7 +8,7 @@ Planted defects down the side, instruments across the top, one cell per pair. Th
 
 | Planted defect                                 | Malloc-heap walker | Byte bound | Buffer counter | Texture counter | Unit suite      |
 | ---------------------------------------------- | ------------------ | ---------- | -------------- | --------------- | --------------- |
-| Command queue or pipeline state never released | yes                | no         | no             | no              | no              |
+| Command queue never released                   | yes                | no         | no             | no              | no              |
 | Window buffer ring built and forgotten         | no                 | no         | yes            | no              | no              |
 | Accumulation pair built and forgotten          | no                 | no         | no             | yes             | no              |
 | Palette lookup built and forgotten             | no                 | no         | no             | yes             | no              |
@@ -19,8 +19,8 @@ Its opening line is the theory in one sentence: each instrument is blind to some
 
 Four conclusions the matrix produced, none of which was available from reading any instrument's documentation:
 
-- **The heap walker sees objects with a runtime class and misses both a graphics buffer's storage and a block with no class at all.**
-- **The byte bound sees anything large the heap walker reported**, which is why it is the one that reaches the project's own allocations. Note the qualifier, because the matrix contains its counterexample: the byte bound is computed from the walker's own total, so an allocation the walker never saw is invisible to the bound however large it is. The leaked texture below is nearly two gigabytes and the bound does not move.
+- **The heap walker sees what is on the malloc heap, and a graphics buffer's storage is not.** Two different misses get confused here, so keep them apart. A block with **no runtime class** is on the heap and the walker does find it; what misses it is the class-prefix filter, because a classless block is not printed as `<ClassName 0xADDRESS>` for the filter to match. A **buffer or private-storage texture** is a different case: its storage is not on the malloc heap at all, so the walker never sees it and nothing downstream of the walker can.
+- **The byte bound is computed from the walker's own total**, which is exactly why it reaches this project's classless allocations: they are on the heap, so they are in the total even though the class filter cannot name them. And it is why it cannot reach a private-storage texture: that is not in the total at all, so nearly two gigabytes can leak without moving the bound. The bound and the class filter are therefore complementary over heap blocks, and both are blind together off the heap.
 - **The counters are exact**, and they are the only instrument for either kind of texture. They cannot name which resource, which is why the message says "textures" rather than "accumulation textures": a counter that cannot tell two kinds apart must not claim to.
 - **One row is covered by nothing, deliberately:** `A release call stops being sent, still counted`. A release path that decrements without releasing balances every counter and leaks storage no instrument here can see. Name the row rather than its position, since a row's position moves as the table grows and the claim then attaches to the wrong defect.
 
@@ -38,7 +38,7 @@ Working the matrix out is what makes a refusal arguable. One proposed instrument
 
 > It is a calibrated instrument for a defect an uncalibrated one already catches, and it is blind to the defect nothing else catches.
 
-Both halves came from measurement. A leaked buffer moved peak memory from 47.7 MB to 57.7 MB, which the existing byte bound already flags. A leaked texture in private storage moved it from **44.1 MB to 44.3 MB while nearly two gigabytes went missing**, because shared storage is in the process's resident set and private storage is not. Only an explicit counter sees that one.
+Both halves came from measurement, and the instrument being compared against is a counter rather than the byte bound. The case for peak memory rested on a leaked buffer, which moves it from 47.7 MB to 57.7 MB while the heap walker reports clean. True, and not sufficient: that same buffer leak is already caught exactly by the buffer counter, so peak memory would be a calibrated way of detecting what an exact instrument already names. Then the case it was actually filed for, a leaked texture in private storage, moves peak memory from **44.1 MB to 44.3 MB while nearly two gigabytes go missing**, because shared storage is in the process's resident set and private storage is not. So it duplicates one instrument and cannot see the defect that motivated it.
 
 The generalizable test for a proposed instrument, then, is two questions:
 
@@ -57,6 +57,8 @@ The pair that establishes it here:
 - A leaked history ring has **no runtime class at all**, so the class filter calls it clean, and it is caught **only by the byte bound**.
 
 Neither subsumes the other. Dropping either one loses a defect, and the matrix is how that became visible rather than arguable.
+
+**Note what the matrix row is keyed to, because a merged row hides a disagreement.** The first row names the command queue specifically, at 137,152 bytes and under the bound. A leaked pipeline state is class-visible in the same way and is **8,555,776 bytes**, over the bound, so it is caught twice. Writing one row for "command queue or pipeline state" would put a single value in the byte-bound cell where the two halves differ, which is the kind of quiet averaging a matrix exists to prevent. One row per defect whose cells differ.
 
 ## A count is not a discriminator
 

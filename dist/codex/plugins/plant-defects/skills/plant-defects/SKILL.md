@@ -25,11 +25,11 @@ Do not use this to re-derive coverage for ordinary code whose failure is a legib
 ## Core Principles
 
 1. **The second property has a bad default answer.** "This test would catch that" is a claim about the test. Until it has been run against the defect it names, it is a prediction.
-1. **Order the assertions.** Proof that the instrument was running first, then a progress or parse check, then the absence. Three steps, always in that order. The first step has a strong form and a weak one, and knowing which you have is part of the result.
+1. **Order the assertions.** Establish that the instrument was running, then that the subject ran and its output parses, and only then read the absence. What is invariant is that no absence is believed before the first two; which of them comes first depends on the instrument, and the strong form of the first (an arm built to fail) is not always available.
 1. **Record what happened, not what was expected.** A result column filled in from the issue that filed the work is not a measurement. Several of the findings behind this skill are cases where the two differed.
 1. **Encoding a plant is not the same as covering it.** A plant far enough outside a bound is caught by a sibling check, so the arm that names it is asserting only that the error had a detectable sign. Weaken each assertion in turn and confirm something still fails.
 1. **A plant that does not compile is not a passing plant.** Judge on the build's exit code, not the shape of its output, or a grep for failures reads a compile error as a pass.
-1. **Instruments do not compose by assumption.** Tabulate defect against instrument and mark what each one cannot see. Expect at least one row that nothing covers, and record it deliberately.
+1. **Instruments do not compose by assumption.** Tabulate defect against instrument and mark what each one cannot see. Where a row turns out to be covered by nothing, say so deliberately rather than leaving it implicit. A matrix that covers every row is a fine outcome; the point is to measure the cells, not to manufacture a gap.
 
 ## The Plant Table
 
@@ -45,7 +45,7 @@ The fourth column is what makes the table regress rather than describing a check
 
 ## Failure Classes
 
-Four, not two. The third survives every coverage mode, because the code is not in the analyzed program at all. The fourth survives line coverage and is reported by branch or condition coverage, which makes that the cheapest instrument for it.
+Four, not two. The third survives every coverage mode, because the code is not in the analyzed program at all. The fourth is reported by branch or condition coverage, and by line coverage too where the untaken arm has body lines of its own; it hides from line coverage only where that arm has no lines to report.
 
 | Class                     | What it is                                                                               | Why more tests do not help                                                              |
 | ------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
