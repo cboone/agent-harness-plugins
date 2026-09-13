@@ -40,6 +40,8 @@ Then **validate the derived name**, because replacing hyphens is necessary and n
 
 If the derived name fails either rule, stop and ask the user for a package name that passes, keeping their chosen project name for the binary and the directory. Do not silently rewrite it: the package name is half of the package's permanent identity, so the user should choose it.
 
+**The name they supply replaces the derived one from here on.** Validate it the same way, and use it for every `PACKAGE-NAME` substitution in steps 6, 7 and 8. Those steps say "the underscored package name" as shorthand for whichever name survived this step, not for a value re-derived from the project name: re-deriving it would write the rejected name back into `build.zig.zon` and fail the same way at step 21.
+
 If the user already provided some or all of these in their initial request, do not re-ask. Derive what you can from context.
 
 ### 2. Detect User Identity
@@ -373,7 +375,7 @@ Print a summary of what was created:
 - If the installed Zig is older than 0.16, stop. These templates use `std.Io` and the `std.process.Init` form of `main`, neither of which exists in 0.15.
 - If `zig build` reports `name must be a valid bare zig identifier`, or `expected expression, found '.'` on the `.name` line, the package name is not a bare non-keyword identifier. Go back to step 1's validation table: a hyphen, a leading digit, and a Zig keyword each produce one of those two errors, and `.@"..."` quoting fixes none of them. The binary name in `build.zig` is unaffected and keeps its hyphens.
 - If `zig build` reports a missing or invalid fingerprint after step 21, the value was transcribed incorrectly. Re-read the diagnostic and take the last `0x` value on the line.
-- If the target directory already contains Zig files (`build.zig`, `build.zig.zon`, `src/`), ask the user before overwriting
+- If step 3's preflight listed any existing path, ask the user before overwriting. That covers every path this run writes, not only the Zig ones: `README.md`, `LICENSE`, `CHANGELOG.md`, `Makefile` and `typos.toml` are the ones most likely to already exist, and losing them is what the preflight is for
 - If `git init` fails, continue generating files but warn the user, and **skip step 23**. There is no repository, so `git add` and `git commit` fail too. Report that the files were generated and no initial commit was created, rather than letting the commit fail at the end of the run
 - If `git commit -S` fails because signing is not configured, tell the user rather than retrying without `-S`. Signing is deliberate, and dropping it is the user's call.
 - If the build verification fails, show the error and attempt to fix it before continuing
