@@ -177,7 +177,7 @@ For each chunk:
    - Examine `git log --oneline -10` output to match the repository's commit message style.
    - Determine the commit type (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `style`) based on the changes.
    - Write a concise description (under 72 characters) focused on _why_ the change was made.
-   - Reference connected issues detected in step 2. Use `fixes #N` for a `fix/*` branch, or for any branch whose changes are a bug fix when the branch carries no type prefix; use `closes #N` otherwise. A branch name need not have a prefix, because the worktree skills preserve whatever workmux's generator returns, so fall back to the nature of the change rather than assuming a prefix is present. If no connected issues were detected, omit issue references from the commit message. Only reference issues in the commit that most directly addresses them.
+   - Reference connected issues detected in step 2. Use `fixes #N` when the changes fix a bug and `closes #N` otherwise. Decide from the nature of the change, which the commit type above already establishes, and never from the branch prefix: a branch may carry no prefix at all, or one such as `bug/` or `hotfix/` that means a fix without spelling it `fix/`, because the worktree skills preserve whatever workmux's generator returns. If no connected issues were detected, omit issue references from the commit message. Only reference issues in the commit that most directly addresses them.
 1. **Create the commit** using GPG signing and a HEREDOC:
 
 ```bash

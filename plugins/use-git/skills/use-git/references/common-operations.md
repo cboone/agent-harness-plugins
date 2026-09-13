@@ -77,8 +77,10 @@ This limit is a default. A project that enforces its own convention wins: a comm
 
 ### Issue References
 
-- `fixes #N` for bug fix branches (`fix/*`)
-- `closes #N` for other branch types
+- `fixes #N` when the changes fix a bug
+- `closes #N` otherwise
+
+Decide from the nature of the change, not from the branch prefix. A branch may carry no prefix, or one such as `bug/` or `hotfix/` that means a fix without spelling it `fix/`.
 
 ## Branch Naming
 
