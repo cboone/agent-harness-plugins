@@ -778,6 +778,17 @@ report-board: */page.html holds more than one JSON document in its board data (g
 [1]
 ```
 
+## A board title carrying the data marker
+
+`render` writes the title through `@html`, so a title holding `id="board-data"`
+reaches the page escaped and cannot be mistaken for the element `extract` looks
+for.
+
+```scrut
+$ dir="$(mktemp -d)" && jq '.title = "widgets id=\"board-data\" backlog"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" render --standalone "${dir}/data.json" "${dir}/page.html" > /dev/null 2>&1 && "${REPORT_BOARD_BIN}" extract "${dir}/page.html" | jq -r '.title'
+widgets id="board-data" backlog
+```
+
 ## Compare two syncs
 
 ```scrut

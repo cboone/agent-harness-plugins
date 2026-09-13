@@ -463,7 +463,17 @@ $previous[0] as $old
 | ($old | pick_map) as $old_picks
 | ($new | pick_map) as $new_picks
 | [
-    entry("Changed board identity"; [("board", "title", "repo", "repoUrl") as $field | select(($old[$field] // null) != ($new[$field] // null)) | "\($field) (\($old[$field] // null | shown) to \($new[$field] // null | shown))"]),
+    # The page builds every same-repository link from repoUrl, falling back to
+    # https://github.com/REPO and dropping a trailing slash, so an omitted
+    # repoUrl and that exact address are one board rather than a move. When
+    # neither side states one, the address follows repo alone and a changed
+    # repo already reports itself, so there is no separate repoUrl change to
+    # report. The message quotes what each side actually held.
+    entry("Changed board identity"; [("board", "title", "repo", "repoUrl") as $field
+      | (if $field == "repoUrl" then (($old.repoUrl // "https://github.com/\($old.repo // "")") | sub("/+$"; "")) else ($old[$field] // null) end) as $was
+      | (if $field == "repoUrl" then (($new.repoUrl // "https://github.com/\($new.repo // "")") | sub("/+$"; "")) else ($new[$field] // null) end) as $now
+      | select($was != $now and ($field != "repoUrl" or ($old.repoUrl // null) != null or ($new.repoUrl // null) != null))
+      | "\($field) (\($old[$field] // null | shown) to \($new[$field] // null | shown))"]),
     entry("Closed"; [$old | issues_of | .[] | select($now[.number | tostring] == null) | describe]),
     # A new issue reaches none of the transition entries below, which compare
     # against a previous state it does not have, so its placement and its state
