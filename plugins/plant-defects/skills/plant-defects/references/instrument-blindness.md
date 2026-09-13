@@ -54,7 +54,7 @@ Two assertions that both catch the same defect are redundant. Two that each catc
 The pair that establishes it here:
 
 - A leaked command queue is **137,152 bytes**, under a one-mebibyte bound, and is caught **only by its class name**.
-- A leaked history ring has **no runtime class at all**, so the class filter calls it clean, and it is caught **only by the byte bound**.
+- A leaked history ring, which is the measured instance of the matrix's `A plain allocation this project owns` row, has **no runtime class at all**, so the class filter calls it clean, and it is caught **only by the byte bound**. Name the instance in the prose and the class in the row, and say which is which, or the pair below reads as citing a row that is not there.
 
 Neither subsumes the other. Dropping either one loses a defect, and the matrix is how that became visible rather than arguable.
 

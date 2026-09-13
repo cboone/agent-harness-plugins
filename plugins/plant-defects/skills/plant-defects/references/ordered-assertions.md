@@ -69,7 +69,7 @@ The general rule: **anything that acquires a sanitizer needs the same kind of co
 A leak checker exits non-zero whenever it finds anything at all, and it always finds something, because the platform's own frameworks leak a few hundred allocations per run and none of them belong to the project. So the exit code is not the signal, and neither is a clean grep on its own. Four assertions, in order:
 
 1. **The harness itself passed.** A leak report over a run that fell over partway through describes a process that never reached the teardown being measured.
-1. **The checker produced a report and it parses.** A grep that finds nothing in output that was never generated reads exactly like a pass.
+1. **This run produced a report, and it parses.** A grep that finds nothing in output that was never generated reads exactly like a pass. Note the first three words: a parseable report left behind by an earlier run survives a run that produced none, and then the absence checks below pass over stale text. Write to a fresh path per run, or delete any prior report before invoking the checker, and parse only what this invocation wrote.
 1. **No leaked object belongs to this project**, by class-name prefix.
 1. **The total leaked bytes are inside the bound.**
 

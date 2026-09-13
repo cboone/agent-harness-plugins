@@ -51,7 +51,7 @@ Each call site does the embedding itself, because the path resolves relative to 
 | `mentions`     | How many statement lines **contain** this substring             |
 | `statedBefore` | Is each line stated once, and does the first precede the second |
 
-**An exact-match count alone leaves a hole.** A file that states every line asked of it and also quietly acquired a sixth operation somewhere else satisfies every exact-match check. Only a containing count refuses it:
+**An exact-match count alone leaves a hole.** A file that states every line asked of it and also quietly acquired a sixth operation **on a line of its own** satisfies every exact-match check. A containing count refuses that:
 
 ```zig
 test "mentions counts lines rather than occurrences, and catches an operation nothing asked about" {
@@ -77,11 +77,15 @@ try testing.expectEqual(stated(right, second), stated(wrong, second));
 
 Make the order predicate false when either line is absent or stated more than once, because "before" means nothing about a line stated twice.
 
+**The containing count closes that hole only under an invariant worth stating, because it counts lines rather than occurrences.** An operation appended to an existing line that already contains the term leaves the count unchanged, and if that line is not itself pinned by an exact match, every assertion still passes. So the guarantee is: one guarded operation per line, and every line containing the term is either pinned exactly or counted. Where the language or the house style allows several statements on a line, count occurrences instead, or accept that this is a limit and record it with the canary.
+
 ## Two matching properties that are answers, not choices
 
 Both were flaws in the first implementation.
 
-**Match a statement trimmed**, ignoring indentation. The original formatted a match string with exactly eight leading spaces, so moving a statement into a conditional block failed the canary with no semantic change at all. Trimmed, re-indentation is a wash.
+**Match a statement trimmed**, ignoring indentation. The original formatted a match string with exactly eight leading spaces, so a **purely cosmetic re-indentation**, the kind a formatter performs, failed the canary while changing nothing. Trimmed, that is a wash, which is what the rule is for.
+
+Be precise about what follows, because the obvious wording of it is wrong. Moving a statement **into** a conditional block is not a cosmetic change: in a brace-delimited language the braces move too, and the statement now runs conditionally. Trimming does not make that harmless; it makes it **invisible to this assertion**, which is a limit rather than a feature. A canary built on exact-match counts alone would accept that control-flow change. Pin the order with the third primitive, or pin the enclosing structure as well as the statement, wherever a statement's being unconditional is part of the claim.
 
 **Treat a line whose trimmed text begins with a comment marker as not a statement.** The original counted a bare identifier over text that included the doc comments above the test banner, so a new comment naming the identifier broke the count. It is also what makes an assertion like `mentions(code, "Threaded.init") == 0` expressible at all, in a file whose own docstring names that term twice in order to forbid it.
 
