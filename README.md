@@ -165,7 +165,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 - _Add GoReleaser Homebrew:_ [`gh`](https://cli.github.com/) and [`goreleaser`](https://goreleaser.com/)
 - _Monitor PR:_ [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) (both required; the skill reads check, review, and merge state over the GitHub API and pipes paginated review JSON through `jq`)
 - _Pin Everything:_ [`gh`](https://cli.github.com/), [`jq`](https://jqlang.org/); optional [`corepack`](https://github.com/nodejs/corepack) (only when pinning Yarn or pnpm) and [`reuse`](https://reuse.software/) (only in REUSE-licensed repos)
-- _Review Dependabot Config:_ [`gh`](https://cli.github.com/) (reads repository settings, labels, alerts, and Dependabot secrets); optional [`uv`](https://docs.astral.sh/uv/) for schema validation with `check-jsonschema`
+- _Review Dependabot Config:_ [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) (reads repository settings, labels, alerts, and Dependabot secrets); optional [`uv`](https://docs.astral.sh/uv/) for schema validation with `check-jsonschema`
 - _Set-Up Installers:_ [`gh`](https://cli.github.com/) to detect the repository owner and probe for a `homebrew-tap` repo
 - _Triage Dependabot PRs:_ [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) (both required; the bundled script reads PRs, comparisons, and alerts over the GitHub API and summarizes them with `jq`)
 - _Write Homebrew Formula:_ [Homebrew](https://brew.sh/) for formula audit, style, install, and test validation

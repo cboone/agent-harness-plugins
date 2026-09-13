@@ -4,7 +4,7 @@ Review a repository's Dependabot setup (dependabot.yml coverage and validity, gr
 
 **Type:** Skill
 **Trigger:** `/review-dependabot-config`
-**Requires:** [`gh`](https://cli.github.com/) (authenticated)
+**Requires:** [`gh`](https://cli.github.com/) (authenticated), [`jq`](https://jqlang.org/)
 
 ## Installation
 
@@ -57,14 +57,14 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh repo view *)", "Bash(gh pr list *)", "Bash(gh label list *)", "Bash(gh label create *)", "Bash(gh api repos/*)", "Bash(gh api -i repos/*)", "Bash(gh api --paginate --slurp repos/*)", "Bash(git fetch *)", "Bash(git show *)", "Bash(git diff *)", "Bash(uvx check-jsonschema *)", "Bash(jq *)"]
+    "allow": ["Bash(date)", "Bash(git remote -v)", "Bash(gh repo view *)", "Bash(gh pr list *)", "Bash(gh label list *)", "Bash(gh label create *)", "Bash(gh api repos/*)", "Bash(gh api 'repos/*)", "Bash(gh api -i repos/*)", "Bash(gh api --paginate --slurp repos/*)", "Bash(gh api --paginate --slurp 'repos/*)", "Bash(gh api orgs/*)", "Bash(git fetch *)", "Bash(git show *)", "Bash(git diff *)", "Bash(grep *)", "Bash(uvx check-jsonschema *)", "Bash(jq *)"]
   }
 }
 ```
 
 If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
-`gh label create` writes to your repository; the skill only runs it after you confirm that label. `uvx check-jsonschema` is optional, and the review skips schema validation without `uv`.
+`gh label create` writes to your repository; the skill only runs it after you confirm that label. `gh api repos/*` also matches write calls such as `-X POST`, which the skill does not make, so narrow it if you prefer. The quoted `'repos/*` forms cover endpoints with a query string, which have to be quoted in the shell. `uvx check-jsonschema` is optional, and the review skips schema validation without `uv`.
 
 ## Examples
 

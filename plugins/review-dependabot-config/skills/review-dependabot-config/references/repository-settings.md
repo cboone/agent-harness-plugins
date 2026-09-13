@@ -16,12 +16,13 @@ gh api -i repos/OWNER/REPO/vulnerability-alerts
 ## Security updates
 
 ```bash
-gh api repos/OWNER/REPO/automated-security-fixes
+gh api -i repos/OWNER/REPO/automated-security-fixes
 ```
 
+- **`404`**: security updates are not enabled, when the caller has admin permission on the repository. Without admin permission the same 404 can mean the setting is not visible, so report it as "not visible" in that case. Report a Suggestion to enable them, unless the repository's policy says otherwise.
 - **`{"enabled": true, "paused": false}`**: security update PRs are opened when an alert has a fix, whether or not a `dependabot.yml` exists.
 - **`"paused": true`**: GitHub paused them, usually after a run of PRs nobody merged. Report a Warning: alerts keep arriving and no PRs follow.
-- **`"enabled": false`**: report a Suggestion to enable them, unless the repository's policy says otherwise.
+- **`"enabled": false`**: treat like the 404 above.
 
 Security updates follow some of the config and ignore the rest: `open-pull-requests-limit`, `cooldown`, and `exclude-paths` apply to version updates only. Say this whenever a finding depends on it.
 
@@ -43,7 +44,7 @@ Report these as Warnings with the likely cause. Fixing the dependency is outside
 
 ## Dependabot secrets
 
-Workflows triggered by a Dependabot PR receive Dependabot secrets, not Actions secrets. A job that needs an Actions secret fails on every Dependabot PR.
+A workflow Dependabot triggers through `push`, `pull_request`, `pull_request_review`, or `pull_request_review_comment` runs like a fork PR: its `GITHUB_TOKEN` is read-only, and it receives Dependabot secrets, not Actions secrets. A job on one of those events that needs an Actions secret fails on every Dependabot PR. `pull_request_target` runs are not restricted this way.
 
 ```bash
 gh api repos/OWNER/REPO/dependabot/secrets --jq '[.secrets[].name]'
@@ -56,7 +57,7 @@ Then find the jobs that run on Dependabot PRs and use secrets:
 grep -rn 'secrets\.' .github/workflows/
 ```
 
-For each secret a `pull_request` or `pull_request_target` job references, other than `GITHUB_TOKEN`:
+For each secret referenced by a job that runs on `push`, `pull_request`, `pull_request_review`, or `pull_request_review_comment`, other than `GITHUB_TOKEN`:
 
 - **Present in Dependabot secrets**: fine.
 - **Missing, and the job will fail without it**: a Warning, with two fixes to offer. Mirror a read-only credential into Dependabot secrets (the user runs `gh secret set NAME --repo OWNER/REPO --app dependabot`), or skip the job on Dependabot runs with `if: github.actor != 'dependabot[bot]'`. Never mirror a credential that can write to production.
@@ -74,14 +75,14 @@ Also check `registries` in `dependabot.yml`: every `${{secrets.NAME}}` it refere
 gh label list --repo OWNER/REPO --limit 500 --json name --jq '[.[].name]'
 ```
 
-Compare with every `labels` value in the config. When a label is missing, Dependabot opens the PR without it and comments that the label could not be found. Read the comments on recent Dependabot PRs for that message as evidence:
+Compare with every `labels` value in the config. GitHub documents that a label missing from the repository is ignored, so the PR opens without it, and Dependabot has also been seen commenting that the label could not be found. The comparison is the finding; a comment like that on a recent Dependabot PR is supporting evidence:
 
 ```bash
 gh api --paginate --slurp repos/OWNER/REPO/issues/N/comments |
   jq -r '.[][] | select(.user.login == "dependabot[bot]") | .body' | grep -A 2 'could not be found'
 ```
 
-When `labels` is not set, Dependabot applies `dependencies` (and an ecosystem label) on its own, creating them if needed.
+When `labels` is not set, Dependabot applies `dependencies` on its own, plus an ecosystem label when more than one ecosystem is configured, creating them if needed.
 
 ## Merge rules
 
@@ -109,7 +110,7 @@ grep -rln -e 'dependabot/fetch-metadata' -e "github.actor == 'dependabot\[bot\]'
 For each workflow found:
 
 - **Auto-merge steps** (`gh pr merge --auto`) fail when a ruleset requires an approving review, and the error GitHub returns can blame the merge method instead. Check the rules above before trusting the step, and report a Warning when the two cannot both succeed.
-- **`pull_request_target`** runs with write permissions and secrets on code from the PR. A workflow that checks out the PR head under `pull_request_target` is an Error.
+- **`pull_request_target`** runs the workflow from the base branch with a write-capable token and the repository's secrets. That is safe only while the workflow never runs code from the PR. A workflow that checks out the PR head under `pull_request_target` and builds or runs it is an Error.
 - **`permissions:`** should be the minimum the job needs.
 
 ## Code owners
