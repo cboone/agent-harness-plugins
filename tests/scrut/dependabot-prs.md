@@ -1,6 +1,6 @@
 # Dependabot PR summaries
 
-Tests for the `dependabot-prs` script that `triage-dependabot-prs` bundles. `summarize` reduces a fetched bundle of open Dependabot PRs, other open PRs, head-to-default-branch comparisons, and Dependabot alerts to the evidence a triage needs.
+Tests for the `dependabot-prs` script that `triage-dependabot-prs` bundles. `summarize` reduces a fetched bundle of open Dependabot PRs, other open PRs, comparisons of each head against its base branch, and Dependabot alerts to the evidence a triage needs.
 
 `fetch` is not exercised past its argument checks: it requires an authenticated `gh`, which the test environment does not have. `summarize` is the seam that makes the parsing testable without one. The fixtures are synthetic bundles modeled on real Dependabot PRs, including the layouts that break naive parsing: grouped bodies repeated per directory, bodies truncated at the size limit, footers removed by a rebase, and titles updated in place.
 
@@ -206,6 +206,86 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/limited.json" 
 ```scrut
 $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/empty.json" | jq -c '{count, unmatchedAlerts, prs}'
 {"count":0,"unmatchedAlerts":[],"prs":[]}
+```
+
+## A short digest in backticks is a digest
+
+Container digest titles wrap short SHAs in backticks. The backticks are stripped before comparing with the branch.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 201) | {updates, branchAgrees}'
+{"updates":[{"name":"node","from":"6f7ab5c","to":"0e9c10a","type":"digest","semverBreaking":null}],"branchAgrees":true}
+```
+
+## A title without versions falls back to the body lead
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 202) | {updates, branchAgrees}'
+{"updates":[{"name":"vendor/lib","from":"08c6903","to":"11bd719","type":"digest","semverBreaking":null}],"branchAgrees":null}
+```
+
+## A requirement update keeps its range, and its branch is not compared
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 203) | {updates, branchAgrees}'
+{"updates":[{"name":"rake","from":"~> 12.3","to":"~> 13.0","type":"major","semverBreaking":true}],"branchAgrees":null}
+```
+
+## Updates lines outrank a stale title
+
+The body was regenerated with the newer version, trailing whitespace and all, while the title still names the old one.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 204) | {to: .updates[0].to, branchAgrees}'
+{"to":"1.2.0","branchAgrees":false}
+```
+
+## A 0.0.x patch bump is a SemVer break
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 205) | .updates[0] | {type, semverBreaking}'
+{"type":"patch","semverBreaking":true}
+```
+
+## Every check state is counted, and a zero completion time is ignored
+
+Neutral is its own count. Cancelled, stale, and errored count as failures. In progress and expected are pending, and an unfinished run's zero timestamp does not become the newest completion.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 205) | .checks'
+{"total":6,"success":0,"failure":3,"pending":2,"skipped":0,"neutral":1,"failing":["cancelled","stale","errored"],"newestCompletedAt":"2026-09-12T02:00:00Z"}
+```
+
+## Alerts match on package, ecosystem, and a dependency file in the same directory
+
+The lockfile the PR touches sits beside the alert's `web/package.json`, so alert 31 matches. Alert 32 names the same package in another directory, and alert 33 names it in another ecosystem.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 206) | {alerts: [.alerts[].number]}'
+{"alerts":[31]}
+```
+
+A file that is not a dependency file does not make a match, even in the manifest's directory.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 207) | {alerts: [.alerts[].number]}'
+{"alerts":[]}
+```
+
+## A matched alert says whether the PR clears it
+
+A PR can update a vulnerable package and still stop short of the first patched version. Here tiny moves to 0.0.4, and the advisory is fixed in 0.1.0.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '[.prs[] | select(.number == 205 or .number == 206) | {number, alerts: [.alerts[] | {number, cleared}]}]'
+[{"number":205,"alerts":[{"number":37,"cleared":false}]},{"number":206,"alerts":[{"number":31,"cleared":true}]}]
+```
+
+## Patched versions sort by version, not as strings
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.unmatchedAlerts[] | select(.package == "qs") | .patched'
+["6.2.4","6.10.0"]
 ```
 
 ## Malformed input is rejected with a reason

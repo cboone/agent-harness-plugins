@@ -4,22 +4,25 @@ Local verification turns a Needs testing PR into Safe to merge or Needs work on 
 
 Run it in a detached worktree under a temporary directory. Never in the user's working tree, and never on a branch that would be pushed.
 
+Each command runs in a fresh shell, so no variable survives from one to the next. Run `mktemp -d` twice, note the two paths it prints, and write them literally where the commands below say `PR_DIR` and `CONTROL_DIR`. `DEFAULT` is the PR's base branch.
+
+Running tests executes the new version's code, and skipping install scripts does not sandbox that. Verify on a machine whose environment holds no production or publishing credentials.
+
 ## 1. Build the would-be merge result
 
+The PR head is already in `refs/dependabot-triage/N` from step 3 of the skill.
+
 ```bash
-git fetch origin "pull/N/head:refs/dependabot-triage/N"
-WORKTREE="$(mktemp -d)/pr-N"
-git worktree add --detach "${WORKTREE}" refs/dependabot-triage/N
-git -C "${WORKTREE}" merge --no-edit --no-ff origin/DEFAULT
+git worktree add --detach PR_DIR/pr refs/dependabot-triage/N
+git -C PR_DIR/pr merge --no-commit --no-ff origin/DEFAULT
 ```
 
-A conflict at the merge step is itself the answer: the PR is Needs refresh. Abort with `git -C "${WORKTREE}" merge --abort` and stop verifying it.
+`--no-commit` leaves the merged tree in place without creating a commit, so nothing needs signing and nothing can be pushed by accident. A conflict at the merge step is itself the answer: the PR is Needs refresh. Abort with `git -C PR_DIR/pr merge --abort` and stop verifying it.
 
 For the control run, a second worktree on `origin/DEFAULT`:
 
 ```bash
-CONTROL="$(mktemp -d)/control"
-git worktree add --detach "${CONTROL}" origin/DEFAULT
+git worktree add --detach CONTROL_DIR/control origin/DEFAULT
 ```
 
 ## 2. Install without changing the lockfile
@@ -68,10 +71,11 @@ A clean run proves something only if the check could have failed:
 ## 6. Clean up
 
 ```bash
-rm -rf "$(dirname "${WORKTREE}")" "$(dirname "${CONTROL}")"
+rm -rf PR_DIR CONTROL_DIR
 git worktree prune
-git update-ref -d refs/dependabot-triage/N
 ```
+
+The triage refs themselves are removed in the skill's wrap-up step.
 
 Deleting the temporary directories and pruning avoids forcing `git worktree remove` past the untracked files the install created. Both directories came from `mktemp -d` in this verification, so nothing else lives in them.
 

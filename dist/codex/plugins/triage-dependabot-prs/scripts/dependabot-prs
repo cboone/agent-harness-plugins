@@ -70,7 +70,9 @@ function require_gh() {
     die "gh (GitHub CLI) is required but not found. Install it: https://cli.github.com"
   fi
 
-  if ! gh auth status > /dev/null 2>&1; then
+  # gh auth token checks only the active account. gh auth status fails when any
+  # account on any host has a problem, even one this script never uses.
+  if ! gh auth token > /dev/null 2>&1; then
     die "Not authenticated with GitHub. Run: gh auth login"
   fi
 }
@@ -136,10 +138,7 @@ function do_fetch() {
     die "Failed to list open PRs for ${repo}. See the gh error above for the cause."
   fi
 
-  local default_branch
-  default_branch="$(jq -r '.defaultBranchRef.name' "${work_dir}/repo.json")"
-
-  fetch_comparisons "${repo}" "${default_branch}" "${work_dir}"
+  fetch_comparisons "${repo}" "${work_dir}"
   fetch_alerts "${repo}" "${work_dir}"
 
   local fetched_at
@@ -180,28 +179,28 @@ function do_fetch() {
   fi
 }
 
-# Compares each Dependabot PR head against the default branch. The compare API
-# is the reliable source for what is actually on the branch: when GitHub holds
-# a stale base for a PR, gh pr view reports commits and files that belong to
-# the default branch, not to the PR.
+# Compares each Dependabot PR head against the branch the PR targets. The
+# compare API is the reliable source for what is actually on the branch: when
+# GitHub holds a stale base for a PR, gh pr view reports commits and files that
+# belong to the base branch, not to the PR. Comparing against the PR's own base
+# keeps a PR aimed at a configured target-branch from reading as far behind.
 # Arguments:
 #   $1 - OWNER/REPO
-#   $2 - Default branch name
-#   $3 - Work directory holding dependabot.json; compare.json is written there
+#   $2 - Work directory holding dependabot.json; compare.json is written there
 function fetch_comparisons() {
   local repo="${1}"
-  local default_branch="${2}"
-  local work_dir="${3}"
+  local work_dir="${2}"
 
   local lines_file="${work_dir}/compare.lines"
   : > "${lines_file}"
 
   local number
   local head_sha
+  local base_ref
   local comparison
-  while IFS=$'\t' read -r number head_sha; do
+  while IFS=$'\t' read -r number head_sha base_ref; do
     if comparison="$(
-      gh api "repos/${repo}/compare/${default_branch}...${head_sha}" \
+      gh api "repos/${repo}/compare/${base_ref}...${head_sha}" \
         --jq '{status, aheadBy: .ahead_by, behindBy: .behind_by, authors: [.commits[] | (.author.login // .commit.author.name // "")]}' \
         2> /dev/null
     )"; then
@@ -209,7 +208,7 @@ function fetch_comparisons() {
     else
       jq -nc --arg number "${number}" '{key: $number, value: null}' >> "${lines_file}"
     fi
-  done < <(jq -r '.[] | [.number, .headRefOid] | @tsv' "${work_dir}/dependabot.json")
+  done < <(jq -r '.[] | [.number, .headRefOid, .baseRefName] | @tsv' "${work_dir}/dependabot.json")
 
   jq -s 'from_entries' "${lines_file}" > "${work_dir}/compare.json"
 }
@@ -283,13 +282,19 @@ function do_summarize() {
     def lower: ascii_downcase;
     def body_text: (.body // "") | gsub("\r"; "");
 
-    # A 40-character hex string. Dependabot titles carry full SHAs for actions
-    # pinned to a commit, and the length check keeps a date-shaped version like
-    # 20240101 from reading as a digest.
-    def is_sha: test("^[0-9a-f]{40}$");
+    # A commit or image digest. Titles carry a full 40-character SHA for an
+    # action pinned to a commit, and a short one for a container digest or a
+    # submodule. A short form must contain a letter, which keeps a date-shaped
+    # version like 20240101 from reading as a digest.
+    def is_sha: test("^[0-9a-f]{40}$") or (test("^[0-9a-f]{7,39}$") and test("[a-f]"));
 
+    # Titles wrap digests in backticks and body leads end in a period.
+    def clean_version: gsub("`"; "") | sub("\\.$"; "");
+
+    # Requirement updates carry an operator (~> 1.2, >= 2.0), which is dropped
+    # before the numeric parts are read.
     def numeric_parts:
-      sub("^[vV]"; "")
+      sub("^[~^>=<!\\s]*[vV]?"; "")
       | capture("^(?<major>[0-9]+)(\\.(?<minor>[0-9]+))?(\\.(?<patch>[0-9]+))?")
       | {
           major: (.major | tonumber),
@@ -334,20 +339,23 @@ function do_summarize() {
     # Grouped and multi-dependency bodies carry one Updates line per dependency,
     # repeated for each directory, so those come first and are deduplicated. A
     # single-dependency title names both versions, and the Bumps lead of the body
-    # is the fallback for a title that does not.
+    # is the fallback for a title that does not. Titles read "bump NAME from A to
+    # B", or "update NAME requirement from A to B" when Dependabot widens a range,
+    # optionally followed by " in DIRECTORY" or " in the GROUP group ...".
     def title_update:
       .title // ""
-      | first(capture("(?i)\\bbump (?<name>\\S+) from (?<from>\\S+) to (?<to>\\S+)"))
-      // null;
+      | (first(capture("(?i)\\b(?:bump|update) (?<name>\\S+)(?: requirement)? from (?<from>.+?) to (?<to>.+?)(?: in .+)?$")) // null)
+      | if . == null then null else {name, from: (.from | clean_version), to: (.to | clean_version)} end;
+
+    def body_lines: body_text | split("\n")[] | sub("\\s+$"; "");
 
     def updates:
-      body_text as $body
-      | [$body | split("\n")[] | capture("^Updates `(?<name>[^`]+)` from (?<from>\\S+) to (?<to>\\S+?)\\.?$")] as $listed
+      [body_lines | capture("^Updates `(?<name>[^`]+)` from (?<from>\\S+) to (?<to>\\S+)$")] as $listed
       | if ($listed | length) > 0 then $listed
         elif title_update != null then [title_update]
-        else [$body | split("\n")[] | capture("^Bumps \\[(?<name>[^\\]]+)\\]\\([^)]*\\) from (?<from>\\S+) to (?<to>\\S+?)\\.?$")]
+        else [body_lines | capture("^Bumps \\[(?<name>[^\\]]+)\\]\\([^)]*\\) from (?<from>\\S+) to (?<to>\\S+)$")]
         end
-      | map({name, from, to} | with_type)
+      | map({name, from: (.from | clean_version), to: (.to | clean_version)} | with_type)
       | dedupe;
 
     def ecosystem:
@@ -371,10 +379,12 @@ function do_summarize() {
 
     # A title updated in place keeps the branch name it was created with, so a
     # disagreement means the diff, not either name, is the truth.
+    # A requirement range such as "~> 13.0" is rewritten in the branch name, so
+    # only a plain version or digest is compared.
     def branch_agrees:
       if shape != "single" then null
       else title_update as $update
-        | if $update == null then null
+        | if $update == null or ($update.to | test("^[0-9A-Za-z._+-]+$") | not) then null
           else (.headRefName // "") | endswith("-" + $update.to)
           end
       end;
@@ -417,7 +427,8 @@ function do_summarize() {
           skipped: ([$all[] | select(.state == "skipped")] | length),
           neutral: ([$all[] | select(.state == "neutral")] | length),
           failing: [$all[] | select(.state == "failure") | .name],
-          newestCompletedAt: ([$all[] | .completedAt | select(. != null)] | max)
+          # gh reports an unfinished check run with a zero timestamp rather than null.
+          newestCompletedAt: ([$all[] | .completedAt | select(. != null and (startswith("0001-") | not))] | max)
         };
 
     def days_since($timestamp):
@@ -431,19 +442,41 @@ function do_summarize() {
       {
         number,
         package: (.dependency.package.name // ""),
+        ecosystem: (.dependency.package.ecosystem // ""),
         severity: (.security_advisory.severity // .security_vulnerability.severity // ""),
         ghsa: (.security_advisory.ghsa_id // ""),
         manifest: (.dependency.manifest_path // ""),
         patched: (.security_vulnerability.first_patched_version.identifier // "")
       };
 
-    # An alert belongs to a PR when the PR updates its package and touches its
-    # manifest or a file beside it (a lockfile next to the manifest, say).
+    # The alerts API names ecosystems differently from Dependabot branches. An
+    # ecosystem missing from this map is not filtered on.
+    def alert_ecosystem_for($branch_ecosystem):
+      if $branch_ecosystem == null then null
+      else {
+          npm_and_yarn: "npm", bun: "npm", go_modules: "go", pip: "pip", uv: "pip",
+          cargo: "rust", bundler: "rubygems", composer: "composer", maven: "maven",
+          gradle: "maven", nuget: "nuget", pub: "pub", mix: "erlang", github_actions: "actions"
+        } | .[$branch_ecosystem] // null
+      end;
+
+    def dependency_file:
+      split("/") | last
+      | test("^(package(-lock)?\\.json|npm-shrinkwrap\\.json|yarn\\.lock|pnpm-lock\\.yaml|bun\\.lock|go\\.(mod|sum)|Cargo\\.(toml|lock)|Gemfile(\\.lock)?|.+\\.gemspec|pyproject\\.toml|uv\\.lock|poetry\\.lock|Pipfile(\\.lock)?|requirements.*\\.(txt|in)|composer\\.(json|lock)|pom\\.xml|build\\.gradle(\\.kts)?|gradle\\.lockfile|.+\\.csproj|packages\\.lock\\.json|Directory\\.Packages\\.props|pubspec\\.(yaml|lock)|mix\\.(exs|lock))$");
+
+    # An alert belongs to a PR when the PR updates its package, in the same
+    # ecosystem, and touches its manifest or a dependency file beside it (the
+    # lockfile next to a package.json, say).
     def alert_matches($pr):
       (.package | lower) as $package
       | .manifest as $manifest
-      | ($pr.updates | any(.name | lower == $package))
-        and ($pr.files | any(. == $manifest or dirname == ($manifest | dirname)));
+      | alert_ecosystem_for($pr.ecosystem) as $expected
+      | ($expected == null or .ecosystem == "" or .ecosystem == $expected)
+        and ($pr.updates | any(.name | lower == $package))
+        and ($pr.files | any(. == $manifest or (dependency_file and dirname == ($manifest | dirname))));
+
+    # Padded to four parts, so 7.5 and 7.5.0 compare equal.
+    def version_key: ([sub("^[~^>=<!\\s]*[vV]?"; "") | split(".")[] | ((capture("^(?<n>[0-9]+)").n | tonumber)? // 0)] + [0, 0, 0, 0]) | .[0:4];
 
     . as $bundle
     | ($bundle.dependabot) as $dependabot
@@ -503,7 +536,15 @@ function do_summarize() {
             )
           }
         | . as $pr
-        | .alerts = [$alerts[] | select(alert_matches($pr))]
+        # cleared says whether the version this PR moves to reaches the first patched
+        # version. A PR can update a vulnerable package without leaving its range.
+        | .alerts = [
+            $alerts[]
+            | select(alert_matches($pr))
+            | . as $alert
+            | (first($pr.updates[] | select(.name | lower == ($alert.package | lower)) | .to) // null) as $to
+            | . + {cleared: (if $to == null or $alert.patched == "" or ($to | is_sha) then null else (($to | version_key) >= ($alert.patched | version_key)) end)}
+          ]
       ] as $prs
     | {
         repo: $bundle.repo,
@@ -527,7 +568,7 @@ function do_summarize() {
               manifest: .[0].manifest,
               count: length,
               highestSeverity: (max_by(.severity | severity_rank) | .severity),
-              patched: ([.[].patched | select(. != "")] | unique),
+              patched: ([.[].patched | select(. != "")] | unique | sort_by(version_key)),
               numbers: ([.[].number] | sort)
             })
           | sort_by([-(.highestSeverity | severity_rank), .package])

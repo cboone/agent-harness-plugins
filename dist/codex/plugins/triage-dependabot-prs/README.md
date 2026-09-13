@@ -14,7 +14,7 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 Dependabot PRs look uniform and are not. A green check can be reporting on a base that no longer exists. A `MERGEABLE` PR can downgrade a dependency the default branch has already moved past. A grouped PR can carry a production-server major among a handful of patches. CI can fail only because Dependabot runs cannot read the repository's secrets, or pass only because nothing it runs touches the changed files. This skill gathers the evidence that separates those cases, puts every open Dependabot PR into exactly one category, and then acts only on what you approve.
 
-A bundled `dependabot-prs` script does the gathering. It lists the open Dependabot PRs and every other open PR, compares each Dependabot head against the default branch through the compare API, reads open Dependabot alerts, and reduces all of it to a compact summary without the PR bodies. It parses what the bodies and titles carry (ecosystem, security or version update, group shape, versions, update type), and flags the layouts that make them unreliable: a body truncated at the size limit, a commands footer removed by a rebase, a title updated in place that no longer matches its branch.
+A bundled `dependabot-prs` script does the gathering. It lists the open Dependabot PRs and every other open PR, compares each Dependabot head against its base branch through the compare API, reads open Dependabot alerts, and reduces all of it to a compact summary without the PR bodies. It parses what the bodies and titles carry (ecosystem, security or version update, group shape, versions, update type), and flags the layouts that make them unreliable: a body truncated at the size limit, a commands footer removed by a rebase, a title updated in place that no longer matches its branch.
 
 The skill then checks each PR for freshness, whether the default branch already has the change, overlap with other PRs, and whether CI actually exercises the change. Majors, grouped PRs, runtime dependencies, security updates, and GitHub Actions bumps also get their release notes, breaking changes, SHA-to-tag resolution, and version comments read.
 
@@ -62,14 +62,14 @@ This skill runs the bundled script, git, and GitHub CLI commands that trigger pe
 ```json
 {
   "permissions": {
-    "allow": ["Bash(bash \"*/dependabot-prs\" *)", "Bash(gh repo view *)", "Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr diff *)", "Bash(gh pr comment *)", "Bash(gh pr close *)", "Bash(gh pr merge *)", "Bash(gh pr review *)", "Bash(gh run view *)", "Bash(gh api repos/*)", "Bash(gh api --paginate --slurp repos/*)", "Bash(git fetch *)", "Bash(git show *)", "Bash(git diff *)", "Bash(git merge-base *)", "Bash(git merge-tree *)", "Bash(git worktree add *)", "Bash(git worktree prune)", "Bash(git update-ref -d refs/dependabot-triage/*)", "Bash(git for-each-ref *)", "Bash(mktemp *)", "Bash(jq *)", "Bash(sleep *)"]
+    "allow": ["Bash(bash \"*/dependabot-prs\" *)", "Bash(date)", "Bash(git remote -v)", "Bash(gh repo view *)", "Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr comment *)", "Bash(gh pr close *)", "Bash(gh pr merge *)", "Bash(gh pr review *)", "Bash(gh run view *)", "Bash(gh api repos/*)", "Bash(gh api 'repos/*)", "Bash(gh api --paginate --slurp repos/*)", "Bash(git fetch *)", "Bash(git show *)", "Bash(git diff *)", "Bash(git log *)", "Bash(git grep *)", "Bash(git merge-base *)", "Bash(git merge-tree *)", "Bash(git worktree add *)", "Bash(git worktree prune)", "Bash(git -C * merge *)", "Bash(git for-each-ref *)", "Bash(git update-ref --stdin)", "Bash(mktemp *)", "Bash(rm -f *)", "Bash(rm -rf *)", "Bash(grep *)", "Bash(base64 *)", "Bash(npm view *)", "Bash(jq *)", "Bash(sleep *)"]
   }
 }
 ```
 
 If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
-The `gh pr comment`, `close`, `merge`, and `review` rules allow writes to your repositories. The skill only issues them after you select an action, but leave them out if you want a second prompt for every write. `sleep` is only needed off Claude Code, where the wait for a Dependabot rebase falls back to a blocking poll.
+The `gh pr comment`, `close`, `merge`, and `review` rules allow writes to your repositories, and so does `gh api repos/*`, which also matches `-X POST` and `-X DELETE` calls. The skill only issues writes after you select an action, but leave those rules out if you want a second prompt for every write. `rm -rf *` is broad: the skill uses it only on the `mktemp -d` directories it creates for verification, so drop it if you would rather confirm each removal. The quoted `gh api 'repos/*` form covers endpoints with a query string, which have to be quoted in the shell. `sleep` is only needed off Claude Code, where the wait for a Dependabot rebase falls back to a blocking poll.
 
 ## Examples
 

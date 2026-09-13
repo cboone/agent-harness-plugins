@@ -14,10 +14,10 @@ If the PR closed, merged, or changed head since the triage, re-triage it before 
 1. **Merge one PR at a time, in the computed order:**
 
    ```bash
-   gh pr merge N --repo OWNER/REPO --squash
+   gh pr merge N --repo OWNER/REPO --squash --match-head-commit HEAD_SHA
    ```
 
-   Use `--merge` or `--rebase` in place of `--squash` as step 1 decided. Add `--delete-branch` only when `deleteBranchOnMerge` is false.
+   Use `--merge` or `--rebase` in place of `--squash` as step 1 decided. `HEAD_SHA` is the `headRefOid` from the re-check just before, so the merge is refused if Dependabot or anyone else pushed in between. Add `--delete-branch` only when `deleteBranchOnMerge` is false.
 
 1. **After each merge, re-query the remaining PRs** in the set. Request a rebase only for those that turned `DIRTY`, or that a rule requires to be up to date (`BEHIND`). `mergeable` reads `UNKNOWN` for a short while after a merge; wait and re-query rather than acting on it.
 
@@ -46,19 +46,19 @@ Then return to step 3 of the skill for the refreshed PRs.
 
 ## Close
 
-Write the comment body to a file with the Write tool, then post it and close. Keep the body file out of the command line so it survives quoting intact:
+Keep the comment body out of the command line, so it survives quoting intact:
 
-```bash
-BODY_FILE="$(mktemp -u)"
-```
+1. Run `mktemp -u` and note the path it prints. Call it `BODY_PATH`.
+1. Write the comment body to `BODY_PATH` with the Write tool.
+1. Post the comment and close the PR in one command, with the literal path, chained so the close only happens once the comment is posted:
 
-Then, in separate calls after writing the file:
+   ```bash
+   gh pr comment N --repo OWNER/REPO --body-file BODY_PATH && gh pr close N --repo OWNER/REPO --delete-branch
+   ```
 
-```bash
-gh pr comment N --repo OWNER/REPO --body-file "${BODY_FILE}"
-gh pr close N --repo OWNER/REPO --delete-branch
-rm -f "${BODY_FILE}"
-```
+1. Remove the file: `rm -f BODY_PATH`.
+
+A PR closed without its explanation leaves the next reader guessing, so if the comment fails, stop and report rather than closing anyway.
 
 Closing a single-dependency PR manually makes Dependabot stop proposing that exact version. Closing a group PR does not ignore anything. Neither is a substitute for an ignore command when the user wants future updates suppressed.
 
@@ -121,10 +121,10 @@ For each Needs work or Hold PR the user wants tracked, invoke the `create-issue`
 
 ## Approve
 
-Only when the user explicitly asks for approval:
+Only when the user explicitly asks for approval. Write the body to a `mktemp -u` path as in [Close](#close), then:
 
 ```bash
-gh pr review N --repo OWNER/REPO --approve --body-file "${BODY_FILE}"
+gh pr review N --repo OWNER/REPO --approve --body-file BODY_PATH
 ```
 
 The body states what was verified, in one or two sentences. Approval posts under the user's identity, so a request to merge is not a request to approve.
@@ -136,5 +136,6 @@ Only when the user asks for it, for example to fix a stale version comment on a 
 1. Request `@dependabot rebase` first, and wait for it, so the push lands on a current branch.
 1. Push the fix as a new, signed commit.
 1. Tell the user that Dependabot will no longer rebase this branch, and that `@dependabot recreate` would discard the fix.
+1. Record the pushed commit in the triage notes. On a later pass, `compare.nonDependabotCommits` counts it, and an approved commit is an intended edit, not a reason to recreate.
 
-A separate follow-up PR avoids all three costs, and is the better offer when the fix is not urgent.
+A separate follow-up PR avoids these costs, and is the better offer when the fix is not urgent.

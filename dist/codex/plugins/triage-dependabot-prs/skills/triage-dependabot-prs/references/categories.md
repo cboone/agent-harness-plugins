@@ -16,8 +16,8 @@ Every PR in scope gets exactly one category. Evaluate them in the order below an
 
 The change is already delivered or replaced. Any one of these matches:
 
-- **The default branch is at or beyond every target version.** Read the manifest, lockfile, or workflow at `origin/DEFAULT`. Merging would be a no-op or, worse, a downgrade, and `MERGEABLE` does not rule that out: a lockfile regenerated wholesale on the default branch can still merge cleanly with a stale PR.
-- **A newer open PR updates the same dependency, in the same directory, to a higher version.** The same dependency in a different directory is a separate install tree, not a duplicate.
+- **The base branch (usually the default branch) is at or beyond every target version.** Read the manifest, lockfile, or workflow at `origin/BASE`. Merging would be a no-op or, worse, a downgrade, and `MERGEABLE` does not rule that out: a lockfile regenerated wholesale on the default branch can still merge cleanly with a stale PR.
+- **A newer open PR updates the same dependency, in the same directory, to a higher version, and that PR can land.** It targets the base branch this PR targets, and is not itself Outdated. A replacement that will never merge replaces nothing. The same dependency in a different directory is a separate install tree, not a duplicate.
 - **A human PR or commit consolidates the change**, for example one branch that applied several upgrades through the package manager.
 
 Deciding evidence names the replacement: a PR number, or the default-branch commit and the version it holds.
@@ -53,11 +53,10 @@ Action: leave the PR open, or, on the user's decision, use the `@dependabot igno
 The change is wanted, but the PR's state is out of date. Any one of these matches:
 
 - **`mergeStateStatus` is `DIRTY`** (conflicts with the base).
-- **The checks ran against an old base.** `compare.behindBy` is above zero and the default branch has changed files that matter to this PR since the merge base, such as its lockfile, its workflow, or the code its dependency is used in.
-- **`rebasesDisabled` is true** and the PR is behind the default branch.
+- **The checks ran against an old base.** `compare.behindBy` is above zero and the base branch has changed files that matter to this PR since the merge base, such as its lockfile, its workflow, or the code its dependency is used in.
+- **`rebasesDisabled` is true** and the base branch has changed files that matter to this PR, since Dependabot will not refresh the PR on its own.
 - **The title, branch, and diff disagree** (`branchAgrees` false, and the diff differs from the title).
-- **`compare.nonDependabotCommits` is above zero.** Confirm this with the compare API. Dependabot refuses to rebase an edited branch, so the refresh is `recreate`, which needs the user to confirm the edits can go.
-- **Another PR must land first**, because this one conflicts with it.
+- **`compare.nonDependabotCommits` is above zero** and the commits are not ones the user asked for in this session. Dependabot refuses to rebase an edited branch, so the refresh is `recreate`, which needs the user to confirm the edits can go. A commit pushed at the user's request (a corrected version comment, say) is an intended edit: it leaves the PR in the category it had.
 
 A PR that is only `BEHIND` on unrelated files, with checks that still exercise the change, is not stale. It can still be Safe to merge.
 
@@ -93,11 +92,11 @@ Action: name the specific verification it needs, from `./verification.md` or the
 
 Every one of these holds:
 
-- **Current against the default branch**, or behind it only on files unrelated to this PR.
+- **Current against the base branch**, or behind it only on files unrelated to this PR.
 - **The checks pass and exercise the change**, or verification has.
-- **No unresolved conflict**, with the default branch or with a PR ahead of it in the merge order.
+- **No conflict with the base branch.** A conflict with another open PR does not disqualify it; it only sets the merge order, and the later PR is expected to need a rebase.
 - **The release notes show no breaking change that affects this repository.** A major can qualify, for example when the only break is a runtime bump the repository's runners already support.
-- **For GitHub Actions**, the pinned SHA resolves to the tagged commit, and the version comments beside it name the new version.
+- **For a GitHub Action pinned to a commit SHA**, the SHA resolves to the tagged commit, and the version comments beside it name the new version. An action pinned to a tag (`@v7`) has no SHA to check.
 
 Action: merge with a method the repository and its rules allow, in the computed order.
 
@@ -108,7 +107,7 @@ Flags are recorded beside the category, never instead of it. They set priority w
 - **security**: `kind` is `security`, or `alerts` is non-empty. Record the highest severity.
 - **group** or **multi**: the PR updates several dependencies together.
 - **major**: any update is a major, or is `semverBreaking`.
-- **stale checks**: the newest check completed before the default branch last changed relevant files.
+- **stale checks**: the newest check completed before the base branch last changed relevant files.
 - **secret-starved CI**: failures trace to secrets a Dependabot run cannot read.
 - **version comment drift**: a SHA-pinned action whose comment still names the old version. Dependabot updates a full `# vX.Y.Z` comment, but a major-only comment such as `# v6` can be left behind.
 

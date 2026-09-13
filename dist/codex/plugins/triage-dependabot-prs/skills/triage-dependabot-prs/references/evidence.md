@@ -1,6 +1,6 @@
 # Evidence
 
-The checks that decide a PR's category. The summary from `dependabot-prs fetch` answers part of each one; the commands below answer the rest. `OWNER/REPO`, `DEFAULT`, and `N` stand for the repository, its default branch, and the PR number.
+The checks that decide a PR's category. The summary from `dependabot-prs fetch` answers part of each one; the commands below answer the rest. `OWNER/REPO` and `N` stand for the repository and the PR number. `DEFAULT` stands for the branch the PR targets: the default branch for nearly every Dependabot PR, or the configured `target-branch` for one aimed elsewhere. The PR heads were fetched into `refs/dependabot-triage/N` at the start of step 3.
 
 Every PR gets sections 1 to 4. Sections 5 to 8 apply to the PRs listed in step 3 of the skill.
 
@@ -17,7 +17,7 @@ The question: do the PR's checks and mergeability describe the default branch as
 
   A changed lockfile, manifest, or workflow that this PR also touches, or code that uses the updated dependency, makes the checks stale.
 
-- **`checks.newestCompletedAt`** against the default branch's latest commit date (`git log -1 --format=%cI origin/DEFAULT`) is a quick first signal. The file comparison above is the deciding one.
+- **`checks.newestCompletedAt`** against the default branch's latest commit date (`git log -1 --format=%cI origin/DEFAULT`) is a first signal. The file comparison above is the deciding one.
 - **`mergeStateStatus`**: `DIRTY` conflicts, `BEHIND` lacks commits a rule requires, `BLOCKED` fails a rule (usually a required review), `UNSTABLE` has failing non-required checks, `CLEAN` is mergeable. `UNKNOWN` is not computed yet: re-query.
 - **Did Dependabot rebase recently?** The timeline records it:
 
@@ -53,7 +53,7 @@ If the default branch is at or beyond `to` for every update, the PR is Supersede
 The question: which PRs must land in a particular order, and which will conflict?
 
 - **`overlaps`** lists every open PR, any author, that shares a file with this one.
-- **Predict conflicts** with the default branch and between overlapping PRs:
+- **Predict conflicts** with the base branch and between overlapping PRs. Step 3 of the skill runs these before anything else:
 
   ```bash
   git fetch origin "pull/N/head:refs/dependabot-triage/N"
@@ -79,7 +79,7 @@ The question: would these checks fail if the update broke something?
 
   The run id is the path segment after `/runs/` in the check's `link`, not the trailing job id. `gh pr checks` exits non-zero for pending checks as well as failing ones, so classify from the JSON.
 
-- **Secret starvation.** Workflows triggered by a Dependabot PR receive only Dependabot secrets, not Actions secrets. These failures say nothing about the update:
+- **Secret starvation.** A workflow that Dependabot triggers through `push`, `pull_request`, `pull_request_review`, or `pull_request_review_comment` runs like a fork PR: a read-only `GITHUB_TOKEN`, and only Dependabot secrets, not Actions secrets. (`pull_request_target` runs are not restricted this way.) These failures say nothing about the update:
   - `Input required and not supplied: token`
   - a cloud or deploy credential that is empty or rejected
   - an OIDC or workload identity exchange that is refused
@@ -141,7 +141,7 @@ Applies when `ecosystem` is `github_actions`.
 
 Applies when `kind` is `security` or `alerts` is non-empty.
 
-- **Which advisories the PR clears**: `alerts[]` with severity and patched version. Confirm `to` is at or above `patched`.
+- **Which advisories the PR clears**: `alerts[]` with severity, patched version, and `cleared`. Only a `cleared: true` alert counts as fixed by this PR. `cleared: null` means the versions could not be compared (a digest, or no patched version), so compare them by hand.
 - **Whether the PR introduces a new vulnerable package.** A bump can pull in a new transitive dependency with its own advisory. After merging, the wrap-up re-fetch catches it; before merging, a local audit in a worktree can (`npm audit`, `yarn npm audit`, `pip-audit`, `govulncheck ./...`, `cargo audit`).
 - **`unmatchedAlerts`** are advisories no open PR addresses. The usual cause is a transitive dependency its parent pins exactly, leaving no version Dependabot can move to. Report them. Fixing them is an override or an upstream upgrade, outside this triage.
 
