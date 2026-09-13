@@ -28,12 +28,12 @@ The user may provide these options inline:
 
 The watch ends when all four axes are clean at the same time. Partial greenness is not readiness.
 
-| Axis         | Clean when                                                                                                                                                                                                                                                                                                     |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Checks       | Every check in `statusCheckRollup` has concluded successfully, or the repository has no checks configured                                                                                                                                                                                                      |
-| Copilot      | A Copilot review exists whose commit SHA equals the current head, `fetch` returns `[]`, and `fetch-reviews` has no open finding. Under `--confirm-clean`, two consecutive such reviews against that same head. Not applicable to a Dependabot PR with no Copilot review, per [Dependabot PRs](#dependabot-prs) |
-| Mergeability | `mergeable` is `MERGEABLE` and `mergeStateStatus` is neither `DIRTY` nor `BEHIND`. `BLOCKED` counts as clean but must be reported, per the rule below                                                                                                                                                          |
-| PR state     | `OPEN` and not merged or closed                                                                                                                                                                                                                                                                                |
+| Axis         | Clean when                                                                                                                                                                                                                                                                                                                                |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Checks       | Every check in `statusCheckRollup` has concluded successfully, or the repository has no checks configured                                                                                                                                                                                                                                 |
+| Copilot      | A Copilot review exists whose commit SHA equals the current head, `fetch` returns `[]`, and `fetch-reviews` has no open finding. Under `--confirm-clean`, two consecutive such reviews against that same head. On a Dependabot PR, clean unless a Copilot review at the current head left findings, per [Dependabot PRs](#dependabot-prs) |
+| Mergeability | `mergeable` is `MERGEABLE` and `mergeStateStatus` is neither `DIRTY` nor `BEHIND`. `BLOCKED` counts as clean but must be reported, per the rule below                                                                                                                                                                                     |
+| PR state     | `OPEN` and not merged or closed                                                                                                                                                                                                                                                                                                           |
 
 Three rules that follow from this and are easy to get wrong:
 
@@ -53,8 +53,8 @@ A PR whose `author.login` in the step 1 snapshot is `app/dependabot` belongs to 
 
   Then wait for the head SHA to change, and resume at step 3. The request works even on a PR whose automatic rebases Dependabot disabled after 30 days. If Dependabot replies that it will not rebase, usually because someone else pushed to the branch, escalate per step 9: `@dependabot recreate` would rebuild the PR but discards those commits, so that is the user's decision.
 
-- **Step 6, failing checks**: diagnose as in step 6a, but do not repair. A failure caused by a secret the Dependabot run cannot read (`Input required and not supplied: token`, an empty cloud credential, a refused OIDC exchange) says nothing about the update: report it as an environment problem and point the user at the `review-dependabot-config` skill. Escalate any other failure per step 9 and point at the `triage-dependabot-prs` skill, which decides whether the update needs work, a migration, or an ignore.
-- **Step 7, the Copilot cycle**: automatic Copilot review does not reliably run on Dependabot PRs, so never request one. With no Copilot review on the PR, the Copilot axis is not applicable: report it as `n/a (Dependabot)`. If a Copilot review does exist at the current head with findings, report them and escalate rather than invoking `resolve-copilot-pr-feedback`, whose fixes would be pushes.
+- **Step 6, failing checks**: diagnose as in step 6a, but do not repair. A failure caused by a secret the Dependabot run cannot read (`Input required and not supplied: token`, an empty cloud credential, a refused OIDC exchange) says nothing about the update: escalate per step 9, reporting it as an environment problem and pointing the user at the `review-dependabot-config` skill. Escalate any other failure per step 9 too, pointing at the `triage-dependabot-prs` skill, which decides whether the update needs work, a migration, or an ignore. Either way the watch stops, because no further tick can change a failure this skill may not repair.
+- **Step 7, the Copilot cycle**: automatic Copilot review does not reliably run on Dependabot PRs, so never request one, and never wait for one. A missing review, or a review against an older head (which every `@dependabot rebase` produces), leaves the Copilot axis not applicable: report it as `n/a (Dependabot)` and treat the axis as clean. Only a Copilot review at the current head that left findings matters, and then report the findings and escalate rather than invoking `resolve-copilot-pr-feedback`, whose fixes would be pushes.
 - **Step 8, the terminal report**: say the PR is a Dependabot PR, and merge only with a method the repository allows, as for any other PR.
 
 Under `--no-fix`, report the rebase request that would have been posted instead of posting it.
@@ -136,7 +136,7 @@ Two orderings are deliberate:
 
 Under `--no-fix`, replace steps 5, 6, and 7 with a report of what would have been done, then continue waiting.
 
-On a Dependabot PR, steps 5 to 8 follow [Dependabot PRs](#dependabot-prs), and the three Copilot conditions above do not apply while the PR has no Copilot review.
+On a Dependabot PR, steps 5 to 8 follow [Dependabot PRs](#dependabot-prs). Of the three Copilot conditions above, only the first (a review at the current head with findings) applies, and it leads to an escalation rather than step 7b; the other two never match.
 
 ### 5. Sync the Branch
 

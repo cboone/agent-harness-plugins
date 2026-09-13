@@ -44,8 +44,8 @@ The budget bounds an unattended watch. It is not a judgment about whether the wo
 Dependabot owns its branches. Once anyone else pushes to one, Dependabot stops rebasing it, and a later `@dependabot recreate` throws the push away. So on a PR authored by Dependabot the skill never pushes:
 
 - A conflicted or out-of-date branch gets a `@dependabot rebase` comment, once per head, instead of `merge-main`.
-- A failing check is diagnosed but not repaired. A failure caused by a secret that Dependabot runs cannot read is reported as an environment problem, pointing at [Review Dependabot Config](../review-dependabot-config/README.md). Anything else escalates, pointing at [Triage Dependabot PRs](../triage-dependabot-prs/README.md).
-- The Copilot axis is not applicable unless Copilot has already reviewed the PR, and the skill never requests a review.
+- A failing check is diagnosed but not repaired, and the watch stops there. A failure caused by a secret that Dependabot runs cannot read is reported as an environment problem, pointing at [Review Dependabot Config](../review-dependabot-config/README.md). Anything else points at [Triage Dependabot PRs](../triage-dependabot-prs/README.md).
+- The Copilot axis counts as clean unless a Copilot review of the current head left findings, which escalates. The skill never requests or waits for a review, since every rebase leaves any earlier review behind.
 
 ### What does not gate
 
