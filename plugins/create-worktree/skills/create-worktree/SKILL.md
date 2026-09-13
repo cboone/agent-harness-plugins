@@ -3,10 +3,15 @@ name: create-worktree
 description: >-
   Create a new git worktree, branch, and tmux window using workmux, from
   either a GitHub issue number or a task description, with a prompt injected
-  into the new session. Use when the user says "create worktree", "new
-  worktree", "start working on", "spin up a worktree", or asks to create a
-  worktree for an issue number or a general task. Requires workmux, plus the
-  gh CLI and jq when given an issue number.
+  into the new session. Optionally claims a named exclusive resource for the
+  worktree, so work that cannot run in parallel is recorded rather than
+  remembered. Use when the user says "create worktree", "new worktree",
+  "start working on", "spin up a worktree", or asks to create a worktree for
+  an issue number or a general task. Also use when the user asks what holds an
+  exclusive resource, asks to claim or release one, or says "list resources",
+  "release the simulator", or "who has the DAW". Requires workmux, plus the gh
+  CLI when given an issue number, and jq for issue parsing and resource
+  claims.
 ---
 
 # Create Worktree
@@ -22,10 +27,30 @@ The user may provide these options inline:
 - **--issue `<number>`**: Force issue lookup, for when a task description is itself a number
 - **--no-issue**: Force description handling, even if the argument looks like an issue number
 - **--base `<branch>`**: Base the worktree on a specific branch instead of the repository's default branch
+- **--resource `<name>`**: Claim a named exclusive resource for the new worktree, and report the holder first if one holds it already
+- **--release-resource `<name>`**: Release a claim and stop, creating nothing
+- **--list-resources**: Report every claim and stop, creating nothing
 
 ## Workflow
 
-### 1. Classify the Argument
+### 1. Handle a Claim-Only Request
+
+`--list-resources` and `--release-resource` are about claims, not worktrees. Handle them here and stop: do not classify an argument, build a branch name, or create anything.
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims" list
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims" release "RESOURCE_NAME"
+```
+
+`list` prints one `key=value` line per claim and nothing at all when there are none, so report "no resources are claimed" rather than showing empty output. A line carrying `state=stale` names a worktree git no longer lists; say so, and offer `prune` to clear it:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims" prune
+```
+
+For the rest of the workflow, skip to the next step.
+
+### 2. Classify the Argument
 
 Decide what the user gave you, in this order:
 
@@ -37,7 +62,7 @@ Decide what the user gave you, in this order:
 
 If an issue number was given but `gh` is not installed or not authenticated, say so and ask whether to treat the argument as a task description instead. Do not silently fall back.
 
-### 2. Determine the Branch Name
+### 3. Determine the Branch Name
 
 **From an issue number**, fetch the issue first:
 
@@ -81,7 +106,31 @@ Examples:
 - "spin up a worktree to fix the auth timeout" -> `fix/auth-timeout`
 - "new worktree feature/refactor-config" -> `feature/refactor-config` (used as-is)
 
-### 3. Compose the Prompt
+### 4. Check the Resource Claim
+
+Skip this step entirely when `--resource` was not given.
+
+Some work cannot run in parallel across worktrees because it needs an exclusive resource: a DAW, a simulator, a device, a database, a port, a shared install location. A claim records which worktree holds one. It is advisory: it makes the constraint visible, it does not enforce it.
+
+**Resolve the name against the project's own list first.** Read whichever of `CLAUDE.md` and `AGENTS.md` exist in the repository root, and `copilot-instructions.md` under `.github/`. Any of them may be absent, which is normal, and `CLAUDE.md` is often a symlink to `AGENTS.md`, so read the target rather than treating it as a second source. Check any plan under `docs/plans/todo/` too. Look for a heading containing "exclusive resource" and take the backticked names beneath it as the project's declared list.
+
+Use that list to map a loose phrase onto a declared name, so "the DAW" becomes `logic` without the user retyping it. If the name the user gave is not on the list, say so once and carry on. The resource name is a free string chosen per project, with no registry, so an undeclared name is not an error.
+
+**Then check the claim:**
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims" check "RESOURCE_NAME"
+```
+
+Branch on the exit code:
+
+- **0 with no output**: the resource is free. Continue.
+- **0 with output**: a stale claim exists, from a worktree git no longer lists. Report it and continue; the claim on the new worktree replaces it.
+- **3**: the resource is held. Report the holding branch, worktree, and timestamp exactly as the script gives them, and ask whether to proceed anyway.
+
+**Never refuse.** If the user says to proceed, proceed: they always have a reason, and taking a claim over is recorded in the next step. Checking here rather than after the worktree exists means a declined claim stops before any work is done.
+
+### 5. Compose the Prompt
 
 **From an issue number**, pipe the `gh issue view` output through the bundled `compose-issue-prompt` script, which produces:
 
@@ -107,24 +156,25 @@ Keep the prompt concise -- a few sentences at most. Use the user's own descripti
 
 If the user provided only a branch name with no description, derive a human-readable description from the branch name (e.g., `feature/add-dark-mode` becomes "Work on: add dark mode").
 
-### 4. Create the Worktree
+### 6. Create the Worktree
 
 **Important:** The `workmux add` command must be fully detached from the Claude Code process. `workmux` creates tmux windows and spawns new Claude sessions, which cannot initialize while the parent Claude Code process is still running. The `launch-workmux` script handles backgrounding, detaching, waiting, and outputting the log.
 
 **Template escaping:** `workmux` renders the prompt body through MiniJinja, so any literal `{{`, `{%`, or `{#` token in the task description (e.g. GitHub Actions `${{ inputs.x }}` expressions, Jinja/Liquid/Tera/Helm/Vue templates, Handlebars-style snippets) would otherwise be parsed as a template variable reference and rejected with `Template uses undefined variables`. The `launch-workmux` script reads the prompt from stdin, writes an escaped temporary prompt file for `workmux add -P`, and removes that temporary file after `workmux add` exits. Each escaped delimiter renders back to the literal characters, so the prompt stored at `<worktree>/.workmux/PROMPT-*.md` matches the original input.
 
-**Invoking the scripts:** Both scripts ship with this plugin. Invoke them via `bash` followed by the quoted path:
+**Invoking the scripts:** All three scripts ship with this plugin. Invoke them via `bash` followed by the quoted path:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt"
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux"
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims"
 ```
 
 These show the path form only. The runnable invocations, with their arguments, are further down.
 
 Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you, so there is no search step and no need for a shell variable. Keeping `bash` as the command prefix keeps the command token stable across plugin versions, which is what permission allowlist rules match on.
 
-**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. In that case locate the scripts with `**/create-worktree/**/scripts/compose-issue-prompt` and `**/create-worktree/**/scripts/launch-workmux`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use those absolute paths for the rest of the session.
+**If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. In that case locate the scripts with `**/create-worktree/**/scripts/compose-issue-prompt`, `**/create-worktree/**/scripts/launch-workmux` and `**/create-worktree/**/scripts/manage-resource-claims`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use those absolute paths for the rest of the session.
 
 In the examples below, `SCRIPTS_DIR/compose-issue-prompt` and `SCRIPTS_DIR/launch-workmux` are shorthand for the full **quoted paths** shown above.
 
@@ -172,7 +222,20 @@ The script outputs the workmux log directly and cleans up its own log file. Veri
 git worktree list
 ```
 
-### 5. Report Success
+**Record the claim, if `--resource` was given.** Do this only after `git worktree list` confirms the worktree, and take the path from that output rather than guessing it: `workmux` owns placement, and a claim on a path that does not exist reads as stale the moment it is written.
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims" claim "RESOURCE_NAME" \
+  --worktree "WORKTREE_PATH" --branch "BRANCH_NAME" --issue NUMBER
+```
+
+Drop `--issue` on the description path. The script prints what it did: a fresh claim, a stale claim cleared, or a takeover from a live holder. Relay that line rather than restating it.
+
+If the claim cannot be written, say so and carry on. The worktree exists and the claim is advisory, so a failure here is worth reporting but is not worth unwinding the work.
+
+**Offer a gitignore entry** when the claim file was created and nothing in the project's `.gitignore` covers `.claude/worktree-resources.local.json`. It is machine-local state, and committing it puts one worktree's claims on every branch.
+
+### 7. Report Success
 
 After confirming the worktree exists in `git worktree list`, report:
 
@@ -180,6 +243,7 @@ After confirming the worktree exists in `git worktree list`, report:
 - The tmux window name (to help the user switch to it)
 - A note that the prompt was injected into the new session
 - For the issue path, the issue number and title
+- For the resource path, the resource claimed and whatever the claim replaced
 
 Then stop. Do not start the work.
 
@@ -190,3 +254,7 @@ Then stop. Do not start the work.
 - If the issue is not found, report that and stop
 - If the issue is closed, warn and ask before proceeding
 - If the branch already exists and `--open-if-exists` opens it, note that the prompt is only injected on initial creation
+- If `--resource` names a resource another worktree holds, report the holder and ask; if the user declines, stop without creating anything
+- If the claim file cannot be read, report the error and ask whether to proceed without a claim. A malformed file is never rewritten automatically
+- If the claim cannot be written after the worktree exists, report it and continue. The claim is advisory, so a failure to record one does not undo the worktree
+- If `--resource` is given outside a git repository, `manage-resource-claims` cannot resolve the shared claim file; report that and stop
