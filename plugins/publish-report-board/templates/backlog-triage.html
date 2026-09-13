@@ -1,0 +1,1744 @@
+<title>__BOARD_TITLE__</title>
+<meta name="color-scheme" content="light dark" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;800&display=swap" />
+<style>
+  /* Catamount palette: the donkey ramp for ink, rails, and slate surfaces;
+     amber marks what is current; blue is reserved for interaction. The light
+     theme is the Catamount report; the dark theme follows Catamount Dark,
+     whose ground is the site's own donkey-600. */
+  :root {
+    color-scheme: light;
+    --face: "Schibsted Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --gutter: clamp(16px, 4.1vw, 44px);
+    --ground: #fcfdfd;
+    --panel: #ffffff;
+    --ink: #1e2123;
+    --muted: #5e686c;
+    --rail: #5e686c;
+    --eyebrow: #b45309;
+    --marker: #d97706;
+    --hairline: rgb(217 119 6 / 50%);
+    --link-hover: #2563eb;
+    --link-active: #1d4ed8;
+    --focus: #2563eb;
+    --zebra: #eff2f3;
+    --rule: rgb(30 33 35 / 20%);
+    --grid: rgb(30 33 35 / 25%);
+    --rule-strong: rgb(30 33 35 / 40%);
+    --slate: #485054;
+    --slate-fade: rgb(94 104 108 / 50%);
+    --slate-edge: #33393b;
+    --slate-ink: #ffffff;
+    --slate-figure: #fde68a;
+    --chip: #e0e5e7;
+    --chip-edge: #a7b2b6;
+    --chip-ink: #1e2123;
+    --chip-hover: #bfdbfe;
+    --chip-hover-edge: #60a5fa;
+    --chip-hover-ink: #1e3a8a;
+    --chip-active: #93c5fd;
+    --chip-active-edge: #3b82f6;
+    --chip-active-ink: #000000;
+    --bar-now: #f59e0b;
+    --bar-queued: #fde68a;
+    --bar-blocked: #c3ccce;
+    --bar-edge: rgb(180 83 9 / 45%);
+    --hatch: rgb(30 33 35 / 18%);
+    --hit: #fef3c7;
+    --selection: #fde68a;
+    --selection-ink: #000000;
+    --heading-shadow: none;
+    --warn: #b45309;
+    --alert: #b91c1c;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #5e686c;
+      --panel: #485054;
+      --ink: #ffffff;
+      --muted: #e6eaeb;
+      --rail: #e0e5e7;
+      --eyebrow: #fde68a;
+      --marker: #fde68a;
+      --hairline: rgb(253 230 138 / 50%);
+      --link-hover: #bfdbfe;
+      --link-active: #93c5fd;
+      --focus: #bfdbfe;
+      --zebra: #535c61;
+      --rule: rgb(255 255 255 / 22%);
+      --grid: rgb(255 255 255 / 28%);
+      --rule-strong: rgb(255 255 255 / 45%);
+      --slate: #3d4447;
+      --slate-fade: rgb(72 80 84 / 60%);
+      --slate-edge: #2b3032;
+      --chip: #485054;
+      --chip-edge: #8d999d;
+      --chip-ink: #ffffff;
+      --bar-now: #fde68a;
+      --bar-queued: #8d999d;
+      --bar-blocked: #485054;
+      --bar-edge: rgb(255 255 255 / 40%);
+      --hatch: rgb(255 255 255 / 16%);
+      --hit: #3d4447;
+      --selection: #8d999d;
+      --heading-shadow: 1px 1px 0 rgb(31 33 35);
+      --warn: #fde68a;
+      --alert: #fecaca;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #5e686c;
+    --panel: #485054;
+    --ink: #ffffff;
+    --muted: #e6eaeb;
+    --rail: #e0e5e7;
+    --eyebrow: #fde68a;
+    --marker: #fde68a;
+    --hairline: rgb(253 230 138 / 50%);
+    --link-hover: #bfdbfe;
+    --link-active: #93c5fd;
+    --focus: #bfdbfe;
+    --zebra: #535c61;
+    --rule: rgb(255 255 255 / 22%);
+    --grid: rgb(255 255 255 / 28%);
+    --rule-strong: rgb(255 255 255 / 45%);
+    --slate: #3d4447;
+    --slate-fade: rgb(72 80 84 / 60%);
+    --slate-edge: #2b3032;
+    --chip: #485054;
+    --chip-edge: #8d999d;
+    --chip-ink: #ffffff;
+    --bar-now: #fde68a;
+    --bar-queued: #8d999d;
+    --bar-blocked: #485054;
+    --bar-edge: rgb(255 255 255 / 40%);
+    --hatch: rgb(255 255 255 / 16%);
+    --hit: #3d4447;
+    --selection: #8d999d;
+    --heading-shadow: 1px 1px 0 rgb(31 33 35);
+    --warn: #fde68a;
+    --alert: #fecaca;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--face);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  ::selection {
+    background: var(--selection);
+    color: var(--selection-ink);
+  }
+
+  :where(.board) :where(p, h1, h2, h3, dl, dd, ol) {
+    margin: 0;
+  }
+
+  :where(.board) :where(ol) {
+    padding: 0;
+    list-style: none;
+  }
+
+  a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .board {
+    max-width: 1080px;
+    margin-inline: auto;
+  }
+
+  .board-message {
+    padding: 40px var(--gutter);
+    color: var(--muted);
+  }
+
+  /* Links rest at ink over an amber hairline and turn blue on hover and press. */
+  .ref {
+    border-bottom: 1px solid var(--hairline);
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  /* Issue numbers line up in columns. Other links stay proportional, because
+     in this face tabular figures also space out the period in lint-shell.yml. */
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ref:hover {
+    border-bottom-color: var(--link-hover);
+    color: var(--link-hover);
+  }
+
+  .ref:active {
+    border-bottom-color: var(--link-active);
+    color: var(--link-active);
+  }
+
+  /* A soft ordering link, "better after" or "eases", is dashed: the same mark
+     the page uses for a missing milestone. Hard links stay solid. */
+  .ref--soft {
+    border-bottom-style: dashed;
+  }
+
+  /* Slate surfaces: lane keys and capacity boxes share the Catamount button face. */
+  .badge,
+  .cap {
+    border: 1px solid var(--slate-edge);
+    border-radius: 6px;
+    background-color: var(--slate);
+    background-image: linear-gradient(to top left, var(--slate), var(--slate-fade));
+    color: var(--slate-ink);
+  }
+
+  .badge {
+    display: inline-block;
+    flex: none;
+    padding: 3px 7px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    line-height: 1.15;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .badge--small {
+    font-size: 10.5px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+    padding: 3px 8px;
+    border: 1px solid var(--chip-edge);
+    border-radius: 6px;
+    background: var(--chip);
+    color: var(--chip-ink);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-decoration: none;
+  }
+
+  .chip::before {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    background: var(--marker);
+  }
+
+  .chip--none {
+    border-style: dashed;
+    background: transparent;
+  }
+
+  .chip--none::before {
+    border: 1px solid currentColor;
+    background: transparent;
+  }
+
+  .chip:hover {
+    border-color: var(--chip-hover-edge);
+    background: var(--chip-hover);
+    color: var(--chip-hover-ink);
+  }
+
+  .chip:active {
+    border-color: var(--chip-active-edge);
+    background: var(--chip-active);
+    color: var(--chip-active-ink);
+  }
+
+  a.tag {
+    text-decoration: none;
+  }
+
+  a.tag:hover {
+    text-decoration: underline;
+  }
+
+  .tag {
+    display: inline-block;
+    margin-left: 7px;
+    padding: 1px 5px;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    color: var(--eyebrow);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    line-height: 1.3;
+    text-transform: uppercase;
+    vertical-align: 1px;
+    white-space: nowrap;
+  }
+
+  /* Header band */
+  .head {
+    padding: 34px var(--gutter) 0;
+    border-left: 6px solid var(--rail);
+    background: var(--panel);
+  }
+
+  .head-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 40px;
+    align-items: end;
+    padding-bottom: 26px;
+  }
+
+  .head-title {
+    min-width: 0;
+    container-type: inline-size;
+  }
+
+  .eyebrow {
+    margin-bottom: 12px;
+    color: var(--eyebrow);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .title {
+    font-size: 40px;
+    font-size: min(48px, 6.4cqw);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 0.98;
+    text-shadow: var(--heading-shadow);
+  }
+
+  .repo-link {
+    display: inline-block;
+    max-width: 100%;
+    border-bottom: 2px solid var(--rail);
+    color: var(--ink);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+
+  .repo-link:hover {
+    border-bottom-color: var(--link-hover);
+    color: var(--link-hover);
+  }
+
+  .repo-link:active {
+    border-bottom-color: var(--link-active);
+    color: var(--link-active);
+  }
+
+  .when {
+    text-align: right;
+  }
+
+  /* Tabular figures on the date only: in this face they also space out the
+     colon in the time. */
+  .when-date {
+    display: block;
+    font-variant-numeric: tabular-nums;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .when-time {
+    margin-top: 6px;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .when-age {
+    margin-top: 9px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .when-age.is-aging {
+    color: var(--warn);
+  }
+
+  .when-age.is-stale {
+    color: var(--alert);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    padding-bottom: 6px;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    padding: 0 16px 22px 0;
+  }
+
+  .stat-value {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-label {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  /* Body */
+  .body {
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+    padding: 34px var(--gutter);
+  }
+
+  .summary {
+    max-width: 74ch;
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.4;
+    text-wrap: pretty;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: var(--head-gap, 12px);
+  }
+
+  .section-title {
+    flex: none;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-shadow: var(--heading-shadow);
+    text-wrap: balance;
+  }
+
+  .section-note {
+    min-width: 0;
+    max-width: 88ch;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+
+  /* Start now */
+  .start-row {
+    display: grid;
+    grid-template-columns: 44px 268px minmax(0, 1fr) 222px;
+    gap: 20px;
+    align-items: start;
+    padding: 17px 0 15px;
+  }
+
+  .start-rank {
+    color: var(--marker);
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .start-title {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+  }
+
+  .start-with {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .start-why {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .start-lane {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+  }
+
+  .start-lane-name {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .start-touches {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .mini-label {
+    margin: 9px 0 4px;
+    color: var(--muted);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Lane bars */
+  .bars {
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+
+  .bar-row {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr) 108px;
+    gap: 26px;
+    align-items: center;
+  }
+
+  .bar-name {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+
+  .bar {
+    display: flex;
+    gap: 2px;
+    height: 18px;
+  }
+
+  .seg {
+    flex: 1 1 0;
+    background-color: var(--bar-queued);
+  }
+
+  .seg--now {
+    background-color: var(--bar-now);
+  }
+
+  /* Queued segments keep an outline, so the three states read as solid,
+     outlined, and hatched rather than by fill alone. */
+  .seg--queued {
+    box-shadow: inset 0 0 0 1px var(--bar-edge);
+  }
+
+  /* Blocked segments carry a hatch so the state reads without color. */
+  .seg--blocked {
+    background-color: var(--bar-blocked);
+    background-image: repeating-linear-gradient(135deg, transparent 0 3px, var(--hatch) 3px 5px);
+  }
+
+  .bar-legend {
+    color: var(--muted);
+    font-size: 11.5px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    align-items: center;
+    padding: 20px 0 6px 158px;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .key-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .key .seg {
+    flex: none;
+    width: 16px;
+    height: 10px;
+  }
+
+  /* Lanes */
+  .lane {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr);
+    gap: 26px;
+    padding: 22px 0 20px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .lane-title {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    font-size: 13.5px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  .cap {
+    display: inline-block;
+    min-width: 112px;
+    margin-top: 15px;
+    padding: 9px 11px 10px;
+  }
+
+  .cap-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cap-figure {
+    color: var(--slate-figure);
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cap-unit {
+    width: min-content;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .cap-then {
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .lane-count {
+    margin-top: 13px;
+    color: var(--muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lane-owns {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  .lane-note {
+    max-width: 88ch;
+    margin-bottom: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .cols,
+  .item {
+    display: grid;
+    grid-template-columns: 28px 58px minmax(0, 1fr) 200px 190px;
+    gap: 14px;
+  }
+
+  /* A board with no milestones drops the milestone column entirely. */
+  @media (min-width: 801px) {
+    .no-milestones .cols,
+    .no-milestones .item {
+      grid-template-columns: 28px 58px minmax(0, 1fr) 240px;
+    }
+  }
+
+  .cols {
+    padding: 0 10px 6px;
+    color: var(--muted);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .item {
+    align-items: baseline;
+    padding: 7px 10px;
+  }
+
+  .item:nth-child(even) {
+    background: var(--zebra);
+  }
+
+  .item-rank {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .item-num {
+    font-size: 13.5px;
+    font-weight: 800;
+  }
+
+  .item-title {
+    font-size: 13.5px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .item-deps {
+    color: var(--muted);
+    font-size: 11.5px;
+  }
+
+  .item-deps .ref,
+  .start-with .ref {
+    font-weight: 600;
+  }
+
+  /* Contention matrix */
+  .matrix-scroll {
+    overflow-x: auto;
+  }
+
+  .matrix {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .matrix-first {
+    width: 230px;
+  }
+
+  .matrix th,
+  .matrix td {
+    padding: 9px 10px;
+    border: 1px solid var(--grid);
+    background: var(--ground);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .matrix thead th {
+    padding: 8px 10px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .matrix tbody th {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .matrix .hit {
+    background: var(--hit);
+  }
+
+  .hit-refs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .hit-refs .ref {
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  /* Blocked */
+  .blocked-cols,
+  .blocked-row {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr) 330px 150px;
+    gap: 16px;
+  }
+
+  .blocked-cols {
+    padding: 12px 10px 8px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .blocked-row {
+    align-items: baseline;
+    padding: 11px 10px;
+  }
+
+  .blocked-row:nth-child(even) {
+    background: var(--zebra);
+  }
+
+  .blocked-issue {
+    font-size: 13.5px;
+    line-height: 1.3;
+  }
+
+  .blocked-issue .ref {
+    font-weight: 800;
+  }
+
+  .waiting {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .waiting-item {
+    font-size: 12.5px;
+    line-height: 1.3;
+  }
+
+  .waiting-item .ref {
+    font-weight: 600;
+  }
+
+  .waiting-title {
+    color: var(--muted);
+  }
+
+  .blocked-why {
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .blocked-lane {
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  /* Each blocked cell names its column: always to a screen reader, and on
+     screen once the header row is hidden at narrow widths. */
+  .cell-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Sync footer */
+  .sync {
+    margin-top: -6px;
+    padding-top: 14px;
+    border-top: 2px solid var(--rule-strong);
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+
+  .sync strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  @media (max-width: 960px) {
+    .start-row {
+      grid-template-columns: 44px minmax(0, 1fr);
+      row-gap: 10px;
+    }
+
+    .start-why,
+    .start-lane {
+      grid-column: 2;
+    }
+
+    .lane {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .lane-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 20px;
+    }
+
+    .lane-title {
+      flex-basis: 100%;
+    }
+
+    .cap {
+      margin-top: 0;
+    }
+
+    .lane-facts {
+      flex: 1 1 180px;
+    }
+
+    .lane-count {
+      margin-top: 0;
+    }
+
+    .blocked-cols {
+      display: none;
+    }
+
+    .blocked-row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+    }
+
+    .cell-label {
+      position: static;
+      display: block;
+      width: auto;
+      height: auto;
+      margin-bottom: 3px;
+      overflow: visible;
+      clip-path: none;
+      color: var(--muted);
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      white-space: normal;
+    }
+  }
+
+  /* Lane rows stack below 800px, where five columns leave titles too narrow. */
+  @media (max-width: 800px) {
+    .cols {
+      display: none;
+    }
+
+    .item {
+      grid-template-columns: 22px 48px minmax(0, 1fr);
+      gap: 5px 10px;
+    }
+
+    .item-ms,
+    .item-deps {
+      grid-column: 3;
+    }
+
+    .item-deps:empty {
+      display: none;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .head-top {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .when {
+      text-align: left;
+    }
+
+    .when-date {
+      font-size: 22px;
+    }
+
+    .when-time {
+      font-size: 17px;
+    }
+
+    .stats {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .section-head {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    .bars {
+      gap: 14px;
+    }
+
+    .bar-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px 12px;
+    }
+
+    .bar {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+
+    .key {
+      padding-left: 0;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .summary {
+      font-size: 17px;
+    }
+
+    .start-row {
+      grid-template-columns: 30px minmax(0, 1fr);
+      column-gap: 12px;
+    }
+
+    .start-rank {
+      font-size: 20px;
+    }
+  }
+</style>
+<div class="board" id="board">
+  <noscript>
+    <p class="board-message">This board draws itself from data embedded in the page, so it needs JavaScript to display.</p>
+  </noscript>
+</div>
+<script type="application/json" id="board-data">
+  "__BOARD_DATA__"
+</script>
+<script>
+  // Draws the board from the JSON in #board-data. The report-board script
+  // checks that JSON before writing it into this template, so the code below
+  // trusts its shape. Every string from the data reaches the page through text
+  // nodes and attributes, never through innerHTML, because issue titles and
+  // notes come from GitHub.
+  (() => {
+    "use strict";
+
+    const EYEBROW = "Backlog review";
+    const AGING_AFTER_DAYS = 1;
+    const STALE_AFTER_DAYS = 3;
+    const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
+    const NO_MILESTONE = Symbol("no milestone");
+
+    const root = document.getElementById("board");
+
+    function h(tag, attributes, children) {
+      const element = document.createElement(tag);
+      for (const [name, value] of Object.entries(attributes ?? {})) {
+        if (value === null || value === undefined || value === false) continue;
+        if (name === "class") element.className = value;
+        else element.setAttribute(name, value === true ? "" : String(value));
+      }
+      for (const child of [children ?? []].flat(Infinity)) {
+        if (child === null || child === undefined || child === false || child === "") continue;
+        element.append(child instanceof Node ? child : String(child));
+      }
+      return element;
+    }
+
+    let data = null;
+    try {
+      data = JSON.parse(document.getElementById("board-data").textContent);
+    } catch {
+      data = null;
+    }
+    if (data === null || typeof data !== "object" || !Array.isArray(data.issues)) {
+      root.replaceChildren(
+        h("p", { class: "board-message" }, "This page holds no board data yet. Render it with the report-board script."),
+      );
+      return;
+    }
+
+    const word = (n) => WORDS[n] ?? String(n);
+    const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+    const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+    const listAt = (map, key) => {
+      if (!map.has(key)) map.set(key, []);
+      return map.get(key);
+    };
+
+    const repoUrl = (data.repoUrl || `https://github.com/${data.repo}`).replace(/\/+$/, "");
+    // An address the URL parser rejects must not stop the page, so links to
+    // other repositories fall back to github.com.
+    let origin = "https://github.com";
+    try {
+      origin = new URL(repoUrl).origin;
+    } catch {
+      origin = "https://github.com";
+    }
+    // A repository URL can carry a path prefix, as an enterprise install at
+    // https://git.example.com/enterprise/owner/name does. Another repository
+    // sits beside this one under that prefix, which origin alone would drop.
+    const repoBase = data.repo && repoUrl.endsWith(`/${data.repo}`) ? repoUrl.slice(0, -(data.repo.length + 1)) : origin;
+    // Encodes a branch name for a URL path, including "#" and "?".
+    const pathPart = (text) => String(text).split("/").map(encodeURIComponent).join("/");
+    const issueUrl = (n) => `${repoUrl}/issues/${n}`;
+    const searchUrl = (query) => `${repoUrl}/issues?q=${encodeURIComponent(query)}`;
+    // A milestone title is arbitrary text, so a quote or a backslash in one
+    // would end the qualifier early and search for something else.
+    const searchQuoted = (text) => `"${String(text).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+    const milestoneUrl = (title) =>
+      searchUrl(title ? `is:open milestone:${searchQuoted(title)}` : "is:open no:milestone");
+    const link = (href, text) => h("a", { class: "ref", href }, text);
+    const ref = (n) => h("a", { class: "ref num", href: issueUrl(n) }, `#${n}`);
+    // Links "#123", and "owner/repo#123" for another repository, in a prose
+    // field. A "#" inside a word, such as "C#1", stays text.
+    const PROSE_REF = /([\w.-]+\/[\w.-]+)?#(\d+)(?![\w#])/g;
+    const prose = (text) => {
+      const source = String(text ?? "");
+      const out = [];
+      let last = 0;
+      for (const match of source.matchAll(PROSE_REF)) {
+        const before = source[match.index - 1];
+        if (!match[1] && before && /[\w&]/.test(before)) continue;
+        // Inside a URL, such as https://example.com/owner/repo#3, the match
+        // belongs to that address rather than to this repository.
+        const head = source.slice(0, match.index);
+        if (/:\/\//.test(head.slice(head.search(/\S*$/)))) continue;
+        // "../target#1" is not a repository reference. A browser normalizes the
+        // path, so linking it would reach another repository, or climb out of a
+        // repository URL that carries a path prefix.
+        if (match[1] && match[1].split("/").some((part) => part === "." || part === "..")) continue;
+        out.push(source.slice(last, match.index));
+        out.push(match[1] ? link(`${repoBase}/${match[1]}/issues/${match[2]}`, match[0]) : ref(Number(match[2])));
+        last = match.index + match[0].length;
+      }
+      out.push(source.slice(last));
+      return out;
+    };
+
+    const issues = data.issues;
+    const startNow = data.startNow ?? [];
+    const notes = data.notes ?? {};
+    const byNumber = new Map(issues.map((issue) => [issue.number, issue]));
+    const anyMilestone = issues.some((issue) => issue.milestone);
+    const waits = (n) => byNumber.get(n)?.waitingOn ?? [];
+    const afters = (n) => byNumber.get(n)?.after ?? [];
+    const isBlocked = (n) => waits(n).length > 0;
+    const partnerOf = (n) => byNumber.get(n)?.sameBranchAs ?? null;
+    const rides = (n) => partnerOf(n) !== null;
+    const shortTitle = (n) => byNumber.get(n)?.short || byNumber.get(n)?.title || "";
+
+    const unblocks = new Map();
+    const eases = new Map();
+    const riders = new Map();
+    for (const issue of issues) {
+      for (const waited of issue.waitingOn ?? []) {
+        if (typeof waited === "number") listAt(unblocks, waited).push(issue.number);
+      }
+      for (const target of issue.after ?? []) {
+        if (typeof target === "number") listAt(eases, target).push(issue.number);
+      }
+      if (issue.sameBranchAs != null) listAt(riders, issue.sameBranchAs).push(issue.number);
+    }
+    // The issue carrying work in progress on the branch of n, counting any
+    // issue that rides on it, or undefined.
+    const progressOf = (n) => [n, ...(riders.get(n) ?? [])].find((m) => byNumber.get(m)?.inProgress);
+
+    const laneOf = new Map();
+    for (const lane of data.lanes) for (const n of lane.issues) laneOf.set(n, lane);
+    const laneLabel = (lane) => `${lane.key} ${lane.name}`;
+
+    // A blocker is an open issue on this board or a reference to something else
+    // that has to land first: a pull request, a branch, an issue in another
+    // repository, or any linked page. `from` names where the freeing work lives.
+    function blocker(b) {
+      if (typeof b === "number") {
+        return { link: ref(b), title: shortTitle(b), from: laneOf.has(b) ? laneLabel(laneOf.get(b)) : "" };
+      }
+      if (b.pr != null) {
+        const href = `${repoUrl}/pull/${b.pr}`;
+        return { link: h("a", { class: "ref num", href }, `PR #${b.pr}`), title: b.title, from: "a pull request" };
+      }
+      if (b.branch != null) {
+        const href = `${repoUrl}/compare/${pathPart(data.sync.branch)}...${pathPart(b.branch)}`;
+        return { link: link(href, b.branch), title: b.title, from: "a branch merge" };
+      }
+      if (b.ref != null) {
+        const [repo, number] = b.ref.split("#");
+        return { link: link(`${repoBase}/${repo}/issues/${number}`, b.ref), title: b.title, from: repo };
+      }
+      return { link: link(b.url, b.label), title: b.title, from: "outside the repository" };
+    }
+
+    // Capacity per lane. A serial lane runs one branch at a time: the first
+    // issue in its listed order that can start. A head lane runs its head, then
+    // whatever the head frees, and nothing in it starts before the head. An
+    // any-order lane runs every unblocked issue at once. An issue that shares a
+    // branch travels with it, and work in progress holds a serial or head
+    // lane's single slot; when more than one branch there is already in
+    // progress, each one shows as running, so the overlap stays visible.
+    // report-board validate holds the start picks to the same rules, so the
+    // two agree.
+    const lanes = data.lanes.map((lane) => {
+      const roots = lane.issues.filter((n) => !rides(n));
+      // A branch waits in the queue while any issue on it is better after
+      // another open issue, unless its work has already started.
+      const queued = (n) => [n, ...(riders.get(n) ?? [])].some((m) => afters(m).some((target) => target !== n));
+      const canRun = (n) => !isBlocked(n) && (!queued(n) || progressOf(n) !== undefined);
+      const first = lane.issues[0];
+      const head = lane.mode === "head" ? (rides(first) ? partnerOf(first) : first) : null;
+      const held = roots.filter((n) => progressOf(n) !== undefined);
+      let running = [];
+      // A branch already in progress is running whether or not its issue is
+      // blocked, the same as in a serial or head lane. state() still draws that
+      // issue as blocked, so the bar and the row stay truthful.
+      if (lane.mode === "any") running = roots.filter((n) => canRun(n) || progressOf(n) !== undefined);
+      // A branch already in progress holds the slot even when its issue is
+      // blocked, so the lane still cannot start another one. state() draws that
+      // issue as blocked regardless, so the bar and the row stay truthful.
+      else if (held.length) running = held;
+      else {
+        const next = lane.mode === "head" ? head : roots.find(canRun);
+        if (next != null && canRun(next)) running = [next];
+      }
+      // A rider stays out of the running set while it has a blocker of its own,
+      // or is better after something that has not landed, unless its own work
+      // has started.
+      const now = new Set(
+        running.flatMap((n) => [
+          n,
+          ...(riders.get(n) ?? []).filter(
+            (r) => !isBlocked(r) && (afters(r).every((target) => target === n) || byNumber.get(r)?.inProgress),
+          ),
+        ]),
+      );
+      const headUnit = lane.mode === "head" ? new Set([head, ...(riders.get(head) ?? [])]) : new Set();
+      // Rows and ranks draw the whole head unit, but only the riders that
+      // travel with the head finish alongside it. A rider held back by its own
+      // blocker frees nothing, so it cannot count toward what the head unlocks.
+      // This is the rule that admits a rider to the running set.
+      const freeingUnit =
+        lane.mode === "head" && head != null
+          ? new Set([
+              head,
+              ...(riders.get(head) ?? []).filter(
+                (r) => !isBlocked(r) && (afters(r).every((target) => target === head) || byNumber.get(r)?.inProgress),
+              ),
+            ])
+          : new Set();
+      // A head that is not the running branch frees nothing yet, so the lane
+      // counts zero rather than promising what the head would unlock. A branch
+      // already in progress holds the slot, and the head is running only when
+      // it is that branch.
+      const freedAfter =
+        lane.mode === "head" && head != null && running.includes(head)
+          ? lane.issues.filter(
+              (n) =>
+                !headUnit.has(n) &&
+                !rides(n) &&
+                waits(n).every((b) => freeingUnit.has(b)) &&
+                afters(n).every((b) => freeingUnit.has(b)),
+            ).length
+          : 0;
+      const ranks = new Map();
+      if (lane.mode === "serial") {
+        let step = 0;
+        for (const n of lane.issues) {
+          if (!(rides(n) && lane.issues.includes(partnerOf(n)))) ranks.set(n, String(++step));
+        }
+        for (const n of lane.issues) if (!ranks.has(n)) ranks.set(n, ranks.get(partnerOf(n)) ?? "·");
+      } else {
+        for (const n of lane.issues) ranks.set(n, headUnit.has(n) ? "1" : "·");
+      }
+      const state = (n) => (isBlocked(n) ? "blocked" : now.has(n) ? "now" : "queued");
+      return {
+        lane,
+        running,
+        cap: running.length,
+        freedAfter,
+        ranks,
+        state,
+        blocked: lane.issues.filter(isBlocked).length,
+      };
+    });
+
+    function tokens(parts) {
+      const out = [];
+      for (const [label, entries, soft] of parts) {
+        if (!entries.length) continue;
+        if (out.length) out.push(" · ");
+        out.push(`${label} `);
+        entries.forEach((entry, index) => {
+          if (index) out.push(", ");
+          const node = typeof entry === "number" ? ref(entry) : blocker(entry).link;
+          if (soft) node.classList.add("ref--soft");
+          out.push(node);
+        });
+      }
+      return out;
+    }
+
+    function chip(milestone) {
+      return milestone
+        ? h("a", { class: "chip", href: milestoneUrl(milestone) }, milestone)
+        : h("a", { class: "chip chip--none", href: milestoneUrl(null) }, "No milestone");
+    }
+
+    // Work in progress links to where it lives: "PR #390" to the pull request,
+    // and a branch name to its comparison with the synced branch. Anything else
+    // stays text.
+    function progressHref(where) {
+      const pr = /^PR #(\d+)$/.exec(where);
+      if (pr) return `${repoUrl}/pull/${pr[1]}`;
+      if (/^\S+$/.test(where)) return `${repoUrl}/compare/${pathPart(data.sync.branch)}...${pathPart(where)}`;
+      return null;
+    }
+
+    function progressTag(where) {
+      const href = progressHref(where);
+      return h(href ? "a" : "span", { class: "tag", href, title: `In progress on ${where}` }, [
+        "In progress",
+        h("span", { class: "visually-hidden" }, ` on ${where}`),
+      ]);
+    }
+
+    function section(id, title, note, gap, body) {
+      return h("section", { class: "section", id, "aria-labelledby": `${id}-heading` }, [
+        h("div", { class: "section-head", style: `--head-gap: ${gap}px` }, [
+          h("h2", { class: "section-title", id: `${id}-heading` }, title),
+          note ? h("p", { class: "section-note" }, prose(note)) : null,
+        ]),
+        body,
+      ]);
+    }
+
+    // Header: repository, sync time, live age, and the six counts.
+    const syncedAt = new Date(data.sync.at);
+    // A time no calendar has, such as 24:30, shows as written and gets no age,
+    // rather than stopping the page.
+    const validTime = !Number.isNaN(syncedAt.getTime());
+    // A zone the browser does not know falls back to UTC, which the time line
+    // then names, so every viewer still sees the same time.
+    function formatSync(locale, options) {
+      if (!validTime) return "";
+      try {
+        return new Intl.DateTimeFormat(locale, { ...options, timeZone: data.sync.timeZone || undefined }).format(syncedAt);
+      } catch {
+        return new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" }).format(syncedAt);
+      }
+    }
+    const dateText = validTime ? formatSync("en-GB", { day: "numeric", month: "long", year: "numeric" }) : data.sync.at;
+    const timeText = formatSync("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "short" });
+
+    const age = h("p", { class: "when-age" });
+    // Amber once a full day has passed, red after three. The wording counts
+    // whole units, so it never says "1 day ago" before the color changes.
+    function refreshAge() {
+      if (!validTime) return;
+      const minutes = Math.max(0, Math.floor((Date.now() - syncedAt.getTime()) / 60000));
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      let text = "Synced just now";
+      if (days >= 1) text = `Synced ${count(days, "day", "days")} ago`;
+      else if (hours >= 1) text = `Synced ${count(hours, "hour", "hours")} ago`;
+      else if (minutes >= 1) text = `Synced ${count(minutes, "minute", "minutes")} ago`;
+      age.textContent = text;
+      age.classList.toggle("is-aging", days >= AGING_AFTER_DAYS && days < STALE_AFTER_DAYS);
+      age.classList.toggle("is-stale", days >= STALE_AFTER_DAYS);
+    }
+    refreshAge();
+    window.setInterval(refreshAge, 60000);
+
+    const blockedCount = issues.filter((issue) => isBlocked(issue.number)).length;
+    const runningCapacity = lanes.reduce((sum, model) => sum + model.cap, 0);
+    // Each label sits in its own element beside its value, so it carries the
+    // noun alone and has to agree with the number itself. open, ready, and
+    // blocked are adjectives and read the same at any count.
+    const stats = [
+      [issues.length, "open"],
+      [issues.length - blockedCount, "ready"],
+      [blockedCount, "blocked"],
+      [data.lanes.length, data.lanes.length === 1 ? "lane open" : "lanes open"],
+      [runningCapacity, runningCapacity === 1 ? "branch at once" : "branches at once"],
+      [startNow.length, "start now"],
+    ];
+
+    const header = h("header", { class: "head" }, [
+      h("div", { class: "head-top" }, [
+        h("div", { class: "head-title" }, [
+          h("p", { class: "eyebrow" }, EYEBROW),
+          h("h1", { class: "title" }, h("a", { class: "repo-link", href: repoUrl }, data.repo)),
+        ]),
+        h("div", { class: "when" }, [
+          h("time", { class: "when-date", datetime: data.sync.at }, dateText),
+          h("p", { class: "when-time" }, timeText),
+          age,
+        ]),
+      ]),
+      h(
+        "dl",
+        { class: "stats" },
+        stats.map(([value, label]) =>
+          h("div", { class: "stat" }, [
+            h("dt", { class: "stat-label" }, label),
+            h("dd", { class: "stat-value" }, String(value)),
+          ]),
+        ),
+      ),
+    ]);
+
+    // Start now
+    function startRow(pick, index) {
+      const n = pick.issue;
+      const lane = laneOf.get(n);
+      const companions = riders.get(n) ?? [];
+      return h("li", { class: "start-row" }, [
+        h("span", { class: "start-rank", "aria-hidden": "true" }, String(index + 1)),
+        h("div", null, [
+          h("p", { class: "start-title" }, [ref(n), " ", shortTitle(n)]),
+          companions.length ? h("p", { class: "start-with" }, tokens([["share a branch with", companions]])) : null,
+        ]),
+        h("p", { class: "start-why" }, prose(pick.why)),
+        h("div", { class: "start-lane" }, [
+          h("span", { class: "badge" }, lane.key),
+          h("div", null, [
+            h("p", { class: "start-lane-name" }, lane.name),
+            pick.touches ? h("p", { class: "start-touches" }, pick.touches) : null,
+            anyMilestone ? [h("p", { class: "mini-label" }, "Milestone"), chip(byNumber.get(n).milestone)] : null,
+          ]),
+        ]),
+      ]);
+    }
+
+    // With no picks the section keeps one line, which says whether anything
+    // could have started.
+    // The note keys off the same state() the lane rows use, so it cannot
+    // contradict a row beside it. A rider joins the running unit whether or not
+    // its own work has started, so a lane whose root is in progress can still
+    // draw a rider as able to run now while running holds only that root.
+    // Progress is read on the branch a rider travels with, because riders maps
+    // a root to its riders and never the reverse, so a rider on its own
+    // reports no progress even while its branch is running.
+    const idle = lanes.some((model) =>
+      model.lane.issues.some((n) => model.state(n) === "now" && progressOf(rides(n) ? partnerOf(n) : n) === undefined),
+    );
+    const emptyStartNote = idle
+      ? "No branches picked today."
+      : "Nothing can start today: every issue is blocked, queued behind another, or already in progress.";
+    const startNote =
+      notes.startNow ||
+      (startNow.length
+        ? `${capitalize(word(startNow.length))} ${startNow.length === 1 ? "branch" : "branches"} to open today.`
+        : emptyStartNote);
+    const startSection = section(
+      "start-now",
+      "Start now",
+      startNote,
+      startNow.length ? 2 : 0,
+      startNow.length ? h("ol", { class: "start", role: "list" }, startNow.map(startRow)) : null,
+    );
+
+    // Lanes
+    function barRow(model) {
+      const { lane } = model;
+      const states = lane.issues.map(model.state);
+      const tally = (state) => states.filter((value) => value === state).length;
+      return h("div", { class: "bar-row" }, [
+        h("p", { class: "bar-name" }, [h("span", { class: "badge badge--small" }, lane.key), h("span", null, lane.name)]),
+        h(
+          "div",
+          {
+            class: "bar",
+            role: "img",
+            "aria-label": `${laneLabel(lane)}: ${tally("now")} can run now, ${tally("queued")} queued, ${tally("blocked")} blocked`,
+          },
+          states.map((state) => h("span", { class: `seg seg--${state}` })),
+        ),
+        h("p", { class: "bar-legend" }, `${tally("now")} of ${count(states.length, "issue", "issues")}`),
+      ]);
+    }
+
+    function laneItem(n, model) {
+      const issue = byNumber.get(n);
+      const partner = partnerOf(n);
+      const rank = model.ranks.get(n);
+      const deps = tokens([
+        ["same branch as", partner === null ? [] : [partner]],
+        ["waits on", waits(n)],
+        ["better after", afters(n), true],
+        ["unblocks", unblocks.get(n) ?? []],
+        ["eases", eases.get(n) ?? [], true],
+      ]);
+      // The column headings are drawn for sighted readers only, so each field
+      // carries a visually hidden label; the title reads as part of "Issue #N".
+      const hidden = (text) => h("span", { class: "visually-hidden" }, text);
+      // The bar above the list carries each issue's state as a colour alone, so
+      // the row states it in words for a reader who cannot see the bar.
+      const stateWord = { now: "can run now", queued: "queued", blocked: "blocked" }[model.state(n)] ?? "";
+      return h("li", { class: "item" }, [
+        h("span", { class: "item-rank", "aria-hidden": rank === "·" ? "true" : null }, [hidden("Step "), rank]),
+        h("span", { class: "item-num" }, [hidden("Issue "), ref(n), stateWord ? hidden(`, ${stateWord}.`) : null]),
+        h("span", { class: "item-title" }, [issue.title, issue.inProgress ? progressTag(issue.inProgress) : null]),
+        anyMilestone ? h("span", { class: "item-ms" }, [hidden("Milestone: "), chip(issue.milestone)]) : null,
+        h("span", { class: "item-deps" }, deps.length ? [hidden("Dependencies: "), ...deps] : deps),
+      ]);
+    }
+
+    function laneBlock(model) {
+      const { lane } = model;
+      const unit =
+        lane.mode === "any"
+          ? model.cap === 1
+            ? "branch at once"
+            : "branches at once"
+          : model.cap === 1
+            ? "branch at a time"
+            : "branches at a time";
+      const then =
+        lane.mode === "head" && model.freedAfter > 0
+          ? model.freedAfter === 1
+            ? "then one more"
+            : `then ${word(model.freedAfter)} at once`
+          : "";
+      return h("li", { class: "lane" }, [
+        h("div", { class: "lane-meta" }, [
+          h("h3", { class: "lane-title" }, [h("span", { class: "badge" }, lane.key), h("span", null, lane.name)]),
+          h("div", { class: "cap" }, [
+            h("p", { class: "cap-line" }, [
+              h("span", { class: "cap-figure" }, String(model.cap)),
+              h("span", { class: "cap-unit" }, unit),
+            ]),
+            then ? h("p", { class: "cap-then" }, then) : null,
+          ]),
+          h("div", { class: "lane-facts" }, [
+            h("p", { class: "lane-count" }, `${count(lane.issues.length, "issue", "issues")} · ${model.blocked} blocked`),
+            lane.owns ? h("p", { class: "lane-owns" }, lane.owns) : null,
+          ]),
+        ]),
+        h("div", null, [
+          lane.note ? h("p", { class: "lane-note" }, prose(lane.note)) : null,
+          h(
+            "div",
+            { class: "cols", "aria-hidden": "true" },
+            ["#", "Issue", "Title", anyMilestone ? "Milestone" : null, "Dependency"]
+              .filter(Boolean)
+              .map((label) => h("span", null, label)),
+          ),
+          h(
+            "ol",
+            { class: "items", role: "list" },
+            lane.issues.map((n) => laneItem(n, model)),
+          ),
+        ]),
+      ]);
+    }
+
+    const keyItem = (state, label) =>
+      h("span", { class: "key-item" }, [h("span", { class: `seg seg--${state}` }), label]);
+    const lanesSection = section(
+      "lanes",
+      "Lanes",
+      "Each lane's order is the order to work in, and anything that waits across lanes is linked in its row. One segment per issue: how many can run at once today, against what is queued behind them.",
+      14,
+      [
+        h("div", { class: "bars" }, lanes.map(barRow)),
+        h("div", { class: "key", "aria-hidden": "true" }, [
+          keyItem("now", "can run now"),
+          keyItem("queued", "queued behind it"),
+          keyItem("blocked", "blocked"),
+        ]),
+        h("ol", { class: "lanes", role: "list" }, lanes.map(laneBlock)),
+      ],
+    );
+
+    // Contention matrix: shared components down the side, milestones across.
+    const claims = data.contention?.claims ?? [];
+    const rowLabel = data.contention?.rowLabel || "Plugin";
+    const milestoneKey = (n) => byNumber.get(n)?.milestone || NO_MILESTONE;
+    const listed = (data.milestones ?? []).map((milestone) => milestone.title);
+    const shortName = new Map((data.milestones ?? []).map((milestone) => [milestone.title, milestone.short || milestone.title]));
+    const seen = [];
+    for (const claim of claims) {
+      for (const n of claim.issues) if (!seen.includes(milestoneKey(n))) seen.push(milestoneKey(n));
+    }
+    const position = (key) =>
+      key === NO_MILESTONE ? Number.MAX_SAFE_INTEGER : listed.includes(key) ? listed.indexOf(key) : listed.length + seen.indexOf(key);
+    const columns = [...seen].sort((a, b) => position(a) - position(b));
+    const anyClaimMilestone = columns.some((key) => key !== NO_MILESTONE);
+
+    function contentionNote() {
+      if (notes.contention) return notes.contention;
+      const across = claims.filter((claim) => new Set(claim.issues.map(milestoneKey)).size > 1).length;
+      const within = claims.length - across;
+      // The row label is arbitrary text, so it modifies "row" rather than
+      // being pluralized itself: no short rule turns every noun a board might
+      // use into a correct plural, and "Analysis" alone defeats the usual one.
+      const lead = `${capitalize(word(claims.length))} ${rowLabel} ${claims.length === 1 ? "row is" : "rows are"} claimed by more than one issue`;
+      let split = anyClaimMilestone ? ", each within one milestone." : ".";
+      if (across && within) split = `: ${word(across)} across milestones, ${word(within)} within one.`;
+      else if (across) split = claims.length === 1 ? ", across milestones." : ", all across milestones.";
+      return `${lead}${split} A filled cell is a rebase waiting to happen, and ${rowLabel.toLowerCase()} names link to every open issue that mentions them.`;
+    }
+
+    const matrixSection = claims.length
+      ? section(
+          "contention",
+          "Contention matrix",
+          contentionNote(),
+          16,
+          h(
+            "div",
+            { class: "matrix-scroll" },
+            h("table", { class: "matrix", style: `min-width: ${230 + columns.length * 92}px` }, [
+              h("colgroup", null, [h("col", { class: "matrix-first" }), columns.map(() => h("col"))]),
+              h(
+                "thead",
+                null,
+                h("tr", null, [
+                  h("th", { scope: "col" }, anyClaimMilestone ? `${rowLabel} \\ milestone` : rowLabel),
+                  columns.map((key) =>
+                    key === NO_MILESTONE
+                      ? h("th", { scope: "col" }, anyClaimMilestone ? "No milestone" : "Claimed by")
+                      : h("th", { scope: "col", title: key }, link(milestoneUrl(key), shortName.get(key) ?? key)),
+                  ),
+                ]),
+              ),
+              h(
+                "tbody",
+                null,
+                claims.map((claim) =>
+                  h("tr", null, [
+                    h("th", { scope: "row" }, link(searchUrl(claim.query || `is:open ${claim.name}`), claim.name)),
+                    columns.map((key) => {
+                      const hits = claim.issues.filter((n) => milestoneKey(n) === key);
+                      return hits.length ? h("td", { class: "hit" }, h("div", { class: "hit-refs" }, hits.map(ref))) : h("td");
+                    }),
+                  ]),
+                ),
+              ),
+            ]),
+          ),
+        )
+      : null;
+
+    // Blocked
+    const blockedIssues = issues
+      .filter((issue) => isBlocked(issue.number))
+      .sort((a, b) => a.waitingOn.length - b.waitingOn.length || a.number - b.number);
+
+    function blockedRow(issue) {
+      const refs = issue.waitingOn.map(blocker);
+      const freeing = [...new Set(refs.map((r) => r.from).filter(Boolean))];
+      const label = (text) => h("span", { class: "cell-label" }, text);
+      return h("li", { class: "blocked-row" }, [
+        h("p", { class: "blocked-issue" }, [ref(issue.number), " ", shortTitle(issue.number)]),
+        h("div", { class: "waiting" }, [
+          label("Waiting on"),
+          refs.map((r) =>
+            h("p", { class: "waiting-item" }, [
+              r.link,
+              r.title ? [" ", h("span", { class: "waiting-title" }, r.title)] : null,
+            ]),
+          ),
+        ]),
+        h("p", { class: "blocked-why" }, [label("Why it cannot start"), prose(issue.blockedBecause)]),
+        h("p", { class: "blocked-lane" }, [label("Freed from"), freeing.join(" + ")]),
+      ]);
+    }
+
+    const blockedNote =
+      notes.blocked ||
+      `${capitalize(word(blockedIssues.length))} ${blockedIssues.length === 1 ? "issue waits" : "issues wait"} on other open work.`;
+    const blockedSection = blockedIssues.length
+      ? section("blocked", "Blocked", blockedNote, 4, [
+          h(
+            "div",
+            { class: "blocked-cols", "aria-hidden": "true" },
+            ["Issue", "Waiting on", "Why it cannot start", "Freed from"].map((label) => h("span", null, label)),
+          ),
+          h("ol", { class: "blocked-list", role: "list" }, blockedIssues.map(blockedRow)),
+        ])
+      : // With nothing blocked the section keeps one line, so an empty result
+        // reads as a finding rather than as a missing section.
+        section("blocked", "Blocked", notes.blocked || "Nothing is blocked.", 0, null);
+
+    // Sync footer: when, against what, and how much.
+    const milestoneCount = new Set(issues.map((issue) => issue.milestone).filter(Boolean)).size;
+    const withoutMilestone = issues.filter((issue) => !issue.milestone).length;
+    const footer = h("footer", { class: "sync" }, [
+      "Synced ",
+      h("strong", null, [dateText, timeText].filter(Boolean).join(", ")),
+      " against ",
+      link(`${repoUrl}/tree/${pathPart(data.sync.branch)}`, data.sync.branch),
+      " at ",
+      link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8)),
+      ". ",
+      milestoneCount
+        ? [
+            `${count(issues.length, "open issue", "open issues")} across `,
+            link(`${repoUrl}/milestones`, count(milestoneCount, "milestone", "milestones")),
+            withoutMilestone ? `, ${withoutMilestone} without one` : "",
+          ]
+        : `${count(issues.length, "open issue", "open issues")}, none in a milestone`,
+      typeof data.sync.openPullRequests === "number"
+        ? `, ${count(data.sync.openPullRequests, "open PR", "open PRs")}`
+        : "",
+      (data.sync.extra ?? []).map((fact) => `, ${fact}`),
+      ". Re-run publish-report-board after any issue, milestone, pull request, branch, or worktree change. GitHub and the repository are the source of truth; this page is a snapshot.",
+    ]);
+
+    root.classList.toggle("no-milestones", !anyMilestone);
+    root.replaceChildren(
+      header,
+      h("main", { class: "body" }, [
+        h("p", { class: "summary" }, prose(data.summary)),
+        startSection,
+        lanesSection,
+        matrixSection,
+        blockedSection,
+        footer,
+      ]),
+    );
+  })();
+</script>
