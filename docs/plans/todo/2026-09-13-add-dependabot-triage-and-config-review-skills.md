@@ -50,7 +50,7 @@ Requires `gh` (authenticated) and `jq`. It builds one bundle object and pipes it
 - `dependabot`: `gh pr list --repo R --author app/dependabot --state open --limit N --json number,title,url,headRefName,headRefOid,baseRefName,body,createdAt,updatedAt,labels,isDraft,mergeable,mergeStateStatus,reviewDecision,autoMergeRequest,statusCheckRollup,files`.
 - `open`: every open PR (`--json number,title,author,headRefName,files`), for overlap detection with human PRs.
 - `defaultBranch` and `isArchived`, from `gh repo view R --json defaultBranchRef,isArchived`.
-- `compare[number]`: `gh api repos/R/compare/<default>...<headRefOid>`, reduced to `status`, `ahead_by`, `behind_by`, and commit authors (`.author.login // .commit.author.name`).
+- `compare[number]`: `gh api repos/R/compare/<baseRefName>...<headRefOid>` (the PR's own base, so a `target-branch` PR does not read as far behind), reduced to `status`, `ahead_by`, `behind_by`, and commit authors (`.author.login // .commit.author.name`).
   - This is the reliable test for non-Dependabot commits. When GitHub has a stale base, `gh pr view --json commits,files` shows other authors' commits that are not really on the branch.
 - `alerts`: `gh api --paginate --slurp 'repos/R/dependabot/alerts?state=open&per_page=100'`. A 403 or 404 records `{"available": false, "reason": ...}` instead of failing.
 - `fetchedAt` and `limit`. When either list returns exactly `limit` items, a warning goes to stderr.
@@ -77,7 +77,7 @@ Reads the bundle on stdin and emits a compact JSON document with no bodies:
     "files": [],
     "overlaps": [{ "number": 0, "author": "", "sharedFiles": [] }],
     "compare": { "status": "", "aheadBy": 0, "behindBy": 0, "nonDependabotCommits": 0 },
-    "alerts": [{ "number": 0, "package": "", "severity": "", "ghsa": "", "manifest": "", "patched": "" }]
+    "alerts": [{ "number": 0, "package": "", "ecosystem": "", "severity": "", "ghsa": "", "manifest": "", "patched": "", "cleared": true }]
   }]
 }
 ```
@@ -109,7 +109,7 @@ Parsing rules, each covered by a test:
 - **`rebasesDisabled`**: the body contains `Automatic rebases have been disabled`.
 - **`checks`**: CheckRun entries map through `status` and `conclusion`. `FAILURE`, `TIMED_OUT`, `CANCELLED`, `ACTION_REQUIRED` and `STARTUP_FAILURE` count as failures. StatusContext entries map through `state`.
 - **`overlaps`**: other open PRs, of any author, whose file paths intersect this PR's.
-- **`alerts`**: open alerts whose package name matches an update name and whose manifest path is in `files` or shares a directory with one. Alerts that match no PR go to `unmatchedAlerts`, grouped by package and manifest with a count and the highest severity, since a repository can carry dozens of alerts for a handful of packages.
+- **`alerts`**: open alerts whose package name matches an update name, whose ecosystem matches the branch ecosystem, and whose manifest path is in `files` or shares a directory with a dependency file in `files`. `cleared` records whether the update's target version reaches the first patched version, since a PR can touch a vulnerable package without fixing it. Alerts that match no PR go to `unmatchedAlerts`, grouped by package and manifest with a count and the highest severity, since a repository can carry dozens of alerts for a handful of packages.
 
 ### Errors
 
@@ -498,3 +498,15 @@ Conventional Commits, GPG-signed, via the `commit` skill:
 - A multi-repository sweep mode, which would need fork and archived filtering. There are 40 open Dependabot PRs in archived repositories today.
 - Qualifying the claim that "Dependabot bumps the SHA and the comment together" in `set-up-linters` (`references/tools/github-actions-ci.md`) and `set-up-installers`. It holds for full `# vX.Y.Z` comments only.
 - Auto-merge wiring for minor and patch groups.
+
+## Review pass
+
+A final two-reviewer pass before the PR changed the implementation in these ways, beyond what the sections above describe:
+
+- **Titles and versions.** The script also reads short and backticked digests and `update NAME requirement from A to B` titles.
+- **Timestamps and sorting.** It ignores the zero timestamp gh reports for unfinished checks, and sorts patched versions by version.
+- **Auth check.** It checks authentication with `gh auth token`, so a problem with another account does not block it.
+- **`triage-dependabot-prs`.** The skill fetches every PR head and predicts conflicts before classifying. Cross-PR conflicts set merge order only. The close flow posts the comment and closes in one chained command with a literal temporary path.
+- **`review-dependabot-config`.** It invokes `lint-and-fix --no-commit`. Its references were corrected against the GitHub docs: which events withhold Actions secrets, the `automated-security-fixes` 404, `bun.lock`, `rust-toolchain`, Terraform, and the default `versioning-strategy`.
+- **`monitor-pr`.** It treats a stale Copilot review on a Dependabot PR as not applicable, and escalates secret-starved failures instead of looping.
+- **`bootstrap-project`.** It reports an existing config, under either file name, as `Already set up` rather than running `pin-everything` over it.
