@@ -64,9 +64,10 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&b.addRunArtifact(mod_tests).step);
     test_step.dependOn(&b.addRunArtifact(exe_tests).step);
 
-    // One path list, reached from both the Makefile and CI, so the two cannot
-    // disagree about what gets formatted. `zig fmt` formats ZON as well, so
-    // the manifest is named explicitly.
+    // One path list for every local entry point: `zig build fmt`, `zig build
+    // fmt-check`, and the Makefile's `fmt` and `format` targets, which call
+    // those steps. `zig fmt` formats ZON as well, so the manifest is named
+    // explicitly. CI does not read this list; see the note below.
     const fmt_paths: []const []const u8 = &.{ "build.zig", "build.zig.zon", "src" };
 
     const fmt_step = b.step("fmt", "Format all Zig and ZON source in place");
@@ -83,4 +84,5 @@ pub fn build(b: *std.Build) void {
 - `b.addModule` exposes `src/root.zig` to downstream packages as well as to the executable. Passing `optimize` is deliberate: it is optional there, and the upstream `zig init` template omits it, which silently pins the library tests to Debug. A root module with no resolved `target` panics outright.
 - A Zig test binary covers exactly one module, which is why there are two `addTest` calls. Dropping either one stops compiling those tests without failing.
 - The `fmt` and `fmt-check` steps keep one path list in the build script. `zig fmt --check src/ build.zig`, the invocation most projects reach for, silently never checks `build.zig.zon`.
+- **CI does not use this list.** The generated workflow calls `cboone/gh-actions`' `run-zig-ci.yml`, whose format job runs that very `zig fmt --check src/ build.zig` and exposes no input for the paths, so the manifest goes unchecked there. Local and CI formatting are therefore not equivalent, and local is the stricter of the two: `make check` catches an unformatted `build.zig.zon` and a green CI run does not mean there isn't one. Do not read this list as giving the two parity.
 - `run_cmd.step.dependOn(b.getInstallStep())` makes `zig build run` execute the installed binary rather than one in the cache directory, so the run matches what a user would get.

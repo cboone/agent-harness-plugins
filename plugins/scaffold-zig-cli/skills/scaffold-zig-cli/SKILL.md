@@ -111,13 +111,9 @@ ls -d build.zig build.zig.zon src README.md LICENSE CHANGELOG.md Makefile \
 
 Anything listed will be replaced, except the `.gitkeep` files, which step 20 creates with `touch` and therefore leaves intact if they already exist. Step 23 stages them either way, so an existing one with content in it would go into the scaffold commit; report it rather than staging it blind. Four paths are merged rather than overwritten: `.gitignore`, `.editorconfig` and `.claude/settings.json` per steps 12, 13 and 19, and `.github/copilot-instructions.md` per step 22. Name those separately when reporting, since an existing one is appended to rather than lost. For the rest, show the user what would be lost and ask before continuing. A directory holding someone's `README.md` and `Makefile` is the case this exists for, and it does not have to be a git repository to lose work.
 
-**Uncommitted work, when the target is a git repository:**
+Note that this check stands on its own: a clean `git status` later says nothing about it, because committed files are exactly the ones `git status` stays quiet about.
 
-```bash
-git status --porcelain
-```
-
-Any output means the repository carries work that is not this scaffold's. Report it and ask whether to continue, because step 23's commit is GPG-signed and should contain only generated files. This check belongs here rather than at the commit: afterwards it can only describe what already happened. Note that a clean tree says nothing about the first check, since committed files are exactly the ones `git status` stays quiet about.
+The second check, for uncommitted work, waits for step 4. It only makes sense once the repository step 23 will commit into is known, and that is what step 4 establishes.
 
 ### 4. Initialize Git
 
@@ -128,6 +124,16 @@ git rev-parse --show-toplevel 2> /dev/null
 ```
 
 Skip `git init` only if that prints the target directory. No output means there is no repository here, and a different path means the target sits inside someone else's.
+
+**When it prints the target, check for uncommitted work before going further:**
+
+```bash
+git status --porcelain
+```
+
+Any output means this repository carries work that is not the scaffold's. Report it and ask whether to continue, since step 23's commit is signed and should hold only generated files.
+
+Run this check in that case alone. In the other two the target is about to become its own repository, and `git status` would be reporting on something else: from a directory nested inside the caller's repository it describes that repository, whose uncommitted work has nothing to do with the scaffold and would block it for no reason.
 
 Being merely _inside_ a repository is not the same thing and must not skip it. Step 3 may have created the target as a subdirectory of wherever the skill was invoked, and if that was a repository, the new directory is inside it while having none of its own. Skipping `git init` there leaves the scaffold with no repository, and step 23's `git add` and signed `git commit` then land in the caller's repository instead. Initialize a nested target like any other:
 
