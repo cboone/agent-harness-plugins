@@ -11,7 +11,7 @@ Code that no test binary compiles is not uncovered. It is absent from the progra
 | Structural uncoverability | Code that no test binary compiles, so it is not in the analyzed program                  | Plant a defect in it and watch the whole suite pass             |
 | Unvisited branch          | It compiles, an instrument could reach it, and no arm was ever written to steer it there | Plant a defect in it and watch the whole suite pass             |
 
-The first is closed by adding an instrument. The second is closed by fixing the check. The third and fourth are closed by changing what the test build contains or where its arms go, and neither is closed by writing more tests of the kind already there.
+The first is closed by adding an instrument. The second is closed by fixing the check. The third is closed by changing what the test build contains, and no test written against the build as it stands will do it. The fourth **is** closed by a test, but a specific one: a new arm supplying an input that steers into the branch. More of the tests already there will not find it, and that is the whole of the difference between the last two.
 
 Note that the third and fourth are found the same way and are not the same thing. Distinguishing them takes one extra step: check whether the code is in the binary at all.
 

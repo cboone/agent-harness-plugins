@@ -57,12 +57,12 @@ The fourth column is what makes the table regress rather than describing a check
 
 Four, not two. The third survives every coverage mode, because the code is not in the analyzed program at all. The fourth is reported by branch or condition coverage, and by line coverage too where the untaken arm has body lines of its own; it hides from line coverage only where that arm has no lines to report.
 
-| Class                     | What it is                                                                               | Why more tests do not help                                                              |
-| ------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| False negative            | A defect one instrument cannot see, closed by naming a second that can                   | The suite is fine; the instrument is the wrong one for this defect                      |
-| False positive            | Nothing was broken and a required check said something was                               | Belongs to the check's scaffolding, not the code; no number of instruments addresses it |
-| Structural uncoverability | Code that no test binary compiles, so it is absent from the analyzed program             | No test written in that suite could reach it, however it was written                    |
-| Unvisited branch          | It compiles, an instrument could reach it, and no arm was ever written to steer it there | Every counter it moved was read by something, so nothing looked absent                  |
+| Class                     | What it is                                                                               | What closes it                                                                 |
+| ------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| False negative            | A defect one instrument cannot see                                                       | A second instrument that can. The suite is not the problem                     |
+| False positive            | Nothing was broken and a required check said something was                               | Fixing the check. No number of instruments addresses it                        |
+| Structural uncoverability | Code that no test binary compiles, so it is absent from the analyzed program             | Changing what the test build contains. No test against this build can reach it |
+| Unvisited branch          | It compiles, an instrument could reach it, and no arm was ever written to steer it there | One new arm, with an input that steers there. More of the same will not        |
 
 ## Workflow
 

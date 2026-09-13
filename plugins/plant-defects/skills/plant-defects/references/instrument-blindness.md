@@ -4,16 +4,16 @@ Instruments do not compose by assumption. Tabulate defect against instrument and
 
 ## The matrix
 
-Planted defects down the side, instruments across the top, one cell per pair. The version below is six defects against five instruments, from a project's leak-instrument notes:
+Planted defects down the side, instruments across the top, one cell per pair. The version below is six defects against five instruments, from a project's leak-instrument notes. Note that the first two columns are two **assertions over one report**, not two tools: the class filter matches leaked objects by class-name prefix, and the byte bound reads the same report's byte total. Naming the column after the tool rather than the assertion is a mistake, because it makes the classless-allocation row look self-contradictory:
 
-| Planted defect                                 | Malloc-heap walker | Byte bound | Buffer counter | Texture counter | Unit suite      |
-| ---------------------------------------------- | ------------------ | ---------- | -------------- | --------------- | --------------- |
-| Command queue never released                   | yes                | no         | no             | no              | no              |
-| Window buffer ring built and forgotten         | no                 | no         | yes            | no              | no              |
-| Accumulation pair built and forgotten          | no                 | no         | no             | yes             | no              |
-| Palette lookup built and forgotten             | no                 | no         | no             | yes             | no              |
-| A release call stops being sent, still counted | no                 | no         | no             | no              | no              |
-| A plain allocation this project owns           | no                 | yes        | no             | no              | on tested paths |
+| Planted defect                                 | Class filter | Byte bound | Buffer counter | Texture counter | Unit suite      |
+| ---------------------------------------------- | ------------ | ---------- | -------------- | --------------- | --------------- |
+| Command queue never released                   | yes          | no         | no             | no              | no              |
+| Window buffer ring built and forgotten         | no           | no         | yes            | no              | no              |
+| Accumulation pair built and forgotten          | no           | no         | no             | yes             | no              |
+| Palette lookup built and forgotten             | no           | no         | no             | yes             | no              |
+| A release call stops being sent, still counted | no           | no         | no             | no              | no              |
+| A plain allocation this project owns           | no           | yes        | no             | no              | on tested paths |
 
 Its opening line is the theory in one sentence: each instrument is blind to something different, and **the differences are what matter rather than how thorough each one is**.
 
