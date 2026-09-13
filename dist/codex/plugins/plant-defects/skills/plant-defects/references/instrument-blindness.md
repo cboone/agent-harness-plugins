@@ -20,7 +20,7 @@ Its opening line is the theory in one sentence: each instrument is blind to some
 Four conclusions the matrix produced, none of which was available from reading any instrument's documentation:
 
 - **The heap walker sees objects with a runtime class and misses both a graphics buffer's storage and a block with no class at all.**
-- **The byte bound sees anything large**, which is why it is the one that reaches the project's own allocations.
+- **The byte bound sees anything large the heap walker reported**, which is why it is the one that reaches the project's own allocations. Note the qualifier, because the matrix contains its counterexample: the byte bound is computed from the walker's own total, so an allocation the walker never saw is invisible to the bound however large it is. The leaked texture below is nearly two gigabytes and the bound does not move.
 - **The counters are exact**, and they are the only instrument for either kind of texture. They cannot name which resource, which is why the message says "textures" rather than "accumulation textures": a counter that cannot tell two kinds apart must not claim to.
 - **One row is covered by nothing, deliberately:** `A release call stops being sent, still counted`. A release path that decrements without releasing balances every counter and leaks storage no instrument here can see. Name the row rather than its position, since a row's position moves as the table grows and the claim then attaches to the wrong defect.
 

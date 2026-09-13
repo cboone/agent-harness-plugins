@@ -6,7 +6,7 @@ Reading a file's own source as text, so a declaration nothing can check as behav
 
 All three conditions, together:
 
-- **The failure mode is a weakening rather than a break.** A releasing store simplified to relaxed, a constructor swapped for its sibling, two correct lines put in the wrong order. Each compiles, and each passes a suite that never exercises the concurrency.
+- **The failure mode is a weakening rather than a break.** A releasing store simplified to relaxed, a constructor swapped for its sibling in one of the spellings that compiles, two correct lines put in the wrong order. Each compiles, and each passes a suite that never exercises the concurrency.
 - **The instrument that would catch it is unavailable.** It needs a platform this machine cannot be, or hardware nobody has, or it does not exist.
 - **The correct spelling is short and stable.** A canary over code that is legitimately edited every week is noise.
 
@@ -34,6 +34,8 @@ pub fn implementation(source: []const u8) []const u8 {
 ```
 
 Each call site does the embedding itself, because the path resolves relative to the importing file. A file with no banner is returned whole, which is correct for one whose tests live elsewhere.
+
+**That fallback is itself a vacuity hazard, and it is worth a control.** The `orelse` cannot tell an intentionally banner-less file from one whose banner was renamed or removed. Where the tests are co-located, the second case silently widens the canary's scope to include the test section, so the assertions start reading the canary's own string literals and can report a result about the canary text rather than about the implementation. Assert the marker's presence separately in any file whose tests sit below it, so a renamed banner fails loudly instead of quietly changing what is being measured.
 
 ## Three primitives, and why all three
 
@@ -142,6 +144,8 @@ And commit the canary before planting against it, so reverting the plant reverts
 
 Written as a table of refusals rather than a list of assertions, so each line says what it is for:
 
+The `...` below stands for a type annotation elided for width. `stated` is an exact match, so a real canary spells the line out in full, character for character, and one of these copied literally would fail against correct code.
+
 | Assertion                                                          | What it refuses                               |
 | ------------------------------------------------------------------ | --------------------------------------------- |
 | `stated(code, "const backend_init: ... = .init_single_threaded;")` | The constructor changing                      |
@@ -166,4 +170,8 @@ The mechanism needs compile-time file reading to be free, but the idea does not.
 
 The CI grep has a failure this practice has already recorded: nothing links the needle to the declaration, so a rename makes the assertion vacuous and green at the same moment, and a positive control that only proves the artifact is readable does not help. See `./references/vacuous-passes.md`.
 
-Whichever form, keep two properties: match trimmed, and exclude comment lines. They are not incidental details of one implementation. They are the two ways a text assertion breaks on an edit that changed nothing.
+Whichever form, keep the comment-line exclusion: a doc comment that names the identifier must not be able to satisfy or break a count, in any language.
+
+**The trimming rule does not port, and porting it blindly is a way to build a canary that accepts the defect.** Matching trimmed is correct where indentation carries no meaning, which is what makes re-indenting into a conditional a wash in a brace-delimited language. In Python, or any other syntax where indentation is the block structure, moving a statement into or out of an `if` changes behaviour while leaving the trimmed line identical, so a trimmed match accepts exactly the edit a canary exists to refuse. There the indentation is part of the claim: match the line with its leading whitespace, or pin the enclosing block as well as the statement, and say in the canary's own comment which you chose and why.
+
+The general form of that: **trim what the language says is insignificant, and no more.** Work out which of the two properties is answering a real flaw in your language before copying both.
