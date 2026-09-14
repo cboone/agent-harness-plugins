@@ -85,20 +85,22 @@ Carry both observations into step 4 and judge them there, once the target's own 
 
 The project is scaffolded in a directory named after the project. Establish that directory and **change into it** before anything else in this step.
 
-**First, before creating or entering anything**, check whether the name is already a symlink:
+Decide which branch applies first, because only one of them needs the symlink check:
+
+- **The current directory is already named after the project.** It **is** the target and no move is needed, whether or not it is empty. Its contents are the preflight's business, not this branch's. Nothing is created or entered, so skip the check below: `PROJECT-NAME` here would name a child of the target, and a project that happens to contain a symlink by that name is not this check's concern.
+- **Otherwise**, the target is a child to be created and entered, and the check applies.
+
+On that second branch only, **before creating or entering anything**:
 
 ```bash
 test -L "PROJECT-NAME" && readlink "PROJECT-NAME"
 ```
 
-The order matters and this check is worthless anywhere later. `mkdir -p` succeeds silently on a symlink pointing at an existing directory and `cd` follows it, so once the working directory has moved, the same `test -L "PROJECT-NAME"` is asking about a _child_ of the destination rather than the entry that was followed. Run it here, while the name still refers to the thing being tested.
+The order matters and the check is worthless anywhere later. `mkdir -p` succeeds silently on a symlink pointing at an existing directory and `cd` follows it, so once the working directory has moved, the same `test -L "PROJECT-NAME"` is asking about a child of the destination rather than the entry that was followed. Run it here, while the name still refers to the thing being tested.
 
 If it is a symlink, say where it leads and ask before continuing. Following one puts every generated file, the `git init`, and the signed commit in the destination tree rather than beside the symlink, and nothing later in the workflow notices: the overwrite preflight runs in the destination, so an empty one reports nothing to worry about.
 
-Then establish the target:
-
-- If the current directory is already named after the project, it **is** the target and no move is needed, whether or not it is empty. Its contents are the preflight's business, not this branch's.
-- Otherwise, create it and enter it:
+Then create and enter it:
 
 ```bash
 mkdir -p "PROJECT-NAME"
