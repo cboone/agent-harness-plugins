@@ -31,7 +31,7 @@ The premise of the PR is gone. Any one of these matches:
 - **The manifest, lockfile, or workflow it updates no longer exists** on the default branch.
 - **The ecosystem was migrated away**, such as a `pip` PR in a project that moved to `uv`, or an `npm` PR after a switch to `pnpm` workspaces where the old lockfile is gone.
 - **The directory is out of scope**: excluded in `dependabot.yml`, vendored, or a subtree whose dependencies another repository manages.
-- **The base branch is not the default branch**, and no `target-branch` in `dependabot.yml` names it. A PR against a branch nobody merges to will never land.
+- **The base branch is gone or retired.** It no longer exists, or it is not the default branch and there is evidence nobody merges to it: its last commit is old (`gh api repos/OWNER/REPO/commits/BASE --jq .commit.committer.date`), the repository's docs or the user say it is retired, or its release line is end of life. A missing `target-branch` entry alone proves nothing, since a release branch can take updates that only a past config aimed at it: report the missing entry as a config finding for the `review-dependabot-config` skill, and classify the PR by the other categories.
 
 Action: close and delete the branch. If `dependabot.yml` would regenerate the PR, say so and hand the fix to the `review-dependabot-config` skill.
 
@@ -53,12 +53,13 @@ Action: leave the PR open, or, on the user's decision, use the `@dependabot igno
 The change is wanted, but the PR's state is out of date. Any one of these matches:
 
 - **`mergeStateStatus` is `DIRTY`** (conflicts with the base).
+- **`mergeStateStatus` is `BEHIND`.** A rule requires the branch to be up to date with its base, so GitHub refuses the merge until it is, whatever files differ.
 - **The checks ran against an old base.** `compare.behindBy` is above zero and the base branch has changed files that matter to this PR since the merge base, such as its lockfile, its workflow, or the code its dependency is used in.
 - **`rebasesDisabled` is true** and the base branch has changed files that matter to this PR, since Dependabot will not refresh the PR on its own.
 - **The title, branch, and diff disagree** (`branchAgrees` false, and the diff differs from the title).
 - **`compare.nonDependabotCommits` is above zero** and the commits are not ones the user asked for in this session. Dependabot refuses to rebase an edited branch, so the refresh is `recreate`, which needs the user to confirm the edits can go. A commit pushed at the user's request (a corrected version comment, say) is an intended edit: it leaves the PR in the category it had.
 
-A PR that is only `BEHIND` on unrelated files, with checks that still exercise the change, is not stale. It can still be Safe to merge.
+A PR that is behind its base only on unrelated files (`compare.behindBy` above zero while `mergeStateStatus` is not `BEHIND`), with checks that still exercise the change, is not stale. It can still be Safe to merge.
 
 Action: `@dependabot rebase`, or `@dependabot recreate` for an edited branch after confirmation, then re-triage once Dependabot has pushed and the checks have concluded.
 
@@ -93,7 +94,7 @@ Action: name the specific verification it needs, from `./verification.md` or the
 
 Every one of these holds:
 
-- **Current against the base branch**, or behind it only on files unrelated to this PR.
+- **Current against the base branch**, or behind it only on files unrelated to this PR while no rule requires it to be up to date (`mergeStateStatus` is not `BEHIND`).
 - **The checks pass and exercise the change**, or verification has.
 - **No conflict with the base branch.** A conflict with another open PR does not disqualify it; it only sets the merge order, and the later PR is expected to need a rebase.
 - **The release notes show no breaking change that affects this repository.** A major can qualify, for example when the only break is a runtime bump the repository's runners already support.
