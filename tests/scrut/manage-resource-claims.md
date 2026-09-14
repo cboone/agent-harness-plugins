@@ -148,7 +148,7 @@ A worktree that has been removed must not hold a resource forever, so `check` re
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-gone --branch feature/gone > /dev/null \
 >   && claims_check_report logic
-resource "logic" has a stale claim from feature/gone at /repo/wt-gone, claimed TIMESTAMP; that worktree no longer exists
+resource "logic" has a stale claim from feature/gone at /repo/wt-gone, claimed TIMESTAMP; that claim no longer matches a live worktree
 ```
 
 ## list --json carries the derived stale flag
@@ -1084,4 +1084,17 @@ $ setup_claims \
 >   && claims prune
 resource=logic state=held id=aaaaaaaaaaaa branch=feature/removed claimed=t worktree=/repo/wt-removed
 no stale claims
+```
+
+## check describes a stale claim without claiming the worktree is gone
+
+A claim goes stale when it no longer matches a live worktree, which is not the same as its worktree having been removed. A path reused by a different worktree is stale while the path itself still exists, so wording the report as "that worktree no longer exists" would describe a directory the user can see is there.
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
+>   && jq '.claims[0].gitdir="/admin/somewhere-else"' "${claim_file}" > "${claim_file}.new" \
+>   && mv "${claim_file}.new" "${claim_file}" \
+>   && claims_check_report logic
+resource "logic" has a stale claim from feature/live at /repo/wt-live, claimed TIMESTAMP; that claim no longer matches a live worktree
 ```

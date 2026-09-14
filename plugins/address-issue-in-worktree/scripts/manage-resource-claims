@@ -49,7 +49,7 @@ Subcommands:
                              exactly where a path or a timestamp would not
   release <resource>         Remove the claim on <resource>
   release --worktree <path>  Remove every claim held by <path>
-  prune                      Drop claims whose worktree no longer exists
+  prune                      Drop claims that no longer match a live worktree
   -h, --help                 Show this help
 
 A claim is stale when git no longer lists its worktree. Stale claims are
@@ -683,7 +683,7 @@ function cmd_check() {
 
   if [[ "${state}" == "stale" ]]; then
     jq -r --arg resource "${resource}" \
-      '"resource \"\($resource)\" has a stale claim from \(.branch) at \(.worktree), claimed \(.claimed_at); that worktree no longer exists"' <<< "${match}"
+      '"resource \"\($resource)\" has a stale claim from \(.branch) at \(.worktree), claimed \(.claimed_at); that claim no longer matches a live worktree"' <<< "${match}"
     return 0
   fi
 

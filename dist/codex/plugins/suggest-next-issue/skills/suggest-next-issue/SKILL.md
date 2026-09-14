@@ -63,7 +63,7 @@ git worktree list --porcelain -z
 
 `-z` matters and is not decoration. Without it the records are newline-delimited, so a worktree path containing a newline splits across two apparent fields and the path read back is a truncation of the real one. The claim file would then be looked for somewhere that does not exist, ordinary recommendations would silently lose the resource signal, and `--parallel-only` could not apply the filter it promises. With `-z` each field ends in a NUL, which no path can contain. The bundled `manage-resource-claims` parses the same way, for the same reason.
 
-A missing file means no claims, which is the ordinary state and not an error. Each claim carries `id`, `resource`, `worktree`, `branch`, `claimed_at`, and an optional `issue`.
+A missing file means no claims, which is the ordinary state and not an error. So does a file that is empty or contains only whitespace: `manage-resource-claims` writes the file only when it records a claim, and reads an empty one as an empty set rather than as damage. Each claim carries `id`, `resource`, `worktree`, `branch`, `claimed_at`, and an optional `issue`.
 
 **Validate the file before reading the claims.** This reads the file directly rather than through `manage-resource-claims`, so it inherits none of that script's guards, and treating malformed data as resource state would produce confident parallel-safety advice from something it has misunderstood. Require all of:
 
@@ -78,7 +78,7 @@ A missing file means no claims, which is the ordinary state and not an error. Ea
 
 That is the same contract `manage-resource-claims` enforces, and matching it matters rather than being pedantry. A `resource` of `"logic "` would never match the `logic` an issue asks for, so the conflict would go unreported; a control character in `worktree` would not match any line of `git worktree list`, so a live claim would read as stale and be discounted. A weaker check here does not fail loudly, it gives confident advice that is wrong.
 
-A missing file is not a failure: it means no claims. Anything that fails these checks is. On a failure, make the recommendations without the resource signal and say why, naming which check failed. Do not treat a partially readable file as partially authoritative: an entry you cannot parse may be the very claim that would have changed the advice.
+A missing, empty, or whitespace-only file is not a failure: each means no claims, and the check for them comes before the checks above, so an empty file is never measured against the versioned-object rule it cannot satisfy. Anything else that fails these checks is a failure. On a failure, make the recommendations without the resource signal and say why, naming which check failed. Do not treat a partially readable file as partially authoritative: an entry you cannot parse may be the very claim that would have changed the advice.
 
 **Under `--parallel-only`, a failure is fatal rather than a downgrade.** That option promises every recommendation is safe to start beside the work already under way, and a claim file that cannot be read makes the held resources unknown, so nothing can be promised. Report that the claims are unreadable and that the parallel-safety filter cannot be applied, offer the ordinary recommendations instead, and let the user decide. Presenting unfiltered work as parallel-safe is the one outcome this option must never produce.
 
@@ -220,7 +220,7 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
 **Exclusive resources held:**
 
 - `logic` -- feature/14-improve-notifications, claimed 2026-09-12T18:04:11Z
-- `simulator` -- fix/99-old-thing (stale: that worktree no longer exists, clear it with `/create-worktree --release-resource simulator`)
+- `simulator` -- fix/99-old-thing (stale: that claim no longer matches a live worktree, clear it with `/create-worktree --release-resource simulator`)
 
 #9 and #12 both need `logic` for verification, so they are better started once #14 is done.
 
