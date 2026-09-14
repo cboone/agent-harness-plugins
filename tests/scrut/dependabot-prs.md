@@ -224,6 +224,13 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.jso
 {"updates":[{"name":"node","from":"6f7ab5c","to":"0e9c10a","type":"digest","semverBreaking":null}],"branchAgrees":true}
 ```
 
+The backticks mark a digest even when every character is a digit, so an all-digit short SHA is never read as a version, and an alert it matches is never cleared by comparing it.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 219) | {updates, alerts: [.alerts[] | {number, cleared}]}'
+{"updates":[{"name":"actions/cache","from":"1234567","to":"7654321","type":"digest","semverBreaking":null}],"alerts":[{"number":47,"cleared":null}]}
+```
+
 ## A title without versions falls back to the body lead
 
 ```scrut
@@ -369,6 +376,15 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.jso
 [{"name":"rake","from":"~> 12.3","to":"~> 13.0","type":"major"},{"name":"rspec","from":">= 3.10, < 4","to":">= 3.13, < 5","type":"minor"}]
 ```
 
+## A grouped security update
+
+A security update ends each `Updates` line with a note that it includes a security fix. The note is not part of the version, so the alert still clears.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 221) | {updates: [.updates[] | {name, to}], alerts: [.alerts[] | {number, cleared}]}'
+{"updates":[{"name":"ws","to":"8.17.1"},{"name":"braces","to":"3.0.3"}],"alerts":[{"number":49,"cleared":true}]}
+```
+
 ## A Swift update that touches only the resolved file
 
 A SwiftPM update can change `Package.resolved` alone while the alert names `Package.swift` beside it. The resolved file counts as a dependency file, so the alert matches.
@@ -376,6 +392,15 @@ A SwiftPM update can change `Package.resolved` alone while the alert names `Pack
 ```scrut
 $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 218) | {ecosystem, alerts: [.alerts[] | {number, cleared}]}'
 {"ecosystem":"swift","alerts":[{"number":46,"cleared":true}]}
+```
+
+## A Go workspace update that touches only the workspace sum file
+
+A module update in a Go workspace can change `go.work.sum` alone while the alert names `go.mod` beside it. The workspace files count as dependency files, so the alert matches.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 220) | {ecosystem, alerts: [.alerts[] | {number, cleared}]}'
+{"ecosystem":"go_modules","alerts":[{"number":48,"cleared":true}]}
 ```
 
 ## A four-part version

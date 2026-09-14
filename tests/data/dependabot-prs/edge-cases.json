@@ -353,6 +353,54 @@
           "path": "Package.resolved"
         }
       ]
+    },
+    {
+      "number": 219,
+      "title": "chore(deps): bump actions/cache from `1234567` to `7654321`",
+      "url": "https://github.com/example-org/edge-repo/pull/219",
+      "headRefName": "dependabot/github_actions/actions/cache-7654321",
+      "headRefOid": "2192192192192192192192192192192192192192",
+      "baseRefName": "main",
+      "body": "Bumps [actions/cache](https://github.com/actions/cache) from `1234567` to `7654321`.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": ".github/workflows/release.yml"
+        }
+      ]
+    },
+    {
+      "number": 220,
+      "title": "chore(deps): bump golang.org/x/net from 0.23.0 to 0.33.0",
+      "url": "https://github.com/example-org/edge-repo/pull/220",
+      "headRefName": "dependabot/go_modules/golang.org/x/net-0.33.0",
+      "headRefOid": "2202202202202202202202202202202202202202",
+      "baseRefName": "main",
+      "body": "Bumps [golang.org/x/net](https://github.com/golang/net) from 0.23.0 to 0.33.0.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "go.work.sum"
+        }
+      ]
+    },
+    {
+      "number": 221,
+      "title": "chore(deps): bump the npm-security group in /svc with 2 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/221",
+      "headRefName": "dependabot/npm_and_yarn/svc/npm-security-9f8e7d6c5b",
+      "headRefOid": "2212212212212212212212212212212212212212",
+      "baseRefName": "main",
+      "body": "Bumps the npm-security group in /svc with 2 updates: [ws](https://github.com/websockets/ws) and [braces](https://github.com/micromatch/braces).\n\nUpdates `ws` from 8.17.0 to 8.17.1 **This update includes a security fix.**\n<details>\n<summary>Commits</summary>\n</details>\n\nUpdates `braces` from 3.0.2 to 3.0.3 **This update includes security fixes.**\n<details>\n<summary>Commits</summary>\n</details>\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "svc/package-lock.json"
+        }
+      ]
     }
   ],
   "alerts": {
@@ -660,6 +708,63 @@
         "security_vulnerability": {
           "first_patched_version": {
             "identifier": "2.65.0"
+          }
+        }
+      },
+      {
+        "number": 47,
+        "dependency": {
+          "package": {
+            "ecosystem": "actions",
+            "name": "actions/cache"
+          },
+          "manifest_path": ".github/workflows/release.yml"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-4747-4747-4747",
+          "severity": "medium"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "4.2.0"
+          }
+        }
+      },
+      {
+        "number": 48,
+        "dependency": {
+          "package": {
+            "ecosystem": "go",
+            "name": "golang.org/x/net"
+          },
+          "manifest_path": "go.mod"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-4848-4848-4848",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "0.33.0"
+          }
+        }
+      },
+      {
+        "number": 49,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "ws"
+          },
+          "manifest_path": "svc/package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-4949-4949-4949",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "8.17.1"
           }
         }
       }

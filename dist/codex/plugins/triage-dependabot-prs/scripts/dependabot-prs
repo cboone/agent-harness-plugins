@@ -337,17 +337,23 @@ function do_summarize() {
     def lower: ascii_downcase;
     def body_text: (.body // "") | gsub("\r"; "");
 
-    # A commit or image digest. Titles carry a full 40-character SHA for an
-    # action pinned to a commit, and a short one for a container digest or a
-    # submodule. An image digest can also be spelled sha256:HEX, full length or
-    # short, and follow a tag (7.2.0-alpine@sha256:2870770). A bare short form
-    # must contain a letter, which keeps a date-shaped version like 20240101
-    # from reading as a digest; the sha256: prefix already rules that out.
+    # A commit or image digest. An image digest can be spelled sha256:HEX, full
+    # length or short, and follow a tag (7.2.0-alpine@sha256:2870770). An
+    # unquoted short form must contain a letter, which keeps a date-shaped
+    # version like 20240101 from reading as a digest; the sha256: prefix already
+    # rules that out. Dependabot itself quotes the digests it writes, which
+    # quoted_digest reads.
     def image_tag: if test("@sha256:") then sub("@sha256:.*$"; "") else "" end;
     def is_sha:
       if test("^(.*@)?sha256:") then sub("^(.*@)?sha256:"; "") | test("^[0-9a-f]{7,64}$")
       else test("^[0-9a-f]{40}$") or (test("^[0-9a-f]{7,39}$") and test("[a-f]"))
       end;
+
+    # Dependabot shortens a commit SHA or an image digest to seven characters
+    # and wraps it in backticks, in titles and body lines alike. The backticks
+    # mark a digest even when every character of the prefix is a digit, which
+    # is_sha alone cannot tell from a version.
+    def quoted_digest: test("^`[0-9a-f]{7,40}`\\.?$");
 
     # Titles wrap digests in backticks and body leads end in a period.
     def clean_version: gsub("`"; "") | sub("\\.$"; "");
@@ -368,9 +374,12 @@ function do_summarize() {
     # type names the position that changed. A change that leaves every numeric
     # part equal (a pre-release or build suffix, say) is unknown rather than
     # guessed at.
-    # A tag that changes alongside its digest is compared as a version.
-    def update_type($from; $to):
-      if ($from | is_sha) and ($to | is_sha) and ($from | image_tag) == ($to | image_tag) then "digest"
+    # A tag that changes alongside its digest is compared as a version. A bare
+    # digest on one side only (a switch between a release and a commit) has no
+    # numeric parts to compare.
+    def update_type($from; $to; $from_digest; $to_digest):
+      if $from_digest and $to_digest and ($from | image_tag) == ($to | image_tag) then "digest"
+      elif ($from_digest and ($from | image_tag) == "") or ($to_digest and ($to | image_tag) == "") then "unknown"
       else
         (first($from | numeric_parts) // null) as $f
         | (first($to | numeric_parts) // null) as $t
@@ -386,17 +395,27 @@ function do_summarize() {
     # bump are breaking by the specification, and npm and Cargo caret ranges do
     # not cross them. Reported beside type rather than folded into it, because
     # some ecosystems (Go x/ modules, for one) ship stable 0.x releases.
-    def semver_breaking($from; $to):
+    def semver_breaking($from; $to; $from_digest; $to_digest):
       (first($from | numeric_parts) // null) as $f
       | (first($to | numeric_parts) // null) as $t
-      | if (($from | is_sha) and ($from | image_tag) == "") or $f == null or $t == null then null
+      | if ($from_digest and ($from | image_tag) == "") or ($to_digest and ($to | image_tag) == "") or $f == null or $t == null then null
         elif $f.major != $t.major then true
         elif $f.major == 0 and $f.minor != $t.minor then true
         elif $f.major == 0 and $f.minor == 0 and $f.patch != $t.patch then true
         else false
         end;
 
-    def with_type: . + {type: update_type(.from; .to), semverBreaking: semver_breaking(.from; .to)};
+    # Built from the versions as captured, before the backticks are stripped.
+    # toDigest is kept for cleared and removed before output.
+    def version_update:
+      ((.from | quoted_digest) or (.from | clean_version | is_sha)) as $from_digest
+      | ((.to | quoted_digest) or (.to | clean_version | is_sha)) as $to_digest
+      | {name, from: (.from | clean_version), to: (.to | clean_version)}
+      | . + {
+          type: update_type(.from; .to; $from_digest; $to_digest),
+          semverBreaking: semver_breaking(.from; .to; $from_digest; $to_digest),
+          toDigest: $to_digest
+        };
 
     def dedupe: reduce .[] as $item ([]; if any(.[]; . == $item) then . else . + [$item] end);
 
@@ -406,20 +425,23 @@ function do_summarize() {
     # is the fallback for a title that does not. Titles read "bump NAME from A to
     # B", or "update NAME requirement from A to B" when Dependabot widens a range,
     # optionally followed by " in DIRECTORY" or " in the GROUP group ...".
-    def title_update:
+    # A security update ends its Updates line, or its Bumps lead, with a note
+    # that is not part of the version.
+    def title_capture:
       .title // ""
-      | (first(capture("(?i)\\b(?:bump|update) (?<name>\\S+)(?: requirement)? from (?<from>.+?) to (?<to>.+?)(?: in .+)?$")) // null)
-      | if . == null then null else {name, from: (.from | clean_version), to: (.to | clean_version)} end;
+      | first(capture("(?i)\\b(?:bump|update) (?<name>\\S+)(?: requirement)? from (?<from>.+?) to (?<to>.+?)(?: in .+)?$")) // null;
+    def title_update: title_capture | if . == null then null else {name, from: (.from | clean_version), to: (.to | clean_version)} end;
+    def security_note: "(?: \\*\\*This update includes (?:a security fix|security fixes)\\.\\*\\*)?";
 
     def body_lines: body_text | split("\n")[] | sub("\\s+$"; "");
 
     def updates:
-      [body_lines | capture("^Updates `(?<name>[^`]+)`(?: requirement)? from (?<from>.+?) to (?<to>.+)$")] as $listed
+      [body_lines | capture("^Updates `(?<name>[^`]+)`(?: requirement)? from (?<from>.+?) to (?<to>.+?)" + security_note + "$")] as $listed
       | if ($listed | length) > 0 then $listed
-        elif title_update != null then [title_update]
-        else [body_lines | capture("^Bumps \\[(?<name>[^\\]]+)\\]\\([^)]*\\) from (?<from>\\S+) to (?<to>\\S+)$")]
+        elif title_capture != null then [title_capture]
+        else [body_lines | capture("^Bumps \\[(?<name>[^\\]]+)\\]\\([^)]*\\) from (?<from>\\S+) to (?<to>\\S+)" + security_note + "$")]
         end
-      | map({name, from: (.from | clean_version), to: (.to | clean_version)} | with_type)
+      | map({name, from, to} | version_update)
       | dedupe;
 
     def ecosystem:
@@ -546,7 +568,7 @@ function do_summarize() {
 
     def dependency_file:
       split("/") | last
-      | test("^(package(-lock)?\\.json|npm-shrinkwrap\\.json|yarn\\.lock|pnpm-lock\\.yaml|bun\\.lock|go\\.(mod|sum)|Cargo\\.(toml|lock)|Gemfile(\\.lock)?|.+\\.gemspec|pyproject\\.toml|uv\\.lock|poetry\\.lock|Pipfile(\\.lock)?|requirements.*\\.(txt|in)|composer\\.(json|lock)|pom\\.xml|build\\.gradle(\\.kts)?|gradle\\.lockfile|.+\\.csproj|packages\\.lock\\.json|Directory\\.Packages\\.props|pubspec\\.(yaml|lock)|mix\\.(exs|lock)|Package\\.(swift|resolved))$");
+      | test("^(package(-lock)?\\.json|npm-shrinkwrap\\.json|yarn\\.lock|pnpm-lock\\.yaml|bun\\.lock|go\\.(mod|sum|work|work\\.sum)|Cargo\\.(toml|lock)|Gemfile(\\.lock)?|.+\\.gemspec|pyproject\\.toml|uv\\.lock|poetry\\.lock|Pipfile(\\.lock)?|requirements.*\\.(txt|in)|composer\\.(json|lock)|pom\\.xml|build\\.gradle(\\.kts)?|gradle\\.lockfile|.+\\.csproj|packages\\.lock\\.json|Directory\\.Packages\\.props|pubspec\\.(yaml|lock)|mix\\.(exs|lock)|Package\\.(swift|resolved))$");
 
     # An alert belongs to a PR when the PR updates its package, in the same
     # ecosystem, and touches its manifest or a dependency file beside it (the
@@ -565,7 +587,11 @@ function do_summarize() {
     # single directory, or the Bumps line for the alert directory names the
     # package. excluded: that line names only other packages. unconfirmed: no line
     # names any package for the alert directory, or a group has no Bumps lines at
-    # all (a body cut short) and changes files in several directories. Every file
+    # all (a body cut short) and changes files in several directories. A PR that
+    # is not a group has no Bumps lines to read, and it is confirmed however many
+    # directories its files span: an ungrouped PR comes from the update of one
+    # directory (an npm workspace member manifest beside the root lockfile, say),
+    # and a dependency-name group lists one version for every directory. Every file
     # a Dependabot PR changes is one it updates (a lockfile, a workflow, a
     # Dockerfile), so the directories of all of them are counted. For
     # github-actions, the / directory covers .github/workflows.
@@ -658,21 +684,23 @@ function do_summarize() {
         # It is null too when the body does not tie the package to the alert
         # directory, when the body was cut short, since a missing Updates line can
         # move the same package to another version, or when the PR file list could
-        # not be read in full.
+        # not be read in full, and never compared when the target is a digest.
         | .alerts = [
             $alerts[]
             | select(alert_matches($pr))
             | directory_match($pr) as $directory_match
             | select($directory_match != "excluded")
             | . as $alert
-            | ([$pr.updates[] | select(.name | lower == ($alert.package | lower)) | .to] | unique) as $targets
+            | [$pr.updates[] | select(.name | lower == ($alert.package | lower))] as $matched
+            | ([$matched[].to] | unique) as $targets
             | ($pr.bodyTruncated or ($pr.updatesExpected != null and $pr.updatesExpected > ($pr.updates | length)) or ($pr.filesComplete | not)) as $incomplete
             | (if ($targets | length) == 1 and $directory_match == "confirmed" and ($incomplete | not) then $targets[0] else null end) as $to
             | . + {
                 directoryConfirmed: ($directory_match == "confirmed"),
-                cleared: (if $to == null or $alert.patched == "" or ($to | is_sha) or ($to | stable_version | not) or ($alert.patched | stable_version | not) then null else (($to | version_key) >= ($alert.patched | version_key)) end)
+                cleared: (if $to == null or $alert.patched == "" or any($matched[]; .toDigest) or ($to | stable_version | not) or ($alert.patched | stable_version | not) then null else (($to | version_key) >= ($alert.patched | version_key)) end)
               }
           ]
+        | .updates |= map(del(.toDigest))
       ] as $prs
     | {
         repo: $bundle.repo,
