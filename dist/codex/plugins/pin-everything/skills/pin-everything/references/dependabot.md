@@ -52,21 +52,39 @@ updates:
       include: scope
 ```
 
-Add additional `- package-ecosystem:` blocks for whichever package ecosystems are present in the repo:
+The `npm` block applies when a `package.json` is present without `bun.lock`; drop it otherwise. Add a `- package-ecosystem:` block for every other ecosystem present in the repo:
 
-| Ecosystem present | Detection                                                 | Add block with `package-ecosystem:` |
-| ----------------- | --------------------------------------------------------- | ----------------------------------- |
-| Cargo (Rust)      | `Cargo.toml`                                              | `cargo`                             |
-| uv (Python)       | `uv.lock`                                                 | `uv`                                |
-| Pip (Python)      | `pyproject.toml` or `requirements.txt`, without `uv.lock` | `pip`                               |
-| Bundler (Ruby)    | `Gemfile`                                                 | `bundler`                           |
-| Go modules        | `go.mod`                                                  | `gomod`                             |
-| Composer (PHP)    | `composer.json`                                           | `composer`                          |
-| Docker            | `Dockerfile`                                              | `docker`                            |
-| Docker Compose    | `docker-compose.yml` or `.yaml`, `compose.yml` or `.yaml` | `docker-compose`                    |
-| Rust toolchain    | `rust-toolchain.toml` or `rust-toolchain`                 | `rust-toolchain`                    |
+| Ecosystem present | Detection                                                          | Add block with `package-ecosystem:` |
+| ----------------- | ------------------------------------------------------------------ | ----------------------------------- |
+| Bun               | `package.json` with `bun.lock`                                     | `bun`                               |
+| Deno              | `deno.json` or `deno.jsonc`                                        | `deno`                              |
+| Cargo (Rust)      | `Cargo.toml`                                                       | `cargo`                             |
+| Rust toolchain    | `rust-toolchain.toml` or `rust-toolchain`                          | `rust-toolchain`                    |
+| uv (Python)       | `uv.lock`                                                          | `uv`                                |
+| Pip (Python)      | `pyproject.toml`, `setup.py`, or `requirements*.txt`, no `uv.lock` | `pip`                               |
+| Conda             | `environment.yml`                                                  | `conda`                             |
+| Bundler (Ruby)    | `Gemfile`                                                          | `bundler`                           |
+| Go modules        | `go.mod` or `go.work`                                              | `gomod`                             |
+| Composer (PHP)    | `composer.json`                                                    | `composer`                          |
+| Maven             | `pom.xml`                                                          | `maven`                             |
+| Gradle            | `build.gradle`, `build.gradle.kts`, or `settings.gradle*`          | `gradle`                            |
+| NuGet (.NET)      | `*.csproj`, `packages.config`, or `Directory.Packages.props`       | `nuget`                             |
+| .NET SDK          | `global.json`                                                      | `dotnet-sdk`                        |
+| Pub (Dart)        | `pubspec.yaml`                                                     | `pub`                               |
+| Mix (Elixir)      | `mix.exs`                                                          | `mix`                               |
+| Swift             | `Package.swift`                                                    | `swift`                             |
+| Docker            | `Dockerfile`, `Dockerfile.*`, `*.Dockerfile`, or `Containerfile`   | `docker`                            |
+| Docker Compose    | `docker-compose.yml` or `.yaml`, `compose.yml` or `.yaml`          | `docker-compose`                    |
+| Helm              | `Chart.yaml`                                                       | `helm`                              |
+| Terraform         | `*.tf`                                                             | `terraform`                         |
+| OpenTofu          | `*.tf` or `*.tofu` in a project run with OpenTofu                  | `opentofu`                          |
+| Dev containers    | `.devcontainer/devcontainer.json` or `.devcontainer.json`          | `devcontainers`                     |
+| Git submodules    | `.gitmodules`                                                      | `gitsubmodule`                      |
+| pre-commit        | `.pre-commit-config.yaml`                                          | `pre-commit`                        |
+| Nix               | `flake.nix` with `flake.lock`                                      | `nix`                               |
+| Bazel             | `MODULE.bazel`                                                     | `bazel`                             |
 
-The same shape applies -- weekly schedule, split groups, 10-PR cap, `commit-message` prefix.
+The same shape applies -- weekly schedule, split groups, 10-PR cap, `commit-message` prefix. `gitsubmodule` and `nix` update to commit revisions, which carry no minor, patch, or major, so give them one group with `patterns: ["*"]` and no `update-types`. For a manifest this table does not list, check GitHub's supported ecosystems page and add a block of the same shape.
 
 ## `versioning-strategy` Per Ecosystem
 

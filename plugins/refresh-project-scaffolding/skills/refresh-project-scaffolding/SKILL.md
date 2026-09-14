@@ -455,7 +455,7 @@ Must include language-specific entries appropriate for the detected project type
 
 ### Checks
 
-- A config exists whenever the repository has `.github/workflows/` files, a manifest from the table below, or a manifest of another ecosystem Dependabot supports, such as `deno.json`, `pom.xml`, `build.gradle`, `*.csproj`, `pubspec.yaml`, `Chart.yaml`, `*.tf`, or `.pre-commit-config.yaml` (the [supported ecosystems page](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories) has the full list). Absent: `Needs update`, fixed by `pin-everything --scope dependabot`, which writes blocks for the table's ecosystems and names the rest for the `review-dependabot-config` skill
+- A config exists whenever the repository has `.github/workflows/` files, a manifest from the table below, or a manifest of another ecosystem Dependabot supports, such as `deno.json`, `pom.xml`, `build.gradle`, `*.csproj`, `pubspec.yaml`, `Chart.yaml`, `*.tf`, or `.pre-commit-config.yaml` (the [supported ecosystems page](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories) has the full list). Absent: `Needs update`, fixed by `pin-everything --scope dependabot`, which writes a block for every supported ecosystem the repository uses
 - Only one of the two file names exists
 - `version: 2` is set
 - Every ecosystem in the table below that the repository uses has an `updates` entry, and its manifest directory is covered by `directory` or `directories`. The table covers the common ecosystems only; the `review-dependabot-config` skill checks the full set:
