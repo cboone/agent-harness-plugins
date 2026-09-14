@@ -368,7 +368,7 @@ claimed "logic" for feature/a
 
 ## An old lock whose owner is still running is honored
 
-Age is not proof that the owner exited. A claim that is merely slow or suspended still holds the section it is in, so breaking its lock on a timer would readmit the second writer the lock exists to keep out. Here the lock is backdated to the year 2000 and still respected, because its recorded owner is alive.
+Age is not proof that the owner exited. A claim that is merely slow or suspended still holds the section it is in, so breaking its lock on a timer would readmit the second writer the lock exists to keep out. Here the lock is backdated to the year 2000 and still respected, because its recorded owner is still running.
 
 ```scrut
 $ setup_claims \

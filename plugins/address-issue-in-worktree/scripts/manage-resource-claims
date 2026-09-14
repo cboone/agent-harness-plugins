@@ -233,7 +233,7 @@ function lock_is_abandoned() {
 # removed.
 #
 # The reclaim lock is held for the length of one stat, so an age check alone is
-# enough to clear it if a process dies mid-reclaim. It guards nothing on its
+# enough to clear it if a process exits mid-reclaim. It guards nothing on its
 # own; the inner re-test is what protects the real lock.
 function reclaim_abandoned_lock() {
   local lock="${1}"
