@@ -260,6 +260,8 @@ If the claim cannot be written, say so and carry on. The worktree exists and the
 
 The trailing `*` matters. The script writes a `.lock` directory beside the file while it mutates, and an interrupted write can leave a `.XXXXXX` temporary file. Ignoring only the exact filename leaves both committable.
 
+**Add it to the `.gitignore` beside the claim file**, which is the main worktree's, not the one in the worktree this skill was invoked from. The claim file lives in the main worktree, and an uncommitted `.gitignore` only applies within the tree it sits in, so a rule added in a linked worktree leaves the actual file untracked and committable where it is. Committing that `.gitignore` is what makes the rule apply in every worktree.
+
 ### 7. Report Success
 
 After confirming the worktree exists in `git worktree list`, report:

@@ -62,11 +62,13 @@ gh pr list --state open --json number,title,labels,createdAt,updatedAt,isDraft,r
 
 Also read the repo's README and any roadmap or project documentation to understand project goals.
 
-**Read the exclusive-resource claims.** Some work cannot run in parallel because it needs a resource only one worktree can hold: a DAW, a simulator, a device, a database, a port, a shared install location. `create-worktree` and `address-issue-in-worktree` record those claims in the main worktree's `.claude/worktree-resources.local.json`. Resolve it from the first record of `git worktree list --porcelain`, whose `worktree` line is always the main worktree, and open the file with the Read tool:
+**Read the exclusive-resource claims.** Some work cannot run in parallel because it needs a resource only one worktree can hold: a DAW, a simulator, a device, a database, a port, a shared install location. `create-worktree` and `address-issue-in-worktree` record those claims in the main worktree's `.claude/worktree-resources.local.json`. Resolve it from the first record of `git worktree list --porcelain -z`, whose `worktree` field is always the main worktree, and open the file with the Read tool:
 
 ```bash
-git worktree list --porcelain
+git worktree list --porcelain -z
 ```
+
+`-z` matters and is not decoration. Without it the records are newline-delimited, so a worktree path containing a newline splits across two apparent fields and the path read back is a truncation of the real one. The claim file would then be looked for somewhere that does not exist, ordinary recommendations would silently lose the resource signal, and `--parallel-only` could not apply the filter it promises. With `-z` each field ends in a NUL, which no path can contain. The bundled `manage-resource-claims` parses the same way, for the same reason.
 
 A missing file means no claims, which is the ordinary state and not an error. Each claim carries `id`, `resource`, `worktree`, `branch`, `claimed_at`, and an optional `issue`.
 
@@ -88,7 +90,7 @@ A missing file is not a failure: it means no claims. Anything that fails these c
 
 **Discount stale claims.** Read the `git worktree list --porcelain` output as whole records, and ignore any record carrying a `prunable` line: git keeps listing a worktree whose directory has been deleted and marks it that way rather than dropping it, so a removed worktree would otherwise count as live and filter out issues that are in fact parallel-safe.
 
-A claim is live when some remaining record matches **either** its `worktree` path **or** its `branch`, and stale only when neither matches. Neither field identifies a worktree by itself: `git worktree move` changes the path and keeps the branch, `git switch` changes the branch and keeps the path, and a removed path can later be reused by an unrelated worktree. Matching on either errs toward reporting a resource still held, which is the right direction here, because reading a live claim as stale is what would let this skill recommend work that collides with someone.
+A claim is live when some remaining NUL-delimited record matches **either** its `worktree` path **or** its `branch`, and stale only when neither matches. Neither field identifies a worktree by itself: `git worktree move` changes the path and keeps the branch, `git switch` changes the branch and keeps the path, and a removed path can later be reused by an unrelated worktree. Matching on either errs toward reporting a resource still held, which is the right direction here, because reading a live claim as stale is what would let this skill recommend work that collides with someone.
 
 Treat a stale claim as free, and mention it so the user can clear it. Nothing that no longer exists should keep a resource reserved.
 

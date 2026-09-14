@@ -221,7 +221,7 @@ function live_worktrees_json() {
 # gets silently downgraded and a hand-edited record silently discarded.
 function read_claims() {
   local file="${1}"
-  local declared
+  local declared documents
 
   if [[ ! -e "${file}" ]]; then
     printf '[]'
@@ -240,24 +240,29 @@ function read_claims() {
     die "${file} exists but cannot be read"
   fi
 
-  # The file is handed to jq by path rather than read into a variable first.
-  # Command substitution truncates at a NUL byte, so a document with one
-  # embedded would arrive here shortened, could then validate, and would be
-  # rewritten without the bytes that followed it, which is exactly the
-  # destructive rewrite this validation exists to prevent.
-  if [[ -z "$(tr -d '[:space:]' < "${file}" | head -c 1)" ]]; then
-    printf '[]'
-    return
-  fi
-
+  # Every inspection below hands the file to jq by path. Command substitution
+  # truncates at a NUL byte, so anything that reads the file into a shell
+  # variable first, an emptiness probe included, would report a document with
+  # one embedded as shorter than it is or as empty, after which a mutation
+  # would rewrite it and lose the rest. That is the destructive rewrite this
+  # validation exists to prevent.
   if ! jq empty "${file}" > /dev/null 2>&1; then
     die "${file} is not valid JSON; fix or remove it"
   fi
 
-  # jq accepts a stream of several top-level values, so two concatenated
-  # documents pass the check above and every envelope check below, since -e
-  # reports only the last result. The reads would then see both.
-  if ! jq -e -s 'length == 1' "${file}" > /dev/null 2>&1; then
+  # jq reads a stream, so counting the values it yields separates the three
+  # cases in one place: none is an empty or whitespace-only file, which is the
+  # ordinary "no claims" state; one is a document; more than one means two were
+  # concatenated, which would otherwise pass every envelope check below because
+  # -e reports only the last result.
+  documents="$(jq -s 'length' "${file}")"
+
+  if [[ "${documents}" -eq 0 ]]; then
+    printf '[]'
+    return
+  fi
+
+  if [[ "${documents}" -ne 1 ]]; then
     die "${file} holds more than one JSON document; it must hold exactly one object"
   fi
 

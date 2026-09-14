@@ -246,7 +246,9 @@ If the claim cannot be written, say so and carry on. The worktree exists and the
 .claude/worktree-resources.local.json*
 ```
 
-The trailing `*` matters. The script writes a `.lock` directory beside the file while it mutates, and an interrupted write can leave a `.XXXXXX` temporary file. Ignoring only the exact filename leaves both committable. All of it is machine-local state, and committing any of it puts one worktree's claims on every branch.
+The trailing `*` matters. The script writes a `.lock` directory beside the file while it mutates, and an interrupted write can leave a `.XXXXXX` temporary file. Ignoring only the exact filename leaves both committable.
+
+**Add it to the `.gitignore` beside the claim file**, which is the main worktree's, not the one in the worktree this skill was invoked from. The claim file lives in the main worktree, and an uncommitted `.gitignore` only applies within the tree it sits in, so a rule added in a linked worktree leaves the actual file untracked and committable where it is. Committing that `.gitignore` is what makes the rule apply in every worktree. All of it is machine-local state, and committing any of it puts one worktree's claims on every branch.
 
 ### 7. Report Success
 

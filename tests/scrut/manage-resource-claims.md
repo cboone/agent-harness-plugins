@@ -840,3 +840,27 @@ $ setup_claims \
 manage-resource-claims: */.claude/worktree-resources.local.json exists but is not a regular file (glob)
 [1]
 ```
+
+## A file whose first non-whitespace byte is NUL is refused, not read as empty
+
+An emptiness probe that routes the file through a shell variable reintroduces the truncation the by-path reads exist to avoid: command substitution stops at a NUL, so such a file would look empty, return no claims, and be replaced by the next mutation. Counting the values jq yields separates empty from malformed without ever reading the bytes into the shell.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '   \000{"version":1,"claims":[]}' > "${claim_file}" \
+>   && claims_tail list
+manage-resource-claims: */.claude/worktree-resources.local.json is not valid JSON; fix or remove it (glob)
+[1]
+```
+
+## A whitespace-only file is still no claims
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '  \n\t\n ' > "${claim_file}" \
+>   && claims list \
+>   && echo "no claims"
+no claims
+```
