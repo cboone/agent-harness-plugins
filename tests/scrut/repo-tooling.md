@@ -117,7 +117,7 @@ identical
 
 ## Every `$(< path)` read in the bundled scripts is guarded by a file-type test
 
-A `"$(< path)"` expansion that fails does so *during expansion*, not as a command, so neither a redirection on the assignment nor a trailing `||` catches it: Bash exits with its own unprefixed diagnostic and the script's error handling never runs. The path must therefore be tested before it is read, and `-r` alone is not enough because it is true for a readable directory.
+A `"$(< path)"` expansion that fails does so _during expansion_, not as a command, so neither a redirection on the assignment nor a trailing `||` catches it: Bash exits with its own unprefixed diagnostic and the script's error handling never runs. The path must therefore be tested before it is read, and `-r` alone is not enough because it is true for a readable directory.
 
 This shipped broken three times on one branch: the lock owner read, the claim file read, and the lock owner read again after the claim file was fixed. Writing the rule into `.github/shell.instructions.md` did not stop the third. This does.
 
