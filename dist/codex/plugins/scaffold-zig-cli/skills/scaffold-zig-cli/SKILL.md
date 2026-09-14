@@ -24,20 +24,21 @@ Ask the user for these parameters:
 
 That pattern is doing real work, not tidiness. A name beginning with a hyphen, `-tool` for instance, reads as options to `mkdir -p` and `cd` instead of as a path. A name containing `/` scaffolds into a different directory than the one reported. `.` and `..` escape the target entirely. A name with whitespace or a shell metacharacter splits into several arguments. Quote the name wherever it reaches a command as well, so the pattern is the guarantee rather than the only defence.
 
+Reject one more set the pattern lets through: the Windows reserved device names, which are `con`, `prn`, `aux`, `nul`, and `com0` through `com9` and `lpt0` through `lpt9`. Windows reserves these whatever the extension, so `con` cannot be a directory and `con.exe` cannot be written or extracted. The release workflow cross-compiles a Windows target and packages `PROJECT-NAME.exe` into a zip, so a project named `con` produces an archive nobody on Windows can unpack. Match them case-insensitively against the whole name; a name that merely contains one, like `con-tool`, is fine.
+
 Derive the **package name** from the project name rather than asking: replace every hyphen with an underscore (`my-tool` becomes `my_tool`). Wherever templates reference `PACKAGE-NAME`, use this form; wherever they reference `PROJECT-NAME`, use the kebab-case form. The binary keeps the hyphens.
 
-Then **validate the derived name**, because replacing hyphens is necessary and not sufficient. `build.zig.zon`'s `.name` must be a bare Zig identifier that is not a reserved word, which means it matches `[A-Za-z_][A-Za-z0-9_]*` and is none of Zig's keywords (`test`, `error`, `fn`, `async`, `export`, `struct`, and the rest). Quoting does not rescue a name that fails either rule. One of these four is accepted and three are not:
+Then **validate the derived name**, because replacing hyphens is necessary and not sufficient. `build.zig.zon`'s `.name` must be a bare Zig identifier that is not a reserved word, which means it matches `[A-Za-z_][A-Za-z0-9_]*` and is none of Zig's keywords (`test`, `error`, `fn`, `async`, `export`, `struct`, and the rest). Two of these three project names derive to something Zig rejects:
 
 | Project name | Derived    | Result                                            |
 | ------------ | ---------- | ------------------------------------------------- |
 | `my-tool`    | `my_tool`  | accepted                                          |
 | `test`       | `test`     | `error: expected expression, found '.'` (keyword) |
 | `123-tool`   | `123_tool` | `error: expected expression, found '.'` (digit)   |
-| `@"test"`    | `@"test"`  | `error: name must be a valid bare zig identifier` |
 
 If the derived name fails either rule, stop and ask the user for a package name that passes, keeping their chosen project name for the binary and the directory. Do not silently rewrite it: the package name is half of the package's permanent identity, so the user should choose it.
 
-**The name they supply replaces the derived one from here on.** Validate it the same way, and use it for **every** `PACKAGE-NAME` substitution: steps 6, 7 and 8, and step 10, which keys `typos.toml`'s identifier entry on it. Those steps say "the underscored package name" as shorthand for whichever name survived this step, not for a value re-derived from the project name. Re-deriving it would write the rejected name back into `build.zig.zon` and fail the same way at step 21, and would leave the typo allowlist keyed to a name that appears nowhere in the project.
+**The name they supply replaces the derived one from here on.** Validate it the same way. Quoting is the likely thing to try and it does not work: `.@"my-tool"` and `.@"test"` are both refused with `error: name must be a valid bare zig identifier`, so a replacement has to be a bare non-keyword identifier like any other. Use it for **every** `PACKAGE-NAME` substitution: steps 6, 7 and 8, and step 10, which keys `typos.toml`'s identifier entry on it. Those steps say "the underscored package name" as shorthand for whichever name survived this step, not for a value re-derived from the project name. Re-deriving it would write the rejected name back into `build.zig.zon` and fail the same way at step 21, and would leave the typo allowlist keyed to a name that appears nowhere in the project.
 
 If the user already provided some or all of these in their initial request, do not re-ask. Derive what you can from context.
 
@@ -142,9 +143,12 @@ Being merely _inside_ a repository is not the same thing and must not skip it. S
 git init
 ```
 
-**If `git init` failed, stop here.** Skip the rest of this step, including the reads below, which need a repository and would fail too. Carry on to the generation steps, and skip step 23 per the Error Handling entry.
+**If `git init` failed**, do exactly two things and then leave this step.
 
-One thing this path must still settle: if step 2 left `COPYRIGHT-HOLDER` unfilled because `git config user.name` was empty, **ask for it now**. Step 2 deferred that question to the re-read below, and the re-read is the thing that just got skipped, so nothing else will answer it. Step 16 would otherwise write a LICENSE with the placeholder still in it, which is worse than asking.
+1. If step 2 left `COPYRIGHT-HOLDER` unfilled because `git config user.name` was empty, **ask for it now**. This one is not optional and is not covered by the skip below: step 2 deferred the question to the re-read further down, the re-read is about to be skipped, and nothing later asks it. Step 16 would write a LICENSE with the placeholder still in it.
+1. Skip everything else in this step, including those reads, which need a repository and would fail too.
+
+Then carry on to the generation steps, and skip step 23 per the Error Handling entry.
 
 Otherwise re-read the committer identity, from inside the target, because only here does its own local config apply. Do this **every time**, including when `git init` was skipped: an existing target repository has its own config, and that is the one step 23 commits with. Step 2's values came from wherever the skill was invoked, and step 3 has since changed into the target:
 
