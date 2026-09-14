@@ -170,8 +170,8 @@ function claim_file_path() {
 #
 # A claim carrying an identity is judged on that alone, because it settles the
 # question in both directions: a path or a branch that has since been reused by
-# an unrelated worktree would otherwise keep a dead claim alive forever, which
-# no later check or prune could clear.
+# an unrelated worktree would otherwise keep an obsolete claim held forever,
+# which no later check or prune could clear.
 #
 # Only a claim without one falls back to the path and the branch, and there
 # either match counts as live. That errs toward reporting a resource still

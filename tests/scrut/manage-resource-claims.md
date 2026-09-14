@@ -928,9 +928,9 @@ $ setup_claims \
 false
 ```
 
-## A path reused by an unrelated worktree does not keep a dead claim alive
+## A path reused by an unrelated worktree does not keep an obsolete claim held
 
-An identity settles staleness in both directions. Judging a claim that has one by the path or branch as well would let a path since reused by a different worktree hold the old claim forever, and no later `check` or `prune` could clear it: the path keeps matching.
+An identity settles staleness in both directions. Judging a claim that has one by the path or branch as well would let a path since reused by a different worktree hold the obsolete claim forever, and no later `check` or `prune` could clear it: the path keeps matching.
 
 Here the stored path and branch still match a live record, and only the admin directory differs.
 

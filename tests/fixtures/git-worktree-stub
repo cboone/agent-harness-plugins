@@ -32,14 +32,15 @@ function rev_parse() {
 }
 
 function main() {
-  if [[ $# -eq 6 && "${1}" == "-C" && "${3}" == "rev-parse" && "${4}" == "--path-format=absolute" && "${5}" == "--git-dir" ]]; then
+  # The exact invocation, so a change to the flags is a stub failure rather
+  # than something a looser match would absorb while the tests kept passing.
+  if [[ $# -eq 5 && "${1}" == "-C" && "${3}" == "rev-parse" && "${4}" == "--path-format=absolute" && "${5}" == "--git-dir" ]]; then
     rev_parse "${2}"
     return
   fi
 
-  if [[ $# -eq 5 && "${1}" == "-C" && "${3}" == "rev-parse" ]]; then
-    rev_parse "${2}"
-    return
+  if [[ "${3:-}" == "rev-parse" ]]; then
+    die "expected git -C <path> rev-parse --path-format=absolute --git-dir invocation"
   fi
 
   if [[ $# -lt 3 || "${1}" != "worktree" || "${2}" != "list" || "${3}" != "--porcelain" ]]; then
