@@ -75,7 +75,7 @@ Action: a tracking issue through the `create-issue` skill (one issue per outstan
 
 ## 6. Needs testing
 
-The PR is current and conflict-free, and nothing known breaks, but the evidence is not yet enough to call it safe. Any one of these matches:
+The PR is current and conflict-free, and nothing known breaks, but the evidence is not yet enough to call it safe. Any one of these matches, until the verification it calls for has passed:
 
 - **A major update**, or `semverBreaking` true in an ecosystem whose ranges treat it as breaking (npm and Cargo carets do not cross a 0.x minor).
 - **A runtime dependency whose behavior CI does not exercise**, such as a web server, a database driver, or a proxy-header parser.
@@ -87,7 +87,7 @@ The PR is current and conflict-free, and nothing known breaks, but the evidence 
 - **The release notes are truncated** in the body and have not yet been read at the source.
 - **The PR is a draft.** GitHub refuses to merge a draft whatever its evidence, so marking it ready is the user's call.
 
-Action: name the specific verification it needs, from `./verification.md` or the evidence checklist. A PR that passes moves to Safe to merge; a PR that fails moves to Needs work.
+Action: name the specific verification it needs, from `./verification.md` or the evidence checklist. Verification that exercised what a bullet names (the major's breaking changes, the runtime path, the consumers, the full release notes) answers that bullet, so a PR whose every matching bullet is answered no longer matches here and moves on to Safe to merge. A PR that fails moves to Needs work. A draft is the exception: no verification answers it.
 
 ## 7. Safe to merge
 
