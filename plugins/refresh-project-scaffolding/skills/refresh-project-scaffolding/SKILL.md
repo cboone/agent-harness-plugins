@@ -63,7 +63,7 @@ For each tool in the ecosystem, check for its signature artifacts. Only tools wh
 
 For each detected tool, record which artifacts were found and which expected artifacts are missing (for "Partially set up" status).
 
-**A missing Dependabot config is actionable even though no artifact detected the tool.** The workflows the scaffolding skills write pin every action to a commit SHA, and those pins stay current only while Dependabot proposes updates. So when the repository has any `.github/workflows/` file, or a manifest Dependabot supports (see [Reference: Dependabot Config Checks](#reference-dependabot-config-checks-pin-everything)), and has no Dependabot config, report `pin-everything` as `Needs update` with the issue "no Dependabot config (`.github/dependabot.yml` or `.yaml`)" rather than `Not detected`.
+**A missing Dependabot config is actionable even though no artifact detected the tool.** The workflows the scaffolding skills write pin every action to a commit SHA, and those pins stay current only while Dependabot proposes updates. So when the repository has any `.github/workflows/` file, a composite `action.yml` or `action.yaml`, or a manifest from the coverage table (see [Reference: Dependabot Config Checks](#reference-dependabot-config-checks-pin-everything)), and has no Dependabot config, report `pin-everything` as `Needs update` with the issue "no Dependabot config (`.github/dependabot.yml` or `.yaml`)" rather than `Not detected`.
 
 ### 3. Compare Against Latest Templates
 
@@ -472,6 +472,8 @@ Must include language-specific entries appropriate for the detected project type
 | `Gemfile`                                                              | `bundler`                    |
 | `composer.json`                                                        | `composer`                   |
 | `Dockerfile`                                                           | `docker`                     |
+| `docker-compose.yml` or `.yaml`, `compose.yml` or `.yaml`              | `docker-compose`             |
+| `action.yml` or `action.yaml` outside `.github/workflows/`             | `github-actions`             |
 
 - A composite action outside `.github/workflows/` whose `action.yml` references other actions has its directory in the `github-actions` entry
 
