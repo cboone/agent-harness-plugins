@@ -383,6 +383,23 @@ function acquire_lock() {
   mkdir -p "${directory}" || die "cannot create ${directory}"
 
   while ! mkdir "${lock}" 2> /dev/null; do
+    # mkdir fails for reasons other than contention: an unwritable parent, or
+    # something that is not a directory already at that path. Waiting those out
+    # and then reporting a held lock would be wrong twice over, since it costs
+    # the full timeout and tells the user to remove a directory that may not
+    # exist. Contention is the case where the lock directory is now there.
+    if [[ ! -d "${lock}" ]]; then
+      # It may have been released between the mkdir and this test, so try once
+      # more before concluding the failure was not contention.
+      if mkdir "${lock}" 2> /dev/null; then
+        break
+      fi
+
+      if [[ ! -d "${lock}" ]]; then
+        die "cannot create ${lock}; check that ${directory} is writable and that nothing else occupies that path"
+      fi
+    fi
+
     if ((waited >= LOCK_WAIT_SECONDS)); then
       die "$(held_lock_report "${lock}")"
     fi

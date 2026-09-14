@@ -864,3 +864,27 @@ $ setup_claims \
 >   && echo "no claims"
 no claims
 ```
+
+## A lock path occupied by a regular file fails at once
+
+Treating every `mkdir` failure as contention costs the full timeout and then reports a held lock, telling the user to remove a directory that does not exist. Contention is specifically the case where the lock directory is there.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && touch "${claim_file}.lock" \
+>   && claims_tail claim logic --worktree /repo/wt-live --branch feature/live
+manage-resource-claims: cannot create */.claude/worktree-resources.local.json.lock; check that */.claude is writable and that nothing else occupies that path (glob)
+[1]
+```
+
+## An unwritable parent fails at once
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && chmod 500 "$(dirname "${claim_file}")" \
+>   && claims_tail claim logic --worktree /repo/wt-live --branch feature/live
+manage-resource-claims: cannot create */.claude/worktree-resources.local.json.lock; check that */.claude is writable and that nothing else occupies that path (glob)
+[1]
+```
