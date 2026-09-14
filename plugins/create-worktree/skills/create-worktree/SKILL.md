@@ -240,9 +240,11 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims" claim "RESOURCE_NAME
 
 Drop `--issue` on the description path. The script prints what it did: a fresh claim or a stale claim cleared. Relay that line rather than restating it.
 
-**Add `--take-over "HOLDER_WORKTREE_PATH"` only if the user approved a takeover in step 4**, passing the `worktree=` path of the holder they were shown. Without it, `claim` exits 3 and refuses when another worktree holds the resource, which is deliberate: step 4's check and this write are separate operations, so a resource that was free at the check can be held by now.
+**Add `--take-over "HOLDER_CLAIMED_AT"` only if the user approved a takeover in step 4**, passing the `claimed` timestamp of the holder they were shown, which `check` prints and the refusal message repeats. Without it, `claim` exits 3 and refuses when another worktree holds the resource, which is deliberate: step 4's check and this write are separate operations, so a resource that was free at the check can be held by now.
 
-The flag names a holder rather than saying yes because approval is about a particular one. If a third worktree took the resource in the meantime, consent to displace the first says nothing about displacing it, and `claim` refuses again rather than acting on approval the user did not give. Either exit 3 means the holder changed under you: report what the script names and ask again, then re-run with the new path only if the user says to.
+The flag names a holder rather than saying yes because approval is about a particular one. If a third worktree took the resource in the meantime, consent to displace the first says nothing about displacing it, and `claim` refuses again rather than acting on approval the user did not give.
+
+The token is the holder's `claimed` timestamp rather than its worktree path, because a path can be reused: an approval naming one could otherwise transfer to a different worktree that claimed the resource at that same path in between. Either exit 3 means the holder changed under you: report what the script names and ask again, then re-run with the new timestamp only if the user says to.
 
 If the claim cannot be written, say so and carry on. The worktree exists and the claim is advisory, so a failure here is worth reporting but is not worth unwinding the work.
 

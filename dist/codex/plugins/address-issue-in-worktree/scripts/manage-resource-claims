@@ -42,10 +42,11 @@ Subcommands:
   list [--json]              Print every claim, one "key=value" line each
   check <resource>           Report the holder of <resource>, if any
   claim <resource> --worktree <path> --branch <name> [--issue <number>]
-        [--take-over <holder-path>]
+        [--take-over <holder-claimed-at>]
                              Record a claim on <resource>. Refuses with exit 3
-                             when another worktree holds it, unless
-                             --take-over names that exact holder
+                             when another worktree holds it, unless --take-over
+                             carries that holder's claimed_at, which names the
+                             exact claim rather than a reusable path
   release <resource>         Remove the claim on <resource>
   release --worktree <path>  Remove every claim held by <path>
   prune                      Drop claims whose worktree no longer exists
@@ -421,15 +422,24 @@ function holder_is_live_and_foreign() {
     '(.stale | not) and (.worktree != $worktree)' > /dev/null 2>&1 <<< "${existing}"
 }
 
-# True when the holder is the one the caller was approved to displace. An empty
-# approval matches nothing, so no approval is never mistaken for blanket consent.
+# True when the holder is the one the caller was approved to displace.
+#
+# The token is the holder's claimed_at, not its worktree path. A path is not a
+# claim identity: it can be reused, so an approval naming one could transfer to
+# a different worktree that claimed the resource at the same path in between,
+# which is the unapproved takeover this check exists to refuse. claimed_at
+# changes on every claim and every refresh, so it names the claim the user was
+# actually shown.
+#
+# An empty approval matches nothing, so no approval is never mistaken for
+# blanket consent.
 function holder_matches() {
   local existing="${1}"
   local approved="${2}"
 
   [[ -n "${approved}" ]] || return 1
 
-  jq -e --arg approved "${approved}" '.worktree == $approved' > /dev/null 2>&1 <<< "${existing}"
+  jq -e --arg approved "${approved}" '.claimed_at == $approved' > /dev/null 2>&1 <<< "${existing}"
 }
 
 function claim_for_resource() {
@@ -576,7 +586,7 @@ function cmd_claim() {
         ;;
       --take-over)
         if [[ $# -lt 2 || -z "${2}" ]]; then
-          die "--take-over requires the worktree path of the holder being displaced"
+          die "--take-over requires the claimed_at value of the holder being displaced"
         fi
         take_over="${2}"
         shift 2
@@ -620,8 +630,8 @@ function cmd_claim() {
     && ! holder_matches "${existing}" "${take_over}"; then
     jq -r --arg resource "${resource}" --arg approved "${take_over}" \
       '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at)"
-       + (if $approved == "" then "; pass --take-over \(.worktree) to claim it anyway"
-          else "; --take-over named \($approved), which no longer holds it, so nothing was changed" end)' <<< "${existing}"
+       + (if $approved == "" then "; pass --take-over \(.claimed_at) to claim it anyway"
+          else "; --take-over named the claim made at \($approved), which is not the one held now, so nothing was changed" end)' <<< "${existing}"
     exit "${E_HELD}"
   fi
 

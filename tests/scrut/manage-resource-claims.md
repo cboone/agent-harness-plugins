@@ -177,7 +177,7 @@ refreshed the claim on "logic" for feature/live
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
 >   && claims_tail claim logic --worktree /repo/main --branch main
-resource "logic" is held by feature/live at /repo/wt-live, claimed *; pass --take-over /repo/wt-live to claim it anyway (glob)
+resource "logic" is held by feature/live at /repo/wt-live, claimed *; pass --take-over * to claim it anyway (glob)
 [3]
 ```
 
@@ -188,7 +188,8 @@ The claim stays advisory: a user who has been asked and said yes needs a way thr
 ```scrut
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
->   && claims claim logic --worktree /repo/main --branch main --take-over /repo/wt-live \
+>   && token="$(claims list --json | jq -r '.[0].claimed_at')" \
+>   && claims claim logic --worktree /repo/main --branch main --take-over "${token}" \
 >   && claims list | wc -l | tr -d ' '
 claimed "logic" for main, taking it over from feature/live
 1
@@ -633,16 +634,16 @@ Approval is about a particular holder. If a third worktree takes the resource be
 ```scrut
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
->   && claims_tail claim logic --worktree /repo/main --branch main --take-over /repo/somewhere-else
-resource "logic" is held by feature/live at /repo/wt-live, claimed *; --take-over named /repo/somewhere-else, which no longer holds it, so nothing was changed (glob)
+>   && claims_tail claim logic --worktree /repo/main --branch main --take-over 2000-01-01T00:00:00Z
+resource "logic" is held by feature/live at /repo/wt-live, claimed *; --take-over named the claim made at 2000-01-01T00:00:00Z, which is not the one held now, so nothing was changed (glob)
 [3]
 ```
 
-## --take-over requires the holder path
+## --take-over requires the holder's claimed_at
 
 ```scrut
 $ setup_claims && claims_tail claim logic --worktree /repo/main --branch main --take-over
-manage-resource-claims: --take-over requires the worktree path of the holder being displaced
+manage-resource-claims: --take-over requires the claimed_at value of the holder being displaced
 [1]
 ```
 
