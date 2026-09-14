@@ -533,11 +533,11 @@ $ fetch_with_stub | jq -c '.prs[] | select(.number == 301) | {files, filesComple
 {"files":["web/package.json","web/package-lock.json"],"filesComplete":true,"overlaps":[{"number":303,"author":"octocat","sharedFiles":["web/package-lock.json"]}],"alerts":[{"number":51,"cleared":true}]}
 ```
 
-When the full list cannot be read, the partial list stays and `filesComplete` says so.
+When the full list cannot be read, the partial list stays and `filesComplete` says so. An alert matched on a partial list is not counted as cleared.
 
 ```scrut
-$ fetch_with_stub STUB_GH_API_FAIL=pulls_301_files | jq -c '.prs[] | select(.number == 301) | {files, filesComplete}'
-{"files":["web/package.json"],"filesComplete":false}
+$ fetch_with_stub STUB_GH_API_FAIL=pulls_301_files | jq -c '.prs[] | select(.number == 301) | {files, filesComplete, alerts: [.alerts[] | {number, cleared}]}'
+{"files":["web/package.json"],"filesComplete":false,"alerts":[{"number":51,"cleared":null}]}
 ```
 
 A non-Dependabot commit on the second page of a comparison is still counted.
