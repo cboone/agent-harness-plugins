@@ -83,7 +83,19 @@ Carry both observations into step 4 and judge them there, once the target's own 
 
 ### 3. Verify the Target Directory
 
-The project is scaffolded in a directory named after the project. Establish that directory and **change into it** before anything else in this step:
+The project is scaffolded in a directory named after the project. Establish that directory and **change into it** before anything else in this step.
+
+**First, before creating or entering anything**, check whether the name is already a symlink:
+
+```bash
+test -L "PROJECT-NAME" && readlink "PROJECT-NAME"
+```
+
+The order matters and this check is worthless anywhere later. `mkdir -p` succeeds silently on a symlink pointing at an existing directory and `cd` follows it, so once the working directory has moved, the same `test -L "PROJECT-NAME"` is asking about a _child_ of the destination rather than the entry that was followed. Run it here, while the name still refers to the thing being tested.
+
+If it is a symlink, say where it leads and ask before continuing. Following one puts every generated file, the `git init`, and the signed commit in the destination tree rather than beside the symlink, and nothing later in the workflow notices: the overwrite preflight runs in the destination, so an empty one reports nothing to worry about.
+
+Then establish the target:
 
 - If the current directory is already named after the project, it **is** the target and no move is needed, whether or not it is empty. Its contents are the preflight's business, not this branch's.
 - Otherwise, create it and enter it:
@@ -93,13 +105,13 @@ mkdir -p "PROJECT-NAME"
 cd "PROJECT-NAME"
 ```
 
-**Check first whether that name is already a symlink**, because `mkdir -p` succeeds silently on one that points at an existing directory and `cd` then follows it:
+Confirm where you actually are, on **both** branches:
 
 ```bash
-test -L "PROJECT-NAME" && pwd -P
+pwd -P
 ```
 
-If it is, say where it leads and ask before continuing. Following it puts every generated file, the `git init`, and the signed commit in the destination tree rather than beside the symlink, and nothing later in the workflow notices: the overwrite preflight runs in the destination, so an empty one reports nothing to worry about. Confirm the working directory with `pwd -P` after entering, so the path the summary reports is the physical one.
+`pwd -P` resolves symlinks, so this reports the physical directory the run will write into. Use that path in the summary rather than the name the user typed, and stop to ask if it is not where you expected. The current-directory branch needs this as much as the other: it moves nowhere, so nothing above has tested it, and it may itself have been reached through a symlink.
 
 Emptiness is deliberately not part of the first test. The recommended order runs `scaffold-new-repo` first, which leaves a populated directory named after the project, and requiring emptiness there sends that case down the second branch to create `PROJECT-NAME/PROJECT-NAME` inside it. That nests the project one level too deep and steps straight past the preflight whose whole purpose is to notice the boilerplate already sitting there. A directory with the project's name is the project's directory.
 
@@ -122,6 +134,14 @@ ls -d build.zig build.zig.zon src README.md LICENSE CHANGELOG.md Makefile \
 Anything listed will be replaced, except the `.gitkeep` files, which step 20 creates with `touch` and therefore leaves intact if they already exist. Step 23 stages them either way, so an existing one with content in it would go into the scaffold commit; report it rather than staging it blind. Four paths are merged rather than overwritten: `.gitignore`, `.editorconfig` and `.claude/settings.json` per steps 12, 13 and 19, and `.github/copilot-instructions.md` per step 22. Name those separately when reporting, since an existing one is appended to rather than lost. For the rest, show the user what would be lost and ask before continuing. A directory holding someone's `README.md` and `Makefile` is the case this exists for, and it does not have to be a git repository to lose work.
 
 Note that this check stands on its own: a clean `git status` later says nothing about it, because committed files are exactly the ones `git status` stays quiet about.
+
+**Directories this run writes into, which may be symlinks of their own.** The check above probes the final files, so it says nothing about a symlinked parent when the file inside it does not exist yet: a `.github/workflows` symlink with no `ci.yml` in it makes `ls -d` print nothing, and step 14 then writes `ci.yml` straight through the link into another tree.
+
+```bash
+find src .github .claude docs tests -maxdepth 2 -type l 2> /dev/null
+```
+
+`find` reports a named starting point that is itself a symlink, so this covers `src` and `.claude` as well as `.github/workflows` and `docs/plans/todo`. For anything it lists, `readlink` it, report where it points, and ask. This is the same hazard as the target directory, one level down, and it is worth checking separately because the preflight above cannot see it.
 
 The second check, for uncommitted work, waits for step 4. It only makes sense once the repository step 23 will commit into is known, and that is what step 4 establishes.
 
