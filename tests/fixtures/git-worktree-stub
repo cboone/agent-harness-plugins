@@ -10,7 +10,38 @@ function die() {
   exit "${2:-1}"
 }
 
+# Answers `git -C <path> rev-parse --path-format=absolute --git-dir` the way git
+# does: an admin directory for a path that is a worktree, and a failure for one
+# that is not. The mapping is /admin/<basename> so a testcase can name an
+# identity without knowing a real repository layout.
+#
+# Only paths listed in STUB_GIT_WORKTREE_PORCELAIN resolve, which is what lets a
+# testcase choose between exercising the identity and exercising the path and
+# branch fallback.
+function rev_parse() {
+  local worktree="${1}"
+  local line
+
+  while IFS= read -r line; do
+    [[ "${line}" == "worktree ${worktree}" ]] || continue
+    printf '/admin/%s\n' "${worktree##*/}"
+    return 0
+  done <<< "${STUB_GIT_WORKTREE_PORCELAIN:-}"
+
+  return 128
+}
+
 function main() {
+  if [[ $# -eq 6 && "${1}" == "-C" && "${3}" == "rev-parse" && "${4}" == "--path-format=absolute" && "${5}" == "--git-dir" ]]; then
+    rev_parse "${2}"
+    return
+  fi
+
+  if [[ $# -eq 5 && "${1}" == "-C" && "${3}" == "rev-parse" ]]; then
+    rev_parse "${2}"
+    return
+  fi
+
   if [[ $# -lt 3 || "${1}" != "worktree" || "${2}" != "list" || "${3}" != "--porcelain" ]]; then
     die "expected git worktree list --porcelain invocation"
   fi

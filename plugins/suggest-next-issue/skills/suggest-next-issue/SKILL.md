@@ -79,6 +79,7 @@ A missing file means no claims, which is the ordinary state and not an error. Ea
 - Every entry is an object whose `id`, `resource`, `worktree`, `branch`, and `claimed_at` are strings, with `id` lowercase hexadecimal.
 - `resource`, `branch`, and `claimed_at` are non-empty and contain no whitespace, and `resource` does not start with a hyphen.
 - `worktree` is non-empty and contains no control characters. Spaces are legal here and only here, because it is a path.
+- `gitdir`, when the key is present, is a non-empty string containing no control characters. It is the worktree's git admin directory, and it is optional because it cannot always be resolved.
 - `issue`, when the key is present, is a non-negative integer. It is optional and omitted rather than null for a worktree that did not come from an issue, so absent is normal and `"128"` as a string is not.
 - No two entries name the same `resource`.
 
@@ -90,7 +91,9 @@ A missing file is not a failure: it means no claims. Anything that fails these c
 
 **Discount stale claims.** Read the `git worktree list --porcelain` output as whole records, and ignore any record carrying a `prunable` line: git keeps listing a worktree whose directory has been deleted and marks it that way rather than dropping it, so a removed worktree would otherwise count as live and filter out issues that are in fact parallel-safe.
 
-A claim is live when some remaining NUL-delimited record matches **either** its `worktree` path **or** its `branch`, and stale only when neither matches. Neither field identifies a worktree by itself: `git worktree move` changes the path and keeps the branch, `git switch` changes the branch and keeps the path, and a removed path can later be reused by an unrelated worktree. Matching on either errs toward reporting a resource still held, which is the right direction here, because reading a live claim as stale is what would let this skill recommend work that collides with someone.
+A claim carrying a `gitdir` is live when that value equals the admin directory of some remaining record, which you get by running `git -C <record path> rev-parse --path-format=absolute --git-dir`. That is the identity `manage-resource-claims` uses, and it is the only one that survives both `git worktree move` and `git switch`. Skipping it marks a worktree that has had both changed as stale, and `--parallel-only` then recommends work that collides with a resource someone is holding.
+
+For a claim with no `gitdir`, or a record whose admin directory cannot be resolved, fall back: live when some remaining record matches **either** its `worktree` path **or** its `branch`, and stale only when neither matches. Neither field identifies a worktree by itself: `git worktree move` changes the path and keeps the branch, `git switch` changes the branch and keeps the path, and a removed path can later be reused by an unrelated worktree. Matching on either errs toward reporting a resource still held, which is the right direction here, because reading a live claim as stale is what would let this skill recommend work that collides with someone.
 
 Treat a stale claim as free, and mention it so the user can clear it. Nothing that no longer exists should keep a resource reserved.
 

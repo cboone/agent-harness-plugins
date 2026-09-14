@@ -61,7 +61,7 @@ resource=logic state=held id=* branch=feature/live issue=128 claimed=TIMESTAMP w
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live --issue 128 > /dev/null \
 >   && jq -c '{version: .version, claim: (.claims[0] | del(.claimed_at, .id))}' "${claim_file}"
-{"version":1,"claim":{"resource":"logic","worktree":"/repo/wt-live","branch":"feature/live","issue":128}}
+{"version":1,"claim":{"resource":"logic","worktree":"/repo/wt-live","branch":"feature/live","gitdir":"/admin/wt-live","issue":128}}
 ```
 
 ## The timestamp is recorded as UTC ISO 8601
@@ -887,4 +887,43 @@ $ setup_claims \
 >   && claims_tail claim logic --worktree /repo/wt-live --branch feature/live
 manage-resource-claims: cannot create */.claude/worktree-resources.local.json.lock; check that */.claude is writable and that nothing else occupies that path (glob)
 [1]
+```
+
+## A claim survives its worktree being moved and switched
+
+`git worktree move` changes the path and `git switch` changes the branch, so a worktree that has had both done matches neither stored field. The claim records the worktree's git admin directory, which survives both, and that is what keeps it live. Without it the claim reads stale and another worktree takes the resource with nobody asked.
+
+The stored path and branch are rewritten here to values git does not list, which is the state those two operations leave behind.
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
+>   && jq '.claims[0].worktree="/gone" | .claims[0].branch="gone"' "${claim_file}" > "${claim_file}.new" \
+>   && mv "${claim_file}.new" "${claim_file}" \
+>   && claims_list
+resource=logic state=held id=* branch=gone claimed=TIMESTAMP worktree=/gone (glob)
+```
+
+## The identity is what keeps it live, not the path or the branch
+
+The same record with its `gitdir` removed is stale, which is what makes the case above a test of the identity rather than of the fallback.
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
+>   && jq '.claims[0].worktree="/gone" | .claims[0].branch="gone" | .claims[0] |= del(.gitdir)' "${claim_file}" > "${claim_file}.new" \
+>   && mv "${claim_file}.new" "${claim_file}" \
+>   && claims_list
+resource=logic state=stale id=* branch=gone claimed=TIMESTAMP worktree=/gone (glob)
+```
+
+## A worktree the identity cannot be resolved for still records a claim
+
+`rev-parse` fails for a path that is not a worktree, and the claim falls back to the path and branch rather than being refused.
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/not-a-worktree --branch feature/live > /dev/null \
+>   && jq -r '.claims[0] | has("gitdir")' "${claim_file}"
+false
 ```

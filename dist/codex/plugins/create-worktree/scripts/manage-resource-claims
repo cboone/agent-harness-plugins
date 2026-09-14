@@ -132,8 +132,17 @@ function main_worktree_path() {
 # branch in that case.
 function worktree_identity() {
   local worktree="${1}"
+  local identity
 
-  git -C "${worktree}" rev-parse --path-format=absolute --git-dir 2> /dev/null || true
+  identity="$(git -C "${worktree}" rev-parse --path-format=absolute --git-dir 2> /dev/null)" || return 0
+
+  # The identity is derived from the main checkout's location, so it can carry
+  # a control character even when the linked worktree's own path does not.
+  # Storing one the read contract rejects would make every later command refuse
+  # the file, so it is dropped instead and the path and branch fallback stands.
+  valid_path "${identity}" || return 0
+
+  printf '%s' "${identity}"
 }
 
 function claim_file_path() {
