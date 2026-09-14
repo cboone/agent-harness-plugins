@@ -74,7 +74,7 @@ All ten planned changes are done. Two details are worth recording:
 
 ### Strengths
 
-- **Staleness is derived, never stored.** A claim cannot outlive its worktree, and nothing has to hook worktree removal, which neither skill performs. This removes an entire class of bug rather than handling it.
+- **Staleness is derived, never stored.** It is recomputed from what git reports now, so nothing has to hook worktree removal, which neither skill performs. This removes an entire class of bug rather than handling it. One case survives: git recycles a worktree's admin directory name, so a claim whose worktree was removed and whose name has since been reused reads as held rather than stale. That is recorded in [issue 424](https://github.com/cboone/agent-harness-plugins/issues/424), documented in the script and the README, and pinned by a scrut case.
 - **`check` exits 3 on a held resource.** A distinct exit code lets the skill branch without parsing prose, which matters because the prose is the part most likely to be reworded later.
 - **Undetermined staleness is distinguished from "nothing is live".** `live_worktrees` returns non-zero when git cannot answer, and `decorate_claims` then marks nothing stale. The naive version, treating an empty list as "no worktrees exist", would report every claim stale and `prune` would clear a file full of valid claims.
 - **Writes are atomic.** `mktemp` beside the target plus `mv` means a reader never sees a half-written document, and the temp file is removed on both failure paths.
