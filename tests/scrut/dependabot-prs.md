@@ -369,6 +369,15 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.jso
 [{"name":"rake","from":"~> 12.3","to":"~> 13.0","type":"major"},{"name":"rspec","from":">= 3.10, < 4","to":">= 3.13, < 5","type":"minor"}]
 ```
 
+## A Swift update that touches only the resolved file
+
+A SwiftPM update can change `Package.resolved` alone while the alert names `Package.swift` beside it. The resolved file counts as a dependency file, so the alert matches.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 218) | {ecosystem, alerts: [.alerts[] | {number, cleared}]}'
+{"ecosystem":"swift","alerts":[{"number":46,"cleared":true}]}
+```
+
 ## A four-part version
 
 A change in the fourth part, such as a NuGet revision, is a patch rather than an unknown change.

@@ -546,7 +546,7 @@ function do_summarize() {
 
     def dependency_file:
       split("/") | last
-      | test("^(package(-lock)?\\.json|npm-shrinkwrap\\.json|yarn\\.lock|pnpm-lock\\.yaml|bun\\.lock|go\\.(mod|sum)|Cargo\\.(toml|lock)|Gemfile(\\.lock)?|.+\\.gemspec|pyproject\\.toml|uv\\.lock|poetry\\.lock|Pipfile(\\.lock)?|requirements.*\\.(txt|in)|composer\\.(json|lock)|pom\\.xml|build\\.gradle(\\.kts)?|gradle\\.lockfile|.+\\.csproj|packages\\.lock\\.json|Directory\\.Packages\\.props|pubspec\\.(yaml|lock)|mix\\.(exs|lock))$");
+      | test("^(package(-lock)?\\.json|npm-shrinkwrap\\.json|yarn\\.lock|pnpm-lock\\.yaml|bun\\.lock|go\\.(mod|sum)|Cargo\\.(toml|lock)|Gemfile(\\.lock)?|.+\\.gemspec|pyproject\\.toml|uv\\.lock|poetry\\.lock|Pipfile(\\.lock)?|requirements.*\\.(txt|in)|composer\\.(json|lock)|pom\\.xml|build\\.gradle(\\.kts)?|gradle\\.lockfile|.+\\.csproj|packages\\.lock\\.json|Directory\\.Packages\\.props|pubspec\\.(yaml|lock)|mix\\.(exs|lock)|Package\\.(swift|resolved))$");
 
     # An alert belongs to a PR when the PR updates its package, in the same
     # ecosystem, and touches its manifest or a dependency file beside it (the

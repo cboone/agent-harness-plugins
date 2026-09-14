@@ -337,6 +337,22 @@
           "path": "example.gemspec"
         }
       ]
+    },
+    {
+      "number": 218,
+      "title": "chore(deps): bump github.com/apple/swift-nio from 2.62.0 to 2.65.0",
+      "url": "https://github.com/example-org/edge-repo/pull/218",
+      "headRefName": "dependabot/swift/github.com/apple/swift-nio-2.65.0",
+      "headRefOid": "2182182182182182182182182182182182182182",
+      "baseRefName": "main",
+      "body": "Bumps [github.com/apple/swift-nio](https://github.com/apple/swift-nio) from 2.62.0 to 2.65.0.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "Package.resolved"
+        }
+      ]
     }
   ],
   "alerts": {
@@ -625,6 +641,25 @@
         "security_vulnerability": {
           "first_patched_version": {
             "identifier": "1.13.7"
+          }
+        }
+      },
+      {
+        "number": 46,
+        "dependency": {
+          "package": {
+            "ecosystem": "swift",
+            "name": "github.com/apple/swift-nio"
+          },
+          "manifest_path": "Package.swift"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-4646-4646-4646",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "2.65.0"
           }
         }
       }
