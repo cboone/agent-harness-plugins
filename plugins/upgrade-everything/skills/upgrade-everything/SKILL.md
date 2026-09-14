@@ -60,10 +60,10 @@ Use `./references/upgrade-sources.md` for source-of-truth selection. Record the 
 Then check whether Dependabot already proposes any of these upgrades. Take `OWNER/REPO` from the `origin` remote (`git remote -v`); in a fork, that is the fork, not the upstream. List its open PRs once, naming the repository explicitly:
 
 ```bash
-gh pr list --repo OWNER/REPO --author app/dependabot --state open --limit 500 --json number,title,headRefName,files
+gh pr list --repo OWNER/REPO --author app/dependabot --state open --limit 500 --json number,title,headRefName,baseRefName,body,files
 ```
 
-If the list returns exactly as many PRs as `--limit` allows, it may be cut off: re-run with a higher limit before matching, so an open proposal is not missed. Match each candidate to a PR by dependency name and by a file the PR touches, and record the PR number and the version it targets. A single-dependency title names the target (`bump NAME from A to B`); a grouped PR lists its updates in the body (``Updates `NAME` from A to B``), which `gh pr view N --repo OWNER/REPO --json body` returns. When `gh` is unavailable or unauthenticated, the repository has no GitHub remote, or the command fails for any other reason, skip this check and say so in the audit summary. It is supporting evidence, so its failure never stops the audit.
+If the list returns exactly as many PRs as `--limit` allows, it may be cut off: re-run with a higher limit before matching, so an open proposal is not missed. Match each candidate to a PR only when the PR's `baseRefName` is the branch being audited (normally the default branch), by dependency name and by a file the PR touches, and record the PR number and the version it targets. A PR aimed at another branch cannot land here and proposes nothing for this audit. A single-dependency title names the target (`bump NAME from A to B`); a grouped PR lists its updates in the body (``Updates `NAME` from A to B``). A grouped body can be truncated: when it contains `_Description has been truncated_`, or lists fewer Updates lines than the title announces, read the manifest and lockfile changes with `gh pr diff N --repo OWNER/REPO` before concluding the PR does not cover a candidate. When `gh` is unavailable or unauthenticated, the repository has no GitHub remote, or the command fails for any other reason, skip this check and say so in the audit summary. It is supporting evidence, so its failure never stops the audit.
 
 ### 5. Classify Candidates
 
