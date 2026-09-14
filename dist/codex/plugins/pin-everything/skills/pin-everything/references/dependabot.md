@@ -102,7 +102,7 @@ The same shape applies -- weekly schedule, split groups, 10-PR cap, `commit-mess
 
 Four surface families are outside Dependabot's scope:
 
-1. **Language version files** -- `.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `.python-version`. There's no Dependabot ecosystem for any of these per-language pin files (asdf-style `.tool-versions` and the per-language fallback files are silent surfaces). Drift accumulates until something triggers a manual bump.
+1. **Language version files** -- `.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `.python-version`. `rust-toolchain.toml` is not one of them: the `rust-toolchain` ecosystem in the table above tracks it. There's no Dependabot ecosystem for any of these per-language pin files (asdf-style `.tool-versions` and the per-language fallback files are silent surfaces). Drift accumulates until something triggers a manual bump.
 2. **`packageManager` field** -- Dependabot recognizes the field but does not propose updates to it.
 3. **Action SHAs in `.md` templates** -- Dependabot only scans workflow files, not markdown.
 4. **Install-command pins inside scripts** -- `go install`, `cargo install`, `pip install`, `npx <tool>@X.Y.Z` lines in shell scripts and Makefiles are invisible to Dependabot.

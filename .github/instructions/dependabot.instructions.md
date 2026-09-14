@@ -1,5 +1,5 @@
 ---
-applyTo: "plugins/triage-dependabot-prs/**,plugins/review-dependabot-config/**,plugins/monitor-pr/**,plugins/upgrade-everything/**,tests/scrut/dependabot-prs.md,tests/data/dependabot-prs/**"
+applyTo: "plugins/pin-everything/skills/pin-everything/references/dependabot.md,plugins/triage-dependabot-prs/**,plugins/review-dependabot-config/**,plugins/monitor-pr/**,plugins/upgrade-everything/**,tests/scrut/dependabot-prs.md,tests/data/dependabot-prs/**"
 ---
 
 # Dependabot Facts for Review
@@ -9,6 +9,7 @@ These were checked against live GitHub data and the GitHub documentation. Do not
 - **One Dependabot identity, spelled per API.** The `gh` CLI's JSON output (`gh pr view --json author`, `gh pr list --json author`) and the `author:app/dependabot` search qualifier use `app/dependabot`. REST responses (`user.login` on comments and reviews, `author.login` in the compare API) and `github.actor` in Actions use `dependabot[bot]`. `gh pr list --author app/dependabot` returns every Dependabot PR. Each command matches the form its own API returns, so do not ask for both forms in a comparison that reads from one API.
 - **The "disable automated security fix PRs" footer line appears only on security update PRs.** Version update PRs, grouped or single, do not carry it, so it is a valid security marker. A body without the footer (after a rebase, or when truncated) is reported as `kind: unknown`, never as `version`.
 - **Dependabot alert `manifest_path` is repository-relative** (`go.mod`, `web/package-lock.json`), with no leading `/`.
+- **`rust-toolchain` is its own Dependabot ecosystem.** It tracks `rust-toolchain.toml` and `rust-toolchain`, so neither is an untracked surface when that ecosystem is configured. `pin-everything`'s untracked list names only `.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, and `.python-version`.
 - **Default labels.** With `labels` unset, Dependabot applies `dependencies`, and adds an ecosystem label only when more than one package ecosystem is configured.
 - **`capture` and `match` emit nothing when the regex does not match; they do not raise an error.** `[body_lines | capture(...)]` on a body with no matching line is `[]`, so the `Bumps [...]` fallback in `updates` needs no `try`. `tests/scrut/dependabot-prs.md` covers a PR with no parseable update.
 - **`jq` on empty or whitespace-only input emits nothing and exits 0**, so `dependabot-prs summarize < /dev/null` reaches the "input is empty" check. `tests/scrut/dependabot-prs.md` covers that case.
