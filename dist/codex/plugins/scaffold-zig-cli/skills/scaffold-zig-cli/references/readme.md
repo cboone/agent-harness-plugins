@@ -37,7 +37,7 @@ PROJECT-NAME --help
 
 ## Development
 
-Requires Zig ZIG-VERSION or later. `build.zig.zon`'s `minimum_zig_version` is the single source of truth for the version, and CI reads it rather than restating it.
+Requires Zig ZIG-VERSION. `build.zig.zon`'s `minimum_zig_version` is the single source of truth, and CI and the release workflow both read it rather than restating the version, so that is the toolchain the project is built and tested against. Zig is pre-1.0 and each minor release breaks the standard library, so treat a newer Zig as an upgrade to make deliberately rather than a version that happens to work.
 
 Homebrew's `zig` formula is unpinned and moves to the next minor release on upgrade, which will not match this project's pin. Install Zig from [ziglang.org/download](https://ziglang.org/download/) or through a version manager instead.
 

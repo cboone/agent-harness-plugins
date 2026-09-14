@@ -155,7 +155,11 @@ git config gpg.format
 git config user.signingkey
 ```
 
-Judge them by step 2's rules, and let these answers win where they differ. If `user.name` differs from the value already used for `COPYRIGHT-HOLDER`, point that out rather than silently rewriting the LICENSE: the committer and the copyright holder are allowed to differ, and which one the user wants in the LICENSE is theirs to say.
+Judge them by step 2's rules, and let these answers win where they differ.
+
+If `user.name` here differs from the value step 2 put in `COPYRIGHT-HOLDER`, **stop and ask which belongs in the LICENSE**, naming both. Do not pick one and carry on. The committer and the copyright holder are genuinely allowed to differ, so neither is the safe default: taking the step 2 value attributes the project to whoever the caller happened to be, and taking this one overrides a name the user may have chosen deliberately. Attribution in a LICENSE is not a detail to infer, and this is the last moment before step 16 writes it.
+
+Whichever they choose goes in the LICENSE. The committer identity for step 23 stays as read here regardless.
 
 If step 2 came back with no `user.name` and left `COPYRIGHT-HOLDER` unfilled, fill it from `user.name` here. Ask the user only if it is still empty at this point, which is the first moment the question is worth asking.
 
@@ -444,7 +448,7 @@ Print a summary of what was created:
   - Run the add-community-files skill to add CONTRIBUTING.md, CODE_OF_CONDUCT.md, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md
   - Avoid running the scaffold-new-repo skill from here on. It belongs before this one, never after: it writes its own LICENSE, README.md and CHANGELOG.md, and a `.claude/settings.json` with an empty allowlist, so running it now overwrites the Zig-specific files and drops the permissions step 19 seeded. If it has not run yet and its agent config files are wanted, say so and let the user decide, rather than running it and undoing this scaffold
   - Run the set-up-installers skill when ready to set up a Homebrew formula and shell install script
-  - Run the add-scrut-cli-tests skill to add snapshot tests for the CLI. It adds its own `run-scrut-tests.yml` job and does not touch the `run-zig-ci.yml` call, so the CI workflow's own `run-scrut` input stays off. Keep one or the other rather than both
+  - Run the add-scrut-cli-tests skill to add snapshot tests for the CLI. It edits `.github/workflows/ci.yml`, adding a `test-scrut` job beside the `ci` job rather than changing that job's inputs, so the `run-zig-ci.yml` call's own `run-scrut` stays off. Keep one or the other rather than both, since enabling both runs the snapshot tests twice
   - Add a `.github/dependabot.yml` with the `github-actions` ecosystem if the workflow pins should keep themselves current. The scaffold pins them to the SHA that was latest when it ran, and nothing updates them on its own
   - Tag a release with `git tag v0.1.0 && git push origin v0.1.0` to trigger the release workflow
 
