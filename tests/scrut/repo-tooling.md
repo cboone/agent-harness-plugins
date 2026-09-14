@@ -114,3 +114,15 @@ identical
 $ cd "${REPO_ROOT}" && cmp plugins/create-worktree/scripts/manage-resource-claims plugins/address-issue-in-worktree/scripts/manage-resource-claims && echo identical
 identical
 ```
+
+## Every `$(< path)` read in the bundled scripts is guarded by a file-type test
+
+A `"$(< path)"` expansion that fails does so *during expansion*, not as a command, so neither a redirection on the assignment nor a trailing `||` catches it: Bash exits with its own unprefixed diagnostic and the script's error handling never runs. The path must therefore be tested before it is read, and `-r` alone is not enough because it is true for a readable directory.
+
+This shipped broken three times on one branch: the lock owner read, the claim file read, and the lock owner read again after the claim file was fixed. Writing the rule into `.github/shell.instructions.md` did not stop the third. This does.
+
+```scrut
+$ cd "${REPO_ROOT}" && for f in plugins/create-worktree/scripts/manage-resource-claims plugins/address-issue-in-worktree/scripts/manage-resource-claims; do awk '/^[[:space:]]*#/ { next } /-f "/ { lastf = NR } /\$\(< "/ { if (lastf == 0 || NR - lastf > 12) { print FILENAME ": unguarded read at line " NR; bad++ } else { guarded++ } } END { printf "%s: guarded=%d unguarded=%d\n", FILENAME, guarded+0, bad+0 }' "$f"; done
+plugins/create-worktree/scripts/manage-resource-claims: guarded=2 unguarded=0
+plugins/address-issue-in-worktree/scripts/manage-resource-claims: guarded=2 unguarded=0
+```

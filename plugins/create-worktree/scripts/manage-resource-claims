@@ -273,7 +273,10 @@ function held_lock_report() {
   # own error to stderr that a redirection on the assignment does not catch,
   # because the failure happens during expansion rather than in the command,
   # and some bash builds then abort under set -e before the || is reached.
-  if [[ -r "${lock}/owner" ]]; then
+  #
+  # -f as well as -r: -r is true for a readable directory, which would reach
+  # the expansion and fail there.
+  if [[ -f "${lock}/owner" && -r "${lock}/owner" ]]; then
     owner="$(< "${lock}/owner")" || owner=""
   fi
 

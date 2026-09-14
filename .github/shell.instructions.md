@@ -9,6 +9,7 @@ Bundled scripts here run on macOS and Linux alike, so portability findings are w
 - **`find -maxdepth` and `-mmin` are portable.** Both are present in BSD `find` on macOS as well as GNU `find`, and `find <path> -maxdepth 0 -mmin +N` works on both. Do not report either as a GNU-only extension.
 - **`flock` is deliberately absent.** macOS has no `flock(1)`, which is why mutual exclusion here uses `mkdir`, which is atomic on every filesystem these scripts run on.
 - **`kill -0 <pid>` is a liveness test, not a terminate.** It is the POSIX interface and keeps its name under the neutral-terminology convention, which exempts names the world already fixed.
+- **A `"$(< path)"` read is always preceded by `-f` and `-r` tests.** That expansion fails during expansion rather than as a command, so a redirection on the assignment and a trailing `||` both miss it and Bash exits with its own unprefixed diagnostic. `-r` alone is insufficient: it is true for a readable directory. A scrut case in `tests/scrut/repo-tooling.md` enforces this.
 - **`local` is declared separately from command substitution** (`local x` then `x="$(cmd)"`) on purpose: `local` always returns 0 and would mask the command's exit code.
 - **`# shellcheck disable=SC2016` at file scope is intentional** in scripts built around `jq` filters. The `$name` tokens inside single-quoted `jq` programs are `jq` variables bound with `--arg`, not shell expansions.
 
