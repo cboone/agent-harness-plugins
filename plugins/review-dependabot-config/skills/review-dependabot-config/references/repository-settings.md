@@ -67,7 +67,7 @@ git grep -nE 'secrets(\.|\[)' origin/DEFAULT -- .github/workflows/
 For each secret referenced by a job that runs on `push`, `pull_request`, `pull_request_review`, or `pull_request_review_comment`, other than `GITHUB_TOKEN`:
 
 - **Present in Dependabot secrets**: fine.
-- **Missing, and the job will fail without it**: a Warning, with two fixes to offer. Mirror a read-only credential into Dependabot secrets (the user runs `gh secret set NAME --repo OWNER/REPO --app dependabot`), or skip the job on Dependabot runs with `if: github.actor != 'dependabot[bot]'`. Never mirror a credential that can write to production.
+- **Missing, and the job will fail without it**: a Warning, with two fixes to offer. Mirror a read-only credential into Dependabot secrets (the user runs `gh secret set NAME --repo OWNER/REPO --app dependabot`), or skip the job on Dependabot runs. For `push` and `pull_request` jobs, `if: github.actor != 'dependabot[bot]'` does it. For `pull_request_review` and `pull_request_review_comment` jobs, `github.actor` is whoever reviewed, so guard on the PR author as well: `if: github.actor != 'dependabot[bot]' && github.event.pull_request.user.login != 'dependabot[bot]'`. Never mirror a credential that can write to production.
 - **Missing, and the job handles its absence**: note it and move on.
 
 Evidence from open PRs strengthens the finding: a check that fails on Dependabot PRs and passes on the default branch, with a log line such as `Input required and not supplied: token`.
