@@ -71,6 +71,8 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 The `gh pr comment`, `close`, `merge`, and `review` rules allow writes to your repositories, and so does `gh api repos/*`, which also matches `-X POST` and `-X DELETE` calls. The skill only issues writes after you select an action, but leave those rules out if you want a second prompt for every write. `rm -rf *` is broad: the skill uses it only on the `mktemp -d` directories it creates for verification, so drop it if you would rather confirm each removal. The quoted `gh api 'repos/*` form covers endpoints with a query string, which have to be quoted in the shell. `sleep` is only needed off Claude Code, where the wait for a Dependabot rebase falls back to a blocking poll.
 
+`--verify` stays interactive. It runs the repository's own install, build, and test commands in a worktree (`npm ci`, `yarn`, `pnpm`, `uv`, `go`, `cargo`, `bundle`, `make`, `npx`, and whatever the workflows call), and the security evidence can run `pip-audit` or `govulncheck`. Those commands execute code from the PR under test, so none are in the list above: each prompts unless you add rules for the tool families your projects use.
+
 ## Examples
 
 - "triage the dependabot PRs": gathers, classifies, and reports every open Dependabot PR, then offers actions
