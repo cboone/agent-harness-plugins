@@ -217,27 +217,25 @@ function held_lock_report() {
 # the later write discarding the earlier claim, which is a likely sequence here
 # because parallel worktrees are the case this feature exists for.
 #
-# A held lock is never broken automatically, and the reason is worth recording,
-# because three earlier revisions of this script tried. Deciding that another
-# process has abandoned a lock cannot be made safe with these primitives: the
-# check and the removal are separate steps, so two waiters can both decide to
-# break the same lock and the second deletes the fresh one the first just took,
-# putting both inside the section. An age threshold, then a recorded owner,
-# then a second mutex around the reclaim each closed one window and opened
-# another, because any holder can be suspended past any threshold.
+# A held lock is never broken automatically, and must not become so. Deciding
+# that another process has abandoned one cannot be made safe with mkdir, rm and
+# stat: the check and the removal are separate steps, so two waiters can both
+# decide to break the same lock and the second deletes the fresh one the first
+# just took, putting both inside the section. Neither an age threshold nor a
+# recorded owner nor a mutex around the reclamation closes that, because any
+# holder can be suspended past any threshold and any observation can go out of
+# date before it is acted on.
 #
-# So a lock that is still held when the wait expires is reported, with whatever
-# is known about its owner, and the user removes it. That is the bargain the
-# rest of this script already makes: a stale claim is cleared by an explicit
-# prune rather than silently, and a held resource is reported rather than
-# taken. Losing a claim without anyone noticing is the outcome worth avoiding;
-# asking for one rm is not.
+# So a lock still held when the wait expires is reported, with whatever is
+# known about its owner, and the user removes it. That is the bargain the rest
+# of this script already makes: a stale claim is cleared by an explicit prune
+# rather than silently, and a held resource is reported rather than taken.
+# Losing a claim without anyone noticing is the outcome worth avoiding; asking
+# for one rm is not.
 #
 # This serializes access to the file; it does not make the claim an enforced
 # lock on the resource, which stays advisory. mkdir is the portable mutex: it
-# is atomic everywhere this runs, and flock is absent on macOS. A lock whose
-# owner has exited is broken rather than waited on forever, for the same reason
-# a stale claim is cleared rather than honored.
+# is atomic everywhere this runs, and flock is absent on macOS.
 function acquire_lock() {
   local file="${1}"
   local lock="${file}.lock"
