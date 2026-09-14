@@ -295,6 +295,41 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.jso
 {"alerts":[{"number":39,"cleared":null}]}
 ```
 
+## A group across directories ties each package to its directory
+
+A grouped body names the dependencies it updates in each directory on its `Bumps` lines. The `Updates` lines carry no directory, so those lines are the only record of which package moves where.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 210) | .directories'
+[{"directory":"web","names":["lodash"]},{"directory":"api","names":["qs"]}]
+```
+
+This group updates lodash in `/web` and qs in `/api`, touching both lockfiles. The lodash alert in `/api` stays unmatched, because the `/api` line names only qs.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 210) | {alerts: [.alerts[] | {number, directoryConfirmed, cleared}]}'
+{"alerts":[{"number":31,"directoryConfirmed":true,"cleared":true},{"number":40,"directoryConfirmed":true,"cleared":true}]}
+```
+
+A `Bumps` line with a long list leaves the names off. An alert in that directory is attached but unconfirmed, with `cleared` null, while an alert in a directory whose line names other packages is not attached.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 211) | {directories, alerts: [.alerts[] | {number, directoryConfirmed, cleared}]}'
+{"directories":[{"directory":"mjx","names":["pip","setuptools"]},{"directory":"python","names":[]}],"alerts":[{"number":41,"directoryConfirmed":false,"cleared":null}]}
+```
+
+For GitHub Actions, the `/` directory covers `.github/workflows`, so a workflow alert matches the `/` line and a composite action alert matches its own.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 212) | {alerts: [.alerts[] | {number, directoryConfirmed, cleared}]}'
+{"alerts":[{"number":43,"directoryConfirmed":true,"cleared":true}]}
+```
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '[.unmatchedAlerts[] | select(.package == "lodash" or .package == "pillow" or .package == "actions/checkout") | {package, manifest}]'
+[{"package":"lodash","manifest":"api/package-lock.json"},{"package":"pillow","manifest":"mjx/requirements.txt"},{"package":"actions/checkout","manifest":".github/actions/setup/action.yml"},{"package":"lodash","manifest":"web/requirements.txt"}]
+```
+
 ## Patched versions sort by version, not as strings
 
 ```scrut

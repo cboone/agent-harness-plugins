@@ -141,7 +141,7 @@ Applies when `ecosystem` is `github_actions`.
 
 Applies when `kind` is `security` or `alerts` is non-empty.
 
-- **Which advisories the PR clears**: `alerts[]` with severity, patched version, and `cleared`. Only a `cleared: true` alert counts as fixed by this PR. `cleared: null` means the versions could not be compared (a digest, or no patched version), so compare them by hand.
+- **Which advisories the PR clears**: `alerts[]` with severity, patched version, and `cleared`. Only a `cleared: true` alert counts as fixed by this PR. `cleared: null` means the versions could not be compared (a digest, a pre-release, no patched version, or different targets in different directories), so compare them by hand. `directoryConfirmed: false` means a group across directories does not say the package updates in the alert's directory: read the diff for that directory's lockfile before counting the alert as addressed at all.
 - **Whether the PR introduces a new vulnerable package.** A bump can pull in a new transitive dependency with its own advisory. After merging, the wrap-up re-fetch catches it; before merging, a local audit in a worktree can (`npm audit`, `yarn npm audit`, `pip-audit`, `govulncheck ./...`, `cargo audit`).
 - **`unmatchedAlerts`** are advisories no open PR addresses. The usual cause is a transitive dependency its parent pins exactly, leaving no version Dependabot can move to. Report them. Fixing them is an override or an upstream upgrade, outside this triage.
 

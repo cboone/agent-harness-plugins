@@ -368,6 +368,15 @@ function do_summarize() {
 
     def group_name: .title // "" | first(capture("(?i)\\bthe (?<group>\\S+) group\\b").group) // null;
 
+    # A grouped body opens with one Bumps line per directory, which names the
+    # dependencies it updates there. The Updates lines carry no directory, and a
+    # long list is left off the Bumps line, so an empty names array means the line
+    # did not say rather than that nothing updates in that directory.
+    def directories:
+      [body_lines
+        | capture("^Bumps the \\S+ group with [0-9]+ updates? in the (?<directory>\\S+) directory:(?<list>.*)$")
+        | {directory: (.directory | sub("^/"; "") | sub("/$"; "")), names: [.list | scan("\\[([^\\]]+)\\]") | .[0]]}];
+
     # A grouped title announces how many updates it carries. A body truncated by
     # the pull request size limit loses its later Updates lines, so a parsed list
     # shorter than this count is incomplete and the diff has to be read instead.
@@ -479,6 +488,25 @@ function do_summarize() {
         and ($pr.updates | any(.name | lower == $package))
         and ($pr.files | any(. == $manifest or (dependency_file and dirname == ($manifest | dirname))));
 
+    # A group across several directories can update a package in one directory
+    # and touch a lockfile in another for a different package, so the package
+    # has to be tied to the alert directory too. confirmed: a single directory, or
+    # the Bumps line for the alert directory names the package. excluded: that
+    # line names only other packages. unconfirmed: no line names any package for
+    # the alert directory. For github-actions, the / directory covers
+    # .github/workflows.
+    def directory_match($pr):
+      (.package | lower) as $package
+      | (.manifest | dirname) as $directory
+      | [$pr.directories[]
+          | select(.directory == $directory or ($pr.ecosystem == "github_actions" and .directory == "" and $directory == ".github/workflows"))
+          | .names[] | lower] as $names
+      | if ($pr.directories | length) < 2 then "confirmed"
+        elif ($names | any(. == $package)) then "confirmed"
+        elif ($names | length) > 0 then "excluded"
+        else "unconfirmed"
+        end;
+
     # A release with only numeric parts, after any requirement operator. A
     # pre-release such as 2.0.0-rc.1 is not one, and version_key would read it as
     # 2.0.0, so cleared stays null rather than comparing it.
@@ -509,6 +537,7 @@ function do_summarize() {
             group: group_name,
             updates: updates,
             updatesExpected: updates_expected,
+            directories: directories,
             branchAgrees: branch_agrees,
             commandsFooter: (body_text | contains("You can trigger Dependabot actions")),
             bodyTruncated: (body_text | contains("_Description has been truncated_")),
@@ -549,13 +578,20 @@ function do_summarize() {
         # version. A PR can update a vulnerable package without leaving its range. A
         # grouped PR can move one package to different versions in different
         # directories, and with no directory on each update, cleared is then null.
+        # It is null too when the body does not tie the package to the alert
+        # directory.
         | .alerts = [
             $alerts[]
             | select(alert_matches($pr))
+            | directory_match($pr) as $directory_match
+            | select($directory_match != "excluded")
             | . as $alert
             | ([$pr.updates[] | select(.name | lower == ($alert.package | lower)) | .to] | unique) as $targets
-            | (if ($targets | length) == 1 then $targets[0] else null end) as $to
-            | . + {cleared: (if $to == null or $alert.patched == "" or ($to | is_sha) or ($to | stable_version | not) or ($alert.patched | stable_version | not) then null else (($to | version_key) >= ($alert.patched | version_key)) end)}
+            | (if ($targets | length) == 1 and $directory_match == "confirmed" then $targets[0] else null end) as $to
+            | . + {
+                directoryConfirmed: ($directory_match == "confirmed"),
+                cleared: (if $to == null or $alert.patched == "" or ($to | is_sha) or ($to | stable_version | not) or ($alert.patched | stable_version | not) then null else (($to | version_key) >= ($alert.patched | version_key)) end)
+              }
           ]
       ] as $prs
     | {
