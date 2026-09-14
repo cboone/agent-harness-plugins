@@ -12,12 +12,13 @@ readonly DEFAULT_LIMIT=200
 
 # Every field the triage skill reads from a Dependabot PR. body is fetched only
 # so summarize can extract what it needs; the summary never repeats it, because
-# a single grouped PR body can run to 65 KB.
-readonly DEPENDABOT_FIELDS="number,title,url,headRefName,headRefOid,baseRefName,body,createdAt,updatedAt,labels,isDraft,mergeable,mergeStateStatus,reviewDecision,autoMergeRequest,statusCheckRollup,files"
+# a single grouped PR body can run to 65 KB. changedFiles is fetched beside
+# files because gh lists at most the first 100 files of a PR.
+readonly DEPENDABOT_FIELDS="number,title,url,headRefName,headRefOid,baseRefName,body,createdAt,updatedAt,labels,isDraft,mergeable,mergeStateStatus,reviewDecision,autoMergeRequest,statusCheckRollup,changedFiles,files"
 
 # Every open PR, from any author, is fetched with just enough to detect file
 # overlap between a Dependabot PR and the rest of the queue.
-readonly OPEN_FIELDS="number,title,author,headRefName,files"
+readonly OPEN_FIELDS="number,title,author,headRefName,changedFiles,files"
 
 readonly ISO8601_PATTERN='^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$'
 readonly REPO_PATTERN='^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
@@ -142,6 +143,8 @@ function do_fetch() {
     die "Failed to list open PRs for ${repo}. See the gh error above for the cause."
   fi
 
+  complete_files "${repo}" "${work_dir}/dependabot.json"
+  complete_files "${repo}" "${work_dir}/open.json"
   fetch_comparisons "${repo}" "${work_dir}"
   fetch_alerts "${repo}" "${work_dir}"
 
@@ -181,6 +184,36 @@ function do_fetch() {
   else
     do_summarize "" < "${work_dir}/bundle.json"
   fi
+}
+
+# Reads the full file list of each PR that gh pr list cut short. gh lists at
+# most the first 100 files of a PR, so a large grouped PR can lose the lockfile
+# its alerts and overlaps are matched on. The REST files endpoint pages through
+# up to 3000 files. A PR whose list cannot be read again keeps the partial list,
+# and summarize reports it as incomplete.
+# Arguments:
+#   $1 - OWNER/REPO
+#   $2 - PR list JSON file, rewritten in place
+function complete_files() {
+  local repo="${1}"
+  local list_file="${2}"
+
+  local lines_file="${list_file}.files"
+  : > "${lines_file}"
+
+  local number
+  while IFS= read -r number; do
+    if gh api --paginate --slurp "repos/${repo}/pulls/${number}/files?per_page=100" \
+      > "${list_file}.pages" 2> /dev/null; then
+      jq -c --arg number "${number}" '{key: $number, value: [.[][] | {path: .filename}]}' \
+        "${list_file}.pages" >> "${lines_file}"
+    fi
+  done < <(jq -r '.[] | select((.changedFiles // 0) > ((.files // []) | length)) | .number' "${list_file}")
+
+  jq --slurpfile lines "${lines_file}" \
+    '($lines | from_entries) as $complete | map(($complete[.number | tostring]) as $files | if $files == null then . else .files = $files end)' \
+    "${list_file}" > "${list_file}.new"
+  mv "${list_file}.new" "${list_file}"
 }
 
 # Compares each Dependabot PR head against the branch the PR targets. The
@@ -552,6 +585,7 @@ function do_summarize() {
             autoMerge: (.autoMergeRequest != null),
             checks: checks,
             files: $paths,
+            filesComplete: ((.changedFiles // null) == null or ($paths | length) >= .changedFiles),
             overlaps: [
               $all_open[]
               | select(.number != $raw.number)

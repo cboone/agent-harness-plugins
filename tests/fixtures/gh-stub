@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# gh-stub -- Test stub for the gh calls dependabot-prs fetch makes.
+#
+# Responses are JSON files under STUB_GH_DIR:
+#   repo.json          gh repo view
+#   dependabot.json    gh pr list --author app/dependabot
+#   open.json          gh pr list (every author)
+#   api/KEY.json       gh api ENDPOINT, where KEY is the endpoint with the
+#                      repos/OWNER/REPO/ prefix and the query string removed and
+#                      each / replaced by _ (compare_main...SHA, pulls_12_files)
+#
+# An api call with no response file fails the way gh does for a missing
+# resource. STUB_GH_API_FAIL names one KEY that fails with a permission error
+# instead, STUB_GH_AUTH_FAIL=1 makes gh auth token fail, and STUB_GH_LOG, when
+# set, receives every invocation, one per line.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function respond() {
+  local file="${STUB_GH_DIR:?STUB_GH_DIR must be set}/${1}"
+  [[ -f "${file}" ]] || die "missing stub response ${file}"
+  cat "${file}"
+}
+
+function api_key() {
+  local endpoint="${1}"
+
+  endpoint="${endpoint%%\?*}"
+  if [[ "${endpoint}" =~ ^repos/[^/]+/[^/]+/(.*)$ ]]; then
+    endpoint="${BASH_REMATCH[1]}"
+  fi
+  printf '%s' "${endpoint//\//_}"
+}
+
+function do_api() {
+  local endpoint=""
+  local arg
+  for arg in "${@}"; do
+    case "${arg}" in
+      --paginate | --slurp) ;;
+      -*) die "unexpected gh api flag ${arg}" ;;
+      *) endpoint="${arg}" ;;
+    esac
+  done
+  [[ -n "${endpoint}" ]] || die "gh api needs an endpoint"
+
+  local key
+  key="$(api_key "${endpoint}")"
+
+  if [[ "${key}" == "${STUB_GH_API_FAIL:-}" ]]; then
+    echo "gh: Resource not accessible by integration (HTTP 403)" >&2
+    exit 1
+  fi
+
+  if [[ ! -f "${STUB_GH_DIR:?STUB_GH_DIR must be set}/api/${key}.json" ]]; then
+    echo "gh: Not Found (HTTP 404)" >&2
+    exit 1
+  fi
+  respond "api/${key}.json"
+}
+
+function do_pr_list() {
+  local arg
+  for arg in "${@}"; do
+    if [[ "${arg}" == "app/dependabot" ]]; then
+      respond "dependabot.json"
+      return 0
+    fi
+  done
+  respond "open.json"
+}
+
+function main() {
+  if [[ -n "${STUB_GH_LOG:-}" ]]; then
+    printf 'gh %s\n' "${*}" >> "${STUB_GH_LOG}"
+  fi
+
+  case "${1:-} ${2:-}" in
+    "auth token")
+      if [[ "${STUB_GH_AUTH_FAIL:-}" == "1" ]]; then
+        echo "no oauth token found for github.com" >&2
+        exit 1
+      fi
+      echo "stub-token"
+      ;;
+    "repo view") respond "repo.json" ;;
+    "pr list") do_pr_list "${@:3}" ;;
+    api\ *) do_api "${@:2}" ;;
+    *) die "unexpected invocation: gh ${*}" ;;
+  esac
+}
+
+main "${@}"

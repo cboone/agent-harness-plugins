@@ -1,0 +1,74 @@
+[
+  {
+    "number": 301,
+    "title": "chore(deps): bump lodash from 4.17.20 to 4.17.21 in /web",
+    "url": "https://github.com/example-org/fetch-repo/pull/301",
+    "headRefName": "dependabot/npm_and_yarn/web/lodash-4.17.21",
+    "headRefOid": "3013013013013013013013013013013013013013",
+    "baseRefName": "main",
+    "body": "Bumps [lodash](https://github.com/lodash/lodash) from 4.17.20 to 4.17.21.\n",
+    "createdAt": "2026-09-12T00:00:00Z",
+    "updatedAt": "2026-09-12T00:00:00Z",
+    "labels": [
+      {
+        "name": "dependencies"
+      }
+    ],
+    "isDraft": false,
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "CLEAN",
+    "reviewDecision": "",
+    "autoMergeRequest": null,
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "name": "ci",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "completedAt": "2026-09-12T01:00:00Z"
+      }
+    ],
+    "changedFiles": 2,
+    "files": [
+      {
+        "path": "web/package.json"
+      }
+    ]
+  },
+  {
+    "number": 302,
+    "title": "chore(deps): bump actions/checkout from 7.0.0 to 7.0.1",
+    "url": "https://github.com/example-org/fetch-repo/pull/302",
+    "headRefName": "dependabot/github_actions/actions/checkout-7.0.1",
+    "headRefOid": "3023023023023023023023023023023023023023",
+    "baseRefName": "main",
+    "body": "Bumps [actions/checkout](https://github.com/actions/checkout) from 7.0.0 to 7.0.1.\n",
+    "createdAt": "2026-09-12T00:00:00Z",
+    "updatedAt": "2026-09-12T00:00:00Z",
+    "labels": [
+      {
+        "name": "dependencies"
+      }
+    ],
+    "isDraft": false,
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "CLEAN",
+    "reviewDecision": "",
+    "autoMergeRequest": null,
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "name": "ci",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "completedAt": "2026-09-12T01:00:00Z"
+      }
+    ],
+    "changedFiles": 1,
+    "files": [
+      {
+        "path": ".github/workflows/ci.yml"
+      }
+    ]
+  }
+]

@@ -1,0 +1,12 @@
+[
+  [
+    {
+      "filename": "web/package.json"
+    }
+  ],
+  [
+    {
+      "filename": "web/package-lock.json"
+    }
+  ]
+]

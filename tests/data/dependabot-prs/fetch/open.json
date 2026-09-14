@@ -1,0 +1,44 @@
+[
+  {
+    "number": 301,
+    "title": "chore(deps): bump lodash from 4.17.20 to 4.17.21 in /web",
+    "author": {
+      "login": "app/dependabot"
+    },
+    "headRefName": "dependabot/npm_and_yarn/web/lodash-4.17.21",
+    "changedFiles": 2,
+    "files": [
+      {
+        "path": "web/package.json"
+      }
+    ]
+  },
+  {
+    "number": 302,
+    "title": "chore(deps): bump actions/checkout from 7.0.0 to 7.0.1",
+    "author": {
+      "login": "app/dependabot"
+    },
+    "headRefName": "dependabot/github_actions/actions/checkout-7.0.1",
+    "changedFiles": 1,
+    "files": [
+      {
+        "path": ".github/workflows/ci.yml"
+      }
+    ]
+  },
+  {
+    "number": 303,
+    "title": "Regenerate the web lockfile",
+    "author": {
+      "login": "octocat"
+    },
+    "headRefName": "regenerate-web-lockfile",
+    "changedFiles": 1,
+    "files": [
+      {
+        "path": "web/package-lock.json"
+      }
+    ]
+  }
+]
