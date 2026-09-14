@@ -68,13 +68,13 @@ Also read the repo's README and any roadmap or project documentation to understa
 git worktree list --porcelain
 ```
 
-A missing file means no claims, which is the ordinary state and not an error. Each claim carries `resource`, `worktree`, `branch`, `claimed_at`, and an optional `issue`.
+A missing file means no claims, which is the ordinary state and not an error. Each claim carries `id`, `resource`, `worktree`, `branch`, `claimed_at`, and an optional `issue`.
 
 **Validate the file before reading the claims.** This reads the file directly rather than through `manage-resource-claims`, so it inherits none of that script's guards, and treating malformed data as resource state would produce confident parallel-safety advice from something it has misunderstood. Require all of:
 
 - `version` is the number `1`. It is the only version this skill knows.
 - `claims` is an array.
-- Every entry is an object whose `resource`, `worktree`, `branch`, and `claimed_at` are strings.
+- Every entry is an object whose `id`, `resource`, `worktree`, `branch`, and `claimed_at` are strings, with `id` lowercase hexadecimal.
 - `resource`, `branch`, and `claimed_at` are non-empty and contain no whitespace, and `resource` does not start with a hyphen.
 - `worktree` is non-empty and contains no control characters. Spaces are legal here and only here, because it is a path.
 - `issue`, when the key is present, is a non-negative integer. It is optional and omitted rather than null for a worktree that did not come from an issue, so absent is normal and `"128"` as a string is not.

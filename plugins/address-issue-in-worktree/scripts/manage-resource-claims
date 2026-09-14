@@ -42,11 +42,11 @@ Subcommands:
   list [--json]              Print every claim, one "key=value" line each
   check <resource>           Report the holder of <resource>, if any
   claim <resource> --worktree <path> --branch <name> [--issue <number>]
-        [--take-over <holder-claimed-at>]
+        [--take-over <holder-id>]
                              Record a claim on <resource>. Refuses with exit 3
                              when another worktree holds it, unless --take-over
-                             carries that holder's claimed_at, which names the
-                             exact claim rather than a reusable path
+                             carries that holder's id, which names one claim
+                             exactly where a path or a timestamp would not
   release <resource>         Remove the claim on <resource>
   release --worktree <path>  Remove every claim held by <path>
   prune                      Drop claims whose worktree no longer exists
@@ -77,6 +77,21 @@ USAGE_TEXT
 function die() {
   echo "${SCRIPT_NAME}: ${1}" >&2
   exit "${2:-1}"
+}
+
+# Identifies one claim event. A timestamp cannot: it has second resolution, so
+# two claims made in the same second share it, and an approval naming one could
+# then displace the other. This is what --take-over carries.
+function new_claim_id() {
+  local random
+
+  random="$(od -An -N6 -tx1 /dev/urandom 2> /dev/null | tr -d ' \n')" || random=""
+
+  if [[ -z "${random}" ]]; then
+    random="$(printf '%04x%04x%04x' "${RANDOM}" "${RANDOM}" "${RANDOM}")"
+  fi
+
+  printf '%s' "${random}"
 }
 
 # Prints the main worktree's absolute path. The first record of
@@ -203,12 +218,13 @@ function read_claims() {
   # is a path, it may legitimately contain spaces, and list emits it last so
   # that it cannot be confused with a following field.
   if ! jq -e 'all(.claims[];
-        ((.resource | type) == "string") and (.resource | test("^[^-[:space:][:cntrl:]][^[:space:][:cntrl:]]*$"))
+        ((.id | type) == "string") and (.id | test("^[0-9a-f]+$"))
+        and ((.resource | type) == "string") and (.resource | test("^[^-[:space:][:cntrl:]][^[:space:][:cntrl:]]*$"))
         and ((.worktree | type) == "string") and (.worktree | test("^[^[:cntrl:]]+$"))
         and ((.branch | type) == "string") and (.branch | test("^[^[:space:][:cntrl:]]+$"))
         and ((.claimed_at | type) == "string") and (.claimed_at | test("^[^[:space:][:cntrl:]]+$"))
         and ((has("issue") | not) or ((.issue | type) == "number" and .issue >= 0 and (.issue | floor) == .issue)))' > /dev/null 2>&1 <<< "${document}"; then
-    die "${file} holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present"
+    die "${file} holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present"
   fi
 
   # One claim per resource is the invariant every lookup assumes: claim_for_resource
@@ -402,7 +418,7 @@ function format_claims() {
 
   jq -r '
     .[]
-    | ["resource=\(.resource)", "state=\(if .stale then "stale" else "held" end)", "branch=\(.branch)"]
+    | ["resource=\(.resource)", "state=\(if .stale then "stale" else "held" end)", "id=\(.id)", "branch=\(.branch)"]
       + (if (.issue // null) == null then [] else ["issue=\(.issue)"] end)
       + ["claimed=\(.claimed_at)", "worktree=\(.worktree)"]
     | join(" ")
@@ -424,12 +440,10 @@ function holder_is_live_and_foreign() {
 
 # True when the holder is the one the caller was approved to displace.
 #
-# The token is the holder's claimed_at, not its worktree path. A path is not a
-# claim identity: it can be reused, so an approval naming one could transfer to
-# a different worktree that claimed the resource at the same path in between,
-# which is the unapproved takeover this check exists to refuse. claimed_at
-# changes on every claim and every refresh, so it names the claim the user was
-# actually shown.
+# The token is the claim's id. Neither of the obvious alternatives identifies a
+# claim: a worktree path can be reused, and a claimed_at has second resolution,
+# so either could match a different claim than the one the user was shown and
+# displace it unapproved, which is what this check exists to refuse.
 #
 # An empty approval matches nothing, so no approval is never mistaken for
 # blanket consent.
@@ -439,7 +453,7 @@ function holder_matches() {
 
   [[ -n "${approved}" ]] || return 1
 
-  jq -e --arg approved "${approved}" '.claimed_at == $approved' > /dev/null 2>&1 <<< "${existing}"
+  jq -e --arg approved "${approved}" '.id == $approved' > /dev/null 2>&1 <<< "${existing}"
 }
 
 function claim_for_resource() {
@@ -513,7 +527,7 @@ function cmd_check() {
   fi
 
   jq -r --arg resource "${resource}" \
-    '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at)"' <<< "${match}"
+    '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at), id \(.id)"' <<< "${match}"
 
   exit "${E_HELD}"
 }
@@ -550,7 +564,7 @@ function report_claim_outcome() {
 # Keep the refusal inside the lock if this is ever restructured.
 function cmd_claim() {
   local resource worktree="" branch="" issue="" take_over=""
-  local file claims decorated existing now updated
+  local file claims decorated existing now updated claim_id
 
   resource="${1:-}"
 
@@ -586,7 +600,7 @@ function cmd_claim() {
         ;;
       --take-over)
         if [[ $# -lt 2 || -z "${2}" ]]; then
-          die "--take-over requires the claimed_at value of the holder being displaced"
+          die "--take-over requires the id of the holder being displaced"
         fi
         take_over="${2}"
         shift 2
@@ -629,13 +643,14 @@ function cmd_claim() {
   if holder_is_live_and_foreign "${existing}" "${worktree}" \
     && ! holder_matches "${existing}" "${take_over}"; then
     jq -r --arg resource "${resource}" --arg approved "${take_over}" \
-      '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at)"
-       + (if $approved == "" then "; pass --take-over \(.claimed_at) to claim it anyway"
-          else "; --take-over named the claim made at \($approved), which is not the one held now, so nothing was changed" end)' <<< "${existing}"
+      '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at), id \(.id)"
+       + (if $approved == "" then "; pass --take-over \(.id) to claim it anyway"
+          else "; --take-over named claim \($approved), which is not the one held now, so nothing was changed" end)' <<< "${existing}"
     exit "${E_HELD}"
   fi
 
   now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  claim_id="$(new_claim_id)"
 
   updated="$(jq -c \
     --arg resource "${resource}" \
@@ -643,8 +658,9 @@ function cmd_claim() {
     --arg branch "${branch}" \
     --arg issue "${issue}" \
     --arg now "${now}" \
+    --arg id "${claim_id}" \
     'map(select(.resource != $resource))
-     + [{resource: $resource, worktree: $worktree, branch: $branch}
+     + [{id: $id, resource: $resource, worktree: $worktree, branch: $branch}
         + (if $issue == "" then {} else {issue: ($issue | tonumber)} end)
         + {claimed_at: $now}]
      | sort_by(.resource)' <<< "${decorated}")"

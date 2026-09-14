@@ -29,7 +29,7 @@ Either way, it creates the worktree via `workmux add` and stops. It does not sta
 
 Some work cannot run in parallel across worktrees because it needs a resource only one worktree can hold: a DAW, a simulator, a device, a database, a port, a shared install location. `--resource <name>` records which worktree holds one, so the constraint is written down instead of remembered.
 
-Claims live in the main worktree's `.claude/worktree-resources.local.json`, which every linked worktree resolves to the same path. Each claim records the resource, worktree, branch, and a timestamp, plus the issue number when the worktree came from an issue. The file is machine-local state and belongs in `.gitignore`; the skill offers to add the entry when it first creates the file.
+Claims live in the main worktree's `.claude/worktree-resources.local.json`, which every linked worktree resolves to the same path. Each claim records an id, the resource, worktree, branch, and a timestamp, plus the issue number when the worktree came from an issue. The id names one claim event, which is what `--take-over` carries: neither a path nor a timestamp identifies a claim, since a path can be reused and a timestamp has second resolution. The file is machine-local state and belongs in `.gitignore`; the skill offers to add the entry when it first creates the file.
 
 Claiming a resource another worktree already holds reports the holder and asks rather than proceeding. Answering yes proceeds: the claim is advisory, and a user who wants to override always has a reason. What it will not do is take a resource over without asking, including in the window between the check and the write, where another worktree may have claimed it in the meantime.
 

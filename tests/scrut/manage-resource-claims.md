@@ -52,7 +52,7 @@ $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live --issue 128 \
 >   && claims_list
 claimed "logic" for feature/live
-resource=logic state=held branch=feature/live issue=128 claimed=TIMESTAMP worktree=/repo/wt-live
+resource=logic state=held id=* branch=feature/live issue=128 claimed=TIMESTAMP worktree=/repo/wt-live (glob)
 ```
 
 ## The stored record carries the issue's fields
@@ -60,7 +60,7 @@ resource=logic state=held branch=feature/live issue=128 claimed=TIMESTAMP worktr
 ```scrut
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live --issue 128 > /dev/null \
->   && jq -c '{version: .version, claim: (.claims[0] | del(.claimed_at))}' "${claim_file}"
+>   && jq -c '{version: .version, claim: (.claims[0] | del(.claimed_at, .id))}' "${claim_file}"
 {"version":1,"claim":{"resource":"logic","worktree":"/repo/wt-live","branch":"feature/live","issue":128}}
 ```
 
@@ -81,7 +81,7 @@ $ setup_claims \
 >   && jq -c '.claims[0] | has("issue")' "${claim_file}" \
 >   && claims_list
 false
-resource=simulator state=held branch=feature/live claimed=TIMESTAMP worktree=/repo/wt-live
+resource=simulator state=held id=* branch=feature/live claimed=TIMESTAMP worktree=/repo/wt-live (glob)
 ```
 
 ## A held resource exits 3 and names its holder
@@ -92,7 +92,7 @@ The distinct exit code is what lets a caller branch on the outcome without parsi
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live --issue 128 > /dev/null \
 >   && claims_check_report logic
-resource "logic" is held by feature/live (issue 128) at /repo/wt-live, claimed TIMESTAMP
+resource "logic" is held by feature/live (issue 128) at /repo/wt-live, claimed TIMESTAMP, id * (glob)
 [3]
 ```
 
@@ -121,7 +121,7 @@ resource=simulator
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-gone --branch feature/gone > /dev/null \
 >   && claims_list
-resource=logic state=stale branch=feature/gone claimed=TIMESTAMP worktree=/repo/wt-gone
+resource=logic state=stale id=* branch=feature/gone claimed=TIMESTAMP worktree=/repo/wt-gone (glob)
 ```
 
 ## check reports a stale claim rather than blocking on it
@@ -157,7 +157,7 @@ $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live \
 >   && claims_list
 claimed "logic" for feature/live, clearing a stale claim from feature/gone
-resource=logic state=held branch=feature/live claimed=TIMESTAMP worktree=/repo/wt-live
+resource=logic state=held id=* branch=feature/live claimed=TIMESTAMP worktree=/repo/wt-live (glob)
 ```
 
 ## Reclaiming from the same worktree refreshes rather than takes over
@@ -177,7 +177,7 @@ refreshed the claim on "logic" for feature/live
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
 >   && claims_tail claim logic --worktree /repo/main --branch main
-resource "logic" is held by feature/live at /repo/wt-live, claimed *; pass --take-over * to claim it anyway (glob)
+resource "logic" is held by feature/live at /repo/wt-live, claimed *, id *; pass --take-over * to claim it anyway (glob)
 [3]
 ```
 
@@ -188,7 +188,7 @@ The claim stays advisory: a user who has been asked and said yes needs a way thr
 ```scrut
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
->   && token="$(claims list --json | jq -r '.[0].claimed_at')" \
+>   && token="$(claims list --json | jq -r '.[0].id')" \
 >   && claims claim logic --worktree /repo/main --branch main --take-over "${token}" \
 >   && claims list | wc -l | tr -d ' '
 claimed "logic" for main, taking it over from feature/live
@@ -215,7 +215,7 @@ $ setup_claims \
 >   && claims release logic \
 >   && claims_list
 released "logic" held by feature/live
-resource=disk state=held branch=feature/live claimed=TIMESTAMP worktree=/repo/wt-live
+resource=disk state=held id=* branch=feature/live claimed=TIMESTAMP worktree=/repo/wt-live (glob)
 ```
 
 ## release by worktree removes every claim that worktree holds
@@ -229,7 +229,7 @@ $ setup_claims \
 >   && claims_list
 released "disk" held by feature/live
 released "logic" held by feature/live
-resource=simulator state=held branch=main claimed=TIMESTAMP worktree=/repo/main
+resource=simulator state=held id=* branch=main claimed=TIMESTAMP worktree=/repo/main (glob)
 ```
 
 ## Releasing a resource nobody holds is reported, not an error
@@ -248,7 +248,7 @@ $ setup_claims \
 >   && claims prune \
 >   && claims_list
 pruned "logic" from feature/gone at /repo/wt-gone
-resource=disk state=held branch=feature/live claimed=TIMESTAMP worktree=/repo/wt-live
+resource=disk state=held id=* branch=feature/live claimed=TIMESTAMP worktree=/repo/wt-live (glob)
 ```
 
 ## prune reports when there is nothing stale
@@ -314,9 +314,9 @@ The skill promises not to rewrite a file it cannot read. Validating only the env
 ```scrut
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
->   && printf '{"version": 1, "claims": [{"resource": "logic"}]}' > "${claim_file}" \
+>   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource": "logic"}]}' > "${claim_file}" \
 >   && claims list 2>&1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
 [1]
 ```
 
@@ -325,9 +325,9 @@ manage-resource-claims: */.claude/worktree-resources.local.json holds a malforme
 ```scrut
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
->   && printf '{"version": 1, "claims": [{"resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":"x"}]}' > "${claim_file}" \
+>   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":"x"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
 ```
 
 ## Concurrent claims on different resources both survive
@@ -380,9 +380,9 @@ Validation on write and on read agree, so a hand-edited file cannot reintroduce 
 ```scrut
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
->   && printf '{"version": 1, "claims": [{"resource":"a b","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
+>   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource":"a b","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
 ```
 
 ## Outside a git repository the claim file cannot be resolved
@@ -412,7 +412,7 @@ $ setup_claims \
 >   && env PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${live_porcelain}" WORKTREE_RESOURCES_FILE="${claim_file}" bash "${CREATE_WORKTREE_MANAGE_RESOURCE_CLAIMS_BIN}" claim logic --worktree /repo/wt-live --branch feature/live \
 >   && claims_list
 claimed "logic" for feature/live
-resource=logic state=held branch=feature/live claimed=TIMESTAMP worktree=/repo/wt-live
+resource=logic state=held id=* branch=feature/live claimed=TIMESTAMP worktree=/repo/wt-live (glob)
 ```
 
 ## Help is available before jq is required
@@ -568,9 +568,9 @@ A looser read contract would let a hand-edited file hold a claim no command can 
 ```scrut
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
->   && printf '{"version": 1, "claims": [{"resource":"-logic","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
+>   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource":"-logic","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
 ```
 
 ## A stored branch carrying whitespace is refused
@@ -578,9 +578,9 @@ manage-resource-claims: */.claude/worktree-resources.local.json holds a malforme
 ```scrut
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
->   && printf '{"version": 1, "claims": [{"resource":"a","worktree":"/repo/wt-live","branch":"b c","claimed_at":"t"}]}' > "${claim_file}" \
+>   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/repo/wt-live","branch":"b c","claimed_at":"t"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
 ```
 
 ## A worktree path containing spaces is still accepted
@@ -591,7 +591,7 @@ A path legitimately may contain spaces, which is why `list` emits `worktree=` la
 $ setup_claims \
 >   && claims claim logic --worktree "/repo/with space" --branch feature/live > /dev/null \
 >   && claims_list
-resource=logic state=held branch=feature/live claimed=TIMESTAMP worktree=/repo/with space
+resource=logic state=held id=* branch=feature/live claimed=TIMESTAMP worktree=/repo/with space (glob)
 ```
 
 ## Two claims on one resource are refused
@@ -601,7 +601,7 @@ One claim per resource is the invariant every lookup assumes. `claim_for_resourc
 ```scrut
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
->   && printf '{"version":1,"claims":[{"resource":"logic","worktree":"/repo/wt-gone","branch":"a","claimed_at":"t"},{"resource":"logic","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
+>   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"logic","worktree":"/repo/wt-gone","branch":"a","claimed_at":"t"},{"id":"bbbbbbbbbbbb","resource":"logic","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
 >   && claims list 2>&1
 manage-resource-claims: */.claude/worktree-resources.local.json holds more than one claim on the same resource; remove the duplicates (glob)
 [1]
@@ -622,9 +622,9 @@ manage-resource-claims: --worktree must not contain control characters
 ```scrut
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
->   && printf '{"version":1,"claims":[{"resource":"a","worktree":"/a\\n/b","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
+>   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/a\\n/b","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
 ```
 
 ## --take-over naming a holder that no longer holds it is refused
@@ -634,16 +634,16 @@ Approval is about a particular holder. If a third worktree takes the resource be
 ```scrut
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
->   && claims_tail claim logic --worktree /repo/main --branch main --take-over 2000-01-01T00:00:00Z
-resource "logic" is held by feature/live at /repo/wt-live, claimed *; --take-over named the claim made at 2000-01-01T00:00:00Z, which is not the one held now, so nothing was changed (glob)
+>   && claims_tail claim logic --worktree /repo/main --branch main --take-over deadbeef
+resource "logic" is held by feature/live at /repo/wt-live, claimed *, id *; --take-over named claim deadbeef, which is not the one held now, so nothing was changed (glob)
 [3]
 ```
 
-## --take-over requires the holder's claimed_at
+## --take-over requires the holder's id
 
 ```scrut
 $ setup_claims && claims_tail claim logic --worktree /repo/main --branch main --take-over
-manage-resource-claims: --take-over requires the claimed_at value of the holder being displaced
+manage-resource-claims: --take-over requires the id of the holder being displaced
 [1]
 ```
 
@@ -654,17 +654,17 @@ The CLI accepts only digit strings for `--issue`, so the read contract has to ma
 ```scrut
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
->   && printf '{"version":1,"claims":[{"resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":1.5}]}' > "${claim_file}" \
+>   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":1.5}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
 ```
 
 ```scrut
 $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
->   && printf '{"version":1,"claims":[{"resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":-3}]}' > "${claim_file}" \
+>   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":-3}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
 ```
 
 ## A lock held past the wait is reported, never broken
@@ -711,7 +711,7 @@ Git keeps listing a worktree whose directory has been deleted and marks the reco
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-prunable --branch feature/prunable > /dev/null \
 >   && claims_list
-resource=logic state=stale branch=feature/prunable claimed=TIMESTAMP worktree=/repo/wt-prunable
+resource=logic state=stale id=* branch=feature/prunable claimed=TIMESTAMP worktree=/repo/wt-prunable (glob)
 ```
 
 ## A version in scientific notation reports the version, not a syntax error
@@ -746,7 +746,7 @@ manage-resource-claims: */.claude/worktree-resources.local.json declares version
 $ setup_claims \
 >   && claims claim logic --worktree /repo/moved-away --branch feature/live > /dev/null \
 >   && claims_list
-resource=logic state=held branch=feature/live claimed=TIMESTAMP worktree=/repo/moved-away
+resource=logic state=held id=* branch=feature/live claimed=TIMESTAMP worktree=/repo/moved-away (glob)
 ```
 
 ## A claim survives its worktree switching branch
@@ -757,7 +757,7 @@ The mirror case: `git switch` changes the branch and keeps the path.
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/since-switched > /dev/null \
 >   && claims_list
-resource=logic state=held branch=feature/since-switched claimed=TIMESTAMP worktree=/repo/wt-live
+resource=logic state=held id=* branch=feature/since-switched claimed=TIMESTAMP worktree=/repo/wt-live (glob)
 ```
 
 ## A claim is stale only when neither path nor branch matches
@@ -766,5 +766,5 @@ resource=logic state=held branch=feature/since-switched claimed=TIMESTAMP worktr
 $ setup_claims \
 >   && claims claim logic --worktree /repo/wt-gone --branch feature/gone > /dev/null \
 >   && claims_list
-resource=logic state=stale branch=feature/gone claimed=TIMESTAMP worktree=/repo/wt-gone
+resource=logic state=stale id=* branch=feature/gone claimed=TIMESTAMP worktree=/repo/wt-gone (glob)
 ```
