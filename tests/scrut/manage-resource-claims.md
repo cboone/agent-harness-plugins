@@ -34,6 +34,15 @@ $ function setup_claims() {
 >   printf '%s\n' "${output}" | sed 's/claimed [0-9TZ:-]*/claimed TIMESTAMP/'
 >   return "${status}"
 > }
+> function claims_shared() {
+>   env -u WORKTREE_RESOURCES_FILE PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${shared_porcelain}" bash "${MANAGE_RESOURCE_CLAIMS_BIN}" "$@"
+> }
+> function setup_shared() {
+>   setup_claims
+>   main_worktree="$(mktemp -d)"
+>   linked_worktree="$(mktemp -d)"
+>   shared_porcelain="$(printf 'worktree %s\nHEAD aaa\nbranch refs/heads/main\n\nworktree %s\nHEAD bbb\nbranch refs/heads/feature/live\n' "${main_worktree}" "${linked_worktree}")"
+> }
 > function without_jq() {
 >   local minimal
 >   minimal="$(mktemp -d)"
@@ -957,4 +966,31 @@ $ setup_claims \
 >   && echo "none left"
 pruned "logic" from feature/live at /repo/wt-live
 none left
+```
+
+## A claim from a linked worktree is written under the main worktree
+
+This is the mechanism the whole feature rests on: worktrees share a repository but not a working tree, so one shared file has to be reachable from every one of them. `claim_file_path` resolves it from the first record of `git worktree list --porcelain -z`, which is always the main worktree.
+
+Every other case here sets `WORKTREE_RESOURCES_FILE`, which bypasses that resolution entirely, so this is the only case that exercises it succeeding. It runs with the override unset and asserts the file lands under the main worktree rather than the linked one it was invoked from.
+
+```scrut
+$ setup_shared \
+>   && ( cd "${linked_worktree}" && claims_shared claim logic --worktree "${linked_worktree}" --branch feature/live ) \
+>   && test -f "${main_worktree}/.claude/worktree-resources.local.json" && echo "written under the main worktree" \
+>   && test ! -e "${linked_worktree}/.claude/worktree-resources.local.json" && echo "not under the linked worktree"
+claimed "logic" for feature/live
+written under the main worktree
+not under the linked worktree
+```
+
+## A claim made in one worktree is visible from another
+
+The point of resolving one shared path: a second worktree reading with the override unset sees the first worktree's claim.
+
+```scrut
+$ setup_shared \
+>   && ( cd "${linked_worktree}" && claims_shared claim logic --worktree "${linked_worktree}" --branch feature/live > /dev/null ) \
+>   && ( cd "${main_worktree}" && claims_shared list | sed 's/claimed=[^ ]*/claimed=TIMESTAMP/' | sed 's/id=[^ ]*/id=ID/' )
+resource=logic state=held id=ID branch=feature/live claimed=TIMESTAMP worktree=* (glob)
 ```
