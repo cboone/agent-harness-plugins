@@ -14,7 +14,7 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 Picks up where `pr` stops. The `pr` skill creates the pull request, prints the URL, and terminates; everything after that has traditionally been hand-driven. This skill takes over and tends the PR until it is ready to merge.
 
-On each tick it takes one snapshot of the PR and reduces it to four axes: checks, Copilot, mergeability, and PR state. It then acts on the first problem it finds, in priority order:
+On each tick it takes one snapshot of the PR and reduces it to four axes: checks, Copilot, mergeability, and PR state. It then acts on the first problem it finds, in priority order. On a PR Dependabot authored, the skill never pushes, so each of these follows [Dependabot PRs](#dependabot-prs) instead:
 
 1. **Branch is conflicted or behind the base**: invokes `merge-main`, since a stale branch is a common cause of check failures.
 1. **A check failed**: pulls the failing job's logs and repairs it. Lint and format failures go to `lint-and-fix`; generated-tree drift is rebuilt with the repository's own build scripts; test and build failures are diagnosed from the logs.
