@@ -254,6 +254,41 @@
           "path": ".github/actions/setup/action.yml"
         }
       ]
+    },
+    {
+      "number": 213,
+      "title": "chore(deps): bump the docker-images group with 3 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/213",
+      "headRefName": "dependabot/docker/docker/docker-images-0a1b2c3d4e",
+      "headRefOid": "2132132132132132132132132132132132132132",
+      "baseRefName": "main",
+      "body": "Bumps the docker-images group with 3 updates in the /docker directory: redis, nginx and node.\n\nUpdates `redis` from 7.2.0-alpine@sha256:2870770 to 7.2.0-alpine@sha256:9a3f1c2\n\nUpdates `nginx` from 1.27.0-alpine@sha256:1111aaa to 1.27.1-alpine@sha256:2222bbb\n\nUpdates `node` from sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef to sha256:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "docker/Dockerfile"
+        }
+      ]
+    },
+    {
+      "number": 214,
+      "title": "chore(deps): bump the npm-libs group across 2 directories with 2 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/214",
+      "headRefName": "dependabot/npm_and_yarn/npm-libs-5f6e7d8c9b",
+      "headRefOid": "2142142142142142142142142142142142142142",
+      "baseRefName": "main",
+      "body": "Updates `underscore` from 1.13.6 to 1.13.7\n\n_Description has been truncated_\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "web/package-lock.json"
+        },
+        {
+          "path": "api/package-lock.json"
+        }
+      ]
     }
   ],
   "alerts": {
@@ -523,6 +558,25 @@
         "security_vulnerability": {
           "first_patched_version": {
             "identifier": "7.0.1"
+          }
+        }
+      },
+      {
+        "number": 45,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "underscore"
+          },
+          "manifest_path": "web/package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-ffff-ffff-ffff",
+          "severity": "medium"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "1.13.7"
           }
         }
       }

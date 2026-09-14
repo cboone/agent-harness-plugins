@@ -330,6 +330,29 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.jso
 [{"package":"lodash","manifest":"api/package-lock.json"},{"package":"pillow","manifest":"mjx/requirements.txt"},{"package":"actions/checkout","manifest":".github/actions/setup/action.yml"},{"package":"lodash","manifest":"web/requirements.txt"}]
 ```
 
+A container image group names its images without links.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 213) | .directories'
+[{"directory":"docker","names":["redis","nginx","node"]}]
+```
+
+A group whose body lost its `Bumps` lines says nothing about directories. When it touches dependency files in more than one, a matched alert stays unconfirmed.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 214) | {directories, alerts: [.alerts[] | {number, directoryConfirmed, cleared}]}'
+{"directories":[],"alerts":[{"number":45,"directoryConfirmed":false,"cleared":null}]}
+```
+
+## An image digest spelled with sha256
+
+A `sha256:` digest is a digest whether it stands alone or follows a tag. When the tag changes with it, the tag decides the update type.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 213) | [.updates[] | {name, type, semverBreaking}]'
+[{"name":"redis","type":"digest","semverBreaking":false},{"name":"nginx","type":"patch","semverBreaking":false},{"name":"node","type":"digest","semverBreaking":null}]
+```
+
 ## Patched versions sort by version, not as strings
 
 ```scrut

@@ -321,9 +321,15 @@ function do_summarize() {
 
     # A commit or image digest. Titles carry a full 40-character SHA for an
     # action pinned to a commit, and a short one for a container digest or a
-    # submodule. A short form must contain a letter, which keeps a date-shaped
-    # version like 20240101 from reading as a digest.
-    def is_sha: test("^[0-9a-f]{40}$") or (test("^[0-9a-f]{7,39}$") and test("[a-f]"));
+    # submodule. An image digest can also be spelled sha256:HEX, full length or
+    # short, and follow a tag (7.2.0-alpine@sha256:2870770). A bare short form
+    # must contain a letter, which keeps a date-shaped version like 20240101
+    # from reading as a digest; the sha256: prefix already rules that out.
+    def image_tag: if test("@sha256:") then sub("@sha256:.*$"; "") else "" end;
+    def is_sha:
+      if test("^(.*@)?sha256:") then sub("^(.*@)?sha256:"; "") | test("^[0-9a-f]{7,64}$")
+      else test("^[0-9a-f]{40}$") or (test("^[0-9a-f]{7,39}$") and test("[a-f]"))
+      end;
 
     # Titles wrap digests in backticks and body leads end in a period.
     def clean_version: gsub("`"; "") | sub("\\.$"; "");
@@ -342,8 +348,9 @@ function do_summarize() {
     # type names the position that changed. A change that leaves every numeric
     # part equal (a pre-release or build suffix, say) is unknown rather than
     # guessed at.
+    # A tag that changes alongside its digest is compared as a version.
     def update_type($from; $to):
-      if ($from | is_sha) and ($to | is_sha) then "digest"
+      if ($from | is_sha) and ($to | is_sha) and ($from | image_tag) == ($to | image_tag) then "digest"
       else
         (first($from | numeric_parts) // null) as $f
         | (first($to | numeric_parts) // null) as $t
@@ -362,7 +369,7 @@ function do_summarize() {
     def semver_breaking($from; $to):
       (first($from | numeric_parts) // null) as $f
       | (first($to | numeric_parts) // null) as $t
-      | if ($from | is_sha) or $f == null or $t == null then null
+      | if (($from | is_sha) and ($from | image_tag) == "") or $f == null or $t == null then null
         elif $f.major != $t.major then true
         elif $f.major == 0 and $f.minor != $t.minor then true
         elif $f.major == 0 and $f.minor == 0 and $f.patch != $t.patch then true
@@ -402,13 +409,24 @@ function do_summarize() {
     def group_name: .title // "" | first(capture("(?i)\\bthe (?<group>\\S+) group\\b").group) // null;
 
     # A grouped body opens with one Bumps line per directory, which names the
-    # dependencies it updates there. The Updates lines carry no directory, and a
-    # long list is left off the Bumps line, so an empty names array means the line
-    # did not say rather than that nothing updates in that directory.
+    # dependencies it updates there, as links or, for container images, as plain
+    # names ("golang, node and nginx."). The Updates lines carry no directory, and
+    # a long list is left off the Bumps line, so an empty names array means the
+    # line did not say rather than that nothing updates in that directory.
     def directories:
       [body_lines
         | capture("^Bumps the \\S+ group with [0-9]+ updates? in the (?<directory>\\S+) directory:(?<list>.*)$")
-        | {directory: (.directory | sub("^/"; "") | sub("/$"; "")), names: [.list | scan("\\[([^\\]]+)\\]") | .[0]]}];
+        | {
+            directory: (.directory | sub("^/"; "") | sub("/$"; "")),
+            names: [
+              .list
+              | gsub("\\[(?<name>[^\\]]+)\\]\\([^)]*\\)"; "\(.name)")
+              | sub("\\.$"; "")
+              | splits(",\\s*|\\s+and\\s+")
+              | sub("^\\s+"; "")
+              | select(length > 0)
+            ]
+          }];
 
     # A grouped title announces how many updates it carries. A body truncated by
     # the pull request size limit loses its later Updates lines, so a parsed list
@@ -523,18 +541,21 @@ function do_summarize() {
 
     # A group across several directories can update a package in one directory
     # and touch a lockfile in another for a different package, so the package
-    # has to be tied to the alert directory too. confirmed: a single directory, or
-    # the Bumps line for the alert directory names the package. excluded: that
-    # line names only other packages. unconfirmed: no line names any package for
-    # the alert directory. For github-actions, the / directory covers
-    # .github/workflows.
+    # has to be tied to the alert directory too. confirmed: the PR updates a
+    # single directory, or the Bumps line for the alert directory names the
+    # package. excluded: that line names only other packages. unconfirmed: no line
+    # names any package for the alert directory, or a group has no Bumps lines at
+    # all (a body cut short) and touches dependency files in several directories.
+    # For github-actions, the / directory covers .github/workflows.
     def directory_match($pr):
       (.package | lower) as $package
       | (.manifest | dirname) as $directory
       | [$pr.directories[]
           | select(.directory == $directory or ($pr.ecosystem == "github_actions" and .directory == "" and $directory == ".github/workflows"))
           | .names[] | lower] as $names
-      | if ($pr.directories | length) < 2 then "confirmed"
+      | ([$pr.files[] | select(dependency_file or test("(^|/)action\\.ya?ml$") or startswith(".github/workflows/")) | dirname] | unique | length) as $touched
+      | if ($pr.directories | length) == 1 then "confirmed"
+        elif ($pr.directories | length) == 0 then (if $pr.shape != "group" or $touched <= 1 then "confirmed" else "unconfirmed" end)
         elif ($names | any(. == $package)) then "confirmed"
         elif ($names | length) > 0 then "excluded"
         else "unconfirmed"
