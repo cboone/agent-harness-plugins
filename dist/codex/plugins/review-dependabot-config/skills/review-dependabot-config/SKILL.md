@@ -18,7 +18,7 @@ This skill reviews configuration. To work through the open Dependabot PRs themse
 
 The user may provide these options inline:
 
-- **--repo `OWNER/REPO`**: Review this repository's settings instead of the one the `origin` remote points at. File checks still read the local checkout, so pair it with a checkout of that repository
+- **--repo `OWNER/REPO`**: Review this repository instead of the one the `origin` remote points at. From a checkout of another repository, files are read through the contents API and no local edits are offered (step 1); run from a checkout of `OWNER/REPO` to apply fixes
 - **--report-only**: Report and stop. Offer no fixes
 
 ## Ground Rules
@@ -139,12 +139,12 @@ Use `AskUserQuestion` where it exists. Without it (Codex CLI, OpenCode), print t
 1. **Apply the confirmed outward-facing changes**, one at a time, with the command for each:
 
    ```bash
-   gh label create dependencies --repo OWNER/REPO --color 0366d6 --description "Dependency updates"
+   gh label create LABEL --repo OWNER/REPO --color 0366d6 --description "DESCRIPTION"
    gh api -X PUT repos/OWNER/REPO/vulnerability-alerts
    gh api -X PUT repos/OWNER/REPO/automated-security-fixes
    ```
 
-   Enable alerts before security updates, which cannot run without them. Both calls need repository admin rights and return `204` on success; re-read each setting afterwards as `./references/repository-settings.md` describes, and report a refusal as not applied.
+   `LABEL` is the missing label the finding names (`dependencies`, or a custom one such as `javascript`), with a description that says what it marks. Enable alerts before security updates, which cannot run without them. Both calls need repository admin rights and return `204` on success; re-read each setting afterwards as `./references/repository-settings.md` describes, and report a refusal as not applied.
 
    For a missing Dependabot secret, give the user the command rather than running it: `gh secret set NAME --repo OWNER/REPO --app dependabot`.
 
