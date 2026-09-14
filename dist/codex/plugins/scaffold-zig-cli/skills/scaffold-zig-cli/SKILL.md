@@ -145,6 +145,8 @@ find src .github .claude docs tests -maxdepth 2 -type l 2> /dev/null
 
 `find` reports a named starting point that is itself a symlink, so this covers `src` and `.claude` as well as `.github/workflows` and `docs/plans/todo`. For anything it lists, `readlink` it, report where it points, and ask. This is the same hazard as the target directory, one level down, and it is worth checking separately because the preflight above cannot see it.
 
+Read the output, not the exit status. On a fresh scaffold most of those directories do not exist yet, so `find` complains about each missing one and exits non-zero while still listing the symlinks among the paths that do exist. The `2> /dev/null` hides the complaints; a non-zero exit here means nothing. `-maxdepth` is fine on macOS, where it is a documented BSD `find` primary, not a GNU extension.
+
 The second check, for uncommitted work, waits for step 4. It only makes sense once the repository step 23 will commit into is known, and that is what step 4 establishes.
 
 ### 4. Initialize Git
