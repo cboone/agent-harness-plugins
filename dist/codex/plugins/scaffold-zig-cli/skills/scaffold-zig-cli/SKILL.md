@@ -142,11 +142,14 @@ Note that this check stands on its own: a clean `git status` later says nothing 
 ```bash
 find build.zig build.zig.zon README.md LICENSE CHANGELOG.md Makefile \
   typos.toml .gitignore .editorconfig \
+  docs/plans/todo/.gitkeep docs/plans/done/.gitkeep \
   src .github .claude docs tests \
   -maxdepth 2 -type l 2> /dev/null
 ```
 
-`find` reports a named starting point that is itself a symlink, whether it is a file or a directory, so one scan covers the top-level files, `src` and `.claude`, and the nested `.github/workflows` and `docs/plans/todo`. For anything it lists, `readlink` it, report where it points, and ask. Say it is a symlink rather than merely that it exists: the two cases look identical in the check above and are not the same thing to overwrite.
+`find` reports a named starting point that is itself a symlink, whether it is a file or a directory, so one scan covers the top-level files, `src` and `.claude`, and the nested `.github/workflows` and `docs/plans/todo`.
+
+The two `docs/plans/*/.gitkeep` paths are named individually because `-maxdepth 2` cannot reach them: counting from the `docs` starting point they sit at depth 3, one past the limit. Naming them covers exactly those two rather than raising the depth for every starting point, which would start reporting symlinks deeper inside `src` that this run never writes. For anything it lists, `readlink` it, report where it points, and ask. Say it is a symlink rather than merely that it exists: the two cases look identical in the check above and are not the same thing to overwrite.
 
 Read the output, not the exit status. On a fresh scaffold most of those paths do not exist yet, so `find` complains about each missing one and exits non-zero while still listing the symlinks among the paths that do exist. The `2> /dev/null` hides the complaints; a non-zero exit here means nothing. `-maxdepth` is fine on macOS, where it is a documented BSD `find` primary, not a GNU extension.
 

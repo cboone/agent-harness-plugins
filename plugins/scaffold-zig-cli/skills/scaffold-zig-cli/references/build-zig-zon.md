@@ -21,7 +21,7 @@ Emit the file exactly as shown, **without** a `.fingerprint` field. The compiler
 }
 ```
 
-After the first `zig build`, the file gains one line between `.version` and `.minimum_zig_version`:
+The first `zig build` fails and prints a suggested fingerprint. It does not edit the manifest: nothing writes this line but the skill, copying the value out of that diagnostic as step 21 describes. Add it between `.version` and `.minimum_zig_version`, indented like its neighbours:
 
 ```zig
     .fingerprint = 0xd7ba43a4d5bc8918, // Changing this has security and trust implications.
