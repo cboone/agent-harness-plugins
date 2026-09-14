@@ -354,13 +354,15 @@ function do_summarize() {
 
     # Requirement updates carry an operator (~> 1.2, >= 2.0), which is dropped
     # before the numeric parts are read.
+    # A fourth part, such as a NuGet revision, is read too.
     def numeric_parts:
       sub("^[~^>=<!\\s]*[vV]?"; "")
-      | capture("^(?<major>[0-9]+)(\\.(?<minor>[0-9]+))?(\\.(?<patch>[0-9]+))?")
+      | capture("^(?<major>[0-9]+)(\\.(?<minor>[0-9]+))?(\\.(?<patch>[0-9]+))?(\\.(?<revision>[0-9]+))?")
       | {
           major: (.major | tonumber),
           minor: ((.minor // "0") | tonumber),
-          patch: ((.patch // "0") | tonumber)
+          patch: ((.patch // "0") | tonumber),
+          revision: ((.revision // "0") | tonumber)
         };
 
     # type names the position that changed. A change that leaves every numeric
@@ -375,7 +377,7 @@ function do_summarize() {
         | if $f == null or $t == null then "unknown"
           elif $f.major != $t.major then "major"
           elif $f.minor != $t.minor then "minor"
-          elif $f.patch != $t.patch then "patch"
+          elif $f.patch != $t.patch or $f.revision != $t.revision then "patch"
           else "unknown"
           end
       end;

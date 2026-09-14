@@ -351,6 +351,15 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.jso
 {"directories":[],"alerts":[{"number":45,"directoryConfirmed":false,"cleared":null}]}
 ```
 
+## A four-part version
+
+A change in the fourth part, such as a NuGet revision, is a patch rather than an unknown change.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 215) | .updates[0] | {from, to, type, semverBreaking}'
+{"from":"4.2.1.7","to":"4.2.1.9","type":"patch","semverBreaking":false}
+```
+
 ## An image digest spelled with sha256
 
 A `sha256:` digest is a digest whether it stands alone or follows a tag. When the tag changes with it, the tag decides the update type.

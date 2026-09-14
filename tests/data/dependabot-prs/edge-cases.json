@@ -289,6 +289,22 @@
           "path": "api/package-lock.json"
         }
       ]
+    },
+    {
+      "number": 215,
+      "title": "chore(deps): bump Example.Client from 4.2.1.7 to 4.2.1.9",
+      "url": "https://github.com/example-org/edge-repo/pull/215",
+      "headRefName": "dependabot/nuget/Example.Client-4.2.1.9",
+      "headRefOid": "2152152152152152152152152152152152152152",
+      "baseRefName": "main",
+      "body": "Bumps [Example.Client](https://github.com/example-org/client) from 4.2.1.7 to 4.2.1.9.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "src/App/App.csproj"
+        }
+      ]
     }
   ],
   "alerts": {
