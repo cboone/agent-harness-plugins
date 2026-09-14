@@ -549,7 +549,7 @@ manage-resource-claims: --branch must not contain whitespace
 
 ## A non-integer version reports the schema error, not an arithmetic one
 
-The declared version is compared with Bash arithmetic, so a JSON `1.5` that passed a bare number check would fail as an arithmetic syntax error rather than the schema error this is meant to report.
+A `1.5` is refused as a malformed envelope rather than reported as an unsupported version it was never going to be, which keeps the two diagnostics distinct.
 
 ```scrut
 $ setup_claims \
@@ -590,7 +590,7 @@ A path legitimately may contain spaces, which is why `list` emits `worktree=` la
 $ setup_claims \
 >   && claims claim logic --worktree "/repo/with space" --branch feature/live > /dev/null \
 >   && claims_list
-resource=logic state=stale branch=feature/live claimed=TIMESTAMP worktree=/repo/with space
+resource=logic state=held branch=feature/live claimed=TIMESTAMP worktree=/repo/with space
 ```
 
 ## Two claims on one resource are refused
@@ -735,4 +735,35 @@ $ setup_claims \
 >   && claims list 2>&1
 manage-resource-claims: */.claude/worktree-resources.local.json declares version 0; this script supports version 1 only, so it will not read or rewrite the file (glob)
 [1]
+```
+
+## A claim survives its worktree being moved
+
+`git worktree move` changes the path and keeps the branch, so matching on the path alone would read a live holder as stale and let another worktree take the resource without anyone being asked. `/repo/moved-away` is a path git no longer lists, but `feature/live` is a branch it does.
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/moved-away --branch feature/live > /dev/null \
+>   && claims_list
+resource=logic state=held branch=feature/live claimed=TIMESTAMP worktree=/repo/moved-away
+```
+
+## A claim survives its worktree switching branch
+
+The mirror case: `git switch` changes the branch and keeps the path.
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/since-switched > /dev/null \
+>   && claims_list
+resource=logic state=held branch=feature/since-switched claimed=TIMESTAMP worktree=/repo/wt-live
+```
+
+## A claim is stale only when neither path nor branch matches
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/wt-gone --branch feature/gone > /dev/null \
+>   && claims_list
+resource=logic state=stale branch=feature/gone claimed=TIMESTAMP worktree=/repo/wt-gone
 ```

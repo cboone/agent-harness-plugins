@@ -121,13 +121,31 @@ function live_worktrees() {
   porcelain="$(git worktree list --porcelain 2> /dev/null)" || return 1
   [[ -n "${porcelain}" ]] || return 1
 
+  # Each live record contributes two keys, "p <path>" and "b <branch>", because
+  # neither identifies a worktree on its own. `git worktree move` changes the
+  # path and keeps the branch; `git switch` changes the branch and keeps the
+  # path; and a removed path can later be reused by an unrelated worktree.
+  #
+  # A claim is therefore live when it matches on either key, which errs toward
+  # reporting a resource still held. That is the deliberate direction: reading
+  # a live claim as stale lets another worktree take the resource without
+  # anyone being asked, while holding one slightly too long is visible in list
+  # and cleared by release or prune.
+  #
   # The extra newline terminates the final record so it is flushed like the
   # rest. Paths may contain spaces, so the path is taken as the remainder of
   # the line rather than as a field.
   printf '%s\n\n' "${porcelain}" | awk '
-    /^worktree / { path = substr($0, 10); prunable = 0; next }
+    /^worktree / { path = substr($0, 10); branch = ""; prunable = 0; next }
+    /^branch refs\/heads\// { branch = substr($0, 19); next }
     /^prunable/  { prunable = 1; next }
-    /^$/         { if (path != "" && !prunable) { print path } ; path = ""; prunable = 0 }
+    /^$/ {
+      if (path != "" && !prunable) {
+        print "p " path
+        if (branch != "") { print "b " branch }
+      }
+      path = ""; branch = ""; prunable = 0
+    }
   '
 }
 
@@ -331,7 +349,10 @@ function decorate_claims() {
     ($live_paths | split("\n") | map(select(length > 0))) as $live
     | map(
         .worktree as $worktree
-        | . + {stale: ($live_known == "yes" and (($live | index($worktree)) == null))}
+        | .branch as $branch
+        | . + {stale: ($live_known == "yes"
+                       and (($live | index("p " + $worktree)) == null)
+                       and (($live | index("b " + $branch)) == null))}
       )
   ' <<< "${claims}"
 }

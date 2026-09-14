@@ -79,7 +79,11 @@ A missing file is not a failure: it means no claims. Anything that fails these c
 
 **Under `--parallel-only`, a failure is fatal rather than a downgrade.** That option promises every recommendation is safe to start beside the work already under way, and a claim file that cannot be read makes the held resources unknown, so nothing can be promised. Report that the claims are unreadable and that the parallel-safety filter cannot be applied, offer the ordinary recommendations instead, and let the user decide. Presenting unfiltered work as parallel-safe is the one outcome this option must never produce.
 
-**Discount stale claims.** A claim is stale when its `worktree` is absent from the `git worktree list --porcelain` output, **or** when its record carries a `prunable` line. Git keeps listing a worktree whose directory has been deleted and marks the record `prunable` rather than dropping it, so matching on the path alone would count a removed worktree as live and filter out issues that are in fact parallel-safe. Treat a stale claim as free, and mention it so the user can clear it. Nothing that no longer exists should keep a resource reserved.
+**Discount stale claims.** Read the `git worktree list --porcelain` output as whole records, and ignore any record carrying a `prunable` line: git keeps listing a worktree whose directory has been deleted and marks it that way rather than dropping it, so a removed worktree would otherwise count as live and filter out issues that are in fact parallel-safe.
+
+A claim is live when some remaining record matches **either** its `worktree` path **or** its `branch`, and stale only when neither matches. Neither field identifies a worktree by itself: `git worktree move` changes the path and keeps the branch, `git switch` changes the branch and keeps the path, and a removed path can later be reused by an unrelated worktree. Matching on either errs toward reporting a resource still held, which is the right direction here, because reading a live claim as stale is what would let this skill recommend work that collides with someone.
+
+Treat a stale claim as free, and mention it so the user can clear it. Nothing that no longer exists should keep a resource reserved.
 
 **Read the project's declared resources too.** Read whichever of `CLAUDE.md` and `AGENTS.md` exist in the repository root, and `copilot-instructions.md` under `.github/`. Any of them may be absent, which is normal, and `CLAUDE.md` is often a symlink to `AGENTS.md`, so read the target rather than treating it as a second source. Check any plan under `docs/plans/todo/` too. A heading containing "exclusive resource" names the project's resources and, usually, what kind of work needs each one. That list is what lets an issue be matched to a resource before anyone has claimed it.
 
@@ -221,5 +225,6 @@ Ready to start on one of these? Just say "start issue #N".
 - If `gh` is not authenticated, instruct the user to run `gh auth login`
 - If no open issues exist, report that and suggest checking closed issues or creating new ones
 - If all open issues are already in progress, report that and congratulate the user
-- If the claim file is unreadable or malformed, say so and carry on without it. Resource awareness sharpens the recommendations; it is not a precondition for making them
+- If the claim file is unreadable or malformed and `--parallel-only` was not asked for, say so and carry on without it. Resource awareness sharpens ordinary recommendations; it is not a precondition for making them
+- If the claim file is unreadable or malformed and `--parallel-only` was asked for, do not carry on. That option promises every recommendation is safe to start beside the work under way, and unknown claims mean nothing can be promised, so report that the filter cannot be applied and offer the ordinary recommendations as a choice instead
 - If `--parallel-only` leaves nothing to recommend, say which resources are held and which issues they hold back, rather than reporting an empty list
