@@ -1027,3 +1027,45 @@ $ setup_claims \
 >   && claims list
 resource=logic state=stale id=aaaaaaaaaaaa branch=feature/live claimed=t worktree=/repo/wt-live
 ```
+
+## Releasing by path releases a claim whose worktree has moved
+
+`git worktree move` changes the path but not the admin directory, and a claim deliberately holds across it. Releasing by the worktree's current path would otherwise report `no claim to release` and leave the claim behind, which is the failure the identity was supposed to rule out rather than introduce.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"logic","worktree":"/repo/wt-old","branch":"feature/live","gitdir":"/admin/wt-live","claimed_at":"t"}]}' > "${claim_file}" \
+>   && claims release --worktree /repo/wt-live \
+>   && jq -c '.claims' "${claim_file}"
+released "logic" held by feature/live
+[]
+```
+
+## Releasing by a reused path leaves another worktree's claim alone
+
+The same rule in the other direction. The path matches, but it is a different worktree's now, and releasing on the path alone would drop a claim its holder still has.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"logic","worktree":"/repo/wt-live","branch":"feature/live","gitdir":"/admin/somewhere-else","claimed_at":"t"}]}' > "${claim_file}" \
+>   && claims release --worktree /repo/wt-live \
+>   && jq -c '[.claims[].resource]' "${claim_file}"
+no claim to release
+["logic"]
+```
+
+## Releasing by path still matches a claim that has no identity
+
+A claim recorded before the worktree existed carries no `gitdir`, so the path is all there is to match on.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"logic","worktree":"/repo/wt-live","branch":"feature/live","claimed_at":"t"}]}' > "${claim_file}" \
+>   && claims release --worktree /repo/wt-live \
+>   && jq -c '.claims' "${claim_file}"
+released "logic" held by feature/live
+[]
+```

@@ -834,8 +834,8 @@ function cmd_claim() {
 }
 
 function cmd_release() {
-  local resource="" worktree=""
-  local file claims removed updated
+  local resource="" worktree="" gitdir=""
+  local file claims removed updated selected
 
   while [[ $# -gt 0 ]]; do
     case "${1}" in
@@ -876,22 +876,40 @@ function cmd_release() {
     die "release requires a resource name that has no whitespace and does not start with a hyphen"
   fi
 
+  # A claim holds across `git worktree move`, so the path recorded when it was
+  # made is not always the path it is released by. Matching the identity where
+  # both the claim and the named worktree have one releases a moved worktree's
+  # claim, and declines to release a claim belonging to a different worktree
+  # that now occupies the same path. The path decides when either side has no
+  # identity, which is the case for a claim made before the worktree existed.
+  if [[ -n "${worktree}" ]]; then
+    gitdir="$(worktree_identity "${worktree}")"
+  fi
+
+  # One definition used in both polarities, so the kept set is always the exact
+  # complement of the released set.
+  selected='def selected:
+              (($resource != "") and .resource == $resource)
+              or (($worktree != "")
+                  and (if ((.gitdir // "") != "") and ($gitdir != "")
+                       then .gitdir == $gitdir
+                       else .worktree == $worktree
+                       end));'
+
   file="$(claim_file_path)"
   acquire_lock "${file}"
   claims="$(read_claims "${file}")"
 
-  removed="$(jq -c --arg resource "${resource}" --arg worktree "${worktree}" \
-    'map(select((($resource != "") and .resource == $resource)
-                or (($worktree != "") and .worktree == $worktree)))' <<< "${claims}")"
+  removed="$(jq -c --arg resource "${resource}" --arg worktree "${worktree}" --arg gitdir "${gitdir}" \
+    "${selected} map(select(selected))" <<< "${claims}")"
 
   if [[ "$(jq -r 'length' <<< "${removed}")" -eq 0 ]]; then
     printf 'no claim to release\n'
     return
   fi
 
-  updated="$(jq -c --arg resource "${resource}" --arg worktree "${worktree}" \
-    'map(select((($resource == "") or .resource != $resource)
-                and (($worktree == "") or .worktree != $worktree)))' <<< "${claims}")"
+  updated="$(jq -c --arg resource "${resource}" --arg worktree "${worktree}" --arg gitdir "${gitdir}" \
+    "${selected} map(select(selected | not))" <<< "${claims}")"
 
   write_claims "${file}" "${updated}"
 
