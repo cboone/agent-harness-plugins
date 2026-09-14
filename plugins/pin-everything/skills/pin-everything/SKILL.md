@@ -159,7 +159,7 @@ Create or merge `.github/dependabot.yml` with:
 - Per-ecosystem split groups (`<ecosystem>-minor-patch` and `<ecosystem>-major`) so minor/patch can auto-merge later while majors get human review.
 - 10-PR cap per ecosystem (raised from the default of 5 -- SHA-pinning produces finer-grained PRs than tag-pinning).
 - `versioning-strategy: increase` for `npm` (and for `pip` if step 6 exact-pinned Python requirements to `==X.Y.Z`) so existing exact pins are not widened on the first Dependabot bump.
-- Coverage for `github-actions` plus every ecosystem from the detection table in `./references/dependabot.md` that the repo uses, from `npm`, `cargo`, and `gomod` through `maven`, `terraform`, and `pre-commit`. A Python project with `uv.lock` gets `uv`, not `pip`, and a `package.json` beside `bun.lock` gets `bun`, not `npm`.
+- Coverage for every ecosystem from the detection table in `./references/dependabot.md` that the repo uses, `github-actions` included only when there are `.github/workflows/*.yml` or `*.yaml` files or a composite action with an external `uses:` step, from `npm`, `cargo`, and `gomod` through `maven`, `terraform`, and `pre-commit`. A Python project with `uv.lock` gets `uv`, not `pip`, and a `package.json` beside `bun.lock` gets `bun`, not `npm`.
 - For a manifest the table does not list, check GitHub's [supported ecosystems page](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories) and add a block of the same shape for it. No ecosystem the repo uses is left without a block; one Dependabot does not support is named to the user instead.
 
 Skip this step if `--no-dependabot` was passed. Reference: `./references/dependabot.md`.

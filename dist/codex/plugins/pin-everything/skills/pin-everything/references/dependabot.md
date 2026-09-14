@@ -52,7 +52,7 @@ updates:
       include: scope
 ```
 
-The `npm` block applies when a `package.json` is present without `bun.lock` or `bun.lockb`; drop it otherwise. A `package.json` beside only the legacy binary `bun.lockb` gets no block at all, since Dependabot cannot read that lockfile: tell the user to migrate to the text `bun.lock` first. Add a `- package-ecosystem:` block for every other ecosystem present in the repo:
+The `github-actions` block applies when the repo has `.github/workflows/*.yml` or `*.yaml` files, or a composite `action.yml` or `action.yaml` with an external `uses:` step; drop it otherwise, since an entry with nothing to update is itself a config finding. The `npm` block applies when a `package.json` is present without `bun.lock` or `bun.lockb`; drop it otherwise. A `package.json` beside only the legacy binary `bun.lockb` gets no block at all, since Dependabot cannot read that lockfile: tell the user to migrate to the text `bun.lock` first. Add a `- package-ecosystem:` block for every other ecosystem present in the repo:
 
 | Ecosystem present | Detection                                                          | Add block with `package-ecosystem:` |
 | ----------------- | ------------------------------------------------------------------ | ----------------------------------- |
