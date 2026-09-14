@@ -52,7 +52,7 @@ updates:
       include: scope
 ```
 
-The `npm` block applies when a `package.json` is present without `bun.lock`; drop it otherwise. Add a `- package-ecosystem:` block for every other ecosystem present in the repo:
+The `npm` block applies when a `package.json` is present without `bun.lock` or `bun.lockb`; drop it otherwise. A `package.json` beside only the legacy binary `bun.lockb` gets no block at all, since Dependabot cannot read that lockfile: tell the user to migrate to the text `bun.lock` first. Add a `- package-ecosystem:` block for every other ecosystem present in the repo:
 
 | Ecosystem present | Detection                                                          | Add block with `package-ecosystem:` |
 | ----------------- | ------------------------------------------------------------------ | ----------------------------------- |
@@ -72,7 +72,7 @@ The `npm` block applies when a `package.json` is present without `bun.lock`; dro
 | .NET SDK          | `global.json`                                                      | `dotnet-sdk`                        |
 | Pub (Dart)        | `pubspec.yaml`                                                     | `pub`                               |
 | Mix (Elixir)      | `mix.exs`                                                          | `mix`                               |
-| Swift             | `Package.swift`                                                    | `swift`                             |
+| Swift             | `Package.swift`, or `Package.resolved` in an Xcode project         | `swift`                             |
 | Docker            | `Dockerfile`, `Dockerfile.*`, `*.Dockerfile`, or `Containerfile`   | `docker`                            |
 | Docker Compose    | `docker-compose.yml` or `.yaml`, `compose.yml` or `.yaml`          | `docker-compose`                    |
 | Helm              | `Chart.yaml`                                                       | `helm`                              |

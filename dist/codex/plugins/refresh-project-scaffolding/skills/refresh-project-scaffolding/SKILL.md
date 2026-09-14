@@ -450,20 +450,21 @@ Must include language-specific entries appropriate for the detected project type
 - `version: 2` is set
 - Every ecosystem in the table below that the repository uses has an `updates` entry, and its manifest directory is covered by `directory` or `directories`. The table covers the common ecosystems only; the `review-dependabot-config` skill checks the full set:
 
-| Found                                                                                     | Expected `package-ecosystem` |
-| ----------------------------------------------------------------------------------------- | ---------------------------- |
-| `.github/workflows/*.yml` or `*.yaml`                                                     | `github-actions`             |
-| `package.json` without `bun.lock`                                                         | `npm`                        |
-| `uv.lock`                                                                                 | `uv`                         |
-| `pyproject.toml`, `setup.py`, or `requirements*.txt` without `uv.lock`                    | `pip`                        |
-| `go.mod` or `go.work`                                                                     | `gomod`                      |
-| `Cargo.toml`                                                                              | `cargo`                      |
-| `rust-toolchain.toml` or `rust-toolchain`                                                 | `rust-toolchain`             |
-| `Gemfile`                                                                                 | `bundler`                    |
-| `composer.json`                                                                           | `composer`                   |
-| `Dockerfile`                                                                              | `docker`                     |
-| `docker-compose.yml` or `.yaml`, `compose.yml` or `.yaml`                                 | `docker-compose`             |
-| `action.yml` or `action.yaml` outside `.github/workflows/`, with an external `uses:` step | `github-actions`             |
+| Found                                                                                     | Expected `package-ecosystem`         |
+| ----------------------------------------------------------------------------------------- | ------------------------------------ |
+| `.github/workflows/*.yml` or `*.yaml`                                                     | `github-actions`                     |
+| `package.json` without `bun.lock` or `bun.lockb`                                          | `npm`                                |
+| `package.json` with only `bun.lockb`                                                      | none: report migrating to `bun.lock` |
+| `uv.lock`                                                                                 | `uv`                                 |
+| `pyproject.toml`, `setup.py`, or `requirements*.txt` without `uv.lock`                    | `pip`                                |
+| `go.mod` or `go.work`                                                                     | `gomod`                              |
+| `Cargo.toml`                                                                              | `cargo`                              |
+| `rust-toolchain.toml` or `rust-toolchain`                                                 | `rust-toolchain`                     |
+| `Gemfile`                                                                                 | `bundler`                            |
+| `composer.json`                                                                           | `composer`                           |
+| `Dockerfile`                                                                              | `docker`                             |
+| `docker-compose.yml` or `.yaml`, `compose.yml` or `.yaml`                                 | `docker-compose`                     |
+| `action.yml` or `action.yaml` outside `.github/workflows/`, with an external `uses:` step | `github-actions`                     |
 
 - A composite action outside `.github/workflows/` whose `action.yml` references other actions has its directory in the `github-actions` entry
 
