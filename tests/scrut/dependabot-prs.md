@@ -360,6 +360,15 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.jso
 {"bodyTruncated":true,"updatesExpected":3,"alerts":[{"number":31,"directoryConfirmed":true,"cleared":null}]}
 ```
 
+## A grouped requirement update
+
+A group that widens requirements lists ranges with spaces, sometimes after the word `requirement`. Both forms parse, and the type comes from the numbers inside the range.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 217) | [.updates[] | {name, from, to, type}]'
+[{"name":"rake","from":"~> 12.3","to":"~> 13.0","type":"major"},{"name":"rspec","from":">= 3.10, < 4","to":">= 3.13, < 5","type":"minor"}]
+```
+
 ## A four-part version
 
 A change in the fourth part, such as a NuGet revision, is a patch rather than an unknown change.

@@ -321,6 +321,22 @@
           "path": "web/package-lock.json"
         }
       ]
+    },
+    {
+      "number": 217,
+      "title": "chore(deps): update the bundler-reqs group with 2 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/217",
+      "headRefName": "dependabot/bundler/bundler-reqs-1f2e3d4c5b",
+      "headRefOid": "2172172172172172172172172172172172172172",
+      "baseRefName": "main",
+      "body": "Updates the requirements on [rake](https://github.com/ruby/rake) and [rspec](https://github.com/rspec/rspec) to permit the latest version.\nUpdates `rake` requirement from ~> 12.3 to ~> 13.0\n\nUpdates `rspec` from >= 3.10, < 4 to >= 3.13, < 5\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "example.gemspec"
+        }
+      ]
     }
   ],
   "alerts": {

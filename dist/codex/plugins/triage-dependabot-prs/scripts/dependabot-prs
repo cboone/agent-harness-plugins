@@ -414,7 +414,7 @@ function do_summarize() {
     def body_lines: body_text | split("\n")[] | sub("\\s+$"; "");
 
     def updates:
-      [body_lines | capture("^Updates `(?<name>[^`]+)` from (?<from>\\S+) to (?<to>\\S+)$")] as $listed
+      [body_lines | capture("^Updates `(?<name>[^`]+)`(?: requirement)? from (?<from>.+?) to (?<to>.+)$")] as $listed
       | if ($listed | length) > 0 then $listed
         elif title_update != null then [title_update]
         else [body_lines | capture("^Bumps \\[(?<name>[^\\]]+)\\]\\([^)]*\\) from (?<from>\\S+) to (?<to>\\S+)$")]
@@ -529,7 +529,7 @@ function do_summarize() {
         ecosystem: (.dependency.package.ecosystem // ""),
         severity: (.security_advisory.severity // .security_vulnerability.severity // ""),
         ghsa: (.security_advisory.ghsa_id // ""),
-        manifest: (.dependency.manifest_path // ""),
+        manifest: (.dependency.manifest_path // "" | sub("^/"; "")),
         patched: (.security_vulnerability.first_patched_version.identifier // "")
       };
 
