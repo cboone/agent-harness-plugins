@@ -692,3 +692,27 @@ $ setup_claims \
 >   && claims list 2>&1 | tail -1
 manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
 ```
+
+## An ownerless lock ages out
+
+A lock with no owner file can only be judged by age: nothing records who holds it. That path uses `find -maxdepth 0 -mmin`, which is present in BSD `find` on macOS as well as GNU `find`, and this case pins it on whichever runs the suite.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "${claim_file}.lock" \
+>   && touch -t 200001010000 "${claim_file}.lock" \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/live
+claimed "logic" for feature/live
+```
+
+## A fresh ownerless lock is not aged out
+
+The same predicate must answer the other way for a lock that was just created, or every lock would be reclaimable the moment it appeared.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "${claim_file}.lock" \
+>   && claims_tail claim logic --worktree /repo/wt-live --branch feature/live
+manage-resource-claims: another claim operation is holding */.claude/worktree-resources.local.json.lock; remove it if nothing is in progress (glob)
+[1]
+```

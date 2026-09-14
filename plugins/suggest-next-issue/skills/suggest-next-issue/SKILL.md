@@ -74,13 +74,20 @@ A missing file means no claims, which is the ordinary state and not an error. Ea
 
 - `version` is the number `1`. It is the only version this skill knows.
 - `claims` is an array.
-- Every entry is an object whose `resource`, `worktree`, and `branch` are non-empty strings.
+- Every entry is an object whose `resource`, `worktree`, `branch`, and `claimed_at` are strings.
+- `resource`, `branch`, and `claimed_at` are non-empty and contain no whitespace, and `resource` does not start with a hyphen.
+- `worktree` is non-empty and contains no control characters. Spaces are legal here and only here, because it is a path.
+- No two entries name the same `resource`.
+
+That is the same contract `manage-resource-claims` enforces, and matching it matters rather than being pedantry. A `resource` of `"logic "` would never match the `logic` an issue asks for, so the conflict would go unreported; a control character in `worktree` would not match any line of `git worktree list`, so a live claim would read as stale and be discounted. A weaker check here does not fail loudly, it gives confident advice that is wrong.
 
 A missing file is not a failure: it means no claims. Anything that fails these checks is. On a failure, make the recommendations without the resource signal and say why, naming which check failed. Do not treat a partially readable file as partially authoritative: an entry you cannot parse may be the very claim that would have changed the advice.
 
 **Discount stale claims.** A claim whose `worktree` is absent from the `git worktree list` output already gathered above belongs to a worktree that has been removed. Treat it as free, and mention it so the user can clear it. Nothing that no longer exists should keep a resource reserved.
 
 **Read the project's declared resources too.** Read whichever of `CLAUDE.md` and `AGENTS.md` exist in the repository root, and `copilot-instructions.md` under `.github/`. Any of them may be absent, which is normal, and `CLAUDE.md` is often a symlink to `AGENTS.md`, so read the target rather than treating it as a second source. Check any plan under `docs/plans/todo/` too. A heading containing "exclusive resource" names the project's resources and, usually, what kind of work needs each one. That list is what lets an issue be matched to a resource before anyone has claimed it.
+
+**The declared list is an aid, not the set of resources that exist.** Resource names are free strings with no registry, so a project may hold `logic` without ever declaring it. Match each issue against the union of the declared names and the names on live claims, so a held resource an issue asks for by name is caught whether or not the project wrote it down. Where no list exists at all, the live claims are the whole vocabulary, and `--parallel-only` must still exclude an issue whose body names one of them.
 
 ### 2. Identify In-Progress Work
 

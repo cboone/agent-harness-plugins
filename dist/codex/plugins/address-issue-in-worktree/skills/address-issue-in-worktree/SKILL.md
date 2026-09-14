@@ -87,13 +87,13 @@ Branch on the exit code:
 
 **Never refuse.** If the user says to proceed, proceed: they always have a reason, and taking a claim over is recorded in step 6.
 
-**If the user declines, clean up before stopping.** Step 1 has already written the issue body to `ISSUE_JSON`, and the only other instruction to remove it is in step 6, which this exit never reaches:
+**Clean up before any exit from this step.** Step 1 has already written the issue body to `ISSUE_JSON`, and the only other instruction to remove it is in step 6, which none of these exits reach:
 
 ```bash
 rm -f ISSUE_JSON
 ```
 
-Substitute the literal path `mktemp` printed. Leaving it behind is the partial-run leak the temp-file handling in step 1 exists to avoid.
+Substitute the literal path `mktemp` printed. This applies to every way step 2 can stop, not only the common one: the user declining a held resource, the user declining to proceed after the claim file turns out to be unreadable, and `manage-resource-claims` failing for any other reason. Leaving the file behind is the partial-run leak the temp-file handling in step 1 exists to avoid.
 
 ### 3. Mark Issue In Progress
 
