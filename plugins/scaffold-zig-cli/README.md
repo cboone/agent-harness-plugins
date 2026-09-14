@@ -4,7 +4,6 @@ Scaffold a complete Zig CLI project with build.zig, build.zig.zon, cross-compile
 
 **Type:** Command
 **Trigger:** `/scaffold-zig-cli`
-**Requires:** Zig 0.16 or later, and `gh` to resolve the GitHub owner
 
 ## Installation
 
@@ -22,6 +21,14 @@ Four details exist because each one has a recorded failure behind it, repeated a
 - **`minimum_zig_version` is always written.** CI resolves the toolchain by reading `build.zig.zon`, so a manifest without it leaves CI with nothing to install. The version is taken from the local toolchain exactly as printed, development snapshots included, because `mlugg/setup-zig` installs precisely that value and a truncated one names a release that does not exist.
 - **`.claude/settings.json` is seeded.** `Bash(zig build*)`, `Bash(zig fmt*)` and `Bash(zig version)` go into the tracked allowlist, because every contributor runs them and an empty allowlist means every build prompts.
 - **`make check` is a real target.** One command runs the format check, the build and the tests, instead of a hand-spelled `zig fmt --check ... && zig build && zig build test` that comes out differently every time.
+
+## Requirements
+
+- **Zig 0.16 or later.** The templates use `std.Io` and the `std.process.Init` form of `main`, neither of which exists in 0.15. Install from [ziglang.org/download](https://ziglang.org/download/) rather than Homebrew, whose `zig` formula floats to the next minor release on upgrade.
+- **`gh`**, authenticated, to resolve the GitHub owner for repository URLs and the Homebrew tap. The skill does not create a repository on GitHub.
+- **Git commit signing**, configured and working. The initial commit is `git commit -S`, and the skill reports the failure rather than retrying without `-S`, because dropping the signature is the user's decision and not a fallback it should take. Either an OpenPGP key or `gpg.format=ssh` with a `user.signingkey` satisfies it, and `user.name` and `user.email` must be set in the target repository.
+
+Without signing configured, every file is still generated and the run stops short of the initial commit, leaving the project uncommitted rather than committed unsigned.
 
 ## Usage
 
