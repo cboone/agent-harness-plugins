@@ -53,7 +53,7 @@ For each tool in the ecosystem, check for its signature artifacts. Only tools wh
 
 For each detected tool, record which artifacts were found and which expected artifacts are missing (for "Partially set up" status).
 
-**A missing Dependabot config is actionable even though no artifact detected the tool.** The workflows the scaffolding skills write pin every action to a commit SHA, and those pins stay current only while Dependabot proposes updates. So when the repository has any `.github/workflows/` file, a composite `action.yml` or `action.yaml`, or a manifest from the coverage table (see [Reference: Dependabot Config Checks](#reference-dependabot-config-checks-pin-everything)), and has no Dependabot config, report `pin-everything` as `Needs update` with the issue "no Dependabot config (`.github/dependabot.yml` or `.yaml`)" rather than `Not detected`.
+**A missing Dependabot config is actionable even though no artifact detected the tool.** The workflows the scaffolding skills write pin every action to a commit SHA, and those pins stay current only while Dependabot proposes updates. So when the repository has any `.github/workflows/` file, a composite `action.yml` or `action.yaml` with an external `uses:` step, or a manifest from the coverage table (see [Reference: Dependabot Config Checks](#reference-dependabot-config-checks-pin-everything)), and has no Dependabot config, report `pin-everything` as `Needs update` with the issue "no Dependabot config (`.github/dependabot.yml` or `.yaml`)" rather than `Not detected`.
 
 ### 3. Compare Against Latest Templates
 
@@ -450,20 +450,20 @@ Must include language-specific entries appropriate for the detected project type
 - `version: 2` is set
 - Every ecosystem in the table below that the repository uses has an `updates` entry, and its manifest directory is covered by `directory` or `directories`. The table covers the common ecosystems only; the `review-dependabot-config` skill checks the full set:
 
-| Found                                                                  | Expected `package-ecosystem` |
-| ---------------------------------------------------------------------- | ---------------------------- |
-| `.github/workflows/*.yml` or `*.yaml`                                  | `github-actions`             |
-| `package.json` without `bun.lock`                                      | `npm`                        |
-| `uv.lock`                                                              | `uv`                         |
-| `pyproject.toml`, `setup.py`, or `requirements*.txt` without `uv.lock` | `pip`                        |
-| `go.mod`                                                               | `gomod`                      |
-| `Cargo.toml`                                                           | `cargo`                      |
-| `rust-toolchain.toml` or `rust-toolchain`                              | `rust-toolchain`             |
-| `Gemfile`                                                              | `bundler`                    |
-| `composer.json`                                                        | `composer`                   |
-| `Dockerfile`                                                           | `docker`                     |
-| `docker-compose.yml` or `.yaml`, `compose.yml` or `.yaml`              | `docker-compose`             |
-| `action.yml` or `action.yaml` outside `.github/workflows/`             | `github-actions`             |
+| Found                                                                                     | Expected `package-ecosystem` |
+| ----------------------------------------------------------------------------------------- | ---------------------------- |
+| `.github/workflows/*.yml` or `*.yaml`                                                     | `github-actions`             |
+| `package.json` without `bun.lock`                                                         | `npm`                        |
+| `uv.lock`                                                                                 | `uv`                         |
+| `pyproject.toml`, `setup.py`, or `requirements*.txt` without `uv.lock`                    | `pip`                        |
+| `go.mod`                                                                                  | `gomod`                      |
+| `Cargo.toml`                                                                              | `cargo`                      |
+| `rust-toolchain.toml` or `rust-toolchain`                                                 | `rust-toolchain`             |
+| `Gemfile`                                                                                 | `bundler`                    |
+| `composer.json`                                                                           | `composer`                   |
+| `Dockerfile`                                                                              | `docker`                     |
+| `docker-compose.yml` or `.yaml`, `compose.yml` or `.yaml`                                 | `docker-compose`             |
+| `action.yml` or `action.yaml` outside `.github/workflows/`, with an external `uses:` step | `github-actions`             |
 
 - A composite action outside `.github/workflows/` whose `action.yml` references other actions has its directory in the `github-actions` entry
 

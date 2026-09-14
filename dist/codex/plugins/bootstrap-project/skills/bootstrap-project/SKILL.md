@@ -83,7 +83,7 @@ Key overlap rules:
 - If `scaffold-lean-library` will run: mark `add-goreleaser-homebrew`, `set-up-installers`, and `add-scrut-cli-tests` as not applicable because Lean libraries do not produce distributable binaries.
 - `set-up-secret-scanning` is always independent (no overlap with other tools).
 - `add-scrut-cli-tests` is applicable only if the project produces a CLI binary.
-- `pin-everything` runs scoped down to `--scope dependabot` when the project has, or will have once the plan runs, workflows or a manifest Dependabot supports, and has no Dependabot config at plan time. A config present at plan time is `Already set up`, and `pin-everything` does not run. The scaffolders already SHA-pin every action they emit, so what a new repository lacks is the config that keeps those pins current. The full pinning pass is a separate decision the user can make later.
+- `pin-everything` runs scoped down to `--scope dependabot` when the project has, or will have once the plan runs, workflows, a composite `action.yml` or `action.yaml` with an external `uses:` step, or a manifest Dependabot supports, and has no Dependabot config at plan time. A config present at plan time is `Already set up`, and `pin-everything` does not run. The scaffolders already SHA-pin every action they emit, so what a new repository lacks is the config that keeps those pins current. The full pinning pass is a separate decision the user can make later.
 
 Execution order (dependencies flow downward):
 
