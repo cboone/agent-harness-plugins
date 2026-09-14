@@ -656,7 +656,8 @@ function do_summarize() {
         # grouped PR can move one package to different versions in different
         # directories, and with no directory on each update, cleared is then null.
         # It is null too when the body does not tie the package to the alert
-        # directory.
+        # directory, or when the body was cut short, since a missing Updates line
+        # can move the same package to another version.
         | .alerts = [
             $alerts[]
             | select(alert_matches($pr))
@@ -664,7 +665,8 @@ function do_summarize() {
             | select($directory_match != "excluded")
             | . as $alert
             | ([$pr.updates[] | select(.name | lower == ($alert.package | lower)) | .to] | unique) as $targets
-            | (if ($targets | length) == 1 and $directory_match == "confirmed" then $targets[0] else null end) as $to
+            | ($pr.bodyTruncated or ($pr.updatesExpected != null and $pr.updatesExpected > ($pr.updates | length))) as $incomplete
+            | (if ($targets | length) == 1 and $directory_match == "confirmed" and ($incomplete | not) then $targets[0] else null end) as $to
             | . + {
                 directoryConfirmed: ($directory_match == "confirmed"),
                 cleared: (if $to == null or $alert.patched == "" or ($to | is_sha) or ($to | stable_version | not) or ($alert.patched | stable_version | not) then null else (($to | version_key) >= ($alert.patched | version_key)) end)

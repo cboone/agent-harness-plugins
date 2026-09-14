@@ -62,7 +62,7 @@ This skill runs the bundled script, git, and GitHub CLI commands that trigger pe
 ```json
 {
   "permissions": {
-    "allow": ["Bash(bash \"*/dependabot-prs\" *)", "Bash(date)", "Bash(git remote -v)", "Bash(gh repo view *)", "Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr comment *)", "Bash(gh pr close *)", "Bash(gh pr merge *)", "Bash(gh pr review *)", "Bash(gh run view *)", "Bash(gh api repos/*)", "Bash(gh api 'repos/*)", "Bash(gh api --paginate --slurp repos/*)", "Bash(git fetch *)", "Bash(git show *)", "Bash(git diff *)", "Bash(git log *)", "Bash(git grep *)", "Bash(git merge-base *)", "Bash(git merge-tree *)", "Bash(git worktree add *)", "Bash(git worktree prune)", "Bash(git -C * merge *)", "Bash(git for-each-ref *)", "Bash(git update-ref --stdin)", "Bash(mktemp *)", "Bash(rm -f *)", "Bash(rm -rf *)", "Bash(grep *)", "Bash(base64 *)", "Bash(npm view *)", "Bash(jq *)", "Bash(sleep *)"]
+    "allow": ["Bash(bash \"*/dependabot-prs\" *)", "Bash(date)", "Bash(git remote -v)", "Bash(gh repo view *)", "Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr comment *)", "Bash(gh pr close *)", "Bash(gh pr merge *)", "Bash(gh pr review *)", "Bash(gh run view *)", "Bash(gh api repos/*)", "Bash(gh api 'repos/*)", "Bash(gh api --paginate --slurp repos/*)", "Bash(gh api --paginate 'repos/*)", "Bash(git fetch *)", "Bash(git show *)", "Bash(git diff *)", "Bash(git log *)", "Bash(git grep *)", "Bash(git merge-base *)", "Bash(git merge-tree *)", "Bash(git worktree add *)", "Bash(git worktree prune)", "Bash(git -C * merge *)", "Bash(git for-each-ref *)", "Bash(git update-ref --stdin)", "Bash(mktemp *)", "Bash(rm -f *)", "Bash(rm -rf *)", "Bash(grep *)", "Bash(base64 *)", "Bash(npm view *)", "Bash(jq *)", "Bash(sleep *)"]
   }
 }
 ```

@@ -305,6 +305,22 @@
           "path": "src/App/App.csproj"
         }
       ]
+    },
+    {
+      "number": 216,
+      "title": "chore(deps): bump the npm-deps group in /web with 3 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/216",
+      "headRefName": "dependabot/npm_and_yarn/web/npm-deps-6a7b8c9d0e",
+      "headRefOid": "2162162162162162162162162162162162162162",
+      "baseRefName": "main",
+      "body": "Bumps the npm-deps group with 3 updates in the /web directory: [lodash](https://github.com/lodash/lodash), [qs](https://github.com/ljharb/qs) and [minimist](https://github.com/minimistjs/minimist).\n\nUpdates `lodash` from 4.17.20 to 4.17.21\n\n_Description has been truncated_\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "web/package-lock.json"
+        }
+      ]
     }
   ],
   "alerts": {

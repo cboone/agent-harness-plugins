@@ -351,6 +351,15 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.jso
 {"directories":[],"alerts":[{"number":45,"directoryConfirmed":false,"cleared":null}]}
 ```
 
+## A body cut short never clears an alert
+
+This group lists three updates in `/web`, but the truncation left only the lodash line. A missing line could move lodash again, so the matched alert is not counted as cleared.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 216) | {bodyTruncated, updatesExpected, alerts: [.alerts[] | {number, directoryConfirmed, cleared}]}'
+{"bodyTruncated":true,"updatesExpected":3,"alerts":[{"number":31,"directoryConfirmed":true,"cleared":null}]}
+```
+
 ## A four-part version
 
 A change in the fourth part, such as a NuGet revision, is a patch rather than an unknown change.
