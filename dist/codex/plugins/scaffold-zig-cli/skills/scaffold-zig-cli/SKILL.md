@@ -137,15 +137,18 @@ Anything listed will be replaced, except the `.gitkeep` files, which step 20 cre
 
 Note that this check stands on its own: a clean `git status` later says nothing about it, because committed files are exactly the ones `git status` stays quiet about.
 
-**Directories this run writes into, which may be symlinks of their own.** The check above probes the final files, so it says nothing about a symlinked parent when the file inside it does not exist yet: a `.github/workflows` symlink with no `ci.yml` in it makes `ls -d` print nothing, and step 14 then writes `ci.yml` straight through the link into another tree.
+**Anything this run writes that is a symlink.** The check above answers whether a path exists, not what it is, and those are different questions here. `ls -d` reports a symlinked `README.md` exactly as it reports a real one, and writing to it replaces the file it points at, in another tree. The same goes for a symlinked parent, which the check above cannot see at all when the file inside does not exist yet: a `.github/workflows` symlink with no `ci.yml` makes `ls -d` print nothing, and step 14 then writes `ci.yml` straight through it.
 
 ```bash
-find src .github .claude docs tests -maxdepth 2 -type l 2> /dev/null
+find build.zig build.zig.zon README.md LICENSE CHANGELOG.md Makefile \
+  typos.toml .gitignore .editorconfig \
+  src .github .claude docs tests \
+  -maxdepth 2 -type l 2> /dev/null
 ```
 
-`find` reports a named starting point that is itself a symlink, so this covers `src` and `.claude` as well as `.github/workflows` and `docs/plans/todo`. For anything it lists, `readlink` it, report where it points, and ask. This is the same hazard as the target directory, one level down, and it is worth checking separately because the preflight above cannot see it.
+`find` reports a named starting point that is itself a symlink, whether it is a file or a directory, so one scan covers the top-level files, `src` and `.claude`, and the nested `.github/workflows` and `docs/plans/todo`. For anything it lists, `readlink` it, report where it points, and ask. Say it is a symlink rather than merely that it exists: the two cases look identical in the check above and are not the same thing to overwrite.
 
-Read the output, not the exit status. On a fresh scaffold most of those directories do not exist yet, so `find` complains about each missing one and exits non-zero while still listing the symlinks among the paths that do exist. The `2> /dev/null` hides the complaints; a non-zero exit here means nothing. `-maxdepth` is fine on macOS, where it is a documented BSD `find` primary, not a GNU extension.
+Read the output, not the exit status. On a fresh scaffold most of those paths do not exist yet, so `find` complains about each missing one and exits non-zero while still listing the symlinks among the paths that do exist. The `2> /dev/null` hides the complaints; a non-zero exit here means nothing. `-maxdepth` is fine on macOS, where it is a documented BSD `find` primary, not a GNU extension.
 
 The second check, for uncommitted work, waits for step 4. It only makes sense once the repository step 23 will commit into is known, and that is what step 4 establishes.
 
@@ -166,6 +169,8 @@ git status --porcelain
 ```
 
 Any output means this repository carries work that is not the scaffold's. Report it and ask whether to continue, since step 23's commit is signed and should hold only generated files.
+
+**Say which of the reported paths this run will also stage**, because those are the ones where continuing has a consequence beyond leaving the work alone. Step 23 stages whole files, so a `.gitignore`, `.editorconfig`, `.claude/settings.json` or `.github/copilot-instructions.md` that the user had already edited goes into the scaffold commit carrying those edits as well as the run's additions: steps 12, 13, 19 and 22 merge into those files rather than replacing them, so the earlier content survives to be committed. Name them, say their existing changes will be included, and let the user commit or set that work aside first. A general "there is uncommitted work here, continue?" does not put that choice in front of them.
 
 Run this check in that case alone. In the other two the target is about to become its own repository, and `git status` would be reporting on something else: from a directory nested inside the caller's repository it describes that repository, whose uncommitted work has nothing to do with the scaffold and would block it for no reason.
 
@@ -467,6 +472,8 @@ The pathspec after `--` is not redundant with the `git add`. A bare `git commit`
 Skip this step entirely if `git init` failed in step 4. There is no repository to commit to, and `git add` and `git commit` will both fail. Say plainly in the summary that the files were generated but no initial commit was created.
 
 Drop only a path this run neither created **nor modified**: steps 12, 13 and 19 merge into an existing `.gitignore`, `.editorconfig` or `.claude/settings.json` rather than replacing it, and those edits still belong in the commit. Dropping them because the file predates the run would leave the Zig ignore rules and the build permissions unstaged.
+
+A merged file goes in whole, so if step 4 reported it as already carrying uncommitted work, this commit takes that work with it. Step 4 is where the user agreed to that; do not stage such a file if they did not, and say in the summary which files went in carrying changes that were not the scaffold's.
 
 **Do not use `git add -A`, and do not name a directory.** Step 3 allows scaffolding into a directory that is already a git repository, and step 4 skips `git init` when it is. `-A` sweeps the whole working tree, and `git add` applied to a directory is recursive, so naming `src`, `.github`, `.claude`, `docs`, or `tests` stages whatever else happens to be under them. Either way the user's unrelated work lands in a signed commit they did not ask for. Full paths are what make the set exact.
 
