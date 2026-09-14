@@ -179,6 +179,13 @@ function read_claims() {
     return
   fi
 
+  # Existing but unreadable is a real case (a permissions mistake, a directory
+  # in the file's place), and "$(< path)" would fail during expansion, which
+  # bypasses the die below and exits with Bash's own unprefixed diagnostic.
+  if [[ ! -r "${file}" ]]; then
+    die "${file} exists but cannot be read"
+  fi
+
   document="$(< "${file}")"
 
   if [[ -z "${document//[[:space:]]/}" ]]; then
@@ -431,11 +438,16 @@ function format_claims() {
 function holder_is_live_and_foreign() {
   local existing="${1}"
   local worktree="${2}"
+  local branch="${3}"
 
   [[ -n "${existing}" ]] || return 1
 
-  jq -e --arg worktree "${worktree}" \
-    '(.stale | not) and (.worktree != $worktree)' > /dev/null 2>&1 <<< "${existing}"
+  # "Same worktree" is decided the way staleness is, on either the path or the
+  # branch. After git worktree move the stored path no longer matches while the
+  # branch still names the same worktree, and comparing paths alone would make
+  # a worktree refreshing its own claim look like a stranger taking it.
+  jq -e --arg worktree "${worktree}" --arg branch "${branch}" \
+    '(.stale | not) and (.worktree != $worktree) and (.branch != $branch)' > /dev/null 2>&1 <<< "${existing}"
 }
 
 # True when the holder is the one the caller was approved to displace.
@@ -548,7 +560,7 @@ function report_claim_outcome() {
   previous_worktree="$(jq -r '.worktree' <<< "${existing}")"
   previous_state="$(jq -r 'if .stale then "stale" else "held" end' <<< "${existing}")"
 
-  if [[ "${previous_worktree}" == "${worktree}" ]]; then
+  if [[ "${previous_worktree}" == "${worktree}" || "${previous_branch}" == "${branch}" ]]; then
     printf 'refreshed the claim on "%s" for %s\n' "${resource}" "${branch}"
   elif [[ "${previous_state}" == "stale" ]]; then
     printf 'claimed "%s" for %s, clearing a stale claim from %s\n' "${resource}" "${branch}" "${previous_branch}"
@@ -640,7 +652,7 @@ function cmd_claim() {
   # bare yes. Approval is about a particular holder: if a third worktree took
   # the resource in the meantime, consent to displace the first says nothing
   # about displacing it, and a boolean flag could not tell the two apart.
-  if holder_is_live_and_foreign "${existing}" "${worktree}" \
+  if holder_is_live_and_foreign "${existing}" "${worktree}" "${branch}" \
     && ! holder_matches "${existing}" "${take_over}"; then
     jq -r --arg resource "${resource}" --arg approved "${take_over}" \
       '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at), id \(.id)"

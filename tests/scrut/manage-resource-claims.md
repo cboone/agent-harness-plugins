@@ -768,3 +768,38 @@ $ setup_claims \
 >   && claims_list
 resource=logic state=stale id=* branch=feature/gone claimed=TIMESTAMP worktree=/repo/wt-gone (glob)
 ```
+
+## A worktree refreshing its own claim after a move is not a takeover
+
+`git worktree move` changes the path and keeps the branch, so comparing paths alone would make a worktree refreshing its own claim look like a stranger taking it, and refuse with exit 3. "Same worktree" is decided the way staleness is, on either field.
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/old-path --branch feature/live > /dev/null \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/live
+refreshed the claim on "logic" for feature/live
+```
+
+## A genuinely different worktree is still refused
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
+>   && claims_tail claim logic --worktree /repo/main --branch main
+resource "logic" is held by feature/live at /repo/wt-live, claimed *, id *; pass --take-over * to claim it anyway (glob)
+[3]
+```
+
+## An unreadable claim file reports which file and why
+
+An existing but unreadable file is a real case: a permissions mistake, or a directory in the file's place. The `"$(< path)"` expansion would fail during expansion rather than as a command, bypassing the error message and exiting with Bash's own unprefixed diagnostic.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version":1,"claims":[]}' > "${claim_file}" \
+>   && chmod 000 "${claim_file}" \
+>   && claims_tail list
+manage-resource-claims: */.claude/worktree-resources.local.json exists but cannot be read (glob)
+[1]
+```
