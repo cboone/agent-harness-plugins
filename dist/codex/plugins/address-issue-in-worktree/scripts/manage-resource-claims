@@ -97,14 +97,28 @@ function new_claim_id() {
 # Prints the main worktree's absolute path. The first record of
 # `git worktree list --porcelain` is always the main worktree, which is what
 # makes one shared claim file reachable from every linked worktree.
+#
+# -z is what makes this safe for every path a filesystem allows. Without it the
+# records are newline-delimited, so a worktree path containing a newline splits
+# into two apparent fields and the path read back is a truncation of the real
+# one. With it each field is NUL-terminated, which no path can contain.
 function main_worktree_path() {
-  local porcelain first
+  local line
 
-  porcelain="$(git worktree list --porcelain 2> /dev/null)" || return 1
-  first="$(printf '%s\n' "${porcelain}" | sed -n '1s|^worktree ||p')"
-  [[ -n "${first}" ]] || return 1
+  # The "|| [[ -n ... ]]" is what processes a final field that carries no
+  # terminator. read returns non-zero there but still assigns what it read, and
+  # without this the last field is silently discarded.
+  while IFS= read -r -d '' line || [[ -n "${line}" ]]; do
+    case "${line}" in
+      "worktree "*)
+        printf '%s' "${line#worktree }"
+        return 0
+        ;;
+      *) ;;
+    esac
+  done < <(git worktree list --porcelain -z 2> /dev/null)
 
-  printf '%s' "${first}"
+  return 1
 }
 
 function claim_file_path() {
@@ -121,48 +135,83 @@ function claim_file_path() {
   printf '%s/%s' "${main_worktree}" "${CLAIM_FILE_NAME}"
 }
 
-# Prints one absolute worktree path per line. Returns 1 when git cannot answer,
-# which leaves staleness undetermined rather than reporting every claim stale.
+# Emits the live worktree keys as a JSON array, or returns 1 when git cannot
+# answer, which leaves staleness undetermined rather than reporting every claim
+# stale.
 #
-# Whole records are parsed rather than every "worktree" line, because git keeps
-# listing a worktree whose directory has been deleted and marks the record
-# "prunable" instead of dropping it. Taking the path alone would count that as
-# live and hold its resource forever, which is the case this feature exists to
-# clear. Deleting a worktree directory outright is the ordinary way to reach
-# that state; `git worktree remove` and `workmux remove` drop the record and
-# never produce it.
-function live_worktrees() {
-  local porcelain
+# Each live record contributes two keys, "p <path>" and "b <branch>", because
+# neither identifies a worktree on its own. `git worktree move` changes the
+# path and keeps the branch; `git switch` changes the branch and keeps the
+# path; and a removed path can later be reused by an unrelated worktree.
+#
+# A claim is live when it matches on either key, which errs toward reporting a
+# resource still held. That is the deliberate direction: reading a live claim
+# as stale lets another worktree take the resource without anyone being asked,
+# while holding one slightly too long is visible in list and cleared by release
+# or prune.
+#
+# A record whose directory has been deleted is skipped: git keeps listing it
+# and marks it "prunable" rather than dropping it, and counting that as live
+# would hold its resource forever.
+#
+# -z and a JSON array, rather than newline-delimited text, because a worktree
+# path may contain a newline. NUL is the one byte a path cannot hold, and JSON
+# carries the result to jq without a delimiter to collide with.
+function live_worktrees_json() {
+  local line path="" branch="" prunable=0 saw_any=0
+  local -a keys=()
 
-  porcelain="$(git worktree list --porcelain 2> /dev/null)" || return 1
-  [[ -n "${porcelain}" ]] || return 1
+  # The "|| [[ -n ... ]]" is what processes a final field that carries no
+  # terminator. read returns non-zero there but still assigns what it read, and
+  # without this the last record's prunable marker is silently discarded, which
+  # would count a removed worktree as live.
+  while IFS= read -r -d '' line || [[ -n "${line}" ]]; do
+    saw_any=1
 
-  # Each live record contributes two keys, "p <path>" and "b <branch>", because
-  # neither identifies a worktree on its own. `git worktree move` changes the
-  # path and keeps the branch; `git switch` changes the branch and keeps the
-  # path; and a removed path can later be reused by an unrelated worktree.
-  #
-  # A claim is therefore live when it matches on either key, which errs toward
-  # reporting a resource still held. That is the deliberate direction: reading
-  # a live claim as stale lets another worktree take the resource without
-  # anyone being asked, while holding one slightly too long is visible in list
-  # and cleared by release or prune.
-  #
-  # The extra newline terminates the final record so it is flushed like the
-  # rest. Paths may contain spaces, so the path is taken as the remainder of
-  # the line rather than as a field.
-  printf '%s\n\n' "${porcelain}" | awk '
-    /^worktree / { path = substr($0, 10); branch = ""; prunable = 0; next }
-    /^branch refs\/heads\// { branch = substr($0, 19); next }
-    /^prunable/  { prunable = 1; next }
-    /^$/ {
-      if (path != "" && !prunable) {
-        print "p " path
-        if (branch != "") { print "b " branch }
-      }
-      path = ""; branch = ""; prunable = 0
-    }
-  '
+    case "${line}" in
+      "")
+        if [[ -n "${path}" && "${prunable}" -eq 0 ]]; then
+          keys+=("p ${path}")
+          if [[ -n "${branch}" ]]; then
+            keys+=("b ${branch}")
+          fi
+        fi
+        path=""
+        branch=""
+        prunable=0
+        ;;
+      "worktree "*)
+        path="${line#worktree }"
+        branch=""
+        prunable=0
+        ;;
+      "branch refs/heads/"*)
+        branch="${line#branch refs/heads/}"
+        ;;
+      prunable*)
+        prunable=1
+        ;;
+      *) ;;
+    esac
+  done < <(git worktree list --porcelain -z 2> /dev/null)
+
+  [[ "${saw_any}" -eq 1 ]] || return 1
+
+  # git separates records rather than terminating them, so the last one may
+  # arrive without a trailing empty field.
+  if [[ -n "${path}" && "${prunable}" -eq 0 ]]; then
+    keys+=("p ${path}")
+    if [[ -n "${branch}" ]]; then
+      keys+=("b ${branch}")
+    fi
+  fi
+
+  if [[ "${#keys[@]}" -eq 0 ]]; then
+    printf '[]'
+    return 0
+  fi
+
+  jq -n '$ARGS.positional' --args "${keys[@]}"
 }
 
 # A missing or empty file means no claims, which is the ordinary state and not
@@ -172,7 +221,7 @@ function live_worktrees() {
 # gets silently downgraded and a hand-edited record silently discarded.
 function read_claims() {
   local file="${1}"
-  local document declared
+  local declared
 
   if [[ ! -e "${file}" ]]; then
     printf '[]'
@@ -191,28 +240,31 @@ function read_claims() {
     die "${file} exists but cannot be read"
   fi
 
-  document="$(< "${file}")"
-
-  if [[ -z "${document//[[:space:]]/}" ]]; then
+  # The file is handed to jq by path rather than read into a variable first.
+  # Command substitution truncates at a NUL byte, so a document with one
+  # embedded would arrive here shortened, could then validate, and would be
+  # rewritten without the bytes that followed it, which is exactly the
+  # destructive rewrite this validation exists to prevent.
+  if [[ -z "$(tr -d '[:space:]' < "${file}" | head -c 1)" ]]; then
     printf '[]'
     return
   fi
 
-  if ! jq empty > /dev/null 2>&1 <<< "${document}"; then
+  if ! jq empty "${file}" > /dev/null 2>&1; then
     die "${file} is not valid JSON; fix or remove it"
   fi
 
   # jq accepts a stream of several top-level values, so two concatenated
   # documents pass the check above and every envelope check below, since -e
   # reports only the last result. The reads would then see both.
-  if ! jq -e -s 'length == 1' > /dev/null 2>&1 <<< "${document}"; then
+  if ! jq -e -s 'length == 1' "${file}" > /dev/null 2>&1; then
     die "${file} holds more than one JSON document; it must hold exactly one object"
   fi
 
   # The version is an integer, not merely a number, so that a 1.5 is refused as
   # a malformed envelope rather than reported as an unsupported version it was
   # never going to be.
-  if ! jq -e '(type == "object") and ((.version | type) == "number") and ((.version | floor) == .version) and ((.claims | type) == "array")' > /dev/null 2>&1 <<< "${document}"; then
+  if ! jq -e '(type == "object") and ((.version | type) == "number") and ((.version | floor) == .version) and ((.claims | type) == "array")' "${file}" > /dev/null 2>&1; then
     die "${file} is not a claim file; expected an object with an integer \"version\" and a \"claims\" array"
   fi
 
@@ -225,8 +277,8 @@ function read_claims() {
   # parse every shape a valid JSON number can take: 1e100 is an integer as far
   # as the check above is concerned, and would reach (( )) as scientific
   # notation and fail as a syntax error instead of the diagnostic below.
-  if ! jq -e --argjson supported "${SCHEMA_VERSION}" '.version == $supported' > /dev/null 2>&1 <<< "${document}"; then
-    declared="$(jq -r '.version' <<< "${document}")"
+  if ! jq -e --argjson supported "${SCHEMA_VERSION}" '.version == $supported' "${file}" > /dev/null 2>&1; then
+    declared="$(jq -r '.version' "${file}")"
     die "${file} declares version ${declared}; this script supports version ${SCHEMA_VERSION} only, so it will not read or rewrite the file"
   fi
 
@@ -242,18 +294,18 @@ function read_claims() {
         and ((.worktree | type) == "string") and (.worktree | test("^[^[:cntrl:]]+$"))
         and ((.branch | type) == "string") and (.branch | test("^[^[:space:][:cntrl:]]+$"))
         and ((.claimed_at | type) == "string") and (.claimed_at | test("^[^[:space:][:cntrl:]]+$"))
-        and ((has("issue") | not) or ((.issue | type) == "number" and .issue >= 0 and (.issue | floor) == .issue)))' > /dev/null 2>&1 <<< "${document}"; then
+        and ((has("issue") | not) or ((.issue | type) == "number" and .issue >= 0 and (.issue | floor) == .issue)))' "${file}" > /dev/null 2>&1; then
     die "${file} holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present"
   fi
 
   # One claim per resource is the invariant every lookup assumes: claim_for_resource
   # answers with the first match, so a duplicate would let a stale record hide a
   # live holder behind it and slip a takeover past the guard in cmd_claim.
-  if ! jq -e '(.claims | map(.resource)) as $names | ($names | length) == ($names | unique | length)' > /dev/null 2>&1 <<< "${document}"; then
+  if ! jq -e '(.claims | map(.resource)) as $names | ($names | length) == ($names | unique | length)' "${file}" > /dev/null 2>&1; then
     die "${file} holds more than one claim on the same resource; remove the duplicates"
   fi
 
-  jq -c '.claims' <<< "${document}"
+  jq -c '.claims' "${file}"
 }
 
 function release_lock() {
@@ -378,21 +430,22 @@ function write_claims() {
 function decorate_claims() {
   local claims="${1}"
   local live_known="no"
-  local live_paths=""
+  local live="[]"
 
-  if live_paths="$(live_worktrees)"; then
+  if live="$(live_worktrees_json)"; then
     live_known="yes"
+  else
+    live="[]"
   fi
 
-  jq -c --arg live_known "${live_known}" --arg live_paths "${live_paths}" '
-    ($live_paths | split("\n") | map(select(length > 0))) as $live
-    | map(
-        .worktree as $worktree
-        | .branch as $branch
-        | . + {stale: ($live_known == "yes"
-                       and (($live | index("p " + $worktree)) == null)
-                       and (($live | index("b " + $branch)) == null))}
-      )
+  jq -c --arg live_known "${live_known}" --argjson live "${live}" '
+    map(
+      .worktree as $worktree
+      | .branch as $branch
+      | . + {stale: ($live_known == "yes"
+                     and (($live | index("p " + $worktree)) == null)
+                     and (($live | index("b " + $branch)) == null))}
+    )
   ' <<< "${claims}"
 }
 
@@ -776,7 +829,7 @@ function cmd_prune() {
     die "unexpected argument: ${1}"
   fi
 
-  live_worktrees > /dev/null \
+  live_worktrees_json > /dev/null \
     || die "cannot list worktrees; run prune inside a git repository"
 
   file="$(claim_file_path)"

@@ -6,7 +6,7 @@ applyTo: "**/scripts/**,**/bin/**,**/tests/fixtures/**"
 
 Bundled scripts here run on macOS and Linux alike, so portability findings are welcome. These specific ones are not defects, and have been checked:
 
-- **`find -maxdepth` and `-mmin` are portable.** Both are present in BSD `find` on macOS as well as GNU `find`, and `find <path> -maxdepth 0 -mmin +N` works on both. Do not report either as a GNU-only extension.
+- **`git worktree list --porcelain -z` is the only form that is parsed.** The newline-delimited form splits a worktree path containing a newline across two apparent fields. NUL is the one byte a path cannot hold, so `-z` plus `read -r -d ''` is correct for every path a filesystem allows. A `read -d ''` loop also needs `|| [[ -n "${line}" ]]` so a final field carrying no terminator is not discarded.
 - **`flock` is deliberately absent.** macOS has no `flock(1)`, which is why mutual exclusion here uses `mkdir`, which is atomic on every filesystem these scripts run on.
 - **`kill -0 <pid>` is a liveness test, not a terminate.** It is the POSIX interface and keeps its name under the neutral-terminology convention, which exempts names the world already fixed.
 - **A `"$(< path)"` read is always preceded by `-f` and `-r` tests.** That expansion fails during expansion rather than as a command, so a redirection on the assignment and a trailing `||` both miss it and Bash exits with its own unprefixed diagnostic. `-r` alone is insufficient: it is true for a readable directory. A scrut case in `tests/scrut/repo-tooling.md` enforces this.

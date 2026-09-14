@@ -121,8 +121,10 @@ A `"$(< path)"` expansion that fails does so _during expansion_, not as a comman
 
 This shipped broken three times on one branch: the lock owner read, the claim file read, and the lock owner read again after the claim file was fixed. Writing the rule into `.github/shell.instructions.md` did not stop the third. This does.
 
+The claim file is no longer read this way at all, because command substitution truncates at a NUL byte and that would let a malformed document validate and be rewritten. The lock owner is the one remaining read, and it stays guarded.
+
 ```scrut
 $ cd "${REPO_ROOT}" && for f in plugins/create-worktree/scripts/manage-resource-claims plugins/address-issue-in-worktree/scripts/manage-resource-claims; do awk '/^[[:space:]]*#/ { next } /-f "/ { lastf = NR } /\$\(< "/ { if (lastf == 0 || NR - lastf > 12) { print FILENAME ": unguarded read at line " NR; bad++ } else { guarded++ } } END { printf "%s: guarded=%d unguarded=%d\n", FILENAME, guarded+0, bad+0 }' "$f"; done
-plugins/create-worktree/scripts/manage-resource-claims: guarded=2 unguarded=0
-plugins/address-issue-in-worktree/scripts/manage-resource-claims: guarded=2 unguarded=0
+plugins/create-worktree/scripts/manage-resource-claims: guarded=1 unguarded=0
+plugins/address-issue-in-worktree/scripts/manage-resource-claims: guarded=1 unguarded=0
 ```

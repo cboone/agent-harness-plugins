@@ -11,7 +11,20 @@ function die() {
 }
 
 function main() {
-  if [[ $# -eq 3 && "${1}" == "worktree" && "${2}" == "list" && "${3}" == "--porcelain" ]]; then
+  if [[ $# -lt 3 || "${1}" != "worktree" || "${2}" != "list" || "${3}" != "--porcelain" ]]; then
+    die "expected git worktree list --porcelain invocation"
+  fi
+
+  # STUB_GIT_WORKTREE_PORCELAIN is written in the readable newline form. Under
+  # -z git terminates each field with a NUL instead of a newline, and separates
+  # records with an extra one, which is exactly what translating every newline
+  # gives for a fixture that already separates records with a blank line.
+  if [[ $# -eq 4 && "${4}" == "-z" ]]; then
+    printf '%s' "${STUB_GIT_WORKTREE_PORCELAIN:-}" | tr '\n' '\0'
+    return 0
+  fi
+
+  if [[ $# -eq 3 ]]; then
     printf '%s' "${STUB_GIT_WORKTREE_PORCELAIN:-}"
     return 0
   fi
