@@ -207,7 +207,16 @@ function lock_is_abandoned() {
 
   [[ -d "${lock}" ]] || return 1
 
-  owner="$(< "${lock}/owner")" 2> /dev/null || owner=""
+  # Test for the file before reading it. A "$(< missing)" expansion writes its
+  # own error to stderr that a redirection on the assignment does not catch,
+  # because the failure happens during expansion rather than in the command,
+  # and some bash builds then abort under set -e before the || is reached. An
+  # ownerless lock is the ordinary case this branch exists to handle, so it
+  # must not depend on a failed read.
+  owner=""
+  if [[ -r "${lock}/owner" ]]; then
+    owner="$(< "${lock}/owner")" || owner=""
+  fi
 
   if [[ -n "${owner}" ]]; then
     kill -0 "${owner}" 2> /dev/null && return 1
