@@ -128,7 +128,7 @@ Applies when `ecosystem` is `github_actions`.
 - **The runtime.** Read `runs.using` at the new SHA:
 
   ```bash
-  gh api 'repos/ACTION_OWNER/ACTION_REPO/contents/action.yml?ref=NEW_SHA' --jq .content | base64 --decode | grep -A 2 '^runs:'
+  gh api 'repos/ACTION_OWNER/ACTION_REPO/contents/action.yml?ref=NEW_SHA' -H 'Accept: application/vnd.github.raw+json' | grep -A 2 '^runs:'
   ```
 
   A change such as `node20` to `node24` matters for self-hosted runners.

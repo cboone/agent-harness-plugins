@@ -10,7 +10,7 @@ If the PR closed, merged, or changed head since the triage, re-triage it before 
 
 ## Merge
 
-1. **Pick the method.** Use one the repository allows (`mergeCommitAllowed`, `squashMergeAllowed`, `rebaseMergeAllowed`) and the rules allow (`allowed_merge_methods` in the `pull_request` rule from `gh api repos/OWNER/REPO/rules/branches/BASE`, where `BASE` is the PR's `baseRefName`, since a PR aimed at a configured `target-branch` answers to that branch's rules). When several remain, follow the repository's agent config, then `viewerDefaultMergeMethod`.
+1. **Pick the method.** Use one the repository allows (`mergeCommitAllowed`, `squashMergeAllowed`, `rebaseMergeAllowed`) and the rules allow (`allowed_merge_methods` in every `pull_request` rule from `gh api --paginate 'repos/OWNER/REPO/rules/branches/BASE?per_page=100' --jq '.[]'`, where `BASE` is the PR's `baseRefName`, since a PR aimed at a configured `target-branch` answers to that branch's rules). When several remain, follow the repository's agent config, then `viewerDefaultMergeMethod`.
 1. **Merge one PR at a time, in the computed order:**
 
    ```bash

@@ -94,7 +94,7 @@ When `labels` is not set, Dependabot applies `dependencies` on its own, plus an 
 ## Merge rules
 
 ```bash
-gh api repos/OWNER/REPO/rules/branches/DEFAULT
+gh api --paginate 'repos/OWNER/REPO/rules/branches/DEFAULT?per_page=100' --jq '.[]'
 gh repo view OWNER/REPO --json mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed,deleteBranchOnMerge
 gh api repos/OWNER/REPO --jq '{allow_auto_merge, allow_update_branch}'
 ```

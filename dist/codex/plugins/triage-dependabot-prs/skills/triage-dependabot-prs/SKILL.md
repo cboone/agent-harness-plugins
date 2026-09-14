@@ -110,7 +110,7 @@ The examples below abbreviate the path to `dependabot-prs`. Expand it when you r
 
 1. Gather the repository context, in parallel:
    - **Dependabot config** on the default branch: `git show origin/DEFAULT:.github/dependabot.yml` (or `.yaml`), or the contents API from step 1 when the working directory is not a checkout of `OWNER/REPO`. Read the policy files below the same way, so another repository's config and policy never shape this triage. Groups, `ignore` rules, `target-branch`, and comments recording deliberate holds all feed the classification.
-   - **Merge rules**: `gh api repos/OWNER/REPO/rules/branches/DEFAULT`. Rulesets can require reviews, restrict `allowed_merge_methods`, and block merges while `branches/DEFAULT/protection` returns 404, so read the rules endpoint rather than protection alone.
+   - **Merge rules**: `gh api --paginate 'repos/OWNER/REPO/rules/branches/DEFAULT?per_page=100' --jq '.[]'`, which pages through every rule that applies. Rulesets can require reviews, restrict `allowed_merge_methods`, and block merges while `branches/DEFAULT/protection` returns 404, so read the rules endpoint rather than protection alone.
    - **Policy**: the repository's `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md`, for held majors, freezes, a required merge method, and commit conventions. Also `git grep -n "held at" origin/DEFAULT -- .github/` for held-major comments on pinned actions, read from the default branch rather than whatever the working tree has checked out.
 
 1. **No open Dependabot PRs**: report that, list `unclearedAlerts` (alerts with no PR, which usually means a transitive dependency its parent pins exactly), and if the repository has no Dependabot config, suggest the `review-dependabot-config` skill. Stop.
