@@ -170,14 +170,21 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/mixed.json" | 
 {"ecosystem":"docker","updates":[{"name":"ubuntu","from":"jammy-20240101","to":"noble-20240601","type":"unknown","semverBreaking":null}]}
 ```
 
-## Alerts no PR addresses are grouped by package
+## Alerts no PR clears are grouped by package
 
-Highest severity first. These are alerts with no fix path through Dependabot.
+Highest severity first. Here no PR updates either package, so `prs` is empty and there is no fix path through Dependabot.
 
 ```scrut
-$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/mixed.json" | jq -c '.unmatchedAlerts[]'
-{"package":"minimist","manifest":"web/package-lock.json","count":1,"highestSeverity":"critical","patched":["1.2.6"],"numbers":[26]}
-{"package":"lodash","manifest":"yarn.lock","count":2,"highestSeverity":"high","patched":["4.17.21"],"numbers":[24,25]}
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/mixed.json" | jq -c '.unclearedAlerts[]'
+{"package":"minimist","manifest":"web/package-lock.json","count":1,"highestSeverity":"critical","patched":["1.2.6"],"numbers":[26],"prs":[]}
+{"package":"lodash","manifest":"yarn.lock","count":2,"highestSeverity":"high","patched":["4.17.21"],"numbers":[24,25],"prs":[]}
+```
+
+An alert a PR matches but does not clear stays in the list, with the PR named: tiny stops short of its patched version, and minimist moves to two different versions.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '[.unclearedAlerts[] | select(.package == "tiny" or .package == "minimist") | {package, numbers, prs}]'
+[{"package":"minimist","numbers":[38],"prs":[208]},{"package":"tiny","numbers":[37],"prs":[205]}]
 ```
 
 ## Top-level counts
@@ -204,8 +211,8 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/limited.json" 
 ## No open Dependabot PRs
 
 ```scrut
-$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/empty.json" | jq -c '{count, unmatchedAlerts, prs}'
-{"count":0,"unmatchedAlerts":[],"prs":[]}
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/empty.json" | jq -c '{count, unclearedAlerts, prs}'
+{"count":0,"unclearedAlerts":[],"prs":[]}
 ```
 
 ## A short digest in backticks is a digest
@@ -304,7 +311,7 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.jso
 [{"directory":"web","names":["lodash"]},{"directory":"api","names":["qs"]}]
 ```
 
-This group updates lodash in `/web` and qs in `/api`, touching both lockfiles. The lodash alert in `/api` stays unmatched, because the `/api` line names only qs.
+This group updates lodash in `/web` and qs in `/api`, touching both lockfiles. The lodash alert in `/api` is not attached, because the `/api` line names only qs.
 
 ```scrut
 $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 210) | {alerts: [.alerts[] | {number, directoryConfirmed, cleared}]}'
@@ -326,8 +333,8 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.jso
 ```
 
 ```scrut
-$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '[.unmatchedAlerts[] | select(.package == "lodash" or .package == "pillow" or .package == "actions/checkout") | {package, manifest}]'
-[{"package":"lodash","manifest":"api/package-lock.json"},{"package":"pillow","manifest":"mjx/requirements.txt"},{"package":"actions/checkout","manifest":".github/actions/setup/action.yml"},{"package":"lodash","manifest":"web/requirements.txt"}]
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '[.unclearedAlerts[] | select(.package == "lodash" or .package == "pillow" or .package == "actions/checkout") | {package, manifest}]'
+[{"package":"lodash","manifest":"api/package-lock.json"},{"package":"pillow","manifest":"mjx/requirements.txt"},{"package":"pillow","manifest":"python/requirements.txt"},{"package":"actions/checkout","manifest":".github/actions/setup/action.yml"},{"package":"lodash","manifest":"web/requirements.txt"}]
 ```
 
 A container image group names its images without links.
@@ -356,7 +363,7 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.jso
 ## Patched versions sort by version, not as strings
 
 ```scrut
-$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.unmatchedAlerts[] | select(.package == "qs") | .patched'
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.unclearedAlerts[] | select(.package == "qs") | .patched'
 ["6.2.4","6.10.0"]
 ```
 
@@ -532,8 +539,8 @@ $ fetch_with_stub STUB_GH_API_FAIL=compare_main...302302302302302302302302302302
 Alerts need extra permissions, so a refusal is recorded with its reason and the triage continues without them.
 
 ```scrut
-$ fetch_with_stub STUB_GH_API_FAIL=dependabot_alerts | jq -c '{alertsAvailable, alertsReason, unmatchedAlerts}'
-{"alertsAvailable":false,"alertsReason":"gh: Resource not accessible by integration (HTTP 403)","unmatchedAlerts":[]}
+$ fetch_with_stub STUB_GH_API_FAIL=dependabot_alerts | jq -c '{alertsAvailable, alertsReason, unclearedAlerts}'
+{"alertsAvailable":false,"alertsReason":"gh: Resource not accessible by integration (HTTP 403)","unclearedAlerts":[]}
 ```
 
 A list that reaches `--limit` may have been cut off, and `fetch` warns.

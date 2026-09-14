@@ -532,15 +532,15 @@ function do_summarize() {
       };
 
     # The alerts API names ecosystems differently from Dependabot branches. An
-    # ecosystem missing from this map is not filtered on.
+    # ecosystem missing from this map (docker, terraform, and gitsubmodule among
+    # them) has no Dependabot alerts, so its PRs match none.
     def alert_ecosystem_for($branch_ecosystem):
-      if $branch_ecosystem == null then null
-      else {
-          npm_and_yarn: "npm", bun: "npm", go_modules: "go", pip: "pip", uv: "pip",
-          cargo: "rust", bundler: "rubygems", composer: "composer", maven: "maven",
-          gradle: "maven", nuget: "nuget", pub: "pub", mix: "erlang", github_actions: "actions"
-        } | .[$branch_ecosystem] // null
-      end;
+      {
+        npm_and_yarn: "npm", bun: "npm", go_modules: "go", pip: "pip", uv: "pip",
+        cargo: "rust", bundler: "rubygems", composer: "composer", maven: "maven",
+        gradle: "maven", nuget: "nuget", pub: "pub", mix: "erlang", hex: "erlang",
+        swift: "swift", github_actions: "actions"
+      } | .[$branch_ecosystem // ""] // null;
 
     def dependency_file:
       split("/") | last
@@ -553,7 +553,7 @@ function do_summarize() {
       (.package | lower) as $package
       | .manifest as $manifest
       | alert_ecosystem_for($pr.ecosystem) as $expected
-      | ($expected == null or .ecosystem == "" or .ecosystem == $expected)
+      | $expected != null and .ecosystem == $expected
         and ($pr.updates | any(.name | lower == $package))
         and ($pr.files | any(. == $manifest or (dependency_file and dirname == ($manifest | dirname))));
 
@@ -563,17 +563,19 @@ function do_summarize() {
     # single directory, or the Bumps line for the alert directory names the
     # package. excluded: that line names only other packages. unconfirmed: no line
     # names any package for the alert directory, or a group has no Bumps lines at
-    # all (a body cut short) and touches dependency files in several directories.
-    # For github-actions, the / directory covers .github/workflows.
+    # all (a body cut short) and changes files in several directories. Every file
+    # a Dependabot PR changes is one it updates (a lockfile, a workflow, a
+    # Dockerfile), so the directories of all of them are counted. For
+    # github-actions, the / directory covers .github/workflows.
     def directory_match($pr):
       (.package | lower) as $package
       | (.manifest | dirname) as $directory
       | [$pr.directories[]
           | select(.directory == $directory or ($pr.ecosystem == "github_actions" and .directory == "" and $directory == ".github/workflows"))
           | .names[] | lower] as $names
-      | ([$pr.files[] | select(dependency_file or test("(^|/)action\\.ya?ml$") or startswith(".github/workflows/")) | dirname] | unique | length) as $touched
-      | if ($pr.directories | length) == 1 then "confirmed"
-        elif ($pr.directories | length) == 0 then (if $pr.shape != "group" or $touched <= 1 then "confirmed" else "unconfirmed" end)
+      | ([$pr.files[] | dirname] | unique | length) as $touched
+      | if ($pr.directories | length) <= 1 and $touched <= 1 then "confirmed"
+        elif ($pr.directories | length) == 0 then (if $pr.shape != "group" then "confirmed" else "unconfirmed" end)
         elif ($names | any(. == $package)) then "confirmed"
         elif ($names | length) > 0 then "excluded"
         else "unconfirmed"
@@ -680,18 +682,26 @@ function do_summarize() {
         ),
         alertsAvailable: ($bundle.alerts.available // false),
         alertsReason: ($bundle.alerts.reason // null),
-        unmatchedAlerts: (
-          [$prs[].alerts[].number] as $matched
-          | [$alerts[] | select(.number as $number | $matched | any(. == $number) | not)]
+        # Every alert no open PR is known to clear: one no PR updates, and one a PR
+        # updates without reaching the patched version or without saying so. prs
+        # names the PRs that match an alert in the group but do not clear it.
+        unclearedAlerts: (
+          [$prs[].alerts[] | select(.cleared == true) | .number] as $cleared
+          | [$prs[] | .number as $pr | .alerts[] | {number, pr: $pr}] as $matches
+          | [$alerts[] | select(.number as $number | $cleared | any(. == $number) | not)]
           | group_by([.package, .manifest])
-          | map({
-              package: .[0].package,
-              manifest: .[0].manifest,
-              count: length,
-              highestSeverity: (max_by(.severity | severity_rank) | .severity),
-              patched: ([.[].patched | select(. != "")] | unique | sort_by(version_key)),
-              numbers: ([.[].number] | sort)
-            })
+          | map(
+              [.[].number] as $numbers
+              | {
+                  package: .[0].package,
+                  manifest: .[0].manifest,
+                  count: length,
+                  highestSeverity: (max_by(.severity | severity_rank) | .severity),
+                  patched: ([.[].patched | select(. != "")] | unique | sort_by(version_key)),
+                  numbers: ($numbers | sort),
+                  prs: ([$matches[] | select(.number as $number | $numbers | any(. == $number)) | .pr] | unique)
+                }
+            )
           | sort_by([-(.highestSeverity | severity_rank), .package])
         ),
         prs: $prs
