@@ -167,8 +167,13 @@ function claim_file_path() {
     return
   fi
 
-  main_worktree="$(main_worktree_path)" \
+  # Command substitution strips every trailing newline, and a directory name
+  # may end in one, so capturing the path bare would undo the -z parsing that
+  # read it correctly and resolve the shared file to a different directory.
+  # The sentinel gives the substitution something else to strip.
+  main_worktree="$(main_worktree_path && printf 'x')" \
     || die "not inside a git repository; set WORKTREE_RESOURCES_FILE to override"
+  main_worktree="${main_worktree%x}"
 
   printf '%s/%s' "${main_worktree}" "${CLAIM_FILE_NAME}"
 }
@@ -479,9 +484,11 @@ function write_claims() {
   fi
 }
 
-# Adds a derived "stale" boolean to each claim. Staleness is never stored, so a
-# claim cannot outlive the worktree that made it and nothing has to hook
-# worktree removal, which this script's callers do not perform.
+# Adds a derived "stale" boolean to each claim. Staleness is never stored, so
+# it is recomputed from what git reports now and nothing has to hook worktree
+# removal, which this script's callers do not perform. A removed worktree's
+# claim therefore reads as stale on the next command, except where its admin
+# directory has since been recycled: see issue 424.
 # An identity decides a match only where both the claim and the record carry
 # one. That is what stops a path since reused by an unrelated worktree from
 # holding an obsolete claim forever, while still falling back to the path and

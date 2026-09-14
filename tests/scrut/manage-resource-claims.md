@@ -1098,3 +1098,22 @@ $ setup_claims \
 >   && claims_check_report logic
 resource "logic" has a stale claim from feature/live at /repo/wt-live, claimed TIMESTAMP; that claim no longer matches a live worktree
 ```
+
+## The shared file resolves under a main worktree whose path ends in a newline
+
+Every other case here drives worktree listing through the stub, which encodes its records with newlines and so cannot express a path that contains one. This case uses real git for that reason: the behavior under test is what happens to a path on its way out of `git worktree list`, which a fixture that cannot carry the path cannot exercise.
+
+A directory name may end in a newline, and command substitution strips every trailing newline, so capturing the main worktree's path bare resolves the shared file to a different directory than the one git named. Reading the records with `-z` does not help if the path is corrupted immediately afterward.
+
+```scrut
+$ root="$(mktemp -d)" && main="${root}/repo"$'\n' && mkdir -p "${main}" \
+>   && git init -q "${main}" \
+>   && git -C "${main}" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init \
+>   && git -C "${main}" worktree add -q "${root}/linked" -b feature/live \
+>   && (cd "${root}/linked" && env -u WORKTREE_RESOURCES_FILE bash "${MANAGE_RESOURCE_CLAIMS_BIN}" claim logic --worktree "${root}/linked" --branch feature/live) \
+>   && test -f "${main}/.claude/worktree-resources.local.json" && echo "resolved under the main worktree" \
+>   && test ! -e "${root}/repo/.claude/worktree-resources.local.json" && echo "and not beside it"
+claimed "logic" for feature/live
+resolved under the main worktree
+and not beside it
+```
