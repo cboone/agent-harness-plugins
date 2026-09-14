@@ -2,7 +2,7 @@
 
 Tests for the `dependabot-prs` script that `triage-dependabot-prs` bundles. `summarize` reduces a fetched bundle of open Dependabot PRs, other open PRs, comparisons of each head against its base branch, and Dependabot alerts to the evidence a triage needs.
 
-`fetch` is not exercised past its argument checks: it requires an authenticated `gh`, which the test environment does not have. `summarize` is the seam that makes the parsing testable without one. The fixtures are synthetic bundles modeled on real Dependabot PRs, including the layouts that break naive parsing: grouped bodies repeated per directory, bodies truncated at the size limit, footers removed by a rebase, and titles updated in place.
+`summarize` is the seam that makes the parsing testable without GitHub credentials. `fetch` is exercised against a `gh` stub at the end of this file. The fixtures are synthetic bundles modeled on real Dependabot PRs, including the layouts that break naive parsing: grouped bodies repeated per directory, bodies truncated at the size limit, footers removed by a rebase, and titles updated in place.
 
 ## Help
 
@@ -419,5 +419,94 @@ Error: Invalid --repo 'example-repo'. Expected OWNER/REPO.
 ```scrut
 $ "${DEPENDABOT_PRS_BIN}" fetch --repo example-org/example-repo --limit 0 2>&1
 Error: Invalid --limit '0'. Expected a positive integer.
+[1]
+```
+
+## Fetching through a gh stub
+
+`fetch` runs against `tests/fixtures/gh-stub`, which answers each `gh` call from a JSON file under `fetch/`, so the calls, the pagination, and the bundle assembly are exercised without credentials. The fixtures model a PR whose file list `gh pr list` cut short, a comparison spread across two pages, and one alert. `fetch_with_stub` takes stub settings (`NAME=value`) first, then `fetch` options.
+
+```scrut
+$ function fetch_with_stub() {
+>   local -a settings=()
+>   while [[ "${1:-}" == *=* ]]; do
+>     settings+=("${1}")
+>     shift
+>   done
+>   env PATH="${gh_stub_dir}:${PATH}" STUB_GH_DIR="${DEPENDABOT_PRS_DATA_DIR}/fetch" ${settings[@]+"${settings[@]}"} \
+>     "${DEPENDABOT_PRS_BIN}" fetch --repo example-org/fetch-repo "${@}"
+> }
+> gh_stub_dir="$(mktemp -d)"
+> cp "${GH_STUB_BIN}" "${gh_stub_dir}/gh"
+> chmod +x "${gh_stub_dir}/gh"
+```
+
+`--raw` prints the assembled bundle.
+
+```scrut
+$ fetch_with_stub --raw | jq -c '{repo, defaultBranch, isArchived, limit, open: (.open | length), compare: (.compare | keys), alerts: {available: .alerts.available, items: (.alerts.items | length)}}'
+{"repo":"example-org/fetch-repo","defaultBranch":"main","isArchived":false,"limit":200,"open":3,"compare":["301","302"],"alerts":{"available":true,"items":1}}
+```
+
+Every `gh api` call pages through its results, and each list is read with the fields summarize needs.
+
+```scrut
+$ log="$(mktemp)" && fetch_with_stub STUB_GH_LOG="${log}" > /dev/null && sed 's/--json .*/--json .../' "${log}"
+gh auth token
+gh repo view example-org/fetch-repo --json ...
+gh pr list --repo example-org/fetch-repo --author app/dependabot --state open --limit 200 --json ...
+gh pr list --repo example-org/fetch-repo --state open --limit 200 --json ...
+gh api --paginate --slurp repos/example-org/fetch-repo/pulls/301/files?per_page=100
+gh api --paginate --slurp repos/example-org/fetch-repo/pulls/301/files?per_page=100
+gh api --paginate --slurp repos/example-org/fetch-repo/compare/main...3013013013013013013013013013013013013013?per_page=100
+gh api --paginate --slurp repos/example-org/fetch-repo/compare/main...3023023023023023023023023023023023023023?per_page=100
+gh api --paginate --slurp repos/example-org/fetch-repo/dependabot/alerts?state=open&per_page=100
+```
+
+`gh pr list` lists at most 100 files per PR. PR 301 changed more files than it listed, so its list is read again from the paginated files endpoint, and the lockfile that only the full list names brings in the overlap with PR 303 and the alert.
+
+```scrut
+$ fetch_with_stub | jq -c '.prs[] | select(.number == 301) | {files, filesComplete, overlaps, alerts: [.alerts[] | {number, cleared}]}'
+{"files":["web/package.json","web/package-lock.json"],"filesComplete":true,"overlaps":[{"number":303,"author":"octocat","sharedFiles":["web/package-lock.json"]}],"alerts":[{"number":51,"cleared":true}]}
+```
+
+When the full list cannot be read, the partial list stays and `filesComplete` says so.
+
+```scrut
+$ fetch_with_stub STUB_GH_API_FAIL=pulls_301_files | jq -c '.prs[] | select(.number == 301) | {files, filesComplete}'
+{"files":["web/package.json"],"filesComplete":false}
+```
+
+A non-Dependabot commit on the second page of a comparison is still counted.
+
+```scrut
+$ fetch_with_stub | jq -c '.prs[] | select(.number == 302) | .compare'
+{"status":"ahead","aheadBy":2,"behindBy":0,"nonDependabotCommits":1}
+```
+
+A comparison that fails is recorded as null rather than stopping the fetch.
+
+```scrut
+$ fetch_with_stub STUB_GH_API_FAIL=compare_main...3023023023023023023023023023023023023023 | jq -c '[.prs[] | {number, compare}]'
+[{"number":301,"compare":{"status":"diverged","aheadBy":1,"behindBy":2,"nonDependabotCommits":0}},{"number":302,"compare":null}]
+```
+
+Alerts need extra permissions, so a refusal is recorded with its reason and the triage continues without them.
+
+```scrut
+$ fetch_with_stub STUB_GH_API_FAIL=dependabot_alerts | jq -c '{alertsAvailable, alertsReason, unmatchedAlerts}'
+{"alertsAvailable":false,"alertsReason":"gh: Resource not accessible by integration (HTTP 403)","unmatchedAlerts":[]}
+```
+
+A list that reaches `--limit` may have been cut off, and `fetch` warns.
+
+```scrut
+$ fetch_with_stub --limit 3 2>&1 > /dev/null
+Warning: a PR list returned 3 items, reaching --limit 3. Re-run with a higher --limit to be sure nothing was cut off.
+```
+
+```scrut
+$ fetch_with_stub STUB_GH_AUTH_FAIL=1 2>&1
+Error: Not authenticated with GitHub. Run: gh auth login
 [1]
 ```
