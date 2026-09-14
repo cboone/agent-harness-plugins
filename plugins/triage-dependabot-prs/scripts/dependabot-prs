@@ -144,6 +144,7 @@ function do_fetch() {
   fi
 
   complete_files "${repo}" "${work_dir}/dependabot.json"
+  reuse_files "${work_dir}/dependabot.json" "${work_dir}/open.json"
   complete_files "${repo}" "${work_dir}/open.json"
   fetch_comparisons "${repo}" "${work_dir}"
   fetch_alerts "${repo}" "${work_dir}"
@@ -212,6 +213,23 @@ function complete_files() {
 
   jq --slurpfile lines "${lines_file}" \
     '($lines | from_entries) as $complete | map(($complete[.number | tostring]) as $files | if $files == null then . else .files = $files end)' \
+    "${list_file}" > "${list_file}.new"
+  mv "${list_file}.new" "${list_file}"
+}
+
+# Copies each Dependabot PR's file list, already completed, into the list of
+# every open PR, where the same PRs appear again, so complete_files does not
+# page through the same files a second time.
+# Arguments:
+#   $1 - Completed Dependabot PR list JSON file
+#   $2 - Open PR list JSON file, rewritten in place
+function reuse_files() {
+  local source_file="${1}"
+  local list_file="${2}"
+
+  jq --slurpfile source "${source_file}" \
+    '($source[0] | map({key: (.number | tostring), value: {changedFiles, files}}) | from_entries) as $known
+      | map(($known[.number | tostring]) as $entry | if $entry == null then . else . + $entry end)' \
     "${list_file}" > "${list_file}.new"
   mv "${list_file}.new" "${list_file}"
 }

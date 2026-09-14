@@ -19,5 +19,26 @@
         }
       }
     }
+  ],
+  [
+    {
+      "number": 52,
+      "dependency": {
+        "package": {
+          "ecosystem": "actions",
+          "name": "actions/checkout"
+        },
+        "manifest_path": ".github/workflows/ci.yml"
+      },
+      "security_advisory": {
+        "ghsa_id": "GHSA-5252-5252-5252",
+        "severity": "low"
+      },
+      "security_vulnerability": {
+        "first_patched_version": {
+          "identifier": "7.0.1"
+        }
+      }
+    }
   ]
 ]

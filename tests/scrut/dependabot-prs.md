@@ -445,6 +445,15 @@ Error: Invalid --limit '0'. Expected a positive integer.
 [1]
 ```
 
+## A PR with no parseable update
+
+A body cut short before any `Updates` or `Bumps` line, under a title that names no versions, leaves nothing to parse. The PR is still summarized, with no updates, so the triage can read its diff instead.
+
+```scrut
+$ printf '%s' '{"repo":"a/b","defaultBranch":"main","fetchedAt":"2026-09-13T12:00:00Z","dependabot":[{"number":1,"title":"chore(deps): bump things","headRefName":"dependabot/npm_and_yarn/things-1","body":"_Description has been truncated_\n","files":[]}]}' | "${DEPENDABOT_PRS_BIN}" summarize | jq -c '.prs[0] | {updates, kind, bodyTruncated}'
+{"updates":[],"kind":"unknown","bodyTruncated":true}
+```
+
 ## Fetching through a gh stub
 
 `fetch` runs against `tests/fixtures/gh-stub`, which answers each `gh` call from a JSON file under `fetch/`, so the calls, the pagination, and the bundle assembly are exercised without credentials. The fixtures model a PR whose file list `gh pr list` cut short, a comparison spread across two pages, and one alert. `fetch_with_stub` takes stub settings (`NAME=value`) first, then `fetch` options.
@@ -464,14 +473,21 @@ $ function fetch_with_stub() {
 > chmod +x "${gh_stub_dir}/gh"
 ```
 
-`--raw` prints the assembled bundle.
+`--raw` prints the assembled bundle. The alerts arrive on two pages, and both are kept.
 
 ```scrut
-$ fetch_with_stub --raw | jq -c '{repo, defaultBranch, isArchived, limit, open: (.open | length), compare: (.compare | keys), alerts: {available: .alerts.available, items: (.alerts.items | length)}}'
-{"repo":"example-org/fetch-repo","defaultBranch":"main","isArchived":false,"limit":200,"open":3,"compare":["301","302"],"alerts":{"available":true,"items":1}}
+$ fetch_with_stub --raw | jq -c '{repo, defaultBranch, isArchived, limit, open: (.open | length), compare: (.compare | keys), alerts: {available: .alerts.available, numbers: [.alerts.items[].number]}}'
+{"repo":"example-org/fetch-repo","defaultBranch":"main","isArchived":false,"limit":200,"open":3,"compare":["301","302"],"alerts":{"available":true,"numbers":[51,52]}}
 ```
 
-Every `gh api` call pages through its results, and each list is read with the fields summarize needs.
+The open PR list carries the completed file list too, so overlaps see every file.
+
+```scrut
+$ fetch_with_stub --raw | jq -c '.open[] | select(.number == 301) | [.files[].path]'
+["web/package.json","web/package-lock.json"]
+```
+
+Every `gh api` call pages through its results, and each list is read with the fields summarize needs. A Dependabot PR's file list is read once, then reused for the list of every open PR.
 
 ```scrut
 $ log="$(mktemp)" && fetch_with_stub STUB_GH_LOG="${log}" > /dev/null && sed 's/--json .*/--json .../' "${log}"
@@ -479,7 +495,6 @@ gh auth token
 gh repo view example-org/fetch-repo --json ...
 gh pr list --repo example-org/fetch-repo --author app/dependabot --state open --limit 200 --json ...
 gh pr list --repo example-org/fetch-repo --state open --limit 200 --json ...
-gh api --paginate --slurp repos/example-org/fetch-repo/pulls/301/files?per_page=100
 gh api --paginate --slurp repos/example-org/fetch-repo/pulls/301/files?per_page=100
 gh api --paginate --slurp repos/example-org/fetch-repo/compare/main...3013013013013013013013013013013013013013?per_page=100
 gh api --paginate --slurp repos/example-org/fetch-repo/compare/main...3023023023023023023023023023023023023023?per_page=100
