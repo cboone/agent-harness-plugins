@@ -110,7 +110,7 @@ A group PR advertises per-dependency forms instead:
 - `@dependabot unignore <dependency name>`
 - `@dependabot unignore <dependency name> <ignore condition>`
 
-When the body lost its commands footer (`commandsFooter` false), use the forms above that match the PR's `shape`. When the user wants the suppression to be visible in the repository, an `ignore` rule in `dependabot.yml` is the durable alternative: hand that to the `review-dependabot-config` skill.
+When the body lost its commands footer (`commandsFooter` false), this PR no longer shows what Dependabot accepts. Take the wording from the footer of another open Dependabot PR of the same `shape` in this repository, and with none to copy from, post no ignore command: offer the `ignore` rule below instead. When the user wants the suppression to be visible in the repository, an `ignore` rule in `dependabot.yml` is the durable alternative: hand that to the `review-dependabot-config` skill.
 
 ## Consolidate
 
