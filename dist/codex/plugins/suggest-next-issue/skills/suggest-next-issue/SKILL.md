@@ -63,7 +63,13 @@ git worktree list --porcelain
 
 A missing file means no claims, which is the ordinary state and not an error. Each claim carries `resource`, `worktree`, `branch`, `claimed_at`, and an optional `issue`.
 
-**Check the `version` field before reading the claims.** This reads the file directly rather than through `manage-resource-claims`, so it does not inherit that script's schema guard, and reading a newer format as though it were version 1 would produce confident parallel-safety advice from data it has misunderstood. Only version `1` is known. On anything else, say the claim file is a newer format than this skill reads, make the recommendations without the resource signal, and say that is what happened.
+**Validate the file before reading the claims.** This reads the file directly rather than through `manage-resource-claims`, so it inherits none of that script's guards, and treating malformed data as resource state would produce confident parallel-safety advice from something it has misunderstood. Require all of:
+
+- `version` is the number `1`. It is the only version this skill knows.
+- `claims` is an array.
+- Every entry is an object whose `resource`, `worktree`, and `branch` are non-empty strings.
+
+A missing file is not a failure: it means no claims. Anything that fails these checks is. On a failure, make the recommendations without the resource signal and say why, naming which check failed. Do not treat a partially readable file as partially authoritative: an entry you cannot parse may be the very claim that would have changed the advice.
 
 **Discount stale claims.** A claim whose `worktree` is absent from the `git worktree list` output already gathered above belongs to a worktree that has been removed. Treat it as free, and mention it so the user can clear it. Nothing that no longer exists should keep a resource reserved.
 

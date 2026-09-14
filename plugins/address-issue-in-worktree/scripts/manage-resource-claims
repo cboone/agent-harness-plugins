@@ -167,8 +167,8 @@ function read_claims() {
         and ((.worktree | type) == "string") and (.worktree | test("^[^[:cntrl:]]+$"))
         and ((.branch | type) == "string") and (.branch | test("^[^[:space:][:cntrl:]]+$"))
         and ((.claimed_at | type) == "string") and (.claimed_at | test("^[^[:space:][:cntrl:]]+$"))
-        and ((has("issue") | not) or ((.issue | type) == "number")))' > /dev/null 2>&1 <<< "${document}"; then
-    die "${file} holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a number when present"
+        and ((has("issue") | not) or ((.issue | type) == "number" and .issue >= 0 and (.issue | floor) == .issue)))' > /dev/null 2>&1 <<< "${document}"; then
+    die "${file} holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present"
   fi
 
   # One claim per resource is the invariant every lookup assumes: claim_for_resource
@@ -278,10 +278,17 @@ function acquire_lock() {
     waited=$((waited + 1))
   done
 
-  printf '%s' "$$" > "${lock}/owner" || true
-
+  # The trap goes on before the owner file is written, so a failure below
+  # still releases the directory instead of leaking it.
   LOCK_DIRECTORY="${lock}"
   trap release_lock EXIT
+
+  # An ownerless lock is worse than no lock: lock_is_abandoned falls back to
+  # age for it, so once it passes the threshold another process reclaims it
+  # while this one is still inside the read-modify-write section, which is the
+  # concurrent write the lock exists to prevent. Refuse to proceed instead.
+  printf '%s' "$$" > "${lock}/owner" \
+    || die "cannot record the lock owner in ${lock}"
 }
 
 # Replaces the file in one step so a reader never sees a half-written document.
