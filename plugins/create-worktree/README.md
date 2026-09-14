@@ -7,7 +7,7 @@ Create a git worktree, branch, and tmux window from an issue number or a task de
 
 ## Requirements
 
-- [`workmux`](https://github.com/paiml/workmux), always.
+- [`workmux`](https://github.com/paiml/workmux), whenever a worktree is created, which is every use except `--list-resources` and `--release-resource`. Those two report on claims and stop, so they need only `jq`.
 - [`gh`](https://cli.github.com/), authenticated, only when you pass an issue number.
 - [`jq`](https://jqlang.org/), when you pass an issue number or use any of the resource options. The bundled `compose-issue-prompt` script parses the issue JSON with it, and `manage-resource-claims` reads and writes the claim file with it. Both exit if it is missing. A task description or an explicit branch name with no resource needs neither `gh` nor `jq`.
 

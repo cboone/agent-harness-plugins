@@ -8,10 +8,11 @@ description: >-
   remembered. Use when the user says "create worktree", "new worktree",
   "start working on", "spin up a worktree", or asks to create a worktree for
   an issue number or a general task. Also use when the user asks what holds an
-  exclusive resource, asks to claim or release one, or says "list resources",
-  "release the simulator", or "who has the DAW". Requires workmux, plus the gh
-  CLI when given an issue number, and jq for issue parsing and resource
-  claims.
+  exclusive resource or asks to release one, or says "list resources", "release
+  the simulator", or "who has the DAW"; those two report on claims and stop
+  without creating anything. Requires workmux whenever a worktree is created,
+  plus the gh CLI when given an issue number, and jq for issue parsing and
+  resource claims.
 ---
 
 # Create Worktree
@@ -35,7 +36,9 @@ The user may provide these options inline:
 
 ### 1. Handle a Claim-Only Request
 
-`--list-resources` and `--release-resource` are about claims, not worktrees. Handle them here and stop: do not classify an argument, build a branch name, or create anything.
+`--list-resources` and `--release-resource` are about claims, not worktrees. Handle them here and stop: do not classify an argument, build a branch name, or create anything. Neither needs `workmux`, since neither reaches worktree creation.
+
+There is no claim-only counterpart. `--resource` records a claim for a worktree this skill is creating, so a request to claim a resource without creating one has no path here: say so rather than inventing a worktree to attach the claim to.
 
 **Resolve the name first for `--release-resource`**, exactly as step 4a does. The user releases a resource by the name they call it, so "release the DAW" has to reach `release logic`; passing `DAW` through verbatim finds no claim and reports success at having done nothing.
 

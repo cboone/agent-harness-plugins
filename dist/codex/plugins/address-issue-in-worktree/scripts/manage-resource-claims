@@ -149,8 +149,12 @@ function read_claims() {
 
   declared="$(jq -r '.version' <<< "${document}")"
 
-  if ((declared > SCHEMA_VERSION)); then
-    die "${file} declares version ${declared}, newer than this script understands (${SCHEMA_VERSION}); upgrade the script rather than letting it overwrite the file"
+  # Exactly one version is supported, not "anything up to". A 0 or a negative
+  # is no more readable than a 2, and accepting it would let a mutation rewrite
+  # an unsupported document as version 1 while suggest-next-issue, which
+  # requires 1 exactly, refuses the same file.
+  if ((declared != SCHEMA_VERSION)); then
+    die "${file} declares version ${declared}; this script supports version ${SCHEMA_VERSION} only, so it will not read or rewrite the file"
   fi
 
   # These match what the CLI accepts, field for field. A looser read contract
@@ -430,7 +434,7 @@ function cmd_check() {
 
   if ! valid_resource_name "${resource}"; then
     usage >&2
-    die "check requires a resource name with no whitespace"
+    die "check requires a resource name that has no whitespace and does not start with a hyphen"
   fi
 
   shift
@@ -501,7 +505,7 @@ function cmd_claim() {
 
   if ! valid_resource_name "${resource}"; then
     usage >&2
-    die "claim requires a resource name with no whitespace"
+    die "claim requires a resource name that has no whitespace and does not start with a hyphen"
   fi
 
   shift
@@ -638,7 +642,7 @@ function cmd_release() {
 
   if [[ -n "${resource}" ]] && ! valid_resource_name "${resource}"; then
     usage >&2
-    die "release requires a resource name with no whitespace"
+    die "release requires a resource name that has no whitespace and does not start with a hyphen"
   fi
 
   file="$(claim_file_path)"

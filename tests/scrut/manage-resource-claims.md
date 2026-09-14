@@ -301,7 +301,7 @@ $ setup_claims \
 >   && printf '{"version": 999, "claims": []}' > "${claim_file}" \
 >   && { claims list 2>&1; echo "exit=$?"; } \
 >   && jq -r '.version' "${claim_file}"
-manage-resource-claims: */.claude/worktree-resources.local.json declares version 999, newer than this script understands (1); upgrade the script rather than letting it overwrite the file (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json declares version 999; this script supports version 1 only, so it will not read or rewrite the file (glob)
 exit=1
 999
 ```
@@ -358,7 +358,7 @@ lock released
 
 ```scrut
 $ setup_claims && claims_tail claim "logic state=stale" --worktree /repo/wt-live --branch feature/a
-manage-resource-claims: claim requires a resource name with no whitespace
+manage-resource-claims: claim requires a resource name that has no whitespace and does not start with a hyphen
 [1]
 ```
 
@@ -367,8 +367,8 @@ manage-resource-claims: claim requires a resource name with no whitespace
 ```scrut
 $ setup_claims \
 >   && { claims_tail check "logic state=stale"; claims_tail release "logic state=stale"; } 2>&1
-manage-resource-claims: check requires a resource name with no whitespace
-manage-resource-claims: release requires a resource name with no whitespace
+manage-resource-claims: check requires a resource name that has no whitespace and does not start with a hyphen
+manage-resource-claims: release requires a resource name that has no whitespace and does not start with a hyphen
 [1]
 ```
 
@@ -451,7 +451,7 @@ manage-resource-claims: unknown subcommand: bogus
 
 ```scrut
 $ setup_claims && claims_tail check
-manage-resource-claims: check requires a resource name with no whitespace
+manage-resource-claims: check requires a resource name that has no whitespace and does not start with a hyphen
 [1]
 ```
 
@@ -459,7 +459,7 @@ manage-resource-claims: check requires a resource name with no whitespace
 
 ```scrut
 $ setup_claims && claims_tail claim --worktree /repo/wt-live
-manage-resource-claims: claim requires a resource name with no whitespace
+manage-resource-claims: claim requires a resource name that has no whitespace and does not start with a hyphen
 [1]
 ```
 
@@ -469,7 +469,7 @@ Without this guard a mistyped flag is read as a resource nobody has claimed, so 
 
 ```scrut
 $ setup_claims && claims_tail check --json
-manage-resource-claims: check requires a resource name with no whitespace
+manage-resource-claims: check requires a resource name that has no whitespace and does not start with a hyphen
 [1]
 ```
 

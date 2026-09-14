@@ -26,7 +26,9 @@ The user may provide these options inline:
 
 ### 1. Handle a Claim-Only Request
 
-`--list-resources` and `--release-resource` are about claims, not worktrees. Handle them here and stop: do not classify an argument, build a branch name, or create anything.
+`--list-resources` and `--release-resource` are about claims, not worktrees. Handle them here and stop: do not classify an argument, build a branch name, or create anything. Neither needs `workmux`, since neither reaches worktree creation.
+
+There is no claim-only counterpart. `--resource` records a claim for a worktree this skill is creating, so a request to claim a resource without creating one has no path here: say so rather than inventing a worktree to attach the claim to.
 
 **Resolve the name first for `--release-resource`**, exactly as step 4a does. The user releases a resource by the name they call it, so "release the DAW" has to reach `release logic`; passing `DAW` through verbatim finds no claim and reports success at having done nothing.
 
