@@ -352,33 +352,6 @@ $ setup_claims \
 lock released
 ```
 
-## A lock whose owner has exited is broken rather than waited on forever
-
-A process terminated mid-write leaves its lock directory behind. Honoring it indefinitely would block every later claim, which is the same failure a stale claim would cause and is ruled out for the same reason.
-
-`sh -c 'echo $$'` reports the PID of a shell that has already exited by the time the owner file is read, which is the condition being tested.
-
-```scrut
-$ setup_claims \
->   && mkdir -p "${claim_file}.lock" \
->   && sh -c 'echo $$' > "${claim_file}.lock/owner" \
->   && claims claim logic --worktree /repo/wt-live --branch feature/a
-claimed "logic" for feature/a
-```
-
-## An old lock whose owner is still running is honored
-
-Age is not proof that the owner exited. A claim that is merely slow or suspended still holds the section it is in, so breaking its lock on a timer would readmit the second writer the lock exists to keep out. Here the lock is backdated to the year 2000 and still respected, because its recorded owner is still running.
-
-```scrut
-$ setup_claims \
->   && mkdir -p "${claim_file}.lock" \
->   && printf '%s' "$$" > "${claim_file}.lock/owner" \
->   && touch -t 200001010000 "${claim_file}.lock" \
->   && claims claim logic --worktree /repo/wt-live --branch feature/a 2>&1 | tail -1
-manage-resource-claims: another claim operation is holding */.claude/worktree-resources.local.json.lock; remove it if nothing is in progress (glob)
-```
-
 ## A resource name carrying whitespace is refused
 
 `resource` is free-form, and the output is space-delimited `key=value`. A name like `logic state=stale` would forge a field and one carrying a newline would fake an entire claim line. The names this is for never contain whitespace, so refusing it removes the ambiguity by construction rather than by escaping.
@@ -693,26 +666,38 @@ $ setup_claims \
 manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
 ```
 
-## An ownerless lock ages out
+## A lock held past the wait is reported, never broken
 
-A lock with no owner file can only be judged by age: nothing records who holds it. That path uses `find -maxdepth 0 -mmin`, which is present in BSD `find` on macOS as well as GNU `find`, and this case pins it on whichever runs the suite.
+Deciding that another process has abandoned a lock cannot be made safe with these primitives: the check and the removal are separate steps, so two waiters can both decide to break the same lock and the second deletes the fresh one the first just took. A held lock is therefore reported and the user removes it.
+
+When the owner has exited, the message says so, which is what makes it actionable.
 
 ```scrut
 $ setup_claims \
 >   && mkdir -p "${claim_file}.lock" \
->   && touch -t 200001010000 "${claim_file}.lock" \
->   && claims claim logic --worktree /repo/wt-live --branch feature/live
-claimed "logic" for feature/live
+>   && sh -c 'echo $$' > "${claim_file}.lock/owner" \
+>   && claims_tail claim logic --worktree /repo/wt-live --branch feature/live
+manage-resource-claims: */.claude/worktree-resources.local.json.lock is held by process *, which has exited; remove that directory (glob)
+[1]
 ```
 
-## A fresh ownerless lock is not aged out
+## A lock whose owner is still running says to wait
 
-The same predicate must answer the other way for a lock that was just created, or every lock would be reclaimable the moment it appeared.
+```scrut
+$ setup_claims \
+>   && mkdir -p "${claim_file}.lock" \
+>   && printf '%s' "$$" > "${claim_file}.lock/owner" \
+>   && claims_tail claim logic --worktree /repo/wt-live --branch feature/live
+manage-resource-claims: */.claude/worktree-resources.local.json.lock is held by process *, which is still running; wait for it to finish (glob)
+[1]
+```
+
+## A lock with no recorded owner is reported as unrecorded
 
 ```scrut
 $ setup_claims \
 >   && mkdir -p "${claim_file}.lock" \
 >   && claims_tail claim logic --worktree /repo/wt-live --branch feature/live
-manage-resource-claims: another claim operation is holding */.claude/worktree-resources.local.json.lock; remove it if nothing is in progress (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json.lock is held by an unrecorded process; remove that directory if no claim is in progress (glob)
 [1]
 ```

@@ -77,6 +77,7 @@ A missing file means no claims, which is the ordinary state and not an error. Ea
 - Every entry is an object whose `resource`, `worktree`, `branch`, and `claimed_at` are strings.
 - `resource`, `branch`, and `claimed_at` are non-empty and contain no whitespace, and `resource` does not start with a hyphen.
 - `worktree` is non-empty and contains no control characters. Spaces are legal here and only here, because it is a path.
+- `issue`, when the key is present, is a non-negative integer. It is optional and omitted rather than null for a worktree that did not come from an issue, so absent is normal and `"128"` as a string is not.
 - No two entries name the same `resource`.
 
 That is the same contract `manage-resource-claims` enforces, and matching it matters rather than being pedantry. A `resource` of `"logic "` would never match the `logic` an issue asks for, so the conflict would go unreported; a control character in `worktree` would not match any line of `git worktree list`, so a live claim would read as stale and be discounted. A weaker check here does not fail loudly, it gives confident advice that is wrong.

@@ -25,9 +25,6 @@ readonly E_HELD
 LOCK_WAIT_SECONDS=10
 readonly LOCK_WAIT_SECONDS
 
-LOCK_STALE_MINUTES=1
-readonly LOCK_STALE_MINUTES
-
 # Set while a lock is held so the EXIT trap knows what to remove.
 LOCK_DIRECTORY=""
 
@@ -188,42 +185,31 @@ function release_lock() {
   LOCK_DIRECTORY=""
 }
 
-# A lock is abandoned only when the process that took it is gone. Age alone is
-# not proof of that: a claim that is merely slow or suspended still holds the
-# section it is in, and breaking its lock on a timer would readmit the second
-# writer this whole mechanism exists to keep out.
-#
-# The age check remains as a fallback for the one window where no owner can be
-# read: between mkdir creating the directory and the owner file landing in it.
-function lock_is_older_than() {
+# Describes a lock that outlasted the wait, so the message says whether
+# anything is still using it rather than only that it exists.
+function held_lock_report() {
   local lock="${1}"
-
-  [[ -n "$(find "${lock}" -maxdepth 0 -mmin "+${LOCK_STALE_MINUTES}" 2> /dev/null)" ]]
-}
-
-function lock_is_abandoned() {
-  local lock="${1}"
-  local owner
-
-  [[ -d "${lock}" ]] || return 1
+  local owner=""
 
   # Test for the file before reading it. A "$(< missing)" expansion writes its
   # own error to stderr that a redirection on the assignment does not catch,
   # because the failure happens during expansion rather than in the command,
-  # and some bash builds then abort under set -e before the || is reached. An
-  # ownerless lock is the ordinary case this branch exists to handle, so it
-  # must not depend on a failed read.
-  owner=""
+  # and some bash builds then abort under set -e before the || is reached.
   if [[ -r "${lock}/owner" ]]; then
     owner="$(< "${lock}/owner")" || owner=""
   fi
 
-  if [[ -n "${owner}" ]]; then
-    kill -0 "${owner}" 2> /dev/null && return 1
-    return 0
+  if [[ -z "${owner}" ]]; then
+    printf '%s is held by an unrecorded process; remove that directory if no claim is in progress' "${lock}"
+    return
   fi
 
-  lock_is_older_than "${lock}"
+  if kill -0 "${owner}" 2> /dev/null; then
+    printf '%s is held by process %s, which is still running; wait for it to finish' "${lock}" "${owner}"
+    return
+  fi
+
+  printf '%s is held by process %s, which has exited; remove that directory' "${lock}" "${owner}"
 }
 
 # Serializes a whole read-modify-write. Atomic replacement alone stops a reader
@@ -231,38 +217,22 @@ function lock_is_abandoned() {
 # the later write discarding the earlier claim, which is a likely sequence here
 # because parallel worktrees are the case this feature exists for.
 #
-# Removes an abandoned lock, and returns 0 when it is worth retrying mkdir.
+# A held lock is never broken automatically, and the reason is worth recording,
+# because three earlier revisions of this script tried. Deciding that another
+# process has abandoned a lock cannot be made safe with these primitives: the
+# check and the removal are separate steps, so two waiters can both decide to
+# break the same lock and the second deletes the fresh one the first just took,
+# putting both inside the section. An age threshold, then a recorded owner,
+# then a second mutex around the reclaim each closed one window and opened
+# another, because any holder can be suspended past any threshold.
 #
-# The check and the removal have to be one step. Two waiters that both saw the
-# same lock as abandoned would otherwise both remove it, and the second would
-# delete the fresh lock the first had just taken, putting both inside the
-# read-modify-write section. So reclamation is itself serialized, and the
-# abandonment test is repeated inside that second lock: by then the lock may
-# belong to a live process that reclaimed it first, and a live owner is never
-# removed.
+# So a lock that is still held when the wait expires is reported, with whatever
+# is known about its owner, and the user removes it. That is the bargain the
+# rest of this script already makes: a stale claim is cleared by an explicit
+# prune rather than silently, and a held resource is reported rather than
+# taken. Losing a claim without anyone noticing is the outcome worth avoiding;
+# asking for one rm is not.
 #
-# The reclaim lock is held for the length of one stat, so an age check alone is
-# enough to clear it if a process exits mid-reclaim. It guards nothing on its
-# own; the inner re-test is what protects the real lock.
-function reclaim_abandoned_lock() {
-  local lock="${1}"
-  local reclaim="${lock}.reclaim"
-  local reclaimed=1
-
-  if ! mkdir "${reclaim}" 2> /dev/null; then
-    lock_is_older_than "${reclaim}" && rm -rf "${reclaim}"
-    return 1
-  fi
-
-  if lock_is_abandoned "${lock}"; then
-    rm -rf "${lock}"
-    reclaimed=0
-  fi
-
-  rmdir "${reclaim}" 2> /dev/null || true
-  return "${reclaimed}"
-}
-
 # This serializes access to the file; it does not make the claim an enforced
 # lock on the resource, which stays advisory. mkdir is the portable mutex: it
 # is atomic everywhere this runs, and flock is absent on macOS. A lock whose
@@ -277,10 +247,8 @@ function acquire_lock() {
   mkdir -p "${directory}" || die "cannot create ${directory}"
 
   while ! mkdir "${lock}" 2> /dev/null; do
-    reclaim_abandoned_lock "${lock}" && continue
-
     if ((waited >= LOCK_WAIT_SECONDS)); then
-      die "another claim operation is holding ${lock}; remove it if nothing is in progress"
+      die "$(held_lock_report "${lock}")"
     fi
 
     sleep 1
@@ -292,10 +260,10 @@ function acquire_lock() {
   LOCK_DIRECTORY="${lock}"
   trap release_lock EXIT
 
-  # An ownerless lock is worse than no lock: lock_is_abandoned falls back to
-  # age for it, so once it passes the threshold another process reclaims it
-  # while this one is still inside the read-modify-write section, which is the
-  # concurrent write the lock exists to prevent. Refuse to proceed instead.
+  # The owner is what lets a waiter that times out say whether anything is
+  # still running, which is the difference between a message someone can act on
+  # and one that only says a directory exists. Refuse to hold a lock this
+  # cannot be recorded for.
   printf '%s' "$$" > "${lock}/owner" \
     || die "cannot record the lock owner in ${lock}"
 }
