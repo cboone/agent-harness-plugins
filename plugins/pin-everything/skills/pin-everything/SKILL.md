@@ -51,7 +51,7 @@ Print the output as a Markdown table grouped by category, with one row per file 
 
 Present the categorized findings. The default is to pin everything in the repo that is not deliberately user-facing. User-facing means scaffolded README install instructions, placeholder paths in skill templates, and similar documentation that downstream users will customize.
 
-Ask the user to confirm or trim the scope. Offer per-category opt-out (e.g., "skip pip pinning", "skip Dependabot config", "actions only"). If the user invokes the skill with `--scope <comma-list>`, use that list directly; otherwise prompt.
+Ask the user to confirm or trim the scope. Offer per-category opt-out (e.g., "skip pip pinning", "skip Dependabot config", "actions only"). If the user invokes the skill with `--scope <comma-list>`, use that list directly; otherwise prompt. The confirmed scope governs every later step: a step whose category is out of scope does not run, and step 11 verifies only the categories in scope. Under `--scope dependabot`, for example, only step 9 writes anything, and verification checks the Dependabot config alone.
 
 If the user requested `--dry-run`, or invoked the skill with audit-only phrasing (e.g. "audit version pins", "audit pins", "report unpinned versions", or any other request that asks for findings without changes), perform the audit only and stop here. Treat all audit-shaped trigger phrases the same as `--dry-run` so the README's "audit version pins" example does not silently fall into the mutating path.
 
@@ -180,7 +180,7 @@ Skip this step if `--no-audit` was passed. Reference: `./references/version-audi
 
 ### 11. Verify and Commit
 
-1. Re-run the audit from step 1 and confirm zero unpinned surfaces remain (modulo the deliberate exclusions confirmed in step 2 and any schema URLs whose publisher exposes no versioned upstream -- see step 7).
+1. Re-run the audit from step 1 for the categories in scope and confirm zero unpinned surfaces remain in them (modulo the deliberate exclusions confirmed in step 2 and any schema URLs whose publisher exposes no versioned upstream -- see step 7). Under `--scope dependabot`, confirm instead that the config has a block for every ecosystem step 9 detected.
 2. Invoke the `lint-and-fix` skill via the Skill tool to run project linters and formatters.
 3. If the user has REUSE/SPDX licensing set up (root `REUSE.toml` present), invoke `manage-repo-licensing` to add SPDX coverage for any newly emitted files (`bin/version-audit`, `.github/workflows/version-audit.yml`, `.github/dependabot.yml`) and run `reuse lint`.
 4. Commit with a Conventional Commits message scoped to what was pinned. Default to one commit per category for clarity (e.g. `chore: SHA-pin third-party action refs`, `chore: pin install commands`, `chore: add Dependabot config`). If the user prefers a single bundled commit, do that instead.
