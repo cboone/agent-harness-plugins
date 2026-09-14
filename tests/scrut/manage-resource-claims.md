@@ -2,7 +2,7 @@
 
 Tests for recording and reporting the exclusive resources held by git worktrees.
 
-Staleness is derived from `git worktree list --porcelain`, so every testcase drives that through `tests/fixtures/git-worktree-stub` rather than the ambient repository. `/repo/wt-live` is a worktree git reports; `/repo/wt-gone` is not, which is what makes a claim on it stale.
+Staleness is derived from `git worktree list --porcelain`, so every testcase drives that through `tests/fixtures/git-worktree-stub` rather than the ambient repository. `/repo/wt-live` is a worktree git reports; `/repo/wt-gone` is not; and `/repo/wt-prunable` is one git still lists but marks `prunable`. Either of the latter two makes a claim on it stale, and the `prunable` case is the one a bare `rm -rf` of a worktree produces.
 
 ## Test helpers
 
@@ -14,7 +14,7 @@ $ function setup_claims() {
 >   stub_dir="$(mktemp -d)"
 >   cp "${GIT_WORKTREE_STUB_BIN}" "${stub_dir}/git"
 >   chmod +x "${stub_dir}/git"
->   live_porcelain="$(printf 'worktree /repo/main\nHEAD aaa\nbranch refs/heads/main\n\nworktree /repo/wt-live\nHEAD bbb\nbranch refs/heads/feature/live\n')"
+>   live_porcelain="$(printf 'worktree /repo/main\nHEAD aaa\nbranch refs/heads/main\n\nworktree /repo/wt-live\nHEAD bbb\nbranch refs/heads/feature/live\n\nworktree /repo/wt-prunable\nHEAD ccc\nbranch refs/heads/feature/prunable\nprunable gitdir file points to non-existent location\n')"
 > }
 > function claims() {
 >   env PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${live_porcelain}" WORKTREE_RESOURCES_FILE="${claim_file}" bash "${MANAGE_RESOURCE_CLAIMS_BIN}" "$@"
@@ -699,5 +699,40 @@ $ setup_claims \
 >   && mkdir -p "${claim_file}.lock" \
 >   && claims_tail claim logic --worktree /repo/wt-live --branch feature/live
 manage-resource-claims: */.claude/worktree-resources.local.json.lock is held by an unrecorded process; remove that directory if no claim is in progress (glob)
+[1]
+```
+
+## A claim on a prunable worktree is stale
+
+Git keeps listing a worktree whose directory has been deleted and marks the record `prunable` rather than dropping it. Reading only the `worktree` lines would count that as live and hold its resource forever, which is the case this feature exists to clear. Deleting the directory outright is the ordinary way to reach that state; `git worktree remove` and `workmux remove` drop the record instead.
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/wt-prunable --branch feature/prunable > /dev/null \
+>   && claims_list
+resource=logic state=stale branch=feature/prunable claimed=TIMESTAMP worktree=/repo/wt-prunable
+```
+
+## A version in scientific notation reports the version, not a syntax error
+
+`1e100` satisfies the integer check, so comparing it in Bash arithmetic would fail as a syntax error rather than naming the unsupported version. The comparison happens in jq for that reason.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version": 1e100, "claims": []}' > "${claim_file}" \
+>   && claims list 2>&1
+manage-resource-claims: */.claude/worktree-resources.local.json declares version 1E+100; this script supports version 1 only, so it will not read or rewrite the file (glob)
+[1]
+```
+
+## Version zero is refused rather than rewritten
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version": 0, "claims": []}' > "${claim_file}" \
+>   && claims list 2>&1
+manage-resource-claims: */.claude/worktree-resources.local.json declares version 0; this script supports version 1 only, so it will not read or rewrite the file (glob)
 [1]
 ```

@@ -55,10 +55,12 @@ A claim is stale when git no longer lists its worktree. Stale claims are
 flagged by list, reported as free by check, replaced by claim, and removed by
 prune, so a worktree that has been removed never blocks a resource forever.
 
-A resource name is any string without whitespace, chosen per project: logic,
-simulator, port-5432. There is no registry. list writes one key=value line per
-claim with worktree= last, since a path may contain spaces; consume list --json
-where the output is parsed rather than read.
+A resource name is chosen per project: logic, simulator, port-5432. There is no
+registry, but the name must contain no whitespace or control characters and
+must not begin with a hyphen, so that it survives the key=value output and can
+be passed back as an argument. list writes one key=value line per claim with
+worktree= last, since a path may contain spaces; consume list --json where the
+output is parsed rather than read.
 
 Claims live in the main worktree's .claude/worktree-resources.local.json, which
 every worktree in the repository resolves to the same path. Set
@@ -105,13 +107,28 @@ function claim_file_path() {
 
 # Prints one absolute worktree path per line. Returns 1 when git cannot answer,
 # which leaves staleness undetermined rather than reporting every claim stale.
+#
+# Whole records are parsed rather than every "worktree" line, because git keeps
+# listing a worktree whose directory has been deleted and marks the record
+# "prunable" instead of dropping it. Taking the path alone would count that as
+# live and hold its resource forever, which is the case this feature exists to
+# clear. Deleting a worktree directory outright is the ordinary way to reach
+# that state; `git worktree remove` and `workmux remove` drop the record and
+# never produce it.
 function live_worktrees() {
   local porcelain
 
   porcelain="$(git worktree list --porcelain 2> /dev/null)" || return 1
   [[ -n "${porcelain}" ]] || return 1
 
-  printf '%s\n' "${porcelain}" | sed -n 's|^worktree ||p'
+  # The extra newline terminates the final record so it is flushed like the
+  # rest. Paths may contain spaces, so the path is taken as the remainder of
+  # the line rather than as a field.
+  printf '%s\n\n' "${porcelain}" | awk '
+    /^worktree / { path = substr($0, 10); prunable = 0; next }
+    /^prunable/  { prunable = 1; next }
+    /^$/         { if (path != "" && !prunable) { print path } ; path = ""; prunable = 0 }
+  '
 }
 
 # A missing or empty file means no claims, which is the ordinary state and not
@@ -139,21 +156,24 @@ function read_claims() {
     die "${file} is not valid JSON; fix or remove it"
   fi
 
-  # The version is required to be an integer here rather than merely a number,
-  # because it is about to be compared with Bash arithmetic: a JSON 1.5 would
-  # otherwise pass and then fail as an arithmetic syntax error instead of the
-  # schema error this is meant to report.
+  # The version is an integer, not merely a number, so that a 1.5 is refused as
+  # a malformed envelope rather than reported as an unsupported version it was
+  # never going to be.
   if ! jq -e '(type == "object") and ((.version | type) == "number") and ((.version | floor) == .version) and ((.claims | type) == "array")' > /dev/null 2>&1 <<< "${document}"; then
     die "${file} is not a claim file; expected an object with an integer \"version\" and a \"claims\" array"
   fi
-
-  declared="$(jq -r '.version' <<< "${document}")"
 
   # Exactly one version is supported, not "anything up to". A 0 or a negative
   # is no more readable than a 2, and accepting it would let a mutation rewrite
   # an unsupported document as version 1 while suggest-next-issue, which
   # requires 1 exactly, refuses the same file.
-  if ((declared != SCHEMA_VERSION)); then
+  #
+  # The comparison happens in jq rather than in Bash arithmetic, which cannot
+  # parse every shape a valid JSON number can take: 1e100 is an integer as far
+  # as the check above is concerned, and would reach (( )) as scientific
+  # notation and fail as a syntax error instead of the diagnostic below.
+  if ! jq -e --argjson supported "${SCHEMA_VERSION}" '.version == $supported' > /dev/null 2>&1 <<< "${document}"; then
+    declared="$(jq -r '.version' <<< "${document}")"
     die "${file} declares version ${declared}; this script supports version ${SCHEMA_VERSION} only, so it will not read or rewrite the file"
   fi
 

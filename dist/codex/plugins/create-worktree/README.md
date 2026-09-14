@@ -33,7 +33,7 @@ Claims live in the main worktree's `.claude/worktree-resources.local.json`, whic
 
 Claiming a resource another worktree already holds reports the holder and asks rather than proceeding. Answering yes proceeds: the claim is advisory, and a user who wants to override always has a reason. What it will not do is take a resource over without asking, including in the window between the check and the write, where another worktree may have claimed it in the meantime.
 
-A resource name is any string without whitespace, chosen per project. There is no registry.
+A resource name is chosen per project and there is no registry, but it must contain no whitespace or control characters and must not begin with a hyphen, so that it survives the `key=value` listing and can be passed back as an argument. `logic`, `simulator`, and `port-5432` are all fine.
 
 A claim whose worktree git no longer lists is stale. Stale claims are flagged by `--list-resources`, read as free when a new claim is checked, and replaced when one is recorded, so a worktree that has been removed never holds a resource forever.
 
