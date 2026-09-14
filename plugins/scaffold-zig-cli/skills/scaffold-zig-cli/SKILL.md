@@ -346,11 +346,17 @@ The first invocation reports the missing field and prints the value in the same 
 build.zig.zon:1:2: error: missing top-level 'fingerprint' field; suggested value: 0xd7ba43a4d5bc8918
 ```
 
-Take the **last** `0x` value on that line and write it into `build.zig.zon` as the `.fingerprint` field, immediately after `.version`, keeping the trailing comment:
+Take the **last** `0x` value on that line and write it into `build.zig.zon` as the `.fingerprint` field, immediately after `.version`, keeping the trailing comment. Indent it four spaces like every other field, shown here in place:
 
 ```zig
-.fingerprint = 0xd7ba43a4d5bc8918, // Changing this has security and trust implications.
+.{
+    .name = .PACKAGE-NAME,
+    .version = "0.1.0",
+    .fingerprint = 0xd7ba43a4d5bc8918, // Changing this has security and trust implications.
+    .minimum_zig_version = "ZIG-VERSION",
 ```
+
+The indentation is load-bearing. `zig fmt --check` rejects the field at column zero, so writing it flush left makes the `zig build fmt-check` below fail on the manifest this step just edited.
 
 Two diagnostics can appear here and the skill must accept either. An absent field produces `missing top-level 'fingerprint' field; suggested value: 0x...`; a field that is present but wrong produces `invalid fingerprint: 0x...; if this is a new or forked package, use this value: 0x...`. Both put the value to use last on the line. Do not compute a fingerprint, and do not reuse one from another project: the compiler is the only correct source.
 
