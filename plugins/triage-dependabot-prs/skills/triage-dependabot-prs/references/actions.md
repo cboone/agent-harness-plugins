@@ -50,7 +50,8 @@ Keep the comment body out of the command line, so it survives quoting intact:
 
 1. Run `mktemp -u` and note the path it prints. Call it `BODY_PATH`.
 1. Write the comment body to `BODY_PATH` with the Write tool.
-1. Post the comment and close the PR in one command, with the literal path, chained so the close only happens once the comment is posted:
+1. Re-check the PR as the top of this page describes, immediately before the next command, and stop if its state or head changed.
+1. Post the comment and close the PR in one command, with the literal path, chained so the close only happens once the comment is posted. The two writes stay chained rather than split around a second re-check: a change landing between them would leave an explanation of a close that never happened, and the chain keeps that window to two consecutive API calls.
 
    ```bash
    gh pr comment N --repo OWNER/REPO --body-file BODY_PATH && gh pr close N --repo OWNER/REPO --delete-branch

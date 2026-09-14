@@ -88,7 +88,7 @@ The examples below abbreviate the path to `dependabot-prs`. Expand it when you r
    - **Archived**: say so first. An archived repository accepts no merges, comments, or closes, so report read-only and skip steps 6 and 7.
    - **`viewerPermission` below `WRITE`**: report read-only and say why.
 
-1. When the working directory is a checkout of `OWNER/REPO`, run `git fetch origin`. The conflict prediction and default-branch reads below depend on it. When it is not, read files with `gh api 'repos/OWNER/REPO/contents/PATH?ref=DEFAULT'` and skip the `git merge-tree` checks, saying so in the report.
+1. When the working directory is a checkout of `OWNER/REPO`, run `git fetch origin`. The conflict prediction and default-branch reads below depend on it. When it is not, read files with `gh api 'repos/OWNER/REPO/contents/PATH?ref=DEFAULT' -H 'Accept: application/vnd.github.raw+json'`, which returns the file text rather than base64-encoded JSON, and skip the `git merge-tree` checks, saying so in the report.
 
 ### 2. Gather
 
@@ -138,6 +138,7 @@ These PRs also get the deeper checks (change content, release notes, breaking ch
 - `shape` of `group` or `multi`
 - a runtime (not development-only) dependency
 - `kind` of `security`, or any matched `alerts`
+- `kind` of `unknown`: the footer that marks a security update is gone, so a security fix can look like a version update. Read the diff and the release notes for an advisory (a GHSA or CVE identifier), and check the repository's alerts for the package before classifying
 - `ecosystem` of `github_actions`
 - `updates` empty, shorter than `updatesExpected`, or `branchAgrees` false: read the diff, because the title and body cannot be trusted for this PR
 

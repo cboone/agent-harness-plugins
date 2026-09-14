@@ -4,7 +4,7 @@ Local verification turns a Needs testing PR into Safe to merge or Needs work on 
 
 Run it in a detached worktree under a temporary directory. Never in the user's working tree, and never on a branch that would be pushed.
 
-Each command runs in a fresh shell, so no variable survives from one to the next. Run `mktemp -d` twice, note the two paths it prints, and write them literally where the commands below say `PR_DIR` and `CONTROL_DIR`. `DEFAULT` is the PR's base branch.
+Each command runs in a fresh shell, so no variable survives from one to the next, and neither does a working directory. Run `mktemp -d` twice, note the two paths it prints, and write them literally where the commands below say `PR_DIR` and `CONTROL_DIR`. `DEFAULT` is the PR's base branch. Every install, check, and build command after step 1 names its worktree in the same command, `cd PR_DIR/pr && COMMAND` or `cd CONTROL_DIR/control && COMMAND`: a bare `npm ci` or `make test` runs in the user's checkout.
 
 Running tests executes the new version's code, and skipping install scripts does not sandbox that. Verify on a machine whose environment holds no production or publishing credentials.
 
@@ -27,7 +27,14 @@ git worktree add --detach CONTROL_DIR/control origin/DEFAULT
 
 ## 2. Install without changing the lockfile
 
-A verification that rewrites the lockfile is testing a different change from the one in the PR. Use the frozen install for the repository's package manager, skipping install scripts where the package manager allows it:
+A verification that rewrites the lockfile is testing a different change from the one in the PR. Use the frozen install for the repository's package manager, skipping install scripts where the package manager allows it, in each worktree:
+
+```bash
+cd PR_DIR/pr && npm ci --ignore-scripts
+cd CONTROL_DIR/control && npm ci --ignore-scripts
+```
+
+The table gives the install for each package manager:
 
 | Package manager | Install                                           |
 | --------------- | ------------------------------------------------- |
@@ -46,7 +53,7 @@ When a project genuinely needs its install scripts to build, run with scripts en
 
 ## 3. Run the repository's own checks
 
-Read the repository's `AGENTS.md`, `CLAUDE.md`, `Makefile`, and `package.json` scripts to find the commands CI runs, and run those, in both worktrees:
+Read the repository's `AGENTS.md`, `CLAUDE.md`, `Makefile`, and `package.json` scripts to find the commands CI runs, and run those in both worktrees, each prefixed with `cd PR_DIR/pr &&` or `cd CONTROL_DIR/control &&`:
 
 - `make test`, `make lint`, `make build`, or the repository's equivalents
 - the test runner the workflow calls (`go test ./...`, `cargo test --locked`, `uv run pytest`, `yarn test`)
