@@ -57,7 +57,7 @@ Resolve current upstream versions from authoritative sources for each ecosystem.
 
 Use `./references/upgrade-sources.md` for source-of-truth selection. Record the source URL or command, lookup date, latest value, and confidence. If upstream resolution fails, keep the candidate in the plan with status `Blocked` or `Unknown` instead of dropping it.
 
-Then check whether Dependabot already proposes any of these upgrades. List its open PRs once, naming the repository explicitly:
+Then check whether Dependabot already proposes any of these upgrades. Take `OWNER/REPO` from the `origin` remote (`git remote -v`); in a fork, that is the fork, not the upstream. List its open PRs once, naming the repository explicitly:
 
 ```bash
 gh pr list --repo OWNER/REPO --author app/dependabot --state open --limit 500 --json number,title,headRefName,files
