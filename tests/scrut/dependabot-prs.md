@@ -288,6 +288,13 @@ $ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.jso
 {"alerts":[{"number":38,"cleared":null}]}
 ```
 
+A pre-release target is not compared at all. Reading `2.0.0-rc.1` as `2.0.0` would call an alert patched in `2.0.0` cleared when it is not.
+
+```scrut
+$ "${DEPENDABOT_PRS_BIN}" summarize < "${DEPENDABOT_PRS_DATA_DIR}/edge-cases.json" | jq -c '.prs[] | select(.number == 209) | {alerts: [.alerts[] | {number, cleared}]}'
+{"alerts":[{"number":39,"cleared":null}]}
+```
+
 ## Patched versions sort by version, not as strings
 
 ```scrut

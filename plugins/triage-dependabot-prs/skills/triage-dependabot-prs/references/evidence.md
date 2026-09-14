@@ -6,9 +6,9 @@ Every PR gets sections 1 to 4. Sections 5 to 8 apply to the PRs listed in step 3
 
 ## 1. Freshness
 
-The question: do the PR's checks and mergeability describe the default branch as it is now?
+The question: do the PR's checks and mergeability describe its base branch as it is now?
 
-- **`compare.behindBy`** counts the default-branch commits the PR head lacks. Zero means current.
+- **`compare.behindBy`** counts the base-branch commits the PR head lacks. Zero means current.
 - **When it is above zero, look at what changed** since the merge base, and whether any of it matters to this PR:
 
   ```bash

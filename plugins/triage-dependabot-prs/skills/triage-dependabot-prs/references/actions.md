@@ -3,14 +3,14 @@
 How to carry out the dispositions the user selected. Everything here is a write to a shared repository, so each one happens only after the user chose it, and each one starts by re-checking the PR:
 
 ```bash
-gh pr view N --repo OWNER/REPO --json state,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviewDecision
+gh pr view N --repo OWNER/REPO --json state,headRefOid,baseRefName,mergeable,mergeStateStatus,statusCheckRollup,reviewDecision
 ```
 
 If the PR closed, merged, or changed head since the triage, re-triage it before acting.
 
 ## Merge
 
-1. **Pick the method.** Use one the repository allows (`mergeCommitAllowed`, `squashMergeAllowed`, `rebaseMergeAllowed`) and the rules allow (`allowed_merge_methods` in the `pull_request` rule from `gh api repos/OWNER/REPO/rules/branches/DEFAULT`). When several remain, follow the repository's agent config, then `viewerDefaultMergeMethod`.
+1. **Pick the method.** Use one the repository allows (`mergeCommitAllowed`, `squashMergeAllowed`, `rebaseMergeAllowed`) and the rules allow (`allowed_merge_methods` in the `pull_request` rule from `gh api repos/OWNER/REPO/rules/branches/BASE`, where `BASE` is the PR's `baseRefName`, since a PR aimed at a configured `target-branch` answers to that branch's rules). When several remain, follow the repository's agent config, then `viewerDefaultMergeMethod`.
 1. **Merge one PR at a time, in the computed order:**
 
    ```bash

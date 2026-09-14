@@ -178,6 +178,25 @@
           "path": "api/package-lock.json"
         }
       ]
+    },
+    {
+      "number": 209,
+      "title": "chore(deps): bump frame from 1.9.0 to 2.0.0-rc.1",
+      "url": "https://github.com/example-org/edge-repo/pull/209",
+      "headRefName": "dependabot/npm_and_yarn/frame-2.0.0-rc.1",
+      "headRefOid": "2090909090909090909090909090909090909090",
+      "baseRefName": "main",
+      "body": "Bumps [frame](https://github.com/example-org/frame) from 1.9.0 to 2.0.0-rc.1.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "package.json"
+        },
+        {
+          "path": "package-lock.json"
+        }
+      ]
     }
   ],
   "alerts": {
@@ -333,6 +352,25 @@
         "security_vulnerability": {
           "first_patched_version": {
             "identifier": "1.2.6"
+          }
+        }
+      },
+      {
+        "number": 39,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "frame"
+          },
+          "manifest_path": "package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-9999-9999-9999",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "2.0.0"
           }
         }
       }

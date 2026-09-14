@@ -107,7 +107,7 @@ The examples below abbreviate the path to `dependabot-prs`. Expand it when you r
    Restrict to the PR numbers the user named, if any. Read individual PR records with `jq '.prs[] | select(.number == N)'` as step 3 needs them.
 
 1. Gather the repository context, in parallel:
-   - **Dependabot config** on the default branch: `git show origin/DEFAULT:.github/dependabot.yml` (or `.yaml`). Groups, `ignore` rules, `target-branch`, and comments recording deliberate holds all feed the classification.
+   - **Dependabot config** on the default branch: `git show origin/DEFAULT:.github/dependabot.yml` (or `.yaml`), or the contents API from step 1 when the working directory is not a checkout of `OWNER/REPO`. Read the policy files below the same way, so another repository's config and policy never shape this triage. Groups, `ignore` rules, `target-branch`, and comments recording deliberate holds all feed the classification.
    - **Merge rules**: `gh api repos/OWNER/REPO/rules/branches/DEFAULT`. Rulesets can require reviews, restrict `allowed_merge_methods`, and block merges while `branches/DEFAULT/protection` returns 404, so read the rules endpoint rather than protection alone.
    - **Policy**: the repository's `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md`, for held majors, freezes, a required merge method, and commit conventions. Also `git grep -n "held at" origin/DEFAULT -- .github/` for held-major comments on pinned actions, read from the default branch rather than whatever the working tree has checked out.
 
@@ -219,7 +219,7 @@ Carry out the selected actions per `./references/actions.md`:
 ### 8. Wrap Up
 
 1. If anything was merged, re-run the script and compare alerts: a merge can clear one advisory and introduce another through a new transitive dependency. The dependency graph updates a little after a merge, so an alert that is still open immediately afterwards is pending, not proof the fix failed; say so rather than re-checking in a loop.
-1. Remove the triage refs and any verification worktrees:
+1. Remove the triage refs and any verification worktrees, when step 3 created them in a checkout of `OWNER/REPO`. When it did not, leave the local refs alone: they may belong to an earlier triage of the local repository.
 
    ```bash
    git for-each-ref --format='delete %(refname)' refs/dependabot-triage/ | git update-ref --stdin

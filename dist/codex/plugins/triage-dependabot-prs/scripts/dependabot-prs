@@ -479,6 +479,11 @@ function do_summarize() {
         and ($pr.updates | any(.name | lower == $package))
         and ($pr.files | any(. == $manifest or (dependency_file and dirname == ($manifest | dirname))));
 
+    # A release with only numeric parts, after any requirement operator. A
+    # pre-release such as 2.0.0-rc.1 is not one, and version_key would read it as
+    # 2.0.0, so cleared stays null rather than comparing it.
+    def stable_version: sub("^[~^>=<!\\s]*[vV]?"; "") | test("^[0-9]+(\\.[0-9]+)*$");
+
     # Padded to four parts, so 7.5 and 7.5.0 compare equal.
     def version_key: ([sub("^[~^>=<!\\s]*[vV]?"; "") | split(".")[] | ((capture("^(?<n>[0-9]+)").n | tonumber)? // 0)] + [0, 0, 0, 0]) | .[0:4];
 
@@ -550,7 +555,7 @@ function do_summarize() {
             | . as $alert
             | ([$pr.updates[] | select(.name | lower == ($alert.package | lower)) | .to] | unique) as $targets
             | (if ($targets | length) == 1 then $targets[0] else null end) as $to
-            | . + {cleared: (if $to == null or $alert.patched == "" or ($to | is_sha) then null else (($to | version_key) >= ($alert.patched | version_key)) end)}
+            | . + {cleared: (if $to == null or $alert.patched == "" or ($to | is_sha) or ($to | stable_version | not) or ($alert.patched | stable_version | not) then null else (($to | version_key) >= ($alert.patched | version_key)) end)}
           ]
       ] as $prs
     | {
