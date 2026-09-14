@@ -67,7 +67,7 @@ When neither file exists on the default branch:
    The settings decide the answer. An empty PR list alone cannot tell disabled security updates from enabled ones with nothing to fix.
 
 1. Report what is missing, what is covered today (security updates only, or nothing), and what the config would add.
-1. In a checkout that matches `OWNER/REPO` (step 1), offer to invoke the `pin-everything` skill with `--scope dependabot`, which writes the house baseline into the current checkout: a weekly schedule, split minor-and-patch and major groups per ecosystem, and an entry for every supported ecosystem the repository uses. Once it has written the file, compare the result with the step 3 inventory and name any ecosystem or directory still missing. Without a matching checkout, do not offer the hand-off, since it would write the config into the wrong repository: tell the user to run this skill again from a checkout of `OWNER/REPO`. Then stop. Under `--report-only`, stop after the report.
+1. Under `--report-only`, stop after the report. Otherwise, in a checkout that matches `OWNER/REPO` (step 1), offer to invoke the `pin-everything` skill with `--scope dependabot`, which writes the house baseline into the current checkout: a weekly schedule, split minor-and-patch and major groups per ecosystem, and an entry for every supported ecosystem the repository uses. Once it has written the file, compare the result with the step 3 inventory and name any ecosystem or directory still missing. Without a matching checkout, do not offer the hand-off, since it would write the config into the wrong repository: tell the user to run this skill again from a checkout of `OWNER/REPO`. Then stop.
 
 ### 3. Inventory the Repository
 
