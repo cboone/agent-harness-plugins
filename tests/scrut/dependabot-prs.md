@@ -558,6 +558,13 @@ $ fetch_with_stub STUB_GH_API_FAIL=pulls_301_files | jq -c '.prs[] | select(.num
 {"files":["web/package.json"],"filesComplete":false,"alerts":[{"number":51,"cleared":null}]}
 ```
 
+The summary lists every open PR, from any author, whose file list stayed incomplete, since overlaps against it can miss a shared file.
+
+```scrut
+$ fetch_with_stub STUB_GH_API_FAIL=pulls_301_files | jq -c '{incompleteFileLists}'
+{"incompleteFileLists":[301]}
+```
+
 A non-Dependabot commit on the second page of a comparison is still counted.
 
 ```scrut
