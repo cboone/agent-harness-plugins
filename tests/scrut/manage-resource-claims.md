@@ -43,6 +43,13 @@ $ function setup_claims() {
 >   linked_worktree="$(mktemp -d)"
 >   shared_porcelain="$(printf 'worktree %s\nHEAD aaa\nbranch refs/heads/main\n\nworktree %s\nHEAD bbb\nbranch refs/heads/feature/live\n' "${main_worktree}" "${linked_worktree}")"
 > }
+> function claims_no_identity() {
+>   local blind
+>   blind="$(mktemp -d)"
+>   printf '#!/usr/bin/env bash\nif [[ "${3:-}" == "rev-parse" ]]; then exit 128; fi\nexec "%s" "$@"\n' "${GIT_WORKTREE_STUB_BIN}" > "${blind}/git"
+>   chmod +x "${blind}/git"
+>   env PATH="${blind}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${live_porcelain}" WORKTREE_RESOURCES_FILE="${claim_file}" bash "${MANAGE_RESOURCE_CLAIMS_BIN}" "$@"
+> }
 > function without_jq() {
 >   local minimal
 >   minimal="$(mktemp -d)"
@@ -325,7 +332,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource": "logic"}]}' > "${claim_file}" \
 >   && claims list 2>&1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 [1]
 ```
 
@@ -336,7 +343,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":"x"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 
 ## Concurrent claims on different resources both survive
@@ -391,7 +398,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource":"a b","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 
 ## Outside a git repository the claim file cannot be resolved
@@ -579,7 +586,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource":"-logic","worktree":"/repo/wt-live","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 
 ## A stored branch carrying whitespace is refused
@@ -589,7 +596,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version": 1, "claims": [{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/repo/wt-live","branch":"b c","claimed_at":"t"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 
 ## A worktree path containing spaces is still accepted
@@ -633,7 +640,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/a\\n/b","branch":"b","claimed_at":"t"}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 
 ## --take-over naming a holder that no longer holds it is refused
@@ -665,7 +672,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":1.5}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 
 ```scrut
@@ -673,7 +680,7 @@ $ setup_claims \
 >   && mkdir -p "$(dirname "${claim_file}")" \
 >   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"a","worktree":"/repo/wt-live","branch":"b","claimed_at":"t","issue":-3}]}' > "${claim_file}" \
 >   && claims list 2>&1 | tail -1
-manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present (glob)
+manage-resource-claims: */.claude/worktree-resources.local.json holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present (glob)
 ```
 
 ## A lock held past the wait is reported, never broken
@@ -993,4 +1000,30 @@ $ setup_shared \
 >   && ( cd "${linked_worktree}" && claims_shared claim logic --worktree "${linked_worktree}" --branch feature/live > /dev/null ) \
 >   && ( cd "${main_worktree}" && claims_shared list | sed 's/claimed=[^ ]*/claimed=TIMESTAMP/' | sed 's/id=[^ ]*/id=ID/' )
 resource=logic state=held id=ID branch=feature/live claimed=TIMESTAMP worktree=* (glob)
+```
+
+## A live record whose identity cannot be resolved falls back rather than going stale
+
+`rev-parse` can fail for a worktree git still lists. Judging a claim that carries a `gitdir` on that alone would then read it as stale, and `claim` would replace a live holder with nobody asked, which is the outcome the identity was added to prevent.
+
+An identity decides a match only where both the claim and the record have one. Here the record has none, so the path and branch decide, and the claim stays held.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"logic","worktree":"/repo/wt-live","branch":"feature/live","gitdir":"/admin/wt-live","claimed_at":"t"}]}' > "${claim_file}" \
+>   && claims_no_identity list
+resource=logic state=held id=aaaaaaaaaaaa branch=feature/live claimed=t worktree=/repo/wt-live
+```
+
+## A record that does resolve an identity still overrides a reused path
+
+The other half of the same rule: where both sides have an identity, a mismatch wins even though the path matches.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"logic","worktree":"/repo/wt-live","branch":"feature/live","gitdir":"/admin/somewhere-else","claimed_at":"t"}]}' > "${claim_file}" \
+>   && claims list
+resource=logic state=stale id=aaaaaaaaaaaa branch=feature/live claimed=t worktree=/repo/wt-live
 ```

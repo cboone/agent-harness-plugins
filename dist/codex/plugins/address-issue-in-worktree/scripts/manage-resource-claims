@@ -163,21 +163,10 @@ function claim_file_path() {
 # answer, which leaves staleness undetermined rather than reporting every claim
 # stale.
 #
-# Each live record contributes two keys, "p <path>" and "b <branch>", because
-# neither identifies a worktree on its own. `git worktree move` changes the
-# path and keeps the branch; `git switch` changes the branch and keeps the
-# path; and a removed path can later be reused by an unrelated worktree.
-#
-# A claim carrying an identity is judged on that alone, because it settles the
-# question in both directions: a path or a branch that has since been reused by
-# an unrelated worktree would otherwise keep an obsolete claim held forever,
-# which no later check or prune could clear.
-#
-# Only a claim without one falls back to the path and the branch, and there
-# either match counts as live. That errs toward reporting a resource still
-# held, which is the right direction for a guess: reading a live claim as stale
-# lets another worktree take the resource with nobody asked, while holding one
-# slightly too long is visible in list and cleared by release or prune.
+# Each live record is emitted whole, as {path, branch, gitdir}, rather than as
+# loose keys. Whether a claim matches depends on what that particular record
+# knows about itself, so the three have to stay grouped: an identity settles
+# the question only against a record that has one.
 #
 # A record whose directory has been deleted is skipped: git keeps listing it
 # and marks it "prunable" rather than dropping it, and counting that as live
@@ -187,7 +176,7 @@ function claim_file_path() {
 # path may contain a newline. NUL is the one byte a path cannot hold, and JSON
 # carries the result to jq without a delimiter to collide with.
 function live_worktrees_json() {
-  local line path="" branch="" prunable=0 saw_any=0 identity=""
+  local line path="" branch="" prunable=0 saw_any=0
   local -a keys=()
 
   # The "|| [[ -n ... ]]" is what processes a final field that carries no
@@ -200,14 +189,7 @@ function live_worktrees_json() {
     case "${line}" in
       "")
         if [[ -n "${path}" && "${prunable}" -eq 0 ]]; then
-          keys+=("p ${path}")
-          if [[ -n "${branch}" ]]; then
-            keys+=("b ${branch}")
-          fi
-          identity="$(worktree_identity "${path}")"
-          if [[ -n "${identity}" ]]; then
-            keys+=("g ${identity}")
-          fi
+          keys+=("${path}" "${branch}" "$(worktree_identity "${path}")")
         fi
         path=""
         branch=""
@@ -233,14 +215,7 @@ function live_worktrees_json() {
   # git separates records rather than terminating them, so the last one may
   # arrive without a trailing empty field.
   if [[ -n "${path}" && "${prunable}" -eq 0 ]]; then
-    keys+=("p ${path}")
-    if [[ -n "${branch}" ]]; then
-      keys+=("b ${branch}")
-    fi
-    identity="$(worktree_identity "${path}")"
-    if [[ -n "${identity}" ]]; then
-      keys+=("g ${identity}")
-    fi
+    keys+=("${path}" "${branch}" "$(worktree_identity "${path}")")
   fi
 
   if [[ "${#keys[@]}" -eq 0 ]]; then
@@ -248,7 +223,9 @@ function live_worktrees_json() {
     return 0
   fi
 
-  jq -n '$ARGS.positional' --args "${keys[@]}"
+  jq -n '$ARGS.positional as $a
+         | [range(0; ($a | length); 3)
+            | {path: $a[.], branch: $a[. + 1], gitdir: $a[. + 2]}]' --args "${keys[@]}"
 }
 
 # A missing or empty file means no claims, which is the ordinary state and not
@@ -342,7 +319,7 @@ function read_claims() {
         and ((.claimed_at | type) == "string") and (.claimed_at | test("^[^[:space:][:cntrl:]]+\\z"))
         and ((has("gitdir") | not) or (((.gitdir | type) == "string") and (.gitdir | test("^[^[:cntrl:]]+\\z"))))
         and ((has("issue") | not) or ((.issue | type) == "number" and .issue >= 0 and (.issue | floor) == .issue)))' "${file}" > /dev/null 2>&1; then
-    die "${file} holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present"
+    die "${file} holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present"
   fi
 
   # One claim per resource is the invariant every lookup assumes: claim_for_resource
@@ -491,6 +468,16 @@ function write_claims() {
 # Adds a derived "stale" boolean to each claim. Staleness is never stored, so a
 # claim cannot outlive the worktree that made it and nothing has to hook
 # worktree removal, which this script's callers do not perform.
+# An identity decides a match only where both the claim and the record carry
+# one. That is what stops a path since reused by an unrelated worktree from
+# holding an obsolete claim forever, while still falling back to the path and
+# the branch for a record whose identity could not be resolved, which would
+# otherwise read a live claim as stale and let its resource be taken with
+# nobody asked.
+#
+# In the fallback either match counts as live, erring toward reporting a
+# resource still held. That is the right direction for a guess: holding a claim
+# slightly too long is visible in list and cleared by release or prune.
 function decorate_claims() {
   local claims="${1}"
   local live_known="no"
@@ -508,11 +495,12 @@ function decorate_claims() {
       | .branch as $branch
       | (.gitdir // "") as $gitdir
       | . + {stale: ($live_known == "yes"
-                     and (if $gitdir != ""
-                          then ($live | index("g " + $gitdir)) == null
-                          else (($live | index("p " + $worktree)) == null)
-                               and (($live | index("b " + $branch)) == null)
-                          end))}
+                     and (($live | any(
+                            if ((.gitdir // "") != "") and ($gitdir != "")
+                            then .gitdir == $gitdir
+                            else (.path == $worktree)
+                                 or ((.branch != "") and (.branch == $branch))
+                            end)) | not))}
     )
   ' <<< "${claims}"
 }
