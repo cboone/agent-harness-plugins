@@ -7,9 +7,28 @@ Create a git worktree, branch, and tmux window from an issue number or a task de
 
 ## Requirements
 
-- [`workmux`](https://github.com/paiml/workmux), whenever a worktree is created, which is every use except `--list-resources` and `--release-resource`. Those two report on claims and stop, so they need only `jq`.
+- [`workmux`](https://github.com/raine/workmux) 0.1.233 or newer, whenever a worktree is created, which is every use except `--list-resources` and `--release-resource`. Those two report on claims and stop, so they need only `jq`. `workmux add --dry-run` arrived in 0.1.220 and slash-separated generated names such as `fix/issue-123` stopped being flattened in 0.1.233; the branch naming here needs both. Verified against 0.1.261. Older versions degrade in two different ways rather than one: below 0.1.220 the dry run fails outright and the skill falls back to deriving the name from the issue title, while 0.1.220 through 0.1.232 generate a name successfully but flatten the prefix, so `fix/auth-timeout` silently becomes `fix-auth-timeout` and no fallback is triggered. Passing an explicit branch name skips naming altogether and works on any version.
+- A naming command workmux can reach, unless you always pass an explicit branch name. `workmux add -A` uses `auto_name.command` if set, otherwise the configured agent's CLI, otherwise the [`llm`](https://llm.datasette.io/) CLI. With `agent: claude` that resolves to `claude --model haiku -p` and needs no extra setup. When none is reachable, the skill falls back to deriving a name from the issue title.
 - [`gh`](https://cli.github.com/), authenticated, only when you pass an issue number.
 - [`jq`](https://jqlang.org/), when you pass an issue number or use any of the resource options. The bundled `compose-issue-prompt` script parses the issue JSON with it, and `manage-resource-claims` reads and writes the claim file with it. Both exit if it is missing. A task description or an explicit branch name with no resource needs neither `gh` nor `jq`.
+
+### Choosing the type prefix
+
+The type prefix is whatever the generator returns, so it comes from your workmux naming prompt rather than from this skill. workmux's built-in prompt asks for bare kebab-case, which yields `387-make-things-better`. To get `feature/`, `fix/`, and `chore/` prefixes, ask for them in your global workmux config:
+
+```yaml
+auto_name:
+  system_prompt: |
+    Generate a concise git branch name based on the task description.
+
+    Rules:
+    - Use kebab-case (lowercase with hyphens)
+    - Focus on the core task, not implementation details
+    - Always use a feature-branch style prefix: feature/, fix/, chore/, or docs/
+    - Use fix/ for a bug fix, feature/ for new work, chore/ for cleanup, docs/ for documentation
+
+    Output ONLY the branch name, nothing else.
+```
 
 ## Installation
 
@@ -19,9 +38,11 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 Takes an issue number, a task description, or an explicit branch name.
 
-Given an **issue number**, it fetches the issue, derives a branch name of the form `feature/42-add-dark-mode-support` from the title and labels, and injects the issue title, labels, and body as the prompt. Leading with the issue number is what lets the [PR](../pr/README.md) skill link the resulting pull request back to the issue.
+Given an **issue number**, it fetches the issue and injects the title, labels, and body as the prompt. Given a **task description**, it injects the description. An explicit branch name is used as-is.
 
-Given a **task description**, it derives a branch name such as `feature/add-dark-mode-support` or `fix/auth-timeout` and injects the description as the prompt. An explicit branch name is used as-is.
+The branch name comes from workmux's own generator, which reads the prompt: the launcher runs `workmux add -A --dry-run`, which returns a name without creating anything. Whatever it returns is used as-is, with the issue number inserted after the type prefix so that `feature/make-things-better` for issue 387 becomes `feature/387-make-things-better`. A generator that returns a bare slug gets the number at the front, as `387-make-things-better`. Leading with the issue number is what lets the [PR](../pr/README.md) skill link the resulting pull request back to the issue.
+
+Rerunning for the same issue reuses a local branch that already carries that number, so the same worktree reopens rather than a second one appearing under a differently worded name.
 
 Either way, it creates the worktree via `workmux add` and stops. It does not start the work. To have the new session also plan the issue, use [Address Issue in Worktree](../address-issue-in-worktree/README.md).
 
@@ -60,6 +81,7 @@ Where a project declares its resources under an "exclusive resources" heading in
 | `--base <branch>`           | Base the worktree on a specific branch instead of the repository's default           |
 | `--resource <name>`         | Claim a named exclusive resource, reporting the holder first if one holds it already |
 | `--release-resource <name>` | Release a claim and stop, creating nothing                                           |
+| `--branch <name>`           | Use this exact branch name and skip generation                                       |
 | `--list-resources`          | Report every claim and stop, creating nothing                                        |
 
 ## Recommended Permissions
@@ -78,10 +100,10 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 ## Examples
 
-- "create worktree for issue 42": creates `feature/42-<slug>` with the issue context injected
-- "create worktree for adding dark mode": creates `feature/adding-dark-mode`
-- "spin up a worktree to fix the auth timeout": creates `fix/auth-timeout`
-- "new worktree feature/refactor-config": uses the branch name as-is
+- "create worktree for issue 42": generates a name for the issue, inserts `42`, and injects the issue context
+- "create worktree for adding dark mode": generates a name such as `feature/add-dark-mode`
+- "spin up a worktree to fix the auth timeout": generates a name such as `fix/auth-timeout`
+- "new worktree feature/refactor-config": uses the branch name as-is, with no generation step
 - "create worktree for issue 42, it needs the DAW": claims `logic` for the new worktree, or reports which branch already holds it and asks
 - "what's holding the simulator": lists every claim, flagging any whose worktree is gone
 - "release the DAW": clears the `logic` claim without creating anything

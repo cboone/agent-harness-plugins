@@ -17,6 +17,7 @@ The user may provide these options inline:
 
 - **--issue `<number>`**: Force issue lookup, for when a task description is itself a number
 - **--no-issue**: Force description handling, even if the argument looks like an issue number
+- **--branch `<name>`**: Use this exact branch name and skip generation, for a name that does not look like one
 - **--base `<branch>`**: Base the worktree on a specific branch instead of the repository's default branch
 - **--resource `<name>`**: Claim a named exclusive resource for the new worktree, and report the holder first if one holds it already
 - **--release-resource `<name>`**: Release a claim and stop, creating nothing
@@ -54,14 +55,16 @@ For the rest of the workflow, skip to the next step.
 Decide what the user gave you, in this order:
 
 1. **An issue number**: a bare integer or `#N` (e.g. `/create-worktree 42`, `/create-worktree #42`), or anything passed via `--issue N`
-2. **An explicit branch name**: a string containing `/` that looks like `type/slug` (e.g. `/create-worktree feature/my-thing`) -- use as-is
+2. **An explicit branch name**: anything passed via `--branch NAME`, or a string containing `/` that looks like `type/slug` (e.g. `/create-worktree feature/my-thing`) -- use as-is
 3. **A task description**: anything else (e.g. `/create-worktree Fix a bug`)
 
 `--no-issue` forces a bare integer down the description path.
 
+The generator can return a name with no `/` in it, so a prefixless branch such as `make-things-better` is indistinguishable from a task description by shape alone. `--branch` is how the user names one: without it, passing a prefixless branch back would generate a second branch rather than reopening the first. Prefer it whenever you are echoing a name the launcher reported earlier, and offer it by name when you ask the user to choose between candidate branches.
+
 If an issue number was given but `gh` is not installed or not authenticated, say so and ask whether to treat the argument as a task description instead. Do not silently fall back.
 
-### 3. Determine the Branch Name
+### 3. Let the Launcher Name the Branch
 
 **From an issue number**, fetch the issue first:
 
@@ -71,24 +74,35 @@ gh issue view NUMBER --json number,title,labels,body,state
 
 If the issue is closed, warn the user and ask whether to proceed.
 
-Build the branch name as `TYPE/NUMBER-SLUG`:
+**Do not build the branch name yourself.** The launcher does it, by passing `--auto-name`, which runs `workmux add -A -P <prompt> --dry-run`. That asks workmux's own generator to read the prompt and return a name, and creates nothing. Whatever it returns is used as-is.
 
-- **TYPE**: `fix` if the labels contain "bug" or "fix", `feature` otherwise
-- **SLUG**: slugify the issue title (see the rules below)
+Adding `--issue NUMBER` inserts the issue number after the type prefix, or at the front when the generator returned a bare slug:
 
-Leading with the issue number is what lets the `pr` skill link the resulting pull request back to the issue: its primary detection strategy reads `TYPE/N-description` straight out of the branch name. Without the number, `pr` falls back to searching GitHub by branch slug, which is slower and can match the wrong issue or none at all.
+| Issue | Generator returns            | Branch created                   |
+| ----- | ---------------------------- | -------------------------------- |
+| 387   | `feature/make-things-better` | `feature/387-make-things-better` |
+| 42    | `fix/fix-the-login-page`     | `fix/42-fix-the-login-page`      |
+| 387   | `make-things-better`         | `387-make-things-better`         |
+| none  | `feature/add-dark-mode`      | `feature/add-dark-mode`          |
 
-Examples:
+Leading with the issue number is what lets the `pr` skill link the resulting pull request back to the issue: its primary detection strategy reads `TYPE/N-description` and `N-description` straight out of the branch name. Without the number, `pr` falls back to searching GitHub by branch slug, which is slower and can match the wrong issue or none at all.
 
-- issue 42 "Add dark mode support" labeled `enhancement` -> `feature/42-add-dark-mode-support`
-- issue 108 "Login fails with special chars" labeled `bug` -> `fix/108-login-fails-with-special-chars`
-- issue 356 "chore: validate skill and path cross-references in bin/validate-plugins" labeled `maintenance` -> `feature/356-validate-skill-and-path-cross-references`
-- issue 358 "lint-and-fix: consult project agent config before running a destructive auto-fix" labeled `bug` -> `fix/358-lint-and-fix-consult-project-agent-config`
+The type prefix comes from workmux's naming prompt, not from this skill, so it reflects the user's own `auto_name.system_prompt`. Do not add, correct, or second-guess it, and do not pass a branch name alongside `--auto-name`: the launcher rejects that combination.
 
-**From a task description**, build `TYPE/SLUG`:
+**An explicit branch name**, whether passed via `--branch NAME` or recognized by its `type/slug` shape, is used as-is, with the positional form and no `--auto-name`.
 
-- **TYPE**: Use `fix` if the user mentions "fix", "bug", "patch", or similar. Use `feature` for everything else.
-- **SLUG**: Slugify the description.
+**Reruns reuse the existing branch, on the issue path only.** With `--issue NUMBER`, the launcher first looks for a local branch already carrying that number and reuses it, so running this skill twice for the same issue reopens the same worktree instead of generating a second name. It reports `Reusing branch <name> for issue <number>`. If more than one local branch matches, it lists them and exits; ask the user which to use and re-run with `--branch NAME`.
+
+A task description has no such identifier, and the generator is not deterministic, so rerunning the same description generally produces a differently worded name and therefore a second worktree. When the user is returning to work they already started from a description, ask for the branch name and pass it with `--branch NAME` instead.
+
+#### If the generator is unavailable
+
+`workmux add -A` needs a naming command: the configured agent's CLI, an `auto_name.command`, or the `llm` CLI. When none is reachable the launcher exits non-zero, printing workmux's error followed by `launch-workmux: workmux could not generate a branch name`.
+
+Only then, build the name yourself and re-run with the positional form. **From an issue**, build `TYPE/NUMBER-SLUG`; **from a task description**, build `TYPE/SLUG`:
+
+- **TYPE**: `fix` if the issue labels contain "bug" or "fix", or the description mentions "fix", "bug", or "patch". `feature` otherwise.
+- **SLUG**: slugify the issue title or the description.
 
 **Slugify rules**, applied in this order:
 
@@ -99,11 +113,11 @@ Examples:
 
    The truncation guard matters: `Login fails with special chars` is under 50 characters, so nothing is dropped and `-with-special-chars` survives intact. Trimming unconditionally would mangle short titles that legitimately end in a prepositional phrase.
 
-Examples:
+Examples of the fallback:
 
-- "create worktree for adding dark mode" -> `feature/adding-dark-mode`
+- issue 42 "Add dark mode support" labeled `enhancement` -> `feature/42-add-dark-mode-support`
+- issue 358 "lint-and-fix: consult project agent config before running a destructive auto-fix" labeled `bug` -> `fix/358-lint-and-fix-consult-project-agent-config`
 - "spin up a worktree to fix the auth timeout" -> `fix/auth-timeout`
-- "new worktree feature/refactor-config" -> `feature/refactor-config` (used as-is)
 
 ### 4. Check the Resource Claim
 
@@ -149,11 +163,11 @@ The script truncates a body longer than about 2000 characters at a paragraph or 
 
 ```text
 Work on: [user's task description]
-
-Branch: [BRANCH_NAME]
 ```
 
-Keep the prompt concise -- a few sentences at most. Use the user's own description of the task as the core content.
+Keep the prompt concise -- a few sentences at most. Use the user's own description of the task as the core content. The prompt is also what the generator reads to name the branch, so describe the work rather than the branch.
+
+Do not put a `Branch:` line in the prompt. The name does not exist yet when the prompt is composed, and stating one there would conflict with the name the generator returns.
 
 If the user provided only a branch name with no description, derive a human-readable description from the branch name (e.g., `feature/add-dark-mode` becomes "Work on: add dark mode").
 
@@ -200,7 +214,7 @@ Then launch the worktree.
 ```bash
 gh issue view NUMBER --json number,title,labels,body,state \
   | bash "SCRIPTS_DIR/compose-issue-prompt" \
-  | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH"
+  | bash "SCRIPTS_DIR/launch-workmux" --auto-name --issue NUMBER --base "BASE_BRANCH"
 ```
 
 Do not pass `--chain-command` here. This skill creates the worktree and stops; `address-issue-in-worktree` is the skill that chains into `address-issue`.
@@ -210,14 +224,20 @@ This skill also does not self-assign the issue or label it "in progress". Creati
 **From a task description**, feed the prompt in directly:
 
 ```bash
-bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH" <<'WORKMUX_PROMPT'
+bash "SCRIPTS_DIR/launch-workmux" --auto-name --base "BASE_BRANCH" <<'WORKMUX_PROMPT'
 Work on: [user's task description]
-
-Branch: [BRANCH_NAME]
 WORKMUX_PROMPT
 ```
 
-The script outputs the workmux log directly and cleans up its own log file. Verify success:
+**From an explicit branch name**, use the positional form and no `--auto-name`:
+
+```bash
+bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH" <<'WORKMUX_PROMPT'
+Work on: [description derived from the branch name]
+WORKMUX_PROMPT
+```
+
+With `--auto-name` the script prints the branch name it settled on, as either `Generated branch name: NAME` or `Reusing branch NAME for issue NUMBER`. Read the branch name from that line rather than assuming one. The positional form prints neither line, because there the name is the one you passed. Either way the script then outputs the workmux log and cleans up its own log file. Verify success:
 
 ```bash
 git worktree list
@@ -256,7 +276,8 @@ The trailing `*` matters. The script writes a `.lock` directory beside the file 
 
 After confirming the worktree exists in `git worktree list`, report:
 
-- The branch name created
+- The branch name. For `--auto-name` take it from the launcher's `Generated branch name:` or `Reusing branch` line; for an explicit branch name it is the one the user gave
+- For `--auto-name`, whether the branch was newly generated or reused from an earlier run
 - The tmux window name (to help the user switch to it)
 - A note that the prompt was injected into the new session
 - For the issue path, the issue number and title
@@ -270,7 +291,9 @@ Then stop. Do not start the work.
 - If an issue number was given and `gh` is not installed or not authenticated, say so and ask whether to treat the argument as a task description
 - If the issue is not found, report that and stop
 - If the issue is closed, warn and ask before proceeding
-- If the branch already exists and `--open-if-exists` opens it, note that the prompt is only injected on initial creation
+- If the launcher reports that workmux could not generate a branch name, fall back to naming it yourself and re-run with the positional form, as described in step 2
+- If the launcher reports that the issue matches more than one local branch, show the user the candidates and ask which to use, then re-run with that name in the positional form
+- If the branch already exists and `--open-if-exists` opens it, note that the prompt is only injected on initial creation. This is the expected path when the launcher reports `Reusing branch`
 - If `--resource` names a resource another worktree holds, report the holder and ask; if the user declines, stop without creating anything
 - If the claim file cannot be read, report the error and ask whether to proceed without a claim. A malformed file is never rewritten automatically
 - If the claim cannot be written after the worktree exists, report it and continue. The claim is advisory, so a failure to record one does not undo the worktree

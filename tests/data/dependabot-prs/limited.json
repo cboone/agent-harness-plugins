@@ -1,0 +1,33 @@
+{
+  "fetchedAt": "2026-09-13T12:00:00Z",
+  "repo": "example-org/archived-repo",
+  "defaultBranch": "main",
+  "isArchived": true,
+  "limit": 1,
+  "dependabot": [
+    {
+      "number": 7,
+      "title": "Bump left-pad from 1.3.0 to 1.3.1",
+      "url": "https://github.com/example-org/archived-repo/pull/7",
+      "headRefName": "dependabot/npm_and_yarn/left-pad-1.3.1",
+      "headRefOid": "0707070707070707070707070707070707070707",
+      "baseRefName": "main",
+      "body": "Bumps [left-pad](https://github.com/left-pad/left-pad) from 1.3.0 to 1.3.1.\n",
+      "createdAt": "2023-01-02T00:00:00Z",
+      "updatedAt": "2023-01-02T00:00:00Z",
+      "labels": [],
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "BLOCKED",
+      "reviewDecision": "",
+      "autoMergeRequest": null,
+      "statusCheckRollup": [],
+      "files": [{ "path": "package.json" }, { "path": "package-lock.json" }]
+    }
+  ],
+  "alerts": {
+    "available": false,
+    "reason": "gh: Resource not accessible by integration (HTTP 403)",
+    "items": []
+  }
+}

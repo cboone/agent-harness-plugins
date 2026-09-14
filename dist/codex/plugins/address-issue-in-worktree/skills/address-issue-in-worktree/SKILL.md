@@ -120,9 +120,27 @@ If any command fails, warn the user but continue with worktree creation. Status 
 
 The "in progress" label is intentionally retained beyond worktree creation and local implementation. It represents active issue lifecycle state until the related pull request is merged or the user explicitly abandons the effort. Do not remove it as part of creating the worktree.
 
-### 4. Build the Branch Name
+### 4. Let the Launcher Name the Branch
 
-Construct a branch name in the format `TYPE/SLUG` where:
+**Do not construct the branch name.** The launcher does it in step 5, by passing `--auto-name --issue NUMBER`. That runs `workmux add -A -P <prompt> --dry-run`, which asks workmux's own generator to read the issue prompt and return a name, and creates nothing. Whatever it returns is used as-is, with the issue number inserted after the type prefix, or at the front when the generator returned a bare slug:
+
+| Issue | Generator returns            | Branch created                   |
+| ----- | ---------------------------- | -------------------------------- |
+| 387   | `feature/make-things-better` | `feature/387-make-things-better` |
+| 42    | `fix/fix-the-login-page`     | `fix/42-fix-the-login-page`      |
+| 387   | `make-things-better`         | `387-make-things-better`         |
+
+Leading with the issue number is what lets the `pr` skill link the resulting pull request back to the issue: its primary detection strategy reads `TYPE/N-description` and `N-description` straight out of the branch name. Without the number, `pr` falls back to searching GitHub by branch slug, which is slower and can match the wrong issue or none at all.
+
+The type prefix comes from workmux's naming prompt, not from this skill, so it reflects the user's own `auto_name.system_prompt` and is not derived from the issue labels. Do not add, correct, or second-guess it.
+
+**Reruns reuse the existing branch.** The launcher first looks for a local branch already carrying the issue number and reuses it, so running this skill twice for the same issue reopens the same worktree instead of generating a second name. It reports `Reusing branch <name> for issue <number>`. If more than one local branch matches, it lists them and exits; ask the user which to use and re-run the launcher with that name in the positional form.
+
+#### If the generator is unavailable
+
+`workmux add -A` needs a naming command: the configured agent's CLI, an `auto_name.command`, or the `llm` CLI. When none is reachable the launcher exits non-zero, printing workmux's error followed by `launch-workmux: workmux could not generate a branch name`.
+
+Only then, build the name yourself as `TYPE/SLUG` and re-run with the positional form, `launch-workmux "BRANCH_NAME" --base "BASE_BRANCH"`. SLUG already begins with the issue number, so the finished name reads `feature/42-add-dark-mode-support`.
 
 - **TYPE**: Derive from issue labels. Use `fix` for labels containing "bug" or "fix". Use `feature` for everything else (including when no labels match).
 - **SLUG**: The issue number, a hyphen, then the slugified issue title.
@@ -136,9 +154,7 @@ Construct a branch name in the format `TYPE/SLUG` where:
 
    The truncation guard matters: issue #108 below is under 50 characters, so nothing is dropped and `-with-special-chars` survives intact. Trimming unconditionally would mangle short titles that legitimately end in a prepositional phrase.
 
-Leading with the issue number is what lets the `pr` skill link the resulting pull request back to the issue: its primary detection strategy reads `TYPE/N-description` straight out of the branch name. Without the number, `pr` falls back to searching GitHub by branch slug, which is slower and can match the wrong issue or none at all.
-
-Examples:
+Examples of the fallback:
 
 - Issue #42 "Add dark mode support" with label "enhancement" -> `feature/42-add-dark-mode-support`
 - Issue #108 "Login fails with special chars" with label "bug" -> `fix/108-login-fails-with-special-chars`
@@ -208,19 +224,19 @@ If the user asked for a specific base branch, use that instead. If both detectio
 
 ```bash
 bash "SCRIPTS_DIR/compose-issue-prompt" --chain-command "/address-issue NUMBER" < ISSUE_JSON \
-  | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH"
+  | bash "SCRIPTS_DIR/launch-workmux" --auto-name --issue NUMBER --base "BASE_BRANCH"
 ```
 
 If the user passed `--no-approval`, the chained command carries it through:
 
 ```bash
 bash "SCRIPTS_DIR/compose-issue-prompt" --chain-command "/address-issue NUMBER --no-approval" < ISSUE_JSON \
-  | bash "SCRIPTS_DIR/launch-workmux" "BRANCH_NAME" --base "BASE_BRANCH"
+  | bash "SCRIPTS_DIR/launch-workmux" --auto-name --issue NUMBER --base "BASE_BRANCH"
 ```
 
 `ISSUE_JSON` is the path `mktemp` printed in step 1; substitute that literal path. Read the cached JSON rather than calling `gh issue view` again here, so the "in progress" label added in step 3 does not leak into the prompt. Remove the file with `rm -f ISSUE_JSON` once the worktree exists.
 
-The script outputs the workmux log directly and cleans up its own log file. Verify success:
+The script prints the branch name it settled on, as either `Generated branch name: NAME` or `Reusing branch NAME for issue NUMBER`, then outputs the workmux log and cleans up its own log file. Read the branch name from that line rather than assuming one. Verify success:
 
 ```bash
 git worktree list
@@ -260,7 +276,7 @@ The trailing `*` matters. The script writes a `.lock` directory beside the file 
 After confirming the worktree exists in `git worktree list`, report:
 
 - The issue number and title
-- The branch name created
+- The branch name, taken from the launcher's `Generated branch name:` or `Reusing branch` line, and whether it was newly generated or reused from an earlier run
 - The tmux window name (to help the user switch to it)
 - A note that the issue context was injected into the new session, and that the new session will run `/address-issue NUMBER`, produce a plan, and stop for approval there
 - Whether the issue was marked in progress (assigned and labeled), or if status marking was skipped/failed
@@ -273,6 +289,8 @@ Then stop. The plan and its approval happen in the new session, so do not wait f
 
 - If `gh` is not authenticated, instruct the user to run `gh auth login`
 - If `workmux` is not installed, inform the user
+- If the launcher reports that workmux could not generate a branch name, fall back to naming it yourself and re-run with the positional form, as described in step 3
+- If the launcher reports that the issue matches more than one local branch, show the user the candidates and ask which to use, then re-run with that name in the positional form
 - If the issue is closed, warn the user and ask if they want to proceed anyway
 - If status marking fails (assignment or labeling), warn the user but continue with worktree creation -- status marking is best-effort
 - If `--resource` names a resource another worktree holds, report the holder and ask; if the user declines, stop before marking the issue in progress, so nothing is left behind on an issue nobody started

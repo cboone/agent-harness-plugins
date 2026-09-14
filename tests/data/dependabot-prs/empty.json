@@ -1,0 +1,11 @@
+{
+  "fetchedAt": "2026-09-13T12:00:00Z",
+  "repo": "example-org/example-repo",
+  "defaultBranch": "main",
+  "isArchived": false,
+  "limit": 200,
+  "dependabot": [],
+  "open": [],
+  "compare": {},
+  "alerts": { "available": true, "reason": null, "items": [] }
+}

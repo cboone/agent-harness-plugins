@@ -45,30 +45,31 @@ If multiple types are detected (monorepo), note all of them.
 
 Check for files and directories that indicate what is already set up:
 
-| Check                              | Indicates               | Typically provided by                         |
-| ---------------------------------- | ----------------------- | --------------------------------------------- |
-| `LICENSE`                          | License exists          | `scaffold-new-repo`                           |
-| `README.md`                        | README exists           | `scaffold-new-repo`                           |
-| `CHANGELOG.md`                     | Changelog exists        | `scaffold-new-repo`                           |
-| `AGENTS.md` or `CLAUDE.md`         | Agent config exists     | `scaffold-new-repo`                           |
-| `.github/workflows/ci.yml`         | CI exists               | `set-up-ci` / `scaffold-go-*`                 |
-| `.github/workflows/text-lint.yml`  | Text lint CI exists     | `scaffold-lean-library` / `set-up-linters`    |
-| `.github/workflows/release.yml`    | Release workflow exists | `scaffold-go-*` / `add-goreleaser-homebrew`   |
-| `.github/workflows/gitleaks.yml`   | Gitleaks exists         | `set-up-secret-scanning`                      |
-| `.github/workflows/trufflehog.yml` | TruffleHog exists       | `set-up-secret-scanning`                      |
-| `lean-toolchain`                   | Lean toolchain exists   | `scaffold-lean-library`                       |
-| `lakefile.toml` or `lakefile.lean` | Lake package exists     | `scaffold-lean-library`                       |
-| `bin/bootstrap-worktree`           | Lean bootstrap exists   | `scaffold-lean-library`                       |
-| `.goreleaser.yml`                  | GoReleaser exists       | `scaffold-go-cli` / `add-goreleaser-homebrew` |
-| `rustfmt.toml`                     | Rust formatter config   | `scaffold-rust-cli` / `set-up-linters`        |
-| `deny.toml`                        | cargo-deny config       | `scaffold-rust-cli` / `set-up-linters`        |
-| `typos.toml`                       | typos config            | `scaffold-rust-cli` / `set-up-linters`        |
-| `cliff.toml`                       | git-cliff config        | `scaffold-rust-cli`                           |
-| `Makefile`                         | Build targets exist     | `scaffold-go-*` / `set-up-ci`                 |
-| Linter config files                | Linters exist           | `set-up-linters` / `scaffold-go-*`            |
-| `tests/scrut/`                     | Scrut tests exist       | `add-scrut-cli-tests`                         |
-| `Formula/`                         | Installers exist        | `set-up-installers`                           |
-| `CONTRIBUTING.md`                  | Community files exist   | `add-community-files`                         |
+| Check                               | Indicates                | Typically provided by                         |
+| ----------------------------------- | ------------------------ | --------------------------------------------- |
+| `LICENSE`                           | License exists           | `scaffold-new-repo`                           |
+| `README.md`                         | README exists            | `scaffold-new-repo`                           |
+| `CHANGELOG.md`                      | Changelog exists         | `scaffold-new-repo`                           |
+| `AGENTS.md` or `CLAUDE.md`          | Agent config exists      | `scaffold-new-repo`                           |
+| `.github/workflows/ci.yml`          | CI exists                | `set-up-ci` / `scaffold-go-*`                 |
+| `.github/workflows/text-lint.yml`   | Text lint CI exists      | `scaffold-lean-library` / `set-up-linters`    |
+| `.github/workflows/release.yml`     | Release workflow exists  | `scaffold-go-*` / `add-goreleaser-homebrew`   |
+| `.github/workflows/gitleaks.yml`    | Gitleaks exists          | `set-up-secret-scanning`                      |
+| `.github/workflows/trufflehog.yml`  | TruffleHog exists        | `set-up-secret-scanning`                      |
+| `lean-toolchain`                    | Lean toolchain exists    | `scaffold-lean-library`                       |
+| `lakefile.toml` or `lakefile.lean`  | Lake package exists      | `scaffold-lean-library`                       |
+| `bin/bootstrap-worktree`            | Lean bootstrap exists    | `scaffold-lean-library`                       |
+| `.goreleaser.yml`                   | GoReleaser exists        | `scaffold-go-cli` / `add-goreleaser-homebrew` |
+| `rustfmt.toml`                      | Rust formatter config    | `scaffold-rust-cli` / `set-up-linters`        |
+| `deny.toml`                         | cargo-deny config        | `scaffold-rust-cli` / `set-up-linters`        |
+| `typos.toml`                        | typos config             | `scaffold-rust-cli` / `set-up-linters`        |
+| `cliff.toml`                        | git-cliff config         | `scaffold-rust-cli`                           |
+| `Makefile`                          | Build targets exist      | `scaffold-go-*` / `set-up-ci`                 |
+| Linter config files                 | Linters exist            | `set-up-linters` / `scaffold-go-*`            |
+| `tests/scrut/`                      | Scrut tests exist        | `add-scrut-cli-tests`                         |
+| `Formula/`                          | Installers exist         | `set-up-installers`                           |
+| `CONTRIBUTING.md`                   | Community files exist    | `add-community-files`                         |
+| `.github/dependabot.yml` or `.yaml` | Dependabot config exists | `pin-everything`                              |
 
 ### 3. Build the Plan
 
@@ -85,6 +86,7 @@ Key overlap rules:
 - If `scaffold-lean-library` will run: mark `add-goreleaser-homebrew`, `set-up-installers`, and `add-scrut-cli-tests` as not applicable because Lean libraries do not produce distributable binaries.
 - `set-up-secret-scanning` is always independent (no overlap with other tools).
 - `add-scrut-cli-tests` is applicable only if the project produces a CLI binary.
+- `pin-everything` runs scoped down to `--scope dependabot` when the project has, or will have once the plan runs, workflows, a composite `action.yml` or `action.yaml` with an external `uses:` step, or a manifest Dependabot supports, and has no Dependabot config at plan time. A config present at plan time is `Already set up`, and `pin-everything` does not run. The scaffolders already SHA-pin every action they emit, so what a new repository lacks is the config that keeps those pins current. The full pinning pass is a separate decision the user can make later.
 
 Execution order (dependencies flow downward):
 
@@ -97,6 +99,7 @@ Execution order (dependencies flow downward):
 1. `add-community-files` (community files: CONTRIBUTING, CoC, SECURITY, PR template)
 1. `set-up-installers` (if CLI project)
 1. `add-scrut-cli-tests` (if CLI project)
+1. `pin-everything`, scoped down to `--scope dependabot` (Dependabot config; last, so it sees every workflow and manifest the tools above wrote)
 
 ### 4. Present the Plan
 
@@ -124,6 +127,7 @@ Example output:
 | 7   | add-community-files      | Will run       | CONTRIBUTING, CoC, SECURITY, PR template    |
 | 8   | set-up-installers        | Will run       | Homebrew formula                            |
 | 9   | add-scrut-cli-tests      | Will run       | Scrut CLI integration tests                 |
+| 10  | pin-everything           | Scoped down    | Dependabot config only                      |
 ```
 
 Ask the user to confirm the plan. They may:
@@ -149,6 +153,7 @@ The tools referenced in this plan are skills. Invoke each selected item using th
 - `add-goreleaser-homebrew`
 - `set-up-installers`
 - `add-scrut-cli-tests`
+- `pin-everything`
 
 For each confirmed tool, in execution order:
 
@@ -160,6 +165,8 @@ When invoking `set-up-linters` in scoped-down mode, tell it to skip language-spe
 
 When invoking `set-up-linters` for a Lean library in scoped-down mode, tell it to skip Lean linter wiring that `scaffold-lean-library` already generated. Only request additional cross-language tools, existing-config refinement, or Pandoc-academic preset updates that the user selected.
 
+When invoking `pin-everything`, pass `--scope dependabot`. It is only in the plan when no Dependabot config existed at plan time.
+
 ### 6. Summary
 
 After all tools have run, print a summary:
@@ -170,6 +177,7 @@ After all tools have run, print a summary:
   - Run `/lint-and-fix` to fix any initial linting issues.
   - Make an initial commit if the repo is new.
   - Push to the remote and verify CI passes.
+  - When the plan marked the Dependabot config as already set up, run `/review-dependabot-config` to check that the config covers everything the repository uses.
 
 ## Error Handling
 

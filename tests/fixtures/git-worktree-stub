@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# git-worktree-stub -- Test stub for git worktree list.
+# git-worktree-stub -- Test stub for git worktree list and for-each-ref.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
@@ -43,8 +43,28 @@ function main() {
     die "expected git -C <path> rev-parse --path-format=absolute --git-dir invocation"
   fi
 
+  # `git for-each-ref --format=... refs/heads/`, used to find an existing
+  # branch for an issue number. One branch name per line in STUB_GIT_BRANCHES.
+  if [[ $# -eq 3 && "${1}" == "for-each-ref" && "${2}" == --format=* && "${3}" == "refs/heads/" ]]; then
+    if [[ -n "${STUB_GIT_BRANCHES:-}" ]]; then
+      printf '%s\n' "${STUB_GIT_BRANCHES}"
+    fi
+    return 0
+  fi
+
+  # `git check-ref-format --branch <name>`, used to reject a generated name
+  # that git would not accept. Delegated to the real git so the stub cannot
+  # disagree with it; STUB_GIT_INVALID_REF=1 forces a rejection instead.
+  if [[ $# -eq 3 && "${1}" == "check-ref-format" && "${2}" == "--branch" ]]; then
+    if [[ "${STUB_GIT_INVALID_REF:-}" == "1" ]]; then
+      return 1
+    fi
+    /usr/bin/git check-ref-format --branch "${3}" > /dev/null 2>&1
+    return $?
+  fi
+
   if [[ $# -lt 3 || "${1}" != "worktree" || "${2}" != "list" || "${3}" != "--porcelain" ]]; then
-    die "expected git worktree list --porcelain invocation"
+    die "expected git worktree list --porcelain, for-each-ref, or check-ref-format invocation"
   fi
 
   # STUB_GIT_WORKTREE_PORCELAIN is written in the readable newline form. Under
@@ -61,7 +81,7 @@ function main() {
     return 0
   fi
 
-  die "expected git worktree list --porcelain invocation"
+  die "expected git worktree list --porcelain, for-each-ref, or check-ref-format invocation"
 }
 
 main "$@"

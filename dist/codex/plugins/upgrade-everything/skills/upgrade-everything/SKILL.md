@@ -52,6 +52,14 @@ Resolve current upstream versions from authoritative sources for each ecosystem.
 
 Use `./references/upgrade-sources.md` for source-of-truth selection. Record the source URL or command, lookup date, latest value, and confidence. If upstream resolution fails, keep the candidate in the plan with status `Blocked` or `Unknown` instead of dropping it.
 
+Then check whether Dependabot already proposes any of these upgrades. Take `OWNER/REPO` from the `origin` remote (`git remote -v`); in a fork, that is the fork, not the upstream. List its open PRs once, naming the repository explicitly:
+
+```bash
+gh pr list --repo OWNER/REPO --author app/dependabot --state open --limit 500 --json number,title,headRefName,baseRefName,body,changedFiles,files
+```
+
+If the list returns exactly as many PRs as `--limit` allows, it may be cut off: re-run with a higher limit before matching, so an open proposal is not missed. Match each candidate to a PR only when the PR's `baseRefName` is the branch being audited (normally the default branch), by dependency name and by a file the PR touches, and record the PR number and the version it targets. A PR aimed at another branch cannot land here and proposes nothing for this audit. A single-dependency title names the target (`bump NAME from A to B`); a grouped PR lists its updates in the body (``Updates `NAME` from A to B``). Those lines carry no directory, so for a group across several directories, tie the dependency to the candidate's directory through the body's `Bumps the GROUP group with N updates in the DIR directory: NAMES` lines: the PR covers the candidate only when the line for its directory names the dependency. A touched file in that directory is not enough, since it can belong to another dependency in the group. When that line leaves the names off, as it does for a long list, read the candidate's manifest and lockfile changes in `gh pr diff N --repo OWNER/REPO`. `files` lists at most the first 100 paths of a PR: when `changedFiles` is larger, read the full list with `gh pr diff N --repo OWNER/REPO --name-only` before matching on paths. A grouped body can be truncated: when it contains `_Description has been truncated_`, or lists fewer Updates lines than the title announces, read the manifest and lockfile changes with `gh pr diff N --repo OWNER/REPO` before concluding the PR does not cover a candidate. When `gh` is unavailable or unauthenticated, the repository has no GitHub remote, or the command fails for any other reason, skip this check and say so in the audit summary. It is supporting evidence, so its failure never stops the audit.
+
 ### 5. Classify Candidates
 
 Build one numbered candidate record for every discovered upgrade opportunity. If a version surface is already current, summarize it separately as up to date unless the user asked for a full inventory.
@@ -64,6 +72,7 @@ Each candidate must include:
 - Reward rating and reasons
 - Risk rating and reasons
 - Required validation
+- Open Dependabot PR, if any, and the version it targets
 - Recommendation
 
 Use `./references/risk-reward.md` for the reward and risk model. Risk affects ordering and recommendation, not inclusion.
@@ -75,11 +84,13 @@ Present a Markdown matrix grouped by ecosystem and surface. Include every candid
 Use this shape:
 
 ```text
-| # | Ecosystem | Surface | Current | Latest | Type | Reward | Risk | Confidence | Recommendation | Validation |
-|---|-----------|---------|---------|--------|------|--------|------|------------|----------------|------------|
+| # | Ecosystem | Surface | Current | Latest | Type | Reward | Risk | Confidence | Open PR | Recommendation | Validation |
+|---|-----------|---------|---------|--------|------|--------|------|------------|---------|----------------|------------|
 ```
 
 After the matrix, list up-to-date surfaces and unresolved upstream lookups separately. Make the distinction between "not selected yet", "not recommended", and "blocked" explicit.
+
+When an open Dependabot PR already targets the latest value, the upgrade is already proposed. Recommend handling that PR with the `triage-dependabot-prs` skill rather than applying the upgrade locally, and say so in the Recommendation cell (for example, `Recommended: triage #42`). When the PR targets an older version than the latest, note that a local upgrade will supersede it.
 
 ### 7. Ask for Selection
 
@@ -90,6 +101,7 @@ Ask the user which upgrades to apply. Offer these choices:
 - Apply only selected candidate numbers
 - Audit only
 - Apply all except custom exclusions
+- Triage the open Dependabot PRs instead, for the candidates that have one (invokes the `triage-dependabot-prs` skill)
 
 Do not apply upgrades until the user explicitly selects a scope. If the user asks for audit-only, stop after reporting the matrix.
 
@@ -117,8 +129,9 @@ Summarize the result under these headings:
 - Failed
 - Already up to date
 - Follow-up validation
+- Dependabot PRs superseded
 
-Include any commands that failed and the concrete candidate numbers affected.
+Include any commands that failed and the concrete candidate numbers affected. Under "Dependabot PRs superseded", list each open Dependabot PR that an applied upgrade makes redundant, and suggest closing them with the `triage-dependabot-prs` skill once the upgrade merges.
 
 ## Reference Navigation
 
