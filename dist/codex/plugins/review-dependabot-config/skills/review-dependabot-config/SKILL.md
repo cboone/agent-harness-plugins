@@ -25,7 +25,7 @@ The user may provide these options inline:
 
 - **Report first, fix second.** Nothing is edited, created, or changed until the user selects it in step 6.
 - **Verify before calling a key invalid.** Dependabot gains options regularly, and a key missing from a model's memory or a lagging schema may be perfectly valid. Check the current GitHub documentation before reporting one. `directories`, `exclude-paths`, `cooldown`, `multi-ecosystem-groups`, and group `applies-to` and `group-by` are all valid.
-- **Merge, never overwrite.** Edits to the config file keep the user's comments, groups, and schedules, change only what a selected finding names, and show the diff before writing.
+- **Merge, never overwrite.** Edits to the config file keep the user's comments, groups, and schedules, change only what a selected finding names, and show the planned change before writing it.
 - **Outward-facing changes are confirmed one by one.** Creating a label or changing a repository setting affects everyone working in the repository.
 - **Never handle secret values.** When a Dependabot secret is missing, tell the user the command to run themselves.
 - **A refused API call is not a pass.** When an endpoint returns 403 or 404 for lack of permission, report the check as not visible with the current permissions.
@@ -46,8 +46,9 @@ The user may provide these options inline:
 
    An archived repository runs no Dependabot updates and accepts no changes: report that and stop. Without `ADMIN` permission, several settings checks in step 4 will be refused; say so up front.
 
+1. Confirm the checkout. Local reads and edits need the working directory to be a checkout of `OWNER/REPO`: compare the `origin` URL from `git remote -v` with `OWNER/REPO`. When they differ (for example, `--repo` names another repository), read files with `gh api 'repos/OWNER/REPO/contents/PATH?ref=DEFAULT'` instead of `git`, skip the working-tree comparison, and offer no local edits in step 6.
 1. Find the config. Run `git fetch origin`, then check both names on the default branch with `git ls-tree --name-only origin/DEFAULT .github/dependabot.yml .github/dependabot.yaml`. Whichever exists is `CONFIG_PATH` for the rest of the review. Read it with `git show origin/DEFAULT:CONFIG_PATH`, and compare it with the working-tree copy at the same path.
-   - **Both files exist**: an Error. Dependabot expects a single configuration file, and a reader cannot tell which copy is in force. Keep one.
+   - **Both files exist**: an Error. Dependabot expects a single configuration file, and a reader cannot tell which copy is in force. Ask the user which file to keep before going further, and set `CONFIG_PATH` to that one; review nothing and offer no edits until they choose.
    - **The working tree differs from the default branch**: report the drift. Dependabot runs the default branch copy, so review that one, and note the local changes separately.
 
 ### 2. No Config
@@ -117,7 +118,7 @@ Use `AskUserQuestion` where it exists. Without it (Codex CLI, OpenCode), print t
 
 ### 7. Apply
 
-1. **Edit `CONFIG_PATH`**, the config file found in step 1, with targeted edits that keep comments and ordering. Show the resulting diff with `git diff -- CONFIG_PATH` before moving on.
+1. **Edit `CONFIG_PATH`**, the config file found in step 1, with targeted edits that keep comments and ordering. First show the planned change (the exact lines to add, change, or remove) and write it only once the user accepts. Then show the resulting `git diff -- CONFIG_PATH`.
 1. **Replace `reviewers` with code owners** when that fix was selected, in the same local change. Find the code owners file (`.github/CODEOWNERS`, `CODEOWNERS`, or `docs/CODEOWNERS`, in that order; create `.github/CODEOWNERS` when none exists), add an entry that assigns the former reviewers to each manifest and lockfile path the entry covered, and show `git diff` for both files. Remove `reviewers` from the config only once the code owners entries are written, so review coverage never lapses.
 1. **Re-validate** the edited file:
 
