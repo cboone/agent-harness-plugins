@@ -236,6 +236,8 @@ The flag names a holder rather than saying yes because approval is about a parti
 
 The token is the claim's `id` rather than its worktree path or its timestamp, because neither of those identifies a claim: a path can be reused, and a timestamp has second resolution, so an approval naming either could transfer to a different claim made in between. Either exit 3 means the holder changed under you: report what the script names and ask again, then re-run with the new id only if the user says to.
 
+An exit 3 naming the user's own branch is the expected result after `git worktree move` or `git switch`. Same-worktree requires both the path and the branch to match, because matching either would let a worktree that later checked out the same branch take the claim silently. Say that plainly rather than treating it as an error: the user is confirming a takeover of their own claim.
+
 If the claim cannot be written, say so and carry on. The worktree exists and the claim is advisory, so a failure here is worth reporting but is not worth unwinding the work.
 
 **Offer a gitignore entry** when the claim file was created and nothing in the project's `.gitignore` covers it. Ignore the whole prefix rather than the one filename:

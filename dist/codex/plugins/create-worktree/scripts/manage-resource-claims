@@ -179,9 +179,14 @@ function read_claims() {
     return
   fi
 
-  # Existing but unreadable is a real case (a permissions mistake, a directory
-  # in the file's place), and "$(< path)" would fail during expansion, which
-  # bypasses the die below and exits with Bash's own unprefixed diagnostic.
+  # "$(< path)" fails during expansion, which bypasses die and exits with
+  # Bash's own unprefixed diagnostic, so everything that would make it fail is
+  # tested first. -r alone is not enough: it is true for a readable directory,
+  # and a directory in the file's place is one of the cases this guards.
+  if [[ ! -f "${file}" ]]; then
+    die "${file} exists but is not a regular file"
+  fi
+
   if [[ ! -r "${file}" ]]; then
     die "${file} exists but cannot be read"
   fi
@@ -195,6 +200,13 @@ function read_claims() {
 
   if ! jq empty > /dev/null 2>&1 <<< "${document}"; then
     die "${file} is not valid JSON; fix or remove it"
+  fi
+
+  # jq accepts a stream of several top-level values, so two concatenated
+  # documents pass the check above and every envelope check below, since -e
+  # reports only the last result. The reads would then see both.
+  if ! jq -e -s 'length == 1' > /dev/null 2>&1 <<< "${document}"; then
+    die "${file} holds more than one JSON document; it must hold exactly one object"
   fi
 
   # The version is an integer, not merely a number, so that a 1.5 is refused as
@@ -442,12 +454,19 @@ function holder_is_live_and_foreign() {
 
   [[ -n "${existing}" ]] || return 1
 
-  # "Same worktree" is decided the way staleness is, on either the path or the
-  # branch. After git worktree move the stored path no longer matches while the
-  # branch still names the same worktree, and comparing paths alone would make
-  # a worktree refreshing its own claim look like a stranger taking it.
+  # Same worktree means both the path and the branch match. This is deliberately
+  # stricter than the staleness rule, which treats either match as live, and the
+  # two point the same way: when the evidence is ambiguous, keep the claim and
+  # ask.
+  #
+  # Matching either field here would be unsafe. If worktree A claims on branch
+  # X, switches away, and worktree B checks out X, then B matches A's claim by
+  # branch and would silently take a resource nobody agreed to hand over. The
+  # cost of requiring both is that a worktree refreshing its own claim after
+  # git worktree move or git switch is asked to confirm a takeover of itself,
+  # which is visible and answerable rather than silent and wrong.
   jq -e --arg worktree "${worktree}" --arg branch "${branch}" \
-    '(.stale | not) and (.worktree != $worktree) and (.branch != $branch)' > /dev/null 2>&1 <<< "${existing}"
+    '(.stale | not) and ((.worktree != $worktree) or (.branch != $branch))' > /dev/null 2>&1 <<< "${existing}"
 }
 
 # True when the holder is the one the caller was approved to displace.
@@ -560,7 +579,7 @@ function report_claim_outcome() {
   previous_worktree="$(jq -r '.worktree' <<< "${existing}")"
   previous_state="$(jq -r 'if .stale then "stale" else "held" end' <<< "${existing}")"
 
-  if [[ "${previous_worktree}" == "${worktree}" || "${previous_branch}" == "${branch}" ]]; then
+  if [[ "${previous_worktree}" == "${worktree}" && "${previous_branch}" == "${branch}" ]]; then
     printf 'refreshed the claim on "%s" for %s\n' "${resource}" "${branch}"
   elif [[ "${previous_state}" == "stale" ]]; then
     printf 'claimed "%s" for %s, clearing a stale claim from %s\n' "${resource}" "${branch}" "${previous_branch}"

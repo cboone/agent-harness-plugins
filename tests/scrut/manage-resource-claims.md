@@ -769,13 +769,25 @@ $ setup_claims \
 resource=logic state=stale id=* branch=feature/gone claimed=TIMESTAMP worktree=/repo/wt-gone (glob)
 ```
 
-## A worktree refreshing its own claim after a move is not a takeover
+## Only an exact path and branch match counts as the same worktree
 
-`git worktree move` changes the path and keeps the branch, so comparing paths alone would make a worktree refreshing its own claim look like a stranger taking it, and refuse with exit 3. "Same worktree" is decided the way staleness is, on either field.
+Same worktree means both fields match, which is deliberately stricter than the staleness rule that accepts either. Matching either here would be unsafe: if worktree A claims on a branch, switches away, and worktree B checks out that branch, B would match A's claim by branch and silently take a resource nobody agreed to hand over.
+
+The cost is that a worktree refreshing its own claim after `git worktree move` or `git switch` is asked to confirm a takeover of itself, which is visible and answerable rather than silent and wrong. Both rules point the same way: when the evidence is ambiguous, keep the claim and ask.
 
 ```scrut
 $ setup_claims \
->   && claims claim logic --worktree /repo/old-path --branch feature/live > /dev/null \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
+>   && claims_tail claim logic --worktree /repo/moved-away --branch feature/live
+resource "logic" is held by feature/live at /repo/wt-live, claimed *, id *; pass --take-over * to claim it anyway (glob)
+[3]
+```
+
+## An exact match is a refresh
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
 >   && claims claim logic --worktree /repo/wt-live --branch feature/live
 refreshed the claim on "logic" for feature/live
 ```
@@ -801,5 +813,30 @@ $ setup_claims \
 >   && chmod 000 "${claim_file}" \
 >   && claims_tail list
 manage-resource-claims: */.claude/worktree-resources.local.json exists but cannot be read (glob)
+[1]
+```
+
+## A file holding two JSON documents is refused
+
+`jq empty` accepts a stream of several top-level values, so two concatenated documents pass it and every envelope check, since `-e` reports only the last result. The reads would then see both.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version":1,"claims":[]} {"version":1,"claims":[]}' > "${claim_file}" \
+>   && claims_tail list
+manage-resource-claims: */.claude/worktree-resources.local.json holds more than one JSON document; it must hold exactly one object (glob)
+[1]
+```
+
+## A directory in the claim file's place is refused
+
+`-r` is true for a readable directory, so a file-type check has to come first or the `"$(< path)"` expansion fails with Bash's own unprefixed diagnostic.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "${claim_file}" \
+>   && claims_tail list
+manage-resource-claims: */.claude/worktree-resources.local.json exists but is not a regular file (glob)
 [1]
 ```
