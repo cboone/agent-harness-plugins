@@ -121,6 +121,21 @@ function main_worktree_path() {
   return 1
 }
 
+# A worktree's admin directory under .git/worktrees/, which is the only handle
+# git exposes that survives both `git worktree move` and `git switch`. A path
+# and a branch are each mutable on their own, and a worktree that has had both
+# changed matches neither, which would read a live claim as stale and let
+# another worktree take the resource with nobody asked.
+#
+# Empty when it cannot be resolved, which is not an error: the path may not
+# exist yet, or may not be a worktree at all. Callers fall back to the path and
+# branch in that case.
+function worktree_identity() {
+  local worktree="${1}"
+
+  git -C "${worktree}" rev-parse --path-format=absolute --git-dir 2> /dev/null || true
+}
+
 function claim_file_path() {
   local main_worktree
 
@@ -158,7 +173,7 @@ function claim_file_path() {
 # path may contain a newline. NUL is the one byte a path cannot hold, and JSON
 # carries the result to jq without a delimiter to collide with.
 function live_worktrees_json() {
-  local line path="" branch="" prunable=0 saw_any=0
+  local line path="" branch="" prunable=0 saw_any=0 identity=""
   local -a keys=()
 
   # The "|| [[ -n ... ]]" is what processes a final field that carries no
@@ -174,6 +189,10 @@ function live_worktrees_json() {
           keys+=("p ${path}")
           if [[ -n "${branch}" ]]; then
             keys+=("b ${branch}")
+          fi
+          identity="$(worktree_identity "${path}")"
+          if [[ -n "${identity}" ]]; then
+            keys+=("g ${identity}")
           fi
         fi
         path=""
@@ -203,6 +222,10 @@ function live_worktrees_json() {
     keys+=("p ${path}")
     if [[ -n "${branch}" ]]; then
       keys+=("b ${branch}")
+    fi
+    identity="$(worktree_identity "${path}")"
+    if [[ -n "${identity}" ]]; then
+      keys+=("g ${identity}")
     fi
   fi
 
@@ -287,6 +310,10 @@ function read_claims() {
     die "${file} declares version ${declared}; this script supports version ${SCHEMA_VERSION} only, so it will not read or rewrite the file"
   fi
 
+  # \z rather than $: Oniguruma's $ matches before a final newline, so a
+  # hand-edited "logic\n" would satisfy a $-anchored pattern and then forge an
+  # extra line in the key=value output.
+  #
   # These match what the CLI accepts, field for field. A looser read contract
   # would let a hand-edited file hold a claim no command can name (a resource
   # starting with "-") or one that forges columns in the space-delimited list
@@ -294,11 +321,12 @@ function read_claims() {
   # is a path, it may legitimately contain spaces, and list emits it last so
   # that it cannot be confused with a following field.
   if ! jq -e 'all(.claims[];
-        ((.id | type) == "string") and (.id | test("^[0-9a-f]+$"))
-        and ((.resource | type) == "string") and (.resource | test("^[^-[:space:][:cntrl:]][^[:space:][:cntrl:]]*$"))
-        and ((.worktree | type) == "string") and (.worktree | test("^[^[:cntrl:]]+$"))
-        and ((.branch | type) == "string") and (.branch | test("^[^[:space:][:cntrl:]]+$"))
-        and ((.claimed_at | type) == "string") and (.claimed_at | test("^[^[:space:][:cntrl:]]+$"))
+        ((.id | type) == "string") and (.id | test("^[0-9a-f]+\\z"))
+        and ((.resource | type) == "string") and (.resource | test("^[^-[:space:][:cntrl:]][^[:space:][:cntrl:]]*\\z"))
+        and ((.worktree | type) == "string") and (.worktree | test("^[^[:cntrl:]]+\\z"))
+        and ((.branch | type) == "string") and (.branch | test("^[^[:space:][:cntrl:]]+\\z"))
+        and ((.claimed_at | type) == "string") and (.claimed_at | test("^[^[:space:][:cntrl:]]+\\z"))
+        and ((has("gitdir") | not) or (((.gitdir | type) == "string") and (.gitdir | test("^[^[:cntrl:]]+\\z"))))
         and ((has("issue") | not) or ((.issue | type) == "number" and .issue >= 0 and (.issue | floor) == .issue)))' "${file}" > /dev/null 2>&1; then
     die "${file} holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, and issue must be a non-negative integer when present"
   fi
@@ -464,9 +492,11 @@ function decorate_claims() {
     map(
       .worktree as $worktree
       | .branch as $branch
+      | (.gitdir // "") as $gitdir
       | . + {stale: ($live_known == "yes"
                      and (($live | index("p " + $worktree)) == null)
-                     and (($live | index("b " + $branch)) == null))}
+                     and (($live | index("b " + $branch)) == null)
+                     and ($gitdir == "" or ($live | index("g " + $gitdir)) == null))}
     )
   ' <<< "${claims}"
 }
@@ -529,22 +559,26 @@ function holder_is_live_and_foreign() {
   local existing="${1}"
   local worktree="${2}"
   local branch="${3}"
+  local gitdir="${4}"
 
   [[ -n "${existing}" ]] || return 1
 
-  # Same worktree means both the path and the branch match. This is deliberately
-  # stricter than the staleness rule, which treats either match as live, and the
-  # two point the same way: when the evidence is ambiguous, keep the claim and
-  # ask.
+  # The admin directory settles this outright when both sides have one, since
+  # it is the same worktree or it is not. Falling back to requiring both the
+  # path and the branch is for the case where it cannot be resolved.
   #
-  # Matching either field here would be unsafe. If worktree A claims on branch
-  # X, switches away, and worktree B checks out X, then B matches A's claim by
-  # branch and would silently take a resource nobody agreed to hand over. The
-  # cost of requiring both is that a worktree refreshing its own claim after
-  # git worktree move or git switch is asked to confirm a takeover of itself,
-  # which is visible and answerable rather than silent and wrong.
-  jq -e --arg worktree "${worktree}" --arg branch "${branch}" \
-    '(.stale | not) and ((.worktree != $worktree) or (.branch != $branch))' > /dev/null 2>&1 <<< "${existing}"
+  # That fallback is deliberately stricter than the staleness rule, which
+  # treats either match as live, and the two point the same way: when the
+  # evidence is ambiguous, keep the claim and ask. Matching either field here
+  # would be unsafe, because a worktree that checked out a branch an earlier
+  # claimant has since left would match by branch and take the resource with
+  # nobody asked.
+  jq -e --arg worktree "${worktree}" --arg branch "${branch}" --arg gitdir "${gitdir}" \
+    '(.stale | not)
+     and (if ($gitdir != "") and ((.gitdir // "") != "")
+          then .gitdir != $gitdir
+          else (.worktree != $worktree) or (.branch != $branch)
+          end)' > /dev/null 2>&1 <<< "${existing}"
 }
 
 # True when the holder is the one the caller was approved to displace.
@@ -646,7 +680,8 @@ function report_claim_outcome() {
   local branch="${2}"
   local worktree="${3}"
   local existing="${4}"
-  local previous_branch previous_worktree previous_state
+  local gitdir="${5}"
+  local previous_branch previous_worktree previous_gitdir previous_state
 
   if [[ -z "${existing}" ]]; then
     printf 'claimed "%s" for %s\n' "${resource}" "${branch}"
@@ -655,15 +690,28 @@ function report_claim_outcome() {
 
   previous_branch="$(jq -r '.branch' <<< "${existing}")"
   previous_worktree="$(jq -r '.worktree' <<< "${existing}")"
+  previous_gitdir="$(jq -r '.gitdir // ""' <<< "${existing}")"
   previous_state="$(jq -r 'if .stale then "stale" else "held" end' <<< "${existing}")"
 
-  if [[ "${previous_worktree}" == "${worktree}" && "${previous_branch}" == "${branch}" ]]; then
+  # Same test as holder_is_live_and_foreign, so the message cannot disagree
+  # with the decision: the admin directory settles it when both sides have one,
+  # and the path and branch together are the fallback.
+  if [[ -n "${gitdir}" && -n "${previous_gitdir}" ]]; then
+    if [[ "${previous_gitdir}" == "${gitdir}" ]]; then
+      printf 'refreshed the claim on "%s" for %s\n' "${resource}" "${branch}"
+      return
+    fi
+  elif [[ "${previous_worktree}" == "${worktree}" && "${previous_branch}" == "${branch}" ]]; then
     printf 'refreshed the claim on "%s" for %s\n' "${resource}" "${branch}"
-  elif [[ "${previous_state}" == "stale" ]]; then
-    printf 'claimed "%s" for %s, clearing a stale claim from %s\n' "${resource}" "${branch}" "${previous_branch}"
-  else
-    printf 'claimed "%s" for %s, taking it over from %s\n' "${resource}" "${branch}" "${previous_branch}"
+    return
   fi
+
+  if [[ "${previous_state}" == "stale" ]]; then
+    printf 'claimed "%s" for %s, clearing a stale claim from %s\n' "${resource}" "${branch}" "${previous_branch}"
+    return
+  fi
+
+  printf 'claimed "%s" for %s, taking it over from %s\n' "${resource}" "${branch}" "${previous_branch}"
 }
 
 # Refuses a resource a different worktree still holds, and takes it only when
@@ -673,7 +721,7 @@ function report_claim_outcome() {
 # Keep the refusal inside the lock if this is ever restructured.
 function cmd_claim() {
   local resource worktree="" branch="" issue="" take_over=""
-  local file claims decorated existing now updated claim_id
+  local file claims decorated existing now updated claim_id gitdir
 
   resource="${1:-}"
 
@@ -739,17 +787,18 @@ function cmd_claim() {
   claims="$(read_claims "${file}")"
   decorated="$(decorate_claims "${claims}")"
   existing="$(claim_for_resource "${decorated}" "${resource}")"
+  gitdir="$(worktree_identity "${worktree}")"
 
   # check and claim are separate operations, so a resource that was free when
   # the caller checked can be held by the time it writes. Refusing a live
   # holder here, under the lock, is what makes the answer the caller acted on
   # still true at the moment of the write.
   #
-  # --take-over carries the worktree the user agreed to displace rather than a
-  # bare yes. Approval is about a particular holder: if a third worktree took
-  # the resource in the meantime, consent to displace the first says nothing
-  # about displacing it, and a boolean flag could not tell the two apart.
-  if holder_is_live_and_foreign "${existing}" "${worktree}" "${branch}" \
+  # --take-over carries the id of the claim the user agreed to displace rather
+  # than a bare yes. Approval is about a particular claim: if a third worktree
+  # took the resource in the meantime, consent to displace the first says
+  # nothing about displacing it, and a boolean flag could not tell them apart.
+  if holder_is_live_and_foreign "${existing}" "${worktree}" "${branch}" "${gitdir}" \
     && ! holder_matches "${existing}" "${take_over}"; then
     jq -r --arg resource "${resource}" --arg approved "${take_over}" \
       '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at), id \(.id)"
@@ -768,14 +817,16 @@ function cmd_claim() {
     --arg issue "${issue}" \
     --arg now "${now}" \
     --arg id "${claim_id}" \
+    --arg gitdir "${gitdir}" \
     'map(select(.resource != $resource))
      + [{id: $id, resource: $resource, worktree: $worktree, branch: $branch}
+        + (if $gitdir == "" then {} else {gitdir: $gitdir} end)
         + (if $issue == "" then {} else {issue: ($issue | tonumber)} end)
         + {claimed_at: $now}]
      | sort_by(.resource)' <<< "${decorated}")"
 
   write_claims "${file}" "${updated}"
-  report_claim_outcome "${resource}" "${branch}" "${worktree}" "${existing}"
+  report_claim_outcome "${resource}" "${branch}" "${worktree}" "${existing}" "${gitdir}"
 }
 
 function cmd_release() {
