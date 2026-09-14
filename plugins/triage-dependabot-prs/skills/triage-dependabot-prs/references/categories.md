@@ -85,6 +85,7 @@ The PR is current and conflict-free, and nothing known breaks, but the evidence 
 - **Consumers carry the risk.** The repository publishes actions or reusable workflows, and a new major changes behavior downstream.
 - **An action's `runs.using` runtime changes**, such as `node20` to `node24`, which self-hosted runners must support.
 - **The release notes are truncated** in the body and have not yet been read at the source.
+- **The PR is a draft.** GitHub refuses to merge a draft whatever its evidence, so marking it ready is the user's call.
 
 Action: name the specific verification it needs, from `./verification.md` or the evidence checklist. A PR that passes moves to Safe to merge; a PR that fails moves to Needs work.
 
@@ -97,7 +98,9 @@ Every one of these holds:
 - **No conflict with the base branch.** A conflict with another open PR does not disqualify it; it only sets the merge order, and the later PR is expected to need a rebase.
 - **The release notes show no breaking change that affects this repository.** A major can qualify, for example when the only break is a runtime bump the repository's runners already support.
 - **For a GitHub Action pinned to a commit SHA**, the SHA resolves to the tagged commit, and the version comments beside it name the new version. An action pinned to a tag (`@v7`) has no SHA to check.
+- **The PR is not a draft.** GitHub refuses to merge a draft, so a draft that meets everything else stays in Needs testing, with marking it ready left to the user.
 
+A PR that meets every condition but is `BLOCKED`, usually by a required review, stays in Safe to merge with the `blocked` flag. Its recommended action names the unmet rule (for example, "Merge once an approving review lands") instead of offering a merge the rules will refuse, and it sorts after the PRs that can merge now.
 Action: merge with a method the repository and its rules allow, in the computed order.
 
 ## Flags
@@ -109,6 +112,7 @@ Flags are recorded beside the category, never instead of it. They set priority w
 - **major**: any update is a major, or is `semverBreaking`.
 - **stale checks**: the newest check completed before the base branch last changed relevant files.
 - **secret-starved CI**: failures trace to secrets a Dependabot run cannot read.
+- **blocked**: `mergeStateStatus` is `BLOCKED`, so a rule (usually a required review) must be satisfied before the merge.
 - **version comment drift**: a SHA-pinned action whose comment still names the old version. Dependabot updates a full `# vX.Y.Z` comment, but a major-only comment such as `# v6` can be left behind.
 
 Within each category, sort security PRs first, by severity, then majors, then the rest by age.
