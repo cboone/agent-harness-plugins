@@ -54,7 +54,7 @@ gh api --paginate --slurp 'repos/OWNER/REPO/actions/secrets?per_page=100' | jq '
 Then find the jobs that run on Dependabot PRs and use secrets:
 
 ```bash
-grep -rn 'secrets\.' .github/workflows/
+grep -rnE 'secrets(\.|\[)' .github/workflows/
 ```
 
 For each secret referenced by a job that runs on `push`, `pull_request`, `pull_request_review`, or `pull_request_review_comment`, other than `GITHUB_TOKEN`:
@@ -72,7 +72,7 @@ Also check `registries` in `dependabot.yml`: every `${{secrets.NAME}}` it refere
 ## Labels
 
 ```bash
-gh label list --repo OWNER/REPO --limit 500 --json name --jq '[.[].name]'
+gh api --paginate 'repos/OWNER/REPO/labels?per_page=100' --jq '.[].name'
 ```
 
 Compare with every `labels` value in the config. GitHub documents that a label missing from the repository is ignored, so the PR opens without it, and Dependabot has also been seen commenting that the label could not be found. The comparison is the finding; a comment like that on a recent Dependabot PR is supporting evidence:
