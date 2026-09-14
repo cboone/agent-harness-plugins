@@ -1069,3 +1069,19 @@ $ setup_claims \
 released "logic" held by feature/live
 []
 ```
+
+## A recycled admin directory keeps an obsolete claim held
+
+git names a worktree's admin directory after its basename and gives that name to the next worktree with the same basename once the first is removed, so the identity names a worktree rather than an instance of one. A claim whose worktree is gone then reports held, naming a holder that no longer exists, and `prune` does not clear it because it does not read as stale.
+
+This pins the behavior the documentation describes. Changing the matching rule fails this case, which is the point: the fix and the prose have to move together. The options and the decision to ship this one are recorded in issue 424.
+
+```scrut
+$ setup_claims \
+>   && mkdir -p "$(dirname "${claim_file}")" \
+>   && printf '{"version":1,"claims":[{"id":"aaaaaaaaaaaa","resource":"logic","worktree":"/repo/wt-removed","branch":"feature/removed","gitdir":"/admin/wt-live","claimed_at":"t"}]}' > "${claim_file}" \
+>   && claims list \
+>   && claims prune
+resource=logic state=held id=aaaaaaaaaaaa branch=feature/removed claimed=t worktree=/repo/wt-removed
+no stale claims
+```

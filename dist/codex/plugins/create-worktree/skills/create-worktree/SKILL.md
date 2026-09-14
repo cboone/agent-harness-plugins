@@ -45,6 +45,8 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims" release "RESOURCE_NA
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims" prune
 ```
 
+When the user says a worktree is gone but its claim reports `state=held`, do not treat that as a contradiction to argue with. A worktree is identified by its git admin directory, and git reuses that directory for the next worktree sharing the basename, so a claim can outlive its worktree and still read as held. `prune` will not clear it, because it is not stale. Offer `--release-resource <name>`, which removes a claim whatever its state, and say why `prune` reported nothing.
+
 For the rest of the workflow, skip to the next step.
 
 ### 2. Classify the Argument

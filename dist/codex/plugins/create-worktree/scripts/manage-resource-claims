@@ -54,7 +54,14 @@ Subcommands:
 
 A claim is stale when git no longer lists its worktree. Stale claims are
 flagged by list, reported as free by check, replaced by claim, and removed by
-prune, so a worktree that has been removed never blocks a resource forever.
+prune.
+
+One case escapes that. A worktree is identified by its git admin directory,
+which git names after the worktree's basename and hands to the next worktree
+with that basename once the first is removed. A claim whose admin directory has
+been recycled that way reports held rather than stale, so check names a holder
+that no longer exists and prune does not clear it. Use release <resource>
+there, which removes a claim whatever its state. See issue 424.
 
 A resource name is chosen per project: logic, simulator, port-5432. There is no
 registry, but the name must contain no whitespace or control characters and
@@ -126,6 +133,13 @@ function main_worktree_path() {
 # and a branch are each mutable on their own, and a worktree that has had both
 # changed matches neither, which would read a live claim as stale and let
 # another worktree take the resource with nobody asked.
+#
+# It identifies a worktree, not an instance of one. git names the directory
+# after the worktree's basename, deletes it on removal, and gives the same name
+# to the next worktree with that basename, so a claim can outlive the worktree
+# that made it and report held. That is the conservative direction, and
+# `release <resource>` clears it, but it is wrong: see issue 424, where the
+# options and the reason this one ships are recorded.
 #
 # Empty when it cannot be resolved, which is not an error: the path may not
 # exist yet, or may not be a worktree at all. Callers fall back to the path and
