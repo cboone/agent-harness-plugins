@@ -67,7 +67,7 @@ When neither file exists on the default branch:
    The settings decide the answer. An empty PR list alone cannot tell disabled security updates from enabled ones with nothing to fix.
 
 1. Report what is missing, what is covered today (security updates only, or nothing), and what the config would add.
-1. Offer to invoke the `pin-everything` skill with `--scope dependabot`, which writes the house baseline: a weekly schedule, split minor-and-patch and major groups per ecosystem, and entries for the ecosystems its reference covers (`github-actions`, `npm`, `cargo`, `rust-toolchain`, `uv`, `pip`, `bundler`, `gomod`, `composer`, `docker`). Name any other ecosystem the inventory found as one to add by hand afterwards, so the hand-off is not reported as full coverage. Then stop. Under `--report-only`, stop after the report.
+1. In a checkout that matches `OWNER/REPO` (step 1), offer to invoke the `pin-everything` skill with `--scope dependabot`, which writes the house baseline into the current checkout: a weekly schedule, split minor-and-patch and major groups per ecosystem, and entries for the ecosystems its reference covers (`github-actions`, `npm`, `cargo`, `rust-toolchain`, `uv`, `pip`, `bundler`, `gomod`, `composer`, `docker`, `docker-compose`). Name any other ecosystem the inventory found as one to add by hand afterwards, so the hand-off is not reported as full coverage. Without a matching checkout, do not offer the hand-off, since it would write the config into the wrong repository: tell the user to run this skill again from a checkout of `OWNER/REPO`. Then stop. Under `--report-only`, stop after the report.
 
 ### 3. Inventory the Repository
 
@@ -76,12 +76,20 @@ Build the list the config is reviewed against, using `./references/ecosystems.md
 1. **Manifests and lockfiles, with their directories.** Exclude `.git/`, `node_modules/`, `vendor/`, `dist/`, `build/`, `target/`, `.venv/`, `.yarn/`, and test fixture directories. Treat a git subtree whose dependencies another repository manages as out of scope, and say so.
 1. **Workflows and actions.** `.github/workflows/*.yml` and `*.yaml`, plus every `action.yml` or `action.yaml` outside `.github/workflows/`. A composite action that references other actions with `uses:` needs its own directory in the config; one with no external `uses:` does not.
 1. **Install trees.** A workspace root (npm, Yarn, or pnpm workspaces, a Cargo workspace, a `go.work`) covers its members from one directory. A separate install tree with its own lockfile needs its own directory.
-1. **Pins Dependabot does not track**: `.tool-versions`, `.nvmrc`, `.python-version`, `packageManager` in `package.json`, tool versions set in workflow `env:` or action inputs, install commands with versions, and action references inside Markdown.
+1. **Pins Dependabot does not track**: every surface in the untracked table of `./references/ecosystems.md`, including the runtime version files (`.tool-versions`, `.nvmrc`, `.node-version`, `.python-version`, `.ruby-version`), `packageManager` in `package.json`, tool versions set in workflow `env:` or action inputs, install commands with versions, checksums, and action references inside Markdown.
 1. **Version comments on SHA-pinned actions.** Note any major-only comment (`# v6`) beside a full SHA.
 
 ### 4. Review
 
-Work through `./references/checklist.md` against the default-branch config and the inventory, and `./references/repository-settings.md` for the settings around it. Run independent API calls in parallel.
+Parse the default-branch config first. The schema check reads the YAML before validating it, so a syntax error comes back with its line and column:
+
+```bash
+git show origin/DEFAULT:CONFIG_PATH | uvx check-jsonschema --builtin-schema vendor.dependabot --default-filetype yaml -
+```
+
+Without a matching checkout, read the file through the contents API instead: `gh api 'repos/OWNER/REPO/contents/CONFIG_PATH?ref=DEFAULT' -H 'Accept: application/vnd.github.raw+json' | uvx check-jsonschema --builtin-schema vendor.dependabot --default-filetype yaml -`. When `uv` is unavailable, say the file was not machine-parsed or schema-checked, and review it by reading it.
+
+Then work through `./references/checklist.md` against the default-branch config and the inventory, and `./references/repository-settings.md` for the settings around it. Run independent API calls in parallel.
 
 Every finding records:
 
@@ -195,7 +203,7 @@ Untracked: `.tool-versions` (node, python) and `CSPELL_VERSION` in ci.yml. See p
 ## Error Handling
 
 - **`gh` missing or not authenticated**: Report and stop.
-- **YAML does not parse**: Report an Error with the parser's line and column, and review nothing else in the file until it parses.
+- **YAML does not parse**: Report an Error with the line and column the step 4 parse gives, and review nothing else in the file until it parses. Without `uv`, report the line where the structure stops making sense, and say no parser confirmed it.
 - **A settings endpoint returns 403 or 404 for permissions**: Record the check as not visible, name the permission it needs (repository admin, or the `security_events` scope for alerts), and continue.
 - **The docs cannot be reached to confirm an unfamiliar key**: Report it as "unverified" rather than invalid.
 - **Archived repository**: Report and stop. Never unarchive to apply a fix.

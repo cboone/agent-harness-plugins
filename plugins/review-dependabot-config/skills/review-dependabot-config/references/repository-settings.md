@@ -2,6 +2,13 @@
 
 Dependabot's behavior depends on settings outside `dependabot.yml`. Each section gives the call, how to read the answer, and what to report. `OWNER/REPO` and `DEFAULT` stand for the repository and its default branch.
 
+Workflow files are read from the default branch, since that is what runs, and from `OWNER/REPO` rather than whatever the working directory holds. In a checkout that matches `OWNER/REPO` (step 1 of the skill), search `origin/DEFAULT` with `git grep`. Without one, list the workflows through the contents API and search each file's raw content:
+
+```bash
+gh api 'repos/OWNER/REPO/contents/.github/workflows?ref=DEFAULT' --jq '.[].path'
+gh api 'repos/OWNER/REPO/contents/PATH?ref=DEFAULT' -H 'Accept: application/vnd.github.raw+json' | grep -nE 'PATTERN'
+```
+
 Several of these endpoints need repository admin rights, and the alerts endpoint also accepts the `security_events` scope. A 403, or a 404 on an endpoint that exists, usually means missing permission. Report the check as not visible, never as passing.
 
 ## Dependabot alerts
@@ -54,7 +61,7 @@ gh api --paginate --slurp 'repos/OWNER/REPO/actions/secrets?per_page=100' | jq '
 Then find the jobs that run on Dependabot PRs and use secrets:
 
 ```bash
-grep -rnE 'secrets(\.|\[)' .github/workflows/
+git grep -nE 'secrets(\.|\[)' origin/DEFAULT -- .github/workflows/
 ```
 
 For each secret referenced by a job that runs on `push`, `pull_request`, `pull_request_review`, or `pull_request_review_comment`, other than `GITHUB_TOKEN`:
@@ -104,7 +111,7 @@ Report, as settings context rather than findings unless they cause harm:
 ## Dependabot automation workflows
 
 ```bash
-grep -rln -e 'dependabot/fetch-metadata' -e "github.actor == 'dependabot\[bot\]'" -e 'pull_request_target' .github/workflows/
+git grep -ln -e 'dependabot/fetch-metadata' -e "github.actor == 'dependabot\[bot\]'" -e 'pull_request_target' origin/DEFAULT -- .github/workflows/
 ```
 
 For each workflow found:
@@ -115,4 +122,4 @@ For each workflow found:
 
 ## Code owners
 
-When `reviewers` appears in the config, check `.github/CODEOWNERS`, `CODEOWNERS`, or `docs/CODEOWNERS` for entries covering the manifests and lockfiles, since code owners are now the way Dependabot PRs get reviewers.
+When `reviewers` appears in the config, check `.github/CODEOWNERS`, `CODEOWNERS`, or `docs/CODEOWNERS` on the default branch, read the same way as the workflows, for entries covering the manifests and lockfiles, since code owners are now the way Dependabot PRs get reviewers.
