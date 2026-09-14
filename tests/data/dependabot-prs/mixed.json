@@ -1,0 +1,468 @@
+{
+  "fetchedAt": "2026-09-13T12:00:00Z",
+  "repo": "example-org/example-repo",
+  "defaultBranch": "main",
+  "isArchived": false,
+  "limit": 200,
+  "dependabot": [
+    {
+      "number": 101,
+      "title": "chore(deps): bump actions/setup-go from 6.4.0 to 7.0.0",
+      "url": "https://github.com/example-org/example-repo/pull/101",
+      "headRefName": "dependabot/github_actions/actions/setup-go-7.0.0",
+      "headRefOid": "1010101010101010101010101010101010101010",
+      "baseRefName": "main",
+      "body": "Bumps [actions/setup-go](https://github.com/actions/setup-go) from 6.4.0 to 7.0.0.\n<details>\n<summary>Release notes</summary>\n<p><em>Sourced from <a href=\"https://github.com/actions/setup-go/releases\">actions/setup-go's releases</a>.</em></p>\n</details>\n\n\n---\n\n<details>\n<summary>Dependabot commands and options</summary>\n<br />\n\nYou can trigger Dependabot actions by commenting on this PR:\n- `@dependabot rebase` will rebase this PR\n- `@dependabot recreate` will recreate this PR, overwriting any edits that have been made to it\n\n\n</details>",
+      "createdAt": "2026-09-10T09:00:00Z",
+      "updatedAt": "2026-09-12T10:00:00Z",
+      "labels": [{ "name": "dependencies" }],
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "autoMergeRequest": null,
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-12T10:05:00Z",
+          "conclusion": "SUCCESS",
+          "name": "ci / Test",
+          "startedAt": "2026-09-12T10:01:00Z",
+          "status": "COMPLETED",
+          "workflowName": "CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-12T10:04:00Z",
+          "conclusion": "SUCCESS",
+          "name": "ci / Lint",
+          "startedAt": "2026-09-12T10:01:00Z",
+          "status": "COMPLETED",
+          "workflowName": "CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-12T10:01:30Z",
+          "conclusion": "SKIPPED",
+          "name": "release / Publish",
+          "startedAt": "2026-09-12T10:01:30Z",
+          "status": "COMPLETED",
+          "workflowName": "Release"
+        }
+      ],
+      "files": [{ "path": ".github/workflows/ci.yml", "additions": 1, "deletions": 1 }]
+    },
+    {
+      "number": 102,
+      "title": "chore(deps): bump the github-actions-minor-patch group across 2 directories with 2 updates",
+      "url": "https://github.com/example-org/example-repo/pull/102",
+      "headRefName": "dependabot/github_actions/github-actions-minor-patch-fadb7a8001",
+      "headRefOid": "1020202020202020202020202020202020202020",
+      "baseRefName": "main",
+      "body": "Bumps the github-actions-minor-patch group with 2 updates in the / directory: [actions/checkout](https://github.com/actions/checkout) and [actions/cache](https://github.com/actions/cache).\nBumps the github-actions-minor-patch group with 1 update in the /.github/actions/setup directory: [actions/checkout](https://github.com/actions/checkout).\n\nUpdates `actions/checkout` from 7.0.0 to 7.0.1\n<details>\n<summary>Commits</summary>\n</details>\n\nUpdates `actions/cache` from 5.0.5 to 5.1.0\n<details>\n<summary>Commits</summary>\n</details>\n\nUpdates `actions/checkout` from 7.0.0 to 7.0.1\n<details>\n<summary>Commits</summary>\n</details>\n\n\n---\n\n<details>\n<summary>Dependabot commands and options</summary>\n<br />\n\nYou can trigger Dependabot actions by commenting on this PR:\n- `@dependabot rebase` will rebase this PR\n\n\n</details>",
+      "createdAt": "2026-09-13T06:00:00Z",
+      "updatedAt": "2026-09-13T06:00:00Z",
+      "labels": [{ "name": "dependencies" }, { "name": "github-actions" }],
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "BLOCKED",
+      "reviewDecision": "REVIEW_REQUIRED",
+      "autoMergeRequest": null,
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "completedAt": null,
+          "conclusion": "",
+          "name": "ci / Test",
+          "startedAt": "2026-09-13T06:01:00Z",
+          "status": "IN_PROGRESS",
+          "workflowName": "CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-13T06:02:00Z",
+          "conclusion": "SUCCESS",
+          "name": "ci / Lint",
+          "startedAt": "2026-09-13T06:01:00Z",
+          "status": "COMPLETED",
+          "workflowName": "CI"
+        }
+      ],
+      "files": [
+        { "path": ".github/actions/setup/action.yml", "additions": 1, "deletions": 1 },
+        { "path": ".github/workflows/ci.yml", "additions": 2, "deletions": 2 }
+      ]
+    },
+    {
+      "number": 103,
+      "title": "deps: bump golang.org/x/crypto from 0.45.0 to 0.52.0 in the go_modules group across 1 directory",
+      "url": "https://github.com/example-org/example-repo/pull/103",
+      "headRefName": "dependabot/go_modules/go_modules-a3c8a40308",
+      "headRefOid": "1030303030303030303030303030303030303030",
+      "baseRefName": "main",
+      "body": "Bumps the go_modules group with 1 update in the / directory: [golang.org/x/crypto](https://github.com/golang/crypto).\n\nUpdates `golang.org/x/crypto` from 0.45.0 to 0.52.0\n<details>\n<summary>Commits</summary>\n</details>\n\n\n---\n\n<details>\n<summary>Dependabot commands and options</summary>\n<br />\n\nYou can trigger Dependabot actions by commenting on this PR:\n- `@dependabot rebase` will rebase this PR\n\nYou can disable automated security fix PRs for this repo from the [Security Alerts page](https://github.com/example-org/example-repo/network/alerts).\n\n</details>",
+      "createdAt": "2026-09-01T12:00:00Z",
+      "updatedAt": "2026-09-01T12:00:00Z",
+      "labels": [],
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "autoMergeRequest": null,
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-01T12:06:00Z",
+          "conclusion": "SUCCESS",
+          "name": "ci / Test",
+          "startedAt": "2026-09-01T12:01:00Z",
+          "status": "COMPLETED",
+          "workflowName": "CI"
+        }
+      ],
+      "files": [
+        { "path": "go.mod", "additions": 1, "deletions": 1 },
+        { "path": "go.sum", "additions": 2, "deletions": 2 }
+      ]
+    },
+    {
+      "number": 104,
+      "title": "chore(deps): bump dtolnay/rust-toolchain from fa04a1451ff1842e2626ccb99004d0195b455a88 to 02cb101ec7c40f2c49e1d9714d64511d8e1b74de",
+      "url": "https://github.com/example-org/example-repo/pull/104",
+      "headRefName": "dependabot/github_actions/dtolnay/rust-toolchain-02cb101ec7c40f2c49e1d9714d64511d8e1b74de",
+      "headRefOid": "1040404040404040404040404040404040404040",
+      "baseRefName": "main",
+      "body": "Bumps [dtolnay/rust-toolchain](https://github.com/dtolnay/rust-toolchain) from fa04a1451ff1842e2626ccb99004d0195b455a88 to 02cb101ec7c40f2c49e1d9714d64511d8e1b74de.\n<details>\n<summary>Commits</summary>\n</details>\n<br />\n",
+      "createdAt": "2026-09-13T11:00:00Z",
+      "updatedAt": "2026-09-13T11:30:00Z",
+      "labels": [{ "name": "dependencies" }],
+      "isDraft": false,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "reviewDecision": "",
+      "autoMergeRequest": null,
+      "statusCheckRollup": [
+        {
+          "__typename": "StatusContext",
+          "context": "buildkite/pipeline",
+          "startedAt": "2026-09-13T11:31:00Z",
+          "state": "SUCCESS",
+          "targetUrl": "https://ci.example.com/builds/1"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": null,
+          "conclusion": "",
+          "name": "ci / Rust",
+          "startedAt": null,
+          "status": "QUEUED",
+          "workflowName": "CI"
+        }
+      ],
+      "files": [{ "path": ".github/workflows/rust.yml", "additions": 1, "deletions": 1 }]
+    },
+    {
+      "number": 105,
+      "title": "Bump maplibre-gl from 3.6.2 to 4.1.2",
+      "url": "https://github.com/example-org/example-repo/pull/105",
+      "headRefName": "dependabot/npm_and_yarn/web/maplibre-gl-4.1.2",
+      "headRefOid": "1050505050505050505050505050505050505050",
+      "baseRefName": "staging",
+      "body": "Bumps [maplibre-gl](https://github.com/maplibre/maplibre-gl-js) from 3.6.2 to 4.1.2.\n\n\n> **Note**\n> Automatic rebases have been disabled on this pull request as it has been open for over 30 days.\n\n---\n\n<details>\n<summary>Dependabot commands and options</summary>\n<br />\n\nYou can trigger Dependabot actions by commenting on this PR:\n- `@dependabot rebase` will rebase this PR\n\n\n</details>",
+      "createdAt": "2024-03-01T08:00:00Z",
+      "updatedAt": "2024-04-02T08:00:00Z",
+      "labels": [{ "name": "dependencies" }, { "name": "javascript" }],
+      "isDraft": false,
+      "mergeable": "CONFLICTING",
+      "mergeStateStatus": "DIRTY",
+      "reviewDecision": "",
+      "autoMergeRequest": null,
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2024-03-01T08:09:00Z",
+          "conclusion": "FAILURE",
+          "name": "build",
+          "startedAt": "2024-03-01T08:01:00Z",
+          "status": "COMPLETED",
+          "workflowName": "Build"
+        },
+        {
+          "__typename": "StatusContext",
+          "context": "netlify/example/deploy-preview",
+          "startedAt": "2024-03-01T08:02:00Z",
+          "state": "FAILURE",
+          "targetUrl": "https://app.netlify.com/sites/example/deploys/1"
+        }
+      ],
+      "files": [
+        { "path": "web/package-lock.json", "additions": 40, "deletions": 38 },
+        { "path": "web/package.json", "additions": 1, "deletions": 1 }
+      ]
+    },
+    {
+      "number": 106,
+      "title": "Bump maplibre-gl from 3.6.2 to 4.1.3",
+      "url": "https://github.com/example-org/example-repo/pull/106",
+      "headRefName": "dependabot/npm_and_yarn/web/maplibre-gl-4.1.3",
+      "headRefOid": "1060606060606060606060606060606060606060",
+      "baseRefName": "staging",
+      "body": "Bumps [maplibre-gl](https://github.com/maplibre/maplibre-gl-js) from 3.6.2 to 4.1.3.\n\n\n> **Note**\n> Automatic rebases have been disabled on this pull request as it has been open for over 30 days.\n\n---\n\n<details>\n<summary>Dependabot commands and options</summary>\n<br />\n\nYou can trigger Dependabot actions by commenting on this PR:\n- `@dependabot rebase` will rebase this PR\n\n\n</details>",
+      "createdAt": "2024-04-10T08:00:00Z",
+      "updatedAt": "2024-04-10T08:00:00Z",
+      "labels": [{ "name": "dependencies" }, { "name": "javascript" }],
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "autoMergeRequest": null,
+      "statusCheckRollup": [],
+      "files": [
+        { "path": "web/package-lock.json", "additions": 40, "deletions": 38 },
+        { "path": "web/package.json", "additions": 1, "deletions": 1 }
+      ]
+    },
+    {
+      "number": 107,
+      "title": "chore(deps-dev): bump the doc-linters group across 1 directory with 3 updates",
+      "url": "https://github.com/example-org/example-repo/pull/107",
+      "headRefName": "dependabot/npm_and_yarn/doc-linters-b0239ad815",
+      "headRefOid": "1070707070707070707070707070707070707070",
+      "baseRefName": "main",
+      "body": "Bumps the doc-linters group with 3 updates in the / directory: [prettier](https://github.com/prettier/prettier), [cspell](https://github.com/streetsidesoftware/cspell) and [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2).\n\nUpdates `prettier` from 3.8.1 to 3.8.3\n<details>\n<summary>Release notes</summary>\n<p>... (truncated)</p>\n</details>\n\nUpdates `cspell` from 9.7.0 to 10.0.0\n<details>\n<summary>Release notes</summary>\n<p>... (truncated)</p>\n</details>\n\n_Description has been truncated_",
+      "createdAt": "2026-09-08T06:00:00Z",
+      "updatedAt": "2026-09-08T06:00:00Z",
+      "labels": [{ "name": "dependencies" }],
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "autoMergeRequest": null,
+      "statusCheckRollup": [],
+      "files": [
+        { "path": "package.json", "additions": 3, "deletions": 3 },
+        { "path": "yarn.lock", "additions": 120, "deletions": 98 }
+      ]
+    },
+    {
+      "number": 108,
+      "title": "chore(deps-dev): bump sinon from 13.0.2 to 22.0.0",
+      "url": "https://github.com/example-org/example-repo/pull/108",
+      "headRefName": "dependabot/npm_and_yarn/sinon-21.1.2",
+      "headRefOid": "1080808080808080808080808080808080808080",
+      "baseRefName": "main",
+      "body": "Bumps [sinon](https://github.com/sinonjs/sinon) from 13.0.2 to 22.0.0.\n\n\n---\n\n<details>\n<summary>Dependabot commands and options</summary>\n<br />\n\nYou can trigger Dependabot actions by commenting on this PR:\n- `@dependabot rebase` will rebase this PR\n\n\n</details>",
+      "createdAt": "2026-08-01T06:00:00Z",
+      "updatedAt": "2026-09-08T06:00:00Z",
+      "labels": [{ "name": "dependencies" }],
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "autoMergeRequest": null,
+      "statusCheckRollup": [],
+      "files": [
+        { "path": "package.json", "additions": 1, "deletions": 1 },
+        { "path": "yarn.lock", "additions": 30, "deletions": 28 }
+      ]
+    },
+    {
+      "number": 109,
+      "title": "chore(deps-dev): bump markdownlint-cli2 from 0.21.0 to 0.23.2",
+      "url": "https://github.com/example-org/example-repo/pull/109",
+      "headRefName": "dependabot/npm_and_yarn/markdownlint-cli2-0.23.2",
+      "headRefOid": "1090909090909090909090909090909090909090",
+      "baseRefName": "main",
+      "body": "Bumps [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2) from 0.21.0 to 0.23.2.\n\n\n---\n\n<details>\n<summary>Dependabot commands and options</summary>\n<br />\n\nYou can trigger Dependabot actions by commenting on this PR:\n- `@dependabot rebase` will rebase this PR\n\n\n</details>",
+      "createdAt": "2026-09-12T06:00:00Z",
+      "updatedAt": "2026-09-12T06:00:00Z",
+      "labels": [{ "name": "dependencies" }],
+      "isDraft": true,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "DRAFT",
+      "reviewDecision": "REVIEW_REQUIRED",
+      "autoMergeRequest": { "enabledAt": "2026-09-12T07:00:00Z", "mergeMethod": "SQUASH" },
+      "statusCheckRollup": [],
+      "files": [
+        { "path": "package.json", "additions": 1, "deletions": 1 },
+        { "path": "yarn.lock", "additions": 12, "deletions": 10 }
+      ]
+    },
+    {
+      "number": 110,
+      "title": "chore(deps): bump markdown-it and markdownlint-cli2",
+      "url": "https://github.com/example-org/example-repo/pull/110",
+      "headRefName": "dependabot/npm_and_yarn/multi-30c1a31621",
+      "headRefOid": "1101010101010101010101010101010101010101",
+      "baseRefName": "main",
+      "body": "Bumps [markdown-it](https://github.com/markdown-it/markdown-it) and [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2). These dependencies needed to be updated together.\nUpdates `markdown-it` from 14.1.0 to 14.1.1\n<details>\n<summary>Commits</summary>\n</details>\n\nUpdates `markdownlint-cli2` from 0.21.0 to 0.22.1\n<details>\n<summary>Commits</summary>\n</details>\n\n\n---\n\n<details>\n<summary>Dependabot commands and options</summary>\n<br />\n\nYou can trigger Dependabot actions by commenting on this PR:\n- `@dependabot rebase` will rebase this PR\n\nYou can disable automated security fix PRs for this repo from the [Security Alerts page](https://github.com/example-org/example-repo/network/alerts).\n\n</details>",
+      "createdAt": "2026-09-11T06:00:00Z",
+      "updatedAt": "2026-09-11T06:00:00Z",
+      "labels": [{ "name": "dependencies" }],
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "autoMergeRequest": null,
+      "statusCheckRollup": [],
+      "files": [{ "path": "yarn.lock", "additions": 20, "deletions": 18 }]
+    },
+    {
+      "number": 111,
+      "title": "build(deps): bump ubuntu from jammy-20240101 to noble-20240601 in /docker",
+      "url": "https://github.com/example-org/example-repo/pull/111",
+      "headRefName": "dependabot/docker/docker/ubuntu-noble-20240601",
+      "headRefOid": "1111011110111101111011110111101111011110",
+      "baseRefName": "main",
+      "body": "Bumps ubuntu from jammy-20240101 to noble-20240601.\n\n\n---\n\n<details>\n<summary>Dependabot commands and options</summary>\n<br />\n\nYou can trigger Dependabot actions by commenting on this PR:\n- `@dependabot rebase` will rebase this PR\n\n\n</details>",
+      "createdAt": "2026-09-13T00:00:00Z",
+      "updatedAt": "2026-09-13T00:00:00Z",
+      "labels": [{ "name": "dependencies" }, { "name": "docker" }],
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "autoMergeRequest": null,
+      "statusCheckRollup": [],
+      "files": [{ "path": "docker/Dockerfile", "additions": 1, "deletions": 1 }]
+    }
+  ],
+  "open": [
+    {
+      "number": 90,
+      "title": "feat: add a TOTP login flow",
+      "author": { "login": "octocat", "is_bot": false },
+      "headRefName": "feat/totp-login",
+      "files": [{ "path": "README.md" }, { "path": "go.mod" }, { "path": "internal/auth/totp.go" }]
+    },
+    {
+      "number": 101,
+      "title": "chore(deps): bump actions/setup-go from 6.4.0 to 7.0.0",
+      "author": { "login": "app/dependabot", "is_bot": true },
+      "headRefName": "dependabot/github_actions/actions/setup-go-7.0.0",
+      "files": [{ "path": ".github/workflows/ci.yml" }]
+    },
+    {
+      "number": 102,
+      "title": "chore(deps): bump the github-actions-minor-patch group across 2 directories with 2 updates",
+      "author": { "login": "app/dependabot", "is_bot": true },
+      "headRefName": "dependabot/github_actions/github-actions-minor-patch-fadb7a8001",
+      "files": [{ "path": ".github/actions/setup/action.yml" }, { "path": ".github/workflows/ci.yml" }]
+    }
+  ],
+  "compare": {
+    "101": { "status": "ahead", "aheadBy": 1, "behindBy": 0, "authors": ["dependabot[bot]"] },
+    "102": { "status": "diverged", "aheadBy": 1, "behindBy": 3, "authors": ["dependabot[bot]"] },
+    "103": { "status": "ahead", "aheadBy": 1, "behindBy": 0, "authors": ["dependabot[bot]"] },
+    "104": null,
+    "105": { "status": "diverged", "aheadBy": 2, "behindBy": 62, "authors": ["dependabot[bot]", "octocat"] },
+    "106": { "status": "diverged", "aheadBy": 1, "behindBy": 60, "authors": ["dependabot[bot]"] },
+    "107": { "status": "ahead", "aheadBy": 1, "behindBy": 0, "authors": ["dependabot[bot]"] },
+    "108": { "status": "ahead", "aheadBy": 1, "behindBy": 0, "authors": ["dependabot[bot]"] },
+    "109": { "status": "ahead", "aheadBy": 1, "behindBy": 0, "authors": ["dependabot[bot]"] },
+    "110": { "status": "ahead", "aheadBy": 1, "behindBy": 0, "authors": ["dependabot[bot]"] },
+    "111": { "status": "ahead", "aheadBy": 1, "behindBy": 0, "authors": ["dependabot[bot]"] }
+  },
+  "alerts": {
+    "available": true,
+    "reason": null,
+    "items": [
+      {
+        "number": 21,
+        "state": "open",
+        "dependency": {
+          "package": { "ecosystem": "go", "name": "golang.org/x/crypto" },
+          "manifest_path": "go.mod",
+          "scope": "runtime",
+          "relationship": "transitive"
+        },
+        "security_advisory": { "ghsa_id": "GHSA-aaaa-aaaa-aaaa", "severity": "critical" },
+        "security_vulnerability": {
+          "first_patched_version": { "identifier": "0.52.0" },
+          "vulnerable_version_range": "< 0.52.0",
+          "severity": "critical"
+        }
+      },
+      {
+        "number": 22,
+        "state": "open",
+        "dependency": {
+          "package": { "ecosystem": "go", "name": "golang.org/x/crypto" },
+          "manifest_path": "go.mod",
+          "scope": "runtime",
+          "relationship": "transitive"
+        },
+        "security_advisory": { "ghsa_id": "GHSA-bbbb-bbbb-bbbb", "severity": "medium" },
+        "security_vulnerability": {
+          "first_patched_version": { "identifier": "0.52.0" },
+          "vulnerable_version_range": "< 0.52.0",
+          "severity": "medium"
+        }
+      },
+      {
+        "number": 23,
+        "state": "open",
+        "dependency": {
+          "package": { "ecosystem": "npm", "name": "markdown-it" },
+          "manifest_path": "yarn.lock",
+          "scope": "development",
+          "relationship": "transitive"
+        },
+        "security_advisory": { "ghsa_id": "GHSA-cccc-cccc-cccc", "severity": "medium" },
+        "security_vulnerability": {
+          "first_patched_version": { "identifier": "14.1.1" },
+          "vulnerable_version_range": "< 14.1.1",
+          "severity": "medium"
+        }
+      },
+      {
+        "number": 24,
+        "state": "open",
+        "dependency": {
+          "package": { "ecosystem": "npm", "name": "lodash" },
+          "manifest_path": "yarn.lock",
+          "scope": "runtime",
+          "relationship": "transitive"
+        },
+        "security_advisory": { "ghsa_id": "GHSA-dddd-dddd-dddd", "severity": "high" },
+        "security_vulnerability": {
+          "first_patched_version": { "identifier": "4.17.21" },
+          "vulnerable_version_range": "< 4.17.21",
+          "severity": "high"
+        }
+      },
+      {
+        "number": 25,
+        "state": "open",
+        "dependency": {
+          "package": { "ecosystem": "npm", "name": "lodash" },
+          "manifest_path": "yarn.lock",
+          "scope": "runtime",
+          "relationship": "transitive"
+        },
+        "security_advisory": { "ghsa_id": "GHSA-eeee-eeee-eeee", "severity": "low" },
+        "security_vulnerability": {
+          "first_patched_version": { "identifier": "4.17.21" },
+          "vulnerable_version_range": "< 4.17.21",
+          "severity": "low"
+        }
+      },
+      {
+        "number": 26,
+        "state": "open",
+        "dependency": {
+          "package": { "ecosystem": "npm", "name": "minimist" },
+          "manifest_path": "web/package-lock.json",
+          "scope": "runtime",
+          "relationship": "transitive"
+        },
+        "security_advisory": { "ghsa_id": "GHSA-ffff-ffff-ffff", "severity": "critical" },
+        "security_vulnerability": {
+          "first_patched_version": { "identifier": "1.2.6" },
+          "vulnerable_version_range": "< 1.2.6",
+          "severity": "critical"
+        }
+      }
+    ]
+  }
+}

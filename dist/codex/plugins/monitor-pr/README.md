@@ -14,7 +14,7 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 Picks up where `pr` stops. The `pr` skill creates the pull request, prints the URL, and terminates; everything after that has traditionally been hand-driven. This skill takes over and tends the PR until it is ready to merge.
 
-On each tick it takes one snapshot of the PR and reduces it to four axes: checks, Copilot, mergeability, and PR state. It then acts on the first problem it finds, in priority order:
+On each tick it takes one snapshot of the PR and reduces it to four axes: checks, Copilot, mergeability, and PR state. It then acts on the first problem it finds, in priority order. On a PR Dependabot authored, the skill never pushes, so each of these follows [Dependabot PRs](#dependabot-prs) instead:
 
 1. **Branch is conflicted or behind the base**: invokes `merge-main`, since a stale branch is a common cause of check failures.
 1. **A check failed**: pulls the failing job's logs and repairs it. Lint and format failures go to `lint-and-fix`; generated-tree drift is rebuilt with the repository's own build scripts; test and build failures are diagnosed from the logs.
@@ -38,6 +38,14 @@ Copilot's output varies between runs over identical code, so a review that surfa
 The Copilot round budget defaults to 10. On reaching it the skill stops and asks whether to continue and for how many more rounds; `--rounds <n>` sets a different budget and `--rounds unlimited` removes the question entirely, committing to run until the PR is genuinely clean.
 
 The budget bounds an unattended watch. It is not a judgment about whether the work is going well, and the skill does not read the finding counts as a trend. Copilot swings between busy and quiet rounds over the same code, so a rising count does not mean divergence, and four rounds is often not enough to finish. A watch still turning up real defects at round 8 is working, not thrashing. What ends a watch early is a finding that needs your judgment, not an unflattering shape in the numbers.
+
+### Dependabot PRs
+
+Dependabot owns its branches. Once anyone else pushes to one, Dependabot stops rebasing it, and a later `@dependabot recreate` throws the push away. So on a PR authored by Dependabot the skill never pushes:
+
+- A conflicted or out-of-date branch gets a `@dependabot rebase` comment, once per head, instead of `merge-main`.
+- A failing check is diagnosed but not repaired, and the watch stops there. A failure caused by a secret that Dependabot runs cannot read is reported as an environment problem, pointing at [Review Dependabot Config](../review-dependabot-config/README.md). Anything else points at [Triage Dependabot PRs](../triage-dependabot-prs/README.md).
+- The Copilot axis counts as clean unless a Copilot review of the current head left findings, which escalates. The skill never requests or waits for a review, since every rebase leaves any earlier review behind.
 
 ### What does not gate
 
@@ -77,7 +85,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr merge *)", "Bash(gh api --paginate --slurp repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(jq *)", "Bash(sleep *)", "Bash(git status*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(bin/build-codex-marketplace)", "Bash(bin/build-opencode-mirror)"]
+    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr comment *)", "Bash(gh pr merge *)", "Bash(gh api --paginate --slurp repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(jq *)", "Bash(sleep *)", "Bash(git status*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(bin/build-codex-marketplace)", "Bash(bin/build-opencode-mirror)"]
   }
 }
 ```
@@ -100,4 +108,5 @@ Three notes on these rules. **Flag position matters**: `Bash(gh api repos/*)` do
 - [Resolve Copilot PR Feedback](../resolve-copilot-pr-feedback/README.md): the Copilot half of the loop, invoked once a review lands on the current head
 - [Merge Main](../merge-main/README.md): invoked when the branch falls behind or conflicts with its base
 - [Lint and Fix](../lint-and-fix/README.md): invoked to repair lint and format failures
+- [Triage Dependabot PRs](../triage-dependabot-prs/README.md): decide what to do with a Dependabot PR before watching it
 - [All plugins](../../../../README.md)

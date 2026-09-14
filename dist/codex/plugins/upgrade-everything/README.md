@@ -15,6 +15,8 @@ Builds a complete upgrade audit for the current repository by inventorying versi
 
 The skill applies only the upgrades the user explicitly selects. When applying upgrades, it preserves each ecosystem's normal update mechanism: package manager commands for manifests and lockfiles, targeted structured edits for configuration, and no hand-edited lockfiles when a package manager owns them.
 
+Before recommending an upgrade, it checks whether an open Dependabot PR already proposes it. A candidate Dependabot already covers is shown with its PR number, and the recommendation is to triage that PR with [Triage Dependabot PRs](../triage-dependabot-prs/README.md) rather than duplicate the upgrade locally. When a local upgrade makes a Dependabot PR redundant, the summary lists the PR for closing.
+
 ## Usage
 
 ```text
@@ -33,4 +35,5 @@ The skill applies only the upgrades the user explicitly selects. When applying u
 - [Pin Everything](../pin-everything/README.md): harden mutable version references before or after upgrade review
 - [Release](../release/README.md): update release metadata after selected upgrades land
 - [Lint and Fix](../lint-and-fix/README.md): format and verify files after upgrades
+- [Triage Dependabot PRs](../triage-dependabot-prs/README.md): work through the upgrades Dependabot has already proposed
 - [All plugins](../../../../README.md)
