@@ -93,6 +93,14 @@ mkdir -p "PROJECT-NAME"
 cd "PROJECT-NAME"
 ```
 
+**Check first whether that name is already a symlink**, because `mkdir -p` succeeds silently on one that points at an existing directory and `cd` then follows it:
+
+```bash
+test -L "PROJECT-NAME" && pwd -P
+```
+
+If it is, say where it leads and ask before continuing. Following it puts every generated file, the `git init`, and the signed commit in the destination tree rather than beside the symlink, and nothing later in the workflow notices: the overwrite preflight runs in the destination, so an empty one reports nothing to worry about. Confirm the working directory with `pwd -P` after entering, so the path the summary reports is the physical one.
+
 Emptiness is deliberately not part of the first test. The recommended order runs `scaffold-new-repo` first, which leaves a populated directory named after the project, and requiring emptiness there sends that case down the second branch to create `PROJECT-NAME/PROJECT-NAME` inside it. That nests the project one level too deep and steps straight past the preflight whose whole purpose is to notice the boilerplate already sitting there. A directory with the project's name is the project's directory.
 
 Every path from here on is relative to the target, in this step and in every later one: the preflight below, `git init`, `zig build`, and each generated file. Entering the directory is therefore not optional. Creating it and staying put scaffolds the whole project into the parent, and the preflight would report on the wrong directory while doing it.
