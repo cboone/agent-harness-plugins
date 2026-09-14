@@ -927,3 +927,34 @@ $ setup_claims \
 >   && jq -r '.claims[0] | has("gitdir")' "${claim_file}"
 false
 ```
+
+## A path reused by an unrelated worktree does not keep a dead claim alive
+
+An identity settles staleness in both directions. Judging a claim that has one by the path or branch as well would let a path since reused by a different worktree hold the old claim forever, and no later `check` or `prune` could clear it: the path keeps matching.
+
+Here the stored path and branch still match a live record, and only the admin directory differs.
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
+>   && jq '.claims[0].gitdir="/admin/somewhere-else"' "${claim_file}" > "${claim_file}.new" \
+>   && mv "${claim_file}.new" "${claim_file}" \
+>   && claims_list
+resource=logic state=stale id=* branch=feature/live claimed=TIMESTAMP worktree=/repo/wt-live (glob)
+```
+
+## prune clears a claim whose path was reused
+
+The consequence of getting the rule above wrong is a claim no command can remove, so this checks the remedy actually reaches it.
+
+```scrut
+$ setup_claims \
+>   && claims claim logic --worktree /repo/wt-live --branch feature/live > /dev/null \
+>   && jq '.claims[0].gitdir="/admin/somewhere-else"' "${claim_file}" > "${claim_file}.new" \
+>   && mv "${claim_file}.new" "${claim_file}" \
+>   && claims prune \
+>   && claims list \
+>   && echo "none left"
+pruned "logic" from feature/live at /repo/wt-live
+none left
+```

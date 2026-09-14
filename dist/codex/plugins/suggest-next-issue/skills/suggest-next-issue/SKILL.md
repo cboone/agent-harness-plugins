@@ -71,8 +71,8 @@ A missing file means no claims, which is the ordinary state and not an error. Ea
 - `claims` is an array.
 - Every entry is an object whose `id`, `resource`, `worktree`, `branch`, and `claimed_at` are strings, with `id` lowercase hexadecimal.
 - `resource`, `branch`, and `claimed_at` are non-empty and contain no whitespace, and `resource` does not start with a hyphen.
-- `worktree` is non-empty and contains no control characters. Spaces are legal here and only here, because it is a path.
-- `gitdir`, when the key is present, is a non-empty string containing no control characters. It is the worktree's git admin directory, and it is optional because it cannot always be resolved.
+- `worktree` is non-empty and contains no control characters. Spaces are legal in it, because it is a path.
+- `gitdir`, when the key is present, is a non-empty string containing no control characters. Spaces are legal in it too, for the same reason: it is the worktree's git admin directory, and it is optional because it cannot always be resolved.
 - `issue`, when the key is present, is a non-negative integer. It is optional and omitted rather than null for a worktree that did not come from an issue, so absent is normal and `"128"` as a string is not.
 - No two entries name the same `resource`.
 

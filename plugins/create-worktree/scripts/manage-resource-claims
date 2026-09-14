@@ -168,11 +168,16 @@ function claim_file_path() {
 # path and keeps the branch; `git switch` changes the branch and keeps the
 # path; and a removed path can later be reused by an unrelated worktree.
 #
-# A claim is live when it matches on either key, which errs toward reporting a
-# resource still held. That is the deliberate direction: reading a live claim
-# as stale lets another worktree take the resource without anyone being asked,
-# while holding one slightly too long is visible in list and cleared by release
-# or prune.
+# A claim carrying an identity is judged on that alone, because it settles the
+# question in both directions: a path or a branch that has since been reused by
+# an unrelated worktree would otherwise keep a dead claim alive forever, which
+# no later check or prune could clear.
+#
+# Only a claim without one falls back to the path and the branch, and there
+# either match counts as live. That errs toward reporting a resource still
+# held, which is the right direction for a guess: reading a live claim as stale
+# lets another worktree take the resource with nobody asked, while holding one
+# slightly too long is visible in list and cleared by release or prune.
 #
 # A record whose directory has been deleted is skipped: git keeps listing it
 # and marks it "prunable" rather than dropping it, and counting that as live
@@ -503,9 +508,11 @@ function decorate_claims() {
       | .branch as $branch
       | (.gitdir // "") as $gitdir
       | . + {stale: ($live_known == "yes"
-                     and (($live | index("p " + $worktree)) == null)
-                     and (($live | index("b " + $branch)) == null)
-                     and ($gitdir == "" or ($live | index("g " + $gitdir)) == null))}
+                     and (if $gitdir != ""
+                          then ($live | index("g " + $gitdir)) == null
+                          else (($live | index("p " + $worktree)) == null)
+                               and (($live | index("b " + $branch)) == null)
+                          end))}
     )
   ' <<< "${claims}"
 }
