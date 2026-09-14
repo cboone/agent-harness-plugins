@@ -1,0 +1,7 @@
+{
+  "nameWithOwner": "example-org/fetch-repo",
+  "defaultBranchRef": {
+    "name": "main"
+  },
+  "isArchived": false
+}

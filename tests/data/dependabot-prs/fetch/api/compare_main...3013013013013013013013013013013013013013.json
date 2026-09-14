@@ -1,0 +1,19 @@
+[
+  {
+    "status": "diverged",
+    "ahead_by": 1,
+    "behind_by": 2,
+    "commits": [
+      {
+        "author": {
+          "login": "dependabot[bot]"
+        },
+        "commit": {
+          "author": {
+            "name": "dependabot[bot]"
+          }
+        }
+      }
+    ]
+  }
+]

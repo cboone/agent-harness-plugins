@@ -1,0 +1,773 @@
+{
+  "fetchedAt": "2026-09-13T12:00:00Z",
+  "repo": "example-org/edge-repo",
+  "defaultBranch": "main",
+  "isArchived": false,
+  "limit": 200,
+  "dependabot": [
+    {
+      "number": 201,
+      "title": "build(deps): bump node from `6f7ab5c` to `0e9c10a` in /docker",
+      "url": "https://github.com/example-org/edge-repo/pull/201",
+      "headRefName": "dependabot/docker/docker/node-0e9c10a",
+      "headRefOid": "2010101010101010101010101010101010101010",
+      "baseRefName": "main",
+      "body": "Bumps node from `6f7ab5c` to `0e9c10a`.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "docker/Dockerfile"
+        }
+      ]
+    },
+    {
+      "number": 202,
+      "title": "chore(deps): bump vendor/lib",
+      "url": "https://github.com/example-org/edge-repo/pull/202",
+      "headRefName": "dependabot/submodules/vendor/lib-11bd719",
+      "headRefOid": "2020202020202020202020202020202020202020",
+      "baseRefName": "main",
+      "body": "Bumps [vendor/lib](https://github.com/example-org/lib) from 08c6903 to 11bd719.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "vendor/lib"
+        }
+      ]
+    },
+    {
+      "number": 203,
+      "title": "Update rake requirement from ~> 12.3 to ~> 13.0",
+      "url": "https://github.com/example-org/edge-repo/pull/203",
+      "headRefName": "dependabot/bundler/rake-tw-13.0",
+      "headRefOid": "2030303030303030303030303030303030303030",
+      "baseRefName": "main",
+      "body": "Updates the requirements on [rake](https://github.com/ruby/rake) to permit the latest version.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "example.gemspec"
+        }
+      ]
+    },
+    {
+      "number": 204,
+      "title": "chore(deps): bump foo from 1.0.0 to 1.1.0",
+      "url": "https://github.com/example-org/edge-repo/pull/204",
+      "headRefName": "dependabot/npm_and_yarn/foo-1.2.0",
+      "headRefOid": "2040404040404040404040404040404040404040",
+      "baseRefName": "main",
+      "body": "Bumps foo.\nUpdates `foo` from 1.0.0 to 1.2.0   \n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "package.json"
+        }
+      ]
+    },
+    {
+      "number": 205,
+      "title": "chore(deps): bump tiny from 0.0.3 to 0.0.4",
+      "url": "https://github.com/example-org/edge-repo/pull/205",
+      "headRefName": "dependabot/cargo/tiny-0.0.4",
+      "headRefOid": "2050505050505050505050505050505050505050",
+      "baseRefName": "main",
+      "body": "Bumps [tiny](https://github.com/example-org/tiny) from 0.0.3 to 0.0.4.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "name": "neutral",
+          "status": "COMPLETED",
+          "conclusion": "NEUTRAL",
+          "completedAt": "2026-09-12T01:00:00Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "cancelled",
+          "status": "COMPLETED",
+          "conclusion": "CANCELLED",
+          "completedAt": "2026-09-12T02:00:00Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "stale",
+          "status": "COMPLETED",
+          "conclusion": "STALE",
+          "completedAt": "2026-09-12T01:30:00Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "running",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "completedAt": "0001-01-01T00:00:00Z"
+        },
+        {
+          "__typename": "StatusContext",
+          "context": "errored",
+          "state": "ERROR"
+        },
+        {
+          "__typename": "StatusContext",
+          "context": "expected",
+          "state": "EXPECTED"
+        }
+      ],
+      "files": [
+        {
+          "path": "Cargo.toml"
+        },
+        {
+          "path": "Cargo.lock"
+        }
+      ]
+    },
+    {
+      "number": 206,
+      "title": "chore(deps): bump lodash from 4.17.20 to 4.17.21 in /web",
+      "url": "https://github.com/example-org/edge-repo/pull/206",
+      "headRefName": "dependabot/npm_and_yarn/web/lodash-4.17.21",
+      "headRefOid": "2060606060606060606060606060606060606060",
+      "baseRefName": "main",
+      "body": "Bumps [lodash](https://github.com/lodash/lodash) from 4.17.20 to 4.17.21.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "web/package-lock.json"
+        }
+      ]
+    },
+    {
+      "number": 207,
+      "title": "chore(deps): bump left-pad from 1.3.0 to 1.3.1",
+      "url": "https://github.com/example-org/edge-repo/pull/207",
+      "headRefName": "dependabot/npm_and_yarn/left-pad-1.3.1",
+      "headRefOid": "2070707070707070707070707070707070707070",
+      "baseRefName": "main",
+      "body": "Bumps [left-pad](https://github.com/left-pad/left-pad) from 1.3.0 to 1.3.1.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "README.md"
+        }
+      ]
+    },
+    {
+      "number": 208,
+      "title": "chore(deps): bump the npm-security group across 2 directories with 2 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/208",
+      "headRefName": "dependabot/npm_and_yarn/npm-security-abc1234567",
+      "headRefOid": "2080808080808080808080808080808080808080",
+      "baseRefName": "main",
+      "body": "Bumps the npm-security group with 1 update in the / directory: [minimist](https://github.com/minimistjs/minimist).\nBumps the npm-security group with 1 update in the /api directory: [minimist](https://github.com/minimistjs/minimist).\n\nUpdates `minimist` from 1.2.5 to 1.2.6\n\nUpdates `minimist` from 0.2.1 to 0.2.4\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "package-lock.json"
+        },
+        {
+          "path": "api/package-lock.json"
+        }
+      ]
+    },
+    {
+      "number": 209,
+      "title": "chore(deps): bump frame from 1.9.0 to 2.0.0-rc.1",
+      "url": "https://github.com/example-org/edge-repo/pull/209",
+      "headRefName": "dependabot/npm_and_yarn/frame-2.0.0-rc.1",
+      "headRefOid": "2090909090909090909090909090909090909090",
+      "baseRefName": "main",
+      "body": "Bumps [frame](https://github.com/example-org/frame) from 1.9.0 to 2.0.0-rc.1.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "package.json"
+        },
+        {
+          "path": "package-lock.json"
+        }
+      ]
+    },
+    {
+      "number": 210,
+      "title": "chore(deps): bump the npm-web group across 2 directories with 2 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/210",
+      "headRefName": "dependabot/npm_and_yarn/npm-web-0123456789",
+      "headRefOid": "2102102102102102102102102102102102102102",
+      "baseRefName": "main",
+      "body": "Bumps the npm-web group with 1 update in the /web directory: [lodash](https://github.com/lodash/lodash).\nBumps the npm-web group with 1 update in the /api directory: [qs](https://github.com/ljharb/qs).\n\nUpdates `lodash` from 4.17.20 to 4.17.21\n\nUpdates `qs` from 6.9.0 to 6.10.0\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "web/package-lock.json"
+        },
+        {
+          "path": "api/package-lock.json"
+        }
+      ]
+    },
+    {
+      "number": 211,
+      "title": "chore(deps): bump the pip group across 2 directories with 14 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/211",
+      "headRefName": "dependabot/pip/pip-9876543210",
+      "headRefOid": "2112112112112112112112112112112112112112",
+      "baseRefName": "main",
+      "body": "Bumps the pip group with 2 updates in the /mjx directory: [pip](https://github.com/pypa/pip) and [setuptools](https://github.com/pypa/setuptools).\nBumps the pip group with 12 updates in the /python directory:\n\nUpdates `pip` from 26.1 to 26.2\n\nUpdates `setuptools` from 78.1.1 to 83.0.0\n\nUpdates `pillow` from 12.2.0 to 12.3.0\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "mjx/requirements.txt"
+        },
+        {
+          "path": "python/requirements.txt"
+        }
+      ]
+    },
+    {
+      "number": 212,
+      "title": "chore(deps): bump the actions group across 2 directories with 2 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/212",
+      "headRefName": "dependabot/github_actions/actions-abcdef0123",
+      "headRefOid": "2122122122122122122122122122122122122122",
+      "baseRefName": "main",
+      "body": "Bumps the actions group with 1 update in the / directory: [actions/checkout](https://github.com/actions/checkout).\nBumps the actions group with 1 update in the /.github/actions/setup directory: [actions/cache](https://github.com/actions/cache).\n\nUpdates `actions/checkout` from 7.0.0 to 7.0.1\n\nUpdates `actions/cache` from 5.0.5 to 5.1.0\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": ".github/workflows/ci.yml"
+        },
+        {
+          "path": ".github/actions/setup/action.yml"
+        }
+      ]
+    },
+    {
+      "number": 213,
+      "title": "chore(deps): bump the docker-images group with 3 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/213",
+      "headRefName": "dependabot/docker/docker/docker-images-0a1b2c3d4e",
+      "headRefOid": "2132132132132132132132132132132132132132",
+      "baseRefName": "main",
+      "body": "Bumps the docker-images group with 3 updates in the /docker directory: redis, nginx and node.\n\nUpdates `redis` from 7.2.0-alpine@sha256:2870770 to 7.2.0-alpine@sha256:9a3f1c2\n\nUpdates `nginx` from 1.27.0-alpine@sha256:1111aaa to 1.27.1-alpine@sha256:2222bbb\n\nUpdates `node` from sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef to sha256:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "docker/Dockerfile"
+        }
+      ]
+    },
+    {
+      "number": 214,
+      "title": "chore(deps): bump the npm-libs group across 2 directories with 2 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/214",
+      "headRefName": "dependabot/npm_and_yarn/npm-libs-5f6e7d8c9b",
+      "headRefOid": "2142142142142142142142142142142142142142",
+      "baseRefName": "main",
+      "body": "Updates `underscore` from 1.13.6 to 1.13.7\n\n_Description has been truncated_\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "web/package-lock.json"
+        },
+        {
+          "path": "api/package-lock.json"
+        }
+      ]
+    },
+    {
+      "number": 215,
+      "title": "chore(deps): bump Example.Client from 4.2.1.7 to 4.2.1.9",
+      "url": "https://github.com/example-org/edge-repo/pull/215",
+      "headRefName": "dependabot/nuget/Example.Client-4.2.1.9",
+      "headRefOid": "2152152152152152152152152152152152152152",
+      "baseRefName": "main",
+      "body": "Bumps [Example.Client](https://github.com/example-org/client) from 4.2.1.7 to 4.2.1.9.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "src/App/App.csproj"
+        }
+      ]
+    },
+    {
+      "number": 216,
+      "title": "chore(deps): bump the npm-deps group in /web with 3 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/216",
+      "headRefName": "dependabot/npm_and_yarn/web/npm-deps-6a7b8c9d0e",
+      "headRefOid": "2162162162162162162162162162162162162162",
+      "baseRefName": "main",
+      "body": "Bumps the npm-deps group with 3 updates in the /web directory: [lodash](https://github.com/lodash/lodash), [qs](https://github.com/ljharb/qs) and [minimist](https://github.com/minimistjs/minimist).\n\nUpdates `lodash` from 4.17.20 to 4.17.21\n\n_Description has been truncated_\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "web/package-lock.json"
+        }
+      ]
+    },
+    {
+      "number": 217,
+      "title": "chore(deps): update the bundler-reqs group with 2 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/217",
+      "headRefName": "dependabot/bundler/bundler-reqs-1f2e3d4c5b",
+      "headRefOid": "2172172172172172172172172172172172172172",
+      "baseRefName": "main",
+      "body": "Updates the requirements on [rake](https://github.com/ruby/rake) and [rspec](https://github.com/rspec/rspec) to permit the latest version.\nUpdates `rake` requirement from ~> 12.3 to ~> 13.0\n\nUpdates `rspec` from >= 3.10, < 4 to >= 3.13, < 5\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "example.gemspec"
+        }
+      ]
+    },
+    {
+      "number": 218,
+      "title": "chore(deps): bump github.com/apple/swift-nio from 2.62.0 to 2.65.0",
+      "url": "https://github.com/example-org/edge-repo/pull/218",
+      "headRefName": "dependabot/swift/github.com/apple/swift-nio-2.65.0",
+      "headRefOid": "2182182182182182182182182182182182182182",
+      "baseRefName": "main",
+      "body": "Bumps [github.com/apple/swift-nio](https://github.com/apple/swift-nio) from 2.62.0 to 2.65.0.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "Package.resolved"
+        }
+      ]
+    },
+    {
+      "number": 219,
+      "title": "chore(deps): bump actions/cache from `1234567` to `7654321`",
+      "url": "https://github.com/example-org/edge-repo/pull/219",
+      "headRefName": "dependabot/github_actions/actions/cache-7654321",
+      "headRefOid": "2192192192192192192192192192192192192192",
+      "baseRefName": "main",
+      "body": "Bumps [actions/cache](https://github.com/actions/cache) from `1234567` to `7654321`.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": ".github/workflows/release.yml"
+        }
+      ]
+    },
+    {
+      "number": 220,
+      "title": "chore(deps): bump golang.org/x/net from 0.23.0 to 0.33.0",
+      "url": "https://github.com/example-org/edge-repo/pull/220",
+      "headRefName": "dependabot/go_modules/golang.org/x/net-0.33.0",
+      "headRefOid": "2202202202202202202202202202202202202202",
+      "baseRefName": "main",
+      "body": "Bumps [golang.org/x/net](https://github.com/golang/net) from 0.23.0 to 0.33.0.\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "go.work.sum"
+        }
+      ]
+    },
+    {
+      "number": 221,
+      "title": "chore(deps): bump the npm-security group in /svc with 2 updates",
+      "url": "https://github.com/example-org/edge-repo/pull/221",
+      "headRefName": "dependabot/npm_and_yarn/svc/npm-security-9f8e7d6c5b",
+      "headRefOid": "2212212212212212212212212212212212212212",
+      "baseRefName": "main",
+      "body": "Bumps the npm-security group in /svc with 2 updates: [ws](https://github.com/websockets/ws) and [braces](https://github.com/micromatch/braces).\n\nUpdates `ws` from 8.17.0 to 8.17.1 **This update includes a security fix.**\n<details>\n<summary>Commits</summary>\n</details>\n\nUpdates `braces` from 3.0.2 to 3.0.3 **This update includes security fixes.**\n<details>\n<summary>Commits</summary>\n</details>\n",
+      "createdAt": "2026-09-12T00:00:00Z",
+      "updatedAt": "2026-09-12T00:00:00Z",
+      "files": [
+        {
+          "path": "svc/package-lock.json"
+        }
+      ]
+    }
+  ],
+  "alerts": {
+    "available": true,
+    "reason": null,
+    "items": [
+      {
+        "number": 31,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "lodash"
+          },
+          "manifest_path": "web/package.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-1111-1111-1111",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "4.17.21"
+          }
+        }
+      },
+      {
+        "number": 32,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "lodash"
+          },
+          "manifest_path": "api/package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-2222-2222-2222",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "4.17.21"
+          }
+        }
+      },
+      {
+        "number": 33,
+        "dependency": {
+          "package": {
+            "ecosystem": "pip",
+            "name": "lodash"
+          },
+          "manifest_path": "web/requirements.txt"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-3333-3333-3333",
+          "severity": "low"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "1.0.0"
+          }
+        }
+      },
+      {
+        "number": 34,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "left-pad"
+          },
+          "manifest_path": "package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-4444-4444-4444",
+          "severity": "medium"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "1.3.1"
+          }
+        }
+      },
+      {
+        "number": 35,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "qs"
+          },
+          "manifest_path": "package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-5555-5555-5555",
+          "severity": "medium"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "6.10.0"
+          }
+        }
+      },
+      {
+        "number": 36,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "qs"
+          },
+          "manifest_path": "package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-6666-6666-6666",
+          "severity": "medium"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "6.2.4"
+          }
+        }
+      },
+      {
+        "number": 37,
+        "dependency": {
+          "package": {
+            "ecosystem": "rust",
+            "name": "tiny"
+          },
+          "manifest_path": "Cargo.lock"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-7777-7777-7777",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "0.1.0"
+          }
+        }
+      },
+      {
+        "number": 38,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "minimist"
+          },
+          "manifest_path": "package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-8888-8888-8888",
+          "severity": "critical"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "1.2.6"
+          }
+        }
+      },
+      {
+        "number": 39,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "frame"
+          },
+          "manifest_path": "package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-9999-9999-9999",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "2.0.0"
+          }
+        }
+      },
+      {
+        "number": 40,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "qs"
+          },
+          "manifest_path": "api/package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-aaaa-aaaa-aaaa",
+          "severity": "medium"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "6.10.0"
+          }
+        }
+      },
+      {
+        "number": 41,
+        "dependency": {
+          "package": {
+            "ecosystem": "pip",
+            "name": "pillow"
+          },
+          "manifest_path": "python/requirements.txt"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-bbbb-bbbb-bbbb",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "12.3.0"
+          }
+        }
+      },
+      {
+        "number": 42,
+        "dependency": {
+          "package": {
+            "ecosystem": "pip",
+            "name": "pillow"
+          },
+          "manifest_path": "mjx/requirements.txt"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-cccc-cccc-cccc",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "12.3.0"
+          }
+        }
+      },
+      {
+        "number": 43,
+        "dependency": {
+          "package": {
+            "ecosystem": "actions",
+            "name": "actions/checkout"
+          },
+          "manifest_path": ".github/workflows/ci.yml"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-dddd-dddd-dddd",
+          "severity": "low"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "7.0.1"
+          }
+        }
+      },
+      {
+        "number": 44,
+        "dependency": {
+          "package": {
+            "ecosystem": "actions",
+            "name": "actions/checkout"
+          },
+          "manifest_path": ".github/actions/setup/action.yml"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-eeee-eeee-eeee",
+          "severity": "low"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "7.0.1"
+          }
+        }
+      },
+      {
+        "number": 45,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "underscore"
+          },
+          "manifest_path": "web/package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-ffff-ffff-ffff",
+          "severity": "medium"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "1.13.7"
+          }
+        }
+      },
+      {
+        "number": 46,
+        "dependency": {
+          "package": {
+            "ecosystem": "swift",
+            "name": "github.com/apple/swift-nio"
+          },
+          "manifest_path": "Package.swift"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-4646-4646-4646",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "2.65.0"
+          }
+        }
+      },
+      {
+        "number": 47,
+        "dependency": {
+          "package": {
+            "ecosystem": "actions",
+            "name": "actions/cache"
+          },
+          "manifest_path": ".github/workflows/release.yml"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-4747-4747-4747",
+          "severity": "medium"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "4.2.0"
+          }
+        }
+      },
+      {
+        "number": 48,
+        "dependency": {
+          "package": {
+            "ecosystem": "go",
+            "name": "golang.org/x/net"
+          },
+          "manifest_path": "go.mod"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-4848-4848-4848",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "0.33.0"
+          }
+        }
+      },
+      {
+        "number": 49,
+        "dependency": {
+          "package": {
+            "ecosystem": "npm",
+            "name": "ws"
+          },
+          "manifest_path": "svc/package-lock.json"
+        },
+        "security_advisory": {
+          "ghsa_id": "GHSA-4949-4949-4949",
+          "severity": "high"
+        },
+        "security_vulnerability": {
+          "first_patched_version": {
+            "identifier": "8.17.1"
+          }
+        }
+      }
+    ]
+  }
+}

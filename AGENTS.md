@@ -83,7 +83,7 @@ plugins/handle-secrets/
             └── ...
 ```
 
-A skill can ship executable helpers too. `address-issue-in-worktree`, `create-worktree`, `publish-report-board`, and `resolve-copilot-pr-feedback` each bundle a `scripts/` directory that the skill body invokes:
+A skill can ship executable helpers too. `address-issue-in-worktree`, `create-worktree`, `publish-report-board`, `resolve-copilot-pr-feedback`, and `triage-dependabot-prs` each bundle a `scripts/` directory that the skill body invokes:
 
 ```text
 plugins/create-worktree/
