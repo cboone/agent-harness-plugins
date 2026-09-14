@@ -1,5 +1,5 @@
 ---
-applyTo: "plugins/pin-everything/skills/pin-everything/references/dependabot.md,plugins/triage-dependabot-prs/**,plugins/review-dependabot-config/**,plugins/monitor-pr/**,plugins/upgrade-everything/**,tests/scrut/dependabot-prs.md,tests/data/dependabot-prs/**"
+applyTo: "plugins/pin-everything/skills/pin-everything/references/dependabot.md,tests/fixtures/gh-stub,plugins/triage-dependabot-prs/**,plugins/review-dependabot-config/**,plugins/monitor-pr/**,plugins/upgrade-everything/**,tests/scrut/dependabot-prs.md,tests/data/dependabot-prs/**"
 ---
 
 # Dependabot Facts for Review
@@ -24,4 +24,5 @@ These were checked against live GitHub data and the GitHub documentation. Do not
 - **`gh api --paginate ENDPOINT --jq FILTER` is valid.** `gh` rejects `--jq` only together with `--slurp`. Without `--slurp`, the filter runs per page, which is correct for a filter that emits items rather than aggregating them.
 - **Branch names with `/` need no encoding in these REST paths.** `repos/OWNER/REPO/branches/BRANCH`, `rules/branches/BRANCH`, and `compare/BASE...HEAD` all accept a raw `release/1.0`-style name, verified against a live `feature/...` branch.
 - **Commands inside the bundled script are covered by the script's permission rule.** Claude Code matches allow rules against the command the agent runs, `bash ".../dependabot-prs" ...`, not against the `gh` calls the script makes internally, so `gh auth token` and the script's `gh pr list` calls need no rules of their own.
+- **`tests/fixtures/gh-stub` accepts only the calls `dependabot-prs fetch` makes, on purpose.** It fails on any other flag (`--jq`, `-H`) or a second operand, so a change to the script's call shape breaks the test instead of passing silently. Widen it only when the script starts making a new call. It is committed as mode `100755`.
 - **The script-locator fallback needs no Claude Code permission rule.** It runs only when `${CLAUDE_PLUGIN_ROOT}` was not substituted, which happens in Codex CLI and OpenCode, where Claude Code's `permissions.allow` rules do not apply. `test -x` is left out of Recommended Permissions for that reason.

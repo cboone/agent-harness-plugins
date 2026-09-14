@@ -46,7 +46,10 @@ function do_api() {
     case "${arg}" in
       --paginate | --slurp) ;;
       -*) die "unexpected gh api flag ${arg}" ;;
-      *) endpoint="${arg}" ;;
+      *)
+        [[ -z "${endpoint}" ]] || die "unexpected second gh api operand ${arg}"
+        endpoint="${arg}"
+        ;;
     esac
   done
   [[ -n "${endpoint}" ]] || die "gh api needs an endpoint"
