@@ -46,7 +46,7 @@ The user may provide these options inline:
 
    An archived repository runs no Dependabot updates and accepts no changes: report that and stop. Without `ADMIN` permission, several settings checks in step 4 will be refused; say so up front.
 
-1. Confirm the checkout. Local reads and edits need the working directory to be a checkout of `OWNER/REPO`: compare the `origin` URL from `git remote -v` with `OWNER/REPO`. When they differ (for example, `--repo` names another repository), read files with `gh api 'repos/OWNER/REPO/contents/PATH?ref=DEFAULT'` instead of `git`, skip the working-tree comparison, and offer no local edits in step 6.
+1. Confirm the checkout. Local reads and edits need the working directory to be a checkout of `OWNER/REPO`: compare the `origin` URL from `git remote -v` with `OWNER/REPO`. When they differ (for example, `--repo` names another repository), read files with `gh api 'repos/OWNER/REPO/contents/PATH?ref=DEFAULT' -H 'Accept: application/vnd.github.raw+json'` instead of `git`, skip the working-tree comparison, and offer no local edits in step 6. The raw media type returns the file text; without it, the API returns JSON metadata with the content base64-encoded.
 1. Find the config. In a matching checkout, run `git fetch origin`, check both names on the default branch with `git ls-tree --name-only origin/DEFAULT .github/dependabot.yml .github/dependabot.yaml`, read the one that exists with `git show origin/DEFAULT:CONFIG_PATH`, and compare it with the working-tree copy at the same path. Without a matching checkout, request both names through the contents API (a 404 means that name is absent) and skip the working-tree comparison. Whichever exists is `CONFIG_PATH` for the rest of the review.
    - **Both files exist**: an Error. Dependabot expects a single configuration file, and a reader cannot tell which copy is in force. Ask the user which file to keep before going further, and set `CONFIG_PATH` to that one; review nothing and offer no edits until they choose.
    - **The working tree differs from the default branch**: report the drift. Dependabot runs the default branch copy, so review that one, and note the local changes separately.
@@ -136,11 +136,15 @@ Use `AskUserQuestion` where it exists. Without it (Codex CLI, OpenCode), print t
 
    When `uv` is unavailable, skip this and say so. The schema can lag new Dependabot options, so an "additional properties" error on an option the documentation lists is schema lag, not a defect.
 
-1. **Apply the confirmed outward-facing changes**, for example:
+1. **Apply the confirmed outward-facing changes**, one at a time, with the command for each:
 
    ```bash
    gh label create dependencies --repo OWNER/REPO --color 0366d6 --description "Dependency updates"
+   gh api -X PUT repos/OWNER/REPO/vulnerability-alerts
+   gh api -X PUT repos/OWNER/REPO/automated-security-fixes
    ```
+
+   Enable alerts before security updates, which cannot run without them. Both calls need repository admin rights and return `204` on success; re-read each setting afterwards as `./references/repository-settings.md` describes, and report a refusal as not applied.
 
    For a missing Dependabot secret, give the user the command rather than running it: `gh secret set NAME --repo OWNER/REPO --app dependabot`.
 
@@ -207,7 +211,7 @@ Untracked: `.tool-versions` (node, python) and `CSPELL_VERSION` in ci.yml. See p
 - **A settings endpoint returns 403 or 404 for permissions**: Record the check as not visible, name the permission it needs (repository admin, or the `security_events` scope for alerts), and continue.
 - **The docs cannot be reached to confirm an unfamiliar key**: Report it as "unverified" rather than invalid.
 - **Archived repository**: Report and stop. Never unarchive to apply a fix.
-- **The working directory is not a checkout of the repository**: Read files with `gh api 'repos/OWNER/REPO/contents/PATH?ref=DEFAULT'`, skip the fixes that need a local edit, and say so.
+- **The working directory is not a checkout of the repository**: Read files with `gh api 'repos/OWNER/REPO/contents/PATH?ref=DEFAULT' -H 'Accept: application/vnd.github.raw+json'`, skip the fixes that need a local edit, and say so.
 
 ## Reference Navigation
 
