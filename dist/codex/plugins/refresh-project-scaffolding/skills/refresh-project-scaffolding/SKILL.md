@@ -454,6 +454,7 @@ Must include language-specific entries appropriate for the detected project type
 | ----------------------------------------------------------------------------------------- | ------------------------------------ |
 | `.github/workflows/*.yml` or `*.yaml`                                                     | `github-actions`                     |
 | `package.json` without `bun.lock` or `bun.lockb`                                          | `npm`                                |
+| `package.json` with `bun.lock`                                                            | `bun`                                |
 | `package.json` with only `bun.lockb`                                                      | none: report migrating to `bun.lock` |
 | `uv.lock`                                                                                 | `uv`                                 |
 | `pyproject.toml`, `setup.py`, or `requirements*.txt` without `uv.lock`                    | `pip`                                |
