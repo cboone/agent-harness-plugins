@@ -159,7 +159,8 @@ Create or merge `.github/dependabot.yml` with:
 - Per-ecosystem split groups (`<ecosystem>-minor-patch` and `<ecosystem>-major`) so minor/patch can auto-merge later while majors get human review.
 - 10-PR cap per ecosystem (raised from the default of 5 -- SHA-pinning produces finer-grained PRs than tag-pinning).
 - `versioning-strategy: increase` for `npm` (and for `pip` if step 6 exact-pinned Python requirements to `==X.Y.Z`) so existing exact pins are not widened on the first Dependabot bump.
-- Coverage for `github-actions` plus every other ecosystem present in the repo, from the detection table in `./references/dependabot.md`: `npm`, `cargo`, `rust-toolchain`, `uv`, `pip`, `bundler`, `gomod`, `composer`, and `docker`. A Python project with `uv.lock` gets `uv`, not `pip`.
+- Coverage for `github-actions` plus each ecosystem from the detection table in `./references/dependabot.md` that the repo uses: `npm`, `cargo`, `rust-toolchain`, `uv`, `pip`, `bundler`, `gomod`, `composer`, `docker`, and `docker-compose`. A Python project with `uv.lock` gets `uv`, not `pip`.
+- For any other ecosystem Dependabot supports that the repo uses (`deno.json`, `pom.xml`, `build.gradle`, `*.csproj`, `pubspec.yaml`, `Chart.yaml`, `*.tf`, `.pre-commit-config.yaml`, and so on), no block is written. When this step finishes, tell the user which of these the repo uses, that the baseline does not cover them, and that the `review-dependabot-config` skill inventories the full set. Never report the baseline as full coverage when one is present.
 
 Skip this step if `--no-dependabot` was passed. Reference: `./references/dependabot.md`.
 

@@ -174,7 +174,7 @@ After all tools have run, print a summary:
   - Run `/lint-and-fix` to fix any initial linting issues.
   - Make an initial commit if the repo is new.
   - Push to the remote and verify CI passes.
-  - When the plan marked the Dependabot config as already set up, run `/review-dependabot-config` to check that it covers everything the new scaffolding added.
+  - When the plan marked the Dependabot config as already set up, or `pin-everything` named ecosystems its baseline does not cover, run `/review-dependabot-config` to check that the config covers everything the repository uses.
 
 ## Error Handling
 

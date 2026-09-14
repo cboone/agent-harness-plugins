@@ -63,6 +63,7 @@ Add additional `- package-ecosystem:` blocks for whichever package ecosystems ar
 | Go modules        | `go.mod`                                                  | `gomod`                             |
 | Composer (PHP)    | `composer.json`                                           | `composer`                          |
 | Docker            | `Dockerfile`                                              | `docker`                            |
+| Docker Compose    | `docker-compose.yml` or `.yaml`, `compose.yml` or `.yaml` | `docker-compose`                    |
 | Rust toolchain    | `rust-toolchain.toml` or `rust-toolchain`                 | `rust-toolchain`                    |
 
 The same shape applies -- weekly schedule, split groups, 10-PR cap, `commit-message` prefix.

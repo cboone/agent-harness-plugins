@@ -63,7 +63,7 @@ For each tool in the ecosystem, check for its signature artifacts. Only tools wh
 
 For each detected tool, record which artifacts were found and which expected artifacts are missing (for "Partially set up" status).
 
-**A missing Dependabot config is actionable even though no artifact detected the tool.** The workflows the scaffolding skills write pin every action to a commit SHA, and those pins stay current only while Dependabot proposes updates. So when the repository has any `.github/workflows/` file, a composite `action.yml` or `action.yaml` with an external `uses:` step, or a manifest from the coverage table (see [Reference: Dependabot Config Checks](#reference-dependabot-config-checks-pin-everything)), and has no Dependabot config, report `pin-everything` as `Needs update` with the issue "no Dependabot config (`.github/dependabot.yml` or `.yaml`)" rather than `Not detected`.
+**A missing Dependabot config is actionable even though no artifact detected the tool.** The workflows the scaffolding skills write pin every action to a commit SHA, and those pins stay current only while Dependabot proposes updates. So when the repository has any `.github/workflows/` file, a composite `action.yml` or `action.yaml` with an external `uses:` step, or a dependency manifest of any ecosystem Dependabot supports (the coverage table in [Reference: Dependabot Config Checks](#reference-dependabot-config-checks-pin-everything) lists the common ones), and has no Dependabot config, report `pin-everything` as `Needs update` with the issue "no Dependabot config (`.github/dependabot.yml` or `.yaml`)" rather than `Not detected`.
 
 ### 3. Compare Against Latest Templates
 
@@ -455,7 +455,7 @@ Must include language-specific entries appropriate for the detected project type
 
 ### Checks
 
-- A config exists whenever the repository has `.github/workflows/` files or a manifest from the table below. Absent: `Needs update`, fixed by `pin-everything --scope dependabot`
+- A config exists whenever the repository has `.github/workflows/` files, a manifest from the table below, or a manifest of another ecosystem Dependabot supports, such as `deno.json`, `pom.xml`, `build.gradle`, `*.csproj`, `pubspec.yaml`, `Chart.yaml`, `*.tf`, or `.pre-commit-config.yaml` (the [supported ecosystems page](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories) has the full list). Absent: `Needs update`, fixed by `pin-everything --scope dependabot`, which writes blocks for the table's ecosystems and names the rest for the `review-dependabot-config` skill
 - Only one of the two file names exists
 - `version: 2` is set
 - Every ecosystem in the table below that the repository uses has an `updates` entry, and its manifest directory is covered by `directory` or `directories`. The table covers the common ecosystems only; the `review-dependabot-config` skill checks the full set:
