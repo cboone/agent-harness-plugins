@@ -1,37 +1,177 @@
 [
-  { "id": "RTAC-001", "request": "Review this display path in an audio plugin.", "artifact_ids": ["history-copy.cpp"] },
-  { "id": "RTAC-002", "request": "Can this meter use relaxed atomics?", "artifact_ids": ["peak-meter.rs"] },
-  { "id": "RTAC-003", "request": "Review this ARM ordering claim.", "artifact_ids": ["arm-ordering-claim.md"] },
-  { "id": "RTAC-004", "request": "Review this event admission policy.", "artifact_ids": ["event-admission.yaml"] },
-  { "id": "RTAC-005", "request": "Review this replacement protocol.", "artifact_ids": ["replacement-retirement.cpp"] },
-  { "id": "RTAC-006", "request": "Assess this TSan result.", "artifact_ids": ["tsan-build-log.txt"] },
-  { "id": "RTAC-007", "request": "Classify this runtime control result.", "artifact_ids": ["rtsan-control-load-log.txt"] },
-  { "id": "RTAC-008", "request": "Scope this RTSan evidence.", "artifact_ids": ["rtsan-plugin-loading.log"] },
-  { "id": "RTAC-009", "request": "Assess this model-check conclusion.", "artifact_ids": ["loom-model.rs", "loom-output.txt"] },
-  { "id": "RTAC-010", "request": "Plan malformed-state testing.", "artifact_ids": ["state-loader.rs", "truncated-state.bin.txt"] },
-  { "id": "RTAC-011", "request": "Review this timing report.", "artifact_ids": ["callback-timings.csv", "timing-run.md"] },
-  { "id": "RTAC-012", "request": "Review state loading during processing.", "artifact_ids": ["state-publication.cpp", "truncated-preset.json"] },
-  { "id": "RTAC-013", "request": "Review this thread check.", "artifact_ids": ["thread-check.cpp", "host-call-log.txt"] },
-  { "id": "RTAC-014", "request": "Review this buffer adapter.", "artifact_ids": ["buffer-adapter.rs", "buffer-layout.json"] },
-  { "id": "RTAC-015", "request": "Review block-size handling.", "artifact_ids": ["block-size-adapters.cpp", "block-contracts.md"] },
-  { "id": "RTAC-016", "request": "Review callback reachability.", "artifact_ids": ["reset-and-workers.cpp", "lifecycle-map.md"] },
-  { "id": "RTAC-017", "request": "Review queue submission.", "artifact_ids": ["queue-submission.cpp", "notification-contract.md"] },
-  { "id": "RTAC-018", "request": "Review a released parameter insertion.", "artifact_ids": ["released-parameters.json", "current-parameters.rs"] },
-  { "id": "RTAC-019", "request": "Review AUv2 ordering.", "artifact_ids": ["auv2-ordering.json", "clap-wrapper-revision.txt"] },
-  { "id": "RTAC-020", "request": "Review this structural preset change.", "artifact_ids": ["pending-latency.cpp", "restart-trace.yaml"] },
-  { "id": "RTAC-021", "request": "Review this event scheduler.", "artifact_ids": ["event-scheduler.cpp", "event-trace.yaml"] },
-  { "id": "RTAC-022", "request": "Review silent processing status.", "artifact_ids": ["process-status.cpp", "pending-events.json"] },
-  { "id": "RTAC-023", "request": "Review host automation decoding.", "artifact_ids": ["vst3-queue.json", "auv3-ramp.json", "automation-adapter.cpp"] },
-  { "id": "RTAC-024", "request": "Review modulation and smoothing.", "artifact_ids": ["clap-modulation.cpp", "case-024-a.cpp"] },
-  { "id": "RTAC-025", "request": "Review numerical recovery.", "artifact_ids": ["recursive-filter.cpp", "release-flags.txt"] },
-  { "id": "RTAC-026", "request": "Assess this core boundary.", "artifact_ids": ["core-cargo.toml", "dependency-policy.log"] },
-  { "id": "RTAC-027", "request": "Scope these passing core vectors.", "artifact_ids": ["core-vectors.txt", "adapter-coverage.md"] },
-  { "id": "RTAC-028", "request": "Choose a skill for this review.", "artifact_ids": ["offline-server-queue.rs"] },
-  { "id": "RTAC-029", "request": "Perform a read-only review of this audio callback.", "artifact_ids": ["read-only-callback.cpp", "request-scope.md"] },
-  { "id": "RTAC-030", "request": "Review an audio callback without companion plugins.", "artifact_ids": ["standalone-meter.cpp", "installed-layout.txt"] },
-  { "id": "RTAC-031", "request": "Classify this runtime control result.", "artifact_ids": ["case-031-a.log"] },
-  { "id": "RTAC-032", "request": "Classify this runtime control result.", "artifact_ids": ["case-032-a.log"] },
-  { "id": "RTAC-033", "request": "Assess this TSan result.", "artifact_ids": ["tsan-instrumented-control.log"] },
-  { "id": "RTAC-034", "request": "Scope this RTSan evidence.", "artifact_ids": ["rtsan-worker-control.log"] },
-  { "id": "RTAC-035", "request": "Review this host automation decoding.", "artifact_ids": ["case-035-a.json", "valid-automation-adapter.cpp"] }
+  {
+    "id": "RTAC-001",
+    "request": "Review this display path in an audio plugin.",
+    "artifact_ids": ["artifact-024"]
+  },
+  {
+    "id": "RTAC-002",
+    "request": "Can this meter use relaxed atomics?",
+    "artifact_ids": ["artifact-032"]
+  },
+  {
+    "id": "RTAC-003",
+    "request": "Review this ARM ordering claim.",
+    "artifact_ids": ["artifact-002"]
+  },
+  {
+    "id": "RTAC-004",
+    "request": "Review this event admission policy.",
+    "artifact_ids": ["artifact-021"]
+  },
+  {
+    "id": "RTAC-005",
+    "request": "Review this replacement protocol.",
+    "artifact_ids": ["artifact-041"]
+  },
+  {
+    "id": "RTAC-006",
+    "request": "Assess this TSan result.",
+    "artifact_ids": ["artifact-055"]
+  },
+  {
+    "id": "RTAC-007",
+    "request": "Classify this runtime control result.",
+    "artifact_ids": ["artifact-045"]
+  },
+  {
+    "id": "RTAC-008",
+    "request": "Scope this RTSan evidence.",
+    "artifact_ids": ["artifact-046"]
+  },
+  {
+    "id": "RTAC-009",
+    "request": "Assess this model-check conclusion.",
+    "artifact_ids": ["artifact-028", "artifact-029"]
+  },
+  {
+    "id": "RTAC-010",
+    "request": "Plan malformed-state testing.",
+    "artifact_ids": ["artifact-049", "artifact-054"]
+  },
+  {
+    "id": "RTAC-011",
+    "request": "Review this timing report.",
+    "artifact_ids": ["artifact-010", "artifact-052"]
+  },
+  {
+    "id": "RTAC-012",
+    "request": "Review state loading during processing.",
+    "artifact_ids": ["artifact-050", "artifact-053"]
+  },
+  {
+    "id": "RTAC-013",
+    "request": "Review this thread check.",
+    "artifact_ids": ["artifact-051", "artifact-025"]
+  },
+  {
+    "id": "RTAC-014",
+    "request": "Review this buffer adapter.",
+    "artifact_ids": ["artifact-008", "artifact-009"]
+  },
+  {
+    "id": "RTAC-015",
+    "request": "Review block-size handling.",
+    "artifact_ids": ["artifact-007", "artifact-006"]
+  },
+  {
+    "id": "RTAC-016",
+    "request": "Review callback reachability.",
+    "artifact_ids": ["artifact-043", "artifact-027"]
+  },
+  {
+    "id": "RTAC-017",
+    "request": "Review queue submission.",
+    "artifact_ids": ["artifact-036", "artifact-030"]
+  },
+  {
+    "id": "RTAC-018",
+    "request": "Review a released parameter insertion.",
+    "artifact_ids": ["artifact-040", "artifact-019"]
+  },
+  {
+    "id": "RTAC-019",
+    "request": "Review AUv2 ordering.",
+    "artifact_ids": ["artifact-004", "artifact-016"]
+  },
+  {
+    "id": "RTAC-020",
+    "request": "Review this structural preset change.",
+    "artifact_ids": ["artifact-034", "artifact-044"]
+  },
+  {
+    "id": "RTAC-021",
+    "request": "Review this event scheduler.",
+    "artifact_ids": ["artifact-022", "artifact-023"]
+  },
+  {
+    "id": "RTAC-022",
+    "request": "Review silent processing status.",
+    "artifact_ids": ["artifact-035", "artifact-033"]
+  },
+  {
+    "id": "RTAC-023",
+    "request": "Review host automation decoding.",
+    "artifact_ids": ["artifact-058", "artifact-005", "artifact-003"]
+  },
+  {
+    "id": "RTAC-024",
+    "request": "Review modulation and smoothing.",
+    "artifact_ids": ["artifact-015", "artifact-011"]
+  },
+  {
+    "id": "RTAC-025",
+    "request": "Review numerical recovery.",
+    "artifact_ids": ["artifact-038", "artifact-039"]
+  },
+  {
+    "id": "RTAC-026",
+    "request": "Assess this core boundary.",
+    "artifact_ids": ["artifact-017", "artifact-020"]
+  },
+  {
+    "id": "RTAC-027",
+    "request": "Scope these passing core vectors.",
+    "artifact_ids": ["artifact-018", "artifact-001"]
+  },
+  {
+    "id": "RTAC-028",
+    "request": "Choose a skill for this review.",
+    "artifact_ids": ["artifact-031"]
+  },
+  {
+    "id": "RTAC-029",
+    "request": "Perform a read-only review of this audio callback.",
+    "artifact_ids": ["artifact-037", "artifact-042"]
+  },
+  {
+    "id": "RTAC-030",
+    "request": "Review an audio callback without companion plugins.",
+    "artifact_ids": ["artifact-048", "artifact-026"]
+  },
+  {
+    "id": "RTAC-031",
+    "request": "Classify this runtime control result.",
+    "artifact_ids": ["artifact-012"]
+  },
+  {
+    "id": "RTAC-032",
+    "request": "Classify this runtime control result.",
+    "artifact_ids": ["artifact-013"]
+  },
+  {
+    "id": "RTAC-033",
+    "request": "Assess this TSan result.",
+    "artifact_ids": ["artifact-056"]
+  },
+  {
+    "id": "RTAC-034",
+    "request": "Scope this RTSan evidence.",
+    "artifact_ids": ["artifact-047"]
+  },
+  {
+    "id": "RTAC-035",
+    "request": "Review this host automation decoding.",
+    "artifact_ids": ["artifact-014", "artifact-057"]
+  }
 ]

@@ -44,7 +44,7 @@ fosforo's render/main-thread arrangement and resize protocol describe that proje
 
 ## Numerical Behavior
 
-Recursive tails can enter the subnormal range. Non-finite inputs, overflow, and an earlier non-finite value can also corrupt later internal state. Define bounded detection and recovery for the selected algorithm. On x86, MXCSR has FTZ and DAZ controls; on AArch64, FPCR has separate controls. Save and restore any host-owned floating-point state and verify compiler and architecture behavior. Faust's `-ftz` modes are documented compiler options, not a universal setting or proof about foreign callees.
+Recursive tails can enter the subnormal range. Non-finite inputs, overflow, and an earlier non-finite value can also corrupt later internal state. Define bounded detection and recovery for the selected algorithm. On x86, MXCSR has FTZ and DAZ controls. On AArch64, use only the FPCR denormal controls supported by the selected architecture and feature set; do not assume separate input and output controls. Save and restore any host-owned floating-point state and verify compiler and architecture behavior. Faust's `-ftz` modes are documented compiler options, not a universal setting or proof about foreign callees.
 
 Test numerical checks with the production floating-point flags. Fast-math assumptions can invalidate non-finite checks. A recovery path should say whether it clears state, clamps a value, bypasses an operation, or emits a bounded diagnostic.
 
