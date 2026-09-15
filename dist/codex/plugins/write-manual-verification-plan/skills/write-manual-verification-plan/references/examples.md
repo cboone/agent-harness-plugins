@@ -118,7 +118,7 @@ The report "I did check 1 and 2, nothing happened (as desired)" would, under the
 
 ## One Complete Checklist
 
-fosforo's host pass for drawing the beam as oriented quads, in the document template. The readings are the ones the plan recorded, in REAPER 7.79 at the default editor on a 2x display with a 1920x1080 drawable. The plan does not record step 0's output, so that Result line shows the form rather than a reading.
+fosforo's host pass for drawing the beam as oriented quads, in the document template. The readings are the ones the plan recorded, in REAPER 7.79 at the default editor on a 2x display with a 1920x1080 drawable. The source record does not supply every date, build identity, or control observation required by this template. Angle-bracketed fields show that missing metadata, including step 0's output; they are placeholders, not evidence that those confirmations happened. Replace them with same-session evidence before treating a copied checklist as verified.
 
 ````markdown
 ## Manual verification
@@ -145,7 +145,7 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 ### 0. Confirm the build under test
 
 - **Setup:** This worktree, with its branch checked out.
-- **Action:** `zig build install-clap`
+- **Action:** Quit REAPER, run `zig build install-clap`, then relaunch REAPER and confirm it loads the installed path below. If the host caches a different bundle, rescan or clear that entry before continuing.
 - **Expected:** The output names what landed and what it replaced:
 
   ```text
@@ -154,10 +154,10 @@ Build under test: confirmed by step 0 at the start of every session, and named i
   clap:   replaced <branch> <commit>
   ```
 
-  The `built from` line names this worktree's branch and `git rev-parse --short HEAD`.
-- **Null vs broken:** `install-clap` builds exactly what it installs, so a matching `built from` line cannot describe another worktree's bundle. A `replaced` line naming another branch is expected: it is the moment the shared install location changed hands.
+  The `built from` line names this worktree's branch and `git rev-parse --short HEAD`, and the relaunched host loads that installed path.
+- **Null vs broken:** `install-clap` builds exactly what it installs, so a matching `built from` line cannot describe another worktree's bundle. Restarting and checking the loaded path connects that file to the host instance under test. A `replaced` line naming another branch is expected: it is the moment the shared install location changed hands.
 - **Why by hand:** The host loads from a shared location that no automated check here installs into.
-- **Result:** passed. <date>: built from <branch> <commit>.
+- **Result:** passed. <date>, build `<commit>` on `<branch>`, REAPER 7.79: <installed provenance output and loaded-path confirmation after relaunch>.
 
 ### 1. The trace's position
 
@@ -166,7 +166,7 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 - **Expected:** Peak and trough invert to +0.5000 and -0.5000, and the guard's off-ray fraction stays under `MAX_OFF_RAY`.
 - **Null vs broken:** A trace frozen on an old frame would still read a position. The meter line must be advancing at the display rate while the capture is taken.
 - **Why by hand:** The offscreen harness renders a window it supplied itself and says nothing about the audio path, the ring buffer, the display link, or the compositor.
-- **Result:** passed. +0.5000 and -0.5000, guard 0.26%. Getting there found two defects in the screenshot tool, both invisible offscreen, including a whole-column centroid that read this sine as +0.0359.
+- **Result:** passed. <date>, build `<commit>` (step 0: <loaded-build confirmation>), REAPER 7.79, default editor, 2x display, 1920x1080 drawable: +0.5000 and -0.5000, guard 0.26%; control: <meter observation during capture>. Getting there found two defects in the screenshot tool, both invisible offscreen, including a whole-column centroid that read this sine as +0.0359.
 
 ### 2. The rail stops the peak from climbing
 
@@ -175,7 +175,7 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 - **Expected:** `implies sample` on the `highest peak` line reads +1.0000, +1.0500, +1.0889, and +1.0889, each within ±0.002, with the `on the rail` line for the last two only.
 - **Null vs broken:** Two readings must differ and two must match.
 - **Why by hand:** As step 1.
-- **Result:** passed.
+- **Result:** passed. <date>, build `<commit>` (step 0: <loaded-build confirmation>), REAPER 7.79, default editor, 2x display, 1920x1080 drawable. The first two peaks differ and the last two agree within ±0.002, as the control requires; readings:
 
   | file        | predicted | peak    | trough  | error   | on the rail |
   | ----------- | --------- | ------- | ------- | ------- | ----------- |
@@ -191,7 +191,7 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 - **Expected:** Every capture inverts to +0.5000, within ±0.002.
 - **Null vs broken:** The rate must actually take effect. After each change, the plugin's `activated at` log line must name the new rate, since a change that did not take effect would pass at 48 kHz three times and exercise none of the three window lengths.
 - **Why by hand:** The harness renders a fixed 960-sample window, so only a host exercises the window length, the ring buffer at three block sizes, and the upload path at three window lengths.
-- **Result:** passed. Nine captures, every one +0.5000 or within 0.001 of it, worst +0.4990, across windows of 960, 1920, and 3840 samples.
+- **Result:** passed. <date>, build `<commit>` (step 0: <loaded-build confirmation>), REAPER 7.79, default editor, 2x display, 1920x1080 drawable: nine captures, every one +0.5000 or within 0.001 of it, worst +0.4990, across windows of 960, 1920, and 3840 samples; control: <activation log confirming each device rate>.
 
 ### 4. By eye: width, seam, and beading
 
@@ -200,7 +200,7 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 - **Expected:** The beam is visibly wider and smoother than a single device pixel, with no seam at the quad's edge, and silence is flat and stable with no flicker between adjacent rows. No beading: a regular string of brighter dots along steep crossings, which would be a 2:1 ripple at the segment pitch, green 219 against 189.
 - **Null vs broken:** The meter line must be advancing while looking, as in step 1, so the picture is live. Look along steep strokes, where the analysis says beading would appear, not along shallow ones where it would not. An absence seen by eye is believed here only because this effect is one an eye reliably sees.
 - **Why by hand:** A brightness ripple of about 16% repeating at a fixed spatial period is exactly what an eye detects well, and it is the one question here that could not be settled by derivation.
-- **Result:** passed. No beading, so of the two analyses the plan recorded, the side-by-side one was right. Wider and smoother, no seam, silence flat and stable. By eye, which is weaker than the other steps, and not weak for this claim.
+- **Result:** passed. <date>, build `<commit>` (step 0: <loaded-build confirmation>), REAPER 7.79, default editor, 2x display, 1920x1080 drawable: no beading, so of the two analyses the plan recorded, the side-by-side one was right. Wider and smoother, no seam, silence flat and stable; control: <meter observation while inspecting steep strokes>. By eye, which is weaker than the other steps, and not weak for this claim.
 
 ### 5. Brightness falls with sample rate
 
@@ -209,7 +209,7 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 - **Expected:** A fall of about 1.41x from 48 to 192 kHz.
 - **Null vs broken:** The scatter within a single rate must be smaller than the predicted effect.
 - **Why by hand:** Retired. The density scale is a pure function of the window length and the drawable width, both of which the offscreen harness sets exactly, so it has no host-only component.
-- **Result:** retired. Three captures per rate read a median of 6.80, 7.69, and 6.80 deposits, with a scatter within one rate of 1.8x against the predicted 1.41x, and the defect itself would have read `g≈249` against an observed `g≈243`, inside a scatter of ten. This method could not have caught the bug it was written for. Density is verified by a test of the pure function at 1x, 2x, and 3x, and by an offscreen measurement at both display scales.
+- **Result:** retired. <date>, build `<commit>`, REAPER 7.79, default editor, 2x display, 1920x1080 drawable: three captures per rate read a median of 6.80, 7.69, and 6.80 deposits, with a scatter within one rate of 1.8x against the predicted 1.41x, and the defect itself would have read `g≈249` against an observed `g≈243`, inside a scatter of ten. This method could not have caught the bug it was written for. Density is verified by a test of the pure function at 1x, 2x, and 3x, and by an offscreen measurement at both display scales.
 ````
 
 ## Three springer Steps, Restated
@@ -284,6 +284,8 @@ One step each, to show the four parts where fosforo has no precedent. Everything
 
 ### Browser
 
+This example stays `deferred` because its behavior can be automated. `<automation-issue-url>` is a placeholder: replace it with the issue filed in the target project before publishing the checklist.
+
 ```markdown
 ### 4. A failed save keeps the draft and says so
 
@@ -291,8 +293,8 @@ One step each, to show the four parts where fosforo has no precedent. Everything
 - **Action:** Set the Network panel's throttling to Offline, then press Save.
 - **Expected:** A banner with the role `alert` reads the save-failure message, and the draft text is still in the editor.
 - **Null vs broken:** The Network panel must show the save request, marked failed. If no request appears, the Save handler never ran, and a missing banner means nothing. Then set throttling back to No throttling and press Save again: the request must succeed and the banner must clear, which shows the banner tracks the save rather than appearing on its own.
-- **Why by hand:** Not automated yet. An end-to-end test with network interception can cover this, and the issue to add one is linked here.
-- **Result:** pending.
+- **Why by hand:** Not automated yet. An end-to-end test with network interception can cover this; track it in [Automate failed-save draft retention](<automation-issue-url>).
+- **Result:** deferred. Risk: a failed save loses the draft or hides the error. Destination: [Automate failed-save draft retention](<automation-issue-url>), which will exercise both failed and successful requests.
 ```
 
 ### Physical device

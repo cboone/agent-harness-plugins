@@ -37,6 +37,27 @@ When the work has a plan, the checklist becomes that plan's `## Manual verificat
 
 Two companion skills are filed and not yet built: one for stamping build provenance into artifacts, which gives step 0 its strongest form, and one for writing phased build plans, whose phase gates are usually where these checklists are needed.
 
+## Recommended Permissions
+
+For a checklist stored on an issue, these optional rules allow the record's create, read, update, and tmpfile commands. Add them to `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh issue comment *)",
+      "Bash(gh api repos/*)",
+      "Bash(gh api --method PATCH repos/*)",
+      "Bash(git diff *)",
+      "Bash(mktemp -u /tmp/manual-verification-body-*)",
+      "Bash(rm /tmp/manual-verification-body-*)"
+    ]
+  }
+}
+```
+
+Review and adjust the rules to match your security preferences. The verification commands inside a checklist depend on the target project and environment.
+
 ## See Also
 
 - [Plant Defects](../plant-defects/README.md): the same discipline for automated checks, proving an instrument can see the defect it claims to catch

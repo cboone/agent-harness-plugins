@@ -15,20 +15,20 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 
 ### Exclusive resources
 
-- `host`: steps 1 to 4, since only one worktree can have its build installed where the host loads from
+- `host`: steps 0 to 4, since only one worktree can have its build installed where the host loads from
 - `window-server`: steps 1 to 4, since two sessions cannot both open windows and time each other's frames
-- No exclusive resource: step 5, which reads a capture already on disk
+- No exclusive resource: step 5, a deferred automation task that needs only a capture already on disk
 
 ### Status
 
-| #   | Step                          | Needs    | Status  | Reading                           |
-| --- | ----------------------------- | -------- | ------- | --------------------------------- |
-| 0   | Confirm the build under test  | `host`   | passed  | hashes match, provenance matches  |
-| 1   | The trace's position          | `host`   | passed  | +0.5000 and -0.5000, guard 0.26%  |
-| 2   | The rail stops the peak       | `host`   | partial | `level-2.000` only                |
-| 3   | Position holds at three rates | `host`   | pending |                                   |
-| 4   | No beading along steep edges  | `host`   | pending |                                   |
-| 5   | The centre row's half pixel   | none     | pending |                                   |
+| #   | Step                          | Needs                   | Status   | Reading                                    |
+| --- | ----------------------------- | ----------------------- | -------- | ------------------------------------------ |
+| 0   | Confirm the build under test  | `host`                  | passed   | hashes match, provenance matches           |
+| 1   | The trace's position          | `host`, `window-server` | passed   | +0.5000 and -0.5000, guard 0.26%           |
+| 2   | The rail stops the peak       | `host`, `window-server` | partial  | `level-2.000` only                         |
+| 3   | Position holds at three rates | `host`, `window-server` | pending  |                                            |
+| 4   | No beading along steep edges  | `host`, `window-server` | pending  |                                            |
+| 5   | The centre row's half pixel   | none                    | deferred | automation issue: `<automation-issue-url>` |
 
 ### 0. Confirm the build under test
 
@@ -44,7 +44,7 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 ...
 ```
 
-Steps 0 to 4 are adapted from fosforo's host pass for drawing the beam as oriented quads, with its recorded readings; step 5 is added to show a step that needs no resource.
+Steps 0 to 4 are adapted from fosforo's host pass for drawing the beam as oriented quads, with its recorded readings; step 5 illustrates a deferred automation task that needs no resource. Replace `<automation-issue-url>` with the filed issue before publishing a real checklist.
 
 The status table is what a person resuming reads first, and what a reprint leads with. Its `Reading` column is a short form of the step's `Result` line, not a replacement for it.
 
@@ -70,7 +70,7 @@ Everything that must be true before the Action means anything, including what mu
 - **State the build mode when the step depends on it.** One fosforo checklist needed the Debug build because the once-a-second rate line it reads is compiled out of a release build, and its Setup spelled out a build order, because the Audio Unit build silently rebuilds the CLAP as ReleaseFast.
 - **Launch in the way that makes the evidence readable.** A host started from a terminal can show diagnostics that one started from the Dock cannot, and the Setup should say so rather than leave the person to discover it.
 
-A failing Setup: "Open the plugin in REAPER." A passing one: "Step 0 passed this session. REAPER launched from a terminal with `2>&1 | grep --line-buffered fosforo`, the plugin on a stereo track, `sine-100hz-0.5.wav` on that track, device rate 48 kHz."
+A failing Setup: "Open the plugin in REAPER." A passing one: "Step 0 passed this session. REAPER launched from a terminal with `/Applications/REAPER.app/Contents/MacOS/REAPER 2>&1 | grep --line-buffered fosforo`, the plugin on a stereo track, `sine-100hz-0.5.wav` on that track, device rate 48 kHz."
 
 ## Action
 
@@ -123,7 +123,7 @@ Every step says why it is not an automated test. There are two acceptable answer
 
 **Not automated yet.** Nothing prevents an automated check, and nobody has written it. That step still goes in the checklist, but it is a deferral, and its `Why by hand` line links the issue that will automate it.
 
-**Put the step where the quantity lives.** Before writing a step, ask whether the quantity it checks has any component that only the environment has. If it does not, the step does not belong in the checklist however important the quantity is. fosforo learned this from a sample-rate arm designed to check a density scale by reading brightness in a host. The density is a pure function of the window length and the drawable width, both of which the offscreen harness sets exactly, so it had no host-only component. In the host, the predicted effect was a 1.41x fall and the scatter within a single rate was 1.8x, so "this method could not have caught the bug it was written for". Density was verified where it lives, by a pure function's test and an offscreen measurement, and the host arm kept only the half that did have a host-only component: the trace's position through the audio path.
+**Put the step where the quantity lives.** Before writing a step, ask whether the quantity it checks has any component that only the environment has. If it does not, do not schedule a manual run: keep the row `deferred` with its automation issue until coverage exists, then `retired` with a reference to that coverage. fosforo learned this from a sample-rate arm designed to check a density scale by reading brightness in a host. The density is a pure function of the window length and the drawable width, both of which the offscreen harness sets exactly, so it had no host-only component. In the host, the predicted effect was a 1.41x fall and the scatter within a single rate was 1.8x, so "this method could not have caught the bug it was written for". Density was verified where it lives, by a pure function's test and an offscreen measurement, and the host arm kept only the half that did have a host-only component: the trace's position through the audio path.
 
 ## Result
 
@@ -145,11 +145,13 @@ An environment loads what is installed, not what was just built, and nothing con
 So every checklist starts with step 0, and every session starts by running it. The confirmation, strongest first:
 
 1. **A provenance marker read from the installed artifact**, naming the branch and commit that built it. This answers "whose build is this?" with nothing else in hand, including for a build this worktree did not make.
-1. **A hash of the installed artifact compared against the one just built.** Two identical hashes mean the environment is loading the branch under test. This only works when this worktree has a build to compare against.
+1. **A hash of the installed artifact compared against the one just built.** Two identical hashes establish that the installed file matches the fresh build. This only works when this worktree has a build to compare against; it does not identify a file an already-running host loaded earlier.
 1. **A version or build number the environment displays**, in an About box, a settings screen, a page footer, or a `--version` line, provided the build under test changes it.
 1. **A modification time.** Weak: it invites an inference instead of ending the question. Use it only when nothing else exists, and say in the Result that it is what was used.
 
-Step 0's Expected names both halves: the identity of the build under test (branch and commit, or hash), and the identity read from the installed artifact, which must match. Its Null vs broken is that a comparison against a file that does not exist is not a match: when this worktree built nothing, a hash check has nothing to compare against, and only a provenance marker still answers.
+An identity read from disk must also be connected to the running environment. Restart or reload the host after installation and confirm it loads that path, clearing its plugin cache if necessary, or read the provenance or version from the active instance. Until then a matching file on disk cannot establish which build a running or cached host uses.
+
+Step 0's Expected names both halves: the identity of the build under test (branch and commit, hash, or a distinct version/build number), and the matching identity loaded by the environment. Its Null vs broken is that a comparison against a file that does not exist is not a match: when this worktree built nothing, a hash check has nothing to compare against. A provenance marker or a distinct version/build number read from the active environment can still answer; a modification time remains weak evidence and must be labelled as such.
 
 Where a project has no provenance stamping at all, say that in step 0's `Why by hand` line and use the weakest confirmation available. Stamping provenance into builds is separate work, and worth an issue.
 
@@ -161,9 +163,9 @@ One vocabulary, so a resumed checklist reads the same in every session.
 
 | Status            | Meaning                                                                                                          | The Result line carries                                          |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `pending`         | Not yet run                                                                                                      | Nothing yet                                                      |
+| `pending`         | Not yet run, or awaiting evidence needed to classify a reported result                                           | The report and missing evidence, if any                          |
 | `passed`          | The Expected observation was seen, and the null-vs-broken check held in the same run                             | The reading, date, build, and environment                        |
-| `failed`          | Something other than the Expected observation was seen                                                           | The reading, and the fix or the issue it went to                 |
+| `failed`          | Something other than Expected was seen after the build and null-vs-broken checks held                            | The reading, and the fix or the issue it went to                 |
 | `partial`         | Some readings of a multi-reading step are in                                                                     | Which readings are in and which remain                           |
 | `void`            | It ran and establishes nothing: wrong build, instrument not running, or conditions under which it could not fail | Why, and what running it again needs                             |
 | `deferred`        | Deliberately not run now                                                                                         | The risk it covers, and where it goes: a later phase or an issue |

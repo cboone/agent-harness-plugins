@@ -20,26 +20,46 @@ The record is what makes the second request cheap and keeps the results. This fi
 
 ### Writing to an issue comment
 
-Write the body to a temporary file first, using the tmpfile pattern from the `use-git` skill, rather than passing a long body inline.
+Write the body to a temporary file first, using the tmpfile pattern from the `use-git` skill, rather than passing a long body inline. Generate a path:
+
+```bash
+mktemp -u /tmp/manual-verification-body-XXXXXX
+```
+
+Set `body_file` to that returned path and write the complete checklist there with the Write tool. Wait for the write to succeed before issuing a separate GitHub CLI call. Replace `NUMBER`, `OWNER/REPO`, and `COMMENT_ID` in the commands with the issue and comment being maintained.
 
 Create the comment once. `gh` prints the comment's URL, which ends in `#issuecomment-` and the comment's numeric ID:
 
 ```bash
-gh issue comment NUMBER --repo OWNER/REPO --body-file "$body_file"
+gh issue comment NUMBER --repo OWNER/REPO --body-file "${body_file}"
 ```
 
-Put that URL on the checklist's `Record:` line, so the next session knows which comment is the record.
+Only after creation succeeds and returns a URL, read that exact comment back using the numeric ID from its `#issuecomment-` fragment:
+
+```bash
+gh api repos/OWNER/REPO/issues/comments/COMMENT_ID --jq .body
+```
+
+Verify that the stored body is non-empty and contains the intended checklist, including its headings, status table, steps, and existing readings. A returned URL alone does not establish that the body was saved. If it is empty or incomplete, rewrite the tmpfile and use the update command below to repair the same comment, then read it back again. Do not create a second comment to recover. If creation fails without returning an ID, report the failure and do not reuse an ID from another run.
+
+Once the body is verified, put the returned URL on the checklist's `Record:` line, update that same comment, and verify the saved body again. Only then present it as the checklist record.
 
 Before every update, read the current body back. The person may have edited the comment on GitHub, typing results straight into it, and an update written from a stale copy would erase them:
 
 ```bash
-gh api "repos/OWNER/REPO/issues/comments/COMMENT_ID" --jq .body
+gh api repos/OWNER/REPO/issues/comments/COMMENT_ID --jq .body
 ```
 
 Merge the new results into what came back, then write it:
 
 ```bash
-gh api --method PATCH "repos/OWNER/REPO/issues/comments/COMMENT_ID" -F body=@"$body_file"
+gh api --method PATCH repos/OWNER/REPO/issues/comments/COMMENT_ID -F body=@"${body_file}"
+```
+
+Read the body back after each update and verify the intended content. Keep the tmpfile until verification or recovery is complete; on an unrecoverable failure, preserve the intended body in the session output and report that persistence is incomplete. Clean up in a separate call:
+
+```bash
+rm "${body_file}"
 ```
 
 Do not use `gh issue comment --edit-last`. It edits the authenticated user's most recent comment on the issue, which stops being the checklist the moment that user comments on the issue about anything else. Pass `--repo` explicitly: inside a fork with an `upstream` remote, `gh` can resolve the repository to the upstream.
@@ -62,17 +82,18 @@ Results arrive as a sentence against step numbers. Take this one:
 
 > 4's confirmed, skipping 5 and 6, 7 gave 1.0894
 
-| Fragment           | Step | Status                                                                                      | Recorded                                                        |
-| ------------------ | ---- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| "4's confirmed"    | 4    | `passed`, if step 4's Expected is an observation that "confirmed" can affirm; otherwise ask | "confirmed", verbatim                                           |
-| "skipping 5 and 6" | 5, 6 | `deferred`                                                                                  | The reason and destination; ask once if neither can be inferred |
-| "7 gave 1.0894"    | 7    | Derived by comparing 1.0894 with step 7's Expected and tolerance                            | "1.0894", verbatim, against the prediction                      |
+| Fragment           | Step | Status                                                                                                                   | Recorded                                                        |
+| ------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| "4's confirmed"    | 4    | `passed` only if the report affirms both Expected and Null vs broken, with step 0 confirmed; otherwise `pending` and ask | "confirmed", verbatim                                           |
+| "skipping 5 and 6" | 5, 6 | `deferred`                                                                                                               | The reason and destination; ask once if neither can be inferred |
+| "7 gave 1.0894"    | 7    | Compare with Expected and tolerance only after step 0 and Null vs broken hold; otherwise ask or mark `void`              | "1.0894", verbatim, against the prediction                      |
 
 The rules behind that table:
 
 - **Record verbatim, then derive the status.** The person's words and numbers go into the Result line as given. The status is a judgment made from them, and it can be revisited; the reading cannot be recovered if it was paraphrased.
 - **Attach date, build, and environment to every result.** The build comes from this session's step 0. If step 0 has not been run this session, record the reading, ask for step 0 now, and let the reading stand only if step 0 confirms the build and nothing was installed in between. Otherwise the reading is `void`.
-- **Check each number against its tolerance, not against the printed prediction.** +1.0893 against a predicted +1.0889 with a tolerance of ±0.002 is a pass, and the record keeps both numbers.
+- **Require the build and control evidence before assigning `passed` or `failed`.** Both the Expected observation and the step's Null vs broken evidence must come from the reported run, with step 0 confirmed for that session. If evidence is merely unreported, keep the result `pending` (or `partial` for an incomplete set of readings) and ask for it. If the build or instrument was wrong, the control was skipped, or conditions could not expose the defect, record `void` and what a valid rerun needs.
+- **Check each number against its tolerance, not against the printed prediction.** Once the build and control evidence hold, +1.0893 against a predicted +1.0889 with a tolerance of ±0.002 is a pass, and the record keeps both numbers.
 - **Ask about everything unsettled in one message**, one precise question per step, so the person answers once.
 - **A step number that does not exist, or a result that fits a different step better, is a question, not a guess.**
 
@@ -80,13 +101,13 @@ The rules behind that table:
 
 Some reports are real results that still do not decide the step. Each has a fixed response.
 
-**"Seems fine."** fosforo received "4: Seems fine." for a step that asked the person to open two instances' editors at once and gave no Expected at all, so "seems fine" was the most the step allowed. Where a step's Expected is an observation in words and the report affirms it, record `passed` with the report verbatim. Where the Expected is a number, keep the step `pending` or `partial` and ask for the number.
+**"Seems fine."** fosforo received "4: Seems fine." for a step that asked the person to open two instances' editors at once and gave no Expected at all, so "seems fine" was the most the step allowed. Where Expected is an observation in words, record `passed` only if the report affirms that observation and the same-run Null vs broken evidence, with step 0 confirmed. Keep the words verbatim. If the number or control evidence is unreported, keep the step `pending` or `partial` and ask for what is missing. If the instrument did not run or the control was skipped, the result is `void`, even for a qualitative Expected.
 
 **"Nothing happened (as desired)."** Ask whether the step's null-vs-broken evidence was seen: the liveness marker, the positive control, the stressing condition. If it was, record `passed` with both the absence and the evidence. If the step had no such evidence, or the person did not see it, record what they observed, set the status to `void`, and write what would confirm it, which is usually a marker to add. `./null-vs-broken.md` has the techniques.
 
 **"I'm not sure what I'm looking for."** The step is defective, not the person. Rewrite its Expected in the record, then answer by pointing at the rewritten step. Re-read anything already reported against the old wording under the new Expected: fosforo's heap counts, from two samples taken with REAPER's interface in different states, could not be read under any wording, so they are `void`, and the rewritten protocol is what ran next.
 
-**A reading outside tolerance.** Record `failed` with the reading. Before concluding the code is wrong, check that step 0 held and that the step's null-vs-broken line held, because a wrong build or an instrument artifact produces out-of-tolerance readings too. fosforo's screenshot tool reported a sine at +0.5000 as +0.0359, which reads as silence, because it took a centroid over a whole column and so averaged the persistence trail rather than the beam. The defect was in the instrument, and the reading was what found it.
+**A reading outside tolerance.** Record the reading first, then check that step 0 and the step's Null vs broken evidence held. Assign `failed` only when those prerequisites are confirmed; keep it `pending` while their evidence is missing, or `void` when the wrong build, a broken instrument, or ineffective conditions invalidate the run. fosforo's screenshot tool reported a sine at +0.5000 as +0.0359, which reads as silence, because it took a centroid over a whole column and so averaged the persistence trail rather than the beam. The defect was in the instrument, and the reading was what found it.
 
 **A reading that shows the prediction was wrong while the code was right.** Keep both numbers, correct the Expected in place, and say the reading corrected it. fosforo's beam-as-quads plan has a section called "Three predictions in this plan were wrong", and that section is worth more than the predictions were.
 

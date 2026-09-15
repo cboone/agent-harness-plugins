@@ -32,7 +32,7 @@ Use this skill when:
 - Results come back as free text against step numbers.
 - Someone says they are not sure what a step is looking for. That step's Expected has failed its reader, and the fix belongs in the record.
 
-Do not use it for a check whose quantity has no component only the environment has. That check belongs in an automated test, however important it is. And do not use it to judge whether an automated instrument can fail: that is the `plant-defects` skill, which is the same discipline pointed at automated checks.
+Do not prescribe a manual run for a check whose quantity has no component only the environment has. That check belongs in an automated test, however important it is. Keep a deferred row linked to its automation issue until that coverage exists; once covered, retire the row with a reference to the test. And do not use this skill to judge whether an automated instrument can fail: that is the `plant-defects` skill, which is the same discipline pointed at automated checks.
 
 ## Core Principles
 
@@ -56,7 +56,7 @@ Four parts, and two lines that make the step a record:
 - **Expected:** The `implies sample` value on the `highest peak` line reads +1.0000, +1.0500, +1.0889, and +1.0889 for `level-1.000`, `level-1.050`, `level-1.089`, and `level-2.000`, each within ±0.002, which is one backing pixel. The `on the rail` line appears for the last two only. If the first two match each other, the clamp fires too early; if the last two differ, it does not fire. Do not look for a flat-topped waveform: at 1.089 the clamp removes about a tenth of a pixel, and the picture correctly looks like an ordinary sine.
 - **Null vs broken:** Two readings must differ and two must match, so neither a clamp that never fires nor one that always fires can pass.
 - **Why by hand:** The offscreen harness draws a window it supplied itself. Only a host exercises the audio path, the ring buffer, the display link, and the compositor.
-- **Result:** partial. `level-2.000` read +1.0893 and printed the rail line; three files remain.
+- **Result:** partial. <date>, build `<commit>` (step 0 confirmed the loaded build), REAPER at 48 kHz: `level-2.000` read +1.0893 against a predicted +1.0889 and printed the rail line; three files and the cross-file control remain.
 ```
 
 Statuses are `pending`, `passed`, `failed`, `partial`, `void`, `deferred`, `untestable here`, and `retired`. Numbers are stable: the person reports results by number, so a step is never renumbered, new steps are appended, and a retired step keeps its number with the reason. `./references/step-format.md` has the full document template and the rules for each part and status.
@@ -64,11 +64,11 @@ Statuses are `pending`, `passed`, `failed`, `partial`, `void`, `deferred`, `unte
 ## Workflow
 
 1. **Look for the checklist before writing one.** Check the active plan under `docs/plans/todo/` for a `## Manual verification` section, and the issue for a checklist comment. If one exists, resume from it with `./references/resuming.md`. A request to list or reprint the steps is a request to find the record, never to regenerate it.
-1. **Decide what belongs by hand.** List the candidate checks, then move every one whose quantity has no environment-only component into an automated test, or into an issue for one. Write `Why by hand` for each step that stays.
-1. **Write step 0: confirm the build under test.** Use the strongest confirmation the project has: a provenance marker read from the installed artifact, a hash compared against the fresh build, or the version the environment displays. Say which one was used, and say so when it is weak.
+1. **Decide what belongs by hand.** List the candidate checks. For each whose quantity has no environment-only component, keep a numbered `deferred` row with its risk and automation issue; when the automated coverage exists, mark the row `retired` and link that coverage. Write `Why by hand` for every row. Never silently drop a candidate or an existing step.
+1. **Write step 0: confirm the build under test.** Use the strongest confirmation the project has: a provenance marker read from the installed artifact, a hash compared against the fresh build, or the version the environment displays. Confirm the environment loaded that build, by restarting or reloading after installation or by reading its identity from the running instance. Say which confirmation was used, and say so when it is weak.
 1. **Scope the resources.** Under an `### Exclusive resources` heading, list each resource as a backticked name with the steps that need it, and name the steps that need none. Keep each resource's steps contiguous.
 1. **Write each step in four parts.** Setup, Action, Expected, Null vs broken. Apply the stranger test: someone who did not write the code can tell a pass from a fail using the step alone.
-1. **Confirm each step can fail.** The expected effect must be larger than the reading's scatter, and the conditions must be ones under which a defect would show. A step that reads the same whether or not the change works is redesigned or removed, not run. See `./references/null-vs-broken.md`.
+1. **Confirm each step can fail.** The expected effect must be larger than the reading's scatter, and the conditions must be ones under which a defect would show. A step that reads the same whether or not the change works is redesigned or retired in place, with its reason and replacement recorded. See `./references/null-vs-broken.md`.
 1. **Persist, then present.** Write the checklist to its record first, then show the person this session's steps, step 0 first.
 1. **Record results as readings.** Map each free-text report onto its step, record the reading verbatim with date, build, and environment, and ask one precise question about any step a report does not settle. Never mark a step `passed` on a report that lacks its Expected observation or skips its null-vs-broken check.
 1. **Close out.** Every step ends `passed`, `failed` with its fix or issue, `deferred` with its destination, `untestable here` with its reason, or `retired` with where its quantity is verified instead. A `pending`, `partial`, or `void` step is run again or deferred, never dropped.
