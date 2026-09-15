@@ -56,10 +56,12 @@ Merge the new results into what came back, then write it:
 gh api --method PATCH repos/OWNER/REPO/issues/comments/COMMENT_ID -F body=@"${body_file}"
 ```
 
-Read the body back after each update and verify the intended content. Keep the tmpfile until verification or recovery is complete; on an unrecoverable failure, preserve the intended body in the session output and report that persistence is incomplete. Clean up in a separate call:
+Read the body back after each update and verify the intended content. Keep the tmpfile until verification or recovery is complete; on an unrecoverable failure, preserve the intended body in the session output and report that persistence is incomplete. Clean up in a separate call, skipping removal if a failed Write left the generated path unoccupied:
 
 ```bash
-rm "${body_file}"
+if [[ -e "${body_file}" ]]; then
+  rm "${body_file}"
+fi
 ```
 
 Do not use `gh issue comment --edit-last`. It edits the authenticated user's most recent comment on the issue, which stops being the checklist the moment that user comments on the issue about anything else. Pass `--repo` explicitly: inside a fork with an `upstream` remote, `gh` can resolve the repository to the upstream.

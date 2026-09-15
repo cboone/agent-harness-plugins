@@ -74,10 +74,10 @@ The step did not say which column is the count. And the premise was unsound: REA
 - **Expected:** The second sample's `CAMetalLayer` and `NSView` counts equal the first sample's, within ±5. A leak of one layer and one view per cycle reads +50 on each, which no host activity disguises. A small negative change is the host releasing its own objects, and is not a failure.
 - **Null vs broken:** Sample in the same editor state both times: a sample with an editor open includes this plugin's own live layer and view, and makes the comparison meaningless. The count of fifty is what puts a real leak far outside the host's own swing.
 - **Why by hand:** The offscreen harness measures leaks in a host it controls. Only REAPER retains the parent view on its own schedule.
-- **Result:** passed. <date>, build `<commit>`, REAPER, two instances: 24 layers and 1 view after one cycle, after ten, and after twenty. A change of exactly zero, where a leak of one per cycle would have read 43 after twenty.
+- **Result:** pending. Record a baseline and the counts after all fifty cycles, with date, build, and environment.
 ```
 
-The readings are the ones the session recorded. It recorded no build identity, which step 0 now supplies, hence the placeholders. The run stopped at twenty cycles rather than fifty, and it still settles the step, because a leak would have read 43; the Result says what was actually run.
+**Historical twenty-cycle variant.** The session recorded 24 layers and 1 view after one cycle, after ten, and after twenty, a change of zero. A leak of one layer per additional cycle would instead have read 43 layers after twenty, relative to the 24-layer reading after the first cycle. That is evidence from a separate, shorter protocol; it does not complete the fifty-cycle Action above. The source did not record a build identity, so these readings remain historical observations and cannot supply a current-session pass.
 
 ### The audio tap: failure described, success and liveness left out
 
@@ -133,14 +133,14 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 
 ### Status
 
-| #   | Step                                  | Needs  | Status  | Reading                                                  |
-| --- | ------------------------------------- | ------ | ------- | -------------------------------------------------------- |
-| 0   | Confirm the build under test          | `host` | passed  | provenance names this branch                             |
-| 1   | The trace's position                  | `host` | passed  | +0.5000 and -0.5000, guard 0.26%                         |
-| 2   | The rail stops the peak               | `host` | passed  | four files, every error under one backing pixel          |
-| 3   | Position holds at 48, 96, and 192 kHz | `host` | passed  | nine captures, worst +0.4990                             |
-| 4   | By eye: width, seam, and beading      | `host` | passed  | no beading                                               |
-| 5   | Brightness falls with sample rate     | `host` | retired | the quantity has no host-only component; verified offscreen |
+| #   | Step                                  | Needs  | Status  | Reading                                                     |
+| --- | ------------------------------------- | ------ | ------- | ----------------------------------------------------------- |
+| 0   | Confirm the build under test          | `host` | passed  | provenance names this branch                                |
+| 1   | The trace's position                  | `host` | passed  | +0.5000 and -0.5000, guard 0.26%                            |
+| 2   | The rail stops the peak               | `host` | passed  | four files, every error under one backing pixel             |
+| 3   | Position holds at 48, 96, and 192 kHz | `host` | passed  | nine captures, worst +0.4990                                |
+| 4   | By eye: width, seam, and beading      | `host` | passed  | no beading                                                  |
+| 5   | Brightness falls with sample rate     | none   | retired | the quantity has no host-only component; verified offscreen |
 
 ### 0. Confirm the build under test
 
@@ -163,14 +163,14 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 
 - **Setup:** Step 0 passed this session. REAPER launched with `/Applications/REAPER.app/Contents/MacOS/REAPER 2>&1 | grep --line-buffered fosforo`. `2>&1` because the log mirror writes to stderr; `--line-buffered` because otherwise the once-a-second meter arrives in bursts and reads like a stopped render loop. `sine-100hz-0.5.wav` on a stereo track.
 - **Action:** Play the file, capture the plugin window, and run `scripts/measure-trace --refresh 120` on the capture.
-- **Expected:** Peak and trough invert to +0.5000 and -0.5000, and the guard's off-ray fraction stays under `MAX_OFF_RAY`.
+- **Expected:** Peak and trough invert to +0.5000 and -0.5000, and the guard's off-ray fraction is at most 0.5% (0.005 as a fraction). The recorded 0.26% reading is below that limit.
 - **Null vs broken:** A trace frozen on an old frame would still read a position. The meter line must be advancing at the display rate while the capture is taken.
 - **Why by hand:** The offscreen harness renders a window it supplied itself and says nothing about the audio path, the ring buffer, the display link, or the compositor.
 - **Result:** passed. <date>, build `<commit>` (step 0: <loaded-build confirmation>), REAPER 7.79, default editor, 2x display, 1920x1080 drawable: +0.5000 and -0.5000, guard 0.26%; control: <meter observation during capture>. Getting there found two defects in the screenshot tool, both invisible offscreen, including a whole-column centroid that read this sine as +0.0359.
 
 ### 2. The rail stops the peak from climbing
 
-- **Setup:** As step 1, with `level-1.000.wav`, `level-1.050.wav`, `level-1.089.wav`, and `level-2.000.wav`.
+- **Setup:** Step 0 passed this session. REAPER launched with `/Applications/REAPER.app/Contents/MacOS/REAPER 2>&1 | grep --line-buffered fosforo`, so the plugin's stderr diagnostics are filtered without buffering the meter line. A stereo track holds `level-1.000.wav`, `level-1.050.wav`, `level-1.089.wav`, and `level-2.000.wav`, with the plugin on that track.
 - **Action:** Play, capture, and measure each file.
 - **Expected:** `implies sample` on the `highest peak` line reads +1.0000, +1.0500, +1.0889, and +1.0889, each within ±0.002, with the `on the rail` line for the last two only.
 - **Null vs broken:** Two readings must differ and two must match.
@@ -186,7 +186,7 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 
 ### 3. Position holds at 48, 96, and 192 kHz
 
-- **Setup:** As step 1. Change REAPER's **device** rate in preferences, not the files: the negotiated rate sets the window length, and the files stay 48 kHz throughout.
+- **Setup:** Step 0 passed this session. REAPER launched with `/Applications/REAPER.app/Contents/MacOS/REAPER 2>&1 | grep --line-buffered fosforo`, with the plugin and `sine-100hz-0.5.wav` on a stereo track. Change REAPER's **device** rate in preferences, not the files: the negotiated rate sets the window length, and the files stay 48 kHz throughout.
 - **Action:** At each of the three device rates, play `sine-100hz-0.5.wav` and take three captures.
 - **Expected:** Every capture inverts to +0.5000, within ±0.002.
 - **Null vs broken:** The rate must actually take effect. After each change, the plugin's `activated at` log line must name the new rate, since a change that did not take effect would pass at 48 kHz three times and exercise none of the three window lengths.
@@ -195,7 +195,7 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 
 ### 4. By eye: width, seam, and beading
 
-- **Setup:** As step 1.
+- **Setup:** Step 0 passed this session. REAPER launched with `/Applications/REAPER.app/Contents/MacOS/REAPER 2>&1 | grep --line-buffered fosforo`, with the plugin and `sine-100hz-0.5.wav` on a stereo track. Keep the meter line visible while inspecting the default editor on a 2x display.
 - **Action:** Play `sine-100hz-0.5.wav` and look along steep strokes.
 - **Expected:** The beam is visibly wider and smoother than a single device pixel, with no seam at the quad's edge, and silence is flat and stable with no flicker between adjacent rows. No beading: a regular string of brighter dots along steep crossings, which would be a 2:1 ripple at the segment pitch, green 219 against 189.
 - **Null vs broken:** The meter line must be advancing while looking, as in step 1, so the picture is live. Look along steep strokes, where the analysis says beading would appear, not along shallow ones where it would not. An absence seen by eye is believed here only because this effect is one an eye reliably sees.
@@ -204,7 +204,7 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 
 ### 5. Brightness falls with sample rate
 
-- **Setup:** As step 3.
+- **Setup:** Step 0 passed this session. REAPER with the plugin and `sine-100hz-0.5.wav` on a stereo track, the file held at 48 kHz and the device rate changed in preferences. This retired protocol is retained as history and is not scheduled for another run.
 - **Action:** Read the `deposits` figure for the brightest pixel at each rate.
 - **Expected:** A fall of about 1.41x from 48 to 192 kHz.
 - **Null vs broken:** The scatter within a single rate must be smaller than the predicted effect.

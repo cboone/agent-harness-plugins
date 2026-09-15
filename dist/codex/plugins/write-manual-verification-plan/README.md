@@ -50,7 +50,7 @@ For a checklist stored on an issue, these optional rules allow the record's crea
       "Bash(gh api --method PATCH repos/*)",
       "Bash(git diff *)",
       "Bash(mktemp -u /tmp/manual-verification-body-*)",
-      "Bash(rm /tmp/manual-verification-body-*)"
+      "Bash(rm *)"
     ]
   }
 }
