@@ -87,7 +87,7 @@ Plans, review documents, and issue bodies hold deferrals under headings such as 
 
 A deferral targets another repository only when it identifies one:
 
-- An `owner/name`, or a GitHub URL.
+- An `owner/name`, a `HOST/OWNER/NAME` selector, or a GitHub repository URL.
 - A name the session already tied to a specific repository, such as "the plugins repo" after the session had established which repository that is.
 
 A description with no identification ("the upstream library", "the shared config") is unresolved. Propose the candidate with its target marked unresolved and let the user supply it, rather than guessing.

@@ -145,13 +145,13 @@ When the comparison is ambiguous, include none. The two errors are not symmetric
 
 Merge the full issue identities from all three strategies into one deduplicated list. Preserve the order: branch-name issues first, then commit-message issues, then search-matched issues. Do not record the branch prefix: the closing keyword comes from the nature of the change, not from how the branch is named.
 
-Collect **follow-up issues** directly from the session, independently of the detected closing list. These are issues filed for concerns this branch set aside, for example by the `create-deferred-issues` skill; a follow-up belongs in this collection even when none of the strategies above found it. Preserve each full issue URL, host, repository, number, title, and destination visibility. Resolve missing identity or visibility with an explicit `gh issue view <issue-url> --json url,title` or `gh repo view <host/owner/name> --json visibility`; never infer the host or repository from a number alone.
+Collect **follow-up issues** directly from the session, independently of the detected closing list. These are issues filed for concerns this branch set aside, for example by the `create-deferred-issues` skill; a follow-up belongs in this collection even when none of the strategies above found it. Preserve each full issue URL, host, repository, number, title, and destination visibility. Resolve missing identity with `gh issue view <issue-url> --json url,title` and accept it only when the returned URL contains `/issues/`; discard `/pull/` results. Resolve visibility with `gh repo view <host/owner/name> --json visibility`; never infer the host or repository from a number alone.
 
 Normalize detected candidates to full identities, then remove only identities that exactly match a follow-up. In the strategies above, treat a repository-qualified reference or full URL as one unit; never extract its `#N` suffix as a local candidate. `other/repo#7` must not remove or introduce the PR repository's `#7`. Define the closing list as the remaining identities that exactly match `<pr-target>`; commit messages in step 4 may use closing keywords for this list only. Keep other connected identities separately for `Related issues`, and every follow-up separately for step 7. If follow-up removal leaves no closing candidate and Strategy 3 was skipped, run Strategy 3 now, then normalize its results to full identities and remove exact follow-up matches again before rebuilding the closing list.
 
 Before creating commits, resolve the PR target's visibility and the visibility of each connected issue outside `<pr-target>`. If the PR target is public, only confirmed-public related issues may appear in generated commit references or public PR text; omit confirmed-private or internal identities. If any required visibility is unknown, stop before creating commits or the PR until it can be verified.
 
-Before creating commits or the PR, inspect the full messages of existing branch commits with `git log --format='%H%n%B' <base-branch>..HEAD` for closing keywords naming a follow-up. Compare full identities, resolving bare references in the PR target. If a match exists, stop and report the conflicting commit and issue so the user can decide how to handle it. Moving a reference into Follow-ups cannot neutralize a closing keyword already committed; never amend or rewrite history automatically.
+Before creating commits or the PR, inspect the full messages of existing branch commits with `git log --format='%H%n%B' <base-branch>..HEAD` for closing keywords naming a follow-up and for issue URLs or repository-qualified issue references. Compare full identities, resolving bare references in the PR target. If a closing keyword names a follow-up, stop and report the conflicting commit and issue so the user can decide how to handle it. If a public PR would expose a private or internal issue identity in existing commit history, stop before pushing or creating the PR and report the commit and issue. Never amend or rewrite history automatically.
 
 ### 3. Validate Preconditions
 
@@ -232,14 +232,10 @@ Run the `lint-and-fix` skill to catch lint and formatting errors before pushing.
 Push the branch to the remote:
 
 ```bash
-git push
+git push --set-upstream origin HEAD
 ```
 
-If the branch has no upstream, use:
-
-```bash
-git push -u origin HEAD
-```
+Push explicitly to the resolved origin and set the branch's tracking remote to origin, even when another upstream is configured.
 
 If the push is rejected because the remote has diverged, report the error and stop. Never force push.
 

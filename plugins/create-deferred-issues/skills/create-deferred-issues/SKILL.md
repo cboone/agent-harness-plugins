@@ -146,7 +146,7 @@ Collect the issues this branch addresses from all available sources, even when a
 
 1. The PR's `closingIssuesReferences`, when a PR was found. Preserve each reference's full URL and derive its host, repository, and number from that URL; a closing reference can name an issue in another repository. If a reference lacks its repository identity, resolve it from the PR's explicit closing text or report it as unavailable rather than assigning its number to origin.
 1. Explicit source references in the PR body, including `Related to #N`. Bare references belong to `<pr-repo>`; preserve repository-qualified references and full URLs.
-1. Issue numbers in the branch name (`feature/42-login`, `fix/issue-42`) and `#N` references in the branch's commit messages. When a PR exists, bare numbers belong to `<pr-repo>`; otherwise they belong to the default target. Preserve an explicit repository or issue URL when one is supplied:
+1. Issue numbers in the branch name (`feature/42-login`, `fix/issue-42`) and `#N` references in the branch's commit messages. When a PR exists, bare numbers belong to `<pr-repo>`; otherwise they belong to the default target only when one was established. With no PR and no default target, leave bare numbers unresolved and do not query an issue repository for them. Preserve an explicit repository or issue URL when one is supplied:
 
    ```bash
    git log --no-merges --format=%B <base-sha>..HEAD
@@ -243,7 +243,7 @@ Apply these in order.
 
 1. **Drop what is not a deferral**, per the exclusions in `./references/deferral-signals.md`: concerns resolved later in the work, concerns the user declined, hedges with no concrete action, and the rest. When unsure whether something is a deferral at all, leave it out.
 1. **Merge duplicates across sources.** A concern the session set aside and a `TODO` about the same thing become one candidate that carries both sources.
-1. **Resolve each target.** Use the default target unless the deferral names another repository: an `owner/name`, a URL, or a repository the session already identified by name. Never guess from a vague description; propose the candidate with its target marked unresolved. Require the user to supply a destination only when neither a default nor an explicit target exists. Check each distinct resolved target:
+1. **Resolve each target.** Use the default target unless the deferral names another repository: an `owner/name`, a `HOST/OWNER/NAME` selector, a GitHub repository URL, or a repository the session already identified by name. For a URL, extract its host and owner/repository path, form a host-qualified selector, and use that selector for metadata, issue-list, and filing calls; never pass the full URL as `--repo`. Never guess from a vague description; propose the candidate with its target marked unresolved. Require the user to supply a destination only when neither a default nor an explicit target exists. Check each distinct resolved target:
 
    ```bash
    gh repo view <target> --json nameWithOwner,visibility,isArchived,hasIssuesEnabled
