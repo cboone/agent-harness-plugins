@@ -58,7 +58,7 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 | Config file(s)                                                                    | Tool               | Fix command                                              | Check command                                                  |
 | --------------------------------------------------------------------------------- | ------------------ | -------------------------------------------------------- | -------------------------------------------------------------- |
 | `eslint.config.*`, `.eslintrc.*`                                                  | eslint             | `npx eslint --fix .`                                     | `npx eslint .`                                                 |
-| `.prettierrc*`, `prettier.config.*`                                               | prettier           | `npx prettier --write .`                                 | `npx prettier --check .`                                       |
+| `.prettierrc*`, `prettier.config.*`, or a `prettier` key in `package.json`        | prettier           | `npx prettier --write .`                                 | `npx prettier --check .`                                       |
 | `.markdownlint.json`, `.markdownlint.jsonc`, `.markdownlint.yaml`                 | markdownlint       | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
 | `.markdownlint-cli2.*`                                                            | markdownlint-cli2  | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
 | Shell scripts in project                                                          | shellcheck         | _(no auto-fix)_                                          | `shellcheck <files>`                                           |
@@ -73,7 +73,7 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 #### Detection Steps
 
 1. **Config files**: Use Glob to check for each config pattern in the project root.
-1. **Package.json scripts**: Read `package.json` and check for `lint`, `format`, or `check` scripts.
+1. **Package.json configuration and scripts**: Read `package.json` for a `prettier` configuration key as well as `lint`, `format`, or `check` scripts. A `prettier` key identifies existing Prettier configuration even when no wrapper script exists.
 1. **Shell scripts**: Use Glob to find `**/*.sh`, `bin/*`, `scripts/*`, `script/*`. If shell scripts are present, shellcheck and shfmt apply.
 1. **Project lint scripts**: Check for `bin/lint`, `scripts/lint`, `script/lint`.
 1. **CI workflow scripts**: Scan CI workflow files for repo-specific linting and validation steps not already covered by other detection methods. See [CI Workflow Detection](#ci-workflow-detection) below.
