@@ -107,7 +107,7 @@ House template: title, description paragraph verbatim, `**Type:** Skill`, `**Tri
 
 ### Catalog registration
 
-- `.claude-plugin/marketplace.json`: the new entry between `commit` and `create-issue`, `"category": "issues-and-worktrees"`, `"source": "./plugins/create-deferred-issues"`. `metadata.version` from `bin/compute-catalog-state` at each commit: `catalog-M71-m103-p156-n58` after registration, `catalog-M71-m104-p152-n58` after the `pr` bump, each confirmed from the script rather than assumed.
+- `.claude-plugin/marketplace.json`: the new entry between `commit` and `create-issue`, `"category": "issues-and-worktrees"`, `"source": "./plugins/create-deferred-issues"`. `metadata.version` from `bin/compute-catalog-state` is `catalog-M71-m104-p153-n58` after the current branch merges `main`, confirmed from the script rather than assumed.
 - Root `README.md`: a `Create Deferred Issues` row between `Address Issue in Worktree` and `Create Issue`; the `gh` bullet becomes `_Address Issue, Create Deferred Issues, Create Issue, Suggest Next Issue:_`. `## Contents` untouched.
 - `bin/build-codex-marketplace` and `bin/build-opencode-mirror` at each commit that changes plugin content or the catalog, results committed.
 

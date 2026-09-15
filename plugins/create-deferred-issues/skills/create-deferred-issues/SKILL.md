@@ -71,18 +71,20 @@ git remote get-url origin
 git remote -v
 ```
 
-Resolve the origin URL to a repository:
+Normalize the origin URL before using it. Never pass, log, store, or report a raw remote URL: an HTTPS remote can contain userinfo such as a token. Strip any userinfo, retain only its host and repository path, and use that sanitized identity in every later command and report. For an SSH remote, retain the path and inspect the SSH host token without printing the raw URL.
+
+Resolve the sanitized origin identity to a repository:
 
 ```bash
 gh repo view <origin-url> --json nameWithOwner,url,visibility,isArchived,isFork,parent,hasIssuesEnabled,defaultBranchRef
 ```
 
 - Its `nameWithOwner` is the **default target** for filing. Select the repository explicitly for every `gh` call: use `--repo` where supported, the repository argument for `gh repo view`, an object's full URL when reading it, or the repository path and host for `gh api`. Source reads use the source repository; filing and tracker searches use the candidate's destination. Without an explicit repository, `gh` prefers a remote named `upstream`, so inside a fork a bare `gh issue create` files on the project that was forked.
-- If `gh` cannot resolve the URL (an SSH host alias such as `git@work-github:owner/name.git`, for example), take `owner/name` from the URL's path and run `gh repo view` with that instead. On a host other than `github.com`, write targets as `HOST/OWNER/NAME` for `--repo`, and pass `--hostname HOST` to `gh api`.
+- If the SSH host token is an alias, resolve its configured hostname with `ssh -G <alias>` before calling `gh`. Use the resulting hostname only when it is a GitHub host for which `gh` is authenticated. If the alias cannot be resolved, or its configured host cannot be authenticated, do not fall back to bare `owner/name`, because that silently selects GitHub.com. Mark origin unavailable and require a user-provided host-qualified selector for filing. On a host other than `github.com`, write targets as `HOST/OWNER/NAME` for `--repo`, and pass `--hostname HOST` to `gh api`.
 - Keep the host and `owner/name` as separate fields for every repository. In the examples, `<target>`, `<pr-repo>`, and `<source-repo>` are host-qualified selectors where needed; `<pr-owner>/<pr-name>` and `<source-owner>/<source-name>` are the host-free API paths. Never put a hostname after `repos/`.
 - `parent` has no `nameWithOwner` field. Build the parent's name from `.parent.owner.login` and `.parent.name`.
 - For the rest of this workflow, a **third-party repository** is any target whose owner differs from origin's owner, plus the fork's parent and the repository an `upstream` remote points at, whoever owns them.
-- With no `origin`, or outside a git repository, there is no default target. Scan only the session, retaining destinations explicitly named there. Only candidates without a named destination start unresolved. Without an ownership baseline, require approval by number unless the session establishes that the target belongs to the user.
+- Without an `origin`, there is no default target. In a Git checkout, still scan uncommitted changes, eligible untracked text files, and local plan and review documents; skip only the committed branch range whose base cannot be established. Outside a Git checkout, scan the session and documents it names. In either case retain destinations explicitly named there, and start only candidates without a named destination unresolved. Without an ownership baseline, require approval by number unless the session establishes that the target belongs to the user.
 
 Treat every substituted value as shell data. Use an argument-list tool when available; otherwise single-quote each literal argument and encode an embedded apostrophe as `'\''` within that argument. For example, `--search 'runner'\''s timeout'` passes one literal phrase. Backticks and `$()` in source text must never become shell substitutions. Do not use `eval` or interpolate source text into double-quoted shell source.
 
@@ -92,12 +94,12 @@ Treat every substituted value as shell data. Use an argument-list tool when avai
 git branch --show-current
 ```
 
-If the output is empty (a detached HEAD) or names the default branch, there is no branch work to read. Scan only the session and the documents it names, and say so in the proposal.
+If the output is empty (a detached HEAD) or names the default branch, there is no committed branch range to read. Still scan uncommitted changes, eligible untracked text files, and local documents, and say that the committed range was unavailable in the proposal.
 
 #### Pull request
 
 ```bash
-gh pr list --repo <target> --head <branch> --state open --json number,url,title,body,baseRefName,headRepository,closingIssuesReferences
+gh pr list --repo <target> --head <branch> --state open --limit 100 --json number,url,title,body,baseRefName,headRepository,closingIssuesReferences
 ```
 
 Keep only a PR whose `headRepository.nameWithOwner` and host match origin's full repository identity, since `--head` matches the branch name in any fork, including another repository owned by the same account. If the head repository is unavailable, report that source as unresolved rather than guessing. Empty output means there is no open PR. Do not use `gh pr view <branch>` for this: it also returns a merged PR from an earlier branch that had the same name.
@@ -135,7 +137,7 @@ Collect the issues this branch addresses from all available sources, even when a
 
 1. The PR's `closingIssuesReferences`, when a PR was found. Preserve each reference's full URL and derive its host, repository, and number from that URL; a closing reference can name an issue in another repository. If a reference lacks its repository identity, resolve it from the PR's explicit closing text or report it as unavailable rather than assigning its number to origin.
 1. Explicit source references in the PR body, including `Related to #N`. Bare references belong to `<pr-repo>`; preserve repository-qualified references and full URLs.
-1. Issue numbers in the branch name (`feature/42-login`, `fix/issue-42`) and `#N` references in the branch's commit messages. Bare numbers belong to the default target; preserve an explicit repository or issue URL when one is supplied:
+1. Issue numbers in the branch name (`feature/42-login`, `fix/issue-42`) and `#N` references in the branch's commit messages. When a PR exists, bare numbers belong to `<pr-repo>`; otherwise they belong to the default target. Preserve an explicit repository or issue URL when one is supplied:
 
    ```bash
    git log --no-merges --format=%B <base-sha>..HEAD
@@ -261,7 +263,7 @@ Apply these in order.
 
      Judge each hit on its distinctive words, the ones naming the specific subject, and not on generic tracker vocabulary such as `add`, `fix`, `update`, or `skill`. A clear match moves the candidate to **Already tracked**. An ambiguous one stays in the batch with a "possible duplicate of #N" note, and the user decides.
 
-   When no source timeline link can exist (there is no source PR or issue, or disclosure rules omit its reference), use the destination issue's published title and description as the duplicate record. Search using those publishable words and also inspect the destination's newest issues directly with `gh issue list --repo <target> --state all --limit 20 --json number,title,body,url`, since the search index can lag. Read plausible matches before deciding. Retain every filed URL in the local report and session. Say in the proposal that no source timeline link is available, and disclose any failed duplicate lookup before approval; do not claim timeline-based duplicate coverage for these items.
+   When no source timeline link can exist (there is no source PR or issue, the destination is on another host, or disclosure rules omit its reference), use the destination issue's published title and description as the duplicate record. Search using those publishable words and also inspect the destination's newest issues directly with `gh issue list --repo <target> --state all --limit 20 --json number,title,body,url`, since the search index can lag. Read plausible matches before deciding. Retain every filed URL in the local report and session. Say in the proposal that no source timeline link is available, and disclose any failed duplicate lookup before approval; do not claim timeline-based duplicate coverage for these items.
 
 A long batch is a sign that the filter is too loose. Apply it again before proposing.
 
@@ -309,7 +311,7 @@ Rules for the proposal and for reading the reply:
 - **Ask in plain text**, not through a structured multiple-choice question. A batch can exceed the options such a question allows, and edits need free text.
 - **Numbers are fixed** for the whole exchange. After `drop 2`, item 3 is still item 3.
 - **An unambiguous approval of the whole batch** ("yes", "file them") counts as `file all`.
-- **Apply drops and edits.** Before filing, revalidate any item whose destination or substantive concern changed, including an unresolved target the user supplied. Repeat step 3's target eligibility and third-party classification, destination label lookup and selection, duplicate checks for the revised concern, and source-to-destination visibility check. Source identities stay attached to their original repositories; never replace them with the new destination. Reuse source timeline reads only when the sources are unchanged, and match them against the revised concern.
+- **Apply drops and edits.** Before filing, revalidate any item whose destination, concern, title, proposed body, label selection, or other publishable content changed, including an unresolved target the user supplied. Repeat the affected step 3 checks: target eligibility and third-party classification, destination label lookup and selection, duplicate checks, source-to-destination visibility, and the status-label exclusion. Source identities stay attached to their original repositories; never replace them with the new destination. Reuse source timeline reads only when the sources are unchanged, and match them against the revised concern. Treat the revalidated item as a new proposal: it needs approval again whenever any check changes the content, labels, disclosure, or duplicate status.
 - **Honor approval of the revised item.** If the reply only edits, or is unclear about which items it approves, present the checked revision and ask again. An edit with approval may proceed only if revalidation leaves the approved content and destination intact. If checks add a duplicate warning, change labels or source disclosure, or otherwise materially change the item, re-present it for approval. An already-tracked or unfileable item is reported in the corresponding list rather than filed. Preserve its number if the user revises it again. Reapply approval by number to third-party destinations; whole-batch approval does not cover them.
 - **`none`** files nothing. Report `none approved`.
 

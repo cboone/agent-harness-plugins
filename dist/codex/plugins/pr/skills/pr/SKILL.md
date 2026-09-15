@@ -83,7 +83,7 @@ git rev-parse --abbrev-ref --symbolic-full-name @{u} 2> /dev/null || echo "no up
 
 ### 2. Detect Connected Issues
 
-Search for GitHub issues that this branch addresses. Combine results from the strategies below, deduplicate by issue number, and record the final list for use in the commit message (step 4) and PR body (step 7).
+Search for GitHub issues that this branch addresses. Record each candidate as a full identity: host, owner, repository, and number. Treat a repository-qualified reference or full URL as one unit before extracting bare `#N` references. Verify bare candidates with the explicit PR-target selector, and deduplicate full identities rather than issue numbers. Use the final list for the commit message (step 4) and PR body (step 7).
 
 #### Strategy 1 -- Issue numbers in the branch name
 
@@ -97,17 +97,17 @@ Extract the current branch name. Look for issue numbers in patterns like:
 For each candidate number, verify it refers to an existing issue:
 
 ```bash
-gh issue view NUMBER --json number,title,state --jq '.number' 2> /dev/null
+gh issue view NUMBER --repo <pr-target> --json number,title,state --jq '.number' 2> /dev/null
 ```
 
 Only include it if the command succeeds (the issue exists).
 
 #### Strategy 2 -- Issue references in commit messages
 
-Scan the `git log <base-branch>..HEAD` output (already gathered in step 1) for `#N` references. Collect all unique issue numbers. For each, verify it refers to an actual issue:
+Scan the `git log <base-branch>..HEAD` output (already gathered in step 1). Parse repository-qualified references and full issue URLs first, retaining their complete identity. Then collect bare `#N` references that are not part of those forms. For each bare candidate, verify it against the PR target:
 
 ```bash
-gh issue view NUMBER --json number,title,state --jq '.number' 2> /dev/null
+gh issue view NUMBER --repo <pr-target> --json number,title,state --jq '.number' 2> /dev/null
 ```
 
 #### Strategy 3 -- GitHub issue search by branch slug
@@ -136,7 +136,7 @@ When the comparison is ambiguous, include none. The two errors are not symmetric
 
 #### Combine results
 
-Merge issue numbers from all three strategies into a single deduplicated list. Preserve the order: branch-name issues first, then commit-message issues, then search-matched issues. Do not record the branch prefix: the closing keyword comes from the nature of the change, not from how the branch is named.
+Merge the full issue identities from all three strategies into one deduplicated list. Preserve the order: branch-name issues first, then commit-message issues, then search-matched issues. Do not record the branch prefix: the closing keyword comes from the nature of the change, not from how the branch is named.
 
 Collect **follow-up issues** directly from the session, independently of the detected closing list. These are issues filed for concerns this branch set aside, for example by the `create-deferred-issues` skill; a follow-up belongs in this collection even when none of the strategies above found it. Preserve each full issue URL, host, repository, number, title, and destination visibility. Resolve missing identity or visibility with an explicit `gh issue view <issue-url> --json url,title` or `gh repo view <host/owner/name> --json visibility`; never infer the host or repository from a number alone.
 
@@ -461,4 +461,5 @@ When committing plan files, use a message like `docs: add plan for <meaningful-d
 - **No gh CLI**: Report that the `gh` CLI is required and link to https://cli.github.com/.
 - **Secret files detected**: Warn the user and exclude them from staging. Continue with the remaining files.
 - **Issue detection fails**: If `gh issue view` or `gh issue list` commands fail (network error, auth issue), skip issue detection silently and proceed without the `## Closes` section. Issue detection is best-effort and must never block PR creation.
+- **Follow-up identity or visibility cannot be verified**: Record the follow-up as unknown, omit it from both `## Closes` and `## Follow-ups`, and report the omission to the user. Do not treat this as ordinary best-effort issue detection, because the safety rule depends on knowing whether the reference may be published or closed.
 - **Detected issue is already closed**: Still include it in the `## Closes` section. GitHub handles this gracefully (the keyword is a no-op for already-closed issues, and it still creates a visible cross-reference).

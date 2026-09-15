@@ -6,7 +6,7 @@ How to file the approved batch and post the summary comment. The per-issue seque
 
 - **Imperative and specific**: "Run shfmt in the lint workflow", not "shfmt".
 - **Under 70 characters**, with no trailing period, and no type prefix unless the target repository's existing issue titles use one.
-- **Single-quoted** on the command line, always. Inside a double-quoted shell argument, a backtick, `$(...)`, or `$NAME` is expanded, so a title that names code in backticks would run that code and file a different title. Single quotes pass all of them through unchanged. Rephrase a title that would need an apostrophe rather than escaping it.
+- **Pass the approved title unchanged as one literal argument.** Inside a double-quoted shell argument, a backtick, `$(...)`, or `$NAME` is expanded, so a title that names code in backticks would run that code and file a different title. Single quotes pass all of them through unchanged; encode any embedded apostrophe as `'\''`, as for labels. Do not rephrase a title after approval. If a disclosure or other validation change requires different title text, return the revised item for approval.
 - **Publishable in the destination**: use the title approved after the visibility check. A public title must not identify a private or unknown source, service, repository, or finding through details omitted from its body.
 
 ## Body
