@@ -66,7 +66,6 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
       "Bash(git --no-pager diff *)",
       "Bash(gh issue view *)",
       "Bash(gh pr view *)",
-      "Bash(gh pr diff *)",
       "Bash(gh repo view *)"
     ]
   }
