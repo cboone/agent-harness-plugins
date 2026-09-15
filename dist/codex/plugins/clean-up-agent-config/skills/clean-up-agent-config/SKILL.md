@@ -26,24 +26,6 @@ The goal is a hub-and-spoke model: shared instructions in one canonical file, to
 
 ### Instruction files (the hub)
 
-Pick **one** scoped-instructions layout per repo. The two layouts below are mutually exclusive alternatives, not files that should coexist.
-
-**Flat layout** (convenient for one or two scoped files):
-
-```text
-repo/
-+-- AGENTS.md                              # Single source of truth (all tools)
-+-- CLAUDE.md -> AGENTS.md                 # Symlink for Claude Code
-+-- .claude/
-|   +-- rules/
-|       +-- *.md                           # Claude-specific rules (auto-loaded)
-+-- .github/
-    +-- copilot-instructions.md            # Copilot repo-wide review rules
-    +-- *.instructions.md                  # Copilot path-scoped rules
-```
-
-**Nested layout** (scales better when there are many scoped files, or to keep `.github/` uncluttered):
-
 ```text
 repo/
 +-- AGENTS.md                              # Single source of truth (all tools)
@@ -57,7 +39,7 @@ repo/
         +-- *.instructions.md              # Copilot path-scoped rules
 ```
 
-Both are read by Copilot and both honor `applyTo` frontmatter. Choose based on how many scoped files the repo needs and stick with that choice; do not mix the two.
+Copilot reads path-scoped files only within or below `.github/instructions/`, and subdirectories there are allowed. A `*.instructions.md` placed directly under `.github/` is never read: its `applyTo` frontmatter is not evaluated and none of its rules reach Copilot.
 
 ### Config files (the spokes)
 
@@ -80,7 +62,7 @@ repo/
 | Directory-scoped conventions                   | Subdirectory `AGENTS.md` (Codex, Copilot) and `CLAUDE.md` or symlink per subdir (Claude) | Scoped by directory; Claude requires `CLAUDE.md` in each scoped directory |
 | Claude-specific (MCP hints, subagent patterns) | `.claude/rules/*.md`                                                                     | Auto-loaded, Claude-only                                                  |
 | Copilot code review rules                      | `.github/copilot-instructions.md`                                                        | Copilot code review agent                                                 |
-| File-type-specific review rules                | `.github/*.instructions.md` or `.github/instructions/*.instructions.md`                  | Copilot's `applyTo` glob scoping                                          |
+| File-type-specific review rules                | `.github/instructions/*.instructions.md`                                                 | Copilot's `applyTo` glob scoping                                          |
 | Team permissions and hooks                     | `.claude/settings.json`                                                                  | Committed, shared with team                                               |
 | Personal model/telemetry/privacy               | `.claude/settings.local.json`                                                            | Gitignored, personal                                                      |
 | MCP servers (team)                             | `.mcp.json` at project root                                                              | Committed, shared                                                         |
@@ -104,8 +86,8 @@ Scan the repository for all known agent-related files.
 - `.claude/CLAUDE.md`
 - `.claude/rules/*.md`
 - `.github/copilot-instructions.md`
-- `.github/*.instructions.md` (flat path-scoped layout)
-- `.github/instructions/*.instructions.md` (nested path-scoped layout)
+- `.github/instructions/**/*.instructions.md` (path-scoped instructions)
+- `.github/*.instructions.md` (misplaced path-scoped instructions, which Copilot does not read)
 - `.github/prompts/*.prompt.md`
 - `.github/chatmodes/*.chatmode.md`
 - `.github/agents/*.agent.md`
@@ -164,14 +146,14 @@ Note: Claude Code writes to `settings.local.json` by default when users change s
 
 #### Scoped Copilot instructions analysis
 
-For each `.github/*.instructions.md` and `.github/instructions/*.instructions.md` file, check:
+For each `*.instructions.md` file under `.github/`, check:
 
 1. **Frontmatter present.** Each scoped file MUST start with YAML frontmatter containing `applyTo: "<glob>"`. Flag files missing the frontmatter or the `applyTo` key.
 1. **Top-level heading matches scope.** Each scoped file should have a top-level heading naming what it scopes to (e.g., `# Lean PR Review Instructions`, `# TypeScript Frontend Instructions`). Flag files with no top-level heading or one that does not reflect the scope.
 1. **Glob is non-empty.** Run a glob match against the repo (e.g., via `git ls-files` or a Glob tool call) to confirm the `applyTo` pattern matches at least one tracked file. Flag scoped files whose glob matches nothing as **stale**: either the code they targeted has been removed, the glob was mistyped, or the file was copied from another repo without being updated.
 1. **No silent overlap with sibling scoped files.** Compare each `applyTo` glob to every other scoped file's `applyTo`. If two scoped files match the same file (e.g., one has `**/*.ts` and another has `**/*.tsx`, but a `.ts` file matches the first only -- fine; but two files both globbing `**/*.lean` is a conflict). Flag overlaps where two files would both apply to the same source file without a clear separation of concerns.
 1. **Cross-references with the general file.** The general `.github/copilot-instructions.md` should mention the scoped files (so a contributor reading the general file discovers them); each scoped file should reference the general file for repo-wide context. Flag missing cross-references.
-1. **Layout consistency.** If the repo uses both `.github/*.instructions.md` (flat) and `.github/instructions/*.instructions.md` (nested), flag the inconsistency and propose consolidating on one layout.
+1. **Location.** Copilot reads scoped files only within or below `.github/instructions/`. Flag any `*.instructions.md` directly under `.github/` as **unread**, since none of its rules have been reaching Copilot. Propose moving it with `git mv` into `.github/instructions/` and updating every link to it, including the cross-references in the general file.
 
 ### Phase 3: Propose Changes
 
@@ -294,12 +276,10 @@ For full project conventions, see AGENTS.md in the repository root.
 
 ## Scoped Instructions
 
-Flat-layout example -- path-scoped Copilot instructions live alongside this file:
+Path-scoped Copilot instructions live under `.github/instructions/`:
 
-- [`lean.instructions.md`](lean.instructions.md) -- Lean source files (`**/*.lean`).
-- [`ts.instructions.md`](ts.instructions.md) -- TypeScript files (`**/*.ts`, `**/*.tsx`).
-
-If the repo uses the nested layout under `.github/instructions/`, link to `instructions/lean.instructions.md` and `instructions/ts.instructions.md` instead.
+- [`lean.instructions.md`](instructions/lean.instructions.md) -- Lean source files (`**/*.lean`).
+- [`ts.instructions.md`](instructions/ts.instructions.md) -- TypeScript files (`**/*.ts`, `**/*.tsx`).
 
 ## PR Review
 
@@ -309,7 +289,7 @@ Each is an intentional project convention:
 - **Convention name**: Brief explanation of why this is intentional.
 ```
 
-**Cross-reference the scoped files.** When the repo has any `.github/*.instructions.md` (or `.github/instructions/*.instructions.md`) files, list them in a `## Scoped Instructions` section in the general file with their `applyTo` glob noted. This makes the scoped surface discoverable to humans reading the general file. Omit the section if there are no scoped files.
+**Cross-reference the scoped files.** When the repo has any `.github/instructions/*.instructions.md` files, list them in a `## Scoped Instructions` section in the general file with their `applyTo` glob noted. This makes the scoped surface discoverable to humans reading the general file. Omit the section if there are no scoped files.
 
 **Keep concise.** GitHub recommends keeping instruction files short and putting the most important rules first. Start with a focused set of review rules and add more iteratively.
 
@@ -322,16 +302,11 @@ Each is an intentional project convention:
 
 **Section heading.** Use `## PR Review` as the heading. Some repos use `## PR Review Checklist (CRITICAL)` or `## Code Review` -- all are acceptable. The key requirement is that PR review rules appear early in the file.
 
-#### 4g. Scoped Copilot instructions (`.github/*.instructions.md`)
+#### 4g. Scoped Copilot instructions (`.github/instructions/*.instructions.md`)
 
 Create path-scoped instruction files only when the project structure warrants them. Use Copilot's `applyTo` glob for file-type or directory scoping.
 
-**Layout.** Two locations are valid; pick one per repo:
-
-- **Flat:** `.github/<scope>.instructions.md` -- convenient for one or two scoped files.
-- **Nested:** `.github/instructions/<scope>.instructions.md` -- scales better when there are several scoped files.
-
-If both layouts are present, consolidate on one. Do not mix.
+**Location.** Write each scoped file to `.github/instructions/<scope>.instructions.md`. Subdirectories of `.github/instructions/` are allowed for grouping. Never place one directly under `.github/`: Copilot does not read it there, so its rules silently never apply. Move any that already sit there.
 
 **Required structure.** Every scoped file MUST have:
 
@@ -346,7 +321,7 @@ applyTo: "**/*.lean"
 
 # Lean PR Review Instructions
 
-For repo-wide conventions, see [`copilot-instructions.md`](copilot-instructions.md) and `AGENTS.md` at the repository root.
+For repo-wide conventions, see [`copilot-instructions.md`](../copilot-instructions.md) and `AGENTS.md` at the repository root.
 
 ## PR Review
 
@@ -365,10 +340,10 @@ For repo-wide conventions, see [`copilot-instructions.md`](copilot-instructions.
 - Test files with different conventions than source files
 - Generated code directories that should be treated differently
 
-**Use `excludeAgent`** to control whether instructions apply to the coding agent, code review, or both:
+**Use `excludeAgent`** to control whether instructions apply to Copilot cloud agent, Copilot code review, or both. It accepts exactly two values:
 
-- `excludeAgent: copilot-code-review` -- coding agent only
-- `excludeAgent: copilot-coding-agent` -- code review only
+- `excludeAgent: "code-review"` -- cloud agent only
+- `excludeAgent: "cloud-agent"` -- code review only
 - Omit `excludeAgent` -- both
 
 **Validate the glob.** Before committing a scoped file, confirm the `applyTo` pattern matches at least one tracked file in the repo. A glob that matches nothing is a strong signal the file is stale (pasted from another repo, target code removed, or pattern mistyped). Either fix the glob, delete the file, or document why the file is being kept ahead of code that does not yet exist.
@@ -423,11 +398,11 @@ Add glob patterns for subdirectory AGENTS.md files in monorepos:
 1. **No duplicated instructions** across AGENTS.md, copilot-instructions.md, and .claude/rules/
 
 1. **Scoped Copilot instructions are well-formed:**
-   - Each `.github/*.instructions.md` (or `.github/instructions/*.instructions.md`) starts with `applyTo` frontmatter and a top-level heading naming the scope
+   - Each `.github/instructions/*.instructions.md` starts with `applyTo` frontmatter and a top-level heading naming the scope
    - Each scoped file's `applyTo` glob matches at least one tracked file (no stale files)
    - No two scoped files silently overlap on the same source file
    - The general `copilot-instructions.md` lists the scoped files; each scoped file references the general file
-   - Only one layout in use (flat or nested, not both)
+   - No `*.instructions.md` sits directly under `.github/`, where Copilot does not read it
 
 1. **Settings split is clean:**
    - settings.json has no personal/local settings
@@ -469,10 +444,10 @@ Add glob patterns for subdirectory AGENTS.md files in monorepos:
 
 ### GitHub Copilot
 
-- **Two agents:** The coding agent (CLI, VS Code) and the code review agent (PR reviews) both read .github/ files but can be targeted separately with `excludeAgent`.
+- **Two agents:** On GitHub.com, Copilot cloud agent and Copilot code review both read path-scoped instructions, and `excludeAgent` targets them separately.
 - **Path-scoping:** `.github/instructions/*.instructions.md` with `applyTo` globs offers file-type-level granularity that no other tool matches. This is Copilot's strongest unique feature.
 - **Also reads:** AGENTS.md (root + subdirs) and CLAUDE.md (root) as fallbacks. If both AGENTS.md and copilot-instructions.md exist, Copilot uses both.
-- **Keep short:** Copilot's review may not read full instruction files. Put critical rules first. Keep each file under ~1,000 lines.
+- **Keep short:** GitHub advises about 1,000 lines at most per instruction file, since shorter files are more likely to be fully processed. Put critical rules first.
 - **Zero root footprint:** Everything lives in .github/, which already exists in most GitHub repos.
 
 ### OpenCode
@@ -497,5 +472,5 @@ Add glob patterns for subdirectory AGENTS.md files in monorepos:
 - **Scoped Copilot file with no `applyTo` frontmatter:** Add the frontmatter using a glob inferred from the file's name and content (e.g., `lean.instructions.md` -- `applyTo: "**/*.lean"`). If the intended scope is unclear, ask.
 - **Scoped Copilot file whose `applyTo` glob matches no tracked files:** Flag as stale. Either fix the glob, delete the file, or (rarely) keep it with a comment explaining that it covers code that does not yet exist.
 - **Two scoped files with overlapping globs:** Ask whether the overlap is intentional. If not, narrow one of the globs or merge the files. If intentional, document the relationship in the narrower file's prose.
-- **Mixed flat (`.github/*.instructions.md`) and nested (`.github/instructions/*.instructions.md`) layouts:** Propose consolidating on one. Default to the layout already used by the majority of the scoped files; if tied, prefer flat for one or two files, nested for three or more.
+- **Scoped Copilot file directly under `.github/`:** Copilot has never read it, so report that its rules have not been applied. Propose moving it with `git mv` into `.github/instructions/`, then update links to it, including the general file's `## Scoped Instructions` section and the file's own back-link, which becomes `../copilot-instructions.md`.
 - **General `copilot-instructions.md` does not reference the scoped files (or vice versa):** Add the cross-references. The general file gets a `## Scoped Instructions` section listing each scoped file with its `applyTo` glob; each scoped file gets a one-line pointer to the general file and `AGENTS.md`.

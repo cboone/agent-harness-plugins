@@ -302,14 +302,14 @@ Copilot also reads `AGENTS.md` (at root and subdirectories) and `CLAUDE.md` at r
 ```markdown
 ---
 applyTo: "src/**/*.tsx"
-excludeAgent: copilot-code-review
+excludeAgent: "code-review"
 ---
 
 Use functional React components with hooks.
 Always use TypeScript strict mode.
 ```
 
-The `applyTo` glob determines which files trigger these instructions. The optional `excludeAgent` field can exclude instructions from specific Copilot features (e.g., code review vs. coding agent).
+The `applyTo` glob determines which files trigger these instructions; separate multiple globs with commas. The optional `excludeAgent` field hides the file from one Copilot feature and accepts exactly `"code-review"` or `"cloud-agent"`, so the example above applies to Copilot cloud agent only. The file must sit within or below `.github/instructions/`; Copilot does not read one placed directly under `.github/`.
 
 #### Notable unique features
 
