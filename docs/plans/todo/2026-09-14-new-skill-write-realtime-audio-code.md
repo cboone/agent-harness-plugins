@@ -2,249 +2,320 @@
 
 Issue: [#343](https://github.com/cboone/agent-harness-plugins/issues/343)
 
-## Context
+## Context and outcome
 
-Nothing in the catalog covers code reachable from an audio callback, and it is the domain where a reviewer without audio background most reliably gets things wrong: an allocation, a lock, or a relaxed atomic compiles, passes every test, and ships as an intermittent click that does not reproduce under a debugger. fosforo (ADR 0010) and springer (ADR 0007) both carry the same non-negotiable:
+The catalog needs a domain guide for code reachable from a real-time audio callback. Allocation, blocking, invalid shared-memory access, and event loss can survive ordinary functional tests and cause missed deadlines, corrupted output, or notes that remain active. The guide must help an agent establish the callback's constraints, choose a valid communication protocol, preserve host compatibility, and collect evidence appropriate to each guarantee.
 
-> Nothing reachable from the audio thread allocates, locks, or makes a syscall.
+Create `write-realtime-audio-code` as a `code-quality` plugin with a concise entry point, one essential checklist, and exactly seven comprehensive references. Follow the progressive-disclosure structure of `write-go-code`, while keeping the rules independent of the implementation language. Zig, C++, Rust, and Faust examples illustrate verified mechanisms; they do not imply identical memory models, tool support, or host APIs.
 
-The outcome is a `code-quality` plugin, `write-realtime-audio-code`, shaped like `write-go-code` (a short SKILL.md, an essential checklist, seven comprehensive references) but a domain guide rather than a language one, like `write-formalization-roadmap`. The rules follow from the audio thread's scheduling contract, so they hold for Zig, C++, Rust, and Faust alike.
+fosforo and springer supply useful audio-specific cases. Their designs and recorded experiments are evidence with explicit scope, not substitutes for language specifications or host contracts. In particular, springer's core and scheduler are planned, and fosforo's plain-sample history buffer acknowledges a lapping data race. Neither becomes a portable implementation recommendation merely because it appears in an ADR.
 
-## Approach
+## Scope and design constraints
 
-**Language-neutral rules, with fosforo and springer as cited worked examples.** Each rule is stated generally; the measured instance comes from the source projects (Zig, CLAP, macOS); and where a mechanism differs by toolchain, the reference names the Zig, C++, Rust, and Faust forms, but only ones verified during planning.
+- Cover writing, reviewing, and planning real-time audio code: callback reachability, cross-thread communication, memory ordering, verification, plugin identities and state, events and timing, numerical behavior, and separation from host APIs.
+- Keep DSP mathematics, unrelated server concurrency, GUI toolkit conventions, and exclusively offline processing outside the automatic trigger. Shared code remains in scope when a real-time callback reaches it. Host-specific offline rendering modes require checking the host contract.
+- Retain the issue's seven-reference structure. Put the thread map and numerical behavior in `audio-thread-rules.md`, and smoothing in `events-and-timing.md`.
+- Make the skill usable by itself. Explain the minimum positive-control method locally and recommend the `plant-defects` skill when available. Link its deeper material through canonical source URLs, not repository-relative paths that fail in an installed plugin.
+- Update the `plant-defects` README's companion status and its related-skills sentence when the audio plugin lands. This is a documentation patch, currently `1.0.0` to `1.0.1`.
+- Bundle no executable helpers. Tool-assisted verification in a downstream project is conditional on that project's language, target, and available tools; it is not a hard dependency of loading this guide. No new Scrut suite or `SCRUT_ENV` entry is needed solely for prose.
+- Keep examples small and explicit about assumptions. Do not provide hand-translated custom lock-free implementations for every language. Prefer a demonstrated protocol or an appropriate existing primitive after checking its actual guarantees.
 
-**Apply `plant-defects`; do not duplicate it.** `plant-defects` already carries fosforo's TSan material in generic form: the non-atomic-memory rule, the `Pending` 2x2, and the five-ordering result in `instrument-blindness.md`, control-first judging in `ordered-assertions.md`, and canary mechanics in `source-canaries.md`. `verifying-concurrency.md` states what is specific to audio seams and links to those files by repository path for the method.
+## Evidence and source policy
 
-**Keep the issue's seven-file structure exactly.** The issue's "other traps" fold into the existing files instead of becoming an eighth: the thread map, denormals, and NaN go in `audio-thread-rules.md`, and parameter smoothing goes in `events-and-timing.md`.
+The review checked the following source revisions and documentation on 2026-09-15. These are the baseline for authoring, not instructions to upgrade a downstream project's dependencies. Preserve immutable links for project examples and record toolchain, target, and configuration whenever reporting a measurement. Recheck a living reference before making a version-sensitive claim from it.
 
-**One scope addition:** the `plant-defects` README says a real-time audio companion is "filed and not yet built". That becomes false when this lands, so that README and the related-plugins line in its SKILL.md get updated, with a patch bump to `1.0.1`.
+| Evidence                                                                                                                                                                                             | Kind and revision                                                                      | What it establishes                                                                                                                          | Limit of the evidence                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| [fosforo source][fosforo-source], especially ADRs 0010 and 0016 and the ring, gate, state, and GPU interface modules                                                                                 | Source and historical experiment records at `1317e2b752f7f7d44db9bb7745200ca6e59dde83` | Concrete ownership choices, teardown code, signature assertions, and recorded Zig sanitizer controls                                         | The history ring explicitly excludes a lapping race from its sanitizer experiment; recorded CI outcomes were not rerun for this review      |
+| [springer source][springer-source], ADRs 0005, 0007, 0008, and 0013 and its build plan                                                                                                               | Design decisions at `e76419dc022cb1690d22c779cfee39dd5f53565d`                         | Planned core boundary, allocation policy, stable parameter IDs, and scheduler behavior                                                       | The core, import assertion, scheduler, and Node-generated reference vectors are not implemented at this revision                            |
+| [CLAP headers][clap-source]                                                                                                                                                                          | API contract at tag `1.2.9`, commit `cd94482ba5941ae410809b6fbaed3bc851044270`         | Thread annotations, parameter notifications, event addressing and lifetimes, processing bounds, and stream semantics                         | Other plugin APIs need their own contracts; a wrapper extension is not part of core CLAP                                                    |
+| [clap-wrapper AUv2 extension][wrapper-auv2]                                                                                                                                                          | Wrapper-specific contract at `1cca996e96f29ab2be7ae9f8cfe532bbc92e1dd6`                | `clap.plugin-auv2-param-ordering/0`, historical ordering, and factory identity overrides                                                     | Check both the header and implementation before publishing an ordering-array example; do not assume all wrapper versions behave identically |
+| [C++ data-race rules][cpp-races], [Rust atomics][rust-atomics], [Rust orderings][rust-ordering], and [Zig 0.16 documentation][zig-docs]                                                              | Language and library contracts                                                         | Legal memory accesses, ordering semantics, and language-specific arithmetic                                                                  | Hardware behavior or a clean sanitizer run cannot replace these contracts                                                                   |
+| [C/C++ processor mappings][atomic-mappings]                                                                                                                                                          | Architecture mapping reference                                                         | AArch64 relaxed and acquire/release loads and stores can use different instructions; x86 ordering also requires operation-specific treatment | Inspect generated code for the actual compiler and target; instruction selection is not a correctness proof                                 |
+| [ThreadSanitizer][tsan], [Clang 20.1.0 RealtimeSanitizer][rtsan-20], [current RealtimeSanitizer][rtsan], [Function Effect Analysis][function-effects], and [Rust standalone integration][rtsan-rust] | Instrument documentation                                                               | What is instrumented, how checks are enabled, and which guarantees remain outside the instrument                                             | Support depends on compiler, backend, platform, build flags, and reached execution paths                                                    |
+| [Faust options][faust-options] and [foreign functions][faust-foreign]                                                                                                                                | Compiler documentation                                                                 | Flush-to-zero options and the boundary where generated DSP calls foreign code                                                                | The DSP language does not certify allocation or blocking behavior in foreign callees or host glue                                           |
+| [VST3 parameters and automation][vst-params] and [Audio Unit parameter addresses][au-address]                                                                                                        | Host-format documentation                                                              | Format-specific parameter identity and automation concepts                                                                                   | Keep AUv2 parameter IDs, AUv3 addresses, CLAP IDs, and VST3 IDs distinct                                                                    |
+| [Ross Bencina's article][bencina] and [Timur Doumler's article][doumler]                                                                                                                             | Author explanations, 2011-07-05 and 2020-04-14 respectively                            | Deadline reasoning, blocking hazards, and alternatives to audio-thread locking                                                               | Cite Doumler's verified article as an article; do not label it an ADC 2020 talk                                                             |
 
-No bundled scripts, so rule 18, `tests/scrut/`, and the `Makefile`/CI `SCRUT_ENV` lists are untouched.
+Each comprehensive reference gets a short source section. Distinguish three kinds of claim in prose: a language/API requirement, a project design choice, and an observed result under a named configuration. Use a compact evidence table only where multiple experiments need comparison.
 
-## Facts verified during planning
+Historical counts such as 139 passing tests, 4096 windows, 256 contended rounds, the `Pending` 2-by-2 experiment, and two flagged gate mutations out of five may be retained only with the exact [fosforo ADR][fosforo-tsan-adr] or run link, the tested mutation, and the relevant compiler/target. Describe them as recorded outcomes. They do not establish current test counts or general behavior across languages.
 
-These back claims the skill makes beyond what the issue states:
+## Files and content
 
-- **CLAP headers** (`free-audio/clap` 1.2.9, via the local `clap-host` clone): `clap_param_info.id` is "Stable parameter identifier, it must never change". `clap_event_header.time` is a "sample offset within the buffer for this event". Input events arrive sorted in sample order, and the plugin must push output events sorted. `state.save`/`load` are `[main-thread]`, `params.flush` is `[active ? audio-thread : main-thread]`, and `host.request_flush` is `[thread-safe,!audio-thread]`. `reset` is `[audio-thread & active]`, and `steady_time` may jump backward across it. `thread-check.h`: the audio thread is _symbolic_. A host may run `process` on different OS threads over time, including the main thread, and guarantees only that no two run at once. A MIDI CC mapped to a parameter should set `CLAP_EVENT_DONT_RECORD`.
-- **Thread Sanitizer runtime** (`libtsan/tsan_interface_atomic.cpp`, shipped with Zig 0.16): a relaxed load or store is a plain access with no happens-before edge; an acquire load joins the sync object's clock; a release store publishes into it; `seq_cst` counts as both. The runtime distinguishes orderings for every language, but whether a language's orderings _reach_ it intact is a compiler and standard-library property, measured here only for Zig 0.16 via LLVM. The skill says so and requires a positive control rather than generalizing.
-- **Zig 0.16 `AtomicOrder`**: `unordered`, `monotonic`, `acquire`, `release`, `acq_rel`, `seq_cst`. C++: `memory_order_relaxed`, `_acquire`, `_release`, `_seq_cst`. Rust: `Relaxed`, `Acquire`, `Release`, `SeqCst`.
-- **RealtimeSanitizer**: Clang 20+, `-fsanitize=realtime` plus `[[clang::nonblocking]]` on the real-time entry point, with the compile-time Function Effect Analysis sharing that attribute, and `rtsan-standalone` for Rust. It is dynamic, so it sees only paths a run reaches.
-- **Faust**: `-ftz <n>` / `--flush-to-zero` adds flush-to-zero code to recursive signals (0 none, 1 fabs-based, 2 mask-based), for targets such as WebAssembly with no hardware mode.
-- **Sources**: Ross Bencina, "Real-time audio programming 101: time waits for nothing" (5 July 2011). Timur Doumler, "Using Locks in Real-Time Audio Processing, Safely" (ADC 2020). Dave Rowland and Fabian Renn-Giles, "Real-time 101", parts I and II (ADC 2019).
+### Plugin manifest and discovery description
 
-## Files
+Create `plugins/write-realtime-audio-code/.claude-plugin/plugin.json` with alphabetized fields matching the sibling style-guide plugins: version `1.0.0`, `"skills": "./skills"`, MIT license, author, homepage, and repository. Suggested keywords: `audio`, `clap`, `dsp`, `lock-free`, `real-time`.
 
-### `plugins/write-realtime-audio-code/.claude-plugin/plugin.json`
+Use this canonical catalog description, 176 characters:
 
-Alphabetized fields matching `write-go-code`: `"version": "1.0.0"`, `"skills": "./skills"`, MIT, author, homepage, repository. Keywords: `["audio", "clap", "dsp", "lock-free", "real-time"]`.
+> Write and review real-time audio code: callback safety, bounded cross-thread communication, memory ordering, sample-accurate events, and compatible plugin parameters and state.
 
-Canonical description, 154 characters, which fits the root README's existing 154-character column so Prettier does not repad the table:
+Repeat it verbatim in the marketplace entry, the plugin README's opening paragraph, and the root README row. README table width is a formatting consequence, not a description constraint. The Codex mirror builder replaces the skill's discovery description with the catalog description, so this shorter text must independently convey useful triggers.
 
-> Style guide for code reachable from an audio callback: the audio thread's contract, lock-free seams and memory orderings, and identifiers a host persists.
+### Skill entry point
 
-The same string appears verbatim in the marketplace entry, as the first paragraph of the plugin README, and in the root README row.
+Create `plugins/write-realtime-audio-code/skills/write-realtime-audio-code/SKILL.md` with `name` and a folded `description` below 1024 characters. The description must qualify concurrency triggers with their audio context so that an unrelated queue or atomic operation does not activate the skill. Include both implementation and review/planning use cases.
 
-### `skills/write-realtime-audio-code/SKILL.md`
+The body should route work rather than reproduce all seven references:
 
-Frontmatter holds `name` and a folded `description`, which must stay under 1024 characters and follows the house shape: what the skill is; "Use whenever real-time audio code is the subject of the work, not only when editing: (1) writing or reviewing a process or render callback or anything it calls, (2) passing data between the audio thread and a GUI, render, or main thread, (3) choosing or reviewing an atomic ordering, ring buffer, or other lock-free structure, (4) verifying a cross-thread ordering or the no-allocation rule with a sanitizer or source canary, (5) defining parameters, plugin identifiers, or saved state for CLAP, VST3, or Audio Units, (6) handling sample-accurate events, parameter smoothing, denormals, or NaN in recursive state, (7) keeping a DSP or musical core free of host types"; then a `Covers ...` sentence.
+- **When to use.** Callback code and its callees; audio-to-UI communication; audio-related atomics and lifetimes; real-time verification; CLAP, VST3, and Audio Unit parameters and state; event timing and smoothing; numerical behavior; and host-independent cores. Include the exclusions from the scope section.
+- **Core constraints.** A callback needs bounded work under the host's contract. Inspect transitive callees and destruction, prove that shared-memory access is legal, state both publication and storage-reuse rules, preserve released identities and parameter meanings, and distinguish race detection from deadline evidence.
+- **Read the callback contract first.** Identify the host API, lifecycle phase, symbolic thread, negotiated block limits, and whether processing is real-time or an explicitly supported offline mode. Do not require a new thread annotation on every function in a downstream repository; record it at entry points and relevant boundaries using that repository's conventions.
+- **Workflow.** Map the changed call graph and lifecycle; read the essential checklist; identify the applicable comprehensive references; write down protocol assumptions and failure policies; validate the changed behavior with an instrument and control suited to the claim; report what remains unverified.
+- **Reference navigation.** Link the checklist as `./references/essential/checklist.md` and each comprehensive file using its full `./references/comprehensive/...` path. Give each link a one-sentence selection rule.
+- **Related skill.** Recommend `plant-defects` for deeper control design when it is installed. The local verification reference must still explain how to judge a subject, positive control, and inconclusive result without loading that companion.
 
-Body sections:
+Keep the entry point's bibliography short. Place detailed project source links beside the claims in the comprehensive references.
 
-- **Title and the core rule** as a block quote, attributed to both projects' ADRs.
-- **When to Use.** The positive signals above. Do not use it for offline rendering with no deadline (unless that code is shared with the real-time path, which makes it reachable), for filter design or DSP mathematics, or for GUI toolkit conventions.
-- **Core Principles**, seven:
-  1. A missed deadline is an audible click, not a slow frame, so ask about worst case, not average.
-  1. "Reachable" means the call graph, not the function body.
-  1. What must happen and cannot happen on the audio thread is handed across a seam.
-  1. Say which ordering, and why, at both ends of every atomic pair.
-  1. A single-threaded suite cannot see an ordering, so verify by instrument with a control that must fail.
-  1. What a host persists is permanent.
-  1. Keep the core pure, and enforce the seam with a compile error rather than a review.
-- **Know Which Thread Calls You.** A compact table of CLAP's thread annotations, the symbolic-audio-thread trap, and the convention of doc-commenting every function with its thread (`[audio-thread & active & processing]`, `[main-thread]`, `[render-thread]`, `[thread-safe]`), as fosforo does throughout.
-- **Workflow**, five steps:
-  1. Map the thread for each function touched.
-  1. Review against the checklist.
-  1. For a cross-thread mechanism, read `lock-free-buffers.md` and `memory-ordering.md`.
-  1. Verify with `verifying-concurrency.md`, using the `plant-defects` skill for the method.
-  1. For parameters, identifiers, or state, read `parameters-and-state.md` before the first release, since the mistakes there cannot be undone afterward.
-- **Reference Navigation**, spelled `./references/...` so rule 19 resolves each path.
-- **Sources**: fosforo ADRs 0005, 0010, 0016, and 0018, `src/dsp/ring.zig`, `src/clap/gate.zig`, `src/ring_race.zig`, `src/gate_race.zig`, `src/canary.zig`, `src/clap/state.zig`, `src/gpu/iface.zig`, `docs/notes/concurrency-and-canaries.md`, and the build plan's identifiers section. springer ADRs 0005, 0007, 0008, and 0013 and its build plan. Then the CLAP spec (`clap/ext/thread-check.h` in particular), compiler-rt's `tsan_interface_atomic.cpp`, Clang's RealtimeSanitizer docs, Bencina, Doumler, and Rowland and Renn-Giles.
+### Essential checklist
 
-### `references/essential/checklist.md`
+Create `references/essential/checklist.md` under the skill directory. Use one-line checkboxes grouped into the callback contract, thread/lifecycle map, ownership and communication, memory ordering, verification, parameters and identifiers, state, events and timing, numerics, and core boundaries.
 
-Checkbox rules in `write-go-code`'s format, a line each with a short example where one clarifies. Sections: the audio thread's contract, the thread map, crossing the seam, memory orderings, verification, parameters and identifiers, state, events and timing, numerics (denormals and NaN), and the pure core.
+Make items questions an agent can answer from the change. Examples: Is every queue-drain loop bounded? Who may reuse this buffer, and after which acknowledgment? Can a full queue discard a termination event? Does a failed state load preserve the current instance? Was the instrument's positive control observed to fail? Link to the corresponding comprehensive section when the answer requires a protocol or API explanation.
 
-### `references/comprehensive/audio-thread-rules.md`
+### Callback rules in `audio-thread-rules.md`
 
-- **Why.** Deadline arithmetic, a runtime fact: 128 samples at 48 kHz is about 2.67 ms per block. Memory safety is not real-time safety; the failure is intermittent, load-dependent, and invisible under a debugger (springer ADR 0007).
-- **The forbidden list, including where each item hides**: allocation and free (container growth, string formatting, type-erased callables, exceptions, the last owner of a reference-counted pointer freeing on the audio thread), locks (priority inversion; an uncontended `unlock` can still wake a waiter through the kernel), syscalls, file I/O, logging and `printf`, `dynamic_cast`, page faults on first touch of fresh memory, lazy thread-local initialization in a `dlopen`-ed library on glibc, garbage collection, unbounded loops, and retry loops that spin on another thread's progress.
-- **Enforce it structurally rather than by discipline.** Two measured shapes: hand the audio path no allocator at all, so "does this allocate" is a question about the call graph (springer); or hand it a fixed-buffer allocator sized at `activate` and assert it is untouched after `process` (fosforo). The C++ and Rust counterparts are RealtimeSanitizer, Function Effect Analysis, and `rtsan-standalone`, each needing a planted allocation as its positive control.
-- **Refuse, do not assert, at the host trust boundary.** A `frames_count` above the negotiated maximum returns an error, because an assertion is compiled out of exactly the build where a misbehaving host does damage.
-- **Capacity bounded by construction and derived in one place.** springer's 256 scheduler entries, with a defined overflow policy: drop the newest, because the oldest pending events include note-offs, and dropping one leaves a note hanging.
-- **Diagnostics set state; a thread that may block reports it later** (`request_callback` then `on_main_thread`, then `clap.log`). `[thread-safe]` is not real-time safe.
-- **Know which thread calls you.** CLAP's symbolic threads, in detail. A thread-local "am I the audio thread" check is wrong because the audio thread is not one OS thread. `[audio-thread]` functions never run concurrently with each other, but `[thread-safe]` ones may. The render thread touches the GPU only and marshals UI mutations to the main thread. Resize is the one seam that cannot be fully lock-free: a pending flag serviced at the top of the render tick (fosforo ADR 0010). Stopping a callback source does not promise no callback is in flight, which is why fosforo has its teardown gate.
-- **Denormals.** They arise in feedback paths decaying toward zero: IIR filters, reverb and delay feedback, release tails. Set flush-to-zero and denormals-are-zero (MXCSR on x86, FPCR on AArch64) at the top of each callback with a scoped guard that restores the previous state, because the control register is per thread and the host owns the thread. Where no hardware mode exists, use a software fix such as Faust's `-ftz 2`. The penalty is microarchitecture-specific, so measure rather than assume a target is immune. Fast-math can fold away the check that would detect a denormal.
-- **NaN and infinity in recursive state are permanent.** `NaN * decay` is NaN forever (fosforo's accumulation texture; the same holds for filter state), so sanitize at the boundary, and do it in code fast-math cannot fold away.
+Place this file and the following six comprehensive references under the skill's `references/comprehensive/` directory.
 
-### `references/comprehensive/lock-free-buffers.md`
+- **Budget and reachability.** Explain that 128 frames at 48 kHz span about 2.67 ms, but this is not a promise that one plugin owns the entire interval. Other graph nodes, scheduling, and safety margin consume the host's budget. Inspect the complete callback call graph, including error paths, destructors, and third-party calls.
+- **Allocation and blocking hazards.** Cover allocation/free, container growth, formatting and logging, reference-counted final destruction, exception paths, lazy initialization, page faults from untouched storage, blocking I/O, mutex operations, and loops dependent on another thread's progress. Treat undocumented library costs, RTTI operations, thread-local initialization, and host calls as things to verify for the selected implementation. A successful `try_lock` does not make a standard mutex's eventual unlock safe for a callback.
+- **Structural controls and their limits.** Separate prohibiting general allocation from permitting explicitly budgeted preallocated scratch storage. springer's allocator-free core is a design decision. fosforo's fixed-buffer allocator check observes that allocator's state, not all allocations reachable from `process`; inspect setup location and allocation/free behavior before describing what the assertion proves. Preallocate and, where relevant, touch memory before processing begins. Do not claim that omitting an allocator argument prevents hidden global allocation.
+- **Host boundaries.** Validate buffer sizes, event headers, indices, and any host-supplied values used to access memory. Follow the API's failure response instead of relying solely on assertions. CLAP activation negotiates positive minimum and maximum frame counts; test zero-size processing only for an API that permits it. Keep validation itself bounded.
+- **Thread and lifecycle map.** Explain CLAP's symbolic audio thread and per-instance serialization. The host may use different OS threads for successive audio callbacks, including the main thread; this is not a single permanently identified OS thread. Distinguish a cached thread ID from a scoped thread-local marker set on each callback entry. `[thread-safe]` permits concurrency but does not establish a real-time bound. Main-thread execution does not imply that audio processing is stopped.
+- **Diagnostics and host services.** Record bounded diagnostic state and use an allowed host notification or later non-real-time consumer to report it. Check the specific host callback's thread annotation before invoking it. Coalesce repeated notifications and define overflow behavior for diagnostic queues.
+- **Graphics and teardown.** Attribute fosforo's render/main-thread arrangement and resize protocol to that project. Other APIs may impose different thread requirements. Stopping a callback source and waiting for in-flight users are separate lifecycle operations; there is no universal claim that resizing requires a mutex or cannot use ownership transfer.
+- **Numerical behavior.** Explain subnormal values in recursive tails, non-finite inputs, and overflow that can create non-finite internal state even from finite inputs. Define a bounded recovery policy for affected state. For hardware flush-to-zero modes, describe x86 MXCSR FTZ/DAZ and AArch64 FPCR controls separately, with a scoped save/restore on host-owned threads. Verify architecture and compiler behavior. Faust's `-ftz` modes are a documented software option, not a universal choice of mode 2. Test the intended checks under the project's floating-point flags; fast-math assumptions can invalidate non-finite checks.
 
-- **Decide by what the consumer needs.** Choose "every item exactly once" (a queue: notes, parameter changes, anything that must not be lost) or "the most recent window" (a history ring: a scope, a meter, an analyzer). A queue for a display adds backpressure nobody asked for; a ring for events loses messages. fosforo ADR 0010 is the worked case.
-- **Say how many producers and consumers, and enforce it.** A single producer may read its own cursor unsynchronized, which is exactly why a second producer silently loses samples. A many-to-one structure needs compare-and-swap and has failure modes, ABA among them, that a single-producer, single-consumer design never meets.
-- **State the protocol completely in the module header.** Write, then publish once per block with release semantics; acquire-load, then read a trailing window.
-- **Cursor mechanics.** The cursor is a monotonic 64-bit sample count rather than a wrapped index, so a reader can tell "lapped twice" from "not moved". Capacity is a power of two, so the wrap is a mask, and the container reports the rounded capacity. Storage is allocated and zeroed once at `activate` and never resized. The container is total: a write longer than the capacity keeps its newest samples and still advances by the whole input.
-- **Torn reads.** Either prevent them (a seqlock retry) or tolerate and report them. A display tolerates: `coherent(snapshot, now, capacity, copied)` says whether the producer overran the window during the copy, and the consumer skips the frame instead of retrying on the audio thread's heels. The margin argument is a capacity of about a second against windows of tens of milliseconds.
-- **Clear through the write path**, never a memset behind a published cursor, which a coherence check is structurally unable to report (fosforo's `Ring.clear`).
-- **Event scheduling across blocks.** A fixed-capacity ring of events with absolute sample timestamps (springer's scheduler).
-- **The one-word message** (fosforo's `Pending`). A whole update packed into one atomic integer is the cheapest seam there is, and it stops being that the moment a field rides alongside it.
-- **Handing over objects.** Build a complete immutable replacement off the audio thread, swap it in, and retire the old one to a thread that may free it. Never free on the audio thread (Doumler, ADC 2020).
-- **Lifecycle seams.** fosforo's teardown gate: one word carries both the closed flag and the count of ticks inside it, so entering claims a place and learns whether the gate is open in a single atomic operation. `close` spins, bounded by one tick. A mutex here would reintroduce a check-then-enter window, and its contended path is an unbounded wait the host's main thread could enter.
+Include one callback audit example with a safe setup/process/retire division, and a thread table tied to the pinned CLAP headers. Its validation cases should cover an oversized block, hidden allocation or final destruction, thread migration between calls, a recursive tail near zero, and recovery from non-finite state.
 
-### `references/comprehensive/memory-ordering.md`
+### Ownership and communication in `lock-free-buffers.md`
 
-- **The orderings across Zig, C++, and Rust**, as a table using the verified names.
-- **The pairing.** A release store publishes; an acquire load observes everything published before it. State the pair in a comment at both sites, naming what catches a weakening (fosforo's `ring.zig` pattern).
-- **What relaxed is for.** The sole writer reading its own value, which is the one relaxed load in `Ring.write`. Anywhere else it buys nothing at runtime: on x86-64 and AArch64, loads and stores compile to the same instructions whatever the ordering (disassemble to confirm on your target), so relaxing changes only what a sanitizer or optimizer is told. It is a weakening that compiles and passes every single-threaded test.
-- **`seq_cst` is both acquire and release** in the sanitizer's model and is C++'s default. It is not wrong, but it hides intent, so choose deliberately.
-- **Check-then-act across two atomic operations is a race** even when each is ordered correctly. Do both in one operation: the teardown gate's `fetchAdd`, then its flag test, undone on refusal.
-- **Statement order matters too.** Two individually correct statements in the wrong order are a defect counting cannot see: fosforo's renderer `Mailbox` and its `canary.statedBefore` check.
-- **Publish once per block**, not once per sample.
-- **The language caveat** from the verified facts above.
+Start with a protocol contract: producer and consumer counts, ownership of each storage location, publication and reuse points, capacity, maximum work per callback, overflow policy, reclamation thread, and behavior when another participant stops progressing. Distinguish FIFO delivery of admitted events from latest-value or latest-snapshot semantics. A finite queue cannot promise lossless delivery under unlimited offered load.
 
-### `references/comprehensive/verifying-concurrency.md`
+- **Legal snapshots.** A display may skip frames, but concurrent reads and writes of ordinary sample storage still require a valid memory-access protocol. A second cursor check or naive seqlock retry does not repair a C++ or Rust data race after the copy. A larger buffer changes the chance of overlap, not the language rule. A cursor published once per block also omits writes already in progress toward the next publication.
+- **Safe alternatives.** Work through a bounded SPSC transfer of owned blocks, or an ownership-protected double/triple buffer, including the consumer-to-producer acknowledgment that permits reuse. If showing an atomic-payload snapshot, prove its separate coherence and ordering rules and check atomic support on the target. Do not present a conventional plain-payload seqlock as portable C++ or Rust code.
+- **Project case study.** Use [fosforo's ring][fosforo-ring] to explain its stated scope and acknowledged lapping limitation. Its post-copy `coherent` predicate is a display decision under its assumptions; it is not a general proof that sample accesses were race-free. Do not recommend excluding a production-reachable race merely to obtain a clean test.
+- **Progress and atomics.** Lock-free means system-wide progress, not a per-callback step bound. Available Rust standard atomic types are lock-free, but an operation may still use a retrying implementation. For C++ and other APIs, check width, alignment, and target-specific lock-free guarantees. A bounded callback also needs bounded batch sizes; draining until a concurrent producer leaves a queue empty can be unbounded.
+- **Participants and counters.** Enforce the supported producer/consumer topology. A sole writer can use a relaxed load for its own cursor when the protocol allows it, but another participant still needs the required synchronization. Multiple producers do not universally imply one prescribed compare-and-swap design, and SPSC alone does not prove immunity to counter wrap, stale handles, or ABA-related assumptions. State counter-wrap and capacity arithmetic explicitly.
+- **Capacity and clearing.** Derive capacity from the product's requirements and report any rounding. Define writes larger than capacity and reset/clear behavior for the selected abstraction. Overwriting published payload behind a cursor is unsafe without ownership or atomic access; routing a clear through the normal writer is useful only if that protocol itself is legal.
+- **Event admission and overflow.** Reserve termination/cancellation capacity when admitting work that creates a future obligation, or reject the operation before emitting its start. Dropping the newest event can discard a note-off for an active note. Treat springer's 256-entry scheduler as a planned product choice, not a universal size or proven overload policy. Handle downstream `try_push` failure and retain obligations through the next valid output opportunity without an unbounded retry loop.
+- **One-word updates.** A self-contained atomic value can use relaxed access if no other payload or ordering requirement depends on it. Decide whether overwriting an unread value is allowed. Adding an ordinary side field changes the protocol and its proof obligations.
+- **Immutable replacements.** Prepare objects off the audio thread, transfer ownership at a defined boundary, and reclaim after all readers release them. An atomic pointer swap alone is insufficient. Define how acknowledgment is communicated, bound the retirement backlog, and reject or defer new updates off the audio thread when reclamation capacity is exhausted. Reference counting can perform final destruction on the callback and must be audited.
+- **Lifecycle gates.** Explain [fosforo's combined closed flag and active count][fosforo-gate] as a particular protocol. Its `close` loop spins and yields on the closing thread; completion depends on participants being scheduled and exiting. It has no elapsed-time bound of one tick and is not an audio-thread operation. A mutex does not inherently create a check-then-enter race; correctness depends on what its critical section protects. Establish a valid state transition and the permitted waiting thread separately.
 
-This is `plant-defects` applied to memory ordering. Each section links the matching `plugins/plant-defects/skills/plant-defects/references/*.md` for the general method.
+Include a complete ownership-state diagram or table for one recommended transfer protocol, with both synchronization directions and its full-capacity behavior. Validate reuse, overwrite attempts, a stalled consumer, bounded draining, and retirement-queue exhaustion.
 
-- **A single-threaded suite cannot observe an ordering.** All 139 of `ring.zig`'s tests passed with the release store weakened to `.monotonic`.
-- **A stress test measures the hardware and the day, not the code.** A weakened store's visibility window is nanoseconds, and drawing the trace cannot tell. With both halves weakened, the harness's own validation passed 4096 windows with none torn; only the sanitizer noticed.
-- **The Thread Sanitizer model.** It builds a happens-before graph and reports two threads reaching one address with no edge between them. Its verdict is a property of the code.
-- **The rule that decides whether an arm can exist:** TSan discriminates an ordering only where that ordering guards non-atomic memory. Ask "what plain memory does its release make safe to touch". Hence the payload harness (fosforo's `[]u64` standing in for the editor's fields), the 2x2 that proves a clean result is a fact about the subject's shape, and a source canary for one-word messages.
-- **Two arms, control first.** Judge the weakened arm before reading the subject, with a progress counter proving the threads met (`scripts/race-check`).
-- **Control-faithfulness hazards**, each measured:
-  - Thread creation is itself an edge, so write the payload after spawning.
-  - `join` is an edge, so write before joining.
-  - The rendezvous flag must stay relaxed on both sides, because a release-acquire pair there supplies the very edge under test.
-  - The instrument's own cost changes timing: fosforo's weakened control stopped contending until the holder was made to hold, after which both arms contended in all 256 rounds, 0.17% apart.
-  - The replica must differ from the real type in exactly one ordering.
-- **Plant in the real type, not only the replica.** Of five orderings planted in the gate, two flag, and the filing issue had named one of the three that do not. Planting also found a harness gap: a per-iteration `written()` acquire load made the harness blind to a weakened acquire in `read`.
-- **Bound the writer** so the tolerated torn path produces no real reports: at most `capacity - window` samples over the whole run. A ratio does not work, because a descheduled reader breaks any ratio.
-- **State what is and is not verified**: the non-lapping path only, with this compiler, on this target.
-- **Toolchain traps that pass silently.**
-  - Zig 0.16's self-hosted x86-64 backend links the TSan runtime and emits no instrumentation (`use_llvm = true` fixes it).
-  - A `-fsanitize-thread` binary on `aarch64-macos` segfaults before `main`, so the check runs on Linux CI.
-  - The module under test must depend on nothing platform-bound, and so must the build script, because dependency build functions run at configure time.
-  - The general rule: confirm instrumentation by disassembly rather than by the flags you passed.
-- **Source canaries** as the faster guard on the development machine: a text assertion that proves nothing about behavior. Pin every atomic operation in a guarded file and count all of them.
-- **The no-allocation rule's instruments**: RealtimeSanitizer and its positive control, and the structural Zig shapes. **Seam checks**: plant the forbidden import and confirm the build goes red (springer ADR 0005).
+### Memory semantics in `memory-ordering.md`
 
-### `references/comprehensive/parameters-and-state.md`
+Use a language-neutral explanation followed by this vocabulary table. `unordered` is a separate Zig ordering and must not be presented as another spelling of C++/Rust relaxed ordering.
 
-- **Stable ids, never index or name.** CLAP's `clap_id`, VST3's `ParamID`, and Audio Unit parameter ids. Assign each once, in an enum doc-commented as permanent; never reuse, renumber, or derive ids from position; number groups with gaps. Scripter is the cautionary tale: binding automation to index froze the parameter order (springer ADR 0008).
-- **Display order is separate from ids, and AUv2 ordering is a separate problem.** Logic presents parameters in reported order, so implement clap-wrapper's `clap.plugin-auv2-param-ordering` from the start. Under stable ids a deferred parameter costs nothing (springer ADR 0013).
-- **Checks**: a source canary over the id enum, plus a by-hand confirmation that an automation lane still binds after a rebuild.
-- **Identifiers in three tiers** (fosforo's build plan):
-  - Permanent: the CLAP `id`, the AU type, subtype, and manufacturer codes, and VST3 class ids.
-  - Sticky: the bundle identifier (signing and preferences).
-  - Free: the display name, and the manufacturer name (with its `Vendor: Product` shape caveat).
-  - Keep the table in the build plan and doc-comment each value at its declaration.
-  - A field that looks cosmetic can be identity: clap-wrapper derives the AU type from CLAP `features[0]`.
-  - Do not namespace identity per worktree; stamp build provenance into the version string, which no host persists (fosforo ADR 0018).
-- **Versioned state from the first release, even with nothing to persist** (fosforo `state.zig`):
-  - A magic number and a version, with explicit endianness.
-  - Growth by appending, with the reader tolerating trailing bytes.
-  - A version bump only when a field changes meaning or disappears, and a newer version refused cleanly rather than misread.
-  - A failed load leaves the instance unchanged.
-  - Save and load run on the main thread, so loaded values reach the audio thread across the seam.
-- **Plugin-initiated parameter changes**: an output parameter event plus `request_flush`. A MIDI CC mapped to a parameter sets `CLAP_EVENT_DONT_RECORD`.
+| Purpose                                              | Zig 0.16    | C++                    | Rust      |
+| ---------------------------------------------------- | ----------- | ---------------------- | --------- |
+| Atomic access without cross-location synchronization | `monotonic` | `memory_order_relaxed` | `Relaxed` |
+| Acquire                                              | `acquire`   | `memory_order_acquire` | `Acquire` |
+| Release                                              | `release`   | `memory_order_release` | `Release` |
+| Acquire and release on an eligible operation         | `acq_rel`   | `memory_order_acq_rel` | `AcqRel`  |
+| Sequential consistency                               | `seq_cst`   | `memory_order_seq_cst` | `SeqCst`  |
 
-### `references/comprehensive/events-and-timing.md`
+- **Publish and observe.** An acquire operation synchronizes with the relevant release when it observes the published value under the language's rules, including release sequences where applicable. Merely putting acquire and release somewhere in the program is insufficient. Identify the payload made visible, the observation that authorizes access, and the reverse edge needed before storage reuse.
+- **Valid relaxed use.** Independent counters, self-contained latest values, and some owner-local cursor reads may require atomicity without publishing other memory. Relaxed operations remain atomic. Do not describe them as ordinary non-atomic accesses, or claim the sole-writer cursor is their only valid use.
+- **Sequential consistency and operation kinds.** A sequentially consistent load has acquire semantics, a store has release semantics, and an RMW can have both, with the additional sequential-consistency constraints. Do not call every operation both acquire and release. Explain legal orderings for loads, stores, RMWs, and compare-exchange success/failure paths using the selected language's documentation.
+- **Hardware is evidence about implementation.** AArch64 commonly distinguishes relaxed `LDR`/`STR` from acquire `LDAR` and release `STLR`. x86 loads and stores also need separate treatment, including sequentially consistent stores. Use disassembly to check a specific compiler/target, never to argue that weakening the language contract is harmless.
+- **Atomic operations and multi-step invariants.** Correct individual orderings do not make an arbitrary check-then-act sequence indivisible. Explain which protocol transition needs a single RMW, ownership, or a larger synchronization mechanism; do not label every multi-operation algorithm incorrect. State what a failed or retried operation does to callback work bounds.
+- **Comments and optimization.** Comment the invariant and both participants' obligations, not just the chosen enum. Batch publication where semantics permit, while accounting for unpublished work. A source-order canary may guard a reviewed invariant, but cannot establish that invariant by itself.
 
-- **Events carry a sample offset within the block.** Split the block at each offset. Applying events at block boundaries quantizes them to the buffer size, which is invisible at a 64-sample development buffer and audible at the large buffers people mix at: 1024 samples at 48 kHz is about 21.3 ms of error. Test at the negotiated maximum block size with an event on the last frame.
-- **Output events must be pushed sorted.**
-- **Schedule across blocks with absolute sample timestamps.** A strummed chord's note-offs carry the same offsets as their note-ons, or the upper voice is released before it is struck and hangs.
-- **Note matching.** Prefer the host's `note_id` and fall back to channel and key when it is `-1`. The note-off path consults the voice table first, and `reset` and `deactivate` release everything.
-- **Transport and reset.** A beat-based gate is disabled while the transport is stopped, and a negative elapsed value means a loop jump. `reset` may move `steady_time` backward, so rebuild derived state rather than advancing it.
-- **Parameter smoothing.** An unsmoothed gain step is a discontinuity in the waveform, heard as a click. Ramp toward the target per sample, starting at the event's offset. Derive coefficients from the sample rate at `activate`. Snap rather than glide on `activate`, `reset`, and state load. Do not interpolate stepped or enumerated parameters; crossfade between their results instead.
-- **Take time from sample counts, not wall clocks**, and validate host-supplied values at the boundary.
+Include a valid relaxed counter, a payload publication example, and an SPSC reuse example. Review each against the language model before choosing an instrument; do not weaken orders simply because a sanitizer remains clean.
 
-### `references/comprehensive/the-pure-core-seam.md`
+### Verification in `verifying-concurrency.md`
 
-- **Three layers with the dependency arrow pointing one way** (springer ADR 0005). The core takes numbers and returns numbers; the engine knows sample offsets, note ids, and event ordering; only the host adapter names a host type.
-- **Enforce it with a compile error, in either of two forms.**
-  - An import assertion: nothing under the core may import the host bindings. springer has decided this in ADR 0005 but not yet built it.
-  - A signature assertion: every backend function's type is checked against the seam's own vocabulary, so a leaked Metal type stops compiling. fosforo's `src/gpu/iface.zig` does this.
-  - Counterparts elsewhere: a Rust core crate that does not depend on the plugin API crate, a C++ core library target built without the SDK's include path, and Faust, which is pure by construction and keeps its host glue separate.
-  - Plant the forbidden import to prove the check can fail.
-- **Why it pays.** The core is testable with no host, and a reference implementation becomes the strongest instrument available: springer runs its original Scripter script under Node to generate expected output vectors. Pure arithmetic, such as `coherent`, can be tested exactly instead of by racing threads.
-- **Load-bearing with one backend.** It costs almost nothing now; design for the port, and do not build the port (fosforo ADR 0005). Pass configuration as arguments rather than reading parameters from inside the core.
-- **Porting hazard: division semantics differ by language.** JavaScript's `Math.floor` floors while Zig's `/` truncates, so negative scale degrees need `@divFloor` and `@mod`, plus a canary for the negative case.
-- **Keep shared containers free of both producer and consumer.** `ring.zig` imports only `std`, which is what let it be built for Linux and raced there.
+Organize this reference by the claim being tested. Apply the general methods in [plant-defects][plant-defects-source] and its [instrument limits][plant-instruments], [ordered assertions][plant-assertions], and [source canaries][plant-canaries], with enough local explanation to work without that plugin installed.
 
-### `plugins/write-realtime-audio-code/README.md`
+| Claim                                     | Evidence to collect                                                                                                                   | What a passing result cannot establish                                                                      |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Legal shared-memory access                | Ownership argument, exercised concurrency cases, and an instrumented TSan subject with an observed failing control                    | All schedules, unexecuted paths, uninstrumented dependencies, or correctness of an all-atomic state machine |
+| Logical protocol and lifetime correctness | State-transition tests, adversarial schedules, capacity/reclamation cases, and a suitable model checker where warranted and available | Callback timing on the production target                                                                    |
+| Absence of prohibited callback operations | Structural audit, supported static effects checks, and RTSan with reached entry points and a planted prohibited operation             | Unreached paths or unsupported/uninstrumented boundaries                                                    |
+| Bounded callback work and deadline margin | Explicit operation/batch bounds and measurements of optimized production builds under representative load                             | Exhaustive behavior from averages, a sanitizer build, or a single stress run                                |
+| Compatibility and event semantics         | Serialized fixtures, automation/host checks, and deterministic event traces                                                           | Other host formats or old releases that were not exercised                                                  |
 
-The sibling template, in order: title; the description verbatim; `**Type:** Skill`; `**Trigger:** /write-realtime-audio-code (also activates automatically)`; Installation, pointing to `../../README.md#install`; What It Does; Usage; Examples; See Also, linking Plant Defects and All plugins. No Requirements section, since the skill runs no command.
+- **Positive controls first.** Build the intended subject and a deliberately defective arm, prove both reach the relevant operation and contend where required, and observe the expected failure of the defective arm before accepting the subject result. If the control stays clean, report the check as inconclusive. A faithful mutation changes the intended property without silently replacing the tested implementation.
+- **TSan scope.** TSan detects races on executed instrumented paths using synchronization information. It does not prove all-atomic message delivery, linearizability, safe reclamation, progress, or all schedules. An ordering mutation can expose a race when the ordering protects ordinary payload, but a clean all-atomic test does not validate the protocol. Use the `Pending` and gate records to illustrate that limitation, not to declare particular orderings universally necessary or unnecessary.
+- **Harness synchronization.** Account for happens-before edges introduced by thread creation, joins, barriers, progress counters, and rendezvous flags. A synchronization edge in the harness may mask the weakened edge under test. In the fosforo-style control, keep the rendezvous from publishing the payload independently, while still preventing races in the harness itself.
+- **Coverage restrictions.** A bounded non-lapping experiment can isolate publication behavior, but proves nothing about a reader being lapped in production. State the restriction and separately repair or exclude that production behavior through a valid ownership protocol. A producer/consumer speed ratio does not bound overlap if one participant is descheduled.
+- **Toolchain qualification.** Attribute the Zig 0.16 backend and macOS failures to the recorded fosforo configurations. Do not generalize those observations into a claim that upstream TSan does not support AArch64 Darwin. Confirm the selected backend emits instrumentation, the relevant dependencies are covered, and the positive control fails. Linking a runtime or passing a flag is insufficient.
+- **Source canaries.** Use textual assertions only as maintenance guards for reviewed source structure. Prefer checks tied to a specific invariant; an operation count or a pinned ordering does not prove correctness. Pair relevant canaries with behavioral evidence, and make their failure explanations identify the invariant requiring review.
+- **RealtimeSanitizer and static effects.** For a supported Clang configuration, use `-fsanitize=realtime` and `[[clang::nonblocking]]` on the entry point, then demonstrate detection of a reached prohibited operation. Distinguish upstream LLVM version 20 support from Apple's compiler version numbering. Function Effect Analysis has its own warning configuration, including `-Wfunction-effects`; document whether those diagnostics actually fail the project's check. For the verified Rust standalone integration, enabling instrumentation requires `RTSAN_ENABLE=1` as documented. Check target availability and build integration before prescribing commands.
+- **Independent execution contexts.** Keep the test subject and build configuration free of unnecessary platform-bound dependencies when a Linux sanitizer job needs to compile a shared module. Report the actual compiler, backend, optimization mode, target, instrumentation flags, tested paths, and observed subject/control outcomes.
+- **Deadline measurements.** Measure release builds separately from sanitizer runs. Include supported block sizes, sample rates, event density, maximum voices, numerical tails, and concurrent UI or loading activity relevant to the project. Record worst observed callback costs and missed-deadline counts with the configuration; do not turn a sample maximum into a mathematical bound.
 
-### Catalog registration
+Provide one publication-control walkthrough and one allocation-control walkthrough. If the control fails to detect the planted defect, report insufficient sensitivity instead of a successful check. Preserve historical experiment links without presenting their outcomes as freshly executed validation.
 
-- `.claude-plugin/marketplace.json`: a new entry between `write-pandoc-markdown` and `write-scrut-tests` with `"category": "code-quality"`. Recompute `metadata.version` with `bin/compute-catalog-state`. It is `catalog-M70-m103-p156-n57` now, and the expected end state after both plugin changes is `catalog-M71-m103-p157-n58`, to be confirmed from the script rather than assumed.
-- Root `README.md`: a `Write Real-Time Audio Code` row between `Write Lean Tests` and `Write Scrut Tests`. No External tools bullet. `## Contents` is left alone.
-- Run `bin/build-codex-marketplace` and `bin/build-opencode-mirror`, and commit both trees, including the new `dist/opencode/skills/` symlink.
+### Compatibility in `parameters-and-state.md`
 
-### `plant-defects` companion update (1.0.0 to 1.0.1)
+- **Parameter identity and meaning.** Assign permanent IDs explicitly and keep them independent of display name and enumeration position. Do not reuse released IDs. Preserve the meaning, range, normalization, and automation mapping attached to an ID, or define an explicit compatible migration. Explain CLAP IDs, VST3 `ParamID` and normalized values, AUv2 IDs, and AUv3 addresses separately.
+- **Presentation and AUv2 wrapping.** Use springer's deferred-parameter decision as a case study. For clap-wrapper, name the exact extension `clap.plugin-auv2-param-ordering/0` and preserve the historical relative order of existing parameters. Pin the wrapper revision and verify the full ordering mapping and implementation before giving an array example. Do not promise that every host presents or persists parameters in the same way.
+- **Plugin identity.** Inventory the released CLAP plugin ID, VST3 class IDs, AU component type/subtype/manufacturer, and relevant bundle identity. Document which fields identify the product, affect signing/preferences, or are presentation metadata under the actual format. Wrapper defaults can turn metadata into identity; AU type derivation from the first CLAP feature has an explicit wrapper override.
+- **Development builds.** Preserve released identity for compatible replacements. Treat co-installable development channels as a separate explicit product choice with distinct identities where required. fosforo's choice to stamp provenance without namespacing identity is one project's decision. A version string is not the plugin identifier, but hosts may still store version information; do not claim no host persists it.
+- **Compatibility fixtures.** Maintain a baseline mapping of released IDs and meanings and a saved-state fixture. Exercise an automation binding after adding or reordering parameters. A source canary over an enum is complementary and cannot establish host compatibility alone.
+- **State schema.** Require an explicit schema and migration policy from the first release. A binary magic value, version, and fixed endianness are one implementation option, illustrated by fosforo. Define missing-field defaults, recognized older versions, unsupported newer versions, unknown fields, and compatibility decisions when meaning changes. Do not mandate append-only binary records or accept arbitrary trailing bytes without a schema rule.
+- **Safe parsing and publication.** Bound lengths and allocations on the permitted thread, handle truncated/corrupt input and partial reads/writes, and treat a zero-byte write as no progress instead of retrying forever. Validate decoded values, including non-finite values, before publishing a complete replacement. Failed loads leave the current instance unchanged. A main-thread save needs a coherent snapshot if the audio thread can update state concurrently; main-thread load needs a safe handoff if processing continues.
+- **CLAP parameter updates.** Keep a coherent main-thread `get_value` view. Publish GUI-originated changes through the chosen communication mechanism and request a permitted flush or processing opportunity. `clap_host_params.request_flush` is explicitly forbidden on the audio thread. During `process` or an active `flush`, emit output parameter events through the supplied output interface and handle failed pushes. Use gesture notifications where appropriate; mapped MIDI changes use `CLAP_EVENT_DONT_RECORD` according to the host contract so already recorded input is not redundantly recorded as automation.
 
-- `plugins/plant-defects/README.md`: replace the "filed and not yet built" sentence so it links the real-time audio skill and keeps the CI-audit companion as filed, and add a See Also link.
-- `plugins/plant-defects/skills/plant-defects/SKILL.md`: add `write-realtime-audio-code` to the related-plugins sentence.
-- Bump the version in `plugin.json` and the marketplace entry, then recompute catalog state and regenerate both mirrors.
+Include tests for reordered parameters, changed parameter semantics, a truncated state stream, short reads/writes and zero progress, unsupported versions, and failed-load preservation while processing is active.
 
-## Corrections to the issue body
+### Events and numerical transitions in `events-and-timing.md`
 
-| Issue says                                                                                                         | Actually                                                                                                                                                                                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| springer's ADR 0005 "puts a comptime assertion in `src/music/`"                                                    | ADR 0005 decides it. springer's `main` has no `src/` yet, and the build plan names `src/music/scale.zig` as its future home. The skill describes it as a decision                                                                                          |
-| ADR 0005 calls it "the seam that makes most of the plugin testable without a host"                                 | That wording is in springer's build plan, not the ADR: "the load-bearing seam and the reason most of this plugin is testable without a host"                                                                                                               |
-| Both projects identify parameters by stable id                                                                     | Only springer does (ADR 0008). fosforo has no parameters, and states the permanence of its plugin `id` and AU triple instead                                                                                                                               |
-| Both projects keep an "Identifiers, which are permanent" table                                                     | springer's has that title. fosforo's is "Identifiers: what is permanent and what is not", with three tiers (permanent, sticky, free), which the skill adopts as the more useful structure                                                                  |
-| fosforo's renderer seam is stated                                                                                  | It is also mechanized: a comptime block in `src/gpu/iface.zig` asserts every backend signature against the seam's vocabulary. That is a different mechanism from springer's import assertion, and the skill teaches both                                  |
-| "Timur Doumler's talks"                                                                                            | Doumler's relevant talk is "Using Locks in Real-Time Audio Processing, Safely" (ADC 2020). "Real-time 101" is by Dave Rowland and Fabian Renn-Giles (ADC 2019). Both are cited, attributed correctly                                                       |
-| A relaxed load "usually buys nothing you wanted"                                                                   | That holds, with the exception the skill must state: a relaxed load is correct for the sole writer reading its own value, which is what `Ring.write` does                                                                                                   |
-| TSan findings framed generally                                                                                     | They were measured with Zig 0.16 via LLVM only. The runtime distinguishes orderings in every language, but whether a language's orderings reach it is not established here                                                                                  |
+- **Time domains.** Distinguish block-relative sample offsets, an internal sample timeline, CLAP `steady_time`, and musical transport position. `steady_time` can be unavailable (`-1`) and can move backward across reset. A discontinuity can be a seek, reset, or loop; a negative difference alone does not identify which. Respect transport validity flags, in-block transport events, and the product's documented behavior when transport is stopped or absent.
+- **Block intervals and ordering.** Process offsets in a half-open block interval and split processing at valid event offsets. Preserve defined ordering between events at the same offset. Validate event type/space, header size, addressing, and time before interpreting a payload, while handling unknown events according to the API. Keep output events in nondecreasing sample order.
+- **Boundary cases.** Test minimum, maximum, and varying block sizes, several events at one offset, the final frame, and an internally scheduled event exactly at the next block boundary. Use zero-frame cases only where the chosen API allows them. At 48 kHz, a 1024-frame block spans about 21.3 ms, illustrating the scale of block-boundary quantization rather than claiming that small buffers make the defect invisible.
+- **Scheduling and resource bounds.** Use a defined sample timeline for delayed events across blocks and define reset/discontinuity behavior. Budget event admission, per-block work, and active voices. A scheduled note-on must retain its corresponding termination obligation, including an early note-off before the delayed start. Apply the overflow policy from `lock-free-buffers.md`; do not drop events solely by recency.
+- **CLAP note addressing.** Follow the full `(port, channel, key, note_id)` matching rules and their `-1` wildcards where the event type permits them. A note ID is not a universal replacement for the other address fields. Handle note-off, choke, and end according to their distinct directions and meanings. A CLAP note-on with velocity zero remains a note-on; do not import MIDI 1.0's special encoding into CLAP note events.
+- **Borrowed memory and output failures.** Host event pointers and process buffers have API-defined lifetimes. Copy any payload that must survive the callback, including variable-size SysEx data, into bounded owned storage with an admission policy. A failed output `try_push` does not deliver the event; retain required state and use a defined later opportunity or product-specific recovery.
+- **Lifecycle and notes.** Reset/deactivate clear the appropriate internal scheduling and voices, but those callbacks do not themselves provide an output event list. Specify how downstream note termination is coordinated through valid output opportunities and the host lifecycle contract. Do not equate clearing an internal table with sending note-offs.
+- **Smoothing.** Apply parameter targets at their event offsets and choose a ramp law and units appropriate to the parameter. Recompute sample-rate-dependent coefficients at the appropriate lifecycle boundary. Initial setup, reset, preset changes, and state load can need different transition policies; do not prescribe snapping during every state load. Stepped values are discrete. Use a bounded crossfade only where the product's semantics and resource budget call for it, rather than interpolating enum values or universally duplicating processing.
 
-These measurements from the issue check out against the ADRs and source: five gate orderings planted with two flagging, the filing issue naming a clean one (`enter`'s acquire), the `[]u64` payload, the `Pending` 2x2, and all 139 ring tests passing with the store weakened.
+Provide a deterministic event trace with delayed note-on/off, equal-offset events, an output rejection, and a discontinuity. Verify matching across multiple ports and wildcard addresses, and verify that smoothing starts at the specified offset without corrupting stepped parameters.
 
-## Cross-reference hazards
+### Host-independent boundaries in `the-pure-core-seam.md`
 
-Rule 19 scans `SKILL.md` and everything under `references/`.
+- **Layer responsibilities.** Use springer's proposed arithmetic core, scheduling engine, and host adapter to illustrate one-way dependencies. A host-independent core can contain explicit state; distinguish that architectural boundary from the stronger claim that every function is mathematically pure. Pass configuration and state explicitly where appropriate.
+- **Different enforcement mechanisms.** fosforo's [GPU interface assertions][fosforo-gpu] check backend signatures against its own vocabulary. They do not establish a transitive import prohibition. springer's [import-boundary decision][springer-core-adr] is planned and requires implementation and a planted forbidden dependency before it can be called enforced.
+- **Language-specific boundaries.** A Rust crate without a plugin-API dependency and a C++ target without SDK include paths are useful structural constraints, but account for transitive dependencies and other paths that can expose host APIs. Verify the intended rejection rather than assuming directory separation proves it. Faust's generated code, architecture files, foreign functions, and host glue still require a callback-safety audit.
+- **Portable validation.** Build and test the core without loading a host. If comparing with a reference implementation, define the behavior and numerical tolerances being compared. springer's Node/Scripter vector generation is planned, not a completed test result. Pure arithmetic tests can check a cursor predicate, but cannot prove legal concurrent memory accesses around it.
+- **Arithmetic semantics.** Cover negative inputs explicitly when translating scale arithmetic. JavaScript `Math.floor` and Zig's `@divFloor` express floor division; Zig runtime signed division requires selecting the permitted operation, such as `@divTrunc`, `@divFloor`, or `@divExact`, rather than treating `/` as a universal truncating operator. Choose modulo/remainder semantics deliberately and include negative boundary cases.
+- **Enforcement scope.** Show one import/dependency restriction with a failing control and one signature restriction, stating what each catches. Keep shared containers independent of their producer and consumer so they can be tested on the required target. Avoid adding an unused abstraction or backend solely to demonstrate future portability.
 
-- Do **not** add `<!-- validate-plugins: repository-paths -->`. Without it, the `docs/` and `bin/` paths quoted from fosforo and springer are skipped rather than resolved against this repository. `src/` and `scripts/` are in no prefix list.
-- `plugins/plant-defects/skills/plant-defects/references/*.md` paths resolve against the repository root, so each one linked must exist.
-- Put a backticked name next to the word "skill" only for plugins that exist (`plant-defects`). The unbuilt audio siblings (`scaffold-clap-audio-plugin`, `set-up-clap-validation`) are not mentioned that way.
-- Avoid backticked single-segment absolute paths, which the checker reads as skill names.
-- Keep every relative link in the READMEs resolvable, fragments included.
+### Plugin README
 
-## Verification
+Create `plugins/write-realtime-audio-code/README.md` using the sibling template: title, canonical description verbatim, `**Type:** Skill`, `**Trigger:** /write-realtime-audio-code (also activates automatically)`, Installation, What It Does, Usage, Examples, and See Also.
+
+Link Installation to `../../README.md#install`, and See Also to Plant Defects and the catalog. Explain that reading the guide has no hard external dependency, while executing a particular sanitizer or host validation procedure requires a compatible downstream toolchain. Do not claim the skill never runs commands merely because it bundles no scripts. Examples should show callback review, an ownership protocol, and parameter/event compatibility work.
+
+### Catalog and companion integration
+
+- Register the new plugin between `write-pandoc-markdown` and `write-scrut-tests` in `.claude-plugin/marketplace.json` with category `code-quality`.
+- Add the root README's `Write Real-Time Audio Code` row between `Write Lean Tests` and `Write Scrut Tests`, using the canonical description verbatim. No new category or Contents entry is needed. Conditional downstream verification tools are not hard install dependencies of this plugin.
+- Update the `plant-defects` README's companion status, add a See Also link, and add `write-realtime-audio-code` to its related-skills sentence. Verify the other companion's current status before preserving a statement about it.
+- Start the audio plugin at `1.0.0`. Apply the appropriate patch increment to the checked-out `plant-defects` version, currently `1.0.0` to `1.0.1`, in both its manifest and marketplace entry.
+- Recompute `metadata.version` with `bin/compute-catalog-state`. The reviewed baseline is `catalog-M70-m103-p156-n57`; if it remains unchanged, both plugin changes produce `catalog-M71-m103-p157-n58`. The script, not this expected string, is authoritative.
+- Run `bin/build-codex-marketplace` and `bin/build-opencode-mirror`, and commit the generated marketplace, plugin roots, and OpenCode skill symlink. Never edit `dist/` or `.agents/` by hand.
+
+## Corrections to source-issue claims
+
+The issue supplies the scope, but the authored guide must use the evidence and guarantees above where the issue or its source ADRs make a broader claim.
+
+| Claim requiring qualification                                                                                 | Required treatment                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| springer's import assertion, scheduler, and reference vectors are already implemented                         | Mark them as planned at the pinned revision; demonstrate an implemented enforcement mechanism separately                        |
+| Both projects demonstrate stable parameter IDs                                                                | Attribute parameter design to springer; fosforo illustrates plugin identity and state scaffolding, not a released parameter set |
+| A lapped history copy can be made safe by checking a cursor afterward                                         | Distinguish display consistency from legal memory access and require a valid ownership or atomic-payload protocol               |
+| Relaxed ordering only helps an owner read its own cursor, and generates identical instructions on x86 and ARM | Include other valid atomic-only uses and operation-specific target mappings; retain the language-level proof                    |
+| A sanitizer verdict is a property of the whole code                                                           | Bound it to executed, instrumented paths and the exact control, configuration, and property under test                          |
+| All gate orderings should flag, or a clean mutation proves an ordering unnecessary                            | Explain the recorded control's sensitivity and the protocol property it observes; do not infer a general ordering proof         |
+| A teardown close is bounded by one tick                                                                       | Separate the number of admitted users from scheduler-dependent completion and keep waiting off the audio thread                 |
+| Dropping the newest scheduled event preserves note-offs                                                       | Reserve termination obligations at admission and handle output rejection explicitly                                             |
+| Stable IDs make all future parameter changes compatible                                                       | Preserve historical semantics, normalization, host-specific ordering, and state migration as well                               |
+| Doumler's cited source is an ADC 2020 talk                                                                    | Cite the verified article dated 2020-04-14; add a talk only after verifying its actual title, speakers, and recording           |
+
+Do not edit the issue as part of authoring the plugin unless requested. The plan and references should stand on their own with accurate source attribution.
+
+## Installation portability and cross-references
+
+Repository validation and installed usability are separate checks. Rule 19 can confirm that a `plugins/...` path exists in this checkout without making it resolvable inside an installed copy of another plugin.
+
+- Use `./references/essential/...` and `./references/comprehensive/...` for the audio skill's own files. Use canonical GitHub URLs for external project material and optional companion reference documents.
+- Keep cross-plugin relative links in repository READMEs consistent with the mirror builders' supported rewriting, and inspect generated results. Do not put checkout-relative companion paths into instructions an installed skill must follow.
+- Treat companion invocation as optional and availability-dependent. Do not automatically install another plugin to complete an ordinary audio review.
+- Do not add `<!-- validate-plugins: repository-paths -->` merely to make foreign project paths pass this repository's checker. Prefer actual source links; add exemptions only for real illustrations that the checker reports and that cannot be expressed more clearly.
+- Run `bin/check-cross-references` across all canonical skills and references. A check of just the new `SKILL.md` does not establish that all seven reference files are correct.
+- Inspect the generated Codex description and OpenCode skill entry point. Test reference navigation from an installed-layout copy that contains only this plugin, with `plant-defects` absent.
+
+## Behavioral acceptance scenarios
+
+The prose is the product. Exercise these scenarios with the completed skill in an available supported harness, recording the input, selected reference, and resulting recommendation. Use minimal context so the evaluated skill supplies the rules. Repeat discovery and navigation checks for the generated harness layouts. These are behavioral evaluations, not tests that merely count headings or look for preferred words.
+
+| Scenario                                                                                    | Expected result                                                                                             | Evidence to record                                              |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| A display copies ordinary samples while a producer may overwrite them, then checks a cursor | Reject the data race and specify legal ownership or atomic access; skipping the frame alone is insufficient | Recommendation and proposed transfer/reuse protocol             |
+| An independent atomic meter uses relaxed ordering                                           | Accept it when the whole value is self-contained and no other payload is published                          | The stated invariant and any limits on missed updates           |
+| A change claims acquire/release always uses identical instructions to relaxed access on ARM | Correct the architecture claim and keep the language proof independent of disassembly                       | Reference to the relevant mapping or actual target output       |
+| An event queue fills before a required note-off, or the host rejects an output event        | Preserve the termination obligation through bounded admission and recovery behavior                         | Deterministic accepted/rejected event trace                     |
+| An immutable pointer is swapped while a retirement queue is full                            | Require safe reader acknowledgment and a bounded backlog policy with reclamation off the callback           | Ownership and capacity transitions                              |
+| A clean TSan run omits subject instrumentation, or its defective control also passes        | Report the check as inconclusive and identify the missing sensitivity evidence                              | Observed control outcome and build configuration                |
+| A state load is truncated or invalid while processing is active                             | Preserve the current instance and publish only a fully validated replacement                                | State fixture, parser result, and handoff behavior              |
+| A host changes the OS thread used for successive audio calls                                | Apply the symbolic thread contract without relying on a permanent thread ID                                 | Callback/lifecycle classification                               |
+| Parameters are inserted or reordered in a released plugin                                   | Preserve IDs, meanings, old automation, and applicable AUv2 ordering                                        | Baseline mapping and host/fixture comparison                    |
+| Same-offset events, delayed notes, wildcard addresses, or a timeline discontinuity occur    | Preserve the host's ordering, matching, and valid output opportunities under the stated policy              | Boundary-case event traces                                      |
+| A recursive value becomes non-finite or a parameter changes at a sample offset              | Apply bounded numerical recovery and the parameter's chosen transition semantics                            | Numeric and timing cases under the production compiler flags    |
+| A forbidden host dependency is introduced into a supposedly isolated core                   | Demonstrate that the actual enforcement check rejects it, or report the boundary as unenforced              | Observed failing dependency/signature control                   |
+| A generic server queue or exclusively offline algorithm is reviewed                         | Avoid activating the audio guide without an audio-specific contract                                         | Discovery result and scope decision                             |
+| The audio skill is installed without the companion plugin                                   | Complete a useful review and open all required local references                                             | Installed-layout navigation and self-contained control guidance |
+
+Keep temporary example projects or mutation fixtures out of the published plugin unless they become intentional maintained assets. If a harness or toolchain is unavailable, record that scenario as unverified instead of substituting a source-text assertion for an execution result.
+
+## Implementation sequence and completion gates
+
+1. **Finalize the plan and evidence.** Keep this living plan in `docs/plans/todo/` while implementation remains pending. Preserve the source distinctions, technical corrections, and acceptance criteria above. The existing initial-plan commit does not need to be recreated.
+1. **Author the seven references.** Start with legal buffer ownership, memory ordering, progress, and lifecycle. Then write verification, host compatibility, timing/numerics, and core boundaries. Use the `create-plugin`, `skill-creator`, and `write-markdown` skills as applicable. Complete at least one worked protocol with both publication and reuse, one faithful control, and the event/state edge cases before condensing the entry point.
+1. **Write the entry point, checklist, and README.** Route each task to the necessary reference, keep the discovery description within its limit, and verify that standalone use does not require a checkout or companion installation.
+1. **Integrate the new plugin coherently.** Add the canonical plugin, catalog entry, root README row, recomputed catalog state, and generated mirrors together. This avoids a commit with an unregistered canonical plugin or missing generated output.
+1. **Update the companion coherently.** Change the `plant-defects` links/status, increment its patch version, recompute catalog state, and regenerate both mirrors together. Recheck current baseline versions rather than assuming this plan's numbers still apply.
+1. **Validate behavior and repository integration.** Exercise the acceptance scenarios, use the `lint-and-fix` skill, check all cross-references, and use the repo-local `check-versions` skill before PR preparation. Finish with the repository's complete checks after any resulting edits. Review the final prose for unsupported universal claims and source attribution.
+1. **Report evidence and remaining limits.** Record which behavioral scenarios and tool controls actually ran. A command that started but has no observed completion is unverified. Move the plan to `done/` only when the plugin work and required checks are complete, following the repository's completion workflow.
+
+The implementation's repository validation sequence is:
 
 ```bash
 yarn install --immutable
-bin/check-cross-references plugins/write-realtime-audio-code/skills/write-realtime-audio-code/SKILL.md
+bin/check-cross-references
 make format
 make build
-make validate
 make test-all
-git status --porcelain dist/ .agents/
+git diff --check
+git status --short
 ```
 
-`make validate` is the gate that matters here. Rule 10 checks catalog state, rules 15 and 16 check mirror freshness, rule 17 enforces the 1024-character canonical description limit (and warns above 320 on the Codex copy), and rule 19 resolves cross-references. After a clean run, use the `check-versions` skill, then run the `plugin-dev:skill-reviewer` agent on the finished skill for trigger quality and progressive disclosure.
+Use the pinned dependency setup when needed rather than reinstalling it on every edit. `make test-all` includes lint, validation, and Scrut; observe its final result. `make validate` can also be run during authoring: rule 10 checks catalog state, rules 15 and 16 compare freshly generated mirrors, rule 17 checks description lengths, and rule 19 checks references. Git status is an inventory of changes, not a mirror-freshness test. This plan-only revision needs documentation formatting/lint checks; it does not require rerunning downstream audio experiments.
 
-A manual pass follows, since the prose is the product:
+For final prose review, check for em dashes, work estimates, non-neutral terminology, unresolved references, accidental mandates of project-specific choices, and numeric claims without scope. Runtime quantities such as frame durations are allowed. Use an additional skill reviewer only if it is available and appropriate; an unavailable `plugin-dev:skill-reviewer` must not become a required dependency.
 
-- `grep` the new files for em dashes.
-- Confirm there are no time or effort estimates. Runtime figures such as block durations are fine.
-- Check neutral terminology. Audio jargon collides with it: write "main bus", not "master bus", and "release all voices", not CLAP's own "kills all voices".
-- Re-check every quoted number against its source file.
+### Commit boundaries
 
-## Commits
+All commits are GPG signed. Use these logical boundaries, updating messages to match the final scope:
 
-1. `docs: add plan for the write-realtime-audio-code skill (#343)`
-1. `feat: add write-realtime-audio-code skill plugin (#343)`, containing the plugin directory alone
-1. `feat: register write-realtime-audio-code in the marketplace catalog (#343)`, containing the marketplace entry, the root README row, recomputed catalog state, and both generated trees
-1. `docs: link plant-defects to its real-time audio companion (#343)`, containing the `plant-defects` text, the patch bump, catalog state, and regenerated trees
+1. `docs: refine real-time audio skill plan (#343)`, containing this plan revision.
+1. `feat: add real-time audio skill and catalog entry (#343)`, containing the new canonical plugin, catalog and root README integration, catalog state, and generated mirrors.
+1. `docs: link plant-defects to its audio companion (#343)`, containing companion prose, its patch version, catalog state, and regenerated mirrors.
+
+Keep fixes discovered by the behavioral or repository checks in coherent follow-up commits. Do not mark issue #343 resolved merely because the plan is revised.
+
+[atomic-mappings]: https://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html
+[au-address]: https://developer.apple.com/documentation/audiotoolbox/auparameteraddress
+[bencina]: https://www.rossbencina.com/code/real-time-audio-programming-101-time-waits-for-nothing
+[clap-source]: https://github.com/free-audio/clap/tree/cd94482ba5941ae410809b6fbaed3bc851044270/include/clap
+[cpp-races]: https://eel.is/c++draft/intro.races
+[doumler]: https://timur.audio/using-locks-in-real-time-audio-processing-safely
+[faust-foreign]: https://faustdoc.grame.fr/manual/syntax/#foreign-functions
+[faust-options]: https://faustdoc.grame.fr/manual/options/
+[fosforo-gate]: https://github.com/cboone/fosforo/blob/1317e2b752f7f7d44db9bb7745200ca6e59dde83/src/clap/gate.zig
+[fosforo-gpu]: https://github.com/cboone/fosforo/blob/1317e2b752f7f7d44db9bb7745200ca6e59dde83/src/gpu/iface.zig
+[fosforo-ring]: https://github.com/cboone/fosforo/blob/1317e2b752f7f7d44db9bb7745200ca6e59dde83/src/dsp/ring.zig
+[fosforo-source]: https://github.com/cboone/fosforo/tree/1317e2b752f7f7d44db9bb7745200ca6e59dde83
+[fosforo-tsan-adr]: https://github.com/cboone/fosforo/blob/1317e2b752f7f7d44db9bb7745200ca6e59dde83/docs/adr/0016-verify-the-ring-ordering-with-tsan.md
+[function-effects]: https://clang.llvm.org/docs/FunctionEffectAnalysis.html
+[plant-assertions]: https://github.com/cboone/agent-harness-plugins/blob/340f319211b8ebfd64b0d37abda7768886bbf165/plugins/plant-defects/skills/plant-defects/references/ordered-assertions.md
+[plant-canaries]: https://github.com/cboone/agent-harness-plugins/blob/340f319211b8ebfd64b0d37abda7768886bbf165/plugins/plant-defects/skills/plant-defects/references/source-canaries.md
+[plant-defects-source]: https://github.com/cboone/agent-harness-plugins/blob/340f319211b8ebfd64b0d37abda7768886bbf165/plugins/plant-defects/skills/plant-defects/SKILL.md
+[plant-instruments]: https://github.com/cboone/agent-harness-plugins/blob/340f319211b8ebfd64b0d37abda7768886bbf165/plugins/plant-defects/skills/plant-defects/references/instrument-blindness.md
+[rtsan]: https://clang.llvm.org/docs/RealtimeSanitizer.html
+[rtsan-20]: https://releases.llvm.org/20.1.0/tools/clang/docs/RealtimeSanitizer.html
+[rtsan-rust]: https://github.com/realtime-sanitizer/rtsan-standalone-rs
+[rust-atomics]: https://doc.rust-lang.org/std/sync/atomic/index.html
+[rust-ordering]: https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html
+[springer-core-adr]: https://github.com/cboone/springer/blob/e76419dc022cb1690d22c779cfee39dd5f53565d/docs/adr/0005-a-pure-musical-core-behind-a-seam.md
+[springer-source]: https://github.com/cboone/springer/tree/e76419dc022cb1690d22c779cfee39dd5f53565d
+[tsan]: https://clang.llvm.org/docs/ThreadSanitizer.html
+[vst-params]: https://steinbergmedia.github.io/vst3_dev_portal/pages/Technical%2BDocumentation/Parameters%2BAutomation/Index.html
+[wrapper-auv2]: https://github.com/free-audio/clap-wrapper/blob/1cca996e96f29ab2be7ae9f8cfe532bbc92e1dd6/include/clapwrapper/auv2.h
+[zig-docs]: https://ziglang.org/documentation/0.16.0/
