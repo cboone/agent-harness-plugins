@@ -164,6 +164,8 @@ Generate default config files and ignore files for each tool. Use templates from
 - **`.editorconfig`** from `./references/tools/editorconfig.md` (adapted to project languages)
 - **`.prettierrc.json`** and **`.prettierignore`** from `./references/tools/prettier.md`
 
+When generating a markdownlint configuration, set MD060 according to whether Prettier formats the project's Markdown files. Treat Prettier as formatting Markdown when the project has a Prettier config (`.prettierrc*`, `prettier.config.*`, or a `prettier` key in `package.json`) or a format script that runs Prettier, and `.prettierignore` does not exclude the Markdown files. Set `"MD060": false` in that case because Prettier owns table alignment. Otherwise set `"MD060": { "style": "aligned" }`, which requires aligned tables and prevents markdownlint's default `any` style from compacting a nearly aligned table during `--fix`. See `./references/tools/markdownlint.md` for the config fragments.
+
 For **Lean projects**, the equivalent of "creating a config file" is adding the `lintDriver` field to `lakefile.toml` (or the `package` block of `lakefile.lean`):
 
 ```toml

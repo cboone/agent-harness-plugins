@@ -45,6 +45,22 @@ Create `.markdownlint-cli2.jsonc` in the project root:
 }
 ```
 
+Configure MD060 according to whether Prettier formats the project's Markdown files:
+
+- **Prettier formats Markdown:** Add the following inside `config`. Prettier formats Markdown when the project has a Prettier config (`.prettierrc*`, `prettier.config.*`, or a `prettier` key in `package.json`) or a format script that runs Prettier, and `.prettierignore` does not exclude the Markdown files. Prettier owns table alignment.
+
+  ```jsonc
+  // Prettier owns table alignment.
+  "MD060": false,
+  ```
+
+- **Prettier does not format Markdown:** Add the following inside `config`. This requires aligned tables and prevents markdownlint's default `any` style from compacting a table that is nearly aligned when `--fix` runs.
+
+  ```jsonc
+  // Require aligned tables when no formatter owns their layout.
+  "MD060": { "style": "aligned" },
+  ```
+
 For projects using scrut CLI tests, also add:
 
 ```jsonc
@@ -150,18 +166,20 @@ npx markdownlint-cli2 --fix "**/*.md"
 
 ## Common Rule Customizations
 
-| Rule  | Description                    | Default  | Recommended Override                   |
-| ----- | ------------------------------ | -------- | -------------------------------------- |
-| MD013 | Line length                    | 80 chars | `false` (disable; Prettier handles it) |
-| MD014 | Dollar signs before commands   | Enabled  | `false` (for scrut test projects)      |
-| MD024 | No duplicate sibling headings  | Enabled  | `{ "siblings_only": true }`            |
-| MD033 | Inline HTML                    | Enabled  | `false` (GFM features)                 |
-| MD034 | Bare URLs                      | Enabled  | `false` (allow bare URLs)              |
-| MD041 | First line must be top heading | Enabled  | `false` (frontmatter or partial files) |
+| Rule  | Description                    | Default  | Recommended Override                       |
+| ----- | ------------------------------ | -------- | ------------------------------------------ |
+| MD013 | Line length                    | 80 chars | `false` (disable; Prettier handles it)     |
+| MD014 | Dollar signs before commands   | Enabled  | `false` (for scrut test projects)          |
+| MD024 | No duplicate sibling headings  | Enabled  | `{ "siblings_only": true }`                |
+| MD033 | Inline HTML                    | Enabled  | `false` (GFM features)                     |
+| MD034 | Bare URLs                      | Enabled  | `false` (allow bare URLs)                  |
+| MD041 | First line must be top heading | Enabled  | `false` (frontmatter or partial files)     |
+| MD060 | Table column style             | `any`    | `false` with Prettier; `aligned` otherwise |
 
 ## Notes
 
 - `markdownlint-cli2` is the successor to `markdownlint-cli`. It has better config file support and is actively maintained.
 - The `.jsonc` config format supports comments, which is useful for documenting rule overrides.
 - When Prettier is also configured, disable MD013 (line length) in markdownlint to avoid conflicts. Prettier handles line wrapping.
+- When Prettier formats Markdown, disable MD060 because Prettier owns table alignment. Otherwise use MD060's `aligned` style so `--fix` cannot compact a nearly aligned table.
 - markdownlint-cli2 auto-fix can resolve many issues (trailing whitespace, heading style, blank lines) but not all (e.g., heading level skips require manual restructuring).
