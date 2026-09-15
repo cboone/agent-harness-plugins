@@ -34,3 +34,8 @@ Assess the matching input without adding its conclusion to the evaluator context
 | `RTAC-028` | Do not select this audio skill                                                  | No audio-specific contract is present                                           |
 | `RTAC-029` | Produce findings and proposed checks only                                       | Do not mutate, commit, or invoke companions automatically                       |
 | `RTAC-030` | Navigate local references and explain local positive control                    | Do not require companion installation                                           |
+| `RTAC-031` | Record a detected runtime control                                               | Require the expected diagnostic at the reached callback                         |
+| `RTAC-032` | Record insufficient control sensitivity                                         | A reached control without its expected diagnostic is not a pass                 |
+| `RTAC-033` | Treat the instrumented TSan control as sensitivity evidence                     | Keep the subject verdict and control result distinct                            |
+| `RTAC-034` | Confirm plugin-load and worker coverage separately                              | Require worker reachability and its own control                                 |
+| `RTAC-035` | Accept the reconstructed VST3 trajectory before smoothing                       | Preserve the described interpolation and separate optional smoothing            |

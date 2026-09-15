@@ -32,6 +32,12 @@ For a fixed owned block, the producer writes the block, then release-stores its 
 
 An owner-local read of its own cursor can be relaxed when the protocol permits it. The other participant still needs the publication and reuse synchronization. Correct individual operations do not make arbitrary check-then-act transitions indivisible. Use an RMW, ownership state, or larger mechanism only for the transition that actually needs it, and bound retry behavior if a failed operation retries.
 
+### Example: Rust `AtomicU8` Slot States
+
+This example uses Rust 1.86 and a target with `AtomicU8` support. Three fixed `[f32; 256]` slots have an atomic state: `0` is producer-owned, `1` is consumer-owned, and `2` is returned. The producer writes samples only while state is `0`, then release-stores `1`. The consumer acquire-loads `1` before reading, copies the array, and release-stores `2`. The producer acquire-loads `2`, changes it to `0`, and only then overwrites it. Each slot's state is separate, so no wrapping cursor interpretation is needed.
+
+A peak meter is separate: `AtomicU32` stores `f32::to_bits()` with `Relaxed`, and the UI can miss intermediate peaks because its value publishes no ordinary payload. The slot states cannot use that rule because they authorize ordinary-array access. The example assumes the slot array outlives both participants and that no references to a slot escape the consumer's copy. It establishes the stated ownership edges, not wait-free callback completion or a proof for another language.
+
 ## Implementation Evidence
 
 AArch64 commonly maps relaxed loads and stores to `LDR` and `STR`, and acquire or release operations to `LDAR` and `STLR`. x86 also has operation-specific behavior, including for sequentially consistent stores. Inspect disassembly to understand a selected compiler and target. It is not a reason to weaken a language-level proof.

@@ -32,6 +32,12 @@ Apply a discrete target at its event offset, then choose a law appropriate to it
 
 Build a trace with a delayed note-on and note-off, equal-offset events, an output rejection, a discontinuity, silent blocks with pending work, and deactivation with outstanding obligations. Add separate traces for a sparse VST3 curve, an AUv3 ramp across blocks, and CLAP base values with targeted modulation. Check multi-port matching, wildcard addresses, continuity, optional smoothing behavior, stepped values, and a zero target.
 
+### Example: Bounded Two-Block Trace
+
+The scheduler accepts at most two pending events. At block 1000 with 64 frames, it receives note-on `(0, 0, 60, 7)` at offset 8 for delivery at sample 1080, then its note-off at offset 20. Admission reserves the note-off slot when accepting the note-on. At offset 20 it retains the termination obligation rather than emitting it before the delayed start. A same-offset parameter value and note event preserve the host's declared order. A discontinuity resets the internal timeline according to the selected transport policy and clears only obligations that the policy permits clearing.
+
+At block 1080 the note-on is emitted at offset 0. If the output event list rejects its later note-off, the scheduler retains that note-off and returns `CLAP_PROCESS_CONTINUE` while audio is silent. It retries only on the next valid output opportunity. Deactivation clears the local schedule without claiming it emitted an unavailable output event. Separately, a VST3 block with only a final point at offset 63 interpolates from the prior value at offset `-1`; an AUv3 96-sample ramp retains 32 samples of duration after a 64-sample block; and a zero target takes the explicit mute path rather than multiplicative smoothing. These traces establish the selected policy and must be adapted to each host contract.
+
 ## Sources
 
 - [CLAP events](https://github.com/free-audio/clap/blob/cd94482ba5941ae410809b6fbaed3bc851044270/include/clap/events.h), [process status](https://github.com/free-audio/clap/blob/cd94482ba5941ae410809b6fbaed3bc851044270/include/clap/process.h), and [tail](https://github.com/free-audio/clap/blob/cd94482ba5941ae410809b6fbaed3bc851044270/include/clap/ext/tail.h)

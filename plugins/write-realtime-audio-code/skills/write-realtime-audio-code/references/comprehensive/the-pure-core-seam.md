@@ -29,6 +29,12 @@ Test the adapter separately for buffer aliases, event time, lifecycle, process s
 
 Faust generated code, architecture files, foreign functions, and host glue still need a callback-safety audit. For arithmetic translations, specify negative-input behavior. JavaScript `Math.floor` and Zig `@divFloor` express floor division. Zig runtime signed division requires an explicit permitted operation such as `@divTrunc`, `@divFloor`, or `@divExact`; `/` is not a universal runtime truncation rule. Choose remainder semantics deliberately and test negative boundaries.
 
+### Example: Enforced Rust Core Boundary
+
+A Rust workspace has `core`, `scheduler`, and `clap-adapter` crates. `core` has no dependency path to the CLAP SDK; a dependency-policy check rejects a temporary direct or transitive CLAP dependency added to `core`. That failing control establishes the scope covered by the policy. A separate compile-time signature assertion rejects a backend function whose buffer argument changes from `&mut [f32]` to `&[f32]`; it does not prove import isolation.
+
+Core vectors cover `floor_div(-1, 12) == -1` and a note timeline transition with a stated tolerance. Adapter fixtures separately cover an aliased buffer, event offset 63, a retained pending note-off, and delayed restart notification. The core vectors therefore support arithmetic and scheduling conclusions only. The policy-control and signature-control results must be recorded for the selected build before calling the boundary enforced.
+
 ## Sources
 
 - [springer core-boundary ADR](https://github.com/cboone/springer/blob/e76419dc022cb1690d22c779cfee39dd5f53565d/docs/adr/0005-a-pure-musical-core-behind-a-seam.md), a planned design at the pinned revision

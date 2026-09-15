@@ -58,6 +58,12 @@ Test numerical checks with the production floating-point flags. Fast-math assump
 
 For each supported configuration, exercise legal in-place buffers, unequal channels, constant channels, supported sample formats, variable legal sizes, an oversized block, hidden allocation or final destruction in every real-time entry, thread migration, worker scratch ownership, rejected worker requests, a near-zero recursive tail, and non-finite recovery. These cases establish only their stated host, build, and execution coverage.
 
+### Example: Two Inputs, Three Outputs, and a Worker
+
+This reviewed design supports stereo `f32` input, three `f32` outputs, and blocks from 1 through 256 frames after CLAP activation. During `activate`, it allocates and touches three 256-frame output scratch buffers and one 256-frame scratch buffer per possible render worker. `process` accepts an in-place left channel only after it reads that channel, zeroes the unmatched third output channel, rejects a block larger than 256 with `CLAP_PROCESS_ERROR`, and does not allocate, log, or notify the host.
+
+`reset` clears only the active 256-frame delay window, so its work has a stated 256-sample bound. A rejected worker request processes the same work on the callback only if that fallback also fits the documented bound; otherwise the prepared last-valid result is used. `stop_processing` only marks the instance inactive. `deactivate` runs on the main thread, waits for worker completion, then releases scratch storage. A focused adapter test supplies aliased stereo input, one input with three outputs, a constant channel, a 256-frame block, and a 257-frame block. It establishes buffer and lifecycle behavior for this declared configuration, not other formats or hosts.
+
 ## Sources
 
 - [CLAP plugin and lifecycle contract](https://github.com/free-audio/clap/blob/cd94482ba5941ae410809b6fbaed3bc851044270/include/clap/plugin.h)

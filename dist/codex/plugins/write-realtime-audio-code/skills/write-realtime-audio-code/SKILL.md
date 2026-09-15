@@ -49,6 +49,7 @@ Use the downstream project's existing conventions to record relevant entry point
 - [Parameters and state](./references/comprehensive/parameters-and-state.md): use for released plugin identity, parameter meaning, state loading, and host reactivation.
 - [Events and timing](./references/comprehensive/events-and-timing.md): use for event order, automation, scheduling, status, smoothing, and numerical transitions.
 - [The pure-core seam](./references/comprehensive/the-pure-core-seam.md): use when separating host-independent behavior from format adapters.
+- [Rule-to-evidence map](./references/essential/rule-to-evidence.md): use when a review needs the source scope and example behind a safety-critical conclusion.
 
 ## Related Skill
 

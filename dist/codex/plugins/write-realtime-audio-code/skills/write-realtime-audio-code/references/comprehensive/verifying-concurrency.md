@@ -45,6 +45,12 @@ Record hardware, operating system, host and driver, compiler, backend, optimizat
 
 For a publication control, state the ordinary payload, intended release and acquire edge, defective mutation, contending participants, expected diagnostic, and reachability proof. For a prohibited-operation control, state the marked entry, prohibited call, host or module loading context, expected diagnostic, and per-worker coverage. Pair either with a malformed-input or lifetime case checked by a suitable memory instrument. Report subject, detected-control, unrelated-failure-control, and missed-control results separately.
 
+### Example: A Control Record, Not a General Result
+
+For a C++20 owned-block subject, one producer writes `samples[256]` and release-stores `ready`; one consumer acquire-loads `ready` before copying. A control changes only the publication store to relaxed while both participants repeat the same handoff. The build records compiler, target, flags, whether each translation unit is instrumented, and a progress counter showing both participants reached the copy. A TSan diagnostic on the control is evidence that this run can observe that weakened ordinary-payload edge. A clean subject run is still limited to the executed schedule.
+
+For a separate prohibited-operation control, a supported Clang build marks the actual callback and one render worker `[[clang::nonblocking]]`, then calls `malloc` from each control arm. The expected RTSan unsafe-library-call diagnostic must name the reached arm. A bundle-load failure before the callback is an unrelated-failure control result, while a reached control with no diagnostic is a missed-control result. Finally, a harness-owned malformed state stream with an oversized declared length is run under ASan and selected UBSan checks. These are three distinct records; no result is claimed here because the toolchain and host are examples rather than this repository's observed execution.
+
 The [Plant Defects skill](https://github.com/cboone/agent-harness-plugins/tree/main/plugins/plant-defects) has deeper control-design material when installed. This reference is self-contained: a control establishes sensitivity only after it reaches the intended operation and yields its intended diagnostic.
 
 ## Sources

@@ -46,6 +46,12 @@ Keep `get_value` coherent on the main thread. Do not call `clap_host_params.requ
 1. For a latency or port change, mark it pending, keep processing the current configuration, request the permitted restart or rescan, then complete the transition through deactivation and activation.
 1. Exercise reordered parameters, changed meanings, failed-load preservation during processing, delayed restart, and notifications in a host or format fixture.
 
+### Example: Preset With Pending Latency
+
+An established plugin stores `gain` as CLAP ID 10 and `mix` as CLAP ID 20. Its baseline fixture records those IDs, normalized meanings, and an automation lane bound to ID 20. A new `drive` parameter receives ID 30, so the fixture verifies that the earlier bindings still resolve. For the pinned AUv2 wrapper, `[A, B, C]` with `ordering = [2, 0, 1]` must present `[C, A, B]`; this is a source-level mapping check until a host fixture also verifies its parameter list and automation binding.
+
+A main-thread loader decodes a preset into temporary owned storage. A truncated stream fails before publication, leaving the active instance unchanged. A valid preset that changes latency records `pending_latency = 128`, continues processing the active 64-sample configuration, requests restart on the permitted thread, and exposes 64 until deactivation and activation complete. After activation, the host-visible latency is 128 and the required notification has occurred. The trace proves transactional state handling and a delayed transition policy for this example, not every host's restart behavior.
+
 ## Sources
 
 - [CLAP parameters](https://github.com/free-audio/clap/blob/cd94482ba5941ae410809b6fbaed3bc851044270/include/clap/ext/params.h), [state](https://github.com/free-audio/clap/blob/cd94482ba5941ae410809b6fbaed3bc851044270/include/clap/ext/state.h), [latency](https://github.com/free-audio/clap/blob/cd94482ba5941ae410809b6fbaed3bc851044270/include/clap/ext/latency.h), [ports](https://github.com/free-audio/clap/blob/cd94482ba5941ae410809b6fbaed3bc851044270/include/clap/ext/audio-ports.h), and [host](https://github.com/free-audio/clap/blob/cd94482ba5941ae410809b6fbaed3bc851044270/include/clap/host.h)

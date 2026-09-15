@@ -45,6 +45,12 @@ fosforo's [combined close flag and active count](https://github.com/cboone/fosfo
 
 Validate block reuse, overwrite attempts, a stalled consumer, bounded drain batches, retirement exhaustion, notification cost, and payload destruction after rejected enqueue. Report the protocol's producer and consumer topology, all full-capacity behavior, and any unverified target-specific atomic guarantee.
 
+### Example: Three Display Blocks
+
+One callback producer and one UI consumer own three fixed 256-sample blocks. The producer fills a `free` block, release-publishes its index, and never touches it again until it acquire-observes the consumer's returned index. The consumer acquire-observes one published index, copies at most 256 samples, then release-publishes that index as returned. The producer examines at most one returned index and publishes at most one block per callback.
+
+When all blocks are consumer-owned, the callback increments an atomic dropped-frame counter and retains the previously published display value. It neither retries nor posts a notification. The UI polls the counter. A test trace holds all three blocks, verifies that a fourth callback does not overwrite one, returns a block, and verifies that only the returned block becomes reusable. This establishes the stated SPSC transfer and bounded overflow policy; a worker producer or a reference-counted payload would require a different protocol and cost audit.
+
 ## Sources
 
 - [fosforo history ring](https://github.com/cboone/fosforo/blob/1317e2b752f7f7d44db9bb7745200ca6e59dde83/src/dsp/ring.zig) and [gate protocol](https://github.com/cboone/fosforo/blob/1317e2b752f7f7d44db9bb7745200ca6e59dde83/src/clap/gate.zig)
