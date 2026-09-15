@@ -138,6 +138,8 @@ When the comparison is ambiguous, include none. The two errors are not symmetric
 
 Merge issue numbers from all three strategies into a single deduplicated list. Preserve the order: branch-name issues first, then commit-message issues, then search-matched issues. Do not record the branch prefix: the closing keyword comes from the nature of the change, not from how the branch is named.
 
+Then remove every **follow-up issue** from the list, whichever strategy found it. A follow-up issue is one filed earlier in this session for a concern this branch's work set aside, for example by the `create-deferred-issues` skill. It must stay open when this PR merges, but strategy 2 picks up any `#N` in a commit message, and strategy 3 can match a just-filed follow-up that shares words with the branch slug; either would close it. Take follow-ups from the session only, never from a tracker search, and record them separately for the `## Follow-ups` section in step 7. Commit messages in step 4 reference only the list that remains.
+
 ### 3. Validate Preconditions
 
 Stop and report an error if any of these are true:
@@ -297,6 +299,10 @@ Use the following format:
 ## Closes
 
 Closes #N
+
+## Follow-ups
+
+- #N
 ```
 
 Keep the summary to 1-4 bullet points. Focus on what changed and why.
@@ -310,6 +316,8 @@ Use the same nature-of-change test as the commit message, so the two never disag
 
 If no connected issues were detected, omit the `## Closes` section entirely.
 
+If step 2 recorded follow-up issues, add a `## Follow-ups` section last, after `## Closes` or, when there is no Closes section, after `## Test plan`. List one issue per line as `- #N`, or `- owner/name#N` for an issue in another repository, and never with a closing keyword, since these issues stay open after the merge. If there are no follow-up issues, omit the section entirely.
+
 #### Create the PR
 
 First, generate a unique temporary file path using `mktemp -u`:
@@ -321,7 +329,7 @@ mktemp -u /tmp/gh-pr-body-XXXXXX
 
 The `-u` flag is required. Plain `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first, so the write fails with `File has not been read yet`. With `-u` the path is unique but unoccupied, so Write creates it fresh.
 
-Then use the **Write** tool to write the full PR body (Summary, Test plan, and Closes sections) to the exact path returned by `mktemp -u`. In the examples below, `TMPFILE` is a placeholder for that path.
+Then use the **Write** tool to write the full PR body (Summary, Test plan, Closes, and Follow-ups sections) to the exact path returned by `mktemp -u`. In the examples below, `TMPFILE` is a placeholder for that path.
 
 Then create the PR with `--body-file`:
 
@@ -395,6 +403,7 @@ After the PR is created, report:
 1. The commit hash(es) included.
 1. A brief summary of what was committed and pushed.
 1. Connected issues (if any) and the closing keywords used.
+1. Follow-up issues listed in the PR body (if any).
 
 ## Plan-Aware Commits
 
