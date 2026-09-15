@@ -108,6 +108,7 @@ Read `./references/MARKDOWN.md` for the complete guide. Summary:
 
 After creating or editing Markdown files, run the project's lint-fix and format commands to correct list numbering, spacing, and other formatting issues. This is a required final step, not optional.
 
-Check `package.json` for project-specific scripts (e.g., `yarn lint:fix`, `yarn lint:md:fix`, `yarn format`, `npm run lint:fix`). Also check `Makefile` targets and scripts in `bin/`. Run the linter in fix mode first and the formatter last, so Prettier has the final say on layout. Where Prettier formats Markdown, the formatter is what aligns tables; markdownlint's fix mode does not.
+Check `package.json` for project-specific scripts (e.g., `yarn lint:fix`, `yarn lint:md:fix`, `yarn format`, `npm run lint:fix`). Also check `Makefile` targets and scripts in `bin/`. Choose the order for each file using the Prettier detection above:
 
-If no project-specific lint script is available, use `markdownlint-cli2 --fix` directly as a fallback, after aligning tables by hand.
+- **Prettier formats the file:** Run the linter in fix mode first and Prettier last, so Prettier has the final say on layout. Use the project's lint-fix and format commands when available. If either command is missing, invoke the corresponding installed tool directly: `markdownlint-cli2 --fix` for lint fixes, then `prettier --write` for formatting, passing the edited file paths. Prettier aligns the tables; no manual padding is needed, including when there is no project-specific lint script.
+- **Prettier does not format the file:** Align tables by hand before running any command that invokes markdownlint's fix mode, including project-specific lint-fix scripts. Then run the project's lint-fix command, or invoke `markdownlint-cli2 --fix` directly on the edited files if no such command exists.
