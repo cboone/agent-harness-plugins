@@ -99,7 +99,7 @@ Reviewed `a1b2c3d` (fast-forwarded from `9f8e7d6`): 12 files, +340/-58. CI: 1 fa
 
 ## How It Differs
 
-- [Review Branch](../review-branch/README.md) evaluates your own branch against a local plan and saves a review document. Review Colleague PR evaluates someone else's pull request and saves nothing.
+- [Review Branch](../review-branch/README.md) evaluates your own branch, checks plan compliance when a plan is available, and normally saves a review document. Review Colleague PR evaluates someone else's pull request and saves nothing.
 - [Resolve Copilot PR Feedback](../resolve-copilot-pr-feedback/README.md) acts on review feedback: it changes code and replies on GitHub. Review Colleague PR only reads.
 
 ## Recommended Permissions
@@ -130,7 +130,7 @@ GitHub access is read-only. Git fetches refs, and step 2 may fast-forward the ch
       "Bash(git --literal-pathspecs ls-tree *)",
       "Bash(git --no-pager --literal-pathspecs ls-tree *)",
       "Bash(git --no-pager cat-file blob *)",
-      "Bash(git merge --ff-only *)",
+      "Bash(git -c core.hooksPath=/dev/null merge --ff-only *)",
       "Bash(git merge-base *)",
       "Bash(git remote -v)",
       "Bash(git rev-parse *)",
