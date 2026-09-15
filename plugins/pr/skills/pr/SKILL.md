@@ -143,7 +143,11 @@ When the comparison is ambiguous, include none. The two errors are not symmetric
 
 Merge issue numbers from all three strategies into a single deduplicated list. Preserve the order: branch-name issues first, then commit-message issues, then search-matched issues. Do not record the branch prefix: the closing keyword comes from the nature of the change, not from how the branch is named.
 
-Then remove every **follow-up issue** from the list, whichever strategy found it. A follow-up issue is one filed earlier in this session for a concern this branch's work set aside, for example by the `create-deferred-issues` skill. It must stay open when this PR merges, but strategy 2 picks up any `#N` in a commit message, and strategy 3 can match a just-filed follow-up that shares words with the branch slug; either would close it. Take follow-ups from the session only, never from a tracker search, and record them separately for the `## Follow-ups` section in step 7. Commit messages in step 4 reference only the list that remains.
+Collect **follow-up issues** directly from the session, independently of the detected closing list. These are issues filed for concerns this branch set aside, for example by the `create-deferred-issues` skill; a follow-up belongs in this collection even when none of the strategies above found it. Preserve each full issue URL, host, repository, number, title, and destination visibility. Resolve missing identity or visibility with an explicit `gh issue view <issue-url> --json url,title` or `gh repo view <host/owner/name> --json visibility`; never infer the host or repository from a number alone.
+
+Normalize the detected local closing candidates to the PR target's host and repository, then remove only identities that exactly match a follow-up. In the strategies above, treat a repository-qualified reference or full URL as one unit; never extract its `#N` suffix as a local candidate. `other/repo#7` must not remove or introduce the PR repository's `#7`. Keep every follow-up in the separate collection for step 7, even if it is omitted from a public PR body. Commit messages in step 4 reference only the closing list that remains.
+
+Before creating commits or the PR, inspect the full messages of existing branch commits with `git log --format='%H%n%B' <base-branch>..HEAD` for closing keywords naming a follow-up. Compare full identities, resolving bare references in the PR target. If a match exists, stop and report the conflicting commit and issue so the user can decide how to handle it. Moving a reference into Follow-ups cannot neutralize a closing keyword already committed; never amend or rewrite history automatically.
 
 ### 3. Validate Preconditions
 
@@ -321,7 +325,9 @@ Use the same nature-of-change test as the commit message, so the two never disag
 
 If no connected issues were detected, omit the `## Closes` section entirely.
 
-If step 2 recorded follow-up issues, add a `## Follow-ups` section last, after `## Closes` or, when there is no Closes section, after `## Test plan`. List one issue per line as `- #N`, or `- owner/name#N` for an issue in another repository, and never with a closing keyword, since these issues stay open after the merge. If there are no follow-up issues, omit the section entirely.
+If step 2 recorded follow-up issues, check the PR repository's visibility and each destination's recorded visibility before composing the `## Follow-ups` section. Use explicit repository selectors for metadata reads. In a public PR, omit private or internal destinations entirely, including their titles, repository names, numbers, and URLs. Omit entries with unknown destination or PR visibility until verified, and report omissions only to the user. Exclude omitted follow-ups from closing references just like published ones.
+
+Place the section last, after `## Closes` or, when there is no Closes section, after `## Test plan`. List one publishable issue per line as `- #N` in the same repository, `- owner/name#N` in another repository on the same host, or `- https://HOST/OWNER/NAME/issues/N` across hosts. Never use a closing keyword. If no entries can be published, omit the section entirely.
 
 #### Create the PR
 

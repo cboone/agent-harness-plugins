@@ -51,7 +51,7 @@ Final output for a parent invocation must include:
 
 ```text
 Deferred issues: <filed|none found|none approved|dry run|failure>
-Filed: <none|#N title (owner/name), ...>
+Filed: <none|full issue URL, title, destination visibility; ...>
 Summary comment: <none|URL>
 Caller resume target: <target from continuation block>
 ```
@@ -151,6 +151,16 @@ Drop any whose `url` contains `/pull/`, because `gh issue view` also resolves pu
 
 Retain the returned URL, host, repository, and number as the source identity for body links, duplicate comparisons, and timeline reads. Equal numbers in different repositories are different issues. A failed source read is unavailable evidence, never a reason to retry the number against the filing target.
 
+#### Source visibility
+
+For every distinct repository supplying a PR, issue, code marker, document, or session concern, fetch and retain its canonical identity, URL, and visibility:
+
+```bash
+gh repo view <source-repo> --json nameWithOwner,url,visibility
+```
+
+Reuse origin's metadata only for sources in origin. Another repository's issue or PR needs its own lookup. Attach visibility to each source, not just to the filing destination. If a source cannot be identified or its visibility cannot be read, mark it unknown and treat its details as non-public when composing public text.
+
 #### Labels
 
 For the default target now, and for any other target once a candidate names it:
@@ -163,7 +173,7 @@ gh label list --repo <target> --json name,description --limit 200
 
 Read `./references/deferral-signals.md` before judging any candidate. It defines a deferral, lists the phrasings and source shapes that mark one, and lists what looks like a deferral but is not.
 
-For each candidate, record the concern in one sentence, the source it came from, and a link or location.
+For each candidate, record the concern in one sentence, every source it came from, and a link or location. Preserve each source's repository identity and visibility; one public source does not make another source's private details publishable.
 
 #### Session
 
@@ -217,15 +227,19 @@ Apply these in order.
 
 1. **Drop what is not a deferral**, per the exclusions in `./references/deferral-signals.md`: concerns resolved later in the work, concerns the user declined, hedges with no concrete action, and the rest. When unsure whether something is a deferral at all, leave it out.
 1. **Merge duplicates across sources.** A concern the session set aside and a `TODO` about the same thing become one candidate that carries both sources.
-1. **Resolve each target.** Use the default target unless the deferral names another repository: an `owner/name`, a URL, or a repository the session already identified by name. Never guess from a vague description; propose the candidate with its target marked unresolved. With no default target, require the user to supply one. Check each distinct resolved target:
+1. **Resolve each target.** Use the default target unless the deferral names another repository: an `owner/name`, a URL, or a repository the session already identified by name. Never guess from a vague description; propose the candidate with its target marked unresolved. Require the user to supply a destination only when neither a default nor an explicit target exists. Check each distinct resolved target:
 
    ```bash
    gh repo view <target> --json nameWithOwner,visibility,isArchived,hasIssuesEnabled
    ```
 
-   Record its canonical repository identity and third-party classification. An archived target, or one with issues disabled, moves the candidate to **Cannot file** with the reason. When origin is a fork whose issues are disabled, add that the user may retarget the item to the parent explicitly. Never retarget it yourself. If repository metadata cannot be read, keep eligibility unresolved and do not file until it can be checked.
+   Record its canonical repository identity, visibility, and third-party classification. An archived target, or one with issues disabled, moves the candidate to **Cannot file** with the reason. When origin is a fork whose issues are disabled, add that the user may retarget the item to the parent explicitly. Never retarget it yourself. If repository metadata cannot be read, keep eligibility unresolved and do not file until it can be checked.
 
    Load labels for this destination using step 1's label command. Do not reuse another repository's labels. For an unresolved target, skip target metadata, label lookup, and tracker search; mark it "target unresolved; not checked for duplicates" until an edit supplies the destination. Source evidence may still establish that the concern is tracked.
+
+1. **Check disclosure in both directions.** For a public destination, compose the proposed title, description, and source context in general terms when any source is private, internal, or unknown. Omit that source's repository and service names, issue numbers and titles, branch names, links, paths, permalinks, and quotations. Use `Raised during related work.` as its context instead of a GitHub reference. State in the proposal that source details are omitted. Public summary comments must use the same publishable wording. If the concern cannot be described without exposing those details, leave the item unfileable until the user supplies publishable wording.
+
+   A private, internal, or unknown destination must also stay out of comments or PR bodies in a public repository. Retain its full issue URL and visibility in the local report and parent handoff, but omit its identity and title from public summaries. Step 6 applies this check to each filed issue and the receiving repository before posting.
 
 1. **Remove what is already tracked.** A candidate is tracked when any of these holds:
    - Its own text names an issue (`#N`, an issue URL, "tracked in", "filed as") other than the branch's source issues. Resolve a bare number in the repository the text came from; compare full repository identities and numbers, not numbers alone. If that repository is unknown, keep the reference unresolved rather than assuming the destination. Naming a source issue alone does not establish that a separate deferral is tracked.
@@ -247,7 +261,7 @@ Apply these in order.
 
      Judge each hit on its distinctive words, the ones naming the specific subject, and not on generic tracker vocabulary such as `add`, `fix`, `update`, or `skill`. A clear match moves the candidate to **Already tracked**. An ambiguous one stays in the batch with a "possible duplicate of #N" note, and the user decides.
 
-1. **Check visibility.** When a public target receives a candidate whose source is a private repository, its body must carry no link, path, permalink, or quotation from that repository. Say so on the item.
+   When no source timeline link can exist (there is no source PR or issue, or disclosure rules omit its reference), use the destination issue's published title and description as the duplicate record. Search using those publishable words and also inspect the destination's newest issues directly with `gh issue list --repo <target> --state all --limit 20 --json number,title,body,url`, since the search index can lag. Read plausible matches before deciding. Retain every filed URL in the local report and session. Say in the proposal that no source timeline link is available, and disclose any failed duplicate lookup before approval; do not claim timeline-based duplicate coverage for these items.
 
 A long batch is a sign that the filter is too loose. Apply it again before proposing.
 
@@ -317,12 +331,14 @@ This lists the newest issues directly rather than through the search index, whic
 
 ### 6. Cross-Reference
 
-Every body links its source, which puts the new issue on the source's timeline. Then post one summary comment, as described in `./references/batch-filing.md`, on the first of these that exists:
+When a source PR or issue exists and disclosure permits its reference, the body links it. Then post one summary comment, as described in `./references/batch-filing.md`, on the first of these that exists:
 
 1. The open PR, when it lives in the default target.
 1. The first source issue in the default target.
 
-If neither exists, post nothing and say so in the report. Never comment on a third-party repository. Skip this step under `--no-comment`, or when nothing was filed.
+Before posting, compare each filed destination's visibility with the receiving repository's visibility. In a public receiver, include only issues in public destinations, with publishable titles. If either visibility is unknown, omit that issue from the comment until it can be verified. Keep private destination URLs, repository names, issue numbers, and titles in the local report only. If every entry is omitted, post nothing and explain why locally.
+
+If neither receiver exists, post nothing and say so in the report. Never comment on a third-party repository. Skip this step under `--no-comment`, or when nothing was filed.
 
 ### 7. Report
 
@@ -339,7 +355,9 @@ Cannot file: Update the host bindings (owner/bindings is archived)
 Summary comment: <URL, or none and why>
 ```
 
-Then suggest the next step. When no PR exists yet, suggest `/pr`, which lists the filed issues under a Follow-ups section of the PR body and keeps them out of its closing references. With a parent continuation block, give the parent output instead and continue per the block.
+Include each filed issue's full URL and destination visibility in this local report, including entries omitted from a public summary. A parent must retain that identity and check visibility before publishing a reference elsewhere.
+
+Then suggest the next step. When no PR exists yet, suggest `/pr`, which lists publishable filed issues under a Follow-ups section of the PR body and excludes all filed follow-ups from its closing references. With a parent continuation block, give the parent output instead and continue per the block.
 
 ## Error Handling
 

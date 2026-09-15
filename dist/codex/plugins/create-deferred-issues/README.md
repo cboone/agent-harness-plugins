@@ -29,15 +29,15 @@ Nothing is filed until you have seen the batch. Each proposed issue shows its ti
 
 ### Filing and cross-referencing
 
-Approved issues are filed one at a time, in order. Each body is written to a temporary file, the same pattern [Create Issue](../create-issue/README.md) uses, and checked after creation. Labels come only from those the repository already has, and never from status or automation labels. Each body links back to the pull request or issue it came from, and one summary comment on that pull request or issue lists everything filed.
+Approved issues are filed one at a time, in order. Each body is written to a temporary file, the same pattern [Create Issue](../create-issue/README.md) uses, and checked after creation. Labels come only from those the repository already has, and never from status or automation labels. When disclosure permits it, each body links back to its source pull request or issue, and one summary comment lists the publishable filings. Without a source link, duplicate checks use the destination's published concern and newest-issues listing. The local report retains every filed URL and its destination visibility.
 
 ### Repositories
 
-Every `gh` call selects its repository explicitly. Filing defaults to the repository `origin` points at, because `gh` otherwise prefers an `upstream` remote and would file on the project you forked. Source issues and PR timelines are read in their own repositories, while duplicate searches run in each concern's resolved destination. A concern that names another repository is proposed against that repository. A repository with a different owner, including a fork's parent, is marked third-party: it is filed to only when you approve that item by number, and it never receives a summary comment. Archived repositories and repositories with issues disabled are listed as unfileable rather than attempted, and nothing from a private repository is linked from an issue filed in a public one.
+Every `gh` call selects its repository explicitly. Filing defaults to the repository `origin` points at, because `gh` otherwise prefers an `upstream` remote and would file on the project you forked. Source issues and PR timelines are read in their own repositories, while duplicate searches run in each concern's resolved destination. A concern that names another repository is proposed against that repository. A repository with a different owner, including a fork's parent, is marked third-party: it is filed to only when you approve that item by number, and it never receives a summary comment. Archived repositories and repositories with issues disabled are listed as unfileable rather than attempted. Visibility is checked for every source and destination: private-source details are omitted from public titles and bodies, and private-destination references are omitted from public summary comments and PR bodies.
 
 ### Before /pr
 
-Run it before opening the pull request. [PR](../pr/README.md) lists the issues filed this way under a `## Follow-ups` section of the PR body and keeps them out of its closing references, so merging the pull request does not close them.
+Run it before opening the pull request. [PR](../pr/README.md) lists publishable issues filed this way under a `## Follow-ups` section and excludes every follow-up from its closing references using the full repository identity. It also checks existing commit messages and stops if one already contains a closing keyword for a follow-up.
 
 ## Usage
 

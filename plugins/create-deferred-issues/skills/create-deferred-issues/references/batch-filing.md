@@ -7,6 +7,7 @@ How to file the approved batch and post the summary comment. The per-issue seque
 - **Imperative and specific**: "Run shfmt in the lint workflow", not "shfmt".
 - **Under 70 characters**, with no trailing period, and no type prefix unless the target repository's existing issue titles use one.
 - **Single-quoted** on the command line, always. Inside a double-quoted shell argument, a backtick, `$(...)`, or `$NAME` is expanded, so a title that names code in backticks would run that code and file a different title. Single quotes pass all of them through unchanged. Rephrase a title that would need an apostrophe rather than escaping it.
+- **Publishable in the destination**: use the title approved after the visibility check. A public title must not identify a private or unknown source, service, repository, or finding through details omitted from its body.
 
 ## Body
 
@@ -27,9 +28,9 @@ Deferred from #<pr> (<pr title>).
 - **With no PR**, the context line reads `Raised while working on #<issue>`, or names the branch when there is no source issue either.
 - **Across repositories**, write `owner/name#N`, using the source's recorded repository and number. Use its full URL across hosts. A bare `#N` resolves in the target repository, not the source. Retargeting the new issue does not change the identity of the source it references.
 - **For a code marker**, link a permalink using the source's recorded host and repository at a commit its remote has: `https://<source-host>/<owner>/<name>/blob/<sha>/<path>#L<line>`. Check with `git branch -r --contains <sha>` and verify that the containing remote belongs to that source. When the commit is not pushed there, write `<path>:<line>` as text rather than a link that would not resolve.
-- **The source link is load-bearing.** It puts the new issue on the source's timeline, which is how a later run recognizes it as already tracked.
+- **Link when a source exists and disclosure permits it.** A source PR or issue reference creates the timeline evidence used for duplicate detection. With no source PR or issue, or when its identity must be omitted, rely on step 3's destination search and newest-issues listing using the published concern, and retain the filed URL locally. Never invent a source reference or promise a timeline entry in these cases.
 - **Summarize.** Never paste session text wholesale, and never include secrets, tokens, local absolute paths, or machine names. The target may be public even when the conversation was not.
-- **Visibility.** When the target is public and the source repository is private, leave out every link, path, permalink, and quotation from the source repository, and describe the concern in general terms.
+- **Visibility overrides the context template.** When the target is public and a source is private, internal, or unknown, use `Raised during related work.` instead of `Deferred from #N`, `Raised while working on #N`, or a branch name. Omit that source's identity, service names, issue numbers and titles, links, paths, permalinks, and quotations from both title and body. No bare or qualified issue reference may reconstruct an omitted private source. Use only the generalized wording approved in the proposal.
 
 ## Labels
 
@@ -55,10 +56,10 @@ Each step below is its own tool call, made in order.
 1. Once the Write has returned, create the issue in a separate call:
 
    ```bash
-   gh issue create --repo <owner/name> --title '<title>' --body-file <path> --label '<label>'
+   gh issue create --repo <target> --title '<title>' --body-file <path> --label '<label>'
    ```
 
-   Repeat `--label` for a second label, and omit it when none fit. Never batch the Write and `gh issue create` into one message. `gh` reads the body file when it starts, so a parallel batch can open the issue with an empty body, and the command still succeeds and prints a URL.
+   Use the destination's recorded host-qualified selector for `<target>`. Repeat `--label` for a second label, and omit it when none fit. Never batch the Write and `gh issue create` into one message. `gh` reads the body file when it starts, so a parallel batch can open the issue with an empty body, and the command still succeeds and prints a URL.
 
 1. Only if `gh issue create` printed an issue URL, confirm the body landed:
 
@@ -76,13 +77,13 @@ Each step below is its own tool call, made in order.
 
    Do not chain the cleanup onto `gh issue create` with an exit-status idiom such as `status=$?`. In zsh, `status` is a read-only variable, and the assignment fails in a way that reports a successful creation as a failure.
 
-1. Record the issue number, URL, title, and repository for the report and the summary comment.
+1. Record the issue number, full URL, title, host, repository, and destination visibility for the local report and parent handoff. Include it in the summary comment only when the receiving repository's visibility permits it.
 
-**If `gh issue create` fails on a label**, list the target's newest issues (`gh issue list --repo <owner/name> --state all --limit 20 --json number,title,createdAt`) to confirm nothing was created, then file again without `--label` and report which labels were skipped.
+**If `gh issue create` fails on a label**, list the target's newest issues (`gh issue list --repo <target> --state all --limit 20 --json number,title,createdAt`) to confirm nothing was created, then file again without `--label` and report which labels were skipped.
 
 ## Summary Comment
 
-One comment, posted after every approved item has been attempted, listing only the issues this run filed:
+One comment, posted after every approved item has been attempted, listing only the issues this run filed whose identities may be published in the receiving repository. Reuse step 6's visibility check: omit private or internal destinations from a public receiver and omit entries with unknown destination or receiver visibility. If no entries can be published, skip the comment and report the omitted entries locally.
 
 ```markdown
 <!-- create-deferred-issues -->
@@ -93,6 +94,8 @@ Filed follow-up issues for concerns set aside in this work:
 - owner/ci-actions#7 Pin the runner image in the shared CI actions
 ```
 
+Use a full issue URL for a destination on another host. Titles must meet the receiving repository's disclosure rules too; never copy private details from the local report into a public comment.
+
 Use the same tmpfile sequence, with its own path:
 
 1. `mktemp -u /tmp/gh-comment-body-XXXXXX`.
@@ -100,14 +103,16 @@ Use the same tmpfile sequence, with its own path:
 1. In a separate call, on the PR:
 
    ```bash
-   gh pr comment <number> --repo <owner/name> --body-file <path>
+   gh pr comment <number> --repo <receiver> --body-file <path>
    ```
 
    Or on the source issue:
 
    ```bash
-   gh issue comment <number> --repo <owner/name> --body-file <path>
+   gh issue comment <number> --repo <receiver> --body-file <path>
    ```
+
+   `<receiver>` is the host-qualified repository selector recorded for the source PR or issue, not the destination of the most recent filing.
 
 1. `rm -f <path>`, in its own call.
 
