@@ -238,15 +238,15 @@ Report style: don't restate the diff, don't hedge, don't praise by default, and 
   - **How it differs:** contrasts it with `review-branch` and `resolve-copilot-pr-feedback`.
   - **Recommended Permissions**
   - **See Also:** ends with the all-plugins link.
-- **Recommended Permissions** lists every command: `gh pr view`, `gh pr checks`, `gh issue view`, `gh api user`, `gh api --paginate repos/`, `gh api graphql`, `git remote -v`, `git fetch`, `git rev-parse`, `git status`, `git ls-files`, `git merge-base`, `git diff`, `git log`, `git show`, and `git merge --ff-only`.
+- **Recommended Permissions** lists every command: `gh pr view`, `gh pr checks`, `gh issue view`, `gh api user`, `gh api --paginate repos/`, `gh api graphql`, `git remote -v`, `git fetch`, `git rev-parse`, `git status`, `git ls-files`, `git merge-base`, `git diff`, `git --literal-pathspecs diff`, `git --literal-pathspecs ls-tree`, `git log`, `git show`, and `git merge --ff-only`.
   - It notes that `gh api` rules also match write calls, so the skill's hard rules are what keep it read-only.
 - Link `review-in-depth` only once that plugin exists. Until then, the markdownlint relative-links rule would fail on the link.
 
 ### Catalog registration
 
 1. `plugins/review-colleague-pr/.claude-plugin/plugin.json`: the same fields as `plugins/review-branch/.claude-plugin/plugin.json`, at version `1.0.0`.
-1. `.claude-plugin/marketplace.json`: insert the entry between `review-branch` and `review-dependabot-config` with category `code-review`. Recompute `metadata.version` with `bin/compute-catalog-state`; the current merged catalog value is `catalog-M71-m107-p165-n58`.
-1. Root `README.md`: add a Code Review table row after Resolve Copilot PR Feedback, with trigger `/review-colleague-pr` and the description verbatim, plus a `gh` bullet under that table's External tools list. The Contents section does not change.
+1. `.claude-plugin/marketplace.json`: insert the entry between `review-branch` and `review-dependabot-config` with category `code-review`. Recompute `metadata.version` with `bin/compute-catalog-state` at implementation time; do not assume a fixed catalog value.
+1. Root `README.md`: add a Code Review table row in alphabetical order, with trigger `/review-colleague-pr` and the description verbatim, plus a `gh` bullet under that table's External tools list. The Contents section does not change.
 1. Regenerate the mirrors with `bin/build-codex-marketplace` and `bin/build-opencode-mirror`.
 
 ### Cross-reference hazards
@@ -303,7 +303,7 @@ Use existing PRs only. Never create or comment on one to test.
 
 ## Review resolution verification
 
-Commit `ce384fa6` resolves R1-R4. Both mirrors were regenerated, and `make lint validate` passed. The plugin stays at its initial `1.0.0` version and the recomputed catalog is `catalog-M71-m107-p165-n58`.
+At the `cbc51a18` verification checkpoint, R1-R4 were recorded resolved, both mirrors were regenerated, and `make lint validate` passed. The plugin stayed at its initial `1.0.0` version and the catalog was `catalog-M71-m107-p165-n58`. Later merges added the Review Plan and Write Manual Verification Plan plugins; the current catalog is `catalog-M73-m107-p165-n60`.
 
 The R1-R4 review fixes update the checkout guards and requirements reads. A disposable-checkout command probe passed nine cases: staged and unstaged tracked edits at matching and stale HEADs; untracked and ignored files at a path introduced by the target commit; non-overlapping untracked content; ignored build output; and a clean fast-forward with post-sync checks. The probe used the commands from the skill, preserved local content, and created no commits. This verifies those Git checks; it does not establish the behavior of index flags, shallow history, or divergent histories.
 
