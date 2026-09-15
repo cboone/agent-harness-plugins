@@ -6,8 +6,7 @@ How to file the approved batch and post the summary comment. The per-issue seque
 
 - **Imperative and specific**: "Run shfmt in the lint workflow", not "shfmt".
 - **Under 70 characters**, with no trailing period, and no type prefix unless the target repository's existing issue titles use one.
-- **No backticks.** Issue titles do not render Markdown, and inside a double-quoted shell argument a backtick starts command substitution, so the title that reaches GitHub would not be the one written.
-- **Single-quoted** on the command line. Rephrase a title that would need an apostrophe rather than escaping it.
+- **Single-quoted** on the command line, always. Inside a double-quoted shell argument, a backtick, `$(...)`, or `$NAME` is expanded, so a title that names code in backticks would run that code and file a different title. Single quotes pass all of them through unchanged. Rephrase a title that would need an apostrophe rather than escaping it.
 
 ## Body
 
