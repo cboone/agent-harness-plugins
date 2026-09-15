@@ -102,7 +102,7 @@ The review must describe the PR as it is now, not as it was when the checkout wa
 
 1. Re-run the same PR lookup with `--repo OWNER/REPO`, requesting the same fields as in step 1. If it fails or omits any required field, stop and report that the PR could not be revalidated. Compare `headRefOid` to the recorded `<head-sha>`, and compare the review inputs `number`, `url`, `title`, `body`, `author`, `state`, `isDraft`, `baseRefName`, `headRefName`, `isCrossRepository`, and `closingIssuesReferences` with the initial lookup. If any value differs, restart resolution and synchronization using the refreshed PR data. Allow at most two such restarts; if the PR changes again, stop and report that its review inputs are changing during synchronization. Use the refreshed values for all later steps.
 
-1. If `git status --porcelain --untracked-files=no` prints anything, there are uncommitted changes to tracked files. Tell the user and stop.
+1. Run `git status --porcelain --untracked-files=no`. If it fails, stop and report that tracked-file cleanliness could not be established. If it succeeds and prints anything, there are uncommitted changes to tracked files; tell the user and stop.
 
 1. Detect tracked paths hidden from ordinary status output:
 
@@ -110,7 +110,7 @@ The review must describe the PR as it is now, not as it was when the checkout wa
    git ls-files -v
    ```
 
-   Stop if any output line starts with a lowercase tag (assume-unchanged) or `S` (skip-worktree). These index flags can hide local edits from `git status`; do not clear them automatically.
+   If the command fails, stop and report that tracked-file index flags could not be checked. If it succeeds, stop if any output line starts with a lowercase tag (assume-unchanged) or `S` (skip-worktree). These index flags can hide local edits from `git status`; do not clear them automatically.
 
 1. Run `git rev-parse --is-shallow-repository` before any HEAD equality or ancestry check. If it fails or prints `true`, stop because incomplete history can make the synchronization decision or review diff omit changes.
 
@@ -237,7 +237,7 @@ If no substantive review is found, review the whole PR. For a selected `LAST_REV
 
    These command blocks are templates: replace each placeholder with its resolved value before running. `<shell-escaped-path-argument>` is one shell-safe argument and must not be wrapped in another layer of quotes. Shell state does not carry between commands; initialize any shell variable in the same command context where it is used.
 
-   Immediately before reading changed files with file tools, repeat `git status --porcelain --untracked-files=no` and `git ls-files -v`. If tracked files are modified or any index entry has an assume-unchanged or skip-worktree flag, stop and report that the checkout changed during review. Do not use local file contents as evidence for the PR in that state.
+   Immediately before reading changed files with file tools, rerun `git status --porcelain --untracked-files=no`, `git ls-files -v`, and `git rev-parse HEAD`. Every command must succeed. Stop and report if tracked files are modified, an index entry has an assume-unchanged or skip-worktree flag, or HEAD differs from `<head-sha>`. Do not use local file contents as evidence for the PR in any of these states.
 
 1. On a re-review, also read what changed since the last review. Merges from the base branch bring in other people's work, so focus on the author's own commits:
 
