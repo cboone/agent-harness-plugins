@@ -79,6 +79,7 @@ Take `OWNER/REPO` from `url` (`https://github.com/OWNER/REPO/pull/NUMBER`).
 - **No PR found and no number given**: tell the user the current branch has no pull request, suggest checking one out with `gh pr checkout <pr-number>` (or a worktree tool such as `workmux add --pr <pr-number>`), and stop.
 - **A number was given**: after identifying the fetch remote in step 2, confirm that `git branch --show-current` prints `headRefName`. Do not require the branch's upstream to be `<remote>/<headRefName>`: a fork PR may track its fork remote, and a deleted source branch may have no upstream. The fetched PR-head SHA is the content identity check. Before changing the checkout, apply the linked-worktree safeguard in step 2.
 - **Closed, merged, or draft**: review it anyway, and note the state in the report header.
+- If `--since <ref>` is supplied without `--full`, resolve it to a commit SHA with `git rev-parse --verify '<ref>^{commit}'` before step 2 can change the checkout. Save that SHA as `LAST_REVIEW_SHA` for the prior-discussion and re-review steps. If it does not resolve to a commit, stop and report the invalid baseline. When `--full` is supplied, ignore `--since`.
 
 ### 2. Sync the Checkout
 
@@ -124,7 +125,7 @@ The review must describe the PR as it is now, not as it was when the checkout wa
 
 1. Otherwise the author rewrote the branch (a rebase or force-push). Reset only when both of these hold:
    - **The checkout is a linked worktree.** `git rev-parse --path-format=absolute --git-dir --git-common-dir` prints two different paths. Two identical paths mean a primary checkout, which may hold other work.
-   - **No local commits were made here.** `git reflog show --format=%gs <local-branch>` (use `HEAD` when detached) succeeds and has no entry beginning `commit`, `cherry-pick`, `revert`, `rebase`, or `am`, and none containing `Merge made by`. Entries for branch creation, checkouts, fast-forwards, and resets are fine. A reflog command failure blocks the reset.
+   - **No local commits were made here.** `git reflog show --format=%gs <local-branch>` (use `HEAD` when detached) succeeds, returns at least one entry, and has no entry beginning `commit`, `cherry-pick`, `revert`, `rebase`, or `am`, and none containing `Merge made by`. Entries for branch creation, checkouts, fast-forwards, and resets are fine. A failed or empty reflog blocks the reset because neither proves that no local commits exist.
 
    When both hold, print the current HEAD SHA so it can be recovered, then:
 
@@ -144,8 +145,11 @@ Collect every statement of what the PR is supposed to do:
 - **Linked issues**: every issue in `closingIssuesReferences`, plus issues the title or body mentions as `#123`, `OWNER/REPO#123`, or an issue URL. Parse each reference into `ISSUE_OWNER`, `ISSUE_REPO`, and `ISSUE_NUMBER`; an unqualified `#123` uses the PR repository. Fetch each from its own repository:
 
   ```bash
-  gh issue view ISSUE_NUMBER --repo ISSUE_OWNER/ISSUE_REPO --json title,body,state,labels,comments
+  gh issue view ISSUE_NUMBER --repo ISSUE_OWNER/ISSUE_REPO --json title,body,state,labels
+  gh api --paginate repos/ISSUE_OWNER/ISSUE_REPO/issues/ISSUE_NUMBER/comments --jq '.[] | {user: .user.login, created_at, body}'
   ```
+
+  Read every comment page because issue discussions may contain acceptance criteria.
 
 - **Parent issues and sub-issues** of each linked issue, which often hold the real acceptance criteria:
 
@@ -182,14 +186,16 @@ gh api graphql --paginate -F owner=OWNER -F repo=REPO -F number=<pr-number> -f q
 
 If any discussion query fails, continue with the available sources and name each unavailable source in the report. Do not treat missing output as an empty review, comment, or thread history; do not derive a re-review baseline from an unavailable source.
 
-Choose `LAST_REVIEW_SHA` as follows:
+Use the baseline selected in step 1:
 
 - If `--full` is supplied, review the whole PR and ignore `--since`.
-- If `--since <ref>` is supplied, resolve it with `git rev-parse --verify '<ref>^{commit}'` and use that commit as `LAST_REVIEW_SHA` for the ancestry check and every re-review command below. If it does not resolve to a commit, stop and report the invalid baseline.
-- Otherwise, use the user's most recent substantive review. A review is substantive if it meets any of these conditions:
+- If `--since <ref>` was supplied, use the `LAST_REVIEW_SHA` resolved before checkout synchronization in step 1.
+- Otherwise, use the user's most recent submitted review that meets any of these conditions:
   - Its state is `APPROVED` or `CHANGES_REQUESTED`.
   - Its body is non-empty.
   - It owns at least one inline comment whose `in_reply_to_id` is null.
+
+Exclude reviews in `PENDING` state. Draft review bodies and comments are not submitted feedback and must not select the re-review baseline.
 
 Replying inside a thread also creates a `COMMENTED` review with an empty body, so a plain "most recent review by the user" would usually find a reply, not a review.
 
@@ -217,7 +223,7 @@ If no substantive review is found, review the whole PR. If `LAST_REVIEW_SHA` is 
 1. On a re-review, also read what changed since the last review. Merges from the base branch bring in other people's work, so focus on the author's own commits:
 
    ```bash
-   git log --no-merges --format='%H %s' <last-review-sha>..HEAD
+   git log --no-merges --format='%H %s' <last-review-sha>..HEAD --not <remote>/<base-branch>
    git show --format= --no-ext-diff <each-non-merge-commit>
    ```
 

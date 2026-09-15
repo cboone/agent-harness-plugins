@@ -39,7 +39,7 @@ The skill follows a set of principles meant to produce a fair review rather than
 ### What it never does
 
 - Post, comment, review, label, or resolve anything on GitHub
-- Edit, create, or delete files, commit, push, or switch branches
+- The only file or branch changes are from guarded checkout synchronization in step 2. The skill never commits or pushes.
 - Run tests, builds, linters, or installs (it reads CI status instead)
 
 The one change it makes is to keep the checkout current. It stops on uncommitted tracked changes even when HEAD already matches the PR. If synchronization is needed, it also stops on any untracked or ignored content, including build output, without changing those files. With those checks clear, it fast-forwards when possible. If the author rewrote the branch, it resets to the PR's head only inside a linked worktree with no local commits; otherwise it stops and explains why.
@@ -104,7 +104,7 @@ Reviewed `a1b2c3d` (fast-forwarded from `9f8e7d6`): 12 files, +340/-58. CI: 1 fa
 
 ## Recommended Permissions
 
-This skill runs read-only git and GitHub CLI commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+GitHub access is read-only. Git fetches refs, and step 2 may fast-forward or reset the checkout after its safeguards pass. To allow these commands to run without individual permission prompts, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
 ```json
 {
