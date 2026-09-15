@@ -25,7 +25,7 @@ It then drops what is not really a deferral (hedges, rejected alternatives, conc
 
 ### The proposal is not optional
 
-Nothing is filed until you have seen the batch. Each proposed issue shows its title, target repository, labels, source, and a two-line body sketch, followed by what was already tracked and what cannot be filed. Reply with `file all`, `file 1 3`, `drop 2`, `edit 2: <change>`, or `none`. Item numbers never shift during the exchange. This gate holds even when another skill invokes this one through a parent continuation block.
+Nothing is filed until you have seen the batch. Each proposed issue shows its title, target repository, labels, source, and a two-line body sketch, followed by what was already tracked and what cannot be filed. Reply with `file all`, `file 1 3`, `drop 2`, `edit 2: <change>`, or `none`. Item numbers never shift during the exchange. Editing a destination or concern repeats the affected repository, duplicate, label, and visibility checks; a material change from those checks is presented for approval before filing. This gate holds even when another skill invokes this one through a parent continuation block.
 
 ### Filing and cross-referencing
 
@@ -33,7 +33,7 @@ Approved issues are filed one at a time, in order. Each body is written to a tem
 
 ### Repositories
 
-Every `gh` call passes an explicit `--repo` for the repository `origin` points at, because `gh` otherwise prefers an `upstream` remote and would file on the project you forked. A concern that names another repository is proposed against that repository. A repository with a different owner, including a fork's parent, is marked third-party: it is filed to only when you approve that item by number, and it never receives a summary comment. Archived repositories and repositories with issues disabled are listed as unfileable rather than attempted, and nothing from a private repository is linked from an issue filed in a public one.
+Every `gh` call selects its repository explicitly. Filing defaults to the repository `origin` points at, because `gh` otherwise prefers an `upstream` remote and would file on the project you forked. Source issues and PR timelines are read in their own repositories, while duplicate searches run in each concern's resolved destination. A concern that names another repository is proposed against that repository. A repository with a different owner, including a fork's parent, is marked third-party: it is filed to only when you approve that item by number, and it never receives a summary comment. Archived repositories and repositories with issues disabled are listed as unfileable rather than attempted, and nothing from a private repository is linked from an issue filed in a public one.
 
 ### Before /pr
 

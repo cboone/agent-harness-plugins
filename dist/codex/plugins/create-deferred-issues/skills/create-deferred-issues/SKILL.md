@@ -69,7 +69,7 @@ Resolve the origin URL to a repository:
 gh repo view <origin-url> --json nameWithOwner,visibility,isArchived,isFork,parent,hasIssuesEnabled,defaultBranchRef
 ```
 
-- Its `nameWithOwner` is the **default target**. Pass a target explicitly as `--repo` on every `gh` call in this skill. Without `--repo`, `gh` picks the base repository itself and prefers a remote named `upstream`, so inside a fork a bare `gh issue create` files on the project that was forked.
+- Its `nameWithOwner` is the **default target** for filing. Select the repository explicitly for every `gh` call: use `--repo` where supported, the repository argument for `gh repo view`, an object's full URL when reading it, or the repository path and host for `gh api`. Source reads use the source repository; filing and tracker searches use the candidate's destination. Without an explicit repository, `gh` prefers a remote named `upstream`, so inside a fork a bare `gh issue create` files on the project that was forked.
 - If `gh` cannot resolve the URL (an SSH host alias such as `git@work-github:owner/name.git`, for example), take `owner/name` from the URL's path and run `gh repo view` with that instead. On a host other than `github.com`, write targets as `HOST/OWNER/NAME` for `--repo`, and pass `--hostname HOST` to `gh api`.
 - `parent` has no `nameWithOwner` field. Build the parent's name from `.parent.owner.login` and `.parent.name`.
 - For the rest of this workflow, a **third-party repository** is any target whose owner differs from origin's owner, plus the fork's parent and the repository an `upstream` remote points at, whoever owns them.
@@ -92,6 +92,8 @@ gh pr list --repo <target> --head <branch> --state open --json number,url,title,
 Keep only a PR whose `headRepositoryOwner.login` is origin's owner, since `--head` matches the branch name in any fork. Empty output means there is no open PR. Do not use `gh pr view <branch>` for this: it also returns a merged PR from an earlier branch that had the same name.
 
 When origin is a fork and no PR was found, run the same query with `--repo <parent>`. A PR found there is a read-only source: its comments yield candidates, but it never receives the summary comment.
+
+Record the PR's full URL, repository as `<pr-repo>`, and number together. Keep these separate from the default filing target, including when the PR lives in the parent.
 
 #### Base
 
@@ -119,20 +121,22 @@ Getting the base right matters: a stacked branch compared against the default br
 
 The issues this branch addresses:
 
-1. The PR's `closingIssuesReferences`, when a PR was found.
-1. Otherwise, issue numbers in the branch name (`feature/42-login`, `fix/issue-42`) and `#N` references in the branch's commit messages:
+1. The PR's `closingIssuesReferences`, when a PR was found. Preserve each reference's full URL and derive its host, repository, and number from that URL; a closing reference can name an issue in another repository. If a reference lacks its repository identity, resolve it from the PR's explicit closing text or report it as unavailable rather than assigning its number to origin.
+1. Otherwise, issue numbers in the branch name (`feature/42-login`, `fix/issue-42`) and `#N` references in the branch's commit messages. Bare numbers belong to the default target; preserve an explicit repository or issue URL when one is supplied:
 
    ```bash
    git log --no-merges --format=%B origin/<base>..HEAD
    ```
 
-Confirm each number:
+Confirm each issue using its own repository:
 
 ```bash
-gh issue view <n> --repo <target> --json url,state,title,body
+gh issue view <n> --repo <source-repo> --json url,state,title,body
 ```
 
 Drop any whose `url` contains `/pull/`, because `gh issue view` also resolves pull request numbers. Never search the tracker for source issues: a keyword match is not evidence that the branch addresses an issue.
+
+Retain the returned URL, host, repository, and number as the source identity for body links, duplicate comparisons, and timeline reads. Equal numbers in different repositories are different issues. A failed source read is unavailable evidence, never a reason to retry the number against the filing target.
 
 #### Labels
 
@@ -198,33 +202,35 @@ Apply these in order.
 
 1. **Drop what is not a deferral**, per the exclusions in `./references/deferral-signals.md`: concerns resolved later in the work, concerns the user declined, hedges with no concrete action, and the rest. When unsure whether something is a deferral at all, leave it out.
 1. **Merge duplicates across sources.** A concern the session set aside and a `TODO` about the same thing become one candidate that carries both sources.
+1. **Resolve each target.** Use the default target unless the deferral names another repository: an `owner/name`, a URL, or a repository the session already identified by name. Never guess from a vague description; propose the candidate with its target marked unresolved. With no default target, require the user to supply one. Check each distinct resolved target:
+
+   ```bash
+   gh repo view <target> --json nameWithOwner,visibility,isArchived,hasIssuesEnabled
+   ```
+
+   Record its canonical repository identity and third-party classification. An archived target, or one with issues disabled, moves the candidate to **Cannot file** with the reason. When origin is a fork whose issues are disabled, add that the user may retarget the item to the parent explicitly. Never retarget it yourself. If repository metadata cannot be read, keep eligibility unresolved and do not file until it can be checked.
+
+   Load labels for this destination using step 1's label command. Do not reuse another repository's labels. For an unresolved target, skip target metadata, label lookup, and tracker search; mark it "target unresolved; not checked for duplicates" until an edit supplies the destination. Source evidence may still establish that the concern is tracked.
+
 1. **Remove what is already tracked.** A candidate is tracked when any of these holds:
-   - Its own text names an issue (`#N`, an issue URL, "tracked in", "filed as") other than the branch's source issues. Those close with this work, so naming them tracks nothing.
+   - Its own text names an issue (`#N`, an issue URL, "tracked in", "filed as") other than the branch's source issues. Resolve a bare number in the repository the text came from; compare full repository identities and numbers, not numbers alone. If that repository is unknown, keep the reference unresolved rather than assuming the destination. Source issues close with this work, so naming them tracks nothing.
    - An issue was filed for it earlier in this session.
    - An issue that links back to the source covers the same concern. Read the cross-references of the PR and of each source issue once, then match candidates against the list:
 
      ```bash
-     gh api --paginate repos/<target>/issues/<n>/timeline --jq '.[] | select(.event == "cross-referenced") | .source.issue | {number, title, state, url: .html_url}'
+     gh api --paginate repos/<source-repo>/issues/<n>/timeline --jq '.[] | select(.event == "cross-referenced") | .source.issue | {number, title, state, url: .html_url}'
      ```
 
-     The endpoint accepts a pull request number too. Every issue this skill files links its source, so this read finds an earlier run's filings whether or not that run posted a summary comment. The list also holds every other issue that merely mentions the source, such as a related proposal, so a listed issue tracks a candidate only when it passes the same distinctive-words test as a search hit below.
+     For the PR, use `<pr-repo>` and its number; for each source issue, use that issue's recorded repository and number. On another host, pass its recorded host with `--hostname`. Preserve each result's full URL rather than treating its number as local to the source or destination. The endpoint accepts a pull request number too. Every issue this skill files links its source, so this read finds an earlier run's filings whether or not that run posted a summary comment. The list also holds every other issue that merely mentions the source, such as a related proposal, so a listed issue tracks a candidate only when it passes the same distinctive-words test as a search hit below.
 
    - A review document on the branch records it as filed.
-   - A tracker search finds it:
+   - A tracker search in the candidate's resolved destination finds it:
 
      ```bash
      gh issue list --repo <target> --search "<distinctive words>" --state all --limit 5 --json number,title,state,url
      ```
 
      Judge each hit on its distinctive words, the ones naming the specific subject, and not on generic tracker vocabulary such as `add`, `fix`, `update`, or `skill`. A clear match moves the candidate to **Already tracked**. An ambiguous one stays in the batch with a "possible duplicate of #N" note, and the user decides.
-
-1. **Resolve each target.** Use the default target unless the deferral names another repository: an `owner/name`, a URL, or a repository the session already identified by name. Never guess from a vague description; propose the candidate with its target marked unresolved. Check each distinct target once:
-
-   ```bash
-   gh repo view <target> --json nameWithOwner,visibility,isArchived,hasIssuesEnabled
-   ```
-
-   An archived target, or one with issues disabled, moves the candidate to **Cannot file** with the reason. When origin is a fork whose issues are disabled, add that the user may retarget the item to the parent explicitly. Never retarget it yourself.
 
 1. **Check visibility.** When a public target receives a candidate whose source is a private repository, its body must carry no link, path, permalink, or quotation from that repository. Say so on the item.
 
@@ -274,7 +280,8 @@ Rules for the proposal and for reading the reply:
 - **Ask in plain text**, not through a structured multiple-choice question. A batch can exceed the options such a question allows, and edits need free text.
 - **Numbers are fixed** for the whole exchange. After `drop 2`, item 3 is still item 3.
 - **An unambiguous approval of the whole batch** ("yes", "file them") counts as `file all`.
-- **Apply drops and edits.** If the reply also approves, file. If it only edits, or is unclear about which items it means, present the revised batch and ask again.
+- **Apply drops and edits.** Before filing, revalidate any item whose destination or substantive concern changed, including an unresolved target the user supplied. Repeat step 3's target eligibility and third-party classification, destination label lookup and selection, duplicate checks for the revised concern, and source-to-destination visibility check. Source identities stay attached to their original repositories; never replace them with the new destination. Reuse source timeline reads only when the sources are unchanged, and match them against the revised concern.
+- **Honor approval of the revised item.** If the reply only edits, or is unclear about which items it approves, present the checked revision and ask again. An edit with approval may proceed only if revalidation leaves the approved content and destination intact. If checks add a duplicate warning, change labels or source disclosure, or otherwise materially change the item, re-present it for approval. An already-tracked or unfileable item is reported in the corresponding list rather than filed. Preserve its number if the user revises it again. Reapply approval by number to third-party destinations; whole-batch approval does not cover them.
 - **`none`** files nothing. Report `none approved`.
 
 **If `--dry-run` was specified**, stop after presenting the batch. Otherwise, stop and wait for the reply.
@@ -282,6 +289,8 @@ Rules for the proposal and for reading the reply:
 ### 5. File the Approved Set
 
 Read `./references/batch-filing.md`, then file each approved item in proposal order, one at a time, following its title, body, label, and per-issue sequence rules. Never file in parallel.
+
+Only file an item whose current destination is resolved and eligible, whose affected checks are complete (or whose permitted duplicate/label lookup failure was disclosed), and whose current proposal is approved. Checks or approval for an earlier version of the item do not carry over to a materially changed proposal.
 
 If an issue fails to file, continue with the rest and report it. Before retrying a failed item, confirm it did not land after all:
 

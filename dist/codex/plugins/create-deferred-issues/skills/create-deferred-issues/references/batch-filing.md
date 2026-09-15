@@ -25,7 +25,7 @@ Deferred from #<pr> (<pr title>).
 ```
 
 - **With no PR**, the context line reads `Raised while working on #<issue>`, or names the branch when there is no source issue either.
-- **Across repositories**, write `owner/name#N`. A bare `#N` resolves in the target repository, not the source.
+- **Across repositories**, write `owner/name#N`, using the source's recorded repository and number. Use its full URL across hosts. A bare `#N` resolves in the target repository, not the source. Retargeting the new issue does not change the identity of the source it references.
 - **For a code marker**, link a permalink at a commit the remote has: `https://github.com/<owner>/<name>/blob/<sha>/<path>#L<line>`. Check with `git branch -r --contains <sha>`. When the commit is not pushed, write `<path>:<line>` as text rather than a link that would not resolve.
 - **The source link is load-bearing.** It puts the new issue on the source's timeline, which is how a later run recognizes it as already tracked.
 - **Summarize.** Never paste session text wholesale, and never include secrets, tokens, local absolute paths, or machine names. The target may be public even when the conversation was not.
