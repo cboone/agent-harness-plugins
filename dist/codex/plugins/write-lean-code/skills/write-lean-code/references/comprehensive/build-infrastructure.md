@@ -165,7 +165,7 @@ import <Name>.Baz
 
 The repetition is intentional: listing every submodule explicitly makes the public surface discoverable in one place, makes `import <Name>` pull in the whole library transitively, and gives the linter a fixed list against which "this module is unreachable from the entrypoint" can be detected.
 
-PR review tooling (including GitHub Copilot's suggestions) sometimes flags imports in an entrypoint manifest as "redundant transitive imports" and suggests removing them. That advice is wrong for the manifest file; state the convention in the project's agent-config instructions (`.github/lean.instructions.md` for Copilot, project CLAUDE.md for Claude Code) so reviewers do not churn on it.
+PR review tooling (including GitHub Copilot's suggestions) sometimes flags imports in an entrypoint manifest as "redundant transitive imports" and suggests removing them. That advice is wrong for the manifest file; state the convention in the project's agent-config instructions (`.github/instructions/lean.instructions.md` for Copilot, project CLAUDE.md for Claude Code) so reviewers do not churn on it.
 
 ## `testDriver` vs `defaultTargets`
 
