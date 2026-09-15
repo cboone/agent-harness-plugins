@@ -424,7 +424,7 @@ Variables modified inside pipelines or subshells don't affect the parent scope.
 ```bash
 count=0
 echo "a b c" | while read -r word; do
-  ((count++)) # modified in subshell
+  ((count += 1)) # modified in subshell
 done
 echo "${count}" # still 0
 ```
@@ -612,11 +612,12 @@ command "${args[@]}"
 
 ### Arithmetic
 
-Use `((...))` for statements and `$((...))` for expressions.
+Use `((...))` for statements and `$((...))` for expressions. Increment with `((i += 1))` rather than `((i++))`: a `((...))` statement whose value is 0 returns a failure status, and since bash 4.1 `set -e` acts on it, so `((i++))` exits the script when `i` starts at 0. The increment in a `for ((...))` header is fine, because its status is never checked.
 
 | Use                           | Avoid                      |
 | ----------------------------- | -------------------------- |
-| `((i++))`                     | `let i++`                  |
+| `((i += 1))`                  | `((i++))`                  |
+| `((i += 1))`                  | `let i++`                  |
 | `$((x + 1))`                  | `expr $x + 1`              |
 | `$((x + 1))`                  | `$[x + 1]`                 |
 | `for ((i=1; i<=10; i++)); do` | `for i in $(seq 1 10); do` |
@@ -1023,10 +1024,10 @@ bash -n script.sh
 
 ### Debug tracing
 
-Support optional debug tracing with a `TRACE` environment variable.
+Support optional debug tracing with a `TRACE` environment variable. Give it an empty default, since under `set -u` an unset `TRACE` would otherwise exit the script.
 
 ```bash
-[[ "${TRACE}" ]] && set -x
+[[ -n "${TRACE:-}" ]] && set -x
 ```
 
 ---
