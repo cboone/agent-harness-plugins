@@ -19,6 +19,10 @@ function warning() {
   echo "::warning::$1"
 }
 
+function is_semver() {
+  [[ "${1}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+}
+
 # ─── 1. Every plugin directory has plugin.json ───────────────────────────────
 
 for dir in plugins/*/; do
@@ -72,6 +76,19 @@ for dir in plugins/*/; do
   done
 done
 
+# ─── 4b. Plugin manifest versions are strict SemVer ─────────────────────────
+
+for dir in plugins/*/; do
+  local_name="$(basename "${dir}")"
+  local_json="${dir}.claude-plugin/plugin.json"
+  [[ -f "${local_json}" ]] || continue
+
+  plugin_version="$(jq -r '.version // empty' "${local_json}")"
+  if ! is_semver "${plugin_version}"; then
+    error "Plugin '${local_name}': plugin.json version '${plugin_version}' must be MAJOR.MINOR.PATCH"
+  fi
+done
+
 # ─── 5. Every plugin directory is registered in marketplace.json ─────────────
 
 for dir in plugins/*/; do
@@ -105,7 +122,7 @@ done
 
 # ─── 7. Required fields in marketplace entries ───────────────────────────────
 
-MARKETPLACE_REQUIRED_FIELDS=("author" "category" "description" "homepage" "keywords" "license" "name" "repository" "source" "version")
+MARKETPLACE_REQUIRED_FIELDS=("author" "category" "description" "homepage" "keywords" "license" "name" "repository" "source")
 readonly MARKETPLACE_REQUIRED_FIELDS
 
 for ((i = 0; i < marketplace_count; i++)); do
@@ -118,24 +135,16 @@ for ((i = 0; i < marketplace_count; i++)); do
   done
 done
 
-# ─── 8. Version in plugin.json matches marketplace entry ────────────────────
+# ─── 8. Marketplace holds no duplicate version state ────────────────────────
 
-for dir in plugins/*/; do
-  local_name="$(basename "${dir}")"
-  local_json="${dir}.claude-plugin/plugin.json"
-  if [[ ! -f "${local_json}" ]]; then
-    continue
-  fi
+if jq -e '.metadata | has("version")' "${MARKETPLACE}" > /dev/null; then
+  error "Marketplace metadata must not contain a version"
+fi
 
-  plugin_version="$(jq -r '.version' "${local_json}")"
-  marketplace_version="$(jq -r --arg name "${local_name}" '.plugins[] | select(.name == $name) | .version' "${MARKETPLACE}")"
-
-  if [[ -z "${marketplace_version}" ]]; then
-    continue
-  fi
-
-  if [[ "${plugin_version}" != "${marketplace_version}" ]]; then
-    error "Plugin '${local_name}': plugin.json version '${plugin_version}' does not match marketplace version '${marketplace_version}'"
+for ((i = 0; i < marketplace_count; i++)); do
+  entry_name="$(jq -r ".plugins[${i}].name" "${MARKETPLACE}")"
+  if jq -e ".plugins[${i}] | has(\"version\")" "${MARKETPLACE}" > /dev/null; then
+    error "Marketplace entry '${entry_name}' must not contain a version"
   fi
 done
 
@@ -148,20 +157,7 @@ if [[ "${sorted}" != "${actual}" ]]; then
   error "Marketplace plugins array is not in alphabetical order by name"
 fi
 
-# ─── 10. Marketplace catalog state matches plugin versions ──────────────────
-# bin/compute-catalog-state is the single source of truth for the canonical
-# catalog state tag and is also consumed by .github/workflows/release.yml.
-
-if ! computed_catalog_state="$(bin/compute-catalog-state 2> /dev/null)"; then
-  error "Marketplace metadata.version could not be computed because one or more plugin versions are not SemVer"
-else
-  metadata_version="$(jq -r '.metadata.version // empty' "${MARKETPLACE}")"
-  if [[ "${metadata_version}" != "${computed_catalog_state}" ]]; then
-    error "Marketplace metadata.version '${metadata_version}' does not match computed catalog state '${computed_catalog_state}'"
-  fi
-fi
-
-# ─── 11. .codex-plugin/plugin.json name matches directory name ──────────────
+# ─── 10. .codex-plugin/plugin.json name matches directory name ──────────────
 
 for dir in plugins/*/; do
   local_name="$(basename "${dir}")"
@@ -250,10 +246,10 @@ fi
 if [[ ! -f "${CODEX_MARKETPLACE}" ]]; then
   error "Codex marketplace '${CODEX_MARKETPLACE}' does not exist; run bin/build-codex-marketplace"
 else
-  claude_plugin_versions="$(jq -r '.plugins[] | "\(.name)\t\(.version)"' "${MARKETPLACE}" | sort)"
-  codex_plugin_versions="$(jq -r '.plugins[] | "\(.name)\t\(.version)"' "${CODEX_MARKETPLACE}" | sort)"
-  if [[ "${claude_plugin_versions}" != "${codex_plugin_versions}" ]]; then
-    error "Codex marketplace plugin set or versions differ from ${MARKETPLACE}"
+  claude_plugin_names="$(jq -r '.plugins[].name' "${MARKETPLACE}" | sort)"
+  codex_plugin_names="$(jq -r '.plugins[].name' "${CODEX_MARKETPLACE}" | sort)"
+  if [[ "${claude_plugin_names}" != "${codex_plugin_names}" ]]; then
+    error "Codex marketplace plugin set differs from ${MARKETPLACE}"
   fi
 
   claude_metadata="$(jq -cS '.metadata' "${MARKETPLACE}")"
@@ -443,9 +439,8 @@ done
 # ─── 19. Skill cross-references resolve ─────────────────────────────────────
 # bin/check-cross-references owns the path and skill-name checks and emits its
 # own ::error:: annotations, so its findings are relayed and counted rather than
-# re-derived here. It is a separate script for the same reason
-# bin/compute-catalog-state is: it can then be exercised on its own against the
-# fixture trees in tests/scrut/.
+# re-derived here. It is a separate script so it can be exercised on its own
+# against the fixture trees in tests/scrut/.
 
 if ! cross_reference_output="$(bin/check-cross-references 2>&1)"; then
   printf '%s\n' "${cross_reference_output}"

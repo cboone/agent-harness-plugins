@@ -111,7 +111,6 @@ A string with a stand-in segment is skipped, so `plugins/PLUGIN-NAME/README.md`,
 1. Create a per-plugin `README.md` in the plugin directory.
 1. Add a row to the appropriate category table in the root `README.md`. If the plugin requires external tools, add a bullet to the category's `**External tools:**` list.
 1. If the plugin bundles a script, add scrut coverage under `tests/scrut/` and register any needed binary path in the `SCRUT_ENV` block in the `Makefile` and the matching `scrut-env` list in `.github/workflows/ci.yml`.
-1. Recompute `metadata.version` with `bin/compute-catalog-state` and write it into `.claude-plugin/marketplace.json`.
 1. Regenerate the Codex and OpenCode mirrors with `bin/build-codex-marketplace` and `bin/build-opencode-mirror`, and commit the results.
 1. Run `make test-all` and fix anything it reports before opening a PR.
 
@@ -139,25 +138,13 @@ Every plugin with a hard external dependency must say so. Two forms are in use, 
 
 ## Versioning
 
-This repository uses two levels of versioning:
+Each plugin has one version source: `plugins/<name>/.claude-plugin/plugin.json`. The generated Codex plugin root copies that manifest unchanged. Marketplace entries do not contain a `version`, and marketplace `metadata` does not contain a version.
 
-**Marketplace `metadata.version`** (in `.claude-plugin/marketplace.json`):
-
-- This is a catalog state tag, not SemVer.
-- Format: `catalog-M<major-sum>-m<minor-sum>-p<patch-sum>-n<plugin-count>`
-- `M`: sum of all plugin major versions
-- `m`: sum of all plugin minor versions
-- `p`: sum of all plugin patch versions
-- `n`: number of marketplace plugins
-- Do not normalize or carry between components.
-- Recompute it from `.plugins[].version` whenever any marketplace plugin version changes. Use `bin/compute-catalog-state` (the canonical implementation, also consumed by `bin/validate-plugins` and `.github/workflows/release.yml`).
-
-**Individual plugin `version`** (in `plugin.json` and mirrored in `marketplace.json`):
+**Individual plugin `version`** (in `plugin.json`):
 
 - **Patch**: bug fixes, wording tweaks, prompt adjustments
 - **Minor**: new capabilities or meaningful behavior changes
 - **Major**: breaking changes (for example, removing or restructuring a skill)
 - New plugins start at `1.0.0`
-- The version in `plugin.json` and its `marketplace.json` entry must always match.
 
 **Version checks on branch operations**: After merging, rebasing, or before creating a PR, use the `check-versions` skill to verify version correctness. Another branch may have already incremented a version, so always check.

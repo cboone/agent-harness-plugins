@@ -44,15 +44,15 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Git
 
-| Plugin                                                   | Trigger             | What it does                                                                                                                                                                   |
-| -------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [Commit](./plugins/commit/README.md)                     | `/commit`           | Smart, context-aware git commits with conventional commit messages and plan awareness.                                                                                         |
-| [Merge Main](./plugins/merge-main/README.md)             | `/merge-main`       | Fetch and merge the base branch into the current feature branch with automatic conflict resolution.                                                                            |
-| [PR](./plugins/pr/README.md)                             | `/pr`               | Lint, commit, push, and create a pull request in one step with no prompts.                                                                                                     |
-| [Rebase Onto Main](./plugins/rebase-onto-main/README.md) | `/rebase-onto-main` | Fetch and rebase the current feature branch onto the base branch with automatic conflict resolution and force-with-lease push.                                                 |
-| [Release](./plugins/release/README.md)                   | `/release`          | Prepare a versioned release or Claude Code marketplace catalog state tag: update release files, create a release commit, tag locally, and optionally publish a GitHub Release. |
-| [Review Branch](./plugins/review-branch/README.md)       | `/review-branch`    | Review and evaluate all work done on the current branch: summarize changes, assess plan compliance, and evaluate code quality.                                                 |
-| [Use Git](./plugins/use-git/README.md)                   | `/use-git`          | Git and GitHub CLI conventions for Claude Code: tmpfile patterns, HEREDOC commits, GPG signing, safe push practices, and permission-prompt avoidance.                          |
+| Plugin                                                   | Trigger             | What it does                                                                                                                                          |
+| -------------------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Commit](./plugins/commit/README.md)                     | `/commit`           | Smart, context-aware git commits with conventional commit messages and plan awareness.                                                                |
+| [Merge Main](./plugins/merge-main/README.md)             | `/merge-main`       | Fetch and merge the base branch into the current feature branch with automatic conflict resolution.                                                   |
+| [PR](./plugins/pr/README.md)                             | `/pr`               | Lint, commit, push, and create a pull request in one step with no prompts.                                                                            |
+| [Rebase Onto Main](./plugins/rebase-onto-main/README.md) | `/rebase-onto-main` | Fetch and rebase the current feature branch onto the base branch with automatic conflict resolution and force-with-lease push.                        |
+| [Release](./plugins/release/README.md)                   | `/release`          | Prepare a versioned release: update release files, create a release commit, tag locally, and optionally publish a GitHub Release.                     |
+| [Review Branch](./plugins/review-branch/README.md)       | `/review-branch`    | Review and evaluate all work done on the current branch: summarize changes, assess plan compliance, and evaluate code quality.                        |
+| [Use Git](./plugins/use-git/README.md)                   | `/use-git`          | Git and GitHub CLI conventions for Claude Code: tmpfile patterns, HEREDOC commits, GPG signing, safe push practices, and permission-prompt avoidance. |
 
 **External tools:**
 

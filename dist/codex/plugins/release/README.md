@@ -1,6 +1,6 @@
 # Release
 
-Prepare a versioned release or Claude Code marketplace catalog state tag: update release files, create a release commit, tag locally, and optionally publish a GitHub Release.
+Prepare a versioned release: update release files, create a release commit, tag locally, and optionally publish a GitHub Release.
 
 **Type:** Skill
 **Trigger:** `/release`
@@ -12,7 +12,7 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 ## What It Does
 
-Detects your project type (Claude Code marketplace, Go CLI, Go library, or generic), analyzes conventional commits since the last release, updates release files, creates a GPG-signed release commit, and applies an annotated git tag. For Claude Code marketplaces, it computes `metadata.version` as a catalog state tag such as `catalog-M55-m101-p44-n49` from the individual plugin versions and uses `Marketplace <catalog-state>` as the GitHub Release title. For other projects, it recommends a SemVer bump, updates version references and `CHANGELOG.md`, and can create a GitHub Release with the version's changelog section as release notes.
+Detects your project type (Claude Code marketplace, Go CLI, Go library, or generic), analyzes conventional commits since the last release, updates release files, creates a GPG-signed release commit, and applies an annotated git tag. For Claude Code marketplaces, it validates plugin manifests and lets push-to-main automation publish plugin or catalog changes as `catalog-<full-commit-SHA>`. Documentation-only pushes create no release. For other projects, it recommends a SemVer bump, updates version references and `CHANGELOG.md`, and can create a GitHub Release with the version's changelog section as release notes.
 
 ## Usage
 
