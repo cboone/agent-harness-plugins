@@ -83,12 +83,12 @@ Outputs `true` on success. The `reply-and-resolve` command also outputs `true` o
 
 #### Instructions File Strategy
 
-Copilot supports two types of instruction files in the `.github/` directory:
+Copilot supports two types of instruction files:
 
-- **`copilot-instructions.md`**: General instructions for the whole repository
-- **`*.instructions.md`** (path-specific): Targeted instructions with `applyTo` frontmatter
+- **`.github/copilot-instructions.md`**: General instructions for the whole repository
+- **`.github/instructions/*.instructions.md`** (path-specific): Targeted instructions with `applyTo` frontmatter
 
-**Prefer path-specific instructions files** when the incorrect feedback applies to a specific language or file pattern. Use `copilot-instructions.md` only for repo-wide conventions.
+**Prefer path-specific instructions files** when the incorrect feedback applies to a specific language or file pattern. Use the repo-wide file only for conventions that apply broadly across the project.
 
 #### CRITICAL: Keep Instructions Concise
 
@@ -101,6 +101,8 @@ Copilot's PR review may not read the full instructions file. Long files risk hav
 1. **Be specific**: clear, concrete instructions work better than vague directives
 
 #### Path-Specific Instructions File Format
+
+Place this file at `.github/instructions/<name>.instructions.md`:
 
 ```markdown
 ---
@@ -299,7 +301,7 @@ The cleanup must be a separate Bash tool call: each tool invocation runs uncondi
    - Incorrect: "This conflicts with our {convention name} convention. {Brief explanation}. See {reference file} for project guidelines."
 1. Resolve the thread using `bash resolve-copilot-threads resolve THREAD_ID`
 1. **Update Copilot instructions** to prevent recurrence:
-   - **Prefer a path-specific file** (e.g., `.github/css.instructions.md` with `applyTo: "**/*.css"`) when the feedback targets a specific language or file pattern
+   - **Prefer a path-specific file** (e.g., `.github/instructions/css.instructions.md` with `applyTo: "**/*.css"`) when the feedback targets a specific language or file pattern
    - **Use `copilot-instructions.md`** only for repo-wide conventions
    - Example: `- Do not suggest removing .sr-only classes - required accessibility utilities`
    - **If symlink:** Follow it and edit target file
