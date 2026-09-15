@@ -129,6 +129,7 @@ GitHub access is read-only. Git fetches refs, and step 2 may fast-forward the ch
       "Bash(git ls-files *)",
       "Bash(git --literal-pathspecs ls-tree *)",
       "Bash(git --no-pager --literal-pathspecs ls-tree *)",
+      "Bash(git --no-pager cat-file blob *)",
       "Bash(git merge --ff-only *)",
       "Bash(git merge-base *)",
       "Bash(git remote -v)",
