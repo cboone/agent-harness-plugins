@@ -26,7 +26,13 @@ Resolve relative arguments from the invocation directory and the default search 
 1. **Explicit directory**: Recursively collect Markdown files from its `todo/` subtree. If the supplied directory is itself named `todo`, use it directly. Exclude any `done/` subtree, including symlink targets in `done/`.
 1. **No argument**: Recursively collect Markdown files from `docs/plans/todo/`, with the same exclusions.
 
-For directory or default selection, use `git branch --show-current` to identify the current branch. Normalize its subject by removing a leading branch category such as `feature/`, `feat/`, `fix/`, `chore/`, or `docs/`, then a leading issue number such as `123-` or `issue-123-`. Lowercase the remainder, replace runs of non-alphanumeric characters with a hyphen, and trim leading and trailing hyphens. Normalize each candidate's basename the same way after removing the `.md` extension and a leading `YYYY-MM-DD-` datestamp. Compare the complete normalized subjects, not substrings.
+For directory or default selection, use `git branch --show-current` to identify the current branch. Compute subjects in this exact order:
+
+1. **Branch**: Remove at most one leading category matching `^(feature|feat|fix|chore|docs)/`, then at most one leading issue prefix matching `^(issue-)?[0-9]+-`.
+1. **Plan**: From the candidate's basename, remove the `.md` extension, then at most one leading datestamp matching `^[0-9]{4}-[0-9]{2}-[0-9]{2}-`, then at most one leading issue prefix matching `^(issue-)?[0-9]+-`.
+1. **Both**: Lowercase ASCII letters, replace each run of characters outside `[a-z0-9]` with one hyphen, and trim leading and trailing hyphens. Compare the complete normalized subjects, not substrings.
+
+Prefix matches are case-sensitive. Remove only the prefixes specified above; an unlisted branch category remains part of the subject. For example, `feature/123-foo` normalizes to `foo`, while `hotfix/123-foo` normalizes to `hotfix-123-foo`.
 
 - Select a unique matching candidate even if another candidate is newer.
 - If there are zero matches or multiple matches, select the most recently modified candidate from the full candidate set. Break equal modification times by ascending repository-relative path. Disclose the lack of a unique match, selected modification time, and any tie-break.

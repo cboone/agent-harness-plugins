@@ -22,7 +22,9 @@ The path is optional and may name a Markdown file or plan directory. Quote paths
 
 With no path, the skill scans `docs/plans/todo/` recursively. A directory argument selects from that directory's `todo/` subtree; supplying a directory named `todo` uses it directly. Automatic selection excludes `done/`.
 
-The skill prefers a unique filename match to the current branch subject after stripping the plan datestamp, branch category, and leading issue number and normalizing case and punctuation. For example, `feature/123-add-search` matches `2026-09-15-add-search.md`. Without a unique match, it selects the most recently modified candidate and explains why. Equal modification times are resolved by ascending repository-relative path. Detached HEAD uses the same fallback. Empty candidate sets require an explicit file path.
+The skill prefers a unique filename match to the current branch subject. It strips at most one case-sensitive branch category from `feature/`, `feat/`, `fix/`, `chore/`, or `docs/`, then one leading issue prefix of the form `123-` or `issue-123-`. Candidate basenames have their `.md` extension, leading `YYYY-MM-DD-` datestamp, and the same optional issue prefix removed. Both subjects then use lowercase ASCII letters, collapse characters outside `[a-z0-9]` into hyphens, and trim boundary hyphens. Complete subjects must match exactly.
+
+For example, `feature/123-add-search` matches `2026-09-15-add-search.md`. Unlisted branch categories remain part of the subject, so `hotfix/123-add-search` normalizes to `hotfix-123-add-search`. Without a unique match, the skill selects the most recently modified candidate and explains why. Equal modification times are resolved by ascending repository-relative path. Detached HEAD uses the same fallback. Empty candidate sets require an explicit file path.
 
 ## What the Review Covers
 
