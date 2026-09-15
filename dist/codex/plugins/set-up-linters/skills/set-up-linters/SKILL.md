@@ -83,7 +83,7 @@ Check for existing linter configs using these patterns (aligned with the `lint-a
 
 **CI workflow scanning**: Also scan `.github/workflows/*.yml` for tools running without config files. For example, a CI step like `shellcheck -S warning scripts/*` means ShellCheck is already in use even without a `.shellcheckrc`. Mark these tools as "Partial" (running in CI but missing local config). A partial tool should still appear in recommendations, but suggest adding the config file for local/CI parity rather than a full setup.
 
-For each already-configured tool, mark it as "Existing" and skip it in recommendations. Exception: when the Pandoc-academic preset was detected or requested, do not treat generic markdownlint/cspell config presence as sufficient. Continue to the preset recommendation step unless the preset completeness check below passes. If everything is already set up, inform the user and stop.
+For each already-configured tool, verify that its executable is available locally or through the project's package manager before marking it fully "Existing" and skipping it in recommendations. A config file or `prettier` key in `package.json` proves configuration exists, not that the tool is installed; when the executable is unavailable, recommend installing it while preserving the existing configuration. Exception: when the Pandoc-academic preset was detected or requested, do not treat generic markdownlint/cspell config presence as sufficient. Continue to the preset recommendation step unless the preset completeness check below passes. If everything is already set up, inform the user and stop.
 
 ### 3. Recommend Linter Stack
 

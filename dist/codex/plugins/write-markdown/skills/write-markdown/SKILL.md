@@ -36,6 +36,8 @@ A committed table has every pipe aligned, every cell padded to its column width,
 
 Determine ownership for each edited file. Verify that Prettier is available as a project dependency or a global tool. Its settings may live in `.prettierrc*`, `prettier.config.*`, or a `prettier` key in `package.json`; config presence alone does not prove that formatting runs. If project format commands exist, inspect their paths, globs, working directory, and options: a command restricted to JavaScript or other non-Markdown files does not own Markdown alignment. If no format command exists, configured and available Prettier can format the file through the direct CLI fallback in Validation. In either case, honor the chosen command's effective ignore files: `.gitignore` and `.prettierignore` by default, or the files specified by `--ignore-path`.
 
+Before formatting a Markdown file with fenced code blocks, check the effective `embeddedLanguageFormatting` setting. Prettier's default `auto` may reformat recognized code blocks along with the tables. Use `embeddedLanguageFormatting: "off"` for the formatting pass, or inspect and accept those code-block changes explicitly.
+
 **Prettier formats this file:** Prettier owns alignment. Write rows without padding, including rows added to an existing table, and follow the command order in Validation. Do not hand-pad cells, and do not cite MD060 as the reason for alignment: projects that run Prettier typically disable it.
 
 **Prettier does not format this file:** align tables by hand, including in files excluded from a project's Prettier command, and do it before running `markdownlint-cli2 --fix`. MD060 has no fix toward the aligned style, and at its default settings it can compact a table that picked up a few unpadded rows, stripping the padding from the rows that were aligned. Procedure: write all rows, find the longest content per column, pad every cell to that width, fill delimiter hyphens to match, then verify all pipes line up.
@@ -112,7 +114,7 @@ After creating or editing Markdown files, run the project's lint-fix and format 
 
 Check `package.json` for project-specific scripts (e.g., `yarn lint:fix`, `yarn lint:md:fix`, `yarn format`, `npm run lint:fix`). Also check `Makefile` targets and scripts in `bin/`.
 
-For direct CLI calls, resolve locally installed tools through the project's package manager: `npm exec --`, `yarn exec`, `pnpm exec`, or `bun run`. For example, use `yarn exec markdownlint-cli2 --fix README.md` and `yarn exec prettier --write README.md` in a Yarn project. Use a bare command only when a global installation is verified. Preserve the project's working directory, configuration arguments, and ignore options, and pass the edited file paths.
+For direct CLI calls, resolve locally installed tools through the project's package manager: `npm exec --`, `yarn`, `pnpm exec`, or `bunx`, following the project's established runner mapping when available. For example, use `yarn markdownlint-cli2 --fix README.md` and `yarn prettier --write README.md` in a Yarn project. Do not use `npx` for Yarn Plug'n'Play projects because it may not resolve the project's locked binary. Use a bare command only when a global installation is verified. Preserve the project's working directory, configuration arguments, and ignore options, and pass the edited file paths.
 
 Choose the order for each file using the Prettier detection above:
 

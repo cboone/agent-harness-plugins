@@ -62,7 +62,7 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 | Config file(s)                                                                    | Tool               | Fix command                                              | Check command                                                  |
 | --------------------------------------------------------------------------------- | ------------------ | -------------------------------------------------------- | -------------------------------------------------------------- |
 | `eslint.config.*`, `.eslintrc.*`                                                  | eslint             | `npx eslint --fix .`                                     | `npx eslint .`                                                 |
-| `.prettierrc*`, `prettier.config.*`, or a `prettier` key in `package.json`        | prettier           | `npx prettier --write .`                                 | `npx prettier --check .`                                       |
+| `.prettierrc*`, `prettier.config.*`, or a `prettier` key in `package.json`        | prettier           | `<package-manager-runner> prettier --write .`            | `<package-manager-runner> prettier --check .`                  |
 | `.markdownlint.json`, `.markdownlint.jsonc`, `.markdownlint.yaml`                 | markdownlint       | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
 | `.markdownlint-cli2.*`                                                            | markdownlint-cli2  | `npx markdownlint-cli2 --fix "**/*.md"`                  | `npx markdownlint-cli2 "**/*.md"`                              |
 | Shell scripts in project                                                          | shellcheck         | _(no auto-fix)_                                          | `shellcheck <files>`                                           |
@@ -73,6 +73,8 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 | `package.json` has `format` script                                                | npm format         | `npm run format`                                         | Try `npm run format -- --check`, fall back to `npm run format` |
 | `bin/lint`, `scripts/lint`, `script/lint`                                         | Project script     | Try `<script> --fix` first                               | `<script>`                                                     |
 | `.github/workflows/*.yml`, `.github/workflows/*.yaml` `run:` steps                | CI workflow script | Run detected command                                     | Run detected command                                           |
+
+Replace `<package-manager-runner>` with the project's local-binary runner: `npx` for npm, `yarn` for Yarn, `pnpm exec` for pnpm, or `bunx` for Bun. Do not use `npx` in Yarn Plug'n'Play projects, where it may not resolve the locked local binary.
 
 #### Detection Steps
 
