@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Write a numbered, resumable checklist for checks run by hand, where every step says what to do, what you should see, and how to tell nothing from broken.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["checklists", "manual-testing", "planning", "resumable", "verification"],
+  "license": "MIT",
+  "name": "write-manual-verification-plan",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
