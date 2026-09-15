@@ -456,15 +456,17 @@ Use a subshell for temporary `cd` to avoid affecting the parent shell.
 
 Use process substitution to avoid subshell scope issues. To collect the lines into an array, append to it inside the loop, which works on every bash version. `readarray` (also spelled `mapfile`) is shorter but does not exist before bash 4.
 
+The `|| [[ -n "${line}" ]]` condition preserves a final line without a trailing newline: `read` assigns its contents but returns a nonzero status at end of input.
+
 ```bash
 # Use
-while IFS= read -r line; do
+while IFS= read -r line || [[ -n "${line}" ]]; do
   process "${line}"
 done < <(command)
 
 # Use: collect lines into an array
 lines=()
-while IFS= read -r line; do
+while IFS= read -r line || [[ -n "${line}" ]]; do
   lines+=("${line}")
 done < <(command)
 
@@ -472,7 +474,7 @@ done < <(command)
 readarray -t lines < <(command)
 
 # Avoid
-command | while IFS= read -r line; do
+command | while IFS= read -r line || [[ -n "${line}" ]]; do
   process "${line}"
 done
 ```
