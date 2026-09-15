@@ -39,3 +39,14 @@ Public interface: `/review-plan [path]`
 - V1 has no flags, no saved review record, and no direct handoff to `address-review`.
 - `review-plan` complements `review-branch`: it audits a plan before implementation, while `review-branch` evaluates implementation afterward.
 - Existing `review-branch`, `address-review`, and `review-in-depth` behavior remains unchanged.
+
+## Completion
+
+Implemented and verified on 2026-09-15. The new plugin is registered at `1.0.0`; the catalog state is `catalog-M71-m103-p156-n58`. Both mirrors rebuild without drift, and source and generated README links resolve.
+
+- `lint-and-fix --no-commit` completed through the repository's format and check targets; formatter changes were inspected.
+- Direct skill cross-reference checks, skill frontmatter validation, and the version audit passed.
+- Independent behavioral evaluation covered explicit file selection, a `docs/plans/` directory, branch-match selection, newest-plan fallback, no candidates, and an unavailable explicitly linked GitHub resource.
+- `DEVELOPER_DIR=/Library/Developer/CommandLineTools make test-all` passed: all lint and plugin checks passed, and all 402 Scrut testcases succeeded across 8 documents.
+
+The default Xcode selection caused 10 launcher test failures because `/usr/bin/git` required acceptance of the Xcode license. Selecting the installed Command Line Tools for the verification command resolved the environment issue without changing the system selection or accepting a license.
