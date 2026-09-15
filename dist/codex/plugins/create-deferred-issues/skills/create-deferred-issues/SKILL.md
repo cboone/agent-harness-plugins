@@ -60,10 +60,10 @@ Everything in this step is read-only. Run independent commands in parallel.
 
 ```bash
 git remote
-git remote get-url origin | sed -E 's#^[A-Za-z][A-Za-z0-9+.-]*://##; s#^[^/@]*@##; s#^([^/:]+):#\1/#; s#\.git$##'
+git remote get-url origin | sed -E 's#^[A-Za-z][A-Za-z0-9+.-]*://([^/@]*@)?([^/]+)/#\2/#; s#^[^/@]*@([^:]+):#\1/#; s#\.git$##'
 ```
 
-The first command lists remote names only. The second removes URL userinfo and SCP-style SSH usernames, converts the remote to `HOST/OWNER/NAME`, and removes a trailing `.git` before printing it, so credentials never enter the tool transcript. Never run `git remote -v` or print an unsanitized remote URL. Use this normalized origin selector in later commands and reports.
+The first command lists remote names only. The second removes URL userinfo and SCP-style SSH usernames, preserves a port in URI authorities, converts the remote to `HOST/OWNER/NAME`, and removes a trailing `.git` before printing it, so credentials never enter the tool transcript. Never run `git remote -v` or print an unsanitized remote URL. Use this normalized origin selector in later commands and reports.
 
 Resolve the sanitized origin identity to a repository:
 
@@ -74,9 +74,10 @@ gh repo view <origin-selector> --json nameWithOwner,url,visibility,isArchived,is
 - Its `nameWithOwner` is the **default target** for filing. Select the repository explicitly for every `gh` call: use `--repo` where supported, the repository argument for `gh repo view`, an object's full URL when reading it, or the repository path and host for `gh api`. Source reads use the source repository; filing and tracker searches use the candidate's destination. Without an explicit repository, `gh` prefers a remote named `upstream`, so inside a fork a bare `gh issue create` files on the project that was forked.
 - If the SSH host token is an alias, resolve its configured hostname with `ssh -G <alias>` before calling `gh`. Use the resulting hostname only when it is a GitHub host for which `gh` is authenticated. If the alias cannot be resolved, or its configured host cannot be authenticated, do not fall back to bare `owner/name`, because that silently selects GitHub.com. Mark origin unavailable and require a user-provided host-qualified selector for filing. On a host other than `github.com`, write targets as `HOST/OWNER/NAME` for `--repo`, and pass `--hostname HOST` to `gh api`.
 - When the normalized origin selector came from an SSH alias, replace its host with the configured hostname returned by `ssh -G <alias>` before calling `gh`. If the alias cannot be resolved, use the unavailable-origin path rather than querying the alias as though it were a GitHub hostname.
+- If `git remote` lists `upstream`, resolve its URL with the same sanitizer, including SSH alias resolution, then use `gh repo view <upstream-selector> --json nameWithOwner,url` to record its canonical host and repository. If the remote cannot be resolved, treat any candidate that could name it as third-party until its identity is established. Never print its unsanitized URL.
 - Keep the host and `owner/name` as separate fields for every repository. In the examples, `<target>`, `<pr-repo>`, and `<source-repo>` are host-qualified selectors where needed; `<pr-owner>/<pr-name>` and `<source-owner>/<source-name>` are the host-free API paths. Never put a hostname after `repos/`.
 - `parent` has no `nameWithOwner` field. Build the parent's name from `.parent.owner.login` and `.parent.name`.
-- For the rest of this workflow, a **third-party repository** is any target whose owner differs from origin's owner, plus the fork's parent and the repository an `upstream` remote points at, whoever owns them.
+- For the rest of this workflow, a **third-party repository** is any target whose owner differs from origin's owner, plus the fork's parent and the canonical repository identified by an `upstream` remote, even when both repositories have the same owner.
 - Without an `origin`, there is no default target. In a Git checkout, still scan uncommitted changes, eligible untracked text files, and local plan and review documents; skip only the committed branch range whose base cannot be established. Outside a Git checkout, scan the session and documents it names. In either case retain destinations explicitly named there, and start only candidates without a named destination unresolved. Without an ownership baseline, require approval by number unless the session establishes that the target belongs to the user.
 
 Treat every substituted value as shell data. Use an argument-list tool when available; otherwise single-quote each literal argument and encode an embedded apostrophe as `'\''` within that argument. For example, `--search 'runner'\''s timeout'` passes one literal phrase. Backticks and `$()` in source text must never become shell substitutions. Do not use `eval` or interpolate source text into double-quoted shell source.
@@ -184,12 +185,17 @@ The conversation in context, from both sides: concerns the assistant named and s
 #### Code markers the branch adds
 
 ```bash
-git diff --unified=0 -G '(^|[^A-Za-z0-9_])(TODO|FIXME|XXX|HACK)([^A-Za-z0-9_]|$)' <base-sha>...HEAD
-git diff --unified=0 -G '(^|[^A-Za-z0-9_])(TODO|FIXME|XXX|HACK)([^A-Za-z0-9_]|$)' HEAD
+git diff --name-only <base-sha>...HEAD
+git diff --name-only HEAD
 git ls-files --others --exclude-standard
 ```
 
-The first covers the branch's commits, the second uncommitted changes, and the third lists untracked files, which neither diff shows. Before inspecting untracked contents, exclude secret-like paths (`.env`, `.env.*`, `credentials.json`, `*.pem`, `*.key`), symlinks, and binary files. Search only the remaining regular text files with a binary-skipping content search, returning matching marker lines and only the context needed to understand them. Do not read every untracked file in full, and do not inspect files without a matching marker. Report excluded source categories without their contents.
+The first command lists paths changed by branch commits, the second lists tracked working-tree changes, and the third lists untracked files. Before reading any diff or file contents, exclude secret-like paths (`.env`, `.env.*`, `credentials.json`, `*.pem`, `*.key`), symlinks, and binary files from all three source sets. Run the marker diff only for eligible regular text paths, then inspect only added lines matching the marker pattern. For eligible untracked files, search with a binary-skipping content search and return matching marker lines plus only the context needed to understand them. Do not read every untracked file in full, and do not inspect files without a matching marker. Report excluded source categories without their contents.
+
+```bash
+git diff --unified=0 -G '(^|[^A-Za-z0-9_])(TODO|FIXME|XXX|HACK)([^A-Za-z0-9_]|$)' <base-sha>...HEAD -- <eligible-tracked-paths>
+git diff --unified=0 -G '(^|[^A-Za-z0-9_])(TODO|FIXME|XXX|HACK)([^A-Za-z0-9_]|$)' HEAD -- <eligible-working-tree-paths>
+```
 
 Three details in those commands are load-bearing:
 

@@ -20,10 +20,10 @@ Commit, push, and create a pull request in one automated step. Never prompt the 
 First, resolve the repository where `gh pr create` will open the PR by normalizing `origin`:
 
 ```bash
-git remote get-url origin | sed -E 's#^[A-Za-z][A-Za-z0-9+.-]*://##; s#^[^/@]*@##; s#^([^/:]+):#\1/#; s#\.git$##'
+git remote get-url origin | sed -E 's#^[A-Za-z][A-Za-z0-9+.-]*://([^/@]*@)?([^/]+)/#\2/#; s#^[^/@]*@([^:]+):#\1/#; s#\.git$##'
 ```
 
-This prints a `HOST/OWNER/REPO` selector without exposing remote userinfo. Record it as `<pr-target>`. If `origin` is missing or cannot be normalized, stop and report that the PR target cannot be established.
+This prints a `HOST/OWNER/REPO` selector without exposing remote userinfo and preserves ports in URI authorities. The SCP-style rewrite applies only when the URL has no scheme. If the SSH host token is an alias, resolve it with `ssh -G <alias>` and use the configured hostname. Record the canonical selector as `<pr-target>`. If `origin` or its SSH alias cannot be resolved, stop and report that the PR target cannot be established.
 
 Then detect the repository's default branch explicitly:
 
@@ -152,7 +152,7 @@ Merge the full issue identities from all three strategies into one deduplicated 
 
 Collect **follow-up issues** directly from the session, independently of the detected closing list. These are issues filed for concerns this branch set aside, for example by the `create-deferred-issues` skill; a follow-up belongs in this collection even when none of the strategies above found it. Preserve each full issue URL, host, repository, number, title, and destination visibility. Resolve missing identity or visibility with an explicit `gh issue view <issue-url> --json url,title` or `gh repo view <host/owner/name> --json visibility`; never infer the host or repository from a number alone.
 
-Normalize detected candidates to full identities, then remove only identities that exactly match a follow-up. In the strategies above, treat a repository-qualified reference or full URL as one unit; never extract its `#N` suffix as a local candidate. `other/repo#7` must not remove or introduce the PR repository's `#7`. Define the closing list as the remaining identities that exactly match `<pr-target>`; commit messages in step 4 may use closing keywords for this list only. Keep other connected identities separately for `Related issues`, and every follow-up separately for step 7. If follow-up removal leaves no closing candidate and Strategy 3 was skipped, run Strategy 3 now.
+Normalize detected candidates to full identities, then remove only identities that exactly match a follow-up. In the strategies above, treat a repository-qualified reference or full URL as one unit; never extract its `#N` suffix as a local candidate. `other/repo#7` must not remove or introduce the PR repository's `#7`. Define the closing list as the remaining identities that exactly match `<pr-target>`; commit messages in step 4 may use closing keywords for this list only. Keep other connected identities separately for `Related issues`, and every follow-up separately for step 7. If follow-up removal leaves no closing candidate and Strategy 3 was skipped, run Strategy 3 now, then normalize its results to full identities and remove exact follow-up matches again before rebuilding the closing list.
 
 Before creating commits, resolve the PR target's visibility and the visibility of each connected issue outside `<pr-target>`. If the PR target is public, only confirmed-public related issues may appear in generated commit references or public PR text; omit confirmed-private or internal identities. If any required visibility is unknown, stop before creating commits or the PR until it can be verified.
 
@@ -476,7 +476,7 @@ When committing plan files, use a message like `docs: add plan for <meaningful-d
 - **PR title lint check fails**: Report the failing check and a corrected title, following step 8. Never delete and recreate the PR to fix the title; `gh pr edit --title` is the remedy, and the user runs it.
 - **No gh CLI**: Report that the `gh` CLI is required and link to https://cli.github.com/.
 - **Secret files detected**: Warn the user and exclude them from staging. Continue with the remaining files.
-- **Issue detection fails**: If `gh issue view` or `gh issue list` commands fail (network error, auth issue), skip issue detection silently and proceed without the `## Closes` section. Issue detection is best-effort and must never block PR creation.
+- **Issue detection fails**: If `gh issue view` or `gh issue list` commands fail during ordinary closing-issue detection (network error, auth issue), skip that detection and proceed without the `## Closes` section. This best-effort rule does not apply to a read needed to resolve a session-provided follow-up's identity or visibility, or a related issue's visibility; those failures follow the stop rules below.
 - **Related-issue visibility cannot be verified**: Stop before creating commits or the PR. Report that the issue's repository visibility must be verified before it can be included in public PR text.
 - **Follow-up identity or visibility cannot be verified**: Stop before creating commits or the PR. Record the follow-up as unknown and report that its full identity or visibility must be verified before continuing. A bare issue number may refer to that follow-up, so do not proceed with an incomplete identity list.
 - **Detected issue is already closed**: Still include it in the `## Closes` section. GitHub handles this gracefully (the keyword is a no-op for already-closed issues, and it still creates a visible cross-reference).
