@@ -77,20 +77,26 @@ gh pr view <pr-number> --json number,url,title,body,author,state,isDraft,baseRef
 Take `OWNER/REPO` from `url` (`https://github.com/OWNER/REPO/pull/NUMBER`).
 
 - **No PR found and no number given**: tell the user the current branch has no pull request, suggest checking one out with `gh pr checkout <pr-number>` (or a worktree tool such as `workmux add --pr <pr-number>`), and stop.
-- **A number was given**: confirm the checkout belongs to that PR before going further, because step 2 may move the current branch. It belongs if `gh pr view --json number --jq .number` (no number argument) prints the same number, or if `git branch --show-current` prints `headRefName`. If neither holds, tell the user which PR the checkout would need and stop.
+- **A number was given**: after identifying the fetch remote in step 2, confirm both that `git branch --show-current` prints `headRefName` and that `git rev-parse --abbrev-ref @{upstream}` prints `<remote>/<headRefName>`. If either command fails or differs, tell the user which checkout would be needed and stop. A branch name alone is not proof that the checkout belongs to this PR.
 - **Closed, merged, or draft**: review it anyway, and note the state in the report header.
 
 ### 2. Sync the Checkout
 
 The review must describe the PR as it is now, not as it was when the checkout was made.
 
-1. Find the remote for `OWNER/REPO` in `git remote -v`: its URL ends in `OWNER/REPO` or `OWNER/REPO.git`, in HTTPS or SSH form, compared case-insensitively. If none matches, tell the user and stop.
+1. Find the remote whose **fetch** URL matches `OWNER/REPO`: inspect only `(fetch)` entries from `git remote -v`, whose URL ends in `OWNER/REPO` or `OWNER/REPO.git`, in HTTPS or SSH form, compared case-insensitively. If none matches, tell the user and stop.
 
-1. Fetch the PR head and the base branch. This updates only `FETCH_HEAD`, the object store, and the base branch's remote-tracking ref:
+1. When the user supplied a number, before fetching require the current branch and its upstream to match `headRefName` and `<remote>/<headRefName>` as described in step 1. Stop on a failed or mismatched lookup.
+
+1. Fetch the PR head and the base branch. This updates the object store and remote-tracking refs:
 
    ```bash
-   git fetch <remote> pull/<pr-number>/head <base-branch>
+   git fetch <remote> pull/<pr-number>/head:refs/remotes/<remote>/pull/<pr-number>/head <base-branch>
    ```
+
+   If the fetch fails, stop and report that synchronization could not be established. Do not compare against existing refs after a failed fetch.
+
+1. Re-run the PR lookup with `--repo OWNER/REPO`. Compare its `headRefOid` to `git rev-parse <remote>/pull/<pr-number>/head`. If they differ, the PR changed during synchronization: restart at step 1 using the new PR data. Use this refreshed `headRefOid` for all later comparisons.
 
 1. If `git status --porcelain --untracked-files=no` prints anything, there are uncommitted changes to tracked files. Tell the user and stop.
 
@@ -115,7 +121,7 @@ The review must describe the PR as it is now, not as it was when the checkout wa
 
 1. Otherwise the author rewrote the branch (a rebase or force-push). Reset only when both of these hold:
    - **The checkout is a linked worktree.** `git rev-parse --path-format=absolute --git-dir --git-common-dir` prints two different paths. Two identical paths mean a primary checkout, which may hold other work.
-   - **No local commits were made here.** `git reflog show --format=%gs <local-branch>` (use `HEAD` when detached) has no entry beginning `commit`, `cherry-pick`, `revert`, `rebase`, or `am`, and none containing `Merge made by`. Entries for branch creation, checkouts, fast-forwards, and resets are fine.
+   - **No local commits were made here.** `git reflog show --format=%gs <local-branch>` (use `HEAD` when detached) succeeds and has no entry beginning `commit`, `cherry-pick`, `revert`, `rebase`, or `am`, and none containing `Merge made by`. Entries for branch creation, checkouts, fast-forwards, and resets are fine. A reflog command failure blocks the reset.
 
    When both hold, print the current HEAD SHA so it can be recovered, then:
 
@@ -132,16 +138,16 @@ After a fast-forward or reset, confirm HEAD equals `headRefOid` and repeat the t
 Collect every statement of what the PR is supposed to do:
 
 - **The PR's title and body**, from step 1.
-- **Linked issues**: every issue in `closingIssuesReferences`, plus issues the body mentions as `#123`, `OWNER/REPO#123`, or an issue URL. Fetch each from its own repository:
+- **Linked issues**: every issue in `closingIssuesReferences`, plus issues the body mentions as `#123`, `OWNER/REPO#123`, or an issue URL. Parse each reference into `ISSUE_OWNER`, `ISSUE_REPO`, and `ISSUE_NUMBER`; an unqualified `#123` uses the PR repository. Fetch each from its own repository:
 
   ```bash
-  gh issue view <issue-number> --repo OWNER/REPO --json title,body,state,labels,comments
+  gh issue view ISSUE_NUMBER --repo ISSUE_OWNER/ISSUE_REPO --json title,body,state,labels,comments
   ```
 
 - **Parent issues and sub-issues** of each linked issue, which often hold the real acceptance criteria:
 
   ```bash
-  gh api graphql --paginate -F owner=OWNER -F repo=REPO -F number=<issue-number> -f query='query($owner:String!,$repo:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$repo){issue(number:$number){parent{url number title body state} subIssues(first:50,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{url number title body state}}}}}'
+  gh api graphql --paginate -F owner=ISSUE_OWNER -F repo=ISSUE_REPO -F number=ISSUE_NUMBER -f query='query($owner:String!,$repo:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$repo){issue(number:$number){parent{url number title body state} subIssues(first:50,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{url number title body state}}}}}'
   ```
 
   Read the parent and every sub-issue body as requirements, across all returned pages. Deduplicate repeated parents by URL. If the API rejects these fields or pagination fails, continue with the sources available and disclose the missing or partial coverage under Requirements; never treat unread acceptance criteria as satisfied.
@@ -171,7 +177,7 @@ gh api --paginate repos/OWNER/REPO/issues/<pr-number>/comments --jq '.[] | {user
 gh api graphql --paginate -F owner=OWNER -F repo=REPO -F number=<pr-number> -f query='query($owner:String!,$repo:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated path line comments(first:20){nodes{author{login} body}}}}}}}'
 ```
 
-If the review-threads query fails, continue without it and say in the report that thread resolution status is unknown.
+If any discussion query fails, continue with the available sources and name each unavailable source in the report. Do not treat missing output as an empty review, comment, or thread history; do not derive a re-review baseline from an unavailable source.
 
 **Find the user's last review**, unless `--full` was given or `--since` supplies the point directly. It is the user's most recent _substantive_ review, meaning one that meets any of these:
 
@@ -205,17 +211,19 @@ If a last review is found and its `commit_id` is an ancestor of HEAD (`git merge
 1. On a re-review, also read what changed since the last review. Merges from the base branch bring in other people's work, so focus on the author's own commits:
 
    ```bash
-   git log --no-merges --format='%h %s' <last-review-sha>..HEAD
-   git diff <last-review-sha>..HEAD
+   git log --no-merges --format='%H %s' <last-review-sha>..HEAD
+   git show --format= --no-ext-diff <each-non-merge-commit>
    ```
 
 1. On a very large PR, read source and tests before documentation and fixtures. Anything not read in detail is named in the report header; never skim silently.
 
-1. Check CI. A non-zero exit here means checks are pending or failing, which is information, not an error:
+1. Check CI:
 
    ```bash
    gh pr checks <pr-number> --repo OWNER/REPO --json name,state,bucket,workflow,link
    ```
+
+   If the command returns JSON, classify its check states even when its exit status is non-zero. If it returns no valid check data, report CI as unavailable instead of treating an API or authentication failure as a failing check.
 
 ### 6. Assess
 

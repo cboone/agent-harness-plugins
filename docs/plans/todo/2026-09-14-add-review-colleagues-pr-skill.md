@@ -45,7 +45,7 @@ plugins/review-colleague-pr/
         └── SKILL.md
 ```
 
-A single `SKILL.md` and no `references/` directory. The principles, rules, and report template are short enough to keep inline, and a briefing skill should load fast.
+A single `SKILL.md` and no `references/` directory. The principles, rules, and report template are short enough to keep inline.
 
 Marketplace and `plugin.json` description, well under the 320-character Codex preference:
 
@@ -104,12 +104,12 @@ Modeled on the prohibition section in `plugins/resolve-copilot-pr-feedback/skill
 
 - Run `gh pr view [N] --json number,url,title,author,state,isDraft,baseRefName,headRefName,headRefOid,isCrossRepository,closingIssuesReferences,additions,deletions,changedFiles`. Parse `OWNER/REPO` from `url`.
 - If no PR resolves from the branch and no number was given, ask for the number, suggesting `gh pr checkout N` or `workmux add --pr N`, and stop.
-- If a number was given, confirm the checkout belongs to that PR. Either `gh pr view` with no number resolves to the same PR, or the current branch is named `headRefName`. Otherwise say which checkout would be needed and stop. Without this check, the sync step could move an unrelated branch.
+- If a number was given, after identifying the fetch remote, require both that the current branch is `headRefName` and that its upstream is `<remote>/<headRefName>`. If either lookup fails or differs, say which checkout would be needed and stop. A branch name alone is not proof that the checkout belongs to this PR.
 - A closed, merged, or draft PR is still reviewed, and its state is noted in the report header.
 
 #### Step 2. Sync the checkout
 
-1. Find the remote whose URL matches `OWNER/REPO` in `git remote -v`. Run `git fetch <remote> pull/<N>/head <baseRefName>`. This touches only `FETCH_HEAD`, the object store, and the base's remote-tracking ref.
+1. Find the remote whose fetch URL matches `OWNER/REPO` in `git remote -v`. When the user supplied a number, before fetching require the current branch and its upstream to match `headRefName` and `<remote>/<headRefName>`. Run `git fetch <remote> pull/<N>/head:refs/remotes/<remote>/pull/<N>/head <baseRefName>`. If fetch fails, stop. Re-read the PR with `--repo OWNER/REPO`, compare its head SHA with the fetched pull ref, and restart from resolution if they differ.
 1. If `git status --porcelain --untracked-files=no` shows changes, report and stop.
 1. If `git rev-parse HEAD` equals `headRefOid`, continue to step 3 only after the tracked-file check passes.
 1. Run `git ls-files --others --exclude-standard --directory` and `git ls-files --others --ignored --exclude-standard --directory`. If either prints anything or any cleanliness check fails, report and stop before synchronization. Never remove or move that local content.
@@ -117,7 +117,7 @@ Modeled on the prohibition section in `plugins/resolve-copilot-pr-feedback/skill
 1. If `headRefOid` is an ancestor of HEAD, the checkout has local commits: report and stop.
 1. Otherwise the branch was rewritten.
    - Check that this is a linked worktree: `git rev-parse --git-dir` differs from `git rev-parse --git-common-dir`.
-   - Check that no entry in `git reflog show --format=%gs` for the current branch records a local commit: `commit`, `commit (amend)`, `cherry-pick`, `rebase`, or a merge that was not a fast-forward.
+   - Require `git reflog show --format=%gs` for the current branch to succeed and show no local commit entry: `commit`, `commit (amend)`, `cherry-pick`, `rebase`, or a merge that was not a fast-forward. A reflog failure blocks reset.
    - If both hold, print the old HEAD SHA so it can be recovered, then run `git reset --hard <headRefOid>`. Otherwise report both SHAs and the reset command, and stop.
 1. Confirm HEAD equals `headRefOid` and tracked files are clean after synchronization. State which sync action was taken in one line, and repeat it in the report header.
 
@@ -125,7 +125,7 @@ Modeled on the prohibition section in `plugins/resolve-copilot-pr-feedback/skill
 
 - Collect the PR title and description, and the issues from `closingIssuesReferences`.
 - Also collect issues the description mentions as `#N`, `OWNER/REPO#N`, or issue URLs. For each, run `gh issue view N --repo ... --json title,body,state,labels,comments`.
-- For each issue, fetch its parent issue and every sub-issue, including their URLs and bodies, with a paginated GraphQL query. Accept `$endCursor`, pass it to `subIssues(first:50,after:$endCursor)`, request `pageInfo{hasNextPage endCursor}`, and use `gh api graphql --paginate`. Read all bodies as requirements and deduplicate repeated parents by URL. If fields are unavailable or pagination fails, disclose missing or partial coverage instead of treating unread criteria as satisfied.
+- For each issue, parse its own owner, repository, and number, then fetch it and its parent issue and every sub-issue from that repository. The paginated GraphQL query accepts `$endCursor`, passes it to `subIssues(first:50,after:$endCursor)`, requests `pageInfo{hasNextPage endCursor}`, and uses `gh api graphql --paginate`. Read all bodies as requirements and deduplicate repeated parents by URL. If fields are unavailable or pagination fails, disclose missing or partial coverage instead of treating unread criteria as satisfied.
 - Read external docs from the trailing context. Fetch URLs with whatever fetch tool or document connector the harness provides. If a URL can't be read, ask for the content to be pasted.
 - **Thin-requirements gate:** if the description is empty or template-only, no issue carries substantive intent, and no external doc was given, say what was found and ask for a doc or permission to infer intent. Ask before reading any code.
 
@@ -148,7 +148,7 @@ Modeled on the prohibition section in `plugins/resolve-copilot-pr-feedback/skill
 - Read every changed non-generated file far enough to understand it. Read whole files where the diff lacks context, and use Grep to find callers and siblings of changed interfaces.
 - Skip lockfiles, vendored code, and generated files: those marked `linguist-generated` in `.gitattributes`, or named as generated in the agent config. Note when a source changed but its generated output clearly did not.
 - On a large PR, read source and tests before documentation and fixtures. Name anything not read in detail in the report header rather than skimming silently.
-- Run `gh pr checks N --repo ... --json name,state,bucket,workflow,link`. A non-zero exit (pending or failing checks) is data, not an error.
+- Run `gh pr checks N --repo ... --json name,state,bucket,workflow,link`. When it returns JSON, classify the states even if its exit is non-zero. When it returns no valid data, report CI as unavailable rather than treating command failure as a check result.
 
 #### Step 6. Assess
 
@@ -235,15 +235,15 @@ Report style: don't restate the diff, don't hedge, don't praise by default, and 
   - **How it differs:** contrasts it with `review-branch` and `resolve-copilot-pr-feedback`.
   - **Recommended Permissions**
   - **See Also:** ends with the all-plugins link.
-- **Recommended Permissions** lists every read command: `gh pr view`, `gh pr checks`, `gh issue view`, `gh api user`, `gh api --paginate repos/`, `gh api graphql`, `git remote -v`, `git fetch`, `git rev-parse`, `git status`, `git ls-files`, `git merge-base`, `git diff`, `git log`, `git reflog show`, and `git merge --ff-only`.
-  - It deliberately omits `git reset --hard`; whether it prompts depends on other permissions and harness settings. Checkout safeguards apply regardless.
+- **Recommended Permissions** lists every command: `gh pr view`, `gh pr checks`, `gh issue view`, `gh api user`, `gh api --paginate repos/`, `gh api graphql`, `git remote -v`, `git fetch`, `git rev-parse`, `git status`, `git ls-files`, `git merge-base`, `git diff`, `git log`, `git reflog show`, `git merge --ff-only`, and `git reset --hard`.
+  - It includes `git reset --hard` because the skill may reset a linked worktree after all checkout safeguards succeed. Checkout safeguards apply regardless.
   - It notes that `gh api` rules also match write calls, so the skill's hard rules are what keep it read-only.
 - Link `review-in-depth` only once that plugin exists. Until then, the markdownlint relative-links rule would fail on the link.
 
 ### Catalog registration
 
 1. `plugins/review-colleague-pr/.claude-plugin/plugin.json`: the same fields as `plugins/review-branch/.claude-plugin/plugin.json`, at version `1.0.0`.
-1. `.claude-plugin/marketplace.json`: insert the entry between `review-branch` and `review-dependabot-config` with category `code-review`. Recompute `metadata.version` with `bin/compute-catalog-state`; the expected value is `catalog-M71-m103-p156-n58`.
+1. `.claude-plugin/marketplace.json`: insert the entry between `review-branch` and `review-dependabot-config` with category `code-review`. Recompute `metadata.version` with `bin/compute-catalog-state`; the expected value is `catalog-M71-m103-p157-n58`.
 1. Root `README.md`: add a Code Review table row after Resolve Copilot PR Feedback, with trigger `/review-colleague-pr` and the description verbatim, plus a `gh` bullet under that table's External tools list. The Contents section does not change.
 1. Regenerate the mirrors with `bin/build-codex-marketplace` and `bin/build-opencode-mirror`.
 
@@ -301,13 +301,13 @@ Use existing PRs only. Never create or comment on one to test.
 
 ## Review resolution verification
 
-Commit `ce384fa6` resolves R1-R4. Both mirrors were regenerated, and `make lint validate` passed. The plugin stays at its initial `1.0.0` version and the recomputed catalog remains `catalog-M71-m103-p156-n58`.
+Commit `ce384fa6` resolves R1-R4. Both mirrors were regenerated, and `make lint validate` passed. The plugin stays at its initial `1.0.0` version and the recomputed catalog is `catalog-M71-m103-p157-n58`.
 
 The R1-R4 review fixes update the checkout guards and requirements reads. A disposable-checkout command probe passed nine cases: staged and unstaged tracked edits at matching and stale HEADs; untracked and ignored files at a path introduced by the target commit; non-overlapping untracked content; ignored build output; and a clean fast-forward with post-sync checks. The probe used the commands from the skill, preserved local content, and created no commits. This verifies the Git checks, not an end-to-end agent run or a destructive reset.
 
 The paginated GraphQL query succeeded against `microsoft/vscode#300108` with a page size of one. That issue returned no parent or sub-issues, so this confirms the query is accepted and handles an empty connection. Multiple-page retrieval and a requirement stated only in a sub-issue body remain unverified. The skill explicitly requests bodies on every page and requires disclosure of missing or partial coverage.
 
-The broader behavioral checklist remains open. The initial branch review's Scrut result was 390 passing and 12 failing cases; ten failures were traced to the unaccepted Xcode license for the fixture's `/usr/bin/git`, and two missing fixture-output failures remain unexplained. No system or test-fixture changes are part of this work.
+The broader behavioral checklist remains open. A subsequent full `make test-all` run passed all 402 Scrut cases with zero failures or skips. The earlier branch-review result remains historical evidence and does not describe the current suite state.
 
 ## Commits
 

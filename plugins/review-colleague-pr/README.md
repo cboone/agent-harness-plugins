@@ -124,6 +124,7 @@ This skill runs read-only git and GitHub CLI commands that trigger permission pr
       "Bash(git merge --ff-only *)",
       "Bash(git merge-base *)",
       "Bash(git reflog show *)",
+      "Bash(git reset --hard *)",
       "Bash(git remote -v)",
       "Bash(git rev-parse *)",
       "Bash(git status *)"
@@ -132,7 +133,7 @@ This skill runs read-only git and GitHub CLI commands that trigger permission pr
 }
 ```
 
-`git reset --hard` is deliberately absent, so these rules do not grant it automatic permission; other permissions and harness settings determine whether it prompts. The checkout safeguards apply regardless of permission settings. The `gh api` rules also match write calls; the skill's ground rules, not these patterns, are what keep it read-only. Read-only GraphQL queries use POST, while REST writes and GraphQL mutations are forbidden. If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+`git reset --hard` is included because the skill may use it after its linked-worktree and reflog safeguards succeed. It overwrites the checkout's tracked files, so review this permission carefully. The checkout safeguards apply regardless of permission settings. The `gh api` rules also match write calls; the skill's ground rules, not these patterns, are what keep it read-only. Read-only GraphQL queries use POST, while REST writes and GraphQL mutations are forbidden. If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
 ## See Also
 
