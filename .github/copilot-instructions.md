@@ -7,6 +7,7 @@ For full project conventions, see `AGENTS.md` in the repository root.
 - **Version bumps are selective**: Only plugins with actual code changes get version bumps. Do not flag missing version bumps on unchanged plugins.
 - **PR descriptions may contain stale commit references**: PR descriptions are often auto-generated from commit messages and may reference superseded commits. Do not flag discrepancies between PR description bullet points and the actual diff.
 - **Done plans are historical records**: Files in `docs/plans/done/` are completed plan documents preserved for reference. They may not match the final implementation. Do not flag discrepancies between done plan content and the actual codebase.
+- **Scoped instruction aliases are committed symlinks**: Each directory-scoped `AGENTS.md` has a sibling `CLAUDE.md -> AGENTS.md` symlink. Confirm these entries with `git ls-tree` or `test -L`; file listings that omit symlinks do not show that an alias is absent.
 - **`monitor-pr` deliberately does not gate on `BLOCKED` or `reviewDecision`**: The skill treats mergeability as clean when there are no conflicts and the branch is not behind. Requiring `mergeStateStatus` to be `CLEAN`, or waiting for an approving review, would never terminate on a repository whose branch protection requires a reviewer the skill cannot supply. `BLOCKED` is reported prominently instead, including in the terminal report. Do not flag this as too permissive.
 
 ## Skill and command files are AI agent prompts
