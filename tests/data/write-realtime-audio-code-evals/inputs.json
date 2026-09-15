@@ -1,0 +1,152 @@
+[
+  {
+    "id": "RTAC-001",
+    "request": "Review this display path in an audio plugin.",
+    "artifact": "The callback writes ordinary f32 samples into a history array. The UI copies the array, then compares the producer cursor before and after the copy and discards changed frames."
+  },
+  {
+    "id": "RTAC-002",
+    "request": "Can this meter use relaxed atomics?",
+    "artifact": "The callback atomically stores one f32 peak value. The UI atomically loads it. No pointer, timestamp, or ordinary payload accompanies the value."
+  },
+  {
+    "id": "RTAC-003",
+    "request": "Review this ARM ordering claim.",
+    "artifact": "The change says acquire and release always compile to the same instructions as relaxed loads and stores on ARM, so every queue operation can use relaxed ordering."
+  },
+  {
+    "id": "RTAC-004",
+    "request": "Review this event admission policy.",
+    "artifact": "A full queue drops the newest event. A note-on may already be queued when its note-off cannot be queued."
+  },
+  {
+    "id": "RTAC-005",
+    "request": "Review this replacement protocol.",
+    "artifact": "The UI atomically swaps a prepared pointer. A bounded retirement queue is full, and the callback may still read the old object."
+  },
+  {
+    "id": "RTAC-006",
+    "request": "Assess this TSan result.",
+    "artifact": "A TSan job passed, but the shared module was linked without instrumentation. Its deliberately weakened ordering control also passed."
+  },
+  {
+    "id": "RTAC-007",
+    "request": "Classify this runtime control result.",
+    "artifact": "The defective arm exits before the marked callback because the host fixture cannot load its bundle. The expected prohibited-operation diagnostic is absent."
+  },
+  {
+    "id": "RTAC-008",
+    "request": "Scope this RTSan evidence.",
+    "artifact": "RTSan detects allocation in a standalone executable. The host loads the plugin through dlopen and its render worker is not marked as a real-time context."
+  },
+  {
+    "id": "RTAC-009",
+    "request": "Assess this model-check conclusion.",
+    "artifact": "A Loom model replaces only the queue atomics. A dependency retains standard synchronization types, and exploration ends at a configured preemption bound."
+  },
+  {
+    "id": "RTAC-010",
+    "request": "Plan malformed-state testing.",
+    "artifact": "A state loader receives a byte slice from a harness. The parser trusts declared lengths and may convert values before range checks."
+  },
+  {
+    "id": "RTAC-011",
+    "request": "Review this timing report.",
+    "artifact": "Average CPU time is low, but the first callback after activation and a periodic cleanup both exceed the block interval."
+  },
+  {
+    "id": "RTAC-012",
+    "request": "Review state loading during processing.",
+    "artifact": "The main thread decodes a truncated preset and swaps partially initialized state while process may run."
+  },
+  {
+    "id": "RTAC-013",
+    "request": "Review this thread check.",
+    "artifact": "The plugin stores the operating-system thread ID from its first process call and rejects later process calls from a different thread."
+  },
+  {
+    "id": "RTAC-014",
+    "request": "Review this buffer adapter.",
+    "artifact": "The adapter assumes equal input and output channels, wraps aliased host pointers as independent mutable Rust slices, and fills only active output channels."
+  },
+  {
+    "id": "RTAC-015",
+    "request": "Review block-size handling.",
+    "artifact": "A JUCE processor assumes every block has the preparation size. A CLAP adapter copies an incoming block larger than its activated maximum into fixed scratch."
+  },
+  {
+    "id": "RTAC-016",
+    "request": "Review callback reachability.",
+    "artifact": "Reset clears a large preallocated delay line. Render workers share one scratch buffer and can publish to a channel described as SPSC."
+  },
+  {
+    "id": "RTAC-017",
+    "request": "Review queue submission.",
+    "artifact": "A full bounded queue drops a reference-counted payload, whose final destructor posts a UI notification. Successful submissions also call an asynchronous notifier from process."
+  },
+  {
+    "id": "RTAC-018",
+    "request": "Review a released parameter insertion.",
+    "artifact": "A new enum member shifts existing parameter numbers. The display labels are unchanged and no saved automation fixture is available."
+  },
+  {
+    "id": "RTAC-019",
+    "request": "Review AUv2 ordering.",
+    "artifact": "CLAP parameters are [A, B, C]. The wrapper ordering is [2, 0, 1], and the review cites only a header that describes the mapping."
+  },
+  {
+    "id": "RTAC-020",
+    "request": "Review this structural preset change.",
+    "artifact": "A preset changes latency and ports. The host delays restart after request_restart, while process reports the pending configuration as active."
+  },
+  {
+    "id": "RTAC-021",
+    "request": "Review this event scheduler.",
+    "artifact": "The scheduler receives equal-offset notes, delayed notes, wildcard addresses, and a timeline discontinuity. It compares note_id only."
+  },
+  {
+    "id": "RTAC-022",
+    "request": "Review silent processing status.",
+    "artifact": "Audio is silent, but a delayed note and a rejected note-off remain pending. The processor returns CLAP_PROCESS_SLEEP."
+  },
+  {
+    "id": "RTAC-023",
+    "request": "Review host automation decoding.",
+    "artifact": "A VST3 queue supplies only a final point for a block. An AUv3 ramp crosses three render blocks. The adapter starts a fresh smoother at each endpoint."
+  },
+  {
+    "id": "RTAC-024",
+    "request": "Review modulation and smoothing.",
+    "artifact": "The processor adds a global CLAP modulation to a polyphonic modulation amount and runs multiplicative smoothing toward zero."
+  },
+  {
+    "id": "RTAC-025",
+    "request": "Review numerical recovery.",
+    "artifact": "A recursive tail can enter the subnormal range. A finite input can overflow internal state, and the build uses floating-point optimization flags."
+  },
+  {
+    "id": "RTAC-026",
+    "request": "Assess this core boundary.",
+    "artifact": "A supposedly host-independent core lives in a separate directory but can import the plugin SDK through a transitive package. No failing dependency control exists."
+  },
+  {
+    "id": "RTAC-027",
+    "request": "Scope these passing core vectors.",
+    "artifact": "Core vectors pass. The adapter still has no tests for buffer aliases, event offsets, process status, or delayed restart notifications."
+  },
+  {
+    "id": "RTAC-028",
+    "request": "Choose a skill for this review.",
+    "artifact": "The subject is a generic server queue and an offline batch algorithm. No audio callback or host contract is involved."
+  },
+  {
+    "id": "RTAC-029",
+    "request": "Perform a read-only review of this audio callback.",
+    "artifact": "The workspace is a user project and Plant Defects is installed. The request asks only for findings and proposed checks."
+  },
+  {
+    "id": "RTAC-030",
+    "request": "Review an audio callback without companion plugins.",
+    "artifact": "Only write-realtime-audio-code and its local references are installed. The callback publishes UI meters and has no documented positive control."
+  }
+]
