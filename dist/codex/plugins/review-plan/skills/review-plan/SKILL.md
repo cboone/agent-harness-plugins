@@ -22,9 +22,11 @@ Accept one optional path through `/review-plan [path]`, with no flags. Review th
 
 Resolve relative arguments from the invocation directory and the default search from the repository root. Preserve paths containing spaces as a single path.
 
-1. **Explicit Markdown file**: Review that exact file, including files outside `docs/plans/todo/` or inside `done/`. Never substitute another plan if the file is absent, unreadable, or not Markdown.
+1. **Explicit Markdown file**: Review that exact file, including files outside `docs/plans/todo/` or inside `done/`. If it is absent, unreadable, or not Markdown, report `Blocked` and request a readable Markdown file. Never substitute another plan.
 1. **Explicit directory**: Recursively collect Markdown files from its `todo/` subtree. If the supplied directory is itself named `todo`, use it directly. Exclude any `done/` subtree, including symlink targets in `done/`.
 1. **No argument**: Recursively collect Markdown files from `docs/plans/todo/`, with the same exclusions.
+
+Before matching or reading candidates, resolve each candidate path, including symlink targets. Keep only Markdown files whose resolved paths remain inside the repository and outside every resolved `done/` subtree. Exclude all other candidates and disclose the exclusions in the report. These candidate restrictions do not apply to an explicit Markdown file under the first rule.
 
 For directory or default selection, use `git branch --show-current` to identify the current branch. Compute subjects in this exact order:
 

@@ -18,9 +18,9 @@ Install through the marketplace following the [installation guide](../../README.
 /review-plan design/search-plan.md
 ```
 
-The path is optional and may name a Markdown file or plan directory. Quote paths containing spaces. An explicit file is reviewed exactly as supplied, even outside the usual plan directories or inside `done/`.
+The path is optional and may name a Markdown file or plan directory. Quote paths containing spaces. An explicit file is reviewed exactly as supplied, even outside the usual plan directories or inside `done/`. An absent, unreadable, or non-Markdown explicit file produces a `Blocked` result and a request for a readable Markdown file.
 
-With no path, the skill scans `docs/plans/todo/` recursively. A directory argument selects from that directory's `todo/` subtree; supplying a directory named `todo` uses it directly. Automatic selection excludes `done/`.
+With no path, the skill scans `docs/plans/todo/` recursively. A directory argument selects from that directory's `todo/` subtree; supplying a directory named `todo` uses it directly. Automatic selection resolves candidate paths, including symlink targets, and keeps only Markdown files within the repository and outside every resolved `done/` subtree. The report discloses excluded candidates.
 
 The skill prefers a unique filename match to the current branch subject. It strips at most one case-sensitive branch category from `feature/`, `feat/`, `fix/`, `chore/`, or `docs/`, then one leading issue prefix of the form `123-` or `issue-123-`. Candidate basenames have their `.md` extension, leading `YYYY-MM-DD-` datestamp, and the same optional issue prefix removed. Both subjects then use lowercase ASCII letters, collapse characters outside `[a-z0-9]` into hyphens, and trim boundary hyphens. Complete subjects must match exactly.
 
