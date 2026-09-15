@@ -85,7 +85,7 @@ Commit this plan file (cboone repo convention: plans stay committed). The `pr` s
 
 ## Verification
 
-1. Residual scan returns nothing outside `docs/plans/done/` and `docs/reviews/`:
+1. Residual scan finds no actionable guidance recommending flat paths, invalid `excludeAgent` values, or claiming that the flat and nested layouts are equivalent. The pattern below also matches the intentional `.github/lean.instructions.md` example in `agent-instruction-files.md` and its generated mirrors, which explains that the path is unread:
 
    ```bash
    grep -rnE '\.github/[A-Za-z0-9_-]+\.instructions\.md|copilot-coding-agent|copilot-code-review|functionally equivalent|[Ff]lat layout' plugins/ dist/ .agents/
