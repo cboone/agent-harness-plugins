@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Triage a repository's open Dependabot pull requests into safe to merge, needs refresh, needs testing, needs work, hold, superseded, or outdated, backed by evidence, then merge, rebase, or close them as the user approves.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["dependabot", "dependencies", "github", "pull-requests", "security", "triage"],
+  "license": "MIT",
+  "name": "triage-dependabot-prs",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

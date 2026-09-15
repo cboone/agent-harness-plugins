@@ -1,0 +1,36 @@
+[
+  {
+    "status": "ahead",
+    "ahead_by": 2,
+    "behind_by": 0,
+    "commits": [
+      {
+        "author": {
+          "login": "dependabot[bot]"
+        },
+        "commit": {
+          "author": {
+            "name": "dependabot[bot]"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "status": "ahead",
+    "ahead_by": 2,
+    "behind_by": 0,
+    "commits": [
+      {
+        "author": {
+          "login": "octocat"
+        },
+        "commit": {
+          "author": {
+            "name": "octocat"
+          }
+        }
+      }
+    ]
+  }
+]

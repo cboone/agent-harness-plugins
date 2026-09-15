@@ -77,8 +77,10 @@ This limit is a default. A project that enforces its own convention wins: a comm
 
 ### Issue References
 
-- `fixes #N` for bug fix branches (`fix/*`)
-- `closes #N` for other branch types
+- `fixes #N` when the changes fix a bug
+- `closes #N` otherwise
+
+Decide from the nature of the change, not from the branch prefix. A branch may carry no prefix, or one such as `bug/` or `hotfix/` that means a fix without spelling it `fix/`.
 
 ## Branch Naming
 
@@ -95,9 +97,9 @@ Use `TYPE/SLUG` format:
 
 The slug should be a lowercase, hyphen-separated description (e.g., `fix/login-timeout`, `feature/add-retry-logic`).
 
-`feature/` is the primary spelling because it is what the `create-worktree` and `address-issue-in-worktree` skills emit; `feat/` is accepted everywhere `feature/` is.
+`feature/` is the primary spelling, and `feat/` is accepted everywhere `feature/` is. The `create-worktree` and `address-issue-in-worktree` skills take the prefix from workmux's branch name generator rather than choosing one themselves, so which prefix they produce depends on the naming prompt in the user's workmux config, and a generator that returns no prefix leaves the branch without one.
 
-**Include the issue number when working from an issue**, immediately after the type prefix: `fix/42-login-timeout`. The `pr` skill's primary issue-detection strategy parses `TYPE/N-description` out of the branch name, so a branch without the number forces a slower GitHub search that can match the wrong issue or none at all.
+**Include the issue number when working from an issue**, immediately after the type prefix: `fix/42-login-timeout`, or at the front when there is no prefix: `42-login-timeout`. The `pr` skill's primary issue-detection strategy parses both `TYPE/N-description` and `N-description` out of the branch name, so a branch without the number forces a slower GitHub search that can match the wrong issue or none at all.
 
 ## Reading Collections with `gh api`
 

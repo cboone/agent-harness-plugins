@@ -1,0 +1,44 @@
+[
+  [
+    {
+      "number": 51,
+      "dependency": {
+        "package": {
+          "ecosystem": "npm",
+          "name": "lodash"
+        },
+        "manifest_path": "web/package-lock.json"
+      },
+      "security_advisory": {
+        "ghsa_id": "GHSA-5151-5151-5151",
+        "severity": "high"
+      },
+      "security_vulnerability": {
+        "first_patched_version": {
+          "identifier": "4.17.21"
+        }
+      }
+    }
+  ],
+  [
+    {
+      "number": 52,
+      "dependency": {
+        "package": {
+          "ecosystem": "actions",
+          "name": "actions/checkout"
+        },
+        "manifest_path": ".github/workflows/ci.yml"
+      },
+      "security_advisory": {
+        "ghsa_id": "GHSA-5252-5252-5252",
+        "severity": "low"
+      },
+      "security_vulnerability": {
+        "first_patched_version": {
+          "identifier": "7.0.1"
+        }
+      }
+    }
+  ]
+]

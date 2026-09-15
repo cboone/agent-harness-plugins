@@ -82,6 +82,8 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 
 - [Set-Up Secret Scanning](../set-up-secret-scanning/README.md): credential-leak hardening (sibling supply-chain concern)
 - [Refresh Project Scaffolding](../refresh-project-scaffolding/README.md): ongoing template-drift detection (different cadence)
+- [Review Dependabot Config](../review-dependabot-config/README.md): review an existing Dependabot config and the repository settings behind it
+- [Triage Dependabot PRs](../triage-dependabot-prs/README.md): work through the PRs Dependabot opens once the config is in place
 - [Manage Repo Licensing](../manage-repo-licensing/README.md): SPDX coverage for newly emitted files
 - [Lint and Fix](../lint-and-fix/README.md): invoked after pinning to format affected files
 - [All plugins](../../README.md)

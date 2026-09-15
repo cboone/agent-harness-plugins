@@ -1,0 +1,809 @@
+#!/usr/bin/env bash
+# dependabot-prs -- Gather and summarize a repository's open Dependabot pull requests
+# Author: Christopher Boone
+# Date: 2026-09-13
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+# gh pr list returns at most this many PRs per list unless --limit raises it.
+readonly DEFAULT_LIMIT=200
+
+# Every field the triage skill reads from a Dependabot PR. body is fetched only
+# so summarize can extract what it needs; the summary never repeats it, because
+# a single grouped PR body can run to 65 KB. changedFiles is fetched beside
+# files because gh lists at most the first 100 files of a PR.
+readonly DEPENDABOT_FIELDS="number,title,url,headRefName,headRefOid,baseRefName,body,createdAt,updatedAt,labels,isDraft,mergeable,mergeStateStatus,reviewDecision,autoMergeRequest,statusCheckRollup,changedFiles,files"
+
+# Every open PR, from any author, is fetched with just enough to detect file
+# overlap between a Dependabot PR and the rest of the queue.
+readonly OPEN_FIELDS="number,title,author,headRefName,changedFiles,files"
+
+readonly ISO8601_PATTERN='^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$'
+readonly REPO_PATTERN='^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
+
+function usage() {
+  cat << USAGE_TEXT
+Usage: ${SCRIPT_NAME} <command> [options]
+
+Gather a repository's open Dependabot pull requests and reduce them to the
+evidence a triage needs, without the PR bodies.
+
+Commands:
+  fetch --repo OWNER/REPO [--limit N] [--raw]   Fetch PRs, comparisons, and alerts, then summarize
+  summarize [--now YYYY-MM-DDTHH:MM:SSZ]        Summarize a fetched bundle read from stdin
+
+Options:
+  --repo OWNER/REPO   Repository to read. Required: a bare gh call inside a fork
+                      resolves to the upstream project instead
+  --limit N           Maximum PRs per list (default: ${DEFAULT_LIMIT})
+  --raw               Print the fetched bundle instead of summarizing it
+  --now TIMESTAMP     Reference time for PR ages (default: the bundle's fetchedAt)
+  -h, --help          Show this help
+
+fetch needs an authenticated gh and jq. summarize reads JSON on stdin and needs
+only jq, so a saved bundle can be re-summarized, and tested, offline.
+
+Examples:
+  ${SCRIPT_NAME} fetch --repo octocat/hello-world
+  ${SCRIPT_NAME} fetch --repo octocat/hello-world --raw > bundle.json
+  ${SCRIPT_NAME} summarize --now 2026-09-13T12:00:00Z < bundle.json
+USAGE_TEXT
+}
+
+function die() {
+  echo "Error: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function require_jq() {
+  if ! command -v jq > /dev/null 2>&1; then
+    die "jq is required but not found. Install it: https://jqlang.github.io/jq/download/"
+  fi
+}
+
+# Checks the GitHub CLI is installed and authenticated. Kept separate from
+# require_jq so summarize, which only transforms JSON on stdin, runs in
+# environments with no GitHub credentials (the test suite, for example).
+function require_gh() {
+  if ! command -v gh > /dev/null 2>&1; then
+    die "gh (GitHub CLI) is required but not found. Install it: https://cli.github.com"
+  fi
+
+  # gh auth token checks only the active account. gh auth status fails when any
+  # account on any host has a problem, even one this script never uses.
+  if ! gh auth token > /dev/null 2>&1; then
+    die "Not authenticated with GitHub. Run: gh auth login"
+  fi
+}
+
+# Fetches everything summarize needs into one bundle object.
+# Arguments:
+#   --repo OWNER/REPO, [--limit N], [--raw]
+# Outputs:
+#   The summary JSON, or the raw bundle under --raw, to stdout
+function do_fetch() {
+  local repo=""
+  local limit="${DEFAULT_LIMIT}"
+  local raw="false"
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --repo)
+        [[ $# -lt 2 ]] && die "Missing value after --repo"
+        repo="${2}"
+        shift 2
+        ;;
+      --limit)
+        [[ $# -lt 2 ]] && die "Missing value after --limit"
+        limit="${2}"
+        shift 2
+        ;;
+      --raw)
+        raw="true"
+        shift
+        ;;
+      *)
+        die "Unknown fetch option: ${1}. Use '${SCRIPT_NAME} --help' for usage."
+        ;;
+    esac
+  done
+
+  [[ -z "${repo}" ]] && die "fetch requires --repo OWNER/REPO"
+  [[ "${repo}" =~ ${REPO_PATTERN} ]] || die "Invalid --repo '${repo}'. Expected OWNER/REPO."
+  [[ "${limit}" =~ ^[1-9][0-9]*$ ]] || die "Invalid --limit '${limit}'. Expected a positive integer."
+
+  # Checked after the arguments, so a usage mistake is reported as one even on
+  # a machine with no GitHub credentials.
+  require_gh
+  require_jq
+
+  local work_dir
+  work_dir="$(mktemp -d)"
+  # Expand now, because work_dir is local and gone by the time the trap fires.
+  # printf %q escapes the path, so a TMPDIR holding quotes or shell
+  # metacharacters cannot break out of the trap command.
+  local quoted_work_dir
+  printf -v quoted_work_dir '%q' "${work_dir}"
+  # shellcheck disable=SC2064
+  trap "rm -rf ${quoted_work_dir}" EXIT
+
+  if ! gh repo view "${repo}" --json nameWithOwner,defaultBranchRef,isArchived > "${work_dir}/repo.json"; then
+    die "Failed to read ${repo}. See the gh error above for the cause."
+  fi
+
+  if ! gh pr list --repo "${repo}" --author app/dependabot --state open --limit "${limit}" \
+    --json "${DEPENDABOT_FIELDS}" > "${work_dir}/dependabot.json"; then
+    die "Failed to list Dependabot PRs for ${repo}. See the gh error above for the cause."
+  fi
+
+  if ! gh pr list --repo "${repo}" --state open --limit "${limit}" \
+    --json "${OPEN_FIELDS}" > "${work_dir}/open.json"; then
+    die "Failed to list open PRs for ${repo}. See the gh error above for the cause."
+  fi
+
+  complete_files "${repo}" "${work_dir}/dependabot.json"
+  reuse_files "${work_dir}/dependabot.json" "${work_dir}/open.json"
+  complete_files "${repo}" "${work_dir}/open.json"
+  fetch_comparisons "${repo}" "${work_dir}"
+  fetch_alerts "${repo}" "${work_dir}"
+
+  local fetched_at
+  fetched_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  # --slurpfile rather than --argjson: PR bodies can exceed the per-argument
+  # size limit the kernel places on a single command-line argument.
+  jq -n \
+    --slurpfile repo "${work_dir}/repo.json" \
+    --slurpfile dependabot "${work_dir}/dependabot.json" \
+    --slurpfile open "${work_dir}/open.json" \
+    --slurpfile compare "${work_dir}/compare.json" \
+    --slurpfile alerts "${work_dir}/alerts.json" \
+    --arg fetched_at "${fetched_at}" \
+    --argjson limit "${limit}" \
+    '{
+      fetchedAt: $fetched_at,
+      repo: $repo[0].nameWithOwner,
+      defaultBranch: $repo[0].defaultBranchRef.name,
+      isArchived: $repo[0].isArchived,
+      limit: $limit,
+      dependabot: $dependabot[0],
+      open: $open[0],
+      compare: $compare[0],
+      alerts: $alerts[0]
+    }' > "${work_dir}/bundle.json"
+
+  local listed
+  listed="$(jq '[(.dependabot | length), (.open | length)] | max' "${work_dir}/bundle.json")"
+  if [[ "${listed}" -ge "${limit}" ]]; then
+    echo "Warning: a PR list returned ${listed} items, reaching --limit ${limit}. Re-run with a higher --limit to be sure nothing was cut off." >&2
+  fi
+
+  if [[ "${raw}" == "true" ]]; then
+    cat "${work_dir}/bundle.json"
+  else
+    do_summarize "" < "${work_dir}/bundle.json"
+  fi
+}
+
+# Reads the full file list of each PR that gh pr list cut short. gh lists at
+# most the first 100 files of a PR, so a large grouped PR can lose the lockfile
+# its alerts and overlaps are matched on. The REST files endpoint pages through
+# up to 3000 files. A PR whose list cannot be read again keeps the partial list,
+# and summarize reports it as incomplete.
+# Arguments:
+#   $1 - OWNER/REPO
+#   $2 - PR list JSON file, rewritten in place
+function complete_files() {
+  local repo="${1}"
+  local list_file="${2}"
+
+  local lines_file="${list_file}.files"
+  : > "${lines_file}"
+
+  local number
+  while IFS= read -r number; do
+    if gh api --paginate --slurp "repos/${repo}/pulls/${number}/files?per_page=100" \
+      > "${list_file}.pages" 2> /dev/null; then
+      jq -c --arg number "${number}" '{key: $number, value: [.[][] | {path: .filename}]}' \
+        "${list_file}.pages" >> "${lines_file}"
+    fi
+  done < <(jq -r '.[] | select((.changedFiles // 0) > ((.files // []) | length)) | .number' "${list_file}")
+
+  jq --slurpfile lines "${lines_file}" \
+    '($lines | from_entries) as $complete | map(($complete[.number | tostring]) as $files | if $files == null then . else .files = $files end)' \
+    "${list_file}" > "${list_file}.new"
+  mv "${list_file}.new" "${list_file}"
+}
+
+# Copies each Dependabot PR's file list, already completed, into the list of
+# every open PR, where the same PRs appear again, so complete_files does not
+# page through the same files a second time.
+# Arguments:
+#   $1 - Completed Dependabot PR list JSON file
+#   $2 - Open PR list JSON file, rewritten in place
+function reuse_files() {
+  local source_file="${1}"
+  local list_file="${2}"
+
+  jq --slurpfile source "${source_file}" \
+    '($source[0] | map({key: (.number | tostring), value: {changedFiles, files}}) | from_entries) as $known
+      | map(($known[.number | tostring]) as $entry | if $entry == null then . else . + $entry end)' \
+    "${list_file}" > "${list_file}.new"
+  mv "${list_file}.new" "${list_file}"
+}
+
+# Compares each Dependabot PR head against the branch the PR targets. The
+# compare API is the reliable source for what is actually on the branch: when
+# GitHub holds a stale base for a PR, gh pr view reports commits and files that
+# belong to the base branch, not to the PR. Comparing against the PR's own base
+# keeps a PR aimed at a configured target-branch from reading as far behind.
+# Arguments:
+#   $1 - OWNER/REPO
+#   $2 - Work directory holding dependabot.json; compare.json is written there
+function fetch_comparisons() {
+  local repo="${1}"
+  local work_dir="${2}"
+
+  local lines_file="${work_dir}/compare.lines"
+  : > "${lines_file}"
+
+  local number
+  local head_sha
+  local base_ref
+  while IFS=$'\t' read -r number head_sha base_ref; do
+    # The commit list is paginated, so authors are gathered across every page;
+    # a non-Dependabot commit on a later page would otherwise go uncounted.
+    if gh api --paginate --slurp "repos/${repo}/compare/${base_ref}...${head_sha}?per_page=100" \
+      > "${work_dir}/compare.pages" 2> /dev/null; then
+      jq -c --arg number "${number}" \
+        '{key: $number, value: {status: .[0].status, aheadBy: .[0].ahead_by, behindBy: .[0].behind_by, authors: [.[].commits[] | (.author.login // .commit.author.name // "")]}}' \
+        "${work_dir}/compare.pages" >> "${lines_file}"
+    else
+      jq -nc --arg number "${number}" '{key: $number, value: null}' >> "${lines_file}"
+    fi
+  done < <(jq -r '.[] | [.number, .headRefOid, .baseRefName] | @tsv' "${work_dir}/dependabot.json")
+
+  jq -s 'from_entries' "${lines_file}" > "${work_dir}/compare.json"
+}
+
+# Fetches open Dependabot alerts. Alerts need the security_events scope or
+# repository admin rights, so a refusal is recorded rather than fatal: triage
+# still works without them, it just cannot match PRs to advisories.
+# Arguments:
+#   $1 - OWNER/REPO
+#   $2 - Work directory; alerts.json is written there
+function fetch_alerts() {
+  local repo="${1}"
+  local work_dir="${2}"
+
+  if gh api --paginate --slurp "repos/${repo}/dependabot/alerts?state=open&per_page=100" \
+    > "${work_dir}/alerts.raw" 2> "${work_dir}/alerts.err"; then
+    jq '{available: true, reason: null, items: [.[][]]}' "${work_dir}/alerts.raw" > "${work_dir}/alerts.json"
+  else
+    local reason
+    reason="$(head -n 1 "${work_dir}/alerts.err")"
+    jq -n --arg reason "${reason:-unknown error}" \
+      '{available: false, reason: $reason, items: []}' > "${work_dir}/alerts.json"
+  fi
+}
+
+# Reduces a fetched bundle to the triage summary.
+# Arguments:
+#   $1 - Reference time (ISO 8601, UTC); empty means the bundle's fetchedAt
+# Outputs:
+#   Summary JSON to stdout
+function do_summarize() {
+  local now="${1}"
+
+  local input
+  input="$(cat)"
+
+  # Validate the shape before filtering, so a failed gh call or a hand-piped
+  # error payload produces a clear message instead of an opaque jq error.
+  local input_type
+  if ! input_type="$(jq -r 'type' 2> /dev/null <<< "${input}")"; then
+    die "Invalid bundle: could not parse input as JSON."
+  fi
+
+  if [[ -z "${input_type}" ]]; then
+    die "Invalid bundle: input is empty."
+  fi
+
+  if [[ "${input_type}" != "object" ]]; then
+    die "Invalid bundle: expected an object, got ${input_type}. Pass the output of: ${SCRIPT_NAME} fetch --repo OWNER/REPO --raw"
+  fi
+
+  local missing
+  missing="$(jq -r '. as $bundle | [("repo", "defaultBranch", "dependabot") | select(. as $key | $bundle | has($key) | not)] | join(", ")' <<< "${input}" 2> /dev/null || true)"
+  if [[ -n "${missing}" ]]; then
+    die "Invalid bundle: missing required field(s): ${missing}."
+  fi
+
+  if ! jq -e '.dependabot | type == "array"' > /dev/null <<< "${input}"; then
+    die "Invalid bundle: dependabot must be an array of PR objects."
+  fi
+
+  if [[ -z "${now}" ]]; then
+    now="$(jq -r '.fetchedAt // empty' <<< "${input}")"
+  fi
+  [[ -z "${now}" ]] && die "summarize needs --now, or a fetchedAt field in the bundle."
+  [[ "${now}" =~ ${ISO8601_PATTERN} ]] || die "Invalid timestamp '${now}'. Expected YYYY-MM-DDTHH:MM:SSZ."
+
+  # shellcheck disable=SC2016
+  # $variables in the filter are jq bindings, not shell variables
+  jq --arg now "${now}" '
+    def lower: ascii_downcase;
+    def body_text: (.body // "") | gsub("\r"; "");
+
+    # A commit or image digest. An image digest can be spelled sha256:HEX, full
+    # length or short, and follow a tag (7.2.0-alpine@sha256:2870770). An
+    # unquoted short form must contain a letter, which keeps a date-shaped
+    # version like 20240101 from reading as a digest; the sha256: prefix already
+    # rules that out. Dependabot itself quotes the digests it writes, which
+    # quoted_digest reads.
+    def image_tag: if test("@sha256:") then sub("@sha256:.*$"; "") else "" end;
+    def is_sha:
+      if test("^(.*@)?sha256:") then sub("^(.*@)?sha256:"; "") | test("^[0-9a-f]{7,64}$")
+      else test("^[0-9a-f]{40}$") or (test("^[0-9a-f]{7,39}$") and test("[a-f]"))
+      end;
+
+    # Dependabot shortens a commit SHA or an image digest to seven characters
+    # and wraps it in backticks, in titles and body lines alike. The backticks
+    # mark a digest even when every character of the prefix is a digit, which
+    # is_sha alone cannot tell from a version.
+    def quoted_digest: test("^`[0-9a-f]{7,40}`\\.?$");
+
+    # Titles wrap digests in backticks and body leads end in a period.
+    def clean_version: gsub("`"; "") | sub("\\.$"; "");
+
+    # Requirement updates carry an operator (~> 1.2, >= 2.0), which is dropped
+    # before the numeric parts are read.
+    # A fourth part, such as a NuGet revision, is read too.
+    def numeric_parts:
+      sub("^[~^>=<!\\s]*[vV]?"; "")
+      | capture("^(?<major>[0-9]+)(\\.(?<minor>[0-9]+))?(\\.(?<patch>[0-9]+))?(\\.(?<revision>[0-9]+))?")
+      | {
+          major: (.major | tonumber),
+          minor: ((.minor // "0") | tonumber),
+          patch: ((.patch // "0") | tonumber),
+          revision: ((.revision // "0") | tonumber)
+        };
+
+    # type names the position that changed. A change that leaves every numeric
+    # part equal (a pre-release or build suffix, say) is unknown rather than
+    # guessed at.
+    # A tag that changes alongside its digest is compared as a version. A bare
+    # digest on one side only (a switch between a release and a commit) has no
+    # numeric parts to compare.
+    def update_type($from; $to; $from_digest; $to_digest):
+      if $from_digest and $to_digest and ($from | image_tag) == ($to | image_tag) then "digest"
+      elif ($from_digest and ($from | image_tag) == "") or ($to_digest and ($to | image_tag) == "") then "unknown"
+      else
+        (first($from | numeric_parts) // null) as $f
+        | (first($to | numeric_parts) // null) as $t
+        | if $f == null or $t == null then "unknown"
+          elif $f.major != $t.major then "major"
+          elif $f.minor != $t.minor then "minor"
+          elif $f.patch != $t.patch or $f.revision != $t.revision then "patch"
+          else "unknown"
+          end
+      end;
+
+    # SemVer promises nothing below 1.0.0, so a 0.x minor bump and a 0.0.x patch
+    # bump are breaking by the specification, and npm and Cargo caret ranges do
+    # not cross them. Reported beside type rather than folded into it, because
+    # some ecosystems (Go x/ modules, for one) ship stable 0.x releases.
+    def semver_breaking($from; $to; $from_digest; $to_digest):
+      (first($from | numeric_parts) // null) as $f
+      | (first($to | numeric_parts) // null) as $t
+      | if ($from_digest and ($from | image_tag) == "") or ($to_digest and ($to | image_tag) == "") or $f == null or $t == null then null
+        elif $f.major != $t.major then true
+        elif $f.major == 0 and $f.minor != $t.minor then true
+        elif $f.major == 0 and $f.minor == 0 and $f.patch != $t.patch then true
+        else false
+        end;
+
+    # Built from the versions as captured, before the backticks are stripped.
+    # toDigest is kept for cleared and removed before output.
+    def version_update:
+      ((.from | quoted_digest) or (.from | clean_version | is_sha)) as $from_digest
+      | ((.to | quoted_digest) or (.to | clean_version | is_sha)) as $to_digest
+      | {name, from: (.from | clean_version), to: (.to | clean_version)}
+      | . + {
+          type: update_type(.from; .to; $from_digest; $to_digest),
+          semverBreaking: semver_breaking(.from; .to; $from_digest; $to_digest),
+          toDigest: $to_digest
+        };
+
+    def dedupe: reduce .[] as $item ([]; if any(.[]; . == $item) then . else . + [$item] end);
+
+    # Grouped and multi-dependency bodies carry one Updates line per dependency,
+    # repeated for each directory, so those come first and are deduplicated. A
+    # single-dependency title names both versions, and the Bumps lead of the body
+    # is the fallback for a title that does not. Titles read "bump NAME from A to
+    # B", or "update NAME requirement from A to B" when Dependabot widens a range,
+    # optionally followed by " in DIRECTORY" or " in the GROUP group ...".
+    # A security update ends its Updates line, or its Bumps lead, with a note
+    # that is not part of the version.
+    def title_capture:
+      .title // ""
+      | first(capture("(?i)\\b(?:bump|update) (?<name>\\S+)(?: requirement)? from (?<from>.+?) to (?<to>.+?)(?: in .+)?$")) // null;
+    def title_update: title_capture | if . == null then null else {name, from: (.from | clean_version), to: (.to | clean_version)} end;
+    def security_note: "(?: \\*\\*This update includes (?:a security fix|security fixes)\\.\\*\\*)?";
+
+    def body_lines: body_text | split("\n")[] | sub("\\s+$"; "");
+
+    def updates:
+      [body_lines | capture("^Updates `(?<name>[^`]+)`(?: requirement)? from (?<from>.+?) to (?<to>.+?)" + security_note + "$")] as $listed
+      | if ($listed | length) > 0 then $listed
+        elif title_capture != null then [title_capture]
+        else [body_lines | capture("^Bumps \\[(?<name>[^\\]]+)\\]\\([^)]*\\) from (?<from>\\S+) to (?<to>\\S+)" + security_note + "$")]
+        end
+      | map({name, from, to} | version_update)
+      | dedupe;
+
+    def ecosystem:
+      (.headRefName // "") | split("/")
+      | if .[0] == "dependabot" and length > 1 then .[1] else null end;
+
+    def group_name: .title // "" | first(capture("(?i)\\bthe (?<group>\\S+) group\\b").group) // null;
+
+    # A grouped body opens with one Bumps line per directory, which names the
+    # dependencies it updates there, as links or, for container images, as plain
+    # names ("golang, node and nginx."). The Updates lines carry no directory, and
+    # a long list is left off the Bumps line, so an empty names array means the
+    # line did not say rather than that nothing updates in that directory.
+    def directories:
+      [body_lines
+        | capture("^Bumps the \\S+ group with [0-9]+ updates? in the (?<directory>\\S+) directory:(?<list>.*)$")
+        | {
+            directory: (.directory | sub("^/"; "") | sub("/$"; "")),
+            names: [
+              .list
+              | gsub("\\[(?<name>[^\\]]+)\\]\\([^)]*\\)"; "\(.name)")
+              | sub("\\.$"; "")
+              | splits(",\\s*|\\s+and\\s+")
+              | sub("^\\s+"; "")
+              | select(length > 0)
+            ]
+          }];
+
+    # A grouped title announces how many updates it carries. A body truncated by
+    # the pull request size limit loses its later Updates lines, so a parsed list
+    # shorter than this count is incomplete and the diff has to be read instead.
+    def updates_expected: .title // "" | first(capture("(?i)\\bwith (?<count>[0-9]+) updates?\\b").count | tonumber) // null;
+
+    def severity_rank: . as $severity | {critical: 4, high: 3, medium: 2, low: 1} | .[$severity] // 0;
+
+    def shape:
+      if group_name != null then "group"
+      elif (.headRefName // "") | test("/multi-[0-9a-f]{10}$") then "multi"
+      else "single"
+      end;
+
+    # A title updated in place keeps the branch name it was created with, so a
+    # disagreement means the diff, not either name, is the truth.
+    # A requirement range such as "~> 13.0" is rewritten in the branch name, so
+    # only a plain version or digest is compared.
+    def branch_agrees:
+      if shape != "single" then null
+      else title_update as $update
+        | if $update == null or ($update.to | test("^[0-9A-Za-z._+-]+$") | not) then null
+          else (.headRefName // "") | endswith("-" + $update.to)
+          end
+      end;
+
+    # The security line and the commands list both live in the footer, which a
+    # rebase or a truncated body can remove, so an absent footer is unknown
+    # rather than evidence of a version update.
+    def kind:
+      body_text as $body
+      | if $body | contains("disable automated security fix PRs") then "security"
+        elif $body | contains("You can trigger Dependabot actions") then "version"
+        else "unknown"
+        end;
+
+    def check_state:
+      if .__typename == "StatusContext" or (has("state") and (has("conclusion") | not)) then
+        (.state // "" | ascii_upcase) as $state
+        | if $state == "SUCCESS" then "success"
+          elif ["FAILURE", "ERROR"] | any(. == $state) then "failure"
+          else "pending"
+          end
+      elif (.status // "" | ascii_upcase) != "COMPLETED" then "pending"
+      else
+        (.conclusion // "" | ascii_upcase) as $conclusion
+        | if $conclusion == "SUCCESS" then "success"
+          elif $conclusion == "SKIPPED" then "skipped"
+          elif $conclusion == "NEUTRAL" then "neutral"
+          elif ["FAILURE", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE", "STALE"] | any(. == $conclusion) then "failure"
+          else "pending"
+          end
+      end;
+
+    def checks:
+      [(.statusCheckRollup // [])[] | {name: (.name // .context // ""), state: check_state, completedAt: (.completedAt // null)}] as $all
+      | {
+          total: ($all | length),
+          success: ([$all[] | select(.state == "success")] | length),
+          failure: ([$all[] | select(.state == "failure")] | length),
+          pending: ([$all[] | select(.state == "pending")] | length),
+          skipped: ([$all[] | select(.state == "skipped")] | length),
+          neutral: ([$all[] | select(.state == "neutral")] | length),
+          failing: [$all[] | select(.state == "failure") | .name],
+          # gh reports an unfinished check run with a zero timestamp rather than null.
+          newestCompletedAt: ([$all[] | .completedAt | select(. != null and (startswith("0001-") | not))] | max)
+        };
+
+    def days_since($timestamp):
+      if $timestamp == null then null
+      else ((($now | fromdateiso8601) - ($timestamp | fromdateiso8601)) / 86400 | floor)
+      end;
+
+    def dirname: if test("/") then sub("/[^/]*$"; "") else "" end;
+
+    def alert_view:
+      {
+        number,
+        package: (.dependency.package.name // ""),
+        ecosystem: (.dependency.package.ecosystem // ""),
+        severity: (.security_advisory.severity // .security_vulnerability.severity // ""),
+        ghsa: (.security_advisory.ghsa_id // ""),
+        manifest: (.dependency.manifest_path // "" | sub("^/"; "")),
+        patched: (.security_vulnerability.first_patched_version.identifier // "")
+      };
+
+    # The alerts API names ecosystems differently from Dependabot branches. An
+    # ecosystem missing from this map (docker, terraform, and gitsubmodule among
+    # them) has no Dependabot alerts, so its PRs match none.
+    def alert_ecosystem_for($branch_ecosystem):
+      {
+        npm_and_yarn: "npm", bun: "npm", go_modules: "go", pip: "pip", uv: "pip",
+        cargo: "rust", bundler: "rubygems", composer: "composer", maven: "maven",
+        gradle: "maven", nuget: "nuget", pub: "pub", mix: "erlang", hex: "erlang",
+        swift: "swift", github_actions: "actions"
+      } | .[$branch_ecosystem // ""] // null;
+
+    def dependency_file:
+      split("/") | last
+      | test("^(package(-lock)?\\.json|npm-shrinkwrap\\.json|yarn\\.lock|pnpm-lock\\.yaml|bun\\.lock|go\\.(mod|sum|work|work\\.sum)|Cargo\\.(toml|lock)|Gemfile(\\.lock)?|.+\\.gemspec|pyproject\\.toml|uv\\.lock|poetry\\.lock|Pipfile(\\.lock)?|requirements.*\\.(txt|in)|composer\\.(json|lock)|pom\\.xml|build\\.gradle(\\.kts)?|gradle\\.lockfile|.+\\.csproj|packages\\.lock\\.json|Directory\\.Packages\\.props|pubspec\\.(yaml|lock)|mix\\.(exs|lock)|Package\\.(swift|resolved))$");
+
+    # An alert belongs to a PR when the PR updates its package, in the same
+    # ecosystem, and touches its manifest or a dependency file beside it (the
+    # lockfile next to a package.json, say).
+    def alert_matches($pr):
+      (.package | lower) as $package
+      | .manifest as $manifest
+      | alert_ecosystem_for($pr.ecosystem) as $expected
+      | $expected != null and .ecosystem == $expected
+        and ($pr.updates | any(.name | lower == $package))
+        and ($pr.files | any(. == $manifest or (dependency_file and dirname == ($manifest | dirname))));
+
+    # A group across several directories can update a package in one directory
+    # and touch a lockfile in another for a different package, so the package
+    # has to be tied to the alert directory too. confirmed: the PR updates a
+    # single directory, or the Bumps line for the alert directory names the
+    # package. excluded: that line names only other packages. unconfirmed: no line
+    # names any package for the alert directory, or a group has no Bumps lines at
+    # all (a body cut short) and changes files in several directories. A PR that
+    # is not a group has no Bumps lines to read, and it is confirmed however many
+    # directories its files span: an ungrouped PR comes from the update of one
+    # directory (an npm workspace member manifest beside the root lockfile, say),
+    # and a dependency-name group lists one version for every directory. Every file
+    # a Dependabot PR changes is one it updates (a lockfile, a workflow, a
+    # Dockerfile), so the directories of all of them are counted. For
+    # github-actions, the / directory covers .github/workflows.
+    def directory_match($pr):
+      (.package | lower) as $package
+      | (.manifest | dirname) as $directory
+      | [$pr.directories[]
+          | select(.directory == $directory or ($pr.ecosystem == "github_actions" and .directory == "" and $directory == ".github/workflows"))
+          | .names[] | lower] as $names
+      | ([$pr.files[] | dirname] | unique | length) as $touched
+      | if ($pr.directories | length) <= 1 and $touched <= 1 then "confirmed"
+        elif ($pr.directories | length) == 0 then (if $pr.shape != "group" then "confirmed" else "unconfirmed" end)
+        elif ($names | any(. == $package)) then "confirmed"
+        elif ($names | length) > 0 then "excluded"
+        else "unconfirmed"
+        end;
+
+    # A release with only numeric parts, after any requirement operator. A
+    # pre-release such as 2.0.0-rc.1 is not one, and version_key would read it as
+    # 2.0.0, so cleared stays null rather than comparing it.
+    def stable_version: sub("^[~^>=<!\\s]*[vV]?"; "") | test("^[0-9]+(\\.[0-9]+)*$");
+
+    # Padded to four parts, so 7.5 and 7.5.0 compare equal.
+    def version_key: ([sub("^[~^>=<!\\s]*[vV]?"; "") | split(".")[] | ((capture("^(?<n>[0-9]+)").n | tonumber)? // 0)] + [0, 0, 0, 0]) | .[0:4];
+
+    . as $bundle
+    | ($bundle.dependabot) as $dependabot
+    | (($bundle.open // []) + ($dependabot | map({number, title, author: {login: "app/dependabot"}, headRefName, files}))
+        | unique_by(.number)) as $all_open
+    | [($bundle.alerts.items // [])[] | alert_view] as $alerts
+    | [
+        $dependabot[]
+        | . as $raw
+        | [(.files // [])[] | .path] as $paths
+        | {
+            number,
+            title,
+            url,
+            branch: .headRefName,
+            base: .baseRefName,
+            baseIsDefault: (.baseRefName == $bundle.defaultBranch),
+            ecosystem: ecosystem,
+            kind: kind,
+            shape: shape,
+            group: group_name,
+            updates: updates,
+            updatesExpected: updates_expected,
+            directories: directories,
+            branchAgrees: branch_agrees,
+            commandsFooter: (body_text | contains("You can trigger Dependabot actions")),
+            bodyTruncated: (body_text | contains("_Description has been truncated_")),
+            rebasesDisabled: (body_text | contains("Automatic rebases have been disabled")),
+            draft: (.isDraft // false),
+            labels: [(.labels // [])[] | .name],
+            ageDays: days_since(.createdAt),
+            updatedDaysAgo: days_since(.updatedAt),
+            mergeable,
+            mergeStateStatus,
+            reviewDecision: (.reviewDecision // ""),
+            autoMerge: (.autoMergeRequest != null),
+            checks: checks,
+            files: $paths,
+            filesComplete: ((.changedFiles // null) == null or ($paths | length) >= .changedFiles),
+            overlaps: [
+              $all_open[]
+              | select(.number != $raw.number)
+              | [(.files // [])[] | .path] as $other
+              | ($paths - ($paths - $other) | unique) as $shared
+              | select($shared | length > 0)
+              | {number, author: (.author.login // ""), sharedFiles: $shared}
+            ],
+            compare: (
+              ($raw.number | tostring) as $key
+              | ($bundle.compare // {})[$key] as $comparison
+              | if $comparison == null then null
+                else {
+                  status: $comparison.status,
+                  aheadBy: $comparison.aheadBy,
+                  behindBy: $comparison.behindBy,
+                  nonDependabotCommits: ([($comparison.authors // [])[] | select(. != "dependabot[bot]")] | length)
+                }
+                end
+            )
+          }
+        | . as $pr
+        # cleared says whether the version this PR moves to reaches the first patched
+        # version. A PR can update a vulnerable package without leaving its range. A
+        # grouped PR can move one package to different versions in different
+        # directories, and with no directory on each update, cleared is then null.
+        # It is null too when the body does not tie the package to the alert
+        # directory, when the body was cut short, since a missing Updates line can
+        # move the same package to another version, or when the PR file list could
+        # not be read in full, and never compared when the target is a digest.
+        | .alerts = [
+            $alerts[]
+            | select(alert_matches($pr))
+            | directory_match($pr) as $directory_match
+            | select($directory_match != "excluded")
+            | . as $alert
+            | [$pr.updates[] | select(.name | lower == ($alert.package | lower))] as $matched
+            | ([$matched[].to] | unique) as $targets
+            | ($pr.bodyTruncated or ($pr.updatesExpected != null and $pr.updatesExpected > ($pr.updates | length)) or ($pr.filesComplete | not)) as $incomplete
+            | (if ($targets | length) == 1 and $directory_match == "confirmed" and ($incomplete | not) then $targets[0] else null end) as $to
+            | . + {
+                directoryConfirmed: ($directory_match == "confirmed"),
+                cleared: (if $to == null or $alert.patched == "" or any($matched[]; .toDigest) or ($to | stable_version | not) or ($alert.patched | stable_version | not) then null else (($to | version_key) >= ($alert.patched | version_key)) end)
+              }
+          ]
+        | .updates |= map(del(.toDigest))
+      ] as $prs
+    | {
+        repo: $bundle.repo,
+        defaultBranch: $bundle.defaultBranch,
+        isArchived: ($bundle.isArchived // false),
+        fetchedAt: ($bundle.fetchedAt // null),
+        count: ($prs | length),
+        limit: ($bundle.limit // null),
+        limitReached: (
+          $bundle.limit != null
+          and ([($dependabot | length), (($bundle.open // []) | length)] | max) >= $bundle.limit
+        ),
+        alertsAvailable: ($bundle.alerts.available // false),
+        alertsReason: ($bundle.alerts.reason // null),
+        # Open PRs, from any author, whose file list stayed cut short. overlaps
+        # computed against them can miss a shared file.
+        incompleteFileLists: (
+          [($dependabot + ($bundle.open // []))[] | select((.changedFiles // null) != null and ((.files // []) | length) < .changedFiles) | .number]
+          | unique
+        ),
+        # Every alert no open PR is known to clear: one no PR updates, and one a PR
+        # updates without reaching the patched version or without saying so. prs
+        # names the PRs that match an alert in the group but do not clear it.
+        unclearedAlerts: (
+          [$prs[].alerts[] | select(.cleared == true) | .number] as $cleared
+          | [$prs[] | .number as $pr | .alerts[] | {number, pr: $pr}] as $matches
+          | [$alerts[] | select(.number as $number | $cleared | any(. == $number) | not)]
+          | group_by([.package, .manifest])
+          | map(
+              [.[].number] as $numbers
+              | {
+                  package: .[0].package,
+                  manifest: .[0].manifest,
+                  count: length,
+                  highestSeverity: (max_by(.severity | severity_rank) | .severity),
+                  patched: ([.[].patched | select(. != "")] | unique | sort_by(version_key)),
+                  numbers: ($numbers | sort),
+                  prs: ([$matches[] | select(.number as $number | $numbers | any(. == $number)) | .pr] | unique)
+                }
+            )
+          | sort_by([-(.highestSeverity | severity_rank), .package])
+        ),
+        prs: $prs
+      }
+  ' <<< "${input}"
+}
+
+function main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
+  local command="${1:-}"
+  if [[ $# -gt 0 ]]; then
+    shift
+  fi
+
+  # Validate the command before checking dependencies, so a missing or unknown
+  # command shows a usage error rather than a confusing dependency failure.
+  case "${command}" in
+    fetch)
+      # do_fetch checks gh and jq once its arguments are valid.
+      ;;
+    summarize)
+      # Reads stdin and touches no GitHub API, so it needs neither the CLI nor
+      # credentials.
+      require_jq
+      ;;
+    "")
+      usage
+      exit 1
+      ;;
+    *)
+      die "Unknown command: ${command}. Use '${SCRIPT_NAME} --help' for usage."
+      ;;
+  esac
+
+  case "${command}" in
+    fetch)
+      do_fetch "$@"
+      ;;
+    summarize)
+      local now=""
+      while [[ $# -gt 0 ]]; do
+        case "${1}" in
+          --now)
+            [[ $# -lt 2 ]] && die "Missing value after --now"
+            now="${2}"
+            shift 2
+            ;;
+          *)
+            die "Unknown summarize option: ${1}. Use '${SCRIPT_NAME} --help' for usage."
+            ;;
+        esac
+      done
+      do_summarize "${now}"
+      ;;
+    *)
+      # Unreachable: the validation case above dies on unknown commands.
+      die "Unknown command: ${command}"
+      ;;
+  esac
+}
+
+main "$@"

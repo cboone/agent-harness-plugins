@@ -26,7 +26,7 @@ Surfaces to detect:
 | Reusable workflow refs      | Same files plus the same Markdown sweep; grep for `uses:` lines containing `.github/workflows/`                                                                                                           |
 | `packageManager` field      | Read `package.json`; check `.packageManager`                                                                                                                                                              |
 | `package.json` deps         | Read `package.json`; flag `^`/`~` ranges in `dependencies`/`devDependencies`. **Skip `peerDependencies`** -- see step 6.                                                                                  |
-| Language version files      | Glob `.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `.python-version`, `rust-toolchain.toml`, `build.zig.zon`; also grep `Gemfile` for a `ruby` directive                                  |
+| Language version files      | Glob `.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `.python-version`, `rust-toolchain.toml`, `rust-toolchain`, `build.zig.zon`; also grep `Gemfile` for a `ruby` directive                |
 | `go.mod` `go` directive     | Read `go.mod`; capture the directive line                                                                                                                                                                 |
 | Inline language pins in CI  | Grep workflows for `node-version:`, `ruby-version:`, `go-version:`, `python-version:`, `zig-version:` (without `-file` suffix)                                                                            |
 | `go install` pins           | Grep for `go install <path>@<ref>` where `<ref>` is `latest`, a `vN.Y.Z` tag (with optional prerelease), or a pseudo-version (`v0.0.0-YYYYMMDDhhmmss-<12-hex>`)                                           |
@@ -43,7 +43,7 @@ Print the output as a Markdown table grouped by category, with one row per file 
 
 Present the categorized findings. The default is to pin everything in the repo that is not deliberately user-facing. User-facing means scaffolded README install instructions, placeholder paths in skill templates, and similar documentation that downstream users will customize.
 
-Ask the user to confirm or trim the scope. Offer per-category opt-out (e.g., "skip pip pinning", "skip Dependabot config", "actions only"). If the user invokes the skill with `--scope <comma-list>`, use that list directly; otherwise prompt.
+Ask the user to confirm or trim the scope. Offer per-category opt-out (e.g., "skip pip pinning", "skip Dependabot config", "actions only"). If the user invokes the skill with `--scope <comma-list>`, use that list directly; otherwise prompt. The confirmed scope governs every later step: a step whose category is out of scope does not run, and step 11 verifies only the categories in scope. Under `--scope dependabot`, for example, only step 9 writes anything, and verification checks the Dependabot config alone.
 
 If the user requested `--dry-run`, or invoked the skill with audit-only phrasing (e.g. "audit version pins", "audit pins", "report unpinned versions", or any other request that asks for findings without changes), perform the audit only and stop here. Treat all audit-shaped trigger phrases the same as `--dry-run` so the README's "audit version pins" example does not silently fall into the mutating path.
 
@@ -151,13 +151,16 @@ Create or merge `.github/dependabot.yml` with:
 - Per-ecosystem split groups (`<ecosystem>-minor-patch` and `<ecosystem>-major`) so minor/patch can auto-merge later while majors get human review.
 - 10-PR cap per ecosystem (raised from the default of 5 -- SHA-pinning produces finer-grained PRs than tag-pinning).
 - `versioning-strategy: increase` for `npm` (and for `pip` if step 6 exact-pinned Python requirements to `==X.Y.Z`) so existing exact pins are not widened on the first Dependabot bump.
-- Coverage for `github-actions` plus whichever package ecosystems are present in the repo (`npm`, `cargo`, `pip`, `bundler`, `gomod`).
+- Coverage for every ecosystem from the detection table in `./references/dependabot.md` that the repo uses, `github-actions` included only when there are `.github/workflows/*.yml` or `*.yaml` files or a composite action with an external `uses:` step, from `npm`, `cargo`, and `gomod` through `maven`, `terraform`, and `pre-commit`. A Python project with `uv.lock` gets `uv`, not `pip`, and a `package.json` beside `bun.lock` gets `bun`, not `npm`.
+- For a manifest the table does not list, check GitHub's [supported ecosystems page](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories) and add a block of the same shape for it. No ecosystem the repo uses is left without a block; one Dependabot does not support is named to the user instead.
 
 Skip this step if `--no-dependabot` was passed. Reference: `./references/dependabot.md`.
 
+This step writes or merges the baseline. To review an existing config against everything the repository contains and the settings around it, use the `review-dependabot-config` skill; to work through the PRs Dependabot opens afterwards, use the `triage-dependabot-prs` skill.
+
 ### 10. Optionally Generate a Version-Audit Script
 
-Dependabot does not cover four surface families: language version files (`.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, `Gemfile`, `.python-version`, `go.mod`, `rust-toolchain.toml`, `build.zig.zon`), `packageManager`, action SHAs in `.md` templates, and install-command pins inside scripts. Schema URLs (step 7) are a fifth Dependabot-uncovered family but are deliberately out of scope here: drift detection is publisher-specific (JSON Schema Store, vendored cloud schemas, and ad-hoc registries each expose versioned URLs differently, and many publishers expose no versioned URL at all), so a generic auditor would either always-pass or always-flag. Record schema URL pins in the step 1 audit summary instead and refresh them by hand when the publisher cuts a new version. If the user wants drift coverage for the four covered families:
+Dependabot does not cover four surface families: language version files (`.tool-versions`, `.nvmrc`, `.node-version`, `.ruby-version`, the `ruby` directive in `Gemfile`, `.python-version`, the `go` and `toolchain` directives in `go.mod`, `build.zig.zon`, and `rust-toolchain.toml` or `rust-toolchain` unless the config enables Dependabot's `rust-toolchain` ecosystem), `packageManager`, action SHAs in `.md` templates, and install-command pins inside scripts. Schema URLs (step 7) are a fifth Dependabot-uncovered family but are deliberately out of scope here: drift detection is publisher-specific (JSON Schema Store, vendored cloud schemas, and ad-hoc registries each expose versioned URLs differently, and many publishers expose no versioned URL at all), so a generic auditor would either always-pass or always-flag. Record schema URL pins in the step 1 audit summary instead and refresh them by hand when the publisher cuts a new version. If the user wants drift coverage for the four covered families:
 
 1. Read `./references/scripts/version-audit-template`.
 2. Tailor it to the surfaces actually present in the repo (drop unused `audit_*` functions, adjust grep paths to match the user's directory layout).
@@ -169,8 +172,8 @@ Skip this step if `--no-audit` was passed. Reference: `./references/version-audi
 
 ### 11. Verify and Commit
 
-1. Re-run the audit from step 1 and confirm zero unpinned surfaces remain (modulo the deliberate exclusions confirmed in step 2 and any schema URLs whose publisher exposes no versioned upstream -- see step 7).
-2. Invoke the `lint-and-fix` skill via the Skill tool to run project linters and formatters.
+1. Re-run the audit from step 1 for the categories in scope and confirm zero unpinned surfaces remain in them (modulo the deliberate exclusions confirmed in step 2 and any schema URLs whose publisher exposes no versioned upstream -- see step 7). Under `--scope dependabot`, confirm instead that the config has a block for every ecosystem step 9 detected.
+2. Invoke the `lint-and-fix` skill via the Skill tool to run project linters and formatters. Under a narrowed scope, invoke it with `--check` instead, and fix by hand only the findings in files this run wrote, so a scoped run such as `--scope dependabot` never reformats unrelated files; report any other findings without changing them.
 3. If the user has REUSE/SPDX licensing set up (root `REUSE.toml` present), invoke `manage-repo-licensing` to add SPDX coverage for any newly emitted files (`bin/version-audit`, `.github/workflows/version-audit.yml`, `.github/dependabot.yml`) and run `reuse lint`.
 4. Commit with a Conventional Commits message scoped to what was pinned. Default to one commit per category for clarity (e.g. `chore: SHA-pin third-party action refs`, `chore: pin install commands`, `chore: add Dependabot config`). If the user prefers a single bundled commit, do that instead.
 
@@ -186,7 +189,7 @@ Skip this step if `--no-audit` was passed. Reference: `./references/version-audi
 - **Tag does not resolve to a commit.** Annotated tags resolve via the tag object; lightweight tags resolve directly. If `gh api repos/<r>/git/ref/tags/<t>` returns a `tag` type, recurse through `.object.sha` to find the commit. The `gh api repos/<r>/commits/<tag>` endpoint sidesteps this entirely and is the preferred path.
 - **Action does not support a version-file input.** For action-direct `mlugg/setup-zig`, omit the version input entirely -- the action reads `build.zig.zon`'s `minimum_zig_version` by default. The `cboone/gh-actions/.../run-zig-ci.yml` wrapper (v2.2.0+) exposes a real `zig-version-file: "build.zig.zon"` input. For other languages without a `*-version-file` input, pin inline to the value from the version file rather than dropping pinning entirely.
 - **Ambiguous user-facing vs tool-install distinction.** If the install path looks like a real tool but lives in a scaffolded README under a `Usage:` heading or similar, prompt the user. Default to leaving placeholder-shaped paths unpinned.
-- **Conflicting existing Dependabot config.** If `.github/dependabot.yml` already exists, do not overwrite -- merge: keep user-specific groups and schedules, add only the missing ecosystems and the standard split-group structure for ecosystems that lacked it. Show the diff before writing.
+- **Conflicting existing Dependabot config.** If `.github/dependabot.yml` (or `.github/dependabot.yaml`) already exists, do not overwrite -- merge: keep user-specific groups and schedules, add only the missing ecosystems and the standard split-group structure for ecosystems that lacked it. Show the diff before writing. For a full review of an existing config, point the user at the `review-dependabot-config` skill.
 - **Library detected when user expected an app pin.** Surface the library discriminator explicitly ("`Cargo.lock` not committed and crate exposes `[lib]` only -- treating as a library and skipping manifest exact-pinning"). Let the user override per-ecosystem if the heuristic is wrong.
 
 ## Reference Templates

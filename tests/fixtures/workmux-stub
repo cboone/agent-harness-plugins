@@ -11,17 +11,27 @@ function main() {
   if [[ $# -lt 2 || "${1}" != "add" ]]; then
     die "expected workmux add invocation"
   fi
+  shift
 
-  local branch="${2}"
+  local branch=""
   local prompt_file=""
   local base_branch=""
   local open_if_exists="false"
-  shift 2
+  local auto_name="false"
+  local dry_run="false"
 
   while [[ $# -gt 0 ]]; do
     case "${1}" in
       --open-if-exists)
         open_if_exists="true"
+        shift
+        ;;
+      -A)
+        auto_name="true"
+        shift
+        ;;
+      --dry-run)
+        dry_run="true"
         shift
         ;;
       -P)
@@ -38,14 +48,54 @@ function main() {
         base_branch="${2}"
         shift 2
         ;;
-      *)
+      -*)
         die "unexpected argument: ${1}"
+        ;;
+      *)
+        if [[ -n "${branch}" ]]; then
+          die "unexpected argument: ${1}"
+        fi
+        branch="${1}"
+        shift
         ;;
     esac
   done
 
   if [[ -z "${prompt_file}" ]]; then
     die "missing -P prompt file"
+  fi
+
+  # Branch-name generation: `workmux add -A -P <file> --dry-run` runs the LLM
+  # and prints the name twice, once from the generator and once from the
+  # dry-run summary, without creating anything.
+  if [[ "${dry_run}" == "true" ]]; then
+    if [[ "${auto_name}" != "true" ]]; then
+      die "--dry-run is only stubbed for -A"
+    fi
+    if [[ -n "${branch}" ]]; then
+      die "unexpected branch name with -A: ${branch}"
+    fi
+
+    if [[ -n "${STUB_STATE:-}" ]]; then
+      mkdir -p "${STUB_STATE}"
+      cp "${prompt_file}" "${STUB_STATE}/auto_name_input"
+    fi
+
+    if [[ "${STUB_AUTO_NAME_FAIL:-}" == "1" ]]; then
+      echo "workmux-stub: LLM did not return a concise branch name" >&2
+      exit 1
+    fi
+
+    local generated="${STUB_AUTO_NAME:-feature/generated-name}"
+    printf '  Branch: %s\n' "${generated}"
+    printf 'Worktree: /tmp/worktrees/%s\n' "${generated##*/}"
+    printf 'Branch:   %s\n' "${generated}"
+    printf 'Base:     main\n'
+    return 0
+  fi
+
+  if [[ -z "${branch}" ]]; then
+    die "expected a branch name"
   fi
 
   if [[ -n "${STUB_STATE:-}" ]]; then
