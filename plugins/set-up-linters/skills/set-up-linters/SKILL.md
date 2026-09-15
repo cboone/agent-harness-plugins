@@ -70,7 +70,7 @@ Check for existing linter configs using these patterns (aligned with the `lint-a
 | Config file(s)                                                                            | Tool          |
 | ----------------------------------------------------------------------------------------- | ------------- |
 | `eslint.config.*`, `.eslintrc.*`                                                          | ESLint        |
-| `.prettierrc*`, `prettier.config.*`                                                       | Prettier      |
+| `.prettierrc*`, `prettier.config.*`, or a `prettier` key in `package.json`                | Prettier      |
 | `.markdownlint.json`, `.markdownlint.jsonc`, `.markdownlint.yaml`, `.markdownlint-cli2.*` | markdownlint  |
 | `.shellcheckrc`                                                                           | ShellCheck    |
 | `.editorconfig`                                                                           | EditorConfig  |
@@ -91,7 +91,7 @@ Check for existing linter configs using these patterns (aligned with the `lint-a
 
 **CI workflow scanning**: Also scan `.github/workflows/*.yml` for tools running without config files. For example, a CI step like `shellcheck -S warning scripts/*` means ShellCheck is already in use even without a `.shellcheckrc`. Mark these tools as "Partial" (running in CI but missing local config). A partial tool should still appear in recommendations, but suggest adding the config file for local/CI parity rather than a full setup.
 
-For each already-configured tool, mark it as "Existing" and skip it in recommendations. Exception: when the Pandoc-academic preset was detected or requested, do not treat generic markdownlint/cspell config presence as sufficient. Continue to the preset recommendation step unless the preset completeness check below passes. If everything is already set up, inform the user and stop.
+For each already-configured tool, verify that its executable is available locally or through the project's package manager before marking it fully "Existing" and skipping it in recommendations. A config file or `prettier` key in `package.json` proves configuration exists, not that the tool is installed; when the executable is unavailable, recommend installing it while preserving the existing configuration. Exception: when the Pandoc-academic preset was detected or requested, do not treat generic markdownlint/cspell config presence as sufficient. Continue to the preset recommendation step unless the preset completeness check below passes. If everything is already set up, inform the user and stop.
 
 ### 3. Recommend Linter Stack
 
@@ -159,10 +159,12 @@ When a pinned version drifts from upstream latest, the repository's `bin/version
 
 ### 6. Create Config Files
 
-Generate default config files and ignore files for each tool. Use templates from the reference files. Also generate:
+Generate default config files and ignore files for the selected tools. Use templates from the reference files and preserve existing configuration, including a `prettier` key in `package.json`. Also generate:
 
 - **`.editorconfig`** from `./references/tools/editorconfig.md` (adapted to project languages)
-- **`.prettierrc.json`** and **`.prettierignore`** from `./references/tools/prettier.md`
+- **`.prettierrc.json`** and **`.prettierignore`** from `./references/tools/prettier.md` only when Prettier was selected and the corresponding configuration is missing
+
+For the generic markdownlint configuration, set MD060 from actual formatter coverage. First verify that Prettier is already available or was selected and installed in step 5; a config file generated here does not establish ownership. Inspect the existing or planned format command's paths, globs, working directory, and options, together with its effective ignore files (`.gitignore` and `.prettierignore` by default, or the files specified by `--ignore-path`). Set `"MD060": false` only when that command formats all Markdown files covered by this markdownlint configuration. A command limited to other file types does not qualify. Otherwise set `"MD060": { "style": "aligned" }`, including when one markdownlint configuration covers both formatted and unformatted files. The Pandoc-academic preset keeps `"MD060": false` regardless of Prettier to allow dense academic tables. See `./references/tools/markdownlint.md` for both presets.
 
 For **Lean projects**, the equivalent of "creating a config file" is adding the `lintDriver` field to `lakefile.toml` (or the `package` block of `lakefile.lean`):
 
