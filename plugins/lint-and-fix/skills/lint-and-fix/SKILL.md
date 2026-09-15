@@ -74,7 +74,7 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 | `bin/lint`, `scripts/lint`, `script/lint`                                         | Project script     | Try `<script> --fix` first                               | `<script>`                                                     |
 | `.github/workflows/*.yml`, `.github/workflows/*.yaml` `run:` steps                | CI workflow script | Run detected command                                     | Run detected command                                           |
 
-Replace `<package-manager-runner>` with the project's local-binary runner: `npx` for npm, `yarn` for Yarn, `pnpm exec` for pnpm, or `bunx` for Bun. Do not use `npx` in Yarn Plug'n'Play projects, where it may not resolve the locked local binary.
+Replace `<package-manager-runner>` with the project's local-binary runner: `npx` for npm, `yarn` for Yarn, `pnpm exec` for pnpm, or `bunx` for Bun. Verify that the selected runner resolves the installed project dependency. If Prettier is available only as a verified global installation, use the bare `prettier` command instead; if it is unavailable both locally and globally, report that rather than invoking a runner that may fetch another version. Do not use `npx` in Yarn Plug'n'Play projects, where it may not resolve the locked local binary.
 
 #### Detection Steps
 
@@ -83,7 +83,7 @@ Replace `<package-manager-runner>` with the project's local-binary runner: `npx`
 1. **Shell scripts**: Use Glob to find `**/*.sh`, `bin/*`, `scripts/*`, `script/*`. If shell scripts are present, shellcheck and shfmt apply.
 1. **Project lint scripts**: Check for `bin/lint`, `scripts/lint`, `script/lint`.
 1. **CI workflow scripts**: Scan CI workflow files for repo-specific linting and validation steps not already covered by other detection methods. See [CI Workflow Detection](#ci-workflow-detection) below.
-1. **Tool availability**: Verify detected tools are installed (check `npx`, `which`, or `package.json` devDependencies).
+1. **Tool availability**: Verify detected tools are installed and can be resolved by the selected runner (check the package manager, project dependencies, and `which`). For Prettier, use the project runner only when it resolves the local dependency; if only a global installation is verified, use the bare `prettier` command.
 
 #### CI Workflow Detection
 
