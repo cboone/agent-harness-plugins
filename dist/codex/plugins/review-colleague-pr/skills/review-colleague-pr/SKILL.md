@@ -67,7 +67,7 @@ gh pr view <pr-number> --json number,url,title,body,author,state,isDraft,baseRef
 Take `OWNER/REPO` from `url` (`https://github.com/OWNER/REPO/pull/NUMBER`).
 
 - **No PR found and no number given**: tell the user the current branch has no pull request, suggest checking one out with `gh pr checkout <pr-number>` (or a worktree tool such as `workmux add --pr <pr-number>`), and stop.
-- **A number was given**: after identifying the fetch remote in step 2, confirm both that `git branch --show-current` prints `headRefName` and that `git rev-parse --abbrev-ref @{upstream}` prints `<remote>/<headRefName>`. If either command fails or differs, tell the user which checkout would be needed and stop. A branch name alone is not proof that the checkout belongs to this PR.
+- **A number was given**: after identifying the fetch remote in step 2, confirm that `git branch --show-current` prints `headRefName`. Do not require the branch's upstream to be `<remote>/<headRefName>`: a fork PR may track its fork remote, and a deleted source branch may have no upstream. The fetched PR-head SHA is the content identity check. Before changing the checkout, apply the linked-worktree safeguard in step 2.
 - **Closed, merged, or draft**: review it anyway, and note the state in the report header.
 
 ### 2. Sync the Checkout
@@ -76,21 +76,22 @@ The review must describe the PR as it is now, not as it was when the checkout wa
 
 1. Find the remote whose **fetch** URL matches `OWNER/REPO`: inspect only `(fetch)` entries from `git remote -v`, whose URL ends in `OWNER/REPO` or `OWNER/REPO.git`, in HTTPS or SSH form, compared case-insensitively. If none matches, tell the user and stop.
 
-1. When the user supplied a number, before fetching require the current branch and its upstream to match `headRefName` and `<remote>/<headRefName>` as described in step 1. Stop on a failed or mismatched lookup.
+1. When the user supplied a number, before fetching require the current branch to match `headRefName` as described in step 1. An absent or different upstream is allowed because the pull-request ref is fetched from the base repository directly.
 
-1. Fetch the PR head and the base branch. This updates the object store and remote-tracking refs:
+1. Fetch the base branch into its remote-tracking ref, then fetch the PR head into `FETCH_HEAD`:
 
    ```bash
-   git fetch <remote> pull/<pr-number>/head:refs/remotes/<remote>/pull/<pr-number>/head <base-branch>
+   git fetch <remote> <base-branch>:refs/remotes/<remote>/<base-branch> &&
+   git fetch <remote> pull/<pr-number>/head
    ```
 
-   If the fetch fails, stop and report that synchronization could not be established. Do not compare against existing refs after a failed fetch.
+   Both fetches must succeed. If either fails, stop and report that synchronization could not be established. Do not compare against existing refs after a failed fetch. Record the PR-head SHA from `git rev-parse FETCH_HEAD` immediately after the second fetch; later commands use that recorded `<head-sha>`. Fetching the PR head to `FETCH_HEAD` accepts rewritten PR history without force-updating an existing local ref.
 
-1. Re-run the PR lookup with `--repo OWNER/REPO`. Compare its `headRefOid` to `git rev-parse <remote>/pull/<pr-number>/head`. If they differ, the PR changed during synchronization: restart at step 1 using the new PR data. Use this refreshed `headRefOid` for all later comparisons.
+1. Re-run the PR lookup with `--repo OWNER/REPO`. Compare its `headRefOid` to the recorded `<head-sha>`. If they differ, the PR changed during synchronization: restart at step 1 using the new PR data. Use this refreshed `headRefOid` for all later comparisons.
 
 1. If `git status --porcelain --untracked-files=no` prints anything, there are uncommitted changes to tracked files. Tell the user and stop.
 
-1. Compare `git rev-parse HEAD` with `headRefOid`. If they match, continue to step 3. The tracked-file check applies even when no synchronization is needed, because later file reads must match the reviewed commit.
+1. Compare `git rev-parse HEAD` with `headRefOid`. If they match, continue to step 3 regardless of the upstream configuration. The tracked-file check applies even when no synchronization is needed, because later file reads must match the reviewed commit.
 
 1. Before either a fast-forward or a reset, check for untracked and ignored content:
 
@@ -100,6 +101,8 @@ The review must describe the PR as it is now, not as it was when the checkout wa
    ```
 
    If either command prints anything, tell the user synchronization is blocked by local content and stop. Do not delete, move, stash, or overwrite it. This conservative check includes ignored build output and stops even when the paths do not appear to overlap the PR. A failed status or file-list command is also a reason to stop, never evidence of a clean checkout.
+
+1. Before changing a checkout whose HEAD differs from `<head-sha>`, require a linked worktree when the PR is cross-repository, when the current branch does not track `<remote>/<headRefName>`, or when `headRefName` equals `baseRefName`. Confirm it with `git rev-parse --path-format=absolute --git-dir --git-common-dir`: the two paths must differ. If that check fails in one of these cases, stop and ask for a PR-specific linked worktree. These cases cannot establish checkout identity from the upstream branch alone.
 
 1. If `git merge-base --is-ancestor HEAD <head-sha>` succeeds, the checkout is behind the PR. Fast-forward it:
 
@@ -128,7 +131,7 @@ After a fast-forward or reset, confirm HEAD equals `headRefOid` and repeat the t
 Collect every statement of what the PR is supposed to do:
 
 - **The PR's title and body**, from step 1.
-- **Linked issues**: every issue in `closingIssuesReferences`, plus issues the body mentions as `#123`, `OWNER/REPO#123`, or an issue URL. Parse each reference into `ISSUE_OWNER`, `ISSUE_REPO`, and `ISSUE_NUMBER`; an unqualified `#123` uses the PR repository. Fetch each from its own repository:
+- **Linked issues**: every issue in `closingIssuesReferences`, plus issues the title or body mentions as `#123`, `OWNER/REPO#123`, or an issue URL. Parse each reference into `ISSUE_OWNER`, `ISSUE_REPO`, and `ISSUE_NUMBER`; an unqualified `#123` uses the PR repository. Fetch each from its own repository:
 
   ```bash
   gh issue view ISSUE_NUMBER --repo ISSUE_OWNER/ISSUE_REPO --json title,body,state,labels,comments
@@ -169,15 +172,18 @@ gh api graphql --paginate -F owner=OWNER -F repo=REPO -F number=<pr-number> -f q
 
 If any discussion query fails, continue with the available sources and name each unavailable source in the report. Do not treat missing output as an empty review, comment, or thread history; do not derive a re-review baseline from an unavailable source.
 
-**Find the user's last review**, unless `--full` was given or `--since` supplies the point directly. It is the user's most recent _substantive_ review, meaning one that meets any of these:
+Choose `LAST_REVIEW_SHA` as follows:
 
-- its state is `APPROVED` or `CHANGES_REQUESTED`
-- its body is non-empty
-- it owns at least one inline comment whose `in_reply_to_id` is null
+- If `--full` is supplied, review the whole PR and ignore `--since`.
+- If `--since <ref>` is supplied, resolve it with `git rev-parse --verify '<ref>^{commit}'` and use that commit as `LAST_REVIEW_SHA` for the ancestry check and every re-review command below. If it does not resolve to a commit, stop and report the invalid baseline.
+- Otherwise, use the user's most recent substantive review. A review is substantive if it meets any of these conditions:
+  - Its state is `APPROVED` or `CHANGES_REQUESTED`.
+  - Its body is non-empty.
+  - It owns at least one inline comment whose `in_reply_to_id` is null.
 
 Replying inside a thread also creates a `COMMENTED` review with an empty body, so a plain "most recent review by the user" would usually find a reply, not a review.
 
-If a last review is found and its `commit_id` is an ancestor of HEAD (`git merge-base --is-ancestor <commit-id> HEAD`), this is a re-review from that commit. If it is not an ancestor, the branch was rewritten since then: review the whole PR, and say so in the report.
+If no substantive review is found, review the whole PR. If `LAST_REVIEW_SHA` is an ancestor of HEAD (`git merge-base --is-ancestor <last-review-sha> HEAD`), this is a re-review from that commit. If it is not an ancestor, the branch was rewritten since then: review the whole PR, and say so in the report.
 
 ### 5. Read the Change
 
@@ -213,7 +219,7 @@ If a last review is found and its `commit_id` is an ancestor of HEAD (`git merge
    gh pr checks <pr-number> --repo OWNER/REPO --json name,state,bucket,workflow,link
    ```
 
-   If the command returns JSON, classify its check states even when its exit status is non-zero. If it returns no valid check data, report CI as unavailable instead of treating an API or authentication failure as a failing check.
+   If the command returns a valid JSON array, classify its check states even when its exit status is non-zero. An empty array with a successful command means `CI: no checks`. If the command fails without valid check data, report `CI: unavailable`; do not treat an API or authentication failure as a failing check.
 
 ### 6. Assess
 

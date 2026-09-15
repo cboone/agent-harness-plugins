@@ -120,6 +120,7 @@ This skill runs read-only git and GitHub CLI commands that trigger permission pr
       "Bash(git diff *)",
       "Bash(git fetch *)",
       "Bash(git log *)",
+      "Bash(git show *)",
       "Bash(git ls-files *)",
       "Bash(git merge --ff-only *)",
       "Bash(git merge-base *)",
