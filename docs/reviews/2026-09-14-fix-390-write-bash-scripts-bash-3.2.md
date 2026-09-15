@@ -1,8 +1,8 @@
 # Branch Review: fix/390-write-bash-scripts-bash-3.2
 
 Base: `main` (merge base: `340f3192`)
-Commits: 3
-Files changed: 9 (1 added, 8 modified, 0 deleted, 0 renamed)
+Implementation commits reviewed: 3
+Files changed in PR: 10 (2 added, 8 modified, 0 deleted, 0 renamed)
 Reviewed through: `9e9c5f1b`
 
 ## Summary
@@ -33,13 +33,14 @@ Files: `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, `p
 
 The branch adds its dated plan and the plan's separate repository-script audit is tracked by open issue [#433](https://github.com/cboone/agent-harness-plugins/issues/433). Keeping the plan committed follows this repository's `cboone` convention.
 
-Files: `docs/plans/todo/2026-09-14-write-bash-scripts-bash-3-2-compatibility.md`
+Files: `docs/plans/done/2026-09-14-write-bash-scripts-bash-3-2-compatibility.md`
 
 ## File Inventory
 
 ### New files
 
-- `docs/plans/todo/2026-09-14-write-bash-scripts-bash-3-2-compatibility.md`
+- `docs/plans/done/2026-09-14-write-bash-scripts-bash-3-2-compatibility.md`
+- `docs/reviews/2026-09-14-fix-390-write-bash-scripts-bash-3.2.md`
 
 ### Modified files
 
@@ -84,7 +85,7 @@ Overall progress: 25/25 items done (100%).
 
 ### Commit 3 and follow-up
 
-- Done: The dated plan is committed at the planned path.
+- Done: The dated plan is committed under `docs/plans/done/`.
 - Done: The required follow-up exists as open issue [#433](https://github.com/cboone/agent-harness-plugins/issues/433), linked to the scope identified by the plan.
 
 ### Verification

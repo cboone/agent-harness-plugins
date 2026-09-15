@@ -4,7 +4,7 @@
 
 The `write-bash-scripts` guide prescribes `set -euo pipefail`, braces on every expansion, `main "${@}"`, and quoted `"${array[@]}"`. Under `set -u`, bash 3.2 (macOS `/bin/bash`, and what `#!/usr/bin/env bash` resolves to on a stock Mac) treats an empty `"${@}"`, `"${*}"`, or `"${array[@]}"` as unbound and aborts. It exempts only the unbraced `"$@"` and `"$*"`. Bash 5.x expands all of them to nothing, so scripts written to the guide pass on Linux and Homebrew bash and fail on a stock Mac (cboone/gh-actions#87: 31 of 31 cases failed at `main "${@}"`). The guide also recommends `readarray`, which bash 3.2 lacks.
 
-Outcome: every example in the guide runs under strict mode on bash 3.2 and 5.3, and the guide says what to avoid when a script must run on macOS.
+Outcome: examples intended for bash 3.2 run under strict mode on bash 3.2 and 5.3. Examples requiring bash 4 or later remain explicitly version-gated, and the guide says what to avoid when a script must run on macOS.
 
 ### Verified on this machine (bash 3.2.57 and 5.3.15, ShellCheck 0.11.0)
 
