@@ -105,7 +105,7 @@ Modeled on the prohibition section in `plugins/resolve-copilot-pr-feedback/skill
 - Run `gh pr view [N] --json number,url,title,author,state,isDraft,baseRefName,headRefName,headRefOid,isCrossRepository,closingIssuesReferences,additions,deletions,changedFiles`. Parse `OWNER/REPO` from `url`.
 - Check the command status and required returned fields. If the lookup fails or its data is incomplete, report the lookup failure and stop. Only GitHub CLI's explicit no-PR result for the current branch means no PR exists; authentication, network, access, or other errors are not absence.
 - If the explicit no-PR result is returned and no number was given, ask for the number, suggesting `gh pr checkout N` or `workmux add --pr N`, and stop.
-- If a number was given, after identifying the fetch remote, require the current branch to be `headRefName`. Do not require its upstream to be `<remote>/<headRefName>`; a fork PR may track its fork remote, or its source branch may have been deleted. Validate the fetched PR-head SHA against GitHub before changing the checkout.
+- If a number was given, after identifying the fetch remote, require the current branch to be `headRefName`. The current branch can track a fork remote or have no upstream when the source branch was deleted; validate the fetched PR-head SHA against GitHub. Before changing a checkout, however, resolve its upstream with `git rev-parse --abbrev-ref --symbolic-full-name '@{u}'`. A failed lookup or any value other than `<remote>/<headRefName>` requires a linked worktree.
 - If `--since <ref>` is supplied without `--full`, resolve it to a commit SHA before step 2 can change the checkout. Save it for the re-review steps. If it does not resolve to a commit, stop. `--full` ignores `--since`.
 - A closed, merged, or draft PR is still reviewed, and its state is noted in the report header.
 
@@ -116,7 +116,7 @@ Modeled on the prohibition section in `plugins/resolve-copilot-pr-feedback/skill
 1. Run `git rev-parse --is-shallow-repository` before any HEAD equality or ancestry check; if it fails or prints `true`, stop.
 1. If `git rev-parse HEAD` equals `headRefOid`, continue to step 3 only after the tracked-file check passes.
 1. Run `git ls-files --others --exclude-standard --directory` and `git ls-files --others --ignored --exclude-standard --directory`. If either prints anything or any cleanliness check fails, report and stop before synchronization. Never remove or move that local content.
-1. Before changing a checkout, require a linked worktree when the PR is cross-repository, the branch does not track `<remote>/<headRefName>`, or `headRefName` equals `baseRefName`. Otherwise stop and request a PR-specific linked worktree.
+1. Before changing a checkout, run `git rev-parse --abbrev-ref --symbolic-full-name '@{u}'`; treat failure as no upstream. Require a linked worktree when the PR is cross-repository, the returned upstream is not exactly `<remote>/<headRefName>` (including no upstream), or `headRefName` equals `baseRefName`. Otherwise the checkout may be fast-forwarded.
 1. For both `git merge-base --is-ancestor` checks, status 0 means ancestor, status 1 means not ancestor, and any other status is an error that stops synchronization.
 1. If HEAD is an ancestor of `headRefOid`, run `git -c core.hooksPath=/dev/null merge --ff-only <headRefOid>` so checkout synchronization cannot invoke a local Git hook.
 1. If `headRefOid` is an ancestor of HEAD, the checkout has commits the PR does not: report and stop.
@@ -290,6 +290,7 @@ Use existing PRs only. Never create or comment on one to test.
 
 1. **Fast-forward.** Prepare a clean linked worktree at an earlier PR commit, then run the skill. It fast-forwards and says so.
 1. **Rewritten branch.** Prepare a clean linked worktree whose HEAD diverges from the PR head. The skill reports both SHAs and stops without replacing the checkout.
+1. **Branch tracking guard.** Use a same-named local branch that tracks another remote or has no upstream, with HEAD behind the PR. Confirm the skill requires a linked worktree before any fast-forward.
 1. **Shallow or incomplete history.** Run with a shallow checkout and with an ancestry command that fails. Both cases stop before synchronization.
 1. **Dirty tree.** Modify a tracked file with HEAD equal to the PR head, then repeat with a stale HEAD. Both cases stop before review or synchronization. Test staged and unstaged changes.
 1. **Untracked and ignored content.** In a stale checkout, create an untracked file at a path introduced by the target commit; repeat with an ignored file at that path, and with untracked or ignored directories. Both the fast-forward and divergent-history paths stop before changing HEAD or any local content. Also confirm that non-overlapping local content blocks synchronization under the conservative policy.
