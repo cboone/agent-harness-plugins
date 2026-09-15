@@ -33,14 +33,14 @@ Start scripts with `set -euo pipefail` to catch errors early: `-e` exits on erro
 
 ### Main function
 
-Encapsulate script logic in a `main` function called at the end.
+Encapsulate script logic in a `main` function called at the end. Pass the arguments as `"$@"`, not `"${@}"`; see [Variable expansion](#variable-expansion).
 
 ```bash
 function main() {
   # script logic here
 }
 
-main "${@}"
+main "$@"
 ```
 
 ---
@@ -50,7 +50,36 @@ main "${@}"
 Use `BASH_SOURCE` to detect if the script is being sourced or executed.
 
 ```bash
-[[ "${0}" == "${BASH_SOURCE[0]}" ]] && main "${@}"
+[[ "${0}" == "${BASH_SOURCE[0]}" ]] && main "$@"
+```
+
+---
+
+### Bash 3.2 (macOS)
+
+macOS ships bash 3.2 as `/bin/bash`, and `#!/usr/bin/env bash` resolves to it unless a newer bash comes earlier on `PATH`. Linux runners and Homebrew install bash 5, so a script can pass everywhere it is tested and still fail on a stock Mac. When a script has to run there, avoid the empty-list expansions that bash 3.2 rejects under `set -u` and the features it predates:
+
+| Avoid                                            | Use instead                                                                         |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `"${@}"` or `"${*}"` under `set -u`              | `"$@"` or `"$*"` ([Variable expansion](#variable-expansion))                        |
+| `"${array[@]}"` on an empty array under `set -u` | `${array[@]+"${array[@]}"}` or a length check ([Array expansion](#array-expansion)) |
+| `readarray` or `mapfile`                         | a `while IFS= read -r` loop ([Process substitution](#process-substitution))         |
+| `declare -A` associative arrays                  | a function with a `case` lookup, or parallel indexed arrays                         |
+| `${var,,}` or `${var^^}`                         | `tr '[:upper:]' '[:lower:]'` or `tr '[:lower:]' '[:upper:]'`                        |
+| `declare -n` namerefs                            | `printf -v "${name}"` to assign, `${!name}` to read                                 |
+| `[[ -v var ]]`                                   | `[[ -n "${var+set}" ]]`                                                             |
+| `${array[-1]}`                                   | `${array[${#array[@]}-1]}`                                                          |
+| `shopt -s globstar`                              | `find`                                                                              |
+
+The `|&` pipe and `&>>` redirection are bash 4 additions too; spell them `2>&1 |` and `>> file 2>&1`.
+
+A script that needs bash 4 anyway should say so up front rather than failing partway through:
+
+```bash
+if ((BASH_VERSINFO[0] < 4)); then
+  echo "script-name: requires bash 4 or later (found ${BASH_VERSION})" >&2
+  exit 1
+fi
 ```
 
 ---
@@ -79,6 +108,9 @@ Use `${var}`, not `$var`. Braces prevent ambiguity in concatenation.
 | -------------------- | ------------------ |
 | `${filename}_backup` | `$filename_backup` |
 | `${array[0]}`        | `$array[0]`        |
+| `"$@"`               | `"${@}"`           |
+
+The argument lists are the exception: spell them `"$@"` and `"$*"`. Under `set -u`, bash 3.2 treats an empty `"${@}"` or `"${*}"` as an unbound variable and exits, so a script that ends in `main "${@}"` aborts on macOS when run without arguments. It exempts only the unbraced spellings, which work on every version; bash 5 accepts both. ShellCheck's `require-variable-braces` check does not flag `$@` or `$*`. Individual parameters keep their braces: `${1}`, or `${1:-}` when the argument is optional. Do not reach for `"${@:-}"`, which passes one empty argument instead of none.
 
 ---
 
@@ -285,7 +317,7 @@ Use `shift` to separate the first argument from the rest.
 function variadic_func() {
   local first="${1}"
   shift
-  local rest=("${@}")
+  local -a rest=("$@")
 }
 ```
 
@@ -298,7 +330,7 @@ Prefer functions over aliases for reusable commands.
 ```bash
 # Use
 function ll() {
-  ls -la "${@}"
+  ls -la "$@"
 }
 
 # Avoid
@@ -392,7 +424,7 @@ Variables modified inside pipelines or subshells don't affect the parent scope.
 ```bash
 count=0
 echo "a b c" | while read -r word; do
-  ((count++)) # modified in subshell
+  ((count += 1)) # modified in subshell
 done
 echo "${count}" # still 0
 ```
@@ -422,19 +454,27 @@ Use a subshell for temporary `cd` to avoid affecting the parent shell.
 
 ### Process substitution
 
-Use process substitution or `readarray` to avoid subshell scope issues.
+Use process substitution to avoid subshell scope issues. To collect the lines into an array, append to it inside the loop, which works on every bash version. `readarray` (also spelled `mapfile`) is shorter but does not exist before bash 4.
+
+The `|| [[ -n "${line}" ]]` condition preserves a final line without a trailing newline: `read` assigns its contents but returns a nonzero status at end of input.
 
 ```bash
 # Use
-while IFS= read -r line; do
+while IFS= read -r line || [[ -n "${line}" ]]; do
   process "${line}"
 done < <(command)
 
-# Or
+# Use: collect lines into an array
+lines=()
+while IFS= read -r line || [[ -n "${line}" ]]; do
+  lines+=("${line}")
+done < <(command)
+
+# Or, on bash 4 and later only
 readarray -t lines < <(command)
 
 # Avoid
-command | while IFS= read -r line; do
+command | while IFS= read -r line || [[ -n "${line}" ]]; do
   process "${line}"
 done
 ```
@@ -504,6 +544,20 @@ Quote array expansions to preserve elements with spaces.
 | --------------- | ------------- |
 | `"${array[@]}"` | `${array[@]}` |
 
+Under `set -u`, bash before 4.4 (macOS's 3.2 among them) treats an array with no elements as unset, so `"${array[@]}"` exits the script whenever the array is empty. When an array can be empty and the script has to run on those versions, guard the expansion or check the length first:
+
+```bash
+# Expands to nothing when files is empty, and to every element, quoted, otherwise
+for file in ${files[@]+"${files[@]}"}; do
+  process "${file}"
+done
+
+# Or skip the command when there is nothing to pass it
+if ((${#files[@]} > 0)); then
+  cp "${files[@]}" dest/
+fi
+```
+
 ---
 
 ## Arguments
@@ -560,11 +614,11 @@ command "${args[@]}"
 
 ### Arithmetic
 
-Use `((...))` for statements and `$((...))` for expressions.
+Use `((...))` for statements and `$((...))` for expressions. Increment with `((i += 1))` rather than `((i++))`: a `((...))` statement whose value is 0 returns a failure status, and since bash 4.1 `set -e` acts on it, so `((i++))` exits the script when `i` starts at 0. The increment in a `for ((...))` header is fine, because its status is never checked.
 
 | Use                           | Avoid                      |
 | ----------------------------- | -------------------------- |
-| `((i++))`                     | `let i++`                  |
+| `((i += 1))`                  | `((i++))` or `let i++`     |
 | `$((x + 1))`                  | `expr $x + 1`              |
 | `$((x + 1))`                  | `$[x + 1]`                 |
 | `for ((i=1; i<=10; i++)); do` | `for i in $(seq 1 10); do` |
@@ -971,10 +1025,10 @@ bash -n script.sh
 
 ### Debug tracing
 
-Support optional debug tracing with a `TRACE` environment variable.
+Support optional debug tracing with a `TRACE` environment variable. Give it an empty default, since under `set -u` an unset `TRACE` would otherwise exit the script.
 
 ```bash
-[[ "${TRACE}" ]] && set -x
+[[ -n "${TRACE:-}" ]] && set -x
 ```
 
 ---
