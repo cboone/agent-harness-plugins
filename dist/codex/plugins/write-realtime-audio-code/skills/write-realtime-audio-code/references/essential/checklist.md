@@ -5,7 +5,7 @@ Answer each question from the change and its applicable host contract. Follow th
 ## Callback Contract
 
 - [ ] Are advertised buses, channel counts, sample formats, legal aliases, and every required output sample handled? See [audio-thread rules](../comprehensive/audio-thread-rules.md).
-- [ ] Does each permitted block size, including a permitted zero-size block or an oversized input, have bounded API-specific handling?
+- [ ] Does each permitted block size, including a permitted zero-size block, have bounded API-specific handling, and does an oversized input follow the documented rejection or recovery path?
 - [ ] Are host pointers used only for their documented lifetime, and are host values validated before bounded memory access?
 
 ## Thread and Lifecycle Map
