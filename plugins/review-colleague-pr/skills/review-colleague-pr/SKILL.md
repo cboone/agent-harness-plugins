@@ -184,6 +184,8 @@ gh api --paginate repos/OWNER/REPO/issues/<pr-number>/comments --jq '.[] | {user
 gh api graphql --paginate -F owner=OWNER -F repo=REPO -F number=<pr-number> -f query='query($owner:String!,$repo:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated path line comments(first:20){nodes{author{login} body}}}}}}}'
 ```
 
+Use the login returned by `gh api user --jq .login` to filter both the reviews and inline review comments. Reviews and comments from other reviewers do not establish this user's re-review baseline.
+
 If any discussion query fails, continue with the available sources and name each unavailable source in the report. Do not treat missing output as an empty review, comment, or thread history; do not derive a re-review baseline from an unavailable source.
 
 Use the baseline selected in step 1:
@@ -196,6 +198,8 @@ Use the baseline selected in step 1:
   - It owns at least one inline comment whose `in_reply_to_id` is null.
 
 Exclude reviews in `PENDING` state. Draft review bodies and comments are not submitted feedback and must not select the re-review baseline.
+
+Set `LAST_REVIEW_SHA` to the `commit_id` of that selected review. When checking whether it has inline comments, count only top-level comments (`in_reply_to_id` is null) written by the user's login.
 
 Replying inside a thread also creates a `COMMENTED` review with an empty body, so a plain "most recent review by the user" would usually find a reply, not a review.
 
