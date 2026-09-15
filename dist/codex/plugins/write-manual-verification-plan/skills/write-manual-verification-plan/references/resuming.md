@@ -10,6 +10,14 @@ The record is what makes the second request cheap and keeps the results. This fi
 
 **On the issue, when there is no plan or the project does not commit plans.** One checklist comment, updated in place for the life of the checklist.
 
+The first line of an issue-backed checklist is the stable marker `<!-- manual-verification: OWNER/REPO#NUMBER -->`, with the actual repository and issue number substituted. To find an existing record, search every issue comment page for that exact marker:
+
+```bash
+gh api --paginate repos/OWNER/REPO/issues/NUMBER/comments --jq '.[] | select((.body | contains("<!-- manual-verification: OWNER/REPO#NUMBER -->")) or (.body | contains("## Manual verification"))) | {id, body}'
+```
+
+Use the plan record without querying GitHub when one exists. With no plan, one comment containing the exact marker is the issue record. If one unmarked comment contains `## Manual verification`, ask the person to identify it and add the marker before continuing. No candidate comments means the checklist may be created. Multiple candidates require asking which comment to keep before editing anything.
+
 **For a phase gate that spans several issues**, in the build plan's section for that phase, with each step linking the issue whose work it verifies.
 
 **Never:**
@@ -34,6 +42,8 @@ Create the comment once. `gh` prints the comment's URL, which ends in `#issuecom
 gh issue comment NUMBER --repo OWNER/REPO --body-file "${body_file}"
 ```
 
+The first line of `body_file` must be the stable marker for this issue: `<!-- manual-verification: OWNER/REPO#NUMBER -->`.
+
 Only after creation succeeds and returns a URL, read that exact comment back using the numeric ID from its `#issuecomment-` fragment:
 
 ```bash
@@ -43,6 +53,8 @@ gh api repos/OWNER/REPO/issues/comments/COMMENT_ID --jq .body
 Verify that the stored body is non-empty and contains the intended checklist, including its headings, status table, steps, and existing readings. A returned URL alone does not establish that the body was saved. If it is empty or incomplete, rewrite the tmpfile and use the update command below to repair the same comment, then read it back again. Do not create a second comment to recover. If creation fails without returning an ID, report the failure and do not reuse an ID from another run.
 
 Once the body is verified, put the returned URL on the checklist's `Record:` line, update that same comment, and verify the saved body again. Only then present it as the checklist record.
+
+Serialize updates to an issue-backed checklist. Only one session may edit a given checklist at a time. Before starting the read-merge-write-verify sequence, confirm that no other session is editing it, and ask the person not to edit it during that sequence. If another update is in progress, wait for it to finish and verify before starting.
 
 Before every update, read the current body back. The person may have edited the comment on GitHub, typing results straight into it, and an update written from a stale copy would erase them:
 

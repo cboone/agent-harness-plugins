@@ -135,11 +135,11 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 
 | #   | Step                                  | Needs  | Status  | Reading                                                     |
 | --- | ------------------------------------- | ------ | ------- | ----------------------------------------------------------- |
-| 0   | Confirm the build under test          | `host` | passed  | provenance names this branch                                |
-| 1   | The trace's position                  | `host` | passed  | +0.5000 and -0.5000, guard 0.26%                            |
-| 2   | The rail stops the peak               | `host` | passed  | four files, every error under one backing pixel             |
-| 3   | Position holds at 48, 96, and 192 kHz | `host` | passed  | nine captures, worst +0.4990                                |
-| 4   | By eye: width, seam, and beading      | `host` | passed  | no beading                                                  |
+| 0   | Confirm the build under test          | `host` | pending | historical reading lacks verified provenance               |
+| 1   | The trace's position                  | `host` | pending | +0.5000 and -0.5000, guard 0.26%; control evidence missing  |
+| 2   | The rail stops the peak               | `host` | pending | four files, every error under one backing pixel             |
+| 3   | Position holds at 48, 96, and 192 kHz | `host` | pending | nine captures, worst +0.4990; control evidence missing     |
+| 4   | By eye: width, seam, and beading      | `host` | pending | no beading; control evidence missing                        |
 | 5   | Brightness falls with sample rate     | none   | retired | the quantity has no host-only component; verified offscreen |
 
 ### 0. Confirm the build under test
@@ -157,7 +157,7 @@ Build under test: confirmed by step 0 at the start of every session, and named i
   The `built from` line names this worktree's branch and `git rev-parse --short HEAD`, and the relaunched host loads that installed path.
 - **Null vs broken:** `install-clap` builds exactly what it installs, so a matching `built from` line cannot describe another worktree's bundle. Restarting and checking the loaded path connects that file to the host instance under test. A `replaced` line naming another branch is expected: it is the moment the shared install location changed hands.
 - **Why by hand:** The host loads from a shared location that no automated check here installs into.
-- **Result:** passed. <date>, build `<commit>` on `<branch>`, REAPER 7.79: <installed provenance output and loaded-path confirmation after relaunch>.
+- **Result:** pending. Historical reading: <date>, build `<commit>` on `<branch>`, REAPER 7.79. Replace with same-session provenance and loaded-path confirmation after relaunch.
 
 ### 1. The trace's position
 
@@ -166,7 +166,7 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 - **Expected:** Peak and trough invert to +0.5000 and -0.5000, and the guard's off-ray fraction is at most 0.5% (0.005 as a fraction). The recorded 0.26% reading is below that limit.
 - **Null vs broken:** A trace frozen on an old frame would still read a position. The meter line must be advancing at the display rate while the capture is taken.
 - **Why by hand:** The offscreen harness renders a window it supplied itself and says nothing about the audio path, the ring buffer, the display link, or the compositor.
-- **Result:** passed. <date>, build `<commit>` (step 0: <loaded-build confirmation>), REAPER 7.79, default editor, 2x display, 1920x1080 drawable: +0.5000 and -0.5000, guard 0.26%; control: <meter observation during capture>. Getting there found two defects in the screenshot tool, both invisible offscreen, including a whole-column centroid that read this sine as +0.0359.
+- **Result:** pending. Historical reading: +0.5000 and -0.5000, guard 0.26%. Same-session build identity and meter evidence are unavailable. Getting there found two defects in the screenshot tool, both invisible offscreen, including a whole-column centroid that read this sine as +0.0359.
 
 ### 2. The rail stops the peak from climbing
 
@@ -175,7 +175,7 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 - **Expected:** `implies sample` on the `highest peak` line reads +1.0000, +1.0500, +1.0889, and +1.0889, each within ±0.002, with the `on the rail` line for the last two only.
 - **Null vs broken:** Two readings must differ and two must match.
 - **Why by hand:** As step 1.
-- **Result:** passed. <date>, build `<commit>` (step 0: <loaded-build confirmation>), REAPER 7.79, default editor, 2x display, 1920x1080 drawable. The first two peaks differ and the last two agree within ±0.002, as the control requires; readings:
+- **Result:** pending. Historical reading: <date>, build `<commit>` (step 0: <loaded-build confirmation>), REAPER 7.79, default editor, 2x display, 1920x1080 drawable. The first two peaks differ and the last two agree within ±0.002, as the control requires; readings:
 
   | file        | predicted | peak    | trough  | error   | on the rail |
   | ----------- | --------- | ------- | ------- | ------- | ----------- |
@@ -191,16 +191,16 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 - **Expected:** Every capture inverts to +0.5000, within ±0.002.
 - **Null vs broken:** The rate must actually take effect. After each change, the plugin's `activated at` log line must name the new rate, since a change that did not take effect would pass at 48 kHz three times and exercise none of the three window lengths.
 - **Why by hand:** The harness renders a fixed 960-sample window, so only a host exercises the window length, the ring buffer at three block sizes, and the upload path at three window lengths.
-- **Result:** passed. <date>, build `<commit>` (step 0: <loaded-build confirmation>), REAPER 7.79, default editor, 2x display, 1920x1080 drawable: nine captures, every one +0.5000 or within 0.001 of it, worst +0.4990, across windows of 960, 1920, and 3840 samples; control: <activation log confirming each device rate>.
+- **Result:** pending. Historical reading: nine captures, every one +0.5000 or within 0.001 of it, worst +0.4990, across windows of 960, 1920, and 3840 samples. Same-session build identity and activation log evidence are unavailable.
 
 ### 4. By eye: width, seam, and beading
 
 - **Setup:** Step 0 passed this session. REAPER launched with `/Applications/REAPER.app/Contents/MacOS/REAPER 2>&1 | grep --line-buffered fosforo`, with the plugin and `sine-100hz-0.5.wav` on a stereo track. Keep the meter line visible while inspecting the default editor on a 2x display.
-- **Action:** Play `sine-100hz-0.5.wav` and look along steep strokes.
+- **Action:** Play `sine-100hz-0.5.wav` and look along steep strokes. Stop playback, wait for the display to settle, and inspect the silent trace for stability.
 - **Expected:** The beam is visibly wider and smoother than a single device pixel, with no seam at the quad's edge, and silence is flat and stable with no flicker between adjacent rows. No beading: a regular string of brighter dots along steep crossings, which would be a 2:1 ripple at the segment pitch, green 219 against 189.
 - **Null vs broken:** The meter line must be advancing while looking, as in step 1, so the picture is live. Look along steep strokes, where the analysis says beading would appear, not along shallow ones where it would not. An absence seen by eye is believed here only because this effect is one an eye reliably sees.
 - **Why by hand:** A brightness ripple of about 16% repeating at a fixed spatial period is exactly what an eye detects well, and it is the one question here that could not be settled by derivation.
-- **Result:** passed. <date>, build `<commit>` (step 0: <loaded-build confirmation>), REAPER 7.79, default editor, 2x display, 1920x1080 drawable: no beading, so of the two analyses the plan recorded, the side-by-side one was right. Wider and smoother, no seam, silence flat and stable; control: <meter observation while inspecting steep strokes>. By eye, which is weaker than the other steps, and not weak for this claim.
+- **Result:** pending. Historical reading: no beading, wider and smoother, no seam, silence flat and stable. Same-session build identity and meter evidence are unavailable.
 
 ### 5. Brightness falls with sample rate
 
@@ -316,9 +316,9 @@ This example stays `deferred` because its behavior can be automated. `<automatio
 ### 2. Duplex printing keeps the back page's margins
 
 - **Setup:** Step 0 passed this session: the driver version shown in the print dialog matches the one under test. A two-sided test page with a frame drawn 5 mm inside every edge on both sides.
-- **Action:** Print the page long-edge duplex to the queue under test.
+- **Action:** Print the page long-edge duplex to the queue under test, and record the submitted job ID.
 - **Expected:** On the back side, the frame is fully visible, and the distance from each paper edge to the frame measures 5 mm ± 1 mm.
-- **Null vs broken:** The job must appear in the completed jobs for this queue (`lpstat -W completed -o` on CUPS systems), so a page from another queue is not mistaken for this one. And a copy of the page with its frame 1 mm inside the edge, printed the same way, must visibly clip, which shows clipping would be seen on this printer and paper.
+- **Null vs broken:** The exact submitted job ID must appear among completed jobs for the target queue (`lpstat -W completed -o QUEUE` on CUPS systems). A page from another job or queue does not count. A copy of the page with its frame 1 mm inside the edge, printed the same way, must visibly clip, which shows clipping would be seen on this printer and paper.
 - **Why by hand:** The paper path and the printer's own imposition are physical; a rendered preview shows neither.
 - **Result:** pending.
 ```

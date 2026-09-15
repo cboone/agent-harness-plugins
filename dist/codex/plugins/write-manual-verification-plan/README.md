@@ -47,6 +47,7 @@ For a checklist stored on an issue, these optional rules allow the record's crea
     "allow": [
       "Bash(gh issue comment *)",
       "Bash(gh api repos/*)",
+      "Bash(gh api --paginate repos/*)",
       "Bash(gh api --method PATCH repos/*)",
       "Bash(git diff *)",
       "Bash(mktemp -u /tmp/manual-verification-body-*)",

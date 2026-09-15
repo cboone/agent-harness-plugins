@@ -2,7 +2,7 @@
 
 Base: `main` (merge base: `340f3192`)
 Commits: 7
-Files changed: 20 (17 added, 3 modified, 0 deleted, 0 renamed)
+Files changed: 21 (18 added, 3 modified, 0 deleted, 0 renamed)
 Reviewed through: `03e0f89b`
 Updated: 2026-09-15 (previous: 2026-09-14)
 
@@ -26,7 +26,7 @@ Files involved:
 
 ### Plugin Documentation and Catalog
 
-The branch adds a complete plugin manifest and README, registers version `1.0.0` in the Writing catalog, recalculates the catalog state to `catalog-M71-m103-p157-n58`, and adds the root README row plus its conditional `gh` requirement. The canonical description is consistent across the manifest, marketplace, plugin README, and root README. The plugin README includes optional permissions for issue-record commands and tmpfile management.
+The branch adds a complete plugin manifest and README, registers version `1.0.0` in the Writing catalog, recalculates the catalog state to `catalog-M71-m105-p159-n58`, and adds the root README row plus its conditional `gh` requirement. The canonical description is consistent across the manifest, marketplace, plugin README, and root README. The plugin README includes optional permissions for issue-record commands and tmpfile management.
 
 Files involved:
 
@@ -35,6 +35,14 @@ Files involved:
 - `.claude-plugin/marketplace.json`
 - `.agents/plugins/marketplace.json`
 - `README.md`
+
+### Copilot Review Guidance
+
+The path-specific instruction records that the target macOS system grep accepts `--line-buffered`, preventing portability reviews from relying on the incorrect assumption that the flag is GNU-only.
+
+Files involved:
+
+- `.github/instructions/manual-verification.instructions.md`
 
 ### Generated Mirrors
 
@@ -58,6 +66,7 @@ Files involved:
 
 ### New Files
 
+- `.github/instructions/manual-verification.instructions.md`
 - `dist/codex/plugins/write-manual-verification-plan/.claude-plugin/plugin.json`
 - `dist/codex/plugins/write-manual-verification-plan/README.md`
 - `dist/codex/plugins/write-manual-verification-plan/skills/write-manual-verification-plan/SKILL.md`
@@ -114,7 +123,7 @@ Files involved:
 ### Documentation, Registration, and Mirrors
 
 - **Done:** The plugin README uses the catalog description verbatim as its opening paragraph, contains valid related-plugin links and optional command permissions, and explains when `gh` is required.
-- **Done:** The marketplace object appears in alphabetical order with matching version and description; `bin/compute-catalog-state` returns the committed `catalog-M71-m103-p156-n58` value.
+- **Done:** The marketplace object appears in alphabetical order with matching version and description; `bin/compute-catalog-state` returns the committed `catalog-M71-m105-p159-n58` value.
 - **Done:** The root README table row and conditional external-tool bullet match the catalog and README language.
 - **Done:** The Codex and OpenCode mirrors are committed and were accepted as current by plugin validation.
 
@@ -151,7 +160,7 @@ None outstanding in the reviewed implementation. It follows the plan's stated ap
 ## Verification Performed
 
 - `bin/check-cross-references plugins/write-manual-verification-plan/skills/write-manual-verification-plan/SKILL.md` passed in the initial review; the refreshed `make validate` also passed rule 19 across the skill and its references.
-- `bin/compute-catalog-state` returned `catalog-M71-m103-p156-n58`, matching the committed marketplace metadata.
+- `bin/compute-catalog-state` returned `catalog-M71-m105-p159-n58`, matching the committed marketplace metadata.
 - `make validate` passed.
 - `make format`, `make build`, and `make lint` passed for the source corrections: Markdown lint, Prettier, ShellCheck, `shfmt`, and `actionlint` reported no findings. The completed plan passed targeted Markdown lint.
 - The earlier local `make test-scrut` run completed with exit code 2: 392 of 402 cases passed and 10 launcher cases failed, as recorded in commit `550ae026` and tracked in [#435](https://github.com/cboone/agent-harness-plugins/issues/435).
