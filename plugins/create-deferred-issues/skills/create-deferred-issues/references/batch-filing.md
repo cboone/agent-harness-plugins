@@ -26,7 +26,7 @@ Deferred from #<pr> (<pr title>).
 
 - **With no PR**, the context line reads `Raised while working on #<issue>`, or names the branch when there is no source issue either.
 - **Across repositories**, write `owner/name#N`, using the source's recorded repository and number. Use its full URL across hosts. A bare `#N` resolves in the target repository, not the source. Retargeting the new issue does not change the identity of the source it references.
-- **For a code marker**, link a permalink at a commit the remote has: `https://github.com/<owner>/<name>/blob/<sha>/<path>#L<line>`. Check with `git branch -r --contains <sha>`. When the commit is not pushed, write `<path>:<line>` as text rather than a link that would not resolve.
+- **For a code marker**, link a permalink using the source's recorded host and repository at a commit its remote has: `https://<source-host>/<owner>/<name>/blob/<sha>/<path>#L<line>`. Check with `git branch -r --contains <sha>` and verify that the containing remote belongs to that source. When the commit is not pushed there, write `<path>:<line>` as text rather than a link that would not resolve.
 - **The source link is load-bearing.** It puts the new issue on the source's timeline, which is how a later run recognizes it as already tracked.
 - **Summarize.** Never paste session text wholesale, and never include secrets, tokens, local absolute paths, or machine names. The target may be public even when the conversation was not.
 - **Visibility.** When the target is public and the source repository is private, leave out every link, path, permalink, and quotation from the source repository, and describe the concern in general terms.
@@ -36,7 +36,7 @@ Deferred from #<pr> (<pr title>).
 - **Existing labels only**, from `gh label list` for that target repository. Never create a label.
 - **Prefer one type label** (`bug`, `enhancement`, `documentation`, `maintenance`, or the repository's equivalent) plus a topical label only when one obviously matches. No label is better than a poor fit.
 - **Never apply status, triage-outcome, or automation-owned labels**: `in progress`, `duplicate`, `wontfix`, `invalid`, `dependencies`, or any label a workflow or bot manages.
-- **Single-quote each name**, since labels may contain spaces: `--label 'good first issue'`.
+- **Pass each name as one literal argument**, since labels may contain spaces or shell syntax. Single-quote it and encode each embedded apostrophe as `'\''`: `--label 'team'\''s area'` passes the existing label `team's area` unchanged. Do not rename an existing label to avoid quoting it.
 
 ## Per-Issue Sequence
 

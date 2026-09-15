@@ -74,14 +74,17 @@ git remote -v
 Resolve the origin URL to a repository:
 
 ```bash
-gh repo view <origin-url> --json nameWithOwner,visibility,isArchived,isFork,parent,hasIssuesEnabled,defaultBranchRef
+gh repo view <origin-url> --json nameWithOwner,url,visibility,isArchived,isFork,parent,hasIssuesEnabled,defaultBranchRef
 ```
 
 - Its `nameWithOwner` is the **default target** for filing. Select the repository explicitly for every `gh` call: use `--repo` where supported, the repository argument for `gh repo view`, an object's full URL when reading it, or the repository path and host for `gh api`. Source reads use the source repository; filing and tracker searches use the candidate's destination. Without an explicit repository, `gh` prefers a remote named `upstream`, so inside a fork a bare `gh issue create` files on the project that was forked.
 - If `gh` cannot resolve the URL (an SSH host alias such as `git@work-github:owner/name.git`, for example), take `owner/name` from the URL's path and run `gh repo view` with that instead. On a host other than `github.com`, write targets as `HOST/OWNER/NAME` for `--repo`, and pass `--hostname HOST` to `gh api`.
+- Keep the host and `owner/name` as separate fields for every repository. In the examples, `<target>`, `<pr-repo>`, and `<source-repo>` are host-qualified selectors where needed; `<pr-owner>/<pr-name>` and `<source-owner>/<source-name>` are the host-free API paths. Never put a hostname after `repos/`.
 - `parent` has no `nameWithOwner` field. Build the parent's name from `.parent.owner.login` and `.parent.name`.
 - For the rest of this workflow, a **third-party repository** is any target whose owner differs from origin's owner, plus the fork's parent and the repository an `upstream` remote points at, whoever owns them.
-- With no `origin`, or outside a git repository, there is no default target. Scan only the session, and start every candidate's target as unresolved.
+- With no `origin`, or outside a git repository, there is no default target. Scan only the session, retaining destinations explicitly named there. Only candidates without a named destination start unresolved. Without an ownership baseline, require approval by number unless the session establishes that the target belongs to the user.
+
+Treat every substituted value as shell data. Use an argument-list tool when available; otherwise single-quote each literal argument and encode an embedded apostrophe as `'\''` within that argument. For example, `--search 'runner'\''s timeout'` passes one literal phrase. Backticks and `$()` in source text must never become shell substitutions. Do not use `eval` or interpolate source text into double-quoted shell source.
 
 #### Branch
 
@@ -94,10 +97,10 @@ If the output is empty (a detached HEAD) or names the default branch, there is n
 #### Pull request
 
 ```bash
-gh pr list --repo <target> --head <branch> --state open --json number,url,title,body,baseRefName,headRepositoryOwner,closingIssuesReferences
+gh pr list --repo <target> --head <branch> --state open --json number,url,title,body,baseRefName,headRepository,closingIssuesReferences
 ```
 
-Keep only a PR whose `headRepositoryOwner.login` is origin's owner, since `--head` matches the branch name in any fork. Empty output means there is no open PR. Do not use `gh pr view <branch>` for this: it also returns a merged PR from an earlier branch that had the same name.
+Keep only a PR whose `headRepository.nameWithOwner` and host match origin's full repository identity, since `--head` matches the branch name in any fork, including another repository owned by the same account. If the head repository is unavailable, report that source as unresolved rather than guessing. Empty output means there is no open PR. Do not use `gh pr view <branch>` for this: it also returns a merged PR from an earlier branch that had the same name.
 
 When origin is a fork and no PR was found, run the same query with `--repo <parent>`. A PR found there is a read-only source: its comments yield candidates, but it never receives the summary comment.
 
@@ -105,7 +108,7 @@ Record the PR's full URL, repository as `<pr-repo>`, and number together. Keep t
 
 #### Base
 
-If a PR was found, its `baseRefName` is the base. Otherwise read where the branch was created:
+If a PR was found, its `baseRefName` is the base, and the repository containing that PR owns the base branch. Resolve its repository URL with `gh repo view <pr-repo> --json url`; a PR in a fork's parent must fetch its base from that parent, even if origin has a branch with the same name. Otherwise read where the branch was created:
 
 ```bash
 git reflog show <branch> --format='%gs'
@@ -117,26 +120,28 @@ The last line reads like `branch: Created from <name>`. Strip any `refs/heads/`,
 1. `git ls-remote --heads origin <name>` prints a line. The command exits 0 either way, so judge by its output.
 1. `git merge-base --is-ancestor origin/<name> origin/<default-branch>` exits non-zero, meaning the parent branch has not already merged. Fetch both first with `git fetch origin <default-branch> <name> --quiet`.
 
-Otherwise the base is the default branch. Then fetch it and compare against the remote copy, never a local base branch that may be stale:
+For this no-PR fallback, otherwise the base is the default branch and its repository is origin. Fetch the selected base from its owning repository, then immediately record the fetched commit:
 
 ```bash
-git fetch origin <base> --quiet
+git fetch <base-repository-url> refs/heads/<base> --quiet
+git rev-parse FETCH_HEAD
 ```
 
-Getting the base right matters: a stacked branch compared against the default branch would inherit its parent branch's markers and issue references.
+Use that immutable commit as `<base-sha>` in every scan below. Record it before any later fetch replaces `FETCH_HEAD`; do not substitute `origin/<base>` or a local branch. Getting the base right matters: a stacked branch compared against the default branch would inherit its parent branch's markers and issue references.
 
 #### Source issues
 
-The issues this branch addresses:
+Collect the issues this branch addresses from all available sources, even when a PR exists:
 
 1. The PR's `closingIssuesReferences`, when a PR was found. Preserve each reference's full URL and derive its host, repository, and number from that URL; a closing reference can name an issue in another repository. If a reference lacks its repository identity, resolve it from the PR's explicit closing text or report it as unavailable rather than assigning its number to origin.
-1. Otherwise, issue numbers in the branch name (`feature/42-login`, `fix/issue-42`) and `#N` references in the branch's commit messages. Bare numbers belong to the default target; preserve an explicit repository or issue URL when one is supplied:
+1. Explicit source references in the PR body, including `Related to #N`. Bare references belong to `<pr-repo>`; preserve repository-qualified references and full URLs.
+1. Issue numbers in the branch name (`feature/42-login`, `fix/issue-42`) and `#N` references in the branch's commit messages. Bare numbers belong to the default target; preserve an explicit repository or issue URL when one is supplied:
 
    ```bash
-   git log --no-merges --format=%B origin/<base>..HEAD
+   git log --no-merges --format=%B <base-sha>..HEAD
    ```
 
-Confirm each issue using its own repository:
+References explicitly labelled as deferred follow-ups or already-filed concerns are duplicate evidence, not source issues. Deduplicate the remaining source references by host, repository, and issue number, then confirm each using its own repository:
 
 ```bash
 gh issue view <n> --repo <source-repo> --json url,state,title,body
@@ -167,12 +172,12 @@ The conversation in context, from both sides: concerns the assistant named and s
 #### Code markers the branch adds
 
 ```bash
-git diff --unified=0 -G '(^|[^A-Za-z0-9_])(TODO|FIXME|XXX|HACK)([^A-Za-z0-9_]|$)' origin/<base>...HEAD
+git diff --unified=0 -G '(^|[^A-Za-z0-9_])(TODO|FIXME|XXX|HACK)([^A-Za-z0-9_]|$)' <base-sha>...HEAD
 git diff --unified=0 -G '(^|[^A-Za-z0-9_])(TODO|FIXME|XXX|HACK)([^A-Za-z0-9_]|$)' HEAD
 git ls-files --others --exclude-standard
 ```
 
-The first covers the branch's commits, the second uncommitted changes, and the third lists untracked files, which neither diff shows. Read untracked files in full.
+The first covers the branch's commits, the second uncommitted changes, and the third lists untracked files, which neither diff shows. Before inspecting untracked contents, exclude secret-like paths (`.env`, `.env.*`, `credentials.json`, `*.pem`, `*.key`), symlinks, and binary files. Search only the remaining regular text files with a binary-skipping content search, returning matching marker lines and only the context needed to understand them. Do not read every untracked file in full, and do not inspect files without a matching marker. Report excluded source categories without their contents.
 
 Three details in those commands are load-bearing:
 
@@ -185,22 +190,24 @@ Three details in those commands are load-bearing:
 When a PR was found:
 
 ```bash
-gh pr view <n> --repo <pr-repo> --json body,comments,reviews
-gh api --paginate repos/<pr-repo>/pulls/<n>/comments --jq '.[] | {path, line, body, url: .html_url, author: .user.login}'
+gh pr view <n> --repo <pr-repo> --json body
+gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/issues/<n>/comments --jq '.[] | {body, url: .html_url, author: .user.login}'
+gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/pulls/<n>/reviews --jq '.[] | {body, url: .html_url, author: .user.login}'
+gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/pulls/<n>/comments --jq '.[] | {path, line, body, url: .html_url, author: .user.login}'
 ```
 
-The first returns the body, the conversation comments, and the review bodies. The second returns the inline review comments as one object per line across every page. Look for replies that set a finding aside, and for review-feedback summaries, such as the one the `resolve-copilot-pr-feedback` skill posts, that carry a Deferred category.
+The first returns the PR body. The three API calls return all pages of conversation comments, review bodies, and inline review comments respectively. Look for replies that set a finding aside, and for review-feedback summaries, such as the one the `resolve-copilot-pr-feedback` skill posts, that carry a Deferred category.
 
 #### Documents
 
 - Plan files under `docs/plans/` and review documents under `docs/reviews/` that the branch changes or that are uncommitted or untracked:
 
   ```bash
-  git diff --name-only origin/<base>...HEAD -- docs/plans docs/reviews
+  git diff --name-only <base-sha>...HEAD -- docs/plans docs/reviews
   git status --short -- docs/plans docs/reviews
   ```
 
-  Read their out-of-scope sections. Review documents saved by the `review-branch` skill land in `docs/reviews/`.
+  Also collect plan and review paths explicitly referenced by the session, PR, source issues, or branch commit messages, including files unchanged by this branch. Read each relevant document once and inspect its out-of-scope and follow-up sections. Review documents saved by the `review-branch` skill land in `docs/reviews/`.
 
 - The body of each source issue, already fetched in step 1.
 
@@ -221,21 +228,21 @@ Apply these in order.
    Load labels for this destination using step 1's label command. Do not reuse another repository's labels. For an unresolved target, skip target metadata, label lookup, and tracker search; mark it "target unresolved; not checked for duplicates" until an edit supplies the destination. Source evidence may still establish that the concern is tracked.
 
 1. **Remove what is already tracked.** A candidate is tracked when any of these holds:
-   - Its own text names an issue (`#N`, an issue URL, "tracked in", "filed as") other than the branch's source issues. Resolve a bare number in the repository the text came from; compare full repository identities and numbers, not numbers alone. If that repository is unknown, keep the reference unresolved rather than assuming the destination. Source issues close with this work, so naming them tracks nothing.
+   - Its own text names an issue (`#N`, an issue URL, "tracked in", "filed as") other than the branch's source issues. Resolve a bare number in the repository the text came from; compare full repository identities and numbers, not numbers alone. If that repository is unknown, keep the reference unresolved rather than assuming the destination. Naming a source issue alone does not establish that a separate deferral is tracked.
    - An issue was filed for it earlier in this session.
    - An issue that links back to the source covers the same concern. Read the cross-references of the PR and of each source issue once, then match candidates against the list:
 
      ```bash
-     gh api --paginate repos/<source-repo>/issues/<n>/timeline --jq '.[] | select(.event == "cross-referenced") | .source.issue | {number, title, state, url: .html_url}'
+     gh api --paginate --hostname <source-host> repos/<source-owner>/<source-name>/issues/<n>/timeline --jq '.[] | select(.event == "cross-referenced") | .source.issue | {number, title, state, url: .html_url}'
      ```
 
-     For the PR, use `<pr-repo>` and its number; for each source issue, use that issue's recorded repository and number. On another host, pass its recorded host with `--hostname`. Preserve each result's full URL rather than treating its number as local to the source or destination. The endpoint accepts a pull request number too. Every issue this skill files links its source, so this read finds an earlier run's filings whether or not that run posted a summary comment. The list also holds every other issue that merely mentions the source, such as a related proposal, so a listed issue tracks a candidate only when it passes the same distinctive-words test as a search hit below.
+     For the PR, use its recorded host, owner, repository name, and number; for each source issue, use that issue's recorded identity. Preserve each result's full URL rather than treating its number as local to the source or destination. The endpoint accepts a pull request number too. When a filed issue can link its source, this read finds an earlier run's filings whether or not that run posted a summary comment. The list also holds every other issue that merely mentions the source, such as a related proposal, so a listed issue tracks a candidate only when it passes the same distinctive-words test as a search hit below.
 
    - A review document on the branch records it as filed.
    - A tracker search in the candidate's resolved destination finds it:
 
      ```bash
-     gh issue list --repo <target> --search "<distinctive words>" --state all --limit 5 --json number,title,state,url
+     gh issue list --repo <target> --search '<distinctive words>' --state all --limit 5 --json number,title,state,url
      ```
 
      Judge each hit on its distinctive words, the ones naming the specific subject, and not on generic tracker vocabulary such as `add`, `fix`, `update`, or `skill`. A clear match moves the candidate to **Already tracked**. An ambiguous one stays in the batch with a "possible duplicate of #N" note, and the user decides.
@@ -337,7 +344,7 @@ Then suggest the next step. When no PR exists yet, suggest `/pr`, which lists th
 ## Error Handling
 
 - **`gh` missing or unauthenticated**: Instruct the user to install it from https://cli.github.com/ and run `gh auth login`, then stop.
-- **No `origin`, or not a git repository**: Scan only the session. Every target is unresolved, and the user must supply one in an `edit` before that item can be filed.
+- **No `origin`, or not a git repository**: Scan only the session. Retain explicitly named destinations and validate them normally; the user must supply a destination only for candidates that still lack one.
 - **A duplicate search or timeline read fails**: Propose the affected candidates with a "not checked for duplicates" note.
 - **The label list fails**: File without labels and report that labels were skipped.
 - **An issue fails to file**: Continue with the rest, and check the newest-issues listing before any retry so a retry cannot duplicate an issue that did land.

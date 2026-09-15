@@ -17,9 +17,9 @@ While working, an agent regularly names a concern and sets it aside: a formatter
 It reads four sources:
 
 1. **The session**: concerns either side of the conversation set aside.
-1. **Code markers**: `TODO`, `FIXME`, `XXX`, and `HACK` lines the branch adds, including uncommitted changes and untracked files.
+1. **Code markers**: `TODO`, `FIXME`, `XXX`, and `HACK` lines the branch adds, including uncommitted changes and eligible untracked text files. Secret-like paths, symlinks, and binary files are excluded from untracked content reads.
 1. **The pull request**: its body, conversation comments, review bodies, and inline review comments.
-1. **Documents**: out-of-scope sections of the plans and review documents the branch touches, and the body of the issue the branch addresses.
+1. **Documents**: out-of-scope sections of plans and review documents the branch touches or the work references, and the bodies of the issues the branch addresses.
 
 It then drops what is not really a deferral (hedges, rejected alternatives, concerns fixed later in the work, concerns you declined) and what is already tracked, which it finds through the source's cross-reference timeline and a search of the tracker. It errs toward proposing too little: a missed concern costs one manual `/create-issue`, while a wrong one costs triage.
 
@@ -59,14 +59,14 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git remote *)", "Bash(git branch *)", "Bash(git reflog show *)", "Bash(git ls-remote --heads *)", "Bash(git fetch *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git log *)", "Bash(git status*)", "Bash(git ls-files *)", "Bash(gh repo view *)", "Bash(gh pr list *)", "Bash(gh pr view *)", "Bash(gh issue view *)", "Bash(gh issue list *)", "Bash(gh label list *)", "Bash(gh api --paginate repos/*/pulls/*/comments*)", "Bash(gh api --paginate repos/*/issues/*/timeline*)", "Bash(gh issue create *)", "Bash(gh issue edit *)", "Bash(gh pr comment *)", "Bash(gh issue comment *)", "Bash(mktemp -u /tmp/gh-issue-body-*)", "Bash(rm -f /tmp/gh-issue-body-*)", "Bash(mktemp -u /tmp/gh-comment-body-*)", "Bash(rm -f /tmp/gh-comment-body-*)"]
+    "allow": ["Bash(git remote *)", "Bash(git branch *)", "Bash(git reflog show *)", "Bash(git ls-remote --heads *)", "Bash(git fetch *)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git log *)", "Bash(git status*)", "Bash(git ls-files *)", "Bash(gh repo view *)", "Bash(gh pr list *)", "Bash(gh pr view *)", "Bash(gh issue view *)", "Bash(gh issue list *)", "Bash(gh label list *)", "Bash(gh api --paginate --hostname * repos/*/pulls/*/comments*)", "Bash(gh api --paginate --hostname * repos/*/pulls/*/reviews*)", "Bash(gh api --paginate --hostname * repos/*/issues/*/comments*)", "Bash(gh api --paginate --hostname * repos/*/issues/*/timeline*)", "Bash(gh issue create *)", "Bash(gh issue edit *)", "Bash(gh pr comment *)", "Bash(gh issue comment *)", "Bash(mktemp -u /tmp/gh-issue-body-*)", "Bash(rm -f /tmp/gh-issue-body-*)", "Bash(mktemp -u /tmp/gh-comment-body-*)", "Bash(rm -f /tmp/gh-comment-body-*)"]
   }
 }
 ```
 
 If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
-The write rules (`gh issue create`, `gh issue edit`, and the two comment commands) are safe to allow because the skill never reaches them before you approve the batch. Leave them out if you would rather confirm each write as well. On a GitHub host other than `github.com`, the `gh api` calls carry `--hostname` before the path, so those two rules need a matching variant.
+The write rules (`gh issue create`, `gh issue edit`, and the two comment commands) are safe to allow because the skill never reaches them before you approve the batch. Leave them out if you would rather confirm each write as well. The API rules include `--hostname` so the same command shape works on GitHub.com and GitHub Enterprise hosts.
 
 ## Examples
 
