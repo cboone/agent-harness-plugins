@@ -1,6 +1,6 @@
 # Plugin development
 
-Read this before changing plugin sources, catalog metadata or plugin documentation. Paths in code spans are relative to the repository root. See [the root instructions](../AGENTS.md) for validation and writing conventions.
+Read this before changing plugin sources, catalog metadata or plugin documentation. Unless the surrounding text says otherwise, paths in code spans are relative to the repository root. See [the root instructions](../AGENTS.md) for validation and writing conventions.
 
 ## Plugin layout
 
