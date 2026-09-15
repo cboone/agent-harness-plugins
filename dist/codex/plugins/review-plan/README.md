@@ -49,6 +49,8 @@ Git provides branch matching and local branch evidence when available. The GitHu
 
 These read-only permissions cover file inspection and the Git and GitHub queries named by the skill. Grant additional focused check permissions individually after inspecting the command's effects.
 
+If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+
 ```json
 {
   "permissions": {

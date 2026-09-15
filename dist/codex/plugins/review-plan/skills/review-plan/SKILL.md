@@ -41,7 +41,7 @@ Prefix matches are case-sensitive. Remove only the prefixes specified above; an 
 - If there are zero matches or multiple matches, select the most recently modified candidate from the full candidate set. Break equal modification times by ascending repository-relative path. Disclose the lack of a unique match, selected modification time, and any tie-break.
 - In detached HEAD or without Git branch information, skip branch matching, use the same newest-plan fallback, and state that limitation.
 - If modification times cannot be read reliably, ask for an explicit file instead of inventing an ordering.
-- If no candidates exist, ask for an explicit Markdown path. Do not search `done/` or create a plan.
+- If no candidates exist, report a **Blocked** verdict, explain that a readable Markdown plan is required, and ask for an explicit Markdown path. Do not search `done/` or create a plan.
 
 State the selected path and selection reason before reviewing. If it cannot be read fully or is empty, report `Blocked`, explain the target problem, and request a readable, non-empty plan. Do not silently choose a different candidate.
 
