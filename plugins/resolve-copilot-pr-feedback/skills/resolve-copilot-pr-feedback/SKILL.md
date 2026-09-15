@@ -89,7 +89,7 @@ Outputs `true` on success. The `reply-and-resolve` command also outputs `true` o
 Copilot supports two types of instruction files:
 
 - **`.github/copilot-instructions.md`**: General instructions for the whole repository
-- **`.github/instructions/*.instructions.md`** (path-specific): Targeted instructions with `applyTo` frontmatter
+- **`.github/instructions/**/*.instructions.md`** (path-specific): Targeted instructions with `applyTo` frontmatter
 
 **Prefer path-specific instructions files** when the incorrect feedback applies to a specific language or file pattern. Use the repo-wide file only for conventions that apply broadly across the project.
 
@@ -99,7 +99,7 @@ An instructions file Copilot never loads does nothing, and nothing warns you. Lo
 
 1. **Location:** a path-specific file sits within or below `.github/instructions/` (subdirectories are allowed). A `*.instructions.md` directly under `.github/` is never read.
 1. **Glob:** its `applyTo` matches the path of the file Copilot flagged. Separate multiple globs with commas.
-1. **Agent:** it does not set `excludeAgent: "code-review"`, which hides it from PR review.
+1. **Agent:** `excludeAgent` is either absent or one of the supported strings `"code-review"` and `"cloud-agent"`. Reject any other value. For these review instructions, require the field to be absent or `"cloud-agent"`; `"code-review"` hides the file from PR review.
 
 Copilot code review reads instructions from the pull request's head branch, so once pushed, the change governs the next review of the same PR. If the same finding recurs after that, re-check the three items above before adding more text.
 
@@ -533,7 +533,7 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 1. **BOTH `fetch` and `fetch-reviews` were run** (a thread fetch alone cannot see review-body findings)
 1. **EVERY addressed thread resolved via the script** (not just code fixed!)
 1. **EVERY review-body finding handled and recorded** in the step 7 summary, since there is no thread to resolve and the summary row is the only record
-1. **For INCORRECT feedback: Copilot instructions updated** (path-specific `.github/instructions/*.instructions.md` preferred, or `.github/copilot-instructions.md` for repo-wide conventions)
+1. **For INCORRECT feedback: Copilot instructions updated** (path-specific `.github/instructions/**/*.instructions.md` preferred, or `.github/copilot-instructions.md` for repo-wide conventions)
 1. **For DEFERRED feedback: Task tracked** (GitHub issue, PROJECT.md, or similar)
 1. **Linters and formatters pass** (via `lint-and-fix` skill, if any files were changed while addressing feedback)
 1. Re-fetch confirms empty array `[]` for all processed **threads**. This does not apply to `fetch-reviews`, which never empties.
