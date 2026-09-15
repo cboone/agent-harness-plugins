@@ -1,19 +1,20 @@
 # Branch Review: feature/351-add-write-manual-verification-plan
 
 Base: `main` (merge base: `340f3192`)
-Commits: 4
-Files changed: 19 (16 added, 3 modified, 0 deleted, 0 renamed)
-Reviewed through: `86b71222`
+Commits: 7
+Files changed: 20 (17 added, 3 modified, 0 deleted, 0 renamed)
+Reviewed through: `03e0f89b`
+Updated: 2026-09-15 (previous: 2026-09-14)
 
 ## Summary
 
-This branch adds the `write-manual-verification-plan` writing skill, which produces persistent, numbered by-hand verification checklists with explicit success observations and controls that distinguish an intended absence from a broken instrument. It supplies four focused reference documents, catalog and README registration, and generated Codex and OpenCode mirrors. The active plan is retained in `docs/plans/todo/`, which is appropriate for this repository's plan convention.
+This branch adds the `write-manual-verification-plan` writing skill, which produces persistent, numbered by-hand verification checklists with explicit success observations and controls that distinguish an intended absence from a broken instrument. It supplies four focused reference documents, catalog and README registration, and generated Codex and OpenCode mirrors. Result classification requires build and control evidence, automation candidates remain visible as deferred rows, and issue-based records are read back after writes. The completed plan is retained in `docs/plans/done/`.
 
 ## Changes by Area
 
 ### Skill and Reference Material
 
-The new skill establishes a complete workflow: it first finds an existing record, separates checks that require a real environment from automated-test candidates, confirms the installed build, scopes exclusive resources, persists the checklist, and records results as readings. Its references provide the fixed checklist schema, null-versus-broken controls, resumption rules, and worked examples across host, simulator, browser, device, and printer environments.
+The new skill establishes a complete workflow: it first finds an existing record, separates checks that require a real environment from automated-test candidates, confirms the loaded build, scopes exclusive resources, persists the checklist, and records results as readings. Its references provide the fixed checklist schema, null-versus-broken controls, resumption rules, and worked examples across host, simulator, browser, device, and printer environments. Shared audio-thread markers require a safe non-blocking handoff. Unreported evidence leaves a result pending, and an invalid build or control makes it void. Examples label missing historical metadata as placeholders.
 
 Files involved:
 
@@ -25,7 +26,7 @@ Files involved:
 
 ### Plugin Documentation and Catalog
 
-The branch adds a complete plugin manifest and README, registers version `1.0.0` in the Writing catalog, recalculates the catalog state to `catalog-M71-m103-p156-n58`, and adds the root README row plus its conditional `gh` requirement. The canonical description is consistent across the manifest, marketplace, plugin README, and root README.
+The branch adds a complete plugin manifest and README, registers version `1.0.0` in the Writing catalog, recalculates the catalog state to `catalog-M71-m103-p156-n58`, and adds the root README row plus its conditional `gh` requirement. The canonical description is consistent across the manifest, marketplace, plugin README, and root README. The plugin README includes optional permissions for issue-record commands and tmpfile management.
 
 Files involved:
 
@@ -44,13 +45,14 @@ Files involved:
 - `dist/codex/plugins/write-manual-verification-plan/`
 - `dist/opencode/skills/write-manual-verification-plan`
 
-### Planning Record
+### Planning and Review Records
 
-The implementation plan defines the artifact shape, references, catalog integration, verification expectations, and commit boundaries. Its final branch update adds the `retired` status and documents the conditional `gh` catalog bullet, keeping the plan aligned with the shipped design.
+The implementation plan defines the artifact shape, references, catalog integration, verification expectations, and commit boundaries. Its inventory describes the shipped copy/symlink/copy control, loaded-build confirmation, evidence requirements, and optional permissions. The completed plan is archived under `docs/plans/done/`. This review is included in the branch's file inventory.
 
 Files involved:
 
-- `docs/plans/todo/2026-09-14-new-skill-write-manual-verification-plan.md`
+- `docs/plans/done/2026-09-14-new-skill-write-manual-verification-plan.md`
+- `docs/reviews/2026-09-14-feature-351-add-write-manual-verification-plan.md`
 
 ## File Inventory
 
@@ -64,7 +66,8 @@ Files involved:
 - `dist/codex/plugins/write-manual-verification-plan/skills/write-manual-verification-plan/references/resuming.md`
 - `dist/codex/plugins/write-manual-verification-plan/skills/write-manual-verification-plan/references/step-format.md`
 - `dist/opencode/skills/write-manual-verification-plan`
-- `docs/plans/todo/2026-09-14-new-skill-write-manual-verification-plan.md`
+- `docs/plans/done/2026-09-14-new-skill-write-manual-verification-plan.md`
+- `docs/reviews/2026-09-14-feature-351-add-write-manual-verification-plan.md`
 - `plugins/write-manual-verification-plan/.claude-plugin/plugin.json`
 - `plugins/write-manual-verification-plan/README.md`
 - `plugins/write-manual-verification-plan/skills/write-manual-verification-plan/SKILL.md`
@@ -85,12 +88,14 @@ Files involved:
 - The workflow requires step 0, confirmation of the build under test, at the beginning of every session. This directly protects against results from an installed artifact produced by another worktree.
 - The skill uses `### Exclusive resources` intentionally, so the resource-claim and issue-suggestion skills can consume the checklist's declared scope.
 - No runtime dependency or executable script is added. The conditional `gh` requirement applies only when the checklist record is stored in an issue comment.
+- Matching an installed file to a fresh build is paired with a host reload and loaded-path check, or an identity read from the running instance.
+- The persisted record retains automation deferrals and verifies issue-comment contents before presenting a successful save.
 
 ## Plan Compliance
 
-**Verdict: good compliance.** The branch implements the plan's artifact, document structure, catalog registration, generated mirrors, and verification requirements. The only implementation addition beyond the earlier plan text, the `retired` status, was explicitly recorded in the plan before review and is a well-justified refinement of its status model.
+**Verdict: good compliance.** The branch implements the planned artifact, document structure, catalog registration, and generated mirrors. The plan records the `retired` status and the evidence and persistence corrections. Its reference inventory matches the delivered scope. Local Scrut verification has a separately tracked limitation, described below.
 
-**Overall progress: 13/13 items done (100%).**
+**Implementation progress: 14/14 items below complete.**
 
 ### Plugin Structure and Activation
 
@@ -101,14 +106,14 @@ Files involved:
 ### Checklist Model and References
 
 - **Done:** The skill defines Setup, Action, Expected, and Null vs broken, plus `Why by hand` and `Result`, stable numbering, a status vocabulary, and mandatory build confirmation.
-- **Done:** `step-format.md` supplies the planned document template, status table, numbering rules, step-part guidance, build-confirmation detail, and status meanings.
+- **Done:** `step-format.md` supplies the planned document template, consistent resource scope, status table, numbering rules, step-part guidance, loaded-build confirmation, and status meanings.
 - **Done:** `null-vs-broken.md` documents same-run liveness, positive controls, conditions that permit failure, discriminating measurements, controlled cycles, and other controls called for by the plan.
-- **Done:** `resuming.md` specifies a single living record, reprinting from that record, free-text result handling, steps that remain unsettled, build changes, deferral, resource-based sessions, and closeout.
+- **Done:** `resuming.md` specifies a single living record, read-back verification and recovery, evidence-gated result handling, build changes, deferral, resource-based sessions, and closeout.
 - **Done:** `examples.md` includes the planned rewritten failures, complete fosforo checklist, springer examples, and clearly labelled illustrative examples for the four other environments.
 
 ### Documentation, Registration, and Mirrors
 
-- **Done:** The plugin README uses the catalog description verbatim as its opening paragraph, contains the intended sections and valid related-plugin links, and explains when `gh` is required.
+- **Done:** The plugin README uses the catalog description verbatim as its opening paragraph, contains valid related-plugin links and optional command permissions, and explains when `gh` is required.
 - **Done:** The marketplace object appears in alphabetical order with matching version and description; `bin/compute-catalog-state` returns the committed `catalog-M71-m103-p156-n58` value.
 - **Done:** The root README table row and conditional external-tool bullet match the catalog and README language.
 - **Done:** The Codex and OpenCode mirrors are committed and were accepted as current by plugin validation.
@@ -116,21 +121,21 @@ Files involved:
 ### Verification and Plan Maintenance
 
 - **Done:** `bin/check-cross-references plugins/write-manual-verification-plan/skills/write-manual-verification-plan/SKILL.md` reports that all cross-references resolve.
-- **Done:** `make validate` passes JSON and all plugin validation rules. The lint portion of `make test-all` also passes with no Markdown, Prettier, shell, or workflow-lint findings.
-- **Done:** The plan's final update records the added `retired` terminal status and corrects the root README requirement to include optional `gh` usage.
+- **Done:** `make validate` passes JSON and all plugin validation rules. `make lint` passes Markdown, Prettier, shell, and workflow checks.
+- **Done:** The completed plan records the delivered status model, reference inventory, conditional `gh` usage, and optional permissions.
 
 ### Deviations
 
-- **Additional commit:** The branch contains a fourth documentation commit after the plan's initial three-commit outline. It updates the plan to reflect the final `retired` status and conditional `gh` bullet. This is reasonable plan maintenance, not scope expansion.
+- **Additional commits:** The seven reviewed commits include the initial three-commit implementation, plan maintenance, a saved review with Scrut evidence, the evidence and persistence corrections, and completion of the plan record.
 - **Status vocabulary refinement:** `retired` is added to the planned vocabulary. The plan was updated before review with a specific rationale and matching reference material, so this is a justified design refinement.
 
 ### Fidelity Concerns
 
-None. The implementation follows the plan's stated approach, including four flat reference files, no bundled scripts, persistence in a plan or issue record, and machine-readable exclusive-resource scope.
+None outstanding in the reviewed implementation. It follows the plan's stated approach, including four flat reference files, no bundled scripts, persistence in a plan or issue record, and machine-readable exclusive-resource scope. The inventory uses the shipped reversible scan-log control; it does not claim an unshipped NaN example.
 
 ## Code Quality Assessment
 
-**Overall quality: implementation ready, but the branch cannot yet pass the full test suite.** This is a prose-first skill plugin, and its behavior is clear, internally consistent, and guarded by the repository's catalog, generated-tree, and cross-reference validation. No implementation defect was found in the branch diff. However, `make test-scrut` currently fails in an unrelated launcher test area, tracked in [#435](https://github.com/cboone/agent-harness-plugins/issues/435).
+**Overall quality: the reviewed implementation corrections pass local lint and validation.** No blocking implementation finding remains in this reassessment. The changes are confined to the new skill, its mirrors, and branch documentation. CI completed successfully for `550ae026`, including Scrut; that is distinct from the earlier local Scrut failure recorded below. This assessment does not claim a fresh local Scrut pass or a CI result for the later commits.
 
 ### Strengths
 
@@ -141,13 +146,20 @@ None. The implementation follows the plan's stated approach, including four flat
 
 ### Issues to Address
 
-- `make test-scrut` completes with 10 failures in `tests/scrut/launch-workmux.md`: 392 of 402 cases pass, but generated branch names are rejected by the launcher. The branch does not change the affected snapshots or launcher scripts, so this is not caused by the plugin change. The failure is tracked in [#435](https://github.com/cboone/agent-harness-plugins/issues/435).
+- The earlier local `make test-scrut` run recorded 10 failures in `tests/scrut/launch-workmux.md`: 392 of 402 cases passed, but generated branch names were rejected by the launcher. The branch does not change those snapshots or scripts. [#435](https://github.com/cboone/agent-harness-plugins/issues/435) remains open as of this reassessment. The local suite was not rerun for these prose changes, so that local limitation is not reported as resolved.
 
 ## Verification Performed
 
-- `bin/check-cross-references plugins/write-manual-verification-plan/skills/write-manual-verification-plan/SKILL.md` passed.
+- `bin/check-cross-references plugins/write-manual-verification-plan/skills/write-manual-verification-plan/SKILL.md` passed in the initial review; the refreshed `make validate` also passed rule 19 across the skill and its references.
 - `bin/compute-catalog-state` returned `catalog-M71-m103-p156-n58`, matching the committed marketplace metadata.
 - `make validate` passed.
-- The lint portion of `make test-all` passed: Markdown lint, Prettier, ShellCheck, `shfmt`, and `actionlint` all reported no findings.
-- `make test-scrut` completed with exit code 2: 392 of 402 cases passed and 10 cases in `tests/scrut/launch-workmux.md` failed. The failure is tracked in [#435](https://github.com/cboone/agent-harness-plugins/issues/435).
-- `git diff --check 340f3192..HEAD` reported no whitespace errors.
+- `make format`, `make build`, and `make lint` passed for the source corrections: Markdown lint, Prettier, ShellCheck, `shfmt`, and `actionlint` reported no findings. The completed plan passed targeted Markdown lint.
+- The earlier local `make test-scrut` run completed with exit code 2: 392 of 402 cases passed and 10 launcher cases failed, as recorded in commit `550ae026` and tracked in [#435](https://github.com/cboone/agent-harness-plugins/issues/435).
+- [CI run 35003754913](https://github.com/cboone/agent-harness-plugins/actions/runs/35003754913) completed both Lint and validate and Scrut tests successfully against `550ae026`, verified through the GitHub API on 2026-09-15.
+- `git diff --check` reported no whitespace errors in the corrections.
+
+## Changes Since Last Review
+
+- `550ae026` saves the review and records the completed local Scrut failure instead of treating an invoked test as a pass.
+- `717d1897` requires same-run evidence, safe marker synchronization, active-build confirmation, persistent deferrals, and verified issue-comment writes; it also completes commands, example metadata, resource scope, and permissions, with regenerated mirrors.
+- `03e0f89b` aligns the plan's inventory with delivery and moves the completed plan to `docs/plans/done/`.
