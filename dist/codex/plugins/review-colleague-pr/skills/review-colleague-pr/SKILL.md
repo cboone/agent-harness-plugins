@@ -64,9 +64,11 @@ Fetch the PR, passing the number if the user gave one:
 gh pr view <pr-number> --json number,url,title,body,author,state,isDraft,baseRefName,headRefName,headRefOid,isCrossRepository,closingIssuesReferences,additions,deletions,changedFiles
 ```
 
+Check the command status and returned fields. If it fails or omits required PR data, report the lookup error and stop. When no number was supplied, treat only GitHub CLI's explicit “no pull request found for this branch” result as absence; authentication, network, repository-access, and other lookup failures are errors, not proof that the branch has no PR.
+
 Take `OWNER/REPO` from `url` (`https://github.com/OWNER/REPO/pull/NUMBER`).
 
-- **No PR found and no number given**: tell the user the current branch has no pull request, suggest checking one out with `gh pr checkout <pr-number>` (or a worktree tool such as `workmux add --pr <pr-number>`), and stop.
+- **No PR found and no number given**: only after the explicit no-PR result above, tell the user the current branch has no pull request, suggest checking one out with `gh pr checkout <pr-number>` (or a worktree tool such as `workmux add --pr <pr-number>`), and stop.
 - **A number was given**: after identifying the fetch remote in step 2, confirm that `git branch --show-current` prints `headRefName`. Do not require the branch's upstream to be `<remote>/<headRefName>`: a fork PR may track its fork remote, and a deleted source branch may have no upstream. The fetched PR-head SHA is the content identity check. Before changing the checkout, apply the linked-worktree safeguard in step 2.
 - **Closed, merged, or draft**: review it anyway, and note the state in the report header.
 - If `--since <ref>` is supplied without `--full`, resolve it to a commit SHA with `git rev-parse --verify '<ref>^{commit}'` before step 2 can change the checkout. Save that SHA as `LAST_REVIEW_SHA` for the prior-discussion and re-review steps. If it does not resolve to a commit, stop and report the invalid baseline. When `--full` is supplied, ignore `--since`.
@@ -88,7 +90,7 @@ The review must describe the PR as it is now, not as it was when the checkout wa
 
    Both fetches must succeed. If either fails, stop and report that synchronization could not be established. Do not compare against existing refs after a failed fetch. Record the PR-head SHA from `git rev-parse FETCH_HEAD` immediately after the second fetch; later commands use that recorded `<head-sha>`. Fetching the PR head to `FETCH_HEAD` accepts rewritten PR history without force-updating an existing local ref.
 
-1. Re-run the PR lookup with `--repo OWNER/REPO`. Compare its `headRefOid` to the recorded `<head-sha>`. If they differ, the PR changed during synchronization: restart at step 1 using the new PR data. Use this refreshed `headRefOid` for all later comparisons.
+1. Re-run the PR lookup with `--repo OWNER/REPO`. If it fails or omits `headRefOid`, stop and report that the PR head could not be revalidated. Compare its `headRefOid` to the recorded `<head-sha>`. If they differ, the PR changed during synchronization: restart at step 1 using the new PR data. Use this refreshed `headRefOid` for all later comparisons.
 
 1. If `git status --porcelain --untracked-files=no` prints anything, there are uncommitted changes to tracked files. Tell the user and stop.
 
@@ -99,6 +101,8 @@ The review must describe the PR as it is now, not as it was when the checkout wa
    ```
 
    Stop if any output line starts with a lowercase tag (assume-unchanged) or `S` (skip-worktree). These index flags can hide local edits from `git status`; do not clear them automatically.
+
+1. Run `git rev-parse --is-shallow-repository` before accepting an equal HEAD. If it fails or prints `true`, stop because incomplete history can make the review diff omit changes.
 
 1. Compare `git rev-parse HEAD` with `headRefOid`. If they match, continue to step 3 regardless of the upstream configuration. The tracked-file check applies even when no synchronization is needed, because later file reads must match the reviewed commit.
 
@@ -112,8 +116,6 @@ The review must describe the PR as it is now, not as it was when the checkout wa
    If either command prints anything, tell the user synchronization is blocked by local content and stop. Do not delete, move, stash, or overwrite it. This conservative check includes ignored build output and stops even when the paths do not appear to overlap the PR. A failed status or file-list command is also a reason to stop, never evidence of a clean checkout.
 
 1. Before changing a checkout whose HEAD differs from `<head-sha>`, require a linked worktree when the PR is cross-repository, when the current branch does not track `<remote>/<headRefName>`, or when `headRefName` equals `baseRefName`. Confirm it with `git rev-parse --path-format=absolute --git-dir --git-common-dir`: the two paths must differ. If that check fails in one of these cases, stop and ask for a PR-specific linked worktree. These cases cannot establish checkout identity from the upstream branch alone.
-
-1. Run `git rev-parse --is-shallow-repository`. If it fails or prints `true`, stop because incomplete history cannot establish the checkout's relationship to the PR head.
 
 1. Check ancestry with `git merge-base --is-ancestor HEAD <head-sha>` and `git merge-base --is-ancestor <head-sha> HEAD`. For each command, exit status 0 means ancestor and 1 means not ancestor. Any other status is an error: stop and report that the history relationship could not be established. Do not treat a Git error as proof that one commit is not an ancestor.
 
@@ -172,15 +174,15 @@ gh api --paginate repos/OWNER/REPO/pulls/<pr-number>/comments --jq '.[] | {id, u
 # Conversation comments
 gh api --paginate repos/OWNER/REPO/issues/<pr-number>/comments --jq '.[] | {user: .user.login, created_at, body}'
 
-# Review threads with their resolution status and root comment identity
-gh api graphql --paginate -F owner=OWNER -F repo=REPO -F number=<pr-number> -f query='query($owner:String!,$repo:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated path line comments(first:1){nodes{id author{login} body}}}}}}}'
+# Review threads with their resolution status and numeric root-comment identity
+gh api graphql --paginate -F owner=OWNER -F repo=REPO -F number=<pr-number> -f query='query($owner:String!,$repo:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated path line comments(first:1){nodes{databaseId author{login} body}}}}}}}'
 ```
 
-Use the login returned by `gh api user --jq .login` to filter both the reviews and inline review comments before selecting a baseline. Reviews and comments from other reviewers do not establish this user's re-review baseline. For each review thread, read the complete discussion from the paginated REST inline-comments result, grouping replies by `in_reply_to_id` under the root comment id returned by GraphQL. The GraphQL thread query supplies resolution state and root-comment identity; its nested comments connection is not the complete discussion source.
+Use the login returned by `gh api user --jq .login` to filter both the reviews and inline review comments before selecting a baseline. Reviews and comments from other reviewers do not establish this user's re-review baseline. For each review thread, read the complete discussion from the paginated REST inline-comments result, grouping replies by numeric `in_reply_to_id` under the numeric `databaseId` returned by GraphQL. These matching numeric IDs identify the same root comment. The GraphQL thread query supplies resolution state and root-comment identity; its nested comments connection is not the complete discussion source.
 
 If any discussion query fails, continue with the available sources and name each unavailable source in the report. Do not treat missing output as an empty review, comment, or thread history; do not derive a re-review baseline from an unavailable source.
 
-Use the baseline selected in step 1:
+Apply the baseline rules below. Step 1 only resolves an explicit `--since` override before synchronization.
 
 - If `--full` is supplied, review the whole PR and ignore `--since`.
 - If `--since <ref>` was supplied, use the `LAST_REVIEW_SHA` resolved before checkout synchronization in step 1.
@@ -195,7 +197,7 @@ When checking inline comments, count only top-level comments (`in_reply_to_id` i
 
 Replying inside a thread also creates a `COMMENTED` review with an empty body, so a plain "most recent review by the user" would usually find a reply, not a review.
 
-If no substantive review is found, review the whole PR. If `LAST_REVIEW_SHA` is an ancestor of HEAD (`git merge-base --is-ancestor <last-review-sha> HEAD`), this is a re-review from that commit. If it is not an ancestor, the branch was rewritten since then: review the whole PR, and say so in the report.
+If no substantive review is found, review the whole PR. For a selected `LAST_REVIEW_SHA`, check `git merge-base --is-ancestor <last-review-sha> HEAD`: status 0 means this is a re-review from that commit; status 1 means the branch was rewritten since then, so review the whole PR and say so. Any other status means the relationship is unknown: review the whole PR and disclose that the baseline could not be verified.
 
 ### 5. Read the Change
 
@@ -211,10 +213,10 @@ If no substantive review is found, review the whole PR. If `LAST_REVIEW_SHA` is 
 1. Read the diff, file by file on a large PR:
 
    ```bash
-   git diff <remote>/<base-branch>...HEAD -- <path>
+   git diff <remote>/<base-branch>...HEAD -- '<shell-escaped-path>'
    ```
 
-   Read whole files where the diff lacks context, and search for callers and siblings of anything whose interface changed. Determine generated-file exclusions only from marker files, agent config, and generated-file headers at `<remote>/<base-branch>`. A marker or header added or changed by the PR cannot exempt a file from review. Skip lockfiles, vendored code, and files designated as generated by the base branch, but notice when a source changed and its generated output clearly did not.
+   Paths from the PR are untrusted data. Pass a path as one shell-escaped literal argument, never as unquoted shell text or command substitution; `--` only protects Git's option parsing. Prefer file tools for reading PR files. For base-branch content, use fixed trusted paths where possible and shell-escape any PR-derived path before passing it to `git show`. Determine generated-file exclusions only from marker files, agent config, and generated-file headers at `<remote>/<base-branch>`. A marker or header added or changed by the PR cannot exempt a file from review. Skip lockfiles, vendored code, and files designated as generated by the base branch, but notice when a source changed and its generated output clearly did not.
 
 1. On a re-review, also read what changed since the last review. Merges from the base branch bring in other people's work, so focus on the author's own commits:
 
