@@ -10,7 +10,7 @@ This is the canonical source for Claude Code plugins (skills and hooks), with co
 - `.claude-plugin/marketplace.json` is the catalog of record. Plugin manifest and catalog versions must match. New plugins start at `1.0.0`; wording/fixes are patch changes, new capabilities are minor changes, and breaking changes are major changes.
 - Marketplace `metadata.version` is a catalog state tag, not SemVer. Recompute it with `bin/compute-catalog-state` whenever a plugin version changes; never carry between its components.
 - After merging, rebasing or before creating a PR, use the repository's [check-versions skill](.claude/skills/check-versions/SKILL.md).
-- Root and plugin README descriptions match the catalog description verbatim. Preserve root README anchors `install`, `using-with-opencode` and `codex-cli-known-limitations`; plugin READMEs link to them.
+- Root and plugin README descriptions match the catalog description verbatim. Preserve root README anchors `install`, `using-with-opencode` and `codex-cli-known-limitations`; plugin READMEs always link to `install` and link to the other anchors when relevant.
 
 ## Navigation and scoped instructions
 

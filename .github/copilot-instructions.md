@@ -99,7 +99,7 @@ Files under `commands/` directories and `SKILL.md` files inside `skills/` direct
 
 ## Writing conventions
 
-These apply to skill bodies, reference material, READMEs, plan and review documents, commit messages, and PR and issue bodies. Skills here are prompts, so their prose is the product. `AGENTS.md` is the full statement; the essentials:
+These apply to skill bodies, reference material, READMEs, plan and review documents, commit messages, and PR and issue bodies. Skills here are prompts, so their prose is the product. `AGENTS.md` is the core statement; its scoped instruction files and linked references provide component-specific detail. The essentials:
 
 - **No em dashes.** Use a comma, colon, semicolon, parenthetical, or a separate sentence. Where a dash genuinely reads best, use a spaced double hyphen (`--`). Flag em dashes in new prose; do not "correct" `--` back to an em dash.
 - **No time or effort estimates** in any form (hours, days, sprints, "quick", t-shirt sizes, story points), including in skill instructions that tell an agent to produce them. Describe scope instead. Estimates of runtime behavior (complexity, latency, throughput, memory) are fine.
