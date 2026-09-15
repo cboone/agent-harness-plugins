@@ -2,9 +2,16 @@
 
 For full project conventions, see `AGENTS.md` in the repository root.
 
+## Scoped instructions
+
+- [Dependabot review instructions](instructions/dependabot.instructions.md) cover the Dependabot plugin, reference, and fixture paths listed in that file's `applyTo` field.
+- [Shell script review instructions](instructions/shell.instructions.md) cover `**/scripts/**`, `**/bin/**`, and `**/tests/fixtures/**`.
+- [Worktree naming review instructions](instructions/worktree-naming.instructions.md) cover `plugins/create-worktree/**`, `plugins/address-issue-in-worktree/**`, and their corresponding `dist/codex/plugins/` mirrors.
+
 ## PR review
 
 - **Version bumps are selective**: Only plugins with actual code changes get version bumps. Do not flag missing version bumps on unchanged plugins.
+- **`excludeAgent` follows GitHub's documented format and values**: GitHub documents a scalar value of `"code-review"` to exclude code review or `"cloud-agent"` to exclude the cloud agent. Do not replace `"cloud-agent"` with `"coding-agent"` or infer a list form; GitHub's repository-instructions documentation shows a scalar field and these two values.
 - **PR descriptions may contain stale commit references**: PR descriptions are often auto-generated from commit messages and may reference superseded commits. Do not flag discrepancies between PR description bullet points and the actual diff.
 - **Done plans are historical records**: Files in `docs/plans/done/` are completed plan documents preserved for reference. They may not match the final implementation. Do not flag discrepancies between done plan content and the actual codebase.
 - **`monitor-pr` deliberately does not gate on `BLOCKED` or `reviewDecision`**: The skill treats mergeability as clean when there are no conflicts and the branch is not behind. Requiring `mergeStateStatus` to be `CLEAN`, or waiting for an approving review, would never terminate on a repository whose branch protection requires a reviewer the skill cannot supply. `BLOCKED` is reported prominently instead, including in the terminal report. Do not flag this as too permissive.
