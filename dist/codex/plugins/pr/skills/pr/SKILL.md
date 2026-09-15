@@ -12,13 +12,14 @@ Commit, push, and create a pull request in one automated step. Never prompt the 
 
 ### 1. Gather Context
 
-First, resolve the repository where `gh pr create` will open the PR by normalizing `origin`:
+First, resolve the repository where `gh pr create` will open the PR and the repository that will host the pushed branch. Normalize the origin fetch URL and every origin push URL:
 
 ```bash
 git remote get-url origin | sed -E 's#^[A-Za-z][A-Za-z0-9+.-]*://([^/@]*@)?([^/]+)/#\2/#; s#^[^/@]*@([^:]+):#\1/#; s#\.git$##'
+git remote get-url --push --all origin | sed -E 's#^[A-Za-z][A-Za-z0-9+.-]*://([^/@]*@)?([^/]+)/#\2/#; s#^[^/@]*@([^:]+):#\1/#; s#\.git$##'
 ```
 
-This prints a `HOST/OWNER/REPO` selector without exposing remote userinfo and preserves ports in URI authorities. The SCP-style rewrite applies only when the URL has no scheme. If the SSH host token is an alias, resolve it with `ssh -G <alias>` and use the configured hostname. Record the canonical selector as `<pr-target>`. If `origin` or its SSH alias cannot be resolved, stop and report that the PR target cannot be established.
+The first line prints the origin fetch selector, which is `<pr-target>`. The second prints the push selector or selectors, which identify the PR head repository. Both remove remote userinfo and preserve ports in URI authorities; the SCP-style rewrite applies only when the URL has no scheme. If an SSH host token is an alias, resolve it with `ssh -G <alias>` and use the configured hostname. If multiple distinct push repositories are configured, or either identity cannot be resolved, stop before pushing or creating the PR and report the ambiguity. If the fetch and push repositories differ but use the same GitHub host, keep `<pr-target>` as the PR base repository, query `gh repo view <head-selector> --json nameWithOwner`, and use its owner as `<head-owner>`. If their hosts differ, stop because GitHub cannot open a cross-host PR.
 
 Then detect the repository's default branch explicitly:
 
@@ -28,7 +29,7 @@ gh repo view <pr-target> --json defaultBranchRef,visibility --jq '{defaultBranch
 
 Use the detected value as `<default-branch>`.
 
-Use `<pr-target>` as the repository where the PR will be opened, and record its visibility from this query. Pass `--repo <pr-target>` to every issue lookup and search below, and pass the same selector to `gh pr create`.
+Use `<pr-target>` as the repository where the PR will be opened, and record its visibility from this query. Pass `--repo <pr-target>` to every issue lookup and search below, and pass the same selector to `gh pr create`. When the push repository differs from `<pr-target>`, pass `--head <head-owner>:<branch>` so the PR uses the branch that was pushed.
 
 #### Detect the PR base branch
 
@@ -145,7 +146,7 @@ When the comparison is ambiguous, include none. The two errors are not symmetric
 
 Merge the full issue identities from all three strategies into one deduplicated list. Preserve the order: branch-name issues first, then commit-message issues, then search-matched issues. Do not record the branch prefix: the closing keyword comes from the nature of the change, not from how the branch is named.
 
-Collect **follow-up issues** directly from the session, independently of the detected closing list. These are issues filed for concerns this branch set aside, for example by the `create-deferred-issues` skill; a follow-up belongs in this collection even when none of the strategies above found it. Preserve each full issue URL, host, repository, number, title, and destination visibility. Resolve missing identity with `gh issue view <issue-url> --json url,title` and accept it only when the returned URL contains `/issues/`; discard `/pull/` results. Resolve visibility with `gh repo view <host/owner/name> --json visibility`; never infer the host or repository from a number alone.
+Collect **follow-up issues** directly from the session, independently of the detected closing list. These are issues filed for concerns this branch set aside, for example by the `create-deferred-issues` skill; a follow-up belongs in this collection even when none of the strategies above found it. Preserve each full issue URL, host, repository, number, title, and destination visibility. Resolve a bare `#N` with `gh issue view N --repo <pr-target> --json url,title`; resolve `owner/repo#N` with `gh issue view N --repo <host/owner/repo> --json url,title`; resolve a host-qualified reference with its full `<host/owner/repo>` selector. Accept a result only when its URL contains `/issues/`; discard `/pull/` results. Resolve visibility with `gh repo view <host/owner/name> --json visibility`; never infer the host or repository from a number alone.
 
 Normalize detected candidates to full identities, then remove only identities that exactly match a follow-up. In the strategies above, treat a repository-qualified reference or full URL as one unit; never extract its `#N` suffix as a local candidate. `other/repo#7` must not remove or introduce the PR repository's `#7`. Define the closing list as the remaining identities that exactly match `<pr-target>`; commit messages in step 4 may use closing keywords for this list only. Keep other connected identities separately for `Related issues`, and every follow-up separately for step 7. If follow-up removal leaves no closing candidate and Strategy 3 was skipped, run Strategy 3 now, then normalize its results to full identities and remove exact follow-up matches again before rebuilding the closing list.
 
@@ -347,10 +348,10 @@ Then use the **Write** tool to write the full PR body (Summary, Test plan, Close
 Then create the PR with `--body-file`:
 
 ```bash
-gh pr create --repo <pr-target> --title "the pr title" --body-file TMPFILE
+gh pr create --repo <pr-target> --head <head-owner>:<branch> --title "the pr title" --body-file TMPFILE
 ```
 
-Pass `--base <base-branch>` if `<base-branch>` differs from `<default-branch>`. Do not pass `--draft`. Do not add labels or reviewers.
+Pass `--head <head-owner>:<branch>` only when the push repository differs from `<pr-target>`. Pass `--base <base-branch>` if `<base-branch>` differs from `<default-branch>`. Do not pass `--draft`. Do not add labels or reviewers.
 
 **Never batch the Write call and `gh pr create` into one message.** Issue them as two separate, sequential tool calls, and wait for the Write to return before invoking `gh`. `gh` reads the body file at invocation time, so a parallel batch can start `gh pr create` before the file exists and open the PR with an empty body. The command still succeeds and still prints a URL, so the failure is silent. This is a deliberate exception to the general preference for parallel tool calls: that preference covers calls with no dependencies between them, and these two are dependent, because `gh pr create` consumes the file Write produces.
 

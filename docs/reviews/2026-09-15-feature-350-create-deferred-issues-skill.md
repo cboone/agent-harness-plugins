@@ -69,7 +69,7 @@ After an edit changes the destination or substantive concern, repeat the affecte
 - `dist/codex/plugins/create-deferred-issues/skills/create-deferred-issues/references/batch-filing.md`
 - `dist/codex/plugins/create-deferred-issues/skills/create-deferred-issues/references/deferral-signals.md`
 - `dist/opencode/skills/create-deferred-issues` (symlink)
-- `docs/plans/todo/2026-09-14-new-skill-create-deferred-issues.md`
+- `docs/plans/done/2026-09-14-new-skill-create-deferred-issues.md`
 
 ### Modified: 9 files
 
@@ -91,7 +91,7 @@ After an edit changes the destination or substantive concern, repeat the affecte
 
 ## Plan Compliance
 
-Plan: `docs/plans/todo/2026-09-14-new-skill-create-deferred-issues.md`.
+Plan: `docs/plans/done/2026-09-14-new-skill-create-deferred-issues.md`.
 
 **Verdict: partial compliance.** All planned feature surfaces exist, but the repository-aware workflow has gaps and the planned full behavioral walkthrough is not established. Counting the plan's work in the 16 groups below, **12/16 are done (75%); 4 are partially done; none are wholly unstarted**. Subrequirements are included in their owning group.
 

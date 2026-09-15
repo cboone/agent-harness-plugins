@@ -62,7 +62,7 @@ Report `failure` when any approved issue failed to file, even if others were fil
 
 ### 1. Establish Context
 
-Everything in this step is read-only. Run independent commands in parallel.
+Run independent read-only probes in parallel. Fetches mutate `FETCH_HEAD`; keep each base fetch immediately followed by recording its immutable SHA before starting another fetch.
 
 #### Repository
 
@@ -208,6 +208,7 @@ git diff --unified=0 -G '(^|[^A-Za-z0-9_])(TODO|FIXME|XXX|HACK)([^A-Za-z0-9_]|$)
 Three details in those commands are load-bearing:
 
 - `-G` selects every file whose diff contains a matching line, then prints all of that file's changed lines. Re-apply the same pattern to each added (`+`) line and ignore everything else.
+- For each added line, apply the marker syntax from `references/deferral-signals.md`: a marker counts only when it opens a comment or is followed by `:` or `(`. A prose mention or identifier such as `const TODO = ...` is not a marker.
 - The pattern spells out its word boundaries. `\b` matches nothing under the regular expression engine git uses on macOS, so a pattern written with it returns an empty, reassuring result.
 - The same boundaries keep placeholder templates such as `mktemp`'s `XXXXXX` from matching.
 
@@ -219,10 +220,10 @@ When a PR was found:
 gh pr view <n> --repo <pr-repo> --json body
 gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/issues/<n>/comments --jq '.[] | {body, url: .html_url, author: .user.login}'
 gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/pulls/<n>/reviews --jq '.[] | {body, url: .html_url, author: .user.login}'
-gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/pulls/<n>/comments --jq '.[] | {path, line, body, url: .html_url, author: .user.login}'
+gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/pulls/<n>/comments --jq '.[] | {id, in_reply_to_id, path, line, body, url: .html_url, author: .user.login, created_at, updated_at}'
 ```
 
-The first returns the PR body. The three API calls return all pages of conversation comments, review bodies, and inline review comments respectively. Look for replies that set a finding aside, and for review-feedback summaries, such as the one the `resolve-copilot-pr-feedback` skill posts, that carry a Deferred category.
+The first returns the PR body. The three API calls return all pages of conversation comments, review bodies, and inline review comments respectively. Preserve comment IDs, reply-to IDs, and timestamps so replies can be associated with the correct finding. Look for replies that set a finding aside, and for review-feedback summaries, such as the one the `resolve-copilot-pr-feedback` skill posts, that carry a Deferred category.
 
 #### Documents
 
@@ -263,7 +264,7 @@ Apply these in order.
    - An issue that links back to the source covers the same concern. Read the cross-references of the PR and of each source issue once, then match candidates against the list:
 
      ```bash
-     gh api --paginate --hostname <source-host> repos/<source-owner>/<source-name>/issues/<n>/timeline --jq '.[] | select(.event == "cross-referenced") | .source.issue | {number, title, state, url: .html_url}'
+     gh api --paginate --hostname <source-host> repos/<source-owner>/<source-name>/issues/<n>/timeline --jq '.[] | select(.event == "cross-referenced") | .source.issue | select(.html_url | contains("/issues/")) | {number, title, state, url: .html_url}'
      ```
 
      For the PR, use its recorded host, owner, repository name, and number; for each source issue, use that issue's recorded identity. Preserve each result's full URL rather than treating its number as local to the source or destination. The endpoint accepts a pull request number too. When a filed issue can link its source, this read finds an earlier run's filings whether or not that run posted a summary comment. The list also holds every other issue that merely mentions the source, such as a related proposal, so a listed issue tracks a candidate only when it passes the same distinctive-words test as a search hit below.
