@@ -481,7 +481,7 @@ These checks only establish that the config exists and covers what is present. F
 - `.claude/settings.local.json`
 - `.claude/rules/*.md`
 - `.github/copilot-instructions.md`
-- `.github/instructions/*.instructions.md`
+- `.github/instructions/**/*.instructions.md`
 
 ### Checks
 
@@ -491,7 +491,7 @@ These checks only establish that the config exists and covers what is present. F
 - `.claude/settings.json` exists and contains only team-shared settings (permissions, hooks, env vars for conventions)
 - `.claude/settings.local.json` is gitignored (check `.gitignore` for the entry)
 - `.github/copilot-instructions.md` cross-references `AGENTS.md`
-- `.github/instructions/*.instructions.md` files have `applyTo:` frontmatter
+- `.github/instructions/**/*.instructions.md` files have `applyTo:` frontmatter
 
 ## Reference: Scrut Test Checks (add-scrut-cli-tests)
 

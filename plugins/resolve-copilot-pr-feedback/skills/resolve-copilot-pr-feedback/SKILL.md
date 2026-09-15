@@ -89,13 +89,23 @@ Outputs `true` on success. The `reply-and-resolve` command also outputs `true` o
 Copilot supports two types of instruction files:
 
 - **`.github/copilot-instructions.md`**: General instructions for the whole repository
-- **`.github/instructions/*.instructions.md`** (path-specific): Targeted instructions with `applyTo` frontmatter
+- **`.github/instructions/**/*.instructions.md`** (path-specific): Targeted instructions with `applyTo` frontmatter
 
 **Prefer path-specific instructions files** when the incorrect feedback applies to a specific language or file pattern. Use the repo-wide file only for conventions that apply broadly across the project.
 
+#### CRITICAL: Make Sure Copilot Reads the File
+
+An instructions file Copilot never loads does nothing, and nothing warns you. Location, not length, is the usual cause. Check all of these whenever you write or edit one:
+
+1. **Location:** a path-specific file sits within or below `.github/instructions/` (subdirectories are allowed). A `*.instructions.md` directly under `.github/` is never read.
+1. **Glob:** its `applyTo` matches the path of the file Copilot flagged. Separate multiple globs with commas.
+1. **Agent:** `excludeAgent` is either absent or one of the supported strings `"code-review"` and `"cloud-agent"`. Reject any other value. For these review instructions, require the field to be absent or `"cloud-agent"`; `"code-review"` hides the file from PR review.
+
+Copilot code review reads instructions from the pull request's head branch, so once pushed, the change governs the next review of the same PR. If the same finding recurs after that, re-check the three items above before adding more text.
+
 #### CRITICAL: Keep Instructions Concise
 
-Copilot's PR review may not read the full instructions file. Long files risk having instructions truncated or ignored. To maximize effectiveness:
+GitHub advises limiting a single instructions file to about 1,000 lines, because response quality can decline past that and shorter files are more likely to be fully processed. To maximize effectiveness:
 
 1. **Keep each instructions file under ~1,000 lines**
 1. **Put the most important review rules first** in each file
@@ -116,7 +126,7 @@ applyTo: "**/*.go"
 - **Pattern Y**: Required for Z reason
 ```
 
-Use the `applyTo` glob to target specific languages or paths. Use `excludeAgent` to limit which Copilot agent reads the file (e.g., `excludeAgent: copilot-coding-agent` to target only code review).
+Use the `applyTo` glob to target specific languages or paths. Use `excludeAgent` to limit which Copilot agent reads the file. It accepts `"code-review"` and `"cloud-agent"`; `excludeAgent: "cloud-agent"` targets only code review.
 
 #### General Instructions File (`copilot-instructions.md`)
 
@@ -305,9 +315,10 @@ The cleanup must be a separate Bash tool call: each tool invocation runs uncondi
 1. Resolve the thread using `bash resolve-copilot-threads resolve THREAD_ID`
 1. **Update Copilot instructions** to prevent recurrence:
    - **Prefer a path-specific file** (e.g., `.github/instructions/css.instructions.md` with `applyTo: "**/*.css"`) when the feedback targets a specific language or file pattern
-   - **Use `copilot-instructions.md`** only for repo-wide conventions
+   - **Use `.github/copilot-instructions.md`** only for repo-wide conventions
    - Example: `- Do not suggest removing .sr-only classes - required accessibility utilities`
    - **If symlink:** Follow it and edit target file
+   - **Confirm Copilot will read it** against [Make Sure Copilot Reads the File](#critical-make-sure-copilot-reads-the-file)
 
 #### Valid Concerns
 
@@ -522,7 +533,7 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 1. **BOTH `fetch` and `fetch-reviews` were run** (a thread fetch alone cannot see review-body findings)
 1. **EVERY addressed thread resolved via the script** (not just code fixed!)
 1. **EVERY review-body finding handled and recorded** in the step 7 summary, since there is no thread to resolve and the summary row is the only record
-1. **For INCORRECT feedback: Copilot instructions updated** (path-specific `*.instructions.md` preferred, or `copilot-instructions.md` for repo-wide conventions)
+1. **For INCORRECT feedback: Copilot instructions updated** (path-specific `.github/instructions/**/*.instructions.md` preferred, or `.github/copilot-instructions.md` for repo-wide conventions)
 1. **For DEFERRED feedback: Task tracked** (GitHub issue, PROJECT.md, or similar)
 1. **Linters and formatters pass** (via `lint-and-fix` skill, if any files were changed while addressing feedback)
 1. Re-fetch confirms empty array `[]` for all processed **threads**. This does not apply to `fetch-reviews`, which never empties.
