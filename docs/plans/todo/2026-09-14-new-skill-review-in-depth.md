@@ -217,9 +217,9 @@ Tracked as separate issues:
 
 ### Repository bookkeeping (both phases)
 
-1. Register the plugin in `.claude-plugin/marketplace.json`, alphabetically, category `code-review`, version `1.0.0` (phase 2 bumps minor).
+1. Set the plugin manifest version to `1.0.0` (phase 2 bumps minor); the manifest is the only SemVer authority.
+1. Register the plugin in `.claude-plugin/marketplace.json`, alphabetically, category `code-review`.
 1. Add a row to the Code Review table in the root `README.md` using the marketplace `description` verbatim, with trigger `/review-in-depth`.
-1. Recompute `metadata.version` with `bin/compute-catalog-state`.
 1. Regenerate `dist/codex/` and `dist/opencode/` with `bin/build-codex-marketplace` and `bin/build-opencode-mirror`.
 1. Keep every `./references/...` path resolvable, and declare any illustrative path with a `validate-plugins: ignore` comment.
 1. Use the `check-versions` skill before opening each PR.
