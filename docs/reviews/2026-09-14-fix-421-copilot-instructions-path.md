@@ -85,7 +85,7 @@ None.
 ## Notable Changes
 
 - The recursive audits now use the same nested instruction-file layout supported by GitHub.
-- `excludeAgent` guidance uses the values in [GitHub's repository instructions documentation](https://docs.github.com/en/copilot/how-tos/configure-custom-instructions-in-your-ide/add-repository-instructions-in-your-ide): `"code-review"` and `"cloud-agent"`.
+- `excludeAgent` guidance follows [GitHub's repository instructions documentation](https://docs.github.com/en/copilot/how-tos/configure-custom-instructions-in-your-ide/add-repository-instructions-in-your-ide), which shows a scalar `"code-review"` or `"cloud-agent"` value.
 - The Codex mirrors and marketplace catalog state were regenerated from canonical sources.
 - CI completed successfully for both `Lint and validate` and `Scrut tests / Scrut` on `62804c1f`.
 
@@ -119,7 +119,7 @@ The changes are internally consistent across source skills, references, manifest
 - Nested instruction files are included in configuration and scaffolding audits and in resolver success criteria.
 - The saved review now records the complete branch file inventory, plugin versions, and observed CI result.
 - The PR description now names `resolve-copilot-pr-feedback` 1.5.4.
-- Repository Copilot instructions clarify that GitHub documents `"cloud-agent"`, not `"coding-agent"`, as the value that excludes the cloud agent.
+- Repository Copilot instructions clarify that GitHub documents a scalar `"cloud-agent"` value, not `"coding-agent"` or a list form, to exclude the cloud agent.
 
 ### Remaining concerns
 
