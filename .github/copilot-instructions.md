@@ -16,6 +16,7 @@ For full project conventions, see `AGENTS.md` in the repository root.
 - **`excludeAgent` follows GitHub's documented format and values**: GitHub documents a scalar value of `"code-review"` to exclude code review or `"cloud-agent"` to exclude the cloud agent. Do not replace `"cloud-agent"` with `"coding-agent"` or infer a list form; GitHub's repository-instructions documentation shows a scalar field and these two values.
 - **PR descriptions may contain stale commit references**: PR descriptions are often auto-generated from commit messages and may reference superseded commits. Do not flag discrepancies between PR description bullet points and the actual diff.
 - **Done plans are historical records**: Files in `docs/plans/done/` are completed plan documents preserved for reference. They may not match the final implementation. Do not flag discrepancies between done plan content and the actual codebase.
+- **Scoped instruction aliases are committed symlinks**: Each directory-scoped `AGENTS.md` has a sibling `CLAUDE.md -> AGENTS.md` symlink. Confirm these entries with `git ls-tree` or `test -L`; file listings that omit symlinks do not show that an alias is absent.
 - **`monitor-pr` deliberately does not gate on `BLOCKED` or `reviewDecision`**: The skill treats mergeability as clean when there are no conflicts and the branch is not behind. Requiring `mergeStateStatus` to be `CLEAN`, or waiting for an approving review, would never terminate on a repository whose branch protection requires a reviewer the skill cannot supply. `BLOCKED` is reported prominently instead, including in the terminal report. Do not flag this as too permissive.
 
 ## Skill and command files are AI agent prompts
@@ -98,7 +99,7 @@ Files under `commands/` directories and `SKILL.md` files inside `skills/` direct
 
 ## Writing conventions
 
-These apply to skill bodies, reference material, READMEs, plan and review documents, commit messages, and PR and issue bodies. Skills here are prompts, so their prose is the product. `AGENTS.md` is the full statement; the essentials:
+These apply to skill bodies, reference material, READMEs, plan and review documents, commit messages, and PR and issue bodies. Skills here are prompts, so their prose is the product. `AGENTS.md` is the core statement; its scoped instruction files and linked references provide component-specific detail. The essentials:
 
 - **No em dashes.** Use a comma, colon, semicolon, parenthetical, or a separate sentence. Where a dash genuinely reads best, use a spaced double hyphen (`--`). Flag em dashes in new prose; do not "correct" `--` back to an em dash.
 - **No time or effort estimates** in any form (hours, days, sprints, "quick", t-shirt sizes, story points), including in skill instructions that tell an agent to produce them. Describe scope instead. Estimates of runtime behavior (complexity, latency, throughput, memory) are fine.
