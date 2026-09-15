@@ -94,8 +94,8 @@ The review must describe the PR as it is now, not as it was when the checkout wa
 1. Fetch the base branch into its remote-tracking ref, then fetch the PR head into `FETCH_HEAD`:
 
    ```bash
-   git fetch <remote> <base-branch>:refs/remotes/<remote>/<base-branch> &&
-   git fetch <remote> pull/<pr-number>/head
+   git -c core.hooksPath=/dev/null fetch <remote> <base-branch>:refs/remotes/<remote>/<base-branch> &&
+   git -c core.hooksPath=/dev/null fetch <remote> pull/<pr-number>/head
    ```
 
    Both fetches must succeed. If either fails, stop and report that synchronization could not be established. Do not compare against existing refs after a failed fetch. Record `<base-sha>` from `git rev-parse <remote>/<base-branch>` and the PR-head SHA from `git rev-parse FETCH_HEAD` immediately after the second fetch; later commands use those recorded values. Fetching the PR head to `FETCH_HEAD` accepts rewritten PR history without force-updating an existing local ref.
@@ -211,6 +211,8 @@ If no substantive review is found, review the whole PR. For a selected `LAST_REV
 
 ### 5. Read the Change
 
+1. Immediately before any diff or commit-log read, fetch `<base-branch>` into its remote-tracking ref again and compare its SHA with the recorded `<base-sha>`. If the fetch fails, stop and report that the base could not be revalidated. If the SHA changed, discard the review and restart from step 1, counting this against the two-restart limit.
+
 1. Get the shape of the change and the author's account of it:
 
    ```bash
@@ -244,7 +246,7 @@ If no substantive review is found, review the whole PR. For a selected `LAST_REV
 
 1. On a very large PR, read source and tests before documentation and fixtures. Anything not read in detail is named in the report header; never skim silently.
 
-1. Immediately before reading the diff, fetch `<base-branch>` into its remote-tracking ref again and compare its SHA with the recorded `<base-sha>`. If the fetch fails, stop and report that the base could not be revalidated. If the SHA changed, discard the review and restart from step 1, counting this against the two-restart limit. Repeat this base-ref refresh and comparison immediately before and after collecting CI. Also repeat the PR lookup with the same fields at those two points, comparing `headRefOid` and all review inputs with the validated snapshot. If any value changes, discard the review and restart under the shared two-restart limit.
+1. Immediately before and after collecting CI, repeat the base-ref refresh and comparison. Also repeat the PR lookup with the same fields at those two points, comparing `headRefOid` and all review inputs with the validated snapshot. If any value changes, discard the review and restart under the shared two-restart limit.
 
 1. Check CI:
 

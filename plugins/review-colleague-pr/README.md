@@ -121,7 +121,7 @@ GitHub access is read-only. Git fetches refs, and step 2 may fast-forward the ch
       "Bash(git --literal-pathspecs diff *)",
       "Bash(git --no-pager diff *)",
       "Bash(git --no-pager --literal-pathspecs diff *)",
-      "Bash(git fetch *)",
+      "Bash(git -c core.hooksPath=/dev/null fetch *)",
       "Bash(git log *)",
       "Bash(git --no-pager log *)",
       "Bash(git show *)",
