@@ -97,7 +97,7 @@ Use `TYPE/SLUG` format:
 
 The slug should be a lowercase, hyphen-separated description (e.g., `fix/login-timeout`, `feature/add-retry-logic`).
 
-`feature/` is the primary spelling, and `feat/` is accepted everywhere `feature/` is. The `create-worktree` and `address-issue-in-worktree` skills take the prefix from workmux's branch name generator rather than choosing one themselves, so which prefix they produce depends on the naming prompt in the user's workmux config, and a generator that returns no prefix leaves the branch without one.
+`feature/` is the primary spelling, and `feat/` is accepted everywhere `feature/` is. The `create-worktree` and `address-issue-in-worktree` skills generate names in the invoking agent using bundled prefix rules, with repository-specific naming conventions taking precedence. Explicit user-supplied names are preserved, including names without a prefix.
 
 **Include the issue number when working from an issue**, immediately after the type prefix: `fix/42-login-timeout`, or at the front when there is no prefix: `42-login-timeout`. The `pr` skill's primary issue-detection strategy parses both `TYPE/N-description` and `N-description` out of the branch name, so a branch without the number forces a slower GitHub search that can match the wrong issue or none at all.
 
