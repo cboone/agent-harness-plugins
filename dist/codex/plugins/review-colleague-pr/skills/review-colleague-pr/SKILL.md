@@ -77,7 +77,7 @@ Take `OWNER/REPO` from `url` (`https://github.com/OWNER/REPO/pull/NUMBER`).
 
 The review must describe the PR as it is now, not as it was when the checkout was made.
 
-1. Find the remote whose **fetch** URL matches `OWNER/REPO`: inspect only `(fetch)` entries from `git remote -v`, whose URL ends in `OWNER/REPO` or `OWNER/REPO.git`, in HTTPS or SSH form, compared case-insensitively. If none matches, tell the user and stop.
+1. Parse the host from the PR `url`. Find a remote whose **fetch** URL has the same host and names this exact `OWNER/REPO`: inspect only `(fetch)` entries from `git remote -v`, parse supported HTTPS and SSH forms according to their URL syntax, and compare host and repository path case-insensitively. Require the HTTPS or SSH remote host to equal the host from the PR URL; matching only the repository path is insufficient. Accept only a path ending exactly in `/OWNER/REPO` or `/OWNER/REPO.git` (or the equivalent scp-style SSH path). If no remote matches, tell the user and stop.
 
 1. When the user supplied a number, before fetching require the current branch to match `headRefName` as described in step 1. An absent or different upstream is allowed because the pull-request ref is fetched from the base repository directly.
 
