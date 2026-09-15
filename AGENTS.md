@@ -9,7 +9,7 @@ This repository is the canonical source for a collection of [Claude Code](https:
 ### Plugin sources and generated mirrors
 
 - `plugins/<name>/`: canonical plugin source. Each plugin has `.claude-plugin/plugin.json`, `README.md`, and either `skills/<name>/SKILL.md` or `hooks/hooks.json` (or both).
-- `.claude-plugin/marketplace.json`: catalog of record for the Claude Code marketplace. Source of truth for plugin metadata and versions.
+- `.claude-plugin/marketplace.json`: catalog of record for Claude Code plugin metadata. Each plugin's `.claude-plugin/plugin.json` is its sole version source.
 - `.agents/plugins/marketplace.json` and `dist/codex/`: generated Codex CLI marketplace plus mirrored plugin roots. Regenerate with `bin/build-codex-marketplace`.
 - `dist/opencode/`: generated OpenCode mirror. Regenerate with `bin/build-opencode-mirror`. CI fails if either generated tree drifts from source.
 
@@ -19,7 +19,6 @@ Never edit anything under `dist/` or `.agents/` by hand. Both are excluded from 
 
 - `bin/validate-json` and `bin/validate-plugins`: pre-merge validation, both run by `.github/workflows/ci.yml`. `validate-plugins` enforces 19 rules covering manifest fields, marketplace agreement, alphabetical ordering, Codex hook manifests, skill description limits, generated-tree freshness, and skill cross-references.
 - `bin/check-cross-references`: resolves the paths and skill names a skill body points at. Rule 19 of `bin/validate-plugins` delegates to it; run it on its own for a fast check while editing a skill. See [Skill cross-references](#skill-cross-references).
-- `bin/compute-catalog-state`: canonical implementation of the marketplace catalog state tag (`metadata.version` in `marketplace.json`). Consumed by `bin/validate-plugins` and `.github/workflows/release.yml`.
 - `bin/version-audit`: a weekly upstream-drift audit, not a merge gate. `.github/workflows/version-audit.yml` runs it on a Monday cron and files or updates a `version-audit`-labelled issue. Requires `gh` (authenticated), `jq`, and `curl`. Empty output means no drift.
 - `bin/list-shell-scripts`: the single source of truth for which Bash scripts get linted. Used by the `Makefile` and CI so a new script is covered without widening a glob.
 
@@ -28,7 +27,7 @@ Never edit anything under `dist/` or `.agents/` by hand. Both are excluded from 
 - `tests/scrut/`: [scrut](https://github.com/facebookincubator/scrut) snapshot suites for the plugin-bundled scripts and the `bin/` tooling. `tests/fixtures/` holds executable stubs (`tmux-stub`, `workmux-stub`, and so on) and `tests/data/` holds JSON fixtures.
 - `Makefile`: the entry point for local work. See [Running tests and linters](#running-tests-and-linters).
 - `package.json` plus Yarn via Corepack: Markdown and formatting tooling only (`markdownlint-cli2`, `prettier`). Node and Yarn versions are pinned in `.tool-versions` and `packageManager`.
-- `.github/workflows/`: `ci.yml` (lint, validate, scrut), `release.yml` (catalog state tag and GitHub Release on push to main), `version-audit.yml` (the weekly drift audit).
+- `.github/workflows/`: `ci.yml` (lint, validate, scrut), `release.yml` (catalog release and GitHub Release on push to main), `version-audit.yml` (the weekly drift audit).
 - Lint and format config: `.markdownlint.jsonc`, `.markdownlint-cli2.jsonc`, `cli.markdownlint-cli2.jsonc` (CLI-only, adds ESM custom rules), `.prettierrc.json`, `.prettierignore`, `.editorconfig`, `.shellcheckrc`, `.yarnrc.yml`.
 
 ### Documentation and agent config
@@ -190,26 +189,14 @@ Every plugin with a hard external dependency must say so. Two forms are in use, 
 
 ## Versioning
 
-This repository uses two levels of versioning:
+Each plugin's `.claude-plugin/plugin.json` is the sole version source. Marketplace entries are registration metadata and contain no version fields.
 
-**Marketplace `metadata.version`** (in `.claude-plugin/marketplace.json`):
-
-- This is a catalog state tag, not SemVer.
-- Format: `catalog-M<major-sum>-m<minor-sum>-p<patch-sum>-n<plugin-count>`
-- `M`: sum of all plugin major versions
-- `m`: sum of all plugin minor versions
-- `p`: sum of all plugin patch versions
-- `n`: number of marketplace plugins
-- Do not normalize or carry between components.
-- Recompute it from `.plugins[].version` whenever any marketplace plugin version changes. Use `bin/compute-catalog-state` (the canonical implementation, also consumed by `bin/validate-plugins` and `.github/workflows/release.yml`).
-
-**Individual plugin `version`** (in `plugin.json` and mirrored in `marketplace.json`):
+**Individual plugin `version`**:
 
 - **Patch**: bug fixes, wording tweaks, prompt adjustments
 - **Minor**: new capabilities or meaningful behavior changes
 - **Major**: breaking changes (for example, removing or restructuring a skill)
 - New plugins start at `1.0.0`
-- The version in `plugin.json` and its `marketplace.json` entry must always match.
 
 **Version checks on branch operations**: After merging, rebasing, or before creating a PR, use the `check-versions` skill to verify version correctness. Another branch may have already incremented a version, so always check.
 

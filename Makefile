@@ -23,7 +23,6 @@ SCRUT_ENV := \
 	CHECK_CROSS_REFERENCES_BIN="$(CURDIR)/bin/check-cross-references" \
 	COMPOSE_ISSUE_PROMPT_BIN="$(CURDIR)/plugins/address-issue-in-worktree/scripts/compose-issue-prompt" \
 	CREATE_WORKTREE_COMPOSE_ISSUE_PROMPT_BIN="$(CURDIR)/plugins/create-worktree/scripts/compose-issue-prompt" \
-	COMPUTE_CATALOG_STATE_BIN="$(CURDIR)/bin/compute-catalog-state" \
 	LIST_SHELL_SCRIPTS_BIN="$(CURDIR)/bin/list-shell-scripts" \
 	REPO_ROOT="$(CURDIR)" \
 	COPILOT_REVIEW_DATA_DIR="$(CURDIR)/tests/data/copilot-reviews" \

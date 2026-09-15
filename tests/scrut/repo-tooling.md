@@ -1,42 +1,27 @@
 # Repository tooling
 
-Tests for the `bin/` scripts that gate releases and generated output. These had
-no coverage at all, even though `compute-catalog-state` alone decides the tag
-name and GitHub Release that `release.yml` publishes.
+Tests for the `bin/` scripts that gate generated output and catalog releases.
 
-## Catalog state sums each SemVer field independently
+## Marketplace entries do not duplicate plugin versions
 
-No normalization and no carry between components, so patch 3 + patch 10 is 13,
-not 1.3.
+Each plugin manifest remains the SemVer source. Both marketplace files omit
+entry and aggregate versions, so a plugin bump leaves catalog registration
+metadata unchanged.
 
 ```scrut
-$ dir="$(mktemp -d)" && jq -n '{plugins: [{version: "1.2.3"}, {version: "2.0.10"}]}' > "${dir}/marketplace.json" && MARKETPLACE="${dir}/marketplace.json" "${COMPUTE_CATALOG_STATE_BIN}"
-catalog-M3-m2-p13-n2
+$ cd "${REPO_ROOT}" && jq -e 'all(.plugins[]; has("version") | not) and (.metadata | has("version") | not)' .claude-plugin/marketplace.json .agents/plugins/marketplace.json > /dev/null && find plugins -path '*/.claude-plugin/plugin.json' -exec jq -e '.version | strings | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")' {} \; > /dev/null && echo version-state-clean
+version-state-clean
 ```
 
-## Catalog state counts plugins
+## Release automation uses immutable tags and ignores documentation-only changes
+
+The workflow compares only plugin sources and canonical marketplace metadata
+with the latest catalog tag. A changed catalog release uses the landing commit's
+full SHA, so aggregate-version collisions cannot occur.
 
 ```scrut
-$ dir="$(mktemp -d)" && jq -n '{plugins: [{version: "0.0.1"}, {version: "0.0.1"}, {version: "0.0.1"}]}' > "${dir}/marketplace.json" && MARKETPLACE="${dir}/marketplace.json" "${COMPUTE_CATALOG_STATE_BIN}"
-catalog-M0-m0-p3-n3
-```
-
-## Catalog state reports a missing marketplace
-
-```scrut
-$ MARKETPLACE="/nonexistent/marketplace.json" "${COMPUTE_CATALOG_STATE_BIN}" 2>&1
-compute-catalog-state: /nonexistent/marketplace.json not found
-[2]
-```
-
-## Catalog state rejects a non-SemVer version
-
-A short version must fail loudly rather than contribute a partial sum to a
-release tag.
-
-```scrut
-$ dir="$(mktemp -d)" && jq -n '{plugins: [{version: "1.2"}]}' > "${dir}/marketplace.json" && MARKETPLACE="${dir}/marketplace.json" "${COMPUTE_CATALOG_STATE_BIN}" > /dev/null 2>&1 || echo "rejected"
-rejected
+$ cd "${REPO_ROOT}" && grep -q "git diff --quiet.*plugins/ .claude-plugin/marketplace.json" .github/workflows/release.yml && grep -q 'tag="catalog-${GITHUB_SHA}"' .github/workflows/release.yml && echo catalog-release-inputs-checked
+catalog-release-inputs-checked
 ```
 
 ## The shell script list excludes generated mirrors

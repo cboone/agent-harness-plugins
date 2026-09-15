@@ -75,9 +75,8 @@ Assess bump level (informational):
 
 Read `.claude-plugin/marketplace.json` and verify:
 
-- **Version matching**: each marketplace entry's `version` matches its `plugin.json`
 - **Coverage**: every `plugins/*/` directory has a marketplace entry, and every marketplace entry points to an existing plugin directory
-- **Metadata version**: `metadata.version` is a catalog state tag in the form `catalog-M<major-sum>-m<minor-sum>-p<patch-sum>-n<plugin-count>`, derived from the marketplace plugin versions with no normalization or carry between components. Recompute it and verify the stored value matches. Prefer running `bin/compute-catalog-state` directly (the canonical implementation, also consumed by `bin/validate-plugins` and the `release` workflow); fall back to recomputing from `.plugins[].version` only if the script is missing.
+- **Version ownership**: every plugin manifest has a valid `MAJOR.MINOR.PATCH` version, and marketplace entries and metadata contain no `version` field
 
 ### 5. Report
 
@@ -92,12 +91,11 @@ Output a structured report:
 ### Plugin Changes
 - **<name>**: <base version> → <current version>
   Changes: <what changed>
-  Status: ✅ OK / ⚠️ Missing bump / ⚠️ Marketplace mismatch
+  Status: ✅ OK / ⚠️ Missing bump / ⚠️ Invalid manifest version
 
 ### Marketplace Sync
-- Plugin versions: ✅ All match / ⚠️ Mismatches listed
 - Coverage: ✅ All registered / ⚠️ Missing or orphaned entries
-- Metadata version: <base> → <current> -- ✅ Correct / ⚠️ Issue described
+- Version ownership: ✅ Manifests only / ⚠️ Invalid or duplicated version state
 
 ### Recommended Actions
 1. <specific fix needed>
@@ -110,8 +108,8 @@ If there are no issues, report a clean result summarizing what was checked.
 If issues were found, ask the user whether to fix them:
 
 - Missing version bumps → bump patch in `plugin.json` (user can adjust level)
-- Marketplace mismatches → update `marketplace.json` to match `plugin.json`
-- Metadata version → recompute the catalog state tag from current plugin versions and update `metadata.version` to the new value
+- Invalid manifest version → correct the plugin's `plugin.json` version
+- Duplicate marketplace version state → remove the entry or metadata `version` field
 - Missing marketplace entries → note that a full entry is needed (the create-plugin skill can help)
 
 Only make changes after the user confirms.
