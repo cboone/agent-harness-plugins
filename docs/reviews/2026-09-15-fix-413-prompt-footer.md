@@ -83,7 +83,7 @@ There are no deleted or renamed files. The saved review itself is outside the re
 - The bundled launcher interface changes: callers using `--auto-name` must generate a candidate and pass `--generated-name`. Both shipped skills migrate together, and obsolete calls receive explicit guidance.
 - Removing the naming subprocess removes the route by which the composed footer reached a separate tool-capable naming agent. The invoking skill explicitly treats issue text as data while naming.
 - The configured destination agent still starts through workmux. Naming behavior no longer comes from workmux's naming configuration.
-- Versions: `create-worktree` 1.6.0, `address-issue-in-worktree` 2.3.0, `use-git` 1.2.4, and `pr` 1.8.5. Catalog state: `catalog-M70-m105-p158-n57`.
+- Versions: `create-worktree` 1.6.0, `address-issue-in-worktree` 2.3.0, `use-git` 1.2.4, and `pr` 1.8.5. Catalog state: `catalog-M70-m105-p159-n57`.
 - No dependency lockfile, workflow, or workmux configuration changes.
 
 ## Plan Compliance
