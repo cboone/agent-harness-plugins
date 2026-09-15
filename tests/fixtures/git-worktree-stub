@@ -10,10 +10,37 @@ function die() {
   exit "${2:-1}"
 }
 
-function main() {
-  if [[ $# -eq 3 && "${1}" == "worktree" && "${2}" == "list" && "${3}" == "--porcelain" ]]; then
-    printf '%s' "${STUB_GIT_WORKTREE_PORCELAIN:-}"
+# Answers `git -C <path> rev-parse --path-format=absolute --git-dir` the way git
+# does: an admin directory for a path that is a worktree, and a failure for one
+# that is not. The mapping is /admin/<basename> so a testcase can name an
+# identity without knowing a real repository layout.
+#
+# Only paths listed in STUB_GIT_WORKTREE_PORCELAIN resolve, which is what lets a
+# testcase choose between exercising the identity and exercising the path and
+# branch fallback.
+function rev_parse() {
+  local worktree="${1}"
+  local line
+
+  while IFS= read -r line; do
+    [[ "${line}" == "worktree ${worktree}" ]] || continue
+    printf '/admin/%s\n' "${worktree##*/}"
     return 0
+  done <<< "${STUB_GIT_WORKTREE_PORCELAIN:-}"
+
+  return 128
+}
+
+function main() {
+  # The exact invocation, so a change to the flags is a stub failure rather
+  # than something a looser match would absorb while the tests kept passing.
+  if [[ $# -eq 5 && "${1}" == "-C" && "${3}" == "rev-parse" && "${4}" == "--path-format=absolute" && "${5}" == "--git-dir" ]]; then
+    rev_parse "${2}"
+    return
+  fi
+
+  if [[ "${3:-}" == "rev-parse" ]]; then
+    die "expected git -C <path> rev-parse --path-format=absolute --git-dir invocation"
   fi
 
   # `git for-each-ref --format=... refs/heads/`, used to find an existing
@@ -34,6 +61,24 @@ function main() {
     fi
     /usr/bin/git check-ref-format --branch "${3}" > /dev/null 2>&1
     return $?
+  fi
+
+  if [[ $# -lt 3 || "${1}" != "worktree" || "${2}" != "list" || "${3}" != "--porcelain" ]]; then
+    die "expected git worktree list --porcelain, for-each-ref, or check-ref-format invocation"
+  fi
+
+  # STUB_GIT_WORKTREE_PORCELAIN is written in the readable newline form. Under
+  # -z git terminates each field with a NUL instead of a newline, and separates
+  # records with an extra one, which is exactly what translating every newline
+  # gives for a fixture that already separates records with a blank line.
+  if [[ $# -eq 4 && "${4}" == "-z" ]]; then
+    printf '%s' "${STUB_GIT_WORKTREE_PORCELAIN:-}" | tr '\n' '\0'
+    return 0
+  fi
+
+  if [[ $# -eq 3 ]]; then
+    printf '%s' "${STUB_GIT_WORKTREE_PORCELAIN:-}"
+    return 0
   fi
 
   die "expected git worktree list --porcelain, for-each-ref, or check-ref-format invocation"

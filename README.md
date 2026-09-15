@@ -74,7 +74,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 - _Address Issue, Create Issue, Suggest Next Issue:_ [`gh`](https://cli.github.com/)
 - _Address Issue in Worktree:_ [`gh`](https://cli.github.com/), [`workmux`](https://github.com/raine/workmux), [`jq`](https://jqlang.org/)
-- _Create Worktree:_ [`workmux`](https://github.com/raine/workmux), plus [`gh`](https://cli.github.com/) and [`jq`](https://jqlang.org/) when given an issue number
+- _Create Worktree:_ [`workmux`](https://github.com/raine/workmux), plus [`gh`](https://cli.github.com/) when given an issue number and [`jq`](https://jqlang.org/) for an issue number or a resource claim
 
 ### Code Review
 

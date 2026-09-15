@@ -1,0 +1,1000 @@
+#!/usr/bin/env bash
+# manage-resource-claims -- Record and report the exclusive resources held by git worktrees.
+#
+# Every jq program below is a single-quoted filter, and the $names inside them
+# are jq variables bound with --arg or --argjson, not shell expansions. SC2016
+# flags that shape at every one of them, so it is disabled here once rather
+# than at each site.
+# shellcheck disable=SC2016
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+CLAIM_FILE_NAME=".claude/worktree-resources.local.json"
+readonly CLAIM_FILE_NAME
+
+SCHEMA_VERSION=1
+readonly SCHEMA_VERSION
+
+# check reports a held resource with its own exit code so a caller can branch
+# on the outcome without parsing the message.
+E_HELD=3
+readonly E_HELD
+
+LOCK_WAIT_SECONDS=10
+readonly LOCK_WAIT_SECONDS
+
+# Set while a lock is held so the EXIT trap knows what to remove.
+LOCK_DIRECTORY=""
+
+function usage() {
+  cat << 'USAGE_TEXT'
+Usage: manage-resource-claims <subcommand> [options]
+
+Record and report the exclusive resources held by git worktrees, so work that
+cannot run in parallel is visible instead of remembered. A claim is advisory
+about the resource: nothing here stops anyone using a DAW or a port. It is not
+advisory about the file, so claim refuses a resource another worktree still
+holds, and --take-over names the holder the user agreed to displace.
+
+Subcommands:
+  list [--json]              Print every claim, one "key=value" line each
+  check <resource>           Report the holder of <resource>, if any
+  claim <resource> --worktree <path> --branch <name> [--issue <number>]
+        [--take-over <holder-id>]
+                             Record a claim on <resource>. Refuses with exit 3
+                             when another worktree holds it, unless --take-over
+                             carries that holder's id, which names one claim
+                             exactly where a path or a timestamp would not
+  release <resource>         Remove the claim on <resource>
+  release --worktree <path>  Remove every claim held by <path>
+  prune                      Drop claims that no longer match a live worktree
+  -h, --help                 Show this help
+
+A claim is stale when git no longer lists its worktree. Stale claims are
+flagged by list, reported as free by check, replaced by claim, and removed by
+prune.
+
+One case escapes that. A worktree is identified by its git admin directory,
+which git names after the worktree's basename and hands to the next worktree
+with that basename once the first is removed. A claim whose admin directory has
+been recycled that way reports held rather than stale, so check names a holder
+that no longer exists and prune does not clear it. Use release <resource>
+there, which removes a claim whatever its state. See issue 424.
+
+A resource name is chosen per project: logic, simulator, port-5432. There is no
+registry, but the name must contain no whitespace or control characters and
+must not begin with a hyphen, so that it survives the key=value output and can
+be passed back as an argument. list writes one key=value line per claim with
+worktree= last, since a path may contain spaces; consume list --json where the
+output is parsed rather than read.
+
+Claims live in the main worktree's .claude/worktree-resources.local.json, which
+every worktree in the repository resolves to the same path. Set
+WORKTREE_RESOURCES_FILE to read and write somewhere else.
+
+Exit codes:
+  0  Success, including a resource that is free
+  1  Usage or environment error
+  3  The resource is held: check found a holder, or claim refused one
+USAGE_TEXT
+}
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+# Identifies one claim event. A timestamp cannot: it has second resolution, so
+# two claims made in the same second share it, and an approval naming one could
+# then displace the other. This is what --take-over carries.
+function new_claim_id() {
+  local random
+
+  random="$(od -An -N6 -tx1 /dev/urandom 2> /dev/null | tr -d ' \n')" || random=""
+
+  if [[ -z "${random}" ]]; then
+    random="$(printf '%04x%04x%04x' "${RANDOM}" "${RANDOM}" "${RANDOM}")"
+  fi
+
+  printf '%s' "${random}"
+}
+
+# Prints the main worktree's absolute path. The first record of
+# `git worktree list --porcelain` is always the main worktree, which is what
+# makes one shared claim file reachable from every linked worktree.
+#
+# -z is what makes this safe for every path a filesystem allows. Without it the
+# records are newline-delimited, so a worktree path containing a newline splits
+# into two apparent fields and the path read back is a truncation of the real
+# one. With it each field is NUL-terminated, which no path can contain.
+function main_worktree_path() {
+  local line
+
+  # The "|| [[ -n ... ]]" is what processes a final field that carries no
+  # terminator. read returns non-zero there but still assigns what it read, and
+  # without this the last field is silently discarded.
+  while IFS= read -r -d '' line || [[ -n "${line}" ]]; do
+    case "${line}" in
+      "worktree "*)
+        printf '%s' "${line#worktree }"
+        return 0
+        ;;
+      *) ;;
+    esac
+  done < <(git worktree list --porcelain -z 2> /dev/null)
+
+  return 1
+}
+
+# A worktree's admin directory under .git/worktrees/, which is the only handle
+# git exposes that survives both `git worktree move` and `git switch`. A path
+# and a branch are each mutable on their own, and a worktree that has had both
+# changed matches neither, which would read a live claim as stale and let
+# another worktree take the resource with nobody asked.
+#
+# It identifies a worktree, not an instance of one. git names the directory
+# after the worktree's basename, deletes it on removal, and gives the same name
+# to the next worktree with that basename, so a claim can outlive the worktree
+# that made it and report held. That is the conservative direction, and
+# `release <resource>` clears it, but it is wrong: see issue 424, where the
+# options and the reason this one ships are recorded.
+#
+# Empty when it cannot be resolved, which is not an error: the path may not
+# exist yet, or may not be a worktree at all. Callers fall back to the path and
+# branch in that case.
+function worktree_identity() {
+  local worktree="${1}"
+  local identity
+
+  identity="$(git -C "${worktree}" rev-parse --path-format=absolute --git-dir 2> /dev/null)" || return 0
+
+  # The identity is derived from the main checkout's location, so it can carry
+  # a control character even when the linked worktree's own path does not.
+  # Storing one the read contract rejects would make every later command refuse
+  # the file, so it is dropped instead and the path and branch fallback stands.
+  valid_path "${identity}" || return 0
+
+  printf '%s' "${identity}"
+}
+
+function claim_file_path() {
+  local main_worktree
+
+  if [[ -n "${WORKTREE_RESOURCES_FILE:-}" ]]; then
+    printf '%s' "${WORKTREE_RESOURCES_FILE}"
+    return
+  fi
+
+  # Command substitution strips every trailing newline, and a directory name
+  # may end in one, so capturing the path bare would undo the -z parsing that
+  # read it correctly and resolve the shared file to a different directory.
+  # The sentinel gives the substitution something else to strip.
+  main_worktree="$(main_worktree_path && printf 'x')" \
+    || die "not inside a git repository; set WORKTREE_RESOURCES_FILE to override"
+  main_worktree="${main_worktree%x}"
+
+  printf '%s/%s' "${main_worktree}" "${CLAIM_FILE_NAME}"
+}
+
+# Emits the live worktree keys as a JSON array, or returns 1 when git cannot
+# answer, which leaves staleness undetermined rather than reporting every claim
+# stale.
+#
+# Each live record is emitted whole, as {path, branch, gitdir}, rather than as
+# loose keys. Whether a claim matches depends on what that particular record
+# knows about itself, so the three have to stay grouped: an identity settles
+# the question only against a record that has one.
+#
+# A record whose directory has been deleted is skipped: git keeps listing it
+# and marks it "prunable" rather than dropping it, and counting that as live
+# would hold its resource forever.
+#
+# -z and a JSON array, rather than newline-delimited text, because a worktree
+# path may contain a newline. NUL is the one byte a path cannot hold, and JSON
+# carries the result to jq without a delimiter to collide with.
+function live_worktrees_json() {
+  local line path="" branch="" prunable=0 saw_any=0
+  local -a keys=()
+
+  # The "|| [[ -n ... ]]" is what processes a final field that carries no
+  # terminator. read returns non-zero there but still assigns what it read, and
+  # without this the last record's prunable marker is silently discarded, which
+  # would count a removed worktree as live.
+  while IFS= read -r -d '' line || [[ -n "${line}" ]]; do
+    saw_any=1
+
+    case "${line}" in
+      "")
+        if [[ -n "${path}" && "${prunable}" -eq 0 ]]; then
+          keys+=("${path}" "${branch}" "$(worktree_identity "${path}")")
+        fi
+        path=""
+        branch=""
+        prunable=0
+        ;;
+      "worktree "*)
+        path="${line#worktree }"
+        branch=""
+        prunable=0
+        ;;
+      "branch refs/heads/"*)
+        branch="${line#branch refs/heads/}"
+        ;;
+      prunable*)
+        prunable=1
+        ;;
+      *) ;;
+    esac
+  done < <(git worktree list --porcelain -z 2> /dev/null)
+
+  [[ "${saw_any}" -eq 1 ]] || return 1
+
+  # git separates records rather than terminating them, so the last one may
+  # arrive without a trailing empty field.
+  if [[ -n "${path}" && "${prunable}" -eq 0 ]]; then
+    keys+=("${path}" "${branch}" "$(worktree_identity "${path}")")
+  fi
+
+  if [[ "${#keys[@]}" -eq 0 ]]; then
+    printf '[]'
+    return 0
+  fi
+
+  jq -n '$ARGS.positional as $a
+         | [range(0; ($a | length); 3)
+            | {path: $a[.], branch: $a[. + 1], gitdir: $a[. + 2]}]' --args "${keys[@]}"
+}
+
+# A missing or empty file means no claims, which is the ordinary state and not
+# an error. Anything else is validated before it is returned, because every
+# caller that reads also writes: a document that passes here is one this script
+# will rewrite, and rewriting what it does not understand is how a newer format
+# gets silently downgraded and a hand-edited record silently discarded.
+function read_claims() {
+  local file="${1}"
+  local declared documents
+
+  if [[ ! -e "${file}" ]]; then
+    printf '[]'
+    return
+  fi
+
+  # "$(< path)" fails during expansion, which bypasses die and exits with
+  # Bash's own unprefixed diagnostic, so everything that would make it fail is
+  # tested first. -r alone is not enough: it is true for a readable directory,
+  # and a directory in the file's place is one of the cases this guards.
+  if [[ ! -f "${file}" ]]; then
+    die "${file} exists but is not a regular file"
+  fi
+
+  if [[ ! -r "${file}" ]]; then
+    die "${file} exists but cannot be read"
+  fi
+
+  # Every inspection below hands the file to jq by path. Command substitution
+  # truncates at a NUL byte, so anything that reads the file into a shell
+  # variable first, an emptiness probe included, would report a document with
+  # one embedded as shorter than it is or as empty, after which a mutation
+  # would rewrite it and lose the rest. That is the destructive rewrite this
+  # validation exists to prevent.
+  if ! jq empty "${file}" > /dev/null 2>&1; then
+    die "${file} is not valid JSON; fix or remove it"
+  fi
+
+  # jq reads a stream, so counting the values it yields separates the three
+  # cases in one place: none is an empty or whitespace-only file, which is the
+  # ordinary "no claims" state; one is a document; more than one means two were
+  # concatenated, which would otherwise pass every envelope check below because
+  # -e reports only the last result.
+  documents="$(jq -s 'length' "${file}")"
+
+  if [[ "${documents}" -eq 0 ]]; then
+    printf '[]'
+    return
+  fi
+
+  if [[ "${documents}" -ne 1 ]]; then
+    die "${file} holds more than one JSON document; it must hold exactly one object"
+  fi
+
+  # The version is an integer, not merely a number, so that a 1.5 is refused as
+  # a malformed envelope rather than reported as an unsupported version it was
+  # never going to be.
+  if ! jq -e '(type == "object") and ((.version | type) == "number") and ((.version | floor) == .version) and ((.claims | type) == "array")' "${file}" > /dev/null 2>&1; then
+    die "${file} is not a claim file; expected an object with an integer \"version\" and a \"claims\" array"
+  fi
+
+  # Exactly one version is supported, not "anything up to". A 0 or a negative
+  # is no more readable than a 2, and accepting it would let a mutation rewrite
+  # an unsupported document as version 1 while suggest-next-issue, which
+  # requires 1 exactly, refuses the same file.
+  #
+  # The comparison happens in jq rather than in Bash arithmetic, which cannot
+  # parse every shape a valid JSON number can take: 1e100 is an integer as far
+  # as the check above is concerned, and would reach (( )) as scientific
+  # notation and fail as a syntax error instead of the diagnostic below.
+  if ! jq -e --argjson supported "${SCHEMA_VERSION}" '.version == $supported' "${file}" > /dev/null 2>&1; then
+    declared="$(jq -r '.version' "${file}")"
+    die "${file} declares version ${declared}; this script supports version ${SCHEMA_VERSION} only, so it will not read or rewrite the file"
+  fi
+
+  # \z rather than $: Oniguruma's $ matches before a final newline, so a
+  # hand-edited "logic\n" would satisfy a $-anchored pattern and then forge an
+  # extra line in the key=value output.
+  #
+  # These match what the CLI accepts, field for field. A looser read contract
+  # would let a hand-edited file hold a claim no command can name (a resource
+  # starting with "-") or one that forges columns in the space-delimited list
+  # output (whitespace in branch or claimed_at). worktree is the exception: it
+  # is a path, it may legitimately contain spaces, and list emits it last so
+  # that it cannot be confused with a following field.
+  if ! jq -e 'all(.claims[];
+        ((.id | type) == "string") and (.id | test("^[0-9a-f]+\\z"))
+        and ((.resource | type) == "string") and (.resource | test("^[^-[:space:][:cntrl:]][^[:space:][:cntrl:]]*\\z"))
+        and ((.worktree | type) == "string") and (.worktree | test("^[^[:cntrl:]]+\\z"))
+        and ((.branch | type) == "string") and (.branch | test("^[^[:space:][:cntrl:]]+\\z"))
+        and ((.claimed_at | type) == "string") and (.claimed_at | test("^[^[:space:][:cntrl:]]+\\z"))
+        and ((has("gitdir") | not) or (((.gitdir | type) == "string") and (.gitdir | test("^[^[:cntrl:]]+\\z"))))
+        and ((has("issue") | not) or ((.issue | type) == "number" and .issue >= 0 and (.issue | floor) == .issue)))' "${file}" > /dev/null 2>&1; then
+    die "${file} holds a malformed claim; id must be lowercase hex, resource, branch and claimed_at must be non-empty and whitespace-free, resource must not start with a hyphen, worktree must be non-empty and free of control characters, gitdir must be non-empty and free of control characters when present, and issue must be a non-negative integer when present"
+  fi
+
+  # One claim per resource is the invariant every lookup assumes: claim_for_resource
+  # answers with the first match, so a duplicate would let a stale record hide a
+  # live holder behind it and slip a takeover past the guard in cmd_claim.
+  if ! jq -e '(.claims | map(.resource)) as $names | ($names | length) == ($names | unique | length)' "${file}" > /dev/null 2>&1; then
+    die "${file} holds more than one claim on the same resource; remove the duplicates"
+  fi
+
+  jq -c '.claims' "${file}"
+}
+
+function release_lock() {
+  [[ -n "${LOCK_DIRECTORY}" ]] || return 0
+
+  rm -rf "${LOCK_DIRECTORY}"
+  LOCK_DIRECTORY=""
+}
+
+# Describes a lock that outlasted the wait, so the message says whether
+# anything is still using it rather than only that it exists.
+function held_lock_report() {
+  local lock="${1}"
+  local owner=""
+
+  # Test for the file before reading it. A "$(< missing)" expansion writes its
+  # own error to stderr that a redirection on the assignment does not catch,
+  # because the failure happens during expansion rather than in the command,
+  # and some bash builds then abort under set -e before the || is reached.
+  #
+  # -f as well as -r: -r is true for a readable directory, which would reach
+  # the expansion and fail there.
+  if [[ -f "${lock}/owner" && -r "${lock}/owner" ]]; then
+    owner="$(< "${lock}/owner")" || owner=""
+  fi
+
+  if [[ -z "${owner}" ]]; then
+    printf '%s is held by an unrecorded process; remove that directory if no claim is in progress' "${lock}"
+    return
+  fi
+
+  if kill -0 "${owner}" 2> /dev/null; then
+    printf '%s is held by process %s, which is still running; wait for it to finish' "${lock}" "${owner}"
+    return
+  fi
+
+  printf '%s is held by process %s, which has exited; remove that directory' "${lock}" "${owner}"
+}
+
+# Serializes a whole read-modify-write. Atomic replacement alone stops a reader
+# seeing half a document, but not two worktrees reading the same snapshot and
+# the later write discarding the earlier claim, which is a likely sequence here
+# because parallel worktrees are the case this feature exists for.
+#
+# A held lock is never broken automatically, and must not become so. Deciding
+# that another process has abandoned one cannot be made safe with mkdir, rm and
+# stat: the check and the removal are separate steps, so two waiters can both
+# decide to break the same lock and the second deletes the fresh one the first
+# just took, putting both inside the section. Neither an age threshold nor a
+# recorded owner nor a mutex around the reclamation closes that, because any
+# holder can be suspended past any threshold and any observation can go out of
+# date before it is acted on.
+#
+# So a lock still held when the wait expires is reported, with whatever is
+# known about its owner, and the user removes it. That is the bargain the rest
+# of this script already makes: a stale claim is cleared by an explicit prune
+# rather than silently, and a held resource is reported rather than taken.
+# Losing a claim without anyone noticing is the outcome worth avoiding; asking
+# for one rm is not.
+#
+# This serializes access to the file; it does not make the claim an enforced
+# lock on the resource, which stays advisory. mkdir is the portable mutex: it
+# is atomic everywhere this runs, and flock is absent on macOS.
+function acquire_lock() {
+  local file="${1}"
+  local lock="${file}.lock"
+  local directory waited=0
+
+  directory="$(dirname "${file}")"
+  mkdir -p "${directory}" || die "cannot create ${directory}"
+
+  while ! mkdir "${lock}" 2> /dev/null; do
+    # mkdir fails for reasons other than contention: an unwritable parent, or
+    # something that is not a directory already at that path. Waiting those out
+    # and then reporting a held lock would be wrong twice over, since it costs
+    # the full timeout and tells the user to remove a directory that may not
+    # exist. Contention is the case where the lock directory is now there.
+    if [[ ! -d "${lock}" ]]; then
+      # It may have been released between the mkdir and this test, so try once
+      # more before concluding the failure was not contention.
+      if mkdir "${lock}" 2> /dev/null; then
+        break
+      fi
+
+      if [[ ! -d "${lock}" ]]; then
+        die "cannot create ${lock}; check that ${directory} is writable and that nothing else occupies that path"
+      fi
+    fi
+
+    if ((waited >= LOCK_WAIT_SECONDS)); then
+      die "$(held_lock_report "${lock}")"
+    fi
+
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  # The trap goes on before the owner file is written, so a failure below
+  # still releases the directory instead of leaking it.
+  LOCK_DIRECTORY="${lock}"
+  trap release_lock EXIT
+
+  # The owner is what lets a waiter that times out say whether anything is
+  # still running, which is the difference between a message someone can act on
+  # and one that only says a directory exists. Refuse to hold a lock this
+  # cannot be recorded for.
+  printf '%s' "$$" > "${lock}/owner" \
+    || die "cannot record the lock owner in ${lock}"
+}
+
+# Replaces the file in one step so a reader never sees a half-written document.
+# Callers that mutate hold the lock from acquire_lock across their read and
+# this write, which is what keeps a concurrent claim from being lost.
+function write_claims() {
+  local file="${1}"
+  local claims="${2}"
+  local directory temp_file
+
+  directory="$(dirname "${file}")"
+  mkdir -p "${directory}" || die "cannot create ${directory}"
+
+  temp_file="$(mktemp "${file}.XXXXXX")" || die "cannot write next to ${file}"
+
+  if ! jq -n --argjson claims "${claims}" --argjson version "${SCHEMA_VERSION}" \
+    '{version: $version, claims: ($claims | map(del(.stale)))}' > "${temp_file}"; then
+    rm -f "${temp_file}"
+    die "cannot serialize claims"
+  fi
+
+  if ! mv "${temp_file}" "${file}"; then
+    rm -f "${temp_file}"
+    die "cannot replace ${file}"
+  fi
+}
+
+# Adds a derived "stale" boolean to each claim. Staleness is never stored, so
+# it is recomputed from what git reports now and nothing has to hook worktree
+# removal, which this script's callers do not perform. A removed worktree's
+# claim therefore reads as stale on the next command, except where its admin
+# directory has since been recycled: see issue 424.
+# An identity decides a match only where both the claim and the record carry
+# one. That is what stops a path since reused by an unrelated worktree from
+# holding an obsolete claim forever, while still falling back to the path and
+# the branch for a record whose identity could not be resolved, which would
+# otherwise read a live claim as stale and let its resource be taken with
+# nobody asked.
+#
+# In the fallback either match counts as live, erring toward reporting a
+# resource still held. That is the right direction for a guess: holding a claim
+# slightly too long is visible in list and cleared by release or prune.
+function decorate_claims() {
+  local claims="${1}"
+  local live_known="no"
+  local live="[]"
+
+  if live="$(live_worktrees_json)"; then
+    live_known="yes"
+  else
+    live="[]"
+  fi
+
+  jq -c --arg live_known "${live_known}" --argjson live "${live}" '
+    map(
+      .worktree as $worktree
+      | .branch as $branch
+      | (.gitdir // "") as $gitdir
+      | . + {stale: ($live_known == "yes"
+                     and (($live | any(
+                            if ((.gitdir // "") != "") and ($gitdir != "")
+                            then .gitdir == $gitdir
+                            else (.path == $worktree)
+                                 or ((.branch != "") and (.branch == $branch))
+                            end)) | not))}
+    )
+  ' <<< "${claims}"
+}
+
+# A resource name is free-form but must survive the key=value output unaltered.
+# Whitespace would make that line ambiguous, and a name like "logic state=stale"
+# or one carrying a newline could forge a field or a whole extra claim line. The
+# names this is for (logic, simulator, port-5432) never contain whitespace, so
+# refusing it costs nothing and removes the ambiguity by construction rather
+# than by escaping.
+function valid_token() {
+  local value="${1}"
+
+  [[ -n "${value}" ]] || return 1
+  [[ "${value}" != *[[:space:][:cntrl:]]* ]] || return 1
+
+  return 0
+}
+
+# A worktree is a path, so spaces are legitimate and list emits it last for
+# that reason. Control characters are not: a newline in a path would let one
+# record print as several, forging claims that are not in the file.
+function valid_path() {
+  local value="${1}"
+
+  [[ -n "${value}" ]] || return 1
+  [[ "${value}" != *[[:cntrl:]]* ]] || return 1
+
+  return 0
+}
+
+function valid_resource_name() {
+  local resource="${1}"
+
+  valid_token "${resource}" || return 1
+  [[ "${resource}" != -* ]] || return 1
+
+  return 0
+}
+
+# One "key=value" line per claim. worktree= comes last because a path may
+# contain spaces, and trailing it keeps every earlier field parseable. Every
+# other value is whitespace-free by validation, so no escaping is needed.
+function format_claims() {
+  local decorated="${1}"
+
+  jq -r '
+    .[]
+    | ["resource=\(.resource)", "state=\(if .stale then "stale" else "held" end)", "id=\(.id)", "branch=\(.branch)"]
+      + (if (.issue // null) == null then [] else ["issue=\(.issue)"] end)
+      + ["claimed=\(.claimed_at)", "worktree=\(.worktree)"]
+    | join(" ")
+  ' <<< "${decorated}"
+}
+
+# True when a claim exists, is not stale, and belongs to a different worktree.
+# A stale claim is free by definition, and the same worktree reclaiming its own
+# resource is a refresh, so neither needs the user's permission to overwrite.
+function holder_is_live_and_foreign() {
+  local existing="${1}"
+  local worktree="${2}"
+  local branch="${3}"
+  local gitdir="${4}"
+
+  [[ -n "${existing}" ]] || return 1
+
+  # The admin directory settles this outright when both sides have one, since
+  # it is the same worktree or it is not. Falling back to requiring both the
+  # path and the branch is for the case where it cannot be resolved.
+  #
+  # That fallback is deliberately stricter than the staleness rule, which
+  # treats either match as live, and the two point the same way: when the
+  # evidence is ambiguous, keep the claim and ask. Matching either field here
+  # would be unsafe, because a worktree that checked out a branch an earlier
+  # claimant has since left would match by branch and take the resource with
+  # nobody asked.
+  jq -e --arg worktree "${worktree}" --arg branch "${branch}" --arg gitdir "${gitdir}" \
+    '(.stale | not)
+     and (if ($gitdir != "") and ((.gitdir // "") != "")
+          then .gitdir != $gitdir
+          else (.worktree != $worktree) or (.branch != $branch)
+          end)' > /dev/null 2>&1 <<< "${existing}"
+}
+
+# True when the holder is the one the caller was approved to displace.
+#
+# The token is the claim's id. Neither of the obvious alternatives identifies a
+# claim: a worktree path can be reused, and a claimed_at has second resolution,
+# so either could match a different claim than the one the user was shown and
+# displace it unapproved, which is what this check exists to refuse.
+#
+# An empty approval matches nothing, so no approval is never mistaken for
+# blanket consent.
+function holder_matches() {
+  local existing="${1}"
+  local approved="${2}"
+
+  [[ -n "${approved}" ]] || return 1
+
+  jq -e --arg approved "${approved}" '.id == $approved' > /dev/null 2>&1 <<< "${existing}"
+}
+
+function claim_for_resource() {
+  local decorated="${1}"
+  local resource="${2}"
+
+  jq -c --arg resource "${resource}" \
+    'map(select(.resource == $resource)) | first // empty' <<< "${decorated}"
+}
+
+function cmd_list() {
+  local emit_json="no"
+  local file claims decorated
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --json)
+        emit_json="yes"
+        shift
+        ;;
+      *)
+        usage >&2
+        die "unexpected argument: ${1}"
+        ;;
+    esac
+  done
+
+  file="$(claim_file_path)"
+  claims="$(read_claims "${file}")"
+  decorated="$(decorate_claims "${claims}")"
+
+  if [[ "${emit_json}" == "yes" ]]; then
+    jq '.' <<< "${decorated}"
+    return
+  fi
+
+  format_claims "${decorated}"
+}
+
+function cmd_check() {
+  local resource="${1:-}"
+  local file claims decorated match state
+
+  if ! valid_resource_name "${resource}"; then
+    usage >&2
+    die "check requires a resource name that has no whitespace and does not start with a hyphen"
+  fi
+
+  shift
+
+  if [[ $# -gt 0 ]]; then
+    usage >&2
+    die "unexpected argument: ${1}"
+  fi
+
+  file="$(claim_file_path)"
+  claims="$(read_claims "${file}")"
+  decorated="$(decorate_claims "${claims}")"
+  match="$(claim_for_resource "${decorated}" "${resource}")"
+
+  if [[ -z "${match}" ]]; then
+    return 0
+  fi
+
+  state="$(jq -r 'if .stale then "stale" else "held" end' <<< "${match}")"
+
+  if [[ "${state}" == "stale" ]]; then
+    jq -r --arg resource "${resource}" \
+      '"resource \"\($resource)\" has a stale claim from \(.branch) at \(.worktree), claimed \(.claimed_at); that claim no longer matches a live worktree"' <<< "${match}"
+    return 0
+  fi
+
+  jq -r --arg resource "${resource}" \
+    '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at), id \(.id)"' <<< "${match}"
+
+  exit "${E_HELD}"
+}
+
+function report_claim_outcome() {
+  local resource="${1}"
+  local branch="${2}"
+  local worktree="${3}"
+  local existing="${4}"
+  local gitdir="${5}"
+  local previous_branch previous_worktree previous_gitdir previous_state
+
+  if [[ -z "${existing}" ]]; then
+    printf 'claimed "%s" for %s\n' "${resource}" "${branch}"
+    return
+  fi
+
+  previous_branch="$(jq -r '.branch' <<< "${existing}")"
+  previous_worktree="$(jq -r '.worktree' <<< "${existing}")"
+  previous_gitdir="$(jq -r '.gitdir // ""' <<< "${existing}")"
+  previous_state="$(jq -r 'if .stale then "stale" else "held" end' <<< "${existing}")"
+
+  # Same test as holder_is_live_and_foreign, so the message cannot disagree
+  # with the decision: the admin directory settles it when both sides have one,
+  # and the path and branch together are the fallback.
+  if [[ -n "${gitdir}" && -n "${previous_gitdir}" ]]; then
+    if [[ "${previous_gitdir}" == "${gitdir}" ]]; then
+      printf 'refreshed the claim on "%s" for %s\n' "${resource}" "${branch}"
+      return
+    fi
+  elif [[ "${previous_worktree}" == "${worktree}" && "${previous_branch}" == "${branch}" ]]; then
+    printf 'refreshed the claim on "%s" for %s\n' "${resource}" "${branch}"
+    return
+  fi
+
+  if [[ "${previous_state}" == "stale" ]]; then
+    printf 'claimed "%s" for %s, clearing a stale claim from %s\n' "${resource}" "${branch}" "${previous_branch}"
+    return
+  fi
+
+  printf 'claimed "%s" for %s, taking it over from %s\n' "${resource}" "${branch}" "${previous_branch}"
+}
+
+# Refuses a resource a different worktree still holds, and takes it only when
+# --take-over says the user was asked and agreed. The decision is made while
+# the lock is held, which is what makes it sound: check runs earlier and is a
+# separate operation, so its answer can be out of date by the time this writes.
+# Keep the refusal inside the lock if this is ever restructured.
+function cmd_claim() {
+  local resource worktree="" branch="" issue="" take_over=""
+  local file claims decorated existing now updated claim_id gitdir
+
+  resource="${1:-}"
+
+  if ! valid_resource_name "${resource}"; then
+    usage >&2
+    die "claim requires a resource name that has no whitespace and does not start with a hyphen"
+  fi
+
+  shift
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --worktree)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          die "--worktree requires a path"
+        fi
+        worktree="${2}"
+        shift 2
+        ;;
+      --branch)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          die "--branch requires a branch name"
+        fi
+        branch="${2}"
+        shift 2
+        ;;
+      --issue)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          die "--issue requires a number"
+        fi
+        issue="${2}"
+        shift 2
+        ;;
+      --take-over)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          die "--take-over requires the id of the holder being displaced"
+        fi
+        take_over="${2}"
+        shift 2
+        ;;
+      *)
+        usage >&2
+        die "unexpected argument: ${1}"
+        ;;
+    esac
+  done
+
+  [[ -n "${worktree}" ]] || die "claim requires --worktree"
+  [[ -n "${branch}" ]] || die "claim requires --branch"
+
+  # git refuses whitespace in a branch name, so rejecting it here costs nothing
+  # and keeps claim from writing a record that the read contract would then
+  # refuse, which would leave the file unusable by the next command.
+  valid_token "${branch}" || die "--branch must not contain whitespace"
+  valid_path "${worktree}" || die "--worktree must not contain control characters"
+
+  if [[ -n "${issue}" && ! "${issue}" =~ ^[0-9]+$ ]]; then
+    die "--issue must be a number, got: ${issue}"
+  fi
+
+  file="$(claim_file_path)"
+  acquire_lock "${file}"
+  claims="$(read_claims "${file}")"
+  decorated="$(decorate_claims "${claims}")"
+  existing="$(claim_for_resource "${decorated}" "${resource}")"
+  gitdir="$(worktree_identity "${worktree}")"
+
+  # check and claim are separate operations, so a resource that was free when
+  # the caller checked can be held by the time it writes. Refusing a live
+  # holder here, under the lock, is what makes the answer the caller acted on
+  # still true at the moment of the write.
+  #
+  # --take-over carries the id of the claim the user agreed to displace rather
+  # than a bare yes. Approval is about a particular claim: if a third worktree
+  # took the resource in the meantime, consent to displace the first says
+  # nothing about displacing it, and a boolean flag could not tell them apart.
+  if holder_is_live_and_foreign "${existing}" "${worktree}" "${branch}" "${gitdir}" \
+    && ! holder_matches "${existing}" "${take_over}"; then
+    jq -r --arg resource "${resource}" --arg approved "${take_over}" \
+      '"resource \"\($resource)\" is held by \(.branch)\(if (.issue // null) == null then "" else " (issue \(.issue))" end) at \(.worktree), claimed \(.claimed_at), id \(.id)"
+       + (if $approved == "" then "; pass --take-over \(.id) to claim it anyway"
+          else "; --take-over named claim \($approved), which is not the one held now, so nothing was changed" end)' <<< "${existing}"
+    exit "${E_HELD}"
+  fi
+
+  now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  claim_id="$(new_claim_id)"
+
+  updated="$(jq -c \
+    --arg resource "${resource}" \
+    --arg worktree "${worktree}" \
+    --arg branch "${branch}" \
+    --arg issue "${issue}" \
+    --arg now "${now}" \
+    --arg id "${claim_id}" \
+    --arg gitdir "${gitdir}" \
+    'map(select(.resource != $resource))
+     + [{id: $id, resource: $resource, worktree: $worktree, branch: $branch}
+        + (if $gitdir == "" then {} else {gitdir: $gitdir} end)
+        + (if $issue == "" then {} else {issue: ($issue | tonumber)} end)
+        + {claimed_at: $now}]
+     | sort_by(.resource)' <<< "${decorated}")"
+
+  write_claims "${file}" "${updated}"
+  report_claim_outcome "${resource}" "${branch}" "${worktree}" "${existing}" "${gitdir}"
+}
+
+function cmd_release() {
+  local resource="" worktree="" gitdir=""
+  local file claims removed updated selected
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --worktree)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          die "--worktree requires a path"
+        fi
+        worktree="${2}"
+        shift 2
+        ;;
+      -*)
+        usage >&2
+        die "unknown option: ${1}"
+        ;;
+      *)
+        if [[ -n "${resource}" ]]; then
+          usage >&2
+          die "unexpected argument: ${1}"
+        fi
+        resource="${1}"
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "${resource}" && -z "${worktree}" ]]; then
+    usage >&2
+    die "release requires a resource name or --worktree"
+  fi
+
+  if [[ -n "${resource}" && -n "${worktree}" ]]; then
+    usage >&2
+    die "release takes a resource name or --worktree, not both"
+  fi
+
+  if [[ -n "${resource}" ]] && ! valid_resource_name "${resource}"; then
+    usage >&2
+    die "release requires a resource name that has no whitespace and does not start with a hyphen"
+  fi
+
+  # A claim holds across `git worktree move`, so the path recorded when it was
+  # made is not always the path it is released by. Matching the identity where
+  # both the claim and the named worktree have one releases a moved worktree's
+  # claim, and declines to release a claim belonging to a different worktree
+  # that now occupies the same path. The path decides when either side has no
+  # identity, which is the case for a claim made before the worktree existed.
+  if [[ -n "${worktree}" ]]; then
+    gitdir="$(worktree_identity "${worktree}")"
+  fi
+
+  # One definition used in both polarities, so the kept set is always the exact
+  # complement of the released set.
+  selected='def selected:
+              (($resource != "") and .resource == $resource)
+              or (($worktree != "")
+                  and (if ((.gitdir // "") != "") and ($gitdir != "")
+                       then .gitdir == $gitdir
+                       else .worktree == $worktree
+                       end));'
+
+  file="$(claim_file_path)"
+  acquire_lock "${file}"
+  claims="$(read_claims "${file}")"
+
+  removed="$(jq -c --arg resource "${resource}" --arg worktree "${worktree}" --arg gitdir "${gitdir}" \
+    "${selected} map(select(selected))" <<< "${claims}")"
+
+  if [[ "$(jq -r 'length' <<< "${removed}")" -eq 0 ]]; then
+    printf 'no claim to release\n'
+    return
+  fi
+
+  updated="$(jq -c --arg resource "${resource}" --arg worktree "${worktree}" --arg gitdir "${gitdir}" \
+    "${selected} map(select(selected | not))" <<< "${claims}")"
+
+  write_claims "${file}" "${updated}"
+
+  jq -r '.[] | "released \"\(.resource)\" held by \(.branch)"' <<< "${removed}"
+}
+
+function cmd_prune() {
+  local file claims decorated stale updated
+
+  if [[ $# -gt 0 ]]; then
+    usage >&2
+    die "unexpected argument: ${1}"
+  fi
+
+  live_worktrees_json > /dev/null \
+    || die "cannot list worktrees; run prune inside a git repository"
+
+  file="$(claim_file_path)"
+  acquire_lock "${file}"
+  claims="$(read_claims "${file}")"
+  decorated="$(decorate_claims "${claims}")"
+  stale="$(jq -c 'map(select(.stale))' <<< "${decorated}")"
+
+  if [[ "$(jq -r 'length' <<< "${stale}")" -eq 0 ]]; then
+    printf 'no stale claims\n'
+    return
+  fi
+
+  updated="$(jq -c 'map(select(.stale | not))' <<< "${decorated}")"
+  write_claims "${file}" "${updated}"
+
+  jq -r '.[] | "pruned \"\(.resource)\" from \(.branch) at \(.worktree)"' <<< "${stale}"
+}
+
+function main() {
+  local subcommand="${1:-}"
+
+  case "${subcommand}" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    "")
+      usage >&2
+      die "expected a subcommand"
+      ;;
+    *) ;;
+  esac
+
+  shift
+
+  command -v jq > /dev/null || die "jq is required"
+
+  case "${subcommand}" in
+    list) cmd_list "$@" ;;
+    check) cmd_check "$@" ;;
+    claim) cmd_claim "$@" ;;
+    release) cmd_release "$@" ;;
+    prune) cmd_prune "$@" ;;
+    *)
+      usage >&2
+      die "unknown subcommand: ${subcommand}"
+      ;;
+  esac
+}
+
+main "$@"

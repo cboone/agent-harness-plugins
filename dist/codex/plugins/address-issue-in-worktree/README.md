@@ -28,13 +28,17 @@ The "in progress" label is retained until the related PR is merged or the user e
 /address-issue-in-worktree 42
 /address-issue-in-worktree the dark mode issue
 /address-issue-in-worktree 42 --no-approval
+/address-issue-in-worktree 42 --resource logic
 ```
 
 Provide either an issue number or descriptive text to search for.
 
-| Option          | Description                                                                          |
-| --------------- | ------------------------------------------------------------------------------------ |
-| `--no-approval` | Pass `--no-approval` through, so the new session plans and executes without stopping |
+| Option              | Description                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------ |
+| `--no-approval`     | Pass `--no-approval` through, so the new session plans and executes without stopping |
+| `--resource <name>` | Claim a named exclusive resource, reporting the holder first if one holds it already |
+
+`--resource` records which worktree holds a resource that only one worktree can use at a time: a DAW, a simulator, a device, a database, a port, a shared install location. The check runs before the issue is self-assigned and labeled, so declining a held resource leaves nothing behind on an issue nobody started. See [Create Worktree](../create-worktree/README.md) for how claims are stored, when they go stale, and how to list or release them.
 
 ## Recommended Permissions
 
@@ -43,7 +47,7 @@ This skill runs GitHub CLI, workmux, and git commands that trigger permission pr
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh issue view *)", "Bash(gh issue list *)", "Bash(gh issue edit *)", "Bash(gh label create *)", "Bash(gh repo view *)", "Bash(bash \"*/compose-issue-prompt\")", "Bash(bash \"*/compose-issue-prompt\" *)", "Bash(bash \"*/launch-workmux\" *)", "Bash(git remote show origin*)", "Bash(git worktree list*)"]
+    "allow": ["Bash(gh issue view *)", "Bash(gh issue list *)", "Bash(gh issue edit *)", "Bash(gh label create *)", "Bash(gh repo view *)", "Bash(bash \"*/compose-issue-prompt\")", "Bash(bash \"*/compose-issue-prompt\" *)", "Bash(bash \"*/launch-workmux\" *)", "Bash(bash \"*/manage-resource-claims\" *)", "Bash(git remote show origin*)", "Bash(git worktree list*)", "Bash(mktemp *)", "Bash(rm -f /tmp/issue-json-*)"]
   }
 }
 ```
@@ -55,6 +59,7 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 - "address issue #42 in a worktree": looks up issue 42, creates a worktree, and the new session plans it
 - "start issue #42": same thing
 - "work on the dark mode issue in a worktree": searches for a matching issue by title
+- "start issue #42, it needs the simulator": claims `simulator` for the new worktree, or reports which branch already holds it and asks first
 
 ## See Also
 
