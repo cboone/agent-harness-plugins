@@ -59,12 +59,12 @@ These read-only permissions cover file inspection and the Git and GitHub queries
       "Bash(git branch --show-current)",
       "Bash(git status --short)",
       "Bash(git remote -v)",
-      "Bash(git show:*)",
-      "Bash(git log:*)",
-      "Bash(git diff:*)",
-      "Bash(gh issue view:*)",
-      "Bash(gh pr view:*)",
-      "Bash(gh pr diff:*)"
+      "Bash(git --no-pager show *)",
+      "Bash(git --no-pager log *)",
+      "Bash(git --no-pager diff *)",
+      "Bash(gh issue view *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr diff *)"
     ]
   }
 }
