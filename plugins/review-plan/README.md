@@ -26,7 +26,9 @@ The skill prefers a unique filename match to the current branch subject after st
 
 ## What the Review Covers
 
-The skill reads the plan, repository guidance, relevant current files, and explicit dependencies. It assesses outcomes, interfaces, compatibility, sequencing, operational risks, documentation, generated surfaces, and validation where relevant. It runs only focused checks confirmed to be read-only.
+The skill reads the plan, repository guidance, relevant current files, and explicit dependencies. Local dependency paths are resolved before reading, including symlink targets, and must remain inside the repository. Outside-repository or ambiguous dependencies are reported as unverified; secret-bearing files and credential locations are excluded from reads and content searches. Explicit plan targets outside the repository remain supported.
+
+It assesses outcomes, interfaces, compatibility, sequencing, operational risks, documentation, generated surfaces, and validation where relevant. It runs only focused checks confirmed to be read-only.
 
 The terminal report includes the target and evidence reviewed, a **Ready**, **Needs revision**, or **Blocked** verdict, prioritized findings with citations, impact and concrete corrections, open questions, and review limits. A clean report states what was covered and what remains unverified.
 

@@ -38,7 +38,11 @@ State the selected path and selection reason before reviewing. If it cannot be r
 
 ### 2. Gather Current Evidence
 
-Read the entire target, applicable repository instructions, and relevant conventions. Inspect current source, configuration, tests, documentation, and generated surfaces needed to check the plan's claims. Read local files named by the plan; distinguish a proposed new file from a missing file the plan assumes already exists. Resolve explicit relative links from the containing document and repository paths from the repository root. If their meaning is ambiguous, ask rather than guessing.
+Read the entire target, applicable repository instructions, and relevant conventions. Inspect current source, configuration, tests, documentation, and generated surfaces needed to check the plan's claims. Distinguish a proposed new file from a missing file the plan assumes already exists.
+
+Before reading a local dependency named by the plan or linked material, resolve relative links from the containing document and repository paths from the repository root, including `..` segments and symlink targets. Read only relevant dependencies whose resolved paths remain inside the repository. Mark outside-repository, ambiguous, or unresolvable paths unverified without reading their contents. An explicit target outside the repository remains valid under step 1; it does not authorize following other outside-repository paths.
+
+Exclude secret-bearing files and credential locations from all reads and content searches, including real environment files, private keys, and credential stores, even inside the repository. Use clearly identified redacted examples or environment-variable names when sufficient; otherwise mark the dependency unverified and request redacted context. If an allowed file unexpectedly contains a secret, do not reproduce it in the report.
 
 Inspect directly referenced plans, branches, issues, and pull requests when they establish requirements or dependencies. Keep the dependency review bounded to those explicit references; follow further links only when necessary to resolve a material dependency, and disclose that expansion. Distinguish current working-tree evidence from proposed changes in another branch or PR.
 
