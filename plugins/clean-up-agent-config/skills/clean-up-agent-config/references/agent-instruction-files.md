@@ -59,7 +59,7 @@ GitHub Copilot's approach is more structured than most. There are three layers:
 
 First, the repo-wide `.github/copilot-instructions.md` applies to all interactions. Second, path-specific `*.instructions.md` files under `.github/instructions/` use YAML frontmatter with an `applyTo` glob to scope instructions to specific file types or directories. Third, organization-level instructions can be set on GitHub.com for enterprise teams.
 
-Copilot discovers path-specific files only within or below `.github/instructions/`, and subdirectories there are allowed for grouping. A `*.instructions.md` directly under `.github/`, such as `.github/lean.instructions.md`, is never read: its `applyTo` is not evaluated and none of its rules apply. The mistake is easy to miss, because nothing reports it.
+Copilot discovers path-specific files only within or below `.github/instructions/`, and subdirectories there are allowed for grouping. A `*.instructions.md` outside that subtree, such as `.github/lean.instructions.md` or `.github/review/lean.instructions.md`, is never read: its `applyTo` is not evaluated and none of its rules apply. The mistake is easy to miss, because nothing reports it.
 
 A unique feature: Copilot's coding agent will auto-suggest generating a `copilot-instructions.md` on your first PR in a repository. The path-specific `.instructions.md` system is powerful for monorepos -- you can have different rules for your Python backend vs. your React frontend, triggered automatically by file glob matches. It is also valuable in single-language repos that need review rules tighter than the general file: a `lean.instructions.md` with `applyTo: "**/*.lean"` can carry Mathlib-aware conventions (no line-length limit, single-line comment paragraphs, vendored-deps exclusion) that would clutter the general file.
 
@@ -236,15 +236,15 @@ ln -sfn ~/.agents/AGENTS.md ~/.config/opencode/AGENTS.md
 
 ### 7. What goes where -- a decision framework
 
-| Instruction type                                      | Where to put it                                               |
-| ----------------------------------------------------- | ------------------------------------------------------------- |
-| Project architecture, tech stack, key commands        | `AGENTS.md` (repo root)                                       |
-| Module-specific conventions                           | `AGENTS.md` in that subdirectory                              |
-| Claude Code-specific (MCP servers, subagent patterns) | `.claude/rules/*.md`                                          |
-| Complex workflows (deploy, release, migrate)          | Skills (`SKILL.md` in a skill directory)                      |
-| Copilot code review rules                             | `.github/instructions/*.instructions.md` with `applyTo` globs |
-| Personal preferences (all projects)                   | `~/.agents/AGENTS.md` symlinked to each tool                  |
-| Temporary overrides                                   | `AGENTS.override.md` (Codex)                                  |
+| Instruction type                                      | Where to put it                                                  |
+| ----------------------------------------------------- | ---------------------------------------------------------------- |
+| Project architecture, tech stack, key commands        | `AGENTS.md` (repo root)                                          |
+| Module-specific conventions                           | `AGENTS.md` in that subdirectory                                 |
+| Claude Code-specific (MCP servers, subagent patterns) | `.claude/rules/*.md`                                             |
+| Complex workflows (deploy, release, migrate)          | Skills (`SKILL.md` in a skill directory)                         |
+| Copilot code review rules                             | `.github/instructions/**/*.instructions.md` with `applyTo` globs |
+| Personal preferences (all projects)                   | `~/.agents/AGENTS.md` symlinked to each tool                     |
+| Temporary overrides                                   | `AGENTS.override.md` (Codex)                                     |
 
 ### 8. Things to avoid
 

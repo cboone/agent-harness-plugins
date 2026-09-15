@@ -15,12 +15,12 @@ Beyond the instruction/context files (CLAUDE.md, AGENTS.md, etc.), every AI codi
 
 ## The Root Directory Footprint
 
-| Tool               | Files at project root        | Files in hidden directories                                                                                                                                                | Total project-level files                |
-| ------------------ | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| **Claude Code**    | `CLAUDE.md`, `.mcp.json`     | `.claude/settings.json`, `.claude/settings.local.json`, `.claude/rules/*.md`, `.claude/skills/*/SKILL.md`, `.claude/commands/*.md`                                         | 2 root + many in `.claude/`              |
-| **OpenAI Codex**   | `AGENTS.md`                  | `.codex/config.toml`, `.agents/skills/*/SKILL.md`                                                                                                                          | 1 root + few in `.codex/` and `.agents/` |
-| **GitHub Copilot** | _(none)_                     | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/chatmodes/*.chatmode.md`, `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md` | 0 root, all in `.github/`                |
-| **OpenCode**       | `AGENTS.md`, `opencode.json` | _(none)_                                                                                                                                                                   | 2 root                                   |
+| Tool               | Files at project root        | Files in hidden directories                                                                                                                                                   | Total project-level files                |
+| ------------------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Claude Code**    | `CLAUDE.md`, `.mcp.json`     | `.claude/settings.json`, `.claude/settings.local.json`, `.claude/rules/*.md`, `.claude/skills/*/SKILL.md`, `.claude/commands/*.md`                                            | 2 root + many in `.claude/`              |
+| **OpenAI Codex**   | `AGENTS.md`                  | `.codex/config.toml`, `.agents/skills/*/SKILL.md`                                                                                                                             | 1 root + few in `.codex/` and `.agents/` |
+| **GitHub Copilot** | _(none)_                     | `.github/copilot-instructions.md`, `.github/instructions/**/*.instructions.md`, `.github/chatmodes/*.chatmode.md`, `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md` | 0 root, all in `.github/`                |
+| **OpenCode**       | `AGENTS.md`, `opencode.json` | _(none)_                                                                                                                                                                      | 2 root                                   |
 
 With the symlink strategy (CLAUDE.md to AGENTS.md), your realistic root footprint across all four tools is: `AGENTS.md`, `CLAUDE.md` (symlink), `.mcp.json` (if using MCP servers), and `opencode.json` (if using OpenCode). Three or four visible files.
 
@@ -293,7 +293,7 @@ These settings can reference external files in the workspace via the `file` prop
 
 1. Personal instructions (user-level, highest priority)
 1. Repository instructions (`.github/copilot-instructions.md` or `AGENTS.md`)
-1. Path-specific instructions (`.github/instructions/*.instructions.md`)
+1. Path-specific instructions (`.github/instructions/**/*.instructions.md`)
 
 Copilot also reads `AGENTS.md` (at root and subdirectories) and `CLAUDE.md` at root as fallbacks. If both `AGENTS.md` and `copilot-instructions.md` exist, instructions from both are used.
 
@@ -309,7 +309,7 @@ Use functional React components with hooks.
 Always use TypeScript strict mode.
 ```
 
-The `applyTo` glob determines which files trigger these instructions; separate multiple globs with commas. The optional `excludeAgent` field hides the file from one Copilot feature and accepts exactly `"code-review"` or `"cloud-agent"`, so the example above applies to Copilot cloud agent only. The file must sit within or below `.github/instructions/`; Copilot does not read one placed directly under `.github/`.
+The `applyTo` glob determines which files trigger these instructions; separate multiple globs with commas. The optional `excludeAgent` field hides the file from one Copilot feature and accepts exactly `"code-review"` or `"cloud-agent"`, so the example above applies to Copilot cloud agent only. The file must sit within or below `.github/instructions/`; Copilot does not read scoped files outside that subtree.
 
 #### Notable unique features
 
@@ -389,18 +389,18 @@ your-project/
 
 ### Version control decisions
 
-| File                                     | Commit to git?           | Why                                                                                             |
-| ---------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------- |
-| `.claude/settings.json`                  | **Yes**                  | Team-shared permissions, hooks, env vars                                                        |
-| `.claude/settings.local.json`            | **No** (auto-gitignored) | Personal API keys, experiments                                                                  |
-| `.mcp.json`                              | **Yes**                  | Team-shared MCP server config                                                                   |
-| `.codex/config.toml`                     | **Depends**              | Team-shared if it only has sandbox/approval defaults; skip if it has personal model preferences |
-| `AGENTS.md` / `CLAUDE.md`                | **Yes**                  | Core project instructions                                                                       |
-| `.github/copilot-instructions.md`        | **Yes**                  | Team-shared Copilot instructions                                                                |
-| `.github/instructions/*.instructions.md` | **Yes**                  | Team-shared path-scoped instructions                                                            |
-| `opencode.json`                          | **Yes** (if no secrets)  | Team-shared OpenCode config                                                                     |
-| `~/.claude/settings.json`                | **No** (user-level)      | Personal global preferences                                                                     |
-| `~/.codex/config.toml`                   | **No** (user-level)      | Personal global preferences                                                                     |
+| File                                        | Commit to git?           | Why                                                                                             |
+| ------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------- |
+| `.claude/settings.json`                     | **Yes**                  | Team-shared permissions, hooks, env vars                                                        |
+| `.claude/settings.local.json`               | **No** (auto-gitignored) | Personal API keys, experiments                                                                  |
+| `.mcp.json`                                 | **Yes**                  | Team-shared MCP server config                                                                   |
+| `.codex/config.toml`                        | **Depends**              | Team-shared if it only has sandbox/approval defaults; skip if it has personal model preferences |
+| `AGENTS.md` / `CLAUDE.md`                   | **Yes**                  | Core project instructions                                                                       |
+| `.github/copilot-instructions.md`           | **Yes**                  | Team-shared Copilot instructions                                                                |
+| `.github/instructions/**/*.instructions.md` | **Yes**                  | Team-shared path-scoped instructions                                                            |
+| `opencode.json`                             | **Yes** (if no secrets)  | Team-shared OpenCode config                                                                     |
+| `~/.claude/settings.json`                   | **No** (user-level)      | Personal global preferences                                                                     |
+| `~/.codex/config.toml`                      | **No** (user-level)      | Personal global preferences                                                                     |
 
 ---
 
@@ -495,7 +495,7 @@ One place to edit, version-controlled, portable across machines.
 | Codex fallback filenames              | `~/.codex/config.toml` `project_doc_fallback_filenames`          |
 | Pre/post tool hooks                   | `.claude/settings.json` `hooks`                                  |
 | Copilot code review config            | VS Code `settings.json` or `.github/instructions/`               |
-| Path-scoped instructions              | `.github/instructions/*.instructions.md` (Copilot)               |
+| Path-scoped instructions              | `.github/instructions/**/*.instructions.md` (Copilot)            |
 | Telemetry/privacy controls            | User-level `settings.json` or `config.toml` `env` vars           |
 
 ---
