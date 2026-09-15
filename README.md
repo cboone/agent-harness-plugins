@@ -78,13 +78,15 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Code Review
 
-| Plugin                                                                         | Trigger                        | What it does                                                                                                       |
-| ------------------------------------------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| [Address Review](./plugins/address-review/README.md)                           | `/address-review <path>`       | Parse a review document for actionable feedback, work through items systematically, and track resolution progress. |
-| [Resolve Copilot PR Feedback](./plugins/resolve-copilot-pr-feedback/README.md) | `/resolve-copilot-pr-feedback` | Process and resolve GitHub Copilot automated PR review comments.                                                   |
+| Plugin                                                                         | Trigger                        | What it does                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Address Review](./plugins/address-review/README.md)                           | `/address-review <path>`       | Parse a review document for actionable feedback, work through items systematically, and track resolution progress.                                                                                                                                                    |
+| [Review Plan](./plugins/review-plan/README.md)                                 | `/review-plan [path]`          | Review an implementation plan against the current repository and its explicit dependencies, reporting evidence-backed blockers, required revisions, and optional improvements before work begins. Use when asked to review a plan or assess implementation readiness. |
+| [Resolve Copilot PR Feedback](./plugins/resolve-copilot-pr-feedback/README.md) | `/resolve-copilot-pr-feedback` | Process and resolve GitHub Copilot automated PR review comments.                                                                                                                                                                                                      |
 
 **External tools:**
 
+- _Review Plan:_ [`gh`](https://cli.github.com/) (optional; only for explicitly linked GitHub context)
 - _Resolve Copilot PR Feedback:_ [`gh`](https://cli.github.com/) (required; the skill reads review threads over the GitHub API and posts its summary comment)
 
 ### Code Quality
@@ -112,17 +114,19 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Writing
 
-| Plugin                                                                         | Trigger                        | What it does                                                                                                                                              |
-| ------------------------------------------------------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Publish Report Board](./plugins/publish-report-board/README.md)               | `/publish-report-board`        | Publish a recurring analysis, starting with backlog triage, as a live report board with a stable URL, and re-sync it in place as the source data changes. |
-| [Write Formalization Roadmap](./plugins/write-formalization-roadmap/README.md) | `/write-formalization-roadmap` | Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants.                             |
-| [Write Markdown](./plugins/write-markdown/README.md)                           | `/write-markdown`              | Applies Markdown style conventions when creating or editing Markdown files.                                                                               |
-| [Write Math](./plugins/write-math/README.md)                                   | `/write-math`                  | Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references.                                                      |
-| [Write Pandoc Markdown](./plugins/write-pandoc-markdown/README.md)             | `/write-pandoc-markdown`       | Pandoc-flavored Markdown conventions for academic papers with LaTeX output.                                                                               |
+| Plugin                                                                               | Trigger                           | What it does                                                                                                                                              |
+| ------------------------------------------------------------------------------------ | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Publish Report Board](./plugins/publish-report-board/README.md)                     | `/publish-report-board`           | Publish a recurring analysis, starting with backlog triage, as a live report board with a stable URL, and re-sync it in place as the source data changes. |
+| [Write Formalization Roadmap](./plugins/write-formalization-roadmap/README.md)       | `/write-formalization-roadmap`    | Document-structure guide for multi-milestone formalization roadmaps in Lean, Rocq, Isabelle, HOL, and other proof assistants.                             |
+| [Write Manual Verification Plan](./plugins/write-manual-verification-plan/README.md) | `/write-manual-verification-plan` | Write a numbered, resumable checklist for checks run by hand, where every step says what to do, what you should see, and how to tell nothing from broken. |
+| [Write Markdown](./plugins/write-markdown/README.md)                                 | `/write-markdown`                 | Applies Markdown style conventions when creating or editing Markdown files.                                                                               |
+| [Write Math](./plugins/write-math/README.md)                                         | `/write-math`                     | Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and other leading references.                                                      |
+| [Write Pandoc Markdown](./plugins/write-pandoc-markdown/README.md)                   | `/write-pandoc-markdown`          | Pandoc-flavored Markdown conventions for academic papers with LaTeX output.                                                                               |
 
 **External tools:**
 
 - _Publish Report Board:_ [`jq`](https://jqlang.org/) (required; the bundled `report-board` script validates and renders board data with it), [`gh`](https://cli.github.com/) (required for the backlog board, which reads issues, milestones, and pull requests)
+- _Write Manual Verification Plan:_ an authenticated [`gh`](https://cli.github.com/) session, only when the checklist is kept on an issue rather than in a plan
 
 ### Scaffolding
 

@@ -2,9 +2,18 @@
 
 For full project conventions, see `AGENTS.md` in the repository root.
 
+## Scoped instructions
+
+- [Dependabot review instructions](instructions/dependabot.instructions.md) cover the Dependabot plugin, reference, and fixture paths listed in that file's `applyTo` field.
+- [Branch review evidence instructions](instructions/branch-reviews.instructions.md) cover `docs/reviews/**/*.md`.
+- [Plugin permission instructions](instructions/plugin-permissions.instructions.md) cover `plugins/**/README.md`.
+- [Shell script review instructions](instructions/shell.instructions.md) cover `**/scripts/**`, `**/bin/**`, and `**/tests/fixtures/**`.
+- [Worktree naming review instructions](instructions/worktree-naming.instructions.md) cover `plugins/create-worktree/**`, `plugins/address-issue-in-worktree/**`, and their corresponding `dist/codex/plugins/` mirrors.
+
 ## PR review
 
 - **Version bumps are selective**: Only plugins with actual code changes get version bumps. Do not flag missing version bumps on unchanged plugins.
+- **`excludeAgent` follows GitHub's documented format and values**: GitHub documents a scalar value of `"code-review"` to exclude code review or `"cloud-agent"` to exclude the cloud agent. Do not replace `"cloud-agent"` with `"coding-agent"` or infer a list form; GitHub's repository-instructions documentation shows a scalar field and these two values.
 - **PR descriptions may contain stale commit references**: PR descriptions are often auto-generated from commit messages and may reference superseded commits. Do not flag discrepancies between PR description bullet points and the actual diff.
 - **Done plans are historical records**: Files in `docs/plans/done/` are completed plan documents preserved for reference. They may not match the final implementation. Do not flag discrepancies between done plan content and the actual codebase.
 - **Scoped instruction aliases are committed symlinks**: Each directory-scoped `AGENTS.md` has a sibling `CLAUDE.md -> AGENTS.md` symlink. Confirm these entries with `git ls-tree` or `test -L`; file listings that omit symlinks do not show that an alias is absent.

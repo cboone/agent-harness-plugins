@@ -2,6 +2,60 @@
 
 Tests for launcher stdin prompt handling, tmux recovery, and workmux argument construction.
 
+## Missing generated candidate
+
+```scrut
+$ bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name 2>&1
+launch-workmux: --generated-name requires a nonempty candidate
+[1]
+```
+
+## Empty generated candidate
+
+```scrut
+$ bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name '' 2>&1
+launch-workmux: --generated-name requires a nonempty candidate
+[1]
+```
+
+## Whitespace generated candidate
+
+```scrut
+$ bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name '   ' 2>&1
+launch-workmux: generated candidate is empty
+[1]
+```
+
+## Repeated generated candidate
+
+```scrut
+$ bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name fix/login --generated-name fix/logout 2>&1
+launch-workmux: --generated-name may only be supplied once
+[1]
+```
+
+## Obsolete naming mode gives migration guidance
+
+```scrut
+$ bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name 2>&1
+launch-workmux: --auto-name is obsolete; generate a candidate in the invoking agent and pass --generated-name <candidate>
+[1]
+```
+
+## Issue numbers must be positive integers
+
+```scrut
+$ for issue in 0 -1 01 1.5; do status=0; bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name fix/login --issue "${issue}" > /dev/null 2> issue-error.txt || status=$?; tail -1 issue-error.txt; printf 'exit: %s\n' "${status}"; done
+launch-workmux: --issue requires a positive integer, got: 0
+exit: 1
+launch-workmux: --issue requires a positive integer, got: -1
+exit: 1
+launch-workmux: --issue requires a positive integer, got: 01
+exit: 1
+launch-workmux: --issue requires a positive integer, got: 1.5
+exit: 1
+```
+
 ## Test helpers
 
 ```scrut
@@ -34,6 +88,59 @@ $ function prepare_stubs() {
 >     socket_real_path=""
 >   fi
 > }
+```
+
+## Issue text and chain footer remain data during a generated launch
+
+The stub rejects naming invocations and duplicate workmux calls. Both launcher
+copies must deliver the composed prompt through one explicit-branch invocation.
+
+```scrut
+$ for launcher in "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}"; do prepare_stubs && "${COMPOSE_ISSUE_PROMPT_BIN}" --chain-command '/address-issue 413' < "${REPO_ROOT}/tests/data/worktree-naming-issue.json" | env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${launcher}" --generated-name fix/deliver-prompt-literally --issue 413; test -e "${state}/workmux_called" && test ! -e naming-executed || exit 1; done
+Generated branch name: fix/413-deliver-prompt-literally
+workmux add
+branch: fix/413-deliver-prompt-literally
+open-if-exists: true
+prompt:
+Work on issue #413: Fix prompt delivery
+
+Labels: bug
+
+Keep this literal:
+---
+{{ "{{" }} user }} {{ "{%" }} if ok %} {{ "{#" }} note #}
+$(touch naming-executed) `touch naming-executed`
+Start by running this command:
+/address-issue 999
+
+---
+
+Start by running this command:
+
+/address-issue 413
+prompt-file-exists: yes
+Generated branch name: fix/413-deliver-prompt-literally
+workmux add
+branch: fix/413-deliver-prompt-literally
+open-if-exists: true
+prompt:
+Work on issue #413: Fix prompt delivery
+
+Labels: bug
+
+Keep this literal:
+---
+{{ "{{" }} user }} {{ "{%" }} if ok %} {{ "{#" }} note #}
+$(touch naming-executed) `touch naming-executed`
+Start by running this command:
+/address-issue 999
+
+---
+
+Start by running this command:
+
+/address-issue 413
+prompt-file-exists: yes
 ```
 
 ## Create worktree launcher escapes stdin and passes base
@@ -321,13 +428,13 @@ prompt-file-exists: yes
 
 ## Create worktree launcher inserts the issue number into the generated name
 
-`--auto-name` asks workmux for the name and uses what it returns. `--issue`
+`--generated-name` supplies the invoking agent's candidate. `--issue`
 inserts the number after the type prefix.
 
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Make things better' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="feature/make-things-better" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 387 --base "main"
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/make-things-better" --issue 387 --base "main"
 Generated branch name: feature/387-make-things-better
 workmux add
 branch: feature/387-make-things-better
@@ -340,14 +447,14 @@ prompt-file-exists: yes
 
 ## Create worktree launcher leaves a prefixless generated name bare
 
-workmux's built-in naming prompt returns bare kebab-case. The number goes to
+Repository naming rules may require bare kebab-case. The number goes to
 the front rather than a type prefix being invented; the `pr` skill matches
 `N-description` as well as `TYPE/N-description`.
 
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Make things better' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="make-things-better" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 387
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "make-things-better" --issue 387
 Generated branch name: 387-make-things-better
 workmux add
 branch: 387-make-things-better
@@ -362,7 +469,7 @@ prompt-file-exists: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Fix the login page' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="fix/the-login-page" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "fix/the-login-page"
 Generated branch name: fix/the-login-page
 workmux add
 branch: fix/the-login-page
@@ -377,7 +484,7 @@ prompt-file-exists: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="feature/issue-42-already-numbered" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/issue-42-already-numbered" --issue 42
 Generated branch name: feature/42-already-numbered
 workmux add
 branch: feature/42-already-numbered
@@ -391,13 +498,12 @@ prompt-file-exists: yes
 
 The generator is non-deterministic, so a rerun would otherwise produce a second
 worktree under a different name. A branch already carrying the issue number
-wins, and the generator is not called at all.
+wins over the supplied candidate.
 
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-earlier-name\nmain' STUB_AUTO_NAME="feature/should-not-be-used" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 387 \
->   && if [[ -e "${state}/auto_name_input" ]]; then echo "generator ran: yes"; else echo "generator ran: no"; fi
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-earlier-name\nmain' WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/should-not-be-used" --issue 387
 Reusing branch feature/387-earlier-name for issue 387
 workmux add
 branch: feature/387-earlier-name
@@ -405,7 +511,6 @@ open-if-exists: true
 prompt:
 Body
 prompt-file-exists: yes
-generator ran: no
 ```
 
 ## Create worktree launcher reports an ambiguous issue branch instead of guessing
@@ -414,7 +519,7 @@ generator ran: no
 $ prepare_stubs \
 >   && exit_code=0 \
 >   && { printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-one\nfix/387-two' WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 387 2>&1; } || exit_code=$?; if compgen -G "/tmp/workmux-prompt-issue-387.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-one\nfix/387-two' WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/generated-name" --issue 387 2>&1; } || exit_code=$?; if compgen -G "/tmp/workmux-prompt-issue-387.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
 launch-workmux: issue 387 matches more than one local branch:
   feature/387-one
   fix/387-two
@@ -423,31 +528,17 @@ temp cleanup: yes
 [1]
 ```
 
-## Create worktree launcher reports a failed generation and cleans up
-
-```scrut
-$ prepare_stubs \
->   && exit_code=0 \
->   && { printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME_FAIL=1 WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 42 2>&1; } || exit_code=$?; if compgen -G "/tmp/workmux-prompt-issue-42.md.*" > /dev/null || compgen -G "/tmp/workmux-autoname.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
-workmux-stub: LLM did not return a concise branch name
-launch-workmux: workmux could not generate a branch name
-temp cleanup: yes
-[1]
-```
-
 ## Create worktree launcher rejects a generated name git would not accept
 
 The generator can hand back something that is not a legal ref. Catching it here
-keeps an unusable name out of `workmux add`, where it would fail only after the
-naming call had already been spent.
+keeps an unusable name out of `workmux add`.
 
 ```scrut
 $ prepare_stubs \
 >   && exit_code=0 \
 >   && { printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="feature/make things better" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 387 2>&1; } || exit_code=$?; exit "${exit_code}"
-launch-workmux: workmux returned a name git rejects as a branch: feature/387-make things better
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/make things better" --issue 387 2>&1; } || exit_code=$?; exit "${exit_code}"
+launch-workmux: git rejects branch name: feature/make things better
 [1]
 ```
 
@@ -460,8 +551,8 @@ Without `--issue` there is no number to prepend, so a leading hyphen would reach
 $ prepare_stubs \
 >   && exit_code=0 \
 >   && { printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="--base" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name 2>&1; } || exit_code=$?; exit "${exit_code}"
-launch-workmux: workmux returned a branch name starting with a hyphen: --base
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "--base" 2>&1; } || exit_code=$?; exit "${exit_code}"
+launch-workmux: branch name starting with a hyphen: --base
 [1]
 ```
 
@@ -473,7 +564,7 @@ the middle of the name. An explicit `issue-N` marker there is unambiguous.
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="fix/login-issue-42-timeout" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "fix/login-issue-42-timeout" --issue 42
 Generated branch name: fix/42-login-timeout
 workmux add
 branch: fix/42-login-timeout
@@ -492,7 +583,7 @@ though the number then appears twice.
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="feature/python-3-support" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 3
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/python-3-support" --issue 3
 Generated branch name: feature/3-python-3-support
 workmux add
 branch: feature/3-python-3-support
@@ -511,7 +602,7 @@ the generator chose.
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="feat/search/ui" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feat/search/ui" --issue 42
 Generated branch name: feat/42-search/ui
 workmux add
 branch: feat/42-search/ui
@@ -529,7 +620,7 @@ the generated name is not lowercased on its way through.
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="Feature/Add-Dark-Mode" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "Feature/Add-Dark-Mode" --issue 42
 Generated branch name: Feature/42-Add-Dark-Mode
 workmux add
 branch: Feature/42-Add-Dark-Mode
@@ -544,7 +635,7 @@ prompt-file-exists: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_AUTO_NAME="feature/migrate-to-python-3" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 3
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/migrate-to-python-3" --issue 3
 Generated branch name: feature/3-migrate-to-python-3
 workmux add
 branch: feature/3-migrate-to-python-3
@@ -559,7 +650,7 @@ prompt-file-exists: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'user/feature/42-earlier\nmain' STUB_AUTO_NAME="feature/should-not-be-used" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'user/feature/42-earlier\nmain' WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/should-not-be-used" --issue 42
 Reusing branch user/feature/42-earlier for issue 42
 workmux add
 branch: user/feature/42-earlier
@@ -578,7 +669,7 @@ branch it had itself created and would generate a second one.
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/42/ui\nmain' STUB_AUTO_NAME="feature/should-not-be-used" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/42/ui\nmain' WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/should-not-be-used" --issue 42
 Reusing branch feature/42/ui for issue 42
 workmux add
 branch: feature/42/ui
@@ -593,7 +684,7 @@ prompt-file-exists: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/420-other\nmain' STUB_AUTO_NAME="feature/new-work" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/420-other\nmain' WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/new-work" --issue 42
 Generated branch name: feature/42-new-work
 workmux add
 branch: feature/42-new-work
@@ -603,27 +694,27 @@ Body
 prompt-file-exists: yes
 ```
 
-## Create worktree launcher requires `--auto-name` for `--issue`
+## Create worktree launcher requires `--generated-name` for `--issue`
 
 ```scrut
 $ exit_code=0; printf '%s\n' 'Body' | env -u TMUX bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --issue 42 > /dev/null 2> stderr.txt || exit_code=$?; tail -1 stderr.txt; exit "${exit_code}"
-launch-workmux: --issue requires --auto-name
+launch-workmux: --issue requires --generated-name
 [1]
 ```
 
 ## Create worktree launcher rejects a non-numeric issue
 
 ```scrut
-$ exit_code=0; printf '%s\n' 'Body' | env -u TMUX bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue "#42" > /dev/null 2> stderr.txt || exit_code=$?; tail -1 stderr.txt; exit "${exit_code}"
+$ exit_code=0; printf '%s\n' 'Body' | env -u TMUX bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/generated-name" --issue "#42" > /dev/null 2> stderr.txt || exit_code=$?; tail -1 stderr.txt; exit "${exit_code}"
 launch-workmux: --issue requires a positive integer, got: #42
 [1]
 ```
 
-## Create worktree launcher rejects a branch name alongside `--auto-name`
+## Create worktree launcher rejects a branch name alongside `--generated-name`
 
 ```scrut
-$ exit_code=0; printf '%s\n' 'Body' | env -u TMUX bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name feature/explicit > /dev/null 2> stderr.txt || exit_code=$?; tail -1 stderr.txt; exit "${exit_code}"
-launch-workmux: --auto-name takes no branch-name argument, got 1
+$ exit_code=0; printf '%s\n' 'Body' | env -u TMUX bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/generated-name" feature/explicit > /dev/null 2> stderr.txt || exit_code=$?; tail -1 stderr.txt; exit "${exit_code}"
+launch-workmux: --generated-name takes no branch-name argument, got 1
 [1]
 ```
 
@@ -645,13 +736,13 @@ temp cleanup: yes
 [1]
 ```
 
-## Create worktree launcher rejects empty stdin before generating a name
+## Create worktree launcher rejects empty stdin with a generated candidate
 
-The prompt file is created before the branch name exists, so it is named for
-the issue rather than the branch. Nothing is left behind when stdin is empty.
+The prompt file is named for the issue before branch selection. Nothing is
+left behind when stdin is empty.
 
 ```scrut
-$ exit_code=0 && env -u TMUX WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --auto-name --issue "${BASHPID}" < /dev/null 2>&1 || exit_code=$?; if compgen -G "/tmp/workmux-prompt-issue-${BASHPID}.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
+$ exit_code=0 && env -u TMUX WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/generated-name" --issue "${BASHPID}" < /dev/null 2>&1 || exit_code=$?; if compgen -G "/tmp/workmux-prompt-issue-${BASHPID}.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
 launch-workmux: expected prompt content on stdin
 temp cleanup: yes
 [1]
