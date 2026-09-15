@@ -70,7 +70,7 @@ Check for existing linter configs using these patterns (aligned with the `lint-a
 | Config file(s)                                                                            | Tool          |
 | ----------------------------------------------------------------------------------------- | ------------- |
 | `eslint.config.*`, `.eslintrc.*`                                                          | ESLint        |
-| `.prettierrc*`, `prettier.config.*`                                                       | Prettier      |
+| `.prettierrc*`, `prettier.config.*`, or a `prettier` key in `package.json`                | Prettier      |
 | `.markdownlint.json`, `.markdownlint.jsonc`, `.markdownlint.yaml`, `.markdownlint-cli2.*` | markdownlint  |
 | `.shellcheckrc`                                                                           | ShellCheck    |
 | `.editorconfig`                                                                           | EditorConfig  |
@@ -159,12 +159,12 @@ When a pinned version drifts from upstream latest, the repository's `bin/version
 
 ### 6. Create Config Files
 
-Generate default config files and ignore files for each tool. Use templates from the reference files. Also generate:
+Generate default config files and ignore files for the selected tools. Use templates from the reference files and preserve existing configuration, including a `prettier` key in `package.json`. Also generate:
 
 - **`.editorconfig`** from `./references/tools/editorconfig.md` (adapted to project languages)
-- **`.prettierrc.json`** and **`.prettierignore`** from `./references/tools/prettier.md`
+- **`.prettierrc.json`** and **`.prettierignore`** from `./references/tools/prettier.md` only when Prettier was selected and the corresponding configuration is missing
 
-For the generic markdownlint configuration, set MD060 according to whether Prettier formats the project's Markdown files. Treat Prettier as formatting Markdown when the project has a Prettier config (`.prettierrc*`, `prettier.config.*`, or a `prettier` key in `package.json`) or a format script that runs Prettier, and `.prettierignore` does not exclude the Markdown files. Set `"MD060": false` in that case because Prettier owns table alignment. Otherwise set `"MD060": { "style": "aligned" }`, which requires aligned tables and prevents markdownlint's default `any` style from compacting a nearly aligned table during `--fix`. The Pandoc-academic preset keeps `"MD060": false` regardless of Prettier to allow dense academic tables. See `./references/tools/markdownlint.md` for both presets.
+For the generic markdownlint configuration, set MD060 from actual formatter coverage. First verify that Prettier is already available or was selected and installed in step 5; a config file generated here does not establish ownership. Inspect the existing or planned format command's paths, globs, working directory, and options, together with its effective ignore files (`.gitignore` and `.prettierignore` by default, or the files specified by `--ignore-path`). Set `"MD060": false` only when that command formats all Markdown files covered by this markdownlint configuration. A command limited to other file types does not qualify. Otherwise set `"MD060": { "style": "aligned" }`, including when one markdownlint configuration covers both formatted and unformatted files. The Pandoc-academic preset keeps `"MD060": false` regardless of Prettier to allow dense academic tables. See `./references/tools/markdownlint.md` for both presets.
 
 For **Lean projects**, the equivalent of "creating a config file" is adding the `lintDriver` field to `lakefile.toml` (or the `package` block of `lakefile.lean`):
 

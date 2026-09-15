@@ -45,16 +45,16 @@ Create `.markdownlint-cli2.jsonc` in the project root:
 }
 ```
 
-For this generic configuration, configure MD060 according to whether Prettier formats the project's Markdown files. The Pandoc-academic preset below keeps MD060 disabled regardless of Prettier to allow dense academic tables.
+For this generic configuration, configure MD060 from actual formatter coverage. Verify that Prettier is already available or was selected and installed during setup; configuration alone does not establish ownership. Inspect the existing or planned format command's paths, globs, working directory, and options. Honor its effective ignore files: `.gitignore` and `.prettierignore` by default, or the files specified by `--ignore-path`. The Pandoc-academic preset below keeps MD060 disabled regardless of Prettier to allow dense academic tables.
 
-- **Prettier formats Markdown:** Add the following inside `config`. Prettier formats Markdown when the project has a Prettier config (`.prettierrc*`, `prettier.config.*`, or a `prettier` key in `package.json`) or a format script that runs Prettier, and `.prettierignore` does not exclude the Markdown files. Prettier owns table alignment.
+- **Prettier formats all Markdown covered by this config:** Add the following inside `config` only when the command includes those Markdown files and they are not excluded. A command restricted to JavaScript or other non-Markdown files does not qualify. Prettier owns table alignment for this scope.
 
   ```jsonc
   // Prettier owns table alignment.
   "MD060": false,
   ```
 
-- **Prettier does not format Markdown:** Add the following inside `config`. This requires aligned tables and prevents markdownlint's default `any` style from compacting a table that is nearly aligned when `--fix` runs.
+- **Prettier does not format every Markdown file covered by this config:** Add the following inside `config`, including when the scope mixes formatted and unformatted files. This requires aligned tables and prevents markdownlint's default `any` style from compacting a table that is nearly aligned when `--fix` runs.
 
   ```jsonc
   // Require aligned tables when no formatter owns their layout.
@@ -166,20 +166,20 @@ npx markdownlint-cli2 --fix "**/*.md"
 
 ## Common Rule Customizations
 
-| Rule  | Description                    | Default  | Recommended Override                                                                             |
-| ----- | ------------------------------ | -------- | ------------------------------------------------------------------------------------------------ |
-| MD013 | Line length                    | 80 chars | `false` (disable; Prettier handles it)                                                           |
-| MD014 | Dollar signs before commands   | Enabled  | `false` (for scrut test projects)                                                                |
-| MD024 | No duplicate sibling headings  | Enabled  | `{ "siblings_only": true }`                                                                      |
-| MD033 | Inline HTML                    | Enabled  | `false` (GFM features)                                                                           |
-| MD034 | Bare URLs                      | Enabled  | `false` (allow bare URLs)                                                                        |
-| MD041 | First line must be top heading | Enabled  | `false` (frontmatter or partial files)                                                           |
-| MD060 | Table column style             | `any`    | `false` with Prettier or the Pandoc-academic preset; `{ "style": "aligned" }` for other projects |
+| Rule  | Description                    | Default  | Recommended Override                                                                                                   |
+| ----- | ------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| MD013 | Line length                    | 80 chars | `false` (disable; Prettier handles it)                                                                                 |
+| MD014 | Dollar signs before commands   | Enabled  | `false` (for scrut test projects)                                                                                      |
+| MD024 | No duplicate sibling headings  | Enabled  | `{ "siblings_only": true }`                                                                                            |
+| MD033 | Inline HTML                    | Enabled  | `false` (GFM features)                                                                                                 |
+| MD034 | Bare URLs                      | Enabled  | `false` (allow bare URLs)                                                                                              |
+| MD041 | First line must be top heading | Enabled  | `false` (frontmatter or partial files)                                                                                 |
+| MD060 | Table column style             | `any`    | `false` when Prettier covers all linted Markdown or for the Pandoc-academic preset; `{ "style": "aligned" }` otherwise |
 
 ## Notes
 
 - `markdownlint-cli2` is the successor to `markdownlint-cli`. It has better config file support and is actively maintained.
 - The `.jsonc` config format supports comments, which is useful for documenting rule overrides.
 - When Prettier is also configured, disable MD013 (line length) in markdownlint to avoid conflicts. Prettier handles line wrapping.
-- For the generic preset, disable MD060 when Prettier formats Markdown because Prettier owns table alignment; otherwise use MD060's `aligned` style so `--fix` cannot compact a nearly aligned table. The Pandoc-academic preset keeps MD060 disabled to allow dense academic tables.
+- For the generic preset, disable MD060 only when Prettier formats all Markdown covered by the config; otherwise use MD060's `aligned` style so `--fix` cannot compact a nearly aligned table. The Pandoc-academic preset keeps MD060 disabled to allow dense academic tables.
 - markdownlint-cli2 auto-fix can resolve many issues (trailing whitespace, heading style, blank lines) but not all (e.g., heading level skips require manual restructuring).
