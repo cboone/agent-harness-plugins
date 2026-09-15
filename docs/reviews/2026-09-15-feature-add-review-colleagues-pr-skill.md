@@ -9,7 +9,7 @@ Reviewed through: `37e42cc1`
 
 All four source findings are addressed in commit `ce384fa6`. The original assessment below records the review of `37e42cc1`; this section tracks the subsequent fixes and their verification.
 
-- [x] **R1:** synchronization stops on any untracked or ignored content, before either fast-forward or reset. The README and plan describe this conservative policy and no longer promise that reset always prompts.
+- [x] **R1:** synchronization stops on any untracked or ignored content before fast-forward. Rewritten or incomplete histories stop without replacing the checkout.
 - [x] **R2:** the tracked-change check precedes equal-HEAD acceptance, and tracked cleanliness is checked again after synchronization.
 - [x] **R3:** read-only GraphQL POST queries are explicitly permitted; REST writes and GraphQL mutations remain prohibited. Repository scoping covers GraphQL variables, linked-issue repositories, the initial lookup, and the global account endpoint.
 - [x] **R4:** the sub-issue query requests bodies and URLs, accepts and uses the pagination cursor, and retrieves all pages. The assessment reads each body and discloses incomplete retrieval.
@@ -21,7 +21,7 @@ The source and README mirrors were regenerated. The new plugin remains at `1.0.0
 - `make lint validate` passed after regenerating both distributions with `make build`. This covers Markdown lint, Prettier, ShellCheck, shfmt, actionlint, JSON validation, cross-references, catalog consistency, and mirror freshness. The edited plan and review also passed targeted lint in fix mode and formatting. The latest merged catalog is `catalog-M71-m107-p165-n58`.
 - Nine disposable-checkout command checks passed: staged and unstaged changes at equal and stale HEADs; untracked and ignored content at an incoming tracked path; non-overlapping untracked content; ignored build output; and a clean fast-forward with post-sync checks. Local content and HEAD were preserved when the guard blocked synchronization. No commits were created in the probe.
 - GitHub accepted the revised GraphQL query against `microsoft/vscode#300108`, with the page size reduced to one. The result had no parent or sub-issues. This verifies query compatibility and the empty-result path, but does not establish multiple-page retrieval or reading real sub-issue acceptance criteria.
-- Full end-to-end agent behavior and the destructive reset scenarios remain unverified. These limitations remain in the plan's behavioral checklist.
+- Full end-to-end agent behavior remains unverified. Checkout synchronization now stops on rewritten or incomplete history instead of resetting; index-flag handling and divergent-history behavior remain in the plan's behavioral checklist.
 - The initial Scrut invocation recorded environment-specific failures. The subsequent full-suite run below passed all 402 cases.
 
 ## Summary
@@ -62,7 +62,7 @@ There are no deleted or renamed files. This review document is outside the revie
 
 - No package dependencies, executable helpers, CI configuration, or schemas change. The skill requires Git and authenticated GitHub CLI access.
 - The latest merged catalog tag is `catalog-M71-m107-p165-n58`, accounting for the new `1.0.0` plugin and the current marketplace state.
-- Checkout synchronization includes a destructive reset path. The README omits reset from its suggested allow rules, but that does not establish that every downstream harness or existing permission configuration will prompt.
+- Checkout synchronization only fast-forwards after its guards pass. Rewritten or incomplete history stops for the user, so the skill does not replace the checkout.
 
 ## Code Quality Assessment
 
@@ -72,7 +72,7 @@ Location: [SKILL.md:97](../../plugins/review-colleague-pr/skills/review-colleagu
 
 The cleanliness check explicitly excludes untracked files. A linked worktree with no local commits can therefore pass every reset condition while containing an untracked file at a path introduced by the rewritten PR. The prescribed hard reset can overwrite that file. Printing the old HEAD does not recover content that was never committed. This follows the documented behavior of [git reset --hard](https://git-scm.com/docs/git-reset).
 
-**Required change:** detect untracked and ignored paths that the target tree could overwrite, and stop when they would be affected, or use a synchronization method that refuses such overwrites. Include this case in the behavioral verification. The tracked-files-only requirement in the plan itself needs correction.
+**Resolution:** subsequent review changes removed the reset path. The skill now stops when history diverges, and still blocks synchronization when any untracked or ignored content exists.
 
 ### R2. P1: check for tracked edits before accepting an equal HEAD
 

@@ -42,7 +42,7 @@ The skill follows a set of principles meant to produce a fair review rather than
 - The only file or branch changes are from guarded checkout synchronization in step 2. The skill never commits or pushes.
 - Run tests, builds, linters, or installs (it reads CI status instead)
 
-The one change it makes is to keep the checkout current. It stops on uncommitted tracked changes even when HEAD already matches the PR. If synchronization is needed, it also stops on any untracked or ignored content, including build output, without changing those files. With those checks clear, it fast-forwards when possible. If the author rewrote the branch, it resets to the PR's head only inside a linked worktree with no local commits; otherwise it stops and explains why.
+The one change it makes is to keep the checkout current. It stops on uncommitted tracked changes or index flags that hide tracked edits, even when HEAD already matches the PR. If synchronization is needed, it also stops on any untracked or ignored content, including build output, without changing those files. With those checks clear, it fast-forwards when possible. If history is incomplete or the author rewrote the branch, it reports the commit SHAs and stops without replacing the checkout.
 
 ## Usage
 
@@ -104,7 +104,7 @@ Reviewed `a1b2c3d` (fast-forwarded from `9f8e7d6`): 12 files, +340/-58. CI: 1 fa
 
 ## Recommended Permissions
 
-GitHub access is read-only. Git fetches refs, and step 2 may fast-forward or reset the checkout after its safeguards pass. To allow these commands to run without individual permission prompts, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+GitHub access is read-only. Git fetches refs, and step 2 may fast-forward the checkout after its safeguards pass. To allow these commands to run without individual permission prompts, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
 ```json
 {
@@ -124,8 +124,6 @@ GitHub access is read-only. Git fetches refs, and step 2 may fast-forward or res
       "Bash(git ls-files *)",
       "Bash(git merge --ff-only *)",
       "Bash(git merge-base *)",
-      "Bash(git reflog show *)",
-      "Bash(git reset --hard *)",
       "Bash(git remote -v)",
       "Bash(git rev-parse *)",
       "Bash(git status *)"
@@ -134,7 +132,7 @@ GitHub access is read-only. Git fetches refs, and step 2 may fast-forward or res
 }
 ```
 
-`git reset --hard` is included because the skill may use it after its linked-worktree and reflog safeguards succeed. It overwrites the checkout's tracked files, so review this permission carefully. The checkout safeguards apply regardless of permission settings. The `gh api` rules also match write calls; the skill's ground rules, not these patterns, are what keep it read-only. Read-only GraphQL queries use POST, while REST writes and GraphQL mutations are forbidden. If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+If a PR branch was rewritten or its history cannot be established, the skill stops and reports the relevant commit SHAs instead of replacing the checkout. The `gh api` rules also match write calls; the skill's ground rules, not these patterns, are what keep GitHub access read-only. Read-only GraphQL queries use POST, while REST writes and GraphQL mutations are forbidden. If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
 ## See Also
 
