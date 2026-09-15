@@ -29,7 +29,7 @@ Bound drain batches. “Drain until empty” can be unbounded when a concurrent 
 
 ## Progress, Topology, and Costs
 
-Lock-free describes system-wide progress. It does not promise a fixed number of steps for one callback. Standard Rust atomic types are available and lock-free, but a particular operation can still retry. For C++ and other APIs, check width, alignment, and target guarantees. State counter-wrap arithmetic, capacity assumptions, stale-handle behavior, and any ABA-related risk. SPSC is a topology constraint, not a proof that those concerns disappear.
+Lock-free describes system-wide progress. It does not promise a fixed number of steps for one callback. In Rust, use an atomic type only when that width is available and lock-free for the selected target; a particular operation can still retry. For C++ and other APIs, check width, alignment, and target guarantees. State counter-wrap arithmetic, capacity assumptions, stale-handle behavior, and any ABA-related risk. SPSC is a topology constraint, not a proof that those concerns disappear.
 
 A bounded enqueue is not the whole submission path. Audit payload construction, copy or move, success notification, rejected-payload destruction, and last-reference release separately. A render worker can turn an apparent SPSC route into multi-producer traffic. If preparation is late or a consumer stalls, keep the last valid configuration or follow the documented product policy without making callback progress depend on background progress.
 
