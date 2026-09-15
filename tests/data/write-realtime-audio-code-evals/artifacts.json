@@ -39,7 +39,7 @@
   "auv3-ramp.json": { "language": "json", "content": "{\"start\":0.0,\"end\":1.0,\"duration_samples\":192,\"block_size\":64}" },
   "automation-adapter.cpp": { "language": "cpp", "content": "for (auto point : queue) smoother.setTargetValue(point.value);\nfor (auto event : auv3_events) smoother.setTargetValue(event.end);\n" },
   "clap-modulation.cpp": { "language": "cpp", "content": "effective = base + global_mod + polyphonic_mod;\n" },
-  "zero-smoothing.cpp": { "language": "cpp", "content": "gain.reset(sample_rate, 0.01); gain.setCurrentAndTargetValue(1.0f); gain.setTargetValue(0.0f);\n" },
+  "case-024-a.cpp": { "language": "cpp", "content": "gain.reset(sample_rate, 0.01); gain.setCurrentAndTargetValue(1.0f); gain.setTargetValue(0.0f);\n" },
   "recursive-filter.cpp": { "language": "cpp", "content": "state = feedback * state + input; return state;\n" },
   "release-flags.txt": { "language": "text", "content": "compiler: clang++\nflags: -O3 -ffast-math\n" },
   "core-cargo.toml": { "language": "toml", "content": "[dependencies]\nshared = { path = \"../shared\" }\n# shared depends on clap-sys\n" },
@@ -51,10 +51,10 @@
   "request-scope.md": { "language": "markdown", "content": "Request: report findings and proposed checks only. Do not edit, commit, or install anything.\nCompanion skill: installed.\n" },
   "standalone-meter.cpp": { "language": "cpp", "content": "void process() { publish_meter(); }\nvoid draw() { read_meter(); }\n" },
   "installed-layout.txt": { "language": "text", "content": "installed plugins:\n- write-realtime-audio-code\nlocal references: present\nplant-defects: absent\n" },
-  "rtsan-control-detected.log": { "language": "text", "content": "callback reached: yes\ncontrol: malloc in [[clang::nonblocking]] callback\nobserved: ERROR: RealtimeSanitizer: unsafe-library-call\n" },
-  "rtsan-control-missed.log": { "language": "text", "content": "callback reached: yes\ncontrol: malloc in [[clang::nonblocking]] callback\nobserved: exit 0; no RealtimeSanitizer diagnostic\n" },
+  "case-031-a.log": { "language": "text", "content": "callback reached: yes\ncontrol: malloc in [[clang::nonblocking]] callback\nobserved: ERROR: RealtimeSanitizer: unsafe-library-call\n" },
+  "case-032-a.log": { "language": "text", "content": "callback reached: yes\ncontrol: malloc in [[clang::nonblocking]] callback\nobserved: exit 0; no RealtimeSanitizer diagnostic\n" },
   "tsan-instrumented-control.log": { "language": "text", "content": "all subject translation units: -fsanitize=thread\ncontrol: ordinary payload with relaxed publication\nparticipants reached copy: producer=1000 consumer=1000\nobserved: WARNING: ThreadSanitizer: data race\n" },
   "rtsan-worker-control.log": { "language": "text", "content": "plugin loading: verify_interceptors=true; initialization succeeded\ncallback control: unsafe-library-call detected\nworker control: worker marked nonblocking; unsafe-library-call detected\n" },
-  "valid-vst3-queue.json": { "language": "json", "content": "{\"prior_value\":0.2,\"block_size\":64,\"points\":[{\"offset\":63,\"value\":0.8}],\"expected_at_offset_31\":0.5}" },
+  "case-035-a.json": { "language": "json", "content": "{\"prior_value\":0.2,\"block_size\":64,\"points\":[{\"offset\":63,\"value\":0.8}],\"expected_at_offset_31\":0.5}" },
   "valid-automation-adapter.cpp": { "language": "cpp", "content": "auto curve = reconstruct_vst3_curve(prior_value, queue, block_size);\napply_curve_before_smoothing(curve);\n" }
 }

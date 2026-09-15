@@ -2,11 +2,11 @@
 
 ## Evaluated Revision
 
-Canonical skill under review, after the worked-example and evaluation-corpus revision. This revision remains at `1.0.0` because the plugin has not yet been released.
+Canonical skill at commit `9c9f1e9e3b4f4f740a42b9dd6c323a84628cb16d`, after the worked-example and evaluation-corpus revision. This revision remains at `1.0.0` because the plugin has not yet been released.
 
 ## Results
 
-An independent Codex subagent evaluated `RTAC-001`, `RTAC-002`, `RTAC-006`, `RTAC-019`, `RTAC-023`, `RTAC-029` through `RTAC-035` in a fresh context. It received the selected raw artifacts and canonical installed-skill layout, but not assessment criteria or prior review findings. The harness did not report a model identifier. It made no changes and ran no downstream audio toolchain commands.
+An independent Codex subagent evaluated `RTAC-001`, `RTAC-002`, `RTAC-006`, `RTAC-019`, `RTAC-023`, `RTAC-029` through `RTAC-035` in a fresh context. It received the selected raw artifacts and canonical installed-skill layout, but not assessment criteria or prior review findings. The harness did not report a model identifier. It made no changes and ran no downstream audio toolchain commands. This table retains only the assessor's summaries, not evaluator outputs or action traces, so each reported result remains independently unauditable.
 
 | Case       | Selected references                                               | Result                        | Assessment and unverified scope                                                                                                                                                                                    |
 | ---------- | ----------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -23,7 +23,7 @@ An independent Codex subagent evaluated `RTAC-001`, `RTAC-002`, `RTAC-006`, `RTA
 | `RTAC-034` | Checklist; verifying concurrency                                  | Pass                          | Separately recognizes callback, loading, and worker coverage and requests controls for other entries. Reset, active flush, foreign code, and other loading arrangements remain unverified.                         |
 | `RTAC-035` | Checklist; events and timing                                      | Pass after fixture correction | Accepts reconstruction before smoothing and found that the original expected value at offset 31 was incorrect. The artifact now records the correct `0.5`. Queue edge cases and unit conversion remain unverified. |
 
-`RTAC-003` through `RTAC-005`, `RTAC-007` through `RTAC-018`, and `RTAC-020` through `RTAC-028` remain unverified because they were outside this independent sample. The evaluation corpus records their raw inputs and criteria for later runs. Generated Codex and OpenCode layout navigation is recorded separately after mirror generation.
+`RTAC-003` through `RTAC-005`, `RTAC-007` through `RTAC-018`, `RTAC-020` through `RTAC-022`, and `RTAC-024` through `RTAC-028` remain unverified because they were outside this independent sample. The evaluation corpus records their raw inputs and criteria for later runs. Generated Codex and OpenCode layout navigation remains unverified because this corpus contains no retained record of those runs.
 
 ## Record Format
 

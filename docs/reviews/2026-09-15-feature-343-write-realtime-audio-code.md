@@ -2,17 +2,19 @@
 
 - Base: `main` (merge base: `340f3192`)
 - Reviewed through: `c6e10bdf`
-- Commits: 7
-- Files changed: 35 (28 added, 7 modified, 0 deleted, 0 renamed)
+- Commits: 7 at the reviewed revision
+- Files changed: 39 (32 added, 7 modified, 0 deleted, 0 renamed) at the reviewed revision
 - Repository: `cboone/agent-harness-plugins`, not archived, with no fork or upstream remote identified
+
+> Historical snapshot: this review assesses `c6e10bdf` and its original merge base. The resolution-status entries record later work, and the detailed findings below are superseded where those entries say they are resolved. Do not use this document as a description of the current branch head.
 
 ## Summary
 
-The branch adds a real-time audio writing and review skill, covering callback contracts, communication, memory ordering, verification, compatibility, event timing, and host-independent cores. It registers the plugin across the catalogs and mirrors, updates the Plant Defects companion documentation, and adds 30 evaluation cases. The integration passes all repository checks, but the required worked examples and behavioral evidence are incomplete, so the branch needs more work before it satisfies its plan.
+At the reviewed revision, the branch adds a real-time audio writing and review skill, covering callback contracts, communication, memory ordering, verification, compatibility, event timing, and host-independent cores. It registers the plugin across the catalogs and mirrors, updates the Plant Defects companion documentation, and adds 35 evaluation cases. The integration passes all repository checks, but the required worked examples and behavioral evidence were incomplete at that revision.
 
 ## Resolution Status
 
-- [x] R1: Recorded independent behavioral evidence for 12 focused cases, corrected the detected event-fixture expectation, and moved the plan back to `todo/` while the remaining cases are unverified.
+- [x] R1: Recorded 12 focused evaluation summaries, corrected the detected event-fixture expectation, and moved the plan back to `todo/` while the remaining cases and retained evaluator evidence are unverified.
 - [x] R2: Replaced conclusion-led input prose with opaque raw artifacts, separated control variants, added wrapper scope, and retained a valid comparison case.
 - [x] R3: Added concrete worked examples to every comprehensive reference and a rule-to-evidence map for the safety-critical guidance.
 
@@ -106,15 +108,16 @@ Plan: [2026-09-14-new-skill-write-realtime-audio-code.md](../plans/todo/2026-09-
 
 ## File Inventory
 
-### Added files: 28
+### Added files: 32
 
-The following 11 relative paths were added under both `plugins/write-realtime-audio-code/` and `dist/codex/plugins/write-realtime-audio-code/`, accounting for 22 files:
+The following 12 relative paths were added under both `plugins/write-realtime-audio-code/` and `dist/codex/plugins/write-realtime-audio-code/`, accounting for 24 files:
 
 ```text
 .claude-plugin/plugin.json
 README.md
 skills/write-realtime-audio-code/SKILL.md
 skills/write-realtime-audio-code/references/essential/checklist.md
+skills/write-realtime-audio-code/references/essential/rule-to-evidence.md
 skills/write-realtime-audio-code/references/comprehensive/audio-thread-rules.md
 skills/write-realtime-audio-code/references/comprehensive/events-and-timing.md
 skills/write-realtime-audio-code/references/comprehensive/lock-free-buffers.md
@@ -124,7 +127,7 @@ skills/write-realtime-audio-code/references/comprehensive/the-pure-core-seam.md
 skills/write-realtime-audio-code/references/comprehensive/verifying-concurrency.md
 ```
 
-The remaining six additions are:
+The remaining eight additions are:
 
 ```text
 dist/opencode/skills/write-realtime-audio-code
@@ -132,6 +135,7 @@ docs/plans/todo/2026-09-14-new-skill-write-realtime-audio-code.md
 tests/data/write-realtime-audio-code-evals/README.md
 tests/data/write-realtime-audio-code-evals/assessment-criteria.md
 tests/data/write-realtime-audio-code-evals/assessment.md
+tests/data/write-realtime-audio-code-evals/artifacts.json
 tests/data/write-realtime-audio-code-evals/inputs.json
 ```
 
@@ -152,7 +156,7 @@ No files are deleted or renamed in the net diff. The plan was created and later 
 ## Notable Changes
 
 - `write-realtime-audio-code` starts at `1.0.0`; `plant-defects` changes from `1.0.0` to `1.0.1`.
-- Catalog state changes from `catalog-M70-m103-p156-n57` to `catalog-M71-m103-p157-n58` and passes the catalog validation rule.
+- At the reviewed revision, catalog state changes from `catalog-M70-m103-p156-n57` to `catalog-M71-m103-p157-n58` and passes the catalog validation rule.
 - The Codex builder substitutes the shorter catalog description into discovery frontmatter; the skill body is preserved. The OpenCode entry is the expected symlink to the canonical skill.
 
 ## Validation and Review Limits

@@ -34,9 +34,9 @@ Distinguish three state-change classes:
 
 An ownership-safe swap solves only the internal-replacement case. It does not authorize changing negotiated latency or ports while active. Track what is pending and what audio-thread and main-thread queries expose until a permitted transition.
 
-CLAP latency changes during activation, and its `changed` notification is limited to that phase. Structural ports and parameter changes requiring `CLAP_PARAM_RESCAN_ALL` require deactivation and their documented rescan contract. A host's `request_restart` can be delayed, so continue with the current valid configuration without waiting in the callback or reporting the pending configuration as active. Update host-visible caches and notifications only at permitted boundaries.
+CLAP latency changes during activation, and its `changed` notification is limited to that phase. Structural ports and parameter changes requiring `CLAP_PARAM_RESCAN_ALL` require deactivation and their documented rescan contract. Use value, text, and info rescan flags for cache or presentation changes; reserve structural rescans for changes that alter the parameter set. A host's `request_restart` can be delayed, so continue with the current valid configuration without waiting in the callback or reporting the pending configuration as active. Update host-visible caches and notifications only at permitted boundaries.
 
-Keep `get_value` coherent on the main thread. Do not call `clap_host_params.request_flush` on the audio thread. During `process` or active `flush`, use the supplied output event interface for parameter events and handle failed pushes. Use gestures where appropriate. State-driven value changes need the matching main-thread rescan so host caches do not become stale.
+Keep `get_value` coherent on the main thread. Do not call `clap_host_params.request_flush` on the audio thread. During `process` or active `flush`, use the supplied output event interface for parameter events and handle failed pushes. Use gestures where appropriate. When an output parameter change mirrors mapped MIDI input, set `CLAP_EVENT_DONT_RECORD` so the host does not record the same change as new automation. State-driven value changes need the matching main-thread rescan so host caches do not become stale.
 
 ## Worked State Transition
 

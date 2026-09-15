@@ -1,6 +1,6 @@
 # Events and Timing
 
-Define the time domain before processing an event. Block-relative offsets, an internal sample timeline, CLAP `steady_time`, and musical transport positions have different meanings. `steady_time` can be `-1` and can move backward across reset. A negative difference can describe a seek, reset, or loop; it does not identify one by itself.
+Define the time domain before processing an event. Block-relative offsets, an internal sample timeline, CLAP `steady_time`, and musical transport positions have different meanings. `steady_time` can be `-1`; when it is available, the CLAP process contract requires it to be nonnegative and advance by at least `frames_count` on the next process call. A transport position can move backward across a seek, reset, or loop, but a change in either time value does not identify the cause by itself. Respect transport validity flags and in-block transport events before treating transport data as a scheduling boundary.
 
 ## Event Boundaries and Scheduling
 
@@ -36,7 +36,7 @@ Build a trace with a delayed note-on and note-off, equal-offset events, an outpu
 
 The scheduler accepts at most two pending events. At block 1000 with 64 frames, it receives note-on `(0, 0, 60, 7)` at offset 8 for delivery at sample 1080, then its note-off at offset 20. Admission reserves the note-off slot when accepting the note-on. At offset 20 it retains the termination obligation rather than emitting it before the delayed start. A same-offset parameter value and note event preserve the host's declared order. A discontinuity resets the internal timeline according to the selected transport policy and clears only obligations that the policy permits clearing.
 
-At block 1080 the note-on is emitted at offset 0. If the output event list rejects its later note-off, the scheduler retains that note-off and returns `CLAP_PROCESS_CONTINUE` while audio is silent. It retries only on the next valid output opportunity. Deactivation clears the local schedule without claiming it emitted an unavailable output event. Separately, a VST3 block with only a final point at offset 63 interpolates from the prior value at offset `-1`; an AUv3 96-sample ramp retains 32 samples of duration after a 64-sample block; and a zero target takes the explicit mute path rather than multiplicative smoothing. These traces establish the selected policy and must be adapted to each host contract.
+The next 64-frame block starts at sample 1064, so the note-on for sample 1080 is emitted at offset 16. If the output event list rejects its later note-off, the scheduler retains that note-off and returns `CLAP_PROCESS_CONTINUE` while audio is silent. It retries only on the next valid output opportunity. Deactivation clears the local schedule without claiming it emitted an unavailable output event. Separately, a VST3 block with only a final point at offset 63 interpolates from the prior value at offset `-1`; an AUv3 96-sample ramp retains 32 samples of duration after a 64-sample block; and a zero target takes the explicit mute path rather than multiplicative smoothing. These traces establish the selected policy and must be adapted to each host contract.
 
 ## Sources
 

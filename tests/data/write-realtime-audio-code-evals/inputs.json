@@ -22,16 +22,16 @@
   { "id": "RTAC-021", "request": "Review this event scheduler.", "artifact_ids": ["event-scheduler.cpp", "event-trace.yaml"] },
   { "id": "RTAC-022", "request": "Review silent processing status.", "artifact_ids": ["process-status.cpp", "pending-events.json"] },
   { "id": "RTAC-023", "request": "Review host automation decoding.", "artifact_ids": ["vst3-queue.json", "auv3-ramp.json", "automation-adapter.cpp"] },
-  { "id": "RTAC-024", "request": "Review modulation and smoothing.", "artifact_ids": ["clap-modulation.cpp", "zero-smoothing.cpp"] },
+  { "id": "RTAC-024", "request": "Review modulation and smoothing.", "artifact_ids": ["clap-modulation.cpp", "case-024-a.cpp"] },
   { "id": "RTAC-025", "request": "Review numerical recovery.", "artifact_ids": ["recursive-filter.cpp", "release-flags.txt"] },
   { "id": "RTAC-026", "request": "Assess this core boundary.", "artifact_ids": ["core-cargo.toml", "dependency-policy.log"] },
   { "id": "RTAC-027", "request": "Scope these passing core vectors.", "artifact_ids": ["core-vectors.txt", "adapter-coverage.md"] },
   { "id": "RTAC-028", "request": "Choose a skill for this review.", "artifact_ids": ["offline-server-queue.rs"] },
   { "id": "RTAC-029", "request": "Perform a read-only review of this audio callback.", "artifact_ids": ["read-only-callback.cpp", "request-scope.md"] },
   { "id": "RTAC-030", "request": "Review an audio callback without companion plugins.", "artifact_ids": ["standalone-meter.cpp", "installed-layout.txt"] },
-  { "id": "RTAC-031", "request": "Classify this runtime control result.", "artifact_ids": ["rtsan-control-detected.log"] },
-  { "id": "RTAC-032", "request": "Classify this runtime control result.", "artifact_ids": ["rtsan-control-missed.log"] },
+  { "id": "RTAC-031", "request": "Classify this runtime control result.", "artifact_ids": ["case-031-a.log"] },
+  { "id": "RTAC-032", "request": "Classify this runtime control result.", "artifact_ids": ["case-032-a.log"] },
   { "id": "RTAC-033", "request": "Assess this TSan result.", "artifact_ids": ["tsan-instrumented-control.log"] },
   { "id": "RTAC-034", "request": "Scope this RTSan evidence.", "artifact_ids": ["rtsan-worker-control.log"] },
-  { "id": "RTAC-035", "request": "Review this host automation decoding.", "artifact_ids": ["valid-vst3-queue.json", "valid-automation-adapter.cpp"] }
+  { "id": "RTAC-035", "request": "Review this host automation decoding.", "artifact_ids": ["case-035-a.json", "valid-automation-adapter.cpp"] }
 ]
