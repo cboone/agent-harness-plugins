@@ -23,7 +23,7 @@ The catalog has no prior art. A grep for `manual verification|by hand|verify man
 Four design decisions go beyond the issue text:
 
 1. **Two record lines beside the four parts.** `Why by hand` carries the issue's design note that a step that cannot be automated in principle says so and why, while one merely not automated yet links the issue that defers it. `Result` holds readings rather than ticks.
-1. **A fixed status vocabulary**, so a resumed checklist reads the same in every session: `pending`, `passed`, `failed`, `partial`, `void`, `deferred`, `untestable here`. `void` is the one fosforo needed and had no word for: a run that happened and says nothing, whether against the wrong build, with the instrument not running, or under conditions that could not fail.
+1. **A fixed status vocabulary**, so a resumed checklist reads the same in every session: `pending`, `passed`, `failed`, `partial`, `void`, `deferred`, `untestable here`, `retired`. `void` is the one fosforo needed and had no word for: a run that happened and says nothing, whether against the wrong build, with the instrument not running, or under conditions that could not fail. `retired` covers a step withdrawn because it was misdesigned or because its quantity has no component only the environment has, which is what happened to the brightness half of fosforo's sample-rate arm; neither `deferred` nor `untestable here` describes that.
 1. **Step 0 is always "confirm the build under test", re-run at the start of every session.** A result recorded without it is `void`. This is the build-confirmation habit the issue attributes to `stamp-build-provenance` (#341). That skill is filed and not yet built, so the step describes the habit on its own terms and degrades to the weakest confirmation a project has, saying plainly that it is weak.
 1. **Scoping uses the convention three skills already read.** `create-worktree`, `address-issue-in-worktree`, and `suggest-next-issue` look in `docs/plans/todo/` for a heading containing "exclusive resource" and take the backticked names under it as the project's declared resources. The checklist's `### Exclusive resources` heading therefore makes it machine-readable to the resource-claim workflow with no change to those skills.
 
@@ -157,7 +157,7 @@ The sibling template, in this order:
 ### Catalog registration
 
 - **`.claude-plugin/marketplace.json`:** a new object between `write-lean-tests` and `write-markdown`, with `"category": "writing"`, `"source": "./plugins/write-manual-verification-plan"`, and a version matching `plugin.json`. Then recompute `metadata.version` with `bin/compute-catalog-state`. It is currently `catalog-M70-m103-p156-n57`, and one plugin at `1.0.0` should give `catalog-M71-m103-p156-n58`, to be confirmed from the script rather than assumed.
-- **`README.md`:** a `Write Manual Verification Plan` row between Write Formalization Roadmap and Write Markdown. There is no `**External tools:**` bullet, and `## Contents` is untouched.
+- **`README.md`:** a `Write Manual Verification Plan` row between Write Formalization Roadmap and Write Markdown, and an `**External tools:**` bullet naming `gh` only for a checklist kept on an issue, matching how the Release bullet lists its optional `gh`. `## Contents` is untouched.
 - **Mirrors:** run `bin/build-codex-marketplace` and `bin/build-opencode-mirror`, and commit both generated trees.
 
 ## Notes on the issue body
