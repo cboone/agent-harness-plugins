@@ -60,10 +60,10 @@ Run independent read-only probes in parallel. Fetches mutate `FETCH_HEAD`; keep 
 
 ```bash
 git remote
-git remote get-url origin | sed -E 's#^[A-Za-z][A-Za-z0-9+.-]*://([^/@]*@)?([^/]+)/#\2/#; s#^[^/@]*@([^:]+):#\1/#; s#\.git$##'
+git remote get-url origin | sed -E 's#^([^/@]*@)?([^/:]+):([^/].*)$#\2/\3#; s#^[A-Za-z][A-Za-z0-9+.-]*://([^/@]*@)?([^/]+)/#\2/#; s#\.git$##'
 ```
 
-The first command lists remote names only. The second removes URL userinfo and SCP-style SSH usernames, preserves a port in URI authorities, converts the remote to `HOST/OWNER/NAME`, and removes a trailing `.git` before printing it, so credentials never enter the tool transcript. Never run `git remote -v` or print an unsanitized remote URL. Use this normalized origin selector in later commands and reports.
+The first command lists remote names only. The second removes URL userinfo and optional SCP-style SSH usernames (including username-free `github.com:OWNER/REPO` remotes), preserves a port in URI authorities, converts the remote to `HOST/OWNER/NAME`, and removes a trailing `.git` before printing it, so credentials never enter the tool transcript. Never run `git remote -v` or print an unsanitized remote URL. Use this normalized origin selector in later commands and reports.
 
 Resolve the sanitized origin identity to a repository:
 
@@ -77,8 +77,8 @@ gh repo view <origin-selector> --json nameWithOwner,url,visibility,isArchived,is
 - If `git remote` lists `upstream`, resolve its URL with the same sanitizer, including SSH alias resolution, then use `gh repo view <upstream-selector> --json nameWithOwner,url` to record its canonical host and repository. If the remote cannot be resolved, treat any candidate that could name it as third-party until its identity is established. Never print its unsanitized URL.
 - Keep the host and `owner/name` as separate fields for every repository. In the examples, `<target>`, `<pr-repo>`, and `<source-repo>` are host-qualified selectors where needed; `<pr-owner>/<pr-name>` and `<source-owner>/<source-name>` are the host-free API paths. Never put a hostname after `repos/`.
 - `parent` has no `nameWithOwner` field. Build the parent's name from `.parent.owner.login` and `.parent.name`.
-- For the rest of this workflow, a **third-party repository** is any target whose owner differs from origin's owner, plus the fork's parent and the canonical repository identified by an `upstream` remote, even when both repositories have the same owner.
-- Without an `origin`, there is no default target. In a Git checkout, still scan uncommitted changes, eligible untracked text files, and local plan and review documents; skip only the committed branch range whose base cannot be established. Outside a Git checkout, scan the session and documents it names. In either case retain destinations explicitly named there, and start only candidates without a named destination unresolved. Without an ownership baseline, require approval by number unless the session establishes that the target belongs to the user.
+- For the rest of this workflow, a **third-party repository** is any target whose normalized host and owner identity differs from origin's, plus the fork's parent and the canonical repository identified by an `upstream` remote, even when both repositories have the same owner. Compare hostnames case-insensitively after SSH alias resolution, and compare owner names case-insensitively. A matching owner on a different GitHub host is third-party.
+- Without an `origin`, there is no default target. In a Git checkout, still scan uncommitted changes, eligible untracked text files, and local plan and review documents; skip only the committed branch range whose base cannot be established. Skip PR discovery and origin-dependent remote, ref, and base commands unless the session supplies an explicit PR identity. For an explicit PR, query it directly using its full repository identity rather than listing PRs against an unavailable target. Carry the unavailable target and base forward: continue session, working-tree, untracked, and document sources, retain destinations explicitly named there, and leave bare references unresolved. Outside a Git checkout, scan the session and documents it names. In either case start only candidates without a named destination unresolved. Without an ownership baseline, require approval by number unless the session establishes that the target belongs to the user.
 
 Treat every substituted value as shell data. Use an argument-list tool when available; otherwise single-quote each literal argument and encode an embedded apostrophe as `'\''` within that argument. For example, `--search 'runner'\''s timeout'` passes one literal phrase. Backticks and `$()` in source text must never become shell substitutions. Do not use `eval` or interpolate source text into double-quoted shell source.
 
@@ -88,7 +88,7 @@ Treat every substituted value as shell data. Use an argument-list tool when avai
 git branch --show-current
 ```
 
-If the output is empty (a detached HEAD) or names the default branch, there is no committed branch range to read. Still scan uncommitted changes, eligible untracked text files, and local documents, and say that the committed range was unavailable in the proposal.
+If the output is empty (a detached HEAD) or names the default branch, there is no committed branch range to read. Skip branch reflog/base commands in either case. Skip PR discovery on the default branch unless an explicit PR identity was supplied; with an empty branch name, use only an explicit PR identity for PR reads. When an explicit PR is supplied, query it directly by its full repository identity instead of listing PRs by branch. Still scan uncommitted changes, eligible untracked text files, and local documents, and say that the committed range and branch-range sources were unavailable in the proposal.
 
 #### Pull request
 
@@ -97,6 +97,8 @@ gh pr list --repo <target> --head <branch> --state open --limit 100 --json numbe
 ```
 
 Keep only a PR whose `headRepository.nameWithOwner` and host match origin's full repository identity, since `--head` matches the branch name in any fork, including another repository owned by the same account. If the head repository is unavailable, report that source as unresolved rather than guessing. Empty output means there is no open PR. Do not use `gh pr view <branch>` for this: it also returns a merged PR from an earlier branch that had the same name.
+
+Record the head repository's visibility when available. If the PR source is private, internal, or has unknown visibility and the filing destination is public, apply the disclosure rules before proposing or filing anything: do not publish source identities or details in that public destination.
 
 When origin is a fork and no PR was found, run the same query with `--repo <parent>`. A PR found there is a read-only source: its comments yield candidates, but it never receives the summary comment.
 
@@ -132,6 +134,8 @@ git rev-parse FETCH_HEAD
 
 Use that immutable commit as `<base-sha>` in every scan below. Record it before any later fetch replaces `FETCH_HEAD`; do not substitute `origin/<base>` or a local branch. Getting the base right matters: a stacked branch compared against the default branch would inherit its parent branch's markers and issue references.
 
+If no base SHA could be established, skip every committed-range diff or log command that requires `<base-sha>`; continue with working-tree, untracked, session, and document sources, and report that branch-range evidence was unavailable.
+
 #### Source issues
 
 Collect the issues this branch addresses from all available sources, even when a PR exists:
@@ -150,7 +154,7 @@ References explicitly labelled as deferred follow-ups or already-filed concerns 
 gh issue view <n> --repo <source-repo> --json url,state,title,body
 ```
 
-Drop any whose `url` contains `/pull/`, because `gh issue view` also resolves pull request numbers. Never search the tracker for source issues: a keyword match is not evidence that the branch addresses an issue.
+Accept only URLs whose final path segments are `/issues/<number>`; discard pull-request URLs ending in `/pull/<number>`. Compare the URL path after removing query and fragment components, so repository names such as `issues` or `pull` do not affect classification. Never search the tracker for source issues: a keyword match is not evidence that the branch addresses an issue.
 
 Retain the returned URL, host, repository, and number as the source identity for body links, duplicate comparisons, and timeline reads. Equal numbers in different repositories are different issues. A failed source read is unavailable evidence, never a reason to retry the number against the filing target.
 
@@ -206,7 +210,7 @@ Three details in those commands are load-bearing:
 
 #### Pull request
 
-When a PR was found:
+When a PR was found, use the explicit `<pr-repo>` selector for every `gh pr` command in this workflow, including PR list, view, and checks commands. Do not rely on `gh`'s implicit repository selection.
 
 ```bash
 gh pr view <n> --repo <pr-repo> --json body
@@ -256,7 +260,7 @@ Apply these in order.
    - An issue that links back to the source covers the same concern. Read the cross-references of the PR and of each source issue once, then match candidates against the list:
 
      ```bash
-     gh api --paginate --hostname <source-host> repos/<source-owner>/<source-name>/issues/<n>/timeline --jq '.[] | select(.event == "cross-referenced") | .source.issue | select(.html_url | contains("/issues/")) | {number, title, state, url: .html_url}'
+     gh api --paginate --hostname <source-host> repos/<source-owner>/<source-name>/issues/<n>/timeline --jq '.[] | select(.event == "cross-referenced") | .source.issue | select(.html_url | split("?")[0] | split("#")[0] | test("/issues/[0-9]+/?$")) | {number, title, state, url: .html_url}'
      ```
 
      For the PR, use its recorded host, owner, repository name, and number; for each source issue, use that issue's recorded identity. Preserve each result's full URL rather than treating its number as local to the source or destination. The endpoint accepts a pull request number too. When a filed issue can link its source, this read finds an earlier run's filings whether or not that run posted a summary comment. The list also holds every other issue that merely mentions the source, such as a related proposal, so a listed issue tracks a candidate only when it passes the same distinctive-words test as a search hit below.

@@ -79,7 +79,7 @@ Each step below is its own tool call, made in order.
 
 1. Record the issue number, full URL, title, host, repository, and destination visibility for the local report and parent handoff. Include it in the summary comment only when the receiving repository's visibility permits it.
 
-**If `gh issue create` fails on a label**, list the target's newest issues (`gh issue list --repo <target> --state all --limit 20 --json number,title,createdAt`) to confirm nothing was created, then file again without `--label` and report which labels were skipped.
+**If `gh issue create` fails on a label**, list the target's newest issues (`gh issue list --repo <target> --state all --limit 20 --json number,title,createdAt`) to confirm nothing was created. Then generate a new unique body-file path, write the same body there, retry without `--label`, and remove that retry file in its own call. The original path was already cleaned up by the normal cleanup step. Report which labels were skipped.
 
 ## Summary Comment
 

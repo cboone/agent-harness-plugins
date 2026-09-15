@@ -20,11 +20,11 @@ Commit, push, and create a pull request in one automated step. Never prompt the 
 First, resolve the repository where `gh pr create` will open the PR and the repository that will host the pushed branch. Normalize the origin fetch URL and every origin push URL:
 
 ```bash
-git remote get-url origin | sed -E 's#^[A-Za-z][A-Za-z0-9+.-]*://([^/@]*@)?([^/]+)/#\2/#; s#^[^/@]*@([^:]+):#\1/#; s#\.git$##'
-git remote get-url --push --all origin | sed -E 's#^[A-Za-z][A-Za-z0-9+.-]*://([^/@]*@)?([^/]+)/#\2/#; s#^[^/@]*@([^:]+):#\1/#; s#\.git$##'
+git remote get-url origin | sed -E 's#^([^/@]*@)?([^/:]+):([^/].*)$#\2/\3#; s#^[A-Za-z][A-Za-z0-9+.-]*://([^/@]*@)?([^/]+)/#\2/#; s#\.git$##'
+git remote get-url --push --all origin | sed -E 's#^([^/@]*@)?([^/:]+):([^/].*)$#\2/\3#; s#^[A-Za-z][A-Za-z0-9+.-]*://([^/@]*@)?([^/]+)/#\2/#; s#\.git$##'
 ```
 
-The first line prints the origin fetch selector, which is `<pr-target>`. The second prints the push selector or selectors, which identify the PR head repository. Both remove remote userinfo and preserve ports in URI authorities; the SCP-style rewrite applies only when the URL has no scheme. If an SSH host token is an alias, resolve it with `ssh -G <alias>` and use the configured hostname. If multiple distinct push repositories are configured, or either identity cannot be resolved, stop before pushing or creating the PR and report the ambiguity. If the fetch and push repositories differ but use the same GitHub host, keep `<pr-target>` as the PR base repository, query `gh repo view <head-selector> --json nameWithOwner`, and use its owner as `<head-owner>`. If their hosts differ, stop because GitHub cannot open a cross-host PR.
+The first line prints the origin fetch selector, which is `<pr-target>`. The second prints the push selector or selectors, which identify the PR head repository. Both remove remote userinfo and preserve ports in URI authorities; the SCP-style rewrite applies only when the URL has no scheme. If an SSH host token is an alias, resolve it with `ssh -G <alias>` and use the configured hostname. If multiple distinct push repositories are configured, or either identity cannot be resolved, stop before pushing or creating the PR and report the ambiguity. If the fetch and push repositories differ but use the same GitHub host, keep `<pr-target>` as the PR base repository, query `gh repo view <head-selector> --json nameWithOwner,visibility`, and use its owner as `<head-owner>`. Record the head repository's visibility. If the PR target is public and the head repository is private, internal, or has unknown visibility, stop and report the visibility mismatch before pushing or opening the PR. If their hosts differ, stop because GitHub cannot open a cross-host PR.
 
 Then detect the repository's default branch explicitly:
 
@@ -34,7 +34,7 @@ gh repo view <pr-target> --json defaultBranchRef,visibility --jq '{defaultBranch
 
 Use the detected value as `<default-branch>`.
 
-Use `<pr-target>` as the repository where the PR will be opened, and record its visibility from this query. Pass `--repo <pr-target>` to every issue lookup and search below, and pass the same selector to `gh pr create`. When the push repository differs from `<pr-target>`, pass `--head <head-owner>:<branch>` so the PR uses the branch that was pushed.
+Use `<pr-target>` as the repository where the PR will be opened, and record its visibility from this query. Pass `--repo <pr-target>` to every issue lookup and search below, and pass the same selector to every `gh pr` command, including title lookup, existing-PR fallback, checks, view, and edit commands. When the push repository differs from `<pr-target>`, pass `--head <head-owner>:<branch>` so the PR uses the branch that was pushed.
 
 #### Detect the PR base branch
 
@@ -110,17 +110,17 @@ Extract the current branch name. Look for issue numbers in patterns like:
 For each candidate number, verify it refers to an existing issue:
 
 ```bash
-gh issue view NUMBER --repo <pr-target> --json number,title,state,url --jq 'select(.url | contains("/issues/")) | .number' 2> /dev/null
+gh issue view NUMBER --repo <pr-target> --json number,title,state,url --jq 'select(.url | split("?")[0] | split("#")[0] | test("/issues/[0-9]+/?$")) | .number' 2> /dev/null
 ```
 
-Only include it if the command returns a number. `gh issue view` also accepts pull requests, so discard results whose URL contains `/pull/`.
+Only include it if the command returns a number. `gh issue view` also accepts pull requests, so accept only URLs whose final path segments are `/issues/<number>` and discard `/pull/<number>`. Remove query and fragment components before checking the path, so repository names such as `issues` and `pull` do not affect classification.
 
 #### Strategy 2 -- Issue references in commit messages
 
-Scan the full-message `git log --format='%H%n%B' <base-branch>..HEAD` output gathered in step 1. Parse repository-qualified references and full issue URLs first, retaining their complete identity. Then collect bare `#N` references that are not part of those forms. Verify qualified references against their named repository and accept only URLs containing `/issues/`. For each bare candidate, verify it against the PR target and discard any result whose URL contains `/pull/`:
+Scan the full-message `git log --format='%H%n%B' <base-branch>..HEAD` output gathered in step 1. Parse repository-qualified references and full issue URLs first, retaining their complete identity. Then collect bare `#N` references that are not part of those forms. Verify qualified references against their named repository and accept only URLs whose final path segments are `/issues/<number>`. For each bare candidate, verify it against the PR target using the same final-path test; discard `/pull/<number>` results. Remove query and fragment components before checking paths, so repository names such as `issues` and `pull` do not affect classification:
 
 ```bash
-gh issue view NUMBER --repo <pr-target> --json number,title,state,url --jq 'select(.url | contains("/issues/")) | .number' 2> /dev/null
+gh issue view NUMBER --repo <pr-target> --json number,title,state,url --jq 'select(.url | split("?")[0] | split("#")[0] | test("/issues/[0-9]+/?$")) | .number' 2> /dev/null
 ```
 
 #### Strategy 3 -- GitHub issue search by branch slug
@@ -151,7 +151,7 @@ When the comparison is ambiguous, include none. The two errors are not symmetric
 
 Merge the full issue identities from all three strategies into one deduplicated list. Preserve the order: branch-name issues first, then commit-message issues, then search-matched issues. Do not record the branch prefix: the closing keyword comes from the nature of the change, not from how the branch is named.
 
-Collect **follow-up issues** directly from the session, independently of the detected closing list. These are issues filed for concerns this branch set aside, for example by the `create-deferred-issues` skill; a follow-up belongs in this collection even when none of the strategies above found it. Preserve each full issue URL, host, repository, number, title, and destination visibility. Resolve a bare `#N` with `gh issue view N --repo <pr-target> --json url,title`; resolve `owner/repo#N` with `gh issue view N --repo <host/owner/repo> --json url,title`; resolve a host-qualified reference with its full `<host/owner/repo>` selector. Accept a result only when its URL contains `/issues/`; discard `/pull/` results. Resolve visibility with `gh repo view <host/owner/name> --json visibility`; never infer the host or repository from a number alone.
+Collect **follow-up issues** directly from the session, independently of the detected closing list. These are issues filed for concerns this branch set aside, for example by the `create-deferred-issues` skill; a follow-up belongs in this collection even when none of the strategies above found it. Preserve each full issue URL, host, repository, number, title, and destination visibility. Resolve a bare `#N` with `gh issue view N --repo <pr-target> --json url,title`; resolve `owner/repo#N` with `gh issue view N --repo <host/owner/repo> --json url,title`; resolve a host-qualified reference with its full `<host/owner/repo>` selector. Accept only URLs whose final path segments are `/issues/<number>`; discard `/pull/<number>` results. Remove query and fragment components before checking the path, so repository names such as `issues` and `pull` do not affect classification. Resolve visibility with `gh repo view <host/owner/name> --json visibility`; never infer the host or repository from a number alone.
 
 Normalize detected candidates to full identities, then remove only identities that exactly match a follow-up. In the strategies above, treat a repository-qualified reference or full URL as one unit; never extract its `#N` suffix as a local candidate. `other/repo#7` must not remove or introduce the PR repository's `#7`. Define the closing list as the remaining identities that exactly match `<pr-target>`; commit messages in step 4 may use closing keywords for this list only. Keep other connected identities separately for `Related issues`, and every follow-up separately for step 7. If follow-up removal leaves no closing candidate and Strategy 3 was skipped, run Strategy 3 now, then normalize its results to full identities and remove exact follow-up matches again before rebuilding the closing list.
 
@@ -276,7 +276,7 @@ The title rules below are this skill's default, not an override. They yield to a
 1. **Merged PR titles are consistent.** As a fallback:
 
    ```bash
-   gh pr list --state merged --limit 20 --json title --jq '.[].title'
+   gh pr list --repo <pr-target> --state merged --limit 20 --json title --jq '.[].title'
    ```
 
    If most of the returned titles match `^[a-z]+(\([^)]+\))?!?:\s`, the project uses conventional-commit PR titles. Match that style.
@@ -367,13 +367,13 @@ Pass `--head <head-owner>:<branch>` only when the push repository differs from `
 `gh pr create` prints the PR URL on success, but a successful exit says nothing about whether the body landed. Before cleaning up, confirm the stored body is non-empty. Pass the URL that `gh pr create` just returned, shown below as `<pr-url>`; it is the identifier this step is guaranteed to have. (`gh pr view` also accepts a bare PR number, or no argument at all, in which case it targets the current branch's PR.)
 
 ```bash
-gh pr view <pr-url> --json body --jq '.body | length'
+gh pr view <pr-url> --repo <pr-target> --json body --jq '.body | length'
 ```
 
 If the length is `0`, the body file was empty or missing when `gh` read it. Recover by re-writing `TMPFILE` with the Write tool and then, as a separate call:
 
 ```bash
-gh pr edit <pr-url> --body-file TMPFILE
+gh pr edit <pr-url> --repo <pr-target> --body-file TMPFILE
 ```
 
 Re-run the length check to confirm the recovery worked.
@@ -393,7 +393,7 @@ Each Bash tool call runs unconditionally and the prior call's exit code is prese
 Skip this step entirely unless step 7 found a workflow that lints the PR title. When it did, confirm the title passed:
 
 ```bash
-gh pr checks --json name,state,link,description,workflow 2> /dev/null || true
+gh pr checks <pr-url> --repo <pr-target> --json name,state,link,description,workflow 2> /dev/null || true
 ```
 
 `gh pr checks` exits non-zero when checks are failing **or** still pending, so a non-zero exit is not an error here. Checks also frequently have not registered yet immediately after `gh pr create`.
@@ -404,7 +404,7 @@ This command returns **every** check on the PR, so narrow the result to the titl
 - **Title check failed**: report that check's `name`, its `description` (the short summary the check itself supplies; `gh pr checks` exposes no fuller reason, so link out rather than inventing one), and its `link`. Then give the user the exact remediation command with a corrected title:
 
   ```bash
-  gh pr edit --title "<corrected title>"
+  gh pr edit <pr-url> --repo <pr-target> --title "<corrected title>"
   ```
 
   Do not run `gh pr edit` automatically.
@@ -469,8 +469,8 @@ When committing plan files, use a message like `docs: add plan for <meaningful-d
 - **Pre-commit hook failure**: Fix the issue, re-stage, and create a new commit (never amend).
 - **Lint issues unresolved**: If the `lint-and-fix` skill reports unresolved issues, skipped items, or a required linter that cannot run, stop before pushing. Report the remaining lint errors and suggest the user fix them manually before retrying `/pr`.
 - **Push rejected**: Report the error. Suggest `git pull --rebase` if the remote has diverged. Never force push.
-- **PR already exists**: If `gh pr create` fails because a PR already exists for this branch, run `gh pr view --web` to open the existing PR and report it to the user.
-- **PR title lint check fails**: Report the failing check and a corrected title, following step 8. Never delete and recreate the PR to fix the title; `gh pr edit --title` is the remedy, and the user runs it.
+- **PR already exists**: If `gh pr create` fails because a PR already exists for this branch, run `gh pr view --repo <pr-target> --web` to open the existing PR and report it to the user.
+- **PR title lint check fails**: Report the failing check and a corrected title, following step 8. Never delete and recreate the PR to fix the title; `gh pr edit <pr-url> --repo <pr-target> --title` is the remedy, and the user runs it.
 - **No gh CLI**: Report that the `gh` CLI is required and link to https://cli.github.com/.
 - **Secret files detected**: Warn the user and exclude them from staging. Continue with the remaining files.
 - **Issue detection fails**: If `gh issue view` or `gh issue list` commands fail during ordinary closing-issue detection (network error, auth issue), skip that detection and proceed without the `## Closes` section. This best-effort rule does not apply to a read needed to resolve a session-provided follow-up's identity or visibility, or a related issue's visibility; those failures follow the stop rules below.
