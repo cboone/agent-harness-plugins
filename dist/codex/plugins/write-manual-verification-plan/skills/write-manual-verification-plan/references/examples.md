@@ -97,10 +97,10 @@ The same message said that REAPER "cannot confirm the tap is recording anything,
 ```markdown
 ### 1. The pass-through leaves the signal unchanged
 
-- **Setup:** Step 0 passed this session. A project with one broadband audio item, such as a drum loop, duplicated onto a second track so both play the identical item. The plugin on track 1 only, shown enabled in the FX chain window, neither bypassed nor offline. Polarity inverted on track 2. Both tracks routed to REAPER's Master track at unity, no pan.
-- **Action:** Play, and toggle the plugin's bypass several times while playing.
-- **Expected:** The Master track's meter reads `-inf`, or below about -140 dBFS, with the plugin active and with it bypassed. Anything audible means `process` alters the signal.
-- **Null vs broken:** Silence on the Master track is also what two muted tracks produce. Before trusting it, turn track 2's polarity inversion off: the Master track must rise to about 6 dB above either track alone, which shows both tracks are playing and the meter is reading their sum. Turn it back on and confirm the silence returns.
+- **Setup:** Step 0 passed this session. Use the Debug build with the temporary sample-tap counter inside `process` enabled. A project has one broadband audio item, such as a drum loop, duplicated onto a second track so both play the identical item. The plugin is on track 1 only, shown enabled in the FX chain window, neither bypassed nor offline. Polarity is inverted on track 2. Both tracks route to REAPER's Master track at unity, with no pan.
+- **Action:** Play and toggle the plugin's bypass several times while playing. Watch the callback-scoped tapped-sample count while the plugin is enabled, and again after re-enabling it.
+- **Expected:** The Master track's meter reads `-inf`, or below about -140 dBFS, with the plugin active and with it bypassed. While enabled, the callback-scoped tapped-sample count advances at the device sample rate. Anything audible means `process` alters the signal.
+- **Null vs broken:** Silence on the Master track is also what two muted tracks produce or what an uncalled `process` callback can yield. The tapped-sample count must advance while the plugin is enabled and resume after re-enabling; otherwise the run is `void`. Before trusting the null, turn track 2's polarity inversion off: the Master track must rise to about 6 dB above either track alone, which shows both tracks are playing and the meter is reading their sum. Turn it back on and confirm the silence returns.
 - **Why by hand:** Only a real host exercises its own buffer handling around `process`.
 - **Result:** pending.
 
