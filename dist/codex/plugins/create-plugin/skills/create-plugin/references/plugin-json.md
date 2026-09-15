@@ -24,7 +24,7 @@ All fields are alphabetized in the JSON file.
 - **New plugins**: start at `1.0.0`
 - **New skills** (added to an existing plugin): bump the **minor** version (e.g., `1.0.0` -> `1.1.0`)
 - **Skill updates** (changes to existing skills): bump the **patch** version (e.g., `1.1.0` -> `1.1.1`)
-- The version in `plugin.json` and the corresponding entry in `marketplace.json` must stay in sync
+- The plugin manifest is the sole version source; marketplace entries do not carry versions
 
 ## Skills Plugin Template
 
