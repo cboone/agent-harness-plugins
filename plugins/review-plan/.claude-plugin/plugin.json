@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Review an implementation plan against the current repository and its explicit dependencies, reporting evidence-backed blockers, required revisions, and optional improvements before work begins.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["code-review", "implementation", "plans", "readiness", "review"],
+  "license": "MIT",
+  "name": "review-plan",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
