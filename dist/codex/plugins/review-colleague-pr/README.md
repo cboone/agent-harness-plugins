@@ -42,7 +42,7 @@ The skill follows a set of principles meant to produce a fair review rather than
 - Edit, create, or delete files, commit, push, or switch branches
 - Run tests, builds, linters, or installs (it reads CI status instead)
 
-The one change it makes is to keep the checkout current. If the author has pushed since you checked the branch out, it fast-forwards. If the author rewrote the branch, it resets to the PR's head, but only inside a linked worktree with no uncommitted changes and no local commits; otherwise it stops and tells you what to run.
+The one change it makes is to keep the checkout current. It stops on uncommitted tracked changes even when HEAD already matches the PR. If synchronization is needed, it also stops on any untracked or ignored content, including build output, without changing those files. With those checks clear, it fast-forwards when possible. If the author rewrote the branch, it resets to the PR's head only inside a linked worktree with no local commits; otherwise it stops and explains why.
 
 ## Usage
 
@@ -120,6 +120,7 @@ This skill runs read-only git and GitHub CLI commands that trigger permission pr
       "Bash(git diff *)",
       "Bash(git fetch *)",
       "Bash(git log *)",
+      "Bash(git ls-files *)",
       "Bash(git merge --ff-only *)",
       "Bash(git merge-base *)",
       "Bash(git reflog show *)",
@@ -131,7 +132,7 @@ This skill runs read-only git and GitHub CLI commands that trigger permission pr
 }
 ```
 
-`git reset --hard` is deliberately absent, so the one destructive step always asks first. The `gh api` rules also match write calls; the skill's ground rules, not these patterns, are what keep it read-only. If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+`git reset --hard` is deliberately absent, so these rules do not grant it automatic permission; other permissions and harness settings determine whether it prompts. The checkout safeguards apply regardless of permission settings. The `gh api` rules also match write calls; the skill's ground rules, not these patterns, are what keep it read-only. Read-only GraphQL queries use POST, while REST writes and GraphQL mutations are forbidden. If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
 ## See Also
 
