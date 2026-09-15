@@ -16,7 +16,7 @@ Read `./references/BASH.md` for the complete guide. Summary:
 
 - Shebang: `#!/usr/bin/env bash`
 - Strict mode: `set -euo pipefail`
-- Main function called at end: `main "${@}"`
+- Main function called at end: `main "$@"`
 
 ### Naming
 
@@ -26,7 +26,7 @@ Read `./references/BASH.md` for the complete guide. Summary:
 
 ### Syntax
 
-- Variable expansion: `${var}` not `$var`
+- Variable expansion: `${var}` not `$var`, except the argument lists `"$@"` and `"$*"`, which stay unbraced
 - Command substitution: `$(...)` not backticks
 - Tests: `[[...]]` not `[...]`
 - Function syntax: `function name() { }` with both keyword and parentheses
@@ -36,11 +36,16 @@ Read `./references/BASH.md` for the complete guide. Summary:
 - Always quote variable expansions: `"${var}"`
 - Always quote command substitutions: `"$(cmd)"`
 - Use arrays for lists, not word splitting
+- Guard an array that can be empty: `${array[@]+"${array[@]}"}`
 
 ### Local Variables
 
 - Declare with `local`
 - Separate declaration from command substitution to preserve exit codes
+
+### Bash 3.2 (macOS)
+
+macOS ships bash 3.2 as `/bin/bash`, which is what `#!/usr/bin/env bash` finds on a stock Mac. Under `set -u` it exits on an empty `"${@}"` or `"${array[@]}"`, and it has no associative arrays, `readarray` or `mapfile`, `${var,,}` or `${var^^}`, or namerefs. See "Bash 3.2 (macOS)" in `./references/BASH.md` for replacements.
 
 ## Validation
 
