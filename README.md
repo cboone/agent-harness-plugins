@@ -78,13 +78,15 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Code Review
 
-| Plugin                                                                         | Trigger                        | What it does                                                                                                       |
-| ------------------------------------------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| [Address Review](./plugins/address-review/README.md)                           | `/address-review <path>`       | Parse a review document for actionable feedback, work through items systematically, and track resolution progress. |
-| [Resolve Copilot PR Feedback](./plugins/resolve-copilot-pr-feedback/README.md) | `/resolve-copilot-pr-feedback` | Process and resolve GitHub Copilot automated PR review comments.                                                   |
+| Plugin                                                                         | Trigger                        | What it does                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Address Review](./plugins/address-review/README.md)                           | `/address-review <path>`       | Parse a review document for actionable feedback, work through items systematically, and track resolution progress.                                                                                                                                                    |
+| [Review Plan](./plugins/review-plan/README.md)                                 | `/review-plan [path]`          | Review an implementation plan against the current repository and its explicit dependencies, reporting evidence-backed blockers, required revisions, and optional improvements before work begins. Use when asked to review a plan or assess implementation readiness. |
+| [Resolve Copilot PR Feedback](./plugins/resolve-copilot-pr-feedback/README.md) | `/resolve-copilot-pr-feedback` | Process and resolve GitHub Copilot automated PR review comments.                                                                                                                                                                                                      |
 
 **External tools:**
 
+- _Review Plan:_ [`gh`](https://cli.github.com/) (optional; only for explicitly linked GitHub context)
 - _Resolve Copilot PR Feedback:_ [`gh`](https://cli.github.com/) (required; the skill reads review threads over the GitHub API and posts its summary comment)
 
 ### Code Quality
