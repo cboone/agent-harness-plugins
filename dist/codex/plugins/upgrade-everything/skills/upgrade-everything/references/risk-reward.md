@@ -70,4 +70,4 @@ Use this model to make upgrade recommendations without hiding any candidate. Ris
 - Container images: rebuild affected images and run the repo's container smoke tests or entrypoint checks.
 - Release tooling: run dry-run or config validation commands before claiming success.
 - Schema URLs and config versions: run the tool that consumes the config.
-- Marketplace and plugin versions: run manifest validation and recompute derived catalog metadata.
+- Marketplace and plugin versions: run manifest validation and regenerate the mirrors.
