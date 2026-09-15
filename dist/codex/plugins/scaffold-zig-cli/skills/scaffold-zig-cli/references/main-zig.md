@@ -1,0 +1,125 @@
+# src/main.zig Template
+
+Create `src/main.zig` with the following content.
+
+Replace `PROJECT-NAME` with the project name. There is no `PACKAGE-NAME` in this file: the library module arrives under the fixed import name `lib` that `build.zig` registers, so nothing here depends on what the package is called.
+
+This is the CLI entry point: argument handling and nothing else, so the logic in `src/root.zig` stays testable.
+
+```zig
+//! Command-line entry point.
+//!
+//! Argument handling lives here and nothing else does, so that the logic in
+//! `src/root.zig` stays testable without a process around it.
+
+const std = @import("std");
+const Io = std.Io;
+
+const build_options = @import("build_options");
+
+// Imported and bound as "lib", neither of which is derived from the package
+// name. build.zig registers the module under this fixed import name, so a
+// package called `std`, `main`, `build_options` or anything else already
+// spoken for here cannot collide with it.
+const lib = @import("lib");
+
+const usage =
+    \\Usage: PROJECT-NAME [options] [name]...
+    \\
+    \\Options:
+    \\  -h, --help     Print this help and exit
+    \\  -V, --version  Print the version and exit
+    \\
+;
+
+/// What one command-line argument asks for. Split out from `main` so the flag
+/// table can be tested without spawning the binary.
+const Arg = enum { help, version, unknown_option, operand };
+
+fn classify(arg: []const u8) Arg {
+    if (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help")) return .help;
+    if (std.mem.eql(u8, arg, "-V") or std.mem.eql(u8, arg, "--version")) return .version;
+    if (std.mem.startsWith(u8, arg, "-")) return .unknown_option;
+    return .operand;
+}
+
+/// Returning `u8` rather than calling `std.process.exit` is deliberate: `exit`
+/// does not return, so it would skip the buffered writer's flush.
+pub fn main(init: std.process.Init) !u8 {
+    // The arena lives as long as the process and the runtime releases it, so
+    // the argument slice needs no explicit cleanup.
+    const arena = init.arena.allocator();
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(arena);
+
+    var stdout_buffer: [4096]u8 = undefined;
+    var stdout_writer = Io.File.stdout().writer(io, &stdout_buffer);
+    const stdout = &stdout_writer.interface;
+
+    // An empty Windows command line yields no arguments at all, so the length
+    // is checked before slicing past the program name.
+    if (args.len < 2) {
+        try stdout.writeAll(usage);
+        try stdout.flush();
+        return 0;
+    }
+
+    // Scan the whole line before doing any work. Acting on operands as they
+    // are encountered would mean `PROJECT-NAME world --nope` printed a
+    // greeting and then exited 2, so a rejected command line would still have
+    // written to stdout.
+    //
+    // `--help` and `--version` return from this loop rather than finishing it,
+    // so `PROJECT-NAME --help --nope` prints help and exits 0 instead of
+    // rejecting the bad flag. That is the usual convention and it is
+    // deliberate; move the two early returns into the second pass if this
+    // program should reject everything it does not recognize.
+    for (args[1..]) |arg| switch (classify(arg)) {
+        .help => {
+            try stdout.writeAll(usage);
+            try stdout.flush();
+            return 0;
+        },
+        .version => {
+            try stdout.print("PROJECT-NAME {s}\n", .{build_options.version});
+            try stdout.flush();
+            return 0;
+        },
+        .unknown_option => {
+            std.log.err("unrecognized option: '{s}'", .{arg});
+            try Io.File.stderr().writeStreamingAll(io, usage);
+            return 2;
+        },
+        .operand => {},
+    };
+
+    for (args[1..]) |arg| {
+        if (classify(arg) == .operand) try lib.greet(stdout, arg);
+    }
+
+    try stdout.flush();
+    return 0;
+}
+
+test classify {
+    try std.testing.expectEqual(Arg.help, classify("-h"));
+    try std.testing.expectEqual(Arg.help, classify("--help"));
+    try std.testing.expectEqual(Arg.version, classify("-V"));
+    try std.testing.expectEqual(Arg.version, classify("--version"));
+    try std.testing.expectEqual(Arg.unknown_option, classify("--nope"));
+    try std.testing.expectEqual(Arg.operand, classify("world"));
+}
+```
+
+## Notes
+
+- `pub fn main(init: std.process.Init) !u8` is the Zig 0.16 form. A zero-parameter `main` still compiles but receives no `Io` and no arguments, and 0.16 removed the free functions that used to supply argv, so a CLI has no way back to them.
+- Argv comes from `init.minimal.args.toSlice(arena)`, never `init.minimal.args.iterate()`. The iterator is a `@compileError` on Windows and WASI, so `iterate()` fails the cross-compile job on the first push. `toSlice` builds for every release target.
+- `std.process.Init` rather than `std.process.Init.Minimal`: the full form hands over the `Io` instance and an arena already built by the runtime. `Minimal` carries only the environment and arguments, leaving the allocator and `Io` to construct by hand.
+- Returning `u8` instead of calling `std.process.exit` matters because `exit` goes straight to the syscall and discards anything still sitting in the stdout buffer. Every exit path here flushes first.
+- Stdout is buffered through `Io.File.stdout().writer(io, &buf)`, and writes go to its `.interface`. `std.fs.File` no longer exists in 0.16.
+- `classify` is a separate function so the flag table is unit-testable without spawning the binary, which is also what keeps the test from touching stdout.
+- An unknown option exits 2 with a clean stdout and the diagnostic on stderr, **wherever it appears among the operands**. That is why `main` walks the arguments twice: scanning first and acting second is what makes `PROJECT-NAME world --nope` exit 2 having written nothing, instead of greeting `world` and then failing. A single loop that acted on each argument as it classified it would honor the guarantee only when the bad flag came first.
+- `--help` and `--version` are the exception: they return from the first pass, so `PROJECT-NAME --help --nope` prints help and exits 0 rather than rejecting `--nope`. That matches how most tools behave, and the comment in the code says how to change it. The distinction is worth knowing before writing a snapshot test against either case.
+- The package module is imported and bound as `lib`, and neither name comes from the package name. `build.zig` registers it under that fixed import name, so nothing here has to avoid colliding with `std`, `Io`, `build_options`, `Arg`, `classify` or `main` when a project happens to be named after one of them. Two namespaces are at stake and a fixed name settles both: the declarations in this file, and the executable's import names, which it shares with `build_options`. Step 1's validation guarantees a legal identifier, not an unused one. The public module name downstream consumers see is the one `b.addModule` is given, and it is still the package name.
+- If the project later adds snapshot tests, that exit code and the empty stdout become recorded expectations, so change them deliberately rather than by accident.
