@@ -23,8 +23,7 @@ bin/build-codex-marketplace
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "Claude Code skills and hooks from Christopher Boone (cboone.github.io)",
-    "version": "catalog-M55-m101-p44-n49"
+    "description": "Claude Code skills and hooks from Christopher Boone (cboone.github.io)"
   },
   "name": "agent-harness-plugins",
   "owner": {
@@ -34,19 +33,11 @@ bin/build-codex-marketplace
 }
 ```
 
-The generated Codex marketplace keeps the same plugin set, versions, and catalog metadata, but each entry's `source` points at `./dist/codex/plugins/PLUGIN-NAME`.
+The generated Codex marketplace keeps the same plugin set and catalog metadata, but each entry's `source` points at `./dist/codex/plugins/PLUGIN-NAME`.
 
 ## Marketplace Versioning
 
-The `metadata.version` stores a catalog state tag derived from the individual plugin versions. It is not SemVer.
-
-- Format: `catalog-M<major-sum>-m<minor-sum>-p<patch-sum>-n<plugin-count>`
-- `M`: sum of all plugin major versions
-- `m`: sum of all plugin minor versions
-- `p`: sum of all plugin patch versions
-- `n`: number of marketplace plugins
-- Do not normalize or carry between components.
-- Recompute it from `.plugins[].version` whenever any marketplace plugin version changes.
+Plugin versions belong only in each plugin's `.claude-plugin/plugin.json`. Do not add a `version` to a marketplace entry or to `metadata`.
 
 ## Plugin Entry Fields
 
@@ -63,7 +54,6 @@ Each entry in the `plugins` array has these fields, alphabetized:
 | `name`        | string | Plugin name. Must match `plugin.json`.                                 |
 | `repository`  | string | `"https://github.com/cboone/agent-harness-plugins"`                    |
 | `source`      | string | Relative path to the plugin directory (e.g., `"./plugins/my-plugin"`). |
-| `version`     | string | Must match `plugin.json`.                                              |
 
 ## Valid Categories
 
@@ -93,8 +83,7 @@ Categories currently used in this repository. Each marketplace category correspo
   "license": "MIT",
   "name": "PLUGIN-NAME",
   "repository": "https://github.com/cboone/agent-harness-plugins",
-  "source": "./plugins/PLUGIN-NAME",
-  "version": "1.0.0"
+  "source": "./plugins/PLUGIN-NAME"
 }
 ```
 
