@@ -186,10 +186,10 @@ Build under test: confirmed by step 0 at the start of every session, and named i
 
 ### 3. Position holds at 48, 96, and 192 kHz
 
-- **Setup:** Step 0 passed this session. REAPER launched with `/Applications/REAPER.app/Contents/MacOS/REAPER 2>&1 | grep --line-buffered fosforo`, with the plugin and `sine-100hz-0.5.wav` on a stereo track. Change REAPER's **device** rate in preferences, not the files: the negotiated rate sets the window length, and the files stay 48 kHz throughout.
-- **Action:** At each of the three device rates, play `sine-100hz-0.5.wav` and take three captures.
-- **Expected:** Every capture inverts to +0.5000, within ±0.002.
-- **Null vs broken:** The rate must actually take effect. After each change, the plugin's `activated at` log line must name the new rate, since a change that did not take effect would pass at 48 kHz three times and exercise none of the three window lengths.
+- **Setup:** Step 0 passed this session. Use the Debug build with the temporary sample-tap counter enabled. REAPER launched with `/Applications/REAPER.app/Contents/MacOS/REAPER 2>&1 | grep --line-buffered fosforo`, with the plugin and `sine-100hz-0.5.wav` on a stereo track. Change REAPER's **device** rate in preferences, not the files: the negotiated rate sets the window length, and the files stay 48 kHz throughout.
+- **Action:** After each device-rate change, stop and restart playback to flush the prior stream. Wait for the once-a-second diagnostic to show the new device rate and a tapped-sample count advancing at that rate, then take three captures.
+- **Expected:** At 48, 96, and 192 kHz, the diagnostic counts 48000, 96000, and 192000 tapped samples per second respectively, and every capture at that rate inverts to +0.5000, within ±0.002.
+- **Null vs broken:** The `activated at` line alone proves only that the host negotiated the rate. The advancing tapped-sample count shows that audio is arriving at that rate, and the refreshed captures show the trace was rendered from the new stream. If the rate did not take effect or the old trace stayed visible, at least one of those observations would fail.
 - **Why by hand:** The harness renders a fixed 960-sample window, so only a host exercises the window length, the ring buffer at three block sizes, and the upload path at three window lengths.
 - **Result:** pending. Historical reading: nine captures, every one +0.5000 or within 0.001 of it, worst +0.4990, across windows of 960, 1920, and 3840 samples. Same-session build identity and activation log evidence are unavailable.
 

@@ -13,7 +13,7 @@ The record is what makes the second request cheap and keeps the results. This fi
 The first line of an issue-backed checklist is the stable marker `<!-- manual-verification: OWNER/REPO#NUMBER -->`, with the actual repository and issue number substituted. To find an existing record, search every issue comment page for that exact marker:
 
 ```bash
-gh api --paginate repos/OWNER/REPO/issues/NUMBER/comments --jq '.[] | select((.body | contains("<!-- manual-verification: OWNER/REPO#NUMBER -->")) or (.body | contains("## Manual verification"))) | {id, body}'
+gh api --paginate repos/OWNER/REPO/issues/NUMBER/comments --jq '.[] | select((.body | split("\n")[0] == "<!-- manual-verification: OWNER/REPO#NUMBER -->") or (.body | contains("## Manual verification"))) | {id, body}'
 ```
 
 Use the plan record without querying GitHub when one exists. With no plan, one comment containing the exact marker is the issue record. If one unmarked comment contains `## Manual verification`, ask the person to identify it and add the marker before continuing. No candidate comments means the checklist may be created. Multiple candidates require asking which comment to keep before editing anything.
