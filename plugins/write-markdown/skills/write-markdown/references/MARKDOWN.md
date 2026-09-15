@@ -527,12 +527,12 @@ Use pipes and hyphens for tables. Surround tables with blank lines. Ensure consi
 
 ---
 
-### Table column alignment (MD060)
+### Table column alignment
 
-Pad cell content so that pipe characters align vertically across all rows. Fill the delimiter row with hyphens to match the column width. This is the `aligned` style in markdownlint's MD060 rule and matches Prettier's default table formatting.
+Committed tables are aligned: pipe characters line up vertically across all rows, each cell is padded to the width of its column's longest content, and the delimiter row's hyphens fill the column width. This is Prettier's table formatting, and it is also the layout markdownlint's MD060 rule accepts as its `aligned` style.
 
 ```markdown
-<!-- Use: aligned columns -->
+<!-- Committed form: aligned columns -->
 
 | Name    | Type   | Default |
 | ------- | ------ | ------- |
@@ -541,7 +541,7 @@ Pad cell content so that pipe characters align vertically across all rows. Fill 
 ```
 
 ```markdown
-<!-- Avoid: ragged columns -->
+<!-- Ragged: a draft Prettier will align, not a committed form -->
 
 | Name | Type | Default |
 | --- | --- | --- |
@@ -549,7 +549,11 @@ Pad cell content so that pipe characters align vertically across all rows. Fill 
 | retries | number | 3 |
 ```
 
-To align a table:
+Who produces the alignment depends on the project's tooling.
+
+**Where Prettier formats Markdown, Prettier owns alignment.** Write rows without padding and let the project's format command (`format`, `lint:fix`, or its equivalent) align them. Appending a row with longer content re-pads the entire column, and Prettier does that in one pass, so do not pad by hand. Projects in this position typically set `MD060: false`: markdownlint has no fix toward the aligned style, and its default `any` style reports, and fixes, against whichever style the table most closely matches. Do not cite MD060 as the reason a table is aligned. Prettier formats Markdown when the project has a Prettier config (`.prettierrc*`, `prettier.config.*`, or a `prettier` key in `package.json`) or a format script that runs Prettier, and `.prettierignore` does not exclude the file.
+
+**Where Prettier is not configured, align tables by hand.** Nothing else will, and markdownlint cannot. With MD060 at its default settings, `markdownlint-cli2 --fix` leaves a table closest to the aligned style unchanged, and rewrites a table closest to the compact style toward compact. An aligned table with a few longer rows appended falls in the second group, so `--fix` strips the padding from the rows that were already aligned. Align before running the fix. To align a table:
 
 1. Write all rows with their content
 1. Find the longest content in each column (including header text)
@@ -557,7 +561,7 @@ To align a table:
 1. Fill delimiter row hyphens to match the column width
 1. Verify all pipes are in the same column positions across every row
 
-Prettier reformats tables to aligned style automatically and can serve as a safety net, but write aligned tables from the start to keep diffs clean.
+A hand-aligned table is already in the layout Prettier produces, so adding Prettier to the project later leaves it unchanged.
 
 ---
 

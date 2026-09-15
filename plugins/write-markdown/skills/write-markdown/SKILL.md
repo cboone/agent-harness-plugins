@@ -12,12 +12,14 @@ Apply the Markdown conventions from `./references/MARKDOWN.md` when creating or 
 
 ## Common Mistakes
 
-These two issues cause the most lint failures. Check every Markdown file for them.
+These two issues cause the most formatting churn and lint failures. Check every Markdown file for them.
 
-### Tables: align all pipes vertically
+### Tables: aligned pipes, from Prettier where it runs
+
+A committed table has every pipe aligned, every cell padded to its column width, and delimiter hyphens filled to match. Who does the padding depends on the project.
 
 ```markdown
-<!-- Correct: pipes aligned, cells padded -->
+<!-- Committed form: pipes aligned, cells padded -->
 
 | Name    | Type   | Default |
 | ------- | ------ | ------- |
@@ -26,7 +28,7 @@ These two issues cause the most lint failures. Check every Markdown file for the
 ```
 
 ```markdown
-<!-- Wrong: ragged pipes, no padding -->
+<!-- Ragged: fine as a draft only where Prettier will format it -->
 
 | Name | Type | Default |
 | --- | --- | --- |
@@ -34,7 +36,9 @@ These two issues cause the most lint failures. Check every Markdown file for the
 | retries | number | 3 |
 ```
 
-Procedure: write all rows, find the longest content per column, pad every cell to that width, fill delimiter hyphens to match, then verify all pipes line up.
+**Prettier formats Markdown here:** Prettier owns alignment. Write rows without padding, including rows added to an existing table, and run the project's format command (`yarn format`, `yarn lint:fix`, `make format`, or its equivalent). Do not hand-pad cells, and do not cite MD060 as the reason for alignment: projects that run Prettier typically disable it. Prettier formats Markdown when the project has a Prettier config (`.prettierrc*`, `prettier.config.*`, or a `prettier` key in `package.json`) or a format script that runs Prettier, and `.prettierignore` does not exclude the file.
+
+**No Prettier:** nothing else aligns tables, so align them by hand, and do it before running `markdownlint-cli2 --fix`. MD060 has no fix toward the aligned style, and at its default settings it can compact a table that picked up a few unpadded rows, stripping the padding from the rows that were aligned. Procedure: write all rows, find the longest content per column, pad every cell to that width, fill delimiter hyphens to match, then verify all pipes line up.
 
 ### Code blocks: always include a language identifier
 
@@ -87,7 +91,7 @@ Read `./references/MARKDOWN.md` for the complete guide. Summary:
 
 ### Tables
 
-- Pad every cell so all pipe characters align vertically; pad delimiter hyphens to match (MD060)
+- Align every pipe vertically and pad delimiter hyphens to match; where Prettier formats Markdown its format command does this, and elsewhere it is done by hand because markdownlint cannot
 - Leading and trailing pipes on every row (MD055)
 - Consistent column count across all rows (MD056)
 
@@ -104,8 +108,8 @@ Read `./references/MARKDOWN.md` for the complete guide. Summary:
 
 ## Validation
 
-After creating or editing Markdown files, run the project's lint-fix command to auto-correct table alignment, list numbering, and other formatting issues. This is a required final step, not optional.
+After creating or editing Markdown files, run the project's lint-fix and format commands to correct list numbering, spacing, and other formatting issues. This is a required final step, not optional.
 
-Check `package.json` for project-specific scripts (e.g., `yarn lint:fix`, `yarn lint:md:fix`, `npm run lint:fix`). Also check `Makefile` targets and scripts in `bin/`. Run the linter in fix mode so it corrects what it can automatically.
+Check `package.json` for project-specific scripts (e.g., `yarn lint:fix`, `yarn lint:md:fix`, `yarn format`, `npm run lint:fix`). Also check `Makefile` targets and scripts in `bin/`. Run the linter in fix mode first and the formatter last, so Prettier has the final say on layout. Where Prettier formats Markdown, the formatter is what aligns tables; markdownlint's fix mode does not.
 
-If no project-specific lint script is available, use `markdownlint-cli2` directly as a fallback.
+If no project-specific lint script is available, use `markdownlint-cli2 --fix` directly as a fallback, after aligning tables by hand.
