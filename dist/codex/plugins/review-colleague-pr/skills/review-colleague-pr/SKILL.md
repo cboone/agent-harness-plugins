@@ -189,11 +189,11 @@ Apply the baseline rules below. Step 1 only resolves an explicit `--since` overr
 - Otherwise, first filter the REST review list to records whose `user.login` equals the login from `gh api user --jq .login`. Filter inline comments to that same login before checking whether a review owns a top-level comment. Then use the user's most recent submitted review that meets any of these conditions:
   - Its state is `APPROVED` or `CHANGES_REQUESTED`.
   - Its body is non-empty.
-  - It owns at least one inline comment whose `in_reply_to_id` is null.
+  - The paginated inline-comments list contains a top-level comment (`in_reply_to_id` is null) whose `pull_request_review_id` equals this review's `id`.
 
 Exclude reviews in `PENDING` state. Draft review bodies and comments are not submitted feedback and must not select the re-review baseline.
 
-When checking inline comments, count only top-level comments (`in_reply_to_id` is null) written by that same login. Set `LAST_REVIEW_SHA` to the `commit_id` of the selected review.
+When checking inline comments, first match `pull_request_review_id` to the candidate review's `id`, then count only top-level comments (`in_reply_to_id` is null) written by that same login. An older top-level comment cannot make a later empty `COMMENTED` review substantive. Set `LAST_REVIEW_SHA` to the `commit_id` of the selected review.
 
 Replying inside a thread also creates a `COMMENTED` review with an empty body, so a plain "most recent review by the user" would usually find a reply, not a review.
 
