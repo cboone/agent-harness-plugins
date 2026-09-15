@@ -45,7 +45,7 @@ Create `.markdownlint-cli2.jsonc` in the project root:
 }
 ```
 
-Configure MD060 according to whether Prettier formats the project's Markdown files:
+For this generic configuration, configure MD060 according to whether Prettier formats the project's Markdown files. The Pandoc-academic preset below keeps MD060 disabled regardless of Prettier to allow dense academic tables.
 
 - **Prettier formats Markdown:** Add the following inside `config`. Prettier formats Markdown when the project has a Prettier config (`.prettierrc*`, `prettier.config.*`, or a `prettier` key in `package.json`) or a format script that runs Prettier, and `.prettierignore` does not exclude the Markdown files. Prettier owns table alignment.
 
@@ -166,20 +166,20 @@ npx markdownlint-cli2 --fix "**/*.md"
 
 ## Common Rule Customizations
 
-| Rule  | Description                    | Default  | Recommended Override                       |
-| ----- | ------------------------------ | -------- | ------------------------------------------ |
-| MD013 | Line length                    | 80 chars | `false` (disable; Prettier handles it)     |
-| MD014 | Dollar signs before commands   | Enabled  | `false` (for scrut test projects)          |
-| MD024 | No duplicate sibling headings  | Enabled  | `{ "siblings_only": true }`                |
-| MD033 | Inline HTML                    | Enabled  | `false` (GFM features)                     |
-| MD034 | Bare URLs                      | Enabled  | `false` (allow bare URLs)                  |
-| MD041 | First line must be top heading | Enabled  | `false` (frontmatter or partial files)     |
-| MD060 | Table column style             | `any`    | `false` with Prettier; `aligned` otherwise |
+| Rule  | Description                    | Default  | Recommended Override                                                                             |
+| ----- | ------------------------------ | -------- | ------------------------------------------------------------------------------------------------ |
+| MD013 | Line length                    | 80 chars | `false` (disable; Prettier handles it)                                                           |
+| MD014 | Dollar signs before commands   | Enabled  | `false` (for scrut test projects)                                                                |
+| MD024 | No duplicate sibling headings  | Enabled  | `{ "siblings_only": true }`                                                                      |
+| MD033 | Inline HTML                    | Enabled  | `false` (GFM features)                                                                           |
+| MD034 | Bare URLs                      | Enabled  | `false` (allow bare URLs)                                                                        |
+| MD041 | First line must be top heading | Enabled  | `false` (frontmatter or partial files)                                                           |
+| MD060 | Table column style             | `any`    | `false` with Prettier or the Pandoc-academic preset; `{ "style": "aligned" }` for other projects |
 
 ## Notes
 
 - `markdownlint-cli2` is the successor to `markdownlint-cli`. It has better config file support and is actively maintained.
 - The `.jsonc` config format supports comments, which is useful for documenting rule overrides.
 - When Prettier is also configured, disable MD013 (line length) in markdownlint to avoid conflicts. Prettier handles line wrapping.
-- When Prettier formats Markdown, disable MD060 because Prettier owns table alignment. Otherwise use MD060's `aligned` style so `--fix` cannot compact a nearly aligned table.
+- For the generic preset, disable MD060 when Prettier formats Markdown because Prettier owns table alignment; otherwise use MD060's `aligned` style so `--fix` cannot compact a nearly aligned table. The Pandoc-academic preset keeps MD060 disabled to allow dense academic tables.
 - markdownlint-cli2 auto-fix can resolve many issues (trailing whitespace, heading style, blank lines) but not all (e.g., heading level skips require manual restructuring).
