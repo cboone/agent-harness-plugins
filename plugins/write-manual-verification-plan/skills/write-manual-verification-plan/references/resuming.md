@@ -118,7 +118,7 @@ Some reports are real results that still do not decide the step. Each has a fixe
 Every result is tied to the build it was measured on. When a session resumes on a different build:
 
 1. Step 0 names the new build.
-1. For each `passed` step, check whether the changes between its build and the new one touch what the step covers, for example with `git diff --stat OLD..NEW -- PATHS`, where `PATHS` are the files the step exercises.
+1. For each step with prior readings, including `passed`, `partial`, and `failed` steps, check whether the changes between its build and the new one touch what the step covers, for example with `git diff --stat OLD..NEW -- PATHS`, where `PATHS` are the files the step exercises.
 1. If they do, set the step back to `pending`, keep the earlier Result line as history, and add why: "passed on `OLD`; re-run, since `NEW` changed the clamp".
 1. If they do not, the result stands, and the record says it was carried forward and why.
 

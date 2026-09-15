@@ -26,7 +26,7 @@ Files involved:
 
 ### Plugin Documentation and Catalog
 
-The branch adds a complete plugin manifest and README, registers version `1.0.0` in the Writing catalog, recalculates the catalog state to `catalog-M71-m103-p156-n58`, and adds the root README row plus its conditional `gh` requirement. The canonical description is consistent across the manifest, marketplace, plugin README, and root README. The plugin README includes optional permissions for issue-record commands and tmpfile management.
+The branch adds a complete plugin manifest and README, registers version `1.0.0` in the Writing catalog, recalculates the catalog state to `catalog-M71-m103-p157-n58`, and adds the root README row plus its conditional `gh` requirement. The canonical description is consistent across the manifest, marketplace, plugin README, and root README. The plugin README includes optional permissions for issue-record commands and tmpfile management.
 
 Files involved:
 
