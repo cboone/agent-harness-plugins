@@ -2,6 +2,8 @@
 
 Issue: [#351](https://github.com/cboone/agent-harness-plugins/issues/351)
 
+Status: Implementation complete. The plugin, catalog registration, reference material, and generated mirrors are delivered; PR checks and review determine merge readiness.
+
 ## Context
 
 Automated checks run on every push. The rest of verification, whatever a DAW, a simulator, a browser, a device, or a printer has to show a person, is a list an agent writes in chat. In fosforo that list went wrong in three distinct ways, and each one is on the record in the transcripts:
@@ -67,7 +69,7 @@ The body has these sections:
 - `## The Step`, with the four parts, the two record lines, and the status vocabulary, in a compact template.
 - `## Workflow`, nine steps:
   1. Look for an existing checklist first, in the plan's `## Manual verification` section or the issue's checklist comment, and resume from it if one exists.
-  1. Decide what belongs by hand, and record `Why by hand` for each step.
+  1. Decide what belongs by hand, retain automation candidates as deferred rows linked to their issues, and record `Why by hand` for each step.
   1. Write step 0.
   1. Scope the resources.
   1. Write each step in four parts.
@@ -93,14 +95,14 @@ The artifact in full, covering:
   - Null vs broken is summarized here, and `./references/null-vs-broken.md` covers it in depth.
 - **Multi-reading steps.** A table of predicted values with a column for the measured value. "Numbers to record rather than predict" is a legitimate step, where the expected value is unknown and the reading is the point.
 - **Why by hand.** Put an arm where the quantity lives. fosforo's density arm had no host-only component and so could never have added anything in a host: its predicted 1.41x effect sat inside a 1.8x scatter. The step states what only the environment has. Examples are the audio path and compositor, a real DAW's buffer handling, and a spatially periodic ripple that an eye is good at. springer's verification table marks its Logic row "not in CI, by hand", with a reason. "Not automated yet" is a deferral with an issue link.
-- **Step 0 in detail.** Compare the installed artifact's hash against the fresh build, read a provenance marker if the project stamps one, or read the version or build number where the environment displays it. Re-run it each session. Say which confirmation was used, and say when it is weak.
+- **Step 0 in detail.** Compare the installed artifact's hash against the fresh build, read a provenance marker if the project stamps one, or read the version or build number where the environment displays it. Connect that identity to the active environment through a restart/reload and loaded-path check, or an identity read from the running instance. Re-run it each session. Say which confirmation was used, and say when it is weak.
 - **Status vocabulary**, with the rule for each terminal state.
 
 #### `./references/null-vs-broken.md`
 
 The part the issue says is always missing. Each technique is paired with its measured fosforo instance, followed by portable forms:
 
-- **A liveness marker in the same run.** fosforo's once-a-second `rendering at N Hz` line, and the instrumented counter proposed for the audio tap (`48000 samples tapped, 2 resets`). When no marker exists, the step says it cannot separate the two readings, and the checklist offers to add one.
+- **A liveness marker in the same run.** fosforo's once-a-second `rendering at N Hz` line, and the instrumented counter proposed for the audio tap (`48000 samples tapped, 2 resets`). A shared counter requires a lock-free atomic or equivalent safe, non-blocking handoff, with logging outside the audio callback. When no marker exists, the step says it cannot separate the two readings, and the checklist offers to add one.
 - **Check the transition that must change.** Liveness is checked on the stop, not the start: a frozen window keeps showing the sine indefinitely, so the check fails loudly where "it appeared quickly" does not.
 - **A positive control first.** Logic's scan log read 60 Audio Units with the copy, 59 with the symlink, and 60 again. A first attempt read 59 for the copy as well, because the registrar had not settled, and only the control caught that.
 - **Conditions under which failure is possible.** Fifteen instances at a 64-sample buffer. At the default buffer no arrangement of instances could fail, so a clean run would say nothing.
@@ -110,14 +112,14 @@ The part the issue says is always missing. Each technique is paired with its mea
 - **The pipe that makes a running thing look stopped.** Without `2>&1`, the pipe appears to do nothing. Without `--line-buffered`, the meter arrives in bursts minutes apart, which reads exactly like a render loop that has stopped.
 - **An instrument whose null is not evidence.** `auval` cannot see the component at all.
 - **The wrong build, where nothing happening was the only available outcome.** A resizable editor was "verified" against a build whose `can_resize` returned false.
-- **A cheap plant inside a manual session.** fosforo's NaN pair: with the guard removed the check reads `TraceNotFlat`, and with the guard in place it passes at 0.00000. This is where the reference points to the `plant-defects` skill.
+- **A reversible plant inside a manual session.** The copy, symlink, copy sequence removes and restores the component while requiring the scan-log count to move and return. This applies the discipline of the `plant-defects` skill within the positive-control technique.
 - **Portable forms**, marked illustrative: a network-panel request or console marker in a browser, a log stream predicate in a simulator, a serial log or indicator on a device, and a job ID in the print queue.
 
 #### `./references/resuming.md`
 
-- **Where the record lives.** Use the active plan's `## Manual verification` section when the work has a plan. Otherwise use one checklist comment on the issue, updated in place. The comment URL is recorded in the checklist, and the body goes through the tmpfile pattern from the `use-git` skill: `gh issue comment NUMBER --body-file FILE` to create it, then `gh api --method PATCH repos/OWNER/REPO/issues/comments/ID -F body=@FILE` to update it. `--edit-last` is not used, because it edits the wrong comment once anyone has commented since. There is one living record, never a copy per session.
+- **Where the record lives.** Use the active plan's `## Manual verification` section when the work has a plan. Otherwise use one checklist comment on the issue, updated in place. The comment URL is recorded in the checklist, and the body goes through the tmpfile pattern from the `use-git` skill: `gh issue comment NUMBER --repo OWNER/REPO --body-file FILE` to create it, then `gh api --method PATCH repos/OWNER/REPO/issues/comments/ID -F body=@FILE` to update it. Read the created or updated body back, verify its content, and repair that same comment if needed before treating it as the record. `--edit-last` is not used, because it targets the authenticated user's latest comment rather than a stable checklist ID. There is one living record, never a copy per session.
 - **Reprinting.** Reprint from the record, never from memory or scrollback. Remaining steps go first, grouped by resource, and step 0 is always included.
-- **Parsing free text.** "4's confirmed, skipping 5 and 6, 7 gave 1.0894" maps to 4 `passed`, 5 and 6 `deferred` (ask for the reason only when none can be inferred), and 7's reading compared against its Expected, with the status derived from the comparison. The reading is recorded verbatim, with date, build, and environment.
+- **Parsing free text.** "4's confirmed, skipping 5 and 6, 7 gave 1.0894" maps to 4 `passed` only with its Expected and same-run control confirmed, 5 and 6 `deferred` with reasons and destinations, and 7's reading compared against its Expected only after build and control confirmation. Unreported evidence leaves a result `pending`; an invalid run is `void`. The reading is recorded verbatim, with date, build, and environment.
 - **Reports that do not settle a step.** "Seems fine" against a numeric Expected keeps the step `pending` and asks for the number. "Nothing happened (as desired)" asks whether the liveness marker showed. If it could not have shown, the step becomes `void`, and the record says what would confirm it. "I'm not sure what I'm looking for" means the step is defective, so the fix goes into the record and not only into chat.
 - **Predictions that were wrong.** When the code is right and the prediction was not, the reading stands and the Expected is corrected with both values kept.
 - **A build that changes between sessions.** Every result is tied to its build. A later commit that touches what a passed step covers marks that step for re-running. One that does not leaves it standing.
@@ -148,10 +150,11 @@ The sibling template, in this order:
 ## What It Does
 ## Usage
 ## Examples
+## Recommended Permissions
 ## See Also          -> ending with the all-plugins link
 ```
 
-- **No `## Requirements` and no `## Recommended Permissions`.** The skill needs no tool of its own. `gh` is used only when the record lives on an issue, which Usage states in prose.
+- **Conditional GitHub CLI use.** Usage explains that `gh` is required when the record lives on an issue. Recommended Permissions provides optional JSON allow rules for creating, reading, and updating that record, inspecting changes with Git, and managing its tmpfile.
 - **See Also** links only to plugins that exist: Plant Defects, Create Worktree, Suggest Next Issue, and Write Formalization Roadmap. The two unbuilt companions, `stamp-build-provenance` (#341) and `write-phased-build-plan` (#347), get a prose mention without a link, as `plant-defects` did for its unbuilt companions.
 
 ### Catalog registration
@@ -176,7 +179,7 @@ Rule 19 scans `SKILL.md` and every file under `references/`.
 
 ## Verification
 
-This worktree has no `node_modules`, so Yarn installs first.
+Install the pinned Markdown tooling when needed, then run the repository checks.
 
 ```bash
 yarn install --immutable
