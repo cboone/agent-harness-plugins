@@ -209,13 +209,13 @@ Apply these in order.
 1. **Remove what is already tracked.** A candidate is tracked when any of these holds:
    - Its own text names an issue (`#N`, an issue URL, "tracked in", "filed as") other than the branch's source issues. Those close with this work, so naming them tracks nothing.
    - An issue was filed for it earlier in this session.
-   - An issue already links back to the source. Read the cross-references of the PR and of each source issue:
+   - An issue that links back to the source covers the same concern. Read the cross-references of the PR and of each source issue once, then match candidates against the list:
 
      ```bash
      gh api --paginate repos/<target>/issues/<n>/timeline --jq '.[] | select(.event == "cross-referenced") | .source.issue | {number, title, state, url: .html_url}'
      ```
 
-     The endpoint accepts a pull request number too. Every issue this skill files links its source, so this read finds an earlier run's filings whether or not that run posted a summary comment.
+     The endpoint accepts a pull request number too. Every issue this skill files links its source, so this read finds an earlier run's filings whether or not that run posted a summary comment. The list also holds every other issue that merely mentions the source, such as a related proposal, so a listed issue tracks a candidate only when it passes the same distinctive-words test as a search hit below.
 
    - A review document on the branch records it as filed.
    - A tracker search finds it:
