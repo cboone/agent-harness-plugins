@@ -62,7 +62,7 @@ Review and adjust the rules to match your security preferences. The verification
 ## See Also
 
 - [Plant Defects](../plant-defects/README.md): the same discipline for automated checks, proving an instrument can see the defect it claims to catch
-- [Create Worktree](../create-worktree/README.md): claims the exclusive resources a checklist declares
+- [Create Worktree](../create-worktree/README.md): claims exclusive resources declared in a plan-backed checklist
 - [Suggest Next Issue](../suggest-next-issue/README.md): uses declared resources to find work that can run in parallel
 - [Write Formalization Roadmap](../write-formalization-roadmap/README.md): the document-structure guide this skill's shape follows
 - [All plugins](../../README.md)

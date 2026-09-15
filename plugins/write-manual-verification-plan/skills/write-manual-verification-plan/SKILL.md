@@ -88,7 +88,7 @@ Statuses are `pending`, `passed`, `failed`, `partial`, `void`, `deferred`, `unte
 ## Related Skills
 
 - `plant-defects`: the same discipline for automated instruments. Where a manual session can plant the defect a step looks for, cheaply and reversibly, it should.
-- `create-worktree`, `address-issue-in-worktree`, and `suggest-next-issue`: each reads a heading containing "exclusive resource" in a plan under `docs/plans/todo/` and takes the backticked names beneath it as the project's declared resources, so the checklist's scope section feeds resource claims and parallel-work suggestions directly.
+- `create-worktree`, `address-issue-in-worktree`, and `suggest-next-issue`: each reads a heading containing "exclusive resource" in a plan under `docs/plans/todo/` and takes the backticked names beneath it as the project's declared resources. This integration applies when the checklist is in a plan; these skills do not read issue comments, so issue-backed resource declarations do not feed their resource claims or parallel-work suggestions.
 - `use-git`: the tmpfile pattern for writing a checklist to an issue comment.
 
 ## Sources

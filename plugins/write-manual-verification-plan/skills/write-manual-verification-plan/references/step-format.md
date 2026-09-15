@@ -48,7 +48,7 @@ Steps 0 to 4 are adapted from fosforo's host pass for drawing the beam as orient
 
 The status table is what a person resuming reads first, and what a reprint leads with. Its `Reading` column is a short form of the step's `Result` line, not a replacement for it.
 
-The `### Exclusive resources` heading is deliberate. Skills that claim resources for a worktree and skills that suggest parallel work look in plans under `docs/plans/todo/` for a heading containing "exclusive resource" and take the backticked names beneath it as the project's declared resources. Use the project's existing resource names where it has any, so a claim and a checklist name the same thing the same way.
+The `### Exclusive resources` heading is deliberate. Skills that claim resources for a worktree and skills that suggest parallel work look in plans under `docs/plans/todo/` for a heading containing "exclusive resource" and take the backticked names beneath it as the project's declared resources. This integration works when the checklist is stored in a plan; those skills do not read issue comments, so issue-backed resource declarations do not feed their resource claims or parallel-work suggestions. Use the project's existing resource names where it has any, so a claim and a checklist name the same thing the same way.
 
 Scope by what a step actually needs, not by what it is near. fosforo's build plan draws this line between two follow-up issues that both involve captures: one corrects arithmetic that does not depend on what was drawn, so any capture already on hand will do, while the other needs a brightness range that no existing capture contains, so it needs a fresh one and therefore the host. Only the second takes the resource.
 

@@ -96,15 +96,16 @@ Results arrive as a sentence against step numbers. Take this one:
 
 > 4's confirmed, skipping 5 and 6, 7 gave 1.0894
 
-| Fragment           | Step | Status                                                                                                                   | Recorded                                                        |
-| ------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| "4's confirmed"    | 4    | `passed` only if the report affirms both Expected and Null vs broken, with step 0 confirmed; otherwise `pending` and ask | "confirmed", verbatim                                           |
-| "skipping 5 and 6" | 5, 6 | `deferred`                                                                                                               | The reason and destination; ask once if neither can be inferred |
-| "7 gave 1.0894"    | 7    | Compare with Expected and tolerance only after step 0 and Null vs broken hold; otherwise ask or mark `void`              | "1.0894", verbatim, against the prediction                      |
+| Fragment           | Step | Status                                                                                                                   | Recorded                                   |
+| ------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ |
+| "4's confirmed"    | 4    | `passed` only if the report affirms both Expected and Null vs broken, with step 0 confirmed; otherwise `pending` and ask | "confirmed", verbatim                      |
+| "skipping 5 and 6" | 5, 6 | `pending` until the reason and destination are recorded, then `deferred`                                                 | Ask once if either cannot be inferred      |
+| "7 gave 1.0894"    | 7    | Compare with Expected and tolerance only after step 0 and Null vs broken hold; otherwise ask or mark `void`              | "1.0894", verbatim, against the prediction |
 
 The rules behind that table:
 
 - **Record verbatim, then derive the status.** The person's words and numbers go into the Result line as given. The status is a judgment made from them, and it can be revisited; the reading cannot be recovered if it was paraphrased.
+- **Do not mark a step `deferred` until its record names both why it is deferred and where it will be completed.** Until both are recorded, leave it `pending` and ask once for the missing information.
 - **Attach date, build, and environment to every result.** The build comes from this session's step 0. If step 0 has not been run this session, record the reading, ask for step 0 now, and let the reading stand only if step 0 confirms the build and nothing was installed in between. Otherwise the reading is `void`.
 - **Require the build and control evidence before assigning `passed` or `failed`.** Both the Expected observation and the step's Null vs broken evidence must come from the reported run, with step 0 confirmed for that session. If evidence is merely unreported, keep the result `pending` (or `partial` for an incomplete set of readings) and ask for it. If the build or instrument was wrong, the control was skipped, or conditions could not expose the defect, record `void` and what a valid rerun needs.
 - **Check each number against its tolerance, not against the printed prediction.** Once the build and control evidence hold, +1.0893 against a predicted +1.0889 with a tolerance of ±0.002 is a pass, and the record keeps both numbers.
