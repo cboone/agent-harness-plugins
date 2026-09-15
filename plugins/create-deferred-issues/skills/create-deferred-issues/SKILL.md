@@ -68,19 +68,20 @@ Everything in this step is read-only. Run independent commands in parallel.
 
 ```bash
 git remote
-git remote get-url origin | sed -E 's#^([A-Za-z][A-Za-z0-9+.-]*://)[^/@]*@#\1#; s#^[^@]+@([^:]+:)#\1#'
+git remote get-url origin | sed -E 's#^[A-Za-z][A-Za-z0-9+.-]*://##; s#^[^/@]*@##; s#^([^/:]+):#\1/#; s#\.git$##'
 ```
 
-The first command lists remote names only. The second removes URL userinfo and SCP-style SSH usernames before printing the remote, so credentials never enter the tool transcript. Never run `git remote -v` or print an unsanitized remote URL. Use only the sanitized host and repository path in later commands and reports. For an SSH remote, inspect the sanitized SSH host token without printing the raw URL.
+The first command lists remote names only. The second removes URL userinfo and SCP-style SSH usernames, converts the remote to `HOST/OWNER/NAME`, and removes a trailing `.git` before printing it, so credentials never enter the tool transcript. Never run `git remote -v` or print an unsanitized remote URL. Use this normalized origin selector in later commands and reports.
 
 Resolve the sanitized origin identity to a repository:
 
 ```bash
-gh repo view <origin-url> --json nameWithOwner,url,visibility,isArchived,isFork,parent,hasIssuesEnabled,defaultBranchRef
+gh repo view <origin-selector> --json nameWithOwner,url,visibility,isArchived,isFork,parent,hasIssuesEnabled,defaultBranchRef
 ```
 
 - Its `nameWithOwner` is the **default target** for filing. Select the repository explicitly for every `gh` call: use `--repo` where supported, the repository argument for `gh repo view`, an object's full URL when reading it, or the repository path and host for `gh api`. Source reads use the source repository; filing and tracker searches use the candidate's destination. Without an explicit repository, `gh` prefers a remote named `upstream`, so inside a fork a bare `gh issue create` files on the project that was forked.
 - If the SSH host token is an alias, resolve its configured hostname with `ssh -G <alias>` before calling `gh`. Use the resulting hostname only when it is a GitHub host for which `gh` is authenticated. If the alias cannot be resolved, or its configured host cannot be authenticated, do not fall back to bare `owner/name`, because that silently selects GitHub.com. Mark origin unavailable and require a user-provided host-qualified selector for filing. On a host other than `github.com`, write targets as `HOST/OWNER/NAME` for `--repo`, and pass `--hostname HOST` to `gh api`.
+- When the normalized origin selector came from an SSH alias, replace its host with the configured hostname returned by `ssh -G <alias>` before calling `gh`. If the alias cannot be resolved, use the unavailable-origin path rather than querying the alias as though it were a GitHub hostname.
 - Keep the host and `owner/name` as separate fields for every repository. In the examples, `<target>`, `<pr-repo>`, and `<source-repo>` are host-qualified selectors where needed; `<pr-owner>/<pr-name>` and `<source-owner>/<source-name>` are the host-free API paths. Never put a hostname after `repos/`.
 - `parent` has no `nameWithOwner` field. Build the parent's name from `.parent.owner.login` and `.parent.name`.
 - For the rest of this workflow, a **third-party repository** is any target whose owner differs from origin's owner, plus the fork's parent and the repository an `upstream` remote points at, whoever owns them.
@@ -110,7 +111,14 @@ Record the PR's full URL, repository as `<pr-repo>`, and number together. Keep t
 
 #### Base
 
-If a PR was found, its `baseRefName` is the base, and the repository containing that PR owns the base branch. Resolve its repository URL with `gh repo view <pr-repo> --json url`; a PR in a fork's parent must fetch its base from that parent, even if origin has a branch with the same name. Otherwise read where the branch was created:
+If a PR was found, its `baseRefName` is the base, and the repository containing that PR owns the base branch. Resolve its repository URL with `gh repo view <pr-repo> --json url`; a PR in a fork's parent must fetch its base from that parent, even if origin has a branch with the same name. Fetch that base and record the immutable commit immediately:
+
+```bash
+git fetch <pr-base-repository-url> refs/heads/<base> --quiet
+git rev-parse FETCH_HEAD
+```
+
+Use that commit as `<base-sha>` in every scan below. Otherwise read where the branch was created:
 
 ```bash
 git reflog show <branch> --format='%gs'

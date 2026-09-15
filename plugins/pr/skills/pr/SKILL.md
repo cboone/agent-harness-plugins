@@ -17,27 +17,23 @@ Commit, push, and create a pull request in one automated step. Never prompt the 
 
 ### 1. Gather Context
 
-First, detect the repository's base branch:
+First, resolve the repository where `gh pr create` will open the PR by normalizing `origin`:
 
 ```bash
-gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
+git remote get-url origin | sed -E 's#^[A-Za-z][A-Za-z0-9+.-]*://##; s#^[^/@]*@##; s#^([^/:]+):#\1/#; s#\.git$##'
 ```
 
-If `gh` is not available or the command fails, fall back to:
+This prints a `HOST/OWNER/REPO` selector without exposing remote userinfo. Record it as `<pr-target>`. If `origin` is missing or cannot be normalized, stop and report that the PR target cannot be established.
+
+Then detect the repository's default branch explicitly:
 
 ```bash
-git remote show origin | grep 'HEAD branch' | sed 's/.*: //'
+gh repo view <pr-target> --json defaultBranchRef,visibility --jq '{defaultBranch: .defaultBranchRef.name, visibility}'
 ```
 
 Use the detected value as `<default-branch>`.
 
-Resolve the repository where `gh pr create` will open the PR and record its host-qualified selector as `<pr-target>`:
-
-```bash
-gh repo view --json nameWithOwner,url
-```
-
-Use `nameWithOwner` with the hostname from `url`: use `OWNER/REPO` on `github.com`, and `HOST/OWNER/REPO` on another GitHub host. This is the repository that interprets bare issue references in the PR body. Pass `--repo <pr-target>` to every issue lookup and search below.
+Use `<pr-target>` as the repository where the PR will be opened, and record its visibility from this query. Pass `--repo <pr-target>` to every issue lookup and search below, and pass the same selector to `gh pr create`.
 
 #### Detect the PR base branch
 
@@ -128,7 +124,7 @@ gh issue view NUMBER --repo <pr-target> --json number,title,state,url --jq 'sele
 
 #### Strategy 3 -- GitHub issue search by branch slug
 
-Only run this strategy if strategies 1 and 2 found zero issues.
+Run this strategy when strategies 1 and 2 found no candidates. After follow-ups are removed in Combine results, run it again if every candidate was a follow-up and no closing candidate remains.
 
 Extract the slug portion of the branch name: everything after the first `/`, or the whole name when it has no `/`, since a branch may carry no type prefix. Convert hyphens to spaces to form search keywords. Search for matching open issues:
 
@@ -156,7 +152,9 @@ Merge the full issue identities from all three strategies into one deduplicated 
 
 Collect **follow-up issues** directly from the session, independently of the detected closing list. These are issues filed for concerns this branch set aside, for example by the `create-deferred-issues` skill; a follow-up belongs in this collection even when none of the strategies above found it. Preserve each full issue URL, host, repository, number, title, and destination visibility. Resolve missing identity or visibility with an explicit `gh issue view <issue-url> --json url,title` or `gh repo view <host/owner/name> --json visibility`; never infer the host or repository from a number alone.
 
-Normalize the detected local closing candidates to the PR target's host and repository, then remove only identities that exactly match a follow-up. In the strategies above, treat a repository-qualified reference or full URL as one unit; never extract its `#N` suffix as a local candidate. `other/repo#7` must not remove or introduce the PR repository's `#7`. Keep every follow-up in the separate collection for step 7, even if it is omitted from a public PR body. Commit messages in step 4 reference only the closing list that remains.
+Normalize detected candidates to full identities, then remove only identities that exactly match a follow-up. In the strategies above, treat a repository-qualified reference or full URL as one unit; never extract its `#N` suffix as a local candidate. `other/repo#7` must not remove or introduce the PR repository's `#7`. Define the closing list as the remaining identities that exactly match `<pr-target>`; commit messages in step 4 may use closing keywords for this list only. Keep other connected identities separately for `Related issues`, and every follow-up separately for step 7. If follow-up removal leaves no closing candidate and Strategy 3 was skipped, run Strategy 3 now.
+
+Before creating commits, resolve the PR target's visibility and the visibility of each connected issue outside `<pr-target>`. If the PR target is public, only confirmed-public related issues may appear in generated commit references or public PR text; omit confirmed-private or internal identities. If any required visibility is unknown, stop before creating commits or the PR until it can be verified.
 
 Before creating commits or the PR, inspect the full messages of existing branch commits with `git log --format='%H%n%B' <base-branch>..HEAD` for closing keywords naming a follow-up. Compare full identities, resolving bare references in the PR target. If a match exists, stop and report the conflicting commit and issue so the user can decide how to handle it. Moving a reference into Follow-ups cannot neutralize a closing keyword already committed; never amend or rewrite history automatically.
 
@@ -199,7 +197,7 @@ For each chunk:
    - Examine `git log --oneline -10` output to match the repository's commit message style.
    - Determine the commit type (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `style`) based on the changes.
    - Write a concise description (under 72 characters) focused on _why_ the change was made.
-   - Reference connected issues detected in step 2. Use `fixes #N` when the changes fix a bug and `closes #N` otherwise. Decide from the nature of the change, which the commit type above already establishes, and never from the branch prefix: a branch may carry no prefix at all, or one such as `bug/` or `hotfix/` that means a fix without spelling it `fix/`, because the worktree skills honor repository naming conventions and explicit user-supplied names. If no connected issues were detected, omit issue references from the commit message. Only reference issues in the commit that most directly addresses them.
+   - Reference only issues in the PR-target closing list from step 2. Use `fixes #N` when the changes fix a bug and `closes #N` otherwise. Decide from the nature of the change, which the commit type above already establishes, and never from the branch prefix: a branch may carry no prefix at all, or one such as `bug/` or `hotfix/` that means a fix without spelling it `fix/`, because the worktree skills honor repository naming conventions and explicit user-supplied names. Keep connected issues from other repositories as non-closing `Related issues` references in the PR body. If the closing list is empty, omit issue references from the commit message. Only reference issues in the commit that most directly addresses them.
 1. **Create the commit** using GPG signing and a HEREDOC:
 
 ```bash
@@ -336,9 +334,9 @@ Use the same nature-of-change test as the commit message, so the two never disag
 
 If no connected issues were detected, omit the `## Closes` section entirely.
 
-Only issues whose full identity matches `<pr-target>` belong in `## Closes`. Keep connected issues in other repositories under a separate `## Related issues` section, using `owner/repo#N` on the same host or the full issue URL across hosts. Never use a closing keyword for those references. If both sections appear, put `## Related issues` after `## Closes` and before `## Follow-ups`.
+Only issues whose full identity matches `<pr-target>` belong in `## Closes` or may appear with a closing keyword in a commit message. If other connected issues remain, add a `## Related issues` section. Before publishing any such issue, resolve that repository's visibility with an explicit `gh repo view` call. In a public PR, include only confirmed-public issues; omit confirmed-private or internal identities, and stop before creating commits or the PR if visibility is unknown. Use `owner/repo#N` on the same host or the full issue URL across hosts. Never use a closing keyword for those references. If both sections appear, put `## Related issues` after `## Closes` and before `## Follow-ups`.
 
-If step 2 recorded follow-up issues, check the PR repository's visibility and each destination's recorded visibility before composing the `## Follow-ups` section. Use explicit repository selectors for metadata reads. In a public PR, omit private or internal destinations entirely, including their titles, repository names, numbers, and URLs. Omit entries with unknown destination or PR visibility until verified, and report omissions only to the user. Exclude omitted follow-ups from closing references just like published ones.
+If step 2 recorded follow-up issues, check the PR repository's visibility and each destination's recorded visibility before composing the `## Follow-ups` section. Use explicit repository selectors for metadata reads. In a public PR, omit confirmed-private or internal destinations entirely, including their titles, repository names, numbers, and URLs. If destination or PR visibility is unknown, stop before creating commits or the PR until it is verified. Exclude omitted follow-ups from closing references just like published ones.
 
 Place `## Follow-ups` last, after any `## Related issues` or `## Closes` section, or after `## Test plan` when neither appears. List one publishable issue per line as `- #N` in the same repository, `- owner/name#N` in another repository on the same host, or `- https://HOST/OWNER/NAME/issues/N` across hosts. Never use a closing keyword. If no entries can be published, omit the section entirely.
 
@@ -358,7 +356,7 @@ Then use the **Write** tool to write the full PR body (Summary, Test plan, Close
 Then create the PR with `--body-file`:
 
 ```bash
-gh pr create --title "the pr title" --body-file TMPFILE
+gh pr create --repo <pr-target> --title "the pr title" --body-file TMPFILE
 ```
 
 Pass `--base <base-branch>` if `<base-branch>` differs from `<default-branch>`. Do not pass `--draft`. Do not add labels or reviewers.
@@ -479,5 +477,6 @@ When committing plan files, use a message like `docs: add plan for <meaningful-d
 - **No gh CLI**: Report that the `gh` CLI is required and link to https://cli.github.com/.
 - **Secret files detected**: Warn the user and exclude them from staging. Continue with the remaining files.
 - **Issue detection fails**: If `gh issue view` or `gh issue list` commands fail (network error, auth issue), skip issue detection silently and proceed without the `## Closes` section. Issue detection is best-effort and must never block PR creation.
+- **Related-issue visibility cannot be verified**: Stop before creating commits or the PR. Report that the issue's repository visibility must be verified before it can be included in public PR text.
 - **Follow-up identity or visibility cannot be verified**: Stop before creating commits or the PR. Record the follow-up as unknown and report that its full identity or visibility must be verified before continuing. A bare issue number may refer to that follow-up, so do not proceed with an incomplete identity list.
 - **Detected issue is already closed**: Still include it in the `## Closes` section. GitHub handles this gracefully (the keyword is a no-op for already-closed issues, and it still creates a visible cross-reference).

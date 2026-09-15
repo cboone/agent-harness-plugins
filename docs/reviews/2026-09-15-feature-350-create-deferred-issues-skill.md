@@ -86,8 +86,8 @@ After an edit changes the destination or substantive concern, repeat the affecte
 ## Notable Changes
 
 - GitHub writes are newly orchestrated through an approved batch. Repository identity, public/private source handling, and retry behavior are therefore functional requirements of the prompt.
-- Version checks are clean: `create-deferred-issues` starts at `1.0.0`; `pr` advances from `1.8.4` to `1.9.0`, appropriate for the new capability.
-- Catalog state changes from `catalog-M70-m103-p157-n57` to `catalog-M71-m104-p153-n58` after merging `main`. The computed value matches; plugin validation confirms catalog agreement and generated-tree freshness. The lower patch sum is expected when `pr` advances to a minor version with patch zero.
+- Version checks are clean: `create-deferred-issues` starts at `1.0.0`; `pr` advances from `1.8.5` to `1.9.0`, appropriate for the new capability.
+- Catalog state changes from `catalog-M70-m106-p159-n57` to `catalog-M71-m107-p154-n58` after merging `main`. The computed value matches; plugin validation confirms catalog agreement and generated-tree freshness. The lower patch sum is expected when `pr` advances to a minor version with patch zero.
 
 ## Plan Compliance
 
@@ -171,7 +171,7 @@ All listed instruction paths reached the stated result on inspection. The full-s
 - `make validate`: passed, including JSON, plugin metadata, cross-references, and generated-tree freshness.
 - The skill-creator validator, run through `uv` with PyYAML and a writable temporary cache: passed.
 - `git diff --check` and staged whitespace check: passed.
-- Version check: the new plugin remains `1.0.0`; `pr` remains `1.9.0`; catalog state recomputes to `catalog-M71-m104-p153-n58`. No additional version bump is needed for corrections to the new plugin before its first release.
+- Version check: `create-deferred-issues` is new at `1.0.0`; `pr` advances from `1.8.5` to `1.9.0`; catalog state recomputes from `catalog-M70-m106-p159-n57` to `catalog-M71-m107-p154-n58`. No additional version bump is needed for corrections to the new plugin before its first release.
 - Scrut was not rerun for these prompt-only fixes. Its earlier completed result remains 387 passing and 15 failing cases, with the limitations described in the original verification section. Neither launcher code nor its tests were changed.
 - No live GitHub writes were made to test the workflow. The 13 recorded scenarios are instruction-path inspections.
 
