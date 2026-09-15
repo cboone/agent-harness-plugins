@@ -24,3 +24,14 @@ Use lowercase kebab-case, an imperative verb and noun, and a `fix/`, `feature/`,
 ## Delivery and boundaries
 
 Create small GPG-signed conventional commits referencing (#413). Workmux continues starting the configured destination agent. Leave workmux configuration untouched and keep issue #414 timeout and signal-cleanup work outside this change.
+
+## Implementation and validation results
+
+Implemented in `0fc38b47` (launcher and regression tests) and `c2829899` (inline naming instructions, documentation, versions, and packaging). Both mirrors were regenerated; the OpenCode symlinks already resolve to the updated source. Both bundled launchers remain byte-identical.
+
+- `make format`, cross-reference validation, Markdown lint, Prettier, ShellCheck, shfmt, actionlint, JSON validation, plugin validation, and `git diff --check` passed.
+- Plugin versions match the approved targets and marketplace entries. Catalog state: `catalog-M70-m105-p158-n57`.
+- The launcher suite initially passed all 44 cases with Command Line Tools Git selected.
+- `DEVELOPER_DIR=/Library/Developer/CommandLineTools make test-all` completed with 400 of 408 Scrut cases passing. Eight launcher cases selected the expected branch but omitted detached workmux output.
+- A subsequent isolated launcher run passed 41 of 44 cases, with three cases omitting the same output. The full suite is therefore not clean. The fixed-wait output behavior is tracked separately in [issue #439](https://github.com/cboone/agent-harness-plugins/issues/439); no launcher wait or signal-cleanup changes are included here.
+- The developer directory selection is needed on this host because `/usr/bin/git` otherwise resolves through an Xcode installation with an unaccepted license. The installed Command Line Tools Git runs successfully.
