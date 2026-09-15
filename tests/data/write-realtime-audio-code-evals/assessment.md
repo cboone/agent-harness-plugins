@@ -6,7 +6,7 @@ Canonical skill at commit `9c9f1e9e3b4f4f740a42b9dd6c323a84628cb16d`, after the 
 
 ## Results
 
-An independent Codex subagent evaluated `RTAC-001`, `RTAC-002`, `RTAC-006`, `RTAC-019`, `RTAC-023`, `RTAC-029` through `RTAC-035` in a fresh context. It received the selected raw artifacts and canonical installed-skill layout, but not assessment criteria or prior review findings. The harness did not report a model identifier. It made no changes and ran no downstream audio toolchain commands. This table retains only the assessor's summaries, not evaluator outputs or action traces, so every row remains unverified until its retained evidence is available.
+No completed fresh-context evaluation is retained for these cases. Earlier assessor summaries describe intended assessment outcomes, but omit evaluator output, action traces, observed command completions, and evidence links. Treat every row as not executed until a run records those artifacts against the named revision.
 
 | Case       | Selected references                                               | Result     | Assessment and unverified scope                                                                                                                                                                      |
 | ---------- | ----------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

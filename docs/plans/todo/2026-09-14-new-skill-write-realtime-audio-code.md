@@ -252,7 +252,7 @@ Link Installation to `../../README.md#install`, and See Also to Plant Defects an
 - Add the root README's `Write Real-Time Audio Code` row between `Write Lean Tests` and `Write Scrut Tests`, using the canonical description verbatim. No new category or Contents entry is needed. Conditional downstream verification tools are not hard install dependencies of this plugin.
 - Update the `plant-defects` README's companion status, add a See Also link, and add `write-realtime-audio-code` to its related-skills sentence. Verify the other companion's current status before preserving a statement about it.
 - Start the audio plugin at `1.0.0`. Apply the appropriate patch increment to the checked-out `plant-defects` version, currently `1.0.0` to `1.0.1`, in both its manifest and marketplace entry.
-- Recompute `metadata.version` with `bin/compute-catalog-state`. The reviewed baseline is `catalog-M70-m103-p156-n57`; if it remains unchanged, both plugin changes produce `catalog-M71-m103-p157-n58`. The script, not this expected string, is authoritative.
+- Recompute `metadata.version` with `bin/compute-catalog-state`. The reviewed baseline is `catalog-M70-m107-p165-n57`; if it remains unchanged, both plugin changes produce `catalog-M71-m107-p166-n58`. The script, not this expected string, is authoritative.
 - Run `bin/build-codex-marketplace` and `bin/build-opencode-mirror`, and commit the generated marketplace, plugin roots, and OpenCode skill symlink. Never edit `dist/` or `.agents/` by hand.
 
 ## Corrections and claim boundaries
