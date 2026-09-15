@@ -25,7 +25,7 @@ The practice and its measured examples come from the host-verification record of
 
 The skill also activates on its own when by-hand verification is the subject: a question about what can be verified manually, a request to walk through what to test, a request to reprint the steps, a report of partial results, or someone unsure what a step is looking for.
 
-When the work has a plan, the checklist becomes that plan's `## Manual verification` section. Otherwise it becomes a single comment on the issue, created and later updated with the [GitHub CLI](https://cli.github.com/), which that case requires.
+When the work has a plan, the checklist becomes that plan's `## Manual verification` section. Otherwise it becomes a single comment on the issue, created and later updated with an authenticated [GitHub CLI](https://cli.github.com/) session, which that case requires.
 
 ## Examples
 
