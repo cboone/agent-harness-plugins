@@ -78,14 +78,16 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Code Review
 
-| Plugin                                                                         | Trigger                        | What it does                                                                                                       |
-| ------------------------------------------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| [Address Review](./plugins/address-review/README.md)                           | `/address-review <path>`       | Parse a review document for actionable feedback, work through items systematically, and track resolution progress. |
-| [Resolve Copilot PR Feedback](./plugins/resolve-copilot-pr-feedback/README.md) | `/resolve-copilot-pr-feedback` | Process and resolve GitHub Copilot automated PR review comments.                                                   |
+| Plugin                                                                         | Trigger                        | What it does                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Address Review](./plugins/address-review/README.md)                           | `/address-review <path>`       | Parse a review document for actionable feedback, work through items systematically, and track resolution progress.                                                                                                          |
+| [Resolve Copilot PR Feedback](./plugins/resolve-copilot-pr-feedback/README.md) | `/resolve-copilot-pr-feedback` | Process and resolve GitHub Copilot automated PR review comments.                                                                                                                                                            |
+| [Review Colleague PR](./plugins/review-colleague-pr/README.md)                 | `/review-colleague-pr`         | Review a colleague's pull request carefully and considerately from a checkout of its branch, and report a brief, read-only assessment in chat: requirements, direction, blockers, follow-ups, and questions for the author. |
 
 **External tools:**
 
 - _Resolve Copilot PR Feedback:_ [`gh`](https://cli.github.com/) (required; the skill reads review threads over the GitHub API and posts its summary comment)
+- _Review Colleague PR:_ [`gh`](https://cli.github.com/) (required; the skill reads the PR, its linked issues, its reviews, and its CI status over the GitHub API, and writes nothing)
 
 ### Code Quality
 
