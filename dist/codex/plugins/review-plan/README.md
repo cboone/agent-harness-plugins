@@ -60,13 +60,14 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
       "Grep",
       "Bash(git branch --show-current)",
       "Bash(git status --short)",
-      "Bash(git remote -v)",
+      "Bash(git remote)",
       "Bash(git --no-pager show *)",
       "Bash(git --no-pager log *)",
       "Bash(git --no-pager diff *)",
       "Bash(gh issue view *)",
       "Bash(gh pr view *)",
-      "Bash(gh pr diff *)"
+      "Bash(gh pr diff *)",
+      "Bash(gh repo view *)"
     ]
   }
 }

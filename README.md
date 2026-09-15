@@ -86,6 +86,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 **External tools:**
 
+- _Review Plan:_ [`gh`](https://cli.github.com/) (optional; only for explicitly linked GitHub context)
 - _Resolve Copilot PR Feedback:_ [`gh`](https://cli.github.com/) (required; the skill reads review threads over the GitHub API and posts its summary comment)
 
 ### Code Quality
