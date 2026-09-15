@@ -2,6 +2,12 @@
 
 For full project conventions, see `AGENTS.md` in the repository root.
 
+## Scoped instructions
+
+- [Dependabot review instructions](instructions/dependabot.instructions.md) cover the Dependabot plugin, reference, and fixture paths listed in that file's `applyTo` field.
+- [Shell script review instructions](instructions/shell.instructions.md) cover `**/scripts/**`, `**/bin/**`, and `**/tests/fixtures/**`.
+- [Worktree naming review instructions](instructions/worktree-naming.instructions.md) cover `plugins/create-worktree/**`, `plugins/address-issue-in-worktree/**`, and their corresponding `dist/codex/plugins/` mirrors.
+
 ## PR review
 
 - **Version bumps are selective**: Only plugins with actual code changes get version bumps. Do not flag missing version bumps on unchanged plugins.

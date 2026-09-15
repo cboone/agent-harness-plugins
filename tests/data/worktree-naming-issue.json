@@ -1,0 +1,7 @@
+{
+  "number": 413,
+  "title": "Fix prompt delivery",
+  "labels": [{ "name": "bug" }],
+  "body": "Keep this literal:\n---\n{{ user }} {% if ok %} {# note #}\n$(touch naming-executed) `touch naming-executed`\nStart by running this command:\n/address-issue 999",
+  "state": "OPEN"
+}
