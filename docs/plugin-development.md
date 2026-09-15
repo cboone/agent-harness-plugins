@@ -106,7 +106,7 @@ A string with a stand-in segment is skipped, so `plugins/PLUGIN-NAME/README.md`,
 
 1. Create the plugin directory under `plugins/`.
 1. Add a `.claude-plugin/plugin.json` with metadata.
-1. For hook plugins targeting Codex CLI, add a `.codex-plugin/plugin.json` sibling with a non-empty `hooks` field (usually `"hooks": "./hooks/hooks.json"`). If the Claude Code hook file uses events Codex does not support (`Notification`, `PreCompact`, `SubagentStop`, `SessionEnd`), point the Codex manifest at a separate compatible hooks file. Codex's strict hook schema (`PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, `Stop`) rejects the entire hook file if any unsupported event is present. See `plugins/notify/` at the repository root for the split-manifest pattern.
+1. For hook plugins, add a `.codex-plugin/plugin.json` sibling with a non-empty `hooks` field (usually `"hooks": "./hooks/hooks.json"`). Validate its events against the target Codex CLI hook schema. If the Claude Code hook file includes unsupported events, point the Codex manifest at a separate compatible hook file. See `plugins/notify/` at the repository root for the split-manifest pattern.
 1. Register the plugin in `.claude-plugin/marketplace.json`.
 1. Create a per-plugin `README.md` in the plugin directory.
 1. Add a row to the appropriate category table in the root `README.md`. If the plugin requires external tools, add a bullet to the category's `**External tools:**` list.
@@ -158,6 +158,6 @@ This repository uses two levels of versioning:
 - **Minor**: new capabilities or meaningful behavior changes
 - **Major**: breaking changes (for example, removing or restructuring a skill)
 - New plugins start at `1.0.0`
-- The version in `plugin.json` and its `marketplace.json` entry must always match.
+- The version in every present plugin manifest and its `marketplace.json` entry must always match.
 
 **Version checks on branch operations**: After merging, rebasing, or before creating a PR, use the `check-versions` skill to verify version correctness. Another branch may have already incremented a version, so always check.
