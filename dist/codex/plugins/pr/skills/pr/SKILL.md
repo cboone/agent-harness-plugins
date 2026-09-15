@@ -26,6 +26,14 @@ git remote show origin | grep 'HEAD branch' | sed 's/.*: //'
 
 Use the detected value as `<default-branch>`.
 
+Resolve the repository where `gh pr create` will open the PR and record its host-qualified selector as `<pr-target>`:
+
+```bash
+gh repo view --json nameWithOwner,url
+```
+
+Use `nameWithOwner` with the hostname from `url`: use `OWNER/REPO` on `github.com`, and `HOST/OWNER/REPO` on another GitHub host. This is the repository that interprets bare issue references in the PR body. Pass `--repo <pr-target>` to every issue lookup and search below.
+
 #### Detect the PR base branch
 
 The current branch may have been created from a non-default branch (e.g., for stacked PRs). Check the reflog for the branch creation point:
@@ -77,6 +85,9 @@ git diff <base-branch>...HEAD
 # Commit history of this branch since diverging from the base branch
 git log --oneline <base-branch>..HEAD
 
+# Full commit messages for issue-reference parsing
+git log --format='%H%n%B' <base-branch>..HEAD
+
 # Check remote tracking status
 git rev-parse --abbrev-ref --symbolic-full-name @{u} 2> /dev/null || echo "no upstream"
 ```
@@ -97,17 +108,17 @@ Extract the current branch name. Look for issue numbers in patterns like:
 For each candidate number, verify it refers to an existing issue:
 
 ```bash
-gh issue view NUMBER --repo <pr-target> --json number,title,state --jq '.number' 2> /dev/null
+gh issue view NUMBER --repo <pr-target> --json number,title,state,url --jq 'select(.url | contains("/issues/")) | .number' 2> /dev/null
 ```
 
-Only include it if the command succeeds (the issue exists).
+Only include it if the command returns a number. `gh issue view` also accepts pull requests, so discard results whose URL contains `/pull/`.
 
 #### Strategy 2 -- Issue references in commit messages
 
-Scan the `git log <base-branch>..HEAD` output (already gathered in step 1). Parse repository-qualified references and full issue URLs first, retaining their complete identity. Then collect bare `#N` references that are not part of those forms. For each bare candidate, verify it against the PR target:
+Scan the full-message `git log --format='%H%n%B' <base-branch>..HEAD` output gathered in step 1. Parse repository-qualified references and full issue URLs first, retaining their complete identity. Then collect bare `#N` references that are not part of those forms. Verify qualified references against their named repository and accept only URLs containing `/issues/`. For each bare candidate, verify it against the PR target and discard any result whose URL contains `/pull/`:
 
 ```bash
-gh issue view NUMBER --repo <pr-target> --json number,title,state --jq '.number' 2> /dev/null
+gh issue view NUMBER --repo <pr-target> --json number,title,state,url --jq 'select(.url | contains("/issues/")) | .number' 2> /dev/null
 ```
 
 #### Strategy 3 -- GitHub issue search by branch slug
@@ -117,7 +128,7 @@ Only run this strategy if strategies 1 and 2 found zero issues.
 Extract the slug portion of the branch name: everything after the first `/`, or the whole name when it has no `/`, since a branch may carry no type prefix. Convert hyphens to spaces to form search keywords. Search for matching open issues:
 
 ```bash
-gh issue list --search "KEYWORDS" --state open --json number,title --limit 5
+gh issue list --repo <pr-target> --search "KEYWORDS" --state open --json number,title,url --limit 5
 ```
 
 If **zero** issues are returned, skip.
@@ -311,7 +322,7 @@ Closes #N
 
 Keep the summary to 1-4 bullet points. Focus on what changed and why.
 
-If connected issues were detected in step 2, add a `## Closes` section after `## Test plan`. Use one line per issue with the appropriate keyword:
+If connected issues in the PR target were detected in step 2, add a `## Closes` section after `## Test plan`. Use one line per issue with the appropriate keyword:
 
 - When the changes fix a bug: `Fixes #N`
 - Otherwise: `Closes #N`
@@ -320,9 +331,11 @@ Use the same nature-of-change test as the commit message, so the two never disag
 
 If no connected issues were detected, omit the `## Closes` section entirely.
 
+Only issues whose full identity matches `<pr-target>` belong in `## Closes`. Keep connected issues in other repositories under a separate `## Related issues` section, using `owner/repo#N` on the same host or the full issue URL across hosts. Never use a closing keyword for those references. If both sections appear, put `## Related issues` after `## Closes` and before `## Follow-ups`.
+
 If step 2 recorded follow-up issues, check the PR repository's visibility and each destination's recorded visibility before composing the `## Follow-ups` section. Use explicit repository selectors for metadata reads. In a public PR, omit private or internal destinations entirely, including their titles, repository names, numbers, and URLs. Omit entries with unknown destination or PR visibility until verified, and report omissions only to the user. Exclude omitted follow-ups from closing references just like published ones.
 
-Place the section last, after `## Closes` or, when there is no Closes section, after `## Test plan`. List one publishable issue per line as `- #N` in the same repository, `- owner/name#N` in another repository on the same host, or `- https://HOST/OWNER/NAME/issues/N` across hosts. Never use a closing keyword. If no entries can be published, omit the section entirely.
+Place `## Follow-ups` last, after any `## Related issues` or `## Closes` section, or after `## Test plan` when neither appears. List one publishable issue per line as `- #N` in the same repository, `- owner/name#N` in another repository on the same host, or `- https://HOST/OWNER/NAME/issues/N` across hosts. Never use a closing keyword. If no entries can be published, omit the section entirely.
 
 #### Create the PR
 
@@ -461,5 +474,5 @@ When committing plan files, use a message like `docs: add plan for <meaningful-d
 - **No gh CLI**: Report that the `gh` CLI is required and link to https://cli.github.com/.
 - **Secret files detected**: Warn the user and exclude them from staging. Continue with the remaining files.
 - **Issue detection fails**: If `gh issue view` or `gh issue list` commands fail (network error, auth issue), skip issue detection silently and proceed without the `## Closes` section. Issue detection is best-effort and must never block PR creation.
-- **Follow-up identity or visibility cannot be verified**: Record the follow-up as unknown, omit it from both `## Closes` and `## Follow-ups`, and report the omission to the user. Do not treat this as ordinary best-effort issue detection, because the safety rule depends on knowing whether the reference may be published or closed.
+- **Follow-up identity or visibility cannot be verified**: Stop before creating commits or the PR. Record the follow-up as unknown and report that its full identity or visibility must be verified before continuing. A bare issue number may refer to that follow-up, so do not proceed with an incomplete identity list.
 - **Detected issue is already closed**: Still include it in the `## Closes` section. GitHub handles this gracefully (the keyword is a no-op for already-closed issues, and it still creates a visible cross-reference).

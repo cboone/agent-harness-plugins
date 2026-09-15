@@ -67,11 +67,11 @@ Everything in this step is read-only. Run independent commands in parallel.
 #### Repository
 
 ```bash
-git remote get-url origin
-git remote -v
+git remote
+git remote get-url origin | sed -E 's#^([A-Za-z][A-Za-z0-9+.-]*://)[^/@]*@#\1#; s#^[^@]+@([^:]+:)#\1#'
 ```
 
-Normalize the origin URL before using it. Never pass, log, store, or report a raw remote URL: an HTTPS remote can contain userinfo such as a token. Strip any userinfo, retain only its host and repository path, and use that sanitized identity in every later command and report. For an SSH remote, retain the path and inspect the SSH host token without printing the raw URL.
+The first command lists remote names only. The second removes URL userinfo and SCP-style SSH usernames before printing the remote, so credentials never enter the tool transcript. Never run `git remote -v` or print an unsanitized remote URL. Use only the sanitized host and repository path in later commands and reports. For an SSH remote, inspect the sanitized SSH host token without printing the raw URL.
 
 Resolve the sanitized origin identity to a repository:
 
@@ -364,7 +364,7 @@ Then suggest the next step. When no PR exists yet, suggest `/pr`, which lists pu
 ## Error Handling
 
 - **`gh` missing or unauthenticated**: Instruct the user to install it from https://cli.github.com/ and run `gh auth login`, then stop.
-- **No `origin`, or not a git repository**: Scan only the session. Retain explicitly named destinations and validate them normally; the user must supply a destination only for candidates that still lack one.
+- **No `origin`**: In a Git checkout, scan uncommitted changes, eligible untracked text files, and local plan and review documents; skip only the committed range whose base cannot be established. Keep explicitly named destinations and leave only candidates without one unresolved. Outside a Git checkout, scan the session and documents it names, retaining explicitly named destinations.
 - **A duplicate search or timeline read fails**: Propose the affected candidates with a "not checked for duplicates" note.
 - **The label list fails**: File without labels and report that labels were skipped.
 - **An issue fails to file**: Continue with the rest, and check the newest-issues listing before any retry so a retry cannot duplicate an issue that did land.
