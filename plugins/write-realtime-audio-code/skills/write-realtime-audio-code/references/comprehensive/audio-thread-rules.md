@@ -16,7 +16,7 @@ Record buses, channel counts, sample formats, legal in-place pairs, ownership, a
 
 CLAP audio ports require 32-bit sample support and make 64-bit support optional. Support unequal input and output counts, select the supplied representation, preserve an aliased input until it is consumed, and write every required output sample, including extra channels and fallback paths. `constant_mask` is a reader hint, so a constant output still needs a complete buffer. Rust code that wraps host buffers must also meet the slice contract: a C ABI's in-place permission does not authorize overlapping incompatible Rust references.
 
-Use the actual block-size rule. CLAP activation negotiates positive minimum and maximum sizes. JUCE preparation supplies an expectation while processing permits varying blocks, including zero samples. Test zero frames only where the API permits it. PortAudio requires filling an output buffer regardless of callback return value, whereas `CLAP_PROCESS_ERROR` asks the host to discard output. Neither outcome is a universal policy.
+Use the actual block-size rule. CLAP activation negotiates positive minimum and maximum sizes. JUCE preparation supplies an expectation while processing permits varying blocks, including zero samples. Test zero frames only where the API permits it. A PortAudio callback returning `paContinue` fills its output buffer; after `paComplete` or `paAbort`, PortAudio fills any ungenerated remainder as part of its stream-level completion guarantee. `CLAP_PROCESS_ERROR` instead asks the host to discard output. Neither outcome is a universal policy.
 
 ## Lifecycle and Threads
 
