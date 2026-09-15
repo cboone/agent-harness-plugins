@@ -3,7 +3,8 @@ name: review-plan
 description: >-
   Review an implementation plan against the current repository and its explicit
   dependencies, reporting evidence-backed blockers, required revisions, and optional
-  improvements before work begins.
+  improvements before work begins. Use when asked to review a plan or assess
+  implementation readiness.
 ---
 
 # Review Plan
@@ -54,7 +55,7 @@ Exclude secret-bearing files and credential locations from all reads and content
 
 Inspect directly referenced plans, branches, issues, and pull requests when they establish requirements or dependencies. Keep the dependency review bounded to those explicit references; follow further links only when necessary to resolve a material dependency, and disclose that expansion. Distinguish current working-tree evidence from proposed changes in another branch or PR.
 
-Use read-only Git queries such as `git status --short`, `git remote -v`, `git show`, `git log`, and `git diff` to inspect state and locally available branch refs. Do not check out, fetch, or merge branches. If a referenced ref is absent locally, mark it unverified or inspect its explicitly identified GitHub PR.
+Use read-only Git queries such as `git status --short`, `git remote -v`, `git --no-pager show --no-ext-diff --no-color`, `git --no-pager log --no-ext-diff --no-color`, and `git --no-pager diff --no-ext-diff --no-color` to inspect state and locally available branch refs. Do not check out, fetch, or merge branches. If a referenced ref is absent locally, mark it unverified or inspect its explicitly identified GitHub PR.
 
 For explicitly linked GitHub issues or PRs, resolve the owner and repository from the link. Inspect remotes to establish fork context; never rely on the implicit repository chosen by `gh`. For example, use `gh issue view NUMBER --repo OWNER/REPO --json number,title,body,state,comments` or `gh pr view NUMBER --repo OWNER/REPO --json number,title,body,state,baseRefName,headRefName,files,comments`, and `gh pr diff NUMBER --repo OWNER/REPO` when the diff is material. A bare issue number in a fork can name either repository; require an unambiguous repository from the plan or user. All external access is read-only.
 

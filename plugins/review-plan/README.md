@@ -1,6 +1,6 @@
 # Review Plan
 
-Review an implementation plan against the current repository and its explicit dependencies, reporting evidence-backed blockers, required revisions, and optional improvements before work begins.
+Review an implementation plan against the current repository and its explicit dependencies, reporting evidence-backed blockers, required revisions, and optional improvements before work begins. Use when asked to review a plan or assess implementation readiness.
 
 **Type:** Skills plugin
 **Trigger:** `/review-plan [path]`
