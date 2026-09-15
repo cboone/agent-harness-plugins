@@ -1,0 +1,163 @@
+# Plugin development
+
+Read this before changing plugin sources, catalog metadata or plugin documentation. Paths in code spans are relative to the repository root. See [the root instructions](../AGENTS.md) for validation and writing conventions.
+
+## Plugin layout
+
+A typical skill plugin looks like:
+
+```text
+plugins/commit/
+├── .claude-plugin/
+│   └── plugin.json
+├── README.md
+└── skills/
+    └── commit/
+        └── SKILL.md
+```
+
+Skills with longer reference material add a `references/` subdirectory:
+
+```text
+plugins/handle-secrets/
+├── .claude-plugin/
+│   └── plugin.json
+├── README.md
+└── skills/
+    └── handle-secrets/
+        ├── SKILL.md
+        └── references/
+            ├── anti-patterns.md
+            ├── checklist.md
+            └── ...
+```
+
+A skill can ship executable helpers too. `address-issue-in-worktree`, `create-worktree`, `publish-report-board`, `resolve-copilot-pr-feedback`, and `triage-dependabot-prs` each bundle a `scripts/` directory that the skill body invokes:
+
+```text
+plugins/create-worktree/
+├── .claude-plugin/
+│   └── plugin.json
+├── README.md
+├── scripts/
+│   ├── compose-issue-prompt
+│   ├── launch-workmux
+│   └── manage-resource-claims
+└── skills/
+    └── create-worktree/
+        └── SKILL.md
+```
+
+`create-worktree` and `address-issue-in-worktree` ship byte-identical copies of all three scripts. Rule 18 requires every `${CLAUDE_PLUGIN_ROOT}/scripts/NAME` reference to resolve inside its own plugin, so the scripts cannot be shared across plugins. Three testcases in `tests/scrut/repo-tooling.md` fail if the copies drift, so change one and copy it to the other.
+
+A skill refers to each script it ships by its plugin-root path, so `create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `resolve-copilot-pr-feedback` names `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads`. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` checks that every such reference resolves to a shipped, executable file and rejects version-blind locator globs like `**/PLUGIN/scripts/NAME`. Bundled scripts belong in `tests/scrut/`.
+
+A script can carry files of its own. `publish-report-board` keeps its page templates in a plugin-root `templates/` directory, and its `report-board` script finds them relative to its own location rather than through `${CLAUDE_PLUGIN_ROOT}`, so the same lookup works in Codex CLI and OpenCode, where the placeholder is not substituted. Prettier formats those templates like any other HTML, which is why the data placeholder in each is a JSON string that still parses before rendering.
+
+A hook plugin that targets all three harnesses (Claude Code, Codex CLI, and OpenCode) carries split manifests, harness-specific entry points, and any helper scripts or assets:
+
+```text
+plugins/notify/
+├── .claude-plugin/
+│   └── plugin.json
+├── .codex-plugin/
+│   └── plugin.json
+├── README.md
+├── assets/
+├── hooks/
+│   ├── codex.hooks.json
+│   └── hooks.json
+├── opencode/
+│   └── index.ts
+└── scripts/
+    ├── focus-pane
+    └── notify
+```
+
+`hooks/codex.hooks.json` carries only the events Codex understands (a subset of the full Claude Code set in `hooks/hooks.json`). `opencode/index.ts` is the OpenCode TypeScript plugin; `bin/build-opencode-mirror` mirrors it to `dist/opencode/plugins/`. Anything under `assets/` and `scripts/` is bundled with the plugin and reachable from hook commands via `${CLAUDE_PLUGIN_ROOT}`.
+
+## Skill cross-references
+
+Skills name each other and point at files by path, and a stale one fails only in the downstream project that loads the skill, long after the rename that broke it. `bin/check-cross-references` resolves them; rule 19 of `bin/validate-plugins` runs it over every `SKILL.md` and every file under a skill's `references/`.
+
+What gets resolved, and against what:
+
+| Spelling                                                    | Resolved against              |
+| ----------------------------------------------------------- | ----------------------------- |
+| `plugins/…`, `dist/codex/…`, `dist/opencode/…`              | the repository root           |
+| `${CLAUDE_PLUGIN_ROOT}/…`                                   | the plugin shipping the skill |
+| `./references/…`                                            | the skill directory           |
+| `` `/name` `` and a backticked name beside the word "skill" | a directory under `plugins/`  |
+
+`${CLAUDE_PLUGIN_ROOT}/scripts/…` is left to rule 18, which also checks the executable bit. A bare backticked name is not checked: nothing distinguishes `set-up-ci` from `lean-toolchain` without reading the sentence around it.
+
+A string with a stand-in segment is skipped, so `plugins/PLUGIN-NAME/README.md`, `plugins/<name>/README.md`, and `./references/ci-<language>.md` need nothing. Two HTML comments cover the rest:
+
+```markdown
+<!-- validate-plugins: repository-paths -->
+<!-- validate-plugins: ignore /config ./references/BASH.md -->
+```
+
+`repository-paths` declares that the `bin/` and `docs/` paths in this file name files in this repository. Without it they are skipped, because most of them name a file the skill _creates_ in the project it is run against (`bin/version-audit`, `docs/plans/todo/`), and because this repository's own layout matches, checking them everywhere would pass by coincidence rather than by correctness. Few files qualify: `create-plugin` is one, since its whole subject is this repository. Run `grep -rl 'validate-plugins: repository-paths' plugins/` for the current set.
+
+`ignore` exempts an individual reference that resolves nowhere because it is an illustration rather than a reference at all: Claude Code's own `/config`, Cargo's `/target` gitignore pattern, a reference filename naming a layout convention a plugin being authored should follow. Write the entry exactly as the checker reports it. Several such comments may appear in one file, and an entry that matches nothing is itself reported, so an exemption cannot outlive the reference it was written for. Exemptions are file-scoped rather than line-scoped because most of the references that need one sit inside an ordered list or a table row, where an HTML comment would break the Markdown.
+
+## Adding a plugin
+
+1. Create the plugin directory under `plugins/`.
+1. Add a `.claude-plugin/plugin.json` with metadata.
+1. For hook plugins targeting Codex CLI, add a `.codex-plugin/plugin.json` sibling with a non-empty `hooks` field (usually `"hooks": "./hooks/hooks.json"`). If the Claude Code hook file uses events Codex does not support (`Notification`, `PreCompact`, `SubagentStop`, `SessionEnd`), point the Codex manifest at a separate compatible hooks file. Codex's strict hook schema (`PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, `Stop`) rejects the entire hook file if any unsupported event is present. See `plugins/notify/` at the repository root for the split-manifest pattern.
+1. Register the plugin in `.claude-plugin/marketplace.json`.
+1. Create a per-plugin `README.md` in the plugin directory.
+1. Add a row to the appropriate category table in the root `README.md`. If the plugin requires external tools, add a bullet to the category's `**External tools:**` list.
+1. If the plugin bundles a script, add scrut coverage under `tests/scrut/` and register any needed binary path in the `SCRUT_ENV` block in the `Makefile` and the matching `scrut-env` list in `.github/workflows/ci.yml`.
+1. Recompute `metadata.version` with `bin/compute-catalog-state` and write it into `.claude-plugin/marketplace.json`.
+1. Regenerate the Codex and OpenCode mirrors with `bin/build-codex-marketplace` and `bin/build-opencode-mirror`, and commit the results.
+1. Run `make test-all` and fix anything it reports before opening a PR.
+
+## README catalog format
+
+The root `README.md` lists plugins in a compact 3-column table (Plugin, Trigger, What it does) per category, plus a 2-column table for hooks (Plugin, What it does). External-tool requirements appear below each table as a `**External tools:**` bullet list, one bullet per plugin (or per group of plugins sharing the same requirement).
+
+A `## Contents` section sits between the intro paragraph and `## Install`. It is section-level navigation over the file's H2s: the `Install` and `Skills` bullets name their H3s inline, and the two `Using with` guides share a bullet. It never lists individual plugins, so adding a plugin does not touch it. Update it only when an H2 or a skills category is added, renamed, or removed, and keep every anchor resolvable, because markdownlint's MD051 checks them.
+
+Do not rename `## Install`, `## Using with OpenCode`, or `### Codex CLI known limitations`, and do not add a second heading that slugifies to one of those. Every plugin README links to `../../README.md#install`, some also link the other two, and the `markdownlint-rule-relative-links` custom rule fails the build if a target fragment disappears.
+
+Use the canonical `description` field from `marketplace.json` for the "What it does" column, verbatim, so the README stays a thin mirror of the catalog of record.
+
+The opening paragraph of each `plugins/<name>/README.md` must also match that same `description` verbatim. The plugin README may elaborate freely after that first paragraph, but the first paragraph is the catalog entry. This keeps three surfaces (catalog, root README, plugin README) from drifting into three different accounts of what a plugin does.
+
+The `Trigger` column shows the slash command (for example `/commit`), plus a required argument when the skill takes one (for example `/address-review <path>`). Auto-activation behavior for style-guide skills is not annotated in the table; cover it in the per-plugin README instead.
+
+Categories used in the README, in order: Git, Issues and Worktrees, Code Review, Code Quality, Writing, Scaffolding, CI and Release, Agents. Their `marketplace.json` `category` slugs are the same names lowercased and hyphenated (`git`, `issues-and-worktrees`, `code-review`, `code-quality`, `writing`, `scaffolding`, `ci-and-release`, `agents`).
+
+Hook plugins are the ninth category. They carry `"category": "workflow"` and are listed under their own H2 rather than in one of the tables above.
+
+If a plugin needs a `## Recommended Permissions` section, use a copy-pasteable JSON block (`{"permissions": {"allow": [...]}}`), not prose bullets, and make sure every command the skill actually runs appears in it.
+
+Every plugin with a hard external dependency must say so. Two forms are in use, both fine: a `**Requires:**` line in the header block next to `**Type:**` and `**Trigger:**` for one or two tools, or a `## Requirements` section before `## Usage` when the entry needs install instructions or caveats. Do not use both in one README.
+
+## Versioning
+
+This repository uses two levels of versioning:
+
+**Marketplace `metadata.version`** (in `.claude-plugin/marketplace.json`):
+
+- This is a catalog state tag, not SemVer.
+- Format: `catalog-M<major-sum>-m<minor-sum>-p<patch-sum>-n<plugin-count>`
+- `M`: sum of all plugin major versions
+- `m`: sum of all plugin minor versions
+- `p`: sum of all plugin patch versions
+- `n`: number of marketplace plugins
+- Do not normalize or carry between components.
+- Recompute it from `.plugins[].version` whenever any marketplace plugin version changes. Use `bin/compute-catalog-state` (the canonical implementation, also consumed by `bin/validate-plugins` and `.github/workflows/release.yml`).
+
+**Individual plugin `version`** (in `plugin.json` and mirrored in `marketplace.json`):
+
+- **Patch**: bug fixes, wording tweaks, prompt adjustments
+- **Minor**: new capabilities or meaningful behavior changes
+- **Major**: breaking changes (for example, removing or restructuring a skill)
+- New plugins start at `1.0.0`
+- The version in `plugin.json` and its `marketplace.json` entry must always match.
+
+**Version checks on branch operations**: After merging, rebasing, or before creating a PR, use the `check-versions` skill to verify version correctness. Another branch may have already incremented a version, so always check.
