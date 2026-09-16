@@ -39,10 +39,10 @@ The skill follows a set of principles meant to produce a fair review rather than
 ### What it never does
 
 - Post, comment, review, label, or resolve anything on GitHub
-- The only file or branch changes are from guarded checkout synchronization in step 2. The skill never commits or pushes.
+- The skill only fetches Git refs. It leaves the branch, index, and working tree unchanged and never commits or pushes.
 - Run tests, builds, linters, or installs (it reads CI status instead)
 
-The one change it makes is to keep the checkout current. It stops on uncommitted tracked changes or index flags that hide tracked edits, even when HEAD already matches the PR. If synchronization is needed, it also stops on any untracked or ignored content, including build output, without changing those files. With those checks clear, it fast-forwards when possible. If history is incomplete or the author rewrote the branch, it reports the commit SHAs and stops without replacing the checkout.
+The skill reads the current PR from fetched Git tree and blob objects. It does not depend on the checkout being current or clean, and it leaves local files and refs unchanged except for fetched refs and `FETCH_HEAD`. A shallow checkout stops because its history can omit part of the diff. For merged PRs, and for unmerged PRs whose head is already in the base, it uses GitHub's retained PR diff.
 
 ## Usage
 
@@ -72,7 +72,7 @@ If the PR's description, linked issues, and your docs say little about what the 
 ## PR #123: Add retries to the webhook sender (@author)
 
 **Verdict:** Needs changes. One bug to fix before merge; the rest can follow.
-Reviewed `a1b2c3d` (fast-forwarded from `9f8e7d6`): 12 files, +340/-58. CI: 1 failing (`integration`).
+Reviewed `a1b2c3d` (checkout unchanged): 12 files, +340/-58. CI: 1 failing (`integration`).
 
 **Summary.** Adds retry with exponential backoff to outgoing webhooks, with a per-endpoint attempt limit.
 
@@ -104,7 +104,7 @@ Reviewed `a1b2c3d` (fast-forwarded from `9f8e7d6`): 12 files, +340/-58. CI: 1 fa
 
 ## Recommended Permissions
 
-GitHub access is read-only. Git fetches refs, and step 2 may fast-forward the checkout after its safeguards pass. To allow these commands to run without individual permission prompts, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+GitHub access is read-only. Git fetches refs only; it does not update the branch, index, or working tree. PR and base-branch file contents come from Git objects. To allow these commands to run without individual permission prompts, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
 ```json
 {
@@ -131,15 +131,12 @@ GitHub access is read-only. Git fetches refs, and step 2 may fast-forward the ch
       "Bash(git --no-pager log *)",
       "Bash(git show *)",
       "Bash(git --no-pager show *)",
-      "Bash(git ls-files *)",
       "Bash(git --literal-pathspecs ls-tree *)",
       "Bash(git --no-pager --literal-pathspecs ls-tree *)",
       "Bash(git --no-pager cat-file blob *)",
-      "Bash(git -c core.hooksPath=/dev/null merge --ff-only *)",
       "Bash(git merge-base *)",
       "Bash(git remote -v *)",
-      "Bash(git rev-parse *)",
-      "Bash(git status *)"
+      "Bash(git rev-parse *)"
     ]
   }
 }
