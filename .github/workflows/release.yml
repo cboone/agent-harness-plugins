@@ -50,6 +50,24 @@ jobs:
         run: |
           latest_tag="$(git tag --list 'catalog-*' --sort=-creatordate | head -1)"
           if [[ -z "${latest_tag}" ]] || [[ "${latest_tag}" == "catalog-${GITHUB_SHA}" ]] || ! git diff --quiet "${latest_tag}" -- plugins/ .claude-plugin/marketplace.json; then
+            if [[ -n "${latest_tag}" && "${latest_tag}" != "catalog-${GITHUB_SHA}" ]]; then
+              changed_plugins="$(git diff --name-only "${latest_tag}" -- plugins/ | awk -F/ 'NF >= 2 { print $2 }' | sort -u)"
+              while IFS= read -r plugin; do
+                [[ -z "${plugin}" ]] && continue
+                manifest="plugins/${plugin}/.claude-plugin/plugin.json"
+                previous_version="$(git show "${latest_tag}:${manifest}" 2>/dev/null | jq -r '.version // empty')"
+                current_version="$(jq -r '.version // empty' "${manifest}")"
+                [[ -z "${previous_version}" ]] && continue
+                IFS=. read -r previous_major previous_minor previous_patch <<< "${previous_version}"
+                IFS=. read -r current_major current_minor current_patch <<< "${current_version}"
+                previous_key="$(printf '%09d%09d%09d' "${previous_major}" "${previous_minor}" "${previous_patch}")"
+                current_key="$(printf '%09d%09d%09d' "${current_major}" "${current_minor}" "${current_patch}")"
+                if [[ "${current_key}" < "${previous_key}" || "${current_key}" == "${previous_key}" ]]; then
+                  echo "::error::${plugin} changed without a forward manifest version bump (${previous_version} -> ${current_version})."
+                  exit 1
+                fi
+              done <<< "${changed_plugins}"
+            fi
             echo "changed=true" >> "${GITHUB_OUTPUT}"
             echo "Plugin or catalog metadata changed since ${latest_tag:-the first catalog release}."
           else

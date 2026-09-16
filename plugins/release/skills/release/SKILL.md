@@ -89,7 +89,7 @@ fi
 
 For every plugin directory with content changes since `latest_tag`, compare the current manifest with its previous manifest. When there is no `latest_tag`, skip that previous-manifest comparison because there is no prior release input. Otherwise require a forward version bump before release: patch for wording or prompt changes, minor for new capabilities, and major for incompatible removal or restructuring.
 
-If `catalog_changed` is false, report that there is no marketplace release. Documentation-only changes do not create one.
+If `catalog_changed` is false, report that there is no marketplace release. Documentation-only changes do not create one. If the latest catalog tag is already `catalog-<full-HEAD-SHA>`, do not treat the clean comparison as a no-op: check whether the tag and GitHub Release exist independently so an interrupted publication can be recovered.
 
 If push-to-main automation exists, report that it will tag the landing commit as `catalog-<full-commit-SHA>` and publish its GitHub Release. Do not create a local catalog tag.
 
@@ -97,7 +97,7 @@ Otherwise, propose the exact `catalog-<full-HEAD-SHA>` tag for explicit user app
 
 ### 4. SemVer Releases
 
-For Go CLI, Go library, and generic projects, follow the remaining release flow using the references below.
+For Go CLI, Go library, and generic projects, follow the remaining release flow using the references below. Before publication, inspect workflow triggers to determine whether an exact `v*` tag starts a release workflow; only such a workflow owns GitHub Release creation.
 
 Find the latest SemVer tag. When none exists, use `v0.0.0` only as the base for calculating the next version, not as a Git revision:
 
@@ -111,11 +111,11 @@ If `--dry-run` is specified, report the proposed version and files that would ch
 
 Update version files according to `./references/project-types.md`, then update `CHANGELOG.md` according to `./references/changelog-format.md`. Use `./references/version-patterns.md` to find version references in documentation and propose those changes before editing them. For a first release, create the changelog if needed and do not attempt replacements for a prior version.
 
-### 5. Pre-Tag Review and Publication
+### 5. SemVer Pre-Tag Review and Publication
 
 Before any commit or tag, present the changed files, proposed version, documentation checklist from `./references/doc-checklist.md`, and exact tag. Wait for explicit user approval.
 
-Create a GPG-signed release commit and GPG-signed annotated `vVERSION` tag. Never amend, force-push, or retarget an existing tag. After the user approves publication, push the commit and exact version tag before any GitHub Release operation. If a release workflow publishes on tag push, do not create a duplicate GitHub Release.
+For this SemVer branch only, create a GPG-signed release commit and GPG-signed annotated `vVERSION` tag. Never amend, force-push, or retarget an existing tag. After the user approves publication, push the commit and exact version tag before any GitHub Release operation. If a release workflow publishes on tag push, do not create a duplicate GitHub Release.
 
 Without a tag-triggered workflow, first run `command -v gh`. If it is unavailable, leave the already-pushed tag in place and report the manual `gh release create vVERSION --title "vVERSION" --notes-file <release-notes-file> --verify-tag` command. If it is available, generate release notes from the changelog and run that command only after the tag push. If publication fails after the tag is pushed, report the remaining manual command rather than recreating or retargeting the tag.
 
