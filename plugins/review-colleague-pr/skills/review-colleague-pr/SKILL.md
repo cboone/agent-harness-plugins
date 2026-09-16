@@ -219,7 +219,7 @@ If no substantive review is found, review the whole PR. For a selected `LAST_REV
 
    ```bash
    git --no-pager log --no-color --no-merges --format='%H' "$last_review_sha..$head_sha" --not "$base_ref" -- "$path"
-   git --no-pager show --no-color --no-ext-diff --no-textconv --format= <commit-sha> -- "$path"
+   git --no-pager --literal-pathspecs show --no-color --no-ext-diff --no-textconv --format= <commit-sha> -- "$path"
    ```
 
 1. On a very large PR, read source and tests before documentation and fixtures. Anything not read in detail is named in the report header; never skim silently.
