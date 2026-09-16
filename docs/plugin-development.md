@@ -48,9 +48,9 @@ plugins/create-worktree/
         └── SKILL.md
 ```
 
-`create-worktree` and `address-issue-in-worktree` ship byte-identical copies of all three scripts. Rule 18 requires every `${CLAUDE_PLUGIN_ROOT}/scripts/NAME` reference to resolve inside its own plugin, so the scripts cannot be shared across plugins. Three testcases in `tests/scrut/repo-tooling.md` fail if the copies drift, so change one and copy it to the other.
+`create-worktree` and `address-issue-in-worktree` ship byte-identical copies of all three scripts. Rule 18 requires every `${CLAUDE_PLUGIN_ROOT}/scripts/NAME` reference in a `SKILL.md` body to resolve inside its own plugin, so the scripts cannot be shared across plugins. Three testcases in `tests/scrut/repo-tooling.md` fail if the copies drift, so change one and copy it to the other.
 
-A skill refers to each script it ships by its plugin-root path, so `create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `resolve-copilot-pr-feedback` names `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads`. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` checks that every such reference resolves to a shipped, executable file and rejects version-blind locator globs like `**/PLUGIN/scripts/NAME`. Bundled scripts belong in `tests/scrut/`.
+A skill refers to each script it ships by its plugin-root path, so `create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `resolve-copilot-pr-feedback` names `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads`. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` scans only `SKILL.md` bodies, checking that every such reference resolves to a shipped, executable file and rejecting version-blind locator globs like `**/PLUGIN/scripts/NAME`. It does not scan reference material. Bundled scripts belong in `tests/scrut/`.
 
 A script can carry files of its own. `publish-report-board` keeps its page templates in a plugin-root `templates/` directory, and its `report-board` script finds them relative to its own location rather than through `${CLAUDE_PLUGIN_ROOT}`, so the same lookup works in Codex CLI and OpenCode, where the placeholder is not substituted. Prettier formats those templates like any other HTML, which is why the data placeholder in each is a JSON string that still parses before rendering.
 
@@ -106,7 +106,7 @@ A string with a stand-in segment is skipped, so `plugins/PLUGIN-NAME/README.md`,
 
 1. Create the plugin directory under `plugins/`.
 1. Add a `.claude-plugin/plugin.json` with metadata.
-1. For hook plugins, add a `.codex-plugin/plugin.json` sibling with a non-empty `hooks` field (usually `"hooks": "./hooks/hooks.json"`). Validate its events against the target Codex CLI hook schema. If the Claude Code hook file includes unsupported events, point the Codex manifest at a separate compatible hook file. See `plugins/notify/` at the repository root for the split-manifest pattern.
+1. For every plugin with `hooks/hooks.json` in this repository, validator rule 14 requires a `.codex-plugin/plugin.json` sibling with a non-empty `hooks` field (usually `"hooks": "./hooks/hooks.json"`), regardless of its intended harness targets. Validate its events against the target Codex CLI hook schema. If the Claude Code hook file includes unsupported events, point the Codex manifest at a separate compatible hook file. See `plugins/notify/` at the repository root for the split-manifest pattern.
 1. Register the plugin in `.claude-plugin/marketplace.json`.
 1. Create a per-plugin `README.md` in the plugin directory.
 1. Add a row to the appropriate category table in the root `README.md`. If the plugin requires external tools, add a bullet to the category's `**External tools:**` list.
@@ -150,7 +150,7 @@ This repository uses two levels of versioning:
 - `p`: sum of all plugin patch versions
 - `n`: number of marketplace plugins
 - Do not normalize or carry between components.
-- Recompute it from `.plugins[].version` whenever any marketplace plugin version changes. Use `bin/compute-catalog-state` (the canonical implementation, also consumed by `bin/validate-plugins` and `.github/workflows/release.yml`).
+- Recompute it from marketplace plugin membership and `.plugins[].version` whenever a plugin is added or removed or any marketplace plugin version changes. Use `bin/compute-catalog-state` (the canonical implementation, also consumed by `bin/validate-plugins` and `.github/workflows/release.yml`).
 
 **Individual plugin `version`** (in `plugin.json` and mirrored in `marketplace.json`):
 
