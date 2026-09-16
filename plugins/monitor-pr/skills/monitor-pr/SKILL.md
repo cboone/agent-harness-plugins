@@ -26,7 +26,7 @@ The user may provide these options inline:
 
 - **`<pr-number>`**: Monitor a specific PR instead of the current branch's PR (e.g., `/monitor-pr 361`)
 - **--interval `<duration>`**: Override adaptive pacing with a fixed wait (e.g., `--interval 10m`)
-- **--ticks `<n|unlimited>`**: On a surface without a scheduler, limit foreground polling to `n` ticks before producing a resumable checkpoint. The default is 3; `unlimited` keeps the foreground turn active until a terminal condition or escalation
+- **--ticks `<n|unlimited>`**: Limit foreground polling, including scheduler fallbacks, to `n` ticks before producing a resumable checkpoint. The default is 3; `unlimited` keeps the foreground turn active until a terminal condition or escalation
 - **--rounds `<n|unlimited>`**: Change the Copilot round budget from its default of 10. `--rounds unlimited` commits to running until the PR is genuinely clean, however many rounds that takes, and never pauses to ask for more
 - **--confirm-clean**: Require two consecutive clean Copilot reviews rather than one. After the first clean review, request another explicitly and wait for it
 - **--no-fix**: Observe and report only. Never push, never invoke a fixing skill, never request a review
@@ -78,6 +78,8 @@ gh pr view <number-or-omitted> --json number,url,author,headRefName,headRefOid,b
 
 Record `OWNER`, `REPO`, and `PR_NUMBER`. The `resolve-copilot-pr-feedback` skill needs all three and does not document how to derive them, so pass them explicitly when invoking it.
 
+If this conversation contains a foreground checkpoint for that same repository and PR, treat the invocation as a continuation: restore its options and watch state using [Checkpoint and Resume](./references/checkpoint.md) before dispatching the opening snapshot. Resume at step 3 with fresh GitHub state. Do not initialize a new watch or reset its action guards merely because the user reran the command.
+
 Also record whether `author.login` is `app/dependabot`, which switches on the rules in [Dependabot PRs](#dependabot-prs).
 
 **If the branch has no PR**, report that and stop, pointing the user at `/pr`.
@@ -86,11 +88,11 @@ Also record whether `author.login` is `app/dependabot`, which switches on the ru
 
 Choose exactly one mechanism and name it on the first tick:
 
-1. **Claude Code**: Prefer `ScheduleWakeup`, which returns control between ticks and keeps the transcript small.
-1. **Codex with scheduled tasks**: Create a task that resumes this conversation after the selected interval. Its prompt must say to resume this `monitor-pr` watch at step 3, retain the recorded PR identity and counters, and stop the task on a terminal report or escalation. A scheduled task is a new tick, not a delayed final response.
-1. **Codex CLI or OpenCode**: Run a foreground polling loop. A blocking `sleep` by itself is not a continuation mechanism: after every sleep, take the step 3 snapshot and dispatch it in the same active turn. Do not print a terminal response merely because a tick is waiting. Stop only on a terminal condition, an escalation, or the `--ticks` foreground limit.
+1. **Claude Code**: Prefer `ScheduleWakeup`, which returns control between ticks and keeps the transcript small. Select this mechanism only when the tool is available and accepts the wakeup.
+1. **Codex with scheduled tasks**: Create a task that resumes this conversation after the selected interval. Select this mechanism only after successful task creation, and retain its task ID for updates and cancellation. Its prompt must say to resume this `monitor-pr` watch at step 3, retain the recorded PR identity, options, counters, and action guards, and stop the task on a terminal report or escalation. Use the watch-state fields in [Checkpoint and Resume](./references/checkpoint.md). On each nonterminal tick, schedule or update the next wakeup using the selected interval. A scheduled task is a new tick, not a delayed final response.
+1. **Foreground, including Codex CLI, OpenCode, and scheduler fallbacks**: When no scheduler is available, or scheduling is rejected or fails, announce the fallback and run a foreground polling loop. If replacing an existing scheduled watch, cancel its pending task or wakeup first; if cancellation fails, escalate rather than start a second loop. A blocking `sleep` by itself is not a continuation mechanism: after every sleep, take the step 3 snapshot and dispatch it in the same active turn. Do not print a terminal response merely because a tick is waiting. Stop only on a terminal condition, an escalation, or the `--ticks` foreground limit.
 
-On Codex CLI and OpenCode, the default `--ticks 3` bounds the foreground loop. At that limit, report a **resumable checkpoint**, not a readiness verdict: include the PR URL, current head SHA, all four axes, counters, selected interval, and the exact `/monitor-pr` invocation to resume. `--ticks unlimited` removes this foreground limit, but the user may still interrupt the active session. Never claim that a blocking wait will resume after the agent has returned a final response.
+The default `--ticks 3` bounds every foreground loop, including scheduler fallbacks. Count one tick for each step 3 snapshot and its step 4 dispatch, including the opening snapshot. Finish the dispatch before applying the limit; readiness and escalation take precedence over a checkpoint. At the limit, checkpoint before the next wait, following [Checkpoint and Resume](./references/checkpoint.md): include the PR URL, current head SHA, all four axes, complete watch state, selected interval, and the exact `/monitor-pr` invocation with the original options. Report a **resumable checkpoint**, not a readiness verdict. `--ticks unlimited` removes this foreground limit, but the user may still interrupt the active session. Never claim that a blocking wait will resume after the agent has returned a final response.
 
 Adaptive intervals by phase, unless `--interval` overrides them:
 
@@ -102,7 +104,7 @@ Adaptive intervals by phase, unless `--interval` overrides them:
 
 When more than one row applies, take the shorter wait. The step 4 fallthrough can reach a tick with checks still running and a Copilot review outstanding at once, and the shorter interval is the one that governs.
 
-On scheduler-backed surfaces there is no wall-clock cap or tick limit. The only budget is on Copilot rounds, per step 7c, and it counts completed reviews rather than elapsed time or poll count. On Codex CLI and OpenCode, `--ticks` additionally bounds an individual foreground invocation. The user can interrupt at any point.
+On scheduler-backed surfaces there is no wall-clock cap or tick limit. The only budget is on Copilot rounds, per step 7c, and it counts completed reviews rather than elapsed time or poll count. On every foreground path, `--ticks` additionally bounds an individual invocation. The user can interrupt at any point.
 
 ### 3. Take a State Snapshot
 
