@@ -372,7 +372,7 @@ git diff --check
 git status --short
 ```
 
-Use the pinned dependency setup when needed rather than reinstalling it on every edit. `make test-all` includes lint, validation, and Scrut; observe its final result. `make validate` can also be run during authoring: rule 10 checks catalog registration, rules 15 and 16 compare freshly generated mirrors, rule 17 checks description lengths, and rule 19 checks references. Git status is an inventory of changes, not a mirror-freshness test. This plan-only revision needs documentation formatting/lint checks; it does not require rerunning downstream audio experiments.
+Use the pinned dependency setup when needed rather than reinstalling it on every edit. `make test-all` includes lint, validation, and Scrut; observe its final result. `make validate` can also be run during authoring: rule 5 checks catalog registration, rules 15 and 16 compare freshly generated mirrors, rule 17 checks description lengths, and rule 19 checks references. Git status is an inventory of changes, not a mirror-freshness test. This plan-only revision needs documentation formatting/lint checks; it does not require rerunning downstream audio experiments.
 
 For final prose review, check for em dashes, work estimates, non-neutral terminology, unresolved references, accidental mandates of project-specific choices, and numeric claims without scope. Runtime quantities such as frame durations are allowed. Use an additional skill reviewer only if it is available and appropriate; an unavailable `plugin-dev:skill-reviewer` must not become a required dependency.
 

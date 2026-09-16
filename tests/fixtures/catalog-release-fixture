@@ -28,7 +28,13 @@ function gh() {
         *) return 2 ;;
       esac
       ;;
-    release) printf '%s\n' "${3}" >> "${CATALOG_FIXTURE_RELEASE_LOG}" ;;
+    release)
+      local tag="${3}" remote_commit expected_commit
+      expected_commit="${COMMIT:?COMMIT is required}"
+      remote_commit="$(git ls-remote origin "refs/tags/${tag}^{}" | cut -f1)"
+      [[ "${remote_commit}" == "${expected_commit}" ]] || return 1
+      printf '%s\n' "${tag}" >> "${CATALOG_FIXTURE_RELEASE_LOG}"
+      ;;
     *) return 2 ;;
   esac
 }
@@ -165,7 +171,7 @@ function main() {
       fi
       condition="$(extract_step 'Create GitHub Release' if "${workflow}")"
       if step_enabled "${condition}" "${changed}" "${release_exists}"; then
-        TAG="${tag}" bash -e -o pipefail "${root}/publish"
+        TAG="${tag}" COMMIT="${commit}" bash -e -o pipefail "${root}/publish"
       fi
       if [[ -f "${CATALOG_FIXTURE_RELEASE_LOG}" ]]; then
         [[ "$(cat "${CATALOG_FIXTURE_RELEASE_LOG}")" == "${tag}" ]]
