@@ -130,10 +130,10 @@ The last line reads like `branch: Created from <name>`. Strip any `refs/heads/`,
 
 If all three checks pass, fetch only the selected parent with `git fetch origin refs/heads/<name> --quiet`, then immediately record `git rev-parse FETCH_HEAD` as `<base-sha>` before any later fetch. Never derive the selected base from the preceding multi-ref fetch.
 
-For this no-PR fallback, otherwise the base is the default branch and its repository is origin. Fetch the selected base from its owning repository, then immediately record the fetched commit:
+For this no-PR fallback, otherwise the base is the default branch and its repository is origin. Fetch it through the already validated origin fetch remote, then immediately record the fetched commit:
 
 ```bash
-git fetch <base-repository-url> refs/heads/<base> --quiet
+git fetch origin refs/heads/<default-branch> --quiet
 git rev-parse FETCH_HEAD
 ```
 
@@ -386,7 +386,7 @@ Then suggest the next step. When no PR exists yet, suggest `/pr`, which lists pu
 - **`gh` missing or unauthenticated**: Instruct the user to install it from https://cli.github.com/ and run `gh auth login`, then stop.
 - **No `origin`**: In a Git checkout, scan uncommitted changes, eligible untracked text files, and local plan and review documents; skip only the committed range whose base cannot be established. Keep explicitly named destinations and leave only candidates without one unresolved. Outside a Git checkout, scan the session and documents it names, retaining explicitly named destinations.
 - **A duplicate search or timeline read fails**: Propose the affected candidates with a "not checked for duplicates" note.
-- **The label list fails**: File without labels and report that labels were skipped.
+- **The label list fails before the proposal**: Propose the item without labels and disclose the failed lookup for approval. A pre-write refresh or retry failure follows steps 5 and 4: return any changed labels or lookup warning for renewed approval before creating the issue.
 - **An issue fails to file**: Continue with the rest, and check the newest-issues listing before any retry so a retry cannot duplicate an issue that did land.
 - **The summary comment fails**: The issues stay filed. Report the failure and the list the comment would have carried.
 - **A third-party target**: Never filed without approval by number, and never commented on.
