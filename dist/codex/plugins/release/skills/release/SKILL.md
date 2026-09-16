@@ -1,9 +1,8 @@
 ---
 name: release
 description: >-
-  Prepare a versioned release or Claude Code marketplace catalog state tag:
-  update release files, create a release commit, tag locally, and optionally
-  publish a GitHub Release.
+  Prepare a versioned release: update release files, create a release commit,
+  tag locally, and optionally publish a GitHub Release.
 ---
 
 # Release

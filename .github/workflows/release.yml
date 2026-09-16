@@ -51,10 +51,13 @@ jobs:
           latest_tag="$(git tag --list 'catalog-*' --sort=-creatordate | head -1)"
           if [[ -z "${latest_tag}" ]] || [[ "${latest_tag}" == "catalog-${GITHUB_SHA}" ]] || ! git diff --quiet "${latest_tag}" -- plugins/ .claude-plugin/marketplace.json; then
             if [[ -n "${latest_tag}" && "${latest_tag}" != "catalog-${GITHUB_SHA}" ]]; then
-              changed_plugins="$(git diff --name-only "${latest_tag}" -- plugins/ | awk -F/ 'NF >= 2 { print $2 }' | sort -u)"
+              changed_plugins="$(git diff --name-only "${latest_tag}" -- plugins/ | awk -F/ 'NF >= 3 && $1 == "plugins" { print $2 }' | sort -u)"
               while IFS= read -r plugin; do
                 [[ -z "${plugin}" ]] && continue
                 manifest="plugins/${plugin}/.claude-plugin/plugin.json"
+                if ! git cat-file -e "${latest_tag}:${manifest}" 2>/dev/null || [[ ! -f "${manifest}" ]]; then
+                  continue
+                fi
                 previous_version="$(git show "${latest_tag}:${manifest}" 2>/dev/null | jq -r '.version // empty')"
                 current_version="$(jq -r '.version // empty' "${manifest}")"
                 [[ -z "${previous_version}" ]] && continue
