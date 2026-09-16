@@ -33,7 +33,7 @@ Use the downstream project's existing conventions to record relevant entry point
 
 ## Workflow
 
-1. Establish whether the request is a review, plan, or authorized implementation.
+1. Establish whether the request is a review, plan, or authorized implementation. In review and plan modes, produce findings or proposed checks without editing the downstream project, installing tools, running mutation experiments, committing, publishing, or automatically invoking companion skills that perform such actions. Existing authorization governs implementation and experiment actions; do not ask again for actions already authorized.
 1. Map the changed callback call graph, lifecycle, shared storage, and host-facing transitions.
 1. Read the [essential checklist](./references/essential/checklist.md), then select the detailed references that answer the remaining questions.
 1. Record protocol assumptions, source and toolchain scope, capacity and work bounds, and failure policies.
