@@ -12,7 +12,7 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 ## What It Does
 
-Detects your project type (Claude Code marketplace, Go CLI, Go library, or generic), analyzes conventional commits since the last release, updates release files, creates a GPG-signed release commit, and applies an annotated git tag. For Claude Code marketplaces, it validates plugin manifests, detects release automation, and uses an immutable `catalog-<full-commit-SHA>` tag when local publication is needed. Documentation-only pushes create no release. For other projects, it recommends a SemVer bump, updates version references and `CHANGELOG.md`, and can create a GitHub Release with the version's changelog section as release notes.
+Detects your project type (Claude Code marketplace, Go CLI, Go library, or generic), analyzes conventional commits since the last release, updates release files, creates a GPG-signed release commit, and applies an annotated git tag. For Claude Code marketplaces, it validates plugin manifests, detects release automation, and uses an immutable `catalog-<full-commit-SHA>` tag when local publication is needed. Documentation-only marketplace changes create no catalog release. For other projects, it recommends a SemVer bump, updates version references and `CHANGELOG.md`, and can create a GitHub Release with the version's changelog section as release notes.
 
 ## Usage
 
