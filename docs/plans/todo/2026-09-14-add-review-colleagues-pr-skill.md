@@ -243,7 +243,7 @@ Report style: don't restate the diff, don't hedge, don't praise by default, and 
   - **How it differs:** contrasts it with `review-branch` and `resolve-copilot-pr-feedback`.
   - **Recommended Permissions**
   - **See Also:** ends with the all-plugins link.
-- **Recommended Permissions** lists `Read`, `Glob`, and `Grep` plus every command: `gh pr view`, `gh pr checks`, `gh issue view`, `gh api user`, `gh api --paginate repos/`, `gh api graphql`, `git remote -v`, `git -c core.hooksPath=/dev/null fetch`, `git rev-parse`, `git status`, `git ls-files`, `git merge-base`, `git diff`, `git --no-pager diff`, `git --no-pager --literal-pathspecs diff`, `git --literal-pathspecs ls-tree`, `git --no-pager --literal-pathspecs ls-tree`, `git --no-pager cat-file blob`, `git log`, `git --no-pager log`, `git show`, `git --no-pager show`, and `git -c core.hooksPath=/dev/null merge --ff-only`.
+- **Recommended Permissions** lists `Read`, `Glob`, and `Grep` plus every command: `awk`, `gh pr view`, `gh pr checks`, `gh issue view`, `gh api user`, `gh api --paginate repos/`, `gh api graphql`, `git remote -v`, `git -c core.hooksPath=/dev/null fetch`, `git rev-parse`, `git status`, `git ls-files`, `git merge-base`, `git diff`, `git --no-pager diff`, `git --no-pager --literal-pathspecs diff`, `git --literal-pathspecs ls-tree`, `git --no-pager --literal-pathspecs ls-tree`, `git --no-pager cat-file blob`, `git log`, `git --no-pager log`, `git show`, `git --no-pager show`, and `git -c core.hooksPath=/dev/null merge --ff-only`.
   - It notes that `gh api` rules also match write calls, so the skill's hard rules are what keep it read-only.
 - Link `review-in-depth` only once that plugin exists. Until then, the markdownlint relative-links rule would fail on the link.
 
