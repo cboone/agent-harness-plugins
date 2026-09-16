@@ -60,10 +60,11 @@ Run independent read-only probes in parallel. Fetches mutate `FETCH_HEAD`; keep 
 
 ```bash
 git remote
-git remote get-url origin | sed -E 's#^([^/@]*@)?([^/:]+):([^/].*)$#\2/\3#; s#^[A-Za-z][A-Za-z0-9+.-]*://([^/@]*@)?([^/]+)/#\2/#; s#\.git$##'
 ```
 
-The first command lists remote names only. The second removes URL userinfo and optional SCP-style SSH usernames (including username-free `github.com:OWNER/REPO` remotes), preserves a port in URI authorities, converts the remote to `HOST/OWNER/NAME`, and removes a trailing `.git` before printing it, so credentials never enter the tool transcript. Never run `git remote -v` or print an unsanitized remote URL. Use this normalized origin selector in later commands and reports.
+This command lists remote names only. Capture the origin fetch URL and every origin push URL inside a tool-side process without printing raw values. Accept only HTTP(S) or SSH URLs with an authority and exactly an owner/repository path, or SCP-style `[user@]host:owner/repository` values. Reject unsupported schemes, local paths, malformed authorities, extra path segments, queries, fragments, and control characters. Remove URL userinfo or the SCP-style username and a trailing `.git`, preserve URI authority ports, and validate the resulting `HOST/OWNER/NAME` selector before emitting it. On any parse or validation failure, emit only an unavailable-identity diagnostic, never the input. Never run `git remote -v` or print an unsanitized remote URL. Use only validated selectors in later commands and reports.
+
+Resolve the push selector with the same SSH alias and repository metadata checks as the fetch selector, and record its canonical host and repository as the head identity. Multiple distinct push identities make branch-based PR discovery ambiguous; report that source as unavailable unless the session supplies an explicit PR URL. An unavailable push identity must not silently fall back to the fetch identity. Keep the fetch repository as the default filing target even when the push repository differs.
 
 Resolve the sanitized origin identity to a repository:
 
@@ -96,7 +97,7 @@ If the output is empty (a detached HEAD) or names the default branch, there is n
 gh pr list --repo <target> --head <branch> --state open --limit 100 --json number,url,title,body,baseRefName,headRepository,closingIssuesReferences
 ```
 
-Keep only a PR whose `headRepository.nameWithOwner` and host match origin's full repository identity, since `--head` matches the branch name in any fork, including another repository owned by the same account. If the head repository is unavailable, report that source as unresolved rather than guessing. Empty output means there is no open PR. Do not use `gh pr view <branch>` for this: it also returns a merged PR from an earlier branch that had the same name.
+Keep only PRs whose `headRepository.nameWithOwner` and canonical host match the recorded push/head identity, since `--head` matches the branch name in any fork, including another repository owned by the same account. If a head repository is unavailable, report that source as unresolved rather than guessing. Require exactly one identity-matching PR before using its base or reading its sources. If multiple matches remain, stop and report their URLs and base branches so the user can select the intended PR. Empty output means there is no open PR. Do not use `gh pr view <branch>` for this: it also returns a merged PR from an earlier branch that had the same name.
 
 Record the head repository's visibility when available. If the PR source is private, internal, or has unknown visibility and the filing destination is public, apply the disclosure rules before proposing or filing anything: do not publish source identities or details in that public destination.
 
@@ -214,8 +215,8 @@ When a PR was found, use the explicit `<pr-repo>` selector for every `gh pr` com
 
 ```bash
 gh pr view <n> --repo <pr-repo> --json body
-gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/issues/<n>/comments --jq '.[] | {body, url: .html_url, author: .user.login}'
-gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/pulls/<n>/reviews --jq '.[] | {body, url: .html_url, author: .user.login}'
+gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/issues/<n>/comments --jq '.[] | {id, body, url: .html_url, author: .user.login, created_at, updated_at}'
+gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/pulls/<n>/reviews --jq '.[] | {id, body, url: .html_url, author: .user.login, submitted_at, commit_id, state}'
 gh api --paginate --hostname <pr-host> repos/<pr-owner>/<pr-name>/pulls/<n>/comments --jq '.[] | {id, in_reply_to_id, path, line, body, url: .html_url, author: .user.login, created_at, updated_at}'
 ```
 
@@ -230,7 +231,7 @@ The first returns the PR body. The three API calls return all pages of conversat
   git status --short -- docs/plans docs/reviews
   ```
 
-  Also collect plan and review paths explicitly referenced by the session, PR, source issues, or branch commit messages, including files unchanged by this branch. Read each relevant document once and inspect its out-of-scope and follow-up sections. Review documents saved by the `review-branch` skill land in `docs/reviews/`.
+  Also collect plan and review paths explicitly referenced by the session, PR, source issues, or branch commit messages, including files unchanged by this branch. Before opening any collected document, including an explicitly referenced one, require a repository-relative path under these directories with no `..` traversal, symlink components, or symlink final file. Apply the collection safety filter: accept only regular text files and reject secret-like names and binaries. Report excluded paths without reading their contents. Read each eligible relevant document once and inspect its out-of-scope and follow-up sections. Review documents saved by the `review-branch` skill land in `docs/reviews/`.
 
 - The body of each source issue, already fetched in step 1.
 

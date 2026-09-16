@@ -12,14 +12,9 @@ Commit, push, and create a pull request in one automated step. Never prompt the 
 
 ### 1. Gather Context
 
-First, resolve the repository where `gh pr create` will open the PR and the repository that will host the pushed branch. Normalize the origin fetch URL and every origin push URL:
+First, resolve the repository where `gh pr create` will open the PR and the repository that will host the pushed branch. Capture the origin fetch URL and every origin push URL inside a tool-side process without printing raw values. Accept only HTTP(S) or SSH URLs with an authority and exactly an owner/repository path, or SCP-style `[user@]host:owner/repository` values. Reject unsupported schemes, local paths, malformed authorities, extra path segments, queries, fragments, and control characters. Remove URL userinfo or the SCP-style username and a trailing `.git`, preserve URI authority ports, and validate the resulting `HOST/OWNER/NAME` selector before emitting it. On any parse or validation failure, emit only an unavailable-identity diagnostic, never the input. Do not use a substitution that passes unmatched raw URLs through to output.
 
-```bash
-git remote get-url origin | sed -E 's#^([^/@]*@)?([^/:]+):([^/].*)$#\2/\3#; s#^[A-Za-z][A-Za-z0-9+.-]*://([^/@]*@)?([^/]+)/#\2/#; s#\.git$##'
-git remote get-url --push --all origin | sed -E 's#^([^/@]*@)?([^/:]+):([^/].*)$#\2/\3#; s#^[A-Za-z][A-Za-z0-9+.-]*://([^/@]*@)?([^/]+)/#\2/#; s#\.git$##'
-```
-
-The first line prints the origin fetch selector, which is `<pr-target>`. The second prints the push selector or selectors, which identify the PR head repository. Both remove remote userinfo and preserve ports in URI authorities; the SCP-style rewrite applies only when the URL has no scheme. If an SSH host token is an alias, resolve it with `ssh -G <alias>` and use the configured hostname. If multiple distinct push repositories are configured, or either identity cannot be resolved, stop before pushing or creating the PR and report the ambiguity. If the fetch and push repositories differ but use the same GitHub host, keep `<pr-target>` as the PR base repository, query `gh repo view <head-selector> --json nameWithOwner,visibility`, and use its owner as `<head-owner>`. Record the head repository's visibility. If the PR target is public and the head repository is private, internal, or has unknown visibility, stop and report the visibility mismatch before pushing or opening the PR. If their hosts differ, stop because GitHub cannot open a cross-host PR.
+The validated fetch selector is `<pr-target>`; the validated push selectors identify the head repository. If an SSH host token is an alias, resolve it with `ssh -G <alias>` and use the configured hostname. If multiple distinct push repositories are configured, or either identity cannot be resolved, stop before pushing or creating the PR and report the ambiguity. If the fetch and push repositories differ but use the same GitHub host, keep `<pr-target>` as the PR base repository and query both repositories with `gh repo view <selector> --json nameWithOwner,url,visibility,isFork,parent`. Follow each repository's parent chain to its non-fork root, resolving each parent by its owner and name on the recorded host. Require identical canonical root identities before pushing; an unrelated or unverifiable fork network must stop the workflow before the branch is published. Use the head repository's owner as `<head-owner>` and record its visibility. If the PR target is public and the head repository is private, internal, or has unknown visibility, stop and report the visibility mismatch before pushing or opening the PR. If their hosts differ, stop because GitHub cannot open a cross-host PR.
 
 Then detect the repository's default branch explicitly:
 
@@ -348,10 +343,10 @@ Then use the **Write** tool to write the full PR body (Summary, Test plan, Close
 Then create the PR with `--body-file`:
 
 ```bash
-gh pr create --repo <pr-target> --head <head-owner>:<branch> --title "the pr title" --body-file TMPFILE
+gh pr create --repo <pr-target> --head <head-owner>:<branch> --title 'the pr title' --body-file TMPFILE
 ```
 
-Pass `--head <head-owner>:<branch>` only when the push repository differs from `<pr-target>`. Pass `--base <base-branch>` if `<base-branch>` differs from `<default-branch>`. Do not pass `--draft`. Do not add labels or reviewers.
+Pass the approved title as one literal argument through an argument-list tool when available. Otherwise single-quote it and encode each embedded apostrophe as `'\''`; preserve backticks, `$()`, dollar signs, and the title's exact wording without shell substitution. Apply the same literal-argument handling to repository and branch selectors. Pass `--head <head-owner>:<branch>` only when the push repository differs from `<pr-target>`. Pass `--base <base-branch>` if `<base-branch>` differs from `<default-branch>`. Do not pass `--draft`. Do not add labels or reviewers.
 
 **Never batch the Write call and `gh pr create` into one message.** Issue them as two separate, sequential tool calls, and wait for the Write to return before invoking `gh`. `gh` reads the body file at invocation time, so a parallel batch can start `gh pr create` before the file exists and open the PR with an empty body. The command still succeeds and still prints a URL, so the failure is silent. This is a deliberate exception to the general preference for parallel tool calls: that preference covers calls with no dependencies between them, and these two are dependent, because `gh pr create` consumes the file Write produces.
 
