@@ -42,7 +42,7 @@ The skill follows a set of principles meant to produce a fair review rather than
 - The skill only fetches Git refs. It leaves the branch, index, and working tree unchanged and never commits or pushes.
 - Run tests, builds, linters, or installs (it reads CI status instead)
 
-The skill reads reviewable PR files from fetched Git tree and blob objects. It first lists changed paths and excludes secret-bearing files, lockfiles, vendored code, and files the base branch marks as generated before retrieving patches or blobs. It does not depend on the checkout being current or clean, and it leaves local files and refs unchanged except for fetched refs and `FETCH_HEAD`. A shallow checkout stops because its history can omit part of the diff. For merged PRs, and for unmerged PRs whose head is already in the base, it uses GitHub's retained per-file patches.
+The skill reads reviewable PR files from fetched Git tree and blob objects. It first lists changed paths and excludes secret-bearing files, lockfiles, vendored code, and files the base branch marks as generated before retrieving patches or blobs. Issue lookups stay within the PR repository; cross-repository references from PR text are not followed. The skill does not depend on the checkout being current or clean, and it leaves local files and refs unchanged except for fetched refs and `FETCH_HEAD`. A shallow checkout stops because its history can omit part of the diff. For merged PRs, and for unmerged PRs whose head is already in the base, it uses GitHub's retained per-file patches.
 
 ## Usage
 
@@ -134,14 +134,14 @@ GitHub access is read-only. Git fetches refs only; it does not update the branch
       "Bash(git --no-pager --literal-pathspecs ls-tree *)",
       "Bash(git --no-pager cat-file blob *)",
       "Bash(git merge-base *)",
-      "Bash(git remote -v *)",
+      "Bash(git remote -v)",
       "Bash(git rev-parse *)"
     ]
   }
 }
 ```
 
-If a PR branch was rewritten or its history cannot be established, the skill stops and reports the relevant commit SHAs instead of replacing the checkout. The `gh api` rules also match write calls; the skill's ground rules, not these patterns, are what keep GitHub access read-only. Read-only GraphQL queries use POST, while REST writes and GraphQL mutations are forbidden. If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+If the selected prior review is not an ancestor of the PR head, or that relationship cannot be established, the skill reviews the whole PR and reports the baseline limitation. It never replaces the checkout. The `gh api` rules also match write calls; the skill's ground rules, not these patterns, are what keep GitHub access read-only. Read-only GraphQL queries use POST, while REST writes and GraphQL mutations are forbidden. If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
 ## See Also
 
