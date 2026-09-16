@@ -60,6 +60,7 @@ For each plugin with content changes:
 
 1. Read the current version from `plugins/<name>/.claude-plugin/plugin.json`
 1. Read the base version: `git show <base>:plugins/<name>/.claude-plugin/plugin.json`
+1. If `.codex-plugin/plugin.json` exists, verify its current `version` matches the Claude manifest. For an existing Codex manifest at the base, also verify it matches the base Claude manifest before comparing bump direction.
 1. Compare:
    - New plugin (file absent at base) -- version should be `1.0.0`
    - Content files changed but version unchanged -- **flag as missing version bump**
@@ -76,7 +77,7 @@ Assess bump level (informational):
 Read `.claude-plugin/marketplace.json` and verify:
 
 - **Coverage**: every `plugins/*/` directory has a marketplace entry, and every marketplace entry points to an existing plugin directory
-- **Version ownership**: every plugin manifest has a valid `MAJOR.MINOR.PATCH` version, and marketplace entries and metadata contain no `version` field
+- **Version ownership**: every Claude plugin manifest has a valid `MAJOR.MINOR.PATCH` version, each present Codex manifest matches it, and marketplace entries and metadata contain no `version` field
 
 ### 5. Report
 

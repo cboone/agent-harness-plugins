@@ -56,9 +56,7 @@ jobs:
             catalogs+="$(git show "${latest_tag}:.claude-plugin/marketplace.json")"
           fi
           sources="$(printf '%s\n' "${catalogs}" | jq -sr '
-            [.[].plugins[].source | if type == "string" then .
-              elif type == "object" then .path // empty else empty end
-              | select(type == "string" and startswith("./"))] | unique[]')"
+            [.[].plugins[].source | select(type == "string" and startswith("./"))] | unique[]')"
           catalog_paths=(.claude-plugin/marketplace.json)
           while IFS= read -r source; do
             [[ -z "${source}" ]] && continue

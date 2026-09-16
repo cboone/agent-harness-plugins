@@ -13,7 +13,7 @@ Detect the project type to determine where version numbers live and how to updat
 
 **Detection:** `.claude-plugin/marketplace.json` exists and contains a top-level `plugins` array.
 
-**Version files:** Each registered local source directory contains `.claude-plugin/plugin.json`, which owns that plugin's version. Sources may be strings such as `./plugins/<name>` or objects with a local `path` field. Remote sources without a local path have no local manifest to update. Marketplace entries are registration metadata and do not carry versions.
+**Version files:** Each registered local string source directory contains `.claude-plugin/plugin.json`, which owns that plugin's version. Sources such as `./plugins/<name>` are local; non-string sources have no local manifest to update. Marketplace entries are registration metadata and do not carry versions.
 
 ## Go CLI
 

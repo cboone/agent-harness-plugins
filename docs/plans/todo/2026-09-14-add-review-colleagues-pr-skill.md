@@ -242,7 +242,7 @@ Report style: don't restate the diff, don't hedge, don't praise by default, and 
 ### Catalog registration
 
 1. `plugins/review-colleague-pr/.claude-plugin/plugin.json`: the same fields as `plugins/review-branch/.claude-plugin/plugin.json`, at version `1.0.0`.
-1. `.claude-plugin/marketplace.json`: insert the entry between `review-branch` and `review-dependabot-config` with category `code-review`. Recompute `metadata.version` with `bin/compute-catalog-state` at implementation time; do not assume a fixed catalog value.
+1. `.claude-plugin/marketplace.json`: insert the entry between `review-branch` and `review-dependabot-config` with category `code-review`. Do not add a marketplace version field; plugin manifests own SemVer, and catalog releases use the landing commit SHA.
 1. Root `README.md`: add a Code Review table row in alphabetical order, with trigger `/review-colleague-pr` and the description verbatim, plus a `gh` bullet under that table's External tools list. The Contents section does not change.
 1. Regenerate the mirrors with `bin/build-codex-marketplace` and `bin/build-opencode-mirror`.
 

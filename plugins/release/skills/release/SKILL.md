@@ -56,10 +56,10 @@ For a marketplace, each plugin manifest is the sole SemVer source. Marketplace e
 
 First determine whether a workflow publishes releases after a push to the default branch. A workflow is push-to-main automation only when it creates `catalog-${GITHUB_SHA}` tags, invokes `gh release create`, and has a `push` trigger limited to the default branch. A manually dispatched, scheduled, pull-request-only, or differently branched workflow is not push-to-main automation. A tag-triggered workflow is separate: it needs a locally created catalog tag to run.
 
-Extract registered local plugin paths from string sources and object sources with a `path` field. Remote sources without a local path are registration metadata, not local manifests to read. Local marketplace sources begin with `./`; do not interpret a remote repository or package source as a filesystem path:
+Extract registered local plugin paths from string sources beginning with `./`. Other source forms are registration metadata, not local manifests to read. Do not interpret a remote repository or package source as a filesystem path:
 
 ```bash
-jq -r '.plugins[].source | if type == "string" then . elif type == "object" then .path // empty else empty end | select(type == "string" and startswith("./"))' .claude-plugin/marketplace.json
+jq -r '.plugins[].source | select(type == "string" and startswith("./"))' .claude-plugin/marketplace.json
 git tag --list 'catalog-*' --sort=-creatordate
 ```
 
@@ -80,6 +80,8 @@ Present the complete release diff, per-plugin version table, validation results,
 If push-to-main automation exists, publish the reviewed release commit only through the project's approved branch or PR flow. A feature-branch push does not publish a catalog release: automation tags the eventual landing commit as `catalog-<full-commit-SHA>` and creates its GitHub Release. Do not create a local catalog tag on this route.
 
 Without push-to-main automation, propose the exact `catalog-<full-release-commit-SHA>` tag after the signed commit exists and obtain explicit approval for tag publication. Create a signed annotated tag, then push the approved commit and exact tag. If a tag-triggered workflow exists, let it publish the release. Otherwise check whether `gh` exists and offer `gh release create --verify-tag` after the tag is pushed. Never overwrite or retarget a tag.
+
+Before presenting any command that pushes to `origin`, run `git remote get-url origin`. If it fails, stop and explain that this release flow needs a reachable `origin` remote; do this for both marketplace and SemVer publication.
 
 When catalog inputs have not changed, create no new tag or release commit. Independently check publication of the latest existing catalog tag, even if a later documentation-only commit is now `HEAD`. Use `gh release view <latest-catalog-tag>` to verify its GitHub Release; distinguish a missing release from an authentication or API error. If the tag exists remotely but its release is missing, recover that release for the existing tag through a supported workflow rerun or an explicitly approved `gh release create --verify-tag`. Never substitute the later documentation commit's SHA. Report when neither a new release nor recovery is needed.
 

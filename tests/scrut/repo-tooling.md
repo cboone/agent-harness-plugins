@@ -49,18 +49,20 @@ $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" entry-version 2>&1
 ## Release automation uses immutable tags and ignores documentation-only changes
 
 The fixture executes the workflow's actual shell steps against isolated Git
-history, with local object sources, custom source directories, and remote
-registrations. It also interprets the check and publication step conditions, so
-an incorrect condition cannot hide a missing recovery attempt.
+history, with custom local source directories and remote registrations. It also
+interprets the check and publication step conditions, so an incorrect condition
+cannot hide a missing recovery attempt.
 
 ```scrut
 $ "${CATALOG_RELEASE_FIXTURE_BIN}" first-release
 changed=true target=current
+release-created-for-target=true
 ```
 
 ```scrut
 $ "${CATALOG_RELEASE_FIXTURE_BIN}" plugin-change
 changed=true target=current
+release-created-for-target=true
 ```
 
 ```scrut
@@ -80,11 +82,6 @@ changed=true target=current
 
 ```scrut
 $ "${CATALOG_RELEASE_FIXTURE_BIN}" deleted-plugin
-changed=true target=current
-```
-
-```scrut
-$ "${CATALOG_RELEASE_FIXTURE_BIN}" object-source
 changed=true target=current
 ```
 
