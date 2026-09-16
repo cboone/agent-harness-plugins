@@ -109,7 +109,7 @@ Before any commit or tag, present the changed files, proposed version, documenta
 
 For this SemVer branch only, create a GPG-signed release commit and GPG-signed annotated `vVERSION` tag. Never amend, force-push, or retarget an existing tag. After the user approves publication, push the commit and exact version tag before any GitHub Release operation. If a release workflow publishes on tag push, do not create a duplicate GitHub Release.
 
-Without a tag-triggered workflow, first run `command -v gh`. If it is unavailable, leave the already-pushed tag in place and report the manual `gh release create vVERSION --title "vVERSION" --notes-file <release-notes-file> --verify-tag` command. If it is available, generate release notes from the changelog and run that command only after the tag push. If publication fails after the tag is pushed, report the remaining manual command rather than recreating or retargeting the tag.
+Without a tag-triggered workflow, first run `command -v gh`. Generate release notes from the changelog into a temporary file, then pass that file to `gh` only after the tag push. Capture the `gh` status, remove the temporary file, and preserve that status. If `gh` is unavailable or publication fails after the tag is pushed, leave the tag in place and report the exact remaining `gh release create vVERSION --title "vVERSION" --notes-file <release-notes-file> --verify-tag` command with the release-notes file path. Never recreate or retarget the tag.
 
 ## Reference Navigation
 

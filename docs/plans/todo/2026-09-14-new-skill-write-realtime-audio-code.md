@@ -339,8 +339,8 @@ Keep generated builds, scratch projects, and experimental mutations in isolated 
 1. **Author the seven references and worked examples.** Start with buffer contracts, complete lifecycle reachability, legal ownership, memory ordering, and progress. Then write verification, compatibility, format-specific automation, scheduling/numerics, and core/adapter boundaries. Use the `create-plugin`, `skill-creator`, and `write-markdown` skills as applicable. Complete the required examples below before condensing the entry point, and make their assumptions and limits explicit.
 1. **Maintain evaluation inputs and expected outcomes.** Create the repository-only case assets, separate the evaluated inputs from assessment criteria, and document the supported harness procedure. Preserve the raw artifacts needed to reproduce incorrect and valid cases. Do not add published helper scripts or a Scrut suite merely to inspect prose structure.
 1. **Write the entry point, checklist, and README.** Route each task to the necessary reference, keep the discovery description within its limit, preserve review versus implementation scope, and verify standalone use without a checkout or companion installation. Check that the condensed entry point still directs buffer/lifecycle, notification, automation, reactivation, pending-event, and instrument-coverage cases to their detailed guidance.
-1. **Integrate the new plugin coherently.** Add the canonical plugin, catalog entry, root README row, recomputed catalog state, and generated mirrors together. This avoids a commit with an unregistered canonical plugin or missing generated output.
-1. **Update the companion coherently.** Change the `plant-defects` links/status, increment its patch version, recompute catalog state, and regenerate both mirrors together. Recheck current baseline versions rather than assuming this plan's numbers still apply.
+1. **Integrate the new plugin coherently.** Add the canonical plugin, catalog entry, root README row, and generated mirrors together. This avoids a commit with an unregistered canonical plugin or missing generated output.
+1. **Update the companion coherently.** Change the `plant-defects` links/status, increment its patch version, and regenerate both mirrors together. Recheck current baseline versions rather than assuming this plan's numbers still apply.
 1. **Validate behavior and repository integration.** Exercise the acceptance cases in fresh context, inspect the actual outcomes, and revise the guide where the evidence shows incorrect or incomplete advice. Recheck affected cases after revisions and preserve the final assessment. Use the `lint-and-fix` skill, check all cross-references, and use the repo-local `check-versions` skill before PR preparation. Finish with the repository's complete checks after any resulting edits. Review the final prose for unsupported universal claims and source attribution.
 1. **Report evidence and remaining limits.** Record which behavioral scenarios and tool controls actually ran. A command that started but has no observed completion is unverified. Move the plan to `done/` only when the plugin work and required checks are complete, following the repository's completion workflow.
 
@@ -372,7 +372,7 @@ git diff --check
 git status --short
 ```
 
-Use the pinned dependency setup when needed rather than reinstalling it on every edit. `make test-all` includes lint, validation, and Scrut; observe its final result. `make validate` can also be run during authoring: rule 10 checks catalog state, rules 15 and 16 compare freshly generated mirrors, rule 17 checks description lengths, and rule 19 checks references. Git status is an inventory of changes, not a mirror-freshness test. This plan-only revision needs documentation formatting/lint checks; it does not require rerunning downstream audio experiments.
+Use the pinned dependency setup when needed rather than reinstalling it on every edit. `make test-all` includes lint, validation, and Scrut; observe its final result. `make validate` can also be run during authoring: rule 10 checks catalog registration, rules 15 and 16 compare freshly generated mirrors, rule 17 checks description lengths, and rule 19 checks references. Git status is an inventory of changes, not a mirror-freshness test. This plan-only revision needs documentation formatting/lint checks; it does not require rerunning downstream audio experiments.
 
 For final prose review, check for em dashes, work estimates, non-neutral terminology, unresolved references, accidental mandates of project-specific choices, and numeric claims without scope. Runtime quantities such as frame durations are allowed. Use an additional skill reviewer only if it is available and appropriate; an unavailable `plugin-dev:skill-reviewer` must not become a required dependency.
 
@@ -381,8 +381,8 @@ For final prose review, check for em dashes, work estimates, non-neutral termino
 All commits are GPG signed. Use these logical boundaries, updating messages to match the final scope:
 
 1. Plan-only revisions grouped by callback/communication contracts, automation/compatibility, and verification/evaluation requirements. Use a `docs:` subject describing each group; keep implementation pending until the plugin is authored.
-1. `feat: add real-time audio skill and catalog entry (#343)`, containing the new canonical plugin, maintained evaluation inputs and criteria, catalog and root README integration, catalog state, and generated mirrors.
-1. `docs: link plant-defects to its audio companion (#343)`, containing companion prose, its patch version, catalog state, and regenerated mirrors.
+1. `feat: add real-time audio skill and catalog entry (#343)`, containing the new canonical plugin, maintained evaluation inputs and criteria, catalog and root README integration, and generated mirrors.
+1. `docs: link plant-defects to its audio companion (#343)`, containing companion prose, its patch version, and regenerated mirrors.
 
 Keep fixes discovered by the behavioral or repository checks in coherent follow-up commits. Do not mark issue #343 resolved merely because the plan is revised.
 

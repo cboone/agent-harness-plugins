@@ -68,11 +68,18 @@ jobs:
                 [[ -z "${source}" ]] && continue
                 git diff --quiet "${latest_tag}" -- ":(literal)${source%/}/" && continue
                 manifest="${source#./}/.claude-plugin/plugin.json"
-                if ! git cat-file -e "${latest_tag}:${manifest}" 2>/dev/null || [[ ! -f "${manifest}" ]]; then
+                if [[ ! -f "${manifest}" ]]; then
+                  continue
+                fi
+                current_version="$(jq -r '.version // empty' "${manifest}")"
+                if ! git cat-file -e "${latest_tag}:${manifest}" 2>/dev/null; then
+                  if [[ "${current_version}" != '1.0.0' ]]; then
+                    echo "::error::${source} is newly registered and must start at manifest version 1.0.0 (found ${current_version:-missing})."
+                    exit 1
+                  fi
                   continue
                 fi
                 previous_version="$(git show "${latest_tag}:${manifest}" 2>/dev/null | jq -r '.version // empty')"
-                current_version="$(jq -r '.version // empty' "${manifest}")"
                 [[ -z "${previous_version}" ]] && continue
                 # Digit length and lexical order compare unbounded integers.
                 if ! jq -en --arg current "${current_version}" --arg previous "${previous_version}" \

@@ -69,7 +69,7 @@ function main() {
     missing-bump) current="${previous}" ;;
     existing-release) CATALOG_FIXTURE_RELEASE_STATE=present ;;
     api-error) CATALOG_FIXTURE_RELEASE_STATE=error ;;
-    first-release | unchanged | root-docs | plugin-change | catalog-only | deleted-plugin | tag-recovery | same-head-recovery | tag-collision | missing-remote-tag) ;;
+    first-release | unchanged | root-docs | plugin-change | catalog-only | deleted-plugin | new-plugin-version | tag-recovery | same-head-recovery | tag-collision | missing-remote-tag) ;;
     *)
       echo "Unknown scenario: ${scenario}" >&2
       return 2
@@ -114,6 +114,12 @@ function main() {
       jq '.plugins |= map(select(.name != "sample"))' .claude-plugin/marketplace.json > "${root}/catalog"
       mv "${root}/catalog" .claude-plugin/marketplace.json
       ;;
+    new-plugin-version)
+      mkdir -p plugins/new-plugin/.claude-plugin
+      jq '.plugins += [{name:"new-plugin",source:"./plugins/new-plugin"}]' .claude-plugin/marketplace.json > "${root}/catalog"
+      mv "${root}/catalog" .claude-plugin/marketplace.json
+      jq -n '{version:"0.1.0"}' > plugins/new-plugin/.claude-plugin/plugin.json
+      ;;
     root-docs) printf 'instructions\n' > plugins/AGENTS.md ;;
     unchanged | tag-recovery | existing-release | api-error | tag-collision | missing-remote-tag) printf 'documentation\n' > README.md ;;
     *) ;;
@@ -138,7 +144,7 @@ function main() {
   commit="$(sed -n 's/^commit=//p' "${GITHUB_OUTPUT}")"
   printf 'changed=%s target=%s\n' "${changed}" "$([[ "${tag}" == "catalog-${GITHUB_SHA}" ]] && echo current || echo previous)"
   case "${scenario}" in
-    first-release | plugin-change | tag-recovery | same-head-recovery | existing-release | api-error | tag-collision | missing-remote-tag)
+    first-release | plugin-change | new-plugin-version | tag-recovery | same-head-recovery | existing-release | api-error | tag-collision | missing-remote-tag)
       if [[ "${scenario}" == tag-collision ]]; then
         commit="${GITHUB_SHA}"
       fi

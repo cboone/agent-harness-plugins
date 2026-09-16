@@ -115,6 +115,12 @@ release-created-for-target=false
 ## Changed plugin content requires a forward version bump
 
 ```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" new-plugin-version 2>&1
+::error::./plugins/new-plugin is newly registered and must start at manifest version 1.0.0 (found 0.1.0).
+[1]
+```
+
+```scrut
 $ "${CATALOG_RELEASE_FIXTURE_BIN}" missing-bump 2>&1
 ::error::./custom/sample changed without a forward manifest version bump (1.0.0 -> 1.0.0).
 [1]
