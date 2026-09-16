@@ -4,15 +4,6 @@
       {
         "hooks": [
           {
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify cc-idle",
-            "type": "command"
-          }
-        ],
-        "matcher": "idle_prompt"
-      },
-      {
-        "hooks": [
-          {
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify cc-elicit",
             "type": "command"
           }
@@ -46,6 +37,27 @@
           {
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify cc-stop",
             "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify cc-turn-start"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify cc-question"
           }
         ]
       }

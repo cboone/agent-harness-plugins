@@ -31,7 +31,18 @@ Refresh the marketplace after repository updates:
 codex plugin marketplace upgrade agent-harness-plugins
 ```
 
-Codex's hook event enum does not include `Notification` or `PreCompact`, so the plugin only wires the `Stop` event on Codex. `PermissionRequest` is intentionally not wired: that hook runs in the automatic-policy path before Codex's user approval UI is shown, not as a user-facing prompt, so notifying on it would alert the human about decisions Codex's internal approver is already making. For idle / elicitation / compact-style banners and approval prompts, enable Codex's native `tui.notifications = true` in `~/.codex/config.toml` (the two are complementary; both can run at once).
+Codex 0.154.0 supports the plugin's `Stop`, `UserPromptSubmit`, `PreToolUse:request_user_input`, and `PreCompact:auto` hooks. Questions and automatic compaction use the same banner sounds and click routing as Claude Code.
+
+`PermissionRequest` is intentionally not wired: it runs before automatic approval review decides whether a human prompt is needed. Keep native terminal attention as a fallback, without duplicating plugin completion alerts:
+
+```toml
+[tui]
+notifications = ["approval-requested", "plan-mode-prompt"]
+notification_method = "auto"
+notification_condition = "unfocused"
+```
+
+Automatic transport selection supports terminals where OSC 9 is unavailable. Native terminal attention does not provide the plugin's customized macOS approval banner. Plan confirmation prompts retain this fallback because they do not use the question tool hook.
 
 ### Using with OpenCode
 
@@ -58,29 +69,33 @@ Delivers native macOS notifications so you can work in other apps while an agent
 - **A per-harness icon**: Claude Code, OpenCode, or Codex's app icon.
 - **A subtitle that identifies the task**: when running inside tmux with a custom pane title (set by `workmux` or similar), the subtitle is `<project> · <pane title>`. Otherwise, `<project> · <branch suffix>`, where the branch suffix is everything after the first `/` (so `feature/improve-notifier` becomes `improve-notifier`).
 - **An informative body**: per-event content (see matrix below). Claude Code permission events show a per-tool preview (the Bash command, the file path being edited, etc.) reconstructed from the most recent `tool_use` block in the transcript, since the Notification payload itself omits tool details. OpenCode permission events use OpenCode's pre-computed `title`, falling back to `pattern` or per-tool `metadata`. Claude Code and OpenCode Stop events show `<last user message> → <last assistant message tail>`; the Claude Code assistant tail comes from the Stop payload's `last_assistant_message` rather than from a transcript walk. Codex Stop is the last assistant message alone, also taken from the payload.
-- **A per-event sound** (Tink for Claude Code idle/elicit and Codex done, Funk for permission and OpenCode error, Pop for auto-compact, Glass for Claude Code and OpenCode done). Codex Stop uses the soft Tink rather than the louder Glass because Codex fires `Stop` once per "no follow-up needed" sampling cycle in its turn loop, so a single user turn can produce multiple notifications when Stop hooks request continuation. Each Stop updates the same notification group, so successive firings replace the previous banner in place rather than stacking.
-- **A per-event group** so a fresh notification dismisses any prior notification of the same kind, instead of stacking.
+- **Shared event sounds**: Tink for questions, Funk for permission, Pop for automatic compaction, and Glass for completion. Claude's idle reminders are disabled.
+- **Session-specific groups**: banners from unrelated sessions do not replace one another. Claude and Codex completion alerts fire once until the next user prompt resets the completion marker. Subagent payloads are ignored.
+- **Visibility-aware completion**: completion alerts are suppressed when the host terminal application is active and a tmux client displays the originating pane. If focus cannot be determined, delivery is preserved. Questions, permissions, and compaction remain visible regardless of focus.
 - **Click-to-focus**: clicking the body of any notification activates the originating terminal app (auto-detected from `$TERM_PROGRAM`, supports Apple Terminal, iTerm2, Ghostty, WezTerm, VSCode, Alacritty) and, if you were inside tmux when the hook fired, switches the tmux client to the originating session, window, and pane.
 
 ## When it fires
 
 ### Claude Code
 
-| Event                             | Title                      | Body                                                       | Sound   |
-| --------------------------------- | -------------------------- | ---------------------------------------------------------- | ------- |
-| `Notification:idle_prompt`        | `Claude Code · Idle`       | Last assistant message tail (fallback `Waiting for input`) | `Tink`  |
-| `Notification:elicitation_dialog` | `Claude Code · Question`   | The actual question text from the payload                  | `Tink`  |
-| `Notification:permission_prompt`  | `Claude Code · Permission` | `<Tool>: <preview>` (subtitle is suffixed with the tool)   | `Funk`  |
-| `PreCompact:auto`                 | `Claude Code · Compacting` | `Auto-compacting context`                                  | `Pop`   |
-| `Stop`                            | `Claude Code · Done`       | `<last user message> → <last assistant message tail>`      | `Glass` |
+`UserPromptSubmit` resets completion deduplication without posting a banner. `PreToolUse:AskUserQuestion` posts a question banner using the actual question text and Tink sound. The idle reminder hook is not registered.
+
+| Event                             | Title                      | Body                                                     | Sound   |
+| --------------------------------- | -------------------------- | -------------------------------------------------------- | ------- |
+| `Notification:elicitation_dialog` | `Claude Code · Question`   | The actual question text from the payload                | `Tink`  |
+| `Notification:permission_prompt`  | `Claude Code · Permission` | `<Tool>: <preview>` (subtitle is suffixed with the tool) | `Funk`  |
+| `PreCompact:auto`                 | `Claude Code · Compacting` | `Auto-compacting context`                                | `Pop`   |
+| `Stop`                            | `Claude Code · Done`       | `<last user message> → <last assistant message tail>`    | `Glass` |
 
 ### Codex
 
-| Event  | Title          | Body                                      | Sound  |
-| ------ | -------------- | ----------------------------------------- | ------ |
-| `Stop` | `Codex · Done` | `last_assistant_message` from the payload | `Tink` |
+| Event                           | Title                | Body                                      | Sound   |
+| ------------------------------- | -------------------- | ----------------------------------------- | ------- |
+| `PreToolUse:request_user_input` | `Codex · Question`   | Question text from tool input             | `Tink`  |
+| `PreCompact:auto`               | `Codex · Compacting` | `Auto-compacting context`                 | `Pop`   |
+| `Stop`                          | `Codex · Done`       | `last_assistant_message` from the payload | `Glass` |
 
-Codex fires `Stop` once per "no follow-up needed" sampling cycle in its turn loop (`codex-rs/core/src/session/turn.rs`), so a single user turn may produce multiple Stop notifications when Stop hooks request continuation. The notification uses the soft Tink sound and reuses the `codex-stop` group, so successive firings within one turn dismiss the prior banner rather than stacking. Click the body to focus the originating pane.
+`UserPromptSubmit` resets completion deduplication without posting a banner. Repeated Stop events in the same user turn are suppressed, including their sounds. A Stop hook that requests continuation can still cause the first completion banner before that continuation finishes; the notification plugin does not decide whether other Stop hooks will continue the turn.
 
 ### OpenCode
 
@@ -107,13 +122,13 @@ When you click the body of a notification, the plugin runs [`scripts/focus-pane`
 | `alacritty`      | Alacritty    |
 | (anything else)  | Terminal.app |
 
-**Switch the tmux client** if the hook fired inside tmux: `tmux switch-client -t <session> \; select-window -t <session>:<window> \; select-pane -t <session>:<window>.<pane>`.
+**Switch the tmux client** if the hook fired inside tmux. Claude and Codex capture immutable session, window, and pane IDs using an explicit `TMUX_PANE` target. The detached process retains the originating tmux socket environment. Existing OpenCode callers using names and indexes remain supported.
 
 Failures (closed pane, no client attached, missing terminal app) are silent: clicking a notification should never produce a visible error.
 
 ## Notes and caveats
 
-- `alerter` blocks waiting for user interaction, so every event launches it in a detached subshell. The harness is never held up. Each invocation has a 24-hour timeout to prevent orphaned processes from accumulating.
+- `alerter` blocks waiting for user interaction, so every event launches it in a detached subshell. The harness is never held up. Each invocation has a 24-hour timeout to bound background notification processes. Completion markers are stored under `${XDG_CACHE_HOME:-$HOME/.cache}/agent-harness-notify/`; deleting this cache resets deduplication.
 - The transcript-based extractors (last user message, last assistant message tail, pending tool use) iterate the transcript JSONL. Performance is fine for typical sessions; very long transcripts may add a small delay before the notification appears.
 - The `--app-icon` flag uses a private macOS API that `alerter` keeps working release to release. If a future macOS update breaks it, notifications will still fire but with the default Terminal icon.
 

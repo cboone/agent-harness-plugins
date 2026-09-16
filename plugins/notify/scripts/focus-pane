@@ -30,13 +30,19 @@ function switch_tmux_pane() {
   local session="${1}"
   local window="${2}"
   local pane="${3}"
+  if [[ "${window}" != @* ]]; then window="${session}:${window}"; fi
+  if [[ "${pane}" != %* ]]; then pane="${window}.${pane}"; fi
   tmux switch-client -t "${session}" \; \
-    select-window -t "${session}:${window}" \; \
-    select-pane -t "${session}:${window}.${pane}" \
+    select-window -t "${window}" \; \
+    select-pane -t "${pane}" \
     > /dev/null 2>&1 || true
 }
 
 function main() {
+  if [[ "${1:-}" == --bundle-id ]]; then
+    bundle_id_for "${2:-}"
+    return 0
+  fi
   local term_program="${1:-}"
   local tmux_session="${2:-}"
   local tmux_window="${3:-}"
@@ -51,4 +57,4 @@ function main() {
   fi
 }
 
-main "${@}"
+main "$@"

@@ -20,6 +20,8 @@ SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 # drifting apart, and .github/workflows/ci.yml passes the same list to the
 # reusable scrut workflow.
 SCRUT_ENV := \
+	NOTIFY_BIN="$(CURDIR)/plugins/notify/scripts/notify" \
+	CHECK_NOTIFICATIONS_BIN="$(CURDIR)/tests/fixtures/check-notifications" \
 	CHECK_CROSS_REFERENCES_BIN="$(CURDIR)/bin/check-cross-references" \
 	COMPOSE_ISSUE_PROMPT_BIN="$(CURDIR)/plugins/address-issue-in-worktree/scripts/compose-issue-prompt" \
 	CREATE_WORKTREE_COMPOSE_ISSUE_PROMPT_BIN="$(CURDIR)/plugins/create-worktree/scripts/compose-issue-prompt" \
