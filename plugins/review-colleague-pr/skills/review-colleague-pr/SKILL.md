@@ -159,7 +159,7 @@ Collect every statement of what the PR is supposed to do:
   gh api --paginate repos/ISSUE_OWNER/ISSUE_REPO/issues/ISSUE_NUMBER/comments --jq '.[] | {user: .user.login, created_at, body}'
   ```
 
-  Read every comment page because issue discussions may contain acceptance criteria.
+  Read every comment page because issue discussions may contain acceptance criteria. Check that the command succeeds and pagination completes. If the request fails or retrieval is partial, continue with the other available sources and disclose the missing or partial issue-comment coverage under Requirements. Do not treat criteria in unread comments as satisfied.
 
 - **Parent issues and sub-issues** of each linked issue, which often hold the real acceptance criteria:
 
