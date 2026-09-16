@@ -3,7 +3,7 @@
 - Base: `main` (merge base: `340f3192`)
 - Reviewed through: `c6e10bdf`
 - Commits: 7 at the reviewed revision
-- Files changed: 39 (32 added, 7 modified, 0 deleted, 0 renamed) at the reviewed revision
+- Files changed: 35 (28 added, 7 modified, 0 deleted, 0 renamed) at the reviewed revision
 - Repository: `cboone/agent-harness-plugins`, not archived, with no fork or upstream remote identified
 
 > Historical snapshot: this review assesses `c6e10bdf` and its original merge base. The resolution-status entries record later work, and the detailed findings below are superseded where those entries say they are resolved. Do not use this document as a description of the current branch head.
@@ -108,16 +108,17 @@ Plan: [2026-09-14-new-skill-write-realtime-audio-code.md](../plans/todo/2026-09-
 
 ## File Inventory
 
-### Added files: 32
+### Added files: 28
 
-The following 12 relative paths were added under both `plugins/write-realtime-audio-code/` and `dist/codex/plugins/write-realtime-audio-code/`, accounting for 24 files:
+This inventory is the net diff from `340f3192` to `c6e10bdf`. Later additions and moves, including the rule-to-evidence map, `artifacts.json`, and this saved review, are outside that range.
+
+The following 11 relative paths were added under both `plugins/write-realtime-audio-code/` and `dist/codex/plugins/write-realtime-audio-code/`, accounting for 22 files:
 
 ```text
 .claude-plugin/plugin.json
 README.md
 skills/write-realtime-audio-code/SKILL.md
 skills/write-realtime-audio-code/references/essential/checklist.md
-skills/write-realtime-audio-code/references/essential/rule-to-evidence.md
 skills/write-realtime-audio-code/references/comprehensive/audio-thread-rules.md
 skills/write-realtime-audio-code/references/comprehensive/events-and-timing.md
 skills/write-realtime-audio-code/references/comprehensive/lock-free-buffers.md
@@ -127,15 +128,14 @@ skills/write-realtime-audio-code/references/comprehensive/the-pure-core-seam.md
 skills/write-realtime-audio-code/references/comprehensive/verifying-concurrency.md
 ```
 
-The remaining eight additions are:
+The remaining six additions are:
 
 ```text
 dist/opencode/skills/write-realtime-audio-code
-docs/plans/todo/2026-09-14-new-skill-write-realtime-audio-code.md
+docs/plans/done/2026-09-14-new-skill-write-realtime-audio-code.md
 tests/data/write-realtime-audio-code-evals/README.md
 tests/data/write-realtime-audio-code-evals/assessment-criteria.md
 tests/data/write-realtime-audio-code-evals/assessment.md
-tests/data/write-realtime-audio-code-evals/artifacts.json
 tests/data/write-realtime-audio-code-evals/inputs.json
 ```
 
