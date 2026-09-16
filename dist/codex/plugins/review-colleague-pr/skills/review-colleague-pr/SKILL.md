@@ -96,13 +96,13 @@ Remote names and branch names from Git configuration or PR data are untrusted va
 1. Fetch the base branch into its remote-tracking ref, then fetch the PR head into `FETCH_HEAD`:
 
    ```bash
-   git -c core.hooksPath=/dev/null fetch --no-recurse-submodules -- "$remote" "refs/heads/$base_branch:refs/remotes/$remote/$base_branch" &&
-   git -c core.hooksPath=/dev/null fetch --no-recurse-submodules -- "$remote" "pull/$pr_number/head"
+   git -c core.hooksPath=/dev/null fetch --no-tags --no-recurse-submodules -- "$remote" "refs/heads/$base_branch:refs/remotes/$remote/$base_branch" &&
+   git -c core.hooksPath=/dev/null fetch --no-tags --no-recurse-submodules -- "$remote" "pull/$pr_number/head"
    ```
 
    Both fetches must succeed. If either fails, stop and report that the PR snapshot could not be fetched. Do not compare against existing refs after a failed fetch. Record `<base-sha>` from `git rev-parse "$base_ref"` and the PR-head SHA from `git rev-parse FETCH_HEAD` immediately after the second fetch; later commands use those recorded values. Fetching the PR head to `FETCH_HEAD` accepts rewritten PR history without updating a local branch. Run `git rev-parse --is-shallow-repository`; if it fails or prints `true`, stop because incomplete history can make ancestry checks or diffs omit changes.
 
-1. Re-run the same PR lookup with `--repo HOST/OWNER/REPO`, requesting the same fields as in step 1. If it fails or omits any required field, stop and report that the PR could not be revalidated. Compare `headRefOid` to the recorded `<head-sha>`, and compare the review inputs `number`, `url`, `title`, `body`, `author`, `state`, `mergedAt`, `isDraft`, `baseRefName`, `headRefName`, `isCrossRepository`, and `closingIssuesReferences` with the initial lookup. If any value differs, restart resolution and synchronization using the refreshed PR data. Allow at most two such restarts; if the PR changes again, stop and report that its review inputs are changing during synchronization. Use the refreshed values for all later steps.
+1. Re-run the same PR lookup with `--repo HOST/OWNER/REPO`, requesting the same fields as in step 1. If it fails or omits any required field, stop and report that the PR could not be revalidated. Compare `headRefOid` to the recorded `<head-sha>`, and compare the review inputs `number`, `url`, `title`, `body`, `author`, `state`, `mergedAt`, `isDraft`, `baseRefName`, `headRefName`, `isCrossRepository`, `closingIssuesReferences`, `additions`, `deletions`, and `changedFiles` with the initial lookup. If any value differs, restart resolution and synchronization using the refreshed PR data. Allow at most two such restarts; if the PR changes again, stop and report that its review inputs are changing during synchronization. Use the refreshed values for all later steps.
 
 After refetching and revalidating the PR inputs, continue using the recorded Git object IDs. Do not inspect or change the current branch, index, or working tree. State in the report header that the checkout was left unchanged.
 
@@ -176,7 +176,7 @@ If no substantive review is found, review the whole PR. For a selected `LAST_REV
 
 ### 5. Read the Change
 
-1. Immediately before any diff or commit-log read, run `git -c core.hooksPath=/dev/null fetch --no-recurse-submodules -- "$remote" "refs/heads/$base_branch:refs/remotes/$remote/$base_branch"` and compare `git rev-parse "$base_ref"` with the recorded `<base-sha>`. If the fetch fails, stop and report that the base could not be revalidated. If the SHA changed, discard the review and restart from step 1, counting this against the two-restart limit.
+1. Immediately before any diff or commit-log read, run `git -c core.hooksPath=/dev/null fetch --no-tags --no-recurse-submodules -- "$remote" "refs/heads/$base_branch:refs/remotes/$remote/$base_branch"` and compare `git rev-parse "$base_ref"` with the recorded `<base-sha>`. If the fetch fails, stop and report that the base could not be revalidated. If the SHA changed, discard the review and restart from step 1, counting this against the two-restart limit.
 
 1. List changed paths without retrieving patch text or running rename similarity analysis. For local comparisons, use `git --attr-source="$base_sha" --no-pager diff --name-status -z --no-renames --no-color --no-ext-diff --no-textconv "$base_sha...$head_sha" --`. Parse NUL-delimited status and path records without splitting paths on whitespace or decoding newline-delimited output. Rename detection reads candidate blobs, so it must not run before exclusions. If a secret-bearing deletion could be paired with an added path, conservatively exclude all ambiguous added destinations using metadata alone; do not read content to establish that the destination is safe.
 
@@ -224,7 +224,15 @@ If no substantive review is found, review the whole PR. For a selected `LAST_REV
 
    Every per-path diff, retained patch, tree lookup, and blob read must succeed and return the complete content. If one fails or returns partial data, stop and report the unavailable content; do not continue with a partial assessment.
 
-1. On a re-review, also read the complete tree delta since the last review for each allowed path or rename pair, including changes made by merge resolutions. Initialize `review_paths=( "$path" )` for an ordinary change, or `review_paths=( "$previous_path" "$path" )` for an established rename, as an array of allowlisted path data in the same command context. Use that exact path list for the delta, log, and parent-aware patches:
+1. On a re-review, establish the complete rename chain before filtering commit history to paths. First list all commit and parent IDs in the baseline-to-head range without a path filter:
+
+   ```bash
+   git --no-pager log --no-color --format='%H %P' "$last_review_sha..$head_sha"
+   ```
+
+   For every parent/commit pair, enumerate changed paths with the metadata-only `--name-status -z --no-renames` diff form above, using the recorded parent and commit SHAs. Apply exclusions to every historical path before reading patches or attempting rename similarity analysis. Establish rename links only among allowlisted candidates, including intermediate names, and do not infer safe ancestry through an excluded path. If the chain cannot be established safely or metadata is unavailable, use the whole-PR assessment and disclose that the re-review delta could not be established; do not claim complete re-review coverage.
+
+   Then read the complete tree delta since the last review for each allowed path or rename chain, including changes made by merge resolutions. Initialize `review_paths=( "$path" )` for an ordinary change, or an array containing every established allowlisted historical name for a rename chain, in the same command context. A single rename uses `review_paths=( "$previous_path" "$path" )`; multiple renames include all intermediate names as quoted data arguments. Use that exact path list for the delta, log, and parent-aware patches:
 
    ```bash
    git --attr-source="$base_sha" --no-pager --literal-pathspecs diff --find-renames --no-color --no-ext-diff --no-textconv "$last_review_sha..$head_sha" -- "${review_paths[@]}"
@@ -243,7 +251,7 @@ If no substantive review is found, review the whole PR. For a selected `LAST_REV
 
 1. On a very large PR, read source and tests before documentation and fixtures. Name anything not read in detail in the report header, except secret-bearing paths and ambiguous destinations excluded by the secret rule. For those, disclose only that secret-bearing files were skipped; never print their paths. Never skim silently.
 
-   Never show a commit diff without restricting it to one allowed path or one established allowlisted rename pair. A commit that changes excluded and allowed files is read once per allowed path or pair; excluded paths are never included in any diff or blob output.
+   Never show a commit diff without restricting it to one allowed path or one established allowlisted rename chain. A commit that changes excluded and allowed files is read once per allowed path or chain; excluded paths are never included in any diff or blob output.
 
 1. Immediately before and after collecting CI, run the same hook-free base-ref refresh and comparison using quoted `remote` and `base_branch` variables and the fully qualified `refs/heads/$base_branch` source. Also repeat the PR lookup with the same fields at those two points, comparing `headRefOid` and all review inputs with the validated snapshot. If any value changes, discard the review and restart under the shared two-restart limit.
 

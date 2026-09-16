@@ -39,7 +39,7 @@ The skill follows a set of principles meant to produce a fair review rather than
 ### What it never does
 
 - Post, comment, review, label, or resolve anything on GitHub
-- The skill only fetches Git refs. It leaves the branch, index, and working tree unchanged and never commits or pushes.
+- Change local project files or the checkout. Its local writes are limited to fetched Git objects, remote-tracking refs, and `FETCH_HEAD`; it never commits or pushes.
 - Run tests, builds, linters, or installs (it reads CI status instead)
 
 The skill reads reviewable PR files from fetched Git tree and blob objects. It first lists changed paths and excludes secret-bearing files, lockfiles, vendored code, and files the base branch marks as generated before retrieving patches or blobs. Issue lookups stay within the PR repository; cross-repository references from PR text are not followed. The skill does not depend on the checkout being current or clean, and it leaves local files and refs unchanged except for fetched refs and `FETCH_HEAD`. A shallow checkout stops because its history can omit part of the diff. For merged PRs, and for unmerged PRs whose head is already in the base, it first retrieves filenames through GraphQL and verifies completeness against the PR's file count. It retrieves retained GitHub patches only when every file is reviewable. Excluded files, an unclassifiable rename source, incomplete file lists, or unavailable patches stop that review before assessment.
