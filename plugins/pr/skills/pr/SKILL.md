@@ -326,7 +326,7 @@ Use the same nature-of-change test as the commit message, so the two never disag
 
 If no connected issues were detected, omit the `## Closes` section entirely.
 
-Only issues whose full identity matches `<pr-target>` belong in `## Closes` or may appear with a closing keyword in a commit message. If other connected issues remain, add a `## Related issues` section. Before publishing any such issue, resolve that repository's visibility with an explicit `gh repo view` call. In a public PR, include only confirmed-public issues; omit confirmed-private or internal identities, and stop before creating commits or the PR if visibility is unknown. Use `owner/repo#N` on the same host or the full issue URL across hosts. Never use a closing keyword for those references. If both sections appear, put `## Related issues` after `## Closes` and before `## Follow-ups`.
+Only issues whose full identity matches `<pr-target>` belong in `## Closes` or may appear with a closing keyword in a commit message. Before publishing any other connected issue, resolve that repository's visibility with an explicit `gh repo view` call. In a public PR, include only confirmed-public issues; omit confirmed-private or internal identities, and stop before creating commits or the PR if visibility is unknown. Add `## Related issues` only when at least one publishable reference remains after filtering; otherwise omit the section entirely. Use `owner/repo#N` on the same host or the full issue URL across hosts. Never use a closing keyword for those references. If both sections appear, put `## Related issues` after `## Closes` and before `## Follow-ups`.
 
 If step 2 recorded follow-up issues, check the PR repository's visibility and each destination's recorded visibility before composing the `## Follow-ups` section. Use explicit repository selectors for metadata reads. In a public PR, omit confirmed-private or internal destinations entirely, including their titles, repository names, numbers, and URLs. If destination or PR visibility is unknown, stop before creating commits or the PR until it is verified. Exclude omitted follow-ups from closing references just like published ones.
 
@@ -399,10 +399,10 @@ This command returns **every** check on the PR, so narrow the result to the titl
 - **Title check failed**: report that check's `name`, its `description` (the short summary the check itself supplies; `gh pr checks` exposes no fuller reason, so link out rather than inventing one), and its `link`. Then give the user the exact remediation command with a corrected title:
 
   ```bash
-  gh pr edit <pr-url> --repo <pr-target> --title "<corrected title>"
+  gh pr edit <pr-url> --repo <pr-target> --title '<corrected title>'
   ```
 
-  Do not run `gh pr edit` automatically.
+  Apply the create command's literal-argument rule to the corrected title, including encoding embedded apostrophes as `'\''`. Do not run `gh pr edit` automatically.
 
 - **Checks pending, or the title check is not among those returned**: report that the title check has not reported yet and continue.
 
