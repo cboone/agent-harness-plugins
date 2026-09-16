@@ -171,7 +171,7 @@ Collect every statement of what the PR is supposed to do:
 
 - **External docs** the user supplied. Read URLs with whatever web fetch tool or document connector is available. If a link cannot be read (a login wall, no tool), ask the user to paste the relevant part.
 
-**Thin-requirements gate.** Stop and ask the user only if all of these are true: both the title and body are empty or only unfilled template text, no linked issue states substantive intent, and no external requirements document was successfully read. A substantive title can establish intent even when the body is empty. If a supplied external document cannot be read, ask the user to paste its relevant content and stop before reviewing code. Otherwise, say what was found and ask for a document or confirmation to infer intent from the commits and code. Ask before reading the code, so the review does not start from a guess.
+**Thin-requirements gate.** Stop and ask the user for a requirements document or permission to infer intent from the commits and code only if all of these are true: both the title and body are empty or only unfilled template text, no linked issue states substantive intent, and no external requirements document was successfully read. A substantive title can establish intent even when the body is empty. If a supplied external document cannot be read, ask the user to paste its relevant content and stop before reviewing code. When this gate does not apply, continue to prior-discussion gathering and review using the requirements sources already read; do not ask for more input.
 
 ### 4. Gather the Prior Discussion
 
