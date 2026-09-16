@@ -53,9 +53,13 @@ Dependabot owns its branches. Once anyone else pushes to one, Dependabot stops r
 
 ### Pacing and harness support
 
-Intervals adapt to the phase: shorter while checks are actively running, longer while waiting on Copilot, longest when nothing is moving. There is no wall-clock cap and no limit on ticks; the only budget is on Copilot rounds, described above. The watch ends on a terminal state, an escalation, or an exhausted round budget, and you can interrupt it at any point.
+Intervals adapt to the phase: shorter while checks are actively running, longer while waiting on Copilot, longest when nothing is moving. The only budget on a scheduler-backed watch is Copilot rounds. The watch ends on a terminal state, an escalation, or an exhausted round budget, and you can interrupt it at any point.
 
-On Claude Code the skill paces itself with the harness scheduler, which returns control between ticks and keeps the transcript small. `/loop /monitor-pr` is the recommended invocation there. Codex CLI and OpenCode have no scheduler, so the skill falls back to a blocking wait between polls inside a single turn. It works, but the whole watch accumulates in one turn's context.
+On Claude Code the skill paces itself with the harness scheduler, which returns control between ticks and keeps the transcript small. `/loop /monitor-pr` is the recommended invocation there.
+
+On Codex surfaces that offer scheduled tasks, the skill schedules the next tick in the current conversation and cancels that task once the watch reaches a terminal state or needs a decision. This is the preferred Codex path because every scheduled run is an actual continuation, not a request for the agent to remember to continue after replying.
+
+Codex CLI and OpenCode do not expose that scheduler. They run a foreground poll loop instead: after each wait, the same active turn takes a new snapshot and dispatches it. The default `--ticks 3` ends that foreground invocation with a resumable checkpoint, never a readiness claim; run the reported command again to continue. Use `--ticks unlimited` only when keeping the foreground session active is appropriate.
 
 Quiet ticks print a single line and are collapsed by the harness where it supports that. Only a real state change prints the full table.
 
@@ -65,6 +69,7 @@ Quiet ticks print a single line and are collapsed by the harness where it suppor
 /monitor-pr
 /monitor-pr 361
 /monitor-pr --interval 10m
+/monitor-pr --ticks 5
 /monitor-pr --rounds unlimited
 /monitor-pr --confirm-clean
 /monitor-pr --no-fix
@@ -74,6 +79,7 @@ Quiet ticks print a single line and are collapsed by the harness where it suppor
 | ------------------------- | -------------------------------------------------------------------------------------------------- |
 | `<pr-number>`             | Monitor a specific PR instead of the current branch's PR                                           |
 | `--interval <d>`          | Override adaptive pacing with a fixed wait                                                         |
+| `--ticks <n\|unlimited>`  | Bound foreground ticks without a scheduler; the default is 3                                       |
 | `--rounds <n\|unlimited>` | Change the Copilot round budget from its default of 10; `unlimited` commits to running until clean |
 | `--confirm-clean`         | Require two consecutive clean Copilot reviews rather than one                                      |
 | `--no-fix`                | Observe and report only: never push, invoke a fixing skill, or request a review                    |
@@ -92,7 +98,7 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 
 If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
-Three notes on these rules. **Flag position matters**: `Bash(gh api repos/*)` does not match `gh api --paginate --slurp repos/*`, because the flags come first, so the rule has to spell them out in order. **The repair paths need write rules**: step 6 stages, commits, and pushes fixes, and rebuilds generated trees, so `git add`, `git commit`, and the build scripts belong in the list alongside `git push`. The two `bin/build-*` entries are specific to this repository; substitute whatever build or codegen commands your own project's checks enforce. **`sleep` is only needed off Claude Code**: it covers the blocking-wait fallback used where no harness scheduler exists, and without it a long watch prompts on every tick.
+Three notes on these rules. **Flag position matters**: `Bash(gh api repos/*)` does not match `gh api --paginate --slurp repos/*`, because the flags come first, so the rule has to spell them out in order. **The repair paths need write rules**: step 6 stages, commits, and pushes fixes, and rebuilds generated trees, so `git add`, `git commit`, and the build scripts belong in the list alongside `git push`. The two `bin/build-*` entries are specific to this repository; substitute whatever build or codegen commands your own project's checks enforce. **`sleep` is only needed on a foreground path**: it pauses an active Codex CLI or OpenCode tick. It cannot revive a watch after the agent has returned a response.
 
 ## Examples
 

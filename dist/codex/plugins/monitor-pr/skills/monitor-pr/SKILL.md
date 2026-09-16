@@ -20,6 +20,7 @@ The user may provide these options inline:
 
 - **`<pr-number>`**: Monitor a specific PR instead of the current branch's PR (e.g., `/monitor-pr 361`)
 - **--interval `<duration>`**: Override adaptive pacing with a fixed wait (e.g., `--interval 10m`)
+- **--ticks `<n|unlimited>`**: On a surface without a scheduler, limit foreground polling to `n` ticks before producing a resumable checkpoint. The default is 3; `unlimited` keeps the foreground turn active until a terminal condition or escalation
 - **--rounds `<n|unlimited>`**: Change the Copilot round budget from its default of 10. `--rounds unlimited` commits to running until the PR is genuinely clean, however many rounds that takes, and never pauses to ask for more
 - **--confirm-clean**: Require two consecutive clean Copilot reviews rather than one. After the first clean review, request another explicitly and wait for it
 - **--no-fix**: Observe and report only. Never push, never invoke a fixing skill, never request a review
@@ -77,9 +78,13 @@ Also record whether `author.login` is `app/dependabot`, which switches on the ru
 
 ### 2. Establish the Wait Mechanism
 
-Prefer `ScheduleWakeup`, which returns control between ticks and keeps the transcript small. If it is unavailable or rejected, fall back to a blocking `sleep` between inline polls. That fallback is also the Codex CLI and OpenCode path, since neither harness has a scheduler.
+Choose exactly one mechanism and name it on the first tick:
 
-State which mechanism is in use on the first tick, so the transcript is unambiguous about how the watch is being paced.
+1. **Claude Code**: Prefer `ScheduleWakeup`, which returns control between ticks and keeps the transcript small.
+1. **Codex with scheduled tasks**: Create a task that resumes this conversation after the selected interval. Its prompt must say to resume this `monitor-pr` watch at step 3, retain the recorded PR identity and counters, and stop the task on a terminal report or escalation. A scheduled task is a new tick, not a delayed final response.
+1. **Codex CLI or OpenCode**: Run a foreground polling loop. A blocking `sleep` by itself is not a continuation mechanism: after every sleep, take the step 3 snapshot and dispatch it in the same active turn. Do not print a terminal response merely because a tick is waiting. Stop only on a terminal condition, an escalation, or the `--ticks` foreground limit.
+
+On Codex CLI and OpenCode, the default `--ticks 3` bounds the foreground loop. At that limit, report a **resumable checkpoint**, not a readiness verdict: include the PR URL, current head SHA, all four axes, counters, selected interval, and the exact `/monitor-pr` invocation to resume. `--ticks unlimited` removes this foreground limit, but the user may still interrupt the active session. Never claim that a blocking wait will resume after the agent has returned a final response.
 
 Adaptive intervals by phase, unless `--interval` overrides them:
 
@@ -91,7 +96,7 @@ Adaptive intervals by phase, unless `--interval` overrides them:
 
 When more than one row applies, take the shorter wait. The step 4 fallthrough can reach a tick with checks still running and a Copilot review outstanding at once, and the shorter interval is the one that governs.
 
-There is no wall-clock cap and no limit on ticks: waiting is free, so a watch may tick as many times as it needs to. The only budget is on Copilot rounds, per step 7c, and it counts completed reviews rather than elapsed time or poll count. The watch ends on a terminal state, an escalation, or an exhausted round budget, never on a timer. The user can interrupt at any point.
+On scheduler-backed surfaces there is no wall-clock cap or tick limit. The only budget is on Copilot rounds, per step 7c, and it counts completed reviews rather than elapsed time or poll count. On Codex CLI and OpenCode, `--ticks` additionally bounds an individual foreground invocation. The user can interrupt at any point.
 
 ### 3. Take a State Snapshot
 
@@ -309,7 +314,7 @@ Each review in a confirmation pair counts as its own round against the step 7c b
 
 ### 8. Terminal Report, Then Ask
 
-1. Stop the wait loop. On the `ScheduleWakeup` path, that means `ScheduleWakeup({stop: true})`.
+1. Stop the wait loop. On the `ScheduleWakeup` path, that means `ScheduleWakeup({stop: true})`; on the scheduled-task path, stop the task that resumes this conversation.
 1. Print the full status table: every check with its state, the Copilot verdict with the SHA it was rendered against, `mergeable`, `mergeStateStatus`, and `reviewDecision` labelled as informational.
 1. **If `mergeStateStatus` is `BLOCKED`, say so before offering to merge.** State that GitHub will refuse the merge until the branch protection requirement is met, and name it if `reviewDecision` identifies it (a required approving review being the usual case). Offering a merge without that caveat presents a PR as ready when it is not yet mergeable.
 1. Ask the user how to proceed: merge now (squash, merge, or rebase), enable auto-merge with `gh pr merge --auto`, or leave it as is.
@@ -318,7 +323,7 @@ Do not merge without asking, and do not enable auto-merge without asking.
 
 ### 9. Escalate
 
-When an escalation rule fires, stop the wait loop and report:
+When an escalation rule fires, stop the wait loop, including any scheduled task that resumes this conversation, and report:
 
 1. What is blocking, in one sentence.
 1. What was already tried, including any commits pushed during this watch.
@@ -328,7 +333,7 @@ Then tell the user that `/monitor-pr` resumes the watch once they have decided.
 
 ## Reporting Format
 
-Every tick prints one compact line. On the `ScheduleWakeup` path, pass `noop: true` on a tick where nothing changed, so quiet ticks collapse in the user's terminal:
+Every tick prints one compact line. On the `ScheduleWakeup` path, pass `noop: true` on a tick where nothing changed, so quiet ticks collapse in the user's terminal. On a scheduled task, report only a material state change; otherwise use the task's quiet-result mechanism if it has one.
 
 ```text
 ▸ 361 · checks 4/5 · copilot stale · mergeable CLEAN · review NONE · round 3/10
