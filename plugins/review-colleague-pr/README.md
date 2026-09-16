@@ -119,6 +119,7 @@ GitHub access is read-only. Git fetches refs, and step 2 may fast-forward the ch
       "Bash(gh api user *)",
       "Bash(gh issue view *)",
       "Bash(gh pr checks *)",
+      "Bash(gh pr diff *)",
       "Bash(gh pr view*)",
       "Bash(git branch --show-current)",
       "Bash(git diff *)",
