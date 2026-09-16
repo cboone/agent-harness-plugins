@@ -138,7 +138,7 @@ Every plugin with a hard external dependency must say so. Two forms are in use, 
 
 ## Versioning
 
-Each plugin's `.claude-plugin/plugin.json` is the sole version source. Marketplace entries are registration metadata and contain no version fields.
+Each plugin's `.claude-plugin/plugin.json` is the sole version source. If a plugin also has `.codex-plugin/plugin.json`, mirror that version there because validation requires the two manifests to agree. Marketplace entries are registration metadata and contain no version fields.
 
 **Individual plugin `version`**:
 

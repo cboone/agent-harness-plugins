@@ -49,48 +49,62 @@ jobs:
         id: changes
         run: |
           latest_tag="$(git tag --list 'catalog-*' --sort=-creatordate | head -1)"
-          if [[ -z "${latest_tag}" ]] || [[ "${latest_tag}" == "catalog-${GITHUB_SHA}" ]] || ! git diff --quiet "${latest_tag}" -- plugins/ .claude-plugin/marketplace.json; then
+          # Include current and previous registrations so removed sources count.
+          catalogs="$(cat .claude-plugin/marketplace.json)"
+          if [[ -n "${latest_tag}" ]]; then
+            catalogs+=$'\n'
+            catalogs+="$(git show "${latest_tag}:.claude-plugin/marketplace.json")"
+          fi
+          sources="$(printf '%s\n' "${catalogs}" | jq -sr '
+            [.[].plugins[].source | if type == "string" then .
+              elif type == "object" then .path // empty else empty end
+              | select(type == "string" and startswith("./"))] | unique[]')"
+          catalog_paths=(.claude-plugin/marketplace.json)
+          while IFS= read -r source; do
+            [[ -z "${source}" ]] && continue
+            catalog_paths+=(":(literal)${source%/}/")
+          done <<< "${sources}"
+          if [[ -z "${latest_tag}" ]] || [[ "${latest_tag}" == "catalog-${GITHUB_SHA}" ]] || ! git diff --quiet "${latest_tag}" -- "${catalog_paths[@]}"; then
             if [[ -n "${latest_tag}" && "${latest_tag}" != "catalog-${GITHUB_SHA}" ]]; then
-              changed_plugins="$(git diff --name-only "${latest_tag}" -- plugins/ | awk -F/ 'NF >= 3 && $1 == "plugins" { print $2 }' | sort -u)"
-              while IFS= read -r plugin; do
-                [[ -z "${plugin}" ]] && continue
-                manifest="plugins/${plugin}/.claude-plugin/plugin.json"
+              while IFS= read -r source; do
+                [[ -z "${source}" ]] && continue
+                git diff --quiet "${latest_tag}" -- ":(literal)${source%/}/" && continue
+                manifest="${source#./}/.claude-plugin/plugin.json"
                 if ! git cat-file -e "${latest_tag}:${manifest}" 2>/dev/null || [[ ! -f "${manifest}" ]]; then
                   continue
                 fi
                 previous_version="$(git show "${latest_tag}:${manifest}" 2>/dev/null | jq -r '.version // empty')"
                 current_version="$(jq -r '.version // empty' "${manifest}")"
                 [[ -z "${previous_version}" ]] && continue
-                IFS=. read -r previous_major previous_minor previous_patch <<< "${previous_version}"
-                IFS=. read -r current_major current_minor current_patch <<< "${current_version}"
-                previous_key="$(printf '%09d%09d%09d' "${previous_major}" "${previous_minor}" "${previous_patch}")"
-                current_key="$(printf '%09d%09d%09d' "${current_major}" "${current_minor}" "${current_patch}")"
-                if [[ "${current_key}" < "${previous_key}" || "${current_key}" == "${previous_key}" ]]; then
-                  echo "::error::${plugin} changed without a forward manifest version bump (${previous_version} -> ${current_version})."
+                # Digit length and lexical order compare unbounded integers.
+                if ! jq -en --arg current "${current_version}" --arg previous "${previous_version}" \
+                  'def key: split(".") | map([length, .]); ($current | key) > ($previous | key)' > /dev/null; then
+                  echo "::error::${source} changed without a forward manifest version bump (${previous_version} -> ${current_version})."
                   exit 1
                 fi
-              done <<< "${changed_plugins}"
+              done <<< "${sources}"
             fi
-            echo "changed=true" >> "${GITHUB_OUTPUT}"
+            {
+              echo "changed=true"
+              echo "tag=catalog-${GITHUB_SHA}"
+              echo "commit=${GITHUB_SHA}"
+            } >> "${GITHUB_OUTPUT}"
             echo "Plugin or catalog metadata changed since ${latest_tag:-the first catalog release}."
           else
-            echo "changed=false" >> "${GITHUB_OUTPUT}"
-            echo "No plugin or catalog metadata changes since ${latest_tag}; skipping release."
+            {
+              echo "changed=false"
+              echo "tag=${latest_tag}"
+              echo "commit=$(git rev-list -1 "${latest_tag}")"
+            } >> "${GITHUB_OUTPUT}"
+            echo "No new catalog inputs; checking publication recovery for ${latest_tag}."
           fi
 
-      - name: Set catalog tag
-        if: steps.changes.outputs.changed == 'true'
-        id: tag
-        run: |
-          tag="catalog-${GITHUB_SHA}"
-          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
-          echo "Catalog tag: ${tag}"
-
       - name: Check whether tag and release already exist
-        if: steps.changes.outputs.changed == 'true'
         id: check
         env:
-          TAG: ${{ steps.tag.outputs.tag }}
+          TAG: ${{ steps.changes.outputs.tag }}
+          COMMIT: ${{ steps.changes.outputs.commit }}
+          CHANGED: ${{ steps.changes.outputs.changed }}
         run: |
           function release_exists() {
             local tag="${1}"
@@ -115,11 +129,15 @@ jobs:
           fi
 
           if [[ -z "${remote_commit}" ]]; then
+            if [[ "${CHANGED}" != "true" ]]; then
+              echo "::error::Recovery tag ${TAG} is missing on origin." >&2
+              exit 1
+            fi
             echo "tag_exists=false" >> "${GITHUB_OUTPUT}"
-          elif [[ "${remote_commit}" == "${GITHUB_SHA}" ]]; then
+          elif [[ "${remote_commit}" == "${COMMIT}" ]]; then
             echo "tag_exists=true" >> "${GITHUB_OUTPUT}"
           else
-            echo "::error::Catalog tag ${TAG} exists at ${remote_commit}, not ${GITHUB_SHA}." >&2
+            echo "::error::Catalog tag ${TAG} exists at ${remote_commit}, not ${COMMIT}." >&2
             exit 1
           fi
 
@@ -140,7 +158,7 @@ jobs:
       - name: Create and push annotated tag
         if: steps.changes.outputs.changed == 'true' && steps.check.outputs.tag_exists == 'false'
         env:
-          TAG: ${{ steps.tag.outputs.tag }}
+          TAG: ${{ steps.changes.outputs.tag }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -148,9 +166,9 @@ jobs:
           git push origin "refs/tags/${TAG}"
 
       - name: Create GitHub Release
-        if: steps.changes.outputs.changed == 'true' && steps.check.outputs.release_exists == 'false'
+        if: steps.check.outputs.release_exists == 'false'
         env:
-          TAG: ${{ steps.tag.outputs.tag }}
+          TAG: ${{ steps.changes.outputs.tag }}
         run: |
           gh release create "${TAG}" \
             --title "Marketplace ${TAG}" \

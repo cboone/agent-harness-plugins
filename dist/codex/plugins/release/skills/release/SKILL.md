@@ -32,7 +32,7 @@ git tag --list 'v*' --sort=-version:refname
 date +%Y-%m-%d
 ```
 
-If the working tree is dirty, ask the user to commit or stash their changes and stop. If this is not a Git repository, report the error and stop.
+If this is not a Git repository, report the error and stop. Record existing staged and unstaged changes before editing. After detecting the project type, handle them according to its release flow.
 
 ### 2. Detect Project Type
 
@@ -51,48 +51,38 @@ For a marketplace, each plugin manifest is the sole SemVer source. Marketplace e
 
 First determine whether a workflow publishes releases after a push to the default branch. A workflow is push-to-main automation only when it creates `catalog-${GITHUB_SHA}` tags, invokes `gh release create`, and has a `push` trigger limited to the default branch. A manually dispatched, scheduled, pull-request-only, or differently branched workflow is not push-to-main automation. A tag-triggered workflow is separate: it needs a locally created catalog tag to run.
 
-Apply the `--dry-run` gate before any build or validator that can modify files. In a dry run, inspect manifests and workflow definitions only, report the changed manifests, detected automation, and whether the catalog comparison would release, then stop without modifying or publishing anything.
-
-Run repository-specific validators only when they exist. Do not assume every marketplace has this repository's scripts or generated directories. Run portable validation in every marketplace:
+Extract registered local plugin paths from string sources and object sources with a `path` field. Remote sources without a local path are registration metadata, not local manifests to read. Local marketplace sources begin with `./`; do not interpret a remote repository or package source as a filesystem path:
 
 ```bash
-jq -e 'all(.plugins[]; has("version") | not) and (.metadata | has("version") | not)' .claude-plugin/marketplace.json
-jq -r '.plugins[].source' .claude-plugin/marketplace.json | while IFS= read -r source; do
-  jq -e '.version | strings | test("^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$")' "${source}/.claude-plugin/plugin.json"
-done
+jq -r '.plugins[].source | if type == "string" then . elif type == "object" then .path // empty else empty end | select(type == "string" and startswith("./"))' .claude-plugin/marketplace.json
+git tag --list 'catalog-*' --sort=-creatordate
 ```
 
-When `bin/validate-json`, `bin/validate-plugins`, and `make build` are present, run the build before validation so generated-tree freshness checks see synchronized output. Build a status path list only from generated directories that exist. If the build leaves generated changes, stop and require those changes to be reviewed and committed before tagging or publishing:
+Use the latest catalog tag as the comparison base. If it exists, read its marketplace with `git show` and include both previous and current registered local paths in the catalog comparison so deleted plugins count. Compare the canonical marketplace file and these plugin directories using literal Git pathspecs. Repository-level files such as `plugins/AGENTS.md` and `plugins/CLAUDE.md` are outside registered plugin directories and do not trigger catalog publication. Root documentation alone creates no new catalog release; documentation inside a registered plugin is plugin content.
 
-```bash
-make build
-bin/validate-json
-bin/validate-plugins
-git status --porcelain
-```
+For each current local plugin, inspect its content changes and manifest relative to the previous catalog tag, including staged, unstaged, and untracked changes when preparing a release. Use `git cat-file -e` before reading a prior manifest with `git show`. Analyze the plugin's conventional commits and actual changes with `./references/conventional-commits.md`. Classify the required bump: patch for wording or fixes, minor for new capabilities, and major for incompatible removal or restructuring. `--major`, `--minor`, and `--patch` override this recommendation for each changed existing plugin. Never bump unchanged plugins or restore duplicate marketplace versions.
 
-Identify the latest catalog release and compare its catalog inputs with `HEAD`. Guard the first-release case rather than passing an empty revision to Git:
+Prepare a per-plugin version table with released, current, and proposed versions. Preserve an already prepared forward bump when it meets the required level. Otherwise propose the required next version from the released version, without decreasing the current version. If the requested level cannot satisfy both constraints, ask the user to choose a forward version. New plugins start at `1.0.0`. With no catalog tag, treat this as a first release, validate existing manifest versions, and do not invent a prior Git revision or require bumps from an absent baseline.
 
-```bash
-latest_tag="$(git tag --list 'catalog-*' --sort=-creatordate | head -1)"
-if [[ -z "${latest_tag}" ]] || ! git diff --quiet "${latest_tag}" -- plugins/ .claude-plugin/marketplace.json; then
-  catalog_changed=true
-else
-  catalog_changed=false
-fi
-```
+Apply the `--dry-run` gate before editing, building, staging, committing, tagging, pushing, or creating a release. In a dry run, report the version table, files that would change, detected automation, catalog comparison, and any pending recovery of an existing tag's release, then stop without modifying anything.
 
-For every plugin directory with content changes since `latest_tag`, compare the current manifest with its previous manifest. When there is no `latest_tag`, skip that previous-manifest comparison because there is no prior release input. Otherwise require a forward version bump before release: patch for wording or prompt changes, minor for new capabilities, and major for incompatible removal or restructuring.
+Existing source changes within the selected plugins can be included in release preparation. Preserve unrelated changes and the user's staging choices; do not silently commit them. If changes outside release inputs are required, or a file mixes release and unrelated edits, stop and ask how to separate them.
 
-If `catalog_changed` is false, report that there is no marketplace release. Documentation-only changes do not create one. If the latest catalog tag is already `catalog-<full-HEAD-SHA>`, do not treat the clean comparison as a no-op: check whether the tag and GitHub Release exist independently so an interrupted publication can be recovered.
+Apply the proposed manifest bumps and update any release notes required by the project's conventions. Regenerate mirrors only when the repository exposes a build target for them; do not assume every marketplace has this repository's Makefile or generated directories. Run `make build` only when that target exists. Run `bin/validate-json` and `bin/validate-plugins` only when each script exists and is executable, after the build. Validate portable marketplace metadata with `jq` and each local manifest's `MAJOR.MINOR.PATCH` version even when repository validators are absent. Run the project's relevant lint and tests. Generated changes belong in the same release commit as their canonical manifest changes.
 
-If push-to-main automation exists, report that it will tag the landing commit as `catalog-<full-commit-SHA>` and publish its GitHub Release. Do not create a local catalog tag.
+Present the complete release diff, per-plugin version table, validation results, files to stage, and publication route for explicit approval before committing or publishing. After approval, stage only reviewed release files and create a GPG-signed Conventional Commit release commit with `git commit -S`. If all required bumps and source changes were already committed and nothing was prepared, do not create an empty release commit; report the existing release input commit instead. Compute the full release SHA after the commit, so a local catalog tag identifies the prepared release.
 
-Otherwise, propose the exact `catalog-<full-HEAD-SHA>` tag for explicit user approval. Create and push that annotated tag after approval. If a tag-triggered workflow exists, let it publish the release. If no automation exists, offer `gh release create --verify-tag` after the tag is pushed.
+If push-to-main automation exists, publish the reviewed release commit only through the project's approved branch or PR flow. A feature-branch push does not publish a catalog release: automation tags the eventual landing commit as `catalog-<full-commit-SHA>` and creates its GitHub Release. Do not create a local catalog tag on this route.
+
+Without push-to-main automation, propose the exact `catalog-<full-release-commit-SHA>` tag after the signed commit exists and obtain explicit approval for tag publication. Create a signed annotated tag, then push the approved commit and exact tag. If a tag-triggered workflow exists, let it publish the release. Otherwise check whether `gh` exists and offer `gh release create --verify-tag` after the tag is pushed. Never overwrite or retarget a tag.
+
+When catalog inputs have not changed, create no new tag or release commit. Independently check publication of the latest existing catalog tag, even if a later documentation-only commit is now `HEAD`. Use `gh release view <latest-catalog-tag>` to verify its GitHub Release; distinguish a missing release from an authentication or API error. If the tag exists remotely but its release is missing, recover that release for the existing tag through a supported workflow rerun or an explicitly approved `gh release create --verify-tag`. Never substitute the later documentation commit's SHA. Report when neither a new release nor recovery is needed.
 
 ### 4. SemVer Releases
 
 For Go CLI, Go library, and generic projects, follow the remaining release flow using the references below. Before publication, inspect workflow triggers to determine whether an exact `v*` tag starts a release workflow; only such a workflow owns GitHub Release creation.
+
+If the working tree is dirty on this SemVer route, ask the user to commit or stash their changes and stop.
 
 Find the latest SemVer tag. When none exists, use `v0.0.0` only as the base for calculating the next version, not as a Git revision:
 

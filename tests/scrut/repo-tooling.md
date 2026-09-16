@@ -14,15 +14,143 @@ All plugin validations passed.
 version-state-clean
 ```
 
-## Release automation uses immutable tags and ignores documentation-only changes
+## Validator rejects forbidden version state
 
-The workflow compares only plugin sources and canonical marketplace metadata
-with the latest catalog tag. A changed catalog release uses the landing commit's
-full SHA, so aggregate-version collisions cannot occur.
+Each case starts from a generated copy of the repository, then mutates one
+surface. This exercises the validator itself instead of duplicating its rules
+with a separate `jq` check.
 
 ```scrut
-$ cd "${REPO_ROOT}" && grep -q "git diff --quiet.*plugins/ .claude-plugin/marketplace.json" .github/workflows/release.yml && grep -q 'tag="catalog-${GITHUB_SHA}"' .github/workflows/release.yml && echo catalog-release-inputs-checked
-catalog-release-inputs-checked
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" valid
+All plugin validations passed.
+```
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" leading-zero 2>&1
+::error::Plugin 'release': plugin.json version '01.2.3' must be MAJOR.MINOR.PATCH
+1 plugin validation error(s) found.
+[1]
+```
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" metadata-version 2>&1
+::error::Marketplace metadata must not contain a version
+1 plugin validation error(s) found.
+[1]
+```
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" entry-version 2>&1
+::error::Marketplace entry 'add-cobra-version' must not contain a version
+1 plugin validation error(s) found.
+[1]
+```
+
+## Release automation uses immutable tags and ignores documentation-only changes
+
+The fixture executes the workflow's actual shell steps against isolated Git
+history, with local object sources, custom source directories, and remote
+registrations. It also interprets the check and publication step conditions, so
+an incorrect condition cannot hide a missing recovery attempt.
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" first-release
+changed=true target=current
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" plugin-change
+changed=true target=current
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" unchanged
+changed=false target=previous
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" root-docs
+changed=false target=previous
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" catalog-only
+changed=true target=current
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" deleted-plugin
+changed=true target=current
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" object-source
+changed=true target=current
+```
+
+## Version comparison accepts unbounded numeric components
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" large-version
+changed=true target=current
+```
+
+## Publication recovers an earlier tag after a documentation commit
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" tag-recovery
+changed=false target=previous
+release-created-for-target=true
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" same-head-recovery
+changed=true target=current
+release-created-for-target=true
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" existing-release
+changed=false target=previous
+release-created-for-target=false
+```
+
+## Changed plugin content requires a forward version bump
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" missing-bump 2>&1
+::error::./custom/sample changed without a forward manifest version bump (1.0.0 -> 1.0.0).
+[1]
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" regression 2>&1
+::error::./custom/sample changed without a forward manifest version bump (1.0.0 -> 0.9.0).
+[1]
+```
+
+## Recovery errors do not silently create another release
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" api-error 2>&1
+changed=false target=previous
+::error::Failed to determine whether GitHub Release catalog-* exists. (glob)
+HTTP 403
+[2]
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" tag-collision 2>&1
+changed=false target=previous
+::error::Catalog tag catalog-* exists at *, not *. (glob)
+[1]
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" missing-remote-tag 2>&1
+changed=false target=previous
+::error::Recovery tag catalog-* is missing on origin. (glob)
+[1]
 ```
 
 ## The shell script list excludes generated mirrors
