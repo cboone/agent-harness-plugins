@@ -16,7 +16,7 @@ function mutate_catalog() {
 }
 
 function main() {
-  local scenario="${1}" catalog
+  local scenario="${1}"
   FIXTURE_ROOT="$(mktemp -d)"
   trap cleanup EXIT
 
