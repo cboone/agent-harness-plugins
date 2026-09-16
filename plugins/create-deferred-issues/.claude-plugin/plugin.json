@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Scan the session, branch, and pull request for concerns set aside as out of scope, propose them as one batch, and file the approved ones as GitHub issues.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["deferrals", "follow-ups", "gh", "github", "issues"],
+  "license": "MIT",
+  "name": "create-deferred-issues",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
