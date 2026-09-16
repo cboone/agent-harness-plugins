@@ -42,7 +42,7 @@ The skill follows a set of principles meant to produce a fair review rather than
 - The skill only fetches Git refs. It leaves the branch, index, and working tree unchanged and never commits or pushes.
 - Run tests, builds, linters, or installs (it reads CI status instead)
 
-The skill reads the current PR from fetched Git tree and blob objects. It does not depend on the checkout being current or clean, and it leaves local files and refs unchanged except for fetched refs and `FETCH_HEAD`. A shallow checkout stops because its history can omit part of the diff. For merged PRs, and for unmerged PRs whose head is already in the base, it uses GitHub's retained PR diff.
+The skill reads reviewable PR files from fetched Git tree and blob objects. It first lists changed paths and excludes secret-bearing files, lockfiles, vendored code, and files the base branch marks as generated before retrieving patches or blobs. It does not depend on the checkout being current or clean, and it leaves local files and refs unchanged except for fetched refs and `FETCH_HEAD`. A shallow checkout stops because its history can omit part of the diff. For merged PRs, and for unmerged PRs whose head is already in the base, it uses GitHub's retained per-file patches.
 
 ## Usage
 
@@ -119,7 +119,6 @@ GitHub access is read-only. Git fetches refs only; it does not update the branch
       "Bash(gh api user *)",
       "Bash(gh issue view *)",
       "Bash(gh pr checks *)",
-      "Bash(gh pr diff *)",
       "Bash(gh pr view*)",
       "Bash(git branch --show-current)",
       "Bash(git diff *)",
