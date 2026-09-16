@@ -21,7 +21,7 @@ The following SPSC state table describes one bounded transfer. It requires one p
 | State       | Owner    | Producer action                        | Consumer action                | Synchronization and full behavior                                               |
 | ----------- | -------- | -------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------- |
 | `free`      | Producer | Fill one block                         | None                           | Reuse only after consumer acknowledgment                                        |
-| `published` | Consumer | Release-publish the block index        | Acquire-observe the index      | If no `free` block exists, apply the documented drop, coalesce, or defer policy |
+| `published` | Consumer | Release-publish ownership state        | Acquire-observe that state     | If no `free` block exists, apply the documented drop, coalesce, or defer policy |
 | `consuming` | Consumer | Do not overwrite                       | Read the block                 | Work is bounded by the block's fixed capacity                                   |
 | `returned`  | Producer | Acquire the acknowledgment, then reuse | Release-publish acknowledgment | The acknowledgment is the reverse edge that authorizes reuse                    |
 
@@ -47,9 +47,11 @@ Validate block reuse, overwrite attempts, a stalled consumer, bounded drain batc
 
 ### Example: Three Display Blocks
 
-One callback producer and one UI consumer own three fixed 256-sample blocks. The producer fills a `free` block, release-publishes its index, and never touches it again until it acquire-observes the consumer's returned index. The consumer acquire-observes one published index, copies at most 256 samples, then release-publishes that index as returned. The producer examines at most one returned index and publishes at most one block per callback.
+One callback producer and one UI consumer own three fixed 256-sample blocks. Use the Rust `AtomicU8` per-slot handshake from [memory ordering](memory-ordering.md): each block starts in state `0` (producer-owned), the producer release-stores `1` after filling it, and the consumer acquire-observes `1`, copies at most 256 samples, then release-stores `2` to that same atomic. The producer acquire-observes `2` and stores `0` before rewriting that block. The callback examines at most one block's state and publishes at most one block; the UI examines at most one block and returns it after copying. Each participant advances its own local round-robin block selection after a successful transfer. A state that does not permit that participant's next action leaves its selection unchanged until a later callback or UI poll. Neither participant retries in the same call.
 
-When all blocks are consumer-owned, the callback increments an atomic dropped-frame counter and retains the previously published display value. It neither retries nor posts a notification. The UI polls the counter. A test trace holds all three blocks, verifies that a fourth callback does not overwrite one, returns a block, and verifies that only the returned block becomes reusable. This establishes the stated SPSC transfer and bounded overflow policy; a worker producer or a reference-counted payload would require a different protocol and cost audit.
+The consumer's own return store prevents a later load from reading the old publication of that block, by the same-atomic write-read coherence proof in the linked example. A reused block index in a separate publication atomic does not provide this handshake. A slot remains consumer-owned from publication through completion of the copy; no payload reference escapes that copy.
+
+When the selected block is consumer-owned, including when all blocks are consumer-owned, the callback increments an atomic dropped-frame counter and retains the previously published display value. It neither scans other blocks nor posts a notification. The counter requires a target with the chosen atomic width available and lock-free; audit the increment operation's progress separately. The UI polls the counter. A test trace holds all three blocks, verifies that a fourth callback does not overwrite one, returns the selected block, and verifies that only that returned block becomes reusable. This establishes the stated SPSC transfer and bounded overflow policy; a worker producer or a reference-counted payload would require a different protocol and cost audit.
 
 ## Sources
 

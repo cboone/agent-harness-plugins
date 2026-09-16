@@ -26,7 +26,7 @@ An atomic peak meter that stores only the current numeric value can use relaxed 
 
 ### Payload Publication
 
-For a fixed owned block, the producer writes the block, then release-stores its index. The consumer acquire-loads the index and reads that block only after observing the published index. The consumer release-publishes an acknowledgment after it finishes. The producer acquire-observes the acknowledgment before overwriting the block. Explain which index values mean each state and how wraparound remains unambiguous.
+For a fixed owned block, the producer writes the block, then release-publishes an ownership state or an unambiguous sequence-bearing handle. The consumer acquire-observes that publication before reading the block and release-publishes an acknowledgment after it finishes. The producer acquire-observes the acknowledgment before overwriting the block. A reused bare index does not identify a new transfer. Use a same-atomic handshake such as the slot-state example below, or prove the handle's generation and wraparound rules.
 
 ### SPSC Reuse
 
@@ -35,6 +35,8 @@ An owner-local read of its own cursor can be relaxed when the protocol permits i
 ### Example: Rust `AtomicU8` Slot States
 
 This example uses Rust 1.86 and a target with `AtomicU8` support, exactly one producer, and exactly one consumer. Three fixed `[f32; 256]` slots have an atomic state: `0` is producer-owned, `1` is consumer-owned, and `2` is returned. The producer writes samples only while state is `0`, then release-stores `1`. The consumer acquire-loads `1` before reading, copies the array, and release-stores `2`. After an acquire load observes `2`, the sole producer calls `state.store(0, Ordering::Relaxed)` and only then overwrites the slot. The acquire load synchronizes with the consumer's return; the relaxed store records the producer-owned state without publishing payload. The consumer must not access the slot again until it acquire-observes a new release-stored `1`. Each slot's state is separate, so no wrapping cursor interpretation is needed.
+
+The handshake uses the same atomic for publication and return. Under Rust's documented C++20 atomic rules, the consumer's store of `2` happens before its next load of that state. Write-read coherence requires that load to read that store or a later modification, so it cannot read the preceding cycle's `1`. Similarly, after the producer stores `0` and publishes `1`, its next load cannot read the preceding cycle's `2`. Each side therefore observes the other side's next transition before reusing its access permission. Repeated state values alone do not create an ABA hazard here; putting the return acknowledgment in a different atomic would require another proof. See [C++20 write-read coherence](https://timsong-cpp.github.io/cppwp/n4868/intro.multithread#intro.races-18).
 
 A peak meter is separate and requires a target that provides `AtomicU32` with Rust's lock-free guarantee; `AtomicU8` support alone does not establish that requirement. On such a target, `AtomicU32` stores `f32::to_bits()` with `Relaxed`, and the UI can miss intermediate peaks because its value publishes no ordinary payload. The slot states cannot use that rule because they authorize ordinary-array access. The example assumes the slot array outlives both participants and that no references to a slot escape the consumer's copy. It establishes the stated ownership edges, not wait-free callback completion or a proof for another language.
 
