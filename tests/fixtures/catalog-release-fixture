@@ -93,7 +93,7 @@ function main() {
   git remote add origin "${root}/remote"
   mkdir -p .claude-plugin "${source}/.claude-plugin" plugins
   jq -n --arg source "${source}" \
-    '{name:"sample",metadata:{},plugins:[{name:"sample",source:$source},{name:"remote",source:{source:"github",repo:"sample/remote"}}]}' > .claude-plugin/marketplace.json
+    '{name:"sample",metadata:{},plugins:[{name:"sample",source:$source}]}' > .claude-plugin/marketplace.json
   jq -n --arg version "${previous}" '{version:$version}' > "${source}/.claude-plugin/plugin.json"
   printf 'sample\n' > "${source}/README.md"
   git add .
