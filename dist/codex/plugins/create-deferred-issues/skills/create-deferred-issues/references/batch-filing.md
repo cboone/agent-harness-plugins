@@ -79,7 +79,9 @@ Each step below is its own tool call, made in order.
 
 1. Record the issue number, full URL, title, host, repository, and destination visibility for the local report and parent handoff. Include it in the summary comment only when the receiving repository's visibility permits it.
 
-**If `gh issue create` fails on a label**, list the target's newest issues (`gh issue list --repo <target> --state all --limit 20 --json number,title,createdAt`) to confirm nothing was created. Then generate a new unique body-file path, write the same body there, retry without `--label`, and remove that retry file in its own call. The original path was already cleaned up by the normal cleanup step. Report which labels were skipped.
+**If `gh issue create` fails**, inspect the target's newest issues with `gh issue list --repo <target> --state all --limit 20 --json number,title,body,url,createdAt` and read plausible matches. An error can occur after GitHub accepted creation. If a matching issue was created by this attempt, verify and record its existing URL rather than creating another. If a match cannot be attributed to this attempt, return the concern to duplicate review. If the lookup fails or absence cannot be established, leave the item failed and do not retry automatically.
+
+**For a label failure with no matching creation**, refresh the destination's labels and return the item to the proposal step with the proposed label change. Do not automatically remove approved labels and file. A retry requires renewed approval of the revised proposal and the main workflow's fresh pre-write checks. After approval, generate a new unique body-file path, write the approved body, create in a separate call using the approved labels, then remove the retry file in its own call. The original file was cleaned up by the normal sequence.
 
 ## Summary Comment
 

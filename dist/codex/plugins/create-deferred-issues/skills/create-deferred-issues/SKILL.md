@@ -128,6 +128,8 @@ The last line reads like `branch: Created from <name>`. Strip any `refs/heads/`,
 1. `git ls-remote --heads origin <name>` prints a line. The command exits 0 either way, so judge by its output.
 1. `git merge-base --is-ancestor origin/<name> origin/<default-branch>` exits non-zero, meaning the parent branch has not already merged. Fetch both first with `git fetch origin <default-branch> <name> --quiet`.
 
+If all three checks pass, fetch only the selected parent with `git fetch origin refs/heads/<name> --quiet`, then immediately record `git rev-parse FETCH_HEAD` as `<base-sha>` before any later fetch. Never derive the selected base from the preceding multi-ref fetch.
+
 For this no-PR fallback, otherwise the base is the default branch and its repository is origin. Fetch the selected base from its owning repository, then immediately record the fetched commit:
 
 ```bash
@@ -323,10 +325,10 @@ Reply with `file all`, `file 1 2`, `drop 2`, `edit 2: <change>`, or `none`.
 
 Rules for the proposal and for reading the reply:
 
-- **Third-party targets** are marked on their item. `file all` never covers one; it is filed only when the reply names its number.
+- **Third-party and ownership-unverified targets** are marked on their item. `file all` never covers either; each is filed only when the reply names its number. Without an origin ownership baseline, keep ownership unverified unless the session establishes that the destination belongs to the user.
 - **Ask in plain text**, not through a structured multiple-choice question. A batch can exceed the options such a question allows, and edits need free text.
 - **Numbers are fixed** for the whole exchange. After `drop 2`, item 3 is still item 3.
-- **An unambiguous approval of the whole batch** ("yes", "file them") counts as `file all`.
+- **An unambiguous approval of the whole batch** ("yes", "file them") counts as `file all`, with the same exclusion for third-party and ownership-unverified targets.
 - **Apply drops and edits.** Before filing, revalidate any item whose destination, concern, title, proposed body, label selection, or other publishable content changed, including an unresolved target the user supplied. Repeat the affected step 3 checks: target eligibility and third-party classification, destination label lookup and selection, duplicate checks, source-to-destination visibility, and the status-label exclusion. Source identities stay attached to their original repositories; never replace them with the new destination. Reuse source timeline reads only when the sources are unchanged, and match them against the revised concern. Treat the revalidated item as a new proposal: it needs approval again whenever any check changes the content, labels, disclosure, or duplicate status.
 - **Honor approval of the revised item.** If the reply only edits, or is unclear about which items it approves, present the checked revision and ask again. An edit with approval may proceed only if revalidation leaves the approved content and destination intact. If checks add a duplicate warning, change labels or source disclosure, or otherwise materially change the item, re-present it for approval. An already-tracked or unfileable item is reported in the corresponding list rather than filed. Preserve its number if the user revises it again. Reapply approval by number to third-party destinations; whole-batch approval does not cover them.
 - **`none`** files nothing. Report `none approved`.
