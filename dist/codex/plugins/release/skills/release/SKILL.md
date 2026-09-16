@@ -51,7 +51,7 @@ For a marketplace, each plugin manifest is the sole SemVer source. Marketplace e
 
 First determine whether a workflow publishes releases after a push to the default branch. A workflow is push-to-main automation only when it creates `catalog-${GITHUB_SHA}` tags, invokes `gh release create`, and has a `push` trigger limited to the default branch. A manually dispatched, scheduled, pull-request-only, or differently branched workflow is not push-to-main automation. A tag-triggered workflow is separate: it needs a locally created catalog tag to run.
 
-Extract registered local plugin paths from string sources beginning with `./`. Other source forms are registration metadata, not local manifests to read. Do not interpret a remote repository or package source as a filesystem path:
+Registered marketplace sources must be strings beginning with `./`; each identifies a local plugin directory. Reject other source forms because repository validation does not support them. Do not interpret a remote repository or package source as a filesystem path:
 
 ```bash
 jq -r '.plugins[].source | select(type == "string" and startswith("./"))' .claude-plugin/marketplace.json
