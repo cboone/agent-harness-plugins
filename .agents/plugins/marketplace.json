@@ -156,6 +156,19 @@
         "name": "Christopher Boone"
       },
       "category": "issues-and-worktrees",
+      "description": "Scan the session, branch, and pull request for concerns set aside as out of scope, propose them as one batch, and file the approved ones as GitHub issues.",
+      "homepage": "https://github.com/cboone/agent-harness-plugins",
+      "keywords": ["deferrals", "follow-ups", "gh", "github", "issues"],
+      "license": "MIT",
+      "name": "create-deferred-issues",
+      "repository": "https://github.com/cboone/agent-harness-plugins",
+      "source": "./dist/codex/plugins/create-deferred-issues"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "issues-and-worktrees",
       "description": "Create GitHub issues using tmpfiles to avoid permission prompts from large multiline Bash arguments.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["gh", "github", "issues", "workflow"],
@@ -364,7 +377,7 @@
         "name": "Christopher Boone"
       },
       "category": "git",
-      "description": "Prepare a versioned release: update release files, create a release commit, tag locally, and optionally publish a GitHub Release.",
+      "description": "Prepare a versioned release or Claude Code marketplace catalog state tag: update release files, create a release commit, tag locally, and optionally publish a GitHub Release.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["catalog", "changelog", "conventional-commits", "gh", "git", "github-release", "marketplace", "release", "semver", "tags", "versioning"],
       "license": "MIT",
