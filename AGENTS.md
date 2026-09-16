@@ -1,227 +1,53 @@
-# Claude Code Plugins
+# Agent Harness Plugins
 
 ## Project overview
 
-This repository is the canonical source for a collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugins (skills and hooks). Committed mirrors under `dist/codex/` and `dist/opencode/` make the same plugins work in [Codex CLI](https://developers.openai.com/codex/cli) and [OpenCode](https://opencode.ai). User-facing details live in `README.md`.
+This is the canonical source for Claude Code plugins (skills and hooks), with committed generated mirrors for Codex CLI and OpenCode. See [README.md](README.md) for installation and the catalog.
 
-## Where to find things
+## Critical constraints
 
-### Plugin sources and generated mirrors
+- Edit canonical sources in `plugins/<name>/`. Never hand-edit `dist/` or `.agents/`; regenerate with `make build` and commit the results when source changes affect them.
+- `.claude-plugin/marketplace.json` is the catalog of record. Each plugin's `.claude-plugin/plugin.json` is its sole version source. New plugins start at `1.0.0`; wording/fixes are patch changes, new capabilities are minor changes, and breaking changes are major changes.
+- After merging, rebasing or before creating a PR, use the repository's [check-versions skill](.claude/skills/check-versions/SKILL.md).
+- Root and plugin README descriptions match the catalog description verbatim. Preserve root README anchors `install`, `using-with-opencode` and `codex-cli-known-limitations`; plugin READMEs always link to `install` and link to the other anchors when relevant.
 
-- `plugins/<name>/`: canonical plugin source. Each plugin has `.claude-plugin/plugin.json`, `README.md`, and either `skills/<name>/SKILL.md` or `hooks/hooks.json` (or both).
-- `.claude-plugin/marketplace.json`: catalog of record for Claude Code plugin metadata. Each plugin's `.claude-plugin/plugin.json` is its sole version source.
-- `.agents/plugins/marketplace.json` and `dist/codex/`: generated Codex CLI marketplace plus mirrored plugin roots. Regenerate with `bin/build-codex-marketplace`.
-- `dist/opencode/`: generated OpenCode mirror. Regenerate with `bin/build-opencode-mirror`. CI fails if either generated tree drifts from source.
+## Navigation and scoped instructions
 
-Never edit anything under `dist/` or `.agents/` by hand. Both are excluded from Prettier and markdownlint for that reason; fix the source and rebuild.
+Read the applicable scoped file before editing its directory, including when working from the repository root. Every scoped `CLAUDE.md` is a symlink to its sibling `AGENTS.md`.
 
-### Scripts
-
-- `bin/validate-json` and `bin/validate-plugins`: pre-merge validation, both run by `.github/workflows/ci.yml`. `validate-plugins` enforces 19 rules covering manifest fields, marketplace agreement, alphabetical ordering, Codex hook manifests, skill description limits, generated-tree freshness, and skill cross-references.
-- `bin/check-cross-references`: resolves the paths and skill names a skill body points at. Rule 19 of `bin/validate-plugins` delegates to it; run it on its own for a fast check while editing a skill. See [Skill cross-references](#skill-cross-references).
-- `bin/version-audit`: a weekly upstream-drift audit, not a merge gate. `.github/workflows/version-audit.yml` runs it on a Monday cron and files or updates a `version-audit`-labelled issue. Requires `gh` (authenticated), `jq`, and `curl`. Empty output means no drift.
-- `bin/list-shell-scripts`: the single source of truth for which Bash scripts get linted. Used by the `Makefile` and CI so a new script is covered without widening a glob.
-
-### Tests and tooling
-
-- `tests/scrut/`: [scrut](https://github.com/facebookincubator/scrut) snapshot suites for the plugin-bundled scripts and the `bin/` tooling. `tests/fixtures/` holds executable stubs (`tmux-stub`, `workmux-stub`, and so on) and `tests/data/` holds JSON fixtures.
-- `Makefile`: the entry point for local work. See [Running tests and linters](#running-tests-and-linters).
-- `package.json` plus Yarn via Corepack: Markdown and formatting tooling only (`markdownlint-cli2`, `prettier`). Node and Yarn versions are pinned in `.tool-versions` and `packageManager`.
-- `.github/workflows/`: `ci.yml` (lint, validate, scrut), `release.yml` (catalog release and GitHub Release on push to main), `version-audit.yml` (the weekly drift audit).
-- Lint and format config: `.markdownlint.jsonc`, `.markdownlint-cli2.jsonc`, `cli.markdownlint-cli2.jsonc` (CLI-only, adds ESM custom rules), `.prettierrc.json`, `.prettierignore`, `.editorconfig`, `.shellcheckrc`, `.yarnrc.yml`.
-
-### Documentation and agent config
-
-- `AGENTS.md` (this file), symlinked as `CLAUDE.md`. `.github/copilot-instructions.md` carries the same conventions for Copilot.
-- `.claude/skills/check-versions/`: a repo-local skill, not a published plugin. Use it to verify version correctness after branch operations.
-- `docs/plans/`: planning documents, split into `todo/` and `done/`. Name every plan `YYYY-MM-DD-meaningful-description.md`; the `commit` and `pr` skills enforce that and will rename a plan that lacks a datestamp. `docs/plans/done/` is a historical archive that may not match current code, and is excluded from Prettier so reformatting cannot rewrite the record.
-- `docs/reviews/`: branch review documents produced by the `review-branch` skill and consumed by `address-review`.
+- [plugins/AGENTS.md](plugins/AGENTS.md): skill and hook source, bundled helpers, registration and versioning.
+- [bin/AGENTS.md](bin/AGENTS.md): repository validators, generators and tooling.
+- [tests/AGENTS.md](tests/AGENTS.md): scrut suites, fixture stubs and CI environment wiring.
+- [docs/AGENTS.md](docs/AGENTS.md): plans, reviews and reference documentation.
+- [Plugin development](docs/plugin-development.md): full layouts, adding plugins, cross-reference syntax, README catalog format and version rules. Read this before editing plugin or catalog surfaces, including the root README and marketplace files.
+- `.github/copilot-instructions.md`: Copilot review rules; `.github/instructions/`: scoped review guidance.
 
 ## Running tests and linters
 
+Node and Yarn are pinned in `.tool-versions` and `package.json`; use Yarn through Corepack. Install the pinned dependencies with `yarn install --immutable`. Shell tools must be available on `PATH`.
+
 ```bash
-make help          # list targets
-make lint          # markdownlint + prettier + shellcheck + shfmt + actionlint
-make validate      # bin/validate-json + bin/validate-plugins
-make build         # regenerate both mirrors
-make test-scrut    # run the scrut suites
-make test-all      # lint + validate + test-scrut
+make help
+make lint          # markdownlint, prettier, shellcheck, shfmt, actionlint
+make validate      # JSON, manifests, catalog, mirrors and cross-references
+make build         # regenerate Codex and OpenCode mirrors
+make test-scrut
+make test-all      # lint, validate and scrut
 ```
 
-`make format` auto-fixes Markdown and shell formatting. Yarn scripts (`yarn lint`, `yarn lint:fix`, `yarn format`) cover the Markdown half on their own.
+`make format` fixes Markdown and shell formatting. `yarn lint:fix` and `yarn format` cover Markdown/Prettier. Run relevant checks after edits; plugin additions require `make test-all` before a PR. Observe the final test result before reporting a pass.
 
-Requires `shellcheck`, `shfmt`, `actionlint`, and `scrut` on `PATH`, plus Yarn via Corepack. ShellCheck runs at its default severity so the optional checks in `.shellcheckrc` are actually enforced.
-
-## Plugin layout
-
-A typical skill plugin looks like:
-
-```text
-plugins/commit/
-├── .claude-plugin/
-│   └── plugin.json
-├── README.md
-└── skills/
-    └── commit/
-        └── SKILL.md
-```
-
-Skills with longer reference material add a `references/` subdirectory:
-
-```text
-plugins/handle-secrets/
-├── .claude-plugin/
-│   └── plugin.json
-├── README.md
-└── skills/
-    └── handle-secrets/
-        ├── SKILL.md
-        └── references/
-            ├── anti-patterns.md
-            ├── checklist.md
-            └── ...
-```
-
-A skill can ship executable helpers too. `address-issue-in-worktree`, `create-worktree`, `publish-report-board`, `resolve-copilot-pr-feedback`, and `triage-dependabot-prs` each bundle a `scripts/` directory that the skill body invokes:
-
-```text
-plugins/create-worktree/
-├── .claude-plugin/
-│   └── plugin.json
-├── README.md
-├── scripts/
-│   ├── compose-issue-prompt
-│   ├── launch-workmux
-│   └── manage-resource-claims
-└── skills/
-    └── create-worktree/
-        └── SKILL.md
-```
-
-`create-worktree` and `address-issue-in-worktree` ship byte-identical copies of all three scripts. Rule 18 requires every `${CLAUDE_PLUGIN_ROOT}/scripts/NAME` reference to resolve inside its own plugin, so the scripts cannot be shared across plugins. Three testcases in `tests/scrut/repo-tooling.md` fail if the copies drift, so change one and copy it to the other.
-
-A skill refers to each script it ships by its plugin-root path, so `create-worktree` names `${CLAUDE_PLUGIN_ROOT}/scripts/compose-issue-prompt`, `${CLAUDE_PLUGIN_ROOT}/scripts/launch-workmux` and `${CLAUDE_PLUGIN_ROOT}/scripts/manage-resource-claims`, and `resolve-copilot-pr-feedback` names `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads`. Claude Code substitutes that placeholder with the installed plugin root. Rule 18 of `bin/validate-plugins` checks that every such reference resolves to a shipped, executable file and rejects version-blind locator globs like `**/PLUGIN/scripts/NAME`. Bundled scripts belong in `tests/scrut/`.
-
-A script can carry files of its own. `publish-report-board` keeps its page templates in a plugin-root `templates/` directory, and its `report-board` script finds them relative to its own location rather than through `${CLAUDE_PLUGIN_ROOT}`, so the same lookup works in Codex CLI and OpenCode, where the placeholder is not substituted. Prettier formats those templates like any other HTML, which is why the data placeholder in each is a JSON string that still parses before rendering.
-
-A hook plugin that targets all three harnesses (Claude Code, Codex CLI, and OpenCode) carries split manifests, harness-specific entry points, and any helper scripts or assets:
-
-```text
-plugins/notify/
-├── .claude-plugin/
-│   └── plugin.json
-├── .codex-plugin/
-│   └── plugin.json
-├── README.md
-├── assets/
-├── hooks/
-│   ├── codex.hooks.json
-│   └── hooks.json
-├── opencode/
-│   └── index.ts
-└── scripts/
-    ├── focus-pane
-    └── notify
-```
-
-`hooks/codex.hooks.json` carries only the events Codex understands (a subset of the full Claude Code set in `hooks/hooks.json`). `opencode/index.ts` is the OpenCode TypeScript plugin; `bin/build-opencode-mirror` mirrors it to `dist/opencode/plugins/`. Anything under `assets/` and `scripts/` is bundled with the plugin and reachable from hook commands via `${CLAUDE_PLUGIN_ROOT}`.
-
-## Skill cross-references
-
-Skills name each other and point at files by path, and a stale one fails only in the downstream project that loads the skill, long after the rename that broke it. `bin/check-cross-references` resolves them; rule 19 of `bin/validate-plugins` runs it over every `SKILL.md` and every file under a skill's `references/`.
-
-What gets resolved, and against what:
-
-| Spelling                                                    | Resolved against              |
-| ----------------------------------------------------------- | ----------------------------- |
-| `plugins/…`, `dist/codex/…`, `dist/opencode/…`              | the repository root           |
-| `${CLAUDE_PLUGIN_ROOT}/…`                                   | the plugin shipping the skill |
-| `./references/…`                                            | the skill directory           |
-| `` `/name` `` and a backticked name beside the word "skill" | a directory under `plugins/`  |
-
-`${CLAUDE_PLUGIN_ROOT}/scripts/…` is left to rule 18, which also checks the executable bit. A bare backticked name is not checked: nothing distinguishes `set-up-ci` from `lean-toolchain` without reading the sentence around it.
-
-A string with a stand-in segment is skipped, so `plugins/PLUGIN-NAME/README.md`, `plugins/<name>/README.md`, and `./references/ci-<language>.md` need nothing. Two HTML comments cover the rest:
-
-```markdown
-<!-- validate-plugins: repository-paths -->
-<!-- validate-plugins: ignore /config ./references/BASH.md -->
-```
-
-`repository-paths` declares that the `bin/` and `docs/` paths in this file name files in this repository. Without it they are skipped, because most of them name a file the skill _creates_ in the project it is run against (`bin/version-audit`, `docs/plans/todo/`), and because this repository's own layout matches, checking them everywhere would pass by coincidence rather than by correctness. Few files qualify: `create-plugin` is one, since its whole subject is this repository. Run `grep -rl 'validate-plugins: repository-paths' plugins/` for the current set.
-
-`ignore` exempts an individual reference that resolves nowhere because it is an illustration rather than a reference at all: Claude Code's own `/config`, Cargo's `/target` gitignore pattern, a reference filename naming a layout convention a plugin being authored should follow. Write the entry exactly as the checker reports it. Several such comments may appear in one file, and an entry that matches nothing is itself reported, so an exemption cannot outlive the reference it was written for. Exemptions are file-scoped rather than line-scoped because most of the references that need one sit inside an ordered list or a table row, where an HTML comment would break the Markdown.
-
-## Adding a plugin
-
-1. Create the plugin directory under `plugins/`.
-1. Add a `.claude-plugin/plugin.json` with metadata.
-1. For hook plugins targeting Codex CLI, add a `.codex-plugin/plugin.json` sibling with a non-empty `hooks` field (usually `"hooks": "./hooks/hooks.json"`). If the Claude Code hook file uses events Codex does not support (`Notification`, `PreCompact`, `SubagentStop`, `SessionEnd`), point the Codex manifest at a separate compatible hooks file. Codex's strict hook schema (`PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, `Stop`) rejects the entire hook file if any unsupported event is present. See `plugins/notify/` for the split-manifest pattern.
-1. Register the plugin in `.claude-plugin/marketplace.json`.
-1. Create a per-plugin `README.md` in the plugin directory.
-1. Add a row to the appropriate category table in the root `README.md`. If the plugin requires external tools, add a bullet to the category's `**External tools:**` list.
-1. If the plugin bundles a script, add scrut coverage under `tests/scrut/` and register any needed binary path in the `SCRUT_ENV` block in the `Makefile` and the matching `scrut-env` list in `.github/workflows/ci.yml`.
-1. Recompute `metadata.version` with `bin/compute-catalog-state` and write it into `.claude-plugin/marketplace.json`.
-1. Regenerate the Codex and OpenCode mirrors with `bin/build-codex-marketplace` and `bin/build-opencode-mirror`, and commit the results.
-1. Run `make test-all` and fix anything it reports before opening a PR.
-
-## README catalog format
-
-The root `README.md` lists plugins in a compact 3-column table (Plugin, Trigger, What it does) per category, plus a 2-column table for hooks (Plugin, What it does). External-tool requirements appear below each table as a `**External tools:**` bullet list, one bullet per plugin (or per group of plugins sharing the same requirement).
-
-A `## Contents` section sits between the intro paragraph and `## Install`. It is section-level navigation over the file's H2s: the `Install` and `Skills` bullets name their H3s inline, and the two `Using with` guides share a bullet. It never lists individual plugins, so adding a plugin does not touch it. Update it only when an H2 or a skills category is added, renamed, or removed, and keep every anchor resolvable, because markdownlint's MD051 checks them.
-
-Do not rename `## Install`, `## Using with OpenCode`, or `### Codex CLI known limitations`, and do not add a second heading that slugifies to one of those. Every plugin README links to `../../README.md#install`, some also link the other two, and the `markdownlint-rule-relative-links` custom rule fails the build if a target fragment disappears.
-
-Use the canonical `description` field from `marketplace.json` for the "What it does" column, verbatim, so the README stays a thin mirror of the catalog of record.
-
-The opening paragraph of each `plugins/<name>/README.md` must also match that same `description` verbatim. The plugin README may elaborate freely after that first paragraph, but the first paragraph is the catalog entry. This keeps three surfaces (catalog, root README, plugin README) from drifting into three different accounts of what a plugin does.
-
-The `Trigger` column shows the slash command (for example `/commit`), plus a required argument when the skill takes one (for example `/address-review <path>`). Auto-activation behavior for style-guide skills is not annotated in the table; cover it in the per-plugin README instead.
-
-Categories used in the README, in order: Git, Issues and Worktrees, Code Review, Code Quality, Writing, Scaffolding, CI and Release, Agents. Their `marketplace.json` `category` slugs are the same names lowercased and hyphenated (`git`, `issues-and-worktrees`, `code-review`, `code-quality`, `writing`, `scaffolding`, `ci-and-release`, `agents`).
-
-Hook plugins are the ninth category. They carry `"category": "workflow"` and are listed under their own H2 rather than in one of the tables above.
-
-If a plugin needs a `## Recommended Permissions` section, use a copy-pasteable JSON block (`{"permissions": {"allow": [...]}}`), not prose bullets, and make sure every command the skill actually runs appears in it.
-
-Every plugin with a hard external dependency must say so. Two forms are in use, both fine: a `**Requires:**` line in the header block next to `**Type:**` and `**Trigger:**` for one or two tools, or a `## Requirements` section before `## Usage` when the entry needs install instructions or caveats. Do not use both in one README.
-
-## Versioning
-
-Each plugin's `.claude-plugin/plugin.json` is the sole version source. Marketplace entries are registration metadata and contain no version fields.
-
-**Individual plugin `version`**:
-
-- **Patch**: bug fixes, wording tweaks, prompt adjustments
-- **Minor**: new capabilities or meaningful behavior changes
-- **Major**: breaking changes (for example, removing or restructuring a skill)
-- New plugins start at `1.0.0`
-
-**Version checks on branch operations**: After merging, rebasing, or before creating a PR, use the `check-versions` skill to verify version correctness. Another branch may have already incremented a version, so always check.
+`bin/check-cross-references` runs independently or through validation rule 19. `bin/list-shell-scripts` defines shell lint coverage for local checks and CI. `bin/version-audit` checks upstream drift on the weekly workflow; it is not a merge gate.
 
 ## Writing conventions
 
-These apply to everything in the repository: skill bodies, reference material, plugin READMEs, the root README, plan and review documents, commit messages, PR and issue bodies. Skills here are prompts, so their prose is the product.
+These rules cover all repository text, including skill prompts, references, READMEs, plans, reviews, commits, PRs and issues.
 
-**No em dashes.** Use a comma, colon, semicolon, parenthetical, or a separate sentence instead. Where a dash genuinely reads best, use a spaced double hyphen (`--`). This is the house style throughout, and the `write-markdown` skill records it for downstream projects too.
-
-**No time or effort estimates**, in any form: hours, days, sprints, "quick", "should be fast", t-shirt sizes, story points. This covers plan documents, issue bodies, and skill instructions that tell an agent to produce estimates. Describe scope instead: what is involved, what depends on what, what is uncertain. Estimates of _runtime_ behavior (algorithmic complexity, latency, throughput, memory) are fine and often useful.
-
-**Neutral technical terminology.** Prefer plain state language over metaphor:
-
-| Avoid                     | Use instead                                                           |
-| ------------------------- | --------------------------------------------------------------------- |
-| `alive` / `dead`          | `running` / `stopped`, `in use` / `unused`, `reachable`               |
-| `kill a process`          | `terminate`, `stop`, `end`                                            |
-| `sanity check`            | `validity check`, `plausibility check`, `smoke test`                  |
-| `crazy` / `insane`        | `unexpected`, `surprising`, `pathological`                            |
-| `dummy data`              | `placeholder data`, `sample data`                                     |
-| `whitelist` / `blacklist` | `allowlist` / `blocklist`, `permitted` / `denied`                     |
-| `master` / `slave`        | `primary` / `replica`, `leader` / `follower`, `controller` / `worker` |
-
-Genuine proper nouns stay as they are: git's `master` branch when detecting a default branch, a `config/master.key` path, a BibTeX `@mastersthesis` entry.
+- No em dashes. Use other punctuation, or a spaced double hyphen where appropriate.
+- No human or agent work estimates, including durations, “quick”, sprints, sizes or story points. Describe scope, dependencies and uncertainty. Code runtime measurements and complexity are allowed.
+- Use neutral technical terms: running/stopped, in use/unused, terminate, validity check, sample data, unexpected, primary/replica and allowlist/blocklist. Fixed upstream identifiers and proper nouns remain unchanged.
+- Keep this operating summary concise. Place component rules in paired scoped instruction files and specialized detail in references. Check global plus root plus nested instruction sizes against 32 KiB.
 
 ## License
 
-MIT License. See `LICENSE`.
+MIT; see `LICENSE`.
