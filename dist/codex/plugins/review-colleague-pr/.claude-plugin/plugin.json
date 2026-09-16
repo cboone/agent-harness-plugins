@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Review a colleague's pull request carefully and considerately from a checkout of its branch, and report a brief, read-only assessment in chat: requirements, direction, blockers, follow-ups, and questions for the author.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["code-review", "feedback", "github", "pull-request", "review"],
+  "license": "MIT",
+  "name": "review-colleague-pr",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}
