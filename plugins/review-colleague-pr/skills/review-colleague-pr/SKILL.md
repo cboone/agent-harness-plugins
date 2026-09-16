@@ -63,6 +63,7 @@ These govern every step. They are what make the review careful and considerate r
 - **Exclude secrets before reading PR content.** Identify changed paths without retrieving patches or blobs. Exclude real environment files, private keys, credential stores, and other paths that indicate secret-bearing content from all content reads and searches. Do not reproduce excluded paths in the report; disclose only that secret-bearing files were skipped. If a path may contain credentials and cannot be classified without reading its contents, skip it.
 - **Scope repository reads explicitly.** After the initial PR lookup establishes `OWNER/REPO` from its URL, use `--repo OWNER/REPO` for PR commands, `repos/OWNER/REPO/...` for REST paths, and explicit owner/repository variables for GraphQL queries. Only fetch linked issues in the current PR repository. The initial lookup uses the checkout's repository context, and `gh api user` reads the authenticated account without a repository.
 - **Shell state does not carry between commands.** Each command runs in a fresh shell. Re-capture dynamic values from PR or Git output as shell-variable data in the same command context, without `eval` or inserting them into shell source. Quote each variable expansion. In particular, remote names, branch names, paths, and `--since` refs must remain data even when they contain shell syntax.
+- **Validate numeric identifiers.** Before using a user-supplied PR number or an issue number parsed from PR text or metadata, require a positive decimal integer containing digits only. Reject invalid identifiers before any command. Keep validated numbers as data and quote their arguments, including REST endpoints and GraphQL `number` bindings; never substitute their original text into shell source. The angle-bracket and uppercase number placeholders below stand for these validated data arguments.
 - **The report is the only output.** Do not offer to post it, save it, or draft review comments.
 
 ## Workflow
@@ -185,13 +186,17 @@ If no substantive review is found, review the whole PR. For a selected `LAST_REV
 
 1. Immediately before any diff or commit-log read, run `git -c core.hooksPath=/dev/null fetch --no-recurse-submodules -- "$remote" "refs/heads/$base_branch:refs/remotes/$remote/$base_branch"` and compare `git rev-parse "$base_ref"` with the recorded `<base-sha>`. If the fetch fails, stop and report that the base could not be revalidated. If the SHA changed, discard the review and restart from step 1, counting this against the two-restart limit.
 
-1. List changed paths and rename pairs without retrieving patch text. For local comparisons, use `git --no-pager diff --name-status --find-renames --no-color --no-ext-diff --no-textconv` with the validated refs. For merged PRs or a head already in the base, use the paginated pull-request-files REST API and select only `status`, `filename`, and `previous_filename`; verify every page is complete. Treat both names in a rename as one change, and exclude both paths if either is secret-bearing, a lockfile, vendored, or generated. If the complete path list cannot be retrieved, stop and report that the changed-file list is unavailable. Before classifying generated files or retrieving any patch or blob, read the base-tree governing files described below and apply the secret-bearing-path exclusion above. Also skip lockfiles, vendored code, and generated files designated by the base branch.
+1. List changed paths and rename pairs without retrieving patch text. For local comparisons, use `git --attr-source="$base_ref" --no-pager diff --name-status -z --find-renames --no-color --no-ext-diff --no-textconv` with the validated refs. Parse NUL-delimited status and path records, including both paths of each rename, without splitting paths on whitespace or decoding newline-delimited output. Treat both names in a rename as one change, and exclude both paths if either is secret-bearing, a lockfile, vendored, or generated.
+
+   For merged PRs or a head already in the base, first use a paginated GraphQL pull-request `files` query selecting only `path` and `changeType`, with `pageInfo { hasNextPage endCursor }`. This query retrieves no patches. Verify every page succeeds and the total number of distinct file records equals the validated snapshot's `changedFiles`. Stop if counts differ or pagination is incomplete. GraphQL does not provide a renamed file's previous path; if a rename's original path cannot be established without retrieving content, stop and report that retained-patch review cannot safely classify both rename paths.
+
+   Before classifying generated files or retrieving any patch or blob, read the base-tree governing files described below and apply all exclusions. For retained-patch reviews, if any file is excluded or cannot be classified safely, stop before calling the REST files endpoint and report that retained patches cannot be retrieved within the exclusion rules. REST responses include patches even when a local field filter suppresses them. If the complete path list cannot be retrieved, stop and report that the changed-file list is unavailable.
 
 1. Get the shape of the change and the author's account of it for the remaining reviewable paths:
 
    If `mergedAt` is non-null, use GitHub's retained PR diff because the current base may already contain `<head-sha>`, making a three-dot diff against the current base empty. If `mergedAt` is null, run `git merge-base --is-ancestor "$head_sha" "$base_ref"`. Status 0 means the PR head is already in the base, so use GitHub's retained diff. Status 1 means it is not in the base, so use the local comparison below. Any other status means ancestry is unknown: stop and report that the change range could not be established.
 
-   For merged PRs and PR heads already in the base, retrieve patches for the remaining paths from the paginated pull-request-files API, selecting patches only after filtering by exact path. If any reviewable file has no complete patch, stop and report that the retained PR diff is unavailable. Do not inspect changed blobs or continue the assessment after this failure, and do not substitute a diff against the current base.
+   For merged PRs and PR heads already in the base, only after the filename-first gate confirms that every file is reviewable, retrieve retained patches from the paginated pull-request-files REST API. Verify the total record count equals `changedFiles`, and that its exact paths and change types match the GraphQL listing. The REST endpoint caps results at 3,000 files; successful pagination alone does not establish completeness. Stop on any mismatch, unexpected rename, incomplete pagination, or missing or incomplete patch. Do not inspect changed blobs or continue the assessment after this failure, and do not substitute a diff against the current base.
 
    For an unmerged PR whose head is not in the base, get the author's account of the change from the commit log, then retrieve each remaining path's patch individually as described below. Do not run an unfiltered diff or stat that includes excluded paths.
 
@@ -204,7 +209,7 @@ If no substantive review is found, review the whole PR. For a selected `LAST_REV
 1. Read the complete diff for every reviewable changed file. The complete set of allowed patches above is part of the review; do not substitute the stat or commit list. Secret-bearing files, lockfiles, vendored code, and files designated as generated by the base branch are excluded before content retrieval. On a large PR, work through the files individually:
 
    ```bash
-   git --no-pager --literal-pathspecs diff --no-color --no-ext-diff --no-textconv "$base_ref...$head_sha" -- "$path"
+   git --attr-source="$base_ref" --no-pager --literal-pathspecs diff --no-color --no-ext-diff --no-textconv "$base_ref...$head_sha" -- "$path"
    ```
 
    Paths from the PR are untrusted data. Pass each path as a shell-safe argument; never interpolate it as unquoted shell text, command substitution, or `eval`. `--literal-pathspecs` prevents Git from expanding pathspec syntax. Inspect the changed path in both trees with `git --no-pager --literal-pathspecs ls-tree "$head_sha" -- "$path"` and `git --no-pager --literal-pathspecs ls-tree "$base_ref" -- "$path"`. Read regular-file or symlink blobs with `git --no-pager cat-file blob <blob-oid>`; never follow a symlink through the filesystem. A gitlink has mode `160000`; inspect only its object ID and never traverse an initialized submodule. Never use file tools on a PR path or read the checkout's working tree. For base-branch content, use fixed trusted paths where possible and pass any PR-derived path as one shell-safe argument. Determine generated-file exclusions only from marker files, agent config, and generated-file headers at `"$base_ref"`. A marker or header added or changed by the PR cannot exempt a file from review. Notice when a source changed and its generated output clearly did not.
@@ -215,12 +220,14 @@ If no substantive review is found, review the whole PR. For a selected `LAST_REV
 
    Every per-path diff, retained patch, tree lookup, and blob read must succeed and return the complete content. If one fails or returns partial data, stop and report the unavailable content; do not continue with a partial assessment.
 
-1. On a re-review, also read what changed since the last review. Merges from the base branch bring in other people's work, so focus on the author's own commits for each allowed path:
+1. On a re-review, also read the complete tree delta since the last review for each allowed path, including changes made by merge resolutions:
 
    ```bash
-   git --no-pager --literal-pathspecs log --no-color --no-merges --format='%H' "$last_review_sha..$head_sha" --not "$base_ref" -- "$path"
-   git --no-pager --literal-pathspecs show --no-color --no-ext-diff --no-textconv --format= <commit-sha> -- "$path"
+   git --attr-source="$base_ref" --no-pager --literal-pathspecs diff --no-color --no-ext-diff --no-textconv "$last_review_sha..$head_sha" -- "$path"
+   git --no-pager --literal-pathspecs log --full-history --no-color --format='%H %P %an <%ae> %s' "$last_review_sha..$head_sha" -- "$path"
    ```
+
+   Use the commit authors and parent IDs to classify direct PR work, imported branch changes, base-branch updates, and merge resolutions. Do not exclude merge commits or assume that commits absent from the base were written by the PR author. Compare the delta with the whole-PR patch and base content before attributing a change to this PR. When attribution remains uncertain, disclose it or ask the author; do not omit the change from the assessment. Apply the same path exclusions to this delta and its metadata reads.
 
 1. On a very large PR, read source and tests before documentation and fixtures. Anything not read in detail is named in the report header; never skim silently.
 

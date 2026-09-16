@@ -9,8 +9,8 @@ Reviewed through: `37e42cc1`
 
 All four source findings are addressed in commit `ce384fa6`. The original assessment below records the review of `37e42cc1`; this section tracks the subsequent fixes and their verification.
 
-- [x] **R1:** synchronization stops on any untracked or ignored content before fast-forward. Rewritten or incomplete histories stop without replacing the checkout.
-- [x] **R2:** the tracked-change check precedes equal-HEAD acceptance, and tracked cleanliness is checked again after synchronization.
+- [x] **R1:** the skill fetches objects and refs without updating the branch, index, or working tree, so tracked, untracked, and ignored local content is preserved.
+- [x] **R2:** review evidence comes from the validated PR's Git objects or safely gated retained GitHub patches, so local edits and checkout freshness do not determine the reviewed content.
 - [x] **R3:** read-only GraphQL POST queries are explicitly permitted; REST writes and GraphQL mutations remain prohibited. Repository scoping covers GraphQL variables, linked-issue repositories, the initial lookup, and the global account endpoint.
 - [x] **R4:** the sub-issue query requests bodies and URLs, accepts and uses the pagination cursor, and retrieves all pages. The assessment reads each body and discloses incomplete retrieval.
 
