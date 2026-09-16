@@ -68,7 +68,7 @@ Fetch the PR, passing the number if the user gave one:
 gh pr view <pr-number> --json number,url,title,body,author,state,mergedAt,isDraft,baseRefName,headRefName,headRefOid,isCrossRepository,closingIssuesReferences,additions,deletions,changedFiles
 ```
 
-Check the command status and returned fields. If it fails or omits required PR data, report the lookup error and stop. When no number was supplied, treat only GitHub CLI's explicit “no pull request found for this branch” result as absence; authentication, network, repository-access, and other lookup failures are errors, not proof that the branch has no PR.
+Check the command status and returned fields. If it fails or omits required PR data, report the lookup error and stop. When no number was supplied, treat only GitHub CLI's explicit result indicating that no pull request is associated with the current branch as absence. Recognize that result semantically rather than requiring one exact phrase; authentication, network, repository-access, and other lookup failures are errors, not proof that the branch has no PR.
 
 Take `HOST` and `OWNER/REPO` from `url` (`https://HOST/OWNER/REPO/pull/NUMBER`). Subsequent `--repo HOST/OWNER/REPO` placeholders stand for the quoted, host-qualified repository target captured from this URL.
 
@@ -224,17 +224,17 @@ If no substantive review is found, review the whole PR. For a selected `LAST_REV
 
    Every per-path diff, retained patch, tree lookup, and blob read must succeed and return the complete content. If one fails or returns partial data, stop and report the unavailable content; do not continue with a partial assessment.
 
-1. On a re-review, also read the complete tree delta since the last review for each allowed path, including changes made by merge resolutions:
+1. On a re-review, also read the complete tree delta since the last review for each allowed path or rename pair, including changes made by merge resolutions. Initialize `review_paths=( "$path" )` for an ordinary change, or `review_paths=( "$previous_path" "$path" )` for an established rename, as an array of allowlisted path data in the same command context. Use that exact path list for the delta, log, and parent-aware patches:
 
    ```bash
-   git --attr-source="$base_sha" --no-pager --literal-pathspecs diff --no-color --no-ext-diff --no-textconv "$last_review_sha..$head_sha" -- "$path"
-   git --no-pager --literal-pathspecs log --full-history --no-color --format='%H %P %an <%ae> %s' "$last_review_sha..$head_sha" -- "$path"
+   git --attr-source="$base_sha" --no-pager --literal-pathspecs diff --find-renames --no-color --no-ext-diff --no-textconv "$last_review_sha..$head_sha" -- "${review_paths[@]}"
+   git --no-pager --literal-pathspecs log --full-history --no-color --format='%H %P %an <%ae> %s' "$last_review_sha..$head_sha" -- "${review_paths[@]}"
    ```
 
    For each listed commit, read its allowed-path patch against each parent separately. A merge's first-parent patch shows what it introduced to the PR branch; its other-parent patches help distinguish imported content from resolutions. Use recorded commit and parent SHAs:
 
    ```bash
-   git --attr-source="$base_sha" --no-pager --literal-pathspecs diff --no-color --no-ext-diff --no-textconv "$parent_sha" "$commit_sha" -- "$path"
+   git --attr-source="$base_sha" --no-pager --literal-pathspecs diff --find-renames --no-color --no-ext-diff --no-textconv "$parent_sha" "$commit_sha" -- "${review_paths[@]}"
    ```
 
    Read every required parent-aware patch successfully before making attribution claims. A root commit uses its path-filtered root patch. Never infer changed lines from author and parent metadata alone.
