@@ -106,7 +106,7 @@ Modeled on the prohibition section in `plugins/resolve-copilot-pr-feedback/skill
 - Check the command status and required returned fields. If the lookup fails or its data is incomplete, report the lookup failure and stop. Only GitHub CLI's explicit no-PR result for the current branch means no PR exists; authentication, network, access, or other errors are not absence.
 - If the explicit no-PR result is returned and no number was given, ask for the number, suggesting `gh pr checkout N` or `workmux add --pr N`, and stop.
 - If a number was given, after identifying the fetch remote, require the current branch to be `headRefName`. The current branch can track a fork remote or have no upstream when the source branch was deleted; validate the fetched PR-head SHA against GitHub. Before changing a checkout, however, resolve its upstream with `git rev-parse --abbrev-ref --symbolic-full-name '@{u}'`. A failed lookup or any value other than `<remote>/<headRefName>` requires a linked worktree.
-- If `--since <ref>` is supplied without `--full`, resolve it to a commit SHA before step 2 can change the checkout. Save it for the re-review steps. If it does not resolve to a commit, stop. `--full` ignores `--since`.
+- If `--since <ref>` is supplied without `--full`, keep the parsed ref as data and pass it as a shell-safe argument to `git rev-parse --verify --end-of-options "$since_ref^{commit}"` before step 2 can change the checkout. Never interpolate it into shell source. Save the resolved SHA for the re-review steps. If it does not resolve to a commit, stop. `--full` ignores `--since`.
 - A closed, merged, or draft PR is still reviewed, and its state is noted in the report header. Use `mergedAt` to distinguish a merged PR from a merely closed one.
 
 #### Step 2. Sync the checkout
@@ -300,6 +300,7 @@ Use existing PRs only. Never create or comment on one to test.
 1. **Dirty tree.** Modify a tracked file with HEAD equal to the PR head, then repeat with a stale HEAD. Both cases stop before review or synchronization. Test staged and unstaged changes.
 1. **Untracked and ignored content.** In a stale checkout, create an untracked file at a path introduced by the target commit; repeat with an ignored file at that path, and with untracked or ignored directories. Both the fast-forward and divergent-history paths stop before changing HEAD or any local content. Also confirm that non-overlapping local content blocks synchronization under the conservative policy.
 1. **Wrong checkout.** Run with a PR number from a checkout of another branch. The skill stops before syncing.
+1. **Shell-safe `--since`.** Supply a ref containing a quote and shell metacharacters. Confirm it is passed as one data argument to `git rev-parse --verify --end-of-options`, resolves or fails as a ref, and cannot execute shell syntax.
 1. **Remote host mismatch.** Configure a fetch remote with the right `OWNER/REPO` path on a different host. The skill rejects it before fetching.
 1. **Symlinks and gitlinks.** Include a symlink to an outside path and an initialized submodule in a PR tree. The skill reads only the symlink blob and gitlink object ID, never traversing either path.
 1. **Configured Git tooling.** Set a pager, external diff, and textconv driver in the checkout. Review commands still return non-interactive raw output without running those tools.
