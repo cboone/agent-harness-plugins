@@ -48,35 +48,46 @@ Report the detected type. If the indicators conflict, ask the user to confirm.
 
 ### 3. Claude Code Marketplace Releases
 
-For a marketplace, each `plugins/<name>/.claude-plugin/plugin.json` is the sole SemVer source. Marketplace entries and marketplace metadata must not contain `version` fields.
+For a marketplace, each plugin manifest is the sole SemVer source. Marketplace entries and marketplace metadata must not contain `version` fields.
 
-Run validation and regenerate both mirrors:
+First determine whether a workflow publishes releases after a push to the default branch. A workflow is push-to-main automation only when it both creates `catalog-${GITHUB_SHA}` tags and invokes `gh release create`. A tag-triggered workflow is separate: it needs a locally created catalog tag to run.
+
+Run repository-specific validators only when they exist. Do not assume every marketplace has this repository's scripts or generated directories. Run portable validation in every marketplace:
 
 ```bash
+jq -e 'all(.plugins[]; has("version") | not) and (.metadata | has("version") | not)' .claude-plugin/marketplace.json
+find plugins -path '*/.claude-plugin/plugin.json' -exec jq -e '.version | strings | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")' {} \;
+```
+
+When `bin/validate-json`, `bin/validate-plugins`, and `make build` are present, run the build before validation so generated-tree freshness checks see synchronized output:
+
+```bash
+make build
 bin/validate-json
 bin/validate-plugins
-make build
 git status --porcelain dist/ .agents/
 ```
 
-Identify the latest catalog release and compare its catalog inputs with `HEAD`:
+Identify the latest catalog release and compare its catalog inputs with `HEAD`. Guard the first-release case rather than passing an empty revision to Git:
 
 ```bash
 latest_tag="$(git tag --list 'catalog-*' --sort=-creatordate | head -1)"
-git diff --quiet "${latest_tag}" -- plugins/ .claude-plugin/marketplace.json
+if [[ -z "${latest_tag}" ]] || ! git diff --quiet "${latest_tag}" -- plugins/ .claude-plugin/marketplace.json; then
+  catalog_changed=true
+else
+  catalog_changed=false
+fi
 ```
 
-If there is no catalog tag, or the comparison reports a change, the catalog has changed. A push-to-main release workflow should tag that landing commit as `catalog-<full-commit-SHA>` and publish its GitHub Release. Do not create a local catalog tag when that workflow exists.
+For every plugin directory with content changes since `latest_tag`, compare the current manifest with its previous manifest. Require a forward version bump before release: patch for wording or prompt changes, minor for new capabilities, and major for incompatible removal or restructuring.
 
-If the catalog inputs are unchanged, report that there is no marketplace release. Documentation-only changes do not create one.
+If `catalog_changed` is false, report that there is no marketplace release. Documentation-only changes do not create one.
 
-Plugin content changes require an appropriate manifest version bump before the catalog change lands:
+If push-to-main automation exists, report that it will tag the landing commit as `catalog-<full-commit-SHA>` and publish its GitHub Release. Do not create a local catalog tag.
 
-- Patch: wording fixes and prompt adjustments
-- Minor: new capabilities or meaningful behavior changes
-- Major: incompatible removal or restructuring
+Otherwise, propose the exact `catalog-<full-HEAD-SHA>` tag for explicit user approval. Create and push that annotated tag after approval. If a tag-triggered workflow exists, let it publish the release. If no automation exists, offer `gh release create --verify-tag` after the tag is pushed.
 
-For `--dry-run`, report the changed plugin manifests and whether the catalog input comparison would release, then stop without modifying or publishing anything.
+For `--dry-run`, report the changed plugin manifests, detected automation, and whether the catalog input comparison would release, then stop without modifying or publishing anything.
 
 ### 4. SemVer Releases
 

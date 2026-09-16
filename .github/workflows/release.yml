@@ -49,7 +49,7 @@ jobs:
         id: changes
         run: |
           latest_tag="$(git tag --list 'catalog-*' --sort=-creatordate | head -1)"
-          if [[ -z "${latest_tag}" ]] || ! git diff --quiet "${latest_tag}" -- plugins/ .claude-plugin/marketplace.json; then
+          if [[ -z "${latest_tag}" ]] || [[ "${latest_tag}" == "catalog-${GITHUB_SHA}" ]] || ! git diff --quiet "${latest_tag}" -- plugins/ .claude-plugin/marketplace.json; then
             echo "changed=true" >> "${GITHUB_OUTPUT}"
             echo "Plugin or catalog metadata changed since ${latest_tag:-the first catalog release}."
           else

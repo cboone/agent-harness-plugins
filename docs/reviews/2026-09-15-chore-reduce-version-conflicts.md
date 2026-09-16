@@ -72,17 +72,13 @@ No plan matched the `chore/reduce-version-conflicts` branch name, so no branch-s
 
 ## Code Quality Assessment
 
-Overall quality: needs one documentation correction before merging.
+Overall quality: meets the reviewed version-ownership requirements.
 
 Strengths:
 
 - The version-ownership rule is consistently encoded in catalog data, validation, generated mirrors, published guidance, and release automation.
 - The release tag is collision-free and the workflow still handles partial prior runs by independently checking the remote tag and GitHub Release.
 - The validation and test changes exercise the new invariant instead of retaining tests for the removed helper.
-
-Issues to address:
-
-1. **Medium: an active plan retains the removed version-state workflow.** `docs/plans/todo/2026-09-14-new-skill-review-in-depth.md:220` instructs contributors to put a version in the marketplace entry, and line 222 instructs them to run `bin/compute-catalog-state`, which this branch deletes. Because this is an active plan rather than a historical `docs/plans/done/` record, it should be updated to use manifest-only versioning and omit catalog-state recomputation. Otherwise, executing the plan will produce invalid catalog data and a missing-command failure.
 
 Suggestions:
 

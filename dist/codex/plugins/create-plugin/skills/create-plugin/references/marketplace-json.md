@@ -95,5 +95,5 @@ When adding a new plugin, insert its entry into the `plugins` array in alphabeti
 
 - The `category` and `source` fields are present in `marketplace.json` but not in `plugin.json`.
 - The `skills` field is present in `plugin.json` but not in `marketplace.json`.
-- All other shared fields (`author`, `description`, `homepage`, `keywords`, `license`, `name`, `repository`, `version`) must match between the two files.
+- All other shared fields (`author`, `description`, `homepage`, `keywords`, `license`, `name`, `repository`) must match between the two files.
 - Generated Codex skill descriptions come from each plugin's concise marketplace `description`; the richer canonical `SKILL.md` descriptions remain unchanged for Claude Code.

@@ -12,7 +12,7 @@ See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 
-Detects your project type (Claude Code marketplace, Go CLI, Go library, or generic), analyzes conventional commits since the last release, updates release files, creates a GPG-signed release commit, and applies an annotated git tag. For Claude Code marketplaces, it validates plugin manifests and lets push-to-main automation publish plugin or catalog changes as `catalog-<full-commit-SHA>`. Documentation-only pushes create no release. For other projects, it recommends a SemVer bump, updates version references and `CHANGELOG.md`, and can create a GitHub Release with the version's changelog section as release notes.
+Detects your project type (Claude Code marketplace, Go CLI, Go library, or generic), analyzes conventional commits since the last release, updates release files, creates a GPG-signed release commit, and applies an annotated git tag. For Claude Code marketplaces, it validates plugin manifests, detects release automation, and uses an immutable `catalog-<full-commit-SHA>` tag when local publication is needed. Documentation-only pushes create no release. For other projects, it recommends a SemVer bump, updates version references and `CHANGELOG.md`, and can create a GitHub Release with the version's changelog section as release notes.
 
 ## Usage
 
@@ -38,7 +38,7 @@ This skill runs git commands that trigger permission prompts. To allow them auto
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git status --porcelain)", "Bash(git branch --show-current)", "Bash(git tag *)", "Bash(git log *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git rev-parse *)", "Bash(git remote get-url *)", "Bash(git push *)", "Bash(grep -rl *)", "Bash(command -v gh)", "Bash(jq *)", "Bash(mktemp -u /tmp/gh-release-notes-*)", "Bash(rm -f /tmp/gh-release-notes-*)", "Bash(gh release create *)", "Bash(date *)"]
+    "allow": ["Bash(git status --porcelain)", "Bash(git branch --show-current)", "Bash(git tag *)", "Bash(git log *)", "Bash(git diff *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git rev-parse *)", "Bash(git remote get-url *)", "Bash(git push *)", "Bash(grep -rl *)", "Bash(command -v gh)", "Bash(jq *)", "Bash(bin/validate-json)", "Bash(bin/validate-plugins)", "Bash(make build)", "Bash(mktemp -u /tmp/gh-release-notes-*)", "Bash(rm -f /tmp/gh-release-notes-*)", "Bash(gh release create *)", "Bash(date *)"]
   }
 }
 ```

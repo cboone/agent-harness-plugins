@@ -2,12 +2,12 @@
   "author": {
     "name": "Christopher Boone"
   },
-  "description": "Prepare a versioned release or Claude Code marketplace catalog state tag: update release files, create a release commit, tag locally, and optionally publish a GitHub Release.",
+  "description": "Prepare a versioned release: update release files, create a release commit, tag locally, and optionally publish a GitHub Release.",
   "homepage": "https://github.com/cboone/agent-harness-plugins",
   "keywords": ["catalog", "changelog", "conventional-commits", "gh", "git", "github-release", "marketplace", "release", "semver", "tags", "versioning"],
   "license": "MIT",
   "name": "release",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.6.2"
+  "version": "2.0.0"
 }

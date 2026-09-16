@@ -9,7 +9,7 @@ entry and aggregate versions, so a plugin bump leaves catalog registration
 metadata unchanged.
 
 ```scrut
-$ cd "${REPO_ROOT}" && jq -e 'all(.plugins[]; has("version") | not) and (.metadata | has("version") | not)' .claude-plugin/marketplace.json .agents/plugins/marketplace.json > /dev/null && find plugins -path '*/.claude-plugin/plugin.json' -exec jq -e '.version | strings | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")' {} \; > /dev/null && echo version-state-clean
+$ cd "${REPO_ROOT}" && jq -e 'all(.plugins[]; has("version") | not) and (.metadata | has("version") | not)' .claude-plugin/marketplace.json > /dev/null && jq -e 'all(.plugins[]; has("version") | not) and (.metadata | has("version") | not)' .agents/plugins/marketplace.json > /dev/null && find plugins -path '*/.claude-plugin/plugin.json' -exec jq -e '.version | strings | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")' {} \; > /dev/null && echo version-state-clean
 version-state-clean
 ```
 
