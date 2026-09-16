@@ -47,7 +47,7 @@ A marker that already names an issue, such as `TODO(#123)`, is tracked.
 
 ### Review comments
 
-- A reply that sets a finding aside: "Good catch, but out of scope for this PR."
+- A top-level review body, inline comment, or reply that states a concrete concern and sets it aside: "The pagination retry is missing, but out of scope for this PR."
 - A review-feedback summary whose table carries a Deferred category. A Deferred row that names an issue is tracked. One tracked only in a project notes file, or not tracked at all, is a candidate.
 
 ### Documents
