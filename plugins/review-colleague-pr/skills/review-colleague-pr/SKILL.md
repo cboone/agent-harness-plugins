@@ -71,7 +71,7 @@ These govern every step. They are what make the review careful and considerate r
 Fetch the PR, passing the number if the user gave one:
 
 ```bash
-gh pr view <pr-number> --json number,url,title,body,author,state,isDraft,baseRefName,headRefName,headRefOid,isCrossRepository,closingIssuesReferences,additions,deletions,changedFiles
+gh pr view <pr-number> --json number,url,title,body,author,state,mergedAt,isDraft,baseRefName,headRefName,headRefOid,isCrossRepository,closingIssuesReferences,additions,deletions,changedFiles
 ```
 
 Check the command status and returned fields. If it fails or omits required PR data, report the lookup error and stop. When no number was supplied, treat only GitHub CLI's explicit “no pull request found for this branch” result as absence; authentication, network, repository-access, and other lookup failures are errors, not proof that the branch has no PR.
@@ -80,7 +80,7 @@ Take `OWNER/REPO` from `url` (`https://github.com/OWNER/REPO/pull/NUMBER`).
 
 - **No PR found and no number given**: only after the explicit no-PR result above, tell the user the current branch has no pull request, suggest checking one out with `gh pr checkout <pr-number>` (or a worktree tool such as `workmux add --pr <pr-number>`), and stop.
 - **A number was given**: after identifying the fetch remote in step 2, confirm that `git branch --show-current` prints `headRefName`. The branch's upstream need not match to identify PR content: a fork PR may track its fork remote, and a deleted source branch may have no upstream. The fetched PR-head SHA is the content identity check. Before changing the checkout, explicitly inspect its upstream and apply the linked-worktree safeguard in step 2.
-- **Closed, merged, or draft**: review it anyway, and note the state in the report header.
+- **Closed, merged, or draft**: review it anyway, and note the state in the report header. Distinguish merged from closed by checking whether `mergedAt` is non-null.
 - If `--since <ref>` is supplied without `--full`, resolve it to a commit SHA with `git rev-parse --verify '<ref>^{commit}'` before step 2 can change the checkout. Save that SHA as `LAST_REVIEW_SHA` for the prior-discussion and re-review steps. If it does not resolve to a commit, stop and report the invalid baseline. When `--full` is supplied, ignore `--since`.
 
 ### 2. Sync the Checkout
@@ -100,7 +100,7 @@ The review must describe the PR as it is now, not as it was when the checkout wa
 
    Both fetches must succeed. If either fails, stop and report that synchronization could not be established. Do not compare against existing refs after a failed fetch. Record `<base-sha>` from `git rev-parse <remote>/<base-branch>` and the PR-head SHA from `git rev-parse FETCH_HEAD` immediately after the second fetch; later commands use those recorded values. Fetching the PR head to `FETCH_HEAD` accepts rewritten PR history without force-updating an existing local ref.
 
-1. Re-run the same PR lookup with `--repo OWNER/REPO`, requesting the same fields as in step 1. If it fails or omits any required field, stop and report that the PR could not be revalidated. Compare `headRefOid` to the recorded `<head-sha>`, and compare the review inputs `number`, `url`, `title`, `body`, `author`, `state`, `isDraft`, `baseRefName`, `headRefName`, `isCrossRepository`, and `closingIssuesReferences` with the initial lookup. If any value differs, restart resolution and synchronization using the refreshed PR data. Allow at most two such restarts; if the PR changes again, stop and report that its review inputs are changing during synchronization. Use the refreshed values for all later steps.
+1. Re-run the same PR lookup with `--repo OWNER/REPO`, requesting the same fields as in step 1. If it fails or omits any required field, stop and report that the PR could not be revalidated. Compare `headRefOid` to the recorded `<head-sha>`, and compare the review inputs `number`, `url`, `title`, `body`, `author`, `state`, `mergedAt`, `isDraft`, `baseRefName`, `headRefName`, `isCrossRepository`, and `closingIssuesReferences` with the initial lookup. If any value differs, restart resolution and synchronization using the refreshed PR data. Allow at most two such restarts; if the PR changes again, stop and report that its review inputs are changing during synchronization. Use the refreshed values for all later steps.
 
 1. Run `git status --porcelain --untracked-files=no`. If it fails, stop and report that tracked-file cleanliness could not be established. If it succeeds and prints anything, there are uncommitted changes to tracked files; tell the user and stop.
 
@@ -165,7 +165,7 @@ Collect every statement of what the PR is supposed to do:
 
 - **External docs** the user supplied. Read URLs with whatever web fetch tool or document connector is available. If a link cannot be read (a login wall, no tool), ask the user to paste the relevant part.
 
-**Thin-requirements gate.** Stop and ask the user only if all of these are true: both the title and body are empty or only unfilled template text, no linked issue states substantive intent, and the user supplied no external doc. A substantive title can establish intent even when the body is empty. Say what was found, and ask for a doc or link, or for confirmation to infer intent from the commits and code. Ask before reading the code, so the review does not start from a guess.
+**Thin-requirements gate.** Stop and ask the user only if all of these are true: both the title and body are empty or only unfilled template text, no linked issue states substantive intent, and no external requirements document was successfully read. A substantive title can establish intent even when the body is empty. If a supplied external document cannot be read, ask the user to paste its relevant content and stop before reviewing code. Otherwise, say what was found and ask for a document or confirmation to infer intent from the commits and code. Ask before reading the code, so the review does not start from a guess.
 
 ### 4. Gather the Prior Discussion
 
