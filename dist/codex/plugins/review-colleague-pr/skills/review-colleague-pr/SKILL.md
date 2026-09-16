@@ -93,8 +93,8 @@ Remote names and branch names from Git configuration or PR data are untrusted va
 1. Fetch the base branch into its remote-tracking ref, then fetch the PR head into `FETCH_HEAD`:
 
    ```bash
-   git -c core.hooksPath=/dev/null fetch -- "$remote" "refs/heads/$base_branch:refs/remotes/$remote/$base_branch" &&
-   git -c core.hooksPath=/dev/null fetch -- "$remote" "pull/$pr_number/head"
+   git -c core.hooksPath=/dev/null fetch --no-recurse-submodules -- "$remote" "refs/heads/$base_branch:refs/remotes/$remote/$base_branch" &&
+   git -c core.hooksPath=/dev/null fetch --no-recurse-submodules -- "$remote" "pull/$pr_number/head"
    ```
 
    Both fetches must succeed. If either fails, stop and report that the PR snapshot could not be fetched. Do not compare against existing refs after a failed fetch. Record `<base-sha>` from `git rev-parse "$base_ref"` and the PR-head SHA from `git rev-parse FETCH_HEAD` immediately after the second fetch; later commands use those recorded values. Fetching the PR head to `FETCH_HEAD` accepts rewritten PR history without updating a local branch. Run `git rev-parse --is-shallow-repository`; if it fails or prints `true`, stop because incomplete history can make ancestry checks or diffs omit changes.
@@ -120,7 +120,7 @@ Collect every statement of what the PR is supposed to do:
 - **Parent issues and sub-issues** of each linked issue, which often hold the real acceptance criteria:
 
   ```bash
-  gh api graphql --paginate -F owner=OWNER -F repo=REPO -F number=ISSUE_NUMBER -f query='query($owner:String!,$repo:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$repo){issue(number:$number){parent{url number title body state} subIssues(first:50,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{url number title body state}}}}}'
+  gh api graphql --paginate -f owner=OWNER -f repo=REPO -F number=ISSUE_NUMBER -f query='query($owner:String!,$repo:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$repo){issue(number:$number){parent{url number title body state} subIssues(first:50,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{url number title body state}}}}}'
   ```
 
   Read the parent and every sub-issue body as requirements, across all returned pages. Deduplicate repeated parents by URL. If the API rejects these fields or pagination fails, continue with the sources available and disclose the missing or partial coverage under Requirements; never treat unread acceptance criteria as satisfied.
@@ -147,7 +147,7 @@ gh api --paginate repos/OWNER/REPO/pulls/<pr-number>/comments --jq '.[] | {id, u
 gh api --paginate repos/OWNER/REPO/issues/<pr-number>/comments --jq '.[] | {user: .user.login, created_at, body}'
 
 # Review threads with their resolution status and numeric root-comment identity
-gh api graphql --paginate -F owner=OWNER -F repo=REPO -F number=<pr-number> -f query='query($owner:String!,$repo:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated path line comments(first:1){nodes{databaseId author{login} body}}}}}}}'
+gh api graphql --paginate -f owner=OWNER -f repo=REPO -F number=<pr-number> -f query='query($owner:String!,$repo:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated path line comments(first:1){nodes{databaseId author{login} body}}}}}}}'
 ```
 
 Use the login returned by `gh api user --jq .login` to filter both the reviews and inline review comments before selecting a baseline. Reviews and comments from other reviewers do not establish this user's re-review baseline. For each review thread, read the complete discussion from the paginated REST inline-comments result, grouping replies by numeric `in_reply_to_id` under the numeric `databaseId` returned by GraphQL. These matching numeric IDs identify the same root comment. The GraphQL thread query supplies resolution state and root-comment identity; its nested comments connection is not the complete discussion source.
@@ -160,7 +160,7 @@ Apply the baseline rules below. Step 1 only resolves an explicit `--since` overr
 - If `--since <ref>` was supplied, use the `LAST_REVIEW_SHA` resolved before fetching refs in step 1.
 - Otherwise, first filter the REST review list to records whose `user.login` equals the login from `gh api user --jq .login`. Filter inline comments to that same login before checking whether a review owns a top-level comment. Then use the user's most recent submitted review that meets any of these conditions:
   - Its state is `APPROVED` or `CHANGES_REQUESTED`.
-  - Its body is non-empty.
+  - Its body contains non-whitespace content.
   - The paginated inline-comments list contains a top-level comment (`in_reply_to_id` is null) whose `pull_request_review_id` equals this review's `id`.
 
 Exclude reviews in `PENDING` state. Draft review bodies and comments are not submitted feedback and must not select the re-review baseline.
@@ -173,9 +173,9 @@ If no substantive review is found, review the whole PR. For a selected `LAST_REV
 
 ### 5. Read the Change
 
-1. Immediately before any diff or commit-log read, run `git -c core.hooksPath=/dev/null fetch -- "$remote" "refs/heads/$base_branch:refs/remotes/$remote/$base_branch"` and compare `git rev-parse "$base_ref"` with the recorded `<base-sha>`. If the fetch fails, stop and report that the base could not be revalidated. If the SHA changed, discard the review and restart from step 1, counting this against the two-restart limit.
+1. Immediately before any diff or commit-log read, run `git -c core.hooksPath=/dev/null fetch --no-recurse-submodules -- "$remote" "refs/heads/$base_branch:refs/remotes/$remote/$base_branch"` and compare `git rev-parse "$base_ref"` with the recorded `<base-sha>`. If the fetch fails, stop and report that the base could not be revalidated. If the SHA changed, discard the review and restart from step 1, counting this against the two-restart limit.
 
-1. List changed paths and rename pairs without retrieving patch text. For local comparisons, use `git diff --name-status --find-renames --no-color --no-ext-diff --no-textconv` with the validated refs. For merged PRs or a head already in the base, use the paginated pull-request-files REST API and select only `status`, `filename`, and `previous_filename`; verify every page is complete. Treat both names in a rename as one change, and exclude both paths if either is secret-bearing, a lockfile, vendored, or generated. If the complete path list cannot be retrieved, stop and report that the changed-file list is unavailable. Before classifying generated files or retrieving any patch or blob, read the base-tree governing files described below and apply the secret-bearing-path exclusion above. Also skip lockfiles, vendored code, and generated files designated by the base branch.
+1. List changed paths and rename pairs without retrieving patch text. For local comparisons, use `git --no-pager diff --name-status --find-renames --no-color --no-ext-diff --no-textconv` with the validated refs. For merged PRs or a head already in the base, use the paginated pull-request-files REST API and select only `status`, `filename`, and `previous_filename`; verify every page is complete. Treat both names in a rename as one change, and exclude both paths if either is secret-bearing, a lockfile, vendored, or generated. If the complete path list cannot be retrieved, stop and report that the changed-file list is unavailable. Before classifying generated files or retrieving any patch or blob, read the base-tree governing files described below and apply the secret-bearing-path exclusion above. Also skip lockfiles, vendored code, and generated files designated by the base branch.
 
 1. Get the shape of the change and the author's account of it for the remaining reviewable paths:
 
@@ -208,7 +208,7 @@ If no substantive review is found, review the whole PR. For a selected `LAST_REV
 1. On a re-review, also read what changed since the last review. Merges from the base branch bring in other people's work, so focus on the author's own commits for each allowed path:
 
    ```bash
-   git --no-pager log --no-color --no-merges --format='%H' "$last_review_sha..$head_sha" --not "$base_ref" -- "$path"
+   git --no-pager --literal-pathspecs log --no-color --no-merges --format='%H' "$last_review_sha..$head_sha" --not "$base_ref" -- "$path"
    git --no-pager --literal-pathspecs show --no-color --no-ext-diff --no-textconv --format= <commit-sha> -- "$path"
    ```
 

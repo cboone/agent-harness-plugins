@@ -104,7 +104,7 @@ Reviewed `a1b2c3d` (checkout unchanged): 12 files, +340/-58. CI: 1 failing (`int
 
 ## Recommended Permissions
 
-GitHub access is read-only. Git fetches refs only; it does not update the branch, index, or working tree. PR and base-branch file contents come from Git objects. To allow these commands to run without individual permission prompts, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+GitHub access is read-only. Git fetches refs only; it does not update the branch, index, or working tree. PR and base-branch file contents come from Git objects, with retained GitHub patches used for merged PRs or a head already in the base. To allow these commands to run without individual permission prompts, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
 ```json
 {
@@ -128,6 +128,7 @@ GitHub access is read-only. Git fetches refs only; it does not update the branch
       "Bash(git -c core.hooksPath=/dev/null fetch *)",
       "Bash(git log *)",
       "Bash(git --no-pager log *)",
+      "Bash(git --no-pager --literal-pathspecs log *)",
       "Bash(git show *)",
       "Bash(git --literal-pathspecs show *)",
       "Bash(git --no-pager show *)",
