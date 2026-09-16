@@ -101,12 +101,12 @@ function main() {
       ;;
     click)
       count=0
-      while ! rg -q 'select-pane -t %7' "${NOTIFY_TEST_TMUX_LOG}" && [[ "${count}" -lt 150 ]]; do
+      while ! grep -Fq 'select-pane -t %7' "${NOTIFY_TEST_TMUX_LOG}" && [[ "${count}" -lt 150 ]]; do
         sleep 0.02
         count=$((count + 1))
       done
-      rg -q 'switch-client -t \$3 ; select-window -t @12 ; select-pane -t %7' "${NOTIFY_TEST_TMUX_LOG}"
-      rg -q 'display-message -t %7 -p' "${NOTIFY_TEST_TMUX_LOG}"
+      grep -Fq 'switch-client -t $3 ; select-window -t @12 ; select-pane -t %7' "${NOTIFY_TEST_TMUX_LOG}"
+      grep -Fq 'display-message -t %7 -p' "${NOTIFY_TEST_TMUX_LOG}"
       echo "Click targets captured session, window and pane on originating server"
       ;;
     *) jq -r '.[index("--title") + 1], .[index("--message") + 1], .[index("--sound") + 1]' "${NOTIFY_TEST_LOG}" ;;
