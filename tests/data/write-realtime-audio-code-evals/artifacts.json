@@ -225,7 +225,7 @@
   },
   "artifact-014": {
     "language": "json",
-    "content": "{\"prior_value\":0.2,\"block_size\":64,\"points\":[{\"offset\":63,\"value\":0.8}],\"expected_at_offset_31\":0.5}"
+    "content": "{\"prior_value\":0.2,\"block_size\":64,\"points\":[{\"offset\":63,\"value\":0.8}]}"
   },
   "artifact-057": {
     "language": "cpp",

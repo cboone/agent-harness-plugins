@@ -8,7 +8,7 @@ Treat a block as a half-open sample interval. Validate event space, type, header
 
 Use an internal sample timeline for delayed events across blocks. Define its reset and discontinuity behavior, and bound event admission, per-block work, and active voices. A scheduled note-on carries a termination obligation, including when an early note-off arrives before the delayed start. Apply the overflow policy from [lock-free buffers](lock-free-buffers.md), rather than dropping events by recency.
 
-CLAP note matching uses `(port, channel, key, note_id)` and its permitted `-1` wildcards. A note ID does not replace the other fields. Note-off, choke, and end have different meanings. CLAP note-on velocity zero remains a note-on; do not import MIDI 1.0's special encoding.
+CLAP note matching uses the complete `(port, channel, key, note_id)` address. `CLAP_EVENT_NOTE_ON` requires nonnegative port, channel, and key; its `note_id` can be `-1` when unspecified. For matching events such as note-off, choke, and end, use `-1` wildcards only where the event contract permits them. A note ID does not replace the other fields. Note-off, choke, and end have different meanings. CLAP note-on velocity zero remains a note-on; do not import MIDI 1.0's special encoding.
 
 Host event pointers and process buffers have API-defined lifetimes. Copy a payload that must survive the callback, including variable-size SysEx, into bounded owned storage with an admission policy. A failed output `try_push` does not deliver the event. Retain required state for a defined later opportunity or follow the selected product recovery policy.
 
