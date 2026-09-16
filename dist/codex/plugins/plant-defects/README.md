@@ -35,7 +35,7 @@ The skill also activates on its own when the subject is whether a check can fail
 - "should we add a memory instrument": the blindness matrix, and the argument for refusing one
 - "/plant-defects": loads the full practice explicitly
 
-Two companion skills are filed and not yet built: one for real-time audio code, whose concurrency-verification section is this method applied to memory ordering, and one for auditing CI workflows, which takes the vacuous-pass half and applies it to GitHub Actions specifically.
+One companion skill is now available: [Write Real-Time Audio Code](../write-realtime-audio-code/README.md) applies this method to callback reachability, ownership, and memory ordering. A companion for auditing CI workflows remains filed and not yet built; it applies the vacuous-pass half to GitHub Actions specifically.
 
 ## See Also
 
@@ -43,4 +43,5 @@ Two companion skills are filed and not yet built: one for real-time audio code, 
 - [Write Scrut Tests](../write-scrut-tests/README.md): snapshot assertions that widen until they can no longer discriminate
 - [Set-Up CI](../set-up-ci/README.md): the CI gates these controls attach to
 - [Review Branch](../review-branch/README.md): where a reviewer should be looking for a plant table
+- [Write Real-Time Audio Code](../write-realtime-audio-code/README.md): positive controls for callback-reachable concurrency and timing claims
 - [All plugins](../../../../README.md)

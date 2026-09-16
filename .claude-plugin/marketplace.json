@@ -780,6 +780,19 @@
         "name": "Christopher Boone"
       },
       "category": "code-quality",
+      "description": "Write and review real-time audio code: callback safety, bounded cross-thread communication, memory ordering, sample-accurate events, and compatible plugin parameters and state.",
+      "homepage": "https://github.com/cboone/agent-harness-plugins",
+      "keywords": ["audio", "clap", "dsp", "lock-free", "real-time"],
+      "license": "MIT",
+      "name": "write-realtime-audio-code",
+      "repository": "https://github.com/cboone/agent-harness-plugins",
+      "source": "./plugins/write-realtime-audio-code"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "code-quality",
       "description": "Applies scrut test style conventions when creating or editing scrut test files for CLI binaries and zsh plugins.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
       "keywords": ["cli", "scrut", "style", "testing", "zsh"],
