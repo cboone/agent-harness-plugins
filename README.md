@@ -62,17 +62,18 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 ### Issues and Worktrees
 
-| Plugin                                                                     | Trigger                                   | What it does                                                                                                                                       |
-| -------------------------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Address Issue](./plugins/address-issue/README.md)                         | `/address-issue <issue>`                  | Fetch a GitHub issue, plan the work, stop for approval, then execute changes and commit with issue references.                                     |
-| [Address Issue in Worktree](./plugins/address-issue-in-worktree/README.md) | `/address-issue-in-worktree <issue>`      | Create a worktree, branch, and tmux window for a GitHub issue, then have the new session run address-issue to plan the work and stop for approval. |
-| [Create Issue](./plugins/create-issue/README.md)                           | `/create-issue`                           | Create GitHub issues using tmpfiles to avoid permission prompts from large multiline Bash arguments.                                               |
-| [Create Worktree](./plugins/create-worktree/README.md)                     | `/create-worktree <issue-or-description>` | Create a git worktree, branch, and tmux window from an issue number or a task description, with a prompt injected using workmux.                   |
-| [Suggest Next Issue](./plugins/suggest-next-issue/README.md)               | `/suggest-next-issue`                     | Review open GitHub issues and recommend what to work on next with prioritized reasoning.                                                           |
+| Plugin                                                                     | Trigger                                   | What it does                                                                                                                                               |
+| -------------------------------------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Address Issue](./plugins/address-issue/README.md)                         | `/address-issue <issue>`                  | Fetch a GitHub issue, plan the work, stop for approval, then execute changes and commit with issue references.                                             |
+| [Address Issue in Worktree](./plugins/address-issue-in-worktree/README.md) | `/address-issue-in-worktree <issue>`      | Create a worktree, branch, and tmux window for a GitHub issue, then have the new session run address-issue to plan the work and stop for approval.         |
+| [Create Deferred Issues](./plugins/create-deferred-issues/README.md)       | `/create-deferred-issues`                 | Scan the session, branch, and pull request for concerns set aside as out of scope, propose them as one batch, and file the approved ones as GitHub issues. |
+| [Create Issue](./plugins/create-issue/README.md)                           | `/create-issue`                           | Create GitHub issues using tmpfiles to avoid permission prompts from large multiline Bash arguments.                                                       |
+| [Create Worktree](./plugins/create-worktree/README.md)                     | `/create-worktree <issue-or-description>` | Create a git worktree, branch, and tmux window from an issue number or a task description, with a prompt injected using workmux.                           |
+| [Suggest Next Issue](./plugins/suggest-next-issue/README.md)               | `/suggest-next-issue`                     | Review open GitHub issues and recommend what to work on next with prioritized reasoning.                                                                   |
 
 **External tools:**
 
-- _Address Issue, Create Issue, Suggest Next Issue:_ [`gh`](https://cli.github.com/)
+- _Address Issue, Create Deferred Issues, Create Issue, Suggest Next Issue:_ [`gh`](https://cli.github.com/)
 - _Address Issue in Worktree:_ [`gh`](https://cli.github.com/), [`workmux`](https://github.com/raine/workmux), [`jq`](https://jqlang.org/)
 - _Create Worktree:_ [`workmux`](https://github.com/raine/workmux), plus [`gh`](https://cli.github.com/) when given an issue number and [`jq`](https://jqlang.org/) for an issue number or a resource claim
 
