@@ -87,7 +87,13 @@ Take `OWNER/REPO` from `url` (`https://github.com/OWNER/REPO/pull/NUMBER`).
 
 The review must describe the PR as it is now, not as it was when the checkout was made.
 
-1. Parse the host from the PR `url`. Find a remote whose **fetch** URL has the same host and names this exact `OWNER/REPO`: inspect only `(fetch)` entries from `git remote -v`, parse supported HTTPS and SSH forms according to their URL syntax, and compare host and repository path case-insensitively. Require the HTTPS or SSH remote host to equal the host from the PR URL; matching only the repository path is insufficient. Accept only a path ending exactly in `/OWNER/REPO` or `/OWNER/REPO.git` (or the equivalent scp-style SSH path). If no remote matches, tell the user and stop.
+1. Parse the host from the PR `url`. Find a remote whose **fetch** URL has the same host and names this exact `OWNER/REPO`. To avoid exposing embedded credentials, inspect only fetch entries from `git remote -v` through this sanitizer, which prints only the remote name, host, and path:
+
+   ```bash
+   git remote -v | awk '$3 == "(fetch)" { url=$2; sub(/^[A-Za-z][A-Za-z0-9+.-]*:\/\//, "", url); sub(/^[^/@]*@/, "", url); sub(/[?#].*$/, "", url); print $1, url }'
+   ```
+
+   Parse supported HTTPS and SSH forms according to their URL syntax, and compare host and repository path case-insensitively. Require the host to equal the host from the PR URL; matching only the repository path is insufficient. Accept only a path ending exactly in `/OWNER/REPO` or `/OWNER/REPO.git` (or the equivalent scp-style SSH path). Never print, log, or otherwise expose the unredacted remote URL. If no remote matches, tell the user and stop.
 
 1. When the user supplied a number, before fetching require the current branch to match `headRefName` as described in step 1. An absent or different upstream does not prevent fetching the PR ref from the base repository, but it requires a linked worktree before any fast-forward as described below.
 
@@ -328,5 +334,5 @@ Stop after the report.
 - **The PR belongs to a different repository than the checkout** (no remote matches `OWNER/REPO`): say so and stop.
 - **The PR's author is the user**: mention that the `review-branch` skill suits a review of one's own work, then proceed.
 - **No CI checks reported**: write "CI: no checks" in the header.
-- **An issue or external doc cannot be read**: continue with the other sources, list what could not be read under Requirements, and ask for anything the thin-requirements gate needs.
+- **A linked issue cannot be read**: continue with the other sources and list the unavailable issue under Requirements. **A supplied external requirements document cannot be read**: ask the user to paste its relevant content and stop before reviewing code.
 - **The harness cannot ask interactive questions**: ask in plain text and stop, rather than guessing.
