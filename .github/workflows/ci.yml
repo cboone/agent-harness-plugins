@@ -101,6 +101,8 @@ jobs:
         REPORT_BOARD_DATA_DIR=./tests/data/report-board
         RESOLVE_COPILOT_THREADS_BIN=./plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads
         TMUX_STUB_BIN=./tests/fixtures/tmux-stub
+        NOTIFY_BIN=./plugins/notify/scripts/notify
+        CHECK_NOTIFICATIONS_BIN=./tests/fixtures/check-notifications
         UNIX_SOCKET_FIXTURE_BIN=./tests/fixtures/create-unix-socket
         WORKMUX_STUB_BIN=./tests/fixtures/workmux-stub
       scrut-test-dir: "tests/scrut/"

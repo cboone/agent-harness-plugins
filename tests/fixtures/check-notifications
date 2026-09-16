@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+# check-notifications -- Exercise notifications without sending macOS alerts.
+# Generated stubs expand these variables when executed, not when written.
+# shellcheck disable=SC2016
+set -euo pipefail
+
+function main() {
+  local scenario="${1}" test_dir
+  test_dir="$(mktemp -d)"
+  # Expand the local path now because EXIT runs after main returns.
+  # shellcheck disable=SC2064
+  trap "rm -r '${test_dir}'" EXIT
+  : "${NOTIFY_BIN:?Set NOTIFY_BIN to the notification script}"
+  mkdir "${test_dir}/bin"
+  export NOTIFY_TEST_LOG="${test_dir}/alerts"
+  export NOTIFY_TEST_TMUX_LOG="${test_dir}/tmux"
+  export NOTIFY_TEST_FRONT="com.example.background"
+  export NOTIFY_TEST_VISIBLE="%99|attached,focused,UTF-8"
+  export NOTIFY_TEST_CLICK=""
+  export PATH="${test_dir}/bin:${PATH}"
+  export XDG_CACHE_HOME="${test_dir}/cache"
+  export TMUX="/tmp/notify-test-server,123,0" TMUX_PANE="%7" TERM_PROGRAM="Apple_Terminal"
+
+  printf '%s\n' '#!/usr/bin/env bash' \
+    'jq -nc --args '\''$ARGS.positional'\'' -- "$@" >> "${NOTIFY_TEST_LOG}"' \
+    'printf "%s" "${NOTIFY_TEST_CLICK}"' > "${test_dir}/bin/alerter"
+  printf '%s\n' '#!/usr/bin/env bash' \
+    'printf "%s\\n" "$*" >> "${NOTIFY_TEST_TMUX_LOG}"' \
+    'case "$1" in' \
+    'display-message) if [[ "$*" == *pane_id* ]]; then printf '\''$3|@12|%%7\\n'\''; else printf "sample-title\\n"; fi ;;' \
+    'list-clients) printf "%s\\n" "${NOTIFY_TEST_VISIBLE}" ;;' \
+    'esac' > "${test_dir}/bin/tmux"
+  printf '%s\n' '#!/usr/bin/env bash' \
+    'printf "%s\\n" "${NOTIFY_TEST_FRONT}"' > "${test_dir}/bin/osascript"
+  chmod +x "${test_dir}/bin/alerter" "${test_dir}/bin/tmux" "${test_dir}/bin/osascript"
+  local payload='{"session_id":"session-one","last_assistant_message":"Completed sample"}'
+  local action="codex-stop"
+  case "${scenario}" in
+    claude-completion) action="cc-stop" ;;
+    claude-question)
+      action="cc-question"
+      payload='{"session_id":"session-one","tool_input":{"questions":[{"question":"Choose a branch?"}]}}'
+      ;;
+    claude-compact) action="cc-compact" ;;
+    question)
+      action="codex-question"
+      payload='{"session_id":"session-one","tool_input":{"questions":[{"question":"Choose a branch?"}]}}'
+      ;;
+    question-string)
+      action="codex-question"
+      payload='{"session_id":"session-one","tool_input":"{\"questions\":[{\"question\":\"Choose a branch?\"}]}"}'
+      ;;
+    compact) action="codex-compact" ;;
+    visible) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,focused,UTF-8" ;;
+    other-window) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,UTF-8" ;;
+    other-pane) export NOTIFY_TEST_FRONT="com.apple.Terminal" ;;
+    subagent) payload='{"session_id":"session-one","agent_id":"child"}' ;;
+    click) export NOTIFY_TEST_CLICK="@CONTENTCLICKED" ;;
+    *) ;;
+  esac
+  printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
+  # Detached dispatch is bounded by a polling validity check.
+  local count=0
+  if [[ "${scenario}" != visible && "${scenario}" != subagent ]]; then
+    while [[ ! -s "${NOTIFY_TEST_LOG}" && "${count}" -lt 150 ]]; do
+      sleep 0.02
+      count=$((count + 1))
+    done
+    [[ -s "${NOTIFY_TEST_LOG}" ]]
+  fi
+  case "${scenario}" in
+    duplicate)
+      printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
+      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 1 ]]
+      echo "One completion alert per turn"
+      ;;
+    reset)
+      printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-turn-start
+      printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
+      count=0
+      while [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" != 2 && "${count}" -lt 150 ]]; do
+        sleep 0.02
+        count=$((count + 1))
+      done
+      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 2 ]]
+      echo "Next user prompt allows another completion"
+      ;;
+    groups)
+      printf '%s' '{"session_id":"session-two"}' | "${NOTIFY_BIN}" codex-stop
+      count=0
+      while [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" != 2 && "${count}" -lt 150 ]]; do
+        sleep 0.02
+        count=$((count + 1))
+      done
+      [[ "$(jq -sr 'map(.[index("--group") + 1]) | unique | length' "${NOTIFY_TEST_LOG}")" == 2 ]]
+      echo "Separate sessions retain separate banners"
+      ;;
+    visible | subagent)
+      [[ ! -e "${NOTIFY_TEST_LOG}" ]]
+      echo "No alert"
+      ;;
+    click)
+      count=0
+      while ! rg -q 'select-pane -t %7' "${NOTIFY_TEST_TMUX_LOG}" && [[ "${count}" -lt 150 ]]; do
+        sleep 0.02
+        count=$((count + 1))
+      done
+      rg -q 'switch-client -t \$3 ; select-window -t @12 ; select-pane -t %7' "${NOTIFY_TEST_TMUX_LOG}"
+      rg -q 'display-message -t %7 -p' "${NOTIFY_TEST_TMUX_LOG}"
+      echo "Click targets captured session, window and pane on originating server"
+      ;;
+    *) jq -r '.[index("--title") + 1], .[index("--message") + 1], .[index("--sound") + 1]' "${NOTIFY_TEST_LOG}" ;;
+  esac
+}
+
+main "$@"
