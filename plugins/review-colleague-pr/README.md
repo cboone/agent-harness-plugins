@@ -117,6 +117,7 @@ GitHub access is read-only. Git fetches refs only; it does not update the branch
       "Bash(gh api --paginate repos/*)",
       "Bash(gh api --paginate \"repos/*)",
       "Bash(gh api graphql *)",
+      "Bash(gh api --hostname *)",
       "Bash(gh api user *)",
       "Bash(gh issue view *)",
       "Bash(gh pr checks *)",
