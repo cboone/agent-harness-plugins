@@ -9,6 +9,38 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify codex-turn-start"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "request_user_input",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify codex-question"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify codex-compact"
+          }
+        ]
+      }
     ]
   }
 }

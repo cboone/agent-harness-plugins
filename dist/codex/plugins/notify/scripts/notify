@@ -29,11 +29,14 @@ function usage() {
 Usage: notify <subcommand>
 
 Subcommands:
-  cc-idle       Claude Code Notification:idle_prompt
   cc-elicit     Claude Code Notification:elicitation_dialog
   cc-permission Claude Code Notification:permission_prompt
   cc-compact    Claude Code PreCompact:auto
   cc-stop       Claude Code Stop
+  cc-question   Claude Code PreToolUse:AskUserQuestion
+  codex-question Codex PreToolUse:request_user_input
+  codex-compact Codex PreCompact:auto
+  turn-start    Reset completion deduplication on UserPromptSubmit
   codex-stop    Codex Stop
 
 Each subcommand reads its hook payload as JSON on stdin.
@@ -106,7 +109,7 @@ function compute_tmux_state() {
   if [[ -z "${TMUX_PANE:-}" ]]; then
     return 0
   fi
-  tmux display-message -t "${TMUX_PANE}" -p '#S|#I|#P' 2> /dev/null || true
+  tmux display-message -t "${TMUX_PANE}" -p '#{session_id}|#{window_id}|#{pane_id}' 2> /dev/null || true
 }
 
 # -----------------------------------------------------------------------------
@@ -274,6 +277,16 @@ function fire_alerter_detached() {
     IFS='|' read -r session window pane <<< "${tmux_state}"
   fi
   local term_program="${TERM_PROGRAM:-}"
+  group="${group}-${SESSION_KEY}"
+  if [[ "${group}" == *-stop-* ]]; then
+    # mkdir is atomic, including when concurrent Stop hooks arrive.
+    if ! mkdir "${STATE_DIR}/completed" 2> /dev/null; then
+      return 0
+    fi
+    if originating_pane_visible; then
+      return 0
+    fi
+  fi
 
   local sound_args=()
   if [[ -n "${sound}" ]]; then
@@ -288,7 +301,7 @@ function fire_alerter_detached() {
       --title "${title}" \
       --subtitle "${subtitle}" \
       --message "${message}" \
-      "${sound_args[@]}" \
+      ${sound_args[@]+"${sound_args[@]}"} \
       --group "${group}" \
       --app-icon "${icon}" \
       --timeout "${FIRE_TIMEOUT}" \
@@ -318,7 +331,7 @@ function fire_alerter_detached() {
 
 function do_cc_idle() {
   local input transcript_path
-  input="$(cat)"
+  input="${HOOK_INPUT}"
   transcript_path="$(printf '%s' "${input}" | jq -r '.transcript_path // empty')"
 
   local subtitle body
@@ -339,7 +352,7 @@ function do_cc_idle() {
 
 function do_cc_elicit() {
   local input message subtitle body
-  input="$(cat)"
+  input="${HOOK_INPUT}"
   message="$(printf '%s' "${input}" | jq -r '.message // empty')"
   subtitle="$(compute_subtitle)"
 
@@ -360,7 +373,7 @@ function do_cc_elicit() {
 
 function do_cc_permission() {
   local input transcript_path
-  input="$(cat)"
+  input="${HOOK_INPUT}"
   transcript_path="$(printf '%s' "${input}" | jq -r '.transcript_path // empty')"
 
   local subtitle base
@@ -396,9 +409,6 @@ function do_cc_permission() {
 }
 
 function do_cc_compact() {
-  # Drain stdin so Claude Code does not see EPIPE.
-  cat > /dev/null
-
   local subtitle
   subtitle="$(compute_subtitle)"
 
@@ -413,7 +423,7 @@ function do_cc_compact() {
 
 function do_cc_stop() {
   local input transcript_path
-  input="$(cat)"
+  input="${HOOK_INPUT}"
   transcript_path="$(printf '%s' "${input}" | jq -r '.transcript_path // empty')"
 
   local subtitle
@@ -453,16 +463,10 @@ function do_cc_stop() {
 # Codex event handlers
 # -----------------------------------------------------------------------------
 
-# Codex Stop fires once per "no follow-up needed" sampling cycle in turn.rs's
-# turn loop, which means a single user turn can produce multiple Stop events
-# when Stop hooks request continuation or compaction re-enters the loop. The
-# notification uses a deliberately soft Tink sound so successive firings
-# within a turn (same group, so they replace in place) are not disruptive.
-# The body comes straight from the payload's `last_assistant_message`, which
-# Codex provides directly, so we do not walk the transcript here.
+# Completion is deduplicated until the next user prompt.
 function do_codex_stop() {
   local input
-  input="$(cat)"
+  input="${HOOK_INPUT}"
 
   local subtitle
   subtitle="$(compute_subtitle)"
@@ -482,9 +486,46 @@ function do_codex_stop() {
     "Codex · Done" \
     "${subtitle}" \
     "${body}" \
-    "Tink" \
+    "Glass" \
     "codex-stop" \
     "${ASSETS_DIR}/codex.png"
+}
+
+# Only suppress completion when both the host application and exact pane
+# are visible. Unknown application or tmux state preserves notification delivery.
+function originating_pane_visible() {
+  [[ -n "${TMUX_PANE:-}" && -n "${TMUX:-}" ]] || return 1
+  case "${TERM_PROGRAM:-}" in
+    Apple_Terminal | iTerm.app | ghostty | WezTerm | vscode | alacritty) ;;
+    *) return 1 ;;
+  esac
+  local bundle front clients
+  bundle="$("${FOCUS_SCRIPT}" --bundle-id "${TERM_PROGRAM:-}")" || return 1
+  front="$(osascript -l JavaScript -e 'ObjC.import("AppKit"); ObjC.unwrap($.NSWorkspace.sharedWorkspace.frontmostApplication.bundleIdentifier)' 2> /dev/null)" || return 1
+  [[ "${front}" == "${bundle}" ]] || return 1
+  clients="$(tmux list-clients -F '#{pane_id}|#{client_flags}' 2> /dev/null)" || return 1
+  local visible flags
+  while IFS='|' read -r visible flags; do
+    [[ "${visible}" == "${TMUX_PANE}" && ",${flags}," == *,focused,* ]] && return 0
+  done <<< "${clients}"
+  return 1
+}
+
+function do_question() {
+  local harness="${1}" icon="${2}" body
+  body="$(printf '%s' "${HOOK_INPUT}" | jq -r '
+    (.tool_input // {}) as $input
+    | (if ($input | type) == "string" then ($input | fromjson? // {}) else $input end)
+    | [.questions[]?.question] | join(" ")')"
+  body="${body:-Needs input}"
+  fire_alerter_detached "${harness} · Question" "$(compute_subtitle)" \
+    "$(truncate_with_ellipsis "${body//$'\n'/ }" "${BODY_LIMIT_DEFAULT}")" \
+    "Tink" "${HARNESS}-question" "${ASSETS_DIR}/${icon}.png"
+}
+
+function do_codex_compact() {
+  fire_alerter_detached "Codex · Compacting" "$(compute_subtitle)" \
+    "Auto-compacting context" "Pop" "codex-compact" "${ASSETS_DIR}/codex.png"
 }
 
 # -----------------------------------------------------------------------------
@@ -497,7 +538,24 @@ function main() {
     exit 0
   fi
 
+  HOOK_INPUT="$(cat)"
+  # Root session alerts must not change state or notify for subagents.
+  if [[ -n "$(printf '%s' "${HOOK_INPUT}" | jq -r '.agent_id // empty')" ]]; then
+    return 0
+  fi
+  HARNESS="claude"
+  [[ "${1:-}" == codex-* ]] && HARNESS="codex"
+  local session_id
+  session_id="$(printf '%s' "${HOOK_INPUT}" | jq -r '.session_id // .sessionId // empty')"
+  SESSION_KEY="$(printf '%s' "${HARNESS}|${session_id}|${TMUX:-}|${TMUX_PANE:-}|${PWD}" | shasum -a 256 | cut -d ' ' -f 1)"
+  STATE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}/agent-harness-notify/${SESSION_KEY}"
+  mkdir -p "${STATE_DIR}"
+
   case "${1:-}" in
+    turn-start | cc-turn-start | codex-turn-start) rmdir "${STATE_DIR}/completed" 2> /dev/null || true ;;
+    cc-question) do_question "Claude Code" "claude-code" ;;
+    codex-question) do_question "Codex" "codex" ;;
+    codex-compact) do_codex_compact ;;
     cc-idle) do_cc_idle ;;
     cc-elicit) do_cc_elicit ;;
     cc-permission) do_cc_permission ;;
@@ -517,4 +575,4 @@ function main() {
   esac
 }
 
-main "${@}"
+main "$@"
