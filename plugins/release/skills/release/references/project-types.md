@@ -13,7 +13,7 @@ Detect the project type to determine where version numbers live and how to updat
 
 **Detection:** `.claude-plugin/marketplace.json` exists and contains a top-level `plugins` array.
 
-**Version files:** Individual plugin versions live in `plugins/<name>/.claude-plugin/plugin.json` and the matching `.claude-plugin/marketplace.json` entry. The marketplace top-level `metadata.version` is not SemVer; compute it from all marketplace plugin versions with `catalog-M<major-sum>-m<minor-sum>-p<patch-sum>-n<plugin-count>`.
+**Version files:** Each registered source must be a local string such as `./plugins/<name>` and contains `.claude-plugin/plugin.json`, which owns that plugin's version. Reject non-string sources because repository validation requires an existing local plugin directory. Marketplace entries are registration metadata and do not carry versions.
 
 ## Go CLI
 

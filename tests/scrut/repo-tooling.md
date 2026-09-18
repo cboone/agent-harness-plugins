@@ -1,42 +1,159 @@
 # Repository tooling
 
-Tests for the `bin/` scripts that gate releases and generated output. These had
-no coverage at all, even though `compute-catalog-state` alone decides the tag
-name and GitHub Release that `release.yml` publishes.
+Tests for the `bin/` scripts that gate generated output and catalog releases.
 
-## Catalog state sums each SemVer field independently
+## Marketplace entries do not duplicate plugin versions
 
-No normalization and no carry between components, so patch 3 + patch 10 is 13,
-not 1.3.
+Each plugin manifest remains the SemVer source. Both marketplace files omit
+entry and aggregate versions, so a plugin bump leaves catalog registration
+metadata unchanged.
 
 ```scrut
-$ dir="$(mktemp -d)" && jq -n '{plugins: [{version: "1.2.3"}, {version: "2.0.10"}]}' > "${dir}/marketplace.json" && MARKETPLACE="${dir}/marketplace.json" "${COMPUTE_CATALOG_STATE_BIN}"
-catalog-M3-m2-p13-n2
+$ cd "${REPO_ROOT}" && jq -e 'all(.plugins[]; has("version") | not) and (.metadata | has("version") | not)' .claude-plugin/marketplace.json > /dev/null && jq -e 'all(.plugins[]; has("version") | not) and (.metadata | has("version") | not)' .agents/plugins/marketplace.json > /dev/null && for manifest in plugins/*/.claude-plugin/plugin.json; do jq -e '.version | strings | test("^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$")' "${manifest}" > /dev/null || exit 1; done && bin/validate-plugins && echo version-state-clean
+All plugin validations passed.
+version-state-clean
 ```
 
-## Catalog state counts plugins
+## Validator rejects forbidden version state
+
+Each case starts from a generated copy of the repository, then mutates one
+surface. This exercises the validator itself instead of duplicating its rules
+with a separate `jq` check.
 
 ```scrut
-$ dir="$(mktemp -d)" && jq -n '{plugins: [{version: "0.0.1"}, {version: "0.0.1"}, {version: "0.0.1"}]}' > "${dir}/marketplace.json" && MARKETPLACE="${dir}/marketplace.json" "${COMPUTE_CATALOG_STATE_BIN}"
-catalog-M0-m0-p3-n3
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" valid
+All plugin validations passed.
 ```
 
-## Catalog state reports a missing marketplace
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" leading-zero 2>&1
+::error::Plugin 'release': plugin.json version '01.2.3' must be MAJOR.MINOR.PATCH
+1 plugin validation error(s) found.
+[1]
+```
 
 ```scrut
-$ MARKETPLACE="/nonexistent/marketplace.json" "${COMPUTE_CATALOG_STATE_BIN}" 2>&1
-compute-catalog-state: /nonexistent/marketplace.json not found
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" metadata-version 2>&1
+::error::Marketplace metadata must not contain a version
+1 plugin validation error(s) found.
+[1]
+```
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" entry-version 2>&1
+::error::Marketplace entry 'add-cobra-version' must not contain a version
+1 plugin validation error(s) found.
+[1]
+```
+
+## Release automation uses immutable tags and ignores documentation-only changes
+
+The fixture executes the workflow's catalog-change, tag/release-check, tag, and
+publication shell steps against isolated Git history with custom local source
+directories. It also interprets the check and publication step conditions, so an
+incorrect condition cannot hide a missing recovery attempt.
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" first-release
+changed=true target=current
+release-created-for-target=true
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" plugin-change
+changed=true target=current
+release-created-for-target=true
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" unchanged
+changed=false target=previous
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" root-docs
+changed=false target=previous
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" catalog-only
+changed=true target=current
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" deleted-plugin
+changed=true target=current
+```
+
+## Version comparison accepts unbounded numeric components
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" large-version
+changed=true target=current
+```
+
+## Publication recovers an earlier tag after a documentation commit
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" tag-recovery
+changed=false target=previous
+release-created-for-target=true
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" same-head-recovery
+changed=true target=current
+release-created-for-target=true
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" existing-release
+changed=false target=previous
+release-created-for-target=false
+```
+
+## Changed plugin content requires a forward version bump
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" new-plugin-version 2>&1
+::error::./plugins/new-plugin is newly registered and must start at manifest version 1.0.0 (found 0.1.0).
+[1]
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" missing-bump 2>&1
+::error::./custom/sample changed without a forward manifest version bump (1.0.0 -> 1.0.0).
+[1]
+```
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" regression 2>&1
+::error::./custom/sample changed without a forward manifest version bump (1.0.0 -> 0.9.0).
+[1]
+```
+
+## Recovery errors do not silently create another release
+
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" api-error 2>&1
+changed=false target=previous
+::error::Failed to determine whether GitHub Release catalog-* exists. (glob)
+HTTP 403
 [2]
 ```
 
-## Catalog state rejects a non-SemVer version
-
-A short version must fail loudly rather than contribute a partial sum to a
-release tag.
+```scrut
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" tag-collision 2>&1
+changed=false target=previous
+::error::Catalog tag catalog-* exists at *, not *. (glob)
+[1]
+```
 
 ```scrut
-$ dir="$(mktemp -d)" && jq -n '{plugins: [{version: "1.2"}]}' > "${dir}/marketplace.json" && MARKETPLACE="${dir}/marketplace.json" "${COMPUTE_CATALOG_STATE_BIN}" > /dev/null 2>&1 || echo "rejected"
-rejected
+$ "${CATALOG_RELEASE_FIXTURE_BIN}" missing-remote-tag 2>&1
+changed=false target=previous
+::error::Recovery tag catalog-* is missing on origin. (glob)
+[1]
 ```
 
 ## The shell script list excludes generated mirrors

@@ -242,7 +242,7 @@ Report style: don't restate the diff, don't hedge, don't praise by default, and 
 ### Catalog registration
 
 1. `plugins/review-colleague-pr/.claude-plugin/plugin.json`: the same fields as `plugins/review-branch/.claude-plugin/plugin.json`, at version `1.0.0`.
-1. `.claude-plugin/marketplace.json`: insert the entry between `review-branch` and `review-dependabot-config` with category `code-review`. Recompute `metadata.version` with `bin/compute-catalog-state` at implementation time; do not assume a fixed catalog value.
+1. `.claude-plugin/marketplace.json`: insert the entry between `review-branch` and `review-dependabot-config` with category `code-review`. Do not add a marketplace version field; plugin manifests own SemVer, and catalog releases use the landing commit SHA.
 1. Root `README.md`: add a Code Review table row in alphabetical order, with trigger `/review-colleague-pr` and the description verbatim, plus a `gh` bullet under that table's External tools list. The Contents section does not change.
 1. Regenerate the mirrors with `bin/build-codex-marketplace` and `bin/build-opencode-mirror`.
 
@@ -315,7 +315,7 @@ Use existing PRs only. Never create or comment on one to test.
 
 ## Review resolution verification
 
-At the `cbc51a18` verification checkpoint, R1-R4 were recorded resolved, both mirrors were regenerated, and `make lint validate` passed. The plugin stayed at its initial `1.0.0` version and the catalog was `catalog-M71-m107-p165-n58`. Later merges added the Review Plan and Write Manual Verification Plan plugins; the current catalog is `catalog-M74-m108-p164-n61`.
+At the `cbc51a18` verification checkpoint, R1-R4 were recorded resolved, both mirrors were regenerated, and `make lint validate` passed. The plugin stayed at its initial `1.0.0` version. Later merges added the Review Plan and Write Manual Verification Plan plugins; catalog releases now use immutable `catalog-<commit-SHA>` tags.
 
 The R1-R4 review fixes originally added checkout guards and requirements reads. A disposable-checkout command probe passed nine cases: staged and unstaged tracked edits at matching and stale HEADs; untracked and ignored files at a path introduced by the target commit; non-overlapping untracked content; ignored build output; and a clean fast-forward with post-sync checks. That probe covered the earlier checkout-synchronization design, which was replaced by fetching refs and reading Git objects without changing the checkout. It does not verify the current object-reading workflow, index flags, shallow history, or divergent histories.
 
@@ -327,6 +327,6 @@ The broader behavioral checklist remains open. The latest full `make test-all` r
 
 1. `docs: add plan for the review-colleague-pr skill`
 1. `feat: add the review-colleague-pr skill`: the plugin directory, with its manifest, `SKILL.md`, and README
-1. `feat: register review-colleague-pr in the catalog`: the marketplace entry, the catalog state tag, and the root README row
+1. `feat: register review-colleague-pr in the catalog`: the marketplace entry, the immutable catalog commit tag, and the root README row
 1. `chore: regenerate the Codex and OpenCode mirrors`
 1. `docs: record implementation findings in the review-colleague-pr plan`

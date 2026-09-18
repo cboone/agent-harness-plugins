@@ -21,3 +21,5 @@ Two checks are disabled in `.shellcheckrc` by design and should not be raised in
 - `${var}` braces, `[[ ]]` over `[ ]`, `$(...)` over backticks, a default `*)` case in every `case`.
 - Errors go to stderr through a `die` helper that prefixes the script name; stdout carries only the command's own output.
 - Never chain a tmpfile cleanup onto the command that consumed it with `; status=$?`. In zsh, the macOS default shell, `status` is a read-only alias for `$?` and the assignment fails.
+
+- Shell function arguments include the subcommand words. In a `gh()` fixture that receives `gh release create <tag>`, `${1}` is `release`, `${2}` is `create`, and `${3}` is the tag.

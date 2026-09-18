@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+# Exercises release workflow shell steps against isolated sample Git history.
+set -euo pipefail
+
+function extract_step() {
+  local name="${1}" field="${2}" workflow="${3}"
+  awk -v name="${name}" -v field="${field}" '
+    /^      - name:/ { selected = ($0 == "      - name: " name); body = 0 }
+    selected && field == "if" && /^        if:/ { sub(/^        if: /, ""); print }
+    selected && field == "run" && /^        run: \|/ { body = 1; next }
+    selected && body { sub(/^          /, ""); print }
+  ' "${workflow}"
+}
+
+function gh() {
+  case "${1}" in
+    api)
+      case "${CATALOG_FIXTURE_RELEASE_STATE}" in
+        present) return 0 ;;
+        missing)
+          echo 'HTTP 404' >&2
+          return 1
+          ;;
+        error)
+          echo 'HTTP 403' >&2
+          return 1
+          ;;
+        *) return 2 ;;
+      esac
+      ;;
+    release)
+      local tag="${3}" remote_commit expected_commit
+      expected_commit="${COMMIT:?COMMIT is required}"
+      remote_commit="$(git ls-remote origin "refs/tags/${tag}^{}" | cut -f1)"
+      [[ "${remote_commit}" == "${expected_commit}" ]] || return 1
+      printf '%s\n' "${tag}" >> "${CATALOG_FIXTURE_RELEASE_LOG}"
+      ;;
+    *) return 2 ;;
+  esac
+}
+export -f gh
+
+function step_enabled() {
+  local condition="${1}" changed="${2}" output_exists="${3}"
+  case "${condition}" in
+    '') return 0 ;;
+    "steps.changes.outputs.changed == 'true'") [[ "${changed}" == true ]] ;;
+    "steps.check.outputs.release_exists == 'false'") [[ "${output_exists}" == false ]] ;;
+    "steps.changes.outputs.changed == 'true' && steps.check.outputs.release_exists == 'false'") [[ "${changed}" == true && "${output_exists}" == false ]] ;;
+    "steps.changes.outputs.changed == 'true' && steps.check.outputs.tag_exists == 'false'") [[ "${changed}" == true && "${output_exists}" == false ]] ;;
+    *)
+      echo "Unsupported fixture condition: ${condition}" >&2
+      return 2
+      ;;
+  esac
+}
+
+function main() {
+  local scenario="${1}" workflow="${REPO_ROOT:?REPO_ROOT is required}/.github/workflows/release.yml"
+  local root source='./custom/sample' previous='1.0.0' current='1.0.1'
+  root="$(mktemp -d)"
+  readonly CATALOG_FIXTURE_ROOT="${root}"
+  trap 'rm -r "${CATALOG_FIXTURE_ROOT}"' EXIT
+  export CATALOG_FIXTURE_RELEASE_STATE=missing
+  export CATALOG_FIXTURE_RELEASE_LOG="${root}/releases"
+  export GITHUB_REPOSITORY='sample/catalog'
+  export GITHUB_OUTPUT="${root}/outputs"
+  local initial_tag='' head_commit changed tag commit release_exists condition tag_exists check_status
+  case "${scenario}" in
+    large-version)
+      previous='999999999.0.0'
+      current='1000000000.0.0'
+      ;;
+    regression) current='0.9.0' ;;
+    missing-bump) current="${previous}" ;;
+    existing-release) CATALOG_FIXTURE_RELEASE_STATE=present ;;
+    api-error) CATALOG_FIXTURE_RELEASE_STATE=error ;;
+    first-release | unchanged | root-docs | plugin-change | catalog-only | deleted-plugin | new-plugin-version | tag-recovery | same-head-recovery | tag-collision | missing-remote-tag) ;;
+    *)
+      echo "Unknown scenario: ${scenario}" >&2
+      return 2
+      ;;
+  esac
+  extract_step 'Check for catalog changes' run "${workflow}" > "${root}/changes"
+  extract_step 'Check whether tag and release already exist' run "${workflow}" > "${root}/check"
+  extract_step 'Create and push annotated tag' run "${workflow}" > "${root}/tag"
+  extract_step 'Create GitHub Release' run "${workflow}" > "${root}/publish"
+  git init -q "${root}/repo"
+  git init --bare -q "${root}/remote"
+  cd "${root}/repo"
+  git config user.name 'Sample catalog'
+  git config user.email 'sample@example.invalid'
+  git remote add origin "${root}/remote"
+  mkdir -p .claude-plugin "${source}/.claude-plugin" plugins
+  jq -n --arg source "${source}" \
+    '{name:"sample",metadata:{},plugins:[{name:"sample",source:$source}]}' > .claude-plugin/marketplace.json
+  jq -n --arg version "${previous}" '{version:$version}' > "${source}/.claude-plugin/plugin.json"
+  printf 'sample\n' > "${source}/README.md"
+  git add .
+  git commit -qm 'feat: add sample catalog'
+  head_commit="$(git rev-parse HEAD)"
+  if [[ "${scenario}" != first-release && "${scenario}" != same-head-recovery ]]; then
+    initial_tag="catalog-${head_commit}"
+    git tag -a "${initial_tag}" -m "${initial_tag}"
+    if [[ "${scenario}" != missing-remote-tag ]]; then
+      git push -q origin "refs/tags/${initial_tag}"
+    fi
+  fi
+  case "${scenario}" in
+    plugin-change | large-version | regression | missing-bump)
+      printf 'updated sample\n' > "${source}/README.md"
+      jq -n --arg version "${current}" '{version:$version}' > "${source}/.claude-plugin/plugin.json"
+      ;;
+    catalog-only)
+      jq '.metadata.description="updated"' .claude-plugin/marketplace.json > "${root}/catalog"
+      mv "${root}/catalog" .claude-plugin/marketplace.json
+      ;;
+    deleted-plugin)
+      rm -r "${source}"
+      jq '.plugins |= map(select(.name != "sample"))' .claude-plugin/marketplace.json > "${root}/catalog"
+      mv "${root}/catalog" .claude-plugin/marketplace.json
+      ;;
+    new-plugin-version)
+      mkdir -p plugins/new-plugin/.claude-plugin
+      jq '.plugins += [{name:"new-plugin",source:"./plugins/new-plugin"}]' .claude-plugin/marketplace.json > "${root}/catalog"
+      mv "${root}/catalog" .claude-plugin/marketplace.json
+      jq -n '{version:"0.1.0"}' > plugins/new-plugin/.claude-plugin/plugin.json
+      ;;
+    root-docs) printf 'instructions\n' > plugins/AGENTS.md ;;
+    unchanged | tag-recovery | existing-release | api-error | tag-collision | missing-remote-tag) printf 'documentation\n' > README.md ;;
+    *) ;;
+  esac
+  if [[ -n "$(git status --porcelain)" ]]; then
+    git add .
+    git commit -qm 'chore: update sample inputs'
+  fi
+  export GITHUB_SHA
+  GITHUB_SHA="$(git rev-parse HEAD)"
+  if [[ "${scenario}" == same-head-recovery ]]; then
+    initial_tag="catalog-${GITHUB_SHA}"
+    git tag -a "${initial_tag}" -m "${initial_tag}"
+    git push -q origin "refs/tags/${initial_tag}"
+  fi
+  if ! bash -e -o pipefail "${root}/changes" > "${root}/changes.log"; then
+    cat "${root}/changes.log"
+    return 1
+  fi
+  changed="$(sed -n 's/^changed=//p' "${GITHUB_OUTPUT}")"
+  tag="$(sed -n 's/^tag=//p' "${GITHUB_OUTPUT}")"
+  commit="$(sed -n 's/^commit=//p' "${GITHUB_OUTPUT}")"
+  printf 'changed=%s target=%s\n' "${changed}" "$([[ "${tag}" == "catalog-${GITHUB_SHA}" ]] && echo current || echo previous)"
+  case "${scenario}" in
+    first-release | plugin-change | new-plugin-version | tag-recovery | same-head-recovery | existing-release | api-error | tag-collision | missing-remote-tag)
+      if [[ "${scenario}" == tag-collision ]]; then
+        commit="${GITHUB_SHA}"
+      fi
+      condition="$(extract_step 'Check whether tag and release already exist' if "${workflow}")"
+      if step_enabled "${condition}" "${changed}" ''; then
+        if TAG="${tag}" COMMIT="${commit}" CHANGED="${changed}" bash -e -o pipefail "${root}/check"; then
+          :
+        else
+          check_status="${?}"
+          return "${check_status}"
+        fi
+      fi
+      release_exists="$(sed -n 's/^release_exists=//p' "${GITHUB_OUTPUT}")"
+      tag_exists="$(sed -n 's/^tag_exists=//p' "${GITHUB_OUTPUT}")"
+      condition="$(extract_step 'Create and push annotated tag' if "${workflow}")"
+      if step_enabled "${condition}" "${changed}" "${tag_exists}"; then
+        TAG="${tag}" bash -e -o pipefail "${root}/tag"
+      fi
+      condition="$(extract_step 'Create GitHub Release' if "${workflow}")"
+      if step_enabled "${condition}" "${changed}" "${release_exists}"; then
+        TAG="${tag}" COMMIT="${commit}" bash -e -o pipefail "${root}/publish"
+      fi
+      if [[ -f "${CATALOG_FIXTURE_RELEASE_LOG}" ]]; then
+        [[ "$(cat "${CATALOG_FIXTURE_RELEASE_LOG}")" == "${tag}" ]]
+        echo 'release-created-for-target=true'
+      else
+        echo 'release-created-for-target=false'
+      fi
+      ;;
+    *) ;;
+  esac
+}
+
+main "$@"

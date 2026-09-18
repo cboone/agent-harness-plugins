@@ -211,5 +211,5 @@ Before finishing, verify:
 - If the plugin name already exists under `plugins/`, ask the user for a different name
 - If `marketplace.json` cannot be parsed as valid JSON, fix the syntax before proceeding
 - If the user is unsure about the plugin type, default to a skills plugin (the most common type)
-- If the user wants to add a skill to an existing plugin instead of creating a new one, bump the minor version in both `plugin.json` and `marketplace.json`
+- If the user wants to add a skill to an existing plugin instead of creating a new one, bump the minor version in `.claude-plugin/plugin.json` and mirror it in `.codex-plugin/plugin.json` when that manifest exists
 - If generated Codex or OpenCode files drift, run `bin/build-codex-marketplace` and `bin/build-opencode-mirror` instead of editing generated files directly

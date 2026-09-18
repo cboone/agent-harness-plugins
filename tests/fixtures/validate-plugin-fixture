@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Runs bin/validate-plugins against a disposable copy with one targeted mutation.
+set -euo pipefail
+
+FIXTURE_ROOT=""
+
+function cleanup() {
+  [[ -z "${FIXTURE_ROOT}" ]] || rm -r "${FIXTURE_ROOT}"
+}
+
+function mutate_catalog() {
+  local filter="${1}"
+  local catalog="${FIXTURE_ROOT}/.claude-plugin/marketplace.json"
+  jq "${filter}" "${catalog}" > "${FIXTURE_ROOT}/catalog.json"
+  mv "${FIXTURE_ROOT}/catalog.json" "${catalog}"
+}
+
+function main() {
+  local scenario="${1}"
+  FIXTURE_ROOT="$(mktemp -d)"
+  trap cleanup EXIT
+
+  mkdir -p "${FIXTURE_ROOT}/.agents/plugins" "${FIXTURE_ROOT}/dist"
+  cp -R "${REPO_ROOT:?REPO_ROOT is required}/plugins" "${FIXTURE_ROOT}/plugins"
+  cp -R "${REPO_ROOT}/.claude-plugin" "${FIXTURE_ROOT}/.claude-plugin"
+  cp -R "${REPO_ROOT}/bin" "${FIXTURE_ROOT}/bin"
+  cp "${REPO_ROOT}/README.md" "${FIXTURE_ROOT}/README.md"
+
+  case "${scenario}" in
+    valid) ;;
+    leading-zero)
+      jq '.version = "01.2.3"' "${FIXTURE_ROOT}/plugins/release/.claude-plugin/plugin.json" > "${FIXTURE_ROOT}/manifest.json"
+      mv "${FIXTURE_ROOT}/manifest.json" "${FIXTURE_ROOT}/plugins/release/.claude-plugin/plugin.json"
+      ;;
+    metadata-version) mutate_catalog '.metadata.version = "catalog-state"' ;;
+    entry-version) mutate_catalog '.plugins[0].version = "1.0.0"' ;;
+    *)
+      echo "Unknown scenario: ${scenario}" >&2
+      return 2
+      ;;
+  esac
+
+  (
+    cd "${FIXTURE_ROOT}"
+    bin/build-codex-marketplace > /dev/null
+    bin/validate-plugins
+  )
+}
+
+main "$@"
