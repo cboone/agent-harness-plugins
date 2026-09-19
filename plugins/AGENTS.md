@@ -8,4 +8,5 @@ Read [plugin development](../docs/plugin-development.md) before changing a plugi
 - Cross-harness hooks need compatible manifests and entry points. Follow `notify/` for separate Claude, Codex and OpenCode surfaces; unsupported Codex events invalidate its entire hook manifest.
 - Reference files and skill names are checked by `../bin/check-cross-references`. The guide describes repository-path declarations and file-scoped exemptions; an unused exemption also fails validation.
 - Add bundled-script coverage to `../tests/scrut/` and register needed paths in both the Makefile's `SCRUT_ENV` and CI's `scrut-env` list.
+- A style guide's `references/review-checklist.md` follows the review checklist format in the plugin development guide. `make build` copies it into `set-up-review-config`, so a checklist change needs forward version bumps in both plugins.
 - Rebuild both mirrors and run relevant validation after source changes. Never edit generated mirrors directly.

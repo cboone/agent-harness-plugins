@@ -102,6 +102,21 @@ A string with a stand-in segment is skipped, so `plugins/PLUGIN-NAME/README.md`,
 
 `ignore` exempts an individual reference that resolves nowhere because it is an illustration rather than a reference at all: Claude Code's own `/config`, Cargo's `/target` gitignore pattern, a reference filename naming a layout convention a plugin being authored should follow. Write the entry exactly as the checker reports it. Several such comments may appear in one file, and an entry that matches nothing is itself reported, so an exemption cannot outlive the reference it was written for. Exemptions are file-scoped rather than line-scoped because most of the references that need one sit inside an ordered list or a table row, where an HTML comment would break the Markdown.
 
+## Review checklists
+
+A style guide can carry a pull request review checklist at `plugins/<guide>/skills/<guide>/references/review-checklist.md`, beside the rules it condenses. `set-up-review-config` installs these checklists into other repositories, where Copilot code review, Codex and Claude Code Review read them. A skill can read only files its own plugin ships, so `bin/build-review-checklists`, run by `make build`, copies each checklist byte for byte to `plugins/set-up-review-config/skills/set-up-review-config/references/checklists/<guide>.md`. Rule 20 of `bin/validate-plugins` fails when a copy is missing, stale or orphaned, or when `set-up-review-config`'s `references/guides.md` has no detection rules for it. Edit the source, never the copy.
+
+A checklist is not the guide's essential checklist. It keeps only the rules a reviewer can check in a diff, leaves out what formatters enforce, and ranks each rule. The generator checks this format, except where noted:
+
+- A level-1 heading ending in "Review Checklist", then a line naming the files it covers and the citation form, `<guide>: Rule name`. The generator does not check that line.
+- Exactly three level-2 sections, in order: `## Important` (defects that change behavior, lose data or break tooling; Claude Important and Codex P1), `## Nits` (style rules no formatter enforces), and `## Do not flag` (accepted exceptions, and tool findings when the tool runs in CI).
+- Every item is `- **Rule name**: explanation`. Reviewers cite the bold name, so renaming a rule changes what review comments say. Mark items that apply only to executable scripts, so sourced files are exempt.
+- It must stand alone in another repository: no relative links, no `./references/` paths, no plugin-root placeholder, and no `validate-plugins` directives. Avoid a backticked slash before a word: rule 19, not the generator, reads it as a skill name and fails.
+- No tables or code fences, so a target repository's Markdown formatter never rewrites an installed copy.
+- At most 5,000 bytes. The cap keeps a checklist condensed; raise it in the generator deliberately, not to fit one file.
+
+Derive every rule from the guide. When a guide's rule changes, update its checklist in the same change. A new checklist also needs an entry in `references/guides.md` with its detection and routing rules.
+
 ## Adding a plugin
 
 1. Create the plugin directory under `plugins/`.
@@ -111,7 +126,7 @@ A string with a stand-in segment is skipped, so `plugins/PLUGIN-NAME/README.md`,
 1. Create a per-plugin `README.md` in the plugin directory.
 1. Add a row to the appropriate category table in the root `README.md`. If the plugin requires external tools, add a bullet to the category's `**External tools:**` list.
 1. If the plugin bundles a script, add scrut coverage under `tests/scrut/` and register any needed binary path in the `SCRUT_ENV` block in the `Makefile` and the matching `scrut-env` list in `.github/workflows/ci.yml`.
-1. Regenerate the Codex and OpenCode mirrors with `bin/build-codex-marketplace` and `bin/build-opencode-mirror`, and commit the results.
+1. Regenerate the bundled review checklists and the Codex and OpenCode mirrors with `make build`, and commit the results.
 1. Run `make test-all` and fix anything it reports before opening a PR.
 
 ## README catalog format
@@ -146,5 +161,7 @@ Each plugin's `.claude-plugin/plugin.json` is the sole version source. If a plug
 - **Minor**: new capabilities or meaningful behavior changes
 - **Major**: breaking changes (for example, removing or restructuring a skill)
 - New plugins start at `1.0.0`
+
+**Review checklists change two plugins**: A change to a style guide's `references/review-checklist.md` also changes its copy in `set-up-review-config`, so both plugins need a forward bump: a patch for rewording, and a minor bump for `set-up-review-config` when it gains a new guide. A generator change that alters the copies bumps `set-up-review-config`.
 
 **Version checks on branch operations**: After merging, rebasing, or before creating a PR, use the `check-versions` skill to verify version correctness. Another branch may have already incremented a version, so always check.

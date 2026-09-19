@@ -452,6 +452,61 @@ if ! cross_reference_output="$(bin/check-cross-references 2>&1)"; then
   fi
 fi
 
+# ─── 20. Bundled review checklists are current ──────────────────────────────
+# bin/build-review-checklists copies each style guide's review checklist into
+# set-up-review-config, because a skill can read only the files its own plugin
+# ships. A hand edit to a copy, or a checklist edit without a rebuild, would
+# install a checklist that no longer matches its guide, so the copies are
+# regenerated into a temporary directory and compared. Rule 16 cannot see this:
+# it rebuilds dist/codex from whatever plugins/ holds, stale copies included.
+# guides.md must also name every copy, or a bundled checklist would have no
+# detection rule and never be installed.
+
+REVIEW_CHECKLISTS_DIR="plugins/set-up-review-config/skills/set-up-review-config/references/checklists"
+REVIEW_GUIDES_FILE="plugins/set-up-review-config/skills/set-up-review-config/references/guides.md"
+readonly REVIEW_CHECKLISTS_DIR REVIEW_GUIDES_FILE
+
+function validate_review_checklists() {
+  local expected_dir output relayed expected committed name
+
+  expected_dir="$(mktemp -d "${TMPDIR:-/tmp}/review-checklists.XXXXXX")"
+  if ! output="$(env REVIEW_CHECKLISTS_DIR="${expected_dir}" bin/build-review-checklists 2>&1)"; then
+    printf '%s\n' "${output}"
+    relayed="$(grep -c '^::error::' <<< "${output}" || true)"
+    if [[ "${relayed}" -gt 0 ]]; then
+      errors=$((errors + relayed))
+    else
+      error "bin/build-review-checklists failed without reporting a finding"
+    fi
+    rm -r "${expected_dir}"
+    return
+  fi
+
+  for expected in "${expected_dir}"/*.md; do
+    [[ -e "${expected}" ]] || continue
+    committed="${REVIEW_CHECKLISTS_DIR}/${expected##*/}"
+    if [[ ! -f "${committed}" ]]; then
+      error "Review checklist copy '${committed}' is missing; run make build"
+    elif ! cmp -s "${expected}" "${committed}"; then
+      error "Review checklist copy '${committed}' does not match its source; edit the style guide's references/review-checklist.md, not the copy, and run make build"
+    fi
+  done
+
+  for committed in "${REVIEW_CHECKLISTS_DIR}"/*.md; do
+    [[ -e "${committed}" ]] || continue
+    name="${committed##*/}"
+    if [[ ! -f "${expected_dir}/${name}" ]]; then
+      error "Review checklist copy '${committed}' has no source checklist; run make build"
+    elif ! grep -qF "./references/checklists/${name}" "${REVIEW_GUIDES_FILE}" 2> /dev/null; then
+      error "'${REVIEW_GUIDES_FILE}' does not name ./references/checklists/${name}; add detection and routing rules for it"
+    fi
+  done
+
+  rm -r "${expected_dir}"
+}
+
+validate_review_checklists
+
 # ─── Summary ────────────────────────────────────────────────────────────────
 
 if [[ ${errors} -gt 0 ]]; then

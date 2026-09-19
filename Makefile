@@ -61,7 +61,7 @@ help:
 	@echo "  lint-shell         shellcheck + shfmt on every Bash script"
 	@echo "  format             Auto-fix Markdown and formatting"
 	@echo "  validate           Validate JSON and plugin structure"
-	@echo "  build              Regenerate the Codex and OpenCode mirrors"
+	@echo "  build              Regenerate bundled review checklists and the Codex and OpenCode mirrors"
 	@echo "  test-scrut         Run the scrut suites"
 	@echo "  test-scrut-update  Re-record scrut expectations"
 	@echo "  test-all           lint + validate + test-scrut"
@@ -89,7 +89,9 @@ validate:
 	bin/validate-json
 	bin/validate-plugins
 
+# The checklists come first: the Codex mirror copies plugins/, copies included.
 build:
+	bin/build-review-checklists
 	bin/build-codex-marketplace
 	bin/build-opencode-mirror
 
