@@ -24,6 +24,7 @@ function main() {
   cp -R "${REPO_ROOT:?REPO_ROOT is required}/plugins" "${FIXTURE_ROOT}/plugins"
   cp -R "${REPO_ROOT}/.claude-plugin" "${FIXTURE_ROOT}/.claude-plugin"
   cp -R "${REPO_ROOT}/bin" "${FIXTURE_ROOT}/bin"
+  cp -R "${REPO_ROOT}/docs" "${FIXTURE_ROOT}/docs"
   cp "${REPO_ROOT}/README.md" "${FIXTURE_ROOT}/README.md"
 
   case "${scenario}" in
