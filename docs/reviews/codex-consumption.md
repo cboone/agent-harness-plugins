@@ -284,7 +284,7 @@ That saves context, but removes useful distinctions. For example:
 
 Marketplace summaries and routing descriptions serve different purposes. Codex should receive concise descriptions written for selection, rather than automatically receiving catalog copy. Actual selection accuracy remains unmeasured.
 
-**Milestone 1: resolved.** `bin/build-codex-marketplace` copies `SKILL.md` files unchanged, and rule 16b of `bin/validate-plugins` fails when a generated copy differs from its source. The canonical descriptions were rewritten as routing descriptions that fit Codex's budget. Selection accuracy remains unmeasured until milestone 2's real-Codex evaluation.
+**Milestone 1: resolved.** `bin/build-codex-marketplace` copies `SKILL.md` files unchanged, and rule 16b of `bin/validate-plugins` fails when a generated copy differs from its source. The canonical descriptions were rewritten as routing descriptions that fit Codex's budget. Selection accuracy remains unmeasured until milestone 2's real-Codex evaluation. Shortening dropped trigger phrasings the old descriptions carried, such as "watch the pr" and "keep an eye on the pr" for `monitor-pr`, asking what can be worked on in parallel for `suggest-next-issue`, and "who has the DAW" for `create-worktree`. The activation checks in milestones 2 and 4 should include phrasings like these, so any routing lost to shortening is measured rather than assumed.
 
 **7. The context-budget check measures only part of discovery overhead. Confirmed coverage gap.**
 
