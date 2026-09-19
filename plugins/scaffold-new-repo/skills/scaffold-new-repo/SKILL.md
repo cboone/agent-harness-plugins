@@ -1,17 +1,8 @@
 ---
 name: scaffold-new-repo
 description: >-
-  Scaffold the universal boilerplate for a new repository: LICENSE, README,
-  CHANGELOG, .gitignore, agent config files (AGENTS.md, CLAUDE.md symlink,
-  .claude/settings.json, .github/copilot-instructions.md), and a plans
-  directory. Use when the user says "scaffold a new repo", "set up a new
-  project", "bootstrap a new repository", "initialize a new repo", "create
-  the boilerplate for", or starts a new repository and wants language-agnostic
-  foundation files. Supports go-cli, go-library, javascript, pascal, python,
-  ruby, rust, shell, swift, zig-cli, and generic project types. For
-  language-specific scaffolding, pairs with scaffold-go-cli,
-  scaffold-go-library, and scaffold-rust-cli; for full setup including CI and
-  linters, see bootstrap-project.
+  Scaffold a new repository's language-agnostic files: LICENSE, README,
+  CHANGELOG, agent config, and plans. Use for "scaffold a new repo".
 ---
 
 # Scaffold New Repo

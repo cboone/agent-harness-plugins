@@ -54,9 +54,8 @@ Codex-facing skill descriptions are generated from the concise plugin marketplac
 
 ```yaml
 description: >-
-  Create a git worktree, branch, and tmux window for a GitHub issue using
-  workmux. Use for "start issue" or "work on #42"; for a task without an
-  issue, use create-worktree. Requires workmux.
+  Merge the base branch into the current branch, resolve conflicts, and push.
+  Use for "merge main" or "sync with main"; to rebase, use rebase-onto-main.
 ```
 
 **Style guide skill:**

@@ -1,12 +1,8 @@
 ---
 name: pr
 description: >-
-  Commit all changes (if needed), push to remote, and create a GitHub pull
-  request in one automated step with no prompts. Handles plan files
-  automatically (renaming, moving completed plans to done). Use when the user
-  says "pr", "create a pr", "open a pr", "submit a pr", "push and create pr",
-  "commit and create pr", or any variant involving creating a pull request from
-  the current branch. Requires the gh CLI to be installed.
+  Commit, push, and open a GitHub pull request from the current branch in one
+  step, with no prompts. Use for "pr", "open a pr", or "push and create pr".
 ---
 
 # PR

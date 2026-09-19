@@ -1,12 +1,8 @@
 ---
 name: merge-main
 description: >-
-  Fetch and merge the base branch (usually main) into the current feature
-  branch, handling conflicts and pushing. Use when the user says
-  "merge main", "merge in main", "merge base branch", "update from main",
-  "pull in main", "sync with main", "merge main into this branch",
-  "update branch from main", or any variant involving merging the default
-  branch into the current working branch.
+  Merge the base branch into the current branch, resolve conflicts, and push.
+  Use for "merge main" or "sync with main"; to rebase, use rebase-onto-main.
 ---
 
 # Merge Main

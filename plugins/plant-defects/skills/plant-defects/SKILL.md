@@ -1,19 +1,8 @@
 ---
 name: plant-defects
 description: >-
-  Deliberately break code to prove a test can see it: plant the defect an
-  instrument claims to catch, confirm it goes red, and record it in a table that
-  regresses. Use whenever the question is whether a check can fail, not only
-  when invoked explicitly: (1) reviewing an assertion or CI gate whose claim is
-  an absence (no leak, no race, no warning, nothing left behind), (2) relying on
-  an external instrument such as a sanitizer, linter, or coverage tool,
-  (3) judging an acceptance criterion that names an instrument it expects to
-  fail, (4) asking "would I know if this broke", or explaining what a green
-  suite establishes, (5) suspecting a check runs on nothing, or that code is
-  unreachable from every test build, (6) choosing between instruments, or
-  deciding not to build one. Covers the plant table, ordered assertions,
-  positive controls, vacuous passes, structural uncoverability,
-  instrument-blindness matrices, and source canaries.
+  Plant the defect a test or check claims to catch and confirm it goes red. Use
+  when asking whether a check can fail, or "would I know if this broke".
 ---
 
 # Plant Defects

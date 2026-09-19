@@ -1,13 +1,8 @@
 ---
 name: address-issue
 description: >-
-  Fetch a GitHub issue, analyze it, plan the work and stop for approval, then
-  execute the changes in the current branch and commit with issue references.
-  Use when the user says "address issue", "address issue #42", "address #42",
-  "fix issue #42", "work on issue #42", "handle issue #42", "resolve issue
-  #42", "tackle issue #42", "implement issue #42", or references addressing a
-  GitHub issue by number or description. Requires the gh CLI to be installed
-  and authenticated.
+  Plan and implement a GitHub issue on the current branch, stopping for approval
+  first. Use for "address issue #42" or "fix issue #42".
 ---
 
 # Address Issue

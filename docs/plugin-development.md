@@ -95,9 +95,8 @@ Rule 17 of `bin/validate-plugins` checks the budget. It renders each generated `
 
 ```yaml
 description: >-
-  Create a GitHub pull request from the current branch, committing and pushing
-  first when needed. Use for "pr", "open a pr", or "push and create a pr"; for
-  existing review comments, use resolve-copilot-pr-feedback.
+  Merge the base branch into the current branch, resolve conflicts, and push.
+  Use for "merge main" or "sync with main"; to rebase, use rebase-onto-main.
 ```
 
 Add `agents/openai.yaml` to a skill only for supported interface metadata, an explicit invocation-policy override, or an MCP tool dependency; no skill needs one today. Never set its `interface.short_description`: Codex prints that in place of `description`, silently replacing the routing description. Do not add keys this repository invents to portable plugin manifests or to `agents/openai.yaml`.

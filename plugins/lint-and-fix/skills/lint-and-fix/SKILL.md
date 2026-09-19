@@ -1,12 +1,8 @@
 ---
 name: lint-and-fix
 description: >-
-  Detect available linters and formatters in the project, run them with
-  auto-fix flags, report results, manually resolve remaining issues, then
-  commit and push the fixes. Use when the user says "lint and fix", "run the
-  linter", "run linters", "fix lint errors", "format the code", "lint this
-  project", "check and fix", "run eslint", "run prettier", or any variant
-  involving running project linters or formatters.
+  Run a project's linters and formatters with auto-fix, fix the rest, then
+  commit and push. Use for "lint and fix", "run the linters", or "fix lint".
 ---
 
 # Lint and Fix

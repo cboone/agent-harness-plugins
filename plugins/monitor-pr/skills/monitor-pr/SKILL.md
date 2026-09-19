@@ -1,14 +1,8 @@
 ---
 name: monitor-pr
 description: >-
-  Monitor a pull request until its checks pass, Copilot has reviewed the
-  current head with nothing left open, and it is mergeable, fixing failures
-  and resolving Copilot feedback along the way. On a Dependabot PR it asks
-  Dependabot to rebase instead of pushing to the branch. Use when the user says
-  "monitor pr", "monitor the pr", "watch the pr", "keep an eye on the pr",
-  "wait for ci", "wait for checks", "monitor pr 361", or any variant
-  involving watching a pull request until it is ready to merge. Requires the
-  gh CLI to be installed and authenticated, and jq.
+  Watch a PR until checks pass, Copilot feedback is resolved, and it is
+  mergeable, fixing failures. Use for "monitor the pr" or "wait for ci".
 ---
 
 # Monitor PR

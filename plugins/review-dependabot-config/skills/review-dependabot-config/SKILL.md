@@ -1,18 +1,8 @@
 ---
 name: review-dependabot-config
 description: >-
-  Review a repository's Dependabot setup: whether dependabot.yml covers every
-  ecosystem and directory present, whether it is valid against current GitHub
-  behavior, how it groups and paces PRs, labels, commit messages, and ignore
-  rules, plus the repository settings and secrets Dependabot depends on
-  (alerts, security updates, Dependabot secrets, rulesets). Reports findings by
-  severity, then applies the fixes the user selects. Use when the user says
-  "review dependabot config", "review dependabot settings", "audit
-  dependabot.yml", "check the Dependabot configuration", "is Dependabot set up
-  correctly", "do we have Dependabot checks on everything", "why isn't
-  Dependabot opening PRs", "stop Dependabot from updating a directory", or any
-  variant involving reviewing Dependabot configuration. Requires the gh CLI to
-  be installed and authenticated, and jq.
+  Review dependabot.yml and Dependabot settings, then apply selected fixes. Use
+  for "review dependabot config"; for PRs, use triage-dependabot-prs.
 ---
 
 # Review Dependabot Config

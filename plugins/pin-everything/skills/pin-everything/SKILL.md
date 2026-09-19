@@ -1,17 +1,8 @@
 ---
 name: pin-everything
 description: >-
-  Pin every version surface in a repository to commit hashes, integrity digests,
-  or specific versions as a one-shot supply-chain hardening pass. Use when the
-  user says "pin everything", "pin all versions", "harden version pinning",
-  "SHA-pin actions", "SHA-pin all the actions", "pin to commit hashes",
-  "audit version pins", "pin all uses to commit hashes", or wants to harden a
-  repository against supply-chain attacks. SHA-pins GitHub Actions, integrity-
-  pins Yarn via Corepack, exact-pins application package-manager dependencies,
-  migrates scaffolded CI to language version files, pins install commands, and
-  optionally generates a weekly drift-audit script. For ongoing template-drift
-  detection use refresh-project-scaffolding; for credential-leak hardening use
-  set-up-secret-scanning.
+  Pin every version surface in a repository, from action SHAs to exact
+  dependency versions. Use for "pin everything" or "SHA-pin actions".
 ---
 
 # Pin Everything

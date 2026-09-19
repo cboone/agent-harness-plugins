@@ -1,16 +1,8 @@
 ---
 name: create-deferred-issues
 description: >-
-  Find the concerns a unit of work raised and set aside (in the current
-  session, in TODO and FIXME markers the branch adds, in the pull request body
-  and review comments, and in out-of-scope sections of the plan or issue),
-  propose them as one batch for the user to trim and edit, then file the
-  approved set as GitHub issues linked back to their source. Use when the user
-  says "create deferred issues", "file the deferred issues", "file issues for
-  the follow-ups", "file issues for everything we set aside", "file the
-  out-of-scope items", "what did we defer", or asks to track the concerns the
-  current work left open, often just before "/pr". Requires the gh CLI to be
-  installed and authenticated.
+  File GitHub issues for concerns the current work set aside, from a batch the
+  user approves. Use for "create deferred issues" or "file the follow-ups".
 ---
 
 # Create Deferred Issues

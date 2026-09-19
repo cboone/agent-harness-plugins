@@ -1,19 +1,8 @@
 ---
 name: review-colleague-pr
 description: >-
-  Review a colleague's pull request carefully and considerately from a checkout
-  of its branch, and report a brief, read-only assessment in chat for the user
-  to turn into their own feedback: what the PR does, whether it meets its
-  stated requirements, whether it moves the codebase in a good direction, what
-  must change before merge, what could be a follow-up, and questions for the
-  author. Posts nothing to GitHub and reads Git objects or retained GitHub
-  patches without changing the checkout. Skips nits and style unless a change clearly
-  breaks established practice. Use when the user says "review colleague pr",
-  "review my colleague's PR", "review a teammate's PR", "review this PR before
-  I give feedback", "brief me on this PR", "what do you make of this PR", or
-  any variant involving evaluating someone else's pull request so the user can
-  write their own feedback. Requires the gh CLI to be installed and
-  authenticated.
+  Brief the user on a colleague's PR from its checkout, posting nothing to
+  GitHub. Use for "review a teammate's PR"; for your branch, use review-branch.
 ---
 
 # Review Colleague PR

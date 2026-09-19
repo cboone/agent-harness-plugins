@@ -1,11 +1,8 @@
 ---
 name: commit
 description: >-
-  Create well-structured git commits with context-aware message generation, plan
-  awareness, and support for common commit workflow variants. Use when the user
-  says "commit", "commit the changes", "commit and push", "commit the plan",
-  "commit staged", "commit just the staged changes", "give the plan a meaningful
-  name and commit", or any variant involving committing code changes.
+  Create git commits with context-aware messages and plan awareness. Use for
+  "commit", "commit and push", "commit staged", or "commit the plan".
 ---
 
 # Commit

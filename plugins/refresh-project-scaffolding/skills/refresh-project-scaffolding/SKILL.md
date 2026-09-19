@@ -1,17 +1,8 @@
 ---
 name: refresh-project-scaffolding
 description: >-
-  Refresh existing project scaffolding against the latest agent-harness-plugins
-  templates. Use when the user says "refresh project scaffolding", "update
-  everything", "audit my repo", "audit the repo", "refresh templates", "bring
-  this repo up to date", "check what's outdated", or wants the maintenance
-  companion to
-  bootstrap-project. Detects which scaffolds, CI workflows, linters, and
-  installers are in use, diffs them against current templates, and applies
-  confirmed updates. Does not set up tools that were never used, with one
-  exception: a repository with workflows or manifests but no Dependabot config
-  is reported for pin-everything to create one. Use bootstrap-project for
-  initial setup.
+  Update a repository's existing scaffolding, CI, and linters to current
+  templates. Use for "refresh project scaffolding" or "audit my repo".
 ---
 
 # Refresh Project Scaffolding

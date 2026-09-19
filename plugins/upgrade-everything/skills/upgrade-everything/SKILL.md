@@ -1,13 +1,8 @@
 ---
 name: upgrade-everything
 description: >-
-  Assess every version reference in a repository, check current upstream
-  versions, evaluate repo-specific risk and reward, and present selectable
-  upgrade options. Use when the user says "upgrade everything", "upgrade all
-  versions", "check dependency upgrades", "assess upgrades", "update
-  dependencies", "what can be upgraded", or asks for a full upgrade audit.
-  Always includes every discovered upgrade candidate in the plan and applies
-  upgrades only after explicit user selection.
+  Audit every version reference for upgrades, weigh their risk, and apply only
+  the selected ones. Use for "upgrade everything" or "what can I upgrade".
 ---
 
 # Upgrade Everything

@@ -1,12 +1,8 @@
 ---
 name: address-review
 description: >-
-  Parse a review document for actionable feedback items, work through them
-  systematically, and track resolution progress. Use when the user says
-  "address review", "address the review", "address @docs/reviews/...",
-  "work through the review feedback", "resolve review items",
-  "address the issues in @docs/...", or references addressing a review
-  document by path.
+  Work through the actionable items in a review document and track their
+  resolution. Use for "address the review" or "address @docs/reviews/...".
 ---
 
 # Address Review

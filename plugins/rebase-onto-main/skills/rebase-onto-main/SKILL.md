@@ -1,13 +1,8 @@
 ---
 name: rebase-onto-main
 description: >-
-  Fetch and rebase the current feature branch onto the base branch (usually
-  main), handling conflicts per commit and force-with-lease pushing. Use when
-  the user says "rebase onto main", "rebase on main", "rebase against main",
-  "rebase from main", "rebase main", "rebase branch", "update branch via
-  rebase", "rebase against base branch", "replay commits onto main", or any
-  variant involving rebasing the current working branch onto the default
-  branch.
+  Rebase the current branch onto the base branch, resolving conflicts per
+  commit, then force-with-lease push. Use for "rebase onto main".
 ---
 
 # Rebase Onto Main

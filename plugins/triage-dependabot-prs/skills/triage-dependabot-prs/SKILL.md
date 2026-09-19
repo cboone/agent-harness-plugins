@@ -1,18 +1,8 @@
 ---
 name: triage-dependabot-prs
 description: >-
-  Triage a repository's open Dependabot pull requests: gather evidence on each
-  one (freshness against its base branch, whether CI exercises the change,
-  overlap with other PRs, release notes, matching security alerts), sort every
-  PR into exactly one category (safe to merge, needs refresh, needs testing,
-  needs work, hold, superseded, outdated), then merge, request rebases, or
-  close with an explanation, as the user approves. Use when the user says
-  "triage dependabot PRs", "review the open Dependabot PRs", "are the
-  Dependabot PRs safe to merge", "assess the merge safety of the Dependabot
-  PRs", "review the newly opened Dependabot PRs", "clean up stale Dependabot
-  PRs", "is this Dependabot PR safe to merge", or any variant involving
-  reviewing Dependabot upgrade PRs. Requires the gh CLI to be installed and
-  authenticated, and jq.
+  Sort open Dependabot PRs by merge safety, then merge, rebase, or close them as
+  approved. Use for "triage dependabot PRs" or "are these safe to merge".
 ---
 
 # Triage Dependabot PRs
