@@ -1,9 +1,8 @@
 ---
 name: review-dependabot-config
 description: >-
-  Review a repository's Dependabot setup (dependabot.yml coverage and validity,
-  grouping, labels, commit messages, and the repository settings and secrets
-  Dependabot depends on), then apply the fixes the user selects.
+  Review dependabot.yml and Dependabot settings, then apply selected fixes. Use
+  for "review dependabot config"; for PRs, use triage-dependabot-prs.
 ---
 
 # Review Dependabot Config

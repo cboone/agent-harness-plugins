@@ -1,8 +1,8 @@
 ---
 name: set-up-linters
 description: >-
-  Detect project languages, recommend linters and formatters, install them, and
-  generate config files, including Pandoc-academic Markdown presets.
+  Choose, install, and configure linters and formatters for a project. Use for
+  "set up linters" or "add prettier"; to run them, use lint-and-fix.
 ---
 
 # Set-Up Linters

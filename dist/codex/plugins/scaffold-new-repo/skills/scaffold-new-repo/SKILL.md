@@ -1,8 +1,8 @@
 ---
 name: scaffold-new-repo
 description: >-
-  Scaffold the universal boilerplate for a new repository: LICENSE, README,
-  CHANGELOG, .gitignore, agent config files, and a plans directory.
+  Scaffold a new repository's language-agnostic files: LICENSE, README,
+  CHANGELOG, agent config, and plans. Use for "scaffold a new repo".
 ---
 
 # Scaffold New Repo

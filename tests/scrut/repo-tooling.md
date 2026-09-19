@@ -10,7 +10,7 @@ metadata unchanged.
 
 ```scrut
 $ cd "${REPO_ROOT}" && jq -e 'all(.plugins[]; has("version") | not) and (.metadata | has("version") | not)' .claude-plugin/marketplace.json > /dev/null && jq -e 'all(.plugins[]; has("version") | not) and (.metadata | has("version") | not)' .agents/plugins/marketplace.json > /dev/null && for manifest in plugins/*/.claude-plugin/plugin.json; do jq -e '.version | strings | test("^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$")' "${manifest}" > /dev/null || exit 1; done && bin/validate-plugins && echo version-state-clean
-* (glob*)
+Codex skill inventory: * (glob)
 All plugin validations passed.
 version-state-clean
 ```
@@ -20,18 +20,18 @@ version-state-clean
 Each case starts from a generated copy of the repository, then mutates one
 surface. This exercises the validator itself instead of duplicating its rules
 with a separate `jq` check. Every run also reports the Codex skill inventory,
-which the next section covers, so these cases pass over it.
+which the next section covers, and a valid run warns about nothing.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" valid
-* (glob*)
+Codex skill inventory: * (glob)
 All plugin validations passed.
 ```
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" leading-zero 2>&1
 ::error::Plugin 'release': plugin.json version '01.2.3' must be MAJOR.MINOR.PATCH
-* (glob*)
+Codex skill inventory: * (glob)
 1 plugin validation error(s) found.
 [1]
 ```
@@ -39,7 +39,7 @@ $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" leading-zero 2>&1
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" metadata-version 2>&1
 ::error::Marketplace metadata must not contain a version
-* (glob*)
+Codex skill inventory: * (glob)
 1 plugin validation error(s) found.
 [1]
 ```
@@ -47,7 +47,7 @@ $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" metadata-version 2>&1
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" entry-version 2>&1
 ::error::Marketplace entry 'add-cobra-version' must not contain a version
-* (glob*)
+Codex skill inventory: * (glob)
 1 plugin validation error(s) found.
 [1]
 ```
@@ -69,14 +69,25 @@ Codex skill inventory: * skills cost * of 4840 tokens available under the 5440-t
 ```
 
 A single description over Codex's 1,024-character limit is an error however
-much room the budget has left.
+much room the budget has left; the scenario widens the context window so the
+length is the only fault.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" oversized-description 2>&1
 ::error::Skill 'plugins/release/skills/release/SKILL.md' description is 1100 characters, exceeding the 1024-character limit
-* (glob*)
+Codex skill inventory: * (glob)
 1 plugin validation error(s) found.
 [1]
+```
+
+A routing description over 150 characters, its average share of the primary
+budget, draws a warning but does not fail the run.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" long-description 2>&1
+::warning::Skill 'plugins/release/skills/release/SKILL.md' routing description is 200 characters; keep it within 150, its average share of the Codex discovery budget
+Codex skill inventory: * (glob)
+All plugin validations passed.
 ```
 
 A catalog over the primary budget fails with its total, the budget and reserve,
@@ -84,7 +95,6 @@ the largest entries, and what to do about it.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" aggregate-overflow 2>&1
-* (glob*)
 Codex skill inventory: * skills cost * of 1400 tokens available under the 2000-token budget for gpt-6-astra, and * (glob)
 ::error::Codex skill inventory costs * tokens, over the 1400 available (2000-token budget for gpt-6-astra less a 600-token system-skill reserve). Descriptions are * of its * bytes; names, paths and line syntax are the rest. Largest entries in tokens: *. Tighten the largest routing descriptions rather than raising the budget. (glob)
 1 plugin validation error(s) found.
@@ -105,9 +115,23 @@ An empty context window models Codex not knowing it, which selects the
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" fallback 2>&1
-* (glob*)
 Codex skill inventory: * skills cost * of 5600 characters available under the 8000-character fallback; no reference context window is set. (glob)
 ::error::Codex skill inventory is * characters, over the 5600 available (8000-character fallback budget less a 2400-character system-skill reserve). Descriptions are * (glob)
+1 plugin validation error(s) found.
+[1]
+```
+
+## Generated Codex skills match their canonical sources
+
+Rule 16 accepts whatever the generator produces, so a generator that rewrote
+routing descriptions, as `bin/build-codex-marketplace` once did for every
+skill, would pass it. Rule 16b compares each generated `SKILL.md` with its
+canonical source directly.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" rewriting-generator 2>&1
+::error::Generated Codex skill 'dist/codex/plugins/release/skills/release/SKILL.md' differs from its canonical source 'plugins/release/skills/release/SKILL.md'; the generator must copy SKILL.md files unchanged
+Codex skill inventory: * (glob)
 1 plugin validation error(s) found.
 [1]
 ```

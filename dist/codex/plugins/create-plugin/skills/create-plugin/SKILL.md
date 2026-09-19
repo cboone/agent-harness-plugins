@@ -1,8 +1,8 @@
 ---
 name: create-plugin
 description: >-
-  Guide for creating new plugins in this repository with consistent structure
-  and conventions.
+  Add a plugin, skill, hook, or command to the agent-harness-plugins repository
+  and its catalog. Use for "create a plugin" or "add a new skill".
 ---
 
 # Create Plugin

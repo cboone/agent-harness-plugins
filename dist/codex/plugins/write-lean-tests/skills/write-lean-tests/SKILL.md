@@ -1,8 +1,8 @@
 ---
 name: write-lean-tests
 description: >-
-  Conventions for compile-time, example-based Lean 4 API regression tests that
-  mirror a library's public surface.
+  Write compile-time, example-based Lean 4 tests that mirror a library's public
+  surface. Use for a NameTest/ directory or for wiring lake test.
 ---
 
 # Write Lean Tests

@@ -1,8 +1,8 @@
 ---
 name: scaffold-lean-library
 description: >-
-  Scaffold a Lean 4 library project with Mathlib or PFR dependencies, Lake
-  test/lint wiring, GitHub Actions CI, text linting, and agent instructions.
+  Scaffold a Lean 4 library with Mathlib or PFR, Lake tests, and CI. Use for
+  "new Lean project"; to edit Lean, use write-lean-code.
 ---
 
 # Scaffold Lean Library

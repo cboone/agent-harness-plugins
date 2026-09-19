@@ -1,9 +1,8 @@
 ---
 name: write-realtime-audio-code
 description: >-
-  Write and review real-time audio code: callback safety, bounded cross-thread
-  communication, memory ordering, sample-accurate events, and compatible plugin
-  parameters and state.
+  Write or review real-time audio callbacks: audio-thread safety, lock-free
+  messaging, and plugin state. Not for generic queues, GUI, or offline DSP.
 ---
 
 # Write Real-Time Audio Code

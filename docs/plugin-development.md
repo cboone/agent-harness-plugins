@@ -83,6 +83,8 @@ A plugin carries two kinds of description, written for different readers, and ea
 - **Routing description:** the `description` in a skill's `SKILL.md` frontmatter. Harnesses use it to decide whether a request should activate the skill implicitly, and selectors show it beside the skill's name. Write it for selection.
 - **Catalog summary:** the `description` in `.claude-plugin/marketplace.json`, repeated verbatim in the plugin's manifests, the opening paragraph of its README, and its root README "What it does" cell. Write it for a person browsing the catalog. It needs no routing detail.
 
+Every harness routes on the same description. Claude Code loads the canonical `SKILL.md`, the OpenCode mirror links to it, and `bin/build-codex-marketplace` copies it into `dist/codex/` unchanged. Rule 16b of `bin/validate-plugins` fails if a generated `SKILL.md` differs from its source, so change a routing description in the canonical file, never through the generator.
+
 A routing description:
 
 1. Opens with the primary action, so a description shortened from the end still routes.

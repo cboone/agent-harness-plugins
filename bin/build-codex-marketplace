@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 # Regenerates the Codex marketplace and plugin roots from the canonical plugins.
+#
+# Skills are copied unchanged: each SKILL.md's description is the one routing
+# description every harness activates on, and rule 16b of bin/validate-plugins
+# fails if a generated SKILL.md ever differs from its canonical source. A
+# harness-specific transformation is therefore a design change, not something
+# this script can do quietly.
 set -euo pipefail
 
 CLAUDE_MARKETPLACE="${CLAUDE_MARKETPLACE:-.claude-plugin/marketplace.json}"
@@ -32,12 +38,6 @@ function plugin_source_path() {
   marketplace_value "${plugin_name}" '(.source | if type == "string" then . else .path end) // empty'
 }
 
-function plugin_description() {
-  local plugin_name="${1}"
-
-  marketplace_value "${plugin_name}" '.description // empty'
-}
-
 function remove_existing_dir() {
   local path="${1}"
 
@@ -51,77 +51,6 @@ function remove_existing_dir() {
   fi
 
   rm -r "${path}"
-}
-
-function rewrite_skill_description() {
-  local skill_md="${1}" description="${2}"
-  local tmp_file
-  tmp_file="$(mktemp "${skill_md}.tmp.XXXXXX")"
-
-  awk -v description="${description}" '
-    function emit_description(raw, words, count, i, word, line) {
-      print "description: >-"
-      count = split(raw, words, /[[:space:]]+/)
-      line = ""
-      for (i = 1; i <= count; i++) {
-        word = words[i]
-        if (word == "") {
-          continue
-        }
-        if (line == "") {
-          line = word
-        } else if (length(line) + 1 + length(word) <= 78) {
-          line = line " " word
-        } else {
-          print "  " line
-          line = word
-        }
-      }
-      if (line != "") {
-        print "  " line
-      }
-    }
-
-    NR == 1 && $0 == "---" {
-      in_frontmatter = 1
-      print
-      next
-    }
-
-    in_frontmatter && skipping_description {
-      if ($0 ~ /^[[:space:]]+/) {
-        next
-      }
-      skipping_description = 0
-    }
-
-    in_frontmatter && $0 ~ /^description:/ {
-      emit_description(description)
-      found_description = 1
-      skipping_description = 1
-      next
-    }
-
-    in_frontmatter && $0 == "---" {
-      in_frontmatter = 0
-      print
-      next
-    }
-
-    { print }
-
-    END {
-      if (!found_description) {
-        exit 2
-      }
-    }
-  ' "${skill_md}" > "${tmp_file}" || {
-    rm "${tmp_file}"
-    error "Skill '${skill_md}' is missing a description field"
-    return
-  }
-
-  mv "${tmp_file}" "${skill_md}"
 }
 
 # A source README at plugins/<name>/README.md reaches the root README with two
@@ -168,7 +97,7 @@ function write_codex_marketplace() {
 }
 
 function copy_codex_plugin_roots() {
-  local plugin_name source_path source_dir target_dir description
+  local plugin_name source_path source_dir target_dir
 
   remove_existing_dir "${CODEX_DIST_DIR}"
   if [[ ${errors} -gt 0 ]]; then
@@ -198,19 +127,6 @@ function copy_codex_plugin_roots() {
     mkdir -p "${target_dir}"
     cp -R "${source_dir}/." "${target_dir}"
     rewrite_generated_readme_links "${target_dir}/README.md"
-
-    description="$(plugin_description "${plugin_name}")"
-    if [[ -z "${description}" ]]; then
-      error "Marketplace entry '${plugin_name}' is missing a description"
-      continue
-    fi
-
-    for skill_md in "${target_dir}"/skills/*/SKILL.md; do
-      if [[ ! -f "${skill_md}" ]]; then
-        continue
-      fi
-      rewrite_skill_description "${skill_md}" "${description}"
-    done
   done < <(jq -r '.plugins[].name' "${CLAUDE_MARKETPLACE}")
 }
 

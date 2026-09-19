@@ -1,7 +1,8 @@
 ---
 name: pr
 description: >-
-  Lint, commit, push, and create a pull request in one step with no prompts.
+  Commit, push, and open a GitHub pull request from the current branch in one
+  step, with no prompts. Use for "pr", "open a pr", or "push and create pr".
 ---
 
 # PR

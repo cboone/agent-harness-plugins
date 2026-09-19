@@ -1,9 +1,8 @@
 ---
 name: pin-everything
 description: >-
-  Pin every version surface in a repository (action SHAs, packageManager
-  integrity digests, dependency exact-pins, runtime version files, install
-  commands) for one-shot supply-chain hardening.
+  Pin every version surface in a repository, from action SHAs to exact
+  dependency versions. Use for "pin everything" or "SHA-pin actions".
 ---
 
 # Pin Everything

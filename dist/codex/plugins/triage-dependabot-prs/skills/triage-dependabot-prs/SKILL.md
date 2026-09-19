@@ -1,9 +1,8 @@
 ---
 name: triage-dependabot-prs
 description: >-
-  Triage a repository's open Dependabot pull requests into safe to merge, needs
-  refresh, needs testing, needs work, hold, superseded, or outdated, backed by
-  evidence, then merge, rebase, or close them as the user approves.
+  Sort open Dependabot PRs by merge safety, then merge, rebase, or close them as
+  approved. Use for "triage dependabot PRs" or "are these safe to merge".
 ---
 
 # Triage Dependabot PRs

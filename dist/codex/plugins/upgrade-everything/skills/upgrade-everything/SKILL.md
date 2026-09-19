@@ -1,8 +1,8 @@
 ---
 name: upgrade-everything
 description: >-
-  Assess every version reference in a repository, evaluate available upgrades
-  with repo-specific risk and reward, and present selectable upgrade options.
+  Audit every version reference for upgrades, weigh their risk, and apply only
+  the selected ones. Use for "upgrade everything" or "what can I upgrade".
 ---
 
 # Upgrade Everything

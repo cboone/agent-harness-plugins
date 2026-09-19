@@ -1,8 +1,8 @@
 ---
 name: set-up-installers
 description: >-
-  Set up installer and distribution methods for Go, Swift, Rust, and Zig
-  projects: Homebrew tap, go/cargo install, and release workflow.
+  Set up Homebrew tap formulas and go or cargo install support for Go, Swift,
+  Rust, and Zig projects. Use for "set up installers".
 ---
 
 # Set-Up Installers

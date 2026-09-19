@@ -1,8 +1,8 @@
 ---
 name: monitor-pr
 description: >-
-  Monitor a pull request until its checks pass, Copilot signs off on the current
-  head, and it is mergeable, fixing failures along the way.
+  Watch a PR until checks pass, Copilot feedback is resolved, and it is
+  mergeable, fixing failures. Use for "monitor the pr" or "wait for ci".
 ---
 
 # Monitor PR

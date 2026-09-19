@@ -46,7 +46,7 @@ The description is the skill's routing description: harnesses use it to decide w
 
 Keep it short, because every installed skill's description shares Codex's discovery budget.
 
-Codex-facing skill descriptions are generated from the concise plugin marketplace description when `bin/build-codex-marketplace` runs. Keep the canonical `SKILL.md` description rich enough for Claude Code activation; tune the plugin `description` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` when the shorter Codex description needs to change.
+Every harness routes on this description: `bin/build-codex-marketplace` copies `SKILL.md` into `dist/codex/` unchanged, and the OpenCode mirror links to it. Change it here. The plugin `description` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` is the separate catalog summary and does not affect routing.
 
 #### Examples from Existing Skills
 

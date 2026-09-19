@@ -204,7 +204,7 @@ Hooks are event-driven; they have no slash-command trigger.
 
 ## Using with Codex CLI
 
-This repository works as a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace. Codex reads the generated `.agents/plugins/marketplace.json`, which points at committed plugin roots under `dist/codex/plugins/`. Those generated roots mirror the canonical `plugins/*` directories but replace skill frontmatter descriptions with shorter Codex-facing descriptions from the marketplace entries. The canonical `plugins/*/skills/*/SKILL.md` files keep their richer Claude Code trigger descriptions.
+This repository works as a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace. Codex reads the generated `.agents/plugins/marketplace.json`, which points at committed plugin roots under `dist/codex/plugins/`. Those generated roots mirror the canonical `plugins/*` directories and copy every `SKILL.md` unchanged, so Codex routes on the same skill descriptions as Claude Code and OpenCode.
 
 For per-plugin metadata Codex prefers `.codex-plugin/plugin.json` when present and falls back to `.claude-plugin/plugin.json` otherwise. Hook registration requires a `.codex-plugin/plugin.json` with a non-empty `hooks` path (for example `"hooks": "./hooks/hooks.json"`); this lets hook plugins point Codex at a Codex-compatible hook file. Codex exposes `PLUGIN_ROOT` to plugin-bundled hook commands, plus `CLAUDE_PLUGIN_ROOT` for compatibility with existing Claude Code plugins.
 

@@ -1,8 +1,8 @@
 ---
 name: write-math
 description: >-
-  Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and
-  other leading references.
+  Apply mathematical exposition conventions from Tao, Knuth, and Halmos whenever
+  writing or discussing mathematics, including proofs and notation.
 ---
 
 # Write Math

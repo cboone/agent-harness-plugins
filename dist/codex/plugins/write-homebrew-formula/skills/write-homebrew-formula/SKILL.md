@@ -1,8 +1,8 @@
 ---
 name: write-homebrew-formula
 description: >-
-  Write or update Homebrew formulae using current Homebrew guidance and
-  cboone/homebrew-tap conventions.
+  Write, update, or review Homebrew formulae following cboone/homebrew-tap
+  conventions. Use for "write a Homebrew formula" or "update a formula".
 ---
 
 # Write Homebrew Formula

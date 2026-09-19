@@ -1,8 +1,8 @@
 ---
 name: merge-main
 description: >-
-  Fetch and merge the base branch into the current feature branch with automatic
-  conflict resolution.
+  Merge the base branch into the current branch, resolve conflicts, and push.
+  Use for "merge main" or "sync with main"; to rebase, use rebase-onto-main.
 ---
 
 # Merge Main

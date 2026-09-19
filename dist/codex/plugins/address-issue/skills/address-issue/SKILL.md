@@ -1,8 +1,8 @@
 ---
 name: address-issue
 description: >-
-  Fetch a GitHub issue, plan the work, stop for approval, then execute changes
-  and commit with issue references.
+  Plan and implement a GitHub issue on the current branch, stopping for approval
+  first. Use for "address issue #42" or "fix issue #42".
 ---
 
 # Address Issue

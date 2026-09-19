@@ -1,8 +1,8 @@
 ---
 name: create-deferred-issues
 description: >-
-  Scan the session, branch, and pull request for concerns set aside as out of
-  scope, propose them as one batch, and file the approved ones as GitHub issues.
+  File GitHub issues for concerns the current work set aside, from a batch the
+  user approves. Use for "create deferred issues" or "file the follow-ups".
 ---
 
 # Create Deferred Issues

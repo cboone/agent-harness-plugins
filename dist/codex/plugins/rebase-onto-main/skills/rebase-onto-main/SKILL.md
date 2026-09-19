@@ -1,8 +1,8 @@
 ---
 name: rebase-onto-main
 description: >-
-  Fetch and rebase the current feature branch onto the base branch with
-  automatic conflict resolution and force-with-lease push.
+  Rebase the current branch onto the base branch, resolving conflicts per
+  commit, then force-with-lease push. Use for "rebase onto main".
 ---
 
 # Rebase Onto Main

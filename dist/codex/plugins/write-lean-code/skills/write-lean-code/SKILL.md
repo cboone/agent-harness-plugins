@@ -1,8 +1,8 @@
 ---
 name: write-lean-code
 description: >-
-  Lean 4 style guide and Mathlib conventions for naming, proofs, formatting, and
-  metaprogramming.
+  Apply Lean 4 and Mathlib conventions whenever Lean is the subject: writing,
+  reading, reviewing, naming, or proofs. For tests, use write-lean-tests.
 ---
 
 # Write Lean Code

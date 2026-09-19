@@ -297,6 +297,34 @@ function validate_codex_generated_output() {
 
 validate_codex_generated_output
 
+# ─── 16b. Generated Codex skills are byte-identical to their sources ────────
+#
+# Rule 16 proves dist/codex matches what the generator produces today, which
+# would still pass if the generator started rewriting skills. Codex must see
+# the same name, routing description and dependency block that Claude Code and
+# OpenCode load, so every generated SKILL.md is compared with its canonical
+# source directly. A harness-specific transformation has to change this rule
+# on purpose rather than slip in through the generator.
+
+while IFS= read -r plugin_name; do
+  for skill_md in "plugins/${plugin_name}"/skills/*/SKILL.md; do
+    [[ -f "${skill_md}" ]] || continue
+    generated_skill_md="${CODEX_DIST_DIR}/${skill_md}"
+    if [[ ! -f "${generated_skill_md}" ]]; then
+      error "Generated Codex skill '${generated_skill_md}' is missing; run bin/build-codex-marketplace"
+    elif ! cmp -s "${skill_md}" "${generated_skill_md}"; then
+      error "Generated Codex skill '${generated_skill_md}' differs from its canonical source '${skill_md}'; the generator must copy SKILL.md files unchanged"
+    fi
+  done
+done < <(jq -r '.plugins[].name' "${MARKETPLACE}")
+
+for generated_skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
+  [[ -f "${generated_skill_md}" ]] || continue
+  if [[ ! -f "${generated_skill_md#"${CODEX_DIST_DIR}/"}" ]]; then
+    error "Generated Codex skill '${generated_skill_md}' has no canonical source"
+  fi
+done
+
 # ─── 17. The Codex skill inventory fits Codex's discovery budget ────────────
 #
 # Codex starts each session with one line per installed skill:
@@ -311,8 +339,9 @@ validate_codex_generated_output
 # the whole line. It ignores Codex's path aliasing, which only lowers the cost.
 #
 # The generated copy is what Codex reads, so the inventory is measured there.
-# The canonical copies get the same validity checks because Claude Code and
-# OpenCode load them directly.
+# Rule 16b holds each generated SKILL.md byte-identical to its canonical
+# source, so the per-description checks run once, on the canonical copies that
+# every harness shares.
 #
 # The constants come from the milestone 1 baseline in
 # docs/reviews/codex-consumption.md. Revisit them only when the reference model
@@ -419,7 +448,7 @@ function character_count() {
 }
 
 function check_skill_fields() {
-  local skill_md="${1}" label="${2}"
+  local skill_md="${1}"
   local name description description_length
 
   name="$(frontmatter_name "${skill_md}")"
@@ -427,18 +456,20 @@ function check_skill_fields() {
   description_length="$(character_count "${description}")"
 
   if [[ -z "${name}" ]]; then
-    error "${label} '${skill_md}' has an empty name"
+    error "Skill '${skill_md}' has an empty name"
   fi
   if [[ -z "${description}" ]]; then
-    error "${label} '${skill_md}' has an empty description"
+    error "Skill '${skill_md}' has an empty description"
   elif [[ ${description_length} -gt ${MAX_SKILL_DESCRIPTION_CHARACTERS} ]]; then
-    error "${label} '${skill_md}' description is ${description_length} characters, exceeding the ${MAX_SKILL_DESCRIPTION_CHARACTERS}-character limit"
+    error "Skill '${skill_md}' description is ${description_length} characters, exceeding the ${MAX_SKILL_DESCRIPTION_CHARACTERS}-character limit"
+  elif [[ ${description_length} -gt ${ROUTED_DESCRIPTION_WARNING_CHARACTERS} ]]; then
+    warning "Skill '${skill_md}' routing description is ${description_length} characters; keep it within ${ROUTED_DESCRIPTION_WARNING_CHARACTERS}, its average share of the Codex discovery budget"
   fi
 }
 
 for skill_md in plugins/*/skills/*/SKILL.md; do
   [[ -f "${skill_md}" ]] || continue
-  check_skill_fields "${skill_md}" "Skill"
+  check_skill_fields "${skill_md}"
 done
 
 if [[ -n "${CODEX_REFERENCE_CONTEXT_WINDOW}" ]] && ! [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]*$ ]]; then
@@ -458,7 +489,6 @@ inventory_entries=""
 
 for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
   [[ -f "${skill_md}" ]] || continue
-  check_skill_fields "${skill_md}" "Generated Codex skill"
 
   skill_plugin="${skill_md#"${CODEX_DIST_DIR}/plugins/"}"
   skill_plugin="${skill_plugin%%/*}"
@@ -470,10 +500,6 @@ for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
   plugin_manifest="${CODEX_DIST_DIR}/plugins/${skill_plugin}/.codex-plugin/plugin.json"
   [[ -f "${plugin_manifest}" ]] || plugin_manifest="${CODEX_DIST_DIR}/plugins/${skill_plugin}/.claude-plugin/plugin.json"
   plugin_version="$(jq -r '.version // empty' "${plugin_manifest}" 2> /dev/null || true)"
-
-  if [[ ${description_length} -gt ${ROUTED_DESCRIPTION_WARNING_CHARACTERS} ]]; then
-    warning "Codex skill '${skill_plugin}:${skill_name}' routing description is ${description_length} characters; keep it within ${ROUTED_DESCRIPTION_WARNING_CHARACTERS}, its average share of the Codex discovery budget"
-  fi
 
   # Codex cuts an over-long description to 1,021 characters plus "...". The
   # length is already an error above; mirroring the cut keeps the total honest.
