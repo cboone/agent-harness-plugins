@@ -345,8 +345,9 @@ done
 #
 # The constants come from the milestone 1 baseline in
 # docs/reviews/codex-consumption.md. Revisit them only when the reference model
-# changes, and record that change there. Never raise them to fit content;
-# tighten the routing descriptions instead.
+# or the set of skills Codex bundles changes, since the reserve measures those
+# skills, and record that change there. Never raise them to fit content; tighten
+# the routing descriptions instead.
 
 CODEX_REFERENCE_MODEL="gpt-6-astra"
 # The model's context window in tokens. Set it empty to model an unknown window,

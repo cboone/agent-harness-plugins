@@ -158,7 +158,7 @@ The warning threshold is the primary budget's average share per skill at the bas
 
 Rule 17 of `bin/validate-plugins` records these constants. It fails when the catalog exceeds the primary budget less the reserve, prints the catalog's cost against both budgets on every run, and applies the fallback as its gate when `CODEX_REFERENCE_CONTEXT_WINDOW` is set empty. Measured this way at `046f1389`, the catalog-summary inventory cost 4,472 of 4,840 available tokens; with canonical descriptions it would have cost 10,966.
 
-Revisit these constants only when the reference model changes, and record the change here.
+Revisit these constants only when the reference model changes or a Codex release changes its bundled system skills, which the reserve measures, and record the change here.
 
 ## Milestone 1 verification
 
