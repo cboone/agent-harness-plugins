@@ -12,7 +12,7 @@ An extensionless file is a script of the language its first line names. Read the
 - `zsh` selects `write-zsh-scripts`.
 - `sh`, `dash` and `ksh` match no guide. Report those files as unsupported rather than applying the Bash checklist, which would push Bash-only syntax into POSIX scripts.
 
-When either shell guide is installed, the entry skill's reporting rules include the line telling reviewers that an extensionless script follows its shebang, so scripts added later are routed too.
+When either shell guide is installed, the entry skill's reporting rules include the line telling reviewers that a script without a file extension follows its shebang, so scripts added later are routed too.
 
 ## write-go-code
 
@@ -55,5 +55,5 @@ When either shell guide is installed, the entry skill's reporting rules include 
 
 - **Detect**: Any tracked `*.md` file that is neither a scrut test file nor Pandoc-academic Markdown.
 - **Route**: `**/*.md`, followed by its exclusions.
-- **Exclude**: Scrut test files, which the scrut checklist covers, and Pandoc-academic Markdown, which the Markdown checklist would misjudge. Treat a project as Pandoc-academic when it has `references/papers/`, `references/extractions/` or `references/transcriptions/`, or `papers/**/main.md` beside `papers/shared/templates/*.latex`; exclude those trees. Also exclude individual files with `bibliography:` or `csl:` in their frontmatter, `[@key]` citations, or raw `{=latex}` blocks. Report the excluded Pandoc files as waiting on a Pandoc checklist.
+- **Exclude**: Scrut test files, which the scrut checklist covers, and Pandoc-academic Markdown, which the Markdown checklist would misjudge. Treat a project as Pandoc-academic when it has `references/papers/`, `references/extractions/` or `references/transcriptions/`, or `papers/**/main.md` beside `papers/shared/templates/*.latex`; exclude those trees. Also exclude individual files with `bibliography:` or `csl:` in their frontmatter, `[@key]` citations in prose, or raw `{=latex}` blocks. A citation shown inside inline code or a code block, such as documentation of the citation syntax, is not a signal. Report the excluded Pandoc files as waiting on a Pandoc checklist.
 - **Checklist**: `./references/checklists/write-markdown.md`

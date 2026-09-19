@@ -48,7 +48,7 @@ Apply the detection rules in `./references/guides.md` to choose the guides and t
 
 ### 3. Detect What CI Enforces and What to Skip
 
-1. **CI checks**: Read `.github/workflows/*.yml` and the Makefile targets or package scripts they call. List only checks that CI actually runs, such as `gofmt`, `goimports`, `go vet`, `golangci-lint`, `shellcheck`, `shfmt`, `zsh -n`, `markdownlint-cli2`, `prettier`, `lake build` and `lake lint`. When a workflow calls a reusable workflow, read the called workflow if it is reachable and list the checks its inputs enable; otherwise name the reusable workflow and its inputs.
+1. **CI checks**: Read `.github/workflows/*.yml` and the Makefile targets or package scripts they call. List only checks that CI actually runs, such as `gofmt`, `goimports`, `go vet`, `golangci-lint`, `shellcheck`, `shfmt`, `zsh -n`, `markdownlint-cli2`, `prettier`, `cspell`, `lake build` and `lake lint`. Note which of them read Markdown, since step 7 runs those on the written files. When a workflow calls a reusable workflow, read the called workflow if it is reachable and list the checks its inputs enable; otherwise name the reusable workflow and its inputs.
 1. **Skip paths**: List the paths reviewers should ignore that exist in the repository: lockfiles (`go.sum`, `yarn.lock`, `package-lock.json`, `pnpm-lock.yaml`, `Cargo.lock`, `lake-manifest.json`, `*.lock`), vendored directories, and generated files or mirrors that the repository documents as generated.
 
 ### 4. Resolve Pinned Links
@@ -87,12 +87,14 @@ Fill the templates in `./references/code-review-skill.md`, `./references/agents-
 1. Every checklist named in the routing list exists and starts with the managed first line, and no managed checklist file is left unrouted.
 1. `.github/skills/code-review/SKILL.md`, `AGENTS.md` and `REVIEW.md` each have exactly one BEGIN line followed by one END line.
 1. The root `AGENTS.md` plus the largest nested `AGENTS.md` chain stays under 32 KiB, the default budget Codex reads. Warn when it does not.
-1. If the repository has its own Markdown linter or formatter commands, run them on the changed files and fix what they report by adjusting the written content, not the tool configuration.
+1. Run the repository's own Markdown linter, formatter and spell checker on the written files, the way its CI does. The checklists are installed verbatim, so never edit them to satisfy a tool:
+   - A spell checker rejects technical terms the checklists use, such as `shfmt` or `compadd`. List the unknown words for the user, then add them to the project's word list, in the order the list already follows: the file its configuration names as a custom dictionary, or its inline `words` list.
+   - A linter or formatter finding in managed content is a defect in this plugin's templates or checklists. Keep the formatted result and report the construct that changed.
 1. Repeat steps 2 to 4 against the written files and confirm that a rerun would change nothing.
 
 ### 8. Report
 
-Summarize each file and its action, the pins, the CI checks, the skip paths, the files waiting on a future checklist, and any conflicts. Then give the next steps:
+Summarize each file and its action, the pins, the CI checks, the skip paths, any words added to the spell checker's word list, the files waiting on a future checklist, and any conflicts. Then give the next steps:
 
 - Commit on a branch and open a pull request. Copilot reads skills and instructions from a pull request's head branch, so that pull request is already reviewed with the new config.
 - Add repository-specific checks to `REVIEW.md` under an `## Always check` heading outside the managed block.
@@ -111,3 +113,4 @@ Ask whether to commit. Suggest `chore: set up review config` as the commit messa
 - **No network access**: Install with `unpinned` links and say so; a later run with network access pins them.
 - **Marketplace behind**: When a bundled checklist differs from the marketplace tip, warn and ask whether to continue.
 - **Formatter rewrites managed content**: Keep the formatted result, report which construct changed, and treat the template as needing a fix in this plugin.
+- **Spell checker rejects checklist words**: Add the words to the project's word list after listing them for the user; editing a verbatim checklist would make the next run rewrite it.

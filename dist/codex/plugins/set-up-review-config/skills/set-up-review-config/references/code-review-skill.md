@@ -58,7 +58,7 @@ The description stays the same for every repository, so a rerun never rewrites t
 - **SHEBANG-LINE**: When the Bash or zsh checklist is installed, this line, naming only the installed checklists. Otherwise remove the line.
 
   ```markdown
-  - An extensionless script follows its shebang: Bash scripts use `write-bash-scripts.md` and zsh scripts use `write-zsh-scripts.md`.
+  - A script without a file extension follows its shebang: Bash scripts use `write-bash-scripts.md` and zsh scripts use `write-zsh-scripts.md`.
   ```
 
 ## Checklist Files
