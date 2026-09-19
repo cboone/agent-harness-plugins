@@ -36,7 +36,7 @@ The checklists are bundled in `./references/checklists/`, one per style guide, a
 1. In `.github/skills/code-review/SKILL.md`, `AGENTS.md` and `REVIEW.md`, count the BEGIN and END marker lines. If a file has more than one of either, or an END before its BEGIN, stop and ask the user how to repair it.
 1. If `.github/skills/code-review/SKILL.md` exists, read its frontmatter. Copilot requires `name: code-review` and a non-empty `description`; if either is missing or different, report it and ask before continuing.
 1. Report any `.claude/skills/code-review/` or `.agents/skills/code-review/` directory: a second skill with the same name may compete with the installed one. Do not change it.
-1. Resolve `AGENTS.md`. When it is a symlink, edit its target and never replace the link. When it is absent and `CLAUDE.md` is a regular file, ask before creating `AGENTS.md`, and mention `/clean-up-agent-config` for consolidating agent instruction files.
+1. Resolve `AGENTS.md`. When it is a symlink, edit its target and never replace the link. When it is absent and `CLAUDE.md` is a regular file, ask before creating `AGENTS.md`, and mention `/clean-up-agent-config` for consolidating agent instruction files. If the user declines, skip the `AGENTS.md` block and continue: Copilot and Claude Code Review still get their files, and the report says that Codex has no review rules in this repository.
 1. Report an existing `## Review guidelines` section in any `AGENTS.md` (an older Codex heading) and any nested `AGENTS.md` files. Codex layers nested files over the root one; leave them unchanged.
 
 ### 2. Detect File Types
@@ -77,14 +77,14 @@ Fill the templates in `./references/code-review-skill.md`, `./references/agents-
 
 1. **Checklists**: For each selected guide, write `.github/skills/code-review/<guide>.md`: the managed first line, one blank line, then the bundled checklist byte for byte. Remove managed checklist files for guides that are no longer selected. If an unmanaged file already has a selected guide's file name, skip that guide and report the conflict.
 1. **Entry skill**: When `.github/skills/code-review/SKILL.md` does not exist, create it from the template. Otherwise replace its managed block, or append the block at the end of the file, leaving the frontmatter and all other content unchanged.
-1. **AGENTS.md**: When the file has a `## Code Review Rules` heading, replace the managed block inside that section, or append the block at the end of the section. Otherwise append the heading and the block at the end of the file. Create the file with an H1 naming the repository when it does not exist. Never add a second `## Code Review Rules` heading.
+1. **AGENTS.md**: When the file has a `## Code Review Rules` heading, replace the managed block inside that section, or append the block at the end of the section. Otherwise append the heading and the block at the end of the file. Create the file with an H1 naming the repository when it does not exist, unless the user declined in step 1. Never add a second `## Code Review Rules` heading.
 1. **REVIEW.md**: When the file does not exist, create it with the template's H1. Otherwise replace its managed block, or append the block at the end of the file. If the file already defines severities, a nit cap or skip rules outside the block, report the overlap; the repository's own text takes precedence.
 
 ### 7. Validate
 
 1. `.github/skills/code-review/SKILL.md` has `name: code-review` and a non-empty `description` in its frontmatter.
 1. Every checklist named in the routing list exists and starts with the managed first line, and no managed checklist file is left unrouted.
-1. `.github/skills/code-review/SKILL.md`, `AGENTS.md` and `REVIEW.md` each have exactly one BEGIN line followed by one END line.
+1. `.github/skills/code-review/SKILL.md` and `REVIEW.md` each have exactly one BEGIN line followed by one END line, and so does `AGENTS.md` unless the user declined creating it.
 1. The root `AGENTS.md` plus the largest nested `AGENTS.md` chain stays under 32 KiB, the default budget Codex reads. Warn when it does not.
 1. Run the repository's own Markdown linter, formatter and spell checker on the written files, the way its CI does. The checklists are installed verbatim, so never edit them to satisfy a tool:
    - A spell checker rejects technical terms the checklists use, such as `shfmt` or `compadd`. List the unknown words for the user, then add them to the project's word list, in the order the list already follows: the file its configuration names as a custom dictionary, or its inline `words` list.
@@ -107,6 +107,7 @@ Ask whether to commit. Suggest `chore: set up review config` as the commit messa
 - **Not a git repository**: Stop; detection needs `git ls-files`.
 - **No supported file types**: Report the file types found and that no checklist covers them yet, and stop without writing.
 - **Unbalanced or duplicated markers**: Stop and ask how to repair the file before writing anything.
+- **AGENTS.md declined**: Write the other files, and report that Codex has no review rules until an `AGENTS.md` exists and the skill runs again.
 - **Unmanaged file in the way**: Skip the affected guide and report the file; never overwrite a checklist file that lacks the managed first line.
 - **Invalid hand-written entry skill**: Ask before appending to a `.github/skills/code-review/SKILL.md` whose frontmatter Copilot would reject.
 - **No network access**: Install with `unpinned` links and say so; a later run with network access pins them.

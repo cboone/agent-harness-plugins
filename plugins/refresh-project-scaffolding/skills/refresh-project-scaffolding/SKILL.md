@@ -515,12 +515,11 @@ These checks only establish that the config exists and covers what is present. F
 
 ### Checks
 
-- Each of the three instruction files has exactly one `<!-- BEGIN set-up-review-config -->` line followed by one `<!-- END set-up-review-config -->` line
+- `.github/skills/code-review/SKILL.md` and `REVIEW.md` each have exactly one `<!-- BEGIN set-up-review-config -->` line followed by one `<!-- END set-up-review-config -->` line
 - `.github/skills/code-review/SKILL.md` frontmatter has `name: code-review` and a non-empty `description`
 - Every checklist the entry skill routes to exists and starts with a `<!-- Managed by set-up-review-config` line, and every file with that line is routed
 - No installed checklist records `unpinned` in its first line
-- The `AGENTS.md` block sits under a `## Code Review Rules` heading, and the file has only one such heading
-- `REVIEW.md` has the managed block
+- When `AGENTS.md` exists, it has one managed block under a `## Code Review Rules` heading, and only one such heading. A repository without `AGENTS.md` passes: the user declined creating one, and `set-up-review-config` reports Codex as unconfigured there
 - `set-up-review-config --dry-run` reports no guide to create, update or remove
 
 ## Reference: Scrut Test Checks (add-scrut-cli-tests)
