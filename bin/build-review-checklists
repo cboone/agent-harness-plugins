@@ -15,9 +15,10 @@
 # formatter unchanged, give every rule a citable name, and stay short enough
 # for a reviewer's context.
 #
-# REVIEW_CHECKLISTS_DIR overrides the output directory; bin/validate-plugins
-# regenerates into a temporary directory and compares. Paths resolve against
-# the current working directory, which must be the repository root.
+# REVIEW_CHECKLISTS_DIR overrides the output directory, which must then be new
+# or empty; bin/validate-plugins regenerates into a temporary directory and
+# compares. Paths resolve against the current working directory, which must be
+# the repository root.
 set -euo pipefail
 
 # Glob expansion and sort order must not depend on the caller's locale, or two
@@ -64,7 +65,6 @@ function guide_name() {
   printf '%s\n' "${rest%%/*}"
 }
 
-function check_source() {
 # Prints each link that is neither an absolute URL nor an in-page anchor:
 # inline links as `](target)`, and reference definitions as whole lines, since
 # `[name]: target` breaks the same way a relative inline link does.
@@ -83,6 +83,7 @@ function has_table() {
     || grep -qE '^[[:space:]]*:?-+:?[[:space:]]*(\|[[:space:]]*:?-+:?[[:space:]]*)+\|?[[:space:]]*$' "${source}"
 }
 
+function check_source() {
   local source="$1"
   local guide skill rest bytes sections line link
 
@@ -181,6 +182,14 @@ function main() {
   esac
   if [[ -z "${REVIEW_CHECKLISTS_DIR:-}" && ! -d "plugins/${CONSUMER}" ]]; then
     echo "build-review-checklists: plugins/${CONSUMER} does not exist to receive the checklists" >&2
+    exit 2
+  fi
+  # Orphan removal deletes every Markdown file in the output directory that is
+  # not a current copy, so an override pointed at a real directory would delete
+  # its documents. An override must be new or empty, as a temporary directory is.
+  if [[ -n "${REVIEW_CHECKLISTS_DIR:-}" && -d "${output_dir}" ]] \
+    && [[ -n "$(find "${output_dir}" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+    echo "build-review-checklists: REVIEW_CHECKLISTS_DIR must name a new or empty directory, since copies without a source are removed from it; '${output_dir}' is not empty" >&2
     exit 2
   fi
 

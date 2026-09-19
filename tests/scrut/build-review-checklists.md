@@ -210,6 +210,16 @@ build-review-checklists: refusing to write review checklists to '/'
 [2]
 ```
 
+An override must name a new or empty directory, because orphan removal would
+otherwise delete Markdown files the generator never wrote.
+
+```scrut
+$ cd "$("${REVIEW_CHECKLIST_FIXTURE_BIN}")" && mkdir notes && touch notes/keep.md && { REVIEW_CHECKLISTS_DIR=notes "${BUILD_REVIEW_CHECKLISTS_BIN}" 2>&1; echo "exit ${?}"; } && ls notes
+build-review-checklists: REVIEW_CHECKLISTS_DIR must name a new or empty directory, since copies without a source are removed from it; 'notes' is not empty
+exit 2
+keep.md
+```
+
 ```scrut
 $ cd "$("${REVIEW_CHECKLIST_FIXTURE_BIN}")" && rm -r plugins/set-up-review-config && "${BUILD_REVIEW_CHECKLISTS_BIN}" 2>&1
 build-review-checklists: plugins/set-up-review-config does not exist to receive the checklists
