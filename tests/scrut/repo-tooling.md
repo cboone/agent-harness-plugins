@@ -164,8 +164,9 @@ All plugin validations passed.
 
 `set-up-review-config` ships byte-identical copies of each style guide's review
 checklist. Rule 20 regenerates them and compares, so a source edited without
-`make build`, a copy left behind, or a copy with no detection rules fails. Only
-the unlisted case runs the generator, since a rebuild would repair the others.
+`make build`, a copy left behind, or a copy with no detection rules fails. The
+fixture never runs the generator, since a rebuild would repair the first two;
+the unlisted case removes the Go checklist's entry from `guides.md` instead.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" stale-review-checklist 2>&1
@@ -186,7 +187,7 @@ Codex skill inventory: * (glob)
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" unlisted-review-checklist 2>&1
 Codex skill inventory: * (glob)
-::error::'plugins/set-up-review-config/skills/set-up-review-config/references/guides.md' does not name ./references/checklists/write-latex.md; add detection and routing rules for it
+::error::'plugins/set-up-review-config/skills/set-up-review-config/references/guides.md' does not name ./references/checklists/write-go-code.md; add detection and routing rules for it
 1 plugin validation error(s) found.
 [1]
 ```
