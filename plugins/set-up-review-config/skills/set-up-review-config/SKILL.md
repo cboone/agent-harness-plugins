@@ -48,7 +48,7 @@ Apply the detection rules in `./references/guides.md` to choose the guides and t
 ### 3. Detect What CI Enforces and What to Skip
 
 1. **CI checks**: Read `.github/workflows/*.yml` and the Makefile targets or package scripts they call. List only checks that CI actually runs, such as `gofmt`, `goimports`, `go vet`, `golangci-lint`, `shellcheck`, `shfmt`, `zsh -n`, `markdownlint-cli2`, `prettier`, `cspell`, `lake build` and `lake lint`. Note which of them read Markdown, since step 7 runs those on the written files. When a workflow calls a reusable workflow, read the called workflow if it is reachable and list the checks its inputs enable; otherwise name the reusable workflow and its inputs.
-1. **Skip paths**: List the paths reviewers should ignore that exist in the repository: lockfiles (`go.sum`, `yarn.lock`, `package-lock.json`, `pnpm-lock.yaml`, `Cargo.lock`, `lake-manifest.json`, `*.lock`), vendored directories, and generated files or mirrors that the repository documents as generated.
+1. **Skip paths**: List the paths reviewers should ignore that exist in the repository: lockfiles (`go.sum`, `yarn.lock`, `package-lock.json`, `pnpm-lock.yaml`, `Cargo.lock`, `lake-manifest.json`, `*.lock`), vendored directories, and generated files or mirrors that the repository documents as generated. Always add the checklists this skill installs, as `.github/skills/code-review/*.md` except `SKILL.md`: they are verbatim copies that a rerun replaces, so a finding in one cannot be fixed in the repository.
 
 ### 4. Resolve Pinned Links
 

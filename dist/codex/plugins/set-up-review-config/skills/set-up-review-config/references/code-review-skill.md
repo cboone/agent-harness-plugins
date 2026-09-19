@@ -54,7 +54,7 @@ The description stays the same for every repository, so a rerun never rewrites t
   ```
 
 - **CI-CHECKS**: The checks from step 3, backticked and comma-separated, such as `gofmt`, `golangci-lint`. When CI runs none, replace the whole line with `- Report formatting and lint findings as Nits.`
-- **SKIP-PATHS**: The skip paths from step 3, backticked and comma-separated. When there are none, remove the line.
+- **SKIP-PATHS**: The skip paths from step 3, backticked and comma-separated, ending with `.github/skills/code-review/*.md` except `SKILL.md`. The installed checklists are always skipped, so the line is always present.
 - **SHEBANG-LINE**: When the Bash or zsh checklist is installed, this line, naming only the installed checklists. Otherwise remove the line.
 
   ```markdown
