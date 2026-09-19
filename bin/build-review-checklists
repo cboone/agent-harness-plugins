@@ -65,6 +65,24 @@ function guide_name() {
 }
 
 function check_source() {
+# Prints each link that is neither an absolute URL nor an in-page anchor:
+# inline links as `](target)`, and reference definitions as whole lines, since
+# `[name]: target` breaks the same way a relative inline link does.
+function relative_links() {
+  local source="$1"
+  grep -oE '\]\([^)]*\)' "${source}" | grep -vE '^\]\((https?://|#)' || true
+  grep -E '^ {0,3}\[[^]]+\]:' "${source}" | grep -vE '^ {0,3}\[[^]]+\]:[[:space:]]*<?(https?://|#)' || true
+}
+
+# Succeeds when the source has a table. A GFM table needs a delimiter row, such
+# as `--- | ---`, and its rows need no leading pipe, so a line starting with a
+# pipe is not the only sign of one.
+function has_table() {
+  local source="$1"
+  grep -qE '^[[:space:]]*\|' "${source}" \
+    || grep -qE '^[[:space:]]*:?-+:?[[:space:]]*(\|[[:space:]]*:?-+:?[[:space:]]*)+\|?[[:space:]]*$' "${source}"
+}
+
   local source="$1"
   local guide skill rest bytes sections line link
 
@@ -99,11 +117,11 @@ function check_source() {
   fi
   while IFS= read -r link; do
     error "${source} has a relative link, which breaks where the checklist is installed: ${link}"
-  done < <(grep -oE '\]\([^)]*\)' "${source}" | grep -vE '^\]\((https?://|#)' || true)
+  done < <(relative_links "${source}")
   if grep -qE '^[[:space:]]*(```|~~~)' "${source}"; then
     error "${source} has a code fence; installed checklists avoid constructs that Markdown formatters rewrite"
   fi
-  if grep -qE '^[[:space:]]*\|' "${source}"; then
+  if has_table "${source}"; then
     error "${source} has a table; installed checklists avoid constructs that Markdown formatters rewrite"
   fi
 

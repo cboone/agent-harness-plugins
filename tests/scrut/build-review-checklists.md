@@ -68,6 +68,11 @@ $ cd "$("${REVIEW_CHECKLIST_FIXTURE_BIN}")" && printf '%s\n' '- **Link**: See [t
 Review checklists: 2 bundled in plugins/set-up-review-config/skills/set-up-review-config/references/checklists (2 written, 1 removed).
 ```
 
+```scrut
+$ cd "$("${REVIEW_CHECKLIST_FIXTURE_BIN}")" && printf '%s\n' '- **Link**: See [the guide][guide].' '' '[guide]: https://example.com/guide' >> plugins/write-alpha/skills/write-alpha/references/review-checklist.md && "${BUILD_REVIEW_CHECKLISTS_BIN}"
+Review checklists: 2 bundled in plugins/set-up-review-config/skills/set-up-review-config/references/checklists (2 written, 1 removed).
+```
+
 ## A failing run writes and removes nothing
 
 Every source is checked before anything is written, so one bad source leaves
@@ -138,6 +143,15 @@ $ cd "$("${REVIEW_CHECKLIST_FIXTURE_BIN}")" && printf '%s\n' '- **Link**: See [t
 [1]
 ```
 
+A reference definition breaks the same way an inline link does.
+
+```scrut
+$ cd "$("${REVIEW_CHECKLIST_FIXTURE_BIN}")" && printf '%s\n' '- **Link**: See [the guide][guide].' '' '[guide]: ../SKILL.md' >> plugins/write-alpha/skills/write-alpha/references/review-checklist.md && "${BUILD_REVIEW_CHECKLISTS_BIN}" 2>&1
+::error::plugins/write-alpha/skills/write-alpha/references/review-checklist.md has a relative link, which breaks where the checklist is installed: [guide]: ../SKILL.md
+1 review checklist error(s) found; no copies were written.
+[1]
+```
+
 ## Constructs that Markdown formatters rewrite are rejected
 
 ```scrut
@@ -149,6 +163,16 @@ $ cd "$("${REVIEW_CHECKLIST_FIXTURE_BIN}")" && printf '%s\n' '~~~text' 'example'
 
 ```scrut
 $ cd "$("${REVIEW_CHECKLIST_FIXTURE_BIN}")" && printf '%s\n' '| Rule | Severity |' >> plugins/write-alpha/skills/write-alpha/references/review-checklist.md && "${BUILD_REVIEW_CHECKLISTS_BIN}" 2>&1
+::error::plugins/write-alpha/skills/write-alpha/references/review-checklist.md has a table; installed checklists avoid constructs that Markdown formatters rewrite
+1 review checklist error(s) found; no copies were written.
+[1]
+```
+
+GFM table rows need no leading pipe, so the delimiter row identifies a table
+written without them.
+
+```scrut
+$ cd "$("${REVIEW_CHECKLIST_FIXTURE_BIN}")" && printf '%s\n' '' 'Rule | Severity' '--- | ---' >> plugins/write-alpha/skills/write-alpha/references/review-checklist.md && "${BUILD_REVIEW_CHECKLISTS_BIN}" 2>&1
 ::error::plugins/write-alpha/skills/write-alpha/references/review-checklist.md has a table; installed checklists avoid constructs that Markdown formatters rewrite
 1 review checklist error(s) found; no copies were written.
 [1]
