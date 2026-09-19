@@ -64,6 +64,17 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🟢 Approval recommended","hasFormatDrift":false,"findings":[]}
 ```
 
+## Overview v2 open threads explain a non-clean verdict
+
+Inline threads listed under `Open (N)` are reported by the thread fetch. A
+review whose only findings are open threads has no body findings and is not
+format drift.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-open-only.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🟡 Changes recommended","hasFormatDrift":false,"findings":[]}
+```
+
 ## Overview v2 format drift
 
 A non-clean verdict cannot become a clean result merely because the parser

@@ -311,8 +311,8 @@ function do_fetch() {
 #
 # The raw legacy slice, complete review body, and structured parse are emitted.
 # hasFormatDrift covers both an unparsed legacy section and a non-clean v2
-# verdict with no structured findings, keeping a format change visible instead
-# of silently reporting no feedback.
+# verdict that neither structured findings nor open inline threads explain,
+# keeping a format change visible instead of silently reporting no feedback.
 # =============================================================================
 
 # Normalizes an array of GitHub review objects into Copilot review-body findings.
@@ -354,6 +354,13 @@ function do_parse_reviews() {
         | first // null;
 
       def is_overview_v2: contains("<!-- ccr-overview-v2 -->");
+
+      # ccr-overview-v2 lists the inline threads that were open when the
+      # review was written under an "Open (N)" summary. Those threads explain
+      # a non-clean verdict by themselves, and the thread fetch reports them,
+      # so a review whose only findings are inline threads is not drift.
+      def lists_open_threads:
+        test("<summary>(<[^>]+>)*Open \\([1-9][0-9]*\\)");
 
       # Copilot puts its verdict heading and lead paragraph before the first
       # <details> block. The "Once you have addressed..." call to action is
@@ -499,6 +506,7 @@ function do_parse_reviews() {
         | (if $is_v2 then (.body | table_findings) else [] end) as $table_findings
         | ($suppressed_findings + $missed_findings + $table_findings) as $findings
         | (.body | has_suppressed_marker) as $has_suppressed_marker
+        | ($is_v2 and (.body | lists_open_threads)) as $lists_open_threads
         | {
             id: .id,
             url: .html_url,
@@ -510,7 +518,11 @@ function do_parse_reviews() {
               ($findings | length) == 0
               and (
                 $has_suppressed_marker
-                or ($is_v2 and $verdict != "### 🟢 Approval recommended")
+                or (
+                  $is_v2
+                  and $verdict != "### 🟢 Approval recommended"
+                  and ($lists_open_threads | not)
+                )
               )
             ),
             suppressed: $slice,
