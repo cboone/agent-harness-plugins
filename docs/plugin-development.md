@@ -91,6 +91,8 @@ A routing description:
 1. Mentions a hard prerequisite only when it affects selection. Other requirements belong in the README and the skill body.
 1. Stays short, because every installed skill's description shares one discovery budget in Codex. The [Codex consumption review](reviews/codex-consumption.md#milestone-1-baseline) records that budget.
 
+Rule 17 of `bin/validate-plugins` checks the budget. It renders each generated `dist/codex` skill as the line Codex lists, `- plugin:skill: description (file: path)` with the installed cache path, and charges `ceil(bytes / 4)` tokens per line. The catalog fails when it exceeds 2 percent of the reference model's context window, less a reserve for Codex's bundled system skills; with `CODEX_REFERENCE_CONTEXT_WINDOW` set empty, it is held to Codex's 8,000-character fallback instead. Every run prints the catalog's cost against both budgets. A description over 1,024 characters fails, and one over 150 characters, its average share of the budget, draws a warning. When the catalog fails, tighten the largest descriptions rather than raising the budget.
+
 ```yaml
 description: >-
   Create a GitHub pull request from the current branch, committing and pushing

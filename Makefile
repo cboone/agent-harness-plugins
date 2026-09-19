@@ -13,7 +13,8 @@ SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u STUB_GH_API_FAIL -u STUB_GH_AUTH_FAIL -u STUB_GH_DIR -u STUB_GH_LOG \
 	-u STUB_GIT_BRANCHES -u STUB_GIT_INVALID_REF -u STUB_GIT_WORKTREE_PORCELAIN \
 	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES \
-	-u TZDIR -u WORKTREE_RESOURCES_FILE
+	-u TZDIR -u WORKTREE_RESOURCES_FILE \
+	-u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_SYSTEM_SKILL_RESERVE_BYTES
 
 # Every scrut test resolves the script or fixture it exercises through one of
 # these variables. Defining them once keeps the test and update targets from

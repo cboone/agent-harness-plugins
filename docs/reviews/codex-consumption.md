@@ -152,6 +152,11 @@ These constants define the Codex inventory budget that repository validation mod
 | Bundled system skill reserve | 2,400 bytes, or 600 tokens; 567 tokens observed                                                         | Observed                                       |
 | Name form                    | `plugin:skill`                                                                                          | Observed                                       |
 | Path form                    | `/Users/username/.codex/plugins/cache/agent-harness-plugins/<plugin>/<version>/skills/<skill>/SKILL.md` | Observed layout, 15-character home placeholder |
+| Description warning          | Over 150 characters                                                                                     | Derived below                                  |
+
+The warning threshold is the primary budget's average share per skill at the baseline. After the reserve, 4,840 tokens is 19,360 bytes, or 317 bytes for each of 61 skills. Names, paths, and line syntax average 164 bytes of each line, which leaves 153 characters for a description, rounded down to 150.
+
+Rule 17 of `bin/validate-plugins` records these constants. It fails when the catalog exceeds the primary budget less the reserve, prints the catalog's cost against both budgets on every run, and applies the fallback as its gate when `CODEX_REFERENCE_CONTEXT_WINDOW` is set empty. Measured this way at `046f1389`, the catalog-summary inventory cost 4,472 of 4,840 available tokens; with canonical descriptions it would have cost 10,966.
 
 Revisit these constants only when the reference model changes, and record the change here.
 

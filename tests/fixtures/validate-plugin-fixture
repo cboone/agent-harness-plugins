@@ -15,6 +15,56 @@ function mutate_catalog() {
   mv "${FIXTURE_ROOT}/catalog.json" "${catalog}"
 }
 
+# Replaces a SKILL.md frontmatter description, including any folded
+# continuation lines, with a single plain-scalar line.
+function replace_description() {
+  local skill_md="${1}" description="${2}"
+
+  awk -v description="${description}" '
+    NR == 1 && $0 == "---" {
+      in_frontmatter = 1
+      print
+      next
+    }
+
+    in_frontmatter && skipping && /^[[:space:]]+/ {
+      next
+    }
+
+    {
+      skipping = 0
+    }
+
+    in_frontmatter && /^description:/ {
+      print "description: " description
+      skipping = 1
+      next
+    }
+
+    in_frontmatter && $0 == "---" {
+      in_frontmatter = 0
+    }
+
+    { print }
+  ' "${skill_md}" > "${FIXTURE_ROOT}/skill.md"
+  mv "${FIXTURE_ROOT}/skill.md" "${skill_md}"
+}
+
+# Letters and spaces only, so the text stays a valid YAML plain scalar. A final
+# space would be trimmed by YAML, so it becomes a letter instead.
+function description_of_length() {
+  local length="${1}" text=""
+
+  while [[ ${#text} -lt ${length} ]]; do
+    text+="padding "
+  done
+  text="${text:0:${length}}"
+  if [[ "${text}" == *" " ]]; then
+    text="${text%" "}x"
+  fi
+  printf '%s' "${text}"
+}
+
 function main() {
   local scenario="${1}"
   FIXTURE_ROOT="$(mktemp -d)"
@@ -35,6 +85,16 @@ function main() {
       ;;
     metadata-version) mutate_catalog '.metadata.version = "catalog-state"' ;;
     entry-version) mutate_catalog '.plugins[0].version = "1.0.0"' ;;
+    oversized-description)
+      replace_description "${FIXTURE_ROOT}/plugins/release/skills/release/SKILL.md" "$(description_of_length 1100)"
+      ;;
+    # 2 percent of 100,000 is a 2,000-token budget, 1,400 after the reserve:
+    # less than the descriptions alone cost.
+    aggregate-overflow) export CODEX_REFERENCE_CONTEXT_WINDOW=100000 ;;
+    # A 3,400-token budget, 2,800 after the reserve: more than the descriptions
+    # alone cost, less than the full lines with their names and paths.
+    path-overhead) export CODEX_REFERENCE_CONTEXT_WINDOW=170000 ;;
+    fallback) export CODEX_REFERENCE_CONTEXT_WINDOW="" ;;
     *)
       echo "Unknown scenario: ${scenario}" >&2
       return 2
