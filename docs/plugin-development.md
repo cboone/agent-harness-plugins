@@ -267,6 +267,7 @@ Other wording, such as "use the `review-branch` skill instead" or "run `/lint-an
 1. Add a row to the appropriate category table in the root `README.md`. If the plugin requires external tools, add a bullet to the category's `**External tools:**` list.
 1. If the plugin bundles a script, add scrut coverage under `tests/scrut/` and register any needed binary path in the `SCRUT_ENV` block in the `Makefile` and the matching `scrut-env` list in `.github/workflows/ci.yml`.
 1. Regenerate the Codex and OpenCode mirrors with `bin/build-codex-marketplace` and `bin/build-opencode-mirror`, and commit the results.
+1. If the plugin ships a skill, read the `Codex skill inventory` line that `make validate` prints. Every skill's line, name and versioned install path included, shares one Codex discovery budget, so a new skill can push the catalog over it even when its own description is short. If rule 17 fails, tighten the largest routing descriptions its error lists rather than raising the budget; see [Routing descriptions and catalog summaries](#routing-descriptions-and-catalog-summaries).
 1. Run `make test-all` and fix anything it reports before opening a PR.
 
 ## README catalog format
