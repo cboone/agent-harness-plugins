@@ -229,7 +229,7 @@ An entry with `hasFormatDrift: false` and an empty `findings` array carries no r
 
 #### 1c. Check for findings handled in a previous run
 
-Copilot re-emits the same suppressed finding in **every** later review until the underlying code changes. Review bodies are immutable, so a finding you fixed last run will still be there this run. Without a check, the skill would re-report or re-fix it forever.
+Copilot re-emits the same review-body finding in **every** later review until the underlying code changes. Review bodies are immutable, so a finding you fixed last run will still be there this run. Without a check, the skill would re-report or re-fix it forever.
 
 Before acting on any review-body finding, read the PR's existing summary comments:
 
@@ -241,10 +241,10 @@ gh api --paginate repos/OWNER/REPO/issues/PR_NUMBER/comments --jq '.[] | select(
 
 This reads comments; it never writes one, so it does not violate the PR Comments Prohibition. Then, for each finding:
 
-1. **Recorded before, and no longer applies.** A prior summary links the same review and identifies this `path:line`, or for a line-less finding the same normalized path and finding text. Reading the current code confirms the finding is addressed. Record it as `Previously handled` and change nothing.
+1. **Recorded before, and no longer applies.** A prior summary has a review-body row for the same finding: the same `path:line`, or for a line-less finding the same normalized path with a `Finding` excerpt that appears in this finding's `body`. That row usually links an earlier review, because Copilot repeats the finding in later reviews; the link records where the finding came from and is not part of its identity. Reading the current code confirms the finding is addressed. Record it as `Previously handled` and change nothing.
 1. **Recorded before, but still applies.** The earlier run deferred it, or a fix regressed. Process it normally.
 1. **Path matches, line does not.** Line numbers drift as files change. Treat it as a candidate and let the code check decide, rather than assuming it is new.
-1. **Line-less path matches, text differs.** Treat it as a different finding. A file-summary review can carry several findings for one path, so the path alone is not an identity.
+1. **Line-less path matches, excerpt does not.** No prior row for that path has an excerpt that appears in this finding's `body`. Treat it as a different finding. A file-summary review can carry several findings for one path, so the path alone is not an identity.
 1. **No match.** Process it normally.
 
 Always verify against the current code before deciding. Verification is what keeps this correct when someone edits or deletes a summary comment: the cost is a re-check, not a wrong answer.
@@ -437,7 +437,7 @@ Counts: 6 fetched, 3 resolved, 3 review-body findings, 1 deferred, 1 previously 
 
 - Status must be one of `Completed`, `No unresolved Copilot feedback`, `Partial`, or `Failed`
 - **`Source`** is `Thread` or a `Review body REVIEW_ID` link using the exact `url` returned by `fetch-reviews`. Review-body findings have no thread, so this link visibly connects the disposition to the immutable source review.
-- **`Finding`** is `path:line` when a line exists. For `line: null`, use the normalized path plus a concise identifying excerpt from `body`; a path alone is ambiguous when one table row carries several findings.
+- **`Finding`** is `path:line` when a line exists. For `line: null`, use the normalized path plus a concise excerpt copied verbatim from `body`, so step 1c can find it in the `body` of a repeated finding; a path alone is ambiguous when one table row carries several findings.
 - **`Outcome`** for `Thread` rows is `Resolved`, `Failed`, or `Pending`. `Resolved` means a thread was actually resolved, so it is never correct for a `Review body` row. Those use `Fixed`, `Tracked`, `Noted`, `Previously handled`, or `Failed`.
 - **`Disposition`** names the fixing commit for `Fixed` and fixed `Previously handled` rows. For `Incorrect`, `Outdated`, and `Nitpick` rows, state the evidence or rationale for making no code change. Do not leave a category-only disposition that forces readers to reconstruct the decision.
 - The trailing `Counts:` line is one short sentence at the end of the comment. Include only non-zero counts from this set: fetched, resolved, pending, failed, deferred, code-change threads, review-body findings, previously handled, workflow failures. Omit zero-valued metrics; do not render an empty table or "0" entries. If every count is zero, omit the `Counts:` line entirely.
