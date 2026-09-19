@@ -34,6 +34,47 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"path":".github/workflows/ci.yml","line":218}
 ```
 
+## Overview v2 previously missed findings
+
+Nested `Previously missed` details are body-only findings. Open thread links
+and resolved findings in the same review are not emitted again.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | jq -c '[.[] | {id, url, findings}]'
+[{"id":6000000002,"url":"https://github.com/o/r/pull/1#pullrequestreview-6000000002","findings":[{"location":"src/report/render.js:197","path":"src/report/render.js","line":197,"severity":"Medium","body":"Handle null timeZone before constructing the formatter\n\nPassing null as the formatter time zone throws. Normalize null to undefined before constructing the formatter."}]},{"id":6000000003,"url":"https://github.com/o/r/pull/1#pullrequestreview-6000000003","findings":[{"location":"src/domain/report-contract.js:171","path":"src/domain/report-contract.js","line":171,"severity":"Medium","body":"Reject sparse arrays\n\nReject missing indexed elements so malformed input cannot bypass the contract."}]}]
+```
+
+## Overview v2 table findings
+
+Each finding appended to a file-summary cell becomes a separate line-less
+entry. Formatting U+200B characters are removed from the path.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":false,"findings":[{"location":"src/handlers/example.js","path":"src/handlers/example.js","line":null,"severity":"Moderate","body":"validate optional replacement values"},{"location":"src/handlers/example.js","path":"src/handlers/example.js","line":null,"severity":"Nit","body":"narrow the error documentation"}]}
+```
+
+## Overview v2 clean verdict
+
+The verified clean verdict can have no body findings while listing entries
+resolved since the prior review. Those resolved entries are not actionable.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🟢 Approval recommended","hasFormatDrift":false,"findings":[]}
+```
+
+## Overview v2 format drift
+
+A non-clean verdict cannot become a clean result merely because the parser
+does not recognize the finding representation. The complete body remains
+available for manual inspection.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-drift.json" | jq -c '.[0] | {verdict, hasSuppressedMarker, hasFormatDrift, hasReviewBody: (.reviewBody | contains("data-finding")), findings}'
+{"verdict":"### 🔵 Needs a closer look","hasSuppressedMarker":false,"hasFormatDrift":true,"hasReviewBody":true,"findings":[]}
+```
+
 ## Finding bodies keep their prose and fenced context
 
 ```scrut
@@ -80,6 +121,13 @@ A body that announces suppressed comments but uses an unrecognized interior layo
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/drift.json" | jq -c '[.[] | {hasSuppressedMarker, findings: (.findings | length)}]'
 [{"hasSuppressedMarker":true,"findings":0}]
+```
+
+Legacy suppressed-section drift also sets the broader drift signal.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/drift.json" | jq -c '[.[] | {hasSuppressedMarker, hasFormatDrift, findings: (.findings | length)}]'
+[{"hasSuppressedMarker":true,"hasFormatDrift":true,"findings":0}]
 ```
 
 The slice keeps the line that announced the section, so a caller reading it can see what opened it.
