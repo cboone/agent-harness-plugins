@@ -205,26 +205,34 @@ Copilot does not always open a thread. When it declines to comment on a line the
     "url": "https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762218",
     "submittedAt": "2026-08-21T18:02:11Z",
     "headline": "### 🔵 Needs a closer look\n\nThe Phase 2 plan section is internally inconsistent...",
+    "verdict": "### 🔵 Needs a closer look",
     "hasSuppressedMarker": true,
+    "hasFormatDrift": false,
     "suppressed": "### Suppressed comments (1)\n\n**docs/plans/todo/phased-build-plan.md:243**\n* This section now states...",
-    "findings": [{ "location": "docs/plans/todo/phased-build-plan.md:243", "path": "docs/plans/todo/phased-build-plan.md", "line": 243, "body": "* This section now states..." }]
+    "reviewBody": "### 🔵 Needs a closer look\n\n...",
+    "findings": [{ "location": "docs/plans/todo/phased-build-plan.md:243", "path": "docs/plans/todo/phased-build-plan.md", "line": 243, "severity": null, "body": "* This section now states..." }]
   }
 ]
 ```
 
 - **`findings`**: the structured parse. Treat each entry exactly like a thread comment, except that it cannot be replied to or resolved.
+- **`verdict`**: the first `###` heading in the body. On `ccr-overview-v2` reviews it is the verdict heading, exposed separately from the lead paragraph in `headline`, and it drives the drift check. Older layouts can report a section heading such as `### Reviewed changes`, or `null`, so read `headline` rather than `verdict` there.
+- **`hasFormatDrift`**: the complete drift signal. It is true when an old suppressed section contains no parseable findings, or when a non-clean `ccr-overview-v2` review has no parseable findings and lists no open inline threads. Threads listed under `Open (N)` are reported by `fetch`, so they explain a non-clean verdict by themselves.
 - **`suppressed`**: the raw section, verbatim, beginning with the line that announced it.
+- **`reviewBody`**: the complete immutable review body for fallback inspection when a newer layout cannot be parsed.
 - **`headline`**: Copilot's verdict and lead paragraph. Sometimes the only place a finding is stated; read it.
 
-**Format-drift rule (CRITICAL):** if `hasSuppressedMarker` is `true` but `findings` is empty, Copilot has changed its review-body layout. Read the `suppressed` field directly and extract the findings yourself; it always retains the line that announced the section, so it tells you what the parser saw. If it holds only that announcing line, open the review at `url` and read the body there. **Never treat that combination as "no findings."** Report the drift in the step 7 summary so it gets fixed.
+Review-body findings may have `line: null`. The `location` is then the normalized path alone, and `severity` preserves the textual severity that Copilot displayed. Never invent a line number.
+
+**Format-drift rule (CRITICAL):** if `hasFormatDrift` is `true`, Copilot has changed its review-body layout. Read `suppressed`, then `reviewBody`, and extract the findings yourself. Open the review at `url` when the raw fields still do not make the concern clear. **Never treat a drift result as "no findings."** Report the drift in the step 7 summary so it gets fixed.
 
 `hasSuppressedMarker` is computed from the review body itself, not from what the slice captured, so an announced-but-empty section still reports drift rather than looking like a clean review.
 
-An entry with `hasSuppressedMarker: false` and an empty `findings` array carries no review-body findings. If every entry looks like that, and `fetch` returned `[]`, only then is there genuinely nothing to process.
+An entry with `hasFormatDrift: false` and an empty `findings` array carries no review-body findings. If every entry looks like that, and `fetch` returned `[]`, only then is there genuinely nothing to process.
 
 #### 1c. Check for findings handled in a previous run
 
-Copilot re-emits the same suppressed finding in **every** later review until the underlying code changes. Review bodies are immutable, so a finding you fixed last run will still be there this run. Without a check, the skill would re-report or re-fix it forever.
+Copilot re-emits the same review-body finding in **every** later review until the underlying code changes. Review bodies are immutable, so a finding you fixed last run will still be there this run. Without a check, the skill would re-report or re-fix it forever.
 
 Before acting on any review-body finding, read the PR's existing summary comments:
 
@@ -236,9 +244,10 @@ gh api --paginate repos/OWNER/REPO/issues/PR_NUMBER/comments --jq '.[] | select(
 
 This reads comments; it never writes one, so it does not violate the PR Comments Prohibition. Then, for each finding:
 
-1. **Recorded before, and no longer applies.** A prior summary has a `Review body` row for this `path:line`, and reading the current code confirms the finding is addressed. Record it as `Previously handled` and change nothing.
-1. **Recorded before, but still applies.** The earlier run deferred it, or a fix regressed. Process it normally.
+1. **Recorded before, and its disposition still holds.** A prior summary has a review-body row for the same finding: the same `path:line`, or for a line-less finding the same normalized path with a `Finding` excerpt that appears in this finding's `body`. That row usually links an earlier review, because Copilot repeats the finding in later reviews; the link records where the finding came from and is not part of its identity. Reading the current code confirms the recorded disposition still holds: for a `Fixed` row the fix is still in place, and for a `Noted` row (Incorrect, Outdated, or Nitpick) the code and evidence its rationale relied on are unchanged, so the same no-change decision applies. Record it as `Previously handled`, carry the prior disposition forward, and change nothing. A no-change finding never stops matching the code, so without this rule Copilot's repeats would be re-processed on every review.
+1. **Recorded before, but no longer settled.** The earlier run deferred it, a fix regressed, or the code a no-change rationale relied on has changed since. Process it normally.
 1. **Path matches, line does not.** Line numbers drift as files change. Treat it as a candidate and let the code check decide, rather than assuming it is new.
+1. **Line-less path matches, excerpt does not.** No prior row for that path has an excerpt that appears in this finding's `body`. Treat it as a different finding. A file-summary review can carry several findings for one path, so the path alone is not an identity.
 1. **No match.** Process it normally.
 
 Always verify against the current code before deciding. Verification is what keeps this correct when someone edits or deletes a summary comment: the cost is a re-check, not a wrong answer.
@@ -340,7 +349,7 @@ The cleanup must be a separate Bash tool call: each tool invocation runs uncondi
 
 #### Review-Body Findings (no thread)
 
-Findings from `fetch-reviews` have **no thread id**. Do not attempt `reply`, `resolve`, or `reply-and-resolve` for them; there is nothing to address those commands to, and the calls will fail. Do not invent a thread by opening a PR comment either: the PR Comments Prohibition still applies, and the step 7 summary is the only reporting channel these findings have.
+Findings from `fetch-reviews` have **no thread id**. Do not attempt `reply`, `resolve`, or `reply-and-resolve` for them; there is nothing to address those commands to, and the calls will fail. GitHub supports replies to line-level review comments, not to the immutable review body itself. Do not invent a thread or post an interim PR comment: the PR Comments Prohibition still applies, and the single step 7 summary is the reporting channel for these findings.
 
 Apply the same categories, minus the thread operations:
 
@@ -352,9 +361,9 @@ Apply the same categories, minus the thread operations:
 | **Outdated**  | Confirm against current code, then record it; no code change                  | `Noted`          |
 | **Nitpick**   | Record it; no code change                                                     | `Noted`          |
 
-Every review-body finding gets a row in the step 7 summary and in the local audit table, whatever its category. Since Copilot will keep re-emitting it and there is no thread to resolve, that row **is** the record that it was handled, and step 1c reads it back on the next run.
+Every review-body finding gets a row in the step 7 summary and in the local audit table, whatever its category. Link its source to the exact review URL. A fixed finding names the fixing commit; an Incorrect, Outdated, or Nitpick disposition states the evidence or rationale for making no code change. Since Copilot will keep re-emitting the finding and there is no thread to resolve, that linked row **is** the record that it was handled, and step 1c reads it back on the next run.
 
-If step 1b reported format drift (`hasSuppressedMarker: true`, empty `findings`), extract what you can from the raw `suppressed` text, process those findings normally, and add a workflow-level failure noting that the review-body format changed and the parser needs updating.
+If step 1b reported format drift (`hasFormatDrift: true`), extract what you can from `suppressed` or `reviewBody`, process those findings normally, and add a workflow-level failure noting that the review-body format changed and the parser needs updating.
 
 ### 5. Lint and Fix
 
@@ -396,7 +405,7 @@ Do not run this step if step 5 recorded a lint failure or skipped required lint 
    **Do not re-run `fetch-reviews` as a completion check.** Review bodies are immutable, so a review-body finding you just fixed still appears in the old body and always will. It will never go empty, and treating it as a verification signal produces a false Partial forever. Only the thread `fetch` is expected to reach `[]`.
 
 1. Determine terminal workflow status and counts:
-   - **No unresolved Copilot feedback**: the initial `fetch` returned `[]` **and** `fetch-reviews` surfaced no findings needing attention (every entry had `hasSuppressedMarker: false`, or every finding was `Previously handled`). Never use this status without having run `fetch-reviews`.
+   - **No unresolved Copilot feedback**: the initial `fetch` returned `[]` **and** `fetch-reviews` surfaced no findings needing attention or format drift (every entry had `hasFormatDrift: false`, and every finding was absent or `Previously handled`). Never use this status without having run `fetch-reviews`.
    - **Completed**: Every fetched thread and every review-body finding was handled according to its category, no failed or pending items remain, and any required code changes were pushed
    - **Partial**: At least one fetched thread or review-body finding was handled, but one or more items, replies, resolutions, tracking items, instruction updates, lint runs, pushes, or verification checks failed or remain pending
    - **Failed**: The workflow could not fetch or process feedback, or no required processing step succeeded
@@ -417,26 +426,28 @@ Post a summary comment to the PR so reviewers can see the workflow outcome at a 
 Status: Completed
 Head SHA: `abc1234`
 
-| Source      | File               | Category  | Outcome            | Action                                            |
-| ----------- | ------------------ | --------- | ------------------ | ------------------------------------------------- |
-| Thread      | `src/foo.ts:42`    | Valid     | Resolved           | Fixed null check                                  |
-| Thread      | `lib/util.js:8`    | Incorrect | Resolved           | Updated error handling; added Copilot instruction |
-| Thread      | `docs/api.md:5`    | Nitpick   | Resolved           | Auto-resolved                                     |
-| Review body | `docs/plan.md:243` | Valid     | Fixed              | Corrected phase status                            |
-| Review body | `src/ui.tsx:20`    | Deferred  | Tracked            | Follow-up issue filed                             |
-| Review body | `src/ring.zig:196` | Valid     | Previously handled | Recorded in an earlier run                        |
+| Source                                                                                       | Finding                                               | Category  | Outcome            | Disposition                                                 |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------------------- | --------- | ------------------ | ----------------------------------------------------------- |
+| Thread                                                                                       | `src/foo.ts:42`                                       | Valid     | Resolved           | Fixed null check                                            |
+| Thread                                                                                       | `lib/util.js:8`                                       | Incorrect | Resolved           | Updated error handling; added Copilot instruction           |
+| Thread                                                                                       | `docs/api.md:5`                                       | Nitpick   | Resolved           | Auto-resolved                                               |
+| [Review body 5035762218](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762218) | `docs/plan.md:243`                                    | Valid     | Fixed              | Corrected phase status in commit `abc1234`                   |
+| [Review body 5035762219](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762219) | `src/ui.tsx` - avoid redundant state synchronization | Nitpick   | Noted              | Existing state flow is required by the upstream component   |
+| [Review body 5035762220](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762220) | `src/ring.zig:196`                                    | Valid     | Previously handled | Fixed in commit `def5678`; current code retains the boundary |
 
-Counts: 6 fetched, 3 resolved, 3 review-body findings, 1 deferred, 1 previously handled, 2 code-change threads.
+Counts: 6 fetched, 3 resolved, 3 review-body findings, 1 previously handled, 2 code-change threads.
 ```
 
 - Status must be one of `Completed`, `No unresolved Copilot feedback`, `Partial`, or `Failed`
-- **`Source`** is `Thread` or `Review body`. Review-body findings have no thread, so this column is what makes a thread-less row legible instead of implied.
+- **`Source`** is `Thread` or a `Review body REVIEW_ID` link using the exact `url` returned by `fetch-reviews`. Review-body findings have no thread, so this link visibly connects the disposition to the immutable source review.
+- **`Finding`** is `path:line` when a line exists. For `line: null`, use the normalized path plus a concise excerpt copied verbatim from `body`, so step 1c can find it in the `body` of a repeated finding; a path alone is ambiguous when one table row carries several findings. Choose an excerpt that contains no `|` character: a pipe would end the table cell, and escaping it as `\|` would stop the cell text from appearing verbatim in `body`. Any distinctive run of words from `body` works, so pick one that sits between pipes.
 - **`Outcome`** for `Thread` rows is `Resolved`, `Failed`, or `Pending`. `Resolved` means a thread was actually resolved, so it is never correct for a `Review body` row. Those use `Fixed`, `Tracked`, `Noted`, `Previously handled`, or `Failed`.
+- **`Disposition`** names the fixing commit for `Fixed` and fixed `Previously handled` rows. For `Incorrect`, `Outdated`, and `Nitpick` rows, state the evidence or rationale for making no code change. Do not leave a category-only disposition that forces readers to reconstruct the decision.
 - The trailing `Counts:` line is one short sentence at the end of the comment. Include only non-zero counts from this set: fetched, resolved, pending, failed, deferred, code-change threads, review-body findings, previously handled, workflow failures. Omit zero-valued metrics; do not render an empty table or "0" entries. If every count is zero, omit the `Counts:` line entirely.
 - Pluralize naturally (`1 fetched`, `2 fetched`; `1 code-change thread`, `2 code-change threads`; `1 review-body finding`, `2 review-body findings`; `1 workflow failure`, `2 workflow failures`).
 - Table includes all processed threads and review-body findings when the comment remains safely postable, not only Valid and Incorrect items
-- If the table would make the PR comment too large, replace detailed rows with aggregate category/outcome rows and state how many detail rows were omitted. Keep the full row-by-row table in the local final output for the agent/user audit trail. **Never aggregate away a `Review body` row's `path:line`**, since step 1c reads those back to avoid re-processing on the next run.
-- Incorrect category notes Copilot instruction additions in the Action column
+- If the table would make the PR comment too large, replace thread details with aggregate category/outcome rows first and state how many detail rows were omitted. Keep the full row-by-row table in the local final output for the agent/user audit trail. **Never aggregate away a review-body source link or finding identity**, since step 1c reads those back to avoid re-processing on the next run.
+- Incorrect category notes Copilot instruction additions in the Disposition column
 - Thread IDs omitted (meaningless to human reviewers)
 - Non-thread failures, including review-body format drift, must be described in a failure details section, not forced into the feedback table
 
@@ -461,12 +472,12 @@ If processing was partial or failed, include failure details, the remaining requ
 Status: Partial
 Head SHA: `abc1234`
 
-| Source      | File               | Category | Outcome  | Action                    |
-| ----------- | ------------------ | -------- | -------- | ------------------------- |
-| Thread      | `src/foo.ts:42`    | Valid    | Resolved | Fixed null check          |
-| Thread      | `src/bar.ts:7`     | Outdated | Failed   | Reply failed              |
-| Thread      | `lib/baz.ts:9`     | Nitpick  | Pending  | Resolution still required |
-| Review body | `docs/plan.md:243` | Valid    | Fixed    | Corrected phase status    |
+| Source                                                                                       | Finding            | Category | Outcome  | Disposition                                |
+| -------------------------------------------------------------------------------------------- | ------------------ | -------- | -------- | ------------------------------------------ |
+| Thread                                                                                       | `src/foo.ts:42`    | Valid    | Resolved | Fixed null check                           |
+| Thread                                                                                       | `src/bar.ts:7`     | Outdated | Failed   | Reply failed                               |
+| Thread                                                                                       | `lib/baz.ts:9`     | Nitpick  | Pending  | Resolution still required                  |
+| [Review body 5035762218](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762218) | `docs/plan.md:243` | Valid    | Fixed    | Corrected phase status in commit `abc1234` |
 
 ### Failure Details
 
@@ -546,23 +557,23 @@ If PR context or GitHub authentication is unavailable, or if `gh pr comment` fai
 
 **You MUST output this table after processing all threads and review-body findings:**
 
-```text
-| Source      | Thread ID | File:Line | Category | Action Taken | Status |
-|-------------|-----------|-----------|----------|--------------|--------|
-| Thread      | PRRT_xxx  | src/foo.ts:42 | Nitpick | Auto-resolved | Resolved |
-| Thread      | PRRT_yyy  | src/bar.ts:15 | Valid | Fixed null check | Resolved |
-| Thread      | PRRT_zzz  | lib/util.js:8 | Outdated | Code refactored | Resolved |
-| Review body | n/a         | src/ui.tsx:20 | Deferred | Tracked in PROJECT.md | Tracked |
-| Review body | n/a         | docs/plan.md:243 | Valid | Corrected phase status | Fixed |
+```markdown
+| Source                                                                                       | Thread ID | Finding                                               | Category  | Action taken                   | Status   |
+| -------------------------------------------------------------------------------------------- | --------- | ----------------------------------------------------- | --------- | ------------------------------ | -------- |
+| Thread                                                                                       | PRRT_xxx  | `src/foo.ts:42`                                       | Nitpick   | Auto-resolved                  | Resolved |
+| Thread                                                                                       | PRRT_yyy  | `src/bar.ts:15`                                       | Valid     | Fixed null check               | Resolved |
+| Thread                                                                                       | PRRT_zzz  | `lib/util.js:8`                                       | Outdated  | Code refactored                | Resolved |
+| [Review body 5035762218](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762218) | --        | `docs/plan.md:243`                                    | Valid     | Fixed in commit `abc1234`      | Fixed    |
+| [Review body 5035762219](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762219) | --        | `src/ui.tsx` - avoid redundant state synchronization | Nitpick   | Existing flow is intentional   | Noted    |
 ```
 
 **Column definitions:**
 
-- **Source**: `Thread` or `Review body`
+- **Source**: `Thread` or an exact originating review link
 - **Thread ID**: GraphQL thread ID (truncated for readability); `--` for review-body findings, which have none
-- **File:Line**: Location of the comment
+- **Finding**: `path:line`, or normalized path plus identifying text when the finding has no line
 - **Category**: Nitpick, Valid, Outdated, Incorrect, or Deferred
-- **Action Taken**: Brief description of resolution (10 words max)
+- **Action taken**: Brief description of resolution (10 words max)
 - **Status**: `Resolved`, `Failed`, or `Pending` for threads; `Fixed`, `Tracked`, `Noted`, `Previously handled`, or `Failed` for review-body findings
 
 **Common failure modes:**
@@ -574,7 +585,7 @@ If PR context or GitHub authentication is unavailable, or if `gh pr comment` fai
 
 - API failures: Retry with proper auth
 - Thread ID issues: Use alternative queries
-- Review-body format drift (`hasSuppressedMarker: true` with empty `findings`): read the raw `suppressed` text, process the findings from it, and record a workflow failure so the parser gets updated. Never report this as "no findings."
+- Review-body format drift (`hasFormatDrift: true`): inspect `suppressed` and `reviewBody`, process the findings you can recover, and record a workflow failure so the parser gets updated. Never report this as "no findings."
 - Fix failures: Retry with alternative approach or defer if out of scope
 - Summary comment failures: Log the error, preserve the intended summary Markdown in the local final output, and treat the workflow as incomplete until the required final summary posts successfully
 - Partial resolution is better than none, but a partial or failed terminal state still requires the final PR summary once PR context exists

@@ -1,0 +1,12 @@
+[
+  {
+    "id": 6000000007,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-19T14:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6000000007",
+    "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🔵 Needs a closer look\n\nSeveral issues remain unresolved.\n\n**Review effort:** Lite  \n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nOne-sentence summary of the PR.\n\n| File | Summary |\n|---|---|\n| `src/​parsers/​split.js` | Splits input. Moderate (1 vote): split on `a; b` correctly; Critical (2 votes): reject naïve input; Nit (1 vote): rename the helper |\n| `src/​parsers/​match.js` | Matches alternations. Low (1 vote): handle `a \\| b` alternation. |\n| `docs/​usage.md` | Documents the parser. |\n| `src/​parsers/​label.js` | Formats labels. Moderate (1 vote): keep the literal Nit (1 vote): prefix intact. Low (2 votes): appears in the same sentence; Nit (1 vote): trim the comment. |\n</details>"
+  }
+]

@@ -302,14 +302,17 @@ function do_fetch() {
 #   <summary>Suppressed comments (N)</summary>
 #   ### Suppressed comments (N)
 #
-# The interior is stable across all three: a bold-only "**path:line**" heading,
-# then the finding prose, then an optional fenced context block. The section
-# ends at a details tag or at the "- **Files reviewed:" trailer.
+# The legacy interior is stable across all three: a bold-only
+# "**path:line**" heading, then the finding prose, then an optional fenced
+# context block. The section ends at a details tag or at the
+# "- **Files reviewed:" trailer. ccr-overview-v2 adds nested
+# "Previously missed" details and line-less findings in file-summary tables;
+# those layouts are parsed separately below.
 #
-# Both the raw slice and a structured parse are emitted. A true
-# hasSuppressedMarker with an empty findings array means Copilot changed the
-# layout again and the caller should read the raw slice directly, which keeps a
-# format change visible instead of silently reporting no feedback.
+# The raw legacy slice, complete review body, and structured parse are emitted.
+# hasFormatDrift covers both an unparsed legacy section and a non-clean v2
+# verdict that neither structured findings nor open inline threads explain,
+# keeping a format change visible instead of silently reporting no feedback.
 # =============================================================================
 
 # Normalizes an array of GitHub review objects into Copilot review-body findings.
@@ -342,6 +345,26 @@ function do_parse_reviews() {
     --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" \
     '
       def trim: sub("^[[:space:]]+"; "") | sub("[[:space:]]+$"; "");
+
+      def normalize_path: gsub("\u200b"; "");
+
+      # The first level-3 heading. On ccr-overview-v2 bodies this is the
+      # verdict the drift check compares; older layouts can yield a section
+      # heading such as "### Reviewed changes", or null. Trimming drops a
+      # trailing carriage return so a CRLF body still compares equal.
+      def verdict:
+        split("\n")
+        | map(select(test("^### ")) | trim)
+        | first // null;
+
+      def is_overview_v2: contains("<!-- ccr-overview-v2 -->");
+
+      # ccr-overview-v2 lists the inline threads that were open when the
+      # review was written under an "Open (N)" summary. Those threads explain
+      # a non-clean verdict by themselves, and the thread fetch reports them,
+      # so a review whose only findings are inline threads is not drift.
+      def lists_open_threads:
+        test("<summary>(<[^>]+>)*Open \\([1-9][0-9]*\\)");
 
       # Copilot puts its verdict heading and lead paragraph before the first
       # <details> block. The "Once you have addressed..." call to action is
@@ -399,7 +422,7 @@ function do_parse_reviews() {
       # The trailing $ anchor is load-bearing: it keeps the
       # "**Previously missed (1)** - in code that..." subheading from parsing
       # as a finding, since that line continues past the closing asterisks.
-      def findings:
+      def suppressed_findings:
         split("\n")
         | reduce .[] as $line ({current: null, out: []};
             if $line | test("^\\*\\*[^*]+:[0-9]+\\*\\*$")
@@ -416,9 +439,75 @@ function do_parse_reviews() {
                 location: .heading,
                 path: ($parts[0:-1] | join(":")),
                 line: ($parts[-1] | tonumber),
+                severity: null,
                 body: (.lines | join("\n") | trim)
               }
           );
+
+      # ccr-overview-v2 nests each "Previously missed" finding in its own
+      # details block. The location is inline code rather than a bold heading,
+      # and GitHub inserts U+200B after path separators for display wrapping.
+      # Scanning the complete body also avoids truncating the outer details at
+      # the first nested closing tag. Open and resolved entries do not have
+      # this nested summary-plus-location shape, so they cannot match.
+      def previously_missed_findings:
+        [
+          scan(
+            "<summary><picture>.*?<img [^>]*alt=\"(?<severity>[^\"]+) severity\"[^>]*>.*?</picture> (?<title>.*?)</summary>[[:space:]]+`(?<location>[^`]+):(?<line>[0-9]+)`[[:space:]]+(?<body>.*?)</details>";
+            "gms"
+          )
+          | {
+              location: ((.[2] | normalize_path) + ":" + .[3]),
+              path: (.[2] | normalize_path),
+              line: (.[3] | tonumber),
+              severity: .[0],
+              body: ((.[1] + "\n\n" + .[4]) | trim)
+            }
+        ];
+
+      # A newer ccr-overview-v2 variant appends line-less findings to a file
+      # summary cell as "<Severity> (<N> votes): <text>" items separated by
+      # "; " and ending with ".". Each item runs from its own severity token to
+      # the next one, so text that contains a semicolon or lacks the final
+      # period is kept rather than dropped. Any capitalized word followed by a
+      # vote count is a severity token, so a severity name not seen before
+      # still parses. The first token opens the first item wherever the file
+      # description ends; every later token must follow the "; " separator, so
+      # prose such as "Nit (1 vote):" inside a finding stays in its text rather
+      # than splitting it into a false finding. Joining every cell after the
+      # path keeps escaped pipes inside the summary, and they are unescaped to
+      # the text GitHub renders. Restrict this parser to marked v2 bodies so
+      # ordinary file-summary tables remain negative controls.
+      def table_findings:
+        [
+          split("\n")[]
+          | select(test("^[[:space:]]*\\|[[:space:]]*`[^`]+`[[:space:]]*\\|"))
+          | split("|") as $cells
+          | ($cells[1] | trim | ltrimstr("`") | rtrimstr("`") | normalize_path) as $path
+          | ($cells[2:-1] | join("|") | gsub("\\\\\\|"; "|") | trim) as $summary
+          | [
+              [$summary | match("\\b(?<severity>[A-Z][A-Za-z]*) \\([0-9]+ votes?\\): "; "g")]
+              | to_entries[]
+              | select(.key == 0 or $summary[(.value.offset - 2):.value.offset] == "; ")
+              | .value
+            ] as $items
+          | range(0; $items | length) as $i
+          | $items[$i] as $item
+          | ($items[$i + 1].offset // ($summary | length)) as $end
+          | {
+              location: $path,
+              path: $path,
+              line: null,
+              severity: $item.captures[0].string,
+              body: (
+                $summary[($item.offset + $item.length):$end]
+                | trim
+                | sub(";$"; "")
+                | sub("\\.$"; "")
+                | trim
+              )
+            }
+        ];
 
       [
         .[]
@@ -433,14 +522,35 @@ function do_parse_reviews() {
         | select((.user.login? // "") as $login | $direct_logins | any(. == $login))
         | select((.body // "") != "")
         | (.body | suppressed_slice) as $slice
+        | (.body | verdict) as $verdict
+        | (.body | is_overview_v2) as $is_v2
+        | ($slice | suppressed_findings) as $suppressed_findings
+        | (if $is_v2 then (.body | previously_missed_findings) else [] end) as $missed_findings
+        | (if $is_v2 then (.body | table_findings) else [] end) as $table_findings
+        | ($suppressed_findings + $missed_findings + $table_findings) as $findings
+        | (.body | has_suppressed_marker) as $has_suppressed_marker
+        | ($is_v2 and (.body | lists_open_threads)) as $lists_open_threads
         | {
             id: .id,
             url: .html_url,
             submittedAt: .submitted_at,
             headline: (.body | headline),
-            hasSuppressedMarker: (.body | has_suppressed_marker),
+            verdict: $verdict,
+            hasSuppressedMarker: $has_suppressed_marker,
+            hasFormatDrift: (
+              ($findings | length) == 0
+              and (
+                $has_suppressed_marker
+                or (
+                  $is_v2
+                  and $verdict != "### 🟢 Approval recommended"
+                  and ($lists_open_threads | not)
+                )
+              )
+            ),
             suppressed: $slice,
-            findings: ($slice | findings)
+            reviewBody: .body,
+            findings: $findings
           }
       ]
     ' <<< "${input}"

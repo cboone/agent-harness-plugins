@@ -1,0 +1,22 @@
+[
+  {
+    "id": 6000000008,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-19T15:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6000000008",
+    "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🔵 Needs a closer look\n\nA renderer issue and a documentation nit remain.\n\n**Review effort:** Lite  \n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\n| File | Summary |\n|---|---|\n| `src/​handlers/​example.js` | Handles the new cases. Nit (1 vote): narrow the error documentation. |\n</details>\n\n<details>\n<summary><strong>Previously missed (1)</strong></summary>\n\nIn code that hasn't changed since last review\n\n<details>\n<summary><picture><source media=\"screen\"><img alt=\"Medium severity\"></picture> Handle null timeZone before constructing the formatter</summary>\n\n`src/​report/​render.js:197`\n\nPassing null as the formatter time zone throws. Normalize null to undefined before constructing the formatter.\n</details>\n</details>"
+  },
+  {
+    "id": 6000000009,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-19T16:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6000000009",
+    "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🔵 Needs a closer look\n\nThe same two issues are reported again after an unrelated push.\n\n**Review effort:** Lite  \n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\n| File | Summary |\n|---|---|\n| `src/​handlers/​example.js` | Handles the new cases and a retry path. Nit (1 vote): narrow the error documentation. |\n</details>\n\n<details>\n<summary><strong>Previously missed (1)</strong></summary>\n\nIn code that hasn't changed since last review\n\n<details>\n<summary><picture><source media=\"screen\"><img alt=\"Medium severity\"></picture> Handle null timeZone before constructing the formatter</summary>\n\n`src/​report/​render.js:197`\n\nPassing null as the formatter time zone throws. Normalize null to undefined before constructing the formatter.\n</details>\n</details>"
+  }
+]
