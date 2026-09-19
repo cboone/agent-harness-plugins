@@ -435,7 +435,7 @@ Head SHA: `abc1234`
 | [Review body 5035762219](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762219) | `src/ui.tsx` - avoid redundant state synchronization | Nitpick   | Noted              | Existing state flow is required by the upstream component   |
 | [Review body 5035762220](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762220) | `src/ring.zig:196`                                    | Valid     | Previously handled | Fixed in commit `def5678`; current code retains the boundary |
 
-Counts: 6 fetched, 3 resolved, 3 review-body findings, 1 deferred, 1 previously handled, 2 code-change threads.
+Counts: 6 fetched, 3 resolved, 3 review-body findings, 1 previously handled, 2 code-change threads.
 ```
 
 - Status must be one of `Completed`, `No unresolved Copilot feedback`, `Partial`, or `Failed`
@@ -573,7 +573,7 @@ If PR context or GitHub authentication is unavailable, or if `gh pr comment` fai
 - **Thread ID**: GraphQL thread ID (truncated for readability); `--` for review-body findings, which have none
 - **Finding**: `path:line`, or normalized path plus identifying text when the finding has no line
 - **Category**: Nitpick, Valid, Outdated, Incorrect, or Deferred
-- **Action Taken**: Brief description of resolution (10 words max)
+- **Action taken**: Brief description of resolution (10 words max)
 - **Status**: `Resolved`, `Failed`, or `Pending` for threads; `Fixed`, `Tracked`, `Noted`, `Previously handled`, or `Failed` for review-body findings
 
 **Common failure modes:**
