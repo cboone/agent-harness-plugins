@@ -241,6 +241,30 @@ $ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependenci
 [1]
 ```
 
+## Near-miss invocation wording draws a warning
+
+"invoke `NAME`" without the canonical phrase escapes the declaration checks, so
+naming an undeclared skill that way is reported. It is only a warning, and the
+run still passes. The reference file holds no other candidate, so this also
+checks that the prefilter admits it.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Then invoke `other` to finish.' > plugins/demo/skills/demo/references/real.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/references/real.md 2>&1
+::warning::plugins/demo/skills/demo/references/real.md says "invoke `other`"; if that step runs the other skill, write "Invoke the `other` skill" and declare it under ## Skill dependencies
+All skill cross-references resolve.
+```
+
+The same words also say what not to do, refer to the skill itself, or name a
+command, so a declared skill, the file's own skill, and a name that is not a
+skill pass silently.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependencies' '' '- **Required:** None' '- **Optional:** `other`' '' '## Workflow' '' 'On a fork, do not invoke `other`.' 'A parent that would invoke `demo` passes a continuation block.' 'Then invoke `gh` to open the PR.' > plugins/demo/skills/demo/SKILL.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1
+All skill cross-references resolve.
+```
+
 ## The default scan discovers the files itself
 
 Every case above names the file to check, but `bin/validate-plugins` passes no

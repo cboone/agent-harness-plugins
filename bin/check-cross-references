@@ -14,7 +14,9 @@
 # NAME under a "## Skill dependencies" section as required or optional. This
 # script checks that each composition is declared, that each declaration
 # resolves, names the skill in only one category, is actually used, and follows
-# the documented form. docs/plugin-development.md describes the convention.
+# the documented form. A step worded "invoke `NAME`" instead of the canonical
+# phrase escapes those checks, so one naming an undeclared skill draws a
+# warning. docs/plugin-development.md describes the convention.
 #
 # Paths resolve against the current working directory, which must be the
 # repository root. Pass explicit files to check only those; the scrut suite does
@@ -51,8 +53,11 @@ DECLARED_PREFIXES="bin|docs"
 # fails that suite rather than quietly reducing what gets checked.
 #
 # A SKILL.md whose only candidate is its dependency block holds none of the
-# other branches, so the section heading is a branch of its own.
-CANDIDATE_PREFILTER='\$\{CLAUDE_PLUGIN_ROOT\}/|\./references/|(plugins|dist/codex|dist/opencode|bin|docs)/|`/|skill|Skill dependencies|validate-plugins:'
+# other branches, so the section heading is a branch of its own, and so is the
+# near-miss wording below, which a reference file can hold on its own. Its
+# backticks are literal text to match, not a command substitution.
+# shellcheck disable=SC2016
+CANDIDATE_PREFILTER='\$\{CLAUDE_PLUGIN_ROOT\}/|\./references/|(plugins|dist/codex|dist/opencode|bin|docs)/|`/|skill|Skill dependencies|[Ii]nvoke `|validate-plugins:'
 
 # The one phrase that marks composition. Suggestions to the user, redirects to
 # an adjacent skill and "Pairs with" text are worded differently on purpose, so
@@ -61,7 +66,12 @@ CANDIDATE_PREFILTER='\$\{CLAUDE_PLUGIN_ROOT\}/|\./references/|(plugins|dist/code
 # shellcheck disable=SC2016
 COMPOSITION_PATTERN='[Ii]nvoke the `/?[a-z][a-z0-9-]*` skill'
 
-readonly UNAMBIGUOUS_PREFIXES DECLARED_PREFIXES CANDIDATE_PREFILTER COMPOSITION_PATTERN
+# Wording that reads like composition without the canonical phrase, which the
+# declaration checks cannot see. The backticks are literal here too.
+# shellcheck disable=SC2016
+NEAR_MISS_PATTERN='[Ii]nvoke `/?[a-z][a-z0-9-]*`'
+
+readonly UNAMBIGUOUS_PREFIXES DECLARED_PREFIXES CANDIDATE_PREFILTER COMPOSITION_PATTERN NEAR_MISS_PATTERN
 
 errors=0
 reference_errors=0
@@ -69,6 +79,11 @@ reference_errors=0
 function error() {
   echo "::error::$1"
   errors=$((errors + 1))
+}
+
+# A warning does not fail the run.
+function warning() {
+  echo "::warning::$1"
 }
 
 # Only an unresolved reference or a stale ignore entry can be answered with an
@@ -389,6 +404,37 @@ function check_compositions() {
   done <<< "${references}"
 }
 
+# "invoke `NAME`" is usually a composition written without the canonical
+# phrase, but the same words also say what not to do ("do not invoke
+# `merge-main`") or name a command ("invoke `gh`"). Only a skill that exists,
+# is not the file's own, and is not already declared is reported, and only as a
+# warning, since an ignore comment does not reach dependency findings.
+function check_near_misses() {
+  local file="${1}" skill_dir="${2}"
+  local names declared name
+
+  # The backticks in the sed expression are literal text, not a substitution.
+  # shellcheck disable=SC2016
+  names="$(
+    scannable_lines "${file}" \
+      | { grep -oE "${NEAR_MISS_PATTERN}" || true; } \
+      | sed -E 's|^.*`/?([a-z0-9-]+)`$|\1|' \
+      | sort -u
+  )"
+  [[ -n "${names}" ]] || return 0
+
+  declared="$(declared_dependencies "${skill_dir}/SKILL.md")"
+
+  while IFS= read -r name; do
+    [[ -n "${name}" ]] || continue
+    [[ "${name}" != "${skill_dir##*/}" ]] || continue
+    if contains_line "${declared}" "${name}" || ! skill_exists "${name}"; then
+      continue
+    fi
+    warning "${file} says \"invoke \`${name}\`\"; if that step runs the ${name} skill, write \"Invoke the \`${name}\` skill\" and declare it under ## Skill dependencies"
+  done <<< "${names}"
+}
+
 # A declared name is used when the workflow names it, backticked with or
 # without a leading slash, anywhere outside the dependency section: selection
 # lists such as bootstrap-project's name their candidates bare.
@@ -484,6 +530,7 @@ function check_file() {
   done <<< "${ignores}"
 
   check_compositions "${file}" "${skill_dir}"
+  check_near_misses "${file}" "${skill_dir}"
   if [[ "${file}" == */SKILL.md ]]; then
     check_declarations "${file}" "${skill_dir}"
   fi

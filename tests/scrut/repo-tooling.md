@@ -147,6 +147,19 @@ Codex skill inventory: * (glob)
 [1]
 ```
 
+## Cross-reference warnings reach a passing run
+
+Rule 19 relays `bin/check-cross-references` output. A run that passes still
+shows its warnings, such as a skill that says "invoke `commit`" without
+declaring it.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" near-miss-invocation 2>&1
+Codex skill inventory: * (glob)
+::warning::plugins/release/skills/release/SKILL.md says "invoke `commit`"; if that step runs the commit skill, write "Invoke the `commit` skill" and declare it under ## Skill dependencies
+All plugin validations passed.
+```
+
 ## Release automation uses immutable tags and ignores documentation-only changes
 
 The fixture executes the workflow's catalog-change, tag/release-check, tag, and

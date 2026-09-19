@@ -581,9 +581,11 @@ done
 
 # ─── 19. Skill cross-references resolve ─────────────────────────────────────
 # bin/check-cross-references owns the path and skill-name checks and emits its
-# own ::error:: annotations, so its findings are relayed and counted rather than
-# re-derived here. It is a separate script so it can be exercised on its own
-# against the fixture trees in tests/scrut/.
+# own ::error:: and ::warning:: annotations, so its findings are relayed and
+# counted rather than re-derived here. It is a separate script so it can be
+# exercised on its own against the fixture trees in tests/scrut/. A passing run
+# still relays its warnings, which would otherwise be discarded with its
+# success line.
 
 if ! cross_reference_output="$(bin/check-cross-references 2>&1)"; then
   printf '%s\n' "${cross_reference_output}"
@@ -593,6 +595,8 @@ if ! cross_reference_output="$(bin/check-cross-references 2>&1)"; then
   else
     error "bin/check-cross-references failed without reporting a finding"
   fi
+else
+  grep '^::warning::' <<< "${cross_reference_output}" || true
 fi
 
 # ─── Summary ────────────────────────────────────────────────────────────────
