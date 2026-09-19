@@ -1,8 +1,8 @@
 ---
 name: release
 description: >-
-  Prepare a versioned release: update release files, create a release commit,
-  tag locally, and optionally publish a GitHub Release.
+  Prepare a versioned release from conventional commits: bump versions, update
+  release files, commit, and tag. Use for "cut a release".
 ---
 
 # Release

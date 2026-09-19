@@ -1,13 +1,8 @@
 ---
 name: release
 description: >-
-  Prepare a versioned release: detect project type, analyze conventional
-  commits, update release files, create a release commit, tag it locally, and
-  optionally push and create a GitHub Release. For Claude Code marketplaces,
-  prepare plugin version bumps and a signed release commit, then let
-  push-to-main automation publish changed catalog inputs. Use when the user says "release", "create a release", "cut a
-  release", "prepare a release", "bump the version", "tag a release", or
-  similar requests to create a versioned release.
+  Prepare a versioned release from conventional commits: bump versions, update
+  release files, commit, and tag. Use for "cut a release".
 ---
 
 # Release

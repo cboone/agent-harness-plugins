@@ -24,11 +24,14 @@ Or, from within `claude`:
 
 ### Codex CLI
 
+Register the marketplace, then install the plugins you want:
+
 ```bash
 codex plugin marketplace add cboone/agent-harness-plugins
+codex plugin add commit@agent-harness-plugins
 ```
 
-See [Using with Codex CLI](#using-with-codex-cli) below for the `plugin_hooks` feature flag, marketplace upgrade and remove semantics, and Codex-specific limitations.
+See [Using with Codex CLI](#using-with-codex-cli) below for selective installation, hook review and trust, refreshing and removing plugins, troubleshooting, and Codex-specific limitations.
 
 ### OpenCode
 
@@ -203,42 +206,66 @@ Hooks are event-driven; they have no slash-command trigger.
 
 ## Using with Codex CLI
 
-This repository works as a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace. Codex reads the generated `.agents/plugins/marketplace.json`, which points at committed plugin roots under `dist/codex/plugins/`. Those generated roots mirror the canonical `plugins/*` directories but replace skill frontmatter descriptions with shorter Codex-facing descriptions from the marketplace entries. The canonical `plugins/*/skills/*/SKILL.md` files keep their richer Claude Code trigger descriptions.
+This repository works as a native [Codex CLI](https://developers.openai.com/codex/cli) plugin marketplace. Codex reads the generated `.agents/plugins/marketplace.json`, which points at committed plugin roots under `dist/codex/plugins/`. Those generated roots mirror the canonical `plugins/*` directories and copy every `SKILL.md` unchanged, so Codex routes on the same skill descriptions as Claude Code and OpenCode.
 
-For per-plugin metadata Codex prefers `.codex-plugin/plugin.json` when present and falls back to `.claude-plugin/plugin.json` otherwise. Hook registration requires a `.codex-plugin/plugin.json` with a non-empty `hooks` path (for example `"hooks": "./hooks/hooks.json"`); this lets hook plugins point Codex at a Codex-compatible hook file. Codex exposes `${CLAUDE_PLUGIN_ROOT}` to plugin-bundled hook commands for backward compatibility with existing Claude Code plugins.
+For per-plugin metadata Codex prefers `.codex-plugin/plugin.json` when present and falls back to `.claude-plugin/plugin.json` otherwise. Hook registration requires a `.codex-plugin/plugin.json` with a non-empty `hooks` path (for example `"hooks": "./hooks/hooks.json"`); this lets hook plugins point Codex at a Codex-compatible hook file. Codex exposes `PLUGIN_ROOT` to plugin-bundled hook commands, plus `CLAUDE_PLUGIN_ROOT` for compatibility with existing Claude Code plugins.
 
-Codex CLI currently manages plugins at the marketplace level. In Codex CLI 0.128.0, `codex plugin` exposes the `marketplace` subcommand with `add`, `upgrade`, and `remove`; it does not expose a separate `codex plugin install` subcommand.
+### Installing and managing plugins
 
-Enable plugin-bundled hooks once per host so the `notify` hook fires:
+Registering the marketplace makes its plugins available without installing any of them. Install each plugin you want by name, qualified with the marketplace name `agent-harness-plugins`:
 
 ```bash
-codex features enable plugin_hooks
+codex plugin marketplace add cboone/agent-harness-plugins
+codex plugin list --marketplace agent-harness-plugins
+codex plugin add commit@agent-harness-plugins
+codex plugin add pr --marketplace agent-harness-plugins
 ```
 
-Plugin-bundled hooks are gated behind the `plugin_hooks` feature flag (listed as `under development` in Codex CLI 0.128.0). Without it the marketplace add and skill discovery still work, but `hooks/hooks.json` files inside installed plugins are silently ignored.
+`codex plugin marketplace add` also accepts a Git ref (`cboone/agent-harness-plugins@main`, or `--ref`) and a local path, such as a clone of this repository.
 
-Refresh a Git-backed marketplace after pulling repository updates or after a published release:
+Start a new Codex session after installing so it loads the new skills. Mention a skill with `$commit`, or choose it from `/skills`. Codex also selects a skill on its own when a request matches the skill's description. The `Trigger` column in the tables above shows the Claude Code slash-command form.
+
+Some workflow skills invoke other skills; for example, `pr` invokes `lint-and-fix`. Each such skill lists them in the `## Skill dependencies` section of its `SKILL.md`: install its required skills for the workflow to complete, and its optional skills for the steps that use them.
+
+List installed plugins, refresh them, and remove them:
 
 ```bash
+codex plugin list
 codex plugin marketplace upgrade agent-harness-plugins
-```
-
-`codex plugin marketplace upgrade` and `remove` take the marketplace name (`agent-harness-plugins`, derived from the repository name), not the `owner/repo` identifier used by `add`.
-
-When changing plugin metadata, skills, hooks, scripts, or references, regenerate the Codex marketplace with `bin/build-codex-marketplace` and commit `.agents/plugins/marketplace.json` plus `dist/codex/`. For a local-path marketplace, restart Codex after changing plugin files so it can rebuild cached plugin copies from the local source.
-
-Remove the configured marketplace by name:
-
-```bash
+codex plugin remove commit@agent-harness-plugins
 codex plugin marketplace remove agent-harness-plugins
 ```
 
+`codex plugin marketplace upgrade` refreshes a Git-backed marketplace and the installed plugins it provides, including files that changed without a version change. Omit the name to refresh every Git-backed marketplace. `upgrade` and `marketplace remove` take the marketplace name, not the `owner/repo` source used by `add`.
+
+`upgrade` does not refresh a local-path marketplace. After pulling changes into a local clone, run `codex plugin add` again for each installed plugin to replace its cached copy, then start a new session.
+
+When changing plugin metadata, skills, hooks, scripts, or references in this repository, regenerate the Codex marketplace with `bin/build-codex-marketplace` and commit `.agents/plugins/marketplace.json` plus `dist/codex/`.
+
+### Reviewing and trusting hooks
+
+Plugin hooks need no feature flag, but Codex runs them only after you review and trust them, and installing a plugin does not trust its hooks. After installing `notify`, open `/hooks` in a Codex session, review the plugin's hooks, and trust them. Codex records trust against each hook definition's hash, so when an upgrade changes a hook, Codex skips that hook until you review and trust it again.
+
+### Troubleshooting
+
+- **`codex plugin add` cannot find a plugin:** confirm the marketplace name with `codex plugin marketplace list` and the plugin name with `codex plugin list --marketplace agent-harness-plugins`.
+- **An installed skill does not appear:** confirm that `codex plugin list` shows the plugin as installed, start a new session, and check `/skills`.
+- **Installed files are out of date:** run `codex plugin marketplace upgrade agent-harness-plugins` for a Git-backed marketplace, or `codex plugin add` again for a local-path one.
+- **A hook does not run:** open `/hooks`, then review and trust it, including after an upgrade that changed it.
+
 ### Codex CLI known limitations
 
-- **Plugin-bundled hooks are gated behind a feature flag.** `plugin_hooks` is `under development` in Codex CLI 0.128.0 and is `false` by default. Run `codex features enable plugin_hooks` once before expecting `notify` to fire on Codex; see above.
-- **`Notification` and `PreCompact` hook events are not supported.** Codex CLI's hook schema only supports `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, and `Stop`. The `notify` plugin therefore wires only the `Stop` event on Codex (turn completion). `PermissionRequest` is deliberately left unwired: it runs in the automatic-policy path before Codex shows its approval UI, so notifying on it would alert you about decisions Codex's internal approver is already making. Idle, elicitation, and compact-style banners have no Codex hook equivalent; for those, enable Codex's built-in `tui.notifications = true` in `~/.codex/config.toml`. The two are complementary and can run side by side. See the [`notify` plugin README](./plugins/notify/README.md) for details.
-- **`${CLAUDE_PLUGIN_ROOT}` is substituted only in hook commands.** Codex exposes the variable to plugin-bundled hook commands, but does not substitute it in skill bodies the way Claude Code does. The bundled script paths in `/address-issue-in-worktree`, `/create-worktree`, `/publish-report-board`, and `/resolve-copilot-pr-feedback` therefore arrive unsubstituted. Each of those skills carries a documented fallback that locates the script by glob, so they stay usable at the cost of an extra search step.
+- **Skill invocations are written in Claude Code syntax.** The catalog's triggers, skill prose, and generated worktree prompts write invocations as `/name`. In Codex, use `$name` or `/skills` instead. Correcting them is [milestone 3][codex-milestone-3] of the Codex roadmap.
+- **Workflow chains are written for Claude Code tools.** Skills such as `pr`, `monitor-pr`, and `bootstrap-project` invoke other skills and ask structured questions through Claude Code tool names, so Codex has to translate those steps. Applying the shared adapter conventions is [milestone 2][codex-milestone-2] for the Git and review chain and [milestone 3][codex-milestone-3] for the rest of the catalog.
+- **`${CLAUDE_PLUGIN_ROOT}` is substituted only in hook commands.** Codex exposes the variable to plugin-bundled hook commands, but does not substitute it in skill bodies the way Claude Code does. The bundled script paths in `/address-issue-in-worktree`, `/create-worktree`, `/publish-report-board`, and `/resolve-copilot-pr-feedback` therefore arrive unsubstituted. Each of those skills carries a documented fallback that locates the script by glob, so they stay usable at the cost of an extra search step. Package-relative helper resolution is [milestone 3][codex-milestone-3].
+- **Installed plugin READMEs have broken links.** An installed plugin's links to this README and to sibling plugins resolve to paths that do not exist in the Codex plugin cache. Read plugin documentation on GitHub until [milestone 3][codex-milestone-3] corrects them.
+- **`notify` covers four Codex events.** On Codex, `notify` wires `Stop` for completion, `UserPromptSubmit` to reset completion deduplication, `PreToolUse` for the `request_user_input` question tool, and `PreCompact` for automatic compaction. `PermissionRequest` is deliberately left unwired: it runs before Codex's automatic approval review decides whether to prompt you, so a notification there would announce decisions that need no response. For approval and plan prompts, enable Codex's built-in terminal notifications as the [`notify` plugin README](./plugins/notify/README.md) describes. Reassessing the other lifecycle events is [milestone 3][codex-milestone-3].
+- **End-to-end verification is partial.** Linux, multiple cached plugin versions, paths containing spaces, restricted destinations, and complete hook payload coverage are not yet verified; that is [milestone 4][codex-milestone-4].
 - **No custom prompts shipped.** Codex's `~/.codex/prompts/` mechanism is officially deprecated in favor of skills. This repository ships skills (and hooks), not prompts.
+
+[codex-milestone-2]: ./docs/plans/todo/2026-09-15-codex-consumption-improvements.md#milestone-2-prove-the-design-on-the-git-and-review-chain
+[codex-milestone-3]: ./docs/plans/todo/2026-09-15-codex-consumption-improvements.md#milestone-3-apply-the-design-across-the-catalog
+[codex-milestone-4]: ./docs/plans/todo/2026-09-15-codex-consumption-improvements.md#milestone-4-verify-the-complete-distribution
 
 ## Using with OpenCode
 

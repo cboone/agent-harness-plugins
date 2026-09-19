@@ -1,8 +1,8 @@
 ---
 name: create-plugin
 description: >-
-  Guide for creating new plugins in this repository with consistent structure
-  and conventions.
+  Add a plugin, skill, hook, or command to the agent-harness-plugins repository
+  and its catalog. Use for "create a plugin" or "add a new skill".
 ---
 
 # Create Plugin
@@ -98,14 +98,16 @@ Key points:
 
 #### For Skills
 
-Create `skills/PLUGIN-NAME/SKILL.md`. See `./references/skill-md.md` for the frontmatter format, description formula, common sections, and examples.
+Create `skills/PLUGIN-NAME/SKILL.md`. See `./references/skill-md.md` for the frontmatter format, description formula, common sections, and examples. The skill is one workflow shared by Claude Code, Codex CLI, and OpenCode; follow the adapter conventions in the "Cross-harness workflow adapters" section of `docs/plugin-development.md`.
 
 Key points:
 
 - Frontmatter has exactly two fields: `name` and `description`
-- The `description` includes trigger phrases for automatic activation
+- The `description` is the routing description: it opens with the primary action, names the trigger phrases that distinguish the skill from its neighbors, and stays short. The catalog summary in `marketplace.json` is written separately
 - Use `>-` (folded block scalar) for multi-line descriptions
 - Structure the body with a `## Workflow` section using numbered steps
+- Write each step against the capability it needs (a structured question, a wait, a browser) with a documented fallback, not against a harness's tool names
+- Write each use of another skill as "Invoke the `NAME` skill", and declare every such skill in a `## Skill dependencies` section before `## Workflow`, as required or optional
 
 #### For Commands
 
@@ -197,6 +199,9 @@ Before finishing, verify:
 - [ ] `plugins/PLUGIN-NAME/README.md` exists and documents installation, usage, requirements, examples, and related plugins
 - [ ] Project-level instruction files such as `AGENTS.md` or `CLAUDE.md` were updated only if the new plugin changes current repository conventions
 - [ ] `SKILL.md` frontmatter has only `name` and `description` fields (skills only)
+- [ ] The `description` opens with the primary action and carries the distinguishing trigger phrases, without restating the catalog summary (skills only)
+- [ ] Steps name the capability they need and a fallback for when it is absent, rather than a single harness's tools (skills only)
+- [ ] Every "Invoke the `NAME` skill" reference is declared under `## Skill dependencies` as required or optional, with the missing-skill behavior described (skills that compose others only)
 - [ ] All reference files are reachable from `SKILL.md` via relative paths (skills only)
 - [ ] Command `.md` has `description` and `disable-model-invocation: true` in frontmatter (commands only)
 - [ ] Command filename matches the intended slash command name (commands only)

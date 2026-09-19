@@ -1,7 +1,8 @@
 ---
 name: resolve-copilot-pr-feedback
 description: >-
-  Process and resolve GitHub Copilot automated PR review comments.
+  Process GitHub Copilot PR review comments: fix, reply to, and resolve each
+  thread. Use for "resolve copilot feedback" or "handle copilot comments".
 ---
 
 # Copilot Feedback Resolver
@@ -147,6 +148,11 @@ Reserve for repo-wide conventions that apply to all file types:
 ## Processing Rules
 
 **ONLY process UNRESOLVED comments. NEVER touch, modify, or re-process already resolved comments. Skip them entirely.**
+
+## Skill dependencies
+
+- **Required:** `lint-and-fix`
+- **Optional:** None
 
 ## Core Workflow
 
@@ -369,7 +375,7 @@ If step 1b reported format drift (`hasFormatDrift: true`), extract what you can 
 This step prevents CI failures from lint issues introduced while resolving feedback.
 
 1. **Check for changes**: If no files were modified during steps 2-4 (only nitpicks auto-resolved or threads replied to), skip this step. Run `git status --porcelain` to verify: empty output means a clean working tree and you may skip; any output means files were changed and you should continue.
-1. **Invoke the `lint-and-fix` skill** using the Skill tool with `--no-push`:
+1. **Invoke the `lint-and-fix` skill** with `--no-push`:
 
    ```text
    lint-and-fix --no-push

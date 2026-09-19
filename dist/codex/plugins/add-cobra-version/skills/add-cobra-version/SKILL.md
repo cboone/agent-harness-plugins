@@ -1,10 +1,8 @@
 ---
 name: add-cobra-version
 description: >-
-  Add a version subcommand with build metadata (version, commit hash, build
-  date, Go runtime version, optional JSON output) to an existing Cobra-based Go
-  CLI, wiring up ldflags in main.go, the cmd package, GoReleaser, and the
-  Makefile.
+  Add a version subcommand with commit and build-date ldflags to an existing
+  Cobra Go CLI. Use for "add a version command" or "add build metadata".
 ---
 
 # Add Cobra Version

@@ -1,9 +1,18 @@
 ---
 name: set-up-review-config
 description: >-
-  Install style-guide review checklists as a Copilot code-review skill, with
-  matching AGENTS.md review rules and a REVIEW.md, so Copilot, Codex, and Claude
-  Code Review apply the same guidance.
+  Detect a repository's file types and install condensed style-guide review
+  checklists as a Copilot code-review skill under .github/skills/code-review/,
+  with a matching Code Review Rules block in AGENTS.md for Codex and a REVIEW.md
+  for Claude Code Review, so all three automated reviewers apply the same
+  guidance. Use when the user says "set up review config", "set up code review
+  guidance", "configure Copilot code review", "add a code review skill", "add
+  REVIEW.md", "add code review rules to AGENTS.md", "wire the style guides into
+  PR review", or wants automated pull request reviewers to follow the
+  repository's style guides. Covers Go, Lean, Lean tests, Bash, Zsh, Markdown,
+  and scrut tests. Pairs with set-up-linters (the tools CI enforces, which
+  reviewers are told to skip) and refresh-project-scaffolding (auditing
+  installed review config).
 ---
 
 # Set-Up Review Config

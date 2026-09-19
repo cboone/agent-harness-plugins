@@ -6,7 +6,7 @@
 <!-- The reference paths below illustrate how a skill being authored points at its own material; they are not this skill's reference files. -->
 <!-- validate-plugins: ignore ./references/BASH.md ./references/languages/go.md ./references/tools/actionlint.md -->
 
-Each skill has a canonical `SKILL.md` file that defines how Claude Code should behave when the skill is triggered. Codex consumes generated copies under `dist/codex/plugins/*`; do not edit those copies by hand.
+Each skill has a canonical `SKILL.md` file that defines the workflow an agent follows when the skill is triggered, shared by Claude Code, Codex CLI, and OpenCode. Codex consumes generated copies under `dist/codex/plugins/*`; do not edit those copies by hand. Write steps with the conventions in the "Cross-harness workflow adapters" section of `docs/plugin-development.md`.
 
 ## File Location
 
@@ -24,9 +24,8 @@ The file starts with YAML frontmatter containing exactly two fields:
 ---
 name: skill-name
 description: >-
-  One-paragraph description of what the skill does and when to use it.
-  Include trigger phrases so Claude Code knows when to activate the skill
-  automatically. Use the YAML folded block scalar (>-) for multi-line
+  The primary action first, then the trigger phrases that should activate
+  the skill. Use the YAML folded block scalar (>-) for multi-line
   descriptions.
 ---
 ```
@@ -38,13 +37,16 @@ description: >-
 
 ### Description
 
-The description serves as the skill's trigger mechanism. It should include:
+The description is the skill's routing description: harnesses use it to decide when to activate the skill, and selectors show it beside the skill's name. It is separate from the catalog summary in `marketplace.json`, which is written for people browsing the catalog (see "Routing descriptions and catalog summaries" in `docs/plugin-development.md`). It should:
 
-1. **What the skill does** (first sentence)
-1. **When to use it** -- list trigger phrases the user might say (e.g., "create a plugin", "add a new skill")
-1. **Prerequisites** if any (e.g., "Requires the gh CLI to be installed")
+1. **Open with the primary action**, so a description shortened from the end still routes
+1. **Name the trigger phrases** a user might say (e.g., "create a plugin", "add a new skill"), preferring those that distinguish the skill from adjacent skills
+1. **State a negative boundary** when an adjacent skill would otherwise activate instead
+1. **Mention a prerequisite** only when it affects selection (e.g., "Requires the gh CLI")
 
-Codex-facing skill descriptions are generated from the concise plugin marketplace description when `bin/build-codex-marketplace` runs. Keep the canonical `SKILL.md` description rich enough for Claude Code activation; tune the plugin `description` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` when the shorter Codex description needs to change.
+Keep it short, because every installed skill's description shares Codex's discovery budget.
+
+Every harness routes on this description: `bin/build-codex-marketplace` copies `SKILL.md` into `dist/codex/` unchanged, and the OpenCode mirror links to it. Change it here. The plugin `description` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` is the separate catalog summary and does not affect routing.
 
 #### Examples from Existing Skills
 
@@ -52,21 +54,16 @@ Codex-facing skill descriptions are generated from the concise plugin marketplac
 
 ```yaml
 description: >-
-  Find a GitHub issue in the current repository and create a new git worktree,
-  branch, and tmux window for working on it using workmux. Use when the user
-  says "start issue", "work on issue", "create worktree from issue",
-  "create worktree for issue", or references starting work on a GitHub issue
-  by number (e.g., "#42") or by description (e.g., "the dark mode issue").
-  Requires the gh CLI and workmux to be installed.
+  Merge the base branch into the current branch, resolve conflicts, and push.
+  Use for "merge main" or "sync with main"; to rebase, use rebase-onto-main.
 ```
 
 **Style guide skill:**
 
 ```yaml
 description: >-
-  Applies Bash style conventions when creating or editing shell scripts.
-  Use when: (1) creating new shell scripts, (2) editing existing scripts in /bin/,
-  or (3) reviewing Bash code for bugs or style issues.
+  Apply Bash style conventions when creating, editing, or reviewing Bash
+  scripts. Not for zsh; use write-zsh-scripts.
 ```
 
 ## Body Structure
@@ -85,15 +82,16 @@ One sentence summarizing the skill's purpose.
 
 Skills in this repository use these sections as applicable:
 
-| Section                   | Purpose                                            | Used by                           |
-| ------------------------- | -------------------------------------------------- | --------------------------------- |
-| `## Options`              | User-configurable parameters                       | suggest-next-issue                |
-| `## Workflow`             | Step-by-step numbered process (`### 1. Step Name`) | All workflow skills               |
-| `## Key Conventions`      | Summary of rules (for style guide skills)          | write-bash-scripts, write-go-code |
-| `## Reference Navigation` | Pointers to reference files by topic               | write-go-code                     |
-| `## Example Output`       | Sample output in a code block                      | suggest-next-issue                |
-| `## Error Handling`       | Bullet list of failure modes and recovery          | All skills                        |
-| `## Sources`              | Attribution links                                  | write-go-code, write-bash-scripts |
+| Section                   | Purpose                                            | Used by                             |
+| ------------------------- | -------------------------------------------------- | ----------------------------------- |
+| `## Options`              | User-configurable parameters                       | suggest-next-issue                  |
+| `## Skill dependencies`   | Required and optional skills the workflow invokes  | Workflow skills that compose others |
+| `## Workflow`             | Step-by-step numbered process (`### 1. Step Name`) | All workflow skills                 |
+| `## Key Conventions`      | Summary of rules (for style guide skills)          | write-bash-scripts, write-go-code   |
+| `## Reference Navigation` | Pointers to reference files by topic               | write-go-code                       |
+| `## Example Output`       | Sample output in a code block                      | suggest-next-issue                  |
+| `## Error Handling`       | Bullet list of failure modes and recovery          | All skills                          |
+| `## Sources`              | Attribution links                                  | write-go-code, write-bash-scripts   |
 
 ### Workflow Steps
 
@@ -108,6 +106,19 @@ Run these commands to build a complete picture:
 gh issue list --state open --json number,title,labels
 ```
 ````
+
+### Skill Dependencies
+
+When a step uses another skill, write it as "Invoke the `NAME` skill", pass its arguments, and name the step to resume from when it returns. Declare every skill the workflow invokes, including from reference files, in a section placed before `## Workflow`:
+
+```markdown
+## Skill dependencies
+
+- **Required:** `NAME`
+- **Optional:** None
+```
+
+A required skill is one the workflow cannot honestly complete the dependent step without; an optional one has a documented fallback or omission. Write `None` for an empty category, and list every candidate as optional when the user selects which skills run. Before a step that needs a required skill, confirm the skill is available. If it is not, report the skill and how to install it, and stop before any dependent side effect instead of substituting another workflow. The "Skill dependencies" section of `docs/plugin-development.md` has copyable examples.
 
 ### Reference File Pointers
 

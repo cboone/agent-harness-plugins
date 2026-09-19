@@ -1,8 +1,8 @@
 ---
 name: scaffold-go-cli
 description: >-
-  Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions, and
-  Homebrew tap support.
+  Scaffold a Go CLI with Cobra, GoReleaser, CI, and Homebrew publishing. Use for
+  "scaffold a Go CLI"; for a library, use scaffold-go-library.
 ---
 
 # Scaffold Go CLI

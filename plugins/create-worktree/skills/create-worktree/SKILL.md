@@ -1,18 +1,8 @@
 ---
 name: create-worktree
 description: >-
-  Create a new git worktree, branch, and tmux window using workmux, from
-  either a GitHub issue number or a task description, with a prompt injected
-  into the new session. Optionally claims a named exclusive resource for the
-  worktree, so work that cannot run in parallel is recorded rather than
-  remembered. Use when the user says "create worktree", "new worktree",
-  "start working on", "spin up a worktree", or asks to create a worktree for
-  an issue number or a general task. Also use when the user asks what holds an
-  exclusive resource or asks to release one, or says "list resources", "release
-  the simulator", or "who has the DAW"; those two report on claims and stop
-  without creating anything. Requires workmux whenever a worktree is created,
-  plus the gh CLI when given an issue number, and jq for issue parsing and
-  resource claims.
+  Create a worktree, branch, and tmux window with workmux for an issue or task.
+  Use for "create worktree", or to list or release resource claims.
 ---
 
 # Create Worktree

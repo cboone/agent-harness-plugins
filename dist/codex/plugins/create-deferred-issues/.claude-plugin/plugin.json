@@ -9,5 +9,5 @@
   "name": "create-deferred-issues",
   "repository": "https://github.com/cboone/agent-harness-plugins",
   "skills": "./skills",
-  "version": "1.0.0"
+  "version": "1.0.1"
 }

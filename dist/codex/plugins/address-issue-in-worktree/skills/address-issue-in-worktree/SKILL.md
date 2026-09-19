@@ -1,8 +1,8 @@
 ---
 name: address-issue-in-worktree
 description: >-
-  Create a worktree, branch, and tmux window for a GitHub issue, then have the
-  new session run address-issue to plan the work and stop for approval.
+  Open a workmux worktree and tmux window for a GitHub issue, where a new
+  session plans the work. Use for "start issue" or "work on #42 in a worktree".
 ---
 
 # Address Issue in Worktree

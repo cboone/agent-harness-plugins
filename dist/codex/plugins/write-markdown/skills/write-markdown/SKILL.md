@@ -1,7 +1,8 @@
 ---
 name: write-markdown
 description: >-
-  Applies Markdown style conventions when creating or editing Markdown files.
+  Apply Markdown style conventions when creating, editing, or reviewing .md
+  files. For Pandoc academic Markdown, use write-pandoc-markdown.
 ---
 
 # Markdown Style Guide

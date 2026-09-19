@@ -1,13 +1,8 @@
 ---
 name: handle-secrets
 description: >-
-  Best practices for handling user-provided secrets in CLI tools. Use when:
-  (1) building CLI tools that accept API keys, tokens, or passwords from users,
-  (2) reviewing secret-handling code for security issues,
-  (3) choosing between input methods (env vars, stdin, keychains, config files),
-  (4) implementing credential storage or retrieval.
-  Covers the security hierarchy of input methods, credential storage patterns,
-  secret masking, and language-specific libraries.
+  Handle user-provided secrets in CLI tools: input methods, credential storage,
+  and masking. Use when a CLI accepts API keys, tokens, or passwords.
 ---
 
 # Handle Secrets

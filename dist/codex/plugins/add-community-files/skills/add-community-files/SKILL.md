@@ -1,8 +1,8 @@
 ---
 name: add-community-files
 description: >-
-  Add standard community files to a project: CONTRIBUTING.md,
-  CODE_OF_CONDUCT.md, SECURITY.md, and PR template.
+  Add CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, and a PR template to a project.
+  Use for "add community files" or "prepare for open source".
 ---
 
 # Add Community Files

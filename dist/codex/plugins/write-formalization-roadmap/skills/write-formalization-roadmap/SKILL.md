@@ -1,8 +1,8 @@
 ---
 name: write-formalization-roadmap
 description: >-
-  Document-structure guide for multi-milestone formalization roadmaps in Lean,
-  Rocq, Isabelle, HOL, and other proof assistants.
+  Structure multi-milestone formalization roadmaps for any proof assistant, when
+  writing, reviewing, or updating one. For math prose, use write-math.
 ---
 
 # Write Formalization Roadmap

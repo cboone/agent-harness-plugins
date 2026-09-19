@@ -1,13 +1,8 @@
 ---
 name: write-pandoc-markdown
 description: >-
-  Pandoc-flavored Markdown conventions for academic papers with LaTeX output.
-  Use when: (1) writing or editing .md files that use Pandoc extensions (math
-  delimiters, citations, raw LaTeX blocks), (2) configuring YAML frontmatter
-  for academic papers, (3) using Pandoc citation syntax, (4) embedding raw
-  LaTeX in Markdown, or (5) working with the Pandoc-to-LaTeX build pipeline.
-  This skill is distinct from write-markdown, which covers GFM and markdownlint
-  rules.
+  Apply Pandoc Markdown conventions for academic papers with LaTeX output: math,
+  citations, and raw LaTeX. For plain GFM, use write-markdown.
 ---
 
 # Write Pandoc Markdown

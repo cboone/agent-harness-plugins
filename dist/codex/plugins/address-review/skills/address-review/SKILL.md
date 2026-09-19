@@ -1,8 +1,8 @@
 ---
 name: address-review
 description: >-
-  Parse a review document for actionable feedback, work through items
-  systematically, and track resolution progress.
+  Work through the actionable items in a review document and track their
+  resolution. Use for "address the review" or "address @docs/reviews/...".
 ---
 
 # Address Review

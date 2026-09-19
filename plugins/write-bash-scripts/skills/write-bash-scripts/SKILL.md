@@ -1,9 +1,8 @@
 ---
 name: write-bash-scripts
 description: >-
-  Applies Bash style conventions when creating or editing Bash scripts.
-  Use when: (1) creating new Bash scripts, (2) editing existing scripts in /bin/,
-  or (3) reviewing Bash code for bugs or style issues.
+  Apply Bash style conventions when creating, editing, or reviewing Bash
+  scripts. Not for zsh; use write-zsh-scripts.
 ---
 
 # Bash Style Guide

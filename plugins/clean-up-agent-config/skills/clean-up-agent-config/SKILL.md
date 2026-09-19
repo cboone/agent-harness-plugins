@@ -1,13 +1,8 @@
 ---
 name: clean-up-agent-config
 description: >-
-  Review and reorganize AI coding agent configuration and instruction files
-  across Claude Code, Codex, Copilot, and OpenCode. Use when the user says
-  "clean up agent config", "organize agent files", "standardize agent
-  instructions", "set up agent config", "review agent config", "consolidate
-  agent files", or mentions reorganizing CLAUDE.md, AGENTS.md,
-  settings.json, or copilot-instructions.md. Also use when the user wants
-  to deduplicate or rationalize agent instruction files across tools.
+  Review and reorganize agent instructions and config for Claude Code, Codex,
+  Copilot, and OpenCode. Use for "clean up agent config".
 ---
 
 # Agent Config Cleanup

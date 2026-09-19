@@ -1,12 +1,8 @@
 ---
 name: create-issue
 description: >-
-  Create a GitHub issue using the gh CLI with tmpfile-based body content to
-  avoid permission prompts from large multiline Bash arguments. Use when the
-  user says "create issue", "create a GitHub issue", "file an issue", "open an
-  issue", "new issue", "report a bug", "request a feature", or asks to create
-  an issue on a GitHub repository. Requires the gh CLI to be installed and
-  authenticated.
+  Create a GitHub issue with gh, passing the body through a tmpfile. Use for
+  "create an issue", "file an issue", "report a bug", or "request a feature".
 ---
 
 # Create Issue

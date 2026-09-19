@@ -1,18 +1,8 @@
 ---
 name: write-math
 description: >-
-  Mathematical writing and exposition guide based on Tao, Knuth, Halmos, and
-  other leading references. Use whenever you produce or discuss mathematical
-  content in any venue -- including chat responses and docstrings, not only
-  file edits: (1) writing or editing mathematical prose in LaTeX, Pandoc
-  Markdown, plain text, or Lean docstrings with mathematical content,
-  (2) stating theorems, structuring proofs, or writing proof sketches
-  (including informal sketches in a chat response), (3) explaining
-  mathematical concepts, propositions, definitions, or results to the user,
-  (4) summarizing or reporting on mathematical work or proof-formalization
-  progress, (5) choosing, reviewing, or disambiguating notation,
-  (6) organizing a mathematics paper, (7) reviewing mathematical exposition
-  for clarity and correctness.
+  Apply mathematical exposition conventions from Tao, Knuth, and Halmos whenever
+  writing or discussing mathematics, including proofs and notation.
 ---
 
 # Write Math

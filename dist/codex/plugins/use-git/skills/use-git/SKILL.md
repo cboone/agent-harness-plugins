@@ -1,8 +1,8 @@
 ---
 name: use-git
 description: >-
-  Git and GitHub CLI conventions for Claude Code: tmpfile patterns, HEREDOC
-  commits, GPG signing, safe push practices, and permission-prompt avoidance.
+  Apply git and gh CLI conventions: tmpfile bodies, signed commits, and safe
+  pushes. Use when running git or gh, or passing them PR or issue bodies.
 ---
 
 # Use Git

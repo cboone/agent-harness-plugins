@@ -1,20 +1,8 @@
 ---
 name: write-lean-tests
 description: >-
-  Conventions for compile-time, `example`-based Lean 4 API regression tests
-  that mirror a library's public surface. Use whenever Lean test code is the
-  subject of the work, not only when editing: (1) creating, editing, or
-  reviewing files under a `<Name>Test/` directory (sibling to the main
-  `<Name>/` library directory), (2) adding a library module and deciding what
-  its sibling test module should assert, (3) planning a milestone and scoping
-  which `example`s must land alongside new exported definitions and lemmas,
-  (4) diagnosing a failing or overly coupled test module (imports reaching into
-  internals, `sorry` in test proofs, restating implementation rather than
-  signature), (5) wiring `lake test` via `testDriver` / `defaultTargets` in a
-  Lake config, (6) reviewing a PR that touches library or test code to check
-  the test-mirroring invariant still holds. Pairs with `write-lean-code`, which
-  owns naming, proof style, and Mathlib conventions for the library code
-  itself.
+  Write compile-time, example-based Lean 4 tests that mirror a library's public
+  surface. Use for a NameTest/ directory or for wiring lake test.
 ---
 
 # Write Lean Tests

@@ -1,13 +1,8 @@
 ---
 name: write-realtime-audio-code
 description: >-
-  Write, review, or plan real-time audio callback code and its reachable
-  callees. Use for audio-thread safety, bounded audio-to-UI communication,
-  audio-specific atomics and lifetimes, real-time verification, CLAP, VST3, or
-  Audio Unit parameters and state, sample-accurate events and smoothing,
-  numerical behavior, and host-independent audio cores. Do not use for generic
-  server queues, GUI conventions, DSP mathematics alone, or exclusively offline
-  processing unless the host contract makes that mode relevant.
+  Write or review real-time audio callbacks: audio-thread safety, lock-free
+  messaging, and plugin state. Not for generic queues, GUI, or offline DSP.
 ---
 
 # Write Real-Time Audio Code

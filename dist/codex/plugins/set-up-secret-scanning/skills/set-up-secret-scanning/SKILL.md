@@ -1,8 +1,8 @@
 ---
 name: set-up-secret-scanning
 description: >-
-  Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows
-  and optional gitleaks configuration.
+  Add gitleaks and TruffleHog secret scanning to GitHub Actions. Use for "add
+  secret scanning" or "set up gitleaks"; for app code, use handle-secrets.
 ---
 
 # Set-Up Secret Scanning

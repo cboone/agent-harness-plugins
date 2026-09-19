@@ -1,13 +1,8 @@
 ---
 name: use-git
 description: >-
-  Git and GitHub CLI conventions for Claude Code. Use when:
-  (1) running git commands (commit, push, merge, rebase),
-  (2) running gh CLI commands (pr create, issue create, pr review),
-  (3) passing long content to git or gh (PR bodies, issue bodies, release notes, review replies),
-  (4) reviewing code that uses git or gh CLI patterns.
-  Covers tmpfile patterns, HEREDOC commits, GPG signing, safe push practices,
-  and permission-prompt avoidance.
+  Apply git and gh CLI conventions: tmpfile bodies, signed commits, and safe
+  pushes. Use when running git or gh, or passing them PR or issue bodies.
 ---
 
 # Use Git

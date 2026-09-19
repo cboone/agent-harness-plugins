@@ -1,8 +1,8 @@
 ---
 name: handle-secrets
 description: >-
-  Best practices for handling user-provided secrets in CLI tools: secure input
-  methods, credential storage, secret masking, and language-specific libraries.
+  Handle user-provided secrets in CLI tools: input methods, credential storage,
+  and masking. Use when a CLI accepts API keys, tokens, or passwords.
 ---
 
 # Handle Secrets

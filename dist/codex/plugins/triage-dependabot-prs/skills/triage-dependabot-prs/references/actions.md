@@ -118,7 +118,7 @@ When several PRs fight over one lockfile, or the security fixes are transitive-o
 
 ## Tracking issues
 
-For each Needs work or Hold PR the user wants tracked, invoke the `create-issue` skill with one issue per outstanding upgrade: the dependency, current and target versions, the deciding evidence, the breaking changes found, and a link to the PR.
+For each Needs work or Hold PR the user wants tracked, invoke the `create-issue` skill with one issue per outstanding upgrade: the dependency, current and target versions, the deciding evidence, the breaking changes found, and a link to the PR. If `create-issue` is not installed, report tracking as skipped with its installation command, and list the issues that would have been filed so the user can file them.
 
 ## Approve
 

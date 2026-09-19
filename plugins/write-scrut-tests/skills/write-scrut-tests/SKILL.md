@@ -1,11 +1,8 @@
 ---
 name: write-scrut-tests
 description: >-
-  Applies scrut test style conventions when creating or editing scrut test
-  files for CLI binaries and zsh plugins. Use when: (1) creating new scrut
-  test files in tests/scrut/, (2) editing existing scrut test .md files,
-  (3) reviewing scrut tests for style and maintainability, or (4) testing
-  zsh plugins or sourced libraries with scrut.
+  Apply scrut test conventions when creating, editing, or reviewing scrut tests
+  for CLIs and zsh plugins. To set up scrut, use add-scrut-cli-tests.
 ---
 
 # Scrut Test Style Guide

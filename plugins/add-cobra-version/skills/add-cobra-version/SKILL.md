@@ -1,17 +1,8 @@
 ---
 name: add-cobra-version
 description: >-
-  Add a version subcommand with build metadata to an existing Cobra-based Go
-  CLI. Use when the user says "add a version subcommand", "add the version
-  command", "wire up version, commit, and date", "add build metadata to
-  version", "add a /version command to this CLI", "make the version command
-  print commit and build date", or wants `cmd/version.go` plus matching
-  ldflags wired up in `main.go`, `cmd/root.go`, `.goreleaser.yml`, and the
-  `Makefile`. Detects whether the project already has a basic `version`
-  variable or no version wiring at all, then applies the changes
-  idempotently. Pairs with scaffold-go-cli (which seeds the basic version
-  variable) and add-goreleaser-homebrew (which sets up GoReleaser when it is
-  missing).
+  Add a version subcommand with commit and build-date ldflags to an existing
+  Cobra Go CLI. Use for "add a version command" or "add build metadata".
 ---
 
 # Add Cobra Version

@@ -1,19 +1,8 @@
 ---
 name: write-manual-verification-plan
 description: >-
-  Write a numbered, resumable checklist for the checks a human has to run by
-  hand, in a DAW, a simulator, a browser, or on a device, where every step
-  gives the setup, the action, the exact observation to expect, and how to
-  tell "nothing happened, as intended" from "the instrument was not running".
-  Use whenever by-hand verification is the subject, not only when invoked
-  explicitly: (1) asked what can be verified manually, what host verification
-  needs, or what to test, (2) writing the manual verification section of a
-  plan or phase gate, (3) asked to list or reprint verification steps,
-  (4) receiving partial results in free text, such as "4's confirmed, skipping
-  5 and 6, 7 gave 1.0894", (5) someone is unsure what a step is looking for,
-  (6) splitting a checklist across sessions or around an exclusive resource.
-  Covers the step format, build confirmation, null-versus-broken controls,
-  persisting to a plan or issue, resuming, and recording measured readings.
+  Write a numbered, resumable checklist for checks run by hand, each saying what
+  to expect. Use when planning or recording manual verification.
 ---
 
 # Write Manual Verification Plan

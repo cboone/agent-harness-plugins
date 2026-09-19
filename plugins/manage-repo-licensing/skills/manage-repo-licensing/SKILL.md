@@ -1,17 +1,8 @@
 ---
 name: manage-repo-licensing
 description: >-
-  Bootstrap, audit, and maintain REUSE-style mixed-license coverage in a
-  repository: populate `LICENSES/`, write a root `NOTICE`, wire a root
-  `REUSE.toml`, apply SPDX headers or sidecars to files, and keep
-  `reuse lint` clean. Use when the user says "license this repo",
-  "bootstrap licensing", "add SPDX headers", "normalize LICENSES",
-  "audit license coverage", "REUSE lint", "fix REUSE", "add a NOTICE",
-  "set up multi-license", "this new file needs a license header", or any
-  variant involving SPDX, REUSE, `.license` sidecars, CC-BY, or dual
-  licensing in a repo-maintenance context. Do not fire for legal
-  interpretation of license text or for third-party dependency licensing
-  questions.
+  Set up and maintain REUSE licensing: SPDX headers, LICENSES/, NOTICE, and
+  REUSE.toml. Use for "license this repo" or "fix REUSE"; not legal advice.
 ---
 
 <!--
