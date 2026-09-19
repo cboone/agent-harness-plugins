@@ -90,6 +90,17 @@ Codex skill inventory: * (glob)
 All plugin validations passed.
 ```
 
+A skill with no name has nothing for Codex to list it under, so an empty `name`
+is an error.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" empty-name 2>&1
+::error::Skill 'plugins/release/skills/release/SKILL.md' has an empty name
+Codex skill inventory: * (glob)
+1 plugin validation error(s) found.
+[1]
+```
+
 A catalog over the primary budget fails with its total, the budget and reserve,
 the largest entries, and what to do about it.
 

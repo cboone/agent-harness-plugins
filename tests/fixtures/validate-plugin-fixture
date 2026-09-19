@@ -111,6 +111,7 @@ function main() {
     long-description)
       replace_description "${FIXTURE_ROOT}/plugins/release/skills/release/SKILL.md" "$(description_of_length 200)"
       ;;
+    empty-name) perl -pi -e 's/^name: release$/name:/' "${FIXTURE_ROOT}/plugins/release/skills/release/SKILL.md" ;;
     # A generator that writes a catalog summary over one routing description,
     # as bin/build-codex-marketplace once did for every skill. Rule 16 still
     # passes, because the committed tree matches what this generator produces.

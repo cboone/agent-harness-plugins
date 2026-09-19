@@ -231,6 +231,16 @@ $ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependenci
 [1]
 ```
 
+A skill declares its dependencies in one section, so a second is reported even
+when both are well formed.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependencies' '' '- **Required:** `other`' '- **Optional:** None' '' '## Skill dependencies' '' '- **Required:** None' '- **Optional:** None' '' '## Workflow' '' 'Invoke the `other` skill.' > plugins/demo/skills/demo/SKILL.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1
+::error::plugins/demo/skills/demo/SKILL.md has more than one ## Skill dependencies section
+[1]
+```
+
 ## The default scan discovers the files itself
 
 Every case above names the file to check, but `bin/validate-plugins` passes no
