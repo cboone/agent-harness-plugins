@@ -78,6 +78,14 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🟢 Approval recommended","hasFormatDrift":false,"findings":[]}
 ```
 
+A CRLF body still yields the clean verdict, rather than a heading with a
+trailing carriage return that reads as drift.
+
+```scrut
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"<!-- ccr-overview-v2 -->\r\n\r\n### 🟢 Approval recommended\r\n\r\nNo issues."}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {verdict, hasFormatDrift}'
+{"verdict":"### 🟢 Approval recommended","hasFormatDrift":false}
+```
+
 ## Overview v2 open threads explain a non-clean verdict
 
 Inline threads listed under `Open (N)` are reported by the thread fetch. A

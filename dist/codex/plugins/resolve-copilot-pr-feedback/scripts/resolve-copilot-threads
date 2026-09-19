@@ -348,9 +348,13 @@ function do_parse_reviews() {
 
       def normalize_path: gsub("\u200b"; "");
 
+      # The first level-3 heading. On ccr-overview-v2 bodies this is the
+      # verdict the drift check compares; older layouts can yield a section
+      # heading such as "### Reviewed changes", or null. Trimming drops a
+      # trailing carriage return so a CRLF body still compares equal.
       def verdict:
         split("\n")
-        | map(select(test("^### ")))
+        | map(select(test("^### ")) | trim)
         | first // null;
 
       def is_overview_v2: contains("<!-- ccr-overview-v2 -->");

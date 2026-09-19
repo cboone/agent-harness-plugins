@@ -216,7 +216,7 @@ Copilot does not always open a thread. When it declines to comment on a line the
 ```
 
 - **`findings`**: the structured parse. Treat each entry exactly like a thread comment, except that it cannot be replied to or resolved.
-- **`verdict`**: the review verdict heading, exposed separately from the lead paragraph in `headline`.
+- **`verdict`**: the first `###` heading in the body. On `ccr-overview-v2` reviews it is the verdict heading, exposed separately from the lead paragraph in `headline`, and it drives the drift check. Older layouts can report a section heading such as `### Reviewed changes`, or `null`, so read `headline` rather than `verdict` there.
 - **`hasFormatDrift`**: the complete drift signal. It is true when an old suppressed section contains no parseable findings, or when a non-clean `ccr-overview-v2` review has no parseable findings and lists no open inline threads. Threads listed under `Open (N)` are reported by `fetch`, so they explain a non-clean verdict by themselves.
 - **`suppressed`**: the raw section, verbatim, beginning with the line that announced it.
 - **`reviewBody`**: the complete immutable review body for fallback inspection when a newer layout cannot be parsed.
