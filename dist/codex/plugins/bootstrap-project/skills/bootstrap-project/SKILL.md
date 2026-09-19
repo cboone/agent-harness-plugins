@@ -11,6 +11,11 @@ Assess the current repository, detect what scaffolding and setup is already in p
 
 Works for both brand-new and existing repositories.
 
+## Skill dependencies
+
+- **Required:** None
+- **Optional:** `add-community-files`, `add-goreleaser-homebrew`, `add-scrut-cli-tests`, `pin-everything`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-lean-library`, `scaffold-new-repo`, `scaffold-rust-cli`, `set-up-ci`, `set-up-installers`, `set-up-linters`, `set-up-secret-scanning`
+
 ## Workflow
 
 ### 1. Detect Project Type
@@ -136,7 +141,7 @@ Wait for explicit approval before proceeding.
 
 ### 5. Execute
 
-The tools referenced in this plan are skills. Invoke each selected item using the Skill tool:
+The tools referenced in this plan are skills. Invoke the skill for each selected item:
 
 - `add-community-files`
 - `scaffold-new-repo`
@@ -154,7 +159,7 @@ The tools referenced in this plan are skills. Invoke each selected item using th
 
 For each confirmed tool, in execution order:
 
-1. Invoke it via the Skill tool.
+1. Invoke its skill.
 1. Verify the tool completed successfully.
 1. If a tool fails, report the error to the user and ask whether to continue with the remaining tools or stop.
 

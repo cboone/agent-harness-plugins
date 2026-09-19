@@ -223,7 +223,7 @@ codex plugin add pr --marketplace agent-harness-plugins
 
 Start a new Codex session after installing so it loads the new skills. Mention a skill with `$commit`, or choose it from `/skills`. Codex also selects a skill on its own when a request matches the skill's description. The `Trigger` column in the tables above shows the Claude Code slash-command form.
 
-Some workflow skills invoke other skills; for example, `pr` invokes `lint-and-fix`. Install those plugins too if you want the complete workflow.
+Some workflow skills invoke other skills; for example, `pr` invokes `lint-and-fix`. Each such skill lists them in the `## Skill dependencies` section of its `SKILL.md`: install its required skills for the workflow to complete, and its optional skills for the steps that use them.
 
 List installed plugins, refresh them, and remove them:
 

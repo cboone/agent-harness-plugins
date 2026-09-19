@@ -59,6 +59,11 @@ A PR whose `author.login` in the step 1 snapshot is `app/dependabot` belongs to 
 
 Under `--no-fix`, report the rebase request that would have been posted instead of posting it.
 
+## Skill dependencies
+
+- **Required:** `lint-and-fix`, `merge-main`, `resolve-copilot-pr-feedback`
+- **Optional:** None
+
 ## Workflow
 
 ### 1. Resolve the PR
@@ -140,7 +145,7 @@ On a Dependabot PR, steps 5 to 8 follow [Dependabot PRs](#dependabot-prs). Of th
 
 ### 5. Sync the Branch
 
-Invoke the `merge-main` skill using the Skill tool:
+Invoke the `merge-main` skill:
 
 ```text
 merge-main
@@ -178,7 +183,7 @@ gh run view <run-id> --log-failed
 
 #### 6b. Repair by Category
 
-- **Lint or format failure**: invoke the `lint-and-fix` skill using the Skill tool with `--no-push`:
+- **Lint or format failure**: invoke the `lint-and-fix` skill with `--no-push`:
 
   ```text
   lint-and-fix --no-push
@@ -254,7 +259,7 @@ The run check is what separates "Copilot has not started" from "Copilot is mid-r
 
 #### 7b. Reviewed at the Current Head
 
-Invoke the `resolve-copilot-pr-feedback` skill using the Skill tool:
+Invoke the `resolve-copilot-pr-feedback` skill:
 
 ```text
 resolve-copilot-pr-feedback OWNER=<owner> REPO=<repo> PR_NUMBER=<number>

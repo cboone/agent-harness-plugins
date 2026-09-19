@@ -243,6 +243,15 @@ A string with a stand-in segment is skipped, so `plugins/PLUGIN-NAME/README.md`,
 
 `repository-paths` declares that the `bin/` and `docs/` paths in this file name files in this repository. Without it they are skipped, because most of them name a file the skill _creates_ in the project it is run against (`bin/version-audit`, `docs/plans/todo/`), and because this repository's own layout matches, checking them everywhere would pass by coincidence rather than by correctness. Few files qualify: `create-plugin` is one, since its whole subject is this repository. Run `grep -rl 'validate-plugins: repository-paths' plugins/` for the current set.
 
+The same script checks skill dependencies, which the [Skill dependencies](#skill-dependencies) convention defines:
+
+- Every composition reference, "Invoke the `NAME` skill" with or without a slash before the name, in a `SKILL.md` or any file under its `references/`, is declared in that skill's `## Skill dependencies` section.
+- The section has exactly one `- **Required:**` line and one `- **Optional:**` line, each holding `None` or backticked skill names separated by commas, and nothing else.
+- Every declared name resolves to a `plugins/*/skills/NAME/SKILL.md`, appears in only one category, and appears only once.
+- Every declared name is used: the skill names it, backticked with or without a leading slash, somewhere outside the section, as a selection list does for each candidate.
+
+Other wording, such as "use the `review-branch` skill instead" or "run `/lint-and-fix` next", is not composition and needs no declaration. An ignore comment does not exempt a dependency finding.
+
 `ignore` exempts an individual reference that resolves nowhere because it is an illustration rather than a reference at all: Claude Code's own `/config`, Cargo's `/target` gitignore pattern, a reference filename naming a layout convention a plugin being authored should follow. Write the entry exactly as the checker reports it. Several such comments may appear in one file, and an entry that matches nothing is itself reported, so an exemption cannot outlive the reference it was written for. Exemptions are file-scoped rather than line-scoped because most of the references that need one sit inside an ordered list or a table row, where an HTML comment would break the Markdown.
 
 ## Adding a plugin

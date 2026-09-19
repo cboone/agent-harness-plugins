@@ -74,6 +74,11 @@ The examples below abbreviate the path to `dependabot-prs`. Expand it when you r
 | `unclearedAlerts[]` (top level)   | Alerts no open PR is known to clear, grouped by package, highest severity first. `prs` names PRs that match an alert without clearing it; empty means no PR touches it                                                                                                                                                                                                          |
 | `limitReached`, `alertsAvailable` | A list hit `--limit`, or the alerts API refused (it needs repository admin or the `security_events` scope)                                                                                                                                                                                                                                                                      |
 
+## Skill dependencies
+
+- **Required:** None
+- **Optional:** `create-issue`, `monitor-pr`
+
 ## Workflow
 
 ### 1. Pre-flight

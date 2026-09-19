@@ -117,6 +117,120 @@ $ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Create `lean-toolch
 All skill cross-references resolve.
 ```
 
+## A declared composition is accepted
+
+A workflow that invokes another skill declares it under `## Skill dependencies`,
+and the declaration resolves to a canonical skill.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependencies' '' '- **Required:** `other`' '- **Optional:** None' '' '## Workflow' '' 'Invoke the `other` skill with `--no-push`.' > plugins/demo/skills/demo/SKILL.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md
+All skill cross-references resolve.
+```
+
+## An undeclared composition is reported
+
+The name may carry the slash of the Claude Code command form.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Invoke the `/other` skill, then continue.' > plugins/demo/skills/demo/SKILL.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1
+::error::plugins/demo/skills/demo/SKILL.md invokes the other skill, but plugins/demo/skills/demo/SKILL.md does not declare it under ## Skill dependencies
+[1]
+```
+
+A composition in reference material belongs to the workflow that loads it, so it
+is checked against the owning `SKILL.md`.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Invoke the `other` skill for each tracked item.' > plugins/demo/skills/demo/references/real.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/references/real.md 2>&1
+::error::plugins/demo/skills/demo/references/real.md invokes the other skill, but plugins/demo/skills/demo/SKILL.md does not declare it under ## Skill dependencies
+[1]
+```
+
+## A mention that is not composition needs no declaration
+
+Suggestions to the user, redirects to an adjacent skill, and "Pairs with" text
+are worded differently from composition on purpose.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Pairs with the `other` skill.' 'For a review, use the `other` skill instead.' 'Suggest next steps: run `/other`.' > plugins/demo/skills/demo/SKILL.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md
+All skill cross-references resolve.
+```
+
+## A selection-driven candidate is declared optional
+
+A workflow that runs the skills a user picks from a list names each candidate
+bare, which counts as using its declaration.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependencies' '' '- **Required:** None' '- **Optional:** `other`' '' '## Workflow' '' 'Invoke the skill for each selected item:' '' '- `other`' > plugins/demo/skills/demo/SKILL.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md
+All skill cross-references resolve.
+```
+
+## A declaration the workflow never uses is reported
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependencies' '' '- **Required:** None' '- **Optional:** `other`' '' '## Workflow' '' 'Nothing here names it.' > plugins/demo/skills/demo/SKILL.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1
+::error::plugins/demo/skills/demo/SKILL.md declares the dependency other but never names it outside ## Skill dependencies
+[1]
+```
+
+## A declaration that names no canonical skill is reported
+
+The dependency block is the file's only candidate here, so this also checks
+that the prefilter admits it.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependencies' '' '- **Required:** `absent`' '- **Optional:** None' > plugins/demo/skills/demo/SKILL.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1
+::error::plugins/demo/skills/demo/SKILL.md declares the dependency absent, but no plugins/*/skills/absent/SKILL.md exists
+::error::plugins/demo/skills/demo/SKILL.md declares the dependency absent but never names it outside ## Skill dependencies
+[1]
+```
+
+## A repeated dependency is reported
+
+A skill is required or optional, never both, and is listed once.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependencies' '' '- **Required:** `other`' '- **Optional:** `other`' '' '## Workflow' '' 'Invoke the `other` skill.' > plugins/demo/skills/demo/SKILL.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1
+::error::plugins/demo/skills/demo/SKILL.md declares other as both required and optional
+[1]
+```
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependencies' '' '- **Required:** `other`, `other`' '- **Optional:** None' '' '## Workflow' '' 'Invoke the `other` skill.' > plugins/demo/skills/demo/SKILL.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1
+::error::plugins/demo/skills/demo/SKILL.md declares other more than once in one ## Skill dependencies category
+[1]
+```
+
+## A malformed declaration is reported
+
+A name must be backticked.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependencies' '' '- **Required:** other' '- **Optional:** None' > plugins/demo/skills/demo/SKILL.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1
+::error::plugins/demo/skills/demo/SKILL.md has a malformed ## Skill dependencies line '- **Required:** other'; write '- **Required:**' or '- **Optional:**' followed by None or backticked skill names separated by commas
+[1]
+```
+
+An empty category is written `None`, not left out.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' '## Skill dependencies' '' '- **Required:** `other`' '' '## Workflow' '' 'Invoke the `other` skill.' > plugins/demo/skills/demo/SKILL.md \
+> && "${CHECK_CROSS_REFERENCES_BIN}" plugins/demo/skills/demo/SKILL.md 2>&1
+::error::plugins/demo/skills/demo/SKILL.md ## Skill dependencies has no '- **Optional:**' line; write None for an empty category
+[1]
+```
+
 ## The default scan discovers the files itself
 
 Every case above names the file to check, but `bin/validate-plugins` passes no

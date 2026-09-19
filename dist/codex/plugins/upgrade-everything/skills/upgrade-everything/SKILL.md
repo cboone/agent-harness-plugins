@@ -9,6 +9,11 @@ description: >-
 
 Audit every version reference in a repository, resolve current upstream versions, evaluate each available upgrade with repo-specific reward and risk, then apply only the upgrades the user explicitly selects.
 
+## Skill dependencies
+
+- **Required:** `lint-and-fix`
+- **Optional:** `triage-dependabot-prs`
+
 ## Workflow
 
 ### 1. Record the Audit Date
@@ -101,7 +106,7 @@ Ask the user which upgrades to apply. Offer these choices:
 - Apply only selected candidate numbers
 - Audit only
 - Apply all except custom exclusions
-- Triage the open Dependabot PRs instead, for the candidates that have one (invokes the `triage-dependabot-prs` skill)
+- Triage the open Dependabot PRs instead, for the candidates that have one (invoke the `triage-dependabot-prs` skill)
 
 Do not apply upgrades until the user explicitly selects a scope. If the user asks for audit-only, stop after reporting the matrix.
 

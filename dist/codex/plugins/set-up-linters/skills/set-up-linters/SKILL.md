@@ -9,6 +9,11 @@ description: >-
 
 Detect the project type, recommend appropriate linters and formatters, install them, generate sensible default configs, create `.editorconfig`, and optionally wire up CI.
 
+## Skill dependencies
+
+- **Required:** None
+- **Optional:** `lint-and-fix`
+
 ## Workflow
 
 ### 1. Detect Project Type
@@ -234,7 +239,7 @@ For **Lean projects**, scan `.github/workflows/*.yml` for the `leanprover/lean-a
 
 ### 10. Run Initial Lint (Optional)
 
-Ask whether to run the newly installed linters. If yes, invoke `lint-and-fix` to fix existing issues.
+Ask whether to run the newly installed linters. If yes, invoke the `lint-and-fix` skill to fix existing issues.
 
 ### 11. Commit (Optional)
 

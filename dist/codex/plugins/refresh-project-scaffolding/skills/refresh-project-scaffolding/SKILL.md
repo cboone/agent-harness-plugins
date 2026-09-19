@@ -12,6 +12,11 @@ This is the maintenance companion to `bootstrap-project`: bootstrap sets things 
 
 **Scope**: This skill audits tools already in use and updates their files to match current templates. For tools that are partially configured, it can restore missing expected files. It does not set up tools that were never used; for initial setup, use the bootstrap-project skill or the individual tool. The one exception is a missing Dependabot config, which step 2 explains.
 
+## Skill dependencies
+
+- **Required:** None
+- **Optional:** `add-community-files`, `add-goreleaser-homebrew`, `add-scrut-cli-tests`, `clean-up-agent-config`, `optimize-runner-usage`, `pin-everything`, `review-dependabot-config`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-new-repo`, `set-up-ci`, `set-up-installers`, `set-up-linters`, `set-up-secret-scanning`
+
 ## Workflow
 
 ### 1. Detect Project Type
@@ -117,13 +122,13 @@ For each confirmed update item, choose a strategy based on scope:
 | Missing workflow key (e.g., `timeout-minutes`)                                                                  | **Targeted**: add the key to each job in the workflow file                                               |
 | Missing `concurrency:` group                                                                                    | **Targeted**: add the concurrency block below the `on:` trigger block                                    |
 | Missing `permissions:` block                                                                                    | **Targeted**: add the permissions block at the workflow level                                            |
-| CLAUDE.md is regular file, not symlink                                                                          | **Full re-run**: invoke `clean-up-agent-config` to reconcile CLAUDE.md and AGENTS.md                     |
-| Community file outdated (e.g., CoC version)                                                                     | **Full re-run**: invoke the `add-community-files` skill via the Skill tool                               |
-| Missing file from a detected tool                                                                               | **Full re-run**: invoke the original skill via the Skill tool                                            |
+| CLAUDE.md is regular file, not symlink                                                                          | **Full re-run**: invoke the `clean-up-agent-config` skill to reconcile CLAUDE.md and AGENTS.md           |
+| Community file outdated (e.g., CoC version)                                                                     | **Full re-run**: invoke the `add-community-files` skill                                                  |
+| Missing file from a detected tool                                                                               | **Full re-run**: invoke the original skill                                                               |
 | No Dependabot config                                                                                            | **Full re-run**: invoke the `pin-everything` skill with `--scope dependabot`                             |
 | Dependabot config fails a check (a missing ecosystem or directory, no `version: 2`, or both file names present) | **Delegate**: invoke the `review-dependabot-config` skill, which merges the fix into the existing config |
 
-For full tool re-runs, all detected tools are skills. Invoke them via the Skill tool. Relevant skills include `add-community-files`, `set-up-linters`, `set-up-ci`, `set-up-secret-scanning`, `add-goreleaser-homebrew`, `set-up-installers`, `add-scrut-cli-tests`, `scaffold-new-repo`, `pin-everything`, and `optimize-runner-usage`. Dependabot coverage gaps go to `review-dependabot-config` instead of a `pin-everything` re-run, because that skill reviews the existing config and merges into it rather than regenerating it.
+For full tool re-runs, all detected tools are skills. Invoke those skills. Relevant skills include `add-community-files`, `set-up-linters`, `set-up-ci`, `set-up-secret-scanning`, `add-goreleaser-homebrew`, `set-up-installers`, `add-scrut-cli-tests`, `scaffold-new-repo`, `pin-everything`, and `optimize-runner-usage`. Dependabot coverage gaps go to `review-dependabot-config` instead of a `pin-everything` re-run, because that skill reviews the existing config and merges into it rather than regenerating it.
 
 Process updates in this order (matching the bootstrap-project execution order):
 

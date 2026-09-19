@@ -19,6 +19,11 @@ The user may provide these options inline:
 
 - **--base `<branch>`**: Override the auto-detected base branch (e.g., `--base develop`)
 
+## Skill dependencies
+
+- **Required:** None
+- **Optional:** `commit`
+
 ## Workflow
 
 ### 1. Pre-Flight Checks
