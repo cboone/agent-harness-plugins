@@ -14,7 +14,7 @@ Works for both brand-new and existing repositories.
 ## Skill dependencies
 
 - **Required:** None
-- **Optional:** `add-community-files`, `add-goreleaser-homebrew`, `add-scrut-cli-tests`, `pin-everything`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-lean-library`, `scaffold-new-repo`, `scaffold-rust-cli`, `set-up-ci`, `set-up-installers`, `set-up-linters`, `set-up-secret-scanning`
+- **Optional:** `add-community-files`, `add-goreleaser-homebrew`, `add-scrut-cli-tests`, `pin-everything`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-lean-library`, `scaffold-new-repo`, `scaffold-rust-cli`, `set-up-ci`, `set-up-installers`, `set-up-linters`, `set-up-review-config`, `set-up-secret-scanning`
 
 ## Workflow
 

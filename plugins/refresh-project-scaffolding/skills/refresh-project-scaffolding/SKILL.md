@@ -16,7 +16,7 @@ This is the maintenance companion to `bootstrap-project`: bootstrap sets things 
 ## Skill dependencies
 
 - **Required:** None
-- **Optional:** `add-community-files`, `add-goreleaser-homebrew`, `add-scrut-cli-tests`, `clean-up-agent-config`, `optimize-runner-usage`, `pin-everything`, `review-dependabot-config`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-new-repo`, `set-up-ci`, `set-up-installers`, `set-up-linters`, `set-up-secret-scanning`
+- **Optional:** `add-community-files`, `add-goreleaser-homebrew`, `add-scrut-cli-tests`, `clean-up-agent-config`, `optimize-runner-usage`, `pin-everything`, `review-dependabot-config`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-new-repo`, `set-up-ci`, `set-up-installers`, `set-up-linters`, `set-up-review-config`, `set-up-secret-scanning`
 
 ## Workflow
 
