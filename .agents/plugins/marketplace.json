@@ -571,6 +571,19 @@
       "author": {
         "name": "Christopher Boone"
       },
+      "category": "code-review",
+      "description": "Install style-guide review checklists as a Copilot code-review skill, with matching AGENTS.md review rules and a REVIEW.md, so Copilot, Codex, and Claude Code Review apply the same guidance.",
+      "homepage": "https://github.com/cboone/agent-harness-plugins",
+      "keywords": ["agents-md", "claude-code-review", "code-review", "codex", "copilot", "review-md", "setup", "style"],
+      "license": "MIT",
+      "name": "set-up-review-config",
+      "repository": "https://github.com/cboone/agent-harness-plugins",
+      "source": "./dist/codex/plugins/set-up-review-config"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
       "category": "ci-and-release",
       "description": "Set up secret scanning with gitleaks and TruffleHog GitHub Actions workflows and optional gitleaks configuration.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
