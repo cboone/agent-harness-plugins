@@ -60,7 +60,7 @@ A PR whose `author.login` in the step 1 snapshot is `app/dependabot` belongs to 
   Then wait for the head SHA to change, and resume at step 3. The request works even on a PR whose automatic rebases Dependabot disabled after 30 days. If Dependabot replies that it will not rebase, usually because someone else pushed to the branch, escalate per step 9: `@dependabot recreate` would rebuild the PR but discards those commits, so that is the user's decision.
 
 - **Step 6, failing checks**: diagnose as in step 6a, but do not repair. A failure caused by a secret the Dependabot run cannot read (`Input required and not supplied: token`, an empty cloud credential, a refused OIDC exchange) says nothing about the update: escalate per step 9, reporting it as an environment problem and pointing the user at the `review-dependabot-config` skill. Escalate any other failure per step 9 too, pointing at the `triage-dependabot-prs` skill, which decides whether the update needs work, a migration, or an ignore. Either way the watch stops, because no further tick can change a failure this skill may not repair.
-- **Step 7, the Copilot cycle**: automatic Copilot review does not reliably run on Dependabot PRs, so never request one, and never wait for one. A missing review, or a review against an older head (which every `@dependabot rebase` produces), leaves the Copilot axis not applicable: report it as `n/a (Dependabot)` and treat the axis as clean. Only a Copilot review at the current head that left findings matters, and then report the findings and escalate rather than invoking `resolve-copilot-pr-feedback`, whose fixes would be pushes.
+- **Step 7, the Copilot cycle**: automatic Copilot review does not reliably run on Dependabot PRs, so never request one, and never wait for one. A missing review, or a review against an older head (which every `@dependabot rebase` produces), leaves the Copilot axis not applicable: report it as `n/a (Dependabot)` and treat the axis as clean. Only a Copilot review at the current head that left findings or format drift matters, and then report the findings, or the drift with the review URL, and escalate rather than invoking `resolve-copilot-pr-feedback`, whose fixes would be pushes.
 - **Step 8, the terminal report**: say the PR is a Dependabot PR, and merge only with a method the repository allows, as for any other PR.
 
 Under `--no-fix`, report the rebase request that would have been posted instead of posting it.
@@ -134,7 +134,7 @@ Two orderings are deliberate:
 1. **`mergeStateStatus` is `BEHIND`**: go to step 5.
 1. **`mergeStateStatus` is `BLOCKED`**: do not treat this as a blocker and do not wait on it, but record it. It means a branch protection rule is unsatisfied, most often a required approving review. Continue evaluating the remaining conditions, and carry the `BLOCKED` state into every status line and into the terminal report per step 8.
 1. **Any check concluded with a failure**: go to step 6.
-1. **Copilot reviewed the current head with open threads or findings**: go to step 7b. Checks still running do not hold this back.
+1. **Copilot reviewed the current head with open threads, review-body findings, or review-body format drift**: go to step 7b. Checks still running do not hold this back. Drift is routed here rather than left to the wait below, because it is not clean and no later tick changes an immutable review body; the resolver reads the raw body and reports the drift as a failure.
 1. **Checks pass and Copilot is missing or stale**: go to step 7a.
 1. **Checks pass, Copilot reviewed the current head cleanly, `--confirm-clean` is set, and this is the first such review**: go to step 7d to request and await the confirming review.
 1. **All four axes clean**: terminal. Go to step 8.
@@ -142,7 +142,7 @@ Two orderings are deliberate:
 
 Under `--no-fix`, replace steps 5, 6, and 7 with a report of what would have been done, then continue waiting.
 
-On a Dependabot PR, steps 5 to 8 follow [Dependabot PRs](#dependabot-prs). Of the three Copilot conditions above, only the first (a review at the current head with findings) applies, and it leads to an escalation rather than step 7b; the other two never match.
+On a Dependabot PR, steps 5 to 8 follow [Dependabot PRs](#dependabot-prs). Of the three Copilot conditions above, only the first (a review at the current head with findings or format drift) applies, and it leads to an escalation rather than step 7b; the other two never match.
 
 ### 5. Sync the Branch
 
