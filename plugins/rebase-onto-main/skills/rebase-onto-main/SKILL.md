@@ -1,13 +1,8 @@
 ---
 name: rebase-onto-main
 description: >-
-  Fetch and rebase the current feature branch onto the base branch (usually
-  main), handling conflicts per commit and force-with-lease pushing. Use when
-  the user says "rebase onto main", "rebase on main", "rebase against main",
-  "rebase from main", "rebase main", "rebase branch", "update branch via
-  rebase", "rebase against base branch", "replay commits onto main", or any
-  variant involving rebasing the current working branch onto the default
-  branch.
+  Rebase the current branch onto the base branch, resolving conflicts per
+  commit, then force-with-lease push. Use for "rebase onto main".
 ---
 
 # Rebase Onto Main
@@ -19,6 +14,11 @@ Fetch and rebase the current feature branch onto the repository's base branch.
 The user may provide these options inline:
 
 - **--base `<branch>`**: Override the auto-detected base branch (e.g., `--base develop`)
+
+## Skill dependencies
+
+- **Required:** None
+- **Optional:** `commit`
 
 ## Workflow
 
@@ -57,7 +57,7 @@ If `git status` shows uncommitted changes (staged or unstaged):
 1. Warn the user that there are uncommitted changes.
 1. Ask whether to:
    - **Stash**: Run `git stash` before proceeding, then `git stash pop` after the rebase completes.
-   - **Commit first**: Invoke the `/commit` skill, then continue with the rebase.
+   - **Commit first**: Invoke the `/commit` skill, then continue with the rebase. `commit` is an optional dependency: if it is not installed, leave this choice out and tell the user why, so they can commit by hand, or install `commit`, before running this skill again.
    - **Abort**: Stop without doing anything.
 
 Rebase will refuse to start with a dirty working tree, so this step is mandatory before fetching.

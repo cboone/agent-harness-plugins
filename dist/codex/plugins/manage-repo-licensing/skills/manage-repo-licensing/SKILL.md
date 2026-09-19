@@ -1,9 +1,8 @@
 ---
 name: manage-repo-licensing
 description: >-
-  Bootstrap, audit, and maintain REUSE-style mixed-license coverage in a
-  repository: LICENSES/, NOTICE, REUSE.toml, SPDX headers, and reuse lint
-  cleanliness.
+  Set up and maintain REUSE licensing: SPDX headers, LICENSES/, NOTICE, and
+  REUSE.toml. Use for "license this repo" or "fix REUSE"; not legal advice.
 ---
 
 <!--

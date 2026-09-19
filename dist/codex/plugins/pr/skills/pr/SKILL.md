@@ -1,12 +1,18 @@
 ---
 name: pr
 description: >-
-  Lint, commit, push, and create a pull request in one step with no prompts.
+  Commit, push, and open a GitHub pull request from the current branch in one
+  step, with no prompts. Use for "pr", "open a pr", or "push and create pr".
 ---
 
 # PR
 
 Commit, push, and create a pull request in one automated step. Never prompt the user for input -- make opinionated decisions at every step.
+
+## Skill dependencies
+
+- **Required:** `lint-and-fix`
+- **Optional:** None
 
 ## Workflow
 
@@ -207,7 +213,7 @@ CRITICAL: Never use `git commit --amend`. Always create a new commit. If a pre-c
 
 Run the `lint-and-fix` skill to catch lint and formatting errors before pushing. This prevents CI failures from code that does not pass project linters.
 
-1. **Invoke the `lint-and-fix` skill** using the Skill tool with `--no-push`:
+1. **Invoke the `lint-and-fix` skill** with `--no-push`:
 
    ```text
    lint-and-fix --no-push

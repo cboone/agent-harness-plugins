@@ -1,15 +1,8 @@
 ---
 name: set-up-installers
 description: >-
-  Set up installer and distribution methods for Go, Swift, Rust, and Zig
-  projects: a Homebrew tap formula for `brew install`, plus README and
-  compatibility wiring for `go install` (Go) and `cargo install` (Rust). Use
-  when the user says "set up installers", "add a Homebrew formula", "set up
-  homebrew", "publish to homebrew tap", "support brew install", "support go
-  install", "support cargo install", "set up distribution", or wants users to
-  install their CLI through a package manager. Pairs with
-  add-goreleaser-homebrew when GoReleaser-driven Homebrew publishing is the
-  goal.
+  Set up Homebrew tap formulas and go or cargo install support for Go, Swift,
+  Rust, and Zig projects. Use for "set up installers".
 ---
 
 # Set-Up Installers

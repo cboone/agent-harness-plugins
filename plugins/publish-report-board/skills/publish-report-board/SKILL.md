@@ -1,15 +1,8 @@
 ---
 name: publish-report-board
 description: >-
-  Publish a recurring analysis as a report board: a private Artifact page with
-  a stable URL, re-synced in place as its source data changes. Ships a
-  backlog-triage board built from open GitHub issues, milestones, branches, and
-  worktrees. Use when the user says "publish a report board", "backlog board",
-  "publish the backlog", "put the triage on a board", "re-sync the board",
-  "refresh the board", "update the report board", or wants an analysis they
-  will re-run and keep open. Writes a local HTML file instead where the
-  Artifact tool is unavailable. Requires jq, and the gh CLI for the backlog
-  board.
+  Publish a recurring analysis, such as backlog triage, as a report board with a
+  stable URL. Use for "publish a report board" or "refresh the board".
 ---
 
 # Publish Report Board

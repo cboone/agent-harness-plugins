@@ -5,8 +5,7 @@ set -euo pipefail
 MARKETPLACE=".claude-plugin/marketplace.json"
 CODEX_MARKETPLACE=".agents/plugins/marketplace.json"
 CODEX_DIST_DIR="dist/codex"
-CODEX_SKILL_DESCRIPTION_BUDGET="${CODEX_SKILL_DESCRIPTION_BUDGET:-12000}"
-readonly MARKETPLACE CODEX_MARKETPLACE CODEX_DIST_DIR CODEX_SKILL_DESCRIPTION_BUDGET
+readonly MARKETPLACE CODEX_MARKETPLACE CODEX_DIST_DIR
 
 errors=0
 
@@ -239,10 +238,6 @@ done
 
 # ─── 15. Generated Codex marketplace mirrors the Claude marketplace ─────────
 
-if ! [[ "${CODEX_SKILL_DESCRIPTION_BUDGET}" =~ ^[0-9]+$ ]]; then
-  error "CODEX_SKILL_DESCRIPTION_BUDGET must be an integer"
-fi
-
 if [[ ! -f "${CODEX_MARKETPLACE}" ]]; then
   error "Codex marketplace '${CODEX_MARKETPLACE}' does not exist; run bin/build-codex-marketplace"
 else
@@ -302,13 +297,101 @@ function validate_codex_generated_output() {
 
 validate_codex_generated_output
 
-# ─── 17. Skill descriptions stay within harness limits ─────────────────────
+# ─── 16b. Generated Codex skills are byte-identical to their sources ────────
 #
-# Two copies of every skill description ship. The canonical
-# plugins/*/skills/*/SKILL.md is what Claude Code loads; the dist/codex copy is
-# generated, and bin/build-codex-marketplace replaces its description with the
-# much shorter marketplace entry. Checking only the generated copy would measure
-# text that can never approach the cap, so both are checked here.
+# Rule 16 proves dist/codex matches what the generator produces today, which
+# would still pass if the generator started rewriting skills. Codex must see
+# the same name, routing description and dependency block that Claude Code and
+# OpenCode load, so every generated SKILL.md is compared with its canonical
+# source directly. A harness-specific transformation has to change this rule
+# on purpose rather than slip in through the generator.
+
+while IFS= read -r plugin_name; do
+  for skill_md in "plugins/${plugin_name}"/skills/*/SKILL.md; do
+    [[ -f "${skill_md}" ]] || continue
+    generated_skill_md="${CODEX_DIST_DIR}/${skill_md}"
+    if [[ ! -f "${generated_skill_md}" ]]; then
+      error "Generated Codex skill '${generated_skill_md}' is missing; run bin/build-codex-marketplace"
+    elif ! cmp -s "${skill_md}" "${generated_skill_md}"; then
+      error "Generated Codex skill '${generated_skill_md}' differs from its canonical source '${skill_md}'; the generator must copy SKILL.md files unchanged"
+    fi
+  done
+done < <(jq -r '.plugins[].name' "${MARKETPLACE}")
+
+for generated_skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
+  [[ -f "${generated_skill_md}" ]] || continue
+  if [[ ! -f "${generated_skill_md#"${CODEX_DIST_DIR}/"}" ]]; then
+    error "Generated Codex skill '${generated_skill_md}' has no canonical source"
+  fi
+done
+
+# ─── 17. The Codex skill inventory fits Codex's discovery budget ────────────
+#
+# Codex starts each session with one line per installed skill:
+#
+#   - {plugin}:{skill}: {description} (file: {path})
+#
+# It budgets that list at 2 percent of the model's context window, charging
+# ceil(bytes / 4) tokens per line, or at 8,000 characters when the context
+# window is unknown. Over budget it shortens descriptions from the end, then
+# omits skills. Names and paths cost about as much as the descriptions, so this
+# rule renders every generated dist/codex skill the way Codex does and budgets
+# the whole line. It ignores Codex's path aliasing, which only lowers the cost.
+#
+# The generated copy is what Codex reads, so the inventory is measured there.
+# Rule 16b holds each generated SKILL.md byte-identical to its canonical
+# source, so the per-description checks run once, on the canonical copies that
+# every harness shares.
+#
+# The constants come from the milestone 1 baseline in
+# docs/reviews/codex-consumption.md. Revisit them only when the reference model
+# or the set of skills Codex bundles changes, since the reserve measures those
+# skills, and record that change there. Never raise them to fit content; tighten
+# the routing descriptions instead.
+
+CODEX_REFERENCE_MODEL="gpt-6-astra"
+# The model's context window in tokens. Set it empty to model an unknown window,
+# which selects Codex's character fallback.
+CODEX_REFERENCE_CONTEXT_WINDOW="${CODEX_REFERENCE_CONTEXT_WINDOW-272000}"
+CODEX_CONTEXT_WINDOW_PERCENT=2
+CODEX_BYTES_PER_TOKEN=4
+CODEX_FALLBACK_BUDGET_CHARACTERS=8000
+# Codex's bundled system skills share the budget: 567 tokens with unaliased
+# paths at the baseline, rounded up. Held in bytes so the same reserve applies
+# to the character fallback, where characters never outnumber bytes.
+CODEX_SYSTEM_SKILL_RESERVE_BYTES="${CODEX_SYSTEM_SKILL_RESERVE_BYTES-2400}"
+# A fixed 15-character home directory keeps the cost independent of the machine.
+CODEX_INVENTORY_HOME="/Users/username"
+MAX_SKILL_DESCRIPTION_CHARACTERS=1024
+# The primary budget's average share per skill at the baseline: 4,840 tokens
+# after the reserve is 19,360 bytes, or 317 per skill across 61 skills. Names,
+# paths and line syntax average 164 bytes of each line, leaving 153 characters
+# for a description, rounded down.
+ROUTED_DESCRIPTION_WARNING_CHARACTERS=150
+readonly CODEX_REFERENCE_MODEL CODEX_REFERENCE_CONTEXT_WINDOW CODEX_CONTEXT_WINDOW_PERCENT \
+  CODEX_BYTES_PER_TOKEN CODEX_FALLBACK_BUDGET_CHARACTERS CODEX_SYSTEM_SKILL_RESERVE_BYTES \
+  CODEX_INVENTORY_HOME MAX_SKILL_DESCRIPTION_CHARACTERS ROUTED_DESCRIPTION_WARNING_CHARACTERS
+
+function frontmatter_name() {
+  awk '
+    NR == 1 && $0 == "---" {
+      in_frontmatter = 1
+      next
+    }
+
+    in_frontmatter && $0 == "---" {
+      exit
+    }
+
+    in_frontmatter && $0 ~ /^name:/ {
+      line = $0
+      sub(/^name:[[:space:]]*/, "", line)
+      sub(/[[:space:]]+$/, "", line)
+      print line
+      exit
+    }
+  ' "${1}"
+}
 
 function frontmatter_description() {
   local file="${1}"
@@ -355,47 +438,108 @@ function frontmatter_description() {
   ' "${file}"
 }
 
-for skill_md in plugins/*/skills/*/SKILL.md; do
-  if [[ ! -f "${skill_md}" ]]; then
-    continue
-  fi
+function byte_count() {
+  printf '%s' "${1}" | LC_ALL=C wc -c | tr -d ' '
+}
 
+# UTF-8 continuation bytes are 0x80 through 0xBF; every other byte starts a
+# character. Counting that way gives the same answer under any locale.
+function character_count() {
+  printf '%s' "${1}" | LC_ALL=C tr -d '\200-\277' | wc -c | tr -d ' '
+}
+
+function check_skill_fields() {
+  local skill_md="${1}"
+  local name description description_length
+
+  name="$(frontmatter_name "${skill_md}")"
   description="$(frontmatter_description "${skill_md}")"
-  description_length="${#description}"
+  description_length="$(character_count "${description}")"
 
+  if [[ -z "${name}" ]]; then
+    error "Skill '${skill_md}' has an empty name"
+  fi
   if [[ -z "${description}" ]]; then
     error "Skill '${skill_md}' has an empty description"
+  elif [[ ${description_length} -gt ${MAX_SKILL_DESCRIPTION_CHARACTERS} ]]; then
+    error "Skill '${skill_md}' description is ${description_length} characters, exceeding the ${MAX_SKILL_DESCRIPTION_CHARACTERS}-character limit"
+  elif [[ ${description_length} -gt ${ROUTED_DESCRIPTION_WARNING_CHARACTERS} ]]; then
+    warning "Skill '${skill_md}' routing description is ${description_length} characters; keep it within ${ROUTED_DESCRIPTION_WARNING_CHARACTERS}, its average share of the Codex discovery budget"
   fi
-  # Canonical descriptions carry the trigger phrases that make a skill
-  # activate, so they are deliberately richer than the marketplace entry and
-  # get no 320-character preference. The hard cap still applies.
-  if [[ ${description_length} -gt 1024 ]]; then
-    error "Skill '${skill_md}' description is ${description_length} characters, exceeding the 1024-character limit"
-  fi
+}
+
+for skill_md in plugins/*/skills/*/SKILL.md; do
+  [[ -f "${skill_md}" ]] || continue
+  check_skill_fields "${skill_md}"
 done
 
-total_codex_description_length=0
+if [[ -n "${CODEX_REFERENCE_CONTEXT_WINDOW}" ]] && ! [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]*$ ]]; then
+  error "CODEX_REFERENCE_CONTEXT_WINDOW must be a positive integer or empty"
+fi
+if ! [[ "${CODEX_SYSTEM_SKILL_RESERVE_BYTES}" =~ ^[0-9]+$ ]]; then
+  error "CODEX_SYSTEM_SKILL_RESERVE_BYTES must be a non-negative integer"
+fi
+
+marketplace_name="$(jq -r '.name // empty' "${CODEX_MARKETPLACE}" 2> /dev/null || true)"
+inventory_count=0
+inventory_tokens=0
+inventory_bytes=0
+inventory_characters=0
+inventory_description_bytes=0
+inventory_entries=""
+
 for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
-  if [[ ! -f "${skill_md}" ]]; then
-    continue
-  fi
+  [[ -f "${skill_md}" ]] || continue
 
+  skill_plugin="${skill_md#"${CODEX_DIST_DIR}/plugins/"}"
+  skill_plugin="${skill_plugin%%/*}"
+  skill_dir="$(basename "$(dirname "${skill_md}")")"
+  skill_name="$(frontmatter_name "${skill_md}")"
   description="$(frontmatter_description "${skill_md}")"
-  description_length="${#description}"
-  total_codex_description_length=$((total_codex_description_length + description_length))
+  description_length="$(character_count "${description}")"
 
-  if [[ -z "${description}" ]]; then
-    error "Generated Codex skill '${skill_md}' has an empty description"
+  plugin_manifest="${CODEX_DIST_DIR}/plugins/${skill_plugin}/.codex-plugin/plugin.json"
+  [[ -f "${plugin_manifest}" ]] || plugin_manifest="${CODEX_DIST_DIR}/plugins/${skill_plugin}/.claude-plugin/plugin.json"
+  plugin_version="$(jq -r '.version // empty' "${plugin_manifest}" 2> /dev/null || true)"
+
+  # Codex cuts an over-long description to 1,021 characters plus "...". The
+  # length is already an error above; mirroring the cut keeps the total honest.
+  if [[ ${description_length} -gt ${MAX_SKILL_DESCRIPTION_CHARACTERS} ]]; then
+    description="$(printf '%s' "${description}" | awk -v limit="$((MAX_SKILL_DESCRIPTION_CHARACTERS - 3))" '{ print substr($0, 1, limit) "..." }')"
   fi
-  if [[ ${description_length} -gt 1024 ]]; then
-    error "Generated Codex skill '${skill_md}' description is ${description_length} characters, exceeding Codex's 1024-character limit"
-  elif [[ ${description_length} -gt 320 ]]; then
-    warning "Generated Codex skill '${skill_md}' description is ${description_length} characters; prefer 320 or fewer"
-  fi
+
+  line="- ${skill_plugin}:${skill_name}: ${description} (file: ${CODEX_INVENTORY_HOME}/.codex/plugins/cache/${marketplace_name}/${skill_plugin}/${plugin_version}/skills/${skill_dir}/SKILL.md)"
+  line_bytes=$(($(byte_count "${line}") + 1))
+  line_tokens=$(((line_bytes + CODEX_BYTES_PER_TOKEN - 1) / CODEX_BYTES_PER_TOKEN))
+
+  inventory_count=$((inventory_count + 1))
+  inventory_tokens=$((inventory_tokens + line_tokens))
+  inventory_bytes=$((inventory_bytes + line_bytes))
+  inventory_characters=$((inventory_characters + $(character_count "${line}") + 1))
+  inventory_description_bytes=$((inventory_description_bytes + $(byte_count "${description}")))
+  inventory_entries+="${line_tokens}"$'\t'"${skill_plugin}:${skill_name}"$'\n'
 done
 
-if [[ "${CODEX_SKILL_DESCRIPTION_BUDGET}" =~ ^[0-9]+$ ]] && [[ ${total_codex_description_length} -gt ${CODEX_SKILL_DESCRIPTION_BUDGET} ]]; then
-  error "Generated Codex skill descriptions total ${total_codex_description_length} characters, exceeding budget ${CODEX_SKILL_DESCRIPTION_BUDGET}"
+if [[ "${CODEX_SYSTEM_SKILL_RESERVE_BYTES}" =~ ^[0-9]+$ ]] && [[ ${inventory_count} -gt 0 ]]; then
+  reserve_tokens=$(((CODEX_SYSTEM_SKILL_RESERVE_BYTES + CODEX_BYTES_PER_TOKEN - 1) / CODEX_BYTES_PER_TOKEN))
+  fallback_available=$((CODEX_FALLBACK_BUDGET_CHARACTERS - CODEX_SYSTEM_SKILL_RESERVE_BYTES))
+  largest_entries="$(printf '%s' "${inventory_entries}" | sort -t $'\t' -k1,1nr -k2,2 | head -5 | awk -F '\t' '{ printf "%s%s (%s)", (NR > 1 ? ", " : ""), $2, $1 }')"
+  inventory_breakdown="Descriptions are ${inventory_description_bytes} of its ${inventory_bytes} bytes; names, paths and line syntax are the rest. Largest entries in tokens: ${largest_entries}. Tighten the largest routing descriptions rather than raising the budget."
+
+  if [[ -z "${CODEX_REFERENCE_CONTEXT_WINDOW}" ]]; then
+    echo "Codex skill inventory: ${inventory_count} skills cost ${inventory_characters} of ${fallback_available} characters available under the ${CODEX_FALLBACK_BUDGET_CHARACTERS}-character fallback; no reference context window is set."
+    if [[ ${inventory_characters} -gt ${fallback_available} ]]; then
+      error "Codex skill inventory is ${inventory_characters} characters, over the ${fallback_available} available (${CODEX_FALLBACK_BUDGET_CHARACTERS}-character fallback budget less a ${CODEX_SYSTEM_SKILL_RESERVE_BYTES}-character system-skill reserve). ${inventory_breakdown}"
+    fi
+  elif [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]*$ ]]; then
+    primary_budget=$((CODEX_REFERENCE_CONTEXT_WINDOW * CODEX_CONTEXT_WINDOW_PERCENT / 100))
+    [[ ${primary_budget} -gt 0 ]] || primary_budget=1
+    primary_available=$((primary_budget - reserve_tokens))
+    echo "Codex skill inventory: ${inventory_count} skills cost ${inventory_tokens} of ${primary_available} tokens available under the ${primary_budget}-token budget for ${CODEX_REFERENCE_MODEL}, and ${inventory_characters} of ${fallback_available} characters available under the ${CODEX_FALLBACK_BUDGET_CHARACTERS}-character fallback."
+    if [[ ${inventory_tokens} -gt ${primary_available} ]]; then
+      error "Codex skill inventory costs ${inventory_tokens} tokens, over the ${primary_available} available (${primary_budget}-token budget for ${CODEX_REFERENCE_MODEL} less a ${reserve_tokens}-token system-skill reserve). ${inventory_breakdown}"
+    fi
+  fi
 fi
 
 # ─── 18. Skill script references resolve to a shipped, executable script ────
@@ -438,9 +582,11 @@ done
 
 # ─── 19. Skill cross-references resolve ─────────────────────────────────────
 # bin/check-cross-references owns the path and skill-name checks and emits its
-# own ::error:: annotations, so its findings are relayed and counted rather than
-# re-derived here. It is a separate script so it can be exercised on its own
-# against the fixture trees in tests/scrut/.
+# own ::error:: and ::warning:: annotations, so its findings are relayed and
+# counted rather than re-derived here. It is a separate script so it can be
+# exercised on its own against the fixture trees in tests/scrut/. A passing run
+# still relays its warnings, which would otherwise be discarded with its
+# success line.
 
 if ! cross_reference_output="$(bin/check-cross-references 2>&1)"; then
   printf '%s\n' "${cross_reference_output}"
@@ -450,6 +596,8 @@ if ! cross_reference_output="$(bin/check-cross-references 2>&1)"; then
   else
     error "bin/check-cross-references failed without reporting a finding"
   fi
+else
+  grep '^::warning::' <<< "${cross_reference_output}" || true
 fi
 
 # ─── Summary ────────────────────────────────────────────────────────────────

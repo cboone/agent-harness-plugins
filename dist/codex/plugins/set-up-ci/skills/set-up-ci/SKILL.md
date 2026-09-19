@@ -1,8 +1,8 @@
 ---
 name: set-up-ci
 description: >-
-  Set up GitHub Actions CI with test, lint, format, and vulnerability check
-  jobs, plus matching Makefile targets.
+  Create GitHub Actions CI with test, lint, format, and vulnerability jobs and
+  matching Makefile targets. Use for "set up CI" or "add a CI workflow".
 ---
 
 # Set-Up CI

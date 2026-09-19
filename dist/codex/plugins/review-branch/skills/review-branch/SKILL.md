@@ -1,8 +1,8 @@
 ---
 name: review-branch
 description: >-
-  Review and evaluate all work done on the current branch: summarize changes,
-  assess plan compliance, and evaluate code quality.
+  Review the current branch's work: summarize changes, check plan compliance,
+  and evaluate quality. Use for "review branch" or "summarize this branch".
 ---
 
 # Review Branch

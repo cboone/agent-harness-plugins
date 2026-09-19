@@ -1,9 +1,8 @@
 ---
 name: plant-defects
 description: >-
-  Deliberately break code to prove a test can see it: plant the defect an
-  instrument claims to catch, confirm it goes red, and record it so it
-  regresses.
+  Plant the defect a test or check claims to catch and confirm it goes red. Use
+  when asking whether a check can fail, or "would I know if this broke".
 ---
 
 # Plant Defects

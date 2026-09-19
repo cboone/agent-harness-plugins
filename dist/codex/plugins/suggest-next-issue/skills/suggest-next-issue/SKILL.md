@@ -1,8 +1,8 @@
 ---
 name: suggest-next-issue
 description: >-
-  Review open GitHub issues and recommend what to work on next with prioritized
-  reasoning.
+  Recommend which open GitHub issue to work on next, with reasoning. Use for
+  "suggest next issue", "what should I work on next", or "prioritize issues".
 ---
 
 # Suggest Next Issue

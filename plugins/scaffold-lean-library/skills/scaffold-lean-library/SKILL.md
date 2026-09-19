@@ -1,14 +1,8 @@
 ---
 name: scaffold-lean-library
 description: >-
-  Scaffold a Lean 4 library project with Mathlib or PFR dependencies, Lake
-  test/lint wiring, GitHub Actions CI, text linting, and agent instructions. Use
-  when the user says "scaffold a Lean library", "new Lean project", "new
-  Mathlib project", "create a Lean formalization repo", "start a
-  Mathlib-downstream library", or "create a PFR downstream formalization". For
-  Lean proof, naming, or module edits inside an existing project, use
-  write-lean-code instead. For compile-time test modules in an existing project,
-  use write-lean-tests.
+  Scaffold a Lean 4 library with Mathlib or PFR, Lake tests, and CI. Use for
+  "new Lean project"; to edit Lean, use write-lean-code.
 ---
 
 # Scaffold Lean Library

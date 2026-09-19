@@ -13,6 +13,7 @@
 #   plugins/demo/.../references/real.md   a sibling reference that resolves
 #   plugins/demo/scripts/real-script  a bundled script for ${CLAUDE_PLUGIN_ROOT}
 #   plugins/other/                    a second plugin, for cross-plugin paths
+#   plugins/other/skills/other/       its skill, which a dependency can name
 #   bin/real-tool                     an ambiguous-prefix path that resolves
 set -euo pipefail
 
@@ -23,13 +24,14 @@ function main() {
   mkdir -p \
     "${root}/plugins/demo/skills/demo/references" \
     "${root}/plugins/demo/scripts" \
-    "${root}/plugins/other" \
+    "${root}/plugins/other/skills/other" \
     "${root}/bin"
 
   : > "${root}/plugins/demo/skills/demo/SKILL.md"
   : > "${root}/plugins/demo/skills/demo/references/real.md"
   : > "${root}/plugins/demo/scripts/real-script"
   : > "${root}/plugins/other/README.md"
+  : > "${root}/plugins/other/skills/other/SKILL.md"
   : > "${root}/bin/real-tool"
 
   printf '%s\n' "${root}"

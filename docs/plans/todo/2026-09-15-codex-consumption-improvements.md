@@ -2,7 +2,7 @@
 
 Tracking: [umbrella issue #434](https://github.com/cboone/agent-harness-plugins/issues/434). Evidence: [Codex consumption review](../../reviews/codex-consumption.md).
 
-This is one coordinated workstream. The four milestone checklists replace the proposed 13-issue execution breakdown. Update this roadmap and the review in place; use focused, GPG-signed commits at logical boundaries. The compatibility implementation remains pending.
+This is one coordinated workstream. The four milestone checklists replace the proposed 13-issue execution breakdown. Update this roadmap and the review in place; use focused, GPG-signed commits at logical boundaries. Milestone 1 is complete, as its [implementation plan](../done/2026-09-18-finish-codex-compatibility-milestone-1.md) and the review's [milestone 1 verification](../../reviews/codex-consumption.md#milestone-1-verification) record. Milestones 2 through 4 remain.
 
 ## Objective
 
@@ -20,10 +20,10 @@ Use shared workflows with harness-specific adapters. Preserve each harness’s c
 
 ## Milestone 1: Establish the baseline and adapter design
 
-- [ ] Record the supported CLI baseline and correct installation, plugin-management, and hook-trust guidance.
-- [ ] Establish shared authoring conventions and harness adapters for invocation, tools, capabilities, permissions, and continuation.
-- [ ] Separate activation descriptions from catalog summaries and define required versus optional skill dependencies.
-- [ ] Add initial compatibility checks alongside the design.
+- [x] Record the supported CLI baseline and correct installation, plugin-management, and hook-trust guidance.
+- [x] Establish shared authoring conventions and harness adapters for invocation, tools, capabilities, permissions, and continuation.
+- [x] Separate activation descriptions from catalog summaries and define required versus optional skill dependencies.
+- [x] Add initial compatibility checks alongside the design.
 
 ## Milestone 2: Prove the design on the Git and review chain
 

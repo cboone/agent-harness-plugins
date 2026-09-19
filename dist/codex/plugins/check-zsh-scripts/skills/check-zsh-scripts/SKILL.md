@@ -1,8 +1,8 @@
 ---
 name: check-zsh-scripts
 description: >-
-  Check and evaluate zsh scripts using shellcheck, shfmt, shellharden, zsh -n,
-  zcompile, setopt warn_create_global/warn_nested_var, and checkbashisms.
+  Lint and check zsh scripts with shellcheck, shfmt, zsh -n, zcompile, and
+  scoping options. Use for "check zsh", "lint zsh", or "validate zsh".
 ---
 
 # Check Zsh Scripts

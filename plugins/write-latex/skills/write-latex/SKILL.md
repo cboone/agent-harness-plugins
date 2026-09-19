@@ -1,11 +1,8 @@
 ---
 name: write-latex
 description: >-
-  LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2,
-  and Knuth conventions. Use when: (1) writing or editing .tex files, (2)
-  writing raw LaTeX blocks in Pandoc Markdown, (3) setting up LaTeX preambles
-  or macros, (4) working with BibTeX files, or (5) reviewing LaTeX code for
-  typesetting quality.
+  Apply LaTeX typesetting conventions from AMS, IEEE, ISO 80000-2, and Knuth.
+  Use when writing or reviewing .tex files, preambles, macros, or BibTeX.
 ---
 
 # Write LaTeX

@@ -1,8 +1,8 @@
 ---
 name: scaffold-rust-cli
 description: >-
-  Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest,
-  git-cliff, GitHub Actions CI/CD, and Makefile.
+  Scaffold a new Rust CLI with Cargo, cargo-deny, cargo-nextest, git-cliff, and
+  CI. Use for "scaffold a Rust CLI" or "new Rust CLI".
 ---
 
 # Scaffold Rust CLI

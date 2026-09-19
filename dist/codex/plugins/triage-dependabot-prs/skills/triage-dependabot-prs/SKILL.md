@@ -1,9 +1,8 @@
 ---
 name: triage-dependabot-prs
 description: >-
-  Triage a repository's open Dependabot pull requests into safe to merge, needs
-  refresh, needs testing, needs work, hold, superseded, or outdated, backed by
-  evidence, then merge, rebase, or close them as the user approves.
+  Sort open Dependabot PRs by merge safety, then merge, rebase, or close them as
+  approved. Use for "triage dependabot PRs" or "are these safe to merge".
 ---
 
 # Triage Dependabot PRs
@@ -73,6 +72,11 @@ The examples below abbreviate the path to `dependabot-prs`. Expand it when you r
 | `alerts[]`                        | Open Dependabot alerts whose package this PR updates, in the same ecosystem and a dependency file this PR touches. `directoryConfirmed` is false when a multi-directory group does not name the package for the alert's directory. `cleared` is true only when the PR's target version reaches the first patched version; a PR can touch a vulnerable package without fixing it |
 | `unclearedAlerts[]` (top level)   | Alerts no open PR is known to clear, grouped by package, highest severity first. `prs` names PRs that match an alert without clearing it; empty means no PR touches it                                                                                                                                                                                                          |
 | `limitReached`, `alertsAvailable` | A list hit `--limit`, or the alerts API refused (it needs repository admin or the `security_events` scope)                                                                                                                                                                                                                                                                      |
+
+## Skill dependencies
+
+- **Required:** None
+- **Optional:** `create-issue`, `monitor-pr`
 
 ## Workflow
 
@@ -208,7 +212,7 @@ Carry out the selected actions per `./references/actions.md`:
 - One write at a time, re-checking the PR's state immediately before each one.
 - On the first failure, stop, report what happened and what remains, and ask whether to continue.
 - After requesting rebases, wait for Dependabot to push. Prefer `ScheduleWakeup`, falling back to a blocking `sleep` between polls where it is unavailable (the Codex CLI and OpenCode path). Once the head SHA has moved and checks have concluded, return to step 3 for those PRs only.
-- For a single PR the user wants watched until it is ready to merge, invoke the `monitor-pr` skill:
+- For a single PR the user wants watched until it is ready to merge, invoke the `monitor-pr` skill. If it is not installed, report the watch as skipped with its installation command, and continue with the next selected action:
 
   ```text
   monitor-pr <number>

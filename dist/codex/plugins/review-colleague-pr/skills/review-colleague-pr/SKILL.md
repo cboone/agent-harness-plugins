@@ -1,9 +1,8 @@
 ---
 name: review-colleague-pr
 description: >-
-  Review a colleague's pull request carefully and considerately from a checkout
-  of its branch, and report a brief, read-only assessment in chat: requirements,
-  direction, blockers, follow-ups, and questions for the author.
+  Brief the user on a colleague's PR from its checkout, posting nothing to
+  GitHub. Use for "review a teammate's PR"; for your branch, use review-branch.
 ---
 
 # Review Colleague PR

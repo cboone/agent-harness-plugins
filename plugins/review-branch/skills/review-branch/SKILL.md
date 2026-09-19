@@ -1,13 +1,8 @@
 ---
 name: review-branch
 description: >-
-  Review and evaluate all work done on the current branch: summarize changes,
-  rigorously assess plan compliance, and independently evaluate code quality.
-  Use when the user says "review branch", "review the work done on this branch",
-  "summarize this branch", "where are we on this branch",
-  "what's been done on this branch", "branch summary",
-  "compare branch to plan", "evaluate this branch", or any variant involving
-  reviewing, summarizing, or evaluating the work on the current branch.
+  Review the current branch's work: summarize changes, check plan compliance,
+  and evaluate quality. Use for "review branch" or "summarize this branch".
 ---
 
 # Review Branch

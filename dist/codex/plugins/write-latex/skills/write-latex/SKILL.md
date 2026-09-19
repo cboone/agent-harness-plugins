@@ -1,8 +1,8 @@
 ---
 name: write-latex
 description: >-
-  LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2,
-  and Knuth conventions.
+  Apply LaTeX typesetting conventions from AMS, IEEE, ISO 80000-2, and Knuth.
+  Use when writing or reviewing .tex files, preambles, macros, or BibTeX.
 ---
 
 # Write LaTeX

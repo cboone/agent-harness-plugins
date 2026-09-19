@@ -1,15 +1,8 @@
 ---
 name: scaffold-zig-cli
 description: >-
-  Scaffold a complete Zig CLI project with build.zig, build.zig.zon,
-  cross-compiled releases, GitHub Actions CI/CD, and Makefile. Use when the
-  user says "scaffold a Zig CLI", "new Zig CLI", "create a Zig CLI", "start a
-  Zig CLI", "bootstrap a Zig CLI", or starts a Zig command-line tool from
-  scratch. Targets Zig 0.16 and later, splits the project into a library
-  module and a CLI module, lets the compiler emit the build.zig.zon
-  fingerprint rather than guessing it, and pins the toolchain through
-  minimum_zig_version so CI and the developer read one version. For
-  language-agnostic boilerplate alone, use scaffold-new-repo.
+  Scaffold a new Zig CLI for Zig 0.16 or later with build.zig, cross-compiled
+  releases, and CI. Use for "scaffold a Zig CLI" or "new Zig CLI".
 ---
 
 # Scaffold Zig CLI

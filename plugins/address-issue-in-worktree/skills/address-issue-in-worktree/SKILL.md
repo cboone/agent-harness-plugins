@@ -1,15 +1,8 @@
 ---
 name: address-issue-in-worktree
 description: >-
-  Create a git worktree, branch, and tmux window for a GitHub issue using
-  workmux, then have the new session run address-issue to plan the work and
-  stop for approval. Use when the user says "address issue in worktree",
-  "start issue", "work on issue #42 in a worktree", or references starting
-  work on a GitHub issue by number (e.g., "#42") or by description (e.g.,
-  "the dark mode issue") in a new worktree. Optionally claims a named
-  exclusive resource for the worktree, so work that cannot run in parallel is
-  recorded rather than remembered. Requires the gh CLI, workmux, and jq to be
-  installed.
+  Open a workmux worktree and tmux window for a GitHub issue, where a new
+  session plans the work. Use for "start issue" or "work on #42 in a worktree".
 ---
 
 # Address Issue in Worktree

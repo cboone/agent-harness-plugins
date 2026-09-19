@@ -1,13 +1,8 @@
 ---
 name: add-scrut-cli-tests
 description: >-
-  Set up scrut snapshot-based CLI integration testing for a CLI project. Use
-  when the user says "add scrut tests", "set up scrut", "add CLI integration
-  tests", "add snapshot tests for the CLI", "wire up scrut", or wants
-  end-to-end snapshot tests for a CLI binary. Detects the project language
-  (Go, Swift, Rust, Zig, Python, Ruby, Shell), creates starter test files
-  under tests/scrut/, adds Makefile targets, and integrates with CI. Pairs
-  with the write-scrut-tests skill for authoring conventions.
+  Set up scrut snapshot testing in a CLI project that lacks it. Use for "add
+  scrut tests" or "set up CLI integration tests".
 ---
 
 # Add Scrut CLI Tests

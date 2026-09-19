@@ -1,14 +1,8 @@
 ---
 name: monitor-pr
 description: >-
-  Monitor a pull request until its checks pass, Copilot has reviewed the
-  current head with nothing left open, and it is mergeable, fixing failures
-  and resolving Copilot feedback along the way. On a Dependabot PR it asks
-  Dependabot to rebase instead of pushing to the branch. Use when the user says
-  "monitor pr", "monitor the pr", "watch the pr", "keep an eye on the pr",
-  "wait for ci", "wait for checks", "monitor pr 361", or any variant
-  involving watching a pull request until it is ready to merge. Requires the
-  gh CLI to be installed and authenticated, and jq.
+  Watch a PR until checks pass, Copilot feedback is resolved, and it is
+  mergeable, fixing failures. Use for "monitor the pr" or "wait for ci".
 ---
 
 # Monitor PR
@@ -64,6 +58,11 @@ A PR whose `author.login` in the step 1 snapshot is `app/dependabot` belongs to 
 - **Step 8, the terminal report**: say the PR is a Dependabot PR, and merge only with a method the repository allows, as for any other PR.
 
 Under `--no-fix`, report the rebase request that would have been posted instead of posting it.
+
+## Skill dependencies
+
+- **Required:** `lint-and-fix`, `merge-main`, `resolve-copilot-pr-feedback`
+- **Optional:** None
 
 ## Workflow
 
@@ -146,7 +145,7 @@ On a Dependabot PR, steps 5 to 8 follow [Dependabot PRs](#dependabot-prs). Of th
 
 ### 5. Sync the Branch
 
-Invoke the `merge-main` skill using the Skill tool:
+Invoke the `merge-main` skill:
 
 ```text
 merge-main
@@ -184,7 +183,7 @@ gh run view <run-id> --log-failed
 
 #### 6b. Repair by Category
 
-- **Lint or format failure**: invoke the `lint-and-fix` skill using the Skill tool with `--no-push`:
+- **Lint or format failure**: invoke the `lint-and-fix` skill with `--no-push`:
 
   ```text
   lint-and-fix --no-push
@@ -260,7 +259,7 @@ The run check is what separates "Copilot has not started" from "Copilot is mid-r
 
 #### 7b. Reviewed at the Current Head
 
-Invoke the `resolve-copilot-pr-feedback` skill using the Skill tool:
+Invoke the `resolve-copilot-pr-feedback` skill:
 
 ```text
 resolve-copilot-pr-feedback OWNER=<owner> REPO=<repo> PR_NUMBER=<number>
