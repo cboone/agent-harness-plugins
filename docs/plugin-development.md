@@ -76,6 +76,149 @@ plugins/notify/
 
 `hooks/codex.hooks.json` carries only the events Codex understands (a subset of the full Claude Code set in `hooks/hooks.json`). `opencode/index.ts` is the OpenCode TypeScript plugin; `bin/build-opencode-mirror` mirrors it to `dist/opencode/plugins/`. Anything under `assets/` and `scripts/` is bundled with the plugin and reachable from hook commands via `${CLAUDE_PLUGIN_ROOT}`.
 
+## Routing descriptions and catalog summaries
+
+A plugin carries two kinds of description, written for different readers, and each has one owner:
+
+- **Routing description:** the `description` in a skill's `SKILL.md` frontmatter. Harnesses use it to decide whether a request should activate the skill implicitly, and selectors show it beside the skill's name. Write it for selection.
+- **Catalog summary:** the `description` in `.claude-plugin/marketplace.json`, repeated verbatim in the plugin's manifests, the opening paragraph of its README, and its root README "What it does" cell. Write it for a person browsing the catalog. It needs no routing detail.
+
+A routing description:
+
+1. Opens with the primary action, so a description shortened from the end still routes.
+1. Names the trigger phrases a user would say, preferring the ones that distinguish the skill from its neighbors.
+1. States a negative boundary when an adjacent skill would otherwise activate instead.
+1. Mentions a hard prerequisite only when it affects selection. Other requirements belong in the README and the skill body.
+1. Stays short, because every installed skill's description shares one discovery budget in Codex. The [Codex consumption review](reviews/codex-consumption.md#milestone-1-baseline) records that budget.
+
+```yaml
+description: >-
+  Create a GitHub pull request from the current branch, committing and pushing
+  first when needed. Use for "pr", "open a pr", or "push and create a pr"; for
+  existing review comments, use resolve-copilot-pr-feedback.
+```
+
+Add `agents/openai.yaml` to a skill only for supported interface metadata, an explicit invocation-policy override, or an MCP tool dependency; no skill needs one today. Never set its `interface.short_description`: Codex prints that in place of `description`, silently replacing the routing description. Do not add keys this repository invents to portable plugin manifests or to `agents/openai.yaml`.
+
+## Cross-harness workflow adapters
+
+Each canonical `SKILL.md` is one workflow shared by Claude Code, Codex CLI, and OpenCode. Write each step against the capability it needs and the restrictions active in the session, not against a harness name: the tools a harness offers vary with its configuration, mode, and installed plugins. Put a harness-specific example beside the shared rule it illustrates instead of forking the workflow into per-harness copies.
+
+New and substantially rewritten skills follow these conventions now. The Git and review chain adopts them in milestone 2 of the [Codex roadmap](plans/todo/2026-09-15-codex-consumption-improvements.md), and the rest of the catalog in milestone 3.
+
+### Invocation
+
+Name the skill, and render how to invoke it only where a person reads the result:
+
+| Harness     | Explicit invocation                                                  |
+| ----------- | -------------------------------------------------------------------- |
+| Claude Code | `/commit`                                                            |
+| Codex CLI   | `$commit`, or choose it from `/skills`                               |
+| OpenCode    | Ask for the `commit` skill; the agent loads it with its `skill` tool |
+
+Every harness also activates a skill implicitly when a request matches its routing description.
+
+A generated prompt, such as a worktree handoff, carries the skill name and its arguments as separate values until it is rendered for its destination: the harness that will read the prompt, not the one writing it. Quote a rendered `$name` so shells and prompt transport pass it through literally.
+
+```text
+Skill: address-issue
+Arguments: 42
+Claude Code: /address-issue 42
+Codex CLI: $address-issue 42
+```
+
+A `$name` mention in generated prose is text for a person or model to read. It is not a tool call, and writing one does not load the skill.
+
+### Skill composition
+
+A parent workflow composes another skill by loading it through the host's skill mechanism, passing its arguments and a continuation block, and resuming from a named step when it returns. Claude Code loads a skill with its `Skill` tool, Codex by reading the `SKILL.md` at the path its skill list advertises, and OpenCode with its `skill` tool.
+
+Write every composition reference with the canonical phrase, so validation can tell composition from other mentions:
+
+```markdown
+Invoke the `lint-and-fix` skill with `--no-push`, passing this continuation block:
+```
+
+Suggestions to the user, redirects to an adjacent skill, "Pairs with" text, and informational mentions are not composition, so do not phrase them as "Invoke the … skill".
+
+### Skill dependencies
+
+Declare every skill a workflow composes in a `## Skill dependencies` section of its `SKILL.md`, placed before `## Workflow`:
+
+```markdown
+## Skill dependencies
+
+- **Required:** `lint-and-fix`
+- **Optional:** `review-branch`, `resolve-copilot-pr-feedback`
+```
+
+Write `None` for an empty category. A skill that composes nothing omits the section.
+
+- **Required:** the workflow cannot honestly complete the dependent step without that skill.
+- **Optional:** the skill improves the workflow, and its absence has a documented fallback or omission.
+- **Selection-driven:** when a workflow invokes skills the user selects from a listed set, declare every candidate as optional.
+
+A composition reference in a skill's `references/` files counts against the skill's own `SKILL.md`. Keep `agents/openai.yaml` `dependencies.tools` for MCP tools; document external executables as requirements rather than dependencies.
+
+Before the first consequential step that needs a required skill, confirm the skill appears in the host's advertised skill list. If it is missing, report the skill and how to install it, preserve completed work, and stop before the dependent side effect. Never silently replace a missing required workflow:
+
+```markdown
+Before pushing, confirm that the `lint-and-fix` skill is available. If it is not, stop and report: "Required skill `lint-and-fix` is not installed. Install it with `/plugin install lint-and-fix@agent-harness-plugins` in Claude Code or `codex plugin add lint-and-fix@agent-harness-plugins` in Codex, then rerun." Leave the local commit in place.
+```
+
+A missing optional skill follows its documented fallback, and the result reports that step as skipped, never as completed. A selected candidate that is not installed is skipped and reported with its installation command, and the remaining selections continue:
+
+```markdown
+If a selected skill is not installed, record it as "skipped: not installed" with its installation command, and continue with the next selection. Report skipped selections separately from completed ones.
+```
+
+### Capabilities
+
+Request the capability a step needs, check whether the session offers it, and use a documented fallback only when it does not. Availability, not the harness name, decides: one harness can offer a capability in one mode and not in another.
+
+| Capability           | Where available                                                                    | Fallback                                                   |
+| -------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Structured question  | Claude Code `AskUserQuestion`; Codex `request_user_input` where its mode offers it | Numbered options in plain text, then wait for the reply    |
+| Interruptible wait   | A background monitor or scheduled wake-up                                          | Bounded polling that stays within the host command timeout |
+| Browser              | A browser automation tool                                                          | Report the URL and what to check there                     |
+| Artifact writer      | An artifact or canvas tool                                                         | Write a local file and report its path                     |
+| Local file operation | Dedicated read, edit, and write tools                                              | Shell commands the sandbox permits                         |
+
+```markdown
+Ask the user which base branch to use. Use a structured question tool when the session offers one; otherwise list the branches as numbered options in plain text and wait for the reply.
+```
+
+### Authority and permissions
+
+Prior user authorization decides what the workflow intends to do: a request to "commit and push" authorizes the push, so the skill does not ask again. The host still decides what it permits. Plan or read-only mode, sandbox writable roots, network policy, hook trust, and tool approval apply regardless of what a skill says, so a skill preserves the user's authorization without promising to bypass those controls. "No prompts" in a skill means the workflow adds no confirmation steps of its own; it cannot suppress a host approval.
+
+```markdown
+The user's request authorizes the push, so do not ask for confirmation. If the host blocks it (Plan or read-only mode, no network access in the sandbox, or a declined approval), stop before any step that depends on the push, report the blocked command and the restriction, and leave the local commit in place.
+```
+
+### Continuation
+
+A child skill invoked by a parent ends with a structured result instead of a handoff, so the parent resumes without asking the user. The `lint-and-fix` Parent Continuation Contract is the reference form. The parent passes:
+
+```text
+Parent continuation:
+- Caller: pr
+- Resume target: step 6
+- On success: continue with step 6
+- On failure or skipped required work: stop and report the unresolved items
+```
+
+The child returns:
+
+```text
+Status: <success|no-op|failure|unavailable>
+Outputs: <commit SHA, paths, or none>
+Unresolved or skipped: <none|summary>
+Caller resume target: step 6
+```
+
+A failure, or a capability the child needs but the session lacks, returns control to the parent with an accurate status. The child does not switch to another workflow, and the parent does not present the step as complete.
+
 ## Skill cross-references
 
 Skills name each other and point at files by path, and a stale one fails only in the downstream project that loads the skill, long after the rename that broke it. `bin/check-cross-references` resolves them; rule 19 of `bin/validate-plugins` runs it over every `SKILL.md` and every file under a skill's `references/`.
