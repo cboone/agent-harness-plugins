@@ -68,6 +68,27 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"location":"src/parsers/match.js","severity":"Low","body":"handle `a | b` alternation"}
 ```
 
+## Overview v2 findings despite a Findings: None header
+
+The `**Findings:** None` header can contradict the verdict. Parsed findings
+come from the body sections, never from that header.
+
+```scrut
+$ jq -s 'add' "${COPILOT_REVIEW_DATA_DIR}/format-d.json" "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '[.[] | select(.reviewBody | contains("**Findings:** None")) | {id, findings: (.findings | length)}]'
+[{"id":6000000001,"findings":2},{"id":6000000003,"findings":1}]
+```
+
+## Overview v2 repeated findings keep their identity
+
+Copilot repeats an unaddressed finding in later reviews. The review ID and URL
+change, but the path, line, and body that identify the finding do not, so a
+prior disposition can be matched against the repeat.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-repeated.json" | jq -c '{ids: [.[].id], identities: [.[] | [.findings[] | {path, line, body}]] | unique | length}'
+{"ids":[6000000008,6000000009],"identities":1}
+```
+
 ## Overview v2 clean verdict
 
 The verified clean verdict can have no body findings while listing entries
