@@ -33,7 +33,7 @@ The checklists are bundled in `./references/checklists/`, one per style guide, a
 ### 1. Check the Repository
 
 1. Work from the repository root (`git rev-parse --show-toplevel`). Stop if the directory is not in a git repository.
-1. In `.github/skills/code-review/SKILL.md`, `AGENTS.md` and `REVIEW.md`, count the BEGIN and END marker lines. If a file has more than one of either, or an END before its BEGIN, stop and ask the user how to repair it.
+1. In `.github/skills/code-review/SKILL.md`, `AGENTS.md` and `REVIEW.md`, check the BEGIN and END marker lines. A file must have none, or exactly one BEGIN line followed later by exactly one END line. For anything else, such as a second BEGIN or END, a BEGIN without an END, an END without a BEGIN, or an END before its BEGIN, stop and ask the user how to repair it.
 1. If `.github/skills/code-review/SKILL.md` exists, read its frontmatter. Copilot requires `name: code-review` and a non-empty `description`; if either is missing or different, report it and ask before continuing.
 1. Report any `.claude/skills/code-review/` or `.agents/skills/code-review/` directory: a second skill with the same name may compete with the installed one. Do not change it.
 1. Resolve `AGENTS.md`. When it is a symlink, edit its target and never replace the link. When it is absent and `CLAUDE.md` is a regular file, ask before creating `AGENTS.md`, and mention `/clean-up-agent-config` for consolidating agent instruction files. If the user declines, skip the `AGENTS.md` block and continue: Copilot and Claude Code Review still get their files, and the report says that Codex has no review rules in this repository.
