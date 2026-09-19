@@ -169,6 +169,7 @@ the unlisted case runs the generator, since a rebuild would repair the others.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" stale-review-checklist 2>&1
+Codex skill inventory: * (glob)
 ::error::Review checklist copy 'plugins/set-up-review-config/skills/set-up-review-config/references/checklists/write-go-code.md' does not match its source; edit the style guide's references/review-checklist.md, not the copy, and run make build
 1 plugin validation error(s) found.
 [1]
@@ -176,6 +177,7 @@ $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" stale-review-checklist 2>&1
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" orphan-review-checklist 2>&1
+Codex skill inventory: * (glob)
 ::error::Review checklist copy 'plugins/set-up-review-config/skills/set-up-review-config/references/checklists/write-orphan.md' has no source checklist; run make build
 1 plugin validation error(s) found.
 [1]
@@ -183,6 +185,7 @@ $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" orphan-review-checklist 2>&1
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" unlisted-review-checklist 2>&1
+Codex skill inventory: * (glob)
 ::error::'plugins/set-up-review-config/skills/set-up-review-config/references/guides.md' does not name ./references/checklists/write-latex.md; add detection and routing rules for it
 1 plugin validation error(s) found.
 [1]
@@ -193,6 +196,7 @@ reported as a generic failure.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" invalid-review-checklist 2>&1
+Codex skill inventory: * (glob)
 ::error::plugins/write-go-code/skills/write-go-code/references/review-checklist.md has a list item without a bold rule name, which reviewers cite: - plain item
 1 review checklist error(s) found; no copies were written.
 1 plugin validation error(s) found.
