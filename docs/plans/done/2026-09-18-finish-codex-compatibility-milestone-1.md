@@ -1,6 +1,6 @@
 # Finish Codex compatibility milestone 1
 
-Tracking: [issue #434](https://github.com/cboone/agent-harness-plugins/issues/434). Roadmap: [Codex consumption improvements](2026-09-15-codex-consumption-improvements.md). Evidence: [Codex consumption review](../../reviews/codex-consumption.md).
+Tracking: [issue #434](https://github.com/cboone/agent-harness-plugins/issues/434). Roadmap: [Codex consumption improvements](../todo/2026-09-15-codex-consumption-improvements.md). Evidence: [Codex consumption review](../../reviews/codex-consumption.md).
 
 ## Outcome
 

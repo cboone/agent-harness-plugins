@@ -134,7 +134,7 @@ Whether `codex plugin marketplace upgrade` refreshes an installed plugin whose v
 
 - Everything observed ran on macOS; Linux was not checked.
 - The skill list came from `codex debug prompt-input`. No model call was made, so the baseline shows what Codex offers the model, not how the model selects from it.
-- Hook trust in `/hooks`, hook execution, and `PreToolUse` matching of `request_user_input` need an authenticated interactive session and were not observed.
+- Hook trust in `/hooks`, hook execution, and `PreToolUse` matching of `request_user_input` need an authenticated interactive session and were not observed at capture; the [milestone 1 verification](#milestone-1-verification) later observed hook review and trust.
 - Git marketplace refresh was observed by editing a pinned ref in the temporary `config.toml`, not by a branch ref advancing.
 
 ### Validation constants
@@ -159,6 +159,52 @@ The warning threshold is the primary budget's average share per skill at the bas
 Rule 17 of `bin/validate-plugins` records these constants. It fails when the catalog exceeds the primary budget less the reserve, prints the catalog's cost against both budgets on every run, and applies the fallback as its gate when `CODEX_REFERENCE_CONTEXT_WINDOW` is set empty. Measured this way at `046f1389`, the catalog-summary inventory cost 4,472 of 4,840 available tokens; with canonical descriptions it would have cost 10,966.
 
 Revisit these constants only when the reference model changes, and record the change here.
+
+## Milestone 1 verification
+
+Run on 2026-09-19 at `d1693ba7`, the milestone branch head carrying every implementation change, with Codex CLI `0.155.1` on macOS.
+
+### Deterministic checks
+
+- `make test-all` passed: Markdown and shell linting reported no issues, `make validate` passed, and `make test-scrut` passed all 458 cases in 9 documents.
+- Rule 17 at this revision: the 61 skills cost 4,689 of the 4,840 available tokens, and 18,676 characters against the 5,600 the fallback leaves. No description exceeds 150 characters.
+- `make build` followed by `git status --porcelain -- .agents dist` printed nothing.
+- The `check-versions` skill found every one of the 62 plugins with canonical or generated changes bumped forward once from `046f1389`, `notify`'s Codex manifest in step, and a marketplace that covers all 62 plugins and holds no version state.
+
+### Codex smoke checks
+
+Every Codex command used a temporary `$CODEX_HOME` in the session's scratch directory, outside the repository. It was authenticated with an interactive `codex login` inside that home; no credential file was copied. This worktree was registered as a local-path marketplace so the branch content was tested.
+
+```text
+$ codex plugin marketplace add <worktree>
+Added marketplace `agent-harness-plugins` from <worktree>.
+$ codex plugin add commit@agent-harness-plugins
+Added plugin `commit` from marketplace `agent-harness-plugins`.
+Installed plugin root: $CODEX_HOME/plugins/cache/agent-harness-plugins/commit/1.3.1
+$ codex plugin add notify --marketplace agent-harness-plugins
+Added plugin `notify` from marketplace `agent-harness-plugins`.
+$ codex plugin list
+commit@agent-harness-plugins  installed, enabled  1.3.1  <worktree>/dist/codex/plugins/commit
+notify@agent-harness-plugins  installed, enabled  2.3.1  <worktree>/dist/codex/plugins/notify
+```
+
+- **Discovery:** `codex debug prompt-input` listed `commit:commit` with its canonical routing description. With all 62 plugins installed, all 61 plugin lines matched their canonical descriptions exactly, none shortened, at 3,835 tokens as rendered with aliasing.
+- **Explicit invocation:** `codex exec -s workspace-write '$commit'` ran in a disposable repository with one staged change. Codex announced the `commit` and `use-git` skills, read both `SKILL.md` files from the installed cache, and inspected the staged diff. It then stopped without attempting the commit: "Commit blocked: the sandbox prevents writing `.git/index.lock`. The staged changes remain intact", followed by the exact `git commit -S` command to run.
+- **Natural-language activation:** `codex exec -s workspace-write 'Please commit the staged changes.'` selected and read the same two skills and stopped the same way: "Couldn’t commit: the sandbox blocks writes to `.git/index.lock`, and escalation is disabled. Your changes remain staged." Both runs reported the host restriction and the command to run instead of working around it, as the authority adapter describes.
+- **Hook trust:** Codex opened with "Hooks need review" and "4 hooks are new or changed." `/hooks` listed `PreToolUse`, `PreCompact`, `UserPromptSubmit`, and `Stop` as installed, inactive, and awaiting review. The `PreToolUse` entry showed matcher `request_user_input`, source `Plugin - notify@agent-harness-plugins`, and the resolved `notify codex-question` command. Once trusted, all four were active, recorded as `trusted_hash` entries under `[hooks.state]` in `config.toml`. After a timeout was added to the cached `PreCompact` definition, a relaunch reported "1 hook is new or changed", with only `PreCompact` awaiting review.
+- **Teardown:** `codex plugin remove` removed `commit` and `notify`, then every other installed plugin. `codex plugin marketplace remove agent-harness-plugins` left "No plugin marketplaces in scope." `codex logout` removed the credentials, and the temporary home was deleted.
+
+### Claude Code and OpenCode
+
+- `claude plugin validate --strict` passed for all 62 plugin directories and for the marketplace, with Claude Code `2.1.278`.
+- A headless `claude -p --plugin-dir plugins/commit` session reported the branch's `commit` description verbatim, so Claude Code loads the canonical skill.
+- `make build` regenerated the OpenCode mirror without changes, and its skills link to the canonical sources.
+
+### Limits of the verification
+
+- The authenticated session defaulted to `gpt-5.6-sol` rather than the `gpt-6-astra` of the unauthenticated render. Both have a 272,000-token context window, so the recorded budget stands.
+- While logged in, `codex plugin list` still counted four installed plugins after this marketplace's plugins were removed and its cache emptied. They were not identified, and none was listed after logout.
+- Each model-backed check ran once and stays informational until the roadmap's repeatability requirement is met. Hook payloads and notification delivery were not exercised, and Linux was not checked.
 
 ## Assessment and agreed direction
 
@@ -188,11 +234,15 @@ The [Codex installation guide](https://github.com/cboone/agent-harness-plugins/b
 
 Users need instructions that distinguish registering a marketplace from installing, inspecting, and removing its plugins. Current documentation also needs selective installation and troubleshooting examples. The current [official command reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli) documents these interfaces.
 
+**Milestone 1: resolved.** The README separates registering the marketplace from installing, listing, refreshing, and removing plugins with `codex plugin add`, `list`, and `remove`, and adds selective installation and troubleshooting guidance checked against CLI `0.155.1`.
+
 **2. Hook setup and capability claims are outdated. Confirmed.**
 
 The README tells users to enable `plugin_hooks`. The installed CLI reports that feature as removed and `hooks` as stable.
 
 The repository also says Codex lacks `PreCompact`, `SubagentStop`, and `SessionEnd`. Current documentation supports those events. It additionally requires review and trust of non-managed hook definitions, including plugin hooks, which the repository’s instructions omit. These errors affect both consumers and future plugin authors. [Official hook documentation](https://learn.chatgpt.com/docs/hooks).
+
+**Milestone 1: resolved.** The root and `notify` READMEs drop the removed `plugin_hooks` flag, describe `/hooks` review and trust, including review again after an upgrade changes a hook, and list the four Codex events `notify` wires. The [milestone 1 verification](#milestone-1-verification) observed that review, trust, and review again after a change.
 
 **3. Skill invocation examples are Claude-specific throughout the product. Confirmed.**
 
@@ -201,6 +251,8 @@ The root catalog, plugin READMEs, workflow recommendations, and generated prompt
 Codex uses `$` mentions or its `/skills` selector. Documentation should explain explicit invocation, qualified names shown by the selector, and natural-language activation. A skill mention belongs in the conversation, not in a shell command. [Official skill documentation](https://learn.chatgpt.com/docs/build-skills).
 
 A global replacement would be unsafe: legitimate harness commands such as `/skills` must remain, and dollar signs inside shell strings require correct quoting.
+
+**Milestone 1: contract established; adoption pending in milestone 3.** The invocation adapter in `docs/plugin-development.md` renders `/name` for Claude Code, `$name` or `/skills` for Codex, and a request by name for OpenCode, and keeps skill identity and arguments separate in generated prompts. The README notes the Codex form. Catalog-wide examples and generated handoffs remain for milestone 3.
 
 **4. Documentation links break after installation. Reproduced.**
 
@@ -216,6 +268,8 @@ Examples include the “Claude Code Plugins” title, marketplace description, a
 
 The presentation should match the agreed support policy. Existing Claude-compatible manifest locations can remain where supported; their names alone are not defects.
 
+**Milestone 1: authoring and distribution wording corrected.** The plugin development guide, the `create-plugin` skill, and the README's Codex section describe one shared workflow and one routing description for every harness, and no longer present Codex's description as a shorter copy. The "Claude Code Plugins" title and the marketplace metadata description remain for milestone 3's authoring and presentation updates.
+
 ### Discovery and prompt quality
 
 **6. The Codex build deliberately removes activation information. Confirmed transformation; behavioral impact needs evaluation.**
@@ -230,17 +284,23 @@ That saves context, but removes useful distinctions. For example:
 
 Marketplace summaries and routing descriptions serve different purposes. Codex should receive concise descriptions written for selection, rather than automatically receiving catalog copy. Actual selection accuracy remains unmeasured.
 
+**Milestone 1: resolved.** `bin/build-codex-marketplace` copies `SKILL.md` files unchanged, and rule 16b of `bin/validate-plugins` fails when a generated copy differs from its source. The canonical descriptions were rewritten as routing descriptions that fit Codex's budget. Selection accuracy remains unmeasured until milestone 2's real-Codex evaluation.
+
 **7. The context-budget check measures only part of discovery overhead. Confirmed coverage gap.**
 
 The generated descriptions total **6,881 characters**, against a repository limit of 12,000. That calculation excludes names, paths, and surrounding metadata.
 
 Codex’s initial skill list includes paths and may shorten descriptions or omit skills when its budget is exceeded. Therefore, the current check cannot establish that the entire installed catalog remains discoverable. [Official skill documentation](https://learn.chatgpt.com/docs/build-skills).
 
+**Milestone 1: resolved.** Rule 17 of `bin/validate-plugins` renders each skill's full inventory line, name and installed path included, and budgets it against 2 percent of the reference model's context window less a system-skill reserve, reporting the 8,000-character fallback on every run. The catalog costs 4,689 of the 4,840 tokens available.
+
 **8. Codex-specific metadata is unused. Improvement opportunity.**
 
 None of the 56 skills ships `agents/openai.yaml`.
 
 Use this selectively for invocation policy, useful interface metadata, and supported tool dependencies. Preserve natural-language activation as agreed. Do not blanket-disable workflow skills merely because their authorized execution can change files or contact GitHub.
+
+**Milestone 1: policy decided.** Add `agents/openai.yaml` only for supported interface metadata, an invocation-policy override, or an MCP tool dependency, and never set `interface.short_description`, which Codex prints in place of the routing description. No skill needs one yet.
 
 **9. Several entrypoints load substantial material before selecting a relevant path. Confirmed structure; improvement needs evaluation.**
 
@@ -258,6 +318,8 @@ Codex needs instructions for resolving a skill through its advertised location, 
 
 The existing `lint-and-fix` parent-continuation contract is a useful foundation and should be preserved.
 
+**Milestone 1: contract established; adoption pending in milestones 2 and 3.** The composition and continuation adapters define how a parent loads a child skill in each harness, passes a continuation block, and resumes. Every composition reference now uses the canonical "Invoke the `NAME` skill" phrase without naming Claude's `Skill` tool. The Git and review chain adopts the adapters in milestone 2 and the rest of the catalog in milestone 3.
+
 **11. Fallbacks confuse a missing Claude tool with a missing capability. Confirmed.**
 
 Examples:
@@ -271,17 +333,23 @@ Adapters should inspect available capabilities. Use structured questions, interr
 
 This does not imply that every Codex environment has every capability.
 
+**Milestone 1: contract established; adoption pending in milestones 2 and 3.** The capabilities adapter selects behavior by the capability a session offers, with a documented fallback when it is absent. The examples above remain until their skills adopt it.
+
 **12. Approval instructions do not adequately distinguish workflow approval from harness restrictions. Confirmed gap.**
 
 “No prompts” and `--no-approval` can describe workflow behavior, but cannot override active Plan Mode, sandbox restrictions, hook trust, or higher-priority instructions.
 
 At the same time, adapters should preserve previously granted authorization and avoid inserting repeated confirmation steps into an authorized workflow.
 
+**Milestone 1: contract established; adoption pending in milestones 2 and 3.** The authority and permissions adapter preserves prior user authorization while leaving Plan mode, sandbox roots, network policy, hook trust, and tool approval to the host.
+
 **13. Selective installation exposes undeclared skill dependencies. Confirmed design gap.**
 
 Plugins such as `pr` and `bootstrap-project` require other skills, while users can install plugins individually. Existing cross-reference checks establish that a referenced plugin exists in this repository, not that it is installed and available to the consuming session.
 
 Distinguish required dependencies from optional recommendations. Detect missing required skills before consequential steps and provide an actionable installation instruction. Do not silently substitute a different workflow.
+
+**Milestone 1: declarations resolved; preflight adoption pending.** Thirteen skills declare their required and optional dependencies, and `bin/check-cross-references` rejects an undeclared composition and a malformed, unresolved, repeated, or unused declaration. The adapter contract defines the preflight, the missing-dependency stop, and the skip-and-report behavior for selection-driven candidates. Applying them in each workflow body is milestone 2 for the Git and review chain and milestone 3 elsewhere.
 
 ### Scripts, worktrees, and hooks
 
@@ -310,6 +378,8 @@ Check the actual destination and available permissions before dependent side eff
 `notify` currently wires only `Stop`. Reassess compaction and lifecycle notifications against the supported baseline, while preserving meaningful notification semantics.
 
 Do not map every permission-policy event to “the user needs to respond.” Verify event timing, payloads, notification grouping, and trust behavior. Add coverage for missing dependencies and installation paths containing spaces.
+
+**Milestone 1: premise corrected; expansion deferred to milestone 3.** On Codex, `notify` already wires `Stop`, `UserPromptSubmit`, `PreToolUse` for `request_user_input`, and `PreCompact` for `auto`. The claim that it wires only `Stop` came from a stale README section, now corrected. Reassessing further events remains milestone 3.
 
 ### Configuration and validation
 
@@ -345,6 +415,8 @@ The repository has valuable checks for manifests, versions, generated output, sc
 - Real Codex behavior.
 
 A fresh mirror can faithfully reproduce incompatible instructions.
+
+**Milestone 1: initial checks added; remaining coverage deferred.** Deterministic checks now cover routing preservation (rule 16b), the Codex inventory budget (rule 17), and dependency declarations (`bin/check-cross-references`). Installed-package discovery, partial installations, activation, continuation, hook payloads, configuration examples, and real Codex behavior remain for milestones 2 through 4.
 
 ## Validation and acceptance
 
