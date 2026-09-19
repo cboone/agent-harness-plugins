@@ -54,7 +54,7 @@ If `git status` shows uncommitted changes (staged or unstaged):
 1. Warn the user that there are uncommitted changes.
 1. Ask whether to:
    - **Stash**: Run `git stash` before proceeding, then `git stash pop` after the merge completes.
-   - **Commit first**: Invoke the `/commit` skill, then continue with the merge.
+   - **Commit first**: Invoke the `/commit` skill, then continue with the merge. `commit` is an optional dependency: if it is not installed, leave this choice out and tell the user why, so they can commit by hand, or install `commit`, before running this skill again.
    - **Abort**: Stop without doing anything.
 
 ### 3. Fetch and Merge
