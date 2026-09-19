@@ -470,11 +470,14 @@ function do_parse_reviews() {
       # "; " and ending with ".". Each item runs from its own severity token to
       # the next one, so text that contains a semicolon or lacks the final
       # period is kept rather than dropped. Any capitalized word followed by a
-      # vote count opens an item, so a severity name not seen before still
-      # parses. Joining every cell after the path keeps escaped pipes inside
-      # the summary, and they are unescaped to the text GitHub renders.
-      # Restrict this parser to marked v2 bodies so ordinary file-summary
-      # tables remain negative controls.
+      # vote count is a severity token, so a severity name not seen before
+      # still parses. The first token opens the first item wherever the file
+      # description ends; every later token must follow the "; " separator, so
+      # prose such as "Nit (1 vote):" inside a finding stays in its text rather
+      # than splitting it into a false finding. Joining every cell after the
+      # path keeps escaped pipes inside the summary, and they are unescaped to
+      # the text GitHub renders. Restrict this parser to marked v2 bodies so
+      # ordinary file-summary tables remain negative controls.
       def table_findings:
         [
           split("\n")[]
@@ -482,7 +485,12 @@ function do_parse_reviews() {
           | split("|") as $cells
           | ($cells[1] | trim | ltrimstr("`") | rtrimstr("`") | normalize_path) as $path
           | ($cells[2:-1] | join("|") | gsub("\\\\\\|"; "|") | trim) as $summary
-          | [$summary | match("\\b(?<severity>[A-Z][A-Za-z]*) \\([0-9]+ votes?\\): "; "g")] as $items
+          | [
+              [$summary | match("\\b(?<severity>[A-Z][A-Za-z]*) \\([0-9]+ votes?\\): "; "g")]
+              | to_entries[]
+              | select(.key == 0 or $summary[(.value.offset - 2):.value.offset] == "; ")
+              | .value
+            ] as $items
           | range(0; $items | length) as $i
           | $items[$i] as $item
           | ($items[$i + 1].offset // ($summary | length)) as $end
