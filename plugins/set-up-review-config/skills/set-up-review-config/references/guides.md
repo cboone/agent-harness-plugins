@@ -28,7 +28,7 @@ When either shell guide is installed, the entry skill's reporting rules include 
 
 ## write-lean-tests
 
-- **Detect**: A Lean project whose lakefile names a test library, either through `testDriver = "NAMETest"` or a `lean_lib` whose name ends in `Test`, and a tracked directory with that name at any depth.
+- **Detect**: A Lean project whose lakefile names a test library, and a tracked directory with that name at any depth. The lakefile names it through a test driver, `testDriver = "NAMETest"` in `lakefile.toml`, or `testDriver := "NAMETest"` or a `@[test_driver]` attribute on the library in `lakefile.lean`, or through a `lean_lib` whose name ends in `Test`.
 - **Route**: The test directory's `**/*.lean` files and the test library's root module, for example `ShannonTest/**/*.lean` and `ShannonTest.lean`. Library changes that add, rename or remove exported declarations are also in scope, which the checklist states itself.
 - **Checklist**: `./references/checklists/write-lean-tests.md`
 
