@@ -98,6 +98,10 @@ Both `scaffold-go-cli` and `scaffold-go-library` generate LICENSE, README, .giti
 
 The Dependabot config is what a freshly scaffolded repository is missing: without it, every SHA pin the other tools wrote stays frozen at the version current on the day of the bootstrap. It runs last so the config covers every workflow and manifest the earlier tools created. When a `.github/dependabot.yml` or `.github/dependabot.yaml` already exists at plan time, the plan marks it `Already set up` and `pin-everything` does not run; the `review-dependabot-config` skill is the tool for checking an existing config.
 
+### set-up-review-config during bootstrap
+
+`set-up-review-config` overlaps no other tool's files, but what it writes depends on theirs, so it is not an independent tool. It detects file types to choose review checklists and reads the CI workflows to tell reviewers which checks to skip, so it runs after the scaffolders, `set-up-ci`, `set-up-linters` and `add-scrut-cli-tests`. It appends a `## Code Review Rules` block to the `AGENTS.md` that `scaffold-new-repo` or a scaffolder wrote, rather than creating the file itself. Drift in an installed config later is for `refresh-project-scaffolding` to find.
+
 ## Applicability Rules
 
 Some tools only apply to certain project types:
@@ -114,5 +118,6 @@ Some tools only apply to certain project types:
 | `set-up-ci`               | Any project without existing CI workflow                                                                                                                                                                                                                                |
 | `set-up-linters`          | Any project                                                                                                                                                                                                                                                             |
 | `set-up-secret-scanning`  | Any project                                                                                                                                                                                                                                                             |
+| `set-up-review-config`    | Any project with files, or files the plan will create, that a review checklist covers: Go, Lean, Bash, Zsh, Markdown or scrut tests                                                                                                                                     |
 | `scaffold-new-repo`       | Any project missing foundational files                                                                                                                                                                                                                                  |
 | `pin-everything`          | Any project that has, or will have once the plan runs, `.github/workflows/` files, a composite `action.yml` or `action.yaml` with an external `uses:` step, or a manifest Dependabot supports, and no Dependabot config yet; always scoped down to `--scope dependabot` |
