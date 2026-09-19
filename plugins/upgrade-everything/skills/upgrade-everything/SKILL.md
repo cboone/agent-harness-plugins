@@ -106,7 +106,7 @@ Ask the user which upgrades to apply. Offer these choices:
 - Apply only selected candidate numbers
 - Audit only
 - Apply all except custom exclusions
-- Triage the open Dependabot PRs instead, for the candidates that have one (invoke the `triage-dependabot-prs` skill)
+- Triage the open Dependabot PRs instead, for the candidates that have one (invoke the `triage-dependabot-prs` skill; offer this choice only when that skill is installed)
 
 Do not apply upgrades until the user explicitly selects a scope. If the user asks for audit-only, stop after reporting the matrix.
 

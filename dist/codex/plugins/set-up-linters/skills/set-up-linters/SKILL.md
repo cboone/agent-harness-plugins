@@ -239,7 +239,7 @@ For **Lean projects**, scan `.github/workflows/*.yml` for the `leanprover/lean-a
 
 ### 10. Run Initial Lint (Optional)
 
-Ask whether to run the newly installed linters. If yes, invoke the `lint-and-fix` skill to fix existing issues.
+Ask whether to run the newly installed linters. If yes, invoke the `lint-and-fix` skill to fix existing issues. If `lint-and-fix` is not installed, report this step as skipped with its installation command; the linters stay installed and configured.
 
 ### 11. Commit (Optional)
 

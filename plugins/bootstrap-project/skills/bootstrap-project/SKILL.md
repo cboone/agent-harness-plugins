@@ -159,7 +159,7 @@ The tools referenced in this plan are skills. Invoke the skill for each selected
 
 For each confirmed tool, in execution order:
 
-1. Invoke its skill.
+1. Invoke its skill. If that skill is not installed, do not set the tool up another way: record it as "skipped: not installed" with its installation command, report it apart from the completed tools, and continue with the next one.
 1. Verify the tool completed successfully.
 1. If a tool fails, report the error to the user and ask whether to continue with the remaining tools or stop.
 

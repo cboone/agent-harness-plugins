@@ -212,7 +212,7 @@ Carry out the selected actions per `./references/actions.md`:
 - One write at a time, re-checking the PR's state immediately before each one.
 - On the first failure, stop, report what happened and what remains, and ask whether to continue.
 - After requesting rebases, wait for Dependabot to push. Prefer `ScheduleWakeup`, falling back to a blocking `sleep` between polls where it is unavailable (the Codex CLI and OpenCode path). Once the head SHA has moved and checks have concluded, return to step 3 for those PRs only.
-- For a single PR the user wants watched until it is ready to merge, invoke the `monitor-pr` skill:
+- For a single PR the user wants watched until it is ready to merge, invoke the `monitor-pr` skill. If it is not installed, report the watch as skipped with its installation command, and continue with the next selected action:
 
   ```text
   monitor-pr <number>

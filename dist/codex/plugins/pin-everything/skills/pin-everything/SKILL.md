@@ -178,7 +178,7 @@ Skip this step if `--no-audit` was passed. Reference: `./references/version-audi
 
 1. Re-run the audit from step 1 for the categories in scope and confirm zero unpinned surfaces remain in them (modulo the deliberate exclusions confirmed in step 2 and any schema URLs whose publisher exposes no versioned upstream -- see step 7). Under `--scope dependabot`, confirm instead that the config has a block for every ecosystem step 9 detected.
 2. Invoke the `lint-and-fix` skill to run project linters and formatters. Under a narrowed scope, invoke it with `--check` instead, and fix by hand only the findings in files this run wrote, so a scoped run such as `--scope dependabot` never reformats unrelated files; report any other findings without changing them.
-3. If the user has REUSE/SPDX licensing set up (root `REUSE.toml` present), invoke the `manage-repo-licensing` skill to add SPDX coverage for any newly emitted files (`bin/version-audit`, `.github/workflows/version-audit.yml`, `.github/dependabot.yml`) and run `reuse lint`.
+3. If the user has REUSE/SPDX licensing set up (root `REUSE.toml` present), invoke the `manage-repo-licensing` skill to add SPDX coverage for any newly emitted files (`bin/version-audit`, `.github/workflows/version-audit.yml`, `.github/dependabot.yml`) and run `reuse lint`. If `manage-repo-licensing` is not installed, report SPDX coverage for those files as skipped with its installation command.
 4. Commit with a Conventional Commits message scoped to what was pinned. Default to one commit per category for clarity (e.g. `chore: SHA-pin third-party action refs`, `chore: pin install commands`, `chore: add Dependabot config`). If the user prefers a single bundled commit, do that instead.
 
 ## Options
