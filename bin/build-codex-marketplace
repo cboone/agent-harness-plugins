@@ -145,7 +145,8 @@ function validate_outputs() {
 # plugin_source_path reads both the string and the {"path": ...} object form,
 # but write_codex_marketplace only rewrites the string form, so an object-form
 # entry would be copied correctly and then left pointing at ./plugins/<name>.
-# All 51 entries are strings today; fail loudly rather than emit a bad source.
+# Every entry uses the string form today; fail loudly rather than emit a bad
+# source.
 function validate_source_forms() {
   local plugin_name source_type
 
