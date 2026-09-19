@@ -39,6 +39,20 @@ Everything the skill writes sits in a managed block or a file marked as managed,
 
 After the skill runs, commit on a branch and open a pull request: Copilot reads skills from a pull request's head branch, so that pull request is already reviewed with the new config.
 
+## Recommended Permissions
+
+This skill reads the repository with git and, to pin its links, reads this marketplace over the network. To allow those commands without a prompt each time, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(git rev-parse --show-toplevel)", "Bash(git ls-files*)", "Bash(git ls-remote https://github.com/cboone/agent-harness-plugins *)", "Bash(curl -fsSL https://raw.githubusercontent.com/cboone/agent-harness-plugins/*)"]
+  }
+}
+```
+
+If you already have a `permissions.allow` array, merge these entries into it. The skill also runs the repository's own Markdown linter, formatter and spell checker on the files it writes; allow those the way you do for other work in the repository. Review and adjust the rules to match your security preferences.
+
 ## Examples
 
 - "set up review config": detects file types and installs the review config
