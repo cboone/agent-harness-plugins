@@ -54,6 +54,20 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🔵 Needs a closer look","hasFormatDrift":false,"findings":[{"location":"src/handlers/example.js","path":"src/handlers/example.js","line":null,"severity":"Moderate","body":"validate optional replacement values"},{"location":"src/handlers/example.js","path":"src/handlers/example.js","line":null,"severity":"Nit","body":"narrow the error documentation"}]}
 ```
 
+## Overview v2 table findings survive unusual text
+
+An item runs from its severity token to the next one. A semicolon inside the
+finding text, a missing final period, an unfamiliar severity name, and an
+escaped pipe must not drop or truncate a finding.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-table-edge.json" | jq -c '.[0].findings[] | {location, severity, body}'
+{"location":"src/parsers/split.js","severity":"Moderate","body":"split on `a; b` correctly"}
+{"location":"src/parsers/split.js","severity":"Critical","body":"reject naïve input"}
+{"location":"src/parsers/split.js","severity":"Nit","body":"rename the helper"}
+{"location":"src/parsers/match.js","severity":"Low","body":"handle `a | b` alternation"}
+```
+
 ## Overview v2 clean verdict
 
 The verified clean verdict can have no body findings while listing entries

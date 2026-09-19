@@ -462,27 +462,38 @@ function do_parse_reviews() {
         ];
 
       # A newer ccr-overview-v2 variant appends line-less findings to a file
-      # summary cell. Finding items are separated by semicolons and carry a
-      # textual severity plus vote count. Restrict this parser to marked v2
-      # bodies so ordinary file-summary tables remain negative controls.
+      # summary cell as "<Severity> (<N> votes): <text>" items separated by
+      # "; " and ending with ".". Each item runs from its own severity token to
+      # the next one, so text that contains a semicolon or lacks the final
+      # period is kept rather than dropped. Any capitalized word followed by a
+      # vote count opens an item, so a severity name not seen before still
+      # parses. Joining every cell after the path keeps escaped pipes inside
+      # the summary, and they are unescaped to the text GitHub renders.
+      # Restrict this parser to marked v2 bodies so ordinary file-summary
+      # tables remain negative controls.
       def table_findings:
         [
           split("\n")[]
           | select(test("^[[:space:]]*\\|[[:space:]]*`[^`]+`[[:space:]]*\\|"))
           | split("|") as $cells
           | ($cells[1] | trim | ltrimstr("`") | rtrimstr("`") | normalize_path) as $path
-          | ($cells[2] | trim) as $summary
-          | $summary
-          | scan(
-              "(?<severity>High|Moderate|Medium|Low|Nit) \\([0-9]+ votes?\\): (?<body>[^;]+?)(?=; (?:High|Moderate|Medium|Low|Nit) \\(|\\.$)";
-              "g"
-            )
+          | ($cells[2:-1] | join("|") | gsub("\\\\\\|"; "|") | trim) as $summary
+          | [$summary | match("\\b(?<severity>[A-Z][A-Za-z]*) \\([0-9]+ votes?\\): "; "g")] as $items
+          | range(0; $items | length) as $i
+          | $items[$i] as $item
+          | ($items[$i + 1].offset // ($summary | length)) as $end
           | {
               location: $path,
               path: $path,
               line: null,
-              severity: .[0],
-              body: (.[1] | trim)
+              severity: $item.captures[0].string,
+              body: (
+                $summary[($item.offset + $item.length):$end]
+                | trim
+                | sub(";$"; "")
+                | sub("\\.$"; "")
+                | trim
+              )
             }
         ];
 
