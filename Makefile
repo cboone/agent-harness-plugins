@@ -13,7 +13,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u STUB_GH_API_FAIL -u STUB_GH_AUTH_FAIL -u STUB_GH_DIR -u STUB_GH_LOG \
 	-u STUB_GIT_BRANCHES -u STUB_GIT_INVALID_REF -u STUB_GIT_WORKTREE_PORCELAIN \
 	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES \
-	-u TZDIR -u WORKTREE_RESOURCES_FILE
+	-u TZDIR -u WORKTREE_RESOURCES_FILE -u REVIEW_CHECKLISTS_DIR
 
 # Every scrut test resolves the script or fixture it exercises through one of
 # these variables. Defining them once keeps the test and update targets from
@@ -23,6 +23,8 @@ SCRUT_ENV := \
 	NOTIFY_BIN="$(CURDIR)/plugins/notify/scripts/notify" \
 	CHECK_NOTIFICATIONS_BIN="$(CURDIR)/tests/fixtures/check-notifications" \
 	CHECK_CROSS_REFERENCES_BIN="$(CURDIR)/bin/check-cross-references" \
+	BUILD_REVIEW_CHECKLISTS_BIN="$(CURDIR)/bin/build-review-checklists" \
+	REVIEW_CHECKLIST_FIXTURE_BIN="$(CURDIR)/tests/fixtures/review-checklist-fixture" \
 	COMPOSE_ISSUE_PROMPT_BIN="$(CURDIR)/plugins/address-issue-in-worktree/scripts/compose-issue-prompt" \
 	CREATE_WORKTREE_COMPOSE_ISSUE_PROMPT_BIN="$(CURDIR)/plugins/create-worktree/scripts/compose-issue-prompt" \
 	LIST_SHELL_SCRIPTS_BIN="$(CURDIR)/bin/list-shell-scripts" \

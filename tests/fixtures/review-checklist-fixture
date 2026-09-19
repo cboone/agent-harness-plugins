@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Creates a throwaway plugin tree for the bin/build-review-checklists suite and
+# prints its root.
+#
+# The generator reads and writes paths relative to the working directory, so it
+# needs a real plugins/ layout. Each testcase cds into the printed directory,
+# edits a source when it needs a failure, and runs the generator.
+#
+# What the tree provides:
+#
+#   plugins/write-alpha/.../references/review-checklist.md   a valid source
+#   plugins/write-beta/.../references/review-checklist.md    a valid source
+#   plugins/set-up-review-config/.../references/checklists/  the output
+#     directory, holding write-gone.md, a copy whose source no longer exists
+set -euo pipefail
+
+readonly OUTPUT_DIR="plugins/set-up-review-config/skills/set-up-review-config/references/checklists"
+
+function write_checklist() {
+  local path="$1"
+  local title="$2"
+  mkdir -p "${path%/*}"
+  printf '%s\n' \
+    "# ${title} Review Checklist" \
+    "" \
+    "Applies to ${title} files. Cite findings as \`guide: Rule name\`." \
+    "" \
+    "## Important" \
+    "" \
+    "- **First rule**: A defect that changes behavior." \
+    "" \
+    "## Nits" \
+    "" \
+    "- **Second rule**: A style rule no formatter enforces." \
+    "" \
+    "## Do not flag" \
+    "" \
+    "- **Third rule**: An accepted exception." \
+    > "${path}"
+}
+
+function main() {
+  local root
+  root="$(mktemp -d "${TMPDIR:-/tmp}/review-checklist-fixture.XXXXXX")"
+
+  write_checklist "${root}/plugins/write-alpha/skills/write-alpha/references/review-checklist.md" "Alpha"
+  write_checklist "${root}/plugins/write-beta/skills/write-beta/references/review-checklist.md" "Beta"
+  write_checklist "${root}/${OUTPUT_DIR}/write-gone.md" "Gone"
+
+  printf '%s\n' "${root}"
+}
+
+main "$@"

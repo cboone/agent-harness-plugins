@@ -15,6 +15,13 @@ function mutate_catalog() {
   mv "${FIXTURE_ROOT}/catalog.json" "${catalog}"
 }
 
+# The review checklist scenarios mutate a source or a copy without running
+# bin/build-review-checklists, so the copies stay stale and rule 20 is the only
+# rule that fires: bin/build-codex-marketplace below rebuilds dist/ from the
+# mutated tree, which keeps rule 16 quiet.
+readonly GO_REVIEW_CHECKLIST="plugins/write-go-code/skills/write-go-code/references/review-checklist.md"
+readonly REVIEW_CHECKLIST_COPIES="plugins/set-up-review-config/skills/set-up-review-config/references/checklists"
+
 function main() {
   local scenario="${1}"
   FIXTURE_ROOT="$(mktemp -d)"
@@ -34,6 +41,19 @@ function main() {
       ;;
     metadata-version) mutate_catalog '.metadata.version = "catalog-state"' ;;
     entry-version) mutate_catalog '.plugins[0].version = "1.0.0"' ;;
+    stale-review-checklist)
+      printf '%s\n' '- **Extra**: A rule added without a rebuild.' >> "${FIXTURE_ROOT}/${GO_REVIEW_CHECKLIST}"
+      ;;
+    orphan-review-checklist)
+      cp "${FIXTURE_ROOT}/${REVIEW_CHECKLIST_COPIES}/write-go-code.md" "${FIXTURE_ROOT}/${REVIEW_CHECKLIST_COPIES}/write-orphan.md"
+      ;;
+    unlisted-review-checklist)
+      cp "${FIXTURE_ROOT}/${GO_REVIEW_CHECKLIST}" "${FIXTURE_ROOT}/plugins/write-latex/skills/write-latex/references/review-checklist.md"
+      (cd "${FIXTURE_ROOT}" && bin/build-review-checklists > /dev/null)
+      ;;
+    invalid-review-checklist)
+      printf '%s\n' '- plain item' >> "${FIXTURE_ROOT}/${GO_REVIEW_CHECKLIST}"
+      ;;
     *)
       echo "Unknown scenario: ${scenario}" >&2
       return 2

@@ -84,6 +84,8 @@ jobs:
     with:
       scrut-env: |
         CHECK_CROSS_REFERENCES_BIN=./bin/check-cross-references
+        BUILD_REVIEW_CHECKLISTS_BIN=./bin/build-review-checklists
+        REVIEW_CHECKLIST_FIXTURE_BIN=./tests/fixtures/review-checklist-fixture
         COMPOSE_ISSUE_PROMPT_BIN=./plugins/address-issue-in-worktree/scripts/compose-issue-prompt
         CREATE_WORKTREE_COMPOSE_ISSUE_PROMPT_BIN=./plugins/create-worktree/scripts/compose-issue-prompt
         COPILOT_REVIEW_DATA_DIR=./tests/data/copilot-reviews
