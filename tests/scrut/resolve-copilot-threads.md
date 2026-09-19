@@ -89,6 +89,20 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 2
 ````
 
+The last finding in a section stops where the section does. Closing `</details>` tags and the `Files reviewed` trailer belong to the review, not to the finding.
+
+```scrut
+$ jq -s 'add' "${COPILOT_REVIEW_DATA_DIR}/format-a.json" "${COPILOT_REVIEW_DATA_DIR}/format-b.json" "${COPILOT_REVIEW_DATA_DIR}/format-c.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '[.[] | .findings[-1].body | test("</details>|Files reviewed")]'
+[false,false,false]
+```
+
+A bold location line outside a suppressed section is prose, not a finding.
+
+```scrut
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"## Pull request overview\n\n**src/lib/heading.js:12**\n\nProse that names a location."}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '[.[] | {hasSuppressedMarker, findings: (.findings | length)}]'
+[{"hasSuppressedMarker":false,"findings":0}]
+```
+
 ## Headline captures the verdict and drops the boilerplate
 
 ```scrut

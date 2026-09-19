@@ -494,7 +494,7 @@ function do_parse_reviews() {
         | (.body | suppressed_slice) as $slice
         | (.body | verdict) as $verdict
         | (.body | is_overview_v2) as $is_v2
-        | (.body | suppressed_findings) as $suppressed_findings
+        | ($slice | suppressed_findings) as $suppressed_findings
         | (if $is_v2 then (.body | previously_missed_findings) else [] end) as $missed_findings
         | (if $is_v2 then (.body | table_findings) else [] end) as $table_findings
         | ($suppressed_findings + $missed_findings + $table_findings) as $findings
