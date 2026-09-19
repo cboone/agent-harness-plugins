@@ -135,7 +135,7 @@ GPG-signed, unscoped Conventional Commits ending in `(#462)`, each leaving `make
 - **Go CLI acceptance**: in a scratchpad clone of `gh-problemas`, follow the new `SKILL.md`. Expect `write-go-code`, `write-markdown`, `write-scrut-tests`, and Bash only if shell scripts exist; CI tools from its workflows; `go.sum` skipped. Rerun and confirm zero changes.
 - **Lean library acceptance**: in a scratchpad clone of `zhang-yeung-inequality` (`shannon-entropy` is a fork, so it was set aside), expect `write-lean-code` on `**/*.lean`, `write-lean-tests` on `ZhangYeungTest/` and `ZhangYeungTest.lean`, `write-zsh-scripts` on `bin/bootstrap-worktree` by its shebang, `write-markdown` on the rest, and the Pandoc-academic trees under `references/` plus the citing `README.md` reported as waiting on the follow-up. Run the repository's own `markdownlint-cli2` and `cspell` on the output. Rerun and confirm zero changes. This run found that verbatim checklists fail a target's spell checker, so step 7 now adds technical words to the project's word list rather than editing checklists.
 - **Copilot citation**: push the generated Go output to the step 0 PR in `cboone/gh-problemas`, request a Copilot review, and confirm a comment cites the violated rule by name. Record the result in the PR description of this repository's PR, then close the test PR and delete its branch. **Result:** with the generated config, Copilot cited `write-go-code: Checked errors`, `write-go-code: Initialisms` and `write-go-code: In-band errors`, and flagged nothing in the installed files; cboone/gh-problemas#18 is closed and its branch deleted.
-- **Follow-up issue**: file with the `create-issue` skill for `write-latex`, `write-pandoc-markdown`, `write-math`, `write-realtime-audio-code`, `write-homebrew-formula`, `write-formalization-roadmap` and `handle-secrets`, noting that `write-math` and `handle-secrets` have no file-glob signal.
+- **Follow-up issue**: file with the `create-issue` skill for `write-latex`, `write-pandoc-markdown`, `write-math`, `write-realtime-audio-code`, `write-homebrew-formula`, `write-formalization-roadmap` and `handle-secrets`, noting that `write-math` and `handle-secrets` have no file-glob signal. **Result:** filed as #469, which also records the Pandoc, overlap and Homebrew questions.
 
 ## Risks
 
@@ -147,5 +147,5 @@ GPG-signed, unscoped Conventional Commits ending in `(#462)`, each leaving `make
 
 - Review checklists for the seven guides in the follow-up issue.
 - Running `set-up-review-config` on this repository.
-- Consolidating the detection tables that `set-up-ci`, `set-up-linters`, `bootstrap-project`, `refresh-project-scaffolding` and `add-scrut-cli-tests` each maintain (they have drifted apart); noted for a separate issue.
+- Consolidating the detection tables that `set-up-ci`, `set-up-linters`, `bootstrap-project`, `refresh-project-scaffolding` and `add-scrut-cli-tests` each maintain (they have drifted apart); filed as #470.
 - Nested `AGENTS.md` review sections and `REVIEW.md` "Always check" content, which stay with the user.
