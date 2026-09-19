@@ -110,6 +110,10 @@ Read `./references/MARKDOWN.md` for the complete guide. Summary:
 - Prefer Markdown syntax when an equivalent exists
 - HTML is acceptable for features Markdown lacks (`<details>`, `<kbd>`, `<br>`, `<sub>`, `<sup>`, etc.)
 
+## Pull Request Review
+
+When reviewing a pull request, apply `./references/review-checklist.md`: the rules of this guide that a reviewer can check in a diff, ranked as Important, Nits and Do not flag. The same checklist is installed into repositories for automated reviewers, so update it whenever a rule here changes.
+
 ## Validation
 
 After creating or editing Markdown files, run the project's lint-fix and format commands to correct list numbering, spacing, and other formatting issues. This is a required final step, not optional.

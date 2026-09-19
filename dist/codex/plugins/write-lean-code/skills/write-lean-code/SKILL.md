@@ -51,6 +51,10 @@ Valid Lean references, in priority order: (1) the project's own code, (2) Mathli
 - `references/comprehensive/pfr-downstream.md`: finite-alphabet specialization, `noncomputable def` + `volume_tac`, measurability hygiene, and anonymous-constructor pair notation for projects built on PFR's entropy API
 - `references/comprehensive/metaprogramming.md`: macros, custom tactics, syntax, elaboration, monad hierarchy
 
+## Pull Request Review
+
+When reviewing a pull request, apply `./references/review-checklist.md`: the rules of this guide that a reviewer can check in a diff, ranked as Important, Nits and Do not flag. The same checklist is installed into repositories for automated reviewers, so update it whenever a rule here changes.
+
 ## Sources
 
 - [Lean 4 Language Reference](https://lean-lang.org/doc/reference/latest/)

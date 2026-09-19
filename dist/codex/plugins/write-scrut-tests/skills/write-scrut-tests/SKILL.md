@@ -63,6 +63,10 @@ For testing zsh plugins and sourced library code with scrut, read `./references/
 - Do not set `ERR_EXIT` at file level; use `emulate -LR zsh` with strict options inside functions
 - Chain `source` and function calls with `&&` on the same command line
 
+## Pull Request Review
+
+When reviewing a pull request, apply `./references/review-checklist.md`: the rules of this guide that a reviewer can check in a diff, ranked as Important, Nits and Do not flag. The same checklist is installed into repositories for automated reviewers, so update it whenever a rule here changes.
+
 ## Validation
 
 After writing or editing scrut tests, run them to verify:

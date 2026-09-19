@@ -179,6 +179,10 @@ For each milestone that lands a new module or extends an existing one:
 
 Do not aim for exhaustive numerical coverage; a handful of concrete instances (e.g., `uniformPNat 2`, `uniformPNat 4` in `Entropy.lean`) is enough to pin behavior. The goal is API regression, not runtime verification.
 
+## Pull Request Review
+
+When reviewing a pull request, apply `./references/review-checklist.md`: the rules of this guide that a reviewer can check in a diff, ranked as Important, Nits and Do not flag. The same checklist is installed into repositories for automated reviewers, so update it whenever a rule here changes.
+
 ## Sources
 
 - `strength-model`'s `proofs/StrengthModelTest/` directory is the primary exemplar this skill was extracted from. `Core.lean`, `Entropy.lean`, `Survival.lean`, and `LargeDeviations.lean` span the full range from small signature-fixing modules to larger composed-downstream-use modules.

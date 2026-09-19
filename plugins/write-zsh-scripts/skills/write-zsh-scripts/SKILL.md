@@ -71,6 +71,10 @@ For zsh completion function conventions, read `./references/completions.md`. Key
 - Register tags before offering matches
 - Return zero if matches were added, non-zero otherwise
 
+## Pull Request Review
+
+When reviewing a pull request, apply `./references/review-checklist.md`: the rules of this guide that a reviewer can check in a diff, ranked as Important, Nits and Do not flag. The same checklist is installed into repositories for automated reviewers, so update it whenever a rule here changes.
+
 ## Validation
 
 Whenever possible, validate the script before finishing. Prefer using a project-specific validation script, if available. Common locations include declarations in `package.json`, `Makefile` targets, and scripts stored in `bin/`.
