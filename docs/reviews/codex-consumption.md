@@ -1,8 +1,159 @@
 # Codex consumption review
 
-Reviewed on 2026-09-15 against repository revision `340f3192`. This document preserves the original audit findings and reported evidence; consolidation does not constitute a new compatibility evaluation. CLI and documentation claims below describe the audit baseline and must be rechecked when milestone 1 begins.
+Reviewed on 2026-09-15 against repository revision `340f3192`. This document preserves the original audit findings and reported evidence; consolidation does not constitute a new compatibility evaluation. The findings' CLI and documentation claims describe the audit baseline; the [milestone 1 baseline](#milestone-1-baseline) supersedes them where they differ.
 
 Tracking: [umbrella issue #434](https://github.com/cboone/agent-harness-plugins/issues/434). Implementation: [four-milestone roadmap](../plans/todo/2026-09-15-codex-consumption-improvements.md). Update these documents in place as work proceeds.
+
+## Milestone 1 baseline
+
+Captured on 2026-09-19 against repository revision `046f1389`; the milestone branch head at capture, `3267c0ae`, added only plan documents. Each claim is marked by its source:
+
+- **Observed:** run locally on macOS (Darwin 25.6.0) with a temporary `$CODEX_HOME` outside the repository, leaving the real Codex home untouched.
+- **Documented:** OpenAI's official documentation, read on 2026-09-19: [plugins](https://learn.chatgpt.com/docs/plugins), [skills](https://learn.chatgpt.com/docs/build-skills), [hooks](https://learn.chatgpt.com/docs/hooks), [CLI commands](https://learn.chatgpt.com/docs/developer-commands?surface=cli), [approvals and security](https://learn.chatgpt.com/docs/agent-approvals-security), and [sandboxing](https://learn.chatgpt.com/docs/sandboxing).
+- **Upstream source:** `openai/codex` at `be2951ea34f0`, the commit tagged `rust-v0.155.1`, mainly `codex-rs/ext/skills/src/render.rs`. `main` at `36b84c81ec01` (2026-09-17) renders identically and differs only in suppressing the warning about shortened descriptions.
+
+The support policy targets the current stable Codex CLI. These constants record the release used for the baseline; they are not a minimum version.
+
+### CLI commands
+
+**Observed.** `codex --version` printed `codex-cli 0.155.1`. The milestone plan anticipated `0.155.0`; `0.155.1` was installed at capture time.
+
+`codex plugin --help` lists `add`, `list`, `marketplace`, and `remove`. `codex plugin marketplace --help` lists `add`, `list`, `upgrade`, and `remove`:
+
+| Command                                               | Observed interface                                                                                        |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `codex plugin marketplace add <SOURCE>`               | A local path, `owner/repo[@ref]`, or an HTTPS or SSH Git URL; `--ref` and repeatable `--sparse`, `--json` |
+| `codex plugin marketplace list`                       | Configured marketplaces and their roots; `--json`                                                         |
+| `codex plugin marketplace upgrade [MARKETPLACE_NAME]` | "Refresh configured Git marketplace snapshots"; all Git marketplaces when the name is omitted             |
+| `codex plugin marketplace remove <MARKETPLACE_NAME>`  | Removes a configured marketplace source by name                                                           |
+| `codex plugin add <PLUGIN[@MARKETPLACE]>`             | Installs one plugin; `--marketplace` replaces the `@MARKETPLACE` suffix                                   |
+| `codex plugin list`                                   | Plugins from configured marketplaces; `--marketplace`, `--json`, `--available`                            |
+| `codex plugin remove <PLUGIN[@MARKETPLACE]>`          | Uninstalls a plugin and removes its local cache                                                           |
+
+A `file://` Git URL is rejected: "invalid marketplace source format; expected owner/repo, a git URL, or a local marketplace path".
+
+`codex features list` rows for hooks, plugins, and skills:
+
+| Feature                           | Stage             | Enabled |
+| --------------------------------- | ----------------- | ------- |
+| `hooks`                           | stable            | true    |
+| `plugin_hooks`                    | removed           | false   |
+| `plugin_sharing`                  | stable            | true    |
+| `plugins`                         | stable            | true    |
+| `recommended_plugins`             | stable            | false   |
+| `remote_plugin`                   | stable            | true    |
+| `skill_env_var_dependency_prompt` | removed           | false   |
+| `skill_mcp_dependency_install`    | stable            | true    |
+| `skill_search`                    | stable            | true    |
+| `skip_host_skill_discovery`       | under development | false   |
+
+`skill_search` was enabled while observing the skill list below and did not change it.
+
+### Plugin installation and refresh
+
+**Observed.** Registering a marketplace installs nothing: `codex plugin list` reported every plugin as `not installed` until `codex plugin add` installed it. Installed plugins land at `$CODEX_HOME/plugins/cache/<marketplace>/<plugin>/<version>/`, with `<version>` taken from the plugin manifest for both local-path and Git marketplaces. The [plugin build documentation](https://developers.openai.com/plugins/build/plugins#how-local-marketplaces-work) says local plugins use `local` as the version segment; the CLI install observed here did not.
+
+Whether `codex plugin marketplace upgrade` refreshes an installed plugin whose version is unchanged:
+
+- **Git marketplace: yes.** The marketplace was added as `cboone/agent-harness-plugins --ref <9d79cb29~1>` and `bootstrap-project` 1.3.1 was installed. With the configured ref changed to `9d79cb29`, which alters `references/overlap-rules.md` at the same version, `upgrade` replaced both the marketplace snapshot and the installed cache copy of that file.
+- **Local-path marketplace: no.** `upgrade` exits with "marketplace `probe-marketplace` is not configured as a Git marketplace". After an edit to the local source at an unchanged version, the installed cache kept its old content through `upgrade` and through a new `codex debug prompt-input` session. Running `codex plugin add` again replaced the cached files. A version bump in the local source was not picked up by a new `codex debug prompt-input` session either; an interactive restart was not observed.
+
+### Skill discovery
+
+**Observed.** `codex debug prompt-input` renders the model-visible prompt without authentication or a model call. With all 62 plugins installed from this worktree as a local-path marketplace, the skill list held 66 entries, the 5 bundled system skills followed by all 61 plugin skills, none shortened or omitted:
+
+```text
+### Skill roots
+- `r0` = `$CODEX_HOME/skills/.system`
+- `r1` = `$CODEX_HOME/plugins/cache/agent-harness-plugins`
+### Available skills
+- imagegen: Generate or edit raster images when ... (file: r0/imagegen/SKILL.md)
+...
+- add-cobra-version:add-cobra-version: Add a version subcommand ... (file: r1/add-cobra-version/1.0.2/skills/add-cobra-version/SKILL.md)
+```
+
+- **Name form:** plugin skills render as the qualified `plugin:skill`; system skills render bare.
+- **Path form:** Codex replaced the shared roots with the aliases `r0` and `r1`. Without aliasing, a plugin skill's path is `$CODEX_HOME/plugins/cache/agent-harness-plugins/<plugin>/<version>/skills/<skill>/SKILL.md`, and `$CODEX_HOME` defaults to `~/.codex`.
+- **Reference model:** the default model rendered identically to `-c model=gpt-6-astra`, the highest-priority listed model in `codex debug models --bundled`. Its `context_window` is 272,000 tokens, as is every listed model's, so the budget is 5,440 tokens.
+- **Framing:** the `## Skills` heading, the introduction, the `### Skill roots` table, and the `### Available skills` heading surround the entries. `gpt-6-astra` sets `include_skills_usage_instructions` to false; `gpt-5.5`, which sets it to true, adds a `### How to use skills` section.
+- **Bundled system skills:** `imagegen`, `openai-docs`, `plugin-creator`, `skill-creator`, and `skill-installer`. Their lines cost 524 tokens as rendered and 567 tokens with unaliased paths under a 15-character home directory.
+- **Current catalog:** as rendered with aliasing, the 61 plugin lines cost 3,618 tokens.
+
+**Upstream source.** `render.rs` explains the observed list:
+
+- Each entry renders as `- {name}: {description} (file: {path})`. A description longer than 1,024 characters is cut to 1,021 characters plus `...`.
+- The budget is 2 percent of the model's `context_window`, falling back to `max_context_window`. A configured `skills.max_context_tokens` replaces it, capped at 10,000 tokens. With neither, the budget is 8,000 characters.
+- A token budget charges each entry `ceil(bytes / 4)` for the line plus its newline. A character budget charges its characters.
+- Only entries are charged. The framing and usage instructions are outside the budget, except that an aliased render also charges its roots table.
+- When the full entries exceed the budget, Codex keeps every name and path and distributes the remaining budget across descriptions one character at a time, shortening them from the end. When names and paths alone exceed it, Codex omits entries from the end of the list. The observed list puts system skills first and plugin skills in name order, so the `write-*` skills would be omitted first.
+- Codex aliases shared path roots whenever that includes more skills, shortens fewer description characters, or costs less.
+- The extension-compatible render policy, used for host skills in turn input, prints an entry's `interface.short_description` from `agents/openai.yaml` in place of its `description`.
+
+### Skill metadata and invocation
+
+**Documented.**
+
+- Codex invokes a skill explicitly through `$` mentions or the `/skills` selector, and implicitly "when your task matches the skill description."
+- The skills documentation confirms the 2 percent and 8,000-character budgets, and that Codex "shortens skill descriptions first" and "may omit some skills from the initial list and show a warning."
+- `agents/openai.yaml` configures interface metadata, invocation policy (`policy.allow_implicit_invocation`), and tool dependencies (`dependencies.tools` with `type: "mcp"`). The documentation describes no skill-to-skill dependency field.
+- No page describes the qualified `plugin:skill` name; the render above is the evidence for it.
+
+### Hooks
+
+**Observed.** `hooks` is stable and enabled; `plugin_hooks` is removed. `plugins/notify/hooks/codex.hooks.json` wires `Stop`, `UserPromptSubmit`, `PreToolUse` matching `request_user_input`, and `PreCompact` matching `auto`.
+
+**Documented.**
+
+- Hooks are enabled by default, and `codex_hooks` remains a deprecated alias of `hooks`.
+- The events are `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PreCompact`, `PostCompact`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `Stop`, `Interrupt`, `SessionStart`, and `SessionEnd`. `Interrupt` and `SessionEnd` do not run for subagents.
+- `PreCompact` matches its trigger, `manual` or `auto`. The documentation does not name `request_user_input` as a `PreToolUse` target; it says other local function tools match by function name.
+- "Codex records trust against the hook's current hash, so new or changed hooks are marked for review and skipped until trusted." `/hooks` reviews and trusts them, and "Installing or enabling a plugin doesn't automatically trust its hooks." `--dangerously-bypass-hook-trust` skips the requirement for one run.
+- Plugin hook commands receive `PLUGIN_ROOT` and `PLUGIN_DATA`, plus `CLAUDE_PLUGIN_ROOT` and `CLAUDE_PLUGIN_DATA` for compatibility.
+
+### Host constraints
+
+**Documented.** The OS-enforced sandbox and the approval policy decide when Codex must stop and ask. When a plugin capability runs through a Codex host, "the host's sandbox and approval policy applies." Codex loads a project's `.codex/config.toml` only for trusted projects. `/plan` enters Plan mode, and hooks receive `permission_mode`, whose values include `plan`. The documentation does not state that skill instructions cannot override these controls; that is this repository's design rule, derived from the host enforcing them.
+
+### Other documentation changes
+
+**Documented**, outside milestone 1:
+
+- The preferred plugin manifest is now a root `plugin.json` using the Agent Plugins schema, with `.codex-plugin/plugin.json` supported as a compatibility fallback.
+- Codex reads `.claude-plugin/marketplace.json` as a "legacy-compatible marketplace."
+- The IDE extension does not support plugins.
+- `approval_policy = "untrusted"` is retired, which bears on finding 19.
+
+### Differences from the 2026-09-15 audit
+
+- The installed CLI moved from `0.154.0` to `0.155.1`, and the catalog from 57 plugins and 56 skills to 62 plugins and 61 skills.
+- **Finding 2:** `plugin_hooks` is removed rather than required, hooks run once trusted through `/hooks`, and Codex supports twelve hook events.
+- **Finding 7:** Codex budgets 2 percent of the context window, 5,440 tokens for the reference model, not a repository character limit. Names and paths cost about 10,000 bytes of it before any description.
+- **Finding 17:** its premise is outdated. `notify` already wires four Codex events: `Stop`, `UserPromptSubmit`, `PreToolUse` for `request_user_input`, and `PreCompact` for `auto`. The claim that it wires only `Stop` came from the README's stale known-limitations section. Reassessing further events remains open.
+
+### Limits of this baseline
+
+- Everything observed ran on macOS; Linux was not checked.
+- The skill list came from `codex debug prompt-input`. No model call was made, so the baseline shows what Codex offers the model, not how the model selects from it.
+- Hook trust in `/hooks`, hook execution, and `PreToolUse` matching of `request_user_input` need an authenticated interactive session and were not observed.
+- Git marketplace refresh was observed by editing a pinned ref in the temporary `config.toml`, not by a branch ref advancing.
+
+### Validation constants
+
+These constants define the Codex inventory budget that repository validation models:
+
+| Constant                     | Value                                                                                                   | Source                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Reference model              | `gpt-6-astra`                                                                                           | Observed default model                         |
+| Context window               | 272,000 tokens                                                                                          | `codex debug models --bundled`                 |
+| Primary budget               | 5,440 tokens, 2 percent of the context window                                                           | Upstream source and documentation              |
+| Bytes per token              | 4, rounded up per entry                                                                                 | Upstream source                                |
+| Fallback budget              | 8,000 characters, when the context window is unknown                                                    | Upstream source and documentation              |
+| Framing reserve              | None; framing is outside the budget, and the check ignores aliasing                                     | Upstream source                                |
+| Bundled system skill reserve | 2,400 bytes, or 600 tokens; 567 tokens observed                                                         | Observed                                       |
+| Name form                    | `plugin:skill`                                                                                          | Observed                                       |
+| Path form                    | `/Users/username/.codex/plugins/cache/agent-harness-plugins/<plugin>/<version>/skills/<skill>/SKILL.md` | Observed layout, 15-character home placeholder |
+
+Revisit these constants only when the reference model changes, and record the change here.
 
 ## Assessment and agreed direction
 
