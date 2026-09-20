@@ -5,11 +5,14 @@
 set -euo pipefail
 
 function main() {
-  local scenario="${1}" test_dir
+  local scenario="${1}" test_dir quoted_test_dir
   test_dir="$(mktemp -d "${TMPDIR:-/tmp}/fixture.XXXXXX")"
   # Expand the local path now because EXIT runs after main returns.
+  # printf %q escapes the path, so a TMPDIR holding quotes or shell
+  # metacharacters cannot break out of the trap command.
+  printf -v quoted_test_dir '%q' "${test_dir}"
   # shellcheck disable=SC2064
-  trap "rm -r '${test_dir}'" EXIT
+  trap "rm -r ${quoted_test_dir}" EXIT
   : "${NOTIFY_BIN:?Set NOTIFY_BIN to the notification script}"
   mkdir "${test_dir}/bin"
   export NOTIFY_TEST_LOG="${test_dir}/alerts"
