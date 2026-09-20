@@ -31,7 +31,7 @@ Use the plan record without querying GitHub when one exists. With no plan, one c
 Write the body to a temporary file first, using the tmpfile pattern from the `use-git` skill, rather than passing a long body inline. Generate a path:
 
 ```bash
-mktemp -u /tmp/manual-verification-body-XXXXXX
+mktemp -u "${TMPDIR:-/tmp}/manual-verification-body-XXXXXX"
 ```
 
 Set `body_file` to that returned path and write the complete checklist there with the Write tool. Wait for the write to succeed before issuing a separate GitHub CLI call. Replace `NUMBER`, `OWNER/REPO`, and `COMMENT_ID` in the commands with the issue and comment being maintained.

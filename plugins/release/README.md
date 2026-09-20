@@ -38,7 +38,7 @@ This skill runs git commands that trigger permission prompts. To allow them auto
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git status --porcelain)", "Bash(git branch --show-current)", "Bash(git tag *)", "Bash(git log *)", "Bash(git diff *)", "Bash(git cat-file *)", "Bash(git show *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git rev-parse *)", "Bash(git remote get-url *)", "Bash(git push *)", "Bash(grep -rl *)", "Bash(head *)", "Bash(command -v gh)", "Bash(jq *)", "Bash(bin/validate-json)", "Bash(bin/validate-plugins)", "Bash(make build)", "Bash(mktemp -u /tmp/gh-release-notes-*)", "Bash(rm -f /tmp/gh-release-notes-*)", "Bash(gh release view *)", "Bash(gh release create *)", "Bash(date *)"]
+    "allow": ["Bash(git status --porcelain)", "Bash(git branch --show-current)", "Bash(git tag *)", "Bash(git log *)", "Bash(git diff *)", "Bash(git cat-file *)", "Bash(git show *)", "Bash(git add *)", "Bash(git commit *)", "Bash(git rev-parse *)", "Bash(git remote get-url *)", "Bash(git push *)", "Bash(grep -rl *)", "Bash(head *)", "Bash(command -v gh)", "Bash(jq *)", "Bash(bin/validate-json)", "Bash(bin/validate-plugins)", "Bash(make build)", "Bash(mktemp -u "${TMPDIR:-/tmp}/gh-release-notes-*")", "Bash(rm -f "${TMPDIR:-/tmp}/gh-release-notes-*")", "Bash(gh release view *)", "Bash(gh release create *)", "Bash(date *)"]
   }
 }
 ```

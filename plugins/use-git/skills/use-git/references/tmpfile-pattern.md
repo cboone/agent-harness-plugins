@@ -1,5 +1,8 @@
 # Tmpfile Pattern
 
+<!-- `/tmp` is the filesystem temp directory, not a skill in this repository. -->
+<!-- validate-plugins: ignore /tmp -->
+
 Use tmpfiles when passing long content to git or `gh` CLI commands. This keeps Bash commands short and prevents Claude Code permission prompts triggered by complex-looking command strings.
 
 ## When to Use
@@ -14,14 +17,26 @@ Use tmpfiles when passing long content to git or `gh` CLI commands. This keeps B
 
 ### 1. Create the tmpfile
 
-Generate a unique path with `mktemp -u`:
+Generate a unique path with `mktemp -u`, under `$TMPDIR`:
 
 ```bash
-mktemp -u /tmp/gh-pr-body-XXXXXX
-# Returns a unique path that does NOT exist on disk, e.g.: /tmp/gh-pr-body-x4y5z6
+mktemp -u "${TMPDIR:-/tmp}/gh-pr-body-XXXXXX"
+# Returns a unique path that does NOT exist on disk, e.g.: /tmp/claude-501/gh-pr-body-x4y5z6
 ```
 
-**The `-u` flag is required.** Without it, `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first (`File has not been read yet. Read it first before writing to it.`). Since the file is empty by construction there is no reason to Read it, so plain `mktemp` forces a pointless Read or leaves the write to fail. With `-u`, the path is unique but unoccupied, so Write creates it fresh. The flag is portable for this purpose: both implementations leave nothing on disk at the path they print. macOS `mktemp(1)` documents `-u` as unlinking the temp file before `mktemp` exits; GNU documents `-u` (`--dry-run`) as printing a name without creating anything.
+**Target `$TMPDIR`, never a literal `/tmp`.** When Bash runs inside the Claude Code sandbox, `/tmp` is unwritable and so is the per-user temp directory that `mktemp` picks by default, while `$TMPDIR` points at a directory the sandbox permits. Outside the sandbox `$TMPDIR` is the ordinary per-user temp directory, so the one form works in both cases. Three ways to get this wrong, all of which fail with `Operation not permitted` under the sandbox:
+
+| Form                               | Why it fails                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------- |
+| `mktemp -u /tmp/gh-pr-body-XXXXXX` | macOS resolves `/tmp` to `/private/tmp`, which the sandbox denies         |
+| `mktemp -u`                        | no template, so macOS uses `confstr(_CS_DARWIN_USER_TEMP_DIR)`            |
+| `mktemp -ut gh-pr-body`            | `-t` also ignores `$TMPDIR` on macOS and uses the same per-user directory |
+
+Only an explicit template under `$TMPDIR` is safe. Use the `:-/tmp` fallback rather than bare `${TMPDIR}`: on the rare shell that leaves `$TMPDIR` unset, a bare expansion resolves to `/gh-pr-body-XXXXXX` and tries to write at the filesystem root. macOS usually sets `$TMPDIR` with a trailing slash, so the expansion can produce a doubled slash mid-path, which every POSIX filesystem treats as one separator.
+
+**The `-u` flag is required.** Without it, `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first (`File has not been read yet. Read it first before writing to it.`). Since the file is empty by construction there is no reason to Read it, so plain `mktemp` forces a pointless Read or leaves the write to fail. With `-u`, the path is unique but unoccupied, so Write creates it fresh.
+
+**`-u` is not equally cheap on both platforms.** GNU `mktemp -u` (`--dry-run`) prints a name without touching the filesystem. macOS `mktemp(1)` creates the file with `mkstemp(3)` and unlinks it before exiting, so it still needs write permission at the target path. Both leave nothing on disk at the path they print, which is all this pattern needs, but the macOS behavior is why the directory has to be writable even though the file is not meant to survive.
 
 **Caveat:** `-u` does not atomically reserve the name, which is why both man pages call it "unsafe" and discourage it in general. The trade-off is acceptable here because the Write follows immediately and the content is a PR, issue, or release body rather than a secret. Do not carry this pattern over to security-sensitive temp files; for those, use plain `mktemp` and write through a shell redirect instead of the Write tool.
 
@@ -95,42 +110,42 @@ In zsh (the macOS default shell), `status` and `pipestatus` are read-only built-
 ### GitHub issue
 
 ```bash
-mktemp -u /tmp/gh-issue-body-XXXXXX
-# Returns: /tmp/gh-issue-body-a1b2c3
+mktemp -u "${TMPDIR:-/tmp}/gh-issue-body-XXXXXX"
+# Returns: /tmp/claude-501/gh-issue-body-a1b2c3
 ```
 
 Write body content via the Write tool to the returned path, then, in a separate message:
 
 ```bash
-gh issue create --title "Fix login timeout" --body-file /tmp/gh-issue-body-a1b2c3 --label "bug"
+gh issue create --title "Fix login timeout" --body-file /tmp/claude-501/gh-issue-body-a1b2c3 --label "bug"
 ```
 
 ```bash
-rm -f /tmp/gh-issue-body-a1b2c3
+rm -f /tmp/claude-501/gh-issue-body-a1b2c3
 ```
 
 ### Pull request
 
 ```bash
-mktemp -u /tmp/gh-pr-body-XXXXXX
-# Returns: /tmp/gh-pr-body-x4y5z6
+mktemp -u "${TMPDIR:-/tmp}/gh-pr-body-XXXXXX"
+# Returns: /tmp/claude-501/gh-pr-body-x4y5z6
 ```
 
 Write PR body via the Write tool to the returned path, then, in a separate message:
 
 ```bash
-gh pr create --title "Add retry logic to API client" --body-file /tmp/gh-pr-body-x4y5z6
+gh pr create --title "Add retry logic to API client" --body-file /tmp/claude-501/gh-pr-body-x4y5z6
 ```
 
 ```bash
-rm -f /tmp/gh-pr-body-x4y5z6
+rm -f /tmp/claude-501/gh-pr-body-x4y5z6
 ```
 
 ### Review reply
 
 ```bash
-mktemp -u /tmp/copilot-reply-XXXXXX
-# Returns a unique path, e.g.: /tmp/copilot-reply-r7s8t9
+mktemp -u "${TMPDIR:-/tmp}/copilot-reply-XXXXXX"
+# Returns a unique path, e.g.: /tmp/claude-501/copilot-reply-r7s8t9
 ```
 
 Write reply via the Write tool to the returned path, then, in a separate message, pass it to the reply command with `--body-file`.

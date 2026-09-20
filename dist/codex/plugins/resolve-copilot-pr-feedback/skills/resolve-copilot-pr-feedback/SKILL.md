@@ -290,8 +290,8 @@ bash resolve-copilot-threads resolve THREAD_ID
 
 ```bash
 # Step 1: Generate a unique tmpfile path (-u so the file is NOT created):
-mktemp -u /tmp/copilot-reply-XXXXXX
-# Returns a unique path that does NOT exist on disk, e.g.: /tmp/copilot-reply-r7s8t9
+mktemp -u "${TMPDIR:-/tmp}/copilot-reply-XXXXXX"
+# Returns a unique path that does NOT exist on disk, e.g.: /tmp/claude-501/copilot-reply-r7s8t9
 
 # Step 2: Write the response body to TMPFILE using the Write tool (not shown here as bash)
 
@@ -503,8 +503,8 @@ Counts: 4 fetched, 2 resolved, 1 pending, 1 failed, 1 review-body finding, 2 cod
 
 ```bash
 # Step 1: Generate a unique tmpfile path (-u so the file is NOT created):
-mktemp -u /tmp/copilot-summary-XXXXXX
-# Returns a unique path that does NOT exist on disk, e.g.: /tmp/copilot-summary-k2m9p4
+mktemp -u "${TMPDIR:-/tmp}/copilot-summary-XXXXXX"
+# Returns a unique path that does NOT exist on disk, e.g.: /tmp/claude-501/copilot-summary-k2m9p4
 
 # Step 2: Write comment body to TMPFILE using the Write tool (not shown here as bash)
 
@@ -525,7 +525,7 @@ When the final summary comment fails, preserve the exact intended summary Markdo
 
 ## Reply Templates
 
-First, generate a unique tmpfile path with `mktemp -u /tmp/copilot-reply-XXXXXX` (the `-u` keeps `mktemp` from creating the file, which would block the Write tool). Write these to the returned path using the Write tool, then, in a **separate message**, pass the path via `--body-file`. Never batch the Write and the reply command together: the command reads the file at invocation time, so a parallel batch can post an empty reply. Clean up the tmpfile (`rm -f TMPFILE`) after each reply operation as a **separate Bash tool call**, not chained onto the reply command.
+First, generate a unique tmpfile path with `mktemp -u "${TMPDIR:-/tmp}/copilot-reply-XXXXXX"` (the `-u` keeps `mktemp` from creating the file, which would block the Write tool). Write these to the returned path using the Write tool, then, in a **separate message**, pass the path via `--body-file`. Never batch the Write and the reply command together: the command reads the file at invocation time, so a parallel batch can post an empty reply. Clean up the tmpfile (`rm -f TMPFILE`) after each reply operation as a **separate Bash tool call**, not chained onto the reply command.
 
 **For outdated comments:**
 

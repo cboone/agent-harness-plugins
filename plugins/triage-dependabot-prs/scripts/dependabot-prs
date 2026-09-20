@@ -120,7 +120,7 @@ function do_fetch() {
   require_jq
 
   local work_dir
-  work_dir="$(mktemp -d)"
+  work_dir="$(mktemp -d "${TMPDIR:-/tmp}/dependabot-prs.XXXXXX")"
   # Expand now, because work_dir is local and gone by the time the trap fires.
   # printf %q escapes the path, so a TMPDIR holding quotes or shell
   # metacharacters cannot break out of the trap command.

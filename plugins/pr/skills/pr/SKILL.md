@@ -340,8 +340,8 @@ Place `## Follow-ups` last, after any `## Related issues` or `## Closes` section
 First, generate a unique temporary file path using `mktemp -u`:
 
 ```bash
-mktemp -u /tmp/gh-pr-body-XXXXXX
-# Returns a unique path that does NOT exist on disk, e.g.: /tmp/gh-pr-body-x4y5z6
+mktemp -u "${TMPDIR:-/tmp}/gh-pr-body-XXXXXX"
+# Returns a unique path that does NOT exist on disk, e.g.: /tmp/claude-501/gh-pr-body-x4y5z6
 ```
 
 The `-u` flag is required. Plain `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first, so the write fails with `File has not been read yet`. With `-u` the path is unique but unoccupied, so Write creates it fresh.
