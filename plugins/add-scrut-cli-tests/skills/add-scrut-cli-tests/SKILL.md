@@ -136,10 +136,10 @@ mktemp -d "${TMPDIR:-/tmp}/scrut-install-XXXXXX"
 Note the directory that prints and write it literally where the next commands say `SCRUT_DIR`. The download and the extracted tree both land inside it, so the archive and directory names cannot collide with another install or a stale copy under the shared `$TMPDIR`, and the cleanup removes only what this install created:
 
 ```bash
-gh release download SCRUT_VERSION --repo facebookincubator/scrut --pattern 'scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz' --dir SCRUT_DIR
-tar -xzf SCRUT_DIR/scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz -C SCRUT_DIR
-cp SCRUT_DIR/scrut-SCRUT_PLATFORM/scrut ~/.local/bin/
-rm -rf SCRUT_DIR
+gh release download SCRUT_VERSION --repo facebookincubator/scrut --pattern 'scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz' --dir "SCRUT_DIR"
+tar -xzf "SCRUT_DIR/scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz" -C "SCRUT_DIR"
+cp "SCRUT_DIR/scrut-SCRUT_PLATFORM/scrut" ~/.local/bin/
+rm -rf "SCRUT_DIR"
 ```
 
 Replace `SCRUT_VERSION` with the pinned release tag (e.g., `v0.4.3`), `SCRUT_PLATFORM` with the appropriate identifier (e.g., `macos-aarch64`, `linux-x86_64`), and `SCRUT_DIR` with the directory `mktemp -d` printed.
