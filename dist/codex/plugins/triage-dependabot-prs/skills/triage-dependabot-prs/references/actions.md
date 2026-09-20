@@ -48,7 +48,7 @@ Then return to step 3 of the skill for the refreshed PRs.
 
 Keep the comment body out of the command line, so it survives quoting intact:
 
-1. Run `mktemp -u` and note the path it prints. Call it `BODY_PATH`.
+1. Run `mktemp -u "${TMPDIR:-/tmp}/dependabot-body-XXXXXX"` and note the path it prints. Call it `BODY_PATH`.
 1. Write the comment body to `BODY_PATH` with the Write tool.
 1. Re-check the PR as the top of this page describes, immediately before the next command, and stop if its state or head changed.
 1. Post the comment and close the PR in one command, with the literal path, chained so the close only happens once the comment is posted. The two writes stay chained rather than split around a second re-check: a change landing between them would leave an explanation of a close that never happened, and the chain keeps that window to two consecutive API calls.
@@ -122,7 +122,7 @@ For each Needs work or Hold PR the user wants tracked, invoke the `create-issue`
 
 ## Approve
 
-Only when the user explicitly asks for approval. Write the body to a `mktemp -u` path as in [Close](#close), then:
+Only when the user explicitly asks for approval. Write the body to a tmpfile as in [Close](#close), then:
 
 ```bash
 gh pr review N --repo OWNER/REPO --approve --body-file BODY_PATH

@@ -38,8 +38,8 @@ If the user specifies a repository (e.g., "file an issue on org/repo"), use the 
 First, generate a unique temporary file path using `mktemp -u`:
 
 ```bash
-mktemp -u /tmp/gh-issue-body-XXXXXX
-# Returns a unique path that does NOT exist on disk, e.g.: /tmp/gh-issue-body-a1b2c3
+mktemp -u "${TMPDIR:-/tmp}/gh-issue-body-XXXXXX"
+# Returns a unique path that does NOT exist on disk, e.g.: /tmp/claude-501/gh-issue-body-a1b2c3
 ```
 
 The `-u` flag is required. Plain `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first, so the write fails with `File has not been read yet`. With `-u` the path is unique but unoccupied, so Write creates it fresh.

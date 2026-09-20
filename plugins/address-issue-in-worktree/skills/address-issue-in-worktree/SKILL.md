@@ -49,8 +49,8 @@ If no results, try broadening the search or ask the user to refine their query.
 **Save the issue JSON to a temporary file and reuse it** for steps 4 and 5 rather than fetching again later. Generate a unique path first, then write to it:
 
 ```bash
-mktemp /tmp/issue-json-XXXXXX
-# Prints a unique path, e.g. /tmp/issue-json-a1b2c3
+mktemp "${TMPDIR:-/tmp}/issue-json-XXXXXX"
+# Prints a unique path, e.g. /tmp/claude-501/issue-json-a1b2c3
 ```
 
 ```bash

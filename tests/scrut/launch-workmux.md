@@ -61,15 +61,15 @@ exit: 1
 ```scrut
 $ function prepare_stubs() {
 >   unset TMUX TMUX_TMPDIR WORKMUX_TMUX WORKMUX_TERM
->   state="$(mktemp -d)"
->   stub_dir="$(mktemp -d)"
+>   state="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+>   stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 >   cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux"
 >   cp "${TMUX_STUB_BIN}" "${stub_dir}/tmux"
 >   cp "${GIT_WORKTREE_STUB_BIN}" "${stub_dir}/git"
 >   chmod +x "${stub_dir}/workmux" "${stub_dir}/tmux" "${stub_dir}/git"
 > }
 > function create_socket_fixture() {
->   tmux_tmpdir="$(mktemp -d)"
+>   tmux_tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 >   socket_dir="${tmux_tmpdir}/tmux-$(id -u)"
 >   socket_path="${socket_dir}/projects"
 >   socket_pid="$("${UNIX_SOCKET_FIXTURE_BIN}" "${socket_path}")"
@@ -253,7 +253,7 @@ prompt-file-exists: yes
 
 ```scrut
 $ prepare_stubs \
->   && existing_worktree="$(mktemp -d)" \
+>   && existing_worktree="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && mkdir -p "${existing_worktree}/.workmux" \
 >   && printf '%s\n' 'Stored prompt' > "${existing_worktree}/.workmux/PROMPT-feature-existing-worktree.md" \
 >   && tmux_log="${state}/tmux-log" \
@@ -281,7 +281,7 @@ tmux: delete-buffer socket=/tmp/tmux-501/projects buffer=workmux-prompt-feature-
 
 ```scrut
 $ prepare_stubs \
->   && existing_worktree="$(mktemp -d)" \
+>   && existing_worktree="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && tmux_log="${state}/tmux-log" \
 >   && socket="/tmp/tmux-501/projects" \
 >   && panes="${socket}|%9|cx|${existing_worktree}|4242" \
@@ -391,8 +391,8 @@ prompt-file-exists: yes
 ## Create worktree launcher continues without `tmux`
 
 ```scrut
-$ state="$(mktemp -d)" \
->   && stub_dir="$(mktemp -d)" \
+$ state="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
+>   && stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux" \
 >   && chmod +x "${stub_dir}/workmux" \
 >   && printf '%s\n' 'Prompt body' \
@@ -410,8 +410,8 @@ prompt-file-exists: yes
 ## Address issue in worktree launcher continues without `tmux`
 
 ```scrut
-$ state="$(mktemp -d)" \
->   && stub_dir="$(mktemp -d)" \
+$ state="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
+>   && stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux" \
 >   && chmod +x "${stub_dir}/workmux" \
 >   && printf '%s\n' 'Issue body' \
@@ -519,7 +519,7 @@ prompt-file-exists: yes
 $ prepare_stubs \
 >   && exit_code=0 \
 >   && { printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-one\nfix/387-two' WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/generated-name" --issue 387 2>&1; } || exit_code=$?; if compgen -G "/tmp/workmux-prompt-issue-387.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-one\nfix/387-two' WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/generated-name" --issue 387 2>&1; } || exit_code=$?; if compgen -G "${TMPDIR:-/tmp}/workmux-prompt-issue-387.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
 launch-workmux: issue 387 matches more than one local branch:
   feature/387-one
   fix/387-two
@@ -721,7 +721,7 @@ launch-workmux: --generated-name takes no branch-name argument, got 1
 ## Create worktree launcher rejects empty stdin
 
 ```scrut
-$ branch="feature/missing-prompt-${BASHPID}" && safe_name="${branch//\//-}" && exit_code=0 && env -u TMUX WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "${branch}" < /dev/null 2>&1 || exit_code=$?; if compgen -G "/tmp/workmux-${safe_name}.log.*" > /dev/null || compgen -G "/tmp/workmux-prompt-${safe_name}.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
+$ branch="feature/missing-prompt-${BASHPID}" && safe_name="${branch//\//-}" && exit_code=0 && env -u TMUX WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "${branch}" < /dev/null 2>&1 || exit_code=$?; if compgen -G "${TMPDIR:-/tmp}/workmux-${safe_name}.log.*" > /dev/null || compgen -G "${TMPDIR:-/tmp}/workmux-prompt-${safe_name}.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
 launch-workmux: expected prompt content on stdin
 temp cleanup: yes
 [1]
@@ -730,7 +730,7 @@ temp cleanup: yes
 ## Address issue in worktree launcher rejects empty stdin
 
 ```scrut
-$ branch="feature/missing-prompt-${BASHPID}" && safe_name="${branch//\//-}" && exit_code=0 && env -u TMUX WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "${branch}" < /dev/null 2>&1 || exit_code=$?; if compgen -G "/tmp/workmux-${safe_name}.log.*" > /dev/null || compgen -G "/tmp/workmux-prompt-${safe_name}.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
+$ branch="feature/missing-prompt-${BASHPID}" && safe_name="${branch//\//-}" && exit_code=0 && env -u TMUX WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "${branch}" < /dev/null 2>&1 || exit_code=$?; if compgen -G "${TMPDIR:-/tmp}/workmux-${safe_name}.log.*" > /dev/null || compgen -G "${TMPDIR:-/tmp}/workmux-prompt-${safe_name}.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
 launch-workmux: expected prompt content on stdin
 temp cleanup: yes
 [1]
@@ -742,7 +742,7 @@ The prompt file is named for the issue before branch selection. Nothing is
 left behind when stdin is empty.
 
 ```scrut
-$ exit_code=0 && env -u TMUX WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/generated-name" --issue "${BASHPID}" < /dev/null 2>&1 || exit_code=$?; if compgen -G "/tmp/workmux-prompt-issue-${BASHPID}.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
+$ exit_code=0 && env -u TMUX WORKMUX_LAUNCH_WAIT_SECONDS=0 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/generated-name" --issue "${BASHPID}" < /dev/null 2>&1 || exit_code=$?; if compgen -G "${TMPDIR:-/tmp}/workmux-prompt-issue-${BASHPID}.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
 launch-workmux: expected prompt content on stdin
 temp cleanup: yes
 [1]

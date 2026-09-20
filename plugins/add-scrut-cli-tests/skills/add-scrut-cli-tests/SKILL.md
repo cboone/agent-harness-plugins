@@ -130,12 +130,19 @@ If `scrut` is not installed locally, inform the user to install from the faceboo
 
 ```bash
 mkdir -p ~/.local/bin
-gh release download SCRUT_VERSION --repo facebookincubator/scrut --pattern 'scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz' --dir /tmp
-tar -xzf /tmp/scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz -C /tmp
-cp /tmp/scrut-SCRUT_PLATFORM/scrut ~/.local/bin/
+mktemp -d "${TMPDIR:-/tmp}/scrut-install-XXXXXX"
 ```
 
-Replace `SCRUT_VERSION` with the pinned release tag (e.g., `v0.4.3`) and `SCRUT_PLATFORM` with the appropriate identifier (e.g., `macos-aarch64`, `linux-x86_64`).
+Note the directory that prints and write it literally where the next commands say `SCRUT_DIR`. The download and the extracted tree both land inside it, so the archive and directory names cannot collide with another install or a stale copy under the shared `$TMPDIR`, and the cleanup removes only what this install created:
+
+```bash
+gh release download SCRUT_VERSION --repo facebookincubator/scrut --pattern 'scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz' --dir "SCRUT_DIR"
+tar -xzf "SCRUT_DIR/scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz" -C "SCRUT_DIR"
+cp "SCRUT_DIR/scrut-SCRUT_PLATFORM/scrut" ~/.local/bin/
+rm -rf "SCRUT_DIR"
+```
+
+Replace `SCRUT_VERSION` with the pinned release tag (e.g., `v0.4.3`), `SCRUT_PLATFORM` with the appropriate identifier (e.g., `macos-aarch64`, `linux-x86_64`), and `SCRUT_DIR` with the directory `mktemp -d` printed.
 
 Scrut does not currently publish checksums or signatures with its releases, so integrity verification is not yet possible. If checksums become available in the future, add a verification step after the download, mirroring the guidance in the CI Job Template section below.
 
@@ -497,7 +504,7 @@ Scrut provides these variables in every test execution:
 
 - Use `NO_COLOR=1` to suppress color codes in output.
 - Pipe through `head`, `tail`, or `grep` to test specific lines.
-- Use `$(mktemp -d)` for operations that create files.
+- Use `$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")` for operations that create files.
 - Sort non-deterministic output with `| sort`.
 - Prefer JSON output with `jq` extraction over snapshotting raw text for structured data.
 - Use one test file per logical group of related behaviors (e.g., `help.md`, `version.md`, `error-handling.md`).

@@ -536,7 +536,7 @@ $ function fetch_with_stub() {
 >   env PATH="${gh_stub_dir}:${PATH}" STUB_GH_DIR="${DEPENDABOT_PRS_DATA_DIR}/fetch" ${settings[@]+"${settings[@]}"} \
 >     "${DEPENDABOT_PRS_BIN}" fetch --repo example-org/fetch-repo "${@}"
 > }
-> gh_stub_dir="$(mktemp -d)"
+> gh_stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 > cp "${GH_STUB_BIN}" "${gh_stub_dir}/gh"
 > chmod +x "${gh_stub_dir}/gh"
 ```
@@ -558,7 +558,7 @@ $ fetch_with_stub --raw | jq -c '.open[] | select(.number == 301) | [.files[].pa
 Every `gh api` call pages through its results, and each list is read with the fields summarize needs. A Dependabot PR's file list is read once, then reused for the list of every open PR.
 
 ```scrut
-$ log="$(mktemp)" && fetch_with_stub STUB_GH_LOG="${log}" > /dev/null && sed 's/--json .*/--json .../' "${log}"
+$ log="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && fetch_with_stub STUB_GH_LOG="${log}" > /dev/null && sed 's/--json .*/--json .../' "${log}"
 gh auth token
 gh repo view example-org/fetch-repo --json ...
 gh pr list --repo example-org/fetch-repo --author app/dependabot --state open --limit 200 --json ...
