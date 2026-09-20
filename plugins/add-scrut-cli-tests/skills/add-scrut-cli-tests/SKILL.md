@@ -497,7 +497,7 @@ Scrut provides these variables in every test execution:
 
 - Use `NO_COLOR=1` to suppress color codes in output.
 - Pipe through `head`, `tail`, or `grep` to test specific lines.
-- Use `$(mktemp -d)` for operations that create files.
+- Use `$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")` for operations that create files.
 - Sort non-deterministic output with `| sort`.
 - Prefer JSON output with `jq` extraction over snapshotting raw text for structured data.
 - Use one test file per logical group of related behaviors (e.g., `help.md`, `version.md`, `error-handling.md`).

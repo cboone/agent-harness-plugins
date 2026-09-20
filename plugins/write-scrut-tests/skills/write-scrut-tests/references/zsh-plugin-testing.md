@@ -145,7 +145,7 @@ Error: last name is required
 ## Validate config file
 
 ```scrut
-$ cd "$(mktemp -d)" \
+$ cd "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && printf 'key: value\n' > config.yaml \
 >   && source "${TESTDIR}/../src/helpers.zsh" \
 >   && validate_config config.yaml
