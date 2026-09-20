@@ -105,6 +105,14 @@ gh pr create --title "..." --body-file TMPFILE; status=$?; rm -f TMPFILE; exit $
 
 In zsh (the macOS default shell), `status` and `pipestatus` are read-only built-in aliases for `$?` and `${pipestatus[@]}`. Assigning to either fails with `read-only variable: status`, so this wrapper exits non-zero and mis-reports a successful `gh` call as failed. Keep cleanup in its own Bash tool call instead.
 
+**A cleanup allow rule has to match the expanded path.** The `mktemp` call runs with `${TMPDIR:-/tmp}` still in its command text, so a permission rule can quote that expression verbatim and match. Cleanup is different: `TMPFILE` is replaced with the literal path `mktemp` printed, so the command reads `rm -f /tmp/claude-501/gh-pr-body-x4y5z6`, and a rule written against the expression never matches it. Scope the cleanup rule by the distinctive filename prefix instead, and keep the expression form only on the `mktemp` rule:
+
+```json
+"Bash(mktemp -u \"${TMPDIR:-/tmp}/gh-pr-body-*\")", "Bash(rm -f *gh-pr-body-*)"
+```
+
+Pinning the cleanup rule to a directory does not work, because `$TMPDIR` differs between the sandbox and an ordinary shell: it is `/tmp/claude-501/` in one and something like `/var/folders/xx/.../T/` in the other. The filename prefix is the part that stays constant, so it is what the rule keys on.
+
 ## Examples
 
 ### GitHub issue
