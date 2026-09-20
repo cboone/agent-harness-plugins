@@ -30,7 +30,7 @@ Read `./references/SCRUT.md` for the complete guide. Summary:
 
 - Always reference the binary via `"${TOOL_BIN}"` environment variable, never by path
 - Use `NO_COLOR=1` for commands that may produce colored output
-- Use `$(mktemp -d)` for commands that create files
+- Use `$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")` for commands that create files
 
 ### Assertion Selection
 

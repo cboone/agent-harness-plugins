@@ -131,7 +131,7 @@ Multiple commands in a single block are fine when they form a logical sequence (
 ## Config init creates file
 
 ```scrut
-$ cd "$(mktemp -d)" && NO_COLOR=1 "${TOOL_BIN}" config init && test -f .config.yaml && echo "File created"
+$ cd "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && NO_COLOR=1 "${TOOL_BIN}" config init && test -f .config.yaml && echo "File created"
 Created configuration file: .config.yaml
 File created
 ```
@@ -149,7 +149,7 @@ The "Config init creates file" example above, rewritten with continuation lines:
 ## Config init creates file
 
 ```scrut
-$ cd "$(mktemp -d)" \
+$ cd "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && NO_COLOR=1 "${TOOL_BIN}" config init \
 >   && test -f .config.yaml \
 >   && echo "File created"
@@ -297,10 +297,10 @@ tool v* (glob)
 
 ### File Paths
 
-Use glob for paths, and `$(mktemp -d)` for temporary directories:
+Use glob for paths, and `$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")` for temporary directories:
 
 ```scrut
-$ cd "$(mktemp -d)" && "${TOOL_BIN}" init
+$ cd "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${TOOL_BIN}" init
 Created configuration file: * (glob)
 ```
 
@@ -378,10 +378,10 @@ Error: * no such file * (glob)
 
 ### Use Temporary Directories for Side Effects
 
-When a command creates, modifies, or deletes files, use `$(mktemp -d)` to isolate the test from the file system:
+When a command creates, modifies, or deletes files, use `$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")` to isolate the test from the file system:
 
 ```scrut
-$ cd "$(mktemp -d)" && "${TOOL_BIN}" init && test -f .config.yaml && echo "File created"
+$ cd "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${TOOL_BIN}" init && test -f .config.yaml && echo "File created"
 Created configuration file: .config.yaml
 File created
 ```
@@ -405,7 +405,7 @@ $ "${TOOL_BIN}" config display
 When a test block sets up state that subsequent blocks depend on, use `{fail_fast: true}` to abort the file early on failure:
 
 ```scrut {fail_fast: true}
-$ cd "$(mktemp -d)" && "${TOOL_BIN}" init
+$ cd "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${TOOL_BIN}" init
 Created configuration file: .config.yaml
 ```
 
@@ -497,7 +497,7 @@ Test init (in a temp directory), display (with known config), and validation:
 ## Config init creates file
 
 ```scrut
-$ cd "$(mktemp -d)" && NO_COLOR=1 "${TOOL_BIN}" config init && test -f .config.yaml && echo "File created"
+$ cd "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && NO_COLOR=1 "${TOOL_BIN}" config init && test -f .config.yaml && echo "File created"
 Created configuration file: .config.yaml
 File created
 ```
@@ -555,7 +555,7 @@ When a test case is not self-explanatory, add a brief description between the he
 Verifies that configuration files with non-ASCII characters are parsed correctly.
 
 ```scrut
-$ cd "$(mktemp -d)" && printf 'name: "café"' > .config.yaml && "${TOOL_BIN}" config display | grep name
+$ cd "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf 'name: "café"' > .config.yaml && "${TOOL_BIN}" config display | grep name
 name: café
 ```
 ````

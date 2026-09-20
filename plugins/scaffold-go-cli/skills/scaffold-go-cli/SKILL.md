@@ -248,10 +248,10 @@ Print a summary of what was created:
   **If it printed `remote-ready`**, create the follow-up issue with the tmpfile pattern rather than an inline `--body`:
 
   ```bash
-  mktemp -u /tmp/gh-issue-body-XXXXXX
+  mktemp -u "${TMPDIR:-/tmp}/gh-issue-body-XXXXXX"
   ```
 
-  Record the path this prints, for example `/tmp/gh-issue-body-a1b2c3`, and substitute it wherever `TMPFILE` appears below. Write the issue body to that path with the Write tool, then, in a separate message:
+  Record the path this prints, for example `/tmp/claude-501/gh-issue-body-a1b2c3`, and substitute it wherever `TMPFILE` appears below. Write the issue body to that path with the Write tool, then, in a separate message:
 
   ```bash
   gh issue create --title "Set up HOMEBREW_TAP_TOKEN repository secret" --body-file TMPFILE

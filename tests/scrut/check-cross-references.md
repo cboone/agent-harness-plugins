@@ -295,7 +295,7 @@ $ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && printf '%s\n' 'Read `plugins/other
 ## A run outside a plugin tree fails loudly
 
 ```scrut
-$ cd "$(mktemp -d)" && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1
+$ cd "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1
 check-cross-references: no plugins/ directory in /* (glob)
 [2]
 ```

@@ -4,7 +4,7 @@ Local verification turns a Needs testing PR into Safe to merge or Needs work on 
 
 Run it in a detached worktree under a temporary directory. Never in the user's working tree, and never on a branch that would be pushed.
 
-Each command runs in a fresh shell, so no variable survives from one to the next, and neither does a working directory. Run `mktemp -d` twice, note the two paths it prints, and write them literally where the commands below say `PR_DIR` and `CONTROL_DIR`. `DEFAULT` is the PR's base branch. Every install, check, and build command after step 1 names its worktree in the same command, `cd PR_DIR/pr && COMMAND` or `cd CONTROL_DIR/control && COMMAND`: a bare `npm ci` or `make test` runs in the user's checkout.
+Each command runs in a fresh shell, so no variable survives from one to the next, and neither does a working directory. Run `mktemp -d "${TMPDIR:-/tmp}/dependabot-verify-XXXXXX"` twice, note the two paths it prints, and write them literally where the commands below say `PR_DIR` and `CONTROL_DIR`. `DEFAULT` is the PR's base branch. Every install, check, and build command after step 1 names its worktree in the same command, `cd PR_DIR/pr && COMMAND` or `cd CONTROL_DIR/control && COMMAND`: a bare `npm ci` or `make test` runs in the user's checkout.
 
 Running tests executes the new version's code, and skipping install scripts does not sandbox that. Verify on a machine whose environment holds no production or publishing credentials.
 

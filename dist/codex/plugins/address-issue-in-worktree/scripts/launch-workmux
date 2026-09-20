@@ -467,7 +467,7 @@ function do_launch() {
     provisional_name="${branch//\//-}"
   fi
 
-  prompt_file="$(mktemp "/tmp/workmux-prompt-${provisional_name}.md.XXXXXX")"
+  prompt_file="$(mktemp "${TMPDIR:-/tmp}/workmux-prompt-${provisional_name}.md.XXXXXX")"
 
   write_escaped_prompt "${prompt_file}"
 
@@ -496,7 +496,7 @@ function do_launch() {
   safe_name="${branch//\//-}"
   existing_worktree_path="$(worktree_path_for_branch "${branch}" || true)"
 
-  log="$(mktemp "/tmp/workmux-${safe_name}.log.XXXXXX")"
+  log="$(mktemp "${TMPDIR:-/tmp}/workmux-${safe_name}.log.XXXXXX")"
 
   local -a cmd=(
     run_workmux_with_existing_prompt_fallback

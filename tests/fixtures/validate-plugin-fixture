@@ -94,7 +94,7 @@ function wrap_generator_with_rewrite() {
 
 function main() {
   local scenario="${1}"
-  FIXTURE_ROOT="$(mktemp -d)"
+  FIXTURE_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/fixture.XXXXXX")"
   trap cleanup EXIT
 
   mkdir -p "${FIXTURE_ROOT}/.agents/plugins" "${FIXTURE_ROOT}/dist"

@@ -97,7 +97,7 @@ The examples below abbreviate the path to `dependabot-prs`. Expand it when you r
 
 ### 2. Gather
 
-1. Make a working directory with `mktemp -d`, note the path it prints, and use that path in place of `WORKDIR` below. Run the script into it:
+1. Make a working directory with `mktemp -d "${TMPDIR:-/tmp}/dependabot-triage-XXXXXX"`, note the path it prints, and use that path in place of `WORKDIR` below. Run the script into it:
 
    ```bash
    bash dependabot-prs fetch --repo OWNER/REPO > "WORKDIR/summary.json"

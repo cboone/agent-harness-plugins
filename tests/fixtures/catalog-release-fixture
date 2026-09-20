@@ -58,7 +58,7 @@ function step_enabled() {
 function main() {
   local scenario="${1}" workflow="${REPO_ROOT:?REPO_ROOT is required}/.github/workflows/release.yml"
   local root source='./custom/sample' previous='1.0.0' current='1.0.1'
-  root="$(mktemp -d)"
+  root="$(mktemp -d "${TMPDIR:-/tmp}/fixture.XXXXXX")"
   readonly CATALOG_FIXTURE_ROOT="${root}"
   trap 'rm -r "${CATALOG_FIXTURE_ROOT}"' EXIT
   export CATALOG_FIXTURE_RELEASE_STATE=missing

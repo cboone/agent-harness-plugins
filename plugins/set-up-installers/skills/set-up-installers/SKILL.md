@@ -194,7 +194,7 @@ gh repo view "${OWNER}/homebrew-tap" --json name -q .name 2>/dev/null
 **If the tap repo exists**, offer to create an issue there with the formula and setup instructions. Use the tmpfile pattern: generate a path, write the body with the Write tool, then invoke `gh` in a separate message.
 
 ```bash
-mktemp -u /tmp/gh-issue-body-XXXXXX
+mktemp -u "${TMPDIR:-/tmp}/gh-issue-body-XXXXXX"
 ```
 
 The `-u` flag is required. Plain `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not Read first. Write the issue body to the returned path, then, in a separate message:

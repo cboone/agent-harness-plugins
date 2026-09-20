@@ -27,7 +27,7 @@ This skill runs custom scripts and git commands that trigger permission prompts.
 ```json
 {
   "permissions": {
-    "allow": ["Bash(bash \"*/resolve-copilot-threads\" *)", "Bash(git push*)", "Bash(gh api --paginate repos/*/issues/*/comments*)", "Bash(mktemp -u /tmp/copilot-reply-*)", "Bash(rm -f /tmp/copilot-reply-*)", "Bash(gh pr comment *)", "Bash(mktemp -u /tmp/copilot-summary-*)", "Bash(rm -f /tmp/copilot-summary-*)"]
+    "allow": ["Bash(bash \"*/resolve-copilot-threads\" *)", "Bash(git push*)", "Bash(gh api --paginate repos/*/issues/*/comments*)", "Bash(mktemp -u \"${TMPDIR:-/tmp}/copilot-reply-*\")", "Bash(rm -f *copilot-reply-*)", "Bash(gh pr comment *)", "Bash(mktemp -u \"${TMPDIR:-/tmp}/copilot-summary-*\")", "Bash(rm -f *copilot-summary-*)"]
   }
 }
 ```

@@ -46,7 +46,7 @@ Each step below is its own tool call, made in order.
 1. Generate an unused path:
 
    ```bash
-   mktemp -u /tmp/gh-issue-body-XXXXXX
+   mktemp -u "${TMPDIR:-/tmp}/gh-issue-body-XXXXXX"
    ```
 
    The `-u` flag is required. Plain `mktemp` creates an empty file at the path it prints, and the Write tool refuses to overwrite a file it has not read, so the write would fail.
@@ -100,7 +100,7 @@ Use a full issue URL for a destination on another host. Titles must meet the rec
 
 Use the same tmpfile sequence, with its own path:
 
-1. `mktemp -u /tmp/gh-comment-body-XXXXXX`.
+1. `mktemp -u "${TMPDIR:-/tmp}/gh-comment-body-XXXXXX"`.
 1. Write the comment body to that path.
 1. In a separate call, on the PR:
 
