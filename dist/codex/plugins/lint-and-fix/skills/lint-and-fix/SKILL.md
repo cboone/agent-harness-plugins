@@ -113,9 +113,7 @@ Would produce two additional detected tools:
 | validate-json    | CI workflow (ci.yml, step 6) | `bin/validate-json`    |
 | validate-plugins | CI workflow (ci.yml, step 7) | `bin/validate-plugins` |
 
-If **--tool <name>** was specified, filter the detected list to only that tool. If the specified tool was not detected, report that and stop.
-
-If **no tools are detected**, report that no linters or formatters were found. If a parent continuation block was supplied, report `Lint status: no-tools`, include the caller resume target, and allow the parent workflow to continue according to its continuation block. Otherwise stop.
+Do not apply **--tool** filtering here, and do not stop here when detection finds nothing. [Step 2](#2-consult-project-agent-config) can add commands this table cannot match, such as a spelling check invoked only from `make lint`, so a project whose entry point names one is unreachable if the run ends before the agent config is read. Both the filter and the empty-run exit belong at the end of step 2, once the run is complete.
 
 ### 2. Consult Project Agent Config
 
@@ -144,15 +142,24 @@ Read whichever of these exist: `CLAUDE.md` and `AGENTS.md` in the repository roo
 
 For each tool in the run, whether detection found it or the agent config named it, carry these forward into the remaining steps:
 
-- **Mode**: `fix`, `check-only (project policy)`, or `check-only (no auto-fix)`
+- **Mode**: `fix`, `check-only (project policy)`, `check-only (no auto-fix)`, or `check-only (no safe check command)`
 - **Command**: the command that will actually run
 - **Source**: for a policy downgrade, the file and the rule, quoted in one line
+
+**A policy downgrade needs a command that is verified not to write.** Two rows of the detection table fall back to a write-mode command when no check-mode form is available: the `format` script tries `npm run format -- --check` and falls back to `npm run format`, and the project-script row runs `<script>` without `--fix`, whose default behavior may still fix. Taking either fallback for a downgraded tool performs the write the project prohibits. So for a downgraded tool, use only a command whose check-only behavior is established, from the project's own documentation or from the tool's documented check flag. If no such command exists, do not fall back: record the tool as `check-only (no safe check command)`, run nothing for it, and report it alongside the downgrade and its source.
 
 **A downgrade is never silent.** A tool moved to check mode by project policy must be reported as such in steps 3, 5, and 7, and on the `Check-only by project policy` line of the [Parent Continuation Contract](#parent-continuation-contract). "The fixer ran and found nothing" and "the fixer was not permitted to run" are different results, and a report that collapses them lets a skipped fixer read as a clean tree.
 
 **If the user's invocation conflicts with a project rule**, for example `--tool markdownlint` in a repository that forbids `markdownlint --fix`, do not resolve it silently in either direction. Run the tool in check mode, report the conflict and its source, and let the user decide whether to override it.
 
 If **no agent config files exist**, or none of them constrain linting, note that and run the detection table as-is. That is the common case and not an error.
+
+#### Close the Run
+
+The run is now complete, so apply the two gates step 1 deferred:
+
+1. If **--tool <name>** was specified, filter the run to only that tool. Match against every tool in the run, including any the agent config added, so a documented entry point's own tools can be selected. If the named tool is in neither detection nor the config, report that and stop.
+1. If **the run is empty**, report that no linters or formatters were found. If a parent continuation block was supplied, report `Lint status: no-tools`, include the caller resume target, and allow the parent workflow to continue according to its continuation block. Otherwise stop.
 
 ### 3. Present Detected Tools
 
@@ -260,7 +267,7 @@ Skipped: <file>:<line> -- <rule> -- <reason>
 
 ### 7. Final Verification
 
-Re-run all detected tools one final time in check mode to confirm a clean state:
+Re-run every tool in the run one final time in check mode to confirm a clean state, including any the agent config added in step 2. Verifying only the detected ones lets a config-only command such as a spelling or workflow check go unverified and be committed anyway. A tool recorded as `check-only (no safe check command)` cannot be re-run: carry its row through with that status rather than omitting it.
 
 ```text
 ## Final Verification
