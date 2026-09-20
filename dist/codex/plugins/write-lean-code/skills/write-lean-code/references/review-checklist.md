@@ -36,5 +36,5 @@ Applies to Lean 4 source files (`*.lean`). Cite findings as `write-lean-code: Ru
 
 - **Terminal simp**: A `simp` that closes its goal does not need to be squeezed into `simp only`.
 - **Project conventions**: Namespace layout, test layout, bootstrap scripts and vendored dependencies follow the project's own `AGENTS.md` or `CLAUDE.md`, which take precedence over this checklist.
-- **Linter findings**: Anything `lake lint` or Mathlib's style linters report when they run in CI, and anything that stops `lake build` from succeeding.
+- **Linter findings**: Anything `lake lint` or Mathlib's style linters report when they run in CI, and compilation errors when CI runs `lake build`. Where CI builds nothing, a change that breaks the build is still worth reporting.
 - **Heartbeat options at or below 400000**: When they carry a comment saying why.
