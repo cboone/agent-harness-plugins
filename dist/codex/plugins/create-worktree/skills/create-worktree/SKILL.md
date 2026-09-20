@@ -1,8 +1,8 @@
 ---
 name: create-worktree
 description: >-
-  Create a git worktree, branch, and tmux window from an issue number or a task
-  description, with a prompt injected using workmux.
+  Create a worktree, branch, and tmux window with workmux for an issue or task.
+  Use for "create worktree", or to list or release resource claims.
 ---
 
 # Create Worktree

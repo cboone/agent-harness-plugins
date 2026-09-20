@@ -1,0 +1,12 @@
+[
+  {
+    "id": 6000000001,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-19T12:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6000000001",
+    "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🔵 Needs a closer look\n\nA moderate validation issue and a documentation nit remain unresolved.\n\n**Review effort:** Lite  \n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nOne-sentence summary of the PR.\n\n**Changes:**\n- Tests the new behavior.\n\n| File | Summary |\n|---|---|\n| `test/​unit/​example-test.js` | Tests the new behavior. |\n| `src/​handlers/​example.js` | Handles the new cases. Moderate (1 vote): validate optional replacement values; Nit (1 vote): narrow the error documentation. |\n</details>"
+  }
+]

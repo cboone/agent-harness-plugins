@@ -1,8 +1,8 @@
 ---
 name: add-goreleaser-homebrew
 description: >-
-  Add GoReleaser and Homebrew tap publishing to an existing Go CLI project with
-  conditional support for completions, man pages, and macOS-only builds.
+  Add GoReleaser, a release workflow, and Homebrew tap publishing to an existing
+  Go CLI. Use for "add goreleaser" or "publish a Go CLI to Homebrew".
 ---
 
 # Add GoReleaser Homebrew

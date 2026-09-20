@@ -1,8 +1,8 @@
 ---
 name: publish-report-board
 description: >-
-  Publish a recurring analysis, starting with backlog triage, as a live report
-  board with a stable URL, and re-sync it in place as the source data changes.
+  Publish a recurring analysis, such as backlog triage, as a report board with a
+  stable URL. Use for "publish a report board" or "refresh the board".
 ---
 
 # Publish Report Board

@@ -1,13 +1,18 @@
 ---
 name: upgrade-everything
 description: >-
-  Assess every version reference in a repository, evaluate available upgrades
-  with repo-specific risk and reward, and present selectable upgrade options.
+  Audit every version reference for upgrades, weigh their risk, and apply only
+  the selected ones. Use for "upgrade everything" or "what can I upgrade".
 ---
 
 # Upgrade Everything
 
 Audit every version reference in a repository, resolve current upstream versions, evaluate each available upgrade with repo-specific reward and risk, then apply only the upgrades the user explicitly selects.
+
+## Skill dependencies
+
+- **Required:** `lint-and-fix`
+- **Optional:** `triage-dependabot-prs`
 
 ## Workflow
 
@@ -101,7 +106,7 @@ Ask the user which upgrades to apply. Offer these choices:
 - Apply only selected candidate numbers
 - Audit only
 - Apply all except custom exclusions
-- Triage the open Dependabot PRs instead, for the candidates that have one (invokes the `triage-dependabot-prs` skill)
+- Triage the open Dependabot PRs instead, for the candidates that have one (invoke the `triage-dependabot-prs` skill; offer this choice only when that skill is installed)
 
 Do not apply upgrades until the user explicitly selects a scope. If the user asks for audit-only, stop after reporting the matrix.
 

@@ -1,8 +1,8 @@
 ---
 name: optimize-runner-usage
 description: >-
-  Add paths-ignore, concurrency groups, and timeout-minutes to existing GitHub
-  Actions workflows.
+  Add paths-ignore, concurrency groups, and timeouts to existing GitHub Actions
+  workflows. Use for "reduce CI costs"; for new CI, use set-up-ci.
 ---
 
 # Optimize Runner Usage
@@ -19,11 +19,11 @@ Use Glob to find all `.yml` and `.yaml` files in `.github/workflows/`.
 
 If the `.github/workflows/` directory does not exist, abort with:
 
-> No `.github/workflows/` directory found. This skill optimizes existing GitHub Actions workflows. Invoke the set-up-ci skill to create a CI workflow from scratch.
+> No `.github/workflows/` directory found. This skill optimizes existing GitHub Actions workflows. Use the `set-up-ci` skill to create a CI workflow from scratch.
 
 If no workflow files are found, abort with:
 
-> No workflow files found in `.github/workflows/`. Invoke the set-up-ci skill to create a CI workflow.
+> No workflow files found in `.github/workflows/`. Use the `set-up-ci` skill to create a CI workflow.
 
 ### 2. Classify Each Workflow
 

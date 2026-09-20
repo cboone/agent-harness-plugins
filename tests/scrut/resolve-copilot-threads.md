@@ -34,6 +34,106 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"path":".github/workflows/ci.yml","line":218}
 ```
 
+## Overview v2 previously missed findings
+
+Nested `Previously missed` details are body-only findings. Open thread links
+and resolved findings in the same review are not emitted again.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | jq -c '[.[] | {id, url, findings}]'
+[{"id":6000000002,"url":"https://github.com/o/r/pull/1#pullrequestreview-6000000002","findings":[{"location":"src/report/render.js:197","path":"src/report/render.js","line":197,"severity":"Medium","body":"Handle null timeZone before constructing the formatter\n\nPassing null as the formatter time zone throws. Normalize null to undefined before constructing the formatter."}]},{"id":6000000003,"url":"https://github.com/o/r/pull/1#pullrequestreview-6000000003","findings":[{"location":"src/domain/report-contract.js:171","path":"src/domain/report-contract.js","line":171,"severity":"Medium","body":"Reject sparse arrays\n\nReject missing indexed elements so malformed input cannot bypass the contract."}]}]
+```
+
+## Overview v2 table findings
+
+Each finding appended to a file-summary cell becomes a separate line-less
+entry. Formatting U+200B characters are removed from the path.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":false,"findings":[{"location":"src/handlers/example.js","path":"src/handlers/example.js","line":null,"severity":"Moderate","body":"validate optional replacement values"},{"location":"src/handlers/example.js","path":"src/handlers/example.js","line":null,"severity":"Nit","body":"narrow the error documentation"}]}
+```
+
+## Overview v2 table findings survive unusual text
+
+An item runs from its severity token to the next one. A semicolon inside the
+finding text, a missing final period, an unfamiliar severity name, and an
+escaped pipe must not drop or truncate a finding. After the first item, only a
+token that follows the separator, a semicolon and a space, opens another, so a
+severity label quoted in a finding's prose stays in its text instead of
+splitting it.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-table-edge.json" | jq -c '.[0].findings[] | {location, severity, body}'
+{"location":"src/parsers/split.js","severity":"Moderate","body":"split on `a; b` correctly"}
+{"location":"src/parsers/split.js","severity":"Critical","body":"reject naïve input"}
+{"location":"src/parsers/split.js","severity":"Nit","body":"rename the helper"}
+{"location":"src/parsers/match.js","severity":"Low","body":"handle `a | b` alternation"}
+{"location":"src/parsers/label.js","severity":"Moderate","body":"keep the literal Nit (1 vote): prefix intact. Low (2 votes): appears in the same sentence"}
+{"location":"src/parsers/label.js","severity":"Nit","body":"trim the comment"}
+```
+
+## Overview v2 findings despite a Findings: None header
+
+The `**Findings:** None` header can contradict the verdict. Parsed findings
+come from the body sections, never from that header.
+
+```scrut
+$ jq -s 'add' "${COPILOT_REVIEW_DATA_DIR}/format-d.json" "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '[.[] | select(.reviewBody | contains("**Findings:** None")) | {id, findings: (.findings | length)}]'
+[{"id":6000000001,"findings":2},{"id":6000000003,"findings":1}]
+```
+
+## Overview v2 repeated findings keep their identity
+
+Copilot repeats an unaddressed finding in later reviews. The review ID and URL
+change, but the path, line, and body that identify the finding do not, so a
+prior disposition can be matched against the repeat.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-repeated.json" | jq -c '{ids: [.[].id], identities: [.[] | [.findings[] | {path, line, body}]] | unique | length}'
+{"ids":[6000000008,6000000009],"identities":1}
+```
+
+## Overview v2 clean verdict
+
+The verified clean verdict can have no body findings while listing entries
+resolved since the prior review. Those resolved entries are not actionable.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🟢 Approval recommended","hasFormatDrift":false,"findings":[]}
+```
+
+A CRLF body still yields the clean verdict, rather than a heading with a
+trailing carriage return that reads as drift.
+
+```scrut
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"<!-- ccr-overview-v2 -->\r\n\r\n### 🟢 Approval recommended\r\n\r\nNo issues."}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {verdict, hasFormatDrift}'
+{"verdict":"### 🟢 Approval recommended","hasFormatDrift":false}
+```
+
+## Overview v2 open threads explain a non-clean verdict
+
+Inline threads listed under `Open (N)` are reported by the thread fetch. A
+review whose only findings are open threads has no body findings and is not
+format drift.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-open-only.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🟡 Changes recommended","hasFormatDrift":false,"findings":[]}
+```
+
+## Overview v2 format drift
+
+A non-clean verdict cannot become a clean result merely because the parser
+does not recognize the finding representation. The complete body remains
+available for manual inspection.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-drift.json" | jq -c '.[0] | {verdict, hasSuppressedMarker, hasFormatDrift, hasReviewBody: (.reviewBody | contains("data-finding")), findings}'
+{"verdict":"### 🔵 Needs a closer look","hasSuppressedMarker":false,"hasFormatDrift":true,"hasReviewBody":true,"findings":[]}
+```
+
 ## Finding bodies keep their prose and fenced context
 
 ```scrut
@@ -47,6 +147,20 @@ The trailing context block Copilot quotes under the prose is preserved, so the b
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-a.json" | jq -r '.[0].findings[0].body' | grep -c '^```'
 2
 ````
+
+The last finding in a section stops where the section does. Closing `</details>` tags and the `Files reviewed` trailer belong to the review, not to the finding.
+
+```scrut
+$ jq -s 'add' "${COPILOT_REVIEW_DATA_DIR}/format-a.json" "${COPILOT_REVIEW_DATA_DIR}/format-b.json" "${COPILOT_REVIEW_DATA_DIR}/format-c.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '[.[] | .findings[-1].body | test("</details>|Files reviewed")]'
+[false,false,false]
+```
+
+A bold location line outside a suppressed section is prose, not a finding.
+
+```scrut
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"## Pull request overview\n\n**src/lib/heading.js:12**\n\nProse that names a location."}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '[.[] | {hasSuppressedMarker, findings: (.findings | length)}]'
+[{"hasSuppressedMarker":false,"findings":0}]
+```
 
 ## Headline captures the verdict and drops the boilerplate
 
@@ -80,6 +194,13 @@ A body that announces suppressed comments but uses an unrecognized interior layo
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/drift.json" | jq -c '[.[] | {hasSuppressedMarker, findings: (.findings | length)}]'
 [{"hasSuppressedMarker":true,"findings":0}]
+```
+
+Legacy suppressed-section drift also sets the broader drift signal.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/drift.json" | jq -c '[.[] | {hasSuppressedMarker, hasFormatDrift, findings: (.findings | length)}]'
+[{"hasSuppressedMarker":true,"hasFormatDrift":true,"findings":0}]
 ```
 
 The slice keeps the line that announced the section, so a caller reading it can see what opened it.

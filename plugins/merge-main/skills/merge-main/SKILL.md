@@ -1,12 +1,8 @@
 ---
 name: merge-main
 description: >-
-  Fetch and merge the base branch (usually main) into the current feature
-  branch, handling conflicts and pushing. Use when the user says
-  "merge main", "merge in main", "merge base branch", "update from main",
-  "pull in main", "sync with main", "merge main into this branch",
-  "update branch from main", or any variant involving merging the default
-  branch into the current working branch.
+  Merge the base branch into the current branch, resolve conflicts, and push.
+  Use for "merge main" or "sync with main"; to rebase, use rebase-onto-main.
 ---
 
 # Merge Main
@@ -18,6 +14,11 @@ Fetch and merge the repository's base branch into the current feature branch.
 The user may provide these options inline:
 
 - **--base `<branch>`**: Override the auto-detected base branch (e.g., `--base develop`)
+
+## Skill dependencies
+
+- **Required:** None
+- **Optional:** `commit`
 
 ## Workflow
 
@@ -53,7 +54,7 @@ If `git status` shows uncommitted changes (staged or unstaged):
 1. Warn the user that there are uncommitted changes.
 1. Ask whether to:
    - **Stash**: Run `git stash` before proceeding, then `git stash pop` after the merge completes.
-   - **Commit first**: Invoke the `/commit` skill, then continue with the merge.
+   - **Commit first**: Invoke the `/commit` skill, then continue with the merge. `commit` is an optional dependency: if it is not installed, leave this choice out and tell the user why, so they can commit by hand, or install `commit`, before running this skill again.
    - **Abort**: Stop without doing anything.
 
 ### 3. Fetch and Merge

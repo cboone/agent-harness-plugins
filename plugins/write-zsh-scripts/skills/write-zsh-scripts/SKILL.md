@@ -1,11 +1,8 @@
 ---
 name: write-zsh-scripts
 description: >-
-  Applies zsh style conventions when creating or editing zsh scripts,
-  configurations, and completions.
-  Use when: (1) creating new zsh scripts or .zsh files, (2) editing existing
-  zsh configurations or plugins, (3) writing zsh completion functions, or
-  (4) reviewing zsh code for bugs or style issues.
+  Apply zsh style conventions when creating, editing, or reviewing zsh scripts,
+  configurations, and completions. To lint them, use check-zsh-scripts.
 ---
 
 # Zsh Style Guide

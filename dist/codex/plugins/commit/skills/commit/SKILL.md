@@ -1,8 +1,8 @@
 ---
 name: commit
 description: >-
-  Smart, context-aware git commits with conventional commit messages and plan
-  awareness.
+  Create git commits with context-aware messages and plan awareness. Use for
+  "commit", "commit and push", "commit staged", or "commit the plan".
 ---
 
 # Commit

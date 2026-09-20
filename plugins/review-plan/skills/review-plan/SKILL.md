@@ -1,10 +1,8 @@
 ---
 name: review-plan
 description: >-
-  Review an implementation plan against the current repository and its explicit
-  dependencies, reporting evidence-backed blockers, required revisions, and optional
-  improvements before work begins. Use when asked to review a plan or assess
-  implementation readiness.
+  Review an implementation plan against the repository before work starts,
+  reporting blockers and needed revisions. Use for "review the plan".
 ---
 
 # Review Plan

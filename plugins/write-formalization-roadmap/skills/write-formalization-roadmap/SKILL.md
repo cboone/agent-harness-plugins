@@ -1,21 +1,8 @@
 ---
 name: write-formalization-roadmap
 description: >-
-  Planning-document structure guide for multi-milestone formalization
-  roadmaps (Lean, Rocq, Isabelle, HOL, and other proof assistants). A
-  sibling to write-math that governs *document structure*, not
-  mathematical prose. Use whenever a formalization roadmap is the
-  subject of the work, including (1) writing or editing a new roadmap
-  under docs/plans/todo/ that lays out a multi-milestone proof project,
-  (2) reviewing an existing roadmap for structural drift or missing
-  conventions, (3) updating a roadmap when scope, milestones, or
-  verification gates change, (4) deciding whether a planning document
-  should be a roadmap (multi-milestone, long-lived) or a single
-  implementation plan (bounded, short-lived), (5) spinning out a
-  per-milestone plan file from a roadmap entry, (6) auditing a
-  milestone entry for the five required parts, (7) discussing roadmap
-  structure with the user before drafting. Applies regardless of which
-  proof assistant or host library the roadmap targets.
+  Structure multi-milestone formalization roadmaps for any proof assistant, when
+  writing, reviewing, or updating one. For math prose, use write-math.
 ---
 
 # Write Formalization Roadmap

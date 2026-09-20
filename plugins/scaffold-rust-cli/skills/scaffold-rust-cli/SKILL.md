@@ -1,13 +1,8 @@
 ---
 name: scaffold-rust-cli
 description: >-
-  Scaffold a complete Rust CLI project with Cargo, cargo-deny, cargo-nextest,
-  git-cliff, GitHub Actions CI/CD, and Makefile. Use when the user says
-  "scaffold a Rust CLI", "new Rust CLI", "create a Rust binary crate",
-  "start a Rust CLI", "bootstrap a Rust CLI", or starts a Rust command-line
-  tool from scratch. Optionally adds clap for argument parsing and supports a
-  macOS-only variant. For language-agnostic boilerplate alone, use
-  scaffold-new-repo.
+  Scaffold a new Rust CLI with Cargo, cargo-deny, cargo-nextest, git-cliff, and
+  CI. Use for "scaffold a Rust CLI" or "new Rust CLI".
 ---
 
 # Scaffold Rust CLI

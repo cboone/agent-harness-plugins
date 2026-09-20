@@ -1,8 +1,8 @@
 ---
 name: create-issue
 description: >-
-  Create GitHub issues using tmpfiles to avoid permission prompts from large
-  multiline Bash arguments.
+  Create a GitHub issue with gh, passing the body through a tmpfile. Use for
+  "create an issue", "file an issue", "report a bug", or "request a feature".
 ---
 
 # Create Issue

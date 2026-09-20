@@ -12,6 +12,7 @@ Bundled scripts here run on macOS and Linux alike, so portability findings are w
 - **A `"$(< path)"` read is always preceded by `-f` and `-r` tests.** That expansion fails during expansion rather than as a command, so a redirection on the assignment and a trailing `||` both miss it and Bash exits with its own unprefixed diagnostic. `-r` alone is insufficient: it is true for a readable directory. A scrut case in `tests/scrut/repo-tooling.md` enforces this.
 - **`local` is declared separately from command substitution** (`local x` then `x="$(cmd)"`) on purpose: `local` always returns 0 and would mask the command's exit code.
 - **`# shellcheck disable=SC2016` at file scope is intentional** in scripts built around `jq` filters. The `$name` tokens inside single-quoted `jq` programs are `jq` variables bound with `--arg`, not shell expansions.
+- **`jq`'s `scan` emits capture arrays when the pattern has groups.** The builtin maps each match to `[.captures[].string]` when the regex has capture groups, and to the whole-match string only when it has none. `"a1 b2" | [scan("([a-z])([0-9])")]` yields `[["a","1"],["b","2"]]`, so `.[0]`, `.[1]`, and so on after a grouped `scan` index capture groups, not characters.
 
 Two checks are disabled in `.shellcheckrc` by design and should not be raised in review: `check-extra-masked-returns` (SC2312) and `check-set-e-suppressed` (SC2310).
 
@@ -21,3 +22,5 @@ Two checks are disabled in `.shellcheckrc` by design and should not be raised in
 - `${var}` braces, `[[ ]]` over `[ ]`, `$(...)` over backticks, a default `*)` case in every `case`.
 - Errors go to stderr through a `die` helper that prefixes the script name; stdout carries only the command's own output.
 - Never chain a tmpfile cleanup onto the command that consumed it with `; status=$?`. In zsh, the macOS default shell, `status` is a read-only alias for `$?` and the assignment fails.
+
+- Shell function arguments include the subcommand words. In a `gh()` fixture that receives `gh release create <tag>`, `${1}` is `release`, `${2}` is `create`, and `${3}` is the tag.

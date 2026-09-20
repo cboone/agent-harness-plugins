@@ -5,9 +5,7 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Serialize releases so two rapid merges cannot race to create the same tag.
-# cancel-in-progress is false because each push may correspond to a distinct
-# catalog state we still want to publish.
+# Serialize releases so two rapid merges cannot race to publish the same commit.
 concurrency:
   group: ${{ github.repository }}-${{ github.workflow }}
   cancel-in-progress: false
@@ -17,12 +15,9 @@ permissions:
 
 jobs:
   release:
-    name: Tag and publish catalog state
-    # Defense in depth: the push trigger is already restricted to main via
-    # branches:[main], but workflow_dispatch can be initiated from any ref.
-    # Without this guard, manually dispatching from a feature branch would
-    # mint a catalog-* tag and GitHub Release for code that never landed on
-    # main, contradicting the push-to-main release model.
+    name: Tag and publish catalog changes
+    # The push trigger is restricted to main, but workflow_dispatch can run
+    # from another ref. Releases only represent changes that landed on main.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -31,47 +26,90 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history lets gh release --generate-notes diff against the
-          # previous tag, and lets git rev-parse resolve refs/tags/* via fetch.
+          # Full history lets the workflow compare the current catalog inputs
+          # with the latest catalog release and generate release notes.
           fetch-depth: 0
 
-      - name: Validate plugins and marketplace
+      - name: Validate plugins and generated mirrors
         run: |
-          # Run the full plugin/marketplace validator before publishing.
-          # Gating only on the metadata.version <-> catalog-state invariant
-          # would let other inconsistencies (plugin.json <-> marketplace.json
-          # version drift, missing marketplace entries, alphabetical-ordering
-          # violations, Codex hook manifest issues, etc.) slip through and
-          # produce a tag and Release for a marketplace state that
-          # bin/validate-plugins rejects in CI. Running the full validator
-          # keeps automation in lockstep with the validator and ci.yml.
-          # Rule 10 of bin/validate-plugins covers the metadata.version check
-          # via bin/compute-catalog-state, so this also subsumes the previous
-          # standalone metadata-version verification.
           bin/validate-json
           bin/validate-plugins
           bin/build-codex-marketplace
           bin/build-opencode-mirror
-          # `git diff` ignores untracked files, so an added skill's new symlink
-          # under dist/opencode/skills/ would slip through. Use git status.
+          # `git diff` ignores untracked files, so use git status to catch an
+          # untracked generated mirror as well.
           drift="$(git status --porcelain dist/ .agents/)"
           if [[ -n "${drift}" ]]; then
-            echo "::error::Generated mirrors are out of date; run bin/build-codex-marketplace and bin/build-opencode-mirror"
+            echo "::error::Generated mirrors are out of date; run make build"
             printf '%s\n' "${drift}"
             exit 1
           fi
 
-      - name: Compute catalog state
-        id: state
+      - name: Check for catalog changes
+        id: changes
         run: |
-          tag="$(bin/compute-catalog-state)"
-          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
-          echo "Catalog state: ${tag}"
+          latest_tag="$(git tag --list 'catalog-*' --sort=-creatordate | head -1)"
+          # Include current and previous registrations so removed sources count.
+          catalogs="$(cat .claude-plugin/marketplace.json)"
+          if [[ -n "${latest_tag}" ]]; then
+            catalogs+=$'\n'
+            catalogs+="$(git show "${latest_tag}:.claude-plugin/marketplace.json")"
+          fi
+          sources="$(printf '%s\n' "${catalogs}" | jq -sr '
+            [.[].plugins[].source | select(type == "string" and startswith("./"))] | unique[]')"
+          catalog_paths=(.claude-plugin/marketplace.json)
+          while IFS= read -r source; do
+            [[ -z "${source}" ]] && continue
+            catalog_paths+=(":(literal)${source%/}/")
+          done <<< "${sources}"
+          if [[ -z "${latest_tag}" ]] || [[ "${latest_tag}" == "catalog-${GITHUB_SHA}" ]] || ! git diff --quiet "${latest_tag}" -- "${catalog_paths[@]}"; then
+            if [[ -n "${latest_tag}" && "${latest_tag}" != "catalog-${GITHUB_SHA}" ]]; then
+              while IFS= read -r source; do
+                [[ -z "${source}" ]] && continue
+                git diff --quiet "${latest_tag}" -- ":(literal)${source%/}/" && continue
+                manifest="${source#./}/.claude-plugin/plugin.json"
+                if [[ ! -f "${manifest}" ]]; then
+                  continue
+                fi
+                current_version="$(jq -r '.version // empty' "${manifest}")"
+                if ! git cat-file -e "${latest_tag}:${manifest}" 2>/dev/null; then
+                  if [[ "${current_version}" != '1.0.0' ]]; then
+                    echo "::error::${source} is newly registered and must start at manifest version 1.0.0 (found ${current_version:-missing})."
+                    exit 1
+                  fi
+                  continue
+                fi
+                previous_version="$(git show "${latest_tag}:${manifest}" 2>/dev/null | jq -r '.version // empty')"
+                [[ -z "${previous_version}" ]] && continue
+                # Digit length and lexical order compare unbounded integers.
+                if ! jq -en --arg current "${current_version}" --arg previous "${previous_version}" \
+                  'def key: split(".") | map([length, .]); ($current | key) > ($previous | key)' > /dev/null; then
+                  echo "::error::${source} changed without a forward manifest version bump (${previous_version} -> ${current_version})."
+                  exit 1
+                fi
+              done <<< "${sources}"
+            fi
+            {
+              echo "changed=true"
+              echo "tag=catalog-${GITHUB_SHA}"
+              echo "commit=${GITHUB_SHA}"
+            } >> "${GITHUB_OUTPUT}"
+            echo "Plugin or catalog metadata changed since ${latest_tag:-the first catalog release}."
+          else
+            {
+              echo "changed=false"
+              echo "tag=${latest_tag}"
+              echo "commit=$(git rev-list -1 "${latest_tag}")"
+            } >> "${GITHUB_OUTPUT}"
+            echo "No new catalog inputs; checking publication recovery for ${latest_tag}."
+          fi
 
       - name: Check whether tag and release already exist
         id: check
         env:
-          TAG: ${{ steps.state.outputs.tag }}
+          TAG: ${{ steps.changes.outputs.tag }}
+          COMMIT: ${{ steps.changes.outputs.commit }}
+          CHANGED: ${{ steps.changes.outputs.changed }}
         run: |
           function release_exists() {
             local tag="${1}"
@@ -90,116 +128,59 @@ jobs:
             return 2
           }
 
-          # Determines two independent booleans:
-          #   tag_exists     - whether refs/tags/${TAG} is already on origin
-          #   release_exists - whether the GitHub Release for ${TAG} exists
-          #
-          # The two are decoupled so a partial prior run (tag pushed, release
-          # creation failed) can self-heal: a rerun will skip tagging but still
-          # create the missing release.
-          #
-          # `ls-remote` for an annotated tag prints the tag object SHA; the
-          # peeled refspec (^{}) gives the commit the tag points at, which is
-          # what we want to compare. Lightweight tags expose the commit
-          # directly; we fall back to that case in case a tag was pushed by
-          # something other than this workflow.
-          remote_commit="$(git ls-remote origin "refs/tags/${TAG}^{}" | cut -f1)"
-          if [[ -z "${remote_commit}" ]]; then
-            remote_commit="$(git ls-remote origin "refs/tags/${TAG}" | cut -f1)"
-          fi
+          function remote_tag_commit() {
+            local ref="${1}" output
 
-          if [[ -z "${remote_commit}" ]]; then
-            echo "Tag ${TAG} does not exist on origin; will create."
-            echo "tag_exists=false" >> "${GITHUB_OUTPUT}"
-          else
-            # Tag exists. There are three sub-cases to disambiguate:
-            #
-            # 1. Tag points at GITHUB_SHA - exact rerun of this commit. No-op.
-            # 2. Tag points at a different commit, but the marketplace plugin
-            #    versions at that commit are identical to HEAD's - the catalog
-            #    state has not actually changed (a docs/chore push reused the
-            #    same catalog state). No-op for the tag, but still confirm the
-            #    release exists.
-            # 3. Tag points at a different commit and the marketplace plugin
-            #    versions differ - true catalog-state collision. The format is
-            #    sum-based and not collision-free: two different plugin-version
-            #    mixes can yield the same component sums (e.g. +1 minor on
-            #    plugin A paired with -1 minor on plugin B). Treating any
-            #    same-named tag as "already released" would silently drop the
-            #    new state, so we abort loudly here.
-            if [[ "${remote_commit}" == "${GITHUB_SHA}" ]]; then
-              echo "Tag ${TAG} already points at ${GITHUB_SHA}; no new tag needed."
-            else
-              tagged_versions="$(git show "${remote_commit}:.claude-plugin/marketplace.json" 2> /dev/null | jq -ec '[.plugins[] | {name, version}]' || echo '')"
-              head_versions="$(jq -ec '[.plugins[] | {name, version}]' .claude-plugin/marketplace.json)"
-
-              if [[ -n "${tagged_versions}" && "${tagged_versions}" == "${head_versions}" ]]; then
-                echo "Tag ${TAG} exists at ${remote_commit}; HEAD has the same plugin versions, so the catalog state is unchanged. No new tag needed."
-              else
-                {
-                  echo "::error::Catalog state tag ${TAG} already exists at a different commit with different plugin versions."
-                  echo
-                  echo "Existing tag points to: ${remote_commit}"
-                  echo "Current commit:         ${GITHUB_SHA}"
-                  echo
-                  echo "This is a catalog-state collision: the marketplace plugin"
-                  echo "versions changed in a way that produces the same per-component"
-                  echo "sums as a previously-released catalog state. The format is"
-                  echo "sum-based and not collision-free."
-                  echo
-                  echo "To resolve, bump one plugin's version on a follow-up commit so"
-                  echo "the marketplace produces a unique catalog state, then re-push"
-                  echo "or re-merge."
-                } >&2
-                exit 1
-              fi
+            if ! output="$(git ls-remote origin "${ref}" 2>&1)"; then
+              echo "::error::Failed to query ${ref} on origin." >&2
+              printf '%s\n' "${output}" >&2
+              return 1
             fi
 
-            echo "tag_exists=true" >> "${GITHUB_OUTPUT}"
-          fi
+            printf '%s\n' "${output}" | cut -f1
+          }
 
-          # Verify the GitHub Release independently from the Git tag. If `git
-          # push` succeeded on a prior run but `gh release create` failed, the
-          # tag will be present without a release; rerunning must recreate the
-          # release rather than silently skip it. Conversely, a release can
-          # outlive a deleted tag; rerunning must not recreate that tag at the
-          # current commit and silently retarget an already-published release.
-          if release_exists "${TAG}"; then
-            if [[ -z "${remote_commit}" ]]; then
-              {
-                echo "::error::GitHub Release ${TAG} exists, but refs/tags/${TAG} is missing on origin."
-                echo
-                echo "Recreating the missing tag at ${GITHUB_SHA} would retarget an"
-                echo "already-published release to the current commit. Restore the"
-                echo "original tag manually, or delete and recreate the GitHub Release"
-                echo "intentionally before rerunning this workflow."
-              } >&2
+          if ! remote_commit="$(remote_tag_commit "refs/tags/${TAG}^{}")"; then
+            exit 1
+          fi
+          if [[ -z "${remote_commit}" ]]; then
+            if ! remote_commit="$(remote_tag_commit "refs/tags/${TAG}")"; then
               exit 1
             fi
+          fi
 
-            echo "Release ${TAG} already exists; nothing to do."
+          if [[ -z "${remote_commit}" ]]; then
+            if [[ "${CHANGED}" != "true" ]]; then
+              echo "::error::Recovery tag ${TAG} is missing on origin." >&2
+              exit 1
+            fi
+            echo "tag_exists=false" >> "${GITHUB_OUTPUT}"
+          elif [[ "${remote_commit}" == "${COMMIT}" ]]; then
+            echo "tag_exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "::error::Catalog tag ${TAG} exists at ${remote_commit}, not ${COMMIT}." >&2
+            exit 1
+          fi
+
+          if release_exists "${TAG}"; then
+            if [[ -z "${remote_commit}" ]]; then
+              echo "::error::GitHub Release ${TAG} exists, but its tag is missing on origin." >&2
+              exit 1
+            fi
             echo "release_exists=true" >> "${GITHUB_OUTPUT}"
           else
             release_status="${?}"
             case "${release_status}" in
-              1)
-                echo "Release ${TAG} does not exist yet; will create."
-                echo "release_exists=false" >> "${GITHUB_OUTPUT}"
-                ;;
-              *)
-                exit "${release_status}"
-                ;;
+              1) echo "release_exists=false" >> "${GITHUB_OUTPUT}" ;;
+              *) exit "${release_status}" ;;
             esac
           fi
 
       - name: Create and push annotated tag
-        if: steps.check.outputs.tag_exists == 'false'
+        if: steps.changes.outputs.changed == 'true' && steps.check.outputs.tag_exists == 'false'
         env:
-          TAG: ${{ steps.state.outputs.tag }}
+          TAG: ${{ steps.changes.outputs.tag }}
         run: |
-          # Annotated (not signed) tag: Actions does not have access to a GPG
-          # key, and the tag's authenticity is established by the workflow
-          # being the only writer of catalog-* tags on the repository.
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "${TAG}" -m "${TAG}"
@@ -208,13 +189,8 @@ jobs:
       - name: Create GitHub Release
         if: steps.check.outputs.release_exists == 'false'
         env:
-          TAG: ${{ steps.state.outputs.tag }}
+          TAG: ${{ steps.changes.outputs.tag }}
         run: |
-          # --generate-notes uses GitHub's auto-generated notes (commits and
-          # merged PRs since the previous release). The release skill produces
-          # commit-derived notes for local releases; CI uses --generate-notes
-          # to keep the workflow self-contained and avoid duplicating that
-          # logic here.
           gh release create "${TAG}" \
             --title "Marketplace ${TAG}" \
             --generate-notes \

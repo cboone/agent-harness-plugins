@@ -13,25 +13,22 @@ See the [marketplace install instructions](../../README.md#install).
 
 ### Using with Codex CLI
 
+Register the marketplace and install the plugin:
+
 ```bash
 codex plugin marketplace add cboone/agent-harness-plugins
+codex plugin add notify@agent-harness-plugins
 ```
 
-Enable plugin-bundled hooks once per host so the `Stop` hook fires:
+Codex runs plugin hooks only after you review and trust them; installing the plugin does not trust its hooks, and no feature flag is involved. Open `/hooks` in a Codex session, review the `notify` hooks, and trust them. Codex records trust against each hook definition's hash, so when an upgrade changes a `notify` hook, Codex skips it until you review and trust it again in `/hooks`.
 
-```bash
-codex features enable plugin_hooks
-```
-
-Without this flag the plugin installs successfully but the hook is silently ignored. See [Codex CLI known limitations](../../README.md#codex-cli-known-limitations) for context.
-
-Refresh the marketplace after repository updates:
+Refresh the installed plugin after repository updates:
 
 ```bash
 codex plugin marketplace upgrade agent-harness-plugins
 ```
 
-Codex 0.154.0 supports the plugin's `Stop`, `UserPromptSubmit`, `PreToolUse:request_user_input`, and `PreCompact:auto` hooks. Questions and automatic compaction use the same banner sounds and click routing as Claude Code.
+The current stable Codex CLI supports all four events the plugin wires: `Stop`, `UserPromptSubmit`, `PreToolUse` matching the `request_user_input` question tool, and `PreCompact` matching `auto`. Questions and automatic compaction use the same banner sounds and click routing as Claude Code. See [Codex CLI known limitations](../../README.md#codex-cli-known-limitations) for what the plugin does not cover.
 
 `PermissionRequest` is intentionally not wired: it runs before automatic approval review decides whether a human prompt is needed. Keep native terminal attention as a fallback, without duplicating plugin completion alerts:
 

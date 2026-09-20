@@ -1,7 +1,8 @@
 ---
 name: write-pandoc-markdown
 description: >-
-  Pandoc-flavored Markdown conventions for academic papers with LaTeX output.
+  Apply Pandoc Markdown conventions for academic papers with LaTeX output: math,
+  citations, and raw LaTeX. For plain GFM, use write-markdown.
 ---
 
 # Write Pandoc Markdown

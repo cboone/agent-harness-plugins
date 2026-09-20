@@ -1,8 +1,8 @@
 ---
 name: bootstrap-project
 description: >-
-  Assess a repository, determine what scaffolding and setup tools are needed,
-  present a plan, and execute them in the correct order.
+  Plan and run the scaffolding and setup skills a repository needs, in order.
+  Use for "bootstrap this project" or "set up everything"; not to refresh.
 ---
 
 # Bootstrap Project
@@ -10,6 +10,11 @@ description: >-
 Assess the current repository, detect what scaffolding and setup is already in place, build a plan of which tools to run, get user approval, and execute everything in the correct order.
 
 Works for both brand-new and existing repositories.
+
+## Skill dependencies
+
+- **Required:** None
+- **Optional:** `add-community-files`, `add-goreleaser-homebrew`, `add-scrut-cli-tests`, `pin-everything`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-lean-library`, `scaffold-new-repo`, `scaffold-rust-cli`, `set-up-ci`, `set-up-installers`, `set-up-linters`, `set-up-secret-scanning`
 
 ## Workflow
 
@@ -136,7 +141,7 @@ Wait for explicit approval before proceeding.
 
 ### 5. Execute
 
-The tools referenced in this plan are skills. Invoke each selected item using the Skill tool:
+The tools referenced in this plan are skills. Invoke the skill for each selected item:
 
 - `add-community-files`
 - `scaffold-new-repo`
@@ -154,7 +159,7 @@ The tools referenced in this plan are skills. Invoke each selected item using th
 
 For each confirmed tool, in execution order:
 
-1. Invoke it via the Skill tool.
+1. Invoke its skill. If that skill is not installed, do not set the tool up another way: record it as "skipped: not installed" with its installation command, report it apart from the completed tools, and continue with the next one.
 1. Verify the tool completed successfully.
 1. If a tool fails, report the error to the user and ask whether to continue with the remaining tools or stop.
 

@@ -1,15 +1,8 @@
 ---
 name: set-up-ci
 description: >-
-  Set up GitHub Actions CI with test, lint, format, and vulnerability check
-  jobs, plus matching Makefile targets. Use when the user says "set up CI",
-  "add GitHub Actions", "create a CI workflow", "add CI", "set up GitHub
-  Actions CI", "configure CI", or wants test, lint, and format jobs wired up
-  for a project. Detects the project language (Go, JavaScript/TypeScript,
-  Python, Rust, Ruby, Shell, Zig, Zsh, or multi-language) and selects the
-  matching template. Pairs with set-up-linters (linter configuration),
-  set-up-secret-scanning (gitleaks/TruffleHog), and add-scrut-cli-tests (CLI
-  snapshot tests).
+  Create GitHub Actions CI with test, lint, format, and vulnerability jobs and
+  matching Makefile targets. Use for "set up CI" or "add a CI workflow".
 ---
 
 # Set-Up CI

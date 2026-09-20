@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+# Runs bin/validate-plugins against a disposable copy with one targeted mutation.
+set -euo pipefail
+
+FIXTURE_ROOT=""
+
+function cleanup() {
+  [[ -z "${FIXTURE_ROOT}" ]] || rm -r "${FIXTURE_ROOT}"
+}
+
+function mutate_catalog() {
+  local filter="${1}"
+  local catalog="${FIXTURE_ROOT}/.claude-plugin/marketplace.json"
+  jq "${filter}" "${catalog}" > "${FIXTURE_ROOT}/catalog.json"
+  mv "${FIXTURE_ROOT}/catalog.json" "${catalog}"
+}
+
+# Replaces a SKILL.md frontmatter description, including any folded
+# continuation lines, with a single plain-scalar line.
+function replace_description() {
+  local skill_md="${1}" description="${2}"
+
+  awk -v description="${description}" '
+    NR == 1 && $0 == "---" {
+      in_frontmatter = 1
+      print
+      next
+    }
+
+    in_frontmatter && skipping && /^[[:space:]]+/ {
+      next
+    }
+
+    {
+      skipping = 0
+    }
+
+    in_frontmatter && /^description:/ {
+      print "description: " description
+      skipping = 1
+      next
+    }
+
+    in_frontmatter && $0 == "---" {
+      in_frontmatter = 0
+    }
+
+    { print }
+  ' "${skill_md}" > "${FIXTURE_ROOT}/skill.md"
+  mv "${FIXTURE_ROOT}/skill.md" "${skill_md}"
+}
+
+# Letters and spaces only, so the text stays a valid YAML plain scalar. A final
+# space would be trimmed by YAML, so it becomes a letter instead.
+function description_of_length() {
+  local length="${1}" text=""
+
+  while [[ ${#text} -lt ${length} ]]; do
+    text+="padding "
+  done
+  text="${text:0:${length}}"
+  if [[ "${text}" == *" " ]]; then
+    text="${text%" "}x"
+  fi
+  printf '%s' "${text}"
+}
+
+# Renames the fixture's generator and puts a wrapper in its place that runs it,
+# then rewrites release's generated description. The wrapper honors
+# CODEX_DIST_DIR because bin/validate-plugins regenerates into a temp directory.
+function wrap_generator_with_rewrite() {
+  local generator="${FIXTURE_ROOT}/bin/build-codex-marketplace"
+
+  mv "${generator}" "${generator}-unchanged"
+  # The expansions belong to the wrapper, so they are written out literally.
+  # shellcheck disable=SC2016
+  printf '%s\n' \
+    '#!/usr/bin/env bash' \
+    'set -euo pipefail' \
+    '"$(dirname "${0}")/build-codex-marketplace-unchanged" "$@"' \
+    'perl -0pi -e '\''s/description: >-\n(  .*\n)+/description: Prepare a versioned release.\n/'\'' "${CODEX_DIST_DIR:-dist/codex}/plugins/release/skills/release/SKILL.md"' \
+    > "${generator}"
+  chmod +x "${generator}"
+}
+
+function main() {
+  local scenario="${1}"
+  FIXTURE_ROOT="$(mktemp -d)"
+  trap cleanup EXIT
+
+  mkdir -p "${FIXTURE_ROOT}/.agents/plugins" "${FIXTURE_ROOT}/dist"
+  cp -R "${REPO_ROOT:?REPO_ROOT is required}/plugins" "${FIXTURE_ROOT}/plugins"
+  cp -R "${REPO_ROOT}/.claude-plugin" "${FIXTURE_ROOT}/.claude-plugin"
+  cp -R "${REPO_ROOT}/bin" "${FIXTURE_ROOT}/bin"
+  cp -R "${REPO_ROOT}/docs" "${FIXTURE_ROOT}/docs"
+  cp "${REPO_ROOT}/README.md" "${FIXTURE_ROOT}/README.md"
+
+  case "${scenario}" in
+    valid) ;;
+    leading-zero)
+      jq '.version = "01.2.3"' "${FIXTURE_ROOT}/plugins/release/.claude-plugin/plugin.json" > "${FIXTURE_ROOT}/manifest.json"
+      mv "${FIXTURE_ROOT}/manifest.json" "${FIXTURE_ROOT}/plugins/release/.claude-plugin/plugin.json"
+      ;;
+    metadata-version) mutate_catalog '.metadata.version = "catalog-state"' ;;
+    entry-version) mutate_catalog '.plugins[0].version = "1.0.0"' ;;
+    # The window leaves the budget ample room, so only the length is at fault.
+    oversized-description)
+      replace_description "${FIXTURE_ROOT}/plugins/release/skills/release/SKILL.md" "$(description_of_length 1100)"
+      export CODEX_REFERENCE_CONTEXT_WINDOW=1000000
+      ;;
+    long-description)
+      replace_description "${FIXTURE_ROOT}/plugins/release/skills/release/SKILL.md" "$(description_of_length 200)"
+      ;;
+    empty-name) perl -pi -e 's/^name: release$/name:/' "${FIXTURE_ROOT}/plugins/release/skills/release/SKILL.md" ;;
+    # release declares no dependencies, so bin/check-cross-references warns
+    # about this line and still passes.
+    near-miss-invocation)
+      # The backticks are literal Markdown, not a command substitution.
+      # shellcheck disable=SC2016
+      printf '%s\n' '' 'Then invoke `commit` to finish.' >> "${FIXTURE_ROOT}/plugins/release/skills/release/SKILL.md"
+      ;;
+    # A generator that writes a catalog summary over one routing description,
+    # as bin/build-codex-marketplace once did for every skill. Rule 16 still
+    # passes, because the committed tree matches what this generator produces.
+    rewriting-generator) wrap_generator_with_rewrite ;;
+    # 2 percent of 100,000 is a 2,000-token budget, 1,400 after the reserve:
+    # less than the descriptions alone cost.
+    aggregate-overflow) export CODEX_REFERENCE_CONTEXT_WINDOW=100000 ;;
+    # A 3,400-token budget, 2,800 after the reserve: more than the descriptions
+    # alone cost, less than the full lines with their names and paths.
+    path-overhead) export CODEX_REFERENCE_CONTEXT_WINDOW=170000 ;;
+    fallback) export CODEX_REFERENCE_CONTEXT_WINDOW="" ;;
+    *)
+      echo "Unknown scenario: ${scenario}" >&2
+      return 2
+      ;;
+  esac
+
+  (
+    cd "${FIXTURE_ROOT}"
+    bin/build-codex-marketplace > /dev/null
+    bin/validate-plugins
+  )
+}
+
+main "$@"

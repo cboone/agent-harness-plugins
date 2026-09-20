@@ -1,14 +1,8 @@
 ---
 name: write-homebrew-formula
 description: >-
-  Write or update Homebrew formulae using current Homebrew guidance and
-  cboone/homebrew-tap conventions. Use when the user says "write a Homebrew
-  formula", "update a formula", "add a brew formula", "review this formula",
-  "convert this HEAD formula to stable", or asks for Homebrew tap packaging.
-  Supports stable release formulae, HEAD-only formulae, Go source builds,
-  GoReleaser-generated outputs, shell tools, caveats, services, completions,
-  man pages, config files, and formula validation. Requires Homebrew for full
-  local validation.
+  Write, update, or review Homebrew formulae following cboone/homebrew-tap
+  conventions. Use for "write a Homebrew formula" or "update a formula".
 ---
 
 # Write Homebrew Formula

@@ -40,13 +40,13 @@ jobs:
           sudo install "/tmp/shellcheck-v${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
           shellcheck --version
       - name: Set up shfmt
-        uses: cboone/gh-actions/actions/set-up-shfmt@844bf31d4ec26df9d0aa531e79d8c3fccf9f0638 # v3.1.0
+        uses: cboone/gh-actions/actions/set-up-shfmt@17f94b08428565213e70ae19c37a7be894a172d2 # v3.1.1
       # Runs at ShellCheck's default severity, so the optional checks enabled in
       # .shellcheckrc are actually enforced, and covers every Bash script in the
       # repository via bin/list-shell-scripts rather than a fixed glob.
       - name: ShellCheck and shfmt
         run: make lint-shell
-      - uses: cboone/gh-actions/actions/set-up-actionlint@844bf31d4ec26df9d0aa531e79d8c3fccf9f0638 # v3.1.0
+      - uses: cboone/gh-actions/actions/set-up-actionlint@17f94b08428565213e70ae19c37a7be894a172d2 # v3.1.1
       - name: Actionlint
         run: actionlint
       - name: Validate JSON syntax
@@ -70,7 +70,7 @@ jobs:
 
   test-scrut:
     name: Scrut tests
-    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@844bf31d4ec26df9d0aa531e79d8c3fccf9f0638 # v3.1.0
+    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@17f94b08428565213e70ae19c37a7be894a172d2 # v3.1.1
     # Every value below must start with "./". scrut runs each testcase from a
     # temporary directory, and the reusable workflow rewrites only values
     # matching ./* into absolute paths before exporting them. A bare "." is left
@@ -86,8 +86,9 @@ jobs:
         COMPOSE_ISSUE_PROMPT_BIN=./plugins/address-issue-in-worktree/scripts/compose-issue-prompt
         CREATE_WORKTREE_COMPOSE_ISSUE_PROMPT_BIN=./plugins/create-worktree/scripts/compose-issue-prompt
         COPILOT_REVIEW_DATA_DIR=./tests/data/copilot-reviews
-        COMPUTE_CATALOG_STATE_BIN=./bin/compute-catalog-state
         CROSS_REFERENCE_FIXTURE_BIN=./tests/fixtures/cross-reference-fixture
+        CATALOG_RELEASE_FIXTURE_BIN=./tests/fixtures/catalog-release-fixture
+        VALIDATE_PLUGIN_FIXTURE_BIN=./tests/fixtures/validate-plugin-fixture
         LIST_SHELL_SCRIPTS_BIN=./bin/list-shell-scripts
         REPO_ROOT=./
         CREATE_WORKTREE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree/scripts/launch-workmux

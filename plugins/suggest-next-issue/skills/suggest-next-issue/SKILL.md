@@ -1,15 +1,8 @@
 ---
 name: suggest-next-issue
 description: >-
-  Review all open GitHub issues in the current repository, analyze them in
-  context (current branch state, recent work, project goals, dependencies), and
-  recommend what to work on next with prioritized reasoning. Use when the user
-  says "suggest next issue", "what should I work on next", "which issue should I
-  tackle", "prioritize issues", "review open issues", "suggest an issue",
-  "triage issues", or asks for help choosing between open issues. Also use
-  when the user asks what can be worked on in parallel, or which issues avoid
-  an exclusive resource another worktree is holding. Requires the gh CLI to be
-  installed and authenticated.
+  Recommend which open GitHub issue to work on next, with reasoning. Use for
+  "suggest next issue", "what should I work on next", or "prioritize issues".
 ---
 
 # Suggest Next Issue

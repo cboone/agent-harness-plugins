@@ -1,21 +1,18 @@
 ---
 name: set-up-linters
 description: >-
-  Detect project languages, recommend linters and formatters, install them, and
-  generate config files, including Pandoc-academic Markdown presets. Use when
-  the user says "set up linters", "add linters", "configure linters", "set up
-  formatters", "add a formatter", "add prettier", "add eslint", "add
-  golangci-lint", "add ruff", "add clippy", "add markdownlint", "generate
-  linter configs", "lint configuration", or wants linting and formatting wired
-  up for a project. Detects Go, JavaScript/TypeScript, Python, Ruby, Rust,
-  Shell, Swift, Zsh, Lean, and Markdown. Pairs with set-up-ci (CI workflows),
-  set-up-secret-scanning (gitleaks and TruffleHog), and lint-and-fix (running
-  the linters once they are configured).
+  Choose, install, and configure linters and formatters for a project. Use for
+  "set up linters" or "add prettier"; to run them, use lint-and-fix.
 ---
 
 # Set-Up Linters
 
 Detect the project type, recommend appropriate linters and formatters, install them, generate sensible default configs, create `.editorconfig`, and optionally wire up CI.
+
+## Skill dependencies
+
+- **Required:** None
+- **Optional:** `lint-and-fix`
 
 ## Workflow
 
@@ -242,7 +239,7 @@ For **Lean projects**, scan `.github/workflows/*.yml` for the `leanprover/lean-a
 
 ### 10. Run Initial Lint (Optional)
 
-Ask whether to run the newly installed linters. If yes, invoke `lint-and-fix` to fix existing issues.
+Ask whether to run the newly installed linters. If yes, invoke the `lint-and-fix` skill to fix existing issues. If `lint-and-fix` is not installed, report this step as skipped with its installation command; the linters stay installed and configured.
 
 ### 11. Commit (Optional)
 

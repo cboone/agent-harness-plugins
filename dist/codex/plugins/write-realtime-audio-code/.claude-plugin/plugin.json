@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Write and review real-time audio code: callback safety, bounded cross-thread communication, memory ordering, sample-accurate events, and compatible plugin parameters and state.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["audio", "clap", "dsp", "lock-free", "real-time"],
+  "license": "MIT",
+  "name": "write-realtime-audio-code",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.1"
+}
