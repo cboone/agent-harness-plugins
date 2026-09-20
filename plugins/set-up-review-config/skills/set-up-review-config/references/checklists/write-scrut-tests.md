@@ -6,7 +6,7 @@ Applies to scrut snapshot test files, usually `tests/scrut/*.md`. Cite findings 
 
 - **Binary through a variable**: Tests call the tool under test through an environment variable such as `"${TOOL_BIN}"`, never through a fixed or relative path.
 - **Asserted exit codes**: Every block that expects a failure ends with its exit code, such as `[1]`.
-- **Isolated side effects**: Commands that create, modify or delete files run in `$(mktemp -d)`, never in the repository or a fixed location.
+- **Isolated side effects**: Commands that create, modify or delete files run in a temporary directory from `$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")`, never in the repository or a fixed location.
 - **Deterministic output**: Output whose order can vary is sorted, and versions, timestamps, hashes and paths are matched with `(glob)`, so the test does not fail at random.
 - **Intentional snapshot updates**: After a snapshot update, `(glob)` and `(regex)` lines have not been replaced with the literal values of one run.
 - **One command per zsh block**: In zsh plugin tests, each block has a single `$` line, because further `$` lines are read as expected output, and `ERR_EXIT` is not set at file level.

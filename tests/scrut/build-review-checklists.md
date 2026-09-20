@@ -199,7 +199,7 @@ $ cd "$("${REVIEW_CHECKLIST_FIXTURE_BIN}")" && mkdir -p plugins/write-gamma/skil
 ## Unusable environments stop before writing
 
 ```scrut
-$ cd "$(mktemp -d)" && "${BUILD_REVIEW_CHECKLISTS_BIN}" 2>&1
+$ cd "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${BUILD_REVIEW_CHECKLISTS_BIN}" 2>&1
 build-review-checklists: no plugins/ directory in * (glob)
 [2]
 ```
