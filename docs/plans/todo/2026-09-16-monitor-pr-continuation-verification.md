@@ -4,7 +4,7 @@
 
 Record: this section. Append dated readings to each step and update the status table in place. Confirm step 0 at the start of each session. These checks exercise skill execution, conversation retention, and scheduler tools in their actual harness; repository lint and Scrut do not observe those behaviors.
 
-Build under test: monitor-pr 1.3.1 on `fix/monitor-pr-loop-in-codex`. Record the committed SHA, loaded skill path, artifact hashes, harness version, repository, PR number, and checkpoint transcript with each result. If another build is loaded between readings, confirm step 0 again.
+Build under test: monitor-pr 1.4.0 on `fix/monitor-pr-loop-in-codex`. Record the committed SHA, loaded skill path, artifact hashes, harness version, repository, PR number, and checkpoint transcript with each result. If another build is loaded between readings, confirm step 0 again.
 
 ### Exclusive resources
 
@@ -25,7 +25,7 @@ Build under test: monitor-pr 1.3.1 on `fix/monitor-pr-loop-in-codex`. Record the
 
 - **Setup:** Build the committed branch with `make build`. Identify the canonical monitor-pr skill, checkpoint reference, manifest, and generated Codex equivalents. Use canonical artifacts for Claude Code or OpenCode and generated artifacts for Codex.
 - **Action:** Load those artifacts into a fresh harness conversation. Record the source and installed file hashes using `shasum -a 256`, the installed manifest version, and the skill path the harness actually reads. Ask the agent to identify the checkpoint restoration and scheduler fallback instructions from the loaded skill and reference.
-- **Expected:** The installed manifest reads `1.3.1`; installed file hashes match the corresponding artifacts from this branch. The harness reads the recorded path and identifies same-conversation checkpoint restoration, retained action guards, and bounded scheduler fallback.
+- **Expected:** The installed manifest reads `1.4.0`; installed file hashes match the corresponding artifacts from this branch. The harness reads the recorded path and identifies same-conversation checkpoint restoration, retained action guards, and bounded scheduler fallback.
 - **Null vs broken:** A matching disk file alone does not establish that the running conversation loaded it. Require the fresh conversation's skill-read evidence and the reference content. Missing artifacts or an older loaded instruction make dependent readings invalid.
 - **Why by hand:** The harness selects and caches installed skills; repository validation checks generated files without observing what the active harness loads.
 - **Result:** untestable here. 2026-09-16: the current conversation loaded monitor-pr 1.2.0 before these changes; a fresh harness session with the branch artifacts is required.
