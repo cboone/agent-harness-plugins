@@ -130,9 +130,10 @@ If `scrut` is not installed locally, inform the user to install from the faceboo
 
 ```bash
 mkdir -p ~/.local/bin
-gh release download SCRUT_VERSION --repo facebookincubator/scrut --pattern 'scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz' --dir /tmp
-tar -xzf /tmp/scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz -C /tmp
-cp /tmp/scrut-SCRUT_PLATFORM/scrut ~/.local/bin/
+gh release download SCRUT_VERSION --repo facebookincubator/scrut --pattern 'scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz' --dir "${TMPDIR:-/tmp}"
+tar -xzf "${TMPDIR:-/tmp}/scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz" -C "${TMPDIR:-/tmp}"
+cp "${TMPDIR:-/tmp}/scrut-SCRUT_PLATFORM/scrut" ~/.local/bin/
+rm -rf "${TMPDIR:-/tmp}/scrut-SCRUT_PLATFORM" "${TMPDIR:-/tmp}/scrut-SCRUT_VERSION-SCRUT_PLATFORM.tar.gz"
 ```
 
 Replace `SCRUT_VERSION` with the pinned release tag (e.g., `v0.4.3`) and `SCRUT_PLATFORM` with the appropriate identifier (e.g., `macos-aarch64`, `linux-x86_64`).
