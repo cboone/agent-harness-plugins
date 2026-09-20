@@ -10,8 +10,8 @@ Staleness is derived from `git worktree list --porcelain`, so every testcase dri
 
 ```scrut
 $ function setup_claims() {
->   claim_file="$(mktemp -d)/.claude/worktree-resources.local.json"
->   stub_dir="$(mktemp -d)"
+>   claim_file="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/.claude/worktree-resources.local.json"
+>   stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 >   cp "${GIT_WORKTREE_STUB_BIN}" "${stub_dir}/git"
 >   chmod +x "${stub_dir}/git"
 >   live_porcelain="$(printf 'worktree /repo/main\nHEAD aaa\nbranch refs/heads/main\n\nworktree /repo/wt-live\nHEAD bbb\nbranch refs/heads/feature/live\n\nworktree /repo/wt-prunable\nHEAD ccc\nbranch refs/heads/feature/prunable\nprunable gitdir file points to non-existent location\n')"
@@ -39,20 +39,20 @@ $ function setup_claims() {
 > }
 > function setup_shared() {
 >   setup_claims
->   main_worktree="$(mktemp -d)"
->   linked_worktree="$(mktemp -d)"
+>   main_worktree="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+>   linked_worktree="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 >   shared_porcelain="$(printf 'worktree %s\nHEAD aaa\nbranch refs/heads/main\n\nworktree %s\nHEAD bbb\nbranch refs/heads/feature/live\n' "${main_worktree}" "${linked_worktree}")"
 > }
 > function claims_no_identity() {
 >   local blind
->   blind="$(mktemp -d)"
+>   blind="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 >   printf '#!/usr/bin/env bash\nif [[ "${3:-}" == "rev-parse" ]]; then exit 128; fi\nexec "%s" "$@"\n' "${GIT_WORKTREE_STUB_BIN}" > "${blind}/git"
 >   chmod +x "${blind}/git"
 >   env PATH="${blind}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${live_porcelain}" WORKTREE_RESOURCES_FILE="${claim_file}" bash "${MANAGE_RESOURCE_CLAIMS_BIN}" "$@"
 > }
 > function without_jq() {
 >   local minimal
->   minimal="$(mktemp -d)"
+>   minimal="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 >   ln -s "$(command -v basename)" "${minimal}/basename"
 >   ln -s "$(command -v cat)" "${minimal}/cat"
 >   env PATH="${minimal}" "$(command -v bash)" "${MANAGE_RESOURCE_CLAIMS_BIN}" "$@"
@@ -404,7 +404,7 @@ manage-resource-claims: */.claude/worktree-resources.local.json holds a malforme
 ## Outside a git repository the claim file cannot be resolved
 
 ```scrut
-$ cd "$(mktemp -d)" && env -u WORKTREE_RESOURCES_FILE bash "${MANAGE_RESOURCE_CLAIMS_BIN}" list 2>&1
+$ cd "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && env -u WORKTREE_RESOURCES_FILE bash "${MANAGE_RESOURCE_CLAIMS_BIN}" list 2>&1
 manage-resource-claims: not inside a git repository; set WORKTREE_RESOURCES_FILE to override
 [1]
 ```
@@ -414,7 +414,7 @@ manage-resource-claims: not inside a git repository; set WORKTREE_RESOURCES_FILE
 Staleness is undetermined when git cannot answer, and pruning every claim because git was unavailable would be worse than leaving them in place.
 
 ```scrut
-$ cd "$(mktemp -d)" && env WORKTREE_RESOURCES_FILE="${PWD}/claims.json" bash "${MANAGE_RESOURCE_CLAIMS_BIN}" prune 2>&1
+$ cd "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && env WORKTREE_RESOURCES_FILE="${PWD}/claims.json" bash "${MANAGE_RESOURCE_CLAIMS_BIN}" prune 2>&1
 manage-resource-claims: cannot list worktrees; run prune inside a git repository
 [1]
 ```
@@ -1106,7 +1106,7 @@ Every other case here drives worktree listing through the stub, which encodes it
 A directory name may end in a newline, and command substitution strips every trailing newline, so capturing the main worktree's path bare resolves the shared file to a different directory than the one git named. Reading the records with `-z` does not help if the path is corrupted immediately afterward.
 
 ```scrut
-$ root="$(mktemp -d)" && main="${root}/repo"$'\n' && mkdir -p "${main}" \
+$ root="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && main="${root}/repo"$'\n' && mkdir -p "${main}" \
 >   && git init -q "${main}" \
 >   && git -C "${main}" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init \
 >   && git -C "${main}" worktree add -q "${root}/linked" -b feature/live \

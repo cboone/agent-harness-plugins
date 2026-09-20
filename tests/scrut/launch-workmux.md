@@ -61,15 +61,15 @@ exit: 1
 ```scrut
 $ function prepare_stubs() {
 >   unset TMUX TMUX_TMPDIR WORKMUX_TMUX WORKMUX_TERM
->   state="$(mktemp -d)"
->   stub_dir="$(mktemp -d)"
+>   state="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
+>   stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 >   cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux"
 >   cp "${TMUX_STUB_BIN}" "${stub_dir}/tmux"
 >   cp "${GIT_WORKTREE_STUB_BIN}" "${stub_dir}/git"
 >   chmod +x "${stub_dir}/workmux" "${stub_dir}/tmux" "${stub_dir}/git"
 > }
 > function create_socket_fixture() {
->   tmux_tmpdir="$(mktemp -d)"
+>   tmux_tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")"
 >   socket_dir="${tmux_tmpdir}/tmux-$(id -u)"
 >   socket_path="${socket_dir}/projects"
 >   socket_pid="$("${UNIX_SOCKET_FIXTURE_BIN}" "${socket_path}")"
@@ -253,7 +253,7 @@ prompt-file-exists: yes
 
 ```scrut
 $ prepare_stubs \
->   && existing_worktree="$(mktemp -d)" \
+>   && existing_worktree="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && mkdir -p "${existing_worktree}/.workmux" \
 >   && printf '%s\n' 'Stored prompt' > "${existing_worktree}/.workmux/PROMPT-feature-existing-worktree.md" \
 >   && tmux_log="${state}/tmux-log" \
@@ -281,7 +281,7 @@ tmux: delete-buffer socket=/tmp/tmux-501/projects buffer=workmux-prompt-feature-
 
 ```scrut
 $ prepare_stubs \
->   && existing_worktree="$(mktemp -d)" \
+>   && existing_worktree="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && tmux_log="${state}/tmux-log" \
 >   && socket="/tmp/tmux-501/projects" \
 >   && panes="${socket}|%9|cx|${existing_worktree}|4242" \
@@ -391,8 +391,8 @@ prompt-file-exists: yes
 ## Create worktree launcher continues without `tmux`
 
 ```scrut
-$ state="$(mktemp -d)" \
->   && stub_dir="$(mktemp -d)" \
+$ state="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
+>   && stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux" \
 >   && chmod +x "${stub_dir}/workmux" \
 >   && printf '%s\n' 'Prompt body' \
@@ -410,8 +410,8 @@ prompt-file-exists: yes
 ## Address issue in worktree launcher continues without `tmux`
 
 ```scrut
-$ state="$(mktemp -d)" \
->   && stub_dir="$(mktemp -d)" \
+$ state="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
+>   && stub_dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux" \
 >   && chmod +x "${stub_dir}/workmux" \
 >   && printf '%s\n' 'Issue body' \
