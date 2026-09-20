@@ -34,15 +34,16 @@ When either shell guide is installed, the entry skill's reporting rules include 
 
 ## write-bash-scripts
 
-- **Detect**: Tracked `*.sh` or `*.bash` files, or extensionless files with a Bash shebang.
-- **Route**: `**/*.sh` and `**/*.bash`, plus each extensionless Bash script by path, or a directory glob such as `bin/*` when every file in the directory is a Bash script.
-- **Exclude**: Files whose shebang names another shell.
+- **Detect**: Tracked `*.sh` or `*.bash` files, and any other tracked file whose shebang names Bash, whether or not it has an extension.
+- **Route**: `**/*.sh` and `**/*.bash`, plus every other Bash script by path, or a directory glob such as `bin/*` when every file in the directory is a Bash script. A `*.sh` or `*.bash` file that the exclusion below removes is named in the exclusions of this guide's routing bullet, so the glob does not carry it.
+- **Exclude**: Files whose shebang names another shell, including a `*.sh` or `*.bash` file that does.
 - **Checklist**: `./references/checklists/write-bash-scripts.md`
 
 ## write-zsh-scripts
 
-- **Detect**: Tracked `*.zsh`, `*.plugin.zsh` or `*.zsh-theme` files; zsh startup files (`.zshrc`, `.zshenv`, `.zprofile`, `.zlogin`, `.zlogout`, with or without the leading dot); files whose first line is `#compdef` or `#autoload`; or extensionless files with a zsh shebang.
-- **Route**: `**/*.zsh` and `**/*.zsh-theme`, plus each startup file, completion function and extensionless zsh script by path, or a directory glob when every file in the directory is zsh.
+- **Detect**: Tracked `*.zsh`, `*.plugin.zsh` or `*.zsh-theme` files; zsh startup files (`.zshrc`, `.zshenv`, `.zprofile`, `.zlogin`, `.zlogout`, with or without the leading dot); files whose first line is `#compdef` or `#autoload`; and any other tracked file whose shebang names zsh, whether or not it has an extension.
+- **Route**: `**/*.zsh` and `**/*.zsh-theme`, plus each startup file, completion function and other zsh script by path, or a directory glob when every file in the directory is zsh. A `*.zsh` file that the exclusion below removes is named in the exclusions of this guide's routing bullet.
+- **Exclude**: Files whose shebang names another shell, including a `*.zsh` file that does.
 - **Checklist**: `./references/checklists/write-zsh-scripts.md`
 
 ## write-scrut-tests

@@ -100,7 +100,7 @@ The Dependabot config is what a freshly scaffolded repository is missing: withou
 
 ### set-up-review-config during bootstrap
 
-`set-up-review-config` overlaps no other tool's files, but what it writes depends on theirs, so it is not an independent tool. It detects file types to choose review checklists and reads the CI workflows to tell reviewers which checks to skip, so it runs after the scaffolders, `set-up-ci`, `set-up-linters` and `add-scrut-cli-tests`. It appends a `## Code Review Rules` block to the `AGENTS.md` that `scaffold-new-repo` or a scaffolder wrote, rather than creating the file itself. Drift in an installed config later is for `refresh-project-scaffolding` to find.
+`set-up-review-config` overlaps no other tool's files, but what it writes depends on theirs, so it is not an independent tool. It detects file types to choose review checklists and reads the CI workflows to tell reviewers which checks to skip, so it runs after the scaffolders, `set-up-ci`, `set-up-linters` and `add-scrut-cli-tests`. It appends a `## Code Review Rules` block to the `AGENTS.md` that `scaffold-new-repo` or a scaffolder wrote. Where no tool wrote one, it creates `AGENTS.md` itself, asking first only when a regular `CLAUDE.md` already holds the repository's instructions, and a declined `AGENTS.md` leaves Codex without review rules and is reported as such. Running it after the scaffolders keeps that question from coming up in a bootstrap that writes the file anyway. Drift in an installed config later is for `refresh-project-scaffolding` to find.
 
 ## Applicability Rules
 

@@ -1,6 +1,6 @@
 # REVIEW.md Template
 
-The root `REVIEW.md` that Claude Code Review sends to every agent that finds and verifies findings. Its agents may not open other files, so the block copies each installed checklist's Important rules and points at the checklists only for Nits.
+The root `REVIEW.md` that Claude Code Review sends to every agent that finds and verifies findings. Its agents may not open other files, so the block copies each installed checklist's Important rules inline. It deliberately does not copy the Nit rules: they would multiply the size of a file that every finding and verification agent reads, for findings this reviewer caps at five and drops after the first review. Copilot reads the checklists themselves and applies the Nits there.
 
 Uppercase words are placeholders, filled as described in `./references/code-review-skill.md`.
 
@@ -21,7 +21,7 @@ IMPORTANT-RULES
 
 ## Nits
 
-Nits come from the checklists in `.github/skills/code-review/`, and the `SKILL.md` there maps file patterns to checklists. Start each finding with the checklist name and the rule name, for example `write-go-code: Checked errors`.
+This file does not carry the checklists' Nit rules. An agent reading it may not open another file, so what it guarantees is the Important rules above; the full Nit lists live in the checklists under `.github/skills/code-review/`, where Copilot code review applies them file by file. Report the Nits you can see in the diff yourself, and when one matches a rule you know from a checklist, start the finding with the checklist name and the rule name, for example `write-go-code: Checked errors`.
 
 ## Cap the nits
 
