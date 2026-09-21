@@ -38,6 +38,7 @@ Honor this block as part of the `lint-and-fix` invocation.
 - On lint success, no tools detected, or no file changes needed, report the result and allow the parent to continue immediately according to `On lint success`.
 - On unresolved lint issues, skipped required lint work, missing required tools, or tool execution failures, report a workflow failure result and list the unresolved items so the parent can follow `On lint failure or skipped required lint work`.
 - A tool that [step 2](#2-consult-project-agent-config) downgraded to check mode is **not** skipped required lint work. When it runs in check mode and finds nothing, that is lint success: report it on the `Check-only by project policy` line, leave `Unresolved or skipped` as `none`, and let the parent continue. When it finds issues that step 6 cannot resolve by hand, that is an ordinary failure and belongs under `Unresolved or skipped`.
+- A tool recorded as `check-only (no safe check command)` **is** skipped required lint work, because nothing ran and the tree was never checked. Report `Lint status: failure`, list the tool under `Unresolved or skipped` with the reason, and name it on the `Check-only by project policy` line as well. It must never reach the parent as success: an unrun tool and a tool that ran clean are opposite results, and a parent such as `pr` would otherwise push a tree no one checked.
 
 Final output for a parent invocation must include:
 
@@ -187,11 +188,13 @@ If running in **--check** mode, show check commands instead of fix commands. **-
 
 ### 4. Run Each Tool
 
-Run each detected tool sequentially, in the order presented in step 3. For each tool:
+Run every tool in the run sequentially, in the order presented in step 3, including any the agent config added in step 2. For each tool:
 
 #### 4a. Run the Command
 
 Run the command step 2 recorded for that tool: its fix command, its check command where the project forbids fixing, or its check command if **--check** was specified. Capture stdout, stderr, and exit code.
+
+**--check** is subject to the same rule as a policy downgrade. The detection table's check commands fall back to a write-mode form in two rows, so running them for a `--check` invocation would modify files in what the user asked to be a dry run. Use only a command whose check-only behavior is established; where none exists, record the tool as `check-only (no safe check command)`, run nothing for it, and report it as above.
 
 **Tool-specific notes:**
 
@@ -258,6 +261,8 @@ For each remaining issue that auto-fix could not resolve:
 1. **Re-run the tool** on the specific file to verify the fix.
 
 For a tool step 2 downgraded to check mode, resolve its findings with targeted edits to the reported files. Do not reach for the forbidden fixer here, and do not invoke it with a narrower glob: the prohibition is on the command, not on the breadth of a single invocation, and tools such as `markdownlint-cli2 --fix` ignore the paths given to them and rewrite everything matching their configured globs anyway.
+
+**A protected path is protected from hand edits too.** Where the downgrade came from a protected path rather than a forbidden command, a targeted edit writes to the tree the project told you not to touch, so it defeats the protection just as the fixer would. Leave those findings alone, report them under `Unresolved or skipped` with the path and the rule that protects it, and let the user decide. Remediate only where the project documents an exception.
 
 If a remaining issue is ambiguous or risky to fix automatically (e.g., removing a dependency that might be used dynamically, or a lint rule that conflicts with project intent), skip it and report:
 
