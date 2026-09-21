@@ -221,7 +221,7 @@ Run exactly the recorded command. Do not reconstruct one here, and do not take a
 - **knip**: No auto-fix. Reports unused files, dependencies, and exports.
 - **cspell**: No auto-fix. Runs with `--dot` so dotfiles and dot-directories match CI spell-check behavior. Users fix typos in the source or add words to `cspell.json` (`words` array) or a project word list file. In git worktrees, `--dot` can expose the `.git` file; if that happens, add `.git` as well as `.git/` to the project's cspell ignore paths.
 - **npm scripts**: Exit codes depend on the underlying tool.
-- **Project scripts**: Try with `--fix` first, but only for a tool in `fix` mode. In any check-only mode, run the recorded command and nothing else: falling back to a bare `<script>` because it does not recognize `--fix` is the write [the No-Write Rule](#the-no-write-rule) exists to prevent.
+- **Project scripts**: Try with `--fix` first, but only for a tool in `fix` mode. In any check-only mode, run the recorded command and nothing else: falling back to a bare `<script>` because it does not recognize `--fix` would perform the write that [the No-Write Rule](#the-no-write-rule) exists to prevent.
 - **CI workflow scripts**: Run exactly as specified in the workflow. These are typically check-only (no auto-fix). Exit code 0 = pass, non-zero = issues found.
 
 #### 4b. Record Results
@@ -309,7 +309,9 @@ Every tool is in check mode here, so [the No-Write Rule](#the-no-write-rule) gov
 
 Carry the policy annotation into this table too. Every tool runs in check mode here, so without it a downgraded tool's row is indistinguishable from one whose fixer ran.
 
-**After verification, always proceed to step 8.** Tools that auto-fixed files will have modified files on disk that need to be committed.
+**After verification, proceed to step 8 to commit.** Tools that auto-fixed files will have modified files on disk, and those changes must be committed rather than left in the working tree, so this transition happens even when verification reported problems.
+
+**The push is gated on verification, the commit is not.** If any tool ends verification as `Not run (no safe check command)`, or with unresolved findings, step 8 commits what is on disk and stops there. Do not push, and report the run as a lint failure with those tools listed under `Unresolved or skipped`. A commit keeps the fixes that did run; a push publishes a tree where a required tool was never checked, which is the outcome the unrun mode exists to flag. Under a parent continuation block this is the `On lint failure or skipped required lint work` path, so the parent decides what happens next.
 
 ### 8. Commit and Push
 
