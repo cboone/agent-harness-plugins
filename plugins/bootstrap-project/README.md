@@ -23,6 +23,7 @@ Orchestrates these tools:
 - `add-goreleaser-homebrew`: GoReleaser and Homebrew tap publishing
 - `set-up-installers`: Homebrew formula
 - `add-scrut-cli-tests`: scrut CLI integration tests
+- `set-up-review-config`: review checklists for Copilot code review, Codex and Claude Code Review
 - `pin-everything` (scoped to `--scope dependabot`): a `.github/dependabot.yml` that keeps the SHA-pinned actions and dependencies the other tools emit up to date
 
 ## Usage
@@ -45,6 +46,7 @@ Orchestrates these tools:
 - [Scaffold Go Library](../scaffold-go-library/README.md): Go library project scaffolding only
 - [Scaffold Lean Library](../scaffold-lean-library/README.md): Lean 4 library project scaffolding only
 - [Set-Up Linters](../set-up-linters/README.md): linter and formatter setup only
+- [Set-Up Review Config](../set-up-review-config/README.md): review checklists for automated pull request reviewers only
 - [Pin Everything](../pin-everything/README.md): the full pinning pass, beyond the Dependabot config bootstrap writes
 - [Review Dependabot Config](../review-dependabot-config/README.md): review an existing Dependabot config and its repository settings
 - [All plugins](../../README.md)

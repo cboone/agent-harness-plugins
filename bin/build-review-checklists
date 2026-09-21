@@ -1,0 +1,213 @@
+#!/usr/bin/env bash
+# Copies each style guide's review checklist into set-up-review-config.
+#
+# A style guide keeps its pull request review checklist beside the guide, at
+# plugins/<guide>/skills/<guide>/references/review-checklist.md, so a rule change
+# and its checklist change land together. set-up-review-config installs those
+# checklists into other repositories, and a skill can read only the files its
+# own plugin ships, so this script copies each one, byte for byte, into
+# set-up-review-config's references/checklists/<guide>.md and removes copies
+# whose source is gone.
+#
+# Every source is checked before anything is written, so one bad source leaves
+# the committed copies untouched. The checks keep a checklist installable: it
+# must stand alone in another repository, survive that repository's Markdown
+# formatter unchanged, give every rule a citable name, and stay short enough
+# for a reviewer's context.
+#
+# REVIEW_CHECKLISTS_DIR overrides the output directory, which must then be new
+# or empty; bin/validate-plugins regenerates into a temporary directory and
+# compares. Paths resolve against the current working directory, which must be
+# the repository root.
+set -euo pipefail
+
+# Glob expansion and sort order must not depend on the caller's locale, or two
+# machines would disagree about the output.
+export LC_ALL=C
+
+CONSUMER="set-up-review-config"
+DEFAULT_OUTPUT_DIR="plugins/${CONSUMER}/skills/${CONSUMER}/references/checklists"
+
+# Installed checklists are read into a reviewer's context beside the diff. The
+# cap keeps each one condensed; raise it deliberately, not to fit one file.
+MAX_BYTES=5000
+
+# The level-2 headings a checklist has, in order. set-up-review-config copies
+# the Important section into REVIEW.md, so its boundaries must be predictable.
+EXPECTED_SECTIONS=$'## Important\n## Nits\n## Do not flag'
+
+readonly CONSUMER DEFAULT_OUTPUT_DIR MAX_BYTES EXPECTED_SECTIONS
+
+errors=0
+
+function error() {
+  echo "::error::$1"
+  errors=$((errors + 1))
+}
+
+# Prints each source path, one per line, in a stable order. The glob matches
+# only the documented location, one directory level per segment.
+function checklist_sources() {
+  local source
+  for source in plugins/*/skills/*/references/review-checklist.md; do
+    [[ -f "${source}" ]] || continue
+    case "${source}" in
+      "plugins/${CONSUMER}/"*) continue ;;
+      *) printf '%s\n' "${source}" ;;
+    esac
+  done
+}
+
+# Prints the guide name for a source path, the plugin directory name.
+function guide_name() {
+  local source="$1"
+  local rest="${source#plugins/}"
+  printf '%s\n' "${rest%%/*}"
+}
+
+# Prints each link that is neither an absolute URL nor an in-page anchor:
+# inline links as `](target)`, and reference definitions as whole lines, since
+# `[name]: target` breaks the same way a relative inline link does.
+function relative_links() {
+  local source="$1"
+  grep -oE '\]\([^)]*\)' "${source}" | grep -vE '^\]\((https?://|#)' || true
+  grep -E '^ {0,3}\[[^]]+\]:' "${source}" | grep -vE '^ {0,3}\[[^]]+\]:[[:space:]]*<?(https?://|#)' || true
+}
+
+# Succeeds when the source has a table. A GFM table needs a delimiter row, such
+# as `--- | ---`, and its rows need no leading pipe, so a line starting with a
+# pipe is not the only sign of one.
+function has_table() {
+  local source="$1"
+  grep -qE '^[[:space:]]*\|' "${source}" \
+    || grep -qE '^[[:space:]]*:?-+:?[[:space:]]*(\|[[:space:]]*:?-+:?[[:space:]]*)+\|?[[:space:]]*$' "${source}"
+}
+
+function check_source() {
+  local source="$1"
+  local guide skill rest bytes sections line link
+
+  guide="$(guide_name "${source}")"
+  rest="${source#plugins/"${guide}"/skills/}"
+  skill="${rest%%/*}"
+  if [[ "${skill}" != "${guide}" ]]; then
+    error "${source} sits in skill ${skill} of plugin ${guide}; a review checklist belongs to the skill named after its plugin"
+  fi
+
+  if ! head -n 1 "${source}" | grep -qE '^# .+ Review Checklist$'; then
+    error "${source} must start with a level-1 heading ending in \"Review Checklist\""
+  fi
+
+  sections="$(grep -E '^## ' "${source}" || true)"
+  if [[ "${sections}" != "${EXPECTED_SECTIONS}" ]]; then
+    error "${source} must have exactly the level-2 headings \"## Important\", \"## Nits\" and \"## Do not flag\", in that order"
+  fi
+
+  while IFS= read -r line; do
+    error "${source} has a list item without a bold rule name, which reviewers cite: ${line}"
+  done < <(grep -E '^[[:space:]]*[-*+] ' "${source}" | grep -vE '^- \*\*[^*]+\*\*: ' || true)
+
+  if grep -qF './references/' "${source}"; then
+    error "${source} names a ./references/ path, which does not exist in the repositories the checklist is installed into"
+  fi
+  if grep -qE '\$\{CLAUDE_PLUGIN_ROOT\}' "${source}"; then
+    error "${source} names the plugin-root placeholder, which is not substituted where the checklist is installed"
+  fi
+  if grep -qF 'validate-plugins:' "${source}"; then
+    error "${source} has a validate-plugins directive, which would be copied into other repositories"
+  fi
+  while IFS= read -r link; do
+    error "${source} has a relative link, which breaks where the checklist is installed: ${link}"
+  done < <(relative_links "${source}")
+  if grep -qE '^[[:space:]]*(```|~~~)' "${source}"; then
+    error "${source} has a code fence; installed checklists avoid constructs that Markdown formatters rewrite"
+  fi
+  if has_table "${source}"; then
+    error "${source} has a table; installed checklists avoid constructs that Markdown formatters rewrite"
+  fi
+
+  bytes="$(wc -c < "${source}" | tr -d '[:space:]')"
+  if ((bytes > MAX_BYTES)); then
+    error "${source} is ${bytes} bytes; review checklists are capped at ${MAX_BYTES}"
+  fi
+}
+
+function write_copies() {
+  local output_dir="$1"
+  shift
+  local source guide target copied=0 removed=0 keep
+
+  mkdir -p "${output_dir}"
+
+  keep=$'\n'
+  for source in "$@"; do
+    guide="$(guide_name "${source}")"
+    target="${output_dir}/${guide}.md"
+    keep+="${guide}.md"$'\n'
+    if ! cmp -s "${source}" "${target}"; then
+      cp "${source}" "${target}"
+      copied=$((copied + 1))
+    fi
+  done
+
+  # Only Markdown files are copies; anything else in the directory, such as a
+  # file manager's metadata, is not this script's to remove.
+  for target in "${output_dir}"/*.md; do
+    [[ -e "${target}" ]] || continue
+    case "${keep}" in
+      *$'\n'"${target##*/}"$'\n'*) ;;
+      *)
+        rm "${target}"
+        removed=$((removed + 1))
+        ;;
+    esac
+  done
+
+  echo "Review checklists: ${#} bundled in ${output_dir} (${copied} written, ${removed} removed)."
+}
+
+function main() {
+  if [[ ! -d plugins ]]; then
+    echo "build-review-checklists: no plugins/ directory in $(pwd)" >&2
+    exit 2
+  fi
+
+  local output_dir="${REVIEW_CHECKLISTS_DIR:-${DEFAULT_OUTPUT_DIR}}"
+  case "${output_dir}" in
+    "" | "/" | "." | "./" | ".." | "../")
+      echo "build-review-checklists: refusing to write review checklists to '${output_dir}'" >&2
+      exit 2
+      ;;
+    *) ;;
+  esac
+  if [[ -z "${REVIEW_CHECKLISTS_DIR:-}" && ! -d "plugins/${CONSUMER}" ]]; then
+    echo "build-review-checklists: plugins/${CONSUMER} does not exist to receive the checklists" >&2
+    exit 2
+  fi
+  # Orphan removal deletes every Markdown file in the output directory that is
+  # not a current copy, so an override pointed at a real directory would delete
+  # its documents. An override must be new or empty, as a temporary directory is.
+  if [[ -n "${REVIEW_CHECKLISTS_DIR:-}" && -d "${output_dir}" ]] \
+    && [[ -n "$(find "${output_dir}" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+    echo "build-review-checklists: REVIEW_CHECKLISTS_DIR must name a new or empty directory, since copies without a source are removed from it; '${output_dir}' is not empty" >&2
+    exit 2
+  fi
+
+  local sources=() source
+  while IFS= read -r source; do
+    sources+=("${source}")
+  done < <(checklist_sources)
+
+  for source in ${sources[@]+"${sources[@]}"}; do
+    check_source "${source}"
+  done
+
+  if ((errors > 0)); then
+    echo "${errors} review checklist error(s) found; no copies were written."
+    exit 1
+  fi
+
+  write_copies "${output_dir}" ${sources[@]+"${sources[@]}"}
+}
+
+main "$@"

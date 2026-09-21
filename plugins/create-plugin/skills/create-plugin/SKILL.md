@@ -147,6 +147,7 @@ Skills and commands that need supplementary documentation or templates should pl
 
 - **Workflow skills**: Use a flat `references/` directory with topic-named files by default (e.g., `./references/checklist.md`, `./references/github.md`). If a workflow skill has enough reference files that a flat list becomes hard to scan, use topical subdirectories named for the organizing axis, such as `./references/languages/`, `./references/tools/`, or `./references/scripts/`. Do not use `./references/essential/` plus `./references/comprehensive/` for workflow skills.
 - **Style-guide skills**: Style-guide skills, primarily `write-*`, may use one canonical topic document such as `./references/BASH.md` or `./references/MARKDOWN.md`, or split reference material into `./references/essential/` plus `./references/comprehensive/`. The split is about reading mode: condensed actionable rules versus deep topic-by-topic guidance. It is not a file-count convention.
+- **Review checklists**: A style guide whose rules a pull request reviewer can check may add `references/review-checklist.md`, which `set-up-review-config` installs for automated reviewers. It follows the "Review checklists" format in the repository's plugin development guide and needs an entry in `set-up-review-config`'s `references/guides.md`.
 
 **For skills**: Reference files are plain Markdown. Point to them from SKILL.md with relative paths (e.g., `./references/checklist.md`).
 
@@ -176,10 +177,11 @@ Do not add an H3 plugin-description section or an individual install command to 
 
 ### 10. Regenerate Generated Mirrors
 
-Regenerate generated surfaces from the canonical plugin source and commit the generated outputs:
+Regenerate generated surfaces from the canonical plugin source with `make build`, and commit the generated outputs. It runs, in order:
 
-1. Run `bin/build-codex-marketplace` to update `.agents/plugins/marketplace.json` and `dist/codex/`.
-1. Run `bin/build-opencode-mirror` to update `dist/opencode/`.
+1. `bin/build-review-checklists`, which copies each style guide's review checklist into `set-up-review-config`.
+1. `bin/build-codex-marketplace`, which updates `.agents/plugins/marketplace.json` and `dist/codex/`.
+1. `bin/build-opencode-mirror`, which updates `dist/opencode/`.
 
 Do not edit generated mirror files directly. Only update project-level instruction files such as `AGENTS.md` or `CLAUDE.md` when the new plugin changes repository conventions or those files already contain a current plugin catalog that must be kept in sync.
 
@@ -191,8 +193,7 @@ Before finishing, verify:
 - [ ] `plugin.json` fields are alphabetized and `name` matches the directory name
 - [ ] `marketplace.json` is valid JSON with the new entry
 - [ ] `marketplace.json` entry fields match `plugin.json` (shared fields)
-- [ ] `bin/build-codex-marketplace` has regenerated `.agents/plugins/marketplace.json` and `dist/codex/`
-- [ ] `bin/build-opencode-mirror` has regenerated `dist/opencode/`
+- [ ] `make build` has regenerated the review checklist copies, `.agents/plugins/marketplace.json`, `dist/codex/` and `dist/opencode/`
 - [ ] Root `README.md` has the new plugin row in the correct category table, with the marketplace description copied verbatim
 - [ ] Root `README.md` external-tool bullets are updated if the plugin needs external tools
 - [ ] `plugins/PLUGIN-NAME/README.md` exists and documents installation, usage, requirements, examples, and related plugins
@@ -217,4 +218,4 @@ Before finishing, verify:
 - If `marketplace.json` cannot be parsed as valid JSON, fix the syntax before proceeding
 - If the user is unsure about the plugin type, default to a skills plugin (the most common type)
 - If the user wants to add a skill to an existing plugin instead of creating a new one, bump the minor version in `.claude-plugin/plugin.json` and mirror it in `.codex-plugin/plugin.json` when that manifest exists
-- If generated Codex or OpenCode files drift, run `bin/build-codex-marketplace` and `bin/build-opencode-mirror` instead of editing generated files directly
+- If generated review checklist copies, Codex files or OpenCode files drift, run `make build` instead of editing generated files directly

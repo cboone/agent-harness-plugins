@@ -55,15 +55,16 @@ jobs:
         run: bin/validate-plugins
       - name: Validate generated mirrors are up to date
         run: |
+          bin/build-review-checklists
           bin/build-codex-marketplace
           bin/build-opencode-mirror
           # `git diff` compares the worktree to the index and ignores untracked
           # files, so a newly added plugin skill produced a brand-new untracked
           # symlink under dist/opencode/skills/ and still reported clean.
           # `git status --porcelain` catches additions as well as edits.
-          drift="$(git status --porcelain dist/ .agents/)"
+          drift="$(git status --porcelain dist/ .agents/ plugins/set-up-review-config/skills/set-up-review-config/references/checklists/)"
           if [[ -n "${drift}" ]]; then
-            echo "::error::Generated mirrors are out of date; run bin/build-codex-marketplace and bin/build-opencode-mirror"
+            echo "::error::Generated files are out of date; run make build"
             printf '%s\n' "${drift}"
             exit 1
           fi
@@ -83,6 +84,8 @@ jobs:
     with:
       scrut-env: |
         CHECK_CROSS_REFERENCES_BIN=./bin/check-cross-references
+        BUILD_REVIEW_CHECKLISTS_BIN=./bin/build-review-checklists
+        REVIEW_CHECKLIST_FIXTURE_BIN=./tests/fixtures/review-checklist-fixture
         COMPOSE_ISSUE_PROMPT_BIN=./plugins/address-issue-in-worktree/scripts/compose-issue-prompt
         CREATE_WORKTREE_COMPOSE_ISSUE_PROMPT_BIN=./plugins/create-worktree/scripts/compose-issue-prompt
         COPILOT_REVIEW_DATA_DIR=./tests/data/copilot-reviews

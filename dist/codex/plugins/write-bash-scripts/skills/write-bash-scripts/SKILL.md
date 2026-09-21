@@ -48,6 +48,10 @@ Read `./references/BASH.md` for the complete guide. Summary:
 
 macOS ships bash 3.2 as `/bin/bash`, which is what `#!/usr/bin/env bash` finds on a stock Mac. Under `set -u` it exits on an empty `"${@}"` or `"${array[@]}"`, and it has no associative arrays, `readarray` or `mapfile`, `${var,,}` or `${var^^}`, or namerefs. See "Bash 3.2 (macOS)" in `./references/BASH.md` for replacements.
 
+## Pull Request Review
+
+When reviewing a pull request, apply `./references/review-checklist.md`: the rules of this guide that a reviewer can check in a diff, ranked as Important, Nits and Do not flag. The same checklist is installed into repositories for automated reviewers, so update it whenever a rule here changes.
+
 ## Validation
 
 Whenever possible, validate the script before finishing. Prefer using a project-specific validation script, if available. Common locations include declarations in `package.json` and scripts stored in `bin/`. If those aren't present, `shellcheck` is a commonly available linter for Bash scripts.

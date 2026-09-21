@@ -15,6 +15,15 @@ function mutate_catalog() {
   mv "${FIXTURE_ROOT}/catalog.json" "${catalog}"
 }
 
+# The review checklist scenarios mutate a source, a copy or guides.md without
+# running bin/build-review-checklists, so rule 20 is the only rule that fires:
+# bin/build-codex-marketplace below rebuilds dist/ from the mutated tree, which
+# keeps rule 16 quiet. They use write-go-code, which already has a checklist,
+# so adding a checklist to another guide never changes what they test.
+readonly GO_REVIEW_CHECKLIST="plugins/write-go-code/skills/write-go-code/references/review-checklist.md"
+readonly REVIEW_CHECKLIST_COPIES="plugins/set-up-review-config/skills/set-up-review-config/references/checklists"
+readonly REVIEW_GUIDES="plugins/set-up-review-config/skills/set-up-review-config/references/guides.md"
+
 # Replaces a SKILL.md frontmatter description, including any folded
 # continuation lines, with a single plain-scalar line.
 function replace_description() {
@@ -103,6 +112,18 @@ function main() {
       ;;
     metadata-version) mutate_catalog '.metadata.version = "catalog-state"' ;;
     entry-version) mutate_catalog '.plugins[0].version = "1.0.0"' ;;
+    stale-review-checklist)
+      printf '%s\n' '- **Extra**: A rule added without a rebuild.' >> "${FIXTURE_ROOT}/${GO_REVIEW_CHECKLIST}"
+      ;;
+    orphan-review-checklist)
+      cp "${FIXTURE_ROOT}/${REVIEW_CHECKLIST_COPIES}/write-go-code.md" "${FIXTURE_ROOT}/${REVIEW_CHECKLIST_COPIES}/write-orphan.md"
+      ;;
+    unlisted-review-checklist)
+      perl -ni -e 'print unless m{\./references/checklists/write-go-code\.md}' "${FIXTURE_ROOT}/${REVIEW_GUIDES}"
+      ;;
+    invalid-review-checklist)
+      printf '%s\n' '- plain item' >> "${FIXTURE_ROOT}/${GO_REVIEW_CHECKLIST}"
+      ;;
     # The window leaves the budget ample room, so only the length is at fault.
     oversized-description)
       replace_description "${FIXTURE_ROOT}/plugins/release/skills/release/SKILL.md" "$(description_of_length 1100)"

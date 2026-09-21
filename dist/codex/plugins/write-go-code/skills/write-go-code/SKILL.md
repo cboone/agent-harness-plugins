@@ -40,6 +40,10 @@ description: >-
 - `references/comprehensive/makefile-conventions.md` - Required CI targets, fmt vs format
 - `references/comprehensive/cobra.md` - Cobra root command usage templates
 
+## Pull Request Review
+
+When reviewing a pull request, apply `./references/review-checklist.md`: the rules of this guide that a reviewer can check in a diff, ranked as Important, Nits and Do not flag. The same checklist is installed into repositories for automated reviewers, so update it whenever a rule here changes.
+
 ## Sources
 
 - [Effective Go](https://go.dev/doc/effective_go)

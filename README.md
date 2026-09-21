@@ -88,12 +88,14 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Review Colleague PR](./plugins/review-colleague-pr/README.md)                 | `/review-colleague-pr`         | Review a colleague's pull request carefully and considerately from a checkout of its branch, and report a brief, read-only assessment in chat: requirements, direction, blockers, follow-ups, and questions for the author.                                           |
 | [Review Plan](./plugins/review-plan/README.md)                                 | `/review-plan [path]`          | Review an implementation plan against the current repository and its explicit dependencies, reporting evidence-backed blockers, required revisions, and optional improvements before work begins. Use when asked to review a plan or assess implementation readiness. |
 | [Resolve Copilot PR Feedback](./plugins/resolve-copilot-pr-feedback/README.md) | `/resolve-copilot-pr-feedback` | Process and resolve GitHub Copilot automated PR review comments.                                                                                                                                                                                                      |
+| [Set-Up Review Config](./plugins/set-up-review-config/README.md)               | `/set-up-review-config`        | Install style-guide review checklists as a Copilot code-review skill, with matching AGENTS.md review rules and a REVIEW.md, so Copilot, Codex, and Claude Code Review apply the same guidance.                                                                        |
 
 **External tools:**
 
 - _Review Colleague PR:_ [`gh`](https://cli.github.com/) (required; the skill reads the PR, its linked issues, its reviews, and its CI status over the GitHub API, and writes nothing)
 - _Review Plan:_ [`gh`](https://cli.github.com/) (optional; only for explicitly linked GitHub context)
 - _Resolve Copilot PR Feedback:_ [`gh`](https://cli.github.com/) (required; the skill reads review threads over the GitHub API and posts its summary comment)
+- _Set-Up Review Config:_ `git` (required; the skill detects file types with `git ls-files` and pins links with `git ls-remote`); `curl` (optional; checks that the bundled checklists match the marketplace)
 
 ### Code Quality
 

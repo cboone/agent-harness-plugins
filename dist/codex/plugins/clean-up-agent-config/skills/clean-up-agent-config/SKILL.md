@@ -30,14 +30,19 @@ The goal is a hub-and-spoke model: shared instructions in one canonical file, to
 repo/
 +-- AGENTS.md                              # Single source of truth (all tools)
 +-- CLAUDE.md -> AGENTS.md                 # Symlink for Claude Code
++-- REVIEW.md                              # Claude Code Review instructions
 +-- .claude/
 |   +-- rules/
 |       +-- *.md                           # Claude-specific rules (auto-loaded)
 +-- .github/
     +-- copilot-instructions.md            # Copilot repo-wide review rules
     +-- instructions/
-        +-- *.instructions.md              # Copilot path-scoped rules
+    |   +-- *.instructions.md              # Copilot path-scoped rules
+    +-- skills/
+        +-- code-review/                   # Copilot code review skill and checklists
 ```
+
+`REVIEW.md`, `.github/skills/code-review/`, and the `## Code Review Rules` section of `AGENTS.md` may hold content managed by `set-up-review-config`: blocks between `<!-- BEGIN set-up-review-config -->` and `<!-- END set-up-review-config -->` lines, and checklist files whose first line begins `<!-- Managed by set-up-review-config`. Leave managed content where it is and as it is; rerunning `/set-up-review-config` is the way to change it.
 
 Copilot reads path-scoped files only within or below `.github/instructions/`, and subdirectories there are allowed. A `*.instructions.md` outside that subtree, such as `.github/lean.instructions.md` or `.github/review/lean.instructions.md`, is never read: its `applyTo` frontmatter is not evaluated and none of its rules reach Copilot.
 
@@ -63,6 +68,9 @@ repo/
 | Claude-specific (MCP hints, subagent patterns) | `.claude/rules/*.md`                                                                     | Auto-loaded, Claude-only                                                  |
 | Copilot code review rules                      | `.github/copilot-instructions.md`                                                        | Copilot code review agent                                                 |
 | File-type-specific review rules                | `.github/instructions/**/*.instructions.md`                                              | Copilot's `applyTo` glob scoping                                          |
+| Style-guide review checklists                  | `.github/skills/code-review/`                                                            | Copilot code review always uses a skill directory named `code-review`     |
+| Claude Code Review rules                       | `REVIEW.md`                                                                              | Sent to every Claude Code Review agent that finds and verifies findings   |
+| Codex code review rules                        | `## Code Review Rules` in `AGENTS.md`                                                    | The section Codex cloud review reads                                      |
 | Team permissions and hooks                     | `.claude/settings.json`                                                                  | Committed, shared with team                                               |
 | Personal model/telemetry/privacy               | `.claude/settings.local.json`                                                            | Gitignored, personal                                                      |
 | MCP servers (team)                             | `.mcp.json` at project root                                                              | Committed, shared                                                         |
@@ -90,6 +98,8 @@ Scan the repository for all known agent-related files.
 - `.github/prompts/*.prompt.md`
 - `.github/chatmodes/*.chatmode.md`
 - `.github/agents/*.agent.md`
+- `.github/skills/*/SKILL.md` and the files beside it
+- `REVIEW.md`
 
 #### Config files to check
 
@@ -118,6 +128,7 @@ Read each found file and categorize its contents into:
 1. **Personal config** -- settings that belong in gitignored files, not shared config
 1. **Duplicated content** -- instructions repeated across multiple files
 1. **Misplaced content** -- team settings in personal files or personal settings in team files
+1. **Managed review content** -- `set-up-review-config` blocks and marked checklist files. Report them, but never move, deduplicate or rewrite them: they repeat checklist rules on purpose, once for each reviewer that reads a different file
 
 #### Settings split analysis (Claude Code)
 
@@ -216,7 +227,7 @@ Brief project description and key architectural decisions.
 
 **Keep it under 200 lines.** If more detail is needed, keep it in `.claude/rules/` files (Claude) or reference supporting docs.
 
-**Do not include** code style rules that linters enforce (formatting, indentation). Those belong in `.editorconfig`, `.prettierrc`, etc.
+**Do not include** code style rules that linters enforce (formatting, indentation). Those belong in `.editorconfig`, `.prettierrc`, etc. A `set-up-review-config` block under `## Code Review Rules` is review guidance rather than style rules; keep it.
 
 #### 4b. CLAUDE.md symlink
 
@@ -394,7 +405,7 @@ Add glob patterns for subdirectory AGENTS.md files in monorepos:
    readlink CLAUDE.md
    ```
 
-1. **No duplicated instructions** across AGENTS.md, copilot-instructions.md, and .claude/rules/
+1. **No duplicated instructions** across AGENTS.md, copilot-instructions.md, and .claude/rules/, apart from `set-up-review-config` managed content, which repeats review rules for each reviewer on purpose
 
 1. **Scoped Copilot instructions are well-formed:**
    - Every `*.instructions.md` within or below `.github/instructions/` starts with `applyTo` frontmatter and a top-level heading naming the scope

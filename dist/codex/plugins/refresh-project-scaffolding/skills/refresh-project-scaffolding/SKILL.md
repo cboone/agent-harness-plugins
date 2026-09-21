@@ -16,7 +16,7 @@ This is the maintenance companion to `bootstrap-project`: bootstrap sets things 
 ## Skill dependencies
 
 - **Required:** None
-- **Optional:** `add-community-files`, `add-goreleaser-homebrew`, `add-scrut-cli-tests`, `clean-up-agent-config`, `optimize-runner-usage`, `pin-everything`, `review-dependabot-config`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-new-repo`, `set-up-ci`, `set-up-installers`, `set-up-linters`, `set-up-secret-scanning`
+- **Optional:** `add-community-files`, `add-goreleaser-homebrew`, `add-scrut-cli-tests`, `clean-up-agent-config`, `optimize-runner-usage`, `pin-everything`, `review-dependabot-config`, `scaffold-go-cli`, `scaffold-go-library`, `scaffold-new-repo`, `set-up-ci`, `set-up-installers`, `set-up-linters`, `set-up-review-config`, `set-up-secret-scanning`
 
 ## Workflow
 
@@ -41,21 +41,22 @@ If multiple types are detected (monorepo), note all of them.
 
 For each tool in the ecosystem, check for its signature artifacts. Only tools whose artifacts are found will be audited.
 
-| Tool                      | Signature artifacts                                                       |
-| ------------------------- | ------------------------------------------------------------------------- |
-| `scaffold-new-repo`       | `LICENSE` + `README.md` + `.gitignore`                                    |
-| `scaffold-go-cli`         | `go.mod` + `cmd/` + `.goreleaser.yml` + `.github/workflows/release.yml`   |
-| `scaffold-go-library`     | `go.mod` (no `cmd/`) + `.golangci.yml` + `.github/workflows/ci.yml`       |
-| `set-up-ci`               | `.github/workflows/ci.yml`                                                |
-| `set-up-linters`          | `.editorconfig` or `.prettierrc.json` or `.golangci.yml`                  |
-| `set-up-secret-scanning`  | `.github/workflows/gitleaks.yml` or `.github/workflows/trufflehog.yml`    |
-| `add-goreleaser-homebrew` | `.goreleaser.yml` with `brews:` section + `.github/workflows/release.yml` |
-| `add-community-files`     | `CONTRIBUTING.md` + `CODE_OF_CONDUCT.md`                                  |
-| `add-scrut-cli-tests`     | `tests/scrut/` directory                                                  |
-| `set-up-installers`       | `Formula/`                                                                |
-| `optimize-runner-usage`   | `concurrency:` key in any `.github/workflows/*.yml`                       |
-| `clean-up-agent-config`   | `AGENTS.md` or (`CLAUDE.md` + `.claude/settings.json`)                    |
-| `pin-everything`          | `.github/dependabot.yml` or `.github/dependabot.yaml`                     |
+| Tool                      | Signature artifacts                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `scaffold-new-repo`       | `LICENSE` + `README.md` + `.gitignore`                                                                            |
+| `scaffold-go-cli`         | `go.mod` + `cmd/` + `.goreleaser.yml` + `.github/workflows/release.yml`                                           |
+| `scaffold-go-library`     | `go.mod` (no `cmd/`) + `.golangci.yml` + `.github/workflows/ci.yml`                                               |
+| `set-up-ci`               | `.github/workflows/ci.yml`                                                                                        |
+| `set-up-linters`          | `.editorconfig` or `.prettierrc.json` or `.golangci.yml`                                                          |
+| `set-up-secret-scanning`  | `.github/workflows/gitleaks.yml` or `.github/workflows/trufflehog.yml`                                            |
+| `add-goreleaser-homebrew` | `.goreleaser.yml` with `brews:` section + `.github/workflows/release.yml`                                         |
+| `add-community-files`     | `CONTRIBUTING.md` + `CODE_OF_CONDUCT.md`                                                                          |
+| `add-scrut-cli-tests`     | `tests/scrut/` directory                                                                                          |
+| `set-up-installers`       | `Formula/`                                                                                                        |
+| `optimize-runner-usage`   | `concurrency:` key in any `.github/workflows/*.yml`                                                               |
+| `clean-up-agent-config`   | `AGENTS.md` or (`CLAUDE.md` + `.claude/settings.json`)                                                            |
+| `pin-everything`          | `.github/dependabot.yml` or `.github/dependabot.yaml`                                                             |
+| `set-up-review-config`    | A `<!-- BEGIN set-up-review-config -->` line in `.github/skills/code-review/SKILL.md`, `AGENTS.md` or `REVIEW.md` |
 
 For each detected tool, record which artifacts were found and which expected artifacts are missing (for "Partially set up" status).
 
@@ -72,6 +73,8 @@ For each failed check, record:
 - The recommended fix
 
 Use Grep and Read to check file contents. Check action versions against the **Reference: Action Versions** table.
+
+For `set-up-review-config`, the reference section covers the structure of the installed config. Whether its checklists match the current style guides, and whether the repository has gained a file type since, is what its dry run reports, so its detection rules stay in one plugin: invoke the `set-up-review-config` skill with `--dry-run` and record any guide it would create, update or remove.
 
 ### 4. Build and Present the Update Plan
 
@@ -128,8 +131,9 @@ For each confirmed update item, choose a strategy based on scope:
 | Missing file from a detected tool                                                                               | **Full re-run**: invoke the original skill                                                               |
 | No Dependabot config                                                                                            | **Full re-run**: invoke the `pin-everything` skill with `--scope dependabot`                             |
 | Dependabot config fails a check (a missing ecosystem or directory, no `version: 2`, or both file names present) | **Delegate**: invoke the `review-dependabot-config` skill, which merges the fix into the existing config |
+| Review config drift (a changed checklist, a new file type, a missing managed file, or an unpinned link)         | **Full re-run**: invoke the `set-up-review-config` skill, which replaces only its managed content        |
 
-For full tool re-runs, all detected tools are skills. Invoke those skills. If one is not installed, record that update as "skipped: not installed" with the skill's installation command, report it apart from the applied updates, and continue with the rest. Relevant skills include `add-community-files`, `set-up-linters`, `set-up-ci`, `set-up-secret-scanning`, `add-goreleaser-homebrew`, `set-up-installers`, `add-scrut-cli-tests`, `scaffold-new-repo`, `pin-everything`, and `optimize-runner-usage`. Dependabot coverage gaps go to `review-dependabot-config` instead of a `pin-everything` re-run, because that skill reviews the existing config and merges into it rather than regenerating it.
+For full tool re-runs, all detected tools are skills. Invoke those skills. If one is not installed, record that update as "skipped: not installed" with the skill's installation command, report it apart from the applied updates, and continue with the rest. Relevant skills include `add-community-files`, `set-up-linters`, `set-up-ci`, `set-up-secret-scanning`, `add-goreleaser-homebrew`, `set-up-installers`, `add-scrut-cli-tests`, `set-up-review-config`, `scaffold-new-repo`, `pin-everything`, and `optimize-runner-usage`. Dependabot coverage gaps go to `review-dependabot-config` instead of a `pin-everything` re-run, because that skill reviews the existing config and merges into it rather than regenerating it.
 
 Process updates in this order (matching the bootstrap-project execution order):
 
@@ -142,6 +146,7 @@ Process updates in this order (matching the bootstrap-project execution order):
 1. `add-community-files` (community files)
 1. `set-up-installers` (distribution)
 1. `add-scrut-cli-tests` (testing)
+1. `set-up-review-config` (review checklists, once the file types and CI checks above are final)
 1. `pin-everything` or `review-dependabot-config` (Dependabot config, once every workflow and manifest above is in place)
 1. `optimize-runner-usage` (CI optimization)
 1. `clean-up-agent-config` (agent config)
@@ -498,6 +503,24 @@ These checks only establish that the config exists and covers what is present. F
 - `.claude/settings.local.json` is gitignored (check `.gitignore` for the entry)
 - `.github/copilot-instructions.md` cross-references `AGENTS.md`
 - `.github/instructions/**/*.instructions.md` files have `applyTo:` frontmatter
+
+## Reference: Review Config Checks (set-up-review-config)
+
+### Files
+
+- `.github/skills/code-review/SKILL.md`
+- `.github/skills/code-review/*.md`
+- `AGENTS.md`
+- `REVIEW.md`
+
+### Checks
+
+- `.github/skills/code-review/SKILL.md` and `REVIEW.md` each have exactly one `<!-- BEGIN set-up-review-config -->` line followed by one `<!-- END set-up-review-config -->` line
+- `.github/skills/code-review/SKILL.md` frontmatter has `name: code-review` and a non-empty `description`
+- Every checklist the entry skill routes to exists and starts with a `<!-- Managed by set-up-review-config` line, and every file with that line is routed
+- No installed checklist records `unpinned` in its first line
+- When `AGENTS.md` exists, it has one managed block under a `## Code Review Rules` heading, and only one such heading. A repository without `AGENTS.md` passes: the user declined creating one, and `set-up-review-config` reports Codex as unconfigured there
+- `set-up-review-config --dry-run` reports no guide to create, update or remove
 
 ## Reference: Scrut Test Checks (add-scrut-cli-tests)
 
