@@ -37,6 +37,9 @@ Honor this block as part of the `lint-and-fix` invocation.
 - Do not end with a vague handoff as the terminal outcome. Report the structured result and the caller resume target instead.
 - On lint success, no tools detected, or no file changes needed, report the result and allow the parent to continue immediately according to `On lint success`.
 - On unresolved lint issues, skipped required lint work, missing required tools, or tool execution failures, report a workflow failure result and list the unresolved items so the parent can follow `On lint failure or skipped required lint work`.
+- A tool that [step 2](#2-consult-project-agent-config) downgraded to check mode is **not** skipped required lint work. When it runs in check mode and finds nothing, that is lint success: report it on the `Check-only by project policy` line, leave `Unresolved or skipped` as `none`, and let the parent continue. When it finds issues that step 6 cannot resolve by hand, that is an ordinary failure and belongs under `Unresolved or skipped`.
+- A tool recorded as `check-only (no safe check command)` **is** skipped required lint work, because nothing ran and the tree was never checked. Report `Lint status: failure` and list the tool under `Unresolved or skipped` with the reason. It must never reach the parent as success: an unrun tool and a tool that ran clean are opposite results, and a parent such as `pr` would otherwise push a tree no one checked.
+- That mode has two sources, and only one of them is policy. Step 2 assigns it when a project rule downgrades a tool and no verified check command exists, and step 4a assigns it when **--check** would otherwise take a write-mode fallback. Name only the first on the `Check-only by project policy` line, since the second is a limit of the user's own dry run and attributing it to the project misreports where the constraint came from. Both still count as skipped required lint work under `Unresolved or skipped`, which is what governs the parent.
 
 Final output for a parent invocation must include:
 
@@ -44,6 +47,7 @@ Final output for a parent invocation must include:
 Lint status: <success|no-tools|failure>
 Commit: <none|commit SHA>
 Unresolved or skipped: <none|summary>
+Check-only by project policy: <none|tool list>
 Caller resume target: <target from continuation block>
 ```
 
@@ -69,6 +73,8 @@ Check for linter and formatter configuration in the project. Use Glob and Read t
 | `package.json` has `format` script                                                | npm format         | `npm run format`                                         | Try `npm run format -- --check`, fall back to `npm run format` |
 | `bin/lint`, `scripts/lint`, `script/lint`                                         | Project script     | Try `<script> --fix` first                               | `<script>`                                                     |
 | `.github/workflows/*.yml`, `.github/workflows/*.yaml` `run:` steps                | CI workflow script | Run detected command                                     | Run detected command                                           |
+
+The fix commands in this table are defaults, not permissions. [Step 2](#2-consult-project-agent-config) decides which of them may actually run.
 
 Replace `<package-manager-runner>` with the project's local-binary runner: `npx` for npm, `yarn` for Yarn, `pnpm exec` for pnpm, or `bunx` for Bun. Verify that the selected runner resolves the installed project dependency. If Prettier is available only as a verified global installation, use the bare `prettier` command instead; if it is unavailable both locally and globally, report that rather than invoking a runner that may fetch another version. Do not use `npx` in Yarn Plug'n'Play projects, where it may not resolve the locked local binary.
 
@@ -109,58 +115,135 @@ Would produce two additional detected tools:
 | validate-json    | CI workflow (ci.yml, step 6) | `bin/validate-json`    |
 | validate-plugins | CI workflow (ci.yml, step 7) | `bin/validate-plugins` |
 
-If **--tool <name>** was specified, filter the detected list to only that tool. If the specified tool was not detected, report that and stop.
+Do not apply **--tool** filtering here, and do not stop here when detection finds nothing. [Step 2](#2-consult-project-agent-config) can add commands this table cannot match, such as a spelling check invoked only from `make lint`, so a project whose entry point names one is unreachable if the run ends before the agent config is read. Both the filter and the empty-run exit belong at the end of step 2, once the run is complete.
 
-If **no tools are detected**, report that no linters or formatters were found. If a parent continuation block was supplied, report `Lint status: no-tools`, include the caller resume target, and allow the parent workflow to continue according to its continuation block. Otherwise stop.
+### 2. Consult Project Agent Config
 
-### 2. Present Detected Tools
+The detection table reconstructs a plausible lint invocation from the config files on disk. It is a guess. A project may document a different invocation, may require a particular order between tools, and may forbid a specific fix command outright. Fix commands rewrite files, so read the project's own instructions before running any of them. Skipping this step is how the skill ends up performing the exact destructive operation a project prohibits.
 
-Before running, display the detected tools:
+Read whichever of these exist: `CLAUDE.md` and `AGENTS.md` in the repository root, and `copilot-instructions.md` under `.github/`. Any of them may be absent, which is normal and not an error, and `CLAUDE.md` is often a symlink to `AGENTS.md`, so read the target rather than reporting a duplicate. Also honor any user-level instructions already present in context.
+
+#### Constraints to Look For
+
+| Constraint                   | What it looks like                                                                                                    | Effect on the run                                                                                                                                                                                                                                                                  |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Forbidden fix command**    | "never pass `--fix` to `markdownlint-cli2`", "this formatter is check-only here", "do not run the fixer on this tree" | Put that tool in check mode, subject to [the No-Write Rule](#the-no-write-rule): where no command qualifies, it runs nothing. Do not substitute a different fixer for it, and do not drop the tool from the run, which means keep reporting it rather than execute it at any cost. |
+| **Prescribed order**         | "run Prettier before the Markdown linter", "`npm run format`, then `npm run lint:md`"                                 | Run the named tools in that order, ahead of tools the config does not mention.                                                                                                                                                                                                     |
+| **Documented lint sequence** | a list of the exact commands the project expects, a `make lint` target, "the full lint invocation is ..."             | Run the documented commands verbatim, in place of the table's reconstruction of the same tools, and add any command they name that detection did not find. Prohibitions still apply to them.                                                                                       |
+| **Protected paths**          | "`docs/plans/done/` is an append-only historical record", "never reformat generated output"                           | Treat any fixer whose file selection reaches those paths as forbidden unless the project also documents how to exclude them.                                                                                                                                                       |
+
+#### Precedence
+
+1. **A prohibition outranks every rule below it.** A forbidden fix command and a protected path decide what may not run, so apply them first, and apply them to documented commands too. A documented `npm run format` that wraps a fixer the same config forbids, or whose file selection reaches a protected path, is downgraded to check mode exactly as the table's reconstruction would be. A documented command is evidence of how the project runs a tool, not permission to run one the project prohibits. Report the conflict and both of its sources rather than resolving it silently in either direction.
+1. **A documented command beats the table's version of the same tool**, verbatim, including its file selection, once it clears the prohibitions above. Projects narrow a tool's inputs on purpose: a `git ls-files`-driven `shfmt` invocation exists because `shfmt` does not read `.gitignore`, so a tree walk reaches vendored and generated scripts. Do not widen such a command back to a glob, and do not "improve" it.
+1. **A documented order beats the table's order.** The detection table has no notion of ordering between two tools that claim the same files, so two fixers over `**/*.md` will fight without it.
+1. **A documented sequence may name commands detection did not find.** A project entry point can include a checker that has no config file for the table to match, such as a spelling or typo check invoked only from `make lint`. Add those commands to the run, deduplicate them against the detected tools they already cover, and apply any **--tool** filter afterward, so the filter selects from everything that will run rather than from detection alone. Otherwise the skill promises to honor the project's entry point and then silently drops part of it. A documented command the sequence names separately is selectable like any other tool; one the sequence only wraps is not, and [Close the Run](#close-the-run) says what to do about that.
+1. **Detection still supplies everything the config does not mention.** Consulting the agent config narrows, reorders, downgrades, and extends the run; it does not replace detection. Keep every other detected tool.
+
+#### Record the Outcome
+
+For each tool in the run, whether detection found it or the agent config named it, carry these forward into the remaining steps:
+
+- **Mode**: `fix`, `check-only (project policy)`, `check-only (no auto-fix)`, `check-only (user requested --check)`, or `check-only (no safe check command)`
+- **Command**: the command that will actually run in step 4
+- **Check command**: the command step 7 will re-run to verify, or `none`
+- **Source**: for a policy downgrade, the file and the rule, quoted in one line
+
+**Record the check command separately, for every tool, including one in `fix` mode.** A tool that fixes runs its fix command in step 4 and still has to be verified in step 7, and step 7 is forbidden to reconstruct a command or take a fallback. Without its own field there is nothing for that step to use, so the run either re-invokes the writer or drops the tool. The two fields are the same command whenever the tool is already in a check-only mode, and `none` for `check-only (no safe check command)`, which is what makes that mode unrunnable in both steps rather than only in step 4.
+
+**--check** sets `check-only (user requested --check)` for every tool in the run that would otherwise be `fix`, and the recorded command becomes that tool's check command. Record it here rather than leaving `Mode: fix` in place, or steps 3, 5 and 7 will present a dry run as though a fixer ran. It does not override a mode already assigned for another reason: a tool the project downgraded keeps `check-only (project policy)`, since that is the constraint worth reporting, and a tool with no fixer keeps `check-only (no auto-fix)`.
+
+#### The No-Write Rule
+
+**Whenever a tool is in any check-only mode, its command must be one that is verified not to write.** This holds wherever a check-mode command is chosen: when step 2 records one, when **--check** replaces a fix command, when step 4's tool-specific notes suggest a form, and when step 7 re-runs the tool. Every one of those is a place the run can quietly write to a tree the user or the project expected it to leave alone.
+
+The detection table is the reason this needs saying, because three of its rows fall back to a write-mode command when no check form is available:
+
+| Row             | Check command falls back to         | Why that writes                       |
+| --------------- | ----------------------------------- | ------------------------------------- |
+| `lint` script   | `npm run lint` after `-- --fix`     | the script's default behavior may fix |
+| `format` script | `npm run format` after `-- --check` | it is the writer                      |
+| Project script  | `<script>` without `--fix`          | the script's default behavior may fix |
+
+Treat that list as illustrative, not exhaustive: any command whose check behavior is not established falls under the rule. A command qualifies when the project's own documentation or the tool's documented check flag establishes it does not write. Where none qualifies, do not fall back. Record the tool as `check-only (no safe check command)`, run nothing for it, and report it with the reason and, for a policy downgrade, its source.
+
+**A downgrade is never silent.** A tool moved to check mode by project policy must be reported as such in steps 3, 5, and 7, and on the `Check-only by project policy` line of the [Parent Continuation Contract](#parent-continuation-contract). "The fixer ran and found nothing" and "the fixer was not permitted to run" are different results, and a report that collapses them lets a skipped fixer read as a clean tree.
+
+**If the user's invocation conflicts with a project rule**, for example `--tool markdownlint` in a repository that forbids `markdownlint --fix`, do not resolve it silently in either direction. Run the tool in check mode, report the conflict and its source, and let the user decide whether to override it.
+
+If **no agent config files exist**, or none of them constrain linting, note that and run the detection table as-is. That is the common case and not an error.
+
+#### Close the Run
+
+The run is now complete, so apply the two gates step 1 deferred:
+
+1. If **--tool <name>** was specified, filter the run to only that tool. Match against every tool in the run, including any the agent config added, so a documented entry point's own tools can be selected. If the named tool is in neither detection nor the config, report that and stop.
+
+   **An aggregate documented command is indivisible, so it can conflict with this filter.** When the named tool is reachable only inside one, as `prettier` is in a project whose documented sequence is `make lint`, there is no filtered run to produce. Running the aggregate would execute the other tools the user excluded, and reconstructing the tool's own command would substitute this skill's version for the project's, which [precedence rule 2](#precedence) forbids. Do neither, and do not expand the aggregate into its parts. Report a selection conflict instead: name the tool, the aggregate command that contains it, and the file and rule that documented it, then stop and let the user choose between running the documented command whole and dropping the filter. This matches how step 2 already handles a `--tool` request that a project rule forbids, and it leaves the choice with the person who can make it.
+
+1. If **the run is empty**, report that no linters or formatters were found. If a parent continuation block was supplied, report `Lint status: no-tools`, include the caller resume target, and allow the parent workflow to continue according to its continuation block. Otherwise stop.
+
+### 3. Present Detected Tools
+
+Before running, display the detected tools, in the order they will run:
 
 ```text
 ## Detected Linters and Formatters
 
-| Tool | Config | Command |
-|------|--------|---------|
-| eslint | eslint.config.js | npx eslint --fix . |
-| prettier | .prettierrc.json | npx prettier --write . |
-| shellcheck | (shell scripts found) | shellcheck bin/* |
+| Tool | Config | Command | Mode |
+|------|--------|---------|------|
+| prettier | .prettierrc.json | npx prettier --write . | fix |
+| eslint | eslint.config.js | npx eslint --fix . | fix |
+| markdownlint-cli2 | .markdownlint-cli2.jsonc | npx markdownlint-cli2 "**/*.md" | check-only (project policy) |
+| shellcheck | (shell scripts found) | shellcheck bin/* | check-only (no auto-fix) |
 ```
 
-If running in **--check** mode, show check commands instead of fix commands.
+Below the table, cite the source of every `check-only (project policy)` mode and of any ordering step 2 imposed:
 
-### 3. Run Each Tool
+```text
+markdownlint-cli2: check-only per CLAUDE.md -- "never pass --fix to markdownlint-cli2"
+prettier before markdownlint-cli2, per CLAUDE.md -- "run Prettier before the Markdown linter"
+```
 
-Run each detected tool sequentially. For each tool:
+If running in **--check** mode, show check commands instead of fix commands. **--check** applies to every tool; a project policy downgrade applies to one tool and still has to be cited.
 
-#### 3a. Run the Command
+### 4. Run Each Tool
 
-Run the fix command (or check command if **--check** was specified). Capture stdout, stderr, and exit code.
+Run every tool in the run sequentially, in the order presented in step 3, including any the agent config added in step 2. For each tool:
+
+**Except `check-only (no safe check command)`.** That mode means step 2 found nothing safe to run, so its `Command` is `none` and there is nothing to execute. Skip it here rather than reaching for the writer it was denied or improvising a command, report it as unresolved, and carry it into steps 5 and 7 with its status.
+
+#### 4a. Run the Command
+
+Run the command step 2 recorded for that tool: its fix command, its check command where the project forbids fixing, or its check command if **--check** was specified. Capture stdout, stderr, and exit code.
+
+Run exactly the recorded command. Do not reconstruct one here, and do not take a fallback the recording rejected: for any check-only mode, including a **--check** dry run, [the No-Write Rule](#the-no-write-rule) already decided what may run.
 
 **Tool-specific notes:**
 
 - **eslint**: Exit code 0 = clean, 1 = issues found. Parse output for remaining error/warning counts.
 - **prettier**: Exit code 0 = all clean, 1 = unformatted files found (check mode) or write errors.
-- **markdownlint-cli2**: Exit code 0 = clean, 1 = issues found. With `--fix`, some issues auto-fix and others remain.
+- **markdownlint-cli2**: Exit code 0 = clean, 1 = issues found. With `--fix`, some issues auto-fix and others remain. `--fix` also ignores the paths given on the command line and rewrites every file matching the `globs` in its config, so its blast radius is the whole configured tree no matter how the invocation is narrowed.
 - **shellcheck**: No auto-fix. All issues reported for manual resolution.
 - **shfmt**: With `-w`, formats in place silently. With `-d`, shows diffs.
 - **knip**: No auto-fix. Reports unused files, dependencies, and exports.
 - **cspell**: No auto-fix. Runs with `--dot` so dotfiles and dot-directories match CI spell-check behavior. Users fix typos in the source or add words to `cspell.json` (`words` array) or a project word list file. In git worktrees, `--dot` can expose the `.git` file; if that happens, add `.git` as well as `.git/` to the project's cspell ignore paths.
 - **npm scripts**: Exit codes depend on the underlying tool.
-- **Project scripts**: Try with `--fix` first. If the script does not recognize `--fix`, run without it.
+- **Project scripts**: Try with `--fix` first, but only for a tool in `fix` mode. In any check-only mode, run the recorded command and nothing else: falling back to a bare `<script>` because it does not recognize `--fix` would perform the write that [the No-Write Rule](#the-no-write-rule) exists to prevent.
 - **CI workflow scripts**: Run exactly as specified in the workflow. These are typically check-only (no auto-fix). Exit code 0 = pass, non-zero = issues found.
 
-#### 3b. Record Results
+#### 4b. Record Results
 
 For each tool, record:
 
 - **Tool**: Name
+- **Mode**: The mode step 2 assigned
 - **Exit code**: 0 (success) or non-zero
 - **Files fixed**: Count from output (if available)
 - **Remaining issues**: Count and summary of what auto-fix could not resolve
 - **Output**: Full output for reference
 
-### 4. Report Results
+### 5. Report Results
 
 After all tools run, display a summary:
 
@@ -169,18 +252,32 @@ After all tools run, display a summary:
 
 | Tool | Status | Fixed | Remaining |
 |------|--------|-------|-----------|
+| prettier | Ran with fixes | 5 files | 0 |
 | eslint | Ran with fixes | 3 files | 2 errors |
-| prettier | All formatted | 5 files | 0 |
-| shellcheck | Check only | n/a | 4 warnings |
+| markdownlint-cli2 | Checked only (fix not permitted) | n/a | 0 |
+| shellcheck | Check only (no auto-fix) | n/a | 4 warnings |
 ```
+
+Keep these statuses distinct, because they mean different things about the tree:
+
+- **`Ran with fixes`**: a fixer ran and corrected files.
+- **`Pass`**: the tool's check came back clean. It says the tree is clean, not that a fixer ran, so it is the right status for a tool with no fixer and for one running in check mode.
+- **`Checked only (fix not permitted)`**: step 2 downgraded the tool. A zero in the `Remaining` column here is a clean result, not a skipped one, but the run still did no fixing, so anything the fixer would have corrected is still uncorrected and appears as a remaining issue instead.
+- **`Check only (no auto-fix)`**: the tool has no fixer at all.
+- **`Check only (--check requested)`**: the user asked for a dry run, so a tool that would have fixed did not. Nothing on disk changed, and anything its fixer would have corrected is still uncorrected.
+- **`Not run (no safe check command)`**: step 2 could not find a command for this tool that is verified not to write, so nothing ran and the tree is unchecked for it. This is never a pass. Put it in the `Status` column, leave `Fixed` as `n/a`, put `unknown` in `Remaining` rather than a zero, and carry it into step 7 and into `Unresolved or skipped`.
+
+Repeat the citation for each `Checked only (fix not permitted)` row below the table.
 
 If **--check** was specified, show results and stop here.
 
-If all tools passed with zero remaining issues (auto-fix resolved everything), skip step 5 and go directly to step 6. **Auto-fix commands modify files on disk even when they resolve all issues. You must still verify in step 6 and commit in step 7.**
+If all tools passed with zero remaining issues (auto-fix resolved everything), skip step 6 and go directly to step 7. **Auto-fix commands modify files on disk even when they resolve all issues. You must still verify in step 7 and commit in step 8.**
 
-### 5. Fix Remaining Issues
+### 6. Fix Remaining Issues
 
-For each remaining issue that auto-fix could not resolve:
+**Check the reported path before editing anything.** A protected path is protected from hand edits whatever reported the finding, so this guard applies to every tool, not only to one step 2 downgraded. A tool with no fixer, or an ordinary tool whose output happens to point at a protected file, reaches this step without passing through any downgrade, and a targeted edit there writes to the tree the project told you not to touch. Leave those findings alone, report them under `Unresolved or skipped` with the path and the rule that protects it, and remediate only where the project documents an exception.
+
+For each remaining issue that auto-fix could not resolve, and whose file is not protected:
 
 1. **Read the tool output** to identify the specific error, file, and line number.
 1. **Read the relevant file** at the indicated location.
@@ -191,29 +288,45 @@ For each remaining issue that auto-fix could not resolve:
    - **Knip**: Remove unused exports or dependencies after confirming they are truly unused.
 1. **Re-run the tool** on the specific file to verify the fix.
 
+For a tool step 2 downgraded to check mode, resolve its findings with targeted edits to the reported files. Do not reach for the forbidden fixer here, and do not invoke it with a narrower glob: the prohibition is on the command, not on the breadth of a single invocation, and tools such as `markdownlint-cli2 --fix` ignore the paths given to them and rewrite everything matching their configured globs anyway.
+
+The protected-path guard above covers this case too: where the downgrade came from a protected path rather than a forbidden command, a targeted edit defeats the protection just as the fixer would.
+
 If a remaining issue is ambiguous or risky to fix automatically (e.g., removing a dependency that might be used dynamically, or a lint rule that conflicts with project intent), skip it and report:
 
 ```text
 Skipped: <file>:<line> -- <rule> -- <reason>
 ```
 
-### 6. Final Verification
+### 7. Final Verification
 
-Re-run all detected tools one final time in check mode to confirm a clean state:
+Re-run every tool in the run one final time in check mode to confirm a clean state, including any the agent config added in step 2. Verifying only the detected ones lets a config-only command such as a spelling or workflow check go unverified and be committed anyway.
+
+Every tool is in check mode here, so [the No-Write Rule](#the-no-write-rule) governs this step in full: use each tool's recorded check command, and never a write-mode fallback, or verification itself rewrites the tree it was meant to inspect. A tool that has no qualifying command, whether recorded that way in step 2 or found to have none here, is carried through as `Not run (no safe check command)` rather than omitted or allowed to read as `Pass`. Here too `Pass` means the check came back clean, which is why a tool with no fixer and a tool running in check mode both earn it.
 
 ```text
 ## Final Verification
 
 | Tool | Status |
 |------|--------|
-| eslint | Pass |
 | prettier | Pass |
+| eslint | Pass |
+| markdownlint-cli2 | Pass (fix mode not permitted) |
 | shellcheck | Pass (1 advisory skipped) |
 ```
 
-**After verification, always proceed to step 7.** Tools that auto-fixed files will have modified files on disk that need to be committed.
+Carry the policy annotation into this table too. Every tool runs in check mode here, so without it a downgraded tool's row is indistinguishable from one whose fixer ran.
 
-### 7. Commit and Push
+**After verification, proceed to step 8 to commit.** Tools that auto-fixed files will have modified files on disk, and those changes must be committed rather than left in the working tree, so this transition happens even when verification reported problems.
+
+**The push is gated on verification, the commit is not.** If any tool ends verification as `Not run (no safe check command)`, or with unresolved findings, step 8 commits what is on disk and stops there. Do not push, and report the run as a lint failure with those tools listed under `Unresolved or skipped`. A commit keeps the fixes that did run; a push publishes a tree where a required tool was never checked, which is the outcome the unrun mode exists to flag. Under a parent continuation block this is the `On lint failure or skipped required lint work` path, so the parent decides what happens next.
+
+**The failure survives every exit from step 8.** The gate suppresses the push; it never adds a commit, and it never turns into a success because nothing needed committing:
+
+- With **--no-commit**, step 8 is skipped as usual. Report the lint failure and its unresolved items, and do not commit in order to satisfy this gate.
+- With a clean `git status`, report that no changes were needed **and** the lint failure, rather than "all files were already clean" on its own. A tree that was already clean is not a tree that was checked, so the parent still takes the failure path.
+
+### 8. Commit and Push
 
 **This step is required unless --no-commit or --check was specified.** Linters and formatters modify files on disk when they auto-fix. Those changes must be committed even if every tool now reports a clean state.
 
@@ -225,7 +338,7 @@ Skip this step only if:
 Check for file changes and commit:
 
 1. Run `git status --porcelain` and check whether its output is empty.
-1. **If no files were modified** (i.e., `git status --porcelain` produced no output): Report "No changes needed, all files were already clean." If a parent continuation block was supplied, include the final output required by [Parent Continuation Contract](#parent-continuation-contract) and allow the parent workflow to continue according to its continuation block. Otherwise stop.
+1. **If no files were modified** (i.e., `git status --porcelain` produced no output): Report "No changes needed, all files were already clean." If verification left any tool `Not run (no safe check command)` or with unresolved findings, report that failure alongside it, because a clean tree is not a checked one. If a parent continuation block was supplied, include the final output required by [Parent Continuation Contract](#parent-continuation-contract) and allow the parent workflow to continue according to its continuation block, which is the failure path in that case. Otherwise stop.
 1. **If files were modified** (i.e., `git status --porcelain` produced any output): Stage all modified files and commit them.
 1. Generate a conventional commit message:
    - Use `style:` for pure formatting and linting fixes.
@@ -245,7 +358,12 @@ After committing, push to the remote:
 - **Tool not installed**: If a config file exists but the tool is not available, report which tool is missing and suggest installation (e.g., `npm install -D eslint`).
 - **Execution failure**: Report the error output, then continue with the next tool rather than aborting.
 - **Permission errors on project scripts**: Report the error, suggest `chmod +x <script>`.
-- **Conflicting tools**: If both a `package.json` lint script and a standalone config (e.g., eslint) are detected, prefer the `package.json` script (it may have project-specific flags). Note the overlap to the user.
+- **Conflicting tools**: If both a `package.json` lint script and a standalone config (e.g., eslint) are detected, prefer the `package.json` script (it may have project-specific flags). Note the overlap to the user. A command documented in the project's agent config outranks both.
+- **Agent config is ambiguous about a fixer**: If a rule reads as a prohibition but could also be read as a preference, treat it as a prohibition, put the tool in check mode under [the No-Write Rule](#the-no-write-rule), and say which reading was taken and why. The cost of an unnecessary check-only run is a slower loop; the cost of an unnecessary fix run is rewritten files.
+- **Agent config forbids the only fixer for a file type**: Report that the file type has no permitted fixer, check it under [the No-Write Rule](#the-no-write-rule), and resolve findings by hand in step 6. Do not fall back to a different fixer for the same files unless the agent config names it as the sanctioned one.
+
+Neither bullet is an exception to the No-Write Rule. "Check mode" here means the rule's qualifying command, so where none exists the tool is recorded as `check-only (no safe check command)` and nothing runs, rather than the check falling back to the writer the prohibition was aimed at.
+
 - **CI workflow tool requires setup**: Some CI workflow steps depend on GitHub Actions that install a tool (e.g., `mfinelli/setup-shfmt`). If the tool is not locally available, report the missing tool and suggest installation. Reusable workflow calls (e.g., `cboone/gh-actions/.github/workflows/run-go-ci.yml@v3.0.0`, `cboone/gh-actions/.github/workflows/run-rust-ci.yml@v3.0.0`, `cboone/gh-actions/.github/workflows/run-zig-ci.yml@v3.0.0`) are CI-only and should be skipped entirely.
 - **CI workflow command uses CI-only syntax**: Some `run:` commands use GitHub Actions expressions (`${{ }}`) or environment variables only available in CI. Skip these commands and note them as CI-only.
 - **Pre-commit hook failure on commit**: Fix the issue, re-stage, and create a new commit (never amend).

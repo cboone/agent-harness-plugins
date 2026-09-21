@@ -13,6 +13,14 @@ See the [marketplace install instructions](../../README.md#install).
 
 Checks for configuration files to detect ESLint, Prettier, markdownlint, ShellCheck, shfmt, Knip, cspell, and project-specific lint scripts. Runs each detected tool with auto-fix flags, reports what was fixed and what remains, attempts to manually resolve remaining issues, then commits and pushes the fixes.
 
+Detection is a guess, so before running anything the skill reads the project's own agent config (`CLAUDE.md` and `AGENTS.md` in the repository root, and `.github/copilot-instructions.md`) for rules that constrain how linters run:
+
+- **A forbidden fix command** downgrades that tool to check mode instead of being ignored. `markdownlint-cli2 --fix` rewrites everything matching its configured globs regardless of the paths it is given, so a repository that protects an append-only directory has good reason to ban it.
+- **A prescribed order** between tools is honored. The detection table has no notion of ordering, so two fixers that both claim `**/*.md` will otherwise fight.
+- **A documented lint sequence** runs verbatim in place of the reconstructed commands, including its file selection. A `git ls-files`-driven `shfmt` invocation exists because `shfmt` does not read `.gitignore`.
+
+A downgrade is reported at every stage rather than being applied silently, so "the fixer ran and found nothing" never reads the same as "the fixer was not permitted to run."
+
 ## Usage
 
 ```text
