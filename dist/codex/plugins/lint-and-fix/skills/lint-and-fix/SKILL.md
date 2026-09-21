@@ -145,8 +145,11 @@ Read whichever of these exist: `CLAUDE.md` and `AGENTS.md` in the repository roo
 For each tool in the run, whether detection found it or the agent config named it, carry these forward into the remaining steps:
 
 - **Mode**: `fix`, `check-only (project policy)`, `check-only (no auto-fix)`, `check-only (user requested --check)`, or `check-only (no safe check command)`
-- **Command**: the command that will actually run
+- **Command**: the command that will actually run in step 4
+- **Check command**: the command step 7 will re-run to verify, or `none`
 - **Source**: for a policy downgrade, the file and the rule, quoted in one line
+
+**Record the check command separately, for every tool, including one in `fix` mode.** A tool that fixes runs its fix command in step 4 and still has to be verified in step 7, and step 7 is forbidden to reconstruct a command or take a fallback. Without its own field there is nothing for that step to use, so the run either re-invokes the writer or drops the tool. The two fields are the same command whenever the tool is already in a check-only mode, and `none` for `check-only (no safe check command)`, which is what makes that mode unrunnable in both steps rather than only in step 4.
 
 **--check** sets `check-only (user requested --check)` for every tool in the run that would otherwise be `fix`, and the recorded command becomes that tool's check command. Record it here rather than leaving `Mode: fix` in place, or steps 3, 5 and 7 will present a dry run as though a fixer ran. It does not override a mode already assigned for another reason: a tool the project downgraded keeps `check-only (project policy)`, since that is the constraint worth reporting, and a tool with no fixer keeps `check-only (no auto-fix)`.
 
@@ -204,6 +207,8 @@ If running in **--check** mode, show check commands instead of fix commands. **-
 ### 4. Run Each Tool
 
 Run every tool in the run sequentially, in the order presented in step 3, including any the agent config added in step 2. For each tool:
+
+**Except `check-only (no safe check command)`.** That mode means step 2 found nothing safe to run, so its `Command` is `none` and there is nothing to execute. Skip it here rather than reaching for the writer it was denied or improvising a command, report it as unresolved, and carry it into steps 5 and 7 with its status.
 
 #### 4a. Run the Command
 
@@ -313,6 +318,11 @@ Carry the policy annotation into this table too. Every tool runs in check mode h
 
 **The push is gated on verification, the commit is not.** If any tool ends verification as `Not run (no safe check command)`, or with unresolved findings, step 8 commits what is on disk and stops there. Do not push, and report the run as a lint failure with those tools listed under `Unresolved or skipped`. A commit keeps the fixes that did run; a push publishes a tree where a required tool was never checked, which is the outcome the unrun mode exists to flag. Under a parent continuation block this is the `On lint failure or skipped required lint work` path, so the parent decides what happens next.
 
+**The failure survives every exit from step 8.** The gate suppresses the push; it never adds a commit, and it never turns into a success because nothing needed committing:
+
+- With **--no-commit**, step 8 is skipped as usual. Report the lint failure and its unresolved items, and do not commit in order to satisfy this gate.
+- With a clean `git status`, report that no changes were needed **and** the lint failure, rather than "all files were already clean" on its own. A tree that was already clean is not a tree that was checked, so the parent still takes the failure path.
+
 ### 8. Commit and Push
 
 **This step is required unless --no-commit or --check was specified.** Linters and formatters modify files on disk when they auto-fix. Those changes must be committed even if every tool now reports a clean state.
@@ -325,7 +335,7 @@ Skip this step only if:
 Check for file changes and commit:
 
 1. Run `git status --porcelain` and check whether its output is empty.
-1. **If no files were modified** (i.e., `git status --porcelain` produced no output): Report "No changes needed, all files were already clean." If a parent continuation block was supplied, include the final output required by [Parent Continuation Contract](#parent-continuation-contract) and allow the parent workflow to continue according to its continuation block. Otherwise stop.
+1. **If no files were modified** (i.e., `git status --porcelain` produced no output): Report "No changes needed, all files were already clean." If verification left any tool `Not run (no safe check command)` or with unresolved findings, report that failure alongside it, because a clean tree is not a checked one. If a parent continuation block was supplied, include the final output required by [Parent Continuation Contract](#parent-continuation-contract) and allow the parent workflow to continue according to its continuation block, which is the failure path in that case. Otherwise stop.
 1. **If files were modified** (i.e., `git status --porcelain` produced any output): Stage all modified files and commit them.
 1. Generate a conventional commit message:
    - Use `style:` for pure formatting and linting fixes.
@@ -346,8 +356,11 @@ After committing, push to the remote:
 - **Execution failure**: Report the error output, then continue with the next tool rather than aborting.
 - **Permission errors on project scripts**: Report the error, suggest `chmod +x <script>`.
 - **Conflicting tools**: If both a `package.json` lint script and a standalone config (e.g., eslint) are detected, prefer the `package.json` script (it may have project-specific flags). Note the overlap to the user. A command documented in the project's agent config outranks both.
-- **Agent config is ambiguous about a fixer**: If a rule reads as a prohibition but could also be read as a preference, treat it as a prohibition, run the tool in check mode, and say which reading was taken and why. The cost of an unnecessary check-only run is a slower loop; the cost of an unnecessary fix run is rewritten files.
-- **Agent config forbids the only fixer for a file type**: Report that the file type has no permitted fixer, run the check, and resolve findings by hand in step 6. Do not fall back to a different fixer for the same files unless the agent config names it as the sanctioned one.
+- **Agent config is ambiguous about a fixer**: If a rule reads as a prohibition but could also be read as a preference, treat it as a prohibition, put the tool in check mode under [the No-Write Rule](#the-no-write-rule), and say which reading was taken and why. The cost of an unnecessary check-only run is a slower loop; the cost of an unnecessary fix run is rewritten files.
+- **Agent config forbids the only fixer for a file type**: Report that the file type has no permitted fixer, check it under [the No-Write Rule](#the-no-write-rule), and resolve findings by hand in step 6. Do not fall back to a different fixer for the same files unless the agent config names it as the sanctioned one.
+
+Neither bullet is an exception to the No-Write Rule. "Check mode" here means the rule's qualifying command, so where none exists the tool is recorded as `check-only (no safe check command)` and nothing runs, rather than the check falling back to the writer the prohibition was aimed at.
+
 - **CI workflow tool requires setup**: Some CI workflow steps depend on GitHub Actions that install a tool (e.g., `mfinelli/setup-shfmt`). If the tool is not locally available, report the missing tool and suggest installation. Reusable workflow calls (e.g., `cboone/gh-actions/.github/workflows/run-go-ci.yml@v3.0.0`, `cboone/gh-actions/.github/workflows/run-rust-ci.yml@v3.0.0`, `cboone/gh-actions/.github/workflows/run-zig-ci.yml@v3.0.0`) are CI-only and should be skipped entirely.
 - **CI workflow command uses CI-only syntax**: Some `run:` commands use GitHub Actions expressions (`${{ }}`) or environment variables only available in CI. Skip these commands and note them as CI-only.
 - **Pre-commit hook failure on commit**: Fix the issue, re-stage, and create a new commit (never amend).
