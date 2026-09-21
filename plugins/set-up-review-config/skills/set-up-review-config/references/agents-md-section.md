@@ -15,7 +15,7 @@ Append the heading and the block when the file has no `## Code Review Rules` hea
 
 - Review each changed file against its checklist in `.github/skills/code-review/`; the `SKILL.md` there maps file patterns to checklists.
 - Rules under a checklist's Important heading are P1. All other checklist rules are P2 or lower.
-- Start each finding with the checklist name and the rule name, for example `write-go-code: Checked errors`.
+- Start each finding with the checklist name and the rule name, for example CITATION-EXAMPLE.
 - Do not report what these CI checks already report: CI-CHECKS.
 - Do not review these paths: SKIP-PATHS.
 - Claude Code Review takes its severities from `REVIEW.md`.
