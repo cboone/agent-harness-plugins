@@ -38,7 +38,8 @@ Honor this block as part of the `lint-and-fix` invocation.
 - On lint success, no tools detected, or no file changes needed, report the result and allow the parent to continue immediately according to `On lint success`.
 - On unresolved lint issues, skipped required lint work, missing required tools, or tool execution failures, report a workflow failure result and list the unresolved items so the parent can follow `On lint failure or skipped required lint work`.
 - A tool that [step 2](#2-consult-project-agent-config) downgraded to check mode is **not** skipped required lint work. When it runs in check mode and finds nothing, that is lint success: report it on the `Check-only by project policy` line, leave `Unresolved or skipped` as `none`, and let the parent continue. When it finds issues that step 6 cannot resolve by hand, that is an ordinary failure and belongs under `Unresolved or skipped`.
-- A tool recorded as `check-only (no safe check command)` **is** skipped required lint work, because nothing ran and the tree was never checked. Report `Lint status: failure`, list the tool under `Unresolved or skipped` with the reason, and name it on the `Check-only by project policy` line as well. It must never reach the parent as success: an unrun tool and a tool that ran clean are opposite results, and a parent such as `pr` would otherwise push a tree no one checked.
+- A tool recorded as `check-only (no safe check command)` **is** skipped required lint work, because nothing ran and the tree was never checked. Report `Lint status: failure` and list the tool under `Unresolved or skipped` with the reason. It must never reach the parent as success: an unrun tool and a tool that ran clean are opposite results, and a parent such as `pr` would otherwise push a tree no one checked.
+- That mode has two sources, and only one of them is policy. Step 2 assigns it when a project rule downgrades a tool and no verified check command exists, and step 4a assigns it when **--check** would otherwise take a write-mode fallback. Name only the first on the `Check-only by project policy` line, since the second is a limit of the user's own dry run and attributing it to the project misreports where the constraint came from. Both still count as skipped required lint work under `Unresolved or skipped`, which is what governs the parent.
 
 Final output for a parent invocation must include:
 
@@ -251,7 +252,9 @@ If all tools passed with zero remaining issues (auto-fix resolved everything), s
 
 ### 6. Fix Remaining Issues
 
-For each remaining issue that auto-fix could not resolve:
+**Check the reported path before editing anything.** A protected path is protected from hand edits whatever reported the finding, so this guard applies to every tool, not only to one step 2 downgraded. A tool with no fixer, or an ordinary tool whose output happens to point at a protected file, reaches this step without passing through any downgrade, and a targeted edit there writes to the tree the project told you not to touch. Leave those findings alone, report them under `Unresolved or skipped` with the path and the rule that protects it, and remediate only where the project documents an exception.
+
+For each remaining issue that auto-fix could not resolve, and whose file is not protected:
 
 1. **Read the tool output** to identify the specific error, file, and line number.
 1. **Read the relevant file** at the indicated location.
@@ -264,7 +267,7 @@ For each remaining issue that auto-fix could not resolve:
 
 For a tool step 2 downgraded to check mode, resolve its findings with targeted edits to the reported files. Do not reach for the forbidden fixer here, and do not invoke it with a narrower glob: the prohibition is on the command, not on the breadth of a single invocation, and tools such as `markdownlint-cli2 --fix` ignore the paths given to them and rewrite everything matching their configured globs anyway.
 
-**A protected path is protected from hand edits too.** Where the downgrade came from a protected path rather than a forbidden command, a targeted edit writes to the tree the project told you not to touch, so it defeats the protection just as the fixer would. Leave those findings alone, report them under `Unresolved or skipped` with the path and the rule that protects it, and let the user decide. Remediate only where the project documents an exception.
+The protected-path guard above covers this case too: where the downgrade came from a protected path rather than a forbidden command, a targeted edit defeats the protection just as the fixer would.
 
 If a remaining issue is ambiguous or risky to fix automatically (e.g., removing a dependency that might be used dynamically, or a lint rule that conflicts with project intent), skip it and report:
 
