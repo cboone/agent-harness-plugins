@@ -144,9 +144,11 @@ Read whichever of these exist: `CLAUDE.md` and `AGENTS.md` in the repository roo
 
 For each tool in the run, whether detection found it or the agent config named it, carry these forward into the remaining steps:
 
-- **Mode**: `fix`, `check-only (project policy)`, `check-only (no auto-fix)`, or `check-only (no safe check command)`
+- **Mode**: `fix`, `check-only (project policy)`, `check-only (no auto-fix)`, `check-only (user requested --check)`, or `check-only (no safe check command)`
 - **Command**: the command that will actually run
 - **Source**: for a policy downgrade, the file and the rule, quoted in one line
+
+**--check** sets `check-only (user requested --check)` for every tool in the run that would otherwise be `fix`, and the recorded command becomes that tool's check command. Record it here rather than leaving `Mode: fix` in place, or steps 3, 5 and 7 will present a dry run as though a fixer ran. It does not override a mode already assigned for another reason: a tool the project downgraded keeps `check-only (project policy)`, since that is the constraint worth reporting, and a tool with no fixer keeps `check-only (no auto-fix)`.
 
 **A policy downgrade needs a command that is verified not to write.** Two rows of the detection table fall back to a write-mode command when no check-mode form is available: the `format` script tries `npm run format -- --check` and falls back to `npm run format`, and the project-script row runs `<script>` without `--fix`, whose default behavior may still fix. Taking either fallback for a downgraded tool performs the write the project prohibits. So for a downgraded tool, use only a command whose check-only behavior is established, from the project's own documentation or from the tool's documented check flag. If no such command exists, do not fall back: record the tool as `check-only (no safe check command)`, run nothing for it, and report it alongside the downgrade and its source.
 
@@ -242,6 +244,7 @@ Keep these statuses distinct, because they mean different things about the tree:
 - **`Pass`**: the tool's check came back clean. It says the tree is clean, not that a fixer ran, so it is the right status for a tool with no fixer and for one running in check mode.
 - **`Checked only (fix not permitted)`**: step 2 downgraded the tool. A zero in the `Remaining` column here is a clean result, not a skipped one, but the run still did no fixing, so anything the fixer would have corrected is still uncorrected and appears as a remaining issue instead.
 - **`Check only (no auto-fix)`**: the tool has no fixer at all.
+- **`Check only (--check requested)`**: the user asked for a dry run, so a tool that would have fixed did not. Nothing on disk changed, and anything its fixer would have corrected is still uncorrected.
 - **`Not run (no safe check command)`**: step 2 could not find a command for this tool that is verified not to write, so nothing ran and the tree is unchecked for it. This is never a pass. Put it in the `Status` column, leave `Fixed` as `n/a`, put `unknown` in `Remaining` rather than a zero, and carry it into step 7 and into `Unresolved or skipped`.
 
 Repeat the citation for each `Checked only (fix not permitted)` row below the table.
