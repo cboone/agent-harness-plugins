@@ -46,12 +46,12 @@ This skill reads the repository with git and, to pin its links, reads this marke
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git rev-parse --show-toplevel)", "Bash(git ls-files*)", "Bash(git ls-remote https://github.com/cboone/agent-harness-plugins *)", "Bash(curl -fsSL https://raw.githubusercontent.com/cboone/agent-harness-plugins/*)"]
+    "allow": ["Bash(git rev-parse --show-toplevel)", "Bash(git ls-files*)", "Bash(git ls-remote https://github.com/cboone/agent-harness-plugins *)", "Bash(curl -fsSL https://raw.githubusercontent.com/cboone/agent-harness-plugins/*)", "Bash(markdownlint-cli2 *)", "Bash(npx markdownlint-cli2 *)", "Bash(yarn markdownlint-cli2 *)", "Bash(pnpm exec markdownlint-cli2 *)", "Bash(bunx markdownlint-cli2 *)", "Bash(prettier *)", "Bash(npx prettier *)", "Bash(yarn prettier *)", "Bash(pnpm exec prettier *)", "Bash(bunx prettier *)", "Bash(cspell *)", "Bash(npx cspell *)", "Bash(yarn cspell *)", "Bash(pnpm exec cspell *)", "Bash(bunx cspell *)"]
   }
 }
 ```
 
-If you already have a `permissions.allow` array, merge these entries into it. The skill also runs the repository's own Markdown linter, formatter and spell checker on the files it writes; allow those the way you do for other work in the repository. Review and adjust the rules to match your security preferences.
+If you already have a `permissions.allow` array, merge these entries into it. The git and `curl` rules cover detection and pinning; the rest cover the Markdown linter, formatter and spell checker that step 7 runs on the files the skill writes, through the usual package-manager runners. A repository that runs those another way, such as a Makefile target or a script under `bin/`, needs a rule of its own. Review and adjust the rules to match your security preferences.
 
 ## Examples
 
