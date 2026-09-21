@@ -150,7 +150,19 @@ For each tool in the run, whether detection found it or the agent config named i
 
 **--check** sets `check-only (user requested --check)` for every tool in the run that would otherwise be `fix`, and the recorded command becomes that tool's check command. Record it here rather than leaving `Mode: fix` in place, or steps 3, 5 and 7 will present a dry run as though a fixer ran. It does not override a mode already assigned for another reason: a tool the project downgraded keeps `check-only (project policy)`, since that is the constraint worth reporting, and a tool with no fixer keeps `check-only (no auto-fix)`.
 
-**A policy downgrade needs a command that is verified not to write.** Two rows of the detection table fall back to a write-mode command when no check-mode form is available: the `format` script tries `npm run format -- --check` and falls back to `npm run format`, and the project-script row runs `<script>` without `--fix`, whose default behavior may still fix. Taking either fallback for a downgraded tool performs the write the project prohibits. So for a downgraded tool, use only a command whose check-only behavior is established, from the project's own documentation or from the tool's documented check flag. If no such command exists, do not fall back: record the tool as `check-only (no safe check command)`, run nothing for it, and report it alongside the downgrade and its source.
+#### The No-Write Rule
+
+**Whenever a tool is in any check-only mode, its command must be one that is verified not to write.** This holds wherever a check-mode command is chosen: when step 2 records one, when **--check** replaces a fix command, when step 4's tool-specific notes suggest a form, and when step 7 re-runs the tool. Every one of those is a place the run can quietly write to a tree the user or the project expected it to leave alone.
+
+The detection table is the reason this needs saying, because three of its rows fall back to a write-mode command when no check form is available:
+
+| Row             | Check command falls back to         | Why that writes                       |
+| --------------- | ----------------------------------- | ------------------------------------- |
+| `lint` script   | `npm run lint` after `-- --fix`     | the script's default behavior may fix |
+| `format` script | `npm run format` after `-- --check` | it is the writer                      |
+| Project script  | `<script>` without `--fix`          | the script's default behavior may fix |
+
+Treat that list as illustrative, not exhaustive: any command whose check behavior is not established falls under the rule. A command qualifies when the project's own documentation or the tool's documented check flag establishes it does not write. Where none qualifies, do not fall back. Record the tool as `check-only (no safe check command)`, run nothing for it, and report it with the reason and, for a policy downgrade, its source.
 
 **A downgrade is never silent.** A tool moved to check mode by project policy must be reported as such in steps 3, 5, and 7, and on the `Check-only by project policy` line of the [Parent Continuation Contract](#parent-continuation-contract). "The fixer ran and found nothing" and "the fixer was not permitted to run" are different results, and a report that collapses them lets a skipped fixer read as a clean tree.
 
@@ -197,7 +209,7 @@ Run every tool in the run sequentially, in the order presented in step 3, includ
 
 Run the command step 2 recorded for that tool: its fix command, its check command where the project forbids fixing, or its check command if **--check** was specified. Capture stdout, stderr, and exit code.
 
-**--check** is subject to the same rule as a policy downgrade. The detection table's check commands fall back to a write-mode form in two rows, so running them for a `--check` invocation would modify files in what the user asked to be a dry run. Use only a command whose check-only behavior is established; where none exists, record the tool as `check-only (no safe check command)`, run nothing for it, and report it as above.
+Run exactly the recorded command. Do not reconstruct one here, and do not take a fallback the recording rejected: for any check-only mode, including a **--check** dry run, [the No-Write Rule](#the-no-write-rule) already decided what may run.
 
 **Tool-specific notes:**
 
@@ -209,7 +221,7 @@ Run the command step 2 recorded for that tool: its fix command, its check comman
 - **knip**: No auto-fix. Reports unused files, dependencies, and exports.
 - **cspell**: No auto-fix. Runs with `--dot` so dotfiles and dot-directories match CI spell-check behavior. Users fix typos in the source or add words to `cspell.json` (`words` array) or a project word list file. In git worktrees, `--dot` can expose the `.git` file; if that happens, add `.git` as well as `.git/` to the project's cspell ignore paths.
 - **npm scripts**: Exit codes depend on the underlying tool.
-- **Project scripts**: Try with `--fix` first, unless step 2 downgraded the script to check mode. If the script does not recognize `--fix`, run without it.
+- **Project scripts**: Try with `--fix` first, but only for a tool in `fix` mode. In any check-only mode, run the recorded command and nothing else: falling back to a bare `<script>` because it does not recognize `--fix` is the write [the No-Write Rule](#the-no-write-rule) exists to prevent.
 - **CI workflow scripts**: Run exactly as specified in the workflow. These are typically check-only (no auto-fix). Exit code 0 = pass, non-zero = issues found.
 
 #### 4b. Record Results
@@ -280,7 +292,9 @@ Skipped: <file>:<line> -- <rule> -- <reason>
 
 ### 7. Final Verification
 
-Re-run every tool in the run one final time in check mode to confirm a clean state, including any the agent config added in step 2. Verifying only the detected ones lets a config-only command such as a spelling or workflow check go unverified and be committed anyway. A tool recorded as `check-only (no safe check command)` cannot be re-run: carry its row through as `Not run (no safe check command)` rather than omitting it or letting it read as `Pass`. Here too `Pass` means the check came back clean, which is why a tool with no fixer and a tool running in check mode both earn it.
+Re-run every tool in the run one final time in check mode to confirm a clean state, including any the agent config added in step 2. Verifying only the detected ones lets a config-only command such as a spelling or workflow check go unverified and be committed anyway.
+
+Every tool is in check mode here, so [the No-Write Rule](#the-no-write-rule) governs this step in full: use each tool's recorded check command, and never a write-mode fallback, or verification itself rewrites the tree it was meant to inspect. A tool that has no qualifying command, whether recorded that way in step 2 or found to have none here, is carried through as `Not run (no safe check command)` rather than omitted or allowed to read as `Pass`. Here too `Pass` means the check came back clean, which is why a tool with no fixer and a tool running in check mode both earn it.
 
 ```text
 ## Final Verification
