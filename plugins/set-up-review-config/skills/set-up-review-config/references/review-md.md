@@ -21,7 +21,7 @@ IMPORTANT-RULES
 
 ## Nits
 
-This file does not carry the checklists' Nit rules. An agent reading it may not open another file, so what it guarantees is the Important rules above; the full Nit lists live in the checklists under `.github/skills/code-review/`, where Copilot code review applies them file by file. Report the Nits you can see in the diff yourself, and when one matches a rule you know from a checklist, start the finding with the checklist name and the rule name, for example `write-go-code: Checked errors`.
+This file does not carry the checklists' Nit rules. An agent reading it may not open another file, so what it guarantees is the Important rules above; the full Nit lists live in the checklists under `.github/skills/code-review/`, where Copilot code review applies them file by file. Report the Nits you can see in the diff yourself, and when one matches a rule you know from a checklist, start the finding with the checklist name and the rule name, for example CITATION-EXAMPLE.
 
 ## Cap the nits
 
@@ -52,4 +52,4 @@ For each installed checklist, in the order of `./references/guides.md`, a level-
 - **Checked errors**: Every returned error is handled or returned. Discarding one with `_` needs a comment explaining why it cannot matter.
 ```
 
-CI-CHECKS and SKIP-PATHS hold the same values as in the entry skill. When CI runs no checks, remove the CI line rather than replacing it: the list names what not to report, and the paragraph under "What Important means here" already keeps formatting and lint findings at Nit. The skip line is always present, since it names at least the installed checklists.
+CITATION-EXAMPLE, CI-CHECKS and SKIP-PATHS hold the same values as in the entry skill. When CI runs no checks, remove the CI line rather than replacing it: the list names what not to report, and the paragraph under "What Important means here" already keeps formatting and lint findings at Nit. The skip line is always present, since it names at least the installed checklists.

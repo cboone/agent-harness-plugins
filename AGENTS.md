@@ -51,3 +51,17 @@ These rules cover all repository text, including skill prompts, references, READ
 ## License
 
 MIT; see `LICENSE`.
+
+## Code Review Rules
+
+<!-- BEGIN set-up-review-config -->
+
+- Review each changed file against its checklist in `.github/skills/code-review/`; the `SKILL.md` there maps file patterns to checklists.
+- Rules under a checklist's Important heading are P1. All other checklist rules are P2 or lower.
+- Start each finding with the checklist name and the rule name, for example `write-bash-scripts: Strict mode`.
+- Do not report what these CI checks already report: `markdownlint-cli2`, `prettier`, `shellcheck`, `shfmt`, `actionlint`, `bin/validate-json`, `bin/validate-plugins`, the `make build` generated-mirror drift check, `scrut`.
+- Do not review these paths: `yarn.lock`, `dist/`, `.agents/`, `plugins/set-up-review-config/skills/set-up-review-config/references/checklists/`, `docs/plans/done/`, `.github/skills/code-review/*.md` except `SKILL.md`.
+- Claude Code Review takes its severities from `REVIEW.md`.
+- Rules outside this block take precedence over it.
+
+<!-- END set-up-review-config -->

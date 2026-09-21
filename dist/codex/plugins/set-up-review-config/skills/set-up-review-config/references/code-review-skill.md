@@ -24,7 +24,7 @@ ROUTING
 
 ## Reporting
 
-- Start each finding with the checklist name and the rule name, for example `write-go-code: Checked errors`.
+- Start each finding with the checklist name and the rule name, for example CITATION-EXAMPLE.
 - Rules under a checklist's Important heading block merging. Report each one you find.
 - Rules under a checklist's Nits heading are minor. Report at most five per review, and give the number of any others in the summary.
 - Follow each checklist's Do not flag section.
@@ -53,6 +53,7 @@ The description stays the same for every repository, so a rerun never rewrites t
   - Markdown files (`**/*.md`, except `tests/scrut/**/*.md`): `write-markdown.md`. Full guide: [write-markdown style guide](https://github.com/cboone/agent-harness-plugins/blob/136cf5554b3a35e4908ffa131ddf09b2b400601e/plugins/write-markdown/skills/write-markdown/SKILL.md).
   ```
 
+- **CITATION-EXAMPLE**: A backticked citation that names a checklist this installation routes, so the example never sends a reviewer to a checklist the repository does not have. Build it from the first installed checklist in the order of `./references/guides.md` and the first rule name under that checklist's `## Important` heading. An installation routing only the Bash, scrut and Markdown checklists gets `write-bash-scripts: Strict mode`. The same value fills this placeholder in `./references/agents-md-section.md` and `./references/review-md.md`, so all three files cite the same rule.
 - **CI-CHECKS**: The checks from step 3, backticked and comma-separated, such as `gofmt`, `golangci-lint`. When CI runs none, replace the whole line with `- Report formatting and lint findings as Nits.`
 - **SKIP-PATHS**: The skip paths from step 3, backticked and comma-separated, ending with `.github/skills/code-review/*.md` except `SKILL.md`. The installed checklists are always skipped, so the line is always present.
 - **SHEBANG-LINE**: When the Bash or zsh checklist is installed, this line, naming only the installed checklists. Otherwise remove the line.
