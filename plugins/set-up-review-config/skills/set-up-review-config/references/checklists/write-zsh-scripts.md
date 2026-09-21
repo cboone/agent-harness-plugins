@@ -15,7 +15,7 @@ Applies to zsh scripts, plugins, configuration files and completion functions (`
 - **Prompt expansion**: `print -P` never receives untrusted text unless `%` has been escaped as `%%`.
 - **Hook registration**: Hooks are added with `add-zsh-hook`, never by redefining `precmd`, `preexec` or `chpwd`, which would replace other plugins' hooks.
 - **Safe temporary files**: Temporary files come from `mktemp`, get `chmod 600` when they hold anything sensitive, and are removed by a trap or an `always` block.
-- **Completion results**: A completion function returns zero when it added matches and nonzero otherwise, and every `compadd` call passes `"${expl[@]}"`.
+- **Completion results**: A completion function returns zero when it added matches and nonzero otherwise, and a direct `compadd` call passes `"${expl[@]}"`. A call made through `_wanted` or another helper that injects the expansion does not repeat it.
 
 ## Nits
 
