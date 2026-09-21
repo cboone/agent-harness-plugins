@@ -12,12 +12,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  # ubuntu-latest ships whatever ShellCheck its image happens to carry, so a
-  # runner bump can add or drop diagnostics with no change in this repository.
-  # Pin it like every other tool here.
-  SHELLCHECK_VERSION: "0.11.0"
-
 jobs:
   ci:
     name: Lint and validate
@@ -33,20 +27,23 @@ jobs:
       - run: yarn install --immutable
       - name: Lint Markdown
         run: yarn lint
+      # ubuntu-latest ships whatever ShellCheck its image happens to carry, so a
+      # runner bump can add or drop diagnostics with no change in this
+      # repository. The action pins 0.11.0 by default and checks the release
+      # archive against SHA-256 digests committed alongside it, which the
+      # `curl | tar` step this replaces did not do: curl sat in a non-final
+      # pipeline stage under a shell without pipefail, so a failed download was
+      # caught only when tar happened to choke on the truncated stream.
       - name: Set up ShellCheck
-        run: |
-          curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" \
-            | tar -xJf - -C /tmp
-          sudo install "/tmp/shellcheck-v${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
-          shellcheck --version
+        uses: cboone/gh-actions/actions/set-up-shellcheck@0d53592f40b487f01b26b374e539c517fa9c570f # v3.2.0
       - name: Set up shfmt
-        uses: cboone/gh-actions/actions/set-up-shfmt@17f94b08428565213e70ae19c37a7be894a172d2 # v3.1.1
+        uses: cboone/gh-actions/actions/set-up-shfmt@0d53592f40b487f01b26b374e539c517fa9c570f # v3.2.0
       # Runs at ShellCheck's default severity, so the optional checks enabled in
       # .shellcheckrc are actually enforced, and covers every Bash script in the
       # repository via bin/list-shell-scripts rather than a fixed glob.
       - name: ShellCheck and shfmt
         run: make lint-shell
-      - uses: cboone/gh-actions/actions/set-up-actionlint@17f94b08428565213e70ae19c37a7be894a172d2 # v3.1.1
+      - uses: cboone/gh-actions/actions/set-up-actionlint@0d53592f40b487f01b26b374e539c517fa9c570f # v3.2.0
       - name: Actionlint
         run: actionlint
       - name: Validate JSON syntax
