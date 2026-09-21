@@ -310,9 +310,10 @@ function do_fetch() {
 # those layouts are parsed separately below.
 #
 # The raw legacy slice, complete review body, and structured parse are emitted.
-# hasFormatDrift covers both an unparsed legacy section and a non-clean v2
-# verdict that neither structured findings nor open inline threads explain,
-# keeping a format change visible instead of silently reporting no feedback.
+# hasFormatDrift covers an unparsed legacy section, a v2 review that states
+# more findings than the parser recovered, and a non-clean v2 verdict that no
+# recognized section explains, keeping a format change visible instead of
+# silently reporting no feedback.
 # =============================================================================
 
 # Normalizes an array of GitHub review objects into Copilot review-body findings.
@@ -365,6 +366,38 @@ function do_parse_reviews() {
       # so a review whose only findings are inline threads is not drift.
       def lists_open_threads:
         test("<summary>(<[^>]+>)*Open \\([1-9][0-9]*\\)");
+
+      # ccr-overview-v2 also lists the findings closed since the previous
+      # round under a "Resolved since last review (N)" summary. Those links
+      # record work already done rather than feedback to act on, so a review
+      # whose only section is this one has nothing outstanding, and its links
+      # are a known layout rather than a finding the parser failed to read.
+      def lists_resolved_threads:
+        test("<summary>(<[^>]+>)*Resolved since last review \\([1-9][0-9]*\\)");
+
+      # ccr-overview-v2 states its own count on a "**Findings:**" line, as
+      # either "None" or a number. Comparing the fixtures shows the count
+      # covers open inline threads and "Previously missed" entries, and omits
+      # the line-less findings appended to file-summary cells, so it is
+      # authoritative about a shortfall and silent about a surplus: a count
+      # above zero that recovers nothing is a real miss, while "None" means
+      # only that those two categories are empty. Layouts predating the line
+      # report null and fall back to the verdict.
+      #
+      # Scanned line by line because jq anchors "^" to the whole string, the
+      # same reason the verdict and marker definitions split the body first.
+      # The anchor keeps a header quoted inside the prose of a finding from
+      # overriding the count that Copilot stated.
+      def stated_finding_count:
+        (
+          split("\n")
+          | map(scan("^\\*\\*Findings:\\*\\*[[:blank:]]*(None|[0-9]+)"; "i"))
+          | first
+        ) as $stated
+        | if $stated == null then null
+          elif ($stated[0] | ascii_downcase) == "none" then 0
+          else ($stated[0] | tonumber)
+          end;
 
       # Copilot puts its verdict heading and lead paragraph before the first
       # <details> block. The "Once you have addressed..." call to action is
@@ -530,6 +563,8 @@ function do_parse_reviews() {
         | ($suppressed_findings + $missed_findings + $table_findings) as $findings
         | (.body | has_suppressed_marker) as $has_suppressed_marker
         | ($is_v2 and (.body | lists_open_threads)) as $lists_open_threads
+        | ($is_v2 and (.body | lists_resolved_threads)) as $lists_resolved_threads
+        | (if $is_v2 then (.body | stated_finding_count) else null end) as $stated_findings
         | {
             id: .id,
             url: .html_url,
@@ -537,14 +572,27 @@ function do_parse_reviews() {
             headline: (.body | headline),
             verdict: $verdict,
             hasSuppressedMarker: $has_suppressed_marker,
+            # Open threads suppress drift first: the thread fetch reports
+            # them, so they account for a non-clean verdict by themselves.
+            # A stated count above zero then reports drift whatever sections
+            # the body lists, so the resolved-section exemption below cannot
+            # swallow a genuine shortfall. A missing count and a stated
+            # "None" both fall through to the verdict, which keeps the
+            # behavior of layouts that predate the "**Findings:**" line.
             hasFormatDrift: (
               ($findings | length) == 0
               and (
                 $has_suppressed_marker
                 or (
                   $is_v2
-                  and $verdict != "### 🟢 Approval recommended"
                   and ($lists_open_threads | not)
+                  and (
+                    ($stated_findings // 0) > 0
+                    or (
+                      $verdict != "### 🟢 Approval recommended"
+                      and ($lists_resolved_threads | not)
+                    )
+                  )
                 )
               )
             ),

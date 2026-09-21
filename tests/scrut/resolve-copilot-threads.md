@@ -123,15 +123,53 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🟡 Changes recommended","hasFormatDrift":false,"findings":[]}
 ```
 
+## Overview v2 resolved entries explain a non-clean verdict
+
+Copilot pairs a non-clean verdict with `**Findings:** None` and a `Resolved
+since last review (N)` section listing what the previous round closed. Those
+links record work already done, so the review has nothing outstanding and is
+not format drift. A review body never changes, so reporting drift here would
+escalate a pull request on a signal that no later run can clear.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-resolved-only.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":false,"findings":[]}
+```
+
 ## Overview v2 format drift
 
 A non-clean verdict cannot become a clean result merely because the parser
-does not recognize the finding representation. The complete body remains
+does not recognize the finding representation. `**Findings:** None` does not
+clear that, because the count omits the line-less findings in file-summary
+cells and so cannot rule out an unparsed layout. The complete body remains
 available for manual inspection.
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-drift.json" | jq -c '.[0] | {verdict, hasSuppressedMarker, hasFormatDrift, hasReviewBody: (.reviewBody | contains("data-finding")), findings}'
 {"verdict":"### 🔵 Needs a closer look","hasSuppressedMarker":false,"hasFormatDrift":true,"hasReviewBody":true,"findings":[]}
+```
+
+## Overview v2 findings stated only in the lead paragraph
+
+Copilot also pairs a non-clean verdict with `**Findings:** None` and no
+section at all, stating the findings in the lead paragraph alone. The stated
+count cannot clear that, so the review reports drift and the reader is sent to
+`headline`, which is the only place the findings appear.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-headline-only.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings, statesFindings: (.headline | contains("Unresolved moderate findings"))}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[],"statesFindings":true}
+```
+
+## Overview v2 stated finding count the parser cannot account for
+
+A stated count above zero that recovers no finding is the shortfall the drift
+signal exists for. It reports drift whatever sections the body lists, so a
+`Resolved since last review (N)` section cannot mask a real miss.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-count-mismatch.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🟡 Changes recommended","hasFormatDrift":true,"findings":[]}
 ```
 
 ## Finding bodies keep their prose and fenced context
