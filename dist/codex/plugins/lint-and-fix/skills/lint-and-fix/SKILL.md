@@ -235,11 +235,13 @@ After all tools run, display a summary:
 | shellcheck | Check only (no auto-fix) | n/a | 4 warnings |
 ```
 
-Keep three statuses distinct, because they mean different things about the tree:
+Keep these statuses distinct, because they mean different things about the tree:
 
-- **`Ran with fixes`** or **`Pass`**: a fixer ran and left nothing behind.
+- **`Ran with fixes`**: a fixer ran and corrected files.
+- **`Pass`**: the tool's check came back clean. It says the tree is clean, not that a fixer ran, so it is the right status for a tool with no fixer and for one running in check mode.
 - **`Checked only (fix not permitted)`**: step 2 downgraded the tool. A zero in the `Remaining` column here is a clean result, not a skipped one, but the run still did no fixing, so anything the fixer would have corrected is still uncorrected and appears as a remaining issue instead.
 - **`Check only (no auto-fix)`**: the tool has no fixer at all.
+- **`Not run (no safe check command)`**: step 2 could not find a command for this tool that is verified not to write, so nothing ran and the tree is unchecked for it. This is never a pass. Put it in the `Status` column, leave `Fixed` as `n/a`, put `unknown` in `Remaining` rather than a zero, and carry it into step 7 and into `Unresolved or skipped`.
 
 Repeat the citation for each `Checked only (fix not permitted)` row below the table.
 
@@ -272,7 +274,7 @@ Skipped: <file>:<line> -- <rule> -- <reason>
 
 ### 7. Final Verification
 
-Re-run every tool in the run one final time in check mode to confirm a clean state, including any the agent config added in step 2. Verifying only the detected ones lets a config-only command such as a spelling or workflow check go unverified and be committed anyway. A tool recorded as `check-only (no safe check command)` cannot be re-run: carry its row through with that status rather than omitting it.
+Re-run every tool in the run one final time in check mode to confirm a clean state, including any the agent config added in step 2. Verifying only the detected ones lets a config-only command such as a spelling or workflow check go unverified and be committed anyway. A tool recorded as `check-only (no safe check command)` cannot be re-run: carry its row through as `Not run (no safe check command)` rather than omitting it or letting it read as `Pass`. Here too `Pass` means the check came back clean, which is why a tool with no fixer and a tool running in check mode both earn it.
 
 ```text
 ## Final Verification
