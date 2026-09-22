@@ -362,7 +362,7 @@ function main() {
       staged: $staged[0],
       unstaged: $unstaged[0],
       untracked: $untracked[0],
-      empty: (($committed[0] + $staged[0] + $unstaged[0] + $untracked[0]) | length) == 0
+      empty: ((($committed[0] + $staged[0] + $unstaged[0] + $untracked[0]) | length) == 0)
     }'
 }
 
