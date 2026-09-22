@@ -188,15 +188,61 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🟢 Approval recommended","hasFormatDrift":true,"findings":[]}
 ```
 
+## Overview v2 the stated count is a severity breakdown
+
+Copilot renders the count as one number per severity, joined by a middle dot
+and each followed by a badge. `2 <medium> · 1 <low>` is three findings, and
+the body lists `Open (3)`, so the totals agree and this is not drift. The
+badges carry their own `width` and `height` numbers, which a count token's
+position keeps out of the sum.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-severity-split.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🟡 Changes recommended","hasFormatDrift":false,"findings":[]}
+```
+
+Summing those counts is what makes the comparison real. Here `2 <medium> · 3
+<low>` totals five against `Open (3)`, so two findings are unaccounted for.
+Reading only the first number would see two, find no shortfall, and report
+this clean.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-severity-shortfall.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🟡 Changes recommended","hasFormatDrift":true,"findings":[]}
+```
+
+## Overview v2 a shortfall counts even when a finding parsed
+
+The shortfall sits outside the no-findings guard. A body stating nine
+findings against `Open (1)` while yielding one `Previously missed` entry has
+a remainder the parser cannot account for, and that remainder is what the
+signal exists for. Keeping the check under the guard would report this clean
+because a single finding happened to parse.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-shortfall-with-finding.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings: (.findings | length)}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":1}
+```
+
 ## Overview v2 a count line that no longer parses is itself drift
 
-A `**Findings:**` line whose value reads as neither `None` nor a number has
-changed shape, which is exactly what this signal is for. It reports drift
-rather than degrading to the same result as a layout that never carried the
-line, even though the rest of this body would otherwise be exempt.
+A `**Findings:**` line whose value reads as neither `None` nor a severity
+breakdown has changed shape, which is exactly what this signal is for. It
+reports drift rather than degrading to the same result as a layout that never
+carried the line, even though the rest of this body would otherwise be exempt.
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-header-drift.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
+The value is matched whole rather than by prefix, so a trailer after an
+otherwise valid `None` is unparseable too. Accepting the prefix would let a
+malformed line read as zero findings, satisfy the resolved-round exemption,
+and suppress the unparsed section below it.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-malformed-count.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
 {"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
 ```
 

@@ -14,17 +14,19 @@ The intended outcome: a resolved-only round whose lead paragraph names no findin
 
 ## Approach
 
-Add three body signals to the jq parser in `plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads`, then rewrite the v2 branch of the drift condition around them.
+Add four body signals to the jq parser in `plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads`, then rewrite the v2 branch of the drift condition around them.
 
 ### What the stated count actually means
 
-The issue proposes treating `**Findings:** None` as authoritative for any `ccr-overview-v2` body. It is not. Measured across every fixture and every live review on pull requests #471, #498 and #503, the `**Findings:**` number is the `Open (N)` thread count and nothing else:
+The issue proposes treating `**Findings:** None` as authoritative for any `ccr-overview-v2` body. It is not. Measured across every fixture and all 13 live Copilot reviews on pull requests #471, #498, #503 and #516, the `**Findings:**` total is the `Open (N)` thread count and nothing else:
 
 - `format-d-previously-missed.json` id 6000000002 states `1` while listing `Open (1)` **and** `Previously missed (1)`. If the count spanned both it would read `2`.
 - Live review 5261421694 states `None` while listing `Previously missed (3)`; live review 5262234889 states `None` with `Previously missed (1)`.
-- Every count above zero equals its `Open (N)` number, and no observed body states a count above zero without an `Open (N)` section.
+- Every total above zero equals its `Open (N)` number, and no observed body states a total above zero without an `Open (N)` section.
 
 So `None` rules out open inline threads and nothing else. Reading it as "this review has no findings" is unsound, and comparing the count against zero is not the invariant. Comparing it against the `Open (N)` number is.
+
+The value is a severity breakdown rather than a single number. Copilot renders each severity as a count followed by a badge, joined by a middle dot, so review 5280564210 on #516 reads `**Findings:** 2 <picture>Medium</picture> · 1 <picture>Low</picture>` and lists `Open (3)`. Every count token has to be summed; reading only the first understates any review spanning severities. The badge markup carries its own numbers in `width` and `height` attributes, so a count token is recognized by position: at the start of the value or just after the dot separator, and followed by whitespace or the end of the line.
 
 ### Why the resolved section cannot clear a review on its own
 
@@ -39,7 +41,7 @@ In the jq program inside `do_parse_reviews`:
 1. `open_thread_count`: the `N` from the `Open (N)` summary, or `0`. Parsed rather than merely detected, so the count has something to reconcile against.
 1. `lists_resolved_threads`: `test("<summary>(<[^>]+>)*Resolved since last review \\([1-9][0-9]*\\)")`, mirroring `lists_open_threads` so the optional `<strong>` wrapper still matches and `(0)` is excluded.
 1. `lead_states_no_findings`: the first prose line of `headline`, matched exactly against Copilot's fixed no-findings sentence. Defined after `headline` so it can reuse it.
-1. `stated_finding_count`: `0` for `None`, the number when numeric, `null` when no `**Findings:**` line exists, and `"unparseable"` when the line exists but its value reads as neither. A renamed header is itself a format change, so it must not collapse into the same value as a layout that never had the line.
+1. `stated_finding_count`: `0` for `None`, the sum of the severity counts when the value is a breakdown, `null` when no `**Findings:**` line exists, and `"unparseable"` when the line exists but its value is neither. The value is matched whole, so `None plus hidden text` is unparseable rather than zero; a prefix match there would let a malformed line satisfy the resolved-round exemption and suppress an unparsed finding. A renamed header is itself a format change, so it must not collapse into the same value as a layout that never had the line.
 
 Then the v2 clause of `hasFormatDrift`:
 
@@ -52,25 +54,23 @@ Then the v2 clause of `hasFormatDrift`:
   ) as $stated_shortfall
 ...
 hasFormatDrift: (
-  ($findings | length) == 0
-  and (
-    $has_suppressed_marker
-    or (
-      $is_v2
-      and (
-        $stated_shortfall
-        or (
-          $verdict != "### 🟢 Approval recommended"
-          and ($lists_open_threads | not)
-          and (($lists_resolved_threads and $lead_states_no_findings) | not)
-        )
+  ($is_v2 and $stated_shortfall)
+  or (
+    ($findings | length) == 0
+    and (
+      $has_suppressed_marker
+      or (
+        $is_v2
+        and $verdict != "### 🟢 Approval recommended"
+        and ($lists_open_threads | not)
+        and (($lists_resolved_threads and $lead_states_no_findings) | not)
       )
     )
   )
 ),
 ```
 
-A shortfall reports drift on its own, ahead of every exemption, because both numbers it compares come from Copilot. Otherwise a non-clean verdict reports drift unless open threads or a resolved-only round with a boilerplate lead accounts for it.
+A shortfall reports drift on its own, outside the no-findings guard, because both numbers it compares come from Copilot. Keeping it under that guard would report clean whenever any single finding parsed, even though the remainder is exactly what the signal is for. The other branches do require an empty parse, because they ask whether anything at all was recovered from a body that says there should be something: a non-clean verdict reports drift unless open threads or a resolved-only round with a boilerplate lead accounts for it.
 
 Resulting behavior:
 
@@ -81,8 +81,9 @@ Resulting behavior:
 | Non-clean verdict, lead states findings, resolved section          | true   | true  |
 | Non-clean verdict, `Findings: None`, unfamiliar markup             | true   | true  |
 | Non-clean verdict, lead states findings, no section                | true   | true  |
-| Any verdict, stated count above the `Open (N)` number              | varies | true  |
-| Any verdict, `**Findings:**` line that no longer parses            | varies | true  |
+| Any verdict, stated total above the `Open (N)` number              | varies | true  |
+| Stated total above `Open (N)`, with some findings parsed           | false  | true  |
+| Any verdict, `**Findings:**` value that is neither None nor counts | varies | true  |
 | Non-clean verdict, `Open (N)` listed and count matching            | false  | false |
 | Section phrases quoted only in a table or prose, or `Resolved (0)` | true   | true  |
 | Legacy suppressed section with no parseable findings               | true   | true  |

@@ -393,7 +393,7 @@ function do_parse_reviews() {
 
       # ccr-overview-v2 states a count on a "**Findings:**" line, as either
       # "None" or a number. Across every observed body, in the fixtures and
-      # on live pull requests, that number is the "Open (N)" thread count and
+      # on live pull requests, that total is the "Open (N)" thread count and
       # nothing else: a review stating 1 can carry "Open (1)" alongside a
       # "Previously missed (1)" entry, and a review stating "None" can carry
       # "Previously missed (3)". It also omits the line-less findings
@@ -411,17 +411,39 @@ function do_parse_reviews() {
       # and first keeps the real header, which always precedes the sections,
       # ahead of one quoted at the start of a line inside them.
       #
-      # A "**Findings:**" line whose value parses as neither "None" nor a
-      # number reports "unparseable" rather than null. A renamed or
-      # restructured header is itself a format change, and collapsing it into
-      # the same value as a layout that never had the line would hide it.
+      # The value is a severity breakdown, not one number. Copilot renders
+      # each severity as a count followed by a badge, joined by a middle dot:
+      # "**Findings:** 2 <picture>...Medium...</picture> · 1 <picture>...Low
+      # ...</picture>" is three findings, and its Open section reads
+      # "Open (3)". Every count token therefore has to be summed. Reading
+      # only the first would report 2 there and understate every review that
+      # spans severities.
+      #
+      # A count token sits at the start of the value or just after the dot
+      # separator, and is followed by whitespace or the end of the line. The
+      # badge markup carries its own numbers, in width and height attributes,
+      # and that position rule is what keeps them out of the sum.
+      #
+      # A value that is neither "None" nor a breakdown reports "unparseable"
+      # rather than null. A renamed or restructured header is itself a format
+      # change, and collapsing it into the same value as a layout that never
+      # had the line would hide it. The value is matched whole rather than by
+      # prefix, so "None plus hidden text" is unparseable rather than zero;
+      # a prefix match there would let a malformed line satisfy the
+      # resolved-round exemption and suppress an unparsed finding.
       def stated_finding_count:
         (split("\n") | map(select(test("^\\*\\*Findings"; "i"))) | first) as $line
         | if $line == null then null
-          elif ($line | test("^\\*\\*Findings:\\*\\*[[:blank:]]*None"; "i")) then 0
-          elif ($line | test("^\\*\\*Findings:\\*\\*[[:blank:]]*[0-9]")) then
-            ($line | capture("^\\*\\*Findings:\\*\\*[[:blank:]]*(?<n>[0-9]+)").n | tonumber)
-          else "unparseable"
+          else
+            ($line | sub("^\\*\\*Findings:\\*\\*[[:blank:]]*"; ""; "i") | trim) as $value
+            | if ($value | test("^None$"; "i")) then 0
+              else
+                (
+                  [$value | scan("(?:^|·[[:blank:]]+)([0-9]+)(?=[[:blank:]]|$)") | .[0] | tonumber]
+                  | add
+                ) as $total
+                | if $total == null then "unparseable" else $total end
+              end
           end;
 
       # Copilot puts its verdict heading and lead paragraph before the first
@@ -631,30 +653,34 @@ function do_parse_reviews() {
             verdict: $verdict,
             hasSuppressedMarker: $has_suppressed_marker,
             # A shortfall against the count Copilot stated reports drift on
-            # its own, whatever sections the body lists, because the count
-            # and the "Open (N)" number it is compared against both come
-            # from Copilot itself.
+            # its own, because the count and the "Open (N)" number it is
+            # compared against both come from Copilot itself. It sits outside
+            # the no-findings guard deliberately: a body can yield one
+            # parseable finding and still state more than its open threads
+            # account for, and that remainder is exactly what this signal is
+            # for. Putting it under the guard would report clean whenever any
+            # single finding parsed.
             #
-            # Otherwise a non-clean verdict reports drift unless something
-            # accounts for it: open threads, which the thread fetch reports,
-            # or a resolved-only round whose lead paragraph states no
-            # findings. Requiring the lead is what keeps the exemption from
-            # clearing a review that lists a resolved section and states its
-            # findings in prose, which is a shape Copilot does emit.
+            # The remaining branches do require an empty parse, because they
+            # ask whether anything at all was recovered from a body that says
+            # there should be something. A non-clean verdict reports drift
+            # unless open threads, which the thread fetch reports, or a
+            # resolved-only round whose lead paragraph states no findings
+            # accounts for it. Requiring the lead is what keeps the exemption
+            # from clearing a review that lists a resolved section and states
+            # its findings in prose, which is a shape Copilot does emit.
             hasFormatDrift: (
-              ($findings | length) == 0
-              and (
-                $has_suppressed_marker
-                or (
-                  $is_v2
-                  and (
-                    $stated_shortfall
-                    or (
-                      $verdict != "### 🟢 Approval recommended"
-                      and ($lists_open_threads | not)
-                      and (
-                        ($lists_resolved_threads and $lead_states_no_findings) | not
-                      )
+              ($is_v2 and $stated_shortfall)
+              or (
+                ($findings | length) == 0
+                and (
+                  $has_suppressed_marker
+                  or (
+                    $is_v2
+                    and $verdict != "### 🟢 Approval recommended"
+                    and ($lists_open_threads | not)
+                    and (
+                      ($lists_resolved_threads and $lead_states_no_findings) | not
                     )
                   )
                 )
