@@ -29,15 +29,16 @@ The user may provide these options inline:
 
 The watch ends when all four axes are clean at the same time. Partial greenness is not readiness.
 
-| Axis         | Clean when                                                                                                                                                                                                                                                                                                                                                                |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Checks       | Every check in `statusCheckRollup` has concluded successfully, or the repository has no checks configured                                                                                                                                                                                                                                                                 |
-| Copilot      | A Copilot review exists whose commit SHA equals the current head, `fetch` returns `[]`, and `fetch-reviews` has no open finding or format drift. Under `--confirm-clean`, two consecutive such reviews against that same head. On a Dependabot PR, clean unless a Copilot review at the current head left findings or format drift, per [Dependabot PRs](#dependabot-prs) |
-| Mergeability | `mergeable` is `MERGEABLE` and `mergeStateStatus` is neither `DIRTY` nor `BEHIND`. `BLOCKED` counts as clean but must be reported, per the rule below                                                                                                                                                                                                                     |
-| PR state     | `OPEN` and not merged or closed                                                                                                                                                                                                                                                                                                                                           |
+| Axis         | Clean when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Checks       | Every check in `statusCheckRollup` has concluded successfully, or the repository has no checks configured                                                                                                                                                                                                                                                                                                                                                                                               |
+| Copilot      | A Copilot review exists whose commit SHA equals the current head, and the step 3 feedback probe reports no open threads, no format drift, and either no review-body findings or only findings step 7b has already returned `Completed` or `No unresolved Copilot feedback` for. Under `--confirm-clean`, two consecutive such reviews against that same head. On a Dependabot PR, clean unless the probe reports findings or drift against a current-head review, per [Dependabot PRs](#dependabot-prs) |
+| Mergeability | `mergeable` is `MERGEABLE` and `mergeStateStatus` is neither `DIRTY` nor `BEHIND`. `BLOCKED` counts as clean but must be reported, per the rule below                                                                                                                                                                                                                                                                                                                                                   |
+| PR state     | `OPEN` and not merged or closed                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
-Three rules that follow from this and are easy to get wrong:
+Four rules that follow from this and are easy to get wrong:
 
+- **A review-body finding the resolver has already handled still shows in the probe, and the axis is still clean.** Review bodies are immutable, so `fetch-reviews` reports that finding against that review for as long as the review exists; it never goes to zero the way an open thread does. What clears it is step 7b's record of having processed that review `id`, not a later probe. Waiting for the count to drop would hold a finished PR open forever.
 - **A Copilot review against an older SHA does not count.** Copilot reviews are pinned to the commit they ran against, so every push this skill makes invalidates the previous review by construction. A fix always sends the loop back around.
 - **`reviewDecision` does not gate.** A human `CHANGES_REQUESTED` will not stop this skill from declaring the PR ready. Report `reviewDecision` in every status line and in the terminal report so an outstanding human objection stays visible, but never wait on it.
 - **`BLOCKED` does not gate either, but it must be reported.** Requiring `mergeStateStatus` to be `CLEAN` would be the stricter reading of "ready to merge", and it is deliberately not what this skill does: on a repository whose branch protection requires an approving review, nothing the skill can do will ever satisfy it, so the watch would run until its round budget expired and then report failure on a PR that is finished. Treat `BLOCKED` as ready-with-a-caveat instead. **A terminal report that omits an active `BLOCKED` state is wrong**, because it tells the user the PR is ready to merge when GitHub will refuse the merge. Name the state and say what is unsatisfied.
@@ -55,7 +56,7 @@ A PR whose `author.login` in the step 1 snapshot is `app/dependabot` belongs to 
   Then wait for the head SHA to change, and resume at step 3. The request works even on a PR whose automatic rebases Dependabot disabled after 30 days. If Dependabot replies that it will not rebase, usually because someone else pushed to the branch, escalate per step 9: `@dependabot recreate` would rebuild the PR but discards those commits, so that is the user's decision.
 
 - **Step 6, failing checks**: diagnose as in step 6a, but do not repair. A failure caused by a secret the Dependabot run cannot read (`Input required and not supplied: token`, an empty cloud credential, a refused OIDC exchange) says nothing about the update: escalate per step 9, reporting it as an environment problem and pointing the user at the `review-dependabot-config` skill. Escalate any other failure per step 9 too, pointing at the `triage-dependabot-prs` skill, which decides whether the update needs work, a migration, or an ignore. Either way the watch stops, because no further tick can change a failure this skill may not repair.
-- **Step 7, the Copilot cycle**: automatic Copilot review does not reliably run on Dependabot PRs, so never request one, and never wait for one. A missing review, or a review against an older head (which every `@dependabot rebase` produces), leaves the Copilot axis not applicable: report it as `n/a (Dependabot)` and treat the axis as clean. Only a Copilot review at the current head that left findings or format drift matters, and then report the findings, or the drift with the review URL, and escalate rather than invoking `resolve-copilot-pr-feedback`, whose fixes would be pushes.
+- **Step 7, the Copilot cycle**: automatic Copilot review does not reliably run on Dependabot PRs, so never request one, and never wait for one. A missing review, or a review against an older head (which every `@dependabot rebase` produces), leaves the Copilot axis not applicable: report it as `n/a (Dependabot)` and treat the axis as clean. Only a Copilot review at the current head matters, and the step 3 feedback probe is what decides whether it did anything. Run the probe here exactly as anywhere else: both of its commands are reads, so nothing about this path pushes. When it reports open threads, review-body findings, or format drift, report the thread locations and finding count, or the drift with the review URL, and escalate rather than invoking `resolve-copilot-pr-feedback`, whose fixes would be pushes. When it reports none of the three, the review is clean and the axis is clean.
 - **Step 8, the terminal report**: say the PR is a Dependabot PR, and merge only with a method the repository allows, as for any other PR.
 
 Under `--no-fix`, report the rebase request that would have been posted instead of posting it.
@@ -122,7 +123,38 @@ Three details in that command are load-bearing:
 
 Copilot's review `state` is always `COMMENTED`, never `APPROVED`, so never treat an approval state as the pass signal.
 
-`id` is the review's stable key, and step 7b's once-per-review guard records it. Project it even though nothing in this step reads it: `commit_id` cannot stand in for it, because `--confirm-clean` produces two reviews against the same head and only the `id` tells them apart.
+`id` is the review's stable key. The feedback probe below reads it, and step 7b's once-per-review guard records it. `commit_id` cannot stand in for it, because `--confirm-clean` produces two reviews against the same head and only the `id` tells them apart.
+
+#### The Copilot feedback probe
+
+The metadata above says a review exists and which commit it ran against. It says nothing about what the review found, and the step 4 Copilot condition is entirely about what it found. Probe that directly, using the same script `resolve-copilot-pr-feedback` classifies with, so the two skills never disagree about what counts as clean.
+
+This plugin ships its own copy of that script. Invoke it via `bash` followed by the quoted path:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads" fetch OWNER REPO PR_NUMBER |
+  jq -c '{openThreads: length, locations: [.[].location]}'
+```
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-copilot-threads" fetch-reviews OWNER REPO PR_NUMBER |
+  jq -c --argjson review_id REVIEW_ID '
+    [.[] | select(.id == $review_id)] | last
+    | {id, url, hasFormatDrift, findings: (.findings | length)}'
+```
+
+Claude Code replaces the plugin-root placeholder with the installed plugin's absolute, version-correct directory before this file reaches you. **If the path was not substituted**, it still begins with `$` rather than `/`; Codex CLI substitutes it only in hook commands, and OpenCode does not substitute it at all. In that case locate the script with `**/monitor-pr/**/scripts/resolve-copilot-threads`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session.
+
+Six points govern how the probe is run and read:
+
+- **Both commands are read-only.** `fetch` is a GraphQL query and `fetch-reviews` is a REST read; neither writes to the PR. So the probe runs unchanged on a Dependabot PR and under `--no-fix`, which is what lets those paths observe findings and drift without invoking a skill that pushes.
+- **Run it only when the metadata probe's `commit_id` equals `headRefOid`.** A stale review sends the tick to step 7a whatever the probe would say, so running it there spends two calls on an answer nothing reads. Nothing is lost by the gate: `fetch` reports every unresolved Copilot thread on the PR, whatever review opened it, so threads left over from an earlier review are still counted the moment a current-head review appears.
+- **Project the fields shown, never the raw result.** `fetch-reviews` returns every Copilot review on the PR with its complete `reviewBody`, and a watch takes this snapshot on every tick.
+- **Select the review by `id`, not by head SHA.** Under `--confirm-clean` two reviews share one head, and only the newest one's body is the current verdict. `--argjson` is required because REST reports `id` as a number.
+- **A `null` result is not a failure.** `fetch-reviews` skips a review whose body is empty, so a review the metadata probe found can be absent from its output. Read that as no review-body findings and no format drift, and keep the thread count from `fetch`.
+- **`fetch-reviews` reads the reviews endpoint the metadata probe already read.** That repetition is deliberate: each command stays standalone and copy-pasteable, and the second read only happens on ticks where a current-head review exists.
+
+The probe answers exactly three questions, and step 4 asks no more of it than these: are there open Copilot threads, does the current-head review body carry findings, and does `hasFormatDrift` report that its layout could not be parsed. Whether a finding is real, already handled, or needs no code change is `resolve-copilot-pr-feedback`'s judgment, not this skill's.
 
 Reduce the snapshot to the four axes in [Ready Criteria](#ready-criteria).
 
@@ -140,15 +172,15 @@ Two orderings are deliberate:
 1. **`mergeStateStatus` is `BEHIND`**: go to step 5.
 1. **`mergeStateStatus` is `BLOCKED`**: do not treat this as a blocker and do not wait on it, but record it. It means a branch protection rule is unsatisfied, most often a required approving review. Continue evaluating the remaining conditions, and carry the `BLOCKED` state into every status line and into the terminal report per step 8.
 1. **Any check concluded with a failure**: go to step 6.
-1. **Copilot reviewed the current head with open threads, review-body findings, or review-body format drift**: go to step 7b. Checks still running do not hold this back. Drift is routed here rather than left to the wait below, because it is not clean and no later tick changes an immutable review body; the resolver reads the raw body and reports the drift as a failure.
+1. **Copilot reviewed the current head, the step 3 feedback probe reported open threads, review-body findings, or format drift, and step 7b has not already been invoked for that review `id`**: go to step 7b. Checks still running do not hold this back. Drift is routed here rather than left to the wait below, because it is not clean and no later tick changes an immutable review body; the resolver reads the raw body and reports the drift as a failure. The `id` clause is step 7b's own once-per-review guard, lifted into the condition that reads it: a review body is immutable, so a finding the resolver has already recorded as handled still appears in the probe on every later tick, and without the guard here it would re-dispatch forever.
 1. **Checks pass and Copilot is missing or stale**: go to step 7a.
 1. **Checks pass, Copilot reviewed the current head cleanly, `--confirm-clean` is set, and this is the first such review**: go to step 7d to request and await the confirming review.
 1. **All four axes clean**: terminal. Go to step 8.
 1. **Nothing above matched**: wait, then return to step 3. Checks pending or running with nothing else to act on is the usual case.
 
-Under `--no-fix`, replace steps 5, 6, and 7 with a report of what would have been done, then continue waiting.
+Under `--no-fix`, replace steps 5, 6, and 7 with a report of what would have been done, then continue waiting. The step 3 feedback probe still runs: it writes nothing, and without it the report would not be able to say what Copilot actually found.
 
-On a Dependabot PR, steps 5 to 8 follow [Dependabot PRs](#dependabot-prs). Of the three Copilot conditions above, only the first (a review at the current head with findings or format drift) applies, and it leads to an escalation rather than step 7b; the other two never match.
+On a Dependabot PR, steps 5 to 8 follow [Dependabot PRs](#dependabot-prs). Of the three Copilot conditions above, only the first applies, and it leads to an escalation rather than step 7b; the other two never match. The step 3 probe is what makes that first condition observable there, and it is read-only, so the Dependabot path judges the review without invoking anything that pushes.
 
 ### 5. Sync the Branch
 
@@ -282,9 +314,11 @@ Pass the `OWNER`, `REPO`, and `PR_NUMBER` recorded in step 1. That skill's scrip
 
 Only invoke it once a review exists at the current head. Invoking it earlier makes it report `No unresolved Copilot feedback` and post a no-op summary comment, which reads as a clean bill of health for code Copilot never saw.
 
-**Invoke it at most once per review.** Record the review `id` each invocation is made against, taken from the step 3 probe. **Do not key this on the head SHA.** Step 7d deliberately requests a second review against the same head, so a SHA key conflates two distinct reviews: it would either suppress the confirming review's findings as already processed or escalate it as a repeat when it is genuinely new. The `id` is the only field that separates them. If it reports `Completed` or `No unresolved Copilot feedback` and the next snapshot still matches step 4's findings condition against that same review id, nothing further will change on its own: a second invocation has no new input to work from, and the step 7c budget will not stop the cycle because it counts completed reviews rather than invocations. Escalate per step 9 instead. A new review or a push is what makes another invocation meaningful.
+**Invoke it at most once per review.** Record the review `id` each invocation is made against, taken from the step 3 probe, together with the status it reported. **Do not key this on the head SHA.** Step 7d deliberately requests a second review against the same head, so a SHA key conflates two distinct reviews: it would either suppress the confirming review's findings as already processed or escalate it as a repeat when it is genuinely new. The `id` is the only field that separates them. That record is also what the Copilot axis reads: a review-body finding is cleared by having processed its review, not by a later probe.
 
-**Both feedback sources count here, and the review body is the one that traps.** An open thread at least clears when it is resolved, so a repeat there means something genuinely failed. A review-body finding has no thread to resolve and review bodies are immutable, so it stays visible in that review permanently: `resolve-copilot-pr-feedback` records it as handled in a linked summary row and reads that record back on its next run. Retain the final summary comment URL and the originating review URL for terminal or escalation reporting. A guard keyed on open threads alone would never fire in precisely the case that loops.
+**Escalate when a source that should have cleared did not.** After a `Completed` or `No unresolved Copilot feedback` report for a review `id`, escalate per step 9 when the next snapshot's probe still reports open threads, or still reports format drift against that same review. Nothing further will change on its own in either case: a second invocation has no new input to work from, and the step 7c budget will not stop the cycle because it counts completed reviews rather than invocations. A new review or a push is what makes another invocation meaningful.
+
+**Review-body findings are the exception, and getting this backwards is the trap.** An open thread clears when it is resolved, so a repeat there means something genuinely failed. A review-body finding has no thread to resolve and review bodies are immutable, so it stays visible in that review permanently, and the step 3 probe will keep reporting it on every tick for the life of the PR. `resolve-copilot-pr-feedback` records it as handled in a linked summary row and reads that record back on its next run; that record, plus this step's own processed-review record, is the disposition. Escalating on a finding count that cannot fall would turn every noted or previously handled review-body finding into a false escalation on a PR that is finished. Retain the final summary comment URL and the originating review URL for terminal or escalation reporting.
 
 #### 7c. Round Budget
 
@@ -311,9 +345,9 @@ Under **--confirm-clean**, require two consecutive clean reviews instead:
 
    This is a re-review of unchanged code, so the request is what produces it. Waiting will not.
 
-1. Wait for a review newer than the recorded one, then judge it by the same standard: no open threads, no review-body format drift, and no review-body findings that are not already recorded in a prior summary comment.
+1. Wait for a review newer than the recorded one, then run the step 3 feedback probe against its `id` and judge it by the same standard: no open threads, no format drift, and no review-body findings.
 1. **Two consecutive clean reviews against the same head SHA** satisfy the Copilot axis. Report both, with their timestamps, so the terminal report shows the confirmation actually happened.
-1. **If the second review surfaces anything real**, the confirmation earned its keep. Handle it per step 7b, and reset the count: the next clean review is again only the first of two.
+1. **If the probe reports anything against the confirming review**, step 4 sends it to step 7b under its own `id`, and the resolver's status decides what it was. `No unresolved Copilot feedback` means every finding in that body was already recorded against an earlier review, so nothing new surfaced and the pair still completes. `Completed` means the confirmation earned its keep: handle it per step 7b, and reset the count, so the next clean review is again only the first of two.
 
 Any push resets the confirmation, whatever its source. Both clean reviews must be against the current head, so a fix, a merge from step 5, or a commit someone else pushes all send the count back to zero.
 

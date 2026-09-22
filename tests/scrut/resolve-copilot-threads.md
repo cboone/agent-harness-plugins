@@ -298,3 +298,27 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" --help | grep -E '^  (fetch-reviews|parse-rev
   fetch-reviews <owner> <repo> <pr_number>            Fetch Copilot review-body findings
   parse-reviews                                        Normalize review JSON read from stdin
 ```
+
+## The copy `monitor-pr` ships parses the same way
+
+`monitor-pr` runs this script's read-only commands in its snapshot step, to see
+whether a current-head Copilot review left findings or format drift before it
+decides whether to dispatch to `resolve-copilot-pr-feedback`. A `cmp` testcase
+in `repo-tooling.md` holds the two copies byte-identical; these two run the
+shipped file, so a copy that matches but cannot execute still fails.
+
+They also pin the two answers the watch reads. A clean review yields no
+findings and no drift, which is the only shape that lets the Copilot axis pass.
+
+```scrut
+$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":false,"findings":0}
+```
+
+A drift-only review yields no findings either, and the watch must not read that
+zero as clean. `hasFormatDrift` is what separates the two.
+
+```scrut
+$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-drift.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":true,"findings":0}
+```

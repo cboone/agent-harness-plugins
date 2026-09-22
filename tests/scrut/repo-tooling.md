@@ -390,6 +390,23 @@ $ cd "${REPO_ROOT}" && cmp plugins/create-worktree/scripts/manage-resource-claim
 identical
 ```
 
+## The duplicated Copilot thread script stays byte-identical
+
+`resolve-copilot-pr-feedback` and `monitor-pr` ship the same
+`resolve-copilot-threads`, for the same rule 18 reason as the worktree scripts
+above. `monitor-pr` calls only its read-only `fetch` and `fetch-reviews`
+commands, to observe Copilot's findings and format drift before it decides
+whether to dispatch to the resolver.
+
+Drift here would be worse than a missing feature: the watch and the resolver
+would disagree about what counts as a clean review, and the watch would report a
+PR ready while the resolver still saw findings in it.
+
+```scrut
+$ cd "${REPO_ROOT}" && cmp plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads plugins/monitor-pr/scripts/resolve-copilot-threads && echo identical
+identical
+```
+
 ## Every `$(< path)` read in the bundled scripts is guarded for the same path
 
 A `"$(< path)"` expansion that fails does so _during expansion_, not as a command, so neither a redirection on the assignment nor a trailing `||` catches it: Bash exits with its own unprefixed diagnostic and the script's error handling never runs. The path must therefore be tested before it is read, with `-f` as well as `-r`, because `-r` is true for a readable directory. The matcher allows the optional whitespace Bash permits after `<`, so a read written `$(<"${path}")` is counted rather than skipped.

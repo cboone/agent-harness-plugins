@@ -18,7 +18,7 @@ On each tick it takes one snapshot of the PR and reduces it to four axes: checks
 
 1. **Branch is conflicted or behind the base**: invokes `merge-main`, since a stale branch is a common cause of check failures.
 1. **A check failed**: pulls the failing job's logs and repairs it. Lint and format failures go to `lint-and-fix`; generated-tree drift is rebuilt with the repository's own build scripts; test and build failures are diagnosed from the logs.
-1. **Copilot reviewed the current head and left findings or review-body format drift**: invokes `resolve-copilot-pr-feedback`. Drift means a review body that is not clean but yields no parseable findings; the resolver reads the raw body and reports the drift, rather than the watch waiting on a review that will never change. This one does not wait for in-flight checks. The fixes land whatever the checks go on to do, so there is no reason to serialize the Copilot cycle behind a check run the skill cannot influence.
+1. **Copilot reviewed the current head and left findings or review-body format drift**: invokes `resolve-copilot-pr-feedback`. The snapshot establishes this rather than assuming it. Every tick with a current-head review runs a read-only feedback probe, using the same bundled script the resolver classifies with, and it answers three questions: are there open Copilot threads, does the review body carry findings, and did its layout fail to parse. Drift is that third answer, a review body that is not clean but yields no parseable findings; the resolver reads the raw body and reports the drift, rather than the watch waiting on a review that will never change. This one does not wait for in-flight checks. The fixes land whatever the checks go on to do, so there is no reason to serialize the Copilot cycle behind a check run the skill cannot influence.
 1. **Copilot has not reviewed the current head**: waits, once the checks are passing. Copilot re-reviews automatically on push in most repository configurations. If no review arrives after two quiet ticks, it requests one with `gh pr edit --add-reviewer "@copilot"`. Asking for a review is the one Copilot action that waits on checks, because any push throws the result away.
 
 Every push it makes invalidates Copilot's previous review, so the loop naturally goes back around after a fix. It stops when all four axes are clean at once, prints a full status table, and asks whether to merge, enable auto-merge, or leave it.
@@ -30,6 +30,8 @@ This is not a continue-at-all-costs skill. It halts the watch and puts the quest
 ### What counts as a Copilot sign-off
 
 Copilot reviews are always `COMMENTED`, never `APPROVED`, so an approval state is never the pass signal. A sign-off means a Copilot review exists whose commit SHA equals the current head, the review-thread fetch returns nothing, no review-body findings are left open, and the review body shows no format drift. A review against an older SHA does not count.
+
+Both fetches run in the snapshot step, before anything is dispatched, from a copy of `resolve-copilot-threads` this plugin ships. Sharing the script rather than restating its rules is what keeps the two skills from disagreeing about what "clean" means. One consequence is worth knowing: review bodies are immutable, so a finding the resolver has already handled keeps appearing in that review for the life of the PR. What clears it is the record of having processed that review, not a later fetch, and the watch does not wait for a count that cannot fall.
 
 Copilot's output varies between runs over identical code, so a review that surfaces nothing is not proof that there was nothing to surface. `--confirm-clean` requires two consecutive clean reviews instead of one: the first clean review does not end the watch, a second is requested explicitly (a re-review of unchanged code has to be asked for, since nothing triggers it), and only two in a row against the same head satisfy the Copilot axis. Any push resets the pair, and if the confirming review turns something up, the count starts over after it is fixed.
 
@@ -45,7 +47,7 @@ Dependabot owns its branches. Once anyone else pushes to one, Dependabot stops r
 
 - A conflicted or out-of-date branch gets a `@dependabot rebase` comment, once per head, instead of `merge-main`.
 - A failing check is diagnosed but not repaired, and the watch stops there. A failure caused by a secret that Dependabot runs cannot read is reported as an environment problem, pointing at [Review Dependabot Config](../review-dependabot-config/README.md). Anything else points at [Triage Dependabot PRs](../triage-dependabot-prs/README.md).
-- The Copilot axis counts as clean unless a Copilot review of the current head left findings or format drift, which escalates. The skill never requests or waits for a review, since every rebase leaves any earlier review behind.
+- The Copilot axis counts as clean unless a Copilot review of the current head left findings or format drift, which escalates. The feedback probe settles that question here as it does anywhere else: both of its commands are reads, so the Dependabot path sees what Copilot found without running a skill that would push. The skill never requests or waits for a review, since every rebase leaves any earlier review behind.
 
 ### What does not gate
 
@@ -91,14 +93,14 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr comment *)", "Bash(gh pr merge *)", "Bash(gh api --paginate --slurp repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(jq *)", "Bash(sleep *)", "Bash(git status*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(bin/build-codex-marketplace)", "Bash(bin/build-opencode-mirror)"]
+    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr comment *)", "Bash(gh pr merge *)", "Bash(gh api --paginate --slurp repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(bash \"*/resolve-copilot-threads\" *)", "Bash(jq *)", "Bash(sleep *)", "Bash(git status*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(bin/build-codex-marketplace)", "Bash(bin/build-opencode-mirror)"]
   }
 }
 ```
 
 If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
-Three notes on these rules. **Flag position matters**: `Bash(gh api repos/*)` does not match `gh api --paginate --slurp repos/*`, because the flags come first, so the rule has to spell them out in order. **The repair paths need write rules**: step 6 stages, commits, and pushes fixes, and rebuilds generated trees, so `git add`, `git commit`, and the build scripts belong in the list alongside `git push`. The two `bin/build-*` entries are specific to this repository; substitute whatever build or codegen commands your own project's checks enforce. **`sleep` is only needed on a foreground path**: it pauses an active Codex CLI or OpenCode tick. It cannot revive a watch after the agent has returned a response.
+Four notes on these rules. **The script rule is deliberately path-agnostic**: the installed plugin directory carries a version in its path, so matching on the trailing script name keeps the rule working across upgrades, and the one entry covers this plugin's copy and `resolve-copilot-pr-feedback`'s alike. **Flag position matters**: `Bash(gh api repos/*)` does not match `gh api --paginate --slurp repos/*`, because the flags come first, so the rule has to spell them out in order. **The repair paths need write rules**: step 6 stages, commits, and pushes fixes, and rebuilds generated trees, so `git add`, `git commit`, and the build scripts belong in the list alongside `git push`. The two `bin/build-*` entries are specific to this repository; substitute whatever build or codegen commands your own project's checks enforce. **`sleep` is only needed on a foreground path**: it pauses an active Codex CLI or OpenCode tick. It cannot revive a watch after the agent has returned a response.
 
 ## Examples
 
