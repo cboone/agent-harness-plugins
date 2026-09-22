@@ -747,11 +747,11 @@ validate_review_checklists
 
 # ─── 21. Skill frontmatter fields are on the allowlist ──────────────────────
 #
-# Claude Code accepts around twenty SKILL.md frontmatter fields, Codex and
-# OpenCode document two, and both ignore what they do not recognize. A
-# misspelling such as `disable-model-invokation` therefore has no effect
-# anywhere and reports nothing. This rule names the fields this repository
-# ships, so a typo fails here instead of going unnoticed.
+# Claude Code accepts around twenty SKILL.md frontmatter fields, OpenCode
+# documents five and Codex CLI two, and all three tolerate what they do not
+# recognize. A misspelling such as `disable-model-invokation` therefore has no
+# effect anywhere and reports nothing. This rule names the fields this
+# repository ships, so a typo fails here instead of going unnoticed.
 #
 # Widening the allowlist is deliberate work, not a formality: each new field
 # needs its Codex and OpenCode handling measured and recorded in

@@ -181,10 +181,10 @@ Codex skill inventory: * (glob)
 
 ## Skill frontmatter fields are on the allowlist
 
-Claude Code accepts around twenty `SKILL.md` frontmatter fields; Codex and
-OpenCode document two and ignore the rest. A misspelled field therefore changes
-nothing in any harness and reports nothing, so rule 21 names the fields this
-repository ships.
+Claude Code accepts around twenty `SKILL.md` frontmatter fields, OpenCode
+documents five and Codex CLI two, and all three tolerate what they do not
+recognize. A misspelled field therefore changes nothing in any harness and
+reports nothing, so rule 21 names the fields this repository ships.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" unknown-frontmatter-field 2>&1
