@@ -104,6 +104,8 @@ jobs:
       run-format-check: true
 ```
 
+`run-lint` installs golangci-lint 2.13.2, up from 2.11.4 before v4.1.0. A first run on the newer release can report findings the older one did not. Pin `golangci-lint-version` to a known release while working through them.
+
 ### Python
 
 ```yaml
@@ -508,6 +510,10 @@ text-lint:
   with:
     run-cspell: true
 ```
+
+The workflow also takes `cspell-config`, to pass `--config` explicitly instead of relying on auto-discovery, and `cspell-files`, to replace the default `.` with newline-delimited files and globs. Setting `cspell-config` suppresses the cspell half of `preset`, since an explicit config is the strongest form of a consumer config. The inline `run-cspell` action exposes the same two as `config` and `files`.
+
+cspell bundles English-family dictionaries and a few technical ones, so a repository whose prose is in another language needs `extra-cspell-packages` (`extra-packages` on the action) or cspell flags essentially every word. Each entry is one `<name>@<version>  sha512-<base64>` line, the version must be exact, and the digest comes from `npm view <name>@<version> dist.integrity`. The packages install beside cspell, so a config elsewhere in the tree keeps the idiomatic `"import": ["@cspell/dict-pt-pt/cspell-ext.json"]`.
 
 ## Combined Multi-Language Workflow
 
