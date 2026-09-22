@@ -60,20 +60,20 @@ The toolchain channel itself (which Rust version `stable` resolves to) is a sepa
 Reusable workflow refs look like:
 
 ```yaml
-uses: cboone/gh-actions/.github/workflows/lint-go.yml@v3.0.0
+uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@v4.1.0
 ```
 
 These are subject to the same tag-mutability risk as actions. SHA-pin them with the same approach:
 
 ```bash
-gh api repos/cboone/gh-actions/commits/v3.0.0 --jq '.sha'
+gh api repos/cboone/gh-actions/commits/v4.1.0 --jq '.sha'
 # → 1234567890abcdef1234567890abcdef12345678
 ```
 
 Then:
 
 ```yaml
-uses: cboone/gh-actions/.github/workflows/lint-go.yml@1234567890abcdef1234567890abcdef12345678 # v3.0.0
+uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@1234567890abcdef1234567890abcdef12345678 # v4.1.0
 ```
 
 Tag immutability is a property of how Git refs work, not a property of repo ownership. Pin org-owned refs the same way you pin third-party ones.

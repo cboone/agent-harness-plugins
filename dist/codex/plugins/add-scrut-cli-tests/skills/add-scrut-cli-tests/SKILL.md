@@ -336,7 +336,7 @@ GitHub Actions job template for running scrut CLI tests. Uses the `cboone/gh-act
 
 ```yaml
 test-scrut:
-  uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+  uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
   with:
     scrut-setup-cmd: "SETUP_CMD"
     scrut-env: "TOOL_BIN=BINARY_PATH"
