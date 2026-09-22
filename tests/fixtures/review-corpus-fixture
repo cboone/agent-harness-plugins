@@ -15,12 +15,16 @@
 #   corpus/                          a git repository, main holding the metadata
 #   corpus/cases/001-demo-tally-sign/   a planted logic defect in src/tally
 #   corpus/cases/002-demo-report-error/ a swallowed error in src/report
-#   refs/heads/case/<id>/base        the frozen base commit, an orphan history
-#   refs/heads/case/<id>/head        the frozen head commit, its child
+#   refs/cases/<id>/base             the frozen base commit, an orphan history
+#   refs/cases/<id>/head             the frozen head commit, its child
 #
-# The case branches are orphans, so main is not reachable from either of them.
+# The case histories are orphans, so main is not reachable from either of them.
 # That is what lets a worktree taken from a case head be free of the corpus
 # metadata, which is the property tests/scrut/review-corpus.md asserts.
+#
+# They live under refs/cases/ rather than refs/heads/ for the reason
+# bin/materialize-case documents: a frozen tree carries its own workflows, and
+# only a branch or a tag raises a push event.
 #
 # The caller owns the printed directory. Like cross-reference-fixture, this
 # script cannot remove it, because the testcase still needs it after the
@@ -144,7 +148,7 @@ function build_case_branches() {
   local base_writer="${2}"
   local head_writer="${3}"
 
-  git_corpus checkout -q --orphan "case/${case_id}/head"
+  git_corpus checkout -q --orphan "build/${case_id}"
   clear_tree
 
   "${base_writer}"
@@ -157,7 +161,8 @@ function build_case_branches() {
   git_corpus commit -q -m "case ${case_id}: head"
   HEAD_SHA="$(git_corpus rev-parse HEAD)"
 
-  git_corpus branch "case/${case_id}/base" "${BASE_SHA}"
+  git_corpus update-ref "refs/cases/${case_id}/base" "${BASE_SHA}"
+  git_corpus update-ref "refs/cases/${case_id}/head" "${HEAD_SHA}"
 }
 
 function write_case_metadata() {
@@ -255,7 +260,7 @@ function apply_mutation() {
       ;;
     base-not-ancestor)
       # A commit from the other case's unrelated orphan history.
-      other_sha="$(git_corpus rev-parse "case/002-demo-report-error/base")"
+      other_sha="$(git_corpus rev-parse "refs/cases/002-demo-report-error/base")"
       printf '%s\n' "${other_sha}" > "${one}/BASE"
       ;;
     head-mismatch)
@@ -266,11 +271,12 @@ function apply_mutation() {
       # Freezes the answer key into the case's own head commit, which is what
       # materialize-case refuses to hand a reviewer. Committing on the checked
       # out branch advances it, so the recorded HEAD is updated to match.
-      git_corpus checkout -q "case/001-demo-tally-sign/head"
+      git_corpus checkout -q --detach "refs/cases/001-demo-tally-sign/head"
       printf '%s\n' 'case: 001-demo-tally-sign' > "${CORPUS}/defects.yaml"
       git_corpus add -A
       git_corpus commit -q -m "case 001-demo-tally-sign: head"
       mutated_sha="$(git_corpus rev-parse HEAD)"
+      git_corpus update-ref "refs/cases/001-demo-tally-sign/head" "${mutated_sha}"
       git_corpus checkout -q main
       printf '%s\n' "${mutated_sha}" > "${one}/HEAD"
       ;;
@@ -315,6 +321,10 @@ function main() {
 
   git_corpus add -A
   git_corpus commit -q -m "Add the demo cases"
+
+  # The scaffolding branches each case history was built on are removed, so the
+  # fixture holds what the real corpus holds: main plus refs/cases/*.
+  git_corpus branch -q -D build/001-demo-tally-sign build/002-demo-report-error
 
   apply_mutation "${mutation}"
 

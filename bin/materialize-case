@@ -2,24 +2,30 @@
 # materialize-case -- Check out a frozen review corpus case as a git worktree.
 #
 # The corpus keeps each case's metadata on its main branch and each case's
-# frozen commits on the orphan branches case/<id>/base and case/<id>/head,
-# which share no ancestor with main. Worktrees are added from a local bare
-# cache that has fetched only those two branches, so main is unreachable from
+# frozen commits under refs/cases/<id>/base and refs/cases/<id>/head, orphan
+# histories that share no ancestor with main. Worktrees are added from a local
+# bare cache that has fetched only those two refs, so main is unreachable from
 # the materialized tree and a reviewer working in it cannot read CASE.md or
 # defects.yaml. That isolation is the whole point: a reviewer that can reach
 # the answer key measures nothing.
 #
+# refs/cases/ rather than refs/heads/ because GitHub raises a push event only
+# for a branch or a tag. A frozen tree carries its own .github/workflows/, so
+# pushing these as branches ran each source repository's CI inside the corpus
+# repository. A custom ref is stored and fetched the same way and starts
+# nothing.
+#
 # The base commit is the merge base of the pull request the case was frozen
-# from, so it is an ancestor of the head commit. Fetching whole branches
+# from, so it is an ancestor of the head commit. Fetching whole histories
 # rather than a shallow slice is what keeps `git diff BASE...HEAD` working,
 # and the three-dot form is what the reviewers under test are given.
 #
-# Branch refspecs, not raw SHAs, are what the fetch asks for. A local
+# Named refspecs, not raw SHAs, are what the fetch asks for. A local
 # repository refuses a request for an unreferenced object unless
-# uploadpack.allowReachableSHA1InWant is set, so asking for the branch works
-# everywhere and additionally checks that the branch still points at the SHA
-# the case recorded. Fetching a raw SHA is needed only when freezing a case,
-# against GitHub, which does allow it.
+# uploadpack.allowReachableSHA1InWant is set, so asking for the ref works
+# everywhere and additionally checks that it still points at the SHA the case
+# recorded. Fetching a raw SHA is needed only when freezing a case, against
+# GitHub, which does allow it.
 #
 # Exit codes:
 #   0 - The worktree was created, or the prune succeeded
@@ -124,16 +130,16 @@ function ensure_cache() {
   fi
 }
 
-# Brings the case's two branches into the cache under refs/cases/, which keeps
+# Brings the case's two refs into the cache under the same names, which keeps
 # the objects reachable so they are not collected between runs.
-function fetch_case_branches() {
+function fetch_case_refs() {
   local cache="${1}"
   local case_id="${2}"
 
   git -C "${cache}" fetch --quiet --no-tags corpus \
-    "+refs/heads/case/${case_id}/base:refs/cases/${case_id}/base" \
-    "+refs/heads/case/${case_id}/head:refs/cases/${case_id}/head" \
-    || die "could not fetch case/${case_id}/{base,head} from the corpus"
+    "+refs/cases/${case_id}/base:refs/cases/${case_id}/base" \
+    "+refs/cases/${case_id}/head:refs/cases/${case_id}/head" \
+    || die "could not fetch refs/cases/${case_id}/{base,head} from the corpus"
 }
 
 function verify_ref_matches() {
@@ -202,7 +208,7 @@ function materialize() {
 
   ensure_cache "${cache}" "${corpus}"
   if [[ "${offline}" == "no" ]]; then
-    fetch_case_branches "${cache}" "${case_id}"
+    fetch_case_refs "${cache}" "${case_id}"
   fi
   verify_ref_matches "${cache}" "refs/cases/${case_id}/base" "${base_sha}" "BASE"
   verify_ref_matches "${cache}" "refs/cases/${case_id}/head" "${head_sha}" "HEAD"

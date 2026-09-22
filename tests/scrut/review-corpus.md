@@ -30,6 +30,20 @@ Review corpus: 0 case(s), 0 defect(s) checked.
 All review corpus cases are valid.
 ```
 
+## Frozen commits are custom refs, never branches
+
+The regression this guards: the case histories were first pushed as
+`refs/heads/case/*`, and because every frozen tree carries its own
+`.github/workflows/`, GitHub ran each source repository's CI inside the corpus
+repository. Only a branch or a tag raises a push event, so the refs live under
+`refs/cases/` instead. The case count is reported alongside, so a corpus with
+no refs at all cannot pass this as a zero.
+
+```scrut
+$ git -C "$("${REVIEW_CORPUS_FIXTURE_BIN}")/corpus" for-each-ref --format='%(refname)' | awk 'BEGIN { c = 0; b = 0 } /^refs\/cases\// { c++ } /^refs\/heads\/case/ { b++ } END { print "cases=" c, "case_branches=" b }'
+cases=4 case_branches=0
+```
+
 ## Materializing a case reports what the harness needs
 
 The SHAs and the path vary per run, so their shape is pinned rather than their

@@ -257,17 +257,18 @@ function check_case_files() {
   [[ "${complete}" == "yes" ]]
 }
 
-# Prints the commit a case branch points at, looking for a local branch first
-# and then a remote-tracking one, so both the canonical corpus and a clone of
-# it work. Returns non-zero and prints nothing when neither ref exists.
+# Prints the commit a case ref points at. The canonical layout is
+# refs/cases/<id>/<side>; refs/remotes/origin/cases/... is accepted too, for a
+# clone that fetched them into a remote namespace. Returns non-zero and prints
+# nothing when neither exists.
 function branch_tip() {
   local corpus="${1}"
   local case_id="${2}"
   local side="${3}"
   local ref tip
 
-  for ref in "refs/heads/case/${case_id}/${side}" \
-    "refs/remotes/origin/case/${case_id}/${side}"; do
+  for ref in "refs/cases/${case_id}/${side}" \
+    "refs/remotes/origin/cases/${case_id}/${side}"; do
     tip="$(git -C "${corpus}" rev-parse --verify --quiet "${ref}^{commit}" || true)"
     if [[ -n "${tip}" ]]; then
       printf '%s\n' "${tip}"
@@ -278,11 +279,11 @@ function branch_tip() {
   return 1
 }
 
-# The recorded SHA and the case branch must agree. They drift when a case is
-# re-frozen and only one of the two is updated, which leaves the branch a
+# The recorded SHA and the case ref must agree. They drift when a case is
+# re-frozen and only one of the two is updated, which leaves the tree a
 # reviewer is given and the ground truth the scorer reads describing different
-# commits. A missing branch is a warning, since a shallow or partial clone can
-# lack it while the objects are still present.
+# commits. A missing ref is a warning, since refs/cases/ is outside what a
+# default fetch brings and a clone can legitimately lack it.
 function check_case_branches() {
   local corpus="${1}"
   local case_id="${2}"
@@ -299,9 +300,9 @@ function check_case_branches() {
 
     tip="$(branch_tip "${corpus}" "${case_id}" "${side}" || true)"
     if [[ -z "${tip}" ]]; then
-      warning "${case_id}: no case/${case_id}/${side} branch in the corpus"
+      warning "${case_id}: no refs/cases/${case_id}/${side} in the corpus"
     elif [[ "${tip}" != "${expected}" ]]; then
-      error "${case_id}: ${side} branch points at ${tip} but the file records ${expected}"
+      error "${case_id}: ${side} ref points at ${tip} but the file records ${expected}"
     fi
   done
 }
@@ -398,7 +399,7 @@ function check_case() {
   if [[ "${structural_ok}" == "yes" ]]; then
     if ! git -C "${corpus}" cat-file -e "${base_sha}^{commit}" 2> /dev/null \
       || ! git -C "${corpus}" cat-file -e "${head_sha}^{commit}" 2> /dev/null; then
-      error "${case_id}: BASE or HEAD is not in the corpus repository; fetch the case branches"
+      error "${case_id}: BASE or HEAD is not in the corpus repository; fetch refs/cases/*"
     elif ! git -C "${corpus}" merge-base --is-ancestor "${base_sha}" "${head_sha}"; then
       error "${case_id}: BASE is not an ancestor of HEAD, so a three-dot diff would be wrong"
     else

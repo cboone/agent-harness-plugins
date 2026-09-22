@@ -66,9 +66,20 @@ reclassifying a case never renames its directory and never invalidates a
 recorded result.
 
 Both SHAs are the real upstream commits. They stay valid inside the corpus
-repository because the objects are the same ones, pushed there under the orphan
-branches `case/<id>/base` and `case/<id>/head`. Freezing this way means the
+repository because the objects are the same ones, pushed there under
+`refs/cases/<id>/base` and `refs/cases/<id>/head`. Freezing this way means the
 corpus no longer depends on an upstream repository never force-pushing.
+
+**The case refs are not branches, and must not become branches.** Every frozen
+tree carries its own `.github/workflows/`, and GitHub raises a push event for a
+branch or a tag. Pushed as `refs/heads/case/*`, the first forty refs ran each
+source repository's CI inside the corpus repository. A custom ref under
+`refs/cases/` is stored and fetched identically and starts nothing.
+`tests/scrut/review-corpus.md` asserts that no `refs/heads/case/*` exists.
+
+One consequence: `refs/cases/*` is outside what a clone or an `actions/checkout`
+fetches, even at `fetch-depth: 0`. A consumer needs an explicit
+`git fetch origin 'refs/cases/*:refs/cases/*'`.
 
 All machine-readable metadata sits in `defects.yaml`, which gives a harness a
 single file to parse and keeps `CASE.md` free to be prose.
@@ -144,9 +155,9 @@ or a release. `p2` and `p3` are progressively smaller.
 ## The reviewer must not reach the answer key
 
 `CASE.md` and `defects.yaml` live on the corpus repository's `main`. The frozen
-commits live on orphan branches that share no ancestor with `main`, and
+commits live in orphan histories that share no ancestor with `main`, and
 `bin/materialize-case` builds its worktree from a local bare cache that has
-fetched only those two branches. So `main` is not reachable from a materialized
+fetched only those two refs. So `main` is not reachable from a materialized
 worktree and neither file can be read from inside it.
 
 This is not a detail. A reviewer that can read the corpus metadata measures
@@ -181,11 +192,13 @@ describes the defect. A synthesized case must keep that property.
    `copilot-comment` case, confirm the anchor commit is an ancestor of the
    merged head; if the branch was force-pushed it will not be, and the comment's
    line numbers refer to a commit the branch no longer contains.
-1. Fetch the head commit into the corpus repository and push both ends to
-   `case/<id>/base` and `case/<id>/head`. One fetch is enough, because the base
-   is an ancestor of the head. Fetching a full 40-character SHA works against a
-   public GitHub repository; a local repository refuses an unreferenced object,
-   which is why `bin/materialize-case` asks for branches rather than SHAs.
+1. Fetch the head commit into the corpus repository and record both ends with
+   `git update-ref` at `refs/cases/<id>/base` and `refs/cases/<id>/head`, then
+   push them with `git push origin 'refs/cases/*:refs/cases/*'`. One fetch is
+   enough, because the base is an ancestor of the head. Fetching a full
+   40-character SHA works against a public GitHub repository; a local
+   repository refuses an unreferenced object, which is why
+   `bin/materialize-case` asks for named refs rather than SHAs.
 1. Write the four files, then run `bin/validate-corpus --corpus DIR <id>`.
 
 ## Adding a planted case
