@@ -78,7 +78,7 @@ plugins/notify/
 
 ## Skill frontmatter
 
-Three harnesses read every canonical `SKILL.md`, and they read its frontmatter differently. Claude Code accepts around twenty fields. Codex CLI and OpenCode document two each and ignore everything else. Rule 21 of `bin/validate-plugins` holds this repository to the fields below, so a misspelling such as `disable-model-invokation` fails validation instead of doing nothing in all three.
+Three harnesses read every canonical `SKILL.md`, and each reads a different part of its frontmatter. Claude Code accepts around twenty fields, OpenCode documents five, and Codex CLI documents two. All three tolerate a field they do not recognize, and only `claude plugin validate --strict` reports one. Rule 21 of `bin/validate-plugins` holds this repository to the fields below, so a misspelling such as `disable-model-invokation` fails validation instead of doing nothing in all three.
 
 | Field                      | Claude Code                  | Codex CLI             | OpenCode |
 | -------------------------- | ---------------------------- | --------------------- | -------- |

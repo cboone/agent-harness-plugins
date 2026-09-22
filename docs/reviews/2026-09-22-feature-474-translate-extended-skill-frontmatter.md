@@ -5,6 +5,8 @@ Commits: 2
 Files changed: 12 (3 added, 9 modified, 0 deleted, 0 renamed)
 Reviewed through: `e9f3be31`
 
+This is a point-in-time record. Its one issue to address and both actionable suggestions were resolved in `e695a378` and `fe5137ec`. The verification gap under Fidelity concerns was closed afterwards and carries a note below. The remaining two items are observations that need no code change.
+
 ## Summary
 
 The branch answers issue #474's empirical question and acts on the answer. Codex CLI 0.155.1 and OpenCode 1.18.31 were measured directly: both ignore unrecognized `SKILL.md` frontmatter silently, and Codex also ignores `disable-model-invocation`, so a skill marked explicit-only in Claude Code is still offered to the model there. `bin/build-codex-marketplace` now translates that one field into an `agents/openai.yaml` invocation policy, rule 16b of `bin/validate-plugins` permits exactly that difference and no other, and a new rule 21 holds skill frontmatter to a named allowlist. The OpenCode mirror stays relative symlinks, with the reason recorded in the script.
@@ -82,7 +84,7 @@ None.
 
 **Compliance verdict: good, with one verification step skipped.** All seven planned changes landed, and two scope additions beyond the plan are justified. One item in the plan's own verification section was not performed.
 
-**Overall progress: 7/7 planned changes done (100%); 6/7 verification steps performed (86%).**
+**Overall progress: 7/7 planned changes done (100%); 6/7 verification steps performed (86%)** at the time of review. The seventh was performed afterwards, so the branch now stands at 7/7 on both counts; see the note under Fidelity concerns.
 
 ### Done
 
@@ -102,7 +104,10 @@ None.
 
 ### Fidelity concerns
 
-- **Plan verification step 7 was not performed.** The plan says to install the _generated_ `dist/codex` plugin under a scratch `CODEX_HOME` and confirm Codex reports no validation error and treats the skill as explicit-only. What was actually done is narrower: a hand-written probe skill whose `agents/openai.yaml` contained only the two policy lines, without the three comment lines the generator emits. The exact bytes this pipeline produces were never fed to Codex. The risk is low, since YAML comments are unremarkable, but this is precisely the end-to-end confirmation the step existed for, and it is cheap to run.
+- **Plan verification step 7 was not performed.** The plan says to install the _generated_ `dist/codex` plugin under a scratch `CODEX_HOME` and confirm Codex reports no validation error and treats the skill as explicit-only. What was actually done is narrower: a hand-written probe skill whose `agents/openai.yaml` contained only the two policy lines, without the three comment lines the generator emits. The exact bytes this pipeline produces were never fed to Codex. The risk is low, since YAML comments are unremarkable, but this is precisely the end-to-end confirmation the step existed for.
+
+  **Resolved after this review was written.** The check was run: a skill was given the field, `make build` regenerated the mirrors, the generated plugin was installed with `codex plugin add` from a local marketplace under a throwaway `CODEX_HOME`, and the resulting session listed `commit:commit` while withholding `release:release`, with empty stderr. The generator's comment lines reached Codex intact. `docs/plugin-development.md` records the outcome and says to repeat the check when the manifest's contents change.
+
 - **The plan was edited to match the implementation.** The findings table, the rule 16b description and the scenario list were revised after the code was written, before the plan was committed. That keeps the committed record accurate, but it means the plan is not an independent yardstick for this review, and a reader cannot tell from the diff which decisions were made before the work and which after.
 
 ## Code Quality Assessment
