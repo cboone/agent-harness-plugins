@@ -2,6 +2,11 @@
 # review-scope -- Report the local review scope and a content snapshot of it.
 set -euo pipefail
 
+# Make `set -e` apply inside command substitutions too. Bash leaves this off by
+# default, which is why a multi-command function called as `$(...)` can fail
+# halfway and still return the last command's success.
+shopt -s inherit_errexit 2> /dev/null || true
+
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
@@ -10,7 +15,10 @@ readonly SCRIPT_NAME
 TMP_DIR=""
 
 function cleanup() {
-  [[ -n "${TMP_DIR}" ]] && rm -rf "${TMP_DIR}"
+  if [[ -n "${TMP_DIR}" ]]; then
+    rm -rf "${TMP_DIR}" \
+      || echo "${SCRIPT_NAME}: could not remove ${TMP_DIR}" >&2
+  fi
   return 0
 }
 
@@ -26,13 +34,12 @@ bound to their content: committed branch changes, staged changes, unstaged
 changes, and untracked files.
 
 The snapshot is content-addressed, so it does not move when a file changes
-which bucket it is in. Staging a file, unstaging it, or recording an intent to
-add it with `git add -N` all leave the snapshot alone; changing a byte of it
-does not.
+which bucket it is in: staging a file, unstaging it, or recording an intent to
+add it with `git add -N` all leave it alone, while changing a byte moves it.
 
 Options:
-  --base <ref>  Compare committed changes against this ref instead of the
-                merge base with the default branch
+  --base <ref>  Take the merge base with this ref instead of with the default
+                branch; committed changes are those from the merge base to HEAD
   --schema      Print the JSON Schema for reviewer findings and exit
   -h, --help    Show this help
 USAGE_TEXT
@@ -45,8 +52,9 @@ function die() {
 
 # The reviewer's output contract. Every property is required and no extra ones
 # are allowed, because structured-output implementations reject the looser
-# forms. A backend that cannot take a schema is given this shape in its prompt
-# instead, and its output is validated against it either way.
+# forms. A backend that cannot take a schema has its reply transcribed into
+# this shape by the host; see references/backends.md for why that transcription
+# is never the evidence that the review actually ran.
 function print_schema() {
   cat << 'SCHEMA_TEXT'
 {
@@ -133,27 +141,76 @@ function resolve_base_ref() {
   return 1
 }
 
-# A content digest of the whole working tree, built in a temporary index so the
-# real one is untouched. write-tree produces a tree object name, which is git's
-# own content address: identical content always yields it, whatever the index
-# says, and deletions, symlinks, executable bits and unusual file names are all
-# covered without parsing a single path.
+# A content digest of every path git tracks or would track, built in a copy of
+# the index so the real one is untouched. write-tree produces a tree object
+# name, which is git's own content address: identical content always yields it,
+# whatever the index says, and deletions, symlinks, the executable bit and
+# unusual file names are all covered without parsing a single path.
+#
+# The copy starts from the real index rather than from HEAD because a path can
+# be in the index without being in HEAD and without `add --all` finding it: a
+# file matched by .gitignore but force-added with `git add -f` is tracked, is
+# reported in the staged bucket, and would be skipped by an `add --all` seeded
+# from HEAD. Its content would then sit outside the digest, so rewriting it
+# would not move the snapshot and a stale clean result would be reused.
+#
+# `add --all` honors .gitignore, so ignored paths that nobody added stay out of
+# the digest, which matches the scope rule. Writes unreferenced blobs and one
+# tree into the object database; `git gc` collects them.
+# Every step checks its own status with `|| die`, which is not belt and braces.
+# Bash does not apply `set -e` inside a command substitution unless
+# `inherit_errexit` is set, and this function is called as `$(...)`. Without
+# these checks a failing `git add --all` falls through to `write-tree`, which
+# succeeds against the index as it stands and returns HEAD's tree. The snapshot
+# then becomes a constant that never moves again, and the loop reports clean
+# for code that changed, which is the worst failure this script can have.
+# `die` exits the subshell outright, so the caller's assignment fails.
 function working_tree_digest() {
   local tmp_index="${1}"
+  local real_index
 
-  GIT_INDEX_FILE="${tmp_index}" git read-tree HEAD
-  GIT_INDEX_FILE="${tmp_index}" git add --all
-  GIT_INDEX_FILE="${tmp_index}" git write-tree
+  real_index="$(git rev-parse --git-path index)" \
+    || die "could not locate the repository index"
+
+  if [[ -f "${real_index}" ]]; then
+    cp "${real_index}" "${tmp_index}" \
+      || die "could not copy the index to ${tmp_index}"
+  else
+    GIT_INDEX_FILE="${tmp_index}" git read-tree HEAD \
+      || die "could not read HEAD into the temporary index"
+  fi
+
+  GIT_INDEX_FILE="${tmp_index}" git add --all \
+    || die "could not stage the working tree into the temporary index; the snapshot would describe HEAD instead of what is on disk"
+  GIT_INDEX_FILE="${tmp_index}" git write-tree \
+    || die "could not write a tree from the temporary index"
 }
 
-# Paths as a JSON array. -z keeps every file name intact, including the ones
-# holding newlines that a line-based read would split.
+# Reads NUL-separated paths on stdin and writes them as a JSON array. Callers
+# pass git's -z so that a file name holding a newline survives; a line-based
+# read would split it into two paths.
+#
+# `unique` because during an unresolved merge `git diff --name-only` lists a
+# conflicted path once per stage, and a bucket holding the same path twice
+# would be reported to the reviewer twice.
 function paths_to_json() {
-  jq -Rs 'split("\u0000") | map(select(length > 0))'
+  jq -Rs 'split("\u0000") | map(select(length > 0)) | unique'
 }
 
-function empty_json_array() {
-  printf '[]'
+# Run a git command that lists paths and store the result as JSON under
+# TMP_DIR. The raw output lands in a file first so that git's exit status is
+# checked by `set -e`; piping straight into jq would let jq's success hide a
+# git failure and yield a convincingly empty bucket.
+function write_bucket() {
+  local name="${1}"
+  shift
+
+  "$@" > "${TMP_DIR}/${name}.raw"
+  paths_to_json < "${TMP_DIR}/${name}.raw" > "${TMP_DIR}/${name}.json"
+}
+
+function write_empty_bucket() {
+  printf '[]' > "${TMP_DIR}/${1}.json"
 }
 
 function main() {
@@ -194,6 +251,18 @@ function main() {
 
   git rev-parse --is-inside-work-tree > /dev/null 2>&1 \
     || die "not inside a git work tree"
+
+  # Run from the top level. `git ls-files` is scoped to the current directory
+  # and prints cwd-relative paths, while `git diff` is whole-tree and prints
+  # repository-relative ones. Called from a subdirectory the two disagree, so
+  # untracked files above it vanish from the scope while the whole-tree digest
+  # still covers them: the loop would bank a clean result over code no reviewer
+  # was shown, and the paths it did report would not resolve from the root.
+  local top_level
+  top_level="$(git rev-parse --show-toplevel)" \
+    || die "could not resolve the repository top level"
+  cd "${top_level}" || die "could not enter ${top_level}"
+
   git rev-parse --verify --quiet HEAD > /dev/null \
     || die "HEAD does not resolve to a commit; the repository has no commits yet"
 
@@ -209,27 +278,69 @@ function main() {
   base_sha=""
   merge_base=""
   if [[ -n "${base_ref}" ]]; then
-    base_sha="$(git rev-parse "${base_ref}^{commit}")"
-    merge_base="$(git merge-base "${base_sha}" "${head}" 2> /dev/null || true)"
+    base_sha="$(git rev-parse --verify --quiet "${base_ref}^{commit}")" \
+      || die "base ref '${base_ref}' does not resolve to a commit"
+
+    # A base that shares no history with HEAD has no merge base, and git says
+    # so with exit 1 and no output. Swallowing that leaves the committed bucket
+    # empty, which reads as "no committed changes" and can make a branch full
+    # of unreviewed commits report empty. Wrong scope is worse than no scope,
+    # so an explicit --base fails loudly and a guessed one is dropped, keeping
+    # base_ref and base consistent with each other.
+    if ! merge_base="$(git merge-base "${base_sha}" "${head}" 2> /dev/null)"; then
+      merge_base=""
+      if [[ -n "${requested_base}" ]]; then
+        die "base ref '${requested_base}' shares no history with HEAD, so the committed part of the scope cannot be computed"
+      fi
+      base_ref=""
+      base_sha=""
+    fi
   fi
 
-  local committed staged unstaged untracked
-  committed="$(empty_json_array)"
-  if [[ -n "${merge_base}" && "${merge_base}" != "${head}" ]]; then
-    committed="$(git diff -z --name-only "${merge_base}" "${head}" | paths_to_json)"
-  fi
-  staged="$(git diff -z --cached --name-only | paths_to_json)"
-  unstaged="$(git diff -z --name-only | paths_to_json)"
-  untracked="$(git ls-files -z --others --exclude-standard | paths_to_json)"
-
-  # A directory rather than a file: mktemp would leave an empty index behind,
-  # which git reads as a corrupt one, and creating the path non-atomically to
-  # avoid that would be worse.
+  # A private directory for the temporary index, so git's own lock and
+  # temporary files land beside it and one rm removes the lot.
   TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/review-scope.XXXXXX")"
+
+  # Each bucket goes to a file rather than into a jq argument. A large scope
+  # makes the combined argument list exceed the execve limit, and on Linux a
+  # single argument is capped far lower than the total, so a few thousand
+  # untracked paths would abort the run with a raw shell error and no JSON.
+  if [[ -n "${merge_base}" && "${merge_base}" != "${head}" ]]; then
+    write_bucket committed git diff -z --name-only "${merge_base}" "${head}"
+  else
+    write_empty_bucket committed
+  fi
+  write_bucket staged git diff -z --cached --name-only
+  write_bucket unstaged git diff -z --name-only
+  write_bucket untracked git ls-files -z --others --exclude-standard
 
   local tree digest
   tree="$(working_tree_digest "${TMP_DIR}/index")"
   digest="$(printf 'head %s\nbase %s\ntree %s\n' "${head}" "${merge_base:--}" "${tree}" | git hash-object --stdin)"
+
+  # An independent cross-check on the digest. The buckets and the tree come
+  # from different git commands and have to agree: if anything is staged,
+  # unstaged or untracked, the working tree differs from HEAD, so its tree
+  # object must differ from HEAD's. When they match anyway, the digest is
+  # describing HEAD rather than what is on disk, whatever the cause, and the
+  # snapshot would freeze. Catching it here turns that into a loud failure.
+  #
+  # The committed bucket is deliberately excluded: a branch with commits ahead
+  # of its base and a clean working tree legitimately has HEAD's own tree.
+  local head_tree
+  head_tree="$(git rev-parse "${head}^{tree}")" \
+    || die "could not resolve HEAD's tree"
+
+  local worktree_is_dirty
+  worktree_is_dirty="$(jq -n \
+    --slurpfile staged "${TMP_DIR}/staged.json" \
+    --slurpfile unstaged "${TMP_DIR}/unstaged.json" \
+    --slurpfile untracked "${TMP_DIR}/untracked.json" \
+    '(($staged[0] + $unstaged[0] + $untracked[0]) | length) > 0')"
+
+  if [[ "${worktree_is_dirty}" == "true" && "${tree}" == "${head_tree}" ]]; then
+    die "the working-tree digest equals HEAD's tree while paths are reported as modified; the snapshot does not describe what is on disk"
+  fi
 
   jq -n \
     --arg head "${head}" \
@@ -237,21 +348,21 @@ function main() {
     --arg base "${merge_base}" \
     --arg tree "${tree}" \
     --arg snapshot "${digest}" \
-    --argjson committed "${committed}" \
-    --argjson staged "${staged}" \
-    --argjson unstaged "${unstaged}" \
-    --argjson untracked "${untracked}" \
+    --slurpfile committed "${TMP_DIR}/committed.json" \
+    --slurpfile staged "${TMP_DIR}/staged.json" \
+    --slurpfile unstaged "${TMP_DIR}/unstaged.json" \
+    --slurpfile untracked "${TMP_DIR}/untracked.json" \
     '{
       head: $head,
       base_ref: (if $base_ref == "" then null else $base_ref end),
       base: (if $base == "" then null else $base end),
       tree: $tree,
       snapshot: $snapshot,
-      committed: $committed,
-      staged: $staged,
-      unstaged: $unstaged,
-      untracked: $untracked,
-      empty: (($committed + $staged + $unstaged + $untracked) | length) == 0
+      committed: $committed[0],
+      staged: $staged[0],
+      unstaged: $unstaged[0],
+      untracked: $untracked[0],
+      empty: (($committed[0] + $staged[0] + $unstaged[0] + $untracked[0]) | length) == 0
     }'
 }
 

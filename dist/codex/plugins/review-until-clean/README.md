@@ -26,7 +26,7 @@ The loop is only worth running if a clean result means something. Four rules mak
 
 ### Model diversity
 
-A reviewer from the same model family as the agent that wrote the code shares its blind spots. By default the skill picks the family the host is not: Codex when it runs under Claude Code, Claude when it runs under Codex CLI. Override with `--reviewer`.
+A reviewer from the same model family as the agent that wrote the code misses the same things it does. By default the skill picks the family the host is not: Codex when it runs under Claude Code, Claude when it runs under Codex CLI. Override with `--reviewer`.
 
 ### Findings you disagree with
 
@@ -34,7 +34,7 @@ A finding you decline is recorded in the ledger with its reason and carried forw
 
 ### What it reports
 
-Each run appends to a ledger at `docs/reviews/<date>-<branch>-until-clean.md` and ends with a status line:
+Each run keeps a ledger while it works and, when it finishes, saves it to `docs/reviews/<date>-<branch>-until-clean.md`. The run ends with a status line:
 
 ```text
 Review-until-clean status: clean | clean-with-declines | decisions-needed | stopped | failed
@@ -51,7 +51,10 @@ At least one reviewer backend:
 - [`codex`](https://github.com/openai/codex), authenticated. Install via Homebrew: `brew install codex`
 - [`claude`](https://code.claude.com/docs/en/overview), when the host is not Claude Code itself
 
-`git` is required. The skill only reads from it, apart from the optional `git add -N` described under [Usage](#usage).
+Also required:
+
+- `git`. The skill never changes your index or your commits, apart from the optional `git add -N` described under [Usage](#usage). Computing the snapshot does write unreferenced blob and tree objects into `.git/objects`, which `git gc` collects.
+- [`jq`](https://jqlang.org/). The bundled scope helper emits JSON and will not run without it.
 
 ## Usage
 
@@ -63,16 +66,16 @@ At least one reviewer backend:
 | Option                              | Description                                                                                     |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `--reviewer <codex\|claude>`        | Choose the backend instead of taking the model-diverse default                                  |
-| `--base <ref>`                      | Compare committed changes against this ref instead of the merge base with the default branch    |
+| `--base <ref>`                      | Take the merge base with this ref instead of with the default branch                            |
 | `--effort <low\|medium\|high\|max>` | Effort for the Claude backend; the Codex backend takes its effort from your Codex configuration |
 | `--severity <important\|nit>`       | Lowest severity the loop fixes; default `important`                                             |
 | `--max-rounds <n>`                  | Cap the rounds; default 3                                                                       |
 | `--report-only`                     | Run one round, write the ledger, change nothing                                                 |
-| `--no-save`                         | Write the ledger to a temporary path instead of `docs/reviews/`                                 |
+| `--no-save`                         | Leave the ledger at its temporary path instead of saving it to `docs/reviews/`                  |
 
 Each round asks you to confirm the item list before anything is edited, because [Address Review](../address-review/README.md) does the fixing and always confirms first. This is a gate you watch, not an unattended job.
 
-When the Claude backend is selected and untracked files are in scope, the skill asks once whether to make them visible to the reviewer with `git add -N`, which records an intent to add without staging content. It restores the index with `git reset` afterward. Declining is fine; the run then reports `partial scope`. The snapshot is computed from file content rather than from index state, so staging a file this way does not move it.
+When the Claude backend is selected and untracked files are in scope, the skill asks once whether to make them visible to the reviewer with `git add -N`, which records an intent to add without staging content. It restores the index with `git reset -- <paths>` afterward, touching only those paths. Declining is fine; the run then reports `partial scope`. The snapshot is computed from file content rather than from index state, so staging a file this way does not move it.
 
 ### As a pre-push hook
 
@@ -85,14 +88,14 @@ This skill runs git and reviewer commands that trigger permission prompts. To al
 ```json
 {
   "permissions": {
-    "allow": ["Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status*)", "Bash(git ls-files *)", "Bash(git hash-object *)", "Bash(git log *)", "Bash(git branch *)", "Bash(codex exec *)", "Bash(claude -p *)", "Bash(mktemp -d \"${TMPDIR:-/tmp}/review-until-clean-*\")", "Bash(rm -rf *review-until-clean-*)"]
+    "allow": ["Bash(bash \"*/review-scope\")", "Bash(bash \"*/review-scope\" *)", "Bash(test -x *)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status*)", "Bash(git ls-files *)", "Bash(git log *)", "Bash(git branch *)", "Bash(codex exec *)", "Bash(claude -p *)"]
   }
 }
 ```
 
 If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
-`git add -N` and `git reset` are left out on purpose: the skill asks before touching the index, so approving those two commands each time is the point.
+The first two rules cover the bundled helper, which runs every round. `git add -N` and `git reset` are left out on purpose: the skill asks before touching the index, so approving those two each time is the point.
 
 ## Examples
 

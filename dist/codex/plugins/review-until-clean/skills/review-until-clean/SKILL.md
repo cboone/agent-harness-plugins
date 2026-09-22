@@ -12,12 +12,12 @@ Run a read-only reviewer over every local change, fix the findings at or above a
 ## Options
 
 - **--reviewer `<codex|claude>`**: choose the backend instead of taking the model-diverse default
-- **--base `<ref>`**: compare committed changes against this ref instead of the merge base with the default branch
+- **--base `<ref>`**: take the merge base with this ref instead of with the default branch
 - **--effort `<low|medium|high|max>`**: effort for the Claude backend
 - **--severity `<important|nit>`**: lowest severity the loop fixes; default `important`
 - **--max-rounds `<n>`**: cap the rounds; default 3
 - **--report-only**: run one round, write the ledger, change nothing
-- **--no-save**: write the ledger to a temporary path instead of `docs/reviews/`
+- **--no-save**: leave the ledger at its temporary path instead of saving it to `docs/reviews/`
 
 ## Skill dependencies
 
@@ -57,7 +57,7 @@ If `empty` is true, report that there is nothing to review and stop. Do not run 
 
 ### 2. Select the backend
 
-Take `--reviewer` when given. Otherwise pick the model family the host is not, because a reviewer that shares the author's blind spots is the one least likely to see past them:
+Take `--reviewer` when given. Otherwise pick the model family the host is not, because a reviewer that misses what the author missed is the one least likely to see past it:
 
 | Host        | Default reviewer |
 | ----------- | ---------------- |
@@ -102,7 +102,9 @@ Report the failure with what the backend actually returned, and stop. Do not ret
 
 ### 6. Record the round
 
-Append a round section to the ledger following `./references/ledger.md`, with the snapshot reviewed, the backend and invocation used, the coverage from step 3, and every finding with a stable identifier and a mapped severity. Write the ledger to `docs/reviews/<date>-<branch>-until-clean.md`, or to a temporary path under `--no-save`.
+Append a round section to the ledger following `./references/ledger.md`, with the snapshot reviewed, the backend and invocation used, the coverage from step 3, and every finding with a stable identifier and a mapped severity.
+
+**Keep the ledger outside the working tree while the loop runs**, at a temporary path. Writing it into `docs/reviews/` would put a new untracked file in the repository, which moves the snapshot; step 8 would then never find the snapshot it reviewed, no round could ever be clean, and the next round would hand the reviewer its own ledger as new code. Step 11 moves the finished ledger into place.
 
 ### 7. Apply carried declines
 
@@ -141,6 +143,8 @@ Never push. A finding you decline goes back into the ledger with its reason, und
 Recompute the snapshot. If it did not move and findings remain, nothing was fixed and the next round would read exactly the same code and return exactly the same findings: stop with `decisions-needed` rather than spending the remaining rounds. Otherwise start the next round at step 1, up to `--max-rounds`.
 
 ### 11. Report
+
+Move the ledger from its temporary path to `docs/reviews/<date>-<branch>-until-clean.md`, unless `--no-save` was given, in which case leave it where it is and report that path. Moving it here rather than during the loop is what keeps it out of the snapshot; do not move it earlier.
 
 Print the status line, the ledger path, and the coverage:
 
