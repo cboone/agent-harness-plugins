@@ -13,9 +13,11 @@ A backend is acceptable only if all four hold. A backend that cannot meet them i
 1. It runs without write access to the working tree.
 1. It covers the whole scope, or states exactly what it missed.
 1. Its findings end up in the schema `review-scope --schema` prints, either because the backend emitted them that way or because you transcribed its reply into it.
-1. **A completed review is distinguishable from a run that did not finish**, by exit status, by schema validity, or by the reply being non-empty. Each backend below says which of those carries the weight for it, because that is the check the whole loop rests on.
+1. **A completed review is distinguishable from a run that did not finish**, by **every** signal the backend offers: its exit status where it runs as a process, schema validity where it is schema-constrained, and a non-empty reply in all cases. A backend section may leave out a signal only by naming it as unavailable and saying what stands in for it.
 
 The third and fourth are separate on purpose. A backend that cannot be schema-constrained is still usable, as long as something other than the transcription tells you the review actually happened. A backend where the only evidence is a transcription you wrote yourself is not.
+
+The fourth says "every" rather than "any" because the signals fail independently. A Codex run that exits zero having written nothing satisfies an exit-status check on its own, and that is exactly the case this loop must not read as clean.
 
 ## Codex
 
@@ -58,8 +60,10 @@ codex exec \
   --ephemeral \
   --output-schema "<schema-file>" \
   -o "<out-file>" \
-  "<review prompt>"
+  "<review prompt>" < /dev/null
 ```
+
+`< /dev/null` is required, not tidiness. `codex exec` appends stdin to the prompt whenever stdin is not a terminal, so a run launched from an agent harness, whose stdin is an open pipe that never reaches end of file, prints `Reading additional input from stdin...` and blocks until something kills it. Measured against `codex-cli 0.155.1`: it hung until a 12-second timeout and **never created the `-o` file**. That is the worst shape a failure can take here, because the round produces no output at all.
 
 `--sandbox read-only` denies writes at the sandbox level. `--ephemeral` keeps the run from persisting a session. `-m` selects a model; effort comes from the Codex configuration.
 
@@ -87,7 +91,14 @@ Two things about building that prompt:
 
 ### Reading the output
 
-`-o` writes the final message to the named file, and with the schema in force that message is the findings object. Parse that file.
+`-o` writes the final message to the named file, and with the schema in force that message is the findings object. Check it in this order, and treat any failure as a failed round:
+
+1. **`codex` exited zero.** A non-zero exit is a failed round whatever the file holds.
+1. **The `-o` file exists.** A run that failed or was killed never creates it, so a missing file is a failed round, never an empty findings list.
+1. **The file is non-empty.** `jq . <file>` exits **0** on an empty file and prints nothing, so jq's exit status is not the emptiness check. Use the file's size, or `jq -e`, which exits 4 on empty input.
+1. **It validates against the schema**, and `reviewed` equals the snapshot from step 1.
+
+Never read a missing file, or an empty one, as "no findings".
 
 `--json` additionally streams events on stdout, where the same message arrives as the `item.completed` event whose `item.type` is `agent_message`. Everything else in the stream is the reviewer's own tool use and is not a finding. The stream is useful for watching a long review; it is not a second source of findings.
 
@@ -111,6 +122,8 @@ This backend behaves differently from Codex in two ways that matter, and both ne
 ### Under Claude Code
 
 Run the review in the session, at the effort `--effort` selected, with the target chosen under Coverage below.
+
+In-session there is no subprocess, so there is no exit status and no output file: the only artifact is the reply, and you are also the one transcribing it. That is the configuration the contract above warns about, so it needs a standing-in signal. **Record the reply verbatim in the round's ledger section before extracting a single finding.** A round with no recorded raw reply is `failed`, whatever you believe you saw. Capturing it first is what makes "the reviewer said nothing" and "the reviewer found nothing" different states rather than the same empty list.
 
 ### Under another harness
 
@@ -160,7 +173,7 @@ Pre-existing findings map to Nit rather than being dropped. They are real, and t
 
 ## Choosing between them
 
-The default is the model family the host is not, because a reviewer built on the same model as the author shares its blind spots, and the findings worth the round trip are the ones the author's own model would not have reached. `--reviewer` overrides this when the point is a second opinion from the same family, or when only one backend is installed.
+The default is the model family the host is not, because a reviewer built on the same model as the author misses what it missed, and the findings worth the round trip are the ones the author's own model would not have reached. `--reviewer` overrides this when the point is a second opinion from the same family, or when only one backend is installed.
 
 ## Adding a backend
 

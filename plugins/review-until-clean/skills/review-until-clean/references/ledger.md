@@ -8,11 +8,15 @@ The loop needs a record that outlives a round for three reasons: `address-review
 
 ## Location
 
-`docs/reviews/<date>-<branch>-until-clean.md`, with the branch name sanitized the way `review-branch` sanitizes it: `/`, spaces, colons and backslashes become `-`, repeated hyphens collapse, leading and trailing hyphens are trimmed, an empty result becomes `branch`, and a detached head becomes `HEAD`.
+**While the loop runs, the ledger lives at a temporary path outside the working tree.** It only reaches `docs/reviews/` at step 11, once the loop has finished.
+
+That is not tidiness. The snapshot covers every non-ignored path in the tree, so a ledger written into `docs/reviews/` is itself a change: step 8 would recompute a snapshot that no longer matches the one the review ran against, no round could ever be reported clean, and the round after would hand the reviewer the ledger as new code to review, growing it each time.
+
+The final location is `docs/reviews/<date>-<branch>-until-clean.md`, with the branch name sanitized the way `review-branch` sanitizes it: `/`, spaces, colons and backslashes become `-`, repeated hyphens collapse, leading and trailing hyphens are trimmed, an empty result becomes `branch`, and a detached head becomes `HEAD`.
 
 The `-until-clean` suffix keeps the file clear of `review-branch`, which writes `<date>-<branch>.md` and overwrites it. Two skills silently overwriting each other's reviews would lose work.
 
-Under `--no-save`, write to a temporary path and report it. Whether the ledger is committed follows the repository's own convention; this skill does not commit it and never pushes.
+Under `--no-save`, the ledger stays at its temporary path and that path is reported. It is still written either way, because `address-review` needs a file to read. Whether a saved ledger is committed follows the repository's own convention; this skill does not commit it and never pushes.
 
 ## Shape
 
