@@ -79,6 +79,8 @@ This prevents future drift from landing silently.
 - A new Invalid SPDX License Expressions criterion flags an expression that is not valid SPDX grammar, which was previously ignored. Correct the expression, or the license identifier it names.
 - Bad licenses now considers only `LICENSES/`. This narrows what is reported rather than widening it, so a repository relying on it to flag files elsewhere loses that signal.
 
+Encoding detection changed too, and it is environmental rather than a criterion. reuse 6 requires `python-magic`, a `ctypes` wrapper around the runner image's `libmagic`, and falls back to another module when that import fails. The action's pinned requirements always install a fallback, so nothing breaks outright, but detection can still differ between a runner that supplies `libmagic` and one that does not, which means the same commit can lint differently on different runners. Set `REUSE_ENCODING_MODULE: charset_normalizer` in the step's `env:` when jobs need to agree.
+
 ## Common verification gotchas
 
 1. **License text that doesn't match the canonical SPDX version.** `reuse download <SPDX-ID>` places canonical text; hand-downloaded text from a search engine may have extra whitespace, removed section numbers, or Unicode quirks that upset some tooling. Prefer `reuse download`.
