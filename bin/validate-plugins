@@ -759,24 +759,37 @@ validate_review_checklists
 # dropped by the other two. `disable-model-invocation` is the case in point, and
 # the only field with a Codex counterpart today.
 
-SKILL_FRONTMATTER_ALLOWLIST="
-name
-description
-license
-compatibility
-metadata
-allowed-tools
-disable-model-invocation
-paths
-context
-agent
-argument-hint
-"
+SKILL_FRONTMATTER_ALLOWLIST=(
+  name
+  description
+  license
+  compatibility
+  metadata
+  allowed-tools
+  disable-model-invocation
+  paths
+  context
+  agent
+  argument-hint
+)
 readonly SKILL_FRONTMATTER_ALLOWLIST
 
-# Prints the top-level keys of the opening frontmatter block, one per line.
-# Indented lines belong to the key above them, so only column-zero keys count.
-function frontmatter_fields() {
+function is_allowed_frontmatter_field() {
+  local candidate="${1}" allowed
+
+  for allowed in "${SKILL_FRONTMATTER_ALLOWLIST[@]}"; do
+    if [[ "${allowed}" == "${candidate}" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+# Prints one tab-separated key and value per top-level frontmatter entry.
+# Indented lines belong to the key above them, so only column-zero keys count,
+# and a body line that happens to look like a key never reaches the caller.
+function frontmatter_entries() {
   local skill_md="${1}"
 
   awk '
@@ -792,7 +805,10 @@ function frontmatter_fields() {
     in_frontmatter && /^[^[:space:]#][^:]*:/ {
       field = $0
       sub(/:.*/, "", field)
-      print field
+      value = $0
+      sub(/^[^:]*:[[:space:]]*/, "", value)
+      sub(/[[:space:]]+$/, "", value)
+      print field "\t" value
     }
   ' "${skill_md}"
 }
@@ -800,19 +816,20 @@ function frontmatter_fields() {
 for skill_md in plugins/*/skills/*/SKILL.md; do
   [[ -f "${skill_md}" ]] || continue
 
-  while IFS= read -r field; do
+  while IFS=$'\t' read -r field value; do
     [[ -n "${field}" ]] || continue
-    if ! grep -qxF "${field}" <<< "${SKILL_FRONTMATTER_ALLOWLIST}"; then
+
+    if ! is_allowed_frontmatter_field "${field}"; then
       error "Skill '${skill_md}' declares frontmatter field '${field}', which is not on the allowlist; see the skill frontmatter section of docs/plugin-development.md"
     fi
-  done < <(frontmatter_fields "${skill_md}")
 
-  # The generator and rule 16b both match an unquoted true, so a value they
-  # cannot read would translate to nothing and lose the author's intent.
-  if grep -q '^disable-model-invocation:' "${skill_md}" \
-    && ! grep -qE '^disable-model-invocation:[[:space:]]*(true|false)[[:space:]]*$' "${skill_md}"; then
-    error "Skill '${skill_md}' must write disable-model-invocation as an unquoted true or false"
-  fi
+    # The generator and rule 16b both match an unquoted true, so a value they
+    # cannot read would translate to nothing and lose the author's intent.
+    if [[ "${field}" == "disable-model-invocation" ]] \
+      && [[ "${value}" != "true" && "${value}" != "false" ]]; then
+      error "Skill '${skill_md}' must write disable-model-invocation as an unquoted true or false"
+    fi
+  done < <(frontmatter_entries "${skill_md}")
 done
 
 # ─── Summary ────────────────────────────────────────────────────────────────
