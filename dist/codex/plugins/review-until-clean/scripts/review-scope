@@ -1,0 +1,258 @@
+#!/usr/bin/env bash
+# review-scope -- Report the local review scope and a content snapshot of it.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+# Set once the temporary index directory exists. The EXIT trap runs after main
+# returns, so this cannot be one of main's locals.
+TMP_DIR=""
+
+function cleanup() {
+  [[ -n "${TMP_DIR}" ]] && rm -rf "${TMP_DIR}"
+  return 0
+}
+
+trap cleanup EXIT
+
+function usage() {
+  cat << 'USAGE_TEXT'
+Usage: review-scope [--base <ref>]
+       review-scope --schema
+
+Print one JSON object describing every local change and a snapshot identifier
+bound to their content: committed branch changes, staged changes, unstaged
+changes, and untracked files.
+
+The snapshot is content-addressed, so it does not move when a file changes
+which bucket it is in. Staging a file, unstaging it, or recording an intent to
+add it with `git add -N` all leave the snapshot alone; changing a byte of it
+does not.
+
+Options:
+  --base <ref>  Compare committed changes against this ref instead of the
+                merge base with the default branch
+  --schema      Print the JSON Schema for reviewer findings and exit
+  -h, --help    Show this help
+USAGE_TEXT
+}
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+# The reviewer's output contract. Every property is required and no extra ones
+# are allowed, because structured-output implementations reject the looser
+# forms. A backend that cannot take a schema is given this shape in its prompt
+# instead, and its output is validated against it either way.
+function print_schema() {
+  cat << 'SCHEMA_TEXT'
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "findings": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "description": "What is wrong and the concrete case that goes wrong.",
+            "type": "string"
+          },
+          "evidence": {
+            "description": "The traced path, command output, or citation that confirms it.",
+            "type": "string"
+          },
+          "file": {
+            "description": "Repository-relative path the finding is in.",
+            "type": "string"
+          },
+          "line": {
+            "description": "1-indexed line the finding anchors to, or null.",
+            "type": ["integer", "null"]
+          },
+          "severity": {
+            "description": "Important for anything that breaks behavior, loses or leaks data, or breaks the build or a release. Nit otherwise.",
+            "enum": ["important", "nit"]
+          },
+          "title": {
+            "description": "One sentence stating the defect.",
+            "type": "string"
+          }
+        },
+        "required": ["detail", "evidence", "file", "line", "severity", "title"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "reviewed": {
+      "description": "Snapshot identifier the review ran against, copied from review-scope.",
+      "type": "string"
+    }
+  },
+  "required": ["findings", "reviewed"],
+  "type": "object"
+}
+SCHEMA_TEXT
+}
+
+function require_command() {
+  command -v "${1}" > /dev/null || die "${1} is required"
+}
+
+# Resolve the ref the committed part of the scope is measured against. An
+# explicit --base wins; otherwise follow origin's default branch, then the
+# conventional names. A repository with no base at all is not an error: the
+# scope is then the working tree alone.
+function resolve_base_ref() {
+  local requested="${1}"
+  local candidate
+
+  if [[ -n "${requested}" ]]; then
+    git rev-parse --verify --quiet "${requested}^{commit}" > /dev/null \
+      || die "base ref '${requested}' does not resolve to a commit"
+    printf '%s' "${requested}"
+    return 0
+  fi
+
+  candidate="$(git rev-parse --abbrev-ref --symbolic-full-name origin/HEAD 2> /dev/null || true)"
+  if [[ -n "${candidate}" && "${candidate}" != "origin/HEAD" ]]; then
+    printf '%s' "${candidate}"
+    return 0
+  fi
+
+  for candidate in main master origin/main origin/master; do
+    if git rev-parse --verify --quiet "${candidate}^{commit}" > /dev/null; then
+      printf '%s' "${candidate}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+# A content digest of the whole working tree, built in a temporary index so the
+# real one is untouched. write-tree produces a tree object name, which is git's
+# own content address: identical content always yields it, whatever the index
+# says, and deletions, symlinks, executable bits and unusual file names are all
+# covered without parsing a single path.
+function working_tree_digest() {
+  local tmp_index="${1}"
+
+  GIT_INDEX_FILE="${tmp_index}" git read-tree HEAD
+  GIT_INDEX_FILE="${tmp_index}" git add --all
+  GIT_INDEX_FILE="${tmp_index}" git write-tree
+}
+
+# Paths as a JSON array. -z keeps every file name intact, including the ones
+# holding newlines that a line-based read would split.
+function paths_to_json() {
+  jq -Rs 'split("\u0000") | map(select(length > 0))'
+}
+
+function empty_json_array() {
+  printf '[]'
+}
+
+function main() {
+  local requested_base=""
+  local mode="scope"
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      --schema)
+        mode="schema"
+        shift
+        ;;
+      --base)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          die "--base requires a ref"
+        fi
+        requested_base="${2}"
+        shift 2
+        ;;
+      *)
+        usage >&2
+        die "unexpected argument: ${1}"
+        ;;
+    esac
+  done
+
+  if [[ "${mode}" == "schema" ]]; then
+    print_schema
+    return 0
+  fi
+
+  require_command git
+  require_command jq
+
+  git rev-parse --is-inside-work-tree > /dev/null 2>&1 \
+    || die "not inside a git work tree"
+  git rev-parse --verify --quiet HEAD > /dev/null \
+    || die "HEAD does not resolve to a commit; the repository has no commits yet"
+
+  local head base_ref base_sha merge_base
+  head="$(git rev-parse HEAD)"
+
+  # The `|| true` absorbs the `return 1` that means "no base found", which is a
+  # valid state: the scope is then the working tree alone. It does not absorb
+  # the `exit 1` from an explicit --base that does not resolve, because `exit`
+  # ends the subshell outright rather than failing a command `||` could catch,
+  # so that case still stops the script. The scrut suite covers both paths.
+  base_ref="$(resolve_base_ref "${requested_base}" || true)"
+  base_sha=""
+  merge_base=""
+  if [[ -n "${base_ref}" ]]; then
+    base_sha="$(git rev-parse "${base_ref}^{commit}")"
+    merge_base="$(git merge-base "${base_sha}" "${head}" 2> /dev/null || true)"
+  fi
+
+  local committed staged unstaged untracked
+  committed="$(empty_json_array)"
+  if [[ -n "${merge_base}" && "${merge_base}" != "${head}" ]]; then
+    committed="$(git diff -z --name-only "${merge_base}" "${head}" | paths_to_json)"
+  fi
+  staged="$(git diff -z --cached --name-only | paths_to_json)"
+  unstaged="$(git diff -z --name-only | paths_to_json)"
+  untracked="$(git ls-files -z --others --exclude-standard | paths_to_json)"
+
+  # A directory rather than a file: mktemp would leave an empty index behind,
+  # which git reads as a corrupt one, and creating the path non-atomically to
+  # avoid that would be worse.
+  TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/review-scope.XXXXXX")"
+
+  local tree digest
+  tree="$(working_tree_digest "${TMP_DIR}/index")"
+  digest="$(printf 'head %s\nbase %s\ntree %s\n' "${head}" "${merge_base:--}" "${tree}" | git hash-object --stdin)"
+
+  jq -n \
+    --arg head "${head}" \
+    --arg base_ref "${base_ref}" \
+    --arg base "${merge_base}" \
+    --arg tree "${tree}" \
+    --arg snapshot "${digest}" \
+    --argjson committed "${committed}" \
+    --argjson staged "${staged}" \
+    --argjson unstaged "${unstaged}" \
+    --argjson untracked "${untracked}" \
+    '{
+      head: $head,
+      base_ref: (if $base_ref == "" then null else $base_ref end),
+      base: (if $base == "" then null else $base end),
+      tree: $tree,
+      snapshot: $snapshot,
+      committed: $committed,
+      staged: $staged,
+      unstaged: $unstaged,
+      untracked: $untracked,
+      empty: (($committed + $staged + $unstaged + $untracked) | length) == 0
+    }'
+}
+
+main "$@"

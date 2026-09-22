@@ -454,6 +454,19 @@
       "author": {
         "name": "Christopher Boone"
       },
+      "category": "code-review",
+      "description": "Run a read-only reviewer from another model family over every local change, fix the findings at or above a severity threshold, and repeat until the exact snapshot on disk comes back clean or a round limit stops the loop.",
+      "homepage": "https://github.com/cboone/agent-harness-plugins",
+      "keywords": ["code-review", "codex", "loop", "pre-push", "review"],
+      "license": "MIT",
+      "name": "review-until-clean",
+      "repository": "https://github.com/cboone/agent-harness-plugins",
+      "source": "./dist/codex/plugins/review-until-clean"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
       "category": "scaffolding",
       "description": "Scaffold a complete Go CLI project with Cobra, GoReleaser, GitHub Actions, and Homebrew tap support.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
