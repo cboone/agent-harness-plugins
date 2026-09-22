@@ -3,12 +3,21 @@
 Tests for the `review-until-clean` helper that reports the local review scope
 and a content snapshot of it.
 
-Each case builds its own repository in a temporary directory. `-c
-commit.gpgsign=false` keeps the fixture off the developer's signing key, which
-CI does not have, and `--template=` keeps it off a template directory
-that would otherwise decide the first branch's name. The base branch is created
-with `git checkout -b` rather than `git init --initial-branch`, so the fixture
-does not depend on `init.defaultBranch` either.
+Cases that need a repository build their own in a temporary directory; the
+help, schema and argument-parsing cases need none.
+
+The suite runs with `GIT_CONFIG_GLOBAL` and `GIT_CONFIG_SYSTEM` pointed at
+`/dev/null`, registered in the `Makefile` and in CI, so the developer's own git
+configuration cannot change the result. That matters here beyond the usual
+flakiness: a global `core.excludesFile` would remove files from the untracked
+bucket, and `diff.relative` would make every reported path relative to the
+current directory.
+
+Each fixture also passes `--template=`, `-c commit.gpgsign=false` and an
+explicit `user.name` and `user.email`, and creates its base branch with `git
+checkout -b` rather than `git init --initial-branch`. The first three are
+belt and braces once the global config is neutralized; the identity is not,
+since a commit still needs one.
 
 ## Help
 
@@ -22,13 +31,12 @@ bound to their content: committed branch changes, staged changes, unstaged
 changes, and untracked files.
 
 The snapshot is content-addressed, so it does not move when a file changes
-which bucket it is in. Staging a file, unstaging it, or recording an intent to
-add it with `git add -N` all leave the snapshot alone; changing a byte of it
-does not.
+which bucket it is in: staging a file, unstaging it, or recording an intent to
+add it with `git add -N` all leave it alone, while changing a byte moves it.
 
 Options:
-  --base <ref>  Compare committed changes against this ref instead of the
-                merge base with the default branch
+  --base <ref>  Take the merge base with this ref instead of with the default
+                branch; committed changes are those from the merge base to HEAD
   --schema      Print the JSON Schema for reviewer findings and exit
   -h, --help    Show this help
 ```
@@ -49,9 +57,24 @@ $ "${REVIEW_SCOPE_BIN}" --schema | jq -c '.properties.findings.items.properties.
 
 ## Unknown flag
 
+The exit status is captured rather than piped, because a pipeline reports
+`tail`'s status and would pass whether or not the script rejected the flag.
+
 ```scrut
-$ "${REVIEW_SCOPE_BIN}" --nope 2>&1 | tail -1
+$ out="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
+>   && exit_code=0 \
+>   && "${REVIEW_SCOPE_BIN}" --nope > "${out}" 2>&1 || exit_code=$? \
+>   && tail -1 "${out}" \
+>   && exit "${exit_code}"
 review-scope: unexpected argument: --nope
+[1]
+```
+
+## Unknown flag prints the usage text
+
+```scrut
+$ "${REVIEW_SCOPE_BIN}" --nope 2>&1 | head -1
+Usage: review-scope [--base <ref>]
 ```
 
 ## Missing base ref value
@@ -163,8 +186,8 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
 >   && git add tracked.txt \
 >   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
->   && [[ "${before}" == "${after}" ]] && echo "snapshot held: yes"
-snapshot held: yes
+>   && [[ -n "${before}" && "${before}" == "${after}" ]] && printf 'snapshot held: %s\n' "${before}"
+snapshot held: * (glob)
 ```
 
 ## The snapshot does not move when an untracked file gets an intent to add
@@ -184,8 +207,8 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
 >   && git add -N fresh.txt \
 >   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
->   && [[ "${before}" == "${after}" ]] && echo "snapshot held: yes"
-snapshot held: yes
+>   && [[ -n "${before}" && "${before}" == "${after}" ]] && printf 'snapshot held: %s\n' "${before}"
+snapshot held: * (glob)
 ```
 
 ## The snapshot moves when one byte changes
@@ -201,7 +224,7 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
 >   && printf 'x' >> fresh.txt \
 >   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
->   && [[ "${before}" != "${after}" ]] && echo "snapshot moved: yes"
+>   && [[ -n "${before}" && -n "${after}" && "${before}" != "${after}" ]] && echo "snapshot moved: yes"
 snapshot moved: yes
 ```
 
@@ -222,7 +245,7 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && git add -A \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm second \
 >   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
->   && [[ "${before}" != "${after}" ]] && echo "snapshot moved: yes"
+>   && [[ -n "${before}" && -n "${after}" && "${before}" != "${after}" ]] && echo "snapshot moved: yes"
 snapshot moved: yes
 ```
 
@@ -238,7 +261,7 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
 >   && rm tracked.txt \
 >   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
->   && [[ "${before}" != "${after}" ]] && echo "snapshot moved: yes"
+>   && [[ -n "${before}" && -n "${after}" && "${before}" != "${after}" ]] && echo "snapshot moved: yes"
 snapshot moved: yes
 ```
 
@@ -312,4 +335,126 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
 >   && "${REVIEW_SCOPE_BIN}" --base base | jq -r '[.head, .base, .tree, .snapshot] | map(test("^[0-9a-f]{40}$")) | join(" ")'
 true true true true
+```
+
+## The scope is the same from a subdirectory
+
+`git ls-files` is scoped to the current directory while `git diff` is
+whole-tree, so a run from a subdirectory once dropped every untracked file
+above it while the whole-tree snapshot still covered them. The loop would then
+bank a clean result over code no reviewer was shown.
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && git checkout -q -b base \
+>   && printf 'one\n' > tracked.txt \
+>   && git add tracked.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && mkdir -p sub \
+>   && printf 'x\n' > top-untracked.txt \
+>   && printf 'y\n' > sub/sub-untracked.txt \
+>   && from_root="$("${REVIEW_SCOPE_BIN}" --base base | jq -c '.untracked')" \
+>   && cd sub \
+>   && from_sub="$("${REVIEW_SCOPE_BIN}" --base base | jq -c '.untracked')" \
+>   && printf '%s\n%s\n' "${from_root}" "${from_sub}"
+["sub/sub-untracked.txt","top-untracked.txt"]
+["sub/sub-untracked.txt","top-untracked.txt"]
+```
+
+## A force-added ignored file is inside the snapshot
+
+A path matched by `.gitignore` but added with `git add -f` is tracked and is
+reported in the staged bucket. A digest seeded from HEAD would skip it, so
+rewriting it would not move the snapshot and a stale clean result would stand.
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && git checkout -q -b base \
+>   && printf 'secret.env\n' > .gitignore \
+>   && git add .gitignore \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && printf 'AAAA\n' > secret.env \
+>   && git add -f secret.env \
+>   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
+>   && printf 'BBBB-different\n' > secret.env \
+>   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
+>   && [[ -n "${before}" && -n "${after}" && "${before}" != "${after}" ]] && echo "snapshot moved: yes"
+snapshot moved: yes
+```
+
+## A base that shares no history fails loudly
+
+Swallowing the missing merge base left the committed bucket empty, which reads
+as "no committed changes" and can report a branch full of unreviewed commits as
+having nothing to review.
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && git checkout -q -b base \
+>   && printf 'one\n' > tracked.txt \
+>   && git add tracked.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && git checkout -q --orphan other \
+>   && git rm -q -rf . \
+>   && printf 'z\n' > other.txt \
+>   && git add other.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm orphan \
+>   && git checkout -q base \
+>   && "${REVIEW_SCOPE_BIN}" --base other 2>&1
+review-scope: base ref 'other' shares no history with HEAD, so the committed part of the scope cannot be computed
+[1]
+```
+
+## A working tree the digest cannot read fails loudly
+
+`git add --all` fails on an unreadable file. Bash does not apply `set -e`
+inside a command substitution, so the digest once fell through to `write-tree`
+and returned HEAD's tree: the snapshot froze at a constant and the loop would
+report clean for code that changed.
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && git checkout -q -b base \
+>   && printf 'one\n' > tracked.txt \
+>   && git add tracked.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && printf 'secret\n' > unreadable.txt \
+>   && chmod 000 unreadable.txt \
+>   && exit_code=0 \
+>   && "${REVIEW_SCOPE_BIN}" --base base > /dev/null 2>&1 || exit_code=$? \
+>   && chmod 644 unreadable.txt \
+>   && printf 'exit=%s\n' "${exit_code}"
+exit=1
+```
+
+## Unstaging does not move the snapshot
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && git checkout -q -b base \
+>   && printf 'one\n' > tracked.txt \
+>   && git add tracked.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && printf 'two\n' >> tracked.txt \
+>   && git add tracked.txt \
+>   && before="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
+>   && git reset -q -- tracked.txt \
+>   && after="$("${REVIEW_SCOPE_BIN}" --base base | jq -r '.snapshot')" \
+>   && [[ -n "${before}" && "${before}" == "${after}" ]] && printf 'snapshot held: %s\n' "${before}"
+snapshot held: * (glob)
+```
+
+## A repository with no commits reports it
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && "${REVIEW_SCOPE_BIN}" 2>&1
+review-scope: HEAD does not resolve to a commit; the repository has no commits yet
+[1]
 ```
