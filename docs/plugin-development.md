@@ -94,6 +94,8 @@ Three harnesses read every canonical `SKILL.md`, and they read its frontmatter d
 | `agent`                    | Read                         | Ignored               | Ignored  |
 | `argument-hint`            | Read                         | Ignored               | Ignored  |
 
+In that table _Read_ means the harness acts on the field, and _Ignored_ means it accepts the field with no effect anyone has observed. The two rest on different evidence: OpenCode's documentation states outright that unknown fields are ignored and names the five it reads, while for Codex _Ignored_ combines the measurement below with the absence of any handling for those fields in the CLI. Codex's documentation names only `name` and `description` and says nothing about the rest, so treat its _Ignored_ cells as what was observed rather than as a guarantee.
+
 Measured against Codex CLI 0.155.1 and OpenCode 1.18.31: a skill carrying every field in that table loads in both, appears in the list of skills offered to the model, and produces no warning and no error. Neither harness rejects an unrecognized field and neither reports one, which is the reason the allowlist exists rather than a linter's opinion.
 
 Widening the allowlist means measuring the new field first. Install a skill that carries it under a throwaway `CODEX_HOME` and a throwaway project directory, list what each harness offers the model with `codex debug prompt-input` and `opencode debug skill`, then record the outcome in the table above. A field Claude Code honors can be dropped silently by the other two, which changes what the skill does there without failing anywhere.
@@ -110,6 +112,8 @@ policy:
 ```
 
 Write the value as an unquoted `true` or `false`. A quoted value parses as a string, which neither the generator nor rule 16b reads, so the policy would be lost everywhere. `false` is Codex's own default, so it needs no manifest and passes through. A skill that already ships its own `agents/openai.yaml` fails the build rather than having it overwritten; merge the policy into that file by hand.
+
+The whole path was confirmed end to end, not just the mechanism: a skill given the field was built, installed from a local marketplace under a throwaway `CODEX_HOME` with `codex plugin add`, and the resulting session listed a sibling skill while withholding the translated one, with no validation error on the generated manifest. Repeat that check rather than only the frontmatter edit whenever the manifest's contents change, since Codex reads the file the generator writes, comments and all.
 
 This is the one sanctioned difference between a canonical skill and its Codex copy. Rule 16b of `bin/validate-plugins` reproduces exactly this edit independently of the generator and fails on any other difference, so a further harness-specific transformation has to change that rule on purpose.
 
