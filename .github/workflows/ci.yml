@@ -102,6 +102,7 @@ jobs:
         REPORT_BOARD_BIN=./plugins/publish-report-board/scripts/report-board
         REPORT_BOARD_DATA_DIR=./tests/data/report-board
         RESOLVE_COPILOT_THREADS_BIN=./plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads
+        REVIEW_SCOPE_BIN=./plugins/review-until-clean/scripts/review-scope
         TMUX_STUB_BIN=./tests/fixtures/tmux-stub
         NOTIFY_BIN=./plugins/notify/scripts/notify
         CHECK_NOTIFICATIONS_BIN=./tests/fixtures/check-notifications
