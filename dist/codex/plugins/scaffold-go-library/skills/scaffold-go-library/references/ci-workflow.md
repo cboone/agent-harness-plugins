@@ -56,8 +56,9 @@ jobs:
 - Two reusable workflow calls implement the Go version matrix: `ci-minimum` reads the minimum version from `go.mod` and runs all checks; `ci-stable` runs tests against the latest stable Go release
 - Each call creates its own set of parallel jobs internally using Makefile targets
 - `run-lint: true` enables golangci-lint with SHA-256 verification
+- `run-lint` installs golangci-lint 2.13.2, up from 2.11.4 before v4.1.0. A first run on the newer release can report findings the older one did not. Pin `golangci-lint-version` to a known release while working through them.
 - `run-format-check: true` enables the gofmt/goimports formatting check
 - `run-build: true` enables the `go build ./...` check
 - `permissions: contents: read` follows the principle of least privilege
 - Libraries benefit from multi-version testing more than CLIs because consumers may use older Go versions
-- The stable call uses defaults (test only) since lint, format, and build results do not vary by Go version
+- The stable call passes no `run-*` inputs, so it runs test, vet and lint: `run-lint` defaults to true, while `run-format-check` and `run-build` default to false. Formatting and build results do not vary by Go version, so leaving those two off is deliberate. Lint results do not vary either, so set `run-lint: false` on this call if the duplicate golangci-lint run is not worth the runner time

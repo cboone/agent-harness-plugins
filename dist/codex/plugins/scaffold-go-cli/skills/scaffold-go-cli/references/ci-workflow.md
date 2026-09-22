@@ -50,5 +50,6 @@ jobs:
 - `permissions: contents: read` follows the principle of least privilege
 - The reusable workflow creates parallel jobs internally (test, vet, lint, format-check) using Makefile targets (`make test`, `make vet`, `make fmt`, etc.)
 - `run-lint: true` enables golangci-lint with SHA-256 verification
+- `run-lint` installs golangci-lint 2.13.2, up from 2.11.4 before v4.1.0. A first run on the newer release can report findings the older one did not. Pin `golangci-lint-version` to a known release while working through them.
 - `run-format-check: true` enables the gofmt/goimports formatting check
 - The reusable workflow uses `go-version-file: go.mod` to stay current automatically
