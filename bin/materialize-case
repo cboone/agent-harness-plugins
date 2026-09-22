@@ -1,0 +1,287 @@
+#!/usr/bin/env bash
+# materialize-case -- Check out a frozen review corpus case as a git worktree.
+#
+# The corpus keeps each case's metadata on its main branch and each case's
+# frozen commits on the orphan branches case/<id>/base and case/<id>/head,
+# which share no ancestor with main. Worktrees are added from a local bare
+# cache that has fetched only those two branches, so main is unreachable from
+# the materialized tree and a reviewer working in it cannot read CASE.md or
+# defects.yaml. That isolation is the whole point: a reviewer that can reach
+# the answer key measures nothing.
+#
+# The base commit is the merge base of the pull request the case was frozen
+# from, so it is an ancestor of the head commit. Fetching whole branches
+# rather than a shallow slice is what keeps `git diff BASE...HEAD` working,
+# and the three-dot form is what the reviewers under test are given.
+#
+# Branch refspecs, not raw SHAs, are what the fetch asks for. A local
+# repository refuses a request for an unreferenced object unless
+# uploadpack.allowReachableSHA1InWant is set, so asking for the branch works
+# everywhere and additionally checks that the branch still points at the SHA
+# the case recorded. Fetching a raw SHA is needed only when freezing a case,
+# against GitHub, which does allow it.
+#
+# Exit codes:
+#   0 - The worktree was created, or the prune succeeded
+#   1 - The case, its commits, or the target directory made that impossible
+#   2 - Usage error, or a corpus that is not a git repository
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+readonly SHA_PATTERN='^[0-9a-f]{40}$'
+
+# A case ID names a directory and two branch paths, so it may not carry a path
+# separator, a leading dot, or anything git check-ref-format would reject.
+readonly CASE_ID_PATTERN='^[0-9][0-9][0-9]-[a-z0-9][a-z0-9.-]*$'
+
+readonly E_FINDING=1
+readonly E_USAGE=2
+
+# Set by read_sha_file. A function that dies inside a command substitution
+# kills only the subshell, so the value comes back through a global instead.
+SHA_VALUE=""
+
+function usage() {
+  printf '%s\n' \
+    "Usage: ${SCRIPT_NAME} [--corpus DIR] [--cache DIR] [--offline] CASE TARGET" \
+    "       ${SCRIPT_NAME} [--corpus DIR] [--cache DIR] --prune" \
+    "" \
+    "Check out a frozen review corpus case as a detached git worktree at TARGET." \
+    "" \
+    "Options:" \
+    "  --corpus DIR   Corpus checkout (default: \${REVIEW_CASE_CORPUS_DIR})" \
+    "  --cache DIR    Bare object cache (default: <corpus>/.cache/cases.git)" \
+    "  --offline      Fail rather than fetch a branch the cache is missing" \
+    "  --prune        Forget worktree registrations whose directory is gone" \
+    "  -h, --help     Show this help" \
+    "" \
+    "Reports KEY=value lines a harness can parse:" \
+    "  CASE=001-example  WORKTREE=/abs/path  BASE=<sha>  HEAD=<sha>" \
+    "" \
+    "Examples:" \
+    "  ${SCRIPT_NAME} 001-snappy-tick-refresh-race \"\${TMPDIR}/case\"" \
+    "  ${SCRIPT_NAME} --corpus ~/Development/review-case-corpus --prune"
+}
+
+function die() {
+  echo "Error: ${1}" >&2
+  exit "${2:-${E_FINDING}}"
+}
+
+# Reads a one-line SHA file into SHA_VALUE, rejecting anything that is not
+# exactly one 40-character hex line. A trailing second line leaves a newline in
+# the value, which the anchored pattern refuses, so no line count is needed.
+function read_sha_file() {
+  local path="${1}"
+
+  [[ -f "${path}" ]] || die "${path} does not exist"
+  SHA_VALUE="$(cat "${path}")"
+  [[ "${SHA_VALUE}" =~ ${SHA_PATTERN} ]] \
+    || die "${path} must hold exactly one 40-character hex SHA"
+}
+
+function validate_corpus() {
+  local corpus="${1}"
+
+  [[ -n "${corpus}" ]] \
+    || die "no corpus given; pass --corpus DIR or set REVIEW_CASE_CORPUS_DIR" "${E_USAGE}"
+  [[ -d "${corpus}" ]] || die "corpus ${corpus} is not a directory" "${E_USAGE}"
+  git -C "${corpus}" rev-parse --git-dir > /dev/null 2>&1 \
+    || die "corpus ${corpus} is not a git repository" "${E_USAGE}"
+}
+
+# Makes a path absolute before git sees it. Every git call runs under
+# `git -C "${cache}"`, so a relative target would land inside the cache rather
+# than beside the caller.
+function absolute_path() {
+  local path="${1}"
+
+  case "${path}" in
+    /*) printf '%s\n' "${path}" ;;
+    *) printf '%s\n' "${PWD}/${path}" ;;
+  esac
+}
+
+function ensure_cache() {
+  local cache="${1}"
+  local corpus="${2}"
+  local corpus_abs
+
+  corpus_abs="$(absolute_path "${corpus}")"
+
+  if [[ ! -d "${cache}" ]]; then
+    git init --quiet --bare "${cache}"
+  fi
+
+  # Re-adding an existing remote fails, and set-url on a missing one fails too,
+  # so branch on whether it is already there and make the URL current either way.
+  if git -C "${cache}" remote get-url corpus > /dev/null 2>&1; then
+    git -C "${cache}" remote set-url corpus "${corpus_abs}"
+  else
+    git -C "${cache}" remote add corpus "${corpus_abs}"
+  fi
+}
+
+# Brings the case's two branches into the cache under refs/cases/, which keeps
+# the objects reachable so they are not collected between runs.
+function fetch_case_branches() {
+  local cache="${1}"
+  local case_id="${2}"
+
+  git -C "${cache}" fetch --quiet --no-tags corpus \
+    "+refs/heads/case/${case_id}/base:refs/cases/${case_id}/base" \
+    "+refs/heads/case/${case_id}/head:refs/cases/${case_id}/head" \
+    || die "could not fetch case/${case_id}/{base,head} from the corpus"
+}
+
+function verify_ref_matches() {
+  local cache="${1}"
+  local ref="${2}"
+  local expected="${3}"
+  local label="${4}"
+  local actual
+
+  actual="$(git -C "${cache}" rev-parse --verify --quiet "${ref}^{commit}" || true)"
+  [[ -n "${actual}" ]] \
+    || die "${ref} is missing from the cache; re-run without --offline"
+  [[ "${actual}" == "${expected}" ]] \
+    || die "${label} records ${expected} but ${ref} points at ${actual}"
+}
+
+# A materialized tree holding corpus metadata would hand the reviewer the
+# answer key. An orphan case branch cannot contain it, so this asserts the
+# property rather than repairing it: a hit means the case was frozen wrongly.
+function verify_no_metadata() {
+  local target="${1}"
+  local leaked=""
+  local name
+
+  for name in cases CASE.md defects.yaml; do
+    if [[ -e "${target}/${name}" ]]; then
+      leaked="${leaked} ${name}"
+    fi
+  done
+
+  [[ -z "${leaked}" ]] \
+    || die "the frozen tree carries corpus metadata (${leaked# }); the case is mis-frozen"
+}
+
+function check_target_available() {
+  local target="${1}"
+
+  [[ -e "${target}" ]] || return 0
+
+  # An existing empty directory is fine; git worktree add accepts one.
+  [[ -d "${target}" ]] || die "target ${target} exists and is not a directory"
+  [[ -z "$(ls -A "${target}")" ]] || die "target ${target} is not empty"
+}
+
+function materialize() {
+  local corpus="${1}"
+  local cache="${2}"
+  local case_id="${3}"
+  local target="${4}"
+  local offline="${5}"
+  local case_dir base_sha head_sha
+
+  [[ "${case_id}" =~ ${CASE_ID_PATTERN} ]] \
+    || die "case ID ${case_id} is not of the form NNN-repo-slug" "${E_USAGE}"
+
+  case_dir="${corpus}/cases/${case_id}"
+  [[ -d "${case_dir}" ]] || die "no case ${case_id} in ${corpus}/cases"
+
+  read_sha_file "${case_dir}/BASE"
+  base_sha="${SHA_VALUE}"
+  read_sha_file "${case_dir}/HEAD"
+  head_sha="${SHA_VALUE}"
+
+  target="$(absolute_path "${target}")"
+  check_target_available "${target}"
+
+  ensure_cache "${cache}" "${corpus}"
+  if [[ "${offline}" == "no" ]]; then
+    fetch_case_branches "${cache}" "${case_id}"
+  fi
+  verify_ref_matches "${cache}" "refs/cases/${case_id}/base" "${base_sha}" "BASE"
+  verify_ref_matches "${cache}" "refs/cases/${case_id}/head" "${head_sha}" "HEAD"
+
+  git -C "${cache}" merge-base --is-ancestor "${base_sha}" "${head_sha}" \
+    || die "BASE ${base_sha} is not an ancestor of HEAD ${head_sha}; three-dot diffs would be wrong"
+
+  git -C "${cache}" worktree add --quiet --detach "${target}" "${head_sha}" \
+    || die "could not add a worktree for ${case_id} at ${target}"
+
+  verify_no_metadata "${target}"
+
+  printf 'CASE=%s\n' "${case_id}"
+  printf 'WORKTREE=%s\n' "${target}"
+  printf 'BASE=%s\n' "${base_sha}"
+  printf 'HEAD=%s\n' "${head_sha}"
+}
+
+function main() {
+  local corpus="${REVIEW_CASE_CORPUS_DIR:-}"
+  local cache=""
+  local offline="no"
+  local prune="no"
+  local -a positional=()
+
+  while [[ ${#} -gt 0 ]]; do
+    case "${1}" in
+      --corpus)
+        [[ ${#} -ge 2 ]] || die "--corpus needs a directory" "${E_USAGE}"
+        corpus="${2}"
+        shift 2
+        ;;
+      --cache)
+        [[ ${#} -ge 2 ]] || die "--cache needs a directory" "${E_USAGE}"
+        cache="${2}"
+        shift 2
+        ;;
+      --offline)
+        offline="yes"
+        shift
+        ;;
+      --prune)
+        prune="yes"
+        shift
+        ;;
+      -h | --help)
+        usage
+        return 0
+        ;;
+      -*)
+        die "unknown option ${1}" "${E_USAGE}"
+        ;;
+      *)
+        positional+=("${1}")
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "${cache}" ]]; then
+    validate_corpus "${corpus}"
+    cache="${corpus}/.cache/cases.git"
+  fi
+
+  if [[ "${prune}" == "yes" ]]; then
+    [[ ${#positional[@]} -eq 0 ]] \
+      || die "--prune takes no case or target" "${E_USAGE}"
+    [[ -d "${cache}" ]] || die "no cache at ${cache}" "${E_USAGE}"
+    git -C "${cache}" worktree prune
+    return 0
+  fi
+
+  if [[ ${#positional[@]} -ne 2 ]]; then
+    usage >&2
+    exit "${E_USAGE}"
+  fi
+
+  validate_corpus "${corpus}"
+  materialize "${corpus}" "${cache}" "${positional[0]}" "${positional[1]}" "${offline}"
+}
+
+main "$@"

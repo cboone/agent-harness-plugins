@@ -90,6 +90,9 @@ jobs:
         CATALOG_RELEASE_FIXTURE_BIN=./tests/fixtures/catalog-release-fixture
         VALIDATE_PLUGIN_FIXTURE_BIN=./tests/fixtures/validate-plugin-fixture
         LIST_SHELL_SCRIPTS_BIN=./bin/list-shell-scripts
+        MATERIALIZE_CASE_BIN=./bin/materialize-case
+        VALIDATE_CORPUS_BIN=./bin/validate-corpus
+        REVIEW_CORPUS_FIXTURE_BIN=./tests/fixtures/review-corpus-fixture
         REPO_ROOT=./
         CREATE_WORKTREE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree/scripts/launch-workmux
         ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN=./plugins/address-issue-in-worktree/scripts/launch-workmux
@@ -107,4 +110,9 @@ jobs:
         CHECK_NOTIFICATIONS_BIN=./tests/fixtures/check-notifications
         UNIX_SOCKET_FIXTURE_BIN=./tests/fixtures/create-unix-socket
         WORKMUX_STUB_BIN=./tests/fixtures/workmux-stub
+      # bin/validate-corpus converts each defects.yaml through yq, which the
+      # ubuntu runner image ships. Asserting it beats installing an unpinned
+      # copy: an image that drops it, or swaps in python-yq with jq's flags,
+      # fails here with a clear message rather than as a scrut output diff.
+      scrut-setup-cmd: "yq --version | grep -q mikefarah"
       scrut-test-dir: "tests/scrut/"
