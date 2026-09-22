@@ -179,6 +179,20 @@ Codex skill inventory: * (glob)
 [1]
 ```
 
+Asking only whether the policy is present would let a generator add anything
+beside it, and Codex reads the whole manifest. `interface.short_description` is
+the sharp case: Codex prints it in place of the skill's description, so a
+generator that wrote one would replace every routing description in the Codex
+catalog with the policy still correct.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" extra-manifest-key 2>&1
+::error::Generated Codex manifest 'dist/codex/plugins/release/skills/release/agents/openai.yaml' must state policy.allow_implicit_invocation false and nothing else
+Codex skill inventory: * (glob)
+1 plugin validation error(s) found.
+[1]
+```
+
 ## Skill frontmatter fields are on the allowlist
 
 Claude Code accepts around twenty `SKILL.md` frontmatter fields, OpenCode

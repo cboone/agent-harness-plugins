@@ -146,6 +146,15 @@ function wrap_generator_to_drop_manifest() {
   wrap_generator 'rm -r "${CODEX_DIST_DIR:-dist/codex}/plugins/release/skills/release/agents"'
 }
 
+# Adds an interface block to the generated manifest. Codex prints
+# interface.short_description in place of the skill's description, so a
+# generator that wrote one would replace the routing description while leaving
+# the invocation policy correct.
+function wrap_generator_to_extend_manifest() {
+  # shellcheck disable=SC2016
+  wrap_generator 'printf "%s\n" "interface:" "  short_description: Prepare a release" >> "${CODEX_DIST_DIR:-dist/codex}/plugins/release/skills/release/agents/openai.yaml"'
+}
+
 function main() {
   local scenario="${1}"
   FIXTURE_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/fixture.XXXXXX")"
@@ -223,6 +232,10 @@ function main() {
     missing-openai-yaml)
       add_frontmatter_line "${FIXTURE_ROOT}/${RELEASE_SKILL}" 'disable-model-invocation: true'
       wrap_generator_to_drop_manifest
+      ;;
+    extra-manifest-key)
+      add_frontmatter_line "${FIXTURE_ROOT}/${RELEASE_SKILL}" 'disable-model-invocation: true'
+      wrap_generator_to_extend_manifest
       ;;
     # 2 percent of 100,000 is a 2,000-token budget, 1,400 after the reserve:
     # less than the descriptions alone cost.

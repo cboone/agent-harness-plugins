@@ -339,6 +339,56 @@ function skill_without_frontmatter_field() {
   ' "${skill_md}"
 }
 
+# Returns 0 when the manifest states the invocation policy and carries nothing
+# else. Asking only whether the policy is present would let a generator add
+# anything beside it, and Codex reads the whole file. interface.short_description
+# is the sharp case: Codex prints it in place of the skill's description, so a
+# generator that wrote one would replace every routing description in the Codex
+# catalog while rule 16 and a presence check both still passed. Comments and
+# blank lines are the generator's own and carry nothing to Codex.
+function manifest_states_only_the_policy() {
+  local manifest="${1}"
+
+  awk '
+    /^[[:space:]]*(#|$)/ {
+      next
+    }
+
+    /^[^[:space:]][^:]*:/ {
+      key = $0
+      sub(/:.*/, "", key)
+      if (key != "policy") {
+        unexpected = 1
+        exit
+      }
+      blocks += 1
+      next
+    }
+
+    /^[[:space:]]+[^[:space:]]/ {
+      setting = $0
+      sub(/^[[:space:]]+/, "", setting)
+      if (setting !~ /^allow_implicit_invocation:[[:space:]]*false[[:space:]]*$/) {
+        unexpected = 1
+        exit
+      }
+      settings += 1
+      next
+    }
+
+    {
+      unexpected = 1
+      exit
+    }
+
+    # An exit inside a rule still runs END, so the verdict has to be carried in
+    # a flag. Returning the rule status directly would let END overwrite it.
+    END {
+      exit !(!unexpected && blocks == 1 && settings == 1)
+    }
+  ' "${manifest}"
+}
+
 # Returns 0 when the frontmatter sets disable-model-invocation to true. Rule 21
 # restricts the value to an unquoted true or false, so no other spelling of
 # truth reaches here.
@@ -383,9 +433,8 @@ while IFS= read -r plugin_name; do
       fi
       if [[ ! -f "${generated_agents_yaml}" ]]; then
         error "Generated Codex skill '${generated_skill_md}' drops disable-model-invocation without writing '${generated_agents_yaml}'"
-      elif ! grep -q '^policy:' "${generated_agents_yaml}" \
-        || ! grep -qE '^[[:space:]]+allow_implicit_invocation:[[:space:]]*false[[:space:]]*$' "${generated_agents_yaml}"; then
-        error "Generated Codex manifest '${generated_agents_yaml}' does not set policy.allow_implicit_invocation to false"
+      elif ! manifest_states_only_the_policy "${generated_agents_yaml}"; then
+        error "Generated Codex manifest '${generated_agents_yaml}' must state policy.allow_implicit_invocation false and nothing else"
       fi
     else
       if ! cmp -s "${skill_md}" "${generated_skill_md}"; then
