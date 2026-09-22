@@ -297,23 +297,113 @@ function validate_codex_generated_output() {
 
 validate_codex_generated_output
 
-# ─── 16b. Generated Codex skills are byte-identical to their sources ────────
+# ─── 16b. Generated Codex skills differ only by the sanctioned translation ──
 #
 # Rule 16 proves dist/codex matches what the generator produces today, which
 # would still pass if the generator started rewriting skills. Codex must see
 # the same name, routing description and dependency block that Claude Code and
 # OpenCode load, so every generated SKILL.md is compared with its canonical
-# source directly. A harness-specific transformation has to change this rule
-# on purpose rather than slip in through the generator.
+# source here rather than taken on trust.
+#
+# One difference is sanctioned. Codex has no frontmatter field for invocation
+# policy and ignores `disable-model-invocation`, so the generator drops that
+# line and writes agents/openai.yaml instead. This rule reproduces that single
+# edit independently of the generator, so any further transformation has to
+# change this rule on purpose rather than slip in through the generator.
+
+# Prints the file with the named frontmatter field's line removed. Only the
+# opening block is filtered, matching bin/build-codex-marketplace.
+function skill_without_frontmatter_field() {
+  local skill_md="${1}" field="${2}"
+
+  awk -v field="${field}" '
+    NR == 1 && $0 == "---" {
+      in_frontmatter = 1
+      print
+      next
+    }
+
+    in_frontmatter && $0 == "---" {
+      in_frontmatter = 0
+      print
+      next
+    }
+
+    in_frontmatter && index($0, field ":") == 1 {
+      next
+    }
+
+    {
+      print
+    }
+  ' "${skill_md}"
+}
+
+# Returns 0 when the frontmatter sets disable-model-invocation to true. Rule 21
+# restricts the value to an unquoted true or false, so no other spelling of
+# truth reaches here.
+function frontmatter_disables_model_invocation() {
+  local skill_md="${1}"
+
+  awk '
+    NR == 1 && $0 == "---" {
+      in_frontmatter = 1
+      next
+    }
+
+    in_frontmatter && $0 == "---" {
+      exit
+    }
+
+    in_frontmatter && $0 ~ /^disable-model-invocation:[[:space:]]*true[[:space:]]*$/ {
+      found = 1
+      exit
+    }
+
+    END {
+      exit !found
+    }
+  ' "${skill_md}"
+}
 
 while IFS= read -r plugin_name; do
   for skill_md in "plugins/${plugin_name}"/skills/*/SKILL.md; do
     [[ -f "${skill_md}" ]] || continue
     generated_skill_md="${CODEX_DIST_DIR}/${skill_md}"
+    generated_agents_yaml="$(dirname "${generated_skill_md}")/agents/openai.yaml"
+
     if [[ ! -f "${generated_skill_md}" ]]; then
       error "Generated Codex skill '${generated_skill_md}' is missing; run bin/build-codex-marketplace"
-    elif ! cmp -s "${skill_md}" "${generated_skill_md}"; then
-      error "Generated Codex skill '${generated_skill_md}' differs from its canonical source '${skill_md}'; the generator must copy SKILL.md files unchanged"
+      continue
+    fi
+
+    if frontmatter_disables_model_invocation "${skill_md}"; then
+      if ! cmp -s <(skill_without_frontmatter_field "${skill_md}" disable-model-invocation) "${generated_skill_md}"; then
+        error "Generated Codex skill '${generated_skill_md}' differs from its canonical source '${skill_md}' by more than the translated disable-model-invocation line"
+      fi
+      if [[ ! -f "${generated_agents_yaml}" ]]; then
+        error "Generated Codex skill '${generated_skill_md}' drops disable-model-invocation without writing '${generated_agents_yaml}'"
+      elif ! grep -q '^policy:' "${generated_agents_yaml}" \
+        || ! grep -qE '^[[:space:]]+allow_implicit_invocation:[[:space:]]*false[[:space:]]*$' "${generated_agents_yaml}"; then
+        error "Generated Codex manifest '${generated_agents_yaml}' does not set policy.allow_implicit_invocation to false"
+      fi
+    else
+      if ! cmp -s "${skill_md}" "${generated_skill_md}"; then
+        error "Generated Codex skill '${generated_skill_md}' differs from its canonical source '${skill_md}'; the generator copies SKILL.md files unchanged unless disable-model-invocation is translated"
+      fi
+
+      # An agents manifest a skill ships itself is copied like any other file,
+      # so it is held to the same identity the SKILL.md is.
+      canonical_agents_yaml="$(dirname "${skill_md}")/agents/openai.yaml"
+      if [[ ! -f "${canonical_agents_yaml}" ]]; then
+        if [[ -f "${generated_agents_yaml}" ]]; then
+          error "Generated Codex skill '${generated_skill_md}' gained '${generated_agents_yaml}', which its canonical source does not ship"
+        fi
+      elif [[ ! -f "${generated_agents_yaml}" ]]; then
+        error "Generated Codex manifest '${generated_agents_yaml}' is missing; run bin/build-codex-marketplace"
+      elif ! cmp -s "${canonical_agents_yaml}" "${generated_agents_yaml}"; then
+        error "Generated Codex manifest '${generated_agents_yaml}' differs from its canonical source '${canonical_agents_yaml}'"
+      fi
     fi
   done
 done < <(jq -r '.plugins[].name' "${MARKETPLACE}")
@@ -654,6 +744,76 @@ function validate_review_checklists() {
 }
 
 validate_review_checklists
+
+# ─── 21. Skill frontmatter fields are on the allowlist ──────────────────────
+#
+# Claude Code accepts around twenty SKILL.md frontmatter fields, Codex and
+# OpenCode document two, and both ignore what they do not recognize. A
+# misspelling such as `disable-model-invokation` therefore has no effect
+# anywhere and reports nothing. This rule names the fields this repository
+# ships, so a typo fails here instead of going unnoticed.
+#
+# Widening the allowlist is deliberate work, not a formality: each new field
+# needs its Codex and OpenCode handling measured and recorded in
+# docs/plugin-development.md, because a field Claude Code honors can be silently
+# dropped by the other two. `disable-model-invocation` is the case in point, and
+# the only field with a Codex counterpart today.
+
+SKILL_FRONTMATTER_ALLOWLIST="
+name
+description
+license
+compatibility
+metadata
+allowed-tools
+disable-model-invocation
+paths
+context
+agent
+argument-hint
+"
+readonly SKILL_FRONTMATTER_ALLOWLIST
+
+# Prints the top-level keys of the opening frontmatter block, one per line.
+# Indented lines belong to the key above them, so only column-zero keys count.
+function frontmatter_fields() {
+  local skill_md="${1}"
+
+  awk '
+    NR == 1 && $0 == "---" {
+      in_frontmatter = 1
+      next
+    }
+
+    in_frontmatter && $0 == "---" {
+      exit
+    }
+
+    in_frontmatter && /^[^[:space:]#][^:]*:/ {
+      field = $0
+      sub(/:.*/, "", field)
+      print field
+    }
+  ' "${skill_md}"
+}
+
+for skill_md in plugins/*/skills/*/SKILL.md; do
+  [[ -f "${skill_md}" ]] || continue
+
+  while IFS= read -r field; do
+    [[ -n "${field}" ]] || continue
+    if ! grep -qxF "${field}" <<< "${SKILL_FRONTMATTER_ALLOWLIST}"; then
+      error "Skill '${skill_md}' declares frontmatter field '${field}', which is not on the allowlist; see the skill frontmatter section of docs/plugin-development.md"
+    fi
+  done < <(frontmatter_fields "${skill_md}")
+
+  # The generator and rule 16b both match an unquoted true, so a value they
+  # cannot read would translate to nothing and lose the author's intent.
+  if grep -q '^disable-model-invocation:' "${skill_md}" \
+    && ! grep -qE '^disable-model-invocation:[[:space:]]*(true|false)[[:space:]]*$' "${skill_md}"; then
+    error "Skill '${skill_md}' must write disable-model-invocation as an unquoted true or false"
+  fi
+done
 
 # ─── Summary ────────────────────────────────────────────────────────────────
 

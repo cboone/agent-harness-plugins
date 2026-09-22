@@ -141,8 +141,76 @@ canonical source directly.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" rewriting-generator 2>&1
-::error::Generated Codex skill 'dist/codex/plugins/release/skills/release/SKILL.md' differs from its canonical source 'plugins/release/skills/release/SKILL.md'; the generator must copy SKILL.md files unchanged
+::error::Generated Codex skill 'dist/codex/plugins/release/skills/release/SKILL.md' differs from its canonical source 'plugins/release/skills/release/SKILL.md'; the generator copies SKILL.md files unchanged unless disable-model-invocation is translated
 Codex skill inventory: * (glob)
+1 plugin validation error(s) found.
+[1]
+```
+
+One difference is sanctioned. Codex ignores `disable-model-invocation`, so the
+generator drops the line and writes `agents/openai.yaml` instead, and rule 16b
+accepts that exact pair of edits.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" translated-frontmatter 2>&1
+Codex skill inventory: * (glob)
+All plugin validations passed.
+```
+
+A generator that left the line in the Codex copy would ship a policy Codex
+ignores.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" untranslated-frontmatter 2>&1
+::error::Generated Codex skill 'dist/codex/plugins/release/skills/release/SKILL.md' differs from its canonical source 'plugins/release/skills/release/SKILL.md' by more than the translated disable-model-invocation line
+Codex skill inventory: * (glob)
+1 plugin validation error(s) found.
+[1]
+```
+
+A generator that dropped the line without writing the manifest would lose the
+policy altogether, which is the quieter of the two failures.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" missing-openai-yaml 2>&1
+::error::Generated Codex skill 'dist/codex/plugins/release/skills/release/SKILL.md' drops disable-model-invocation without writing 'dist/codex/plugins/release/skills/release/agents/openai.yaml'
+Codex skill inventory: * (glob)
+1 plugin validation error(s) found.
+[1]
+```
+
+## Skill frontmatter fields are on the allowlist
+
+Claude Code accepts around twenty `SKILL.md` frontmatter fields; Codex and
+OpenCode document two and ignore the rest. A misspelled field therefore changes
+nothing in any harness and reports nothing, so rule 21 names the fields this
+repository ships.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" unknown-frontmatter-field 2>&1
+Codex skill inventory: * (glob)
+::error::Skill 'plugins/release/skills/release/SKILL.md' declares frontmatter field 'disable-model-invokation', which is not on the allowlist; see the skill frontmatter section of docs/plugin-development.md
+1 plugin validation error(s) found.
+[1]
+```
+
+A field on the allowlist passes, and reaches Codex and OpenCode unchanged
+because both ignore what they do not recognize.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" permitted-frontmatter-field 2>&1
+Codex skill inventory: * (glob)
+All plugin validations passed.
+```
+
+Neither the generator nor rule 16b reads a quoted value, so a quoted
+`disable-model-invocation` would translate to nothing and leave the skill
+implicitly invocable everywhere.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" quoted-invocation-value 2>&1
+Codex skill inventory: * (glob)
+::error::Skill 'plugins/release/skills/release/SKILL.md' must write disable-model-invocation as an unquoted true or false
 1 plugin validation error(s) found.
 [1]
 ```

@@ -83,6 +83,8 @@ jobs:
         CHECK_CROSS_REFERENCES_BIN=./bin/check-cross-references
         BUILD_REVIEW_CHECKLISTS_BIN=./bin/build-review-checklists
         REVIEW_CHECKLIST_FIXTURE_BIN=./tests/fixtures/review-checklist-fixture
+        BUILD_CODEX_MARKETPLACE_BIN=./bin/build-codex-marketplace
+        CODEX_TRANSLATION_FIXTURE_BIN=./tests/fixtures/codex-translation-fixture
         COMPOSE_ISSUE_PROMPT_BIN=./plugins/address-issue-in-worktree/scripts/compose-issue-prompt
         CREATE_WORKTREE_COMPOSE_ISSUE_PROMPT_BIN=./plugins/create-worktree/scripts/compose-issue-prompt
         COPILOT_REVIEW_DATA_DIR=./tests/data/copilot-reviews
