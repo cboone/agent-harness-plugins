@@ -97,12 +97,14 @@ concurrency:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
     with:
       go-version-file: go.mod
       run-lint: true
       run-format-check: true
 ```
+
+`run-lint` installs golangci-lint 2.13.2, up from 2.11.4 before v4.1.0. A first run on the newer release can report findings the older one did not. Pin `golangci-lint-version` to a known release while working through them.
 
 ### Python
 
@@ -186,7 +188,7 @@ concurrency:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
     with:
       run-test: false
 ```
@@ -275,8 +277,12 @@ concurrency:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
 ```
+
+The workflow installs a pinned, checksum-verified ShellCheck 0.11.0 rather than using the runner image's, which is 0.9.0 on `ubuntu-latest`. A first run can report findings from checks added in 0.10.0 and 0.11.0, SC2327 to SC2332 among them. Fix them, add a `# shellcheck disable=` directive, or pin `shellcheck-version` together with that release's `shellcheck-checksums` while working through them.
+
+The workflow fetches its installer using the `job.workflow_repository` and `job.workflow_sha` context properties, which GitHub Enterprise Server does not populate. On GHES, run the linters in a job of your own with the `set-up-shellcheck`, `set-up-shfmt` and `set-up-actionlint` composite actions instead.
 
 ### Zsh
 
@@ -438,8 +444,10 @@ Or as a reusable workflow job:
 
 ```yaml
 github-lint:
-  uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+  uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
 ```
+
+actionlint shells out to ShellCheck for every `run:` block, so this workflow installs the same pinned ShellCheck 0.11.0 described above before running. With no ShellCheck on `PATH` it would skip every embedded script and still exit 0. The GHES limitation above applies to this workflow too.
 
 ### Hadolint
 
@@ -491,17 +499,21 @@ As an inline step:
 
 ```yaml
 - name: cspell
-  uses: cboone/gh-actions/actions/run-cspell@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+  uses: cboone/gh-actions/actions/run-cspell@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
 ```
 
 Or as a reusable workflow job (also covers markdownlint, prettier, yamllint):
 
 ```yaml
 text-lint:
-  uses: cboone/gh-actions/.github/workflows/lint-text.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+  uses: cboone/gh-actions/.github/workflows/lint-text.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
   with:
     run-cspell: true
 ```
+
+The workflow also takes `cspell-config`, to pass `--config` explicitly instead of relying on auto-discovery, and `cspell-files`, to replace the default `.` with newline-delimited files and globs. Setting `cspell-config` suppresses the cspell half of `preset`, since an explicit config is the strongest form of a consumer config. The inline `run-cspell` action exposes the same two as `config` and `files`.
+
+cspell bundles English-family dictionaries and a few technical ones, so a repository whose prose is in another language needs `extra-cspell-packages` (`extra-packages` on the action) or cspell flags essentially every word. Each entry is one `<name>@<version>  sha512-<base64>` line, the version must be exact, and the digest comes from `npm view <name>@<version> dist.integrity`. The packages install beside cspell, so a config elsewhere in the tree keeps the idiomatic `"import": ["@cspell/dict-pt-pt/cspell-ext.json"]`.
 
 ## Combined Multi-Language Workflow
 
@@ -538,14 +550,14 @@ concurrency:
 
 jobs:
   go-lint:
-    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
     with:
       go-version-file: go.mod
       run-lint: true
       run-format-check: true
 
   rust-lint:
-    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
     with:
       run-test: false
 
