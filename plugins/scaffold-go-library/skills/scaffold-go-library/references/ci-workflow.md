@@ -1,6 +1,6 @@
 # CI Workflow Template
 
-Use this template for `.github/workflows/ci.yml`. The minimum Go version is read from `go.mod` automatically. Uses two `cboone/gh-actions` reusable workflow calls: one for the minimum supported Go version (all checks, reads `go.mod`) and one for the latest stable Go release (tests only).
+Use this template for `.github/workflows/ci.yml`. The minimum Go version is read from `go.mod` automatically. Uses two `cboone/gh-actions` reusable workflow calls: one for the minimum supported Go version (all checks, reads `go.mod`) and one for the latest stable Go release (test, vet and lint).
 
 ```yaml
 name: CI
@@ -53,7 +53,7 @@ jobs:
 
 - `paths-ignore` skips CI for documentation and agent configuration changes; remove `*.md` if Markdown is source code (e.g., Scrut CLI tests in `tests/scrut/` are nested and NOT ignored)
 - Concurrency groups cancel in-progress runs when new commits are pushed to the same branch/PR
-- Two reusable workflow calls implement the Go version matrix: `ci-minimum` reads the minimum version from `go.mod` and runs all checks; `ci-stable` runs tests against the latest stable Go release
+- Two reusable workflow calls implement the Go version matrix: `ci-minimum` reads the minimum version from `go.mod` and runs all checks; `ci-stable` runs test, vet and lint against the latest stable Go release
 - Each call creates its own set of parallel jobs internally using Makefile targets
 - `run-lint: true` enables golangci-lint with SHA-256 verification
 - `run-lint` installs golangci-lint 2.13.2, up from 2.11.4 before v4.1.0. A first run on the newer release can report findings the older one did not. Pin `golangci-lint-version` to a known release while working through them.

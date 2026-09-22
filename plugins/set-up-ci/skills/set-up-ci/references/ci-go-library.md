@@ -1,6 +1,6 @@
 # Go Library CI Workflow
 
-Use this template for Go library projects (no `main.go` at root, no `cmd/` directory). The minimum Go version is read from `go.mod` automatically. Uses two `cboone/gh-actions` reusable workflow calls: one for the minimum supported Go version (all checks, reads `go.mod`) and one for the latest stable Go release (tests only).
+Use this template for Go library projects (no `main.go` at root, no `cmd/` directory). The minimum Go version is read from `go.mod` automatically. Uses two `cboone/gh-actions` reusable workflow calls: one for the minimum supported Go version (all checks, reads `go.mod`) and one for the latest stable Go release (test, vet and lint).
 
 ```yaml
 name: CI
@@ -51,7 +51,7 @@ jobs:
 
 ## Notes
 
-- Two reusable workflow calls implement the Go version matrix: `ci-minimum` reads the minimum version from `go.mod` and runs all checks; `ci-stable` runs tests against the latest stable Go release
+- Two reusable workflow calls implement the Go version matrix: `ci-minimum` reads the minimum version from `go.mod` and runs all checks; `ci-stable` runs test, vet and lint against the latest stable Go release
 - Each call creates its own set of parallel jobs internally
 - Libraries benefit from multi-version testing more than CLIs because consumers may use older Go versions
 - `run-lint: true` enables golangci-lint with SHA-256 verification

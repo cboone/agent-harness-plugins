@@ -1,4 +1,4 @@
-# Makefile Conventions for run-go-ci.yml v3
+# Makefile Conventions for run-go-ci.yml v4
 
 The `cboone/gh-actions` reusable CI workflow (`run-go-ci.yml@v4.1.0`) calls Makefile targets directly. All Go projects using this workflow must follow these conventions.
 
