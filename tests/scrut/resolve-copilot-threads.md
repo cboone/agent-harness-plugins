@@ -236,13 +236,23 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
 ```
 
-The value is matched whole rather than by prefix, so a trailer after an
-otherwise valid `None` is unparseable too. Accepting the prefix would let a
-malformed line read as zero findings, satisfy the resolved-round exemption,
-and suppress the unparsed section below it.
+The whole value is validated, so a trailer after an otherwise valid `None` is
+unparseable too. Accepting a leading token would let a malformed line read as
+zero findings, satisfy the resolved-round exemption, and suppress the unparsed
+section below it.
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-malformed-count.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
+A numeric value takes the same treatment, which a token scan would not give
+it. `0 plus an unfamiliar trailer` reduces to a count of zero under any rule
+that reads the leading number, and zero is the one value that satisfies the
+exemption outright.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-trailer.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
 {"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
 ```
 

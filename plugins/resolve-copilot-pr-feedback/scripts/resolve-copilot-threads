@@ -419,30 +419,36 @@ function do_parse_reviews() {
       # only the first would report 2 there and understate every review that
       # spans severities.
       #
-      # A count token sits at the start of the value or just after the dot
-      # separator, and is followed by whitespace or the end of the line. The
-      # badge markup carries its own numbers, in width and height attributes,
-      # and that position rule is what keeps them out of the sum.
+      # The value is validated whole rather than scanned for tokens. Removing
+      # the markup tags and then all whitespace leaves the counts and their
+      # separators alone, so a well-formed value reduces to "None" or to
+      # digits joined by the dot, and anything else is reported as
+      # "unparseable". Tag removal is also what keeps the width and height
+      # numbers inside the badge markup out of the sum.
       #
-      # A value that is neither "None" nor a breakdown reports "unparseable"
-      # rather than null. A renamed or restructured header is itself a format
-      # change, and collapsing it into the same value as a layout that never
-      # had the line would hide it. The value is matched whole rather than by
-      # prefix, so "None plus hidden text" is unparseable rather than zero;
-      # a prefix match there would let a malformed line satisfy the
-      # resolved-round exemption and suppress an unparsed finding.
+      # Validating the whole value is load-bearing. Matching a leading token
+      # instead would read "None plus hidden text" as zero and "0 plus hidden
+      # text" as a count of zero, and either one then satisfies the
+      # resolved-round exemption and suppresses an unparsed finding, which is
+      # the failure this command exists to prevent.
+      #
+      # "unparseable" is deliberately distinct from null. A renamed or
+      # restructured header is itself a format change, and collapsing it into
+      # the same value as a layout that never had the line would hide it.
       def stated_finding_count:
         (split("\n") | map(select(test("^\\*\\*Findings"; "i"))) | first) as $line
         | if $line == null then null
           else
-            ($line | sub("^\\*\\*Findings:\\*\\*[[:blank:]]*"; ""; "i") | trim) as $value
-            | if ($value | test("^None$"; "i")) then 0
-              else
-                (
-                  [$value | scan("(?:^|·[[:blank:]]+)([0-9]+)(?=[[:blank:]]|$)") | .[0] | tonumber]
-                  | add
-                ) as $total
-                | if $total == null then "unparseable" else $total end
+            (
+              $line
+              | sub("^\\*\\*Findings:\\*\\*"; ""; "i")
+              | gsub("<[^>]*>"; "")
+              | gsub("[[:space:]]"; "")
+            ) as $counts
+            | if ($counts | test("^None$"; "i")) then 0
+              elif ($counts | test("^[0-9]+(·[0-9]+)*$")) then
+                ([$counts | scan("[0-9]+") | tonumber] | add)
+              else "unparseable"
               end
           end;
 
