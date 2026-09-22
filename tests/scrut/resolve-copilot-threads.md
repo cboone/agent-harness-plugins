@@ -322,3 +322,42 @@ zero as clean. `hasFormatDrift` is what separates the two.
 $ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-drift.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
 {"hasFormatDrift":true,"findings":0}
 ```
+
+## The step 3 selection filter pins its own output shape
+
+`monitor-pr` does not read the whole `fetch-reviews` result. It selects the one
+review the metadata probe named and projects four fields, because the raw result
+carries every Copilot review on the PR with its complete body and the watch
+prints this on every tick. These testcases run the filter exactly as the skill
+documents it, over `parse-reviews` so no authenticated `gh` is needed.
+
+```scrut
+$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | jq -c --argjson review_id 6000000004 '[.[] | select(.id == $review_id)] | last | {id, url, hasFormatDrift, findings: (.findings | length)}'
+{"id":6000000004,"url":"https://github.com/o/r/pull/1#pullrequestreview-6000000004","hasFormatDrift":false,"findings":0}
+```
+
+A review id the result does not carry, which is what an empty review body
+produces, does **not** yield `null`. jq builds the object from `null` anyway, and
+`.findings | length` over an absent review is `0` rather than an error. The skill
+documents this shape so a reader does not mistake the all-null object for a
+review that parsed cleanly: a null `hasFormatDrift` is an absent answer, not
+`false`.
+
+```scrut
+$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | jq -c --argjson review_id 6000000099 '[.[] | select(.id == $review_id)] | last | {id, url, hasFormatDrift, findings: (.findings | length)}'
+{"id":null,"url":null,"hasFormatDrift":null,"findings":0}
+```
+
+The thread-side filter reduces `fetch` the same way, to a count plus locations.
+`fetch` needs GraphQL credentials, so this runs the filter over the shape that
+command returns.
+
+```scrut
+$ echo '[{"id":"PRRT_a","location":"src/foo.ts:42"},{"id":"PRRT_b","location":"lib/bar.js:(no-line)"}]' | jq -c '{openThreads: length, locations: [.[].location]}'
+{"openThreads":2,"locations":["src/foo.ts:42","lib/bar.js:(no-line)"]}
+```
+
+```scrut
+$ echo '[]' | jq -c '{openThreads: length, locations: [.[].location]}'
+{"openThreads":0,"locations":[]}
+```
