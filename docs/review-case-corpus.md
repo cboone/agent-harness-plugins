@@ -22,9 +22,11 @@ Keeping the data out of this repository is deliberate. Frozen case files here
 would be read by `bin/validate-json`, `bin/list-shell-scripts`,
 `markdownlint-cli2` and `prettier --check .`, so a planted defect in JSON would
 fail `make validate` and one in shell would be reported by `make lint-shell`.
-Three of those can be silenced with ignore entries; `bin/list-shell-scripts`
-has no ignore mechanism at all. Deliberately defective code also needs a
-pushable home that is not this repository's ref namespace.
+Only `markdownlint-cli2` and Prettier take ignore entries. `bin/validate-json`
+prunes `node_modules` and `.yarn` inside its `find`, and
+`bin/list-shell-scripts` skips `dist/*` in a `case` arm, so silencing a case
+there means editing the tool. Deliberately defective code also needs a pushable
+home that is not this repository's ref namespace.
 
 ## What a case is
 
@@ -50,7 +52,8 @@ quietly measuring the wrong diff.
 
 ## Case layout
 
-Each case is a directory under `cases/` holding exactly four files:
+Each case is a directory under `cases/` holding these four files. Anything
+else in the directory is reported as a warning, not an error:
 
 ```text
 cases/001-snappy-tick-refresh-race/
@@ -71,11 +74,16 @@ repository because the objects are the same ones, pushed there under
 corpus no longer depends on an upstream repository never force-pushing.
 
 **The case refs are not branches, and must not become branches.** Every frozen
-tree carries its own `.github/workflows/`, and GitHub raises a push event for a
-branch or a tag. Pushed as `refs/heads/case/*`, the first forty refs ran each
-source repository's CI inside the corpus repository. A custom ref under
-`refs/cases/` is stored and fetched identically and starts nothing.
-`tests/scrut/review-corpus.md` asserts that no `refs/heads/case/*` exists.
+tree carries its own `.github/workflows/`, and Actions runs `on: push`
+workflows for `refs/heads/*` and `refs/tags/*`. Stored as `refs/heads/case/*`,
+the case refs ran each source repository's CI inside the corpus repository,
+which is the observation this rule rests on. A custom ref under `refs/cases/`
+is stored and fetched identically and starts nothing.
+
+`tests/scrut/review-corpus.md` asserts the tool-side half of this, that a
+materialized cache holds no `refs/heads/*` at all, so a widened fetch refspec
+would show up. The freezing procedure itself lives in the corpus repository and
+is not under test here.
 
 One consequence: `refs/cases/*` is outside what a clone or an `actions/checkout`
 fetches, even at `fetch-depth: 0`. A consumer needs an explicit
@@ -106,26 +114,27 @@ defects:
 
 ### Top-level fields
 
-| Field       | Required | Meaning                                                                                                                                      |
-| ----------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `case`      | yes      | The case ID. Must equal the directory name.                                                                                                  |
-| `source`    | yes      | One of the three sources below.                                                                                                              |
-| `repo`      | yes      | Clone URL of the repository the case was frozen from.                                                                                        |
-| `languages` | yes      | Non-empty list of the languages the diff touches.                                                                                            |
-| `origin`    | no       | Provenance. `introduced_by_pr` is the pull request the case is frozen from; `ground_truth` is the later fix commit, for a `fix-commit` case. |
-| `defects`   | yes      | Non-empty list of the known defects.                                                                                                         |
+| Field       | Required | Meaning                                                                                                                                                                                                                                                                                                   |
+| ----------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `case`      | yes      | The case ID. Must equal the directory name.                                                                                                                                                                                                                                                               |
+| `source`    | yes      | One of the three sources below.                                                                                                                                                                                                                                                                           |
+| `repo`      | yes      | Clone URL of the repository the case was frozen from.                                                                                                                                                                                                                                                     |
+| `languages` | yes      | Non-empty list of the languages the diff touches.                                                                                                                                                                                                                                                         |
+| `origin`    | no       | Provenance. `introduced_by_pr` is the pull request the case is frozen from and is not validated. `ground_truth` is the later fix commit, for a `fix-commit` case, and when present must be a full 40-character lowercase hex SHA, because an abbreviation stops identifying the commit as upstream grows. |
+| `defects`   | yes      | Non-empty list of the known defects.                                                                                                                                                                                                                                                                      |
 
 ### Defect fields
 
-| Field         | Required | Meaning                                                                                                                                                                                                                 |
-| ------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`          | yes      | Short identifier, unique within the case.                                                                                                                                                                               |
-| `file`        | yes      | Path as it appears at `HEAD`. Must be in the `BASE..HEAD` diff.                                                                                                                                                         |
-| `lines`       | yes      | Two integers, start and end, both inside the file at `HEAD`.                                                                                                                                                            |
-| `class`       | yes      | One of the four classes below.                                                                                                                                                                                          |
-| `severity`    | yes      | `p1`, `p2` or `p3`.                                                                                                                                                                                                     |
-| `description` | yes      | One sentence saying what is wrong. Always double-quote it: a defect description very often contains a colon followed by a space, as in `RefreshResultMsg{DiskErr: true}`, which YAML would otherwise read as a mapping. |
-| `added_in`    | yes      | `initial`, or the run ID that discovered the defect.                                                                                                                                                                    |
+| Field           | Required | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`            | yes      | Short identifier, unique within the case.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `file`          | yes      | Path as it appears at `HEAD`. Must be in the `BASE..HEAD` diff.                                                                                                                                                                                                                                                                                                                                                                             |
+| `lines`         | yes      | Two integers, start and end, both inside the file at `HEAD`.                                                                                                                                                                                                                                                                                                                                                                                |
+| `class`         | yes      | One of the four classes below.                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `severity`      | yes      | `p1`, `p2` or `p3`.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `description`   | yes      | One sentence saying what is wrong. Always double-quote it: a defect description very often contains a colon followed by a space, as in `RefreshResultMsg{DiskErr: true}`, which YAML refuses to parse, so the whole case fails as unreadable rather than as a bad description. The validator cannot enforce the quoting field by field, because an unquoted description has already made the file unparseable before any field is examined. |
+| `added_in`      | yes      | `initial`, or the run ID that discovered the defect.                                                                                                                                                                                                                                                                                                                                                                                        |
+| `discovered_by` | no       | The reviewer that found a defect the corpus did not list. Present only on later additions; see Findings the corpus does not list.                                                                                                                                                                                                                                                                                                           |
 
 ### Closed sets
 
@@ -148,9 +157,12 @@ reported per class:
 | `concurrency`    | A race, a lock misuse, an ordering or visibility defect.                                                   |
 | `input-handling` | Security-relevant handling of untrusted input: injection, escaping, path and symlink handling, validation. |
 
-`severity` follows [`REVIEW.md`](../REVIEW.md), where `p1` is what that file
-calls Important: it would break behavior, lose or leak data, or break the build
-or a release. `p2` and `p3` are progressively smaller.
+`p1` is what [`REVIEW.md`](../REVIEW.md) calls Important: it would break
+behavior, lose or leak data, or break the build or a release. The `p1`-to-`p2`
+mapping comes from the Code Review Rules block in [`AGENTS.md`](../AGENTS.md),
+which puts a checklist's Important rules at P1 and the rest at P2 or lower.
+`p3` is a third level local to this corpus, for a real but minor finding, with
+no counterpart in either file.
 
 ## The reviewer must not reach the answer key
 
@@ -196,9 +208,10 @@ describes the defect. A synthesized case must keep that property.
    `git update-ref` at `refs/cases/<id>/base` and `refs/cases/<id>/head`, then
    push them with `git push origin 'refs/cases/*:refs/cases/*'`. One fetch is
    enough, because the base is an ancestor of the head. Fetching a full
-   40-character SHA works against a public GitHub repository; a local
-   repository refuses an unreferenced object, which is why
-   `bin/materialize-case` asks for named refs rather than SHAs.
+   40-character SHA can be fetched from GitHub while it is still reachable from
+   some ref there, which is exactly why this step exists: once the branch is
+   force-pushed or deleted that fetch stops working and only the corpus copy
+   remains.
 1. Write the four files, then run `bin/validate-corpus --corpus DIR <id>`.
 
 ## Adding a planted case
@@ -209,7 +222,7 @@ plants, and record what happened rather than what was expected. Planting is the
 only source where every defect is known rather than only the noticed ones,
 which is what makes it the cleanest recall measurement.
 
-Three things learned from planting the cases that are here.
+Four things learned from planting the cases that are here.
 
 **A plant the project's own instruments catch is not a corpus case.** It is a
 result about the instruments, and the right response is to record it and plant
@@ -306,6 +319,16 @@ bin/materialize-case 001-snappy-tick-refresh-race "${TMPDIR}/case"
 so a harness can read the worktree path and pass `--base "${BASE}"` to the
 reviewer under test without parsing the corpus itself. Worktree registrations
 left behind by a removed directory are cleared with `--prune`.
+
+`bin/materialize-case` writes its object cache to `<corpus>/.cache/cases.git`
+unless `--cache` says otherwise, so a corpus repository must ignore `.cache/`
+or a `git add -A` there would commit a bare repository and its worktree
+registrations.
+
+One precondition on the isolation guarantee above: it holds because the default
+cache never fetches `main`. A `--cache` pointed at the corpus's own `.git`
+would give a worktree from which `main` is reachable, and the metadata check
+would not catch it, because that check inspects only the checked-out tree.
 
 `bin/validate-corpus` needs `jq` and mikefarah `yq` v4. It reports GitHub
 Actions annotations and a summary carrying the case and defect counts, so a run

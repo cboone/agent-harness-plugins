@@ -4,7 +4,7 @@
 #
 # bin/validate-corpus and bin/materialize-case both need real git objects: the
 # validator compares recorded line ranges against blobs at a commit, and the
-# materializer adds a worktree. The git stub in this directory matches exact
+# materializer adds a worktree. tests/fixtures/git-worktree-stub matches exact
 # invocations by design and handles none of `worktree add`, `fetch` or
 # `merge-base`, so this fixture stands up an actual repository instead. Each
 # scenario asks for one mutation, which exercises the checker rather than
@@ -32,6 +32,21 @@
 set -euo pipefail
 
 CORPUS=""
+
+# The root this run made, and whether the run got far enough to hand it over.
+# A failure before the final printf means the caller was never told the path,
+# so the fixture removes it rather than leaving an orphan in TMPDIR.
+ROOT=""
+HANDED_OVER="no"
+
+function die() {
+  echo "Error: ${1}" >&2
+  exit "${2:-2}"
+}
+
+function cleanup() {
+  [[ "${HANDED_OVER}" == "yes" || -z "${ROOT}" ]] || rm -rf "${ROOT}"
+}
 
 # Set by build_case_branches. Returning them on stdout would mean any stray
 # line from a git command landed in a SHA.
@@ -210,6 +225,37 @@ function write_case_metadata() {
     > "${case_dir}/defects.yaml"
 }
 
+# Applies a sed script and refuses to continue if it changed nothing. Without
+# this a drift in write_case_metadata's output would turn a mutation into a
+# no-op, and the negative scenarios would assert that a clean corpus validates
+# clean, which is the fixture lying about having introduced a defect.
+function mutate() {
+  local path="${1}"
+  shift
+  local before after
+
+  before="$(cat "${path}")"
+  sed -i.bak "$@" "${path}"
+  rm -f "${path}.bak"
+  after="$(cat "${path}")"
+
+  [[ "${before}" != "${after}" ]] \
+    || die "mutation left ${path} unchanged; the metadata format has drifted"
+}
+
+# Every mutation name, checked before any temporary directory exists so an
+# unknown name cannot leak one.
+function validate_mutation() {
+  case "${1}" in
+    clean | missing-defects | bad-sha | unknown-class | line-out-of-range) ;;
+    file-not-in-diff | case-mismatch | invalid-yaml | stray-file) ;;
+    base-not-ancestor | head-mismatch | metadata-in-tree | bad-ground-truth) ;;
+    non-mapping-yaml | scalar-defect | float-lines | directory-as-file) ;;
+    base-unrelated) ;;
+    *) die "unknown mutation ${1}" ;;
+  esac
+}
+
 function apply_mutation() {
   local mutation="${1}"
   local one="${CORPUS}/cases/001-demo-tally-sign"
@@ -224,29 +270,51 @@ function apply_mutation() {
       printf '%s\n' 'abc123' > "${one}/BASE"
       ;;
     unknown-class)
-      sed -i.bak 's/^    class: logic$/    class: perfomance/' "${one}/defects.yaml"
-      rm -f "${one}/defects.yaml.bak"
+      mutate "${one}/defects.yaml" 's/^    class: logic$/    class: perfomance/'
       ;;
     line-out-of-range)
-      sed -i.bak 's/^    lines: \[9, 9\]$/    lines: [9, 400]/' "${one}/defects.yaml"
-      rm -f "${one}/defects.yaml.bak"
+      mutate "${one}/defects.yaml" 's/^    lines: \[9, 9\]$/    lines: [9, 400]/'
+      ;;
+    float-lines)
+      # Integral values written as floats. jq reads 9.0 as equal to its floor,
+      # so a value-only integer test accepts it, and the text then reaches a
+      # shell arithmetic comparison that cannot parse it.
+      mutate "${one}/defects.yaml" 's/^    lines: \[9, 9\]$/    lines: [9.0, 400.0]/'
+      ;;
+    directory-as-file)
+      # `git cat-file -e` is true for a tree, so a defect recorded against a
+      # directory clears a bare existence check.
+      mutate "${one}/defects.yaml" 's|^    file: src/tally$|    file: src|'
       ;;
     file-not-in-diff)
       # README.md is in both trees and unchanged between them. The line range
       # moves to 1 as well, so the out-of-range check does not fire first and
       # mask the finding this scenario is for.
-      sed -i.bak \
+      mutate "${one}/defects.yaml" \
         -e 's|^    file: src/tally$|    file: README.md|' \
-        -e 's|^    lines: \[9, 9\]$|    lines: [1, 1]|' \
-        "${one}/defects.yaml"
-      rm -f "${one}/defects.yaml.bak"
+        -e 's|^    lines: \[9, 9\]$|    lines: [1, 1]|'
       ;;
     case-mismatch)
-      sed -i.bak 's/^case: 001-demo-tally-sign$/case: 007-demo-elsewhere/' "${one}/defects.yaml"
-      rm -f "${one}/defects.yaml.bak"
+      mutate "${one}/defects.yaml" 's/^case: 001-demo-tally-sign$/case: 007-demo-elsewhere/'
       ;;
     invalid-yaml)
       printf '%s\n' 'case: [unterminated' > "${one}/defects.yaml"
+      ;;
+    non-mapping-yaml)
+      # A leading "- " on the first line, the likeliest hand edit: the document
+      # becomes a sequence and every field lookup yields nothing.
+      printf '%s\n' '- case: 001-demo-tally-sign' '  defects: []' \
+        > "${one}/defects.yaml"
+      ;;
+    scalar-defect)
+      printf '%s\n' \
+        'case: 001-demo-tally-sign' \
+        'source: planted' \
+        'repo: https://example.invalid/demo/tally' \
+        'languages: [shell]' \
+        'defects:' \
+        '  - just-a-string' \
+        > "${one}/defects.yaml"
       ;;
     stray-file)
       printf '%s\n' 'scratch' > "${one}/NOTES.md"
@@ -254,9 +322,7 @@ function apply_mutation() {
     bad-ground-truth)
       # Abbreviated rather than absent: the fix commit lives upstream, so only
       # its shape can be checked here.
-      sed -i.bak -E 's/^  ground_truth: ([0-9a-f]{7}).*$/  ground_truth: \1/' \
-        "${one}/defects.yaml"
-      rm -f "${one}/defects.yaml.bak"
+      mutate "${one}/defects.yaml" -E 's/^  ground_truth: ([0-9a-f]{7}).*$/  ground_truth: \1/'
       ;;
     base-not-ancestor)
       # A commit from the other case's unrelated orphan history.
@@ -264,13 +330,33 @@ function apply_mutation() {
       printf '%s\n' "${other_sha}" > "${one}/BASE"
       ;;
     head-mismatch)
-      # Valid, present, and not what the case branch points at.
-      printf '%s\n' "$(cat "${one}/BASE")" > "${one}/HEAD"
+      # A fresh descendant of the recorded head, referenced outside refs/cases/
+      # so it survives and the case-ref count is unaffected. Pointing the HEAD
+      # file at the base instead would empty the BASE..HEAD diff and trip the
+      # diff-membership rule as well, so the scenario would not isolate the
+      # drift it is named for.
+      git_corpus checkout -q --detach "refs/cases/001-demo-tally-sign/head"
+      printf '%s\n' 'later' > "${CORPUS}/NOTE.md"
+      git_corpus add -A
+      git_corpus commit -q -m "case 001-demo-tally-sign: later"
+      mutated_sha="$(git_corpus rev-parse HEAD)"
+      git_corpus update-ref "refs/drift/001-demo-tally-sign" "${mutated_sha}"
+      git_corpus checkout -q main
+      printf '%s\n' "${mutated_sha}" > "${one}/HEAD"
+      ;;
+    base-unrelated)
+      # Both the file and the ref move to the other case's orphan history, so
+      # the recorded SHA and the ref agree and the ancestry check is what
+      # refuses it. Moving only the file would be caught earlier, as drift.
+      other_sha="$(git_corpus rev-parse "refs/cases/002-demo-report-error/base")"
+      printf '%s\n' "${other_sha}" > "${one}/BASE"
+      git_corpus update-ref "refs/cases/001-demo-tally-sign/base" "${other_sha}"
       ;;
     metadata-in-tree)
       # Freezes the answer key into the case's own head commit, which is what
-      # materialize-case refuses to hand a reviewer. Committing on the checked
-      # out branch advances it, so the recorded HEAD is updated to match.
+      # materialize-case refuses to hand a reviewer. The new commit is a new
+      # SHA, so the ref is moved explicitly and the recorded HEAD is updated to
+      # match; leaving them apart would trip the drift check instead.
       git_corpus checkout -q --detach "refs/cases/001-demo-tally-sign/head"
       printf '%s\n' 'case: 001-demo-tally-sign' > "${CORPUS}/defects.yaml"
       git_corpus add -A
@@ -281,18 +367,22 @@ function apply_mutation() {
       printf '%s\n' "${mutated_sha}" > "${one}/HEAD"
       ;;
     *)
-      echo "Error: unknown mutation ${mutation}" >&2
-      exit 2
+      die "unknown mutation ${mutation}"
       ;;
   esac
 }
 
 function main() {
   local mutation="${1:-clean}"
-  local root tally_base tally_head report_base report_head
+  local tally_base tally_head report_base report_head
 
-  root="$(mktemp -d "${TMPDIR:-/tmp}/review-corpus-fixture.XXXXXX")"
-  CORPUS="${root}/corpus"
+  # Before mktemp, so an unknown name cannot leave a directory behind.
+  validate_mutation "${mutation}"
+
+  trap cleanup EXIT
+  ROOT="$(mktemp -d "${TMPDIR:-/tmp}/review-corpus-fixture.XXXXXX")" \
+    || die "could not create a temporary directory under ${TMPDIR:-/tmp}"
+  CORPUS="${ROOT}/corpus"
 
   mkdir -p "${CORPUS}"
   git init --quiet "${CORPUS}"
@@ -328,7 +418,8 @@ function main() {
 
   apply_mutation "${mutation}"
 
-  printf '%s\n' "${root}"
+  HANDED_OVER="yes"
+  printf '%s\n' "${ROOT}"
 }
 
 main "$@"
