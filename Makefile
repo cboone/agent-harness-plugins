@@ -51,6 +51,7 @@ SCRUT_ENV := \
 	REPORT_BOARD_BIN="$(CURDIR)/plugins/publish-report-board/scripts/report-board" \
 	REPORT_BOARD_DATA_DIR="$(CURDIR)/tests/data/report-board" \
 	RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads" \
+	MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/monitor-pr/scripts/resolve-copilot-threads" \
 	TMUX_STUB_BIN="$(CURDIR)/tests/fixtures/tmux-stub" \
 	UNIX_SOCKET_FIXTURE_BIN="$(CURDIR)/tests/fixtures/create-unix-socket" \
 	WORKMUX_STUB_BIN="$(CURDIR)/tests/fixtures/workmux-stub"
