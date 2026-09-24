@@ -38,13 +38,13 @@ permissions:
 
 jobs:
   go-ci:
-    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
     with:
       go-version-file: go.mod
       run-format-check: true
 
   rust-ci:
-    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
 
   js-test:
     name: "JS: Test"
@@ -90,6 +90,7 @@ jobs:
 ## Notes
 
 - Go, Rust, and Zig use reusable workflow calls that create their own parallel jobs internally
+- The Go call passes no `run-lint`, which defaults to true, so golangci-lint runs here. `run-lint` installs golangci-lint 2.13.2, up from 2.11.4 before v4.1.0. A first run on the newer release can report findings the older one did not. Pin `golangci-lint-version` to a known release while working through them.
 - Non-reusable languages (JS/TS, Python, Ruby) use inline jobs with language-prefixed IDs (e.g., `js-test`, `js-lint`)
 - Prefix job display names with the language (e.g., `"JS: Test"`, `"JS: Lint"`)
 - Only include jobs relevant to each detected language

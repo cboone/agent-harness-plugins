@@ -61,7 +61,7 @@ For repos that run CI, add a `reuse lint` step to the lint workflow. Example (Gi
 
 ```yaml
 - name: REUSE compliance
-  uses: cboone/gh-actions/actions/run-reuse@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+  uses: cboone/gh-actions/actions/run-reuse@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
 ```
 
 or inline:
@@ -72,6 +72,14 @@ or inline:
 ```
 
 This prevents future drift from landing silently.
+
+`run-reuse` installs reuse 6.2.0 from a hash-pinned requirements file, so there is no input that holds it at 5.x. A repository that passed under 5.0.2 can fail under 6.2.0 for three reasons, none of which is a change in what REUSE requires:
+
+- `lint` reads whole files, where 5.x stopped after the first 4 KiB. Copyright or license text deeper in a file is now found and attributed. Wrap the passage in `REUSE-IgnoreStart` and `REUSE-IgnoreEnd`. Vendored headers, license blocks quoted inside documentation, and test fixtures are the usual sources, and this is the one most likely to bite.
+- A new Invalid SPDX License Expressions criterion flags an expression that is not valid SPDX grammar, which was previously ignored. Correct the expression, or the license identifier it names.
+- Bad licenses now considers only `LICENSES/`. This narrows what is reported rather than widening it, so a repository relying on it to flag files elsewhere loses that signal.
+
+Encoding detection changed too, and it is environmental rather than a criterion. reuse 6 requires `python-magic`, a `ctypes` wrapper around the runner image's `libmagic`, and falls back to another module when that import fails. The action's pinned requirements always install a fallback, so nothing breaks outright, but detection can still differ between a runner that supplies `libmagic` and one that does not, which means the same commit can lint differently on different runners. Set `REUSE_ENCODING_MODULE: charset_normalizer` in the step's `env:` when jobs need to agree.
 
 ## Common verification gotchas
 

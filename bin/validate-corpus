@@ -1,0 +1,566 @@
+#!/usr/bin/env bash
+# validate-corpus -- Check every review corpus case against the schema.
+#
+# Reads objects directly from the corpus checkout rather than through the
+# isolated cache that bin/materialize-case builds. The isolation exists to keep
+# a reviewer away from the answer key; the validator is the answer key's
+# reader, so it wants the corpus repository itself, where the case refs and
+# their objects already are.
+#
+# The structural rules are one jq filter over the YAML converted to JSON, in
+# the style of plugins/publish-report-board/scripts/report-board: every field is
+# type-checked before it is used, so malformed data produces a message rather
+# than a jq error. The checks that need git come after, and only for a case
+# whose structure was sound, because a malformed lines array cannot be compared
+# against a file.
+#
+# The git checks are what stop a case rotting in place. A line range that no
+# longer sits inside its file, or a file absent from the case's own diff, means
+# the recorded defect no longer describes the frozen commit, and a harness
+# scoring against it would count a correct finding as a miss.
+#
+# Exit codes:
+#   0 - No findings; a warning does not change this
+#   1 - At least one case has a finding
+#   2 - Usage error, a missing tool, or a corpus that is not a git repository
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+readonly SHA_PATTERN='^[0-9a-f]{40}$'
+readonly CASE_ID_PATTERN='^[0-9][0-9][0-9]-[a-z0-9][a-z0-9.-]*$'
+
+# The closed sets. Defect classes are exactly the four the corpus scores recall
+# by, so adding a fifth is a deliberate change to what the benchmark measures,
+# not a data entry. Severities follow REVIEW.md, where p1 is Important.
+readonly SOURCES_JSON='["fix-commit","copilot-comment","planted"]'
+readonly CLASSES_JSON='["logic","error-handling","concurrency","input-handling"]'
+readonly SEVERITIES_JSON='["p1","p2","p3"]'
+
+# The four files a case directory holds. Anything else is reported as a warning
+# rather than an error: a stray note does not corrupt a case, but it is usually
+# a file someone meant to put somewhere else.
+readonly CASE_FILES=(CASE.md BASE HEAD defects.yaml)
+
+readonly E_FINDING=1
+readonly E_USAGE=2
+
+errors=0
+warnings=0
+cases_checked=0
+defects_checked=0
+
+# Scratch space for the JSON each defects.yaml is converted into. It must not
+# live beside the case: the validator reads the corpus and never writes to it,
+# and a stray defects.json in a case directory would show up as an unexpected
+# file on the next run, or be committed by accident.
+WORK_DIR=""
+
+# The \(...) forms are jq string interpolation, not shell expansion.
+# shellcheck disable=SC2016
+readonly STRUCTURE_FILTER='
+def nonempty_string: (type == "string") and (length > 0);
+
+# Integral value and integral spelling both. jq reads 9.0 as a number equal to
+# its floor, and yq and @tsv preserve the "9.0" text, which then reaches a bash
+# arithmetic comparison and makes it an error rather than a false. Inside an if
+# condition that error reads as false, so the range check would be skipped
+# silently.
+def is_int: (type == "number") and (. == floor) and ((tostring | test("^-?[0-9]+$")));
+
+# The shape assertion comes first and short-circuits everything else. Every
+# field access below uses jq'"'"'s optional operator, and on a non-object input
+# `.field?` yields nothing rather than null, so each surrounding if collapses to
+# empty and a sequence or a scalar document would produce no problems at all and
+# pass as valid. Writing only the defects list into the file is the likeliest
+# hand edit there is, so this is the case that most needs catching.
+if type != "object" then
+  "defects.yaml must be a mapping at the top level, got \(type)"
+else
+[
+  (if (.case? | nonempty_string) | not then "case must be a non-empty string"
+   elif .case != $case_id then "case is \(.case) but the directory is \($case_id)"
+   else empty end),
+
+  # Bound before the membership test: inside `$sources | index(...)` the input
+  # is the array, so a bare .source there would index the array by a string.
+  (.source? as $source
+   | if ($source | nonempty_string) | not then "source must be a non-empty string"
+     elif ($sources | index($source)) == null
+     then "source \($source) is not one of \($sources | join(", "))"
+     else empty end),
+
+  (if (.repo? | nonempty_string) | not then "repo must be a non-empty string" else empty end),
+
+  # The fix commit lives upstream, not here, so its existence cannot be
+  # checked. Its shape can, which catches the abbreviation or the invented
+  # SHA that would make a case untraceable back to its ground truth.
+  (.origin?.ground_truth? as $truth
+   | if $truth == null then empty
+     elif ($truth | type) != "string" or ($truth | test("^[0-9a-f]{40}$") | not)
+     then "origin.ground_truth must be a full 40-character hex SHA"
+     else empty end),
+
+  (if (.languages? | type) != "array" or ((.languages | length) == 0)
+   then "languages must be a non-empty array"
+   else empty end),
+
+  (if (.defects? | type) != "array" or ((.defects | length) == 0)
+   then "defects must be a non-empty array"
+   else empty end),
+
+  # Each entry has to be a mapping before any field of it is read. Without
+  # this, map(.id) below is a jq runtime error rather than a finding, and the
+  # error becomes the script'"'"'s exit status instead of a reported problem.
+  (if (.defects? | type) == "array"
+   then (.defects
+         | to_entries[]
+         | select((.value | type) != "object")
+         | "defects[\(.key)] must be a mapping, got \(.value | type)")
+   else empty end),
+
+  (if (.defects? | type) == "array"
+   then ((.defects | map(.id?) | map(select(nonempty_string))) as $ids
+         | if ($ids | length) != ($ids | unique | length)
+           then "defect ids are not unique"
+           else empty end)
+   else empty end),
+
+  (if (.defects? | type) == "array"
+   then (.defects
+         | to_entries[]
+         | .key as $i
+         | .value as $d
+         | select(($d | type) == "object")
+         | [
+             (if ($d.id? | nonempty_string) | not
+              then "defects[\($i)].id must be a non-empty string" else empty end),
+             (if ($d.file? | nonempty_string) | not
+              then "defects[\($i)].file must be a non-empty string" else empty end),
+             (if ($d.description? | nonempty_string) | not
+              then "defects[\($i)].description must be a non-empty string" else empty end),
+             (if ($d.added_in? | nonempty_string) | not
+              then "defects[\($i)].added_in must be a non-empty string" else empty end),
+             (if ($d.class? | nonempty_string) | not
+              then "defects[\($i)].class must be a non-empty string"
+              elif ($classes | index($d.class)) == null
+              then "defects[\($i)].class \($d.class) is not one of \($classes | join(", "))"
+              else empty end),
+             (if ($d.severity? | nonempty_string) | not
+              then "defects[\($i)].severity must be a non-empty string"
+              elif ($severities | index($d.severity)) == null
+              then "defects[\($i)].severity \($d.severity) is not one of \($severities | join(", "))"
+              else empty end),
+             (if ($d.lines? | type) != "array" or (($d.lines | length) != 2)
+              then "defects[\($i)].lines must be a two-element array"
+              elif (($d.lines[0] | is_int) and ($d.lines[1] | is_int)) | not
+              then "defects[\($i)].lines must hold integers"
+              elif $d.lines[0] < 1
+              then "defects[\($i)].lines start must be 1 or greater"
+              elif $d.lines[0] > $d.lines[1]
+              then "defects[\($i)].lines start \($d.lines[0]) is after end \($d.lines[1])"
+              else empty end)
+           ]
+         | .[])
+   else empty end)
+]
+| .[]
+end
+'
+
+function usage() {
+  printf '%s\n' \
+    "Usage: ${SCRIPT_NAME} [--corpus DIR] [CASE...]" \
+    "" \
+    "Check every review corpus case, or only the named ones, against the schema" \
+    "documented in docs/review-case-corpus.md." \
+    "" \
+    "Options:" \
+    "  --corpus DIR   Corpus checkout (default: \${REVIEW_CASE_CORPUS_DIR})" \
+    "  -h, --help     Show this help" \
+    "" \
+    "Needs jq and mikefarah yq v4. Reports GitHub Actions annotations and a" \
+    "summary carrying the case and defect counts, so a run that checked nothing" \
+    "cannot be mistaken for a clean one." \
+    "" \
+    "Examples:" \
+    "  ${SCRIPT_NAME}" \
+    "  ${SCRIPT_NAME} --corpus ~/Development/review-case-corpus 001-snappy-tick-refresh-race"
+}
+
+function die() {
+  echo "Error: ${1}" >&2
+  exit "${2:-${E_USAGE}}"
+}
+
+function cleanup() {
+  [[ -z "${WORK_DIR}" ]] || rm -rf "${WORK_DIR}"
+}
+
+function error() {
+  echo "::error::$1"
+  errors=$((errors + 1))
+}
+
+function warning() {
+  echo "::warning::$1"
+  warnings=$((warnings + 1))
+}
+
+function require_tools() {
+  local yq_version
+
+  command -v jq > /dev/null 2>&1 || die "jq is required: https://jqlang.org" "${E_USAGE}"
+  command -v yq > /dev/null 2>&1 \
+    || die "yq is required: https://github.com/mikefarah/yq" "${E_USAGE}"
+
+  # python-yq takes jq's flags and would misread -o=json. Checking the banner
+  # rather than the behavior keeps the failure legible instead of surfacing as a
+  # parse error on the first case.
+  yq_version="$(yq --version 2>&1 || true)"
+  case "${yq_version}" in
+    *mikefarah*) ;;
+    *) die "yq must be mikefarah yq v4, not ${yq_version}" "${E_USAGE}" ;;
+  esac
+}
+
+function validate_corpus_dir() {
+  local corpus="${1}"
+
+  [[ -n "${corpus}" ]] \
+    || die "no corpus given; pass --corpus DIR or set REVIEW_CASE_CORPUS_DIR" "${E_USAGE}"
+  [[ -d "${corpus}" ]] || die "corpus ${corpus} is not a directory" "${E_USAGE}"
+  git -C "${corpus}" rev-parse --git-dir > /dev/null 2>&1 \
+    || die "corpus ${corpus} is not a git repository" "${E_USAGE}"
+  [[ -d "${corpus}/cases" ]] || die "corpus ${corpus} has no cases directory" "${E_USAGE}"
+}
+
+# Reads a one-line SHA file, printing the value. Returns non-zero without
+# printing when the file is missing or malformed, so the caller reports the
+# finding with the case's own prefix.
+function sha_from_file() {
+  local path="${1}"
+  local value
+
+  [[ -f "${path}" ]] || return 1
+  value="$(cat "${path}")"
+  [[ "${value}" =~ ${SHA_PATTERN} ]] || return 1
+
+  printf '%s\n' "${value}"
+}
+
+function is_case_file() {
+  local candidate="${1}"
+  local name
+
+  for name in "${CASE_FILES[@]}"; do
+    [[ "${name}" != "${candidate}" ]] || return 0
+  done
+
+  return 1
+}
+
+function check_case_files() {
+  local case_dir="${1}"
+  local case_id="${2}"
+  local complete="yes"
+  local name entry base
+
+  for name in "${CASE_FILES[@]}"; do
+    if [[ ! -f "${case_dir}/${name}" ]]; then
+      error "${case_id}: ${name} is missing"
+      complete="no"
+    fi
+  done
+
+  # find rather than a glob: a glob skips dotfiles, so a stray .DS_Store or a
+  # leftover .defects.json would pass unreported.
+  while IFS= read -r entry; do
+    [[ -n "${entry}" ]] || continue
+    base="$(basename "${entry}")"
+    is_case_file "${base}" || warning "${case_id}: unexpected entry ${base}"
+  done < <(find "${case_dir}" -mindepth 1 -maxdepth 1)
+
+  [[ "${complete}" == "yes" ]]
+}
+
+# Prints the commit a case ref points at. The canonical layout is
+# refs/cases/<id>/<side>; refs/remotes/origin/cases/... is accepted too, for a
+# clone that fetched them into a remote namespace. Returns non-zero and prints
+# nothing when neither exists.
+function case_ref_tip() {
+  local corpus="${1}"
+  local case_id="${2}"
+  local side="${3}"
+  local ref tip
+
+  for ref in "refs/cases/${case_id}/${side}" \
+    "refs/remotes/origin/cases/${case_id}/${side}"; do
+    tip="$(git -C "${corpus}" rev-parse --verify --quiet "${ref}^{commit}" || true)"
+    if [[ -n "${tip}" ]]; then
+      printf '%s\n' "${tip}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+# The recorded SHA and the case ref must agree. They drift when a case is
+# re-frozen and only one of the two is updated, which leaves the tree a
+# reviewer is given and the ground truth the scorer reads describing different
+# commits. A missing ref is a warning, since refs/cases/ is outside what a
+# default fetch brings and a clone can legitimately lack it.
+function check_case_refs() {
+  local corpus="${1}"
+  local case_id="${2}"
+  local base_sha="${3}"
+  local head_sha="${4}"
+  local side expected tip
+
+  for side in base head; do
+    if [[ "${side}" == "base" ]]; then
+      expected="${base_sha}"
+    else
+      expected="${head_sha}"
+    fi
+
+    tip="$(case_ref_tip "${corpus}" "${case_id}" "${side}" || true)"
+    if [[ -z "${tip}" ]]; then
+      warning "${case_id}: no refs/cases/${case_id}/${side} in the corpus"
+    elif [[ "${tip}" != "${expected}" ]]; then
+      error "${case_id}: ${side} ref points at ${tip} but the file records ${expected}"
+    fi
+  done
+}
+
+# Line count of a blob at a commit, printed on stdout. awk rather than
+# `wc -l` because a file with no trailing newline makes wc undercount its last
+# line, which would put a legitimate final-line defect out of range.
+#
+# The content is captured before counting so a git failure is this function's
+# own non-zero return rather than a pipefail status that would abort the whole
+# run from inside the caller's command substitution.
+function blob_line_count() {
+  local corpus="${1}"
+  local commit="${2}"
+  local file="${3}"
+  local content
+
+  content="$(git -C "${corpus}" show "${commit}:${file}" 2> /dev/null)" || return 1
+  printf '%s\n' "${content}" | awk 'END { print NR }'
+}
+
+function check_defect_locations() {
+  local corpus="${1}"
+  local case_id="${2}"
+  local json_path="${3}"
+  local base_sha="${4}"
+  local head_sha="${5}"
+  local changed_files rows declared visited=0
+  local defect_id file line_start line_end line_count object_type
+
+  changed_files="$(git -C "${corpus}" diff --name-only "${base_sha}" "${head_sha}")" \
+    || {
+      error "${case_id}: could not diff BASE against HEAD"
+      return 0
+    }
+
+  # Read first and check the status. In a process substitution the shell never
+  # looks at jq's exit, so a filter error would be indistinguishable from a
+  # case with no defects and would pass as clean.
+  rows="$(jq -r '.defects[] | [.id, .file, .lines[0], .lines[1]] | @tsv' < "${json_path}")" \
+    || {
+      error "${case_id}: defects could not be read from defects.yaml"
+      return 0
+    }
+
+  declared="$(jq -r '.defects | length' < "${json_path}")" || declared=0
+
+  while IFS=$'\t' read -r defect_id file line_start line_end; do
+    [[ -n "${defect_id}" ]] || continue
+    defects_checked=$((defects_checked + 1))
+    visited=$((visited + 1))
+
+    # -e is true for a tree as well as a blob, and `git show` on a tree prints
+    # its listing, so a defect recorded against a directory would clear the
+    # range check and be reported later as a diff-membership problem instead.
+    object_type="$(git -C "${corpus}" cat-file -t "${head_sha}:${file}" 2> /dev/null || true)"
+    if [[ "${object_type}" != "blob" ]]; then
+      error "${case_id}/${defect_id}: ${file} is not a file at HEAD"
+      continue
+    fi
+
+    # The range is compared numerically, so a non-integer that reached here
+    # would make the comparison an arithmetic error. Inside an if condition
+    # that error reads as false and the check would be skipped in silence.
+    if [[ ! "${line_start}" =~ ^[0-9]+$ || ! "${line_end}" =~ ^[0-9]+$ ]]; then
+      error "${case_id}/${defect_id}: lines must be plain integers, got ${line_start} and ${line_end}"
+      continue
+    fi
+
+    line_count="$(blob_line_count "${corpus}" "${head_sha}" "${file}")" \
+      || {
+        error "${case_id}/${defect_id}: ${file} could not be read at HEAD"
+        continue
+      }
+    if [[ "${line_end}" -gt "${line_count}" ]]; then
+      error "${case_id}/${defect_id}: lines ${line_start} to ${line_end} fall outside ${file}, which has ${line_count} lines at HEAD"
+    fi
+
+    # A here-string rather than a pipe into grep -q: grep exits on its first
+    # match, and once the name list outgrows the pipe buffer printf takes
+    # SIGPIPE, which pipefail turns into a failed pipeline and a false finding.
+    if ! grep -qxF "${file}" <<< "${changed_files}"; then
+      error "${case_id}/${defect_id}: ${file} is not in the BASE..HEAD diff"
+    fi
+  done <<< "${rows}"
+
+  # The declared count against the visited count. This is what makes a case
+  # that silently contributed nothing visible, rather than leaving the summary
+  # to report a total nobody compares against anything.
+  if [[ "${visited}" -ne "${declared}" ]]; then
+    error "${case_id}: defects.yaml declares ${declared} defect(s) but ${visited} were checked"
+  fi
+}
+
+function check_case() {
+  local corpus="${1}"
+  local case_id="${2}"
+  local case_dir="${corpus}/cases/${case_id}"
+  local json_path="${WORK_DIR}/${case_id}.json"
+  local base_sha head_sha problems yq_error structural_ok="yes"
+
+  if [[ ! "${case_id}" =~ ${CASE_ID_PATTERN} ]]; then
+    error "${case_id}: case ID is not of the form NNN-repo-slug"
+    return 0
+  fi
+
+  cases_checked=$((cases_checked + 1))
+
+  if ! check_case_files "${case_dir}" "${case_id}"; then
+    return 0
+  fi
+
+  base_sha="$(sha_from_file "${case_dir}/BASE" || true)"
+  head_sha="$(sha_from_file "${case_dir}/HEAD" || true)"
+  if [[ -z "${base_sha}" ]]; then
+    error "${case_id}: BASE must hold exactly one 40-character hex SHA"
+    structural_ok="no"
+  fi
+  if [[ -z "${head_sha}" ]]; then
+    error "${case_id}: HEAD must hold exactly one 40-character hex SHA"
+    structural_ok="no"
+  fi
+
+  # yq's own message names the line, and it is the only thing that does, so it
+  # is carried into the finding. Reporting every failure as invalid YAML would
+  # also blame the file for an unwritable scratch directory.
+  if ! yq_error="$(yq -o=json '.' "${case_dir}/defects.yaml" 2>&1 > "${json_path}")"; then
+    error "${case_id}: could not read defects.yaml: ${yq_error//$'\n'/ }"
+    return 0
+  fi
+
+  if ! problems="$(jq -r \
+    --arg case_id "${case_id}" \
+    --argjson sources "${SOURCES_JSON}" \
+    --argjson classes "${CLASSES_JSON}" \
+    --argjson severities "${SEVERITIES_JSON}" \
+    "${STRUCTURE_FILTER}" < "${json_path}" 2>&1)"; then
+    error "${case_id}: the schema filter could not be applied: ${problems//$'\n'/ }"
+    return 0
+  fi
+
+  if [[ -n "${problems}" ]]; then
+    while IFS= read -r problem; do
+      error "${case_id}: ${problem}"
+    done <<< "${problems}"
+    structural_ok="no"
+  fi
+
+  if [[ "${structural_ok}" == "yes" ]]; then
+    if ! git -C "${corpus}" cat-file -e "${base_sha}^{commit}" 2> /dev/null \
+      || ! git -C "${corpus}" cat-file -e "${head_sha}^{commit}" 2> /dev/null; then
+      error "${case_id}: BASE or HEAD is not in the corpus repository; fetch refs/cases/*"
+    elif ! git -C "${corpus}" merge-base --is-ancestor "${base_sha}" "${head_sha}"; then
+      error "${case_id}: BASE is not an ancestor of HEAD, so a three-dot diff would be wrong"
+    else
+      check_case_refs "${corpus}" "${case_id}" "${base_sha}" "${head_sha}"
+      check_defect_locations "${corpus}" "${case_id}" "${json_path}" "${base_sha}" "${head_sha}"
+    fi
+  fi
+}
+
+function main() {
+  local corpus="${REVIEW_CASE_CORPUS_DIR:-}"
+  local -a requested=()
+  local case_id case_dir
+
+  while [[ ${#} -gt 0 ]]; do
+    case "${1}" in
+      --corpus)
+        [[ ${#} -ge 2 ]] || die "--corpus needs a directory" "${E_USAGE}"
+        corpus="${2}"
+        shift 2
+        ;;
+      -h | --help)
+        usage
+        return 0
+        ;;
+      -*)
+        die "unknown option ${1}" "${E_USAGE}"
+        ;;
+      *)
+        requested+=("${1}")
+        shift
+        ;;
+    esac
+  done
+
+  require_tools
+  validate_corpus_dir "${corpus}"
+
+  trap cleanup EXIT
+  WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/validate-corpus.XXXXXX")" \
+    || die "could not create a scratch directory under ${TMPDIR:-/tmp}" "${E_USAGE}"
+
+  if [[ ${#requested[@]} -gt 0 ]]; then
+    for case_id in "${requested[@]}"; do
+      [[ -d "${corpus}/cases/${case_id}" ]] \
+        || die "no case ${case_id} in ${corpus}/cases" "${E_USAGE}"
+      check_case "${corpus}" "${case_id}"
+    done
+  else
+    for case_dir in "${corpus}"/cases/*/; do
+      [[ -d "${case_dir}" ]] || continue
+      case_id="$(basename "${case_dir}")"
+      check_case "${corpus}" "${case_id}"
+    done
+  fi
+
+  # The counts travel with the verdict so an empty corpus, or a glob that
+  # matched nothing, reads as a zero rather than as a pass.
+  # Before the summary, because a corpus with no cases is a misconfiguration
+  # rather than a result, and a count nobody consumes is not a safeguard. A
+  # wrong --corpus, or a clone that never fetched the cases, would otherwise
+  # report a clean pass having checked nothing.
+  if [[ "${cases_checked}" -eq 0 ]]; then
+    die "no cases found under ${corpus}/cases; nothing was validated" "${E_USAGE}"
+  fi
+
+  echo "Review corpus: ${cases_checked} case(s), ${defects_checked} defect(s), ${warnings} warning(s)."
+
+  if [[ "${errors}" -gt 0 ]]; then
+    echo "${errors} corpus validation error(s) found."
+    return "${E_FINDING}"
+  fi
+
+  if [[ "${defects_checked}" -eq 0 ]]; then
+    die "checked ${cases_checked} case(s) and zero defects; refusing to report a pass" "${E_USAGE}"
+  fi
+
+  echo "All review corpus cases are valid."
+}
+
+main "$@"

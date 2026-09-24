@@ -1,0 +1,725 @@
+#!/usr/bin/env bash
+# resolve-copilot-threads — Fetch, reply to, and resolve Copilot PR review threads
+# Author: Christopher Boone
+# Date: 2026-02-06
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+# =============================================================================
+# Copilot author detection heuristics
+# =============================================================================
+# Author logins matched unconditionally:
+#   - copilot-pull-request-reviewer: Copilot code review bot (primary)
+#   - copilot-pull-request-reviewer[bot]: same bot as reported by the REST API
+#   - copilot: Legacy/alternative Copilot login
+#   - github-copilot[bot]: GitHub Copilot bot account
+#
+# Author logins matched with body signature verification:
+#   - github-actions[bot]: Copilot sometimes posts via GitHub Actions;
+#     matched only when the comment body starts with a severity tag
+#     (e.g., [nitpick], [suggestion], [important], [critical], [note])
+#
+# GraphQL and REST disagree on the suffix for the same account: GraphQL
+# author.login reports "copilot-pull-request-reviewer" while REST user.login
+# reports "copilot-pull-request-reviewer[bot]". Both forms are listed so the
+# same constant serves the thread fetch and the review-body fetch.
+# =============================================================================
+readonly COPILOT_DIRECT_LOGINS='["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"]'
+readonly COPILOT_ACTIONS_LOGIN="github-actions[bot]"
+readonly COPILOT_SEVERITY_PATTERN="^\\s*\\[(nitpick|suggestion|important|critical|note)\\]"
+
+function usage() {
+  cat << USAGE_TEXT
+Usage: ${SCRIPT_NAME} <command> [arguments]
+
+Manage GitHub Copilot PR review feedback: threads via GraphQL, review-body
+findings via REST.
+
+Commands:
+  fetch <owner> <repo> <pr_number>                    Fetch unresolved Copilot threads
+  fetch-reviews <owner> <repo> <pr_number>            Fetch Copilot review-body findings
+  parse-reviews                                        Normalize review JSON read from stdin
+  resolve <thread_id>                                  Resolve a review thread
+  reply <thread_id> [--body-file <path>]               Reply to a review thread
+  reply-and-resolve <thread_id> [--body-file <path>]   Reply and resolve
+
+Options:
+  -h, --help    Show this help
+
+The reply and reply-and-resolve commands read the reply body from --body-file
+or stdin if --body-file is not specified.
+
+Copilot files some findings in a review body instead of an inline thread, where
+they have no thread id and cannot be replied to or resolved. fetch-reviews
+surfaces those. parse-reviews is the same normalization over review JSON on
+stdin, for testing and for reprocessing a saved response.
+
+Examples:
+  ${SCRIPT_NAME} fetch octocat hello-world 42
+  ${SCRIPT_NAME} fetch-reviews octocat hello-world 42
+  gh api repos/octocat/hello-world/pulls/42/reviews | ${SCRIPT_NAME} parse-reviews
+  ${SCRIPT_NAME} resolve PRRT_kwDONZ...
+  echo "Explanation here" | ${SCRIPT_NAME} reply PRRT_kwDONZ...
+  ${SCRIPT_NAME} reply PRRT_kwDONZ... --body-file response.md
+  ${SCRIPT_NAME} reply-and-resolve PRRT_kwDONZ... --body-file response.md
+USAGE_TEXT
+}
+
+function die() {
+  echo "Error: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function require_jq() {
+  if ! command -v jq > /dev/null 2>&1; then
+    die "jq is required but not found. Install it: https://jqlang.github.io/jq/download/"
+  fi
+}
+
+# Checks the GitHub CLI is installed and authenticated. Kept separate from
+# require_jq so parse-reviews, which only transforms JSON on stdin, runs in
+# environments with no GitHub credentials (the test suite, for example).
+function require_gh() {
+  if ! command -v gh > /dev/null 2>&1; then
+    die "gh (GitHub CLI) is required but not found. Install it: https://cli.github.com"
+  fi
+
+  if ! gh auth status > /dev/null 2>&1; then
+    die "Not authenticated with GitHub. Run: gh auth login"
+  fi
+}
+
+function check_dependencies() {
+  require_gh
+  require_jq
+}
+
+# Reads reply body from --body-file argument or stdin.
+# Arguments:
+#   [--body-file <path>] - Read body from file (optional)
+# Outputs:
+#   Reply body text to stdout
+function read_body() {
+  case "$#" in
+    0)
+      cat
+      ;;
+    2)
+      if [[ "$1" != "--body-file" ]]; then
+        die "Invalid argument '$1'. Expected '--body-file <path>' or no arguments."
+      fi
+      if [[ -z "${2:-}" ]]; then
+        die "Missing path after --body-file"
+      fi
+      if [[ ! -f "$2" ]]; then
+        die "File not found: $2"
+      fi
+      cat -- "$2"
+      ;;
+    *)
+      die "Invalid arguments to read_body. Expected no arguments or '--body-file <path>'."
+      ;;
+  esac
+}
+
+# Sends a reply to a review thread via GraphQL mutation.
+# Arguments:
+#   $1 - Thread ID (e.g., PRRT_kwDONZ...)
+#   $2 - Reply body text
+# Outputs:
+#   Comment ID to stdout
+function send_reply() {
+  local thread_id="${1}"
+  local body="${2}"
+
+  local response
+  local comment_id
+
+  # shellcheck disable=SC2016
+  # $variables in the query are GraphQL references, not shell variables
+  response="$(
+    gh api graphql \
+      -f threadId="${thread_id}" \
+      --raw-field body="${body}" \
+      -f query='
+        mutation($threadId: ID!, $body: String!) {
+          addPullRequestReviewThreadReply(input: {
+            pullRequestReviewThreadId: $threadId,
+            body: $body
+          }) {
+            comment { id }
+          }
+        }
+      '
+  )"
+
+  if jq -e '.errors and (.errors | length > 0)' > /dev/null <<< "${response}"; then
+    local error_message
+    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<< "${response}")"
+    die "Failed to send reply: ${error_message}"
+  fi
+
+  comment_id="$(jq -r '.data.addPullRequestReviewThreadReply.comment.id // empty' <<< "${response}")"
+  if [[ -z "${comment_id}" || "${comment_id}" == "null" ]]; then
+    die "Failed to send reply: missing comment id in GraphQL response"
+  fi
+
+  printf '%s\n' "${comment_id}"
+}
+
+# Fetches all unresolved Copilot-authored review threads for a PR.
+# Uses gh --paginate --slurp for automatic cursor-based pagination.
+# Arguments:
+#   $1 - Repository owner
+#   $2 - Repository name
+#   $3 - Pull request number
+# Outputs:
+#   JSON array of unresolved Copilot threads to stdout
+function do_fetch() {
+  local owner="${1}"
+  local repo="${2}"
+  local pr_number="${3}"
+
+  local response
+
+  # shellcheck disable=SC2016
+  # $variables in the query are GraphQL references, not shell variables
+  response="$(
+    gh api graphql \
+      --paginate \
+      --slurp \
+      -f owner="${owner}" \
+      -f repo="${repo}" \
+      -F pr_number="${pr_number}" \
+      -f query='
+        query($owner: String!, $repo: String!, $pr_number: Int!, $endCursor: String) {
+          repository(owner: $owner, name: $repo) {
+            pullRequest(number: $pr_number) {
+              reviewThreads(first: 100, after: $endCursor) {
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+                nodes {
+                  id
+                  isResolved
+                  isOutdated
+                  path
+                  line
+                  originalLine
+                  startLine
+                  originalStartLine
+                  comments(first: 20) {
+                    nodes {
+                      author { login }
+                      body
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      '
+  )"
+
+  # Check for GraphQL errors before running the normalization filter
+  local graphql_error
+  graphql_error="$(
+    printf '%s' "${response}" \
+      | jq -r 'map(.errors? // []) | add | .[0].message? // empty'
+  )"
+
+  if [[ -n "${graphql_error}" ]]; then
+    die "GraphQL error while fetching threads: ${graphql_error}"
+  fi
+
+  # Validate that the response contains the expected data shape.
+  # Invalid owner/repo/PR number can return null data without GraphQL errors.
+  local null_path
+  null_path="$(
+    printf '%s' "${response}" \
+      | jq -r '
+          [.[] | .data as $d |
+            if $d.repository == null then "repository"
+            elif $d.repository.pullRequest == null then "pullRequest"
+            else empty
+            end
+          ] | first // empty
+        '
+  )"
+
+  if [[ -n "${null_path}" ]]; then
+    die "Invalid response: ${null_path} is null. Verify the owner, repo, and PR number are correct."
+  fi
+
+  printf '%s' "${response}" \
+    | jq \
+      --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" \
+      --arg actions_login "${COPILOT_ACTIONS_LOGIN}" \
+      --arg severity_pattern "${COPILOT_SEVERITY_PATTERN}" \
+      '
+        [
+          .[].data.repository.pullRequest.reviewThreads.nodes[]
+          | select(.isResolved == false)
+          | select(.comments.nodes | length > 0)
+          | .comments.nodes[0] as $first
+          | ($first.author.login? // "") as $login
+          | select(
+              ($direct_logins | any(. == $login))
+              or (
+                $login == $actions_login
+                and (($first.body? // "") | test($severity_pattern; "i"))
+              )
+            )
+          | (.line // .originalLine // .startLine // .originalStartLine) as $ln
+          | {
+              id: .id,
+              path: .path,
+              location: (.path + ":" + (if $ln then ($ln | tostring) else "(no-line)" end)),
+              isOutdated: .isOutdated,
+              comments: [.comments.nodes[] | {author: (.author.login? // ""), body: .body}]
+            }
+        ]
+      '
+}
+
+# =============================================================================
+# Review-body findings
+# =============================================================================
+# Copilot does not always open an inline thread. When it declines to comment on
+# a line the latest push did not touch, it files the finding in the review body
+# under a "suppressed comments" section instead. Those findings have no thread
+# id, so they cannot be replied to or resolved, and a reviewThreads query cannot
+# see them at all.
+#
+# Three body layouts have shipped so far. They differ only in how the section is
+# announced:
+#
+#   <summary>Comments suppressed due to low confidence (N)</summary>
+#   <summary>Suppressed comments (N)</summary>
+#   ### Suppressed comments (N)
+#
+# The legacy interior is stable across all three: a bold-only
+# "**path:line**" heading, then the finding prose, then an optional fenced
+# context block. The section ends at a details tag or at the
+# "- **Files reviewed:" trailer. ccr-overview-v2 adds nested
+# "Previously missed" details and line-less findings in file-summary tables;
+# those layouts are parsed separately below.
+#
+# The raw legacy slice, complete review body, and structured parse are emitted.
+# hasFormatDrift covers both an unparsed legacy section and a non-clean v2
+# verdict that neither structured findings nor open inline threads explain,
+# keeping a format change visible instead of silently reporting no feedback.
+# =============================================================================
+
+# Normalizes an array of GitHub review objects into Copilot review-body findings.
+# Arguments:
+#   None; reads REST review JSON on stdin
+# Outputs:
+#   JSON array of Copilot reviews with parsed findings to stdout
+function do_parse_reviews() {
+  local input
+  input="$(cat)"
+
+  # Validate the shape before filtering. A failed gh call, or a hand-piped
+  # error payload, otherwise surfaces as an opaque jq indexing error.
+  local input_type
+  if ! input_type="$(jq -r 'type' 2> /dev/null <<< "${input}")"; then
+    die "Invalid review JSON: could not parse input as JSON."
+  fi
+
+  if [[ "${input_type}" != "array" ]]; then
+    die "Invalid review JSON: expected an array of review objects, got ${input_type}. Pass the output of: gh api repos/OWNER/REPO/pulls/N/reviews"
+  fi
+
+  if ! jq -e 'all(type == "object")' > /dev/null <<< "${input}"; then
+    die "Invalid review JSON: every element must be a review object."
+  fi
+
+  # shellcheck disable=SC2016
+  # $variables in the filter are jq bindings, not shell variables
+  jq \
+    --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" \
+    '
+      def trim: sub("^[[:space:]]+"; "") | sub("[[:space:]]+$"; "");
+
+      def normalize_path: gsub("\u200b"; "");
+
+      # The first level-3 heading. On ccr-overview-v2 bodies this is the
+      # verdict the drift check compares; older layouts can yield a section
+      # heading such as "### Reviewed changes", or null. Trimming drops a
+      # trailing carriage return so a CRLF body still compares equal.
+      def verdict:
+        split("\n")
+        | map(select(test("^### ")) | trim)
+        | first // null;
+
+      def is_overview_v2: contains("<!-- ccr-overview-v2 -->");
+
+      # ccr-overview-v2 lists the inline threads that were open when the
+      # review was written under an "Open (N)" summary. Those threads explain
+      # a non-clean verdict by themselves, and the thread fetch reports them,
+      # so a review whose only findings are inline threads is not drift.
+      def lists_open_threads:
+        test("<summary>(<[^>]+>)*Open \\([1-9][0-9]*\\)");
+
+      # Copilot puts its verdict heading and lead paragraph before the first
+      # <details> block. The "Once you have addressed..." call to action is
+      # boilerplate on every review and carries no finding.
+      def headline:
+        split("\n")
+        | (map(test("^<details>")) | index(true)) as $stop
+        | (if $stop then .[0:$stop] else . end)
+        | map(select(test("^\\*Once you") | not))
+        | join("\n")
+        | trim;
+
+      # The section match is deliberately loose: almost any line mentioning the
+      # phrase opens the slice, rather than requiring a <summary> tag or a
+      # heading. Anchoring on the exact wrapper would be more precise, but a
+      # fourth layout would then slip through as an empty result, which is the
+      # silent miss this whole command exists to prevent. Loose matching can
+      # instead over-capture when a review quotes the phrase in prose, and that
+      # surfaces as a visible drift report. Failing loud beats failing quiet.
+      #
+      # Table rows are the one exception. Copilot opens most reviews with a
+      # "File summaries" table describing every changed file, so any PR that
+      # touches code about suppressed comments gets a row quoting the phrase.
+      # That fires on every such review, and a section is never announced from
+      # inside a table, so excluding rows costs no real coverage.
+      def announces_section($line):
+        ($line | test("^[[:space:]]*\\|") | not)
+        and ($line | ascii_downcase | test("suppressed comments|comments suppressed"));
+
+      # Derived from the body rather than from the slice. Deriving it from the
+      # slice would report false whenever a section is announced but captures
+      # no interior lines (an empty section, or a marker sitting directly above
+      # the trailer), which silently disarms the drift detector in exactly the
+      # case it exists to catch.
+      def has_suppressed_marker:
+        split("\n") | any(announces_section(.));
+
+      def suppressed_slice:
+        split("\n")
+        | reduce .[] as $line ({inside: false, out: []};
+            if (.inside | not) and announces_section($line)
+            # The announcing line is kept so the slice is never empty when a
+            # section exists, and so a caller reading it can see what opened it.
+            then .inside = true | .out += [$line]
+            elif .inside and ($line | test("^</?details>|^- \\*\\*Files reviewed:"))
+            then .inside = false
+            elif .inside
+            then .out += [$line]
+            else .
+            end)
+        | .out
+        | join("\n")
+        | trim;
+
+      # The trailing $ anchor is load-bearing: it keeps the
+      # "**Previously missed (1)** - in code that..." subheading from parsing
+      # as a finding, since that line continues past the closing asterisks.
+      def suppressed_findings:
+        split("\n")
+        | reduce .[] as $line ({current: null, out: []};
+            if $line | test("^\\*\\*[^*]+:[0-9]+\\*\\*$")
+            then (if .current then .out += [.current] else . end)
+              | .current = {heading: ($line | ltrimstr("**") | rtrimstr("**")), lines: []}
+            elif .current != null
+            then .current.lines += [$line]
+            else .
+            end)
+        | (if .current then .out + [.current] else .out end)
+        | map(
+            (.heading | split(":")) as $parts
+            | {
+                location: .heading,
+                path: ($parts[0:-1] | join(":")),
+                line: ($parts[-1] | tonumber),
+                severity: null,
+                body: (.lines | join("\n") | trim)
+              }
+          );
+
+      # ccr-overview-v2 nests each "Previously missed" finding in its own
+      # details block. The location is inline code rather than a bold heading,
+      # and GitHub inserts U+200B after path separators for display wrapping.
+      # Scanning the complete body also avoids truncating the outer details at
+      # the first nested closing tag. Open and resolved entries do not have
+      # this nested summary-plus-location shape, so they cannot match.
+      def previously_missed_findings:
+        [
+          scan(
+            "<summary><picture>.*?<img [^>]*alt=\"(?<severity>[^\"]+) severity\"[^>]*>.*?</picture> (?<title>.*?)</summary>[[:space:]]+`(?<location>[^`]+):(?<line>[0-9]+)`[[:space:]]+(?<body>.*?)</details>";
+            "gms"
+          )
+          | {
+              location: ((.[2] | normalize_path) + ":" + .[3]),
+              path: (.[2] | normalize_path),
+              line: (.[3] | tonumber),
+              severity: .[0],
+              body: ((.[1] + "\n\n" + .[4]) | trim)
+            }
+        ];
+
+      # A newer ccr-overview-v2 variant appends line-less findings to a file
+      # summary cell as "<Severity> (<N> votes): <text>" items separated by
+      # "; " and ending with ".". Each item runs from its own severity token to
+      # the next one, so text that contains a semicolon or lacks the final
+      # period is kept rather than dropped. Any capitalized word followed by a
+      # vote count is a severity token, so a severity name not seen before
+      # still parses. The first token opens the first item wherever the file
+      # description ends; every later token must follow the "; " separator, so
+      # prose such as "Nit (1 vote):" inside a finding stays in its text rather
+      # than splitting it into a false finding. Joining every cell after the
+      # path keeps escaped pipes inside the summary, and they are unescaped to
+      # the text GitHub renders. Restrict this parser to marked v2 bodies so
+      # ordinary file-summary tables remain negative controls.
+      def table_findings:
+        [
+          split("\n")[]
+          | select(test("^[[:space:]]*\\|[[:space:]]*`[^`]+`[[:space:]]*\\|"))
+          | split("|") as $cells
+          | ($cells[1] | trim | ltrimstr("`") | rtrimstr("`") | normalize_path) as $path
+          | ($cells[2:-1] | join("|") | gsub("\\\\\\|"; "|") | trim) as $summary
+          | [
+              [$summary | match("\\b(?<severity>[A-Z][A-Za-z]*) \\([0-9]+ votes?\\): "; "g")]
+              | to_entries[]
+              | select(.key == 0 or $summary[(.value.offset - 2):.value.offset] == "; ")
+              | .value
+            ] as $items
+          | range(0; $items | length) as $i
+          | $items[$i] as $item
+          | ($items[$i + 1].offset // ($summary | length)) as $end
+          | {
+              location: $path,
+              path: $path,
+              line: null,
+              severity: $item.captures[0].string,
+              body: (
+                $summary[($item.offset + $item.length):$end]
+                | trim
+                | sub(";$"; "")
+                | sub("\\.$"; "")
+                | trim
+              )
+            }
+        ];
+
+      [
+        .[]
+        # Safe access, matching the thread path. A null or absent user already
+        # yields no match, but a malformed non-object user would otherwise abort
+        # the whole run rather than skipping one review.
+        #
+        # Only the direct logins apply here. The github-actions[bot] heuristic
+        # the thread fetch uses keys on a comment body opening with a severity
+        # tag, and review bodies open with a verdict heading instead, so it has
+        # nothing to match on.
+        | select((.user.login? // "") as $login | $direct_logins | any(. == $login))
+        | select((.body // "") != "")
+        | (.body | suppressed_slice) as $slice
+        | (.body | verdict) as $verdict
+        | (.body | is_overview_v2) as $is_v2
+        | ($slice | suppressed_findings) as $suppressed_findings
+        | (if $is_v2 then (.body | previously_missed_findings) else [] end) as $missed_findings
+        | (if $is_v2 then (.body | table_findings) else [] end) as $table_findings
+        | ($suppressed_findings + $missed_findings + $table_findings) as $findings
+        | (.body | has_suppressed_marker) as $has_suppressed_marker
+        | ($is_v2 and (.body | lists_open_threads)) as $lists_open_threads
+        | {
+            id: .id,
+            url: .html_url,
+            submittedAt: .submitted_at,
+            headline: (.body | headline),
+            verdict: $verdict,
+            hasSuppressedMarker: $has_suppressed_marker,
+            hasFormatDrift: (
+              ($findings | length) == 0
+              and (
+                $has_suppressed_marker
+                or (
+                  $is_v2
+                  and $verdict != "### 🟢 Approval recommended"
+                  and ($lists_open_threads | not)
+                )
+              )
+            ),
+            suppressed: $slice,
+            reviewBody: .body,
+            findings: $findings
+          }
+      ]
+    ' <<< "${input}"
+}
+
+# Fetches Copilot review bodies for a PR and extracts their findings.
+# Arguments:
+#   $1 - Repository owner
+#   $2 - Repository name
+#   $3 - Pull request number
+# Outputs:
+#   JSON array of Copilot reviews with parsed findings to stdout
+function do_fetch_reviews() {
+  local owner="${1}"
+  local repo="${2}"
+  local pr_number="${3}"
+
+  # gh merges paginated REST array responses into a single array, so the
+  # normalizer receives one flat list of reviews.
+  # gh writes its own diagnostic to stderr, which passes through untouched, so
+  # this message adds the request context rather than guessing at the cause.
+  # A wrong owner, repo, or PR number is only one possibility; missing token
+  # scopes, unauthorized SSO, and rate limiting all land here too.
+  local response
+  if ! response="$(gh api --paginate "repos/${owner}/${repo}/pulls/${pr_number}/reviews")"; then
+    die "Failed to fetch reviews for ${owner}/${repo}#${pr_number}. See the gh error above for the cause."
+  fi
+
+  do_parse_reviews <<< "${response}"
+}
+
+# Resolves a review thread via GraphQL mutation.
+# Arguments:
+#   $1 - Thread ID (e.g., PRRT_kwDONZ...)
+# Outputs:
+#   "true" on success to stdout
+function do_resolve() {
+  local thread_id="${1}"
+
+  local response
+
+  # shellcheck disable=SC2016
+  # $variables in the query are GraphQL references, not shell variables
+  response="$(
+    gh api graphql \
+      -f threadId="${thread_id}" \
+      -f query='
+        mutation($threadId: ID!) {
+          resolveReviewThread(input: {threadId: $threadId}) {
+            thread { isResolved }
+          }
+        }
+      '
+  )"
+
+  # Check for GraphQL errors before extracting the result
+  if jq -e '.errors and (.errors | length > 0)' > /dev/null <<< "${response}"; then
+    local error_message
+    error_message="$(jq -r '.errors[0].message // "unknown GraphQL error"' <<< "${response}")"
+    die "Failed to resolve review thread ${thread_id}: ${error_message}"
+  fi
+
+  local is_resolved
+  is_resolved="$(jq -r '.data.resolveReviewThread.thread.isResolved' <<< "${response}")"
+
+  if [[ "${is_resolved}" != "true" ]]; then
+    die "Failed to resolve review thread ${thread_id}: isResolved=${is_resolved}"
+  fi
+
+  echo "${is_resolved}"
+}
+
+# Replies to a review thread via GraphQL mutation.
+# Reads body from --body-file or stdin.
+# Arguments:
+#   $1 - Thread ID
+#   [--body-file <path>] - Read body from file; reads from stdin otherwise
+# Outputs:
+#   Comment ID to stdout
+function do_reply() {
+  local thread_id="${1}"
+  shift
+
+  local body
+  body=$(read_body "$@")
+
+  send_reply "${thread_id}" "${body}"
+}
+
+# Replies to and resolves a review thread.
+# Reads body from --body-file or stdin.
+# Arguments:
+#   $1 - Thread ID
+#   [--body-file <path>] - Read body from file; reads from stdin otherwise
+# Outputs:
+#   "true" on success to stdout (consistent with do_resolve)
+function do_reply_and_resolve() {
+  local thread_id="${1}"
+  shift
+
+  local body
+  body=$(read_body "$@")
+
+  send_reply "${thread_id}" "${body}" > /dev/null
+
+  do_resolve "${thread_id}"
+}
+
+function main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
+  local command="${1:-}"
+  if [[ $# -gt 0 ]]; then
+    shift
+  fi
+
+  # Validate command before checking dependencies so that missing/unknown
+  # commands show usage errors rather than confusing dependency failures.
+  case "${command}" in
+    fetch | fetch-reviews | resolve | reply | reply-and-resolve)
+      check_dependencies
+      ;;
+    parse-reviews)
+      # Reads stdin and touches no GitHub API, so it needs neither the CLI nor
+      # credentials.
+      require_jq
+      ;;
+    "")
+      usage
+      exit 1
+      ;;
+    *)
+      die "Unknown command: ${command}. Use '${SCRIPT_NAME} --help' for usage."
+      ;;
+  esac
+
+  case "${command}" in
+    fetch)
+      [[ $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} fetch <owner> <repo> <pr_number>"
+      do_fetch "$1" "$2" "$3"
+      ;;
+    fetch-reviews)
+      [[ $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} fetch-reviews <owner> <repo> <pr_number>"
+      do_fetch_reviews "$1" "$2" "$3"
+      ;;
+    parse-reviews)
+      [[ $# -ne 0 ]] && die "Usage: ${SCRIPT_NAME} parse-reviews (reads review JSON on stdin)"
+      do_parse_reviews
+      ;;
+    resolve)
+      [[ $# -ne 1 ]] && die "Usage: ${SCRIPT_NAME} resolve <thread_id>"
+      do_resolve "$1"
+      ;;
+    reply)
+      [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply <thread_id> [--body-file <path>]"
+      do_reply "$@"
+      ;;
+    reply-and-resolve)
+      [[ $# -ne 1 && $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} reply-and-resolve <thread_id> [--body-file <path>]"
+      do_reply_and_resolve "$@"
+      ;;
+    *)
+      # Unreachable: the validation case above dies on unknown commands.
+      die "Unknown command: ${command}"
+      ;;
+  esac
+}
+
+main "$@"

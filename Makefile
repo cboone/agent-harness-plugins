@@ -14,6 +14,7 @@ SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u STUB_GIT_BRANCHES -u STUB_GIT_INVALID_REF -u STUB_GIT_WORKTREE_PORCELAIN \
 	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES \
 	-u TZDIR -u WORKTREE_RESOURCES_FILE -u REVIEW_CHECKLISTS_DIR \
+	-u REVIEW_CASE_CORPUS_DIR \
 	-u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_SYSTEM_SKILL_RESERVE_BYTES
 
 # Every scrut test resolves the script or fixture it exercises through one of
@@ -26,9 +27,14 @@ SCRUT_ENV := \
 	CHECK_CROSS_REFERENCES_BIN="$(CURDIR)/bin/check-cross-references" \
 	BUILD_REVIEW_CHECKLISTS_BIN="$(CURDIR)/bin/build-review-checklists" \
 	REVIEW_CHECKLIST_FIXTURE_BIN="$(CURDIR)/tests/fixtures/review-checklist-fixture" \
+	BUILD_CODEX_MARKETPLACE_BIN="$(CURDIR)/bin/build-codex-marketplace" \
+	CODEX_TRANSLATION_FIXTURE_BIN="$(CURDIR)/tests/fixtures/codex-translation-fixture" \
 	COMPOSE_ISSUE_PROMPT_BIN="$(CURDIR)/plugins/address-issue-in-worktree/scripts/compose-issue-prompt" \
 	CREATE_WORKTREE_COMPOSE_ISSUE_PROMPT_BIN="$(CURDIR)/plugins/create-worktree/scripts/compose-issue-prompt" \
 	LIST_SHELL_SCRIPTS_BIN="$(CURDIR)/bin/list-shell-scripts" \
+	MATERIALIZE_CASE_BIN="$(CURDIR)/bin/materialize-case" \
+	VALIDATE_CORPUS_BIN="$(CURDIR)/bin/validate-corpus" \
+	REVIEW_CORPUS_FIXTURE_BIN="$(CURDIR)/tests/fixtures/review-corpus-fixture" \
 	REPO_ROOT="$(CURDIR)" \
 	COPILOT_REVIEW_DATA_DIR="$(CURDIR)/tests/data/copilot-reviews" \
 	CROSS_REFERENCE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/cross-reference-fixture" \
@@ -45,6 +51,7 @@ SCRUT_ENV := \
 	REPORT_BOARD_BIN="$(CURDIR)/plugins/publish-report-board/scripts/report-board" \
 	REPORT_BOARD_DATA_DIR="$(CURDIR)/tests/data/report-board" \
 	RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads" \
+	MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/monitor-pr/scripts/resolve-copilot-threads" \
 	TMUX_STUB_BIN="$(CURDIR)/tests/fixtures/tmux-stub" \
 	UNIX_SOCKET_FIXTURE_BIN="$(CURDIR)/tests/fixtures/create-unix-socket" \
 	WORKMUX_STUB_BIN="$(CURDIR)/tests/fixtures/workmux-stub"
@@ -55,7 +62,7 @@ SHELL_SCRIPTS = $(shell ./bin/list-shell-scripts)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help lint lint-markdown lint-shell format validate build test-scrut test-scrut-update test-all
+.PHONY: help lint lint-markdown lint-shell format validate validate-corpus build test-scrut test-scrut-update test-all
 
 help:
 	@echo "Targets:"
@@ -64,12 +71,14 @@ help:
 	@echo "  lint-shell         shellcheck + shfmt on every Bash script"
 	@echo "  format             Auto-fix Markdown and formatting"
 	@echo "  validate           Validate JSON and plugin structure"
+	@echo "  validate-corpus    Validate the review case corpus (needs REVIEW_CASE_CORPUS_DIR)"
 	@echo "  build              Regenerate bundled review checklists and the Codex and OpenCode mirrors"
 	@echo "  test-scrut         Run the scrut suites"
 	@echo "  test-scrut-update  Re-record scrut expectations"
 	@echo "  test-all           lint + validate + test-scrut"
 	@echo ""
 	@echo "Requires: yarn (via corepack), shellcheck, shfmt, actionlint, scrut."
+	@echo "validate-corpus additionally needs jq and mikefarah yq v4."
 
 lint: lint-markdown lint-shell
 	@command -v actionlint > /dev/null || { echo "actionlint is required: https://github.com/rhysd/actionlint" >&2; exit 1; }
@@ -91,6 +100,12 @@ format:
 validate:
 	bin/validate-json
 	bin/validate-plugins
+
+# Deliberately outside validate and test-all. The corpus lives in a separate
+# repository, so it is absent on most checkouts and in CI, and a merge gate that
+# depends on it would fail for everyone who has not cloned it.
+validate-corpus:
+	bin/validate-corpus
 
 # The checklists come first: the Codex mirror copies plugins/, copies included.
 build:

@@ -35,15 +35,15 @@ jobs:
       # pipeline stage under a shell without pipefail, so a failed download was
       # caught only when tar happened to choke on the truncated stream.
       - name: Set up ShellCheck
-        uses: cboone/gh-actions/actions/set-up-shellcheck@0d53592f40b487f01b26b374e539c517fa9c570f # v3.2.0
+        uses: cboone/gh-actions/actions/set-up-shellcheck@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
       - name: Set up shfmt
-        uses: cboone/gh-actions/actions/set-up-shfmt@0d53592f40b487f01b26b374e539c517fa9c570f # v3.2.0
+        uses: cboone/gh-actions/actions/set-up-shfmt@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
       # Runs at ShellCheck's default severity, so the optional checks enabled in
       # .shellcheckrc are actually enforced, and covers every Bash script in the
       # repository via bin/list-shell-scripts rather than a fixed glob.
       - name: ShellCheck and shfmt
         run: make lint-shell
-      - uses: cboone/gh-actions/actions/set-up-actionlint@0d53592f40b487f01b26b374e539c517fa9c570f # v3.2.0
+      - uses: cboone/gh-actions/actions/set-up-actionlint@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
       - name: Actionlint
         run: actionlint
       - name: Validate JSON syntax
@@ -68,7 +68,7 @@ jobs:
 
   test-scrut:
     name: Scrut tests
-    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@17f94b08428565213e70ae19c37a7be894a172d2 # v3.1.1
+    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
     # Every value below must start with "./". scrut runs each testcase from a
     # temporary directory, and the reusable workflow rewrites only values
     # matching ./* into absolute paths before exporting them. A bare "." is left
@@ -83,6 +83,8 @@ jobs:
         CHECK_CROSS_REFERENCES_BIN=./bin/check-cross-references
         BUILD_REVIEW_CHECKLISTS_BIN=./bin/build-review-checklists
         REVIEW_CHECKLIST_FIXTURE_BIN=./tests/fixtures/review-checklist-fixture
+        BUILD_CODEX_MARKETPLACE_BIN=./bin/build-codex-marketplace
+        CODEX_TRANSLATION_FIXTURE_BIN=./tests/fixtures/codex-translation-fixture
         COMPOSE_ISSUE_PROMPT_BIN=./plugins/address-issue-in-worktree/scripts/compose-issue-prompt
         CREATE_WORKTREE_COMPOSE_ISSUE_PROMPT_BIN=./plugins/create-worktree/scripts/compose-issue-prompt
         COPILOT_REVIEW_DATA_DIR=./tests/data/copilot-reviews
@@ -90,6 +92,9 @@ jobs:
         CATALOG_RELEASE_FIXTURE_BIN=./tests/fixtures/catalog-release-fixture
         VALIDATE_PLUGIN_FIXTURE_BIN=./tests/fixtures/validate-plugin-fixture
         LIST_SHELL_SCRIPTS_BIN=./bin/list-shell-scripts
+        MATERIALIZE_CASE_BIN=./bin/materialize-case
+        VALIDATE_CORPUS_BIN=./bin/validate-corpus
+        REVIEW_CORPUS_FIXTURE_BIN=./tests/fixtures/review-corpus-fixture
         REPO_ROOT=./
         CREATE_WORKTREE_LAUNCH_WORKMUX_BIN=./plugins/create-worktree/scripts/launch-workmux
         ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN=./plugins/address-issue-in-worktree/scripts/launch-workmux
@@ -102,9 +107,15 @@ jobs:
         REPORT_BOARD_BIN=./plugins/publish-report-board/scripts/report-board
         REPORT_BOARD_DATA_DIR=./tests/data/report-board
         RESOLVE_COPILOT_THREADS_BIN=./plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads
+        MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN=./plugins/monitor-pr/scripts/resolve-copilot-threads
         TMUX_STUB_BIN=./tests/fixtures/tmux-stub
         NOTIFY_BIN=./plugins/notify/scripts/notify
         CHECK_NOTIFICATIONS_BIN=./tests/fixtures/check-notifications
         UNIX_SOCKET_FIXTURE_BIN=./tests/fixtures/create-unix-socket
         WORKMUX_STUB_BIN=./tests/fixtures/workmux-stub
+      # bin/validate-corpus converts each defects.yaml through yq, which the
+      # ubuntu runner image ships. Asserting it beats installing an unpinned
+      # copy: an image that drops it, or swaps in python-yq with jq's flags,
+      # fails here with a clear message rather than as a scrut output diff.
+      scrut-setup-cmd: "yq --version | grep -q mikefarah"
       scrut-test-dir: "tests/scrut/"
