@@ -76,6 +76,49 @@ plugins/notify/
 
 `hooks/codex.hooks.json` carries only the events Codex understands (a subset of the full Claude Code set in `hooks/hooks.json`). `opencode/index.ts` is the OpenCode TypeScript plugin; `bin/build-opencode-mirror` mirrors it to `dist/opencode/plugins/`. Anything under `assets/` and `scripts/` is bundled with the plugin and reachable from hook commands via `${CLAUDE_PLUGIN_ROOT}`.
 
+## Skill frontmatter
+
+Three harnesses read every canonical `SKILL.md`, and each reads a different part of its frontmatter. Claude Code accepts around twenty fields, OpenCode documents five, and Codex CLI documents two. All three tolerate a field they do not recognize, and only `claude plugin validate --strict` reports one. Rule 21 of `bin/validate-plugins` holds this repository to the fields below, so a misspelling such as `disable-model-invokation` fails validation instead of doing nothing in all three.
+
+| Field                      | Claude Code                  | Codex CLI             | OpenCode |
+| -------------------------- | ---------------------------- | --------------------- | -------- |
+| `name`                     | Required                     | Read                  | Read     |
+| `description`              | Required routing description | Read                  | Read     |
+| `license`                  | Read                         | Ignored               | Read     |
+| `compatibility`            | Read                         | Ignored               | Read     |
+| `metadata`                 | Read                         | Read                  | Read     |
+| `allowed-tools`            | Read                         | Ignored               | Ignored  |
+| `disable-model-invocation` | Read                         | Translated, see below | Ignored  |
+| `paths`                    | Read                         | Ignored               | Ignored  |
+| `context`                  | Read                         | Ignored               | Ignored  |
+| `agent`                    | Read                         | Ignored               | Ignored  |
+| `argument-hint`            | Read                         | Ignored               | Ignored  |
+
+In that table _Read_ means the harness acts on the field, and _Ignored_ means it accepts the field with no effect anyone has observed. The two rest on different evidence: OpenCode's documentation states outright that unknown fields are ignored and names the five it reads, while for Codex _Ignored_ combines the measurement below with the absence of any handling for those fields in the CLI. Codex's documentation names only `name` and `description` and says nothing about the rest, so treat its _Ignored_ cells as what was observed rather than as a guarantee.
+
+Measured against Codex CLI 0.155.1 and OpenCode 1.18.31: a skill carrying every field in that table loads in both, appears in the list of skills offered to the model, and produces no warning and no error. Neither harness rejects an unrecognized field and neither reports one, which is the reason the allowlist exists rather than a linter's opinion.
+
+Widening the allowlist means measuring the new field first. Install a skill that carries it under a throwaway `CODEX_HOME` and a throwaway project directory, list what each harness offers the model with `codex debug prompt-input` and `opencode debug skill`, then record the outcome in the table above. A field Claude Code honors can be dropped silently by the other two, which changes what the skill does there without failing anywhere.
+
+### Invocation policy
+
+`disable-model-invocation: true` keeps a skill out of implicit selection in Claude Code. Codex ignores the field and offers the skill to the model anyway. Its counterpart is `policy.allow_implicit_invocation: false` in an `agents/openai.yaml` beside the skill, which withholds the skill from that list while explicit `$skill-name` invocation still works.
+
+`bin/build-codex-marketplace` therefore translates the field rather than copying it. The generated `dist/codex` skill loses the frontmatter line and gains a manifest:
+
+```yaml
+policy:
+  allow_implicit_invocation: false
+```
+
+Write the value as an unquoted `true` or `false`. A quoted value parses as a string, which neither the generator nor rule 16b reads, so the policy would be lost everywhere. `false` is Codex's own default, so it needs no manifest and passes through. A skill that already ships its own `agents/openai.yaml` fails the build rather than having it overwritten; merge the policy into that file by hand.
+
+The whole path was confirmed end to end, not just the mechanism: a skill given the field was built, installed from a local marketplace under a throwaway `CODEX_HOME` with `codex plugin add`, and the resulting session listed a sibling skill while withholding the translated one, with no validation error on the generated manifest. Repeat that check rather than only the frontmatter edit whenever the manifest's contents change, since Codex reads the file the generator writes, comments and all.
+
+This is the one sanctioned difference between a canonical skill and its Codex copy. Rule 16b of `bin/validate-plugins` reproduces exactly this edit independently of the generator and fails on any other difference, so a further harness-specific transformation has to change that rule on purpose.
+
+OpenCode has no counterpart and ignores the field, so a skill that disables model invocation stays implicitly selectable there. OpenCode gates skills through the `skill` key of its own permission configuration instead, which matches on the skill name and is a user setting rather than something a plugin ships. Because OpenCode ignores every field it does not recognize, `bin/build-opencode-mirror` needs no translation step and stays relative symlinks to the canonical skills.
+
 ## Routing descriptions and catalog summaries
 
 A plugin carries two kinds of description, written for different readers, and each has one owner:
@@ -83,7 +126,7 @@ A plugin carries two kinds of description, written for different readers, and ea
 - **Routing description:** the `description` in a skill's `SKILL.md` frontmatter. Harnesses use it to decide whether a request should activate the skill implicitly, and selectors show it beside the skill's name. Write it for selection.
 - **Catalog summary:** the `description` in `.claude-plugin/marketplace.json`, repeated verbatim in the plugin's manifests, the opening paragraph of its README, and its root README "What it does" cell. Write it for a person browsing the catalog. It needs no routing detail.
 
-Every harness routes on the same description. Claude Code loads the canonical `SKILL.md`, the OpenCode mirror links to it, and `bin/build-codex-marketplace` copies it into `dist/codex/` unchanged. Rule 16b of `bin/validate-plugins` fails if a generated `SKILL.md` differs from its source, so change a routing description in the canonical file, never through the generator.
+Every harness routes on the same description. Claude Code loads the canonical `SKILL.md`, the OpenCode mirror links to it, and `bin/build-codex-marketplace` copies it into `dist/codex/` unchanged. Rule 16b of `bin/validate-plugins` permits one difference between a generated `SKILL.md` and its source, the [invocation policy translation](#invocation-policy), and the description is never it, so change a routing description in the canonical file, never through the generator.
 
 A routing description:
 
@@ -101,7 +144,7 @@ description: >-
   Use for "merge main" or "sync with main"; to rebase, use rebase-onto-main.
 ```
 
-Add `agents/openai.yaml` to a skill only for supported interface metadata, an explicit invocation-policy override, or an MCP tool dependency; no skill needs one today. Never set its `interface.short_description`: Codex prints that in place of `description`, silently replacing the routing description. Do not add keys this repository invents to portable plugin manifests or to `agents/openai.yaml`.
+Add `agents/openai.yaml` to a canonical skill only for supported interface metadata or an MCP tool dependency; no skill needs one today, and an invocation-policy override belongs in `disable-model-invocation`, which the generator [translates into that manifest](#invocation-policy) for Codex alone. Never set its `interface.short_description`: Codex prints that in place of `description`, silently replacing the routing description. Do not add keys this repository invents to portable plugin manifests or to `agents/openai.yaml`.
 
 ## Cross-harness workflow adapters
 

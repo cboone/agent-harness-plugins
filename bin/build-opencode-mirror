@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Regenerates dist/opencode/{skills,commands} from plugins/*.
 # Each entry is a relative symlink back to the canonical Claude Code plugin file.
+#
+# Symlinks stay correct no matter which frontmatter fields a skill grows.
+# OpenCode reads `name` and `description` and ignores every other field:
+# measured against OpenCode 1.18.31, a skill carrying the full extended field
+# set loads with no warning. Unlike the Codex mirror, this one needs no
+# translation step, so nothing here filters frontmatter.
 set -euo pipefail
 
 OUTPUT_DIR="dist/opencode"

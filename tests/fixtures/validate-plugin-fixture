@@ -15,6 +15,10 @@ function mutate_catalog() {
   mv "${FIXTURE_ROOT}/catalog.json" "${catalog}"
 }
 
+# The skill most scenarios mutate. release carries no extended frontmatter field
+# of its own, so each scenario adds exactly the one it tests.
+readonly RELEASE_SKILL="plugins/release/skills/release/SKILL.md"
+
 # The review checklist scenarios mutate a source, a copy or guides.md without
 # running bin/build-review-checklists, so rule 20 is the only rule that fires:
 # bin/build-codex-marketplace below rebuilds dist/ from the mutated tree, which
@@ -74,10 +78,38 @@ function description_of_length() {
   printf '%s' "${text}"
 }
 
+# Inserts a line into a SKILL.md's frontmatter, directly after its name.
+function add_frontmatter_line() {
+  local skill_md="${1}" line="${2}"
+
+  awk -v line="${line}" '
+    NR == 1 && $0 == "---" {
+      in_frontmatter = 1
+      print
+      next
+    }
+
+    in_frontmatter && /^name:/ {
+      print
+      print line
+      next
+    }
+
+    in_frontmatter && $0 == "---" {
+      in_frontmatter = 0
+    }
+
+    { print }
+  ' "${skill_md}" > "${FIXTURE_ROOT}/skill.md"
+  mv "${FIXTURE_ROOT}/skill.md" "${skill_md}"
+}
+
 # Renames the fixture's generator and puts a wrapper in its place that runs it,
-# then rewrites release's generated description. The wrapper honors
-# CODEX_DIST_DIR because bin/validate-plugins regenerates into a temp directory.
-function wrap_generator_with_rewrite() {
+# then applies one further edit to release's generated skill. The wrappers honor
+# CODEX_DIST_DIR because bin/validate-plugins regenerates into a temp directory,
+# so rule 16 sees the same tree either way and only rule 16b fires.
+function wrap_generator() {
+  local edit="${1}"
   local generator="${FIXTURE_ROOT}/bin/build-codex-marketplace"
 
   mv "${generator}" "${generator}-unchanged"
@@ -87,9 +119,40 @@ function wrap_generator_with_rewrite() {
     '#!/usr/bin/env bash' \
     'set -euo pipefail' \
     '"$(dirname "${0}")/build-codex-marketplace-unchanged" "$@"' \
-    'perl -0pi -e '\''s/description: >-\n(  .*\n)+/description: Prepare a versioned release.\n/'\'' "${CODEX_DIST_DIR:-dist/codex}/plugins/release/skills/release/SKILL.md"' \
+    "${edit}" \
     > "${generator}"
   chmod +x "${generator}"
+}
+
+# Rewrites release's generated routing description, as bin/build-codex-marketplace
+# once did for every skill.
+function wrap_generator_with_rewrite() {
+  # The expansions belong to the wrapper, so they are written out literally.
+  # shellcheck disable=SC2016
+  wrap_generator 'perl -0pi -e '\''s/description: >-\n(  .*\n)+/description: Prepare a versioned release.\n/'\'' "${CODEX_DIST_DIR:-dist/codex}/plugins/release/skills/release/SKILL.md"'
+}
+
+# Puts release's disable-model-invocation line back into the generated copy, as
+# a generator that skipped the translation would.
+function wrap_generator_to_keep_field() {
+  # shellcheck disable=SC2016
+  wrap_generator 'perl -pi -e '\''s/^name: release$/name: release\ndisable-model-invocation: true/'\'' "${CODEX_DIST_DIR:-dist/codex}/plugins/release/skills/release/SKILL.md"'
+}
+
+# Removes the generated agents manifest, as a generator that dropped the field
+# without stating the policy Codex reads would.
+function wrap_generator_to_drop_manifest() {
+  # shellcheck disable=SC2016
+  wrap_generator 'rm -r "${CODEX_DIST_DIR:-dist/codex}/plugins/release/skills/release/agents"'
+}
+
+# Adds an interface block to the generated manifest. Codex prints
+# interface.short_description in place of the skill's description, so a
+# generator that wrote one would replace the routing description while leaving
+# the invocation policy correct.
+function wrap_generator_to_extend_manifest() {
+  # shellcheck disable=SC2016
+  wrap_generator 'printf "%s\n" "interface:" "  short_description: Prepare a release" >> "${CODEX_DIST_DIR:-dist/codex}/plugins/release/skills/release/agents/openai.yaml"'
 }
 
 function main() {
@@ -126,24 +189,54 @@ function main() {
       ;;
     # The window leaves the budget ample room, so only the length is at fault.
     oversized-description)
-      replace_description "${FIXTURE_ROOT}/plugins/release/skills/release/SKILL.md" "$(description_of_length 1100)"
+      replace_description "${FIXTURE_ROOT}/${RELEASE_SKILL}" "$(description_of_length 1100)"
       export CODEX_REFERENCE_CONTEXT_WINDOW=1000000
       ;;
     long-description)
-      replace_description "${FIXTURE_ROOT}/plugins/release/skills/release/SKILL.md" "$(description_of_length 200)"
+      replace_description "${FIXTURE_ROOT}/${RELEASE_SKILL}" "$(description_of_length 200)"
       ;;
-    empty-name) perl -pi -e 's/^name: release$/name:/' "${FIXTURE_ROOT}/plugins/release/skills/release/SKILL.md" ;;
+    empty-name) perl -pi -e 's/^name: release$/name:/' "${FIXTURE_ROOT}/${RELEASE_SKILL}" ;;
     # release declares no dependencies, so bin/check-cross-references warns
     # about this line and still passes.
     near-miss-invocation)
       # The backticks are literal Markdown, not a command substitution.
       # shellcheck disable=SC2016
-      printf '%s\n' '' 'Then invoke `commit` to finish.' >> "${FIXTURE_ROOT}/plugins/release/skills/release/SKILL.md"
+      printf '%s\n' '' 'Then invoke `commit` to finish.' >> "${FIXTURE_ROOT}/${RELEASE_SKILL}"
       ;;
     # A generator that writes a catalog summary over one routing description,
     # as bin/build-codex-marketplace once did for every skill. Rule 16 still
     # passes, because the committed tree matches what this generator produces.
     rewriting-generator) wrap_generator_with_rewrite ;;
+    # Rule 21 allowlist scenarios. The generator reruns over the mutated tree,
+    # so the generated copy matches its source and rule 16b stays quiet.
+    unknown-frontmatter-field)
+      add_frontmatter_line "${FIXTURE_ROOT}/${RELEASE_SKILL}" 'disable-model-invokation: true'
+      ;;
+    permitted-frontmatter-field)
+      add_frontmatter_line "${FIXTURE_ROOT}/${RELEASE_SKILL}" 'paths: "**/*.md"'
+      ;;
+    # Neither the generator nor rule 16b reads a quoted value, so without rule
+    # 21 the skill would stay implicitly invocable in every harness.
+    quoted-invocation-value)
+      add_frontmatter_line "${FIXTURE_ROOT}/${RELEASE_SKILL}" 'disable-model-invocation: "true"'
+      ;;
+    # The translation itself: the generated copy loses the line and gains the
+    # policy Codex reads, and validation passes.
+    translated-frontmatter)
+      add_frontmatter_line "${FIXTURE_ROOT}/${RELEASE_SKILL}" 'disable-model-invocation: true'
+      ;;
+    untranslated-frontmatter)
+      add_frontmatter_line "${FIXTURE_ROOT}/${RELEASE_SKILL}" 'disable-model-invocation: true'
+      wrap_generator_to_keep_field
+      ;;
+    missing-openai-yaml)
+      add_frontmatter_line "${FIXTURE_ROOT}/${RELEASE_SKILL}" 'disable-model-invocation: true'
+      wrap_generator_to_drop_manifest
+      ;;
+    extra-manifest-key)
+      add_frontmatter_line "${FIXTURE_ROOT}/${RELEASE_SKILL}" 'disable-model-invocation: true'
+      wrap_generator_to_extend_manifest
+      ;;
     # 2 percent of 100,000 is a 2,000-token budget, 1,400 after the reserve:
     # less than the descriptions alone cost.
     aggregate-overflow) export CODEX_REFERENCE_CONTEXT_WINDOW=100000 ;;
