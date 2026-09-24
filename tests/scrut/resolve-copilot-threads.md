@@ -194,8 +194,8 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 Copilot renders the count as one number per severity, joined by a middle dot
 and each followed by a badge. `2 <medium> · 1 <low>` is three findings, and
 the body lists `Open (3)`, so the totals agree and this is not drift. The
-badges carry their own `width` and `height` numbers, which a count token's
-position keeps out of the sum.
+badges carry their own `width` and `height` numbers, which removing the markup
+tags before summing keeps out of the total.
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-severity-split.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'

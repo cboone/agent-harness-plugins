@@ -104,9 +104,11 @@ Resulting behavior:
 1. `plugins/resolve-copilot-pr-feedback/skills/resolve-copilot-pr-feedback/SKILL.md`: the `hasFormatDrift` bullet in the step 1b output contract, and the trailing clause of the `verdict` bullet. The `Format-drift rule (CRITICAL)` paragraph and the terminal-status wording stay as they are, since the meaning of a true result has not changed.
 1. `plugins/resolve-copilot-pr-feedback/.claude-plugin/plugin.json`: `1.6.2` to `1.7.0`. Not a patch: drift results move in both directions (a resolved-only round with a boilerplate lead becomes clean; a shortfall or an unparseable count line becomes drift, including on an approval, which `1.6.2` could not report), and the documented semantics of a published output field change with them.
 
-No `monitor-pr` change. Escalating on drift is the behavior that is wanted; this narrows what counts as drift. No root README or marketplace change, since those descriptions must match verbatim and do not state the rule.
+1. `plugins/monitor-pr/scripts/resolve-copilot-threads` and `plugins/monitor-pr/.claude-plugin/plugin.json`: `monitor-pr` ships a byte-identical copy of the parser, added to main in #520 while this branch was open, and a scrut case asserts the pair matches. Copy the script across and bump `1.5.3` to `1.6.0`, matching the minor bump the other plugin took for the same helper change.
 
-`make build` regenerates `dist/codex/plugins/resolve-copilot-pr-feedback/` (the script, `SKILL.md` and the manifest copy). `dist/opencode/` links skills only and needs no script mirror. Do not hand-edit either tree.
+No change to the `monitor-pr` skill itself. Escalating on drift is the behavior that is wanted; this narrows what counts as drift, and only the bundled parser copy moves. No root README or marketplace change, since those descriptions must match verbatim and do not state the rule.
+
+`make build` regenerates `dist/codex/plugins/resolve-copilot-pr-feedback/` and `dist/codex/plugins/monitor-pr/` (each script, `SKILL.md` and the manifest copy). `dist/opencode/` links skills only and needs no script mirror. Do not hand-edit either tree.
 
 ## Verification
 
