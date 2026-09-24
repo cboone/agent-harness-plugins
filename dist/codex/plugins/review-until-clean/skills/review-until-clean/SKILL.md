@@ -53,7 +53,9 @@ Do not recompute the snapshot by hand. It is content-addressed on purpose, so th
 
 Run `review-scope --base <ref>`, or without `--base` to take the merge base with the default branch. Record `head`, `base`, `snapshot`, and the four file lists.
 
-If `empty` is true, report that there is nothing to review and stop. Do not run a reviewer over an empty scope: a clean result there means nothing, and reporting one would be the first invariant failing quietly.
+**If `base_unrelated` is true**, the ref in `base_ref` shares no history with HEAD, so the committed bucket could not be computed and the branch's commits are outside the scope. Do not read that as a small scope. Say which ref was tried, record the round's coverage as partial, and never report plain `clean` from it. If `empty` is also true, the working tree is clean and the only unreviewed work is those commits: stop and ask for a `--base` that shares history, rather than reporting nothing to review.
+
+Otherwise, if `empty` is true, report that there is nothing to review and stop. Do not run a reviewer over an empty scope: a clean result there means nothing, and reporting one would be the first invariant failing quietly.
 
 ### 2. Select the backend
 

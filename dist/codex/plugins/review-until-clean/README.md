@@ -53,7 +53,7 @@ At least one reviewer backend:
 
 Also required:
 
-- `git`. The skill never changes your index or your commits, apart from the optional `git add -N` described under [Usage](#usage). Computing the snapshot does write unreferenced blob and tree objects into `.git/objects`, which `git gc` collects.
+- `git`. The loop itself never pushes and never rewrites history, but it does commit: [Address Review](../address-review/README.md) does the fixing, and its default is to commit each round's changes locally. Your index is left alone apart from the optional `git add -N` described under [Usage](#usage). Computing the snapshot also writes unreferenced blob and tree objects into `.git/objects`, which `git gc` collects.
 - [`jq`](https://jqlang.org/). The bundled scope helper emits JSON and will not run without it.
 
 ## Usage

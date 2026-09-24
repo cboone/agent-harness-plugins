@@ -458,3 +458,57 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 review-scope: HEAD does not resolve to a commit; the repository has no commits yet
 [1]
 ```
+
+## Staging a change and editing it back is not a failure
+
+Both the staged and unstaged buckets are non-empty here, yet the working tree
+matches HEAD, so the tree digest legitimately equals HEAD's. A guard that
+inferred a changed worktree from those buckets rejected this valid state.
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && git checkout -q -b base \
+>   && printf 'one\n' > f.txt \
+>   && git add f.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && printf 'two\n' > f.txt \
+>   && git add f.txt \
+>   && printf 'one\n' > f.txt \
+>   && "${REVIEW_SCOPE_BIN}" --base base | jq -c '{staged, unstaged, empty}'
+{"staged":["f.txt"],"unstaged":["f.txt"],"empty":false}
+```
+
+## An inferred base with no shared history is reported, not dropped
+
+Clearing the ref would empty the committed bucket and let a branch's whole
+history leave the scope while the run still looked complete.
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && git checkout -q -b main \
+>   && printf 'one\n' > a.txt \
+>   && git add a.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && git checkout -q --orphan feature \
+>   && git rm -q -rf . \
+>   && printf 'work\n' > b.txt \
+>   && git add b.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm orphan \
+>   && "${REVIEW_SCOPE_BIN}" | jq -c '{base_ref, base, base_unrelated, committed}'
+{"base_ref":"main","base":null,"base_unrelated":true,"committed":[]}
+```
+
+## A base that shares history reports base_unrelated false
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && git checkout -q -b base \
+>   && printf 'one\n' > tracked.txt \
+>   && git add tracked.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && "${REVIEW_SCOPE_BIN}" --base base | jq -c '.base_unrelated'
+false
+```

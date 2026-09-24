@@ -16,19 +16,19 @@ The fixer half of a local loop already exists in `address-review`. What is missi
 
 Settled with the user before implementation. Do not quietly revisit them.
 
-| Decision               | Choice                                                                                                                                                      |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Name                   | `review-until-clean`, category `code-review`, version `1.0.0`                                                                                               |
-| Delivery               | Agent-invoked skill only. No pre-push hook. The README documents wiring one by hand; a shipped hook is a separate issue                                     |
-| Backends               | Codex (`codex exec`, read-only sandbox) and Claude (`/code-review`). CodeRabbit is deferred to a follow-up issue because its `--agent` output is unverified |
-| Default backend        | The model family the host is not. Codex under Claude Code, Claude under Codex CLI, Codex under OpenCode                                                     |
-| Snapshot               | A bundled `scripts/review-scope` helper, with scrut coverage and CI registration                                                                            |
-| Severity vocabulary    | `REVIEW.md`'s existing Important and Nit, with per-backend mapping. No fourth ladder                                                                        |
-| Fix threshold          | Important by default; `--severity nit` includes everything                                                                                                  |
-| Round limit            | 3 by default                                                                                                                                                |
-| Declined findings      | Recorded in the ledger with a reason, carried forward across rounds, excluded from the clean check, never silently dropped                                  |
-| Persistence            | A ledger at `docs/reviews/<date>-<branch>-until-clean.md`, appended per round. Never pushed, never committed by this skill                                  |
-| Codex discovery budget | Fit inside the remaining headroom. No other plugin's description changes in this PR                                                                         |
+| Decision               | Choice                                                                                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Name                   | `review-until-clean`, category `code-review`, version `1.0.0`                                                                                                            |
+| Delivery               | Agent-invoked skill only. No pre-push hook. The README documents wiring one by hand; a shipped hook is a separate issue                                                  |
+| Backends               | Codex (`codex exec`, read-only sandbox) and Claude (`/code-review`). CodeRabbit is deferred to a follow-up issue because its `--agent` output is unverified              |
+| Default backend        | The model family the host is not. Codex under Claude Code, Claude under Codex CLI, Codex under OpenCode                                                                  |
+| Snapshot               | A bundled `scripts/review-scope` helper, with scrut coverage and CI registration                                                                                         |
+| Severity vocabulary    | `REVIEW.md`'s existing Important and Nit, with per-backend mapping. No fourth ladder                                                                                     |
+| Fix threshold          | Important by default; `--severity nit` includes everything                                                                                                               |
+| Round limit            | 3 by default                                                                                                                                                             |
+| Declined findings      | Recorded in the ledger with a reason, carried forward across rounds, excluded from the clean check, never silently dropped                                               |
+| Persistence            | A ledger at `docs/reviews/<date>-<branch>-until-clean.md`, appended per round. Never pushed, never committed by this skill                                               |
+| Codex discovery budget | Fit inside the remaining headroom. **Revised during implementation:** fitting proved impossible, so four routing descriptions were tightened. See Verified backend facts |
 
 ## Verified backend facts
 
@@ -219,7 +219,7 @@ CI cannot answer whether the loop is correct. Run these and record the results.
 
 ## Risks
 
-- **Codex discovery budget.** This plugin consumes 68 of the 70 remaining tokens under rule 17. The catalog is effectively full, and the next skill added will not fit without tightening the largest routing descriptions. File that as a follow-up issue rather than doing it here.
+- **Codex discovery budget.** Adding a 63rd skill left two tokens of headroom under rule 17, which broke `tests/scrut/repo-tooling.md:87`: that case asserts a 200-character description warns without failing, and the fixture's extra characters tipped the inventory to 4,855 of 4,840. Four routing descriptions were tightened to 112 to 138 characters, bringing the catalog to 4,815. The structural concern, that the catalog has outgrown 2 percent of the reference window, is tracked in #481.
 - **The two backends are not equally trustworthy.** Codex is schema-constrained, echoes the snapshot, and covers the whole scope in one run. Claude does none of those: its findings are transcribed by the host, and its scope can silently omit committed work on a pushed branch. Both are usable, and the skill says which signal carries the weight for each, but a clean result from Codex is a stronger claim than a clean result from Claude. The control is that coverage is reported rather than assumed.
 - **A clean result is still a sample.** One reviewer pass is not proof the branch is defect-free. The report states coverage, matching `review-in-depth`'s rule.
 - **`address-review` asks for confirmation.** Its step 3 stalls an unattended loop. This skill is an interactive pre-push gate, so one confirmation per round is acceptable; say so in the README rather than working around it.
