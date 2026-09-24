@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# Creates a throwaway plugin tree for the bin/build-codex-marketplace suite and
+# prints its root.
+#
+# The generator reads and writes paths relative to the working directory, so it
+# needs a real plugins/ layout and a catalog. Each testcase cds into the printed
+# directory, runs the generator, and inspects what it produced.
+#
+# What the tree provides:
+#
+#   plugins/alpha/skills/alpha/SKILL.md     disable-model-invocation: true, the
+#                                           one field Codex expresses elsewhere
+#   plugins/beta/skills/beta/SKILL.md       no extended fields, so the generated
+#                                           copy must stay byte-identical
+#   plugins/gamma/skills/gamma/SKILL.md     disable-model-invocation: false,
+#                                           which Codex reads as its own default
+#   .claude-plugin/marketplace.json         all three registered in order
+#
+# Pass "own-manifest" to give alpha its own agents/openai.yaml, which the
+# generator refuses to overwrite.
+set -euo pipefail
+
+function write_plugin() {
+  local root="${1}" name="${2}" invocation="${3}"
+  local skill_dir="${root}/plugins/${name}/skills/${name}"
+
+  mkdir -p "${skill_dir}" "${root}/plugins/${name}/.claude-plugin"
+
+  printf '%s\n' \
+    '---' \
+    "name: ${name}" \
+    > "${skill_dir}/SKILL.md"
+  if [[ -n "${invocation}" ]]; then
+    printf '%s\n' "disable-model-invocation: ${invocation}" >> "${skill_dir}/SKILL.md"
+  fi
+  printf '%s\n' \
+    "description: Fixture skill ${name}. Use only in the build-codex-marketplace suite." \
+    '---' \
+    '' \
+    "# ${name}" \
+    '' \
+    'This body exists so the skill parses. It carries no instructions.' \
+    >> "${skill_dir}/SKILL.md"
+
+  printf '%s\n' \
+    '{' \
+    "  \"name\": \"${name}\"," \
+    '  "version": "1.0.0",' \
+    "  \"description\": \"Fixture plugin ${name}.\"" \
+    '}' \
+    > "${root}/plugins/${name}/.claude-plugin/plugin.json"
+
+  printf '%s\n' \
+    "# ${name}" \
+    '' \
+    "Fixture plugin ${name}." \
+    > "${root}/plugins/${name}/README.md"
+}
+
+function write_marketplace() {
+  local root="${1}"
+
+  mkdir -p "${root}/.claude-plugin"
+  printf '%s\n' \
+    '{' \
+    '  "name": "fixture-marketplace",' \
+    '  "plugins": [' \
+    '    { "name": "alpha", "source": "./plugins/alpha" },' \
+    '    { "name": "beta", "source": "./plugins/beta" },' \
+    '    { "name": "gamma", "source": "./plugins/gamma" }' \
+    '  ]' \
+    '}' \
+    > "${root}/.claude-plugin/marketplace.json"
+}
+
+function main() {
+  local scenario="${1:-default}"
+  local root
+
+  root="$(mktemp -d "${TMPDIR:-/tmp}/codex-translation-fixture.XXXXXX")"
+
+  write_plugin "${root}" alpha true
+  write_plugin "${root}" beta ""
+  write_plugin "${root}" gamma false
+  write_marketplace "${root}"
+
+  case "${scenario}" in
+    default) ;;
+    own-manifest)
+      mkdir -p "${root}/plugins/alpha/skills/alpha/agents"
+      printf '%s\n' \
+        'interface:' \
+        '  display_name: "Alpha"' \
+        > "${root}/plugins/alpha/skills/alpha/agents/openai.yaml"
+      ;;
+    *)
+      echo "Unknown scenario: ${scenario}" >&2
+      return 2
+      ;;
+  esac
+
+  printf '%s\n' "${root}"
+}
+
+main "$@"

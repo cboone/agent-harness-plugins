@@ -38,7 +38,7 @@ permissions:
 
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
     with:
       zig-version-file: build.zig.zon
       run-cross-compile: true
@@ -48,6 +48,7 @@ jobs:
 
 - `zig-version-file: build.zig.zon` makes the wrapped `mlugg/setup-zig` action read `minimum_zig_version` from `build.zig.zon`, so the project's Zig version is the single source of truth.
 - The reusable workflow creates parallel jobs internally for test, format check (`zig fmt --check`), build, and cross-compilation
+- The format job checks `build.zig`, `build.zig.zon` and `src` by default, so an unformatted or missing manifest fails it. Run `zig fmt build.zig.zon`, or set `fmt-paths` to the paths this project's layout uses.
 - All checks are enabled by default except cross-compilation. Set `run-cross-compile: true` to validate release targets on every PR. Cross-compilation is cheap with Zig (single runner, no extra toolchains).
 - To disable a specific check, set its input to `false` (e.g., `run-test: false`, `run-fmt: false`, `run-build: false`)
 - The reusable workflow handles Zig toolchain setup internally

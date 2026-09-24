@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-zig-binaries.yml@17f94b08428565213e70ae19c37a7be894a172d2 # v3.1.1
+    uses: cboone/gh-actions/.github/workflows/release-zig-binaries.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
     with:
       binary-name: "PROJECT-NAME"
       zig-version-file: build.zig.zon

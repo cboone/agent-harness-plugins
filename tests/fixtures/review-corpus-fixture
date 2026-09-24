@@ -1,0 +1,425 @@
+#!/usr/bin/env bash
+# Builds a throwaway review corpus and prints its root, optionally with one
+# targeted mutation applied.
+#
+# bin/validate-corpus and bin/materialize-case both need real git objects: the
+# validator compares recorded line ranges against blobs at a commit, and the
+# materializer adds a worktree. tests/fixtures/git-worktree-stub matches exact
+# invocations by design and handles none of `worktree add`, `fetch` or
+# `merge-base`, so this fixture stands up an actual repository instead. Each
+# scenario asks for one mutation, which exercises the checker rather than
+# restating its rules alongside it.
+#
+# What the corpus provides:
+#
+#   corpus/                          a git repository, main holding the metadata
+#   corpus/cases/001-demo-tally-sign/   a planted logic defect in src/tally
+#   corpus/cases/002-demo-report-error/ a swallowed error in src/report
+#   refs/cases/<id>/base             the frozen base commit, an orphan history
+#   refs/cases/<id>/head             the frozen head commit, its child
+#
+# The case histories are orphans, so main is not reachable from either of them.
+# That is what lets a worktree taken from a case head be free of the corpus
+# metadata, which is the property tests/scrut/review-corpus.md asserts.
+#
+# They live under refs/cases/ rather than refs/heads/ for the reason
+# bin/materialize-case documents: a frozen tree carries its own workflows, and
+# only a branch or a tag raises a push event.
+#
+# The caller owns the printed directory. Like cross-reference-fixture, this
+# script cannot remove it, because the testcase still needs it after the
+# fixture exits.
+set -euo pipefail
+
+CORPUS=""
+
+# The root this run made, and whether the run got far enough to hand it over.
+# A failure before the final printf means the caller was never told the path,
+# so the fixture removes it rather than leaving an orphan in TMPDIR.
+ROOT=""
+HANDED_OVER="no"
+
+function die() {
+  echo "Error: ${1}" >&2
+  exit "${2:-2}"
+}
+
+function cleanup() {
+  [[ "${HANDED_OVER}" == "yes" || -z "${ROOT}" ]] || rm -rf "${ROOT}"
+}
+
+# Set by build_case_branches. Returning them on stdout would mean any stray
+# line from a git command landed in a SHA.
+BASE_SHA=""
+HEAD_SHA=""
+
+# A fixture must not depend on the developer's git identity, and must not need a
+# signing key: this repository signs its own commits, but a throwaway corpus
+# that required a key would fail in CI and on any machine without one.
+function git_corpus() {
+  git -C "${CORPUS}" \
+    -c user.name="Corpus Fixture" \
+    -c user.email="corpus@example.invalid" \
+    -c commit.gpgsign=false \
+    -c tag.gpgsign=false \
+    "$@"
+}
+
+# Empties the index and the working tree between orphan branches. find rather
+# than a glob, so no file name can be read as an option and dotfiles are
+# included, and .git is held back explicitly.
+function clear_tree() {
+  git_corpus rm -r -q -f --ignore-unmatch --cached . > /dev/null 2>&1 || true
+  find "${CORPUS}" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+}
+
+# The single quotes are deliberate: these lines are the frozen file's own
+# text, and expanding them here would write this fixture's values instead.
+# shellcheck disable=SC2016
+function write_tally_base() {
+  mkdir -p "${CORPUS}/src"
+  printf '%s\n' \
+    '#!/usr/bin/env bash' \
+    '# Sums the numbers given on the command line.' \
+    'set -euo pipefail' \
+    '' \
+    'function tally() {' \
+    '  local total=0' \
+    '  local value' \
+    '  for value in "$@"; do' \
+    '    total=$((total + value))' \
+    '  done' \
+    "  printf '%s\\n' \"\${total}\"" \
+    '}' \
+    > "${CORPUS}/src/tally"
+  printf '%s\n' '# Demo' '' 'A throwaway tree for the review corpus fixture.' \
+    > "${CORPUS}/README.md"
+}
+
+# The planted defect: line 9 subtracts where it should add. The file keeps its
+# twelve lines, so a line range past 12 is out of range for the range check.
+# The single quotes are deliberate: these lines are the frozen file's own
+# text, and expanding them here would write this fixture's values instead.
+# shellcheck disable=SC2016
+function write_tally_head() {
+  printf '%s\n' \
+    '#!/usr/bin/env bash' \
+    '# Sums the numbers given on the command line.' \
+    'set -euo pipefail' \
+    '' \
+    'function tally() {' \
+    '  local total=0' \
+    '  local value' \
+    '  for value in "$@"; do' \
+    '    total=$((total - value))' \
+    '  done' \
+    "  printf '%s\\n' \"\${total}\"" \
+    '}' \
+    > "${CORPUS}/src/tally"
+}
+
+# The single quotes are deliberate: these lines are the frozen file's own
+# text, and expanding them here would write this fixture's values instead.
+# shellcheck disable=SC2016
+function write_report_base() {
+  mkdir -p "${CORPUS}/src"
+  printf '%s\n' \
+    '#!/usr/bin/env bash' \
+    '# Writes a report and reports whether the write succeeded.' \
+    'set -euo pipefail' \
+    '' \
+    'function report() {' \
+    '  local path="${1}"' \
+    '  if ! printf "report\\n" > "${path}"; then' \
+    '    return 1' \
+    '  fi' \
+    '}' \
+    > "${CORPUS}/src/report"
+  printf '%s\n' '# Demo' '' 'A throwaway tree for the review corpus fixture.' \
+    > "${CORPUS}/README.md"
+}
+
+# The defect: the write failure is swallowed and success is reported regardless.
+# The single quotes are deliberate: these lines are the frozen file's own
+# text, and expanding them here would write this fixture's values instead.
+# shellcheck disable=SC2016
+function write_report_head() {
+  printf '%s\n' \
+    '#!/usr/bin/env bash' \
+    '# Writes a report and reports whether the write succeeded.' \
+    'set -euo pipefail' \
+    '' \
+    'function report() {' \
+    '  local path="${1}"' \
+    '  printf "report\\n" > "${path}" || true' \
+    '  return 0' \
+    '}' \
+    > "${CORPUS}/src/report"
+}
+
+# Builds one case's orphan history, leaving its SHAs in BASE_SHA and HEAD_SHA.
+function build_case_branches() {
+  local case_id="${1}"
+  local base_writer="${2}"
+  local head_writer="${3}"
+
+  git_corpus checkout -q --orphan "build/${case_id}"
+  clear_tree
+
+  "${base_writer}"
+  git_corpus add -A
+  git_corpus commit -q -m "case ${case_id}: base"
+  BASE_SHA="$(git_corpus rev-parse HEAD)"
+
+  "${head_writer}"
+  git_corpus add -A
+  git_corpus commit -q -m "case ${case_id}: head"
+  HEAD_SHA="$(git_corpus rev-parse HEAD)"
+
+  git_corpus update-ref "refs/cases/${case_id}/base" "${BASE_SHA}"
+  git_corpus update-ref "refs/cases/${case_id}/head" "${HEAD_SHA}"
+}
+
+function write_case_metadata() {
+  local case_id="${1}"
+  local base_sha="${2}"
+  local head_sha="${3}"
+  local source="${4}"
+  local file="${5}"
+  local line_start="${6}"
+  local line_end="${7}"
+  local class="${8}"
+  local description="${9}"
+  local case_dir="${CORPUS}/cases/${case_id}"
+
+  mkdir -p "${case_dir}"
+  printf '%s\n' "${base_sha}" > "${case_dir}/BASE"
+  printf '%s\n' "${head_sha}" > "${case_dir}/HEAD"
+
+  printf '%s\n' \
+    "# Case ${case_id}" \
+    '' \
+    "A throwaway case built by tests/fixtures/review-corpus-fixture." \
+    '' \
+    '## What a reviewer sees' \
+    '' \
+    "The diff from BASE to HEAD, which touches ${file}." \
+    > "${case_dir}/CASE.md"
+
+  printf '%s\n' \
+    "case: ${case_id}" \
+    "source: ${source}" \
+    'repo: https://example.invalid/demo/tally' \
+    'languages: [shell]' \
+    'origin:' \
+    '  introduced_by_pr: 1' \
+    "  ground_truth: ${base_sha}" \
+    'defects:' \
+    '  - id: D1' \
+    "    file: ${file}" \
+    "    lines: [${line_start}, ${line_end}]" \
+    "    class: ${class}" \
+    '    severity: p1' \
+    "    description: \"${description}\"" \
+    '    added_in: initial' \
+    > "${case_dir}/defects.yaml"
+}
+
+# Applies a sed script and refuses to continue if it changed nothing. Without
+# this a drift in write_case_metadata's output would turn a mutation into a
+# no-op, and the negative scenarios would assert that a clean corpus validates
+# clean, which is the fixture lying about having introduced a defect.
+function mutate() {
+  local path="${1}"
+  shift
+  local before after
+
+  before="$(cat "${path}")"
+  sed -i.bak "$@" "${path}"
+  rm -f "${path}.bak"
+  after="$(cat "${path}")"
+
+  [[ "${before}" != "${after}" ]] \
+    || die "mutation left ${path} unchanged; the metadata format has drifted"
+}
+
+# Every mutation name, checked before any temporary directory exists so an
+# unknown name cannot leak one.
+function validate_mutation() {
+  case "${1}" in
+    clean | missing-defects | bad-sha | unknown-class | line-out-of-range) ;;
+    file-not-in-diff | case-mismatch | invalid-yaml | stray-file) ;;
+    base-not-ancestor | head-mismatch | metadata-in-tree | bad-ground-truth) ;;
+    non-mapping-yaml | scalar-defect | float-lines | directory-as-file) ;;
+    base-unrelated) ;;
+    *) die "unknown mutation ${1}" ;;
+  esac
+}
+
+function apply_mutation() {
+  local mutation="${1}"
+  local one="${CORPUS}/cases/001-demo-tally-sign"
+  local other_sha mutated_sha
+
+  case "${mutation}" in
+    clean) ;;
+    missing-defects)
+      rm -f "${one}/defects.yaml"
+      ;;
+    bad-sha)
+      printf '%s\n' 'abc123' > "${one}/BASE"
+      ;;
+    unknown-class)
+      mutate "${one}/defects.yaml" 's/^    class: logic$/    class: perfomance/'
+      ;;
+    line-out-of-range)
+      mutate "${one}/defects.yaml" 's/^    lines: \[9, 9\]$/    lines: [9, 400]/'
+      ;;
+    float-lines)
+      # Integral values written as floats. jq reads 9.0 as equal to its floor,
+      # so a value-only integer test accepts it, and the text then reaches a
+      # shell arithmetic comparison that cannot parse it.
+      mutate "${one}/defects.yaml" 's/^    lines: \[9, 9\]$/    lines: [9.0, 400.0]/'
+      ;;
+    directory-as-file)
+      # `git cat-file -e` is true for a tree, so a defect recorded against a
+      # directory clears a bare existence check.
+      mutate "${one}/defects.yaml" 's|^    file: src/tally$|    file: src|'
+      ;;
+    file-not-in-diff)
+      # README.md is in both trees and unchanged between them. The line range
+      # moves to 1 as well, so the out-of-range check does not fire first and
+      # mask the finding this scenario is for.
+      mutate "${one}/defects.yaml" \
+        -e 's|^    file: src/tally$|    file: README.md|' \
+        -e 's|^    lines: \[9, 9\]$|    lines: [1, 1]|'
+      ;;
+    case-mismatch)
+      mutate "${one}/defects.yaml" 's/^case: 001-demo-tally-sign$/case: 007-demo-elsewhere/'
+      ;;
+    invalid-yaml)
+      printf '%s\n' 'case: [unterminated' > "${one}/defects.yaml"
+      ;;
+    non-mapping-yaml)
+      # A leading "- " on the first line, the likeliest hand edit: the document
+      # becomes a sequence and every field lookup yields nothing.
+      printf '%s\n' '- case: 001-demo-tally-sign' '  defects: []' \
+        > "${one}/defects.yaml"
+      ;;
+    scalar-defect)
+      printf '%s\n' \
+        'case: 001-demo-tally-sign' \
+        'source: planted' \
+        'repo: https://example.invalid/demo/tally' \
+        'languages: [shell]' \
+        'defects:' \
+        '  - just-a-string' \
+        > "${one}/defects.yaml"
+      ;;
+    stray-file)
+      printf '%s\n' 'scratch' > "${one}/NOTES.md"
+      ;;
+    bad-ground-truth)
+      # Abbreviated rather than absent: the fix commit lives upstream, so only
+      # its shape can be checked here.
+      mutate "${one}/defects.yaml" -E 's/^  ground_truth: ([0-9a-f]{7}).*$/  ground_truth: \1/'
+      ;;
+    base-not-ancestor)
+      # A commit from the other case's unrelated orphan history.
+      other_sha="$(git_corpus rev-parse "refs/cases/002-demo-report-error/base")"
+      printf '%s\n' "${other_sha}" > "${one}/BASE"
+      ;;
+    head-mismatch)
+      # A fresh descendant of the recorded head, referenced outside refs/cases/
+      # so it survives and the case-ref count is unaffected. Pointing the HEAD
+      # file at the base instead would empty the BASE..HEAD diff and trip the
+      # diff-membership rule as well, so the scenario would not isolate the
+      # drift it is named for.
+      git_corpus checkout -q --detach "refs/cases/001-demo-tally-sign/head"
+      printf '%s\n' 'later' > "${CORPUS}/NOTE.md"
+      git_corpus add -A
+      git_corpus commit -q -m "case 001-demo-tally-sign: later"
+      mutated_sha="$(git_corpus rev-parse HEAD)"
+      git_corpus update-ref "refs/drift/001-demo-tally-sign" "${mutated_sha}"
+      git_corpus checkout -q main
+      printf '%s\n' "${mutated_sha}" > "${one}/HEAD"
+      ;;
+    base-unrelated)
+      # Both the file and the ref move to the other case's orphan history, so
+      # the recorded SHA and the ref agree and the ancestry check is what
+      # refuses it. Moving only the file would be caught earlier, as drift.
+      other_sha="$(git_corpus rev-parse "refs/cases/002-demo-report-error/base")"
+      printf '%s\n' "${other_sha}" > "${one}/BASE"
+      git_corpus update-ref "refs/cases/001-demo-tally-sign/base" "${other_sha}"
+      ;;
+    metadata-in-tree)
+      # Freezes the answer key into the case's own head commit, which is what
+      # materialize-case refuses to hand a reviewer. The new commit is a new
+      # SHA, so the ref is moved explicitly and the recorded HEAD is updated to
+      # match; leaving them apart would trip the drift check instead.
+      git_corpus checkout -q --detach "refs/cases/001-demo-tally-sign/head"
+      printf '%s\n' 'case: 001-demo-tally-sign' > "${CORPUS}/defects.yaml"
+      git_corpus add -A
+      git_corpus commit -q -m "case 001-demo-tally-sign: head"
+      mutated_sha="$(git_corpus rev-parse HEAD)"
+      git_corpus update-ref "refs/cases/001-demo-tally-sign/head" "${mutated_sha}"
+      git_corpus checkout -q main
+      printf '%s\n' "${mutated_sha}" > "${one}/HEAD"
+      ;;
+    *)
+      die "unknown mutation ${mutation}"
+      ;;
+  esac
+}
+
+function main() {
+  local mutation="${1:-clean}"
+  local tally_base tally_head report_base report_head
+
+  # Before mktemp, so an unknown name cannot leave a directory behind.
+  validate_mutation "${mutation}"
+
+  trap cleanup EXIT
+  ROOT="$(mktemp -d "${TMPDIR:-/tmp}/review-corpus-fixture.XXXXXX")" \
+    || die "could not create a temporary directory under ${TMPDIR:-/tmp}"
+  CORPUS="${ROOT}/corpus"
+
+  mkdir -p "${CORPUS}"
+  git init --quiet "${CORPUS}"
+  git -C "${CORPUS}" symbolic-ref HEAD refs/heads/main
+
+  build_case_branches 001-demo-tally-sign write_tally_base write_tally_head
+  tally_base="${BASE_SHA}"
+  tally_head="${HEAD_SHA}"
+
+  build_case_branches 002-demo-report-error write_report_base write_report_head
+  report_base="${BASE_SHA}"
+  report_head="${HEAD_SHA}"
+
+  git_corpus checkout -q --orphan main
+  clear_tree
+
+  write_case_metadata 001-demo-tally-sign \
+    "${tally_base}" "${tally_head}" \
+    planted src/tally 9 9 logic \
+    'tally subtracts each value instead of adding it, so every total is wrong.'
+
+  write_case_metadata 002-demo-report-error \
+    "${report_base}" "${report_head}" \
+    fix-commit src/report 7 8 error-handling \
+    'The failed write is swallowed and success is reported regardless.'
+
+  git_corpus add -A
+  git_corpus commit -q -m "Add the demo cases"
+
+  # The scaffolding branches each case history was built on are removed, so the
+  # fixture holds what the real corpus holds: main plus refs/cases/*.
+  git_corpus branch -q -D build/001-demo-tally-sign build/002-demo-report-error
+
+  apply_mutation "${mutation}"
+
+  HANDED_OVER="yes"
+  printf '%s\n' "${ROOT}"
+}
+
+main "$@"

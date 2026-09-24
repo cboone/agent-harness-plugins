@@ -42,7 +42,7 @@ permissions:
 
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@17f94b08428565213e70ae19c37a7be894a172d2 # v3.1.1
+    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
     with:
       zig-version-file: build.zig.zon
       run-cross-compile: true
@@ -56,5 +56,5 @@ jobs:
 - Test, format check and build are on by default. Cross-compilation and scrut are both off, and this template turns on the first of them: `run-cross-compile: true` validates the release targets on every PR, which Zig does on one runner with no extra toolchains, and catches the platform-specific compile errors that only appear off the host target. Scrut stays opt-in, per the note below.
 - To disable a specific check, set its input to `false` (e.g., `run-test: false`, `run-fmt: false`, `run-build: false`).
 - Optional inputs include `cross-targets` (space-separated target triples, defaults to linux/macOS/Windows), `run-scrut` for CLI snapshot testing, and `scrut-build-cmd`/`scrut-env`/`scrut-test-dir` for scrut configuration. Setting them is a manual step. The add-scrut-cli-tests skill edits **this file** but not this job: it adds a sibling `test-scrut` job that calls `run-scrut-tests.yml`, and leaves the `ci` job's inputs alone, so `run-scrut` here stays off. The result is one workflow with two jobs. Enabling `run-scrut` as well would run the snapshot tests twice, so pick one: the input reuses the Zig toolchain this job already installs, while the separate job installs scrut from a checksum manifest the reusable workflow maintains.
-- The workflow's format job runs `zig fmt --check src/ build.zig`, which does not cover `build.zig.zon`. The Makefile's `fmt` target does, so run `make check` locally rather than relying on CI to catch an unformatted manifest.
+- The workflow's format job checks `build.zig`, `build.zig.zon` and `src` by default, so an unformatted or missing manifest fails CI. The Makefile's `fmt` target covers the same paths, so `make check` catches it locally first. Set `fmt-paths` if this project's layout differs.
 - Refresh the pinned SHA and its `# vX.Y.Z` comment before emitting this file; see the SHA refresh section in the skill body.

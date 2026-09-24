@@ -336,7 +336,7 @@ GitHub Actions job template for running scrut CLI tests. Uses the `cboone/gh-act
 
 ```yaml
 test-scrut:
-  uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+  uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
   with:
     scrut-setup-cmd: "SETUP_CMD"
     scrut-env: "TOOL_BIN=BINARY_PATH"
@@ -354,6 +354,7 @@ test-scrut:
 
 - The reusable workflow handles scrut installation, SHA-256 checksum verification, checkout, and test execution internally. No manual installation steps, language setup steps, or platform detection are needed.
 - `scrut-setup-cmd` runs before scrut tests to build the project binary. For interpreted languages (shell scripts, Python, Ruby) where no build step is needed, omit this input entirely.
+- For a CLI shipped as PEP 723 Python scripts, set `setup-uv: true` rather than hand-rolling a uv install inside `scrut-setup-cmd`. The workflow installs the pinned uv release, verified against the SHA-256 upstream publishes beside the asset, and puts it on `PATH` before `scrut-setup-cmd` runs. `uv-version` overrides the pin. Linux and macOS, amd64 and arm64.
 - `scrut-env` accepts newline-delimited `KEY=VALUE` pairs. Relative paths (starting with `./`) are automatically resolved to absolute paths by the reusable workflow.
 - The reusable workflow defaults to `runs-on: ubuntu-latest`. For projects that require macOS (e.g., macOS framework dependencies), add `runs-on: macos-latest`.
 - The default `scrut-test-dir` is `tests/`. Override with `scrut-test-dir: "tests/scrut/"` if your test files are in a subdirectory.

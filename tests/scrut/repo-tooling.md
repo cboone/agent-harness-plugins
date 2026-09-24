@@ -141,8 +141,90 @@ canonical source directly.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" rewriting-generator 2>&1
-::error::Generated Codex skill 'dist/codex/plugins/release/skills/release/SKILL.md' differs from its canonical source 'plugins/release/skills/release/SKILL.md'; the generator must copy SKILL.md files unchanged
+::error::Generated Codex skill 'dist/codex/plugins/release/skills/release/SKILL.md' differs from its canonical source 'plugins/release/skills/release/SKILL.md'; the generator copies SKILL.md files unchanged unless disable-model-invocation is translated
 Codex skill inventory: * (glob)
+1 plugin validation error(s) found.
+[1]
+```
+
+One difference is sanctioned. Codex ignores `disable-model-invocation`, so the
+generator drops the line and writes `agents/openai.yaml` instead, and rule 16b
+accepts that exact pair of edits.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" translated-frontmatter 2>&1
+Codex skill inventory: * (glob)
+All plugin validations passed.
+```
+
+A generator that left the line in the Codex copy would ship a policy Codex
+ignores.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" untranslated-frontmatter 2>&1
+::error::Generated Codex skill 'dist/codex/plugins/release/skills/release/SKILL.md' differs from its canonical source 'plugins/release/skills/release/SKILL.md' by more than the translated disable-model-invocation line
+Codex skill inventory: * (glob)
+1 plugin validation error(s) found.
+[1]
+```
+
+A generator that dropped the line without writing the manifest would lose the
+policy altogether, which is the quieter of the two failures.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" missing-openai-yaml 2>&1
+::error::Generated Codex skill 'dist/codex/plugins/release/skills/release/SKILL.md' drops disable-model-invocation without writing 'dist/codex/plugins/release/skills/release/agents/openai.yaml'
+Codex skill inventory: * (glob)
+1 plugin validation error(s) found.
+[1]
+```
+
+Asking only whether the policy is present would let a generator add anything
+beside it, and Codex reads the whole manifest. `interface.short_description` is
+the sharp case: Codex prints it in place of the skill's description, so a
+generator that wrote one would replace every routing description in the Codex
+catalog with the policy still correct.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" extra-manifest-key 2>&1
+::error::Generated Codex manifest 'dist/codex/plugins/release/skills/release/agents/openai.yaml' must state policy.allow_implicit_invocation false and nothing else
+Codex skill inventory: * (glob)
+1 plugin validation error(s) found.
+[1]
+```
+
+## Skill frontmatter fields are on the allowlist
+
+Claude Code accepts around twenty `SKILL.md` frontmatter fields, OpenCode
+documents five and Codex CLI two, and all three tolerate what they do not
+recognize. A misspelled field therefore changes nothing in any harness and
+reports nothing, so rule 21 names the fields this repository ships.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" unknown-frontmatter-field 2>&1
+Codex skill inventory: * (glob)
+::error::Skill 'plugins/release/skills/release/SKILL.md' declares frontmatter field 'disable-model-invokation', which is not on the allowlist; see the skill frontmatter section of docs/plugin-development.md
+1 plugin validation error(s) found.
+[1]
+```
+
+A field on the allowlist passes, and reaches Codex and OpenCode unchanged
+because both ignore what they do not recognize.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" permitted-frontmatter-field 2>&1
+Codex skill inventory: * (glob)
+All plugin validations passed.
+```
+
+Neither the generator nor rule 16b reads a quoted value, so a quoted
+`disable-model-invocation` would translate to nothing and leave the skill
+implicitly invocable everywhere.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" quoted-invocation-value 2>&1
+Codex skill inventory: * (glob)
+::error::Skill 'plugins/release/skills/release/SKILL.md' must write disable-model-invocation as an unquoted true or false
 1 plugin validation error(s) found.
 [1]
 ```
@@ -387,6 +469,23 @@ identical
 
 ```scrut
 $ cd "${REPO_ROOT}" && cmp plugins/create-worktree/scripts/manage-resource-claims plugins/address-issue-in-worktree/scripts/manage-resource-claims && echo identical
+identical
+```
+
+## The duplicated Copilot thread script stays byte-identical
+
+`resolve-copilot-pr-feedback` and `monitor-pr` ship the same
+`resolve-copilot-threads`, for the same rule 18 reason as the worktree scripts
+above. `monitor-pr` calls only its read-only `fetch` and `fetch-reviews`
+commands, to observe Copilot's findings and format drift before it decides
+whether to dispatch to the resolver.
+
+Drift here would be worse than a missing feature: the watch and the resolver
+would disagree about what counts as a clean review, and the watch would report a
+PR ready while the resolver still saw findings in it.
+
+```scrut
+$ cd "${REPO_ROOT}" && cmp plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads plugins/monitor-pr/scripts/resolve-copilot-threads && echo identical
 identical
 ```
 

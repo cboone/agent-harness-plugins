@@ -36,10 +36,12 @@ permissions:
 
 jobs:
   lint:
-    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@91f9abd25d4f82354c0f950dfc8b6d7525b0f5b5 # v3.0.0
+    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@bbe15187a1a8c60caded9295d1d2d90338a0bb93 # v4.1.0
 ```
 
 ## Notes
 
 - The reusable workflow handles ShellCheck and shfmt installation, checkout, and execution internally
 - ShellCheck and shfmt configuration (scan directories, formatting options) is managed by the reusable workflow
+- The workflow installs a pinned, checksum-verified ShellCheck 0.11.0 rather than using the runner image's, which is 0.9.0 on `ubuntu-latest`. A first run can report findings from checks added in 0.10.0 and 0.11.0, SC2327 to SC2332 among them. Fix them, add a `# shellcheck disable=` directive, or pin `shellcheck-version` together with that release's `shellcheck-checksums` while working through them.
+- The workflow fetches its installer using the `job.workflow_repository` and `job.workflow_sha` context properties, which GitHub Enterprise Server does not populate. On GHES, run the linters in a job of your own with the `set-up-shellcheck`, `set-up-shfmt` and `set-up-actionlint` composite actions instead.
