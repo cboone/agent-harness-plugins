@@ -310,9 +310,10 @@ function do_fetch() {
 # those layouts are parsed separately below.
 #
 # The raw legacy slice, complete review body, and structured parse are emitted.
-# hasFormatDrift covers both an unparsed legacy section and a non-clean v2
-# verdict that neither structured findings nor open inline threads explain,
-# keeping a format change visible instead of silently reporting no feedback.
+# hasFormatDrift covers an unparsed legacy section, a v2 review that states
+# more findings than the inline threads it lists, and a non-clean v2 verdict
+# that neither open threads nor a resolved-only round explains, keeping a
+# format change visible instead of silently reporting no feedback.
 # =============================================================================
 
 # Normalizes an array of GitHub review objects into Copilot review-body findings.
@@ -366,6 +367,92 @@ function do_parse_reviews() {
       def lists_open_threads:
         test("<summary>(<[^>]+>)*Open \\([1-9][0-9]*\\)");
 
+      # The number of inline threads that summary announced, or 0 when there
+      # is no such section. Reconciling it against the stated count is what
+      # makes a shortfall visible, so the count is parsed rather than the
+      # section merely detected.
+      def open_thread_count:
+        (
+          split("\n")
+          | map(scan("<summary>(?:<[^>]+>)*Open \\(([0-9]+)\\)"))
+          | first
+        ) as $open
+        | if $open == null then 0 else ($open[0] | tonumber) end;
+
+      # ccr-overview-v2 also lists the findings closed since the previous
+      # round under a "Resolved since last review (N)" summary. Those links
+      # record work already done rather than feedback to act on, so they are
+      # a known layout rather than a finding the parser failed to read.
+      #
+      # Presence alone is not enough to call a review clean. Copilot ships a
+      # resolved section on most second and later rounds, including rounds
+      # that state findings, so pairing it with the lead paragraph is what
+      # separates the two. See lead_states_no_findings.
+      def lists_resolved_threads:
+        test("<summary>(<[^>]+>)*Resolved since last review \\([1-9][0-9]*\\)");
+
+      # ccr-overview-v2 states a count on a "**Findings:**" line, as either
+      # "None" or a number. Across every observed body, in the fixtures and
+      # on live pull requests, that total is the "Open (N)" thread count and
+      # nothing else: a review stating 1 can carry "Open (1)" alongside a
+      # "Previously missed (1)" entry, and a review stating "None" can carry
+      # "Previously missed (3)". It also omits the line-less findings
+      # appended to file-summary cells.
+      #
+      # So the count says how many inline threads Copilot opened, and says
+      # nothing about the rest of the body. Comparing it against
+      # open_thread_count is therefore a real invariant, while reading "None"
+      # as "this review has no findings" is not. Layouts predating the line
+      # report null and are excluded from the comparison.
+      #
+      # Scanned line by line because jq anchors "^" to the whole string, the
+      # same reason the verdict and marker definitions split the body first.
+      # The anchor drops a header quoted mid-line in the prose of a finding,
+      # and first keeps the real header, which always precedes the sections,
+      # ahead of one quoted at the start of a line inside them.
+      #
+      # The value is a severity breakdown, not one number. Copilot renders
+      # each severity as a count followed by a badge, joined by a middle dot:
+      # "**Findings:** 2 <picture>...Medium...</picture> · 1 <picture>...Low
+      # ...</picture>" is three findings, and its Open section reads
+      # "Open (3)". Every count token therefore has to be summed. Reading
+      # only the first would report 2 there and understate every review that
+      # spans severities.
+      #
+      # The value is validated whole rather than scanned for tokens. Removing
+      # the markup tags and then all whitespace leaves the counts and their
+      # separators alone, so a well-formed value reduces to "None" or to
+      # digits joined by the dot, and anything else is reported as
+      # "unparseable". Tag removal is also what keeps the width and height
+      # numbers inside the badge markup out of the sum.
+      #
+      # Validating the whole value is load-bearing. Matching a leading token
+      # instead would read "None plus hidden text" as zero and "0 plus hidden
+      # text" as a count of zero, and either one then satisfies the
+      # resolved-round exemption and suppresses an unparsed finding, which is
+      # the failure this command exists to prevent.
+      #
+      # "unparseable" is deliberately distinct from null, which means no
+      # "**Findings" line at all. The caller turns that null into
+      # "unparseable" on a v2 body, where the line is always present, and
+      # keeps it as null on the older layouts that never carried one.
+      def stated_finding_count:
+        (split("\n") | map(select(test("^\\*\\*Findings"; "i"))) | first) as $line
+        | if $line == null then null
+          else
+            (
+              $line
+              | sub("^\\*\\*Findings:\\*\\*"; ""; "i")
+              | gsub("<[^>]*>"; "")
+              | gsub("[[:space:]]"; "")
+            ) as $counts
+            | if ($counts | test("^None$"; "i")) then 0
+              elif ($counts | test("^[0-9]+(·[0-9]+)*$")) then
+                ([$counts | scan("[0-9]+") | tonumber] | add)
+              else "unparseable"
+              end
+          end;
+
       # Copilot puts its verdict heading and lead paragraph before the first
       # <details> block. The "Once you have addressed..." call to action is
       # boilerplate on every review and carries no finding.
@@ -376,6 +463,28 @@ function do_parse_reviews() {
         | map(select(test("^\\*Once you") | not))
         | join("\n")
         | trim;
+
+      # A ccr-overview-v2 review opens with either a lead paragraph naming
+      # the findings it is reporting, or one fixed sentence that names none.
+      # On live pull requests the fixed sentence accompanies every review
+      # with nothing outstanding, including the review that issue #491 was
+      # filed for, while every other lead reads like "Unresolved moderate
+      # findings affect detection, reviewer exclusions, and checklist
+      # accuracy" and states findings that appear nowhere else in the body.
+      #
+      # So the lead is the signal that separates a resolved-only review with
+      # nothing left to do from one whose findings live only in prose. It is
+      # matched exactly: an unrecognized lead reports drift, which sends a
+      # reader to headline. That is the safe direction, because headline is
+      # sometimes the only place a finding is stated.
+      def lead_states_no_findings:
+        headline
+        | split("\n")
+        | map(trim)
+        | map(select(. != "" and (test("^<|^#|^\\*|^-|^\\|") | not)))
+        | first
+        | . != null
+          and test("^One or more issues must be addressed before approval\\.$");
 
       # The section match is deliberately loose: almost any line mentioning the
       # phrase opens the slice, rather than requiring a <summary> tag or a
@@ -530,6 +639,30 @@ function do_parse_reviews() {
         | ($suppressed_findings + $missed_findings + $table_findings) as $findings
         | (.body | has_suppressed_marker) as $has_suppressed_marker
         | ($is_v2 and (.body | lists_open_threads)) as $lists_open_threads
+        | ($is_v2 and (.body | lists_resolved_threads)) as $lists_resolved_threads
+        | ($is_v2 and (.body | lead_states_no_findings)) as $lead_states_no_findings
+        # Every ccr-overview-v2 body carries a "**Findings:**" line, in every
+        # fixture and in all 13 observed live reviews, so its absence on a v2
+        # body is a renamed or removed header rather than an older layout.
+        # Reporting it as unparseable is what keeps a header rename from
+        # reading as "this layout never had a count" and taking the
+        # resolved-round exemption. Only a pre-v2 body reports null and is
+        # excluded from the comparison.
+        | (
+            if $is_v2 | not then null
+            else ((.body | stated_finding_count) // "unparseable")
+            end
+          ) as $stated_findings
+        | (if $is_v2 then (.body | open_thread_count) else 0 end) as $open_thread_count
+        # A stated count above the inline threads Copilot listed, or a count
+        # line that no longer parses, leaves findings this command cannot
+        # account for. Both are independent of which sections the body has.
+        | (
+            if $stated_findings == null then false
+            elif $stated_findings == "unparseable" then true
+            else $stated_findings > $open_thread_count
+            end
+          ) as $stated_shortfall
         | {
             id: .id,
             url: .html_url,
@@ -537,14 +670,37 @@ function do_parse_reviews() {
             headline: (.body | headline),
             verdict: $verdict,
             hasSuppressedMarker: $has_suppressed_marker,
+            # A shortfall against the count Copilot stated reports drift on
+            # its own, because the count and the "Open (N)" number it is
+            # compared against both come from Copilot itself. It sits outside
+            # the no-findings guard deliberately: a body can yield one
+            # parseable finding and still state more than its open threads
+            # account for, and that remainder is exactly what this signal is
+            # for. Putting it under the guard would report clean whenever any
+            # single finding parsed.
+            #
+            # The remaining branches do require an empty parse, because they
+            # ask whether anything at all was recovered from a body that says
+            # there should be something. A non-clean verdict reports drift
+            # unless open threads, which the thread fetch reports, or a
+            # resolved-only round whose lead paragraph states no findings
+            # accounts for it. Requiring the lead is what keeps the exemption
+            # from clearing a review that lists a resolved section and states
+            # its findings in prose, which is a shape Copilot does emit.
             hasFormatDrift: (
-              ($findings | length) == 0
-              and (
-                $has_suppressed_marker
-                or (
-                  $is_v2
-                  and $verdict != "### 🟢 Approval recommended"
-                  and ($lists_open_threads | not)
+              ($is_v2 and $stated_shortfall)
+              or (
+                ($findings | length) == 0
+                and (
+                  $has_suppressed_marker
+                  or (
+                    $is_v2
+                    and $verdict != "### 🟢 Approval recommended"
+                    and ($lists_open_threads | not)
+                    and (
+                      ($lists_resolved_threads and $lead_states_no_findings) | not
+                    )
+                  )
                 )
               )
             ),
