@@ -432,9 +432,10 @@ function do_parse_reviews() {
       # resolved-round exemption and suppresses an unparsed finding, which is
       # the failure this command exists to prevent.
       #
-      # "unparseable" is deliberately distinct from null. A renamed or
-      # restructured header is itself a format change, and collapsing it into
-      # the same value as a layout that never had the line would hide it.
+      # "unparseable" is deliberately distinct from null, which means no
+      # "**Findings" line at all. The caller turns that null into
+      # "unparseable" on a v2 body, where the line is always present, and
+      # keeps it as null on the older layouts that never carried one.
       def stated_finding_count:
         (split("\n") | map(select(test("^\\*\\*Findings"; "i"))) | first) as $line
         | if $line == null then null
@@ -640,7 +641,18 @@ function do_parse_reviews() {
         | ($is_v2 and (.body | lists_open_threads)) as $lists_open_threads
         | ($is_v2 and (.body | lists_resolved_threads)) as $lists_resolved_threads
         | ($is_v2 and (.body | lead_states_no_findings)) as $lead_states_no_findings
-        | (if $is_v2 then (.body | stated_finding_count) else null end) as $stated_findings
+        # Every ccr-overview-v2 body carries a "**Findings:**" line, in every
+        # fixture and in all 13 observed live reviews, so its absence on a v2
+        # body is a renamed or removed header rather than an older layout.
+        # Reporting it as unparseable is what keeps a header rename from
+        # reading as "this layout never had a count" and taking the
+        # resolved-round exemption. Only a pre-v2 body reports null and is
+        # excluded from the comparison.
+        | (
+            if $is_v2 | not then null
+            else ((.body | stated_finding_count) // "unparseable")
+            end
+          ) as $stated_findings
         | (if $is_v2 then (.body | open_thread_count) else 0 end) as $open_thread_count
         # A stated count above the inline threads Copilot listed, or a count
         # line that no longer parses, leaves findings this command cannot

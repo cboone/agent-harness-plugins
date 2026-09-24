@@ -105,10 +105,11 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 ```
 
 A CRLF body still yields the clean verdict, rather than a heading with a
-trailing carriage return that reads as drift.
+trailing carriage return that reads as drift. The count line carries the
+carriage return too, so this also covers `**Findings:** None` surviving it.
 
 ```scrut
-$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"<!-- ccr-overview-v2 -->\r\n\r\n### 🟢 Approval recommended\r\n\r\nNo issues."}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {verdict, hasFormatDrift}'
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"<!-- ccr-overview-v2 -->\r\n\r\n### 🟢 Approval recommended\r\n\r\nNo issues.\r\n\r\n**Findings:** None\r\n"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {verdict, hasFormatDrift}'
 {"verdict":"### 🟢 Approval recommended","hasFormatDrift":false}
 ```
 
@@ -253,6 +254,17 @@ exemption outright.
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-trailer.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
+Renaming the header is the same format change seen from the other side. Every
+`ccr-overview-v2` body carries a `**Findings:**` line, so its absence is a
+rename rather than an older layout, and reading it as "this layout never had a
+count" would let the renamed body take the resolved-round exemption. Only a
+body with no v2 marker reports no count and is excluded from the comparison.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-renamed-header.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
 {"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
 ```
 

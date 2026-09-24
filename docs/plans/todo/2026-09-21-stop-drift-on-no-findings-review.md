@@ -26,7 +26,9 @@ The issue proposes treating `**Findings:** None` as authoritative for any `ccr-o
 
 So `None` rules out open inline threads and nothing else. Reading it as "this review has no findings" is unsound, and comparing the count against zero is not the invariant. Comparing it against the `Open (N)` number is.
 
-The value is a severity breakdown rather than a single number. Copilot renders each severity as a count followed by a badge, joined by a middle dot, so review 5280564210 on #516 reads `**Findings:** 2 <picture>Medium</picture> · 1 <picture>Low</picture>` and lists `Open (3)`. Every count token has to be summed; reading only the first understates any review spanning severities. The badge markup carries its own numbers in `width` and `height` attributes, so a count token is recognized by position: at the start of the value or just after the dot separator, and followed by whitespace or the end of the line.
+The value is a severity breakdown rather than a single number. Copilot renders each severity as a count followed by a badge, joined by a middle dot, so review 5280564210 on #516 reads `**Findings:** 2 <picture>Medium</picture> · 1 <picture>Low</picture>` and lists `Open (3)`. The counts have to be summed; reading only the first understates any review spanning severities.
+
+The value is validated whole rather than scanned for tokens. Removing the markup tags and then all whitespace leaves the counts and their separators alone, so a well-formed value reduces to `None` or to digits joined by the dot, and anything else is unparseable. Tag removal is also what keeps the badges' own `width` and `height` numbers out of the sum. Validating the whole value is what stops `None plus hidden text` and `0 plus hidden text` from reading as a count, either of which would satisfy the resolved-round exemption and suppress an unparsed finding.
 
 ### Why the resolved section cannot clear a review on its own
 
@@ -41,7 +43,7 @@ In the jq program inside `do_parse_reviews`:
 1. `open_thread_count`: the `N` from the `Open (N)` summary, or `0`. Parsed rather than merely detected, so the count has something to reconcile against.
 1. `lists_resolved_threads`: `test("<summary>(<[^>]+>)*Resolved since last review \\([1-9][0-9]*\\)")`, mirroring `lists_open_threads` so the optional `<strong>` wrapper still matches and `(0)` is excluded.
 1. `lead_states_no_findings`: the first prose line of `headline`, matched exactly against Copilot's fixed no-findings sentence. Defined after `headline` so it can reuse it.
-1. `stated_finding_count`: `0` for `None`, the sum of the severity counts when the value is a breakdown, `null` when no `**Findings:**` line exists, and `"unparseable"` when the line exists but its value is neither. The value is matched whole, so `None plus hidden text` is unparseable rather than zero; a prefix match there would let a malformed line satisfy the resolved-round exemption and suppress an unparsed finding. A renamed header is itself a format change, so it must not collapse into the same value as a layout that never had the line.
+1. `stated_finding_count`: `0` for `None`, the sum of the severity counts when the value is a breakdown, `"unparseable"` when a `**Findings` line exists but its value is neither, and `null` when no such line exists. The binding then turns that `null` into `"unparseable"` on a `ccr-overview-v2` body, where the line is always present, so a renamed header reads as the format change it is rather than as a layout that never had a count. Only a pre-v2 body keeps `null` and is excluded from the comparison.
 
 Then the v2 clause of `hasFormatDrift`:
 
@@ -84,6 +86,7 @@ Resulting behavior:
 | Any verdict, stated total above the `Open (N)` number              | varies | true  |
 | Stated total above `Open (N)`, with some findings parsed           | false  | true  |
 | Any verdict, `**Findings:**` value that is neither None nor counts | varies | true  |
+| v2 body whose `**Findings:**` header was renamed or removed        | varies | true  |
 | Non-clean verdict, `Open (N)` listed and count matching            | false  | false |
 | Section phrases quoted only in a table or prose, or `Resolved (0)` | true   | true  |
 | Legacy suppressed section with no parseable findings               | true   | true  |
