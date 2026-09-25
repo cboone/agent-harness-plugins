@@ -2,7 +2,7 @@
 name: pr
 description: >-
   Commit, push, and open a GitHub pull request from the current branch in one
-  step, with no prompts. Use for "pr", "open a pr", or "push and create pr".
+  step. Use for "pr", "open a pr", or "push and create pr".
 ---
 
 # PR

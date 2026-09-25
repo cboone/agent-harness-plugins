@@ -108,6 +108,9 @@ jobs:
         REPORT_BOARD_DATA_DIR=./tests/data/report-board
         RESOLVE_COPILOT_THREADS_BIN=./plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads
         MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN=./plugins/monitor-pr/scripts/resolve-copilot-threads
+        REVIEW_SCOPE_BIN=./plugins/review-until-clean/scripts/review-scope
+        GIT_CONFIG_GLOBAL=/dev/null
+        GIT_CONFIG_SYSTEM=/dev/null
         TMUX_STUB_BIN=./tests/fixtures/tmux-stub
         NOTIFY_BIN=./plugins/notify/scripts/notify
         CHECK_NOTIFICATIONS_BIN=./tests/fixtures/check-notifications
@@ -119,3 +122,8 @@ jobs:
       # fails here with a clear message rather than as a scrut output diff.
       scrut-setup-cmd: "yq --version | grep -q mikefarah"
       scrut-test-dir: "tests/scrut/"
+      # The reusable workflow defaults to 10 minutes, which the suite outgrew:
+      # main at 9e76eb82 took 9m17s, and the next branch to add a case was
+      # cancelled at 10m01s. Raising the ceiling buys room; it does not address
+      # why 600-odd cases take that long, which is tracked separately.
+      timeout-minutes: 20
