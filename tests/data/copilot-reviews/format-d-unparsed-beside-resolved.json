@@ -1,0 +1,12 @@
+[
+  {
+    "id": 6000000023,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-25T11:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6000000023",
+    "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🔵 Needs a closer look\n\nOne or more issues must be addressed before approval.\n\n**Review effort:** Lite  \n**Findings:** None\n\n<section data-finding=\"unknown\">The parser cannot structure this yet.</section>\n\n<details>\n<summary><strong>Resolved since last review (1)</strong></summary>\n\n- <picture><img alt=\"High severity\"></picture> [An issue fixed by the latest commit](#discussion_r670)\n</details>"
+  }
+]

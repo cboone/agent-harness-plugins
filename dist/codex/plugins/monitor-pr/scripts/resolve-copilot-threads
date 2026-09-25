@@ -360,24 +360,49 @@ function do_parse_reviews() {
 
       def is_overview_v2: contains("<!-- ccr-overview-v2 -->");
 
+      # Copilot announces every section as a <summary> inside a <details>
+      # block, so the nesting is part of what identifies one. Matching the
+      # summary text alone would let an unfamiliar wrapper carrying the same
+      # words stand in for a section Copilot emits, and both section matchers
+      # below grant an exemption, so a spoofable match is a way to suppress
+      # drift rather than a cosmetic imprecision.
+      #
+      # Depth is tracked rather than assumed, because "Previously missed"
+      # nests a details block per finding. A closing tag at depth zero is
+      # ignored so unbalanced markup cannot drive the count negative and open
+      # the rest of the body to matching.
+      def section_summary($name):
+        split("\n")
+        | reduce .[] as $line ({depth: 0, value: null};
+            if ($line | test("^<details"))
+            then .depth += 1
+            elif ($line | test("^</details>"))
+            then (if .depth > 0 then .depth -= 1 else . end)
+            elif .value == null
+                 and .depth > 0
+                 and ($line | test("<summary>(<[^>]+>)*" + $name + " \\([0-9]+\\)"))
+            then .value = (
+                $line
+                | capture("<summary>(?:<[^>]+>)*" + $name + " \\((?<count>[0-9]+)\\)").count
+                | tonumber
+              )
+            else .
+            end)
+        | .value;
+
       # ccr-overview-v2 lists the inline threads that were open when the
       # review was written under an "Open (N)" summary. Those threads explain
       # a non-clean verdict by themselves, and the thread fetch reports them,
       # so a review whose only findings are inline threads is not drift.
       def lists_open_threads:
-        test("<summary>(<[^>]+>)*Open \\([1-9][0-9]*\\)");
+        (section_summary("Open") // 0) > 0;
 
       # The number of inline threads that summary announced, or 0 when there
       # is no such section. Reconciling it against the stated count is what
       # makes a shortfall visible, so the count is parsed rather than the
       # section merely detected.
       def open_thread_count:
-        (
-          split("\n")
-          | map(scan("<summary>(?:<[^>]+>)*Open \\(([0-9]+)\\)"))
-          | first
-        ) as $open
-        | if $open == null then 0 else ($open[0] | tonumber) end;
+        section_summary("Open") // 0;
 
       # ccr-overview-v2 also lists the findings closed since the previous
       # round under a "Resolved since last review (N)" summary. Those links
@@ -389,7 +414,32 @@ function do_parse_reviews() {
       # that state findings, so pairing it with the lead paragraph is what
       # separates the two. See lead_states_no_findings.
       def lists_resolved_threads:
-        test("<summary>(<[^>]+>)*Resolved since last review \\([1-9][0-9]*\\)");
+        (section_summary("Resolved since last review") // 0) > 0;
+
+      # True when a line outside every details block opens an element this
+      # parser does not recognize. Every section Copilot emits is a details
+      # block, and its preamble is prose, headings, bold labels and the
+      # marker comment, so any other element at depth zero is content nothing
+      # here has read.
+      #
+      # This is what bounds the resolved-round exemption. Without it a body
+      # can pair the fixed lead and a real resolved section with an unparsed
+      # finding section and still read as clean, which is the silent miss the
+      # whole command exists to prevent.
+      def has_unrecognized_block:
+        split("\n")
+        | reduce .[] as $line ({depth: 0, found: false};
+            if ($line | test("^<details"))
+            then .depth += 1
+            elif ($line | test("^</details>"))
+            then (if .depth > 0 then .depth -= 1 else . end)
+            elif .depth == 0
+                 and ($line | test("^<"))
+                 and ($line | test("^<!--") | not)
+            then .found = true
+            else .
+            end)
+        | .found;
 
       # ccr-overview-v2 states a count on a "**Findings:**" line, as either
       # "None" or a number. Across every observed body, in the fixtures and
@@ -655,6 +705,7 @@ function do_parse_reviews() {
         | ($is_v2 and (.body | lists_open_threads)) as $lists_open_threads
         | ($is_v2 and (.body | lists_resolved_threads)) as $lists_resolved_threads
         | ($is_v2 and (.body | lead_states_no_findings)) as $lead_states_no_findings
+        | ($is_v2 and (.body | has_unrecognized_block)) as $has_unrecognized_block
         # Every ccr-overview-v2 body carries a "**Findings:**" line, in every
         # fixture and in all 13 observed live reviews, so its absence on a v2
         # body is a renamed or removed header rather than an older layout.
@@ -697,10 +748,15 @@ function do_parse_reviews() {
             # ask whether anything at all was recovered from a body that says
             # there should be something. A non-clean verdict reports drift
             # unless open threads, which the thread fetch reports, or a
-            # resolved-only round whose lead paragraph states no findings
-            # accounts for it. Requiring the lead is what keeps the exemption
-            # from clearing a review that lists a resolved section and states
-            # its findings in prose, which is a shape Copilot does emit.
+            # resolved-only round accounts for it.
+            #
+            # That round has to establish three things, and dropping any one
+            # of them reopens a silent miss: the lead paragraph states no
+            # finding, or a review whose findings are stated in prose reads
+            # as clean; a resolved section is actually present; and no
+            # element outside the details blocks is unrecognized, or an
+            # unparsed finding section sitting beside a genuine resolved
+            # section reads as clean.
             hasFormatDrift: (
               ($is_v2 and $stated_shortfall)
               or (
@@ -712,7 +768,12 @@ function do_parse_reviews() {
                     and $verdict != "### 🟢 Approval recommended"
                     and ($lists_open_threads | not)
                     and (
-                      ($lists_resolved_threads and $lead_states_no_findings) | not
+                      (
+                        $lists_resolved_threads
+                        and $lead_states_no_findings
+                        and ($has_unrecognized_block | not)
+                      )
+                      | not
                     )
                   )
                 )

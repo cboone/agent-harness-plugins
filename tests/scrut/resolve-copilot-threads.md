@@ -138,6 +138,30 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🔵 Needs a closer look","hasFormatDrift":false,"findings":[]}
 ```
 
+## Overview v2 an unparsed section beside a resolved one is still drift
+
+The exemption has to establish that nothing else in the body went unread. A
+genuine resolved section and the fixed lead sitting beside an unrecognized
+element leave `findings` empty, so without that check the review reads clean
+while carrying content nothing parsed.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-unparsed-beside-resolved.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
+## Overview v2 a section summary counts only inside a details block
+
+Copilot announces every section as a `<summary>` inside `<details>`, so the
+nesting identifies one. A summary at the top level is not a section, and
+honouring it would let an `Open (9)` that opens nothing absorb a stated count
+of 2 and hide the shortfall.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-unnested-summary.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🟡 Changes recommended","hasFormatDrift":true,"findings":[]}
+```
+
 ## Overview v2 a resolved section does not clear a lead that states findings
 
 The same shape with a lead paragraph naming findings is drift. Copilot ships a

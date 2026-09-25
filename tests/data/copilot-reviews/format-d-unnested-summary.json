@@ -1,0 +1,12 @@
+[
+  {
+    "id": 6000000024,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-25T12:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6000000024",
+    "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🟡 Changes recommended\n\nOne or more issues must be addressed before approval.\n\n**Review effort:** Lite  \n**Findings:** 2 <picture><img alt=\"Medium severity\" width=\"62\" height=\"18\"></picture>\n\n<summary><strong>Open (9)</strong></summary>\n\n- [A thread this summary does not actually open](#discussion_r680)"
+  }
+]
