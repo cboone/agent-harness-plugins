@@ -150,6 +150,28 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
 ```
 
+Wrapping that element in a details block of its own does not hide it. The
+check reads the element vocabulary of the whole body rather than stopping at
+the top level, so an unfamiliar section rendered the way Copilot renders its
+own cannot carry unread content past the exemption.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-unknown-section-block.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
+The vocabulary is elements, not section names. Copilot has already added
+`Open`, `Resolved since last review`, `Previously missed` and `What changed in
+this PR` over time, so a list of known section names would report drift the
+first time it ships another one, and on a resolved-only round that is an
+escalation no later run can clear. `format-d-open-only.json` carries the
+`What changed in this PR` shape alongside its sections and stays clean.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-resolved-only.json" | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":false}
+```
+
 ## Overview v2 a section summary counts only inside a details block
 
 Copilot announces every section as a `<summary>` inside `<details>`, so the

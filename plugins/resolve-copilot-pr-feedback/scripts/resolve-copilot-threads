@@ -416,30 +416,34 @@ function do_parse_reviews() {
       def lists_resolved_threads:
         (section_summary("Resolved since last review") // 0) > 0;
 
-      # True when a line outside every details block opens an element this
-      # parser does not recognize. Every section Copilot emits is a details
-      # block, and its preamble is prose, headings, bold labels and the
-      # marker comment, so any other element at depth zero is content nothing
-      # here has read.
+      # True when the body uses an element outside the vocabulary a
+      # ccr-overview-v2 review is built from. Measured across every observed
+      # live review, that vocabulary is seven elements and nothing else:
+      # details, summary, strong, picture, source, img and a.
       #
-      # This is what bounds the resolved-round exemption. Without it a body
-      # can pair the fixed lead and a real resolved section with an unparsed
-      # finding section and still read as clean, which is the silent miss the
-      # whole command exists to prevent.
-      def has_unrecognized_block:
-        split("\n")
-        | reduce .[] as $line ({depth: 0, found: false};
-            if ($line | test("^<details"))
-            then .depth += 1
-            elif ($line | test("^</details>"))
-            then (if .depth > 0 then .depth -= 1 else . end)
-            elif .depth == 0
-                 and ($line | test("^<"))
-                 and ($line | test("^<!--") | not)
-            then .found = true
-            else .
-            end)
-        | .found;
+      # Elements rather than section names, deliberately. Copilot adds
+      # sections over time, and this repository has already seen "Open",
+      # "Resolved since last review", "Previously missed" and "What changed
+      # in this PR" arrive, so a list of known section names would report
+      # drift the first time it ships another one. On a resolved-only round
+      # that is an escalation no later run can clear, which is the failure
+      # this whole change exists to remove. The element vocabulary is what
+      # has held still, so an element outside it is a layout change nothing
+      # here has read, wherever in the body it sits.
+      #
+      # Depth is not tracked, and that is the point. An unfamiliar section
+      # rendered as a details block hides its contents from any check that
+      # stops at the top level, so the contents are what gets inspected.
+      #
+      # This bounds the resolved-round exemption. Without it a body can pair
+      # the fixed lead and a real resolved section with an unparsed finding
+      # and still read as clean, which is the silent miss the whole command
+      # exists to prevent. The marker comment does not match, because "<!"
+      # is not the start of an element name.
+      def has_unrecognized_element:
+        ["details", "summary", "strong", "picture", "source", "img", "a"] as $known
+        | [scan("</?([a-zA-Z][a-zA-Z0-9-]*)")[0] | ascii_downcase]
+        | any(. as $tag | ($known | any(. == $tag)) | not);
 
       # ccr-overview-v2 states a count on a "**Findings:**" line, as either
       # "None" or a number. Across every observed body, in the fixtures and
@@ -705,7 +709,7 @@ function do_parse_reviews() {
         | ($is_v2 and (.body | lists_open_threads)) as $lists_open_threads
         | ($is_v2 and (.body | lists_resolved_threads)) as $lists_resolved_threads
         | ($is_v2 and (.body | lead_states_no_findings)) as $lead_states_no_findings
-        | ($is_v2 and (.body | has_unrecognized_block)) as $has_unrecognized_block
+        | ($is_v2 and (.body | has_unrecognized_element)) as $has_unrecognized_element
         # Every ccr-overview-v2 body carries a "**Findings:**" line, in every
         # fixture and in all 13 observed live reviews, so its absence on a v2
         # body is a renamed or removed header rather than an older layout.
@@ -771,7 +775,7 @@ function do_parse_reviews() {
                       (
                         $lists_resolved_threads
                         and $lead_states_no_findings
-                        and ($has_unrecognized_block | not)
+                        and ($has_unrecognized_element | not)
                       )
                       | not
                     )
