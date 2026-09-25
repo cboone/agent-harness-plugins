@@ -1,0 +1,12 @@
+[
+  {
+    "id": 6000000016,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-22T10:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6000000016",
+    "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🟡 Changes recommended\n\nOne or more issues must be addressed before approval.\n\n**Review effort:** Lite  \n**Findings:** 2 <picture><img src=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-light.png\" alt=\"Medium severity\" width=\"62\" height=\"18\" align=\"texttop\"></picture> · 1 <picture><img src=\"https://github.githubassets.com/static/images/icons/copilot-code-review/low-v2-light.png\" alt=\"Low severity\" width=\"62\" height=\"18\" align=\"texttop\"></picture>\n\n<details open>\n<summary><strong>Open (3)</strong></summary>\n\n- <picture><img alt=\"Medium severity\"></picture> [Anchor the value rather than its prefix](#discussion_r600) · New\n- <picture><img alt=\"Medium severity\"></picture> [Lift the shortfall out of the guard](#discussion_r601) · New\n- <picture><img alt=\"Low severity\"></picture> [Correct the stated signal count](#discussion_r602) · New\n</details>"
+  }
+]

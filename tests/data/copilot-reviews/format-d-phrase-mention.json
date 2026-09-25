@@ -1,0 +1,12 @@
+[
+  {
+    "id": 6000000015,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-21T16:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6000000015",
+    "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🔵 Needs a closer look\n\nOne or more issues must be addressed before approval.\n\n**Review effort:** Lite  \n**Findings:** None\n\n| File | Description |\n| --- | --- |\n| `scripts/resolve-copilot-threads` | Adds handling for Resolved since last review (1) and Open (2) summaries |\n\nThe change also documents Resolved since last review (3) sections in prose.\n\n<details>\n<summary><strong>Resolved since last review (0)</strong></summary>\n\nNothing was resolved since the previous review.\n</details>"
+  }
+]

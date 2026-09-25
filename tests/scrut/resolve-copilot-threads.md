@@ -105,10 +105,11 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 ```
 
 A CRLF body still yields the clean verdict, rather than a heading with a
-trailing carriage return that reads as drift.
+trailing carriage return that reads as drift. The count line carries the
+carriage return too, so this also covers `**Findings:** None` surviving it.
 
 ```scrut
-$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"<!-- ccr-overview-v2 -->\r\n\r\n### 🟢 Approval recommended\r\n\r\nNo issues."}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {verdict, hasFormatDrift}'
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"<!-- ccr-overview-v2 -->\r\n\r\n### 🟢 Approval recommended\r\n\r\nNo issues.\r\n\r\n**Findings:** None\r\n"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {verdict, hasFormatDrift}'
 {"verdict":"### 🟢 Approval recommended","hasFormatDrift":false}
 ```
 
@@ -123,15 +124,218 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🟡 Changes recommended","hasFormatDrift":false,"findings":[]}
 ```
 
+## Overview v2 a resolved-only round with a boilerplate lead is not drift
+
+Copilot pairs a non-clean verdict with `**Findings:** None` and a `Resolved
+since last review (N)` section listing what the previous round closed. When
+the lead paragraph is the fixed sentence that names no finding, nothing is
+outstanding and the review is not format drift. A review body never changes,
+so reporting drift here would escalate a pull request on a signal that no
+later run can clear.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-resolved-only.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":false,"findings":[]}
+```
+
+## Overview v2 an unparsed section beside a resolved one is still drift
+
+The exemption has to establish that nothing else in the body went unread. A
+genuine resolved section and the fixed lead sitting beside an unrecognized
+element leave `findings` empty, so without that check the review reads clean
+while carrying content nothing parsed.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-unparsed-beside-resolved.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
+Wrapping that element in a details block of its own does not hide it. The
+check reads the element vocabulary of the whole body rather than stopping at
+the top level, so an unfamiliar section rendered the way Copilot renders its
+own cannot carry unread content past the exemption.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-unknown-section-block.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
+The vocabulary is elements, not section names. Copilot has already added
+`Open`, `Resolved since last review`, `Previously missed` and `What changed in
+this PR` over time, so a list of known section names would report drift the
+first time it ships another one, and on a resolved-only round that is an
+escalation no later run can clear. `format-d-open-only.json` carries the
+`What changed in this PR` shape alongside its sections and stays clean.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-resolved-only.json" | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":false}
+```
+
+## Overview v2 a section summary counts only inside a details block
+
+Copilot announces every section as a `<summary>` inside `<details>`, so the
+nesting identifies one. A summary at the top level is not a section, and
+honouring it would let an `Open (9)` that opens nothing absorb a stated count
+of 2 and hide the shortfall.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-unnested-summary.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🟡 Changes recommended","hasFormatDrift":true,"findings":[]}
+```
+
+## Overview v2 a resolved section does not clear a lead that states findings
+
+The same shape with a lead paragraph naming findings is drift. Copilot ships a
+resolved section on most second and later rounds, including rounds that state
+their findings in prose, so presence of the section cannot stand alone. Without
+the lead check this body would read as clean and the findings would reach
+nobody.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-resolved-lead.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
 ## Overview v2 format drift
 
 A non-clean verdict cannot become a clean result merely because the parser
-does not recognize the finding representation. The complete body remains
-available for manual inspection.
+does not recognize the finding representation. `**Findings:** None` does not
+clear that, because the count reports only the inline threads Copilot opened
+and so cannot rule out an unparsed layout. The complete body remains available
+for manual inspection.
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-drift.json" | jq -c '.[0] | {verdict, hasSuppressedMarker, hasFormatDrift, hasReviewBody: (.reviewBody | contains("data-finding")), findings}'
 {"verdict":"### 🔵 Needs a closer look","hasSuppressedMarker":false,"hasFormatDrift":true,"hasReviewBody":true,"findings":[]}
+```
+
+## Overview v2 findings stated only in the lead paragraph
+
+Copilot also pairs a non-clean verdict with `**Findings:** None` and no section
+at all, stating the findings in the lead paragraph alone. That is drift, and
+`headline` carries the verdict and the lead, which is the only place those
+findings appear.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-headline-only.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings, headline}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[],"headline":"<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🔵 Needs a closer look\n\nUnresolved moderate findings affect detection, reviewer exclusions, and checklist accuracy.\n\n**Review effort:** Lite  \n**Findings:** None"}
+```
+
+## Overview v2 stated count above the inline threads listed
+
+The stated count is the `Open (N)` thread count. A count above that number
+leaves findings this command cannot account for, so it reports drift on its own
+and neither the open-threads nor the resolved-round exemption suppresses it.
+The clean verdict here isolates that path: no other branch can produce drift on
+an approval.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-count-mismatch.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🟢 Approval recommended","hasFormatDrift":true,"findings":[]}
+```
+
+## Overview v2 the stated count is a severity breakdown
+
+Copilot renders the count as one number per severity, joined by a middle dot
+and each followed by a badge. `2 <medium> · 1 <low>` is three findings, and
+the body lists `Open (3)`, so the totals agree and this is not drift. The
+badges carry their own `width` and `height` numbers, which removing the markup
+tags before summing keeps out of the total.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-severity-split.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🟡 Changes recommended","hasFormatDrift":false,"findings":[]}
+```
+
+Summing those counts is what makes the comparison real. Here `2 <medium> · 3
+<low>` totals five against `Open (3)`, so two findings are unaccounted for.
+Reading only the first number would see two, find no shortfall, and report
+this clean.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-severity-shortfall.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🟡 Changes recommended","hasFormatDrift":true,"findings":[]}
+```
+
+## Overview v2 a shortfall counts even when a finding parsed
+
+The shortfall sits outside the no-findings guard. A body stating nine
+findings against `Open (1)` while yielding one `Previously missed` entry has
+a remainder the parser cannot account for, and that remainder is what the
+signal exists for. Keeping the check under the guard would report this clean
+because a single finding happened to parse.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-shortfall-with-finding.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings: (.findings | length)}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":1}
+```
+
+## Overview v2 a count line that no longer parses is itself drift
+
+A `**Findings:**` line whose value reads as neither `None` nor a severity
+breakdown has changed shape, which is exactly what this signal is for. It
+reports drift rather than degrading to the same result as a layout that never
+carried the line, even though the rest of this body would otherwise be exempt.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-header-drift.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
+The whole value is validated, so a trailer after an otherwise valid `None` is
+unparseable too. Accepting a leading token would let a malformed line read as
+zero findings, satisfy the resolved-round exemption, and suppress the unparsed
+section below it.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-malformed-count.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
+A numeric value takes the same treatment, which a token scan would not give
+it. `0 plus an unfamiliar trailer` reduces to a count of zero under any rule
+that reads the leading number, and zero is the one value that satisfies the
+exemption outright.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-trailer.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
+Renaming the header is the same format change seen from the other side. Every
+`ccr-overview-v2` body carries a `**Findings:**` line, so its absence is a
+rename rather than an older layout, and reading it as "this layout never had a
+count" would let the renamed body take the resolved-round exemption. Only a
+body with no v2 marker reports no count and is excluded from the comparison.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-renamed-header.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
+Only the preamble is searched for that line, which is where Copilot states it
+in every observed body. A rename would otherwise fall through to a `**Findings`
+line quoted inside a section, and a quoted `None` reads as zero findings, which
+satisfies the resolved-round exemption and hides the rename.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-quoted-count.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
+## Overview v2 section phrases in prose do not grant an exemption
+
+Both exemptions key on a `<summary>` announcing a non-zero count. A review of
+this repository quotes `Open (N)` and `Resolved since last review (N)` in its
+file-summary table and prose, and a real summary can announce zero resolved
+entries. None of that is a section, so none of it suppresses drift. The
+existing `file-summaries-mention.json` fixture records the same over-match
+happening for the suppressed-comments phrase.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-phrase-mention.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
 ```
 
 ## Finding bodies keep their prose and fenced context
@@ -174,8 +378,8 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 Its body still carries several `<details>` blocks, so this guards against a false positive on ordinary reviews.
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/no-suppressed.json" | jq -c '[.[] | {hasSuppressedMarker, findings: (.findings | length)}]'
-[{"hasSuppressedMarker":false,"findings":0}]
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/no-suppressed.json" | jq -c '[.[] | {hasSuppressedMarker, hasFormatDrift, findings: (.findings | length)}]'
+[{"hasSuppressedMarker":false,"hasFormatDrift":false,"findings":0}]
 ```
 
 ## A file-summaries table mentioning the phrase is not a section
@@ -183,8 +387,8 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/n
 Copilot opens most reviews with a table describing every changed file, so a PR that touches code about suppressed comments gets a row quoting the phrase. A section is never announced from inside a table, so table rows must not open one. This fixture is the real review Copilot left on the PR that added this command, which tripped exactly that case.
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/file-summaries-mention.json" | jq -c '[.[] | {hasSuppressedMarker, findings: (.findings | length)}]'
-[{"hasSuppressedMarker":false,"findings":0}]
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/file-summaries-mention.json" | jq -c '[.[] | {hasSuppressedMarker, hasFormatDrift, findings: (.findings | length)}]'
+[{"hasSuppressedMarker":false,"hasFormatDrift":false,"findings":0}]
 ```
 
 ## Format drift is reported, not swallowed
