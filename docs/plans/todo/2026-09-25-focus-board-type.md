@@ -8,6 +8,17 @@ The board combines three priority sources: the user's steering note, ZenHub stat
 
 The first client is Swing Left: the `swing-left` organization's repositories and its ZenHub workspace. Nothing Swing Left specific is hard-coded; a per-client config file carries it.
 
+## Scope: Work That Is Definitively the User's
+
+The board considers only items that name the user directly:
+
+- Open issues assigned to the user.
+- Open pull requests the user authored.
+- Open pull requests that request the user's review by name, found with `user-review-requested:LOGIN`. Requests made to a team the user belongs to are out of scope.
+- Open issues and pull requests that mention the user by login.
+
+Unassigned issues, team review requests, and issues in areas the user effectively owns but is not assigned to are out of scope. Widening scope later is a config change plus new searches, not a redesign.
+
 ## Evidence Behind the Design
 
 Gathered on 2026-09-25 against live Swing Left data.
@@ -15,7 +26,7 @@ Gathered on 2026-09-25 against live Swing Left data.
 - **Volume.** About 460 open issues across six `swing-left` repositories; 73 assigned to `cboone`, of which more than 20 are Projects and Epics rather than work.
 - **The tracker's priority signal is thin.** Of the 73 assigned issues, 21 sit in New Issues and 38 in Product Backlog. ZenHub's `priority` field is unset on every one. Sprint membership is set, and the current sprint (Sep 14 - Sep 28) holds three of them, which makes it the strongest ZenHub signal.
 - **Work arrives as new issues, not backlog drawdown.** This month's 51 merged PRs in `votefwd`, `frontend` and `SwingLeftPy` closed 37 issues. One of them, `SwingLeftPy#403`, was in the 2026-09-18 assigned inventory; the rest were filed and fixed within days. Nineteen PRs closed no issue.
-- **Asks are noisy.** 108 open PRs request review from `cboone`. Of the first 50 returned, 32 came from Dependabot and 2 from release automation; the 16 from people are the signal.
+- **Most review requests are not the user's.** 108 open PRs match `review-requested:cboone`, which includes team requests; of the first 50 returned, 32 came from Dependabot and 2 from release automation. Only 2 match `user-review-requested:cboone`, the requests made to the user by name.
 - **Per-item model work is what scales linearly.** `backlog-triage` reads every issue body and places every issue in a lane. Gathering is cheap by comparison:
   - One aliased ZenHub `issueByInfo` query returned pipeline, sprint, estimate and blocking counts for all 73 assigned issues in 0.8 s.
   - A single combined GitHub GraphQL query with five searches took 10.5 s and sits at GitHub's timeout; adding timeline fields made it fail with HTTP 502. The gatherer splits it into parallel calls.
@@ -24,14 +35,14 @@ Gathered on 2026-09-25 against live Swing Left data.
 
 Sections, most actionable first. A section with nothing that earns a place shrinks to its heading and one line, as `backlog-triage` already does; the analysis never promotes an item just to fill a section.
 
-| Section           | Holds                                                                                                                      |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Now               | The user's open PRs and in-progress work, with CI and review state and what each is waiting on                             |
-| Focus             | At most `focusLimit` items (default 10), each with a "why now" naming the signals that put it there                        |
-| Asks              | Review requests and mentions from people that await the user; bot requests collapse into one counted line linking a search |
-| Waiting on others | The user's items held by someone else, naming what they wait on                                                            |
-| Rising            | A short list of items whose signals moved toward Focus without crossing into it                                            |
-| Everything else   | Counts only: parked, containers (Initiative, Project, Epic), untriaged, snoozed, each linking a search                     |
+| Section           | Holds                                                                                                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Now               | The user's open PRs and in-progress work, with CI and review state and what each is waiting on                                                                           |
+| Focus             | At most `focusLimit` items (default 10), each with a "why now" naming the signals that put it there                                                                      |
+| Asks              | Review requests made to the user by name, and mentions from people, that await the user; anything from a configured bot collapses into one counted line linking a search |
+| Waiting on others | The user's items held by someone else, naming what they wait on                                                                                                          |
+| Rising            | A short list of items whose signals moved toward Focus without crossing into it                                                                                          |
+| Everything else   | Counts only: parked, containers (Initiative, Project, Epic), untriaged, snoozed, each linking a search                                                                   |
 
 ### Signals
 
@@ -41,7 +52,7 @@ Signals may name people by GitHub login, such as "a review requested by `@erhowe
 
 ### Horizon
 
-Focus means what to work on today, with the current sprint and any steering entries as the wider context. The horizon is one of the open questions below.
+Focus means what to work on today, with the current sprint and any steering entries as the wider context.
 
 ## The Steering Note
 
@@ -57,31 +68,34 @@ The steering note is the user's input and a source of truth in its own right; th
 
 Verbs are `pin`, `boost`, `snooze`, `drop` and `context`. `pin` places an item in Focus; `boost` adds weight; `snooze` hides an item until a date; `drop` hides it until the note changes; `context` is free text the analysis reads when it writes "why now". Entries with `until` expire, and the check-in offers to remove expired ones. The skill edits the note through the Write and Edit tools as the user directs; the page never edits it.
 
-The note's path is set in the client config. For Swing Left, propose `~/Work/docs/focus/swing-left.md` in the `sl-vf` bare repository, whose ignore rules already track `docs/`; committing it is the user's choice, not part of each sync.
+The note's path is set in the client config. For Swing Left it is `~/Work/docs/focus/swing-left.md`, tracked in the `sl-vf` bare repository, whose ignore rules already include `docs/`.
+
+The note is committed. After the check-in changes it, the skill commits only the note, GPG-signed, with a Conventional Commits message such as `docs: steer focus toward votefwd#4034`. The client config's `steeringGit` names how to reach the repository, because `sl-vf` is a bare repository whose worktree has no `.git` directory: plain `git` fails there, so the skill passes `--git-dir` and `--work-tree` explicitly. The skill never pushes; pushing stays with the user. When the note has uncommitted changes the skill did not make, it stops and asks rather than folding them into its commit.
 
 ## Client Config
 
 One JSON file per client, at a path the user passes or the skill finds at `${XDG_CONFIG_HOME:-$HOME/.config}/report-boards/focus/CLIENT.json`:
 
-| Field          | Contents                                                                         |
-| -------------- | -------------------------------------------------------------------------------- |
-| `client`       | A short name, used in the title (`swing-left focus`) and the working file names  |
-| `login`        | The user's GitHub login                                                          |
-| `org`          | The GitHub organization searched                                                 |
-| `repos`        | Repositories in scope, each with its GitHub numeric ID for ZenHub lookups        |
-| `zenhub`       | Workspace ID, the token's environment variable name, and a weight per pipeline   |
-| `bots`         | Logins whose review requests and comments are counted but never surfaced as asks |
-| `focusLimit`   | The Focus cap, default 10                                                        |
-| `steeringNote` | Path to the steering note                                                        |
+| Field          | Contents                                                                                                                     |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `client`       | A short name, used in the title (`swing-left focus`) and the working file names                                              |
+| `login`        | The user's GitHub login                                                                                                      |
+| `org`          | The GitHub organization searched                                                                                             |
+| `repos`        | Repositories in scope, each with its GitHub numeric ID for ZenHub lookups                                                    |
+| `zenhub`       | Workspace ID, the token's environment variable name, and a weight per pipeline                                               |
+| `bots`         | Logins whose review requests and comments are counted but never surfaced as asks                                             |
+| `focusLimit`   | The Focus cap, default 10                                                                                                    |
+| `steeringNote` | Path to the steering note                                                                                                    |
+| `steeringGit`  | `{ "gitDir", "workTree" }` for committing the note; omitted when the note sits in an ordinary repository or is not committed |
 
 The ZenHub token stays in its environment variable. The gatherer writes the authorization header to a mode-600 temporary file and passes it to `curl` with `-H @FILE`, so the token never appears on a command line or in shell tracing.
 
 ## Sync Flow
 
 1. **Find the previous board** as the existing skill does, by exact title.
-2. **Gather deterministically.** A new bundled script, `focus-gather`, runs the GitHub searches as parallel GraphQL calls (assigned issues, the user's open PRs, review requests, recent mentions, and unassigned issues filed recently in scope), then one aliased ZenHub query for every candidate plus the current sprint. It writes one normalized JSON file. Cost is a fixed number of calls, not one per issue.
+2. **Gather deterministically.** A new bundled script, `focus-gather`, runs the GitHub searches as parallel GraphQL calls (the four searches in the scope section above), then one aliased ZenHub query for every candidate plus the current sprint. It writes one normalized JSON file. Cost is a fixed number of calls, not one per issue.
 3. **Score deterministically.** `focus-gather score` applies the steering note and the configured weights in `jq`, buckets every item, and writes a ranked shortlist of about 25 candidates with a per-signal breakdown. Containers, snoozed and dropped items leave the shortlist here.
-4. **Check in with the user.** Before any model reading, show the current steering entries, expired entries, and what moved since the last sync: new asks, pipeline and sprint changes, new comments from other people, CI state changes on the user's PRs. Then ask with `AskUserQuestion` whether priorities changed. Record the answers as steering entries and re-run the score, which runs in `jq` time. Skip the questions when the user already stated updates in the invoking message.
+4. **Check in with the user.** Before any model reading, show the current steering entries, expired entries, and what moved since the last sync: new asks, pipeline and sprint changes, new comments from other people, CI state changes on the user's PRs. Then ask with `AskUserQuestion` whether priorities changed. Record the answers as steering entries, commit the note as described above, and re-run the score, which runs in `jq` time. Skip the questions when the user already stated updates in the invoking message.
 5. **Read the shortlist only.** The model reads bodies and recent comments for shortlisted items whose `updatedAt` differs from the cached digest, and reuses cached digests for the rest. Digests live beside the working board files, keyed by item and `updatedAt`. When more than a handful changed, read them in parallel with subagents, each returning a digest in a fixed shape.
 6. **Write the board data**: Focus picks with "why now", Asks, Waiting, Rising, and the summary, then validate, render, compare and publish through the existing script and Artifact flow.
 
@@ -138,8 +152,15 @@ Add `templates/focus.html`, following `design-conventions.md`: tokens for both t
 - Writing anything back to ZenHub or GitHub. Moving a pipeline or reassigning an issue stays with `manage-zenhub`.
 - Porting to `cboone/board`. The gather and score split is designed so it can move to a server later.
 
-## Open Questions
+## Decisions
 
-- **Horizon:** is Focus for today or for the current sprint? The default above is today.
-- **Steering note location:** confirm `~/Work/docs/focus/swing-left.md`, and whether it is committed.
-- **Unassigned new issues:** 82 unassigned issues were filed in scope since 2026-09-18, 53 of them in `votefwd`. Should any of them be candidates by area, for example by path or label, or should only assigned work, the user's PRs, asks and mentions be in scope?
+Confirmed by the user on 2026-09-25:
+
+- Priority sources are the user, through the steering note, plus ZenHub and GitHub.
+- The skill checks in with the user about priority updates on every run.
+- Sections hold only what earns a place; none is filled for its own sake.
+- Focus is for today, with the current sprint as context.
+- The steering note lives at `~/Work/docs/focus/swing-left.md` and is committed to `sl-vf`.
+- Scope is work that is definitively the user's, as the scope section defines. Unassigned issues are out: 82 were filed in scope between 2026-09-18 and 2026-09-25, 53 of them in `votefwd`.
+- Operational signals are out of scope.
+- `focus` is a second board type in `publish-report-board`, published as a private Artifact.
