@@ -268,6 +268,16 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
 ```
 
+Only the preamble is searched for that line, which is where Copilot states it
+in every observed body. A rename would otherwise fall through to a `**Findings`
+line quoted inside a section, and a quoted `None` reads as zero findings, which
+satisfies the resolved-round exemption and hides the rename.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-quoted-count.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
 ## Overview v2 section phrases in prose do not grant an exemption
 
 Both exemptions key on a `<summary>` announcing a non-zero count. A review of

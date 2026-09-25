@@ -436,8 +436,22 @@ function do_parse_reviews() {
       # "**Findings" line at all. The caller turns that null into
       # "unparseable" on a v2 body, where the line is always present, and
       # keeps it as null on the older layouts that never carried one.
+      #
+      # Only the preamble is searched, the region before the first details
+      # block, which is where Copilot states the count in all 18 observed
+      # live review bodies. Searching the whole body would let a renamed
+      # header fall through to a "**Findings" line quoted at the start of a
+      # line inside a section, reading a quoted value as the count instead of
+      # reporting the rename. The stop pattern omits the closing angle
+      # bracket so an opened section, "<details open>", ends the preamble too.
       def stated_finding_count:
-        (split("\n") | map(select(test("^\\*\\*Findings"; "i"))) | first) as $line
+        (
+          split("\n")
+          | (map(test("^<details")) | index(true)) as $stop
+          | (if $stop then .[0:$stop] else . end)
+          | map(select(test("^\\*\\*Findings"; "i")))
+          | first
+        ) as $line
         | if $line == null then null
           else
             (
