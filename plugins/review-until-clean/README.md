@@ -88,7 +88,7 @@ This skill runs git and reviewer commands that trigger permission prompts. To al
 ```json
 {
   "permissions": {
-    "allow": ["Bash(bash \"*/review-scope\")", "Bash(bash \"*/review-scope\" *)", "Bash(test -x *)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status*)", "Bash(git ls-files *)", "Bash(git log *)", "Bash(git branch *)", "Bash(codex exec *)", "Bash(claude -p *)"]
+    "allow": ["Bash(bash \"*/review-scope\")", "Bash(bash \"*/review-scope\" *)", "Bash(test -x *)", "Bash(git rev-parse *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git status*)", "Bash(git ls-files *)", "Bash(git log *)", "Bash(git branch *)", "Bash(command -v codex)", "Bash(codex --version)", "Bash(codex exec *)", "Bash(command -v claude)", "Bash(claude -p *)"]
   }
 }
 ```

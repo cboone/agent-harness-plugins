@@ -55,6 +55,21 @@ function die() {
 # forms. A backend that cannot take a schema has its reply transcribed into
 # this shape by the host; see references/backends.md for why that transcription
 # is never the evidence that the review actually ran.
+#
+# `file` is constrained rather than left as a bare string because it names a
+# path the fixer will edit. An absolute path, a `~` path or a `../` escape from
+# reviewer output would otherwise validate, reach the ledger, and point
+# `address-review` outside the repository, which is prompt injection reaching a
+# write. The pattern permits any relative path whose segments are not `.` or
+# `..`, and rejects a leading `/`, `~` or backslash.
+#
+# It avoids lookaround deliberately, enumerating segment lengths instead.
+# Measured against `codex-cli 0.157.1`: `pattern` and `minimum` are both
+# honored, and a lookaround rejects the whole schema with
+# `Invalid JSON schema: regex lookaround is not supported`, which fails the
+# round before the review starts. The schema is only half the defense, since the
+# Claude backend has no schema at all; `references/ledger.md` carries the check
+# that covers every backend.
 function print_schema() {
   cat << 'SCHEMA_TEXT'
 {
@@ -74,11 +89,13 @@ function print_schema() {
             "type": "string"
           },
           "file": {
-            "description": "Repository-relative path the finding is in.",
+            "description": "Repository-relative path the finding is in. No leading slash or tilde, and no . or .. path segment.",
+            "pattern": "^(?:[^./\\\\~]|[^./\\\\~][^/\\\\]|\\.[^./\\\\]|[^/\\\\~][^/\\\\]{2,})(?:/(?:[^./\\\\]|[^./\\\\][^/\\\\]|\\.[^./\\\\]|[^/\\\\]{3,}))*$",
             "type": "string"
           },
           "line": {
             "description": "1-indexed line the finding anchors to, or null.",
+            "minimum": 1,
             "type": ["integer", "null"]
           },
           "severity": {

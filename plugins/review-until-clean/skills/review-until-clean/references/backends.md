@@ -80,20 +80,24 @@ Plain `codex exec` has none of those limits: the prompt sets the scope, `--outpu
 
 ### The invocation
 
+Both files below live **outside the working tree**, in the same temporary directory as the ledger, and are removed when the round ends. The rule and its reason are the ledger's, in `./ledger.md`: the snapshot covers every non-ignored path in the tree, so a schema or output file written into the repository is itself a change. It moves the snapshot the review just ran against, so no round could be reported clean, and the next round would hand the reviewer its own schema and its own findings as new untracked code to review. Use `mktemp -d` and clean up on the way out, including when the round fails.
+
 ```bash
-review-scope --schema > "<schema-file>"
+review-scope --schema > "<tmp-dir>/schema.json"
 
 codex exec \
   --sandbox read-only \
   --ephemeral \
-  --output-schema "<schema-file>" \
-  -o "<out-file>" \
+  --output-schema "<tmp-dir>/schema.json" \
+  -o "<tmp-dir>/findings.json" \
   "<review prompt>" < /dev/null
 ```
 
 `< /dev/null` is required, not tidiness. `codex exec` appends stdin to the prompt whenever stdin is not a terminal, so a run launched from an agent harness, whose stdin is an open pipe that never reaches end of file, prints `Reading additional input from stdin...` and blocks until something kills it. Measured against `codex-cli 0.155.1`: it hung until a 12-second timeout and **never created the `-o` file**. That is the worst shape a failure can take here, because the round produces no output at all.
 
 `--sandbox read-only` denies writes at the sandbox level. `--ephemeral` keeps the run from persisting a session. `-m` selects a model; effort comes from the Codex configuration.
+
+**The schema is validated before the review starts, and not every keyword survives.** Measured against `codex-cli 0.157.1`: `pattern` and `minimum` are both honored, and a `pattern` containing lookaround is rejected outright with `Invalid JSON schema: regex lookaround is not supported` and HTTP 400. That is a failed round with no findings file, so a schema change that looks harmless can stop the backend working. The shipped schema avoids lookaround for this reason. Run `review-scope --schema` through one real invocation after editing it, rather than trusting that a valid JSON Schema is an acceptable one.
 
 The prompt names the whole scope in one pass, which is how this backend satisfies the first invariant without a second invocation:
 

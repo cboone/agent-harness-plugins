@@ -55,6 +55,39 @@ $ "${REVIEW_SCOPE_BIN}" --schema | jq -c '.properties.findings.items.properties.
 ["important","nit"]
 ```
 
+## Findings schema rejects a line number that anchors nothing
+
+```scrut
+$ "${REVIEW_SCOPE_BIN}" --schema | jq -c '.properties.findings.items.properties.line | {type, minimum}'
+{"type":["integer","null"],"minimum":1}
+```
+
+## Findings schema confines a finding's path to the repository
+
+`file` names a path the fixer will edit, so reviewer output that escapes the
+repository must not validate. The pattern is applied here with `test`, which
+uses the same Oniguruma-compatible syntax a JSON Schema validator does, and it
+carries no lookaround because Codex rejects a schema that contains one.
+
+```scrut
+$ pattern="$("${REVIEW_SCOPE_BIN}" --schema | jq -r '.properties.findings.items.properties.file.pattern')" \
+>   && printf '%s\n' README.md .gitignore docs/plans/todo/notes.md ... dir/.hidden \
+>        /etc/passwd ../outside.txt .. . a/../../etc/passwd '~/.ssh/id_ed25519' 'a\b' \
+>   | jq -Rr --arg p "${pattern}" 'if test($p) then "accept \(.)" else "reject \(.)" end'
+accept README.md
+accept .gitignore
+accept docs/plans/todo/notes.md
+accept ...
+accept dir/.hidden
+reject /etc/passwd
+reject ../outside.txt
+reject ..
+reject .
+reject a/../../etc/passwd
+reject ~/.ssh/id_ed25519
+reject a\b
+```
+
 ## Unknown flag
 
 The exit status is captured rather than piped, because a pipeline reports
