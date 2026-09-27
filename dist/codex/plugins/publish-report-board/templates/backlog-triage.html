@@ -1270,13 +1270,15 @@
       // A head that is not the running branch frees nothing yet, so the lane
       // counts zero rather than promising what the head would unlock. A branch
       // already in progress holds the slot, and the head is running only when
-      // it is that branch.
+      // it is that branch. Another branch already in progress beside the head
+      // is running now, so the head landing frees nothing there.
       const freedAfter =
         lane.mode === "head" && head != null && running.includes(head)
           ? lane.issues.filter(
               (n) =>
                 !headUnit.has(n) &&
                 !rides(n) &&
+                !running.includes(n) &&
                 waits(n).every((b) => freeingUnit.has(b)) &&
                 afters(n).every((b) => freeingUnit.has(b)),
             ).length
