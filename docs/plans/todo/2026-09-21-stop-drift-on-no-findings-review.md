@@ -14,7 +14,7 @@ The intended outcome: a resolved-only round whose lead paragraph names no findin
 
 ## Approach
 
-Add four body signals to the jq parser in `plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads`, then rewrite the v2 branch of the drift condition around them.
+Add five body signals to the jq parser in `plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads`, then rewrite the v2 branch of the drift condition around them.
 
 ### What the stated count actually means
 
@@ -40,8 +40,10 @@ The lead paragraph is what separates the two, and it separates them cleanly on e
 
 In the jq program inside `do_parse_reviews`:
 
-1. `open_thread_count`: the `N` from the `Open (N)` summary, or `0`. Parsed rather than merely detected, so the count has something to reconcile against.
-1. `lists_resolved_threads`: `test("<summary>(<[^>]+>)*Resolved since last review \\([1-9][0-9]*\\)")`, mirroring `lists_open_threads` so the optional `<strong>` wrapper still matches and `(0)` is excluded.
+1. `section_summary($name)`: the `N` from a named section summary, or `null`. It tracks `<details>` nesting and matches only at depth one, the summary of a block opened at the top of the body, because every section summary on a live review sits there and the only deeper ones are the per-finding summaries `Previously missed` nests. Matching the text alone would let an unfamiliar wrapper, or a nested block carrying a section name, stand in for a section Copilot emits, and both section matchers grant an exemption. All three callers share it, so they cannot disagree about what a section is.
+1. `open_thread_count` and `lists_open_threads`: the count from `section_summary("Open")`, and whether it exceeds zero. Parsed rather than merely detected, so the count has something to reconcile against.
+1. `lists_resolved_threads`: whether `section_summary("Resolved since last review")` exceeds zero, so a `(0)` summary does not grant the exemption.
+1. `has_unrecognized_element`: whether the body uses an element outside the seven a `ccr-overview-v2` body is built from, measured across every observed live review: `details`, `summary`, `strong`, `picture`, `source`, `img` and `a`. Elements rather than section names, because Copilot adds sections over time and a list of known names would report drift the first time it ships another one, which on a resolved-only round is an escalation no later run can clear. It reads the whole body rather than stopping at the top level, so an unfamiliar section rendered as a details block cannot hide unread content inside itself.
 1. `lead_states_no_findings`: the first prose line of `headline`, matched exactly against Copilot's fixed no-findings sentence. Defined after `headline` so it can reuse it.
 1. `stated_finding_count`: `0` for `None`, the sum of the severity counts when the value is a breakdown, `"unparseable"` when a `**Findings` line exists but its value is neither, and `null` when no such line exists. The binding then turns that `null` into `"unparseable"` on a `ccr-overview-v2` body, where the line is always present, so a renamed header reads as the format change it is rather than as a layout that never had a count. Only a pre-v2 body keeps `null` and is excluded from the comparison.
 
@@ -65,31 +67,40 @@ hasFormatDrift: (
         $is_v2
         and $verdict != "### 🟢 Approval recommended"
         and ($lists_open_threads | not)
-        and (($lists_resolved_threads and $lead_states_no_findings) | not)
+        and (
+          (
+            $lists_resolved_threads
+            and $lead_states_no_findings
+            and ($has_unrecognized_element | not)
+          )
+          | not
+        )
       )
     )
   )
 ),
 ```
 
-A shortfall reports drift on its own, outside the no-findings guard, because both numbers it compares come from Copilot. Keeping it under that guard would report clean whenever any single finding parsed, even though the remainder is exactly what the signal is for. The other branches do require an empty parse, because they ask whether anything at all was recovered from a body that says there should be something: a non-clean verdict reports drift unless open threads or a resolved-only round with a boilerplate lead accounts for it.
+A shortfall reports drift on its own, outside the no-findings guard, because both numbers it compares come from Copilot. Keeping it under that guard would report clean whenever any single finding parsed, even though the remainder is exactly what the signal is for. The other branches do require an empty parse, because they ask whether anything at all was recovered from a body that says there should be something: a non-clean verdict reports drift unless open threads account for it, or a resolved-only round does. That round has to establish three things, and dropping any one reopens a silent miss: the lead states no finding, a resolved section is present, and no element outside the details blocks is unrecognized.
 
 Resulting behavior:
 
-| Body                                                               | Before | After |
-| ------------------------------------------------------------------ | ------ | ----- |
-| Clean verdict, `Findings: None`, resolved section                  | false  | false |
-| Non-clean verdict, boilerplate lead, resolved section (#491)       | true   | false |
-| Non-clean verdict, lead states findings, resolved section          | true   | true  |
-| Non-clean verdict, `Findings: None`, unfamiliar markup             | true   | true  |
-| Non-clean verdict, lead states findings, no section                | true   | true  |
-| Any verdict, stated total above the `Open (N)` number              | varies | true  |
-| Stated total above `Open (N)`, with some findings parsed           | false  | true  |
-| Any verdict, `**Findings:**` value that is neither None nor counts | varies | true  |
-| v2 body whose `**Findings:**` header was renamed or removed        | varies | true  |
-| Non-clean verdict, `Open (N)` listed and count matching            | false  | false |
-| Section phrases quoted only in a table or prose, or `Resolved (0)` | true   | true  |
-| Legacy suppressed section with no parseable findings               | true   | true  |
+| Body                                                                | Before | After |
+| ------------------------------------------------------------------- | ------ | ----- |
+| Clean verdict, `Findings: None`, resolved section                   | false  | false |
+| Non-clean verdict, boilerplate lead, resolved section (#491)        | true   | false |
+| Non-clean verdict, lead states findings, resolved section           | true   | true  |
+| Non-clean verdict, `Findings: None`, unfamiliar markup              | true   | true  |
+| Non-clean verdict, lead states findings, no section                 | true   | true  |
+| Any verdict, stated total above the `Open (N)` number               | varies | true  |
+| Stated total above `Open (N)`, with some findings parsed            | false  | true  |
+| Any verdict, `**Findings:**` value that is neither None nor counts  | varies | true  |
+| v2 body whose `**Findings:**` header was renamed or removed         | varies | true  |
+| Resolved round carrying an element outside the seven                | true   | true  |
+| Section summary spoofed outside, or nested below, a top-level block | varies | true  |
+| Non-clean verdict, `Open (N)` listed and count matching             | false  | false |
+| Section phrases quoted only in a table or prose, or `Resolved (0)`  | true   | true  |
+| Legacy suppressed section with no parseable findings                | true   | true  |
 
 ## Files to change
 

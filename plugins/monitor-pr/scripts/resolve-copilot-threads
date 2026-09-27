@@ -367,10 +367,17 @@ function do_parse_reviews() {
       # below grant an exemption, so a spoofable match is a way to suppress
       # drift rather than a cosmetic imprecision.
       #
-      # Depth is tracked rather than assumed, because "Previously missed"
-      # nests a details block per finding. A closing tag at depth zero is
-      # ignored so unbalanced markup cannot drive the count negative and open
-      # the rest of the body to matching.
+      # Depth one exactly, which is the summary of a details block opened at
+      # the top of the body. Every section summary observed on a live review
+      # sits there, and the only deeper ones are the per-finding summaries
+      # that "Previously missed" nests, at depth two. Accepting any positive
+      # depth would let one of those nested blocks carry a section name and
+      # impersonate the real thing, so a "Resolved since last review (1)"
+      # tucked inside "What changed in this PR" would grant the exemption
+      # although the review lists no resolved section at all.
+      #
+      # A closing tag at depth zero is ignored so unbalanced markup cannot
+      # drive the count negative and shift every later line down a level.
       def section_summary($name):
         split("\n")
         | reduce .[] as $line ({depth: 0, value: null};
@@ -379,7 +386,7 @@ function do_parse_reviews() {
             elif ($line | test("^</details>"))
             then (if .depth > 0 then .depth -= 1 else . end)
             elif .value == null
-                 and .depth > 0
+                 and .depth == 1
                  and ($line | test("<summary>(<[^>]+>)*" + $name + " \\([0-9]+\\)"))
             then .value = (
                 $line

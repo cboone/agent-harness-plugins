@@ -184,6 +184,17 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🟡 Changes recommended","hasFormatDrift":true,"findings":[]}
 ```
 
+A section summary counts at one depth only, the summary of a block opened at
+the top of the body. `Previously missed` nests a details block per finding, so
+accepting any depth would let one of those carry a section name: a `Resolved
+since last review (1)` tucked inside `What changed in this PR` would grant the
+exemption although the review lists no resolved section.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-nested-impersonation.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
+```
+
 ## Overview v2 a resolved section does not clear a lead that states findings
 
 The same shape with a lead paragraph naming findings is drift. Copilot ships a
