@@ -512,3 +512,53 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 >   && "${REVIEW_SCOPE_BIN}" --base base | jq -c '.base_unrelated'
 false
 ```
+
+## Committed work with no base ref reports the bucket as uncovered
+
+With no `origin/HEAD`, `main` or `master`, there is nothing to measure commits
+from. An empty `committed` list alone would read as "nothing committed", so the
+branch's history could leave the scope while the run still looked complete.
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && git checkout -q -b solo \
+>   && printf 'one\n' > a.txt \
+>   && git add a.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm first \
+>   && printf 'two\n' >> a.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qam second \
+>   && "${REVIEW_SCOPE_BIN}" | jq -c '{base_ref, base_unrelated, committed_covered, committed, empty}'
+{"base_ref":null,"base_unrelated":false,"committed_covered":false,"committed":[],"empty":true}
+```
+
+## An unrelated base reports uncovered and says why
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && git checkout -q -b main \
+>   && printf 'one\n' > a.txt \
+>   && git add a.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && git checkout -q --orphan feature \
+>   && git rm -q -rf . \
+>   && printf 'work\n' > b.txt \
+>   && git add b.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm orphan \
+>   && "${REVIEW_SCOPE_BIN}" | jq -c '{base_ref, base_unrelated, committed_covered}'
+{"base_ref":"main","base_unrelated":true,"committed_covered":false}
+```
+
+## A resolved base reports the committed bucket as covered
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && git checkout -q -b base \
+>   && printf 'one\n' > tracked.txt \
+>   && git add tracked.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && "${REVIEW_SCOPE_BIN}" --base base | jq -c '{base_unrelated, committed_covered}'
+{"base_unrelated":false,"committed_covered":true}
+```

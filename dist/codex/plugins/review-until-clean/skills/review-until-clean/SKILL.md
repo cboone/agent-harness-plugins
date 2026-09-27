@@ -53,7 +53,12 @@ Do not recompute the snapshot by hand. It is content-addressed on purpose, so th
 
 Run `review-scope --base <ref>`, or without `--base` to take the merge base with the default branch. Record `head`, `base`, `snapshot`, and the four file lists.
 
-**If `base_unrelated` is true**, the ref in `base_ref` shares no history with HEAD, so the committed bucket could not be computed and the branch's commits are outside the scope. Do not read that as a small scope. Say which ref was tried, record the round's coverage as partial, and never report plain `clean` from it. If `empty` is also true, the working tree is clean and the only unreviewed work is those commits: stop and ask for a `--base` that shares history, rather than reporting nothing to review.
+**If `committed_covered` is false**, there is no merge base, so the committed bucket was not measured and the branch's commits are outside the scope. An empty `committed` list then means "not reached", not "nothing there". Do not read it as a small scope: record the round's coverage as partial and never report plain `clean` from it. `base_unrelated` says which case it is, and the remedy differs:
+
+- **`base_unrelated` true**: the ref in `base_ref` exists but shares no history with HEAD. Name it and ask for a `--base` that does share history.
+- **`base_unrelated` false**: no candidate ref was found at all, so there is nothing to measure from. Ask for an explicit `--base`.
+
+If `empty` is also true, the working tree is clean and the only unreviewed work is those commits. Stop and ask, rather than reporting nothing to review.
 
 Otherwise, if `empty` is true, report that there is nothing to review and stop. Do not run a reviewer over an empty scope: a clean result there means nothing, and reporting one would be the first invariant failing quietly.
 
@@ -121,6 +126,8 @@ The round is **clean** when all of these hold:
 - `review-scope` still reports the snapshot the review ran against
 
 Check the snapshot again here rather than trusting step 1. Anything that touched the tree during the round, including another session, invalidates the result.
+
+**A moved snapshot invalidates the findings, not only a clean result.** The findings name paths and lines in the tree the reviewer read, and that tree is gone. Handing them to the fixer would apply edits computed for one version of a file to a different one, which is how a review turns into damage. So when the snapshot has moved, discard the round's findings along with any clean verdict, record in the ledger that the round was invalidated and why, and start a new round from step 1 against the current snapshot. Do not go to step 9 with findings from a snapshot that no longer exists.
 
 If the round is clean, go to step 11. Under `--report-only`, go to step 11 whatever the result.
 

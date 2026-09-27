@@ -266,8 +266,16 @@ function main() {
   git rev-parse --verify --quiet HEAD > /dev/null \
     || die "HEAD does not resolve to a commit; the repository has no commits yet"
 
-  local head base_ref base_sha merge_base base_unrelated
+  # committed_covered answers the question the caller actually has: was the
+  # committed part of the scope measured at all. It is false whenever there is
+  # no merge base, whether because no candidate ref was found or because the
+  # one found shares no history, and base_unrelated then says which. Reporting
+  # only an empty committed bucket would make "nothing is committed" and "the
+  # commits could not be reached" identical, and a branch whose history was
+  # never reviewed would read as an empty scope.
+  local head base_ref base_sha merge_base base_unrelated committed_covered
   base_unrelated="false"
+  committed_covered="false"
   head="$(git rev-parse HEAD)"
 
   # The `|| true` absorbs the `return 1` that means "no base found", which is a
@@ -300,6 +308,8 @@ function main() {
       fi
       base_unrelated="true"
       base_sha=""
+    else
+      committed_covered="true"
     fi
   fi
 
@@ -359,6 +369,7 @@ function main() {
     --arg base_ref "${base_ref}" \
     --arg base "${merge_base}" \
     --argjson base_unrelated "${base_unrelated}" \
+    --argjson committed_covered "${committed_covered}" \
     --arg tree "${tree}" \
     --arg snapshot "${digest}" \
     --slurpfile committed "${TMP_DIR}/committed.json" \
@@ -370,6 +381,7 @@ function main() {
       base_ref: (if $base_ref == "" then null else $base_ref end),
       base: (if $base == "" then null else $base end),
       base_unrelated: $base_unrelated,
+      committed_covered: $committed_covered,
       tree: $tree,
       snapshot: $snapshot,
       committed: $committed[0],
