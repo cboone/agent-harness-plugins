@@ -1,0 +1,12 @@
+[
+  {
+    "id": 6000000019,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-09-22T13:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6000000019",
+    "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🔵 Needs a closer look\n\nTen unresolved moderate findings affect validation, detection, CI coverage, and checklist correctness.\n\n**Review effort:** Lite  \n**Findings:** 9 <picture><img alt=\"Medium severity\" width=\"62\" height=\"18\"></picture>\n\n<details open>\n<summary><strong>Open (1)</strong></summary>\n\n- <picture><img alt=\"Low severity\"></picture> [Update stale documentation](#discussion_r630) · New\n</details>\n\n<details>\n<summary><strong>Previously missed (1)</strong></summary>\n\n<details>\n<summary><picture><img alt=\"Medium severity\"></picture> Handle the null case before constructing the formatter</summary>\n\n`src/report/render.js:197`\n\nPassing null as the formatter time zone throws.\n</details>\n</details>"
+  }
+]
