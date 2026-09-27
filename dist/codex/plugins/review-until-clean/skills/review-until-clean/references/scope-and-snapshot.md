@@ -80,11 +80,15 @@ If the second value differs from the first, the snapshot is tracking representat
 
 ## When there is no base
 
-A repository with no `origin/HEAD`, no `main` and no `master` reports a null base. That is not an error: the committed bucket is then empty and the scope is the working tree alone. An explicit `--base` always wins, and a ref that does not resolve is an error rather than a silent fallback, because quietly reviewing the wrong range is how a scope gap gets past the first invariant.
+A repository with no `origin/HEAD`, no `main` and no `master` reports a null base, along with `committed_covered: false`. That is not an error, and it is not an empty committed bucket either: nothing was measured, so whether the branch has committed work is unknown. The working-tree buckets are still exact and still worth reviewing, and the round's coverage is partial rather than full. Do not read the empty `committed` list as "nothing is committed", and do not report plain `clean` from such a round. When `empty` is also true the working tree is clean, which makes any commits the only unreviewed work and a reason to ask for a `--base` rather than to report nothing to review.
+
+An explicit `--base` always wins, and a ref that does not resolve is an error rather than a silent fallback, because quietly reviewing the wrong range is how a scope gap gets past the first invariant.
 
 A third case sits between those two: a base ref exists but shares no history with HEAD, so there is no merge base and the committed bucket cannot be computed. That is reported, never hidden.
 
 - **An explicit `--base` fails.** The caller named the ref, so the answer is wrong rather than unavailable.
-- **An inferred candidate sets `base_unrelated` to true** and leaves `base_ref` in place with a null `base`. The committed bucket is empty because it could not be computed, not because there is nothing in it, and the caller is told which ref was tried.
+- **An inferred candidate sets `base_unrelated` to true** and leaves `base_ref` in place with a null `base`. The caller is told which ref was tried.
 
-That distinction matters because the two look identical in the output otherwise. Clearing the ref silently would drop a branch's whole commit history from the scope while the run still looked complete, which is the first invariant failing quietly. `empty` being true alongside `base_unrelated` means the working tree is clean and the commits are simply unreachable from the base, so it is a reason to ask for a better `--base`, not a reason to report nothing to review.
+That distinction matters because the two look identical in the output otherwise, and clearing the ref silently would drop a branch's whole commit history from the scope while the run still looked complete, which is the first invariant failing quietly.
+
+**`committed_covered` is the field to read, not the length of the `committed` list.** It is false for both unmeasurable cases, no candidate ref and an unrelated one, and `base_unrelated` says which. The list is empty either way, so the list alone cannot tell "nothing is committed" from "the commits were never reached".

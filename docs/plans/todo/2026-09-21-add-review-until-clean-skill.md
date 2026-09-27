@@ -100,7 +100,15 @@ review-scope --schema         # the JSON Schema the Codex backend passes to --ou
 review-scope -h | --help
 ```
 
-The snapshot must be **representation-independent**: it is a digest over `HEAD`, the resolved base commit, and the sorted set of `(path, blob hash)` pairs for every path in the union of `git diff --name-only HEAD` and `git ls-files --others --exclude-standard`, with deleted paths recorded as deleted. Hashing `git status` output or `git diff HEAD` alone is wrong, because `git add -N` moves a file from untracked to tracked without changing a byte of content and would falsely invalidate a clean result. Content hashes come from `git hash-object`, which is already verified to work here.
+The snapshot must be **representation-independent**. Hashing `git status` output or `git diff HEAD` alone is wrong, because `git add -N` moves a file from untracked to tracked without changing a byte of content and would falsely invalidate a clean result.
+
+The first draft got there by hashing a sorted set of `(path, blob hash)` pairs over the union of `git diff --name-only HEAD` and `git ls-files --others --exclude-standard`. **The shipped helper does not do that**, and this paragraph records what it does instead, because a stale design note is how a later change reintroduces the version that was rejected. Git already has the data structure this was reaching for, so the digest is `git hash-object` over `head`, the merge base and a **tree object** built in a temporary index:
+
+- The repository index is copied to a temporary path, never `HEAD` read in, because which paths are tracked is a property of the index. A path matched by `.gitignore` and force-added with `git add -f` is tracked and in scope, and a HEAD-seeded digest would drop it.
+- The add runs twice on that copy: `--all` to settle which paths the tree covers, then `--all --renormalize` to rehash every tracked entry regardless of its recorded stat. Without the second pass the copied stat cache is trusted and can be wrong, and the staged blob reaches the tree in place of the bytes on disk.
+- The tree is written before the file lists are read and again after, and unequal trees stop the run. Both describe the working tree, and a file appearing between the reads would otherwise be covered by the snapshot while named in no list.
+
+The caller's real index is never touched, which is what makes the loop safe on a partly staged tree. `references/scope-and-snapshot.md` carries the same account for the skill's readers, and `tests/scrut/review-scope.md` pins each property.
 
 `--schema` keeps the JSON in the one file the skill already has to locate, instead of adding a second `${CLAUDE_PLUGIN_ROOT}` lookup for an asset. Emit it from a quoted heredoc, the way `plugins/create-worktree/scripts/compose-issue-prompt` emits its usage text.
 
