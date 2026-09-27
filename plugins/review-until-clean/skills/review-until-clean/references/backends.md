@@ -19,6 +19,30 @@ The third and fourth are separate on purpose. A backend that cannot be schema-co
 
 The fourth says "every" rather than "any" because the signals fail independently. A Codex run that exits zero having written nothing satisfies an exit-status check on its own, and that is exactly the case this loop must not read as clean.
 
+## An untracked symlink is not an untracked file
+
+This rule applies to every backend, because every backend is handed the untracked paths as paths to open.
+
+`git ls-files --others --exclude-standard` lists an untracked symlink exactly like an untracked regular file: one path, no indication of what it is. A reviewer told to read that path reads the target instead of the link, and the target is chosen by whoever created the link. A link to `~/.ssh/id_ed25519` or to another checkout puts that content into the reviewer's context, from where it reaches the findings, the ledger, and any commit made from them. Neither read-only mode stops it: `--sandbox read-only` and `--disallowed-tools Edit Write NotebookEdit Bash` both restrict writing, and reading outside the repository stays allowed.
+
+So partition the untracked paths before they go into a prompt:
+
+```bash
+while IFS= read -r -d '' path; do
+  if [[ -L "${path}" ]]; then
+    printf 'symlink %s -> %s\n' "${path}" "$(readlink "${path}")"
+  fi
+done < <(git ls-files -z --others --exclude-standard)
+```
+
+Then:
+
+- **A symlink is passed as its link text, never as a file to open.** Give the reviewer `<path> -> <target>`, and say it is a symlink whose contents are out of scope. A wrong or dangling link target is itself reviewable, and that is all there is to review in a link.
+- **Never ask a backend to follow one.** Do not resolve the target and pass that path either; the resolved path is the same content by another name.
+- **A symlink is in the scope, and its target is not.** Both statements hold at once, so a round whose untracked bucket contains symlinks is still full coverage. The snapshot already agrees: git records a symlink as its target string, so the tree covers the link and never the file it points at.
+
+The rule deliberately does not depend on where the target points. Classifying by target would have to resolve every link, get relative and chained links right, and decide what an ignored file inside the tree counts as, all to earn nothing: a target inside the repository is already in the scope on its own merits, and following the link would only show the reviewer the same bytes twice. One rule for every link is both safer and shorter.
+
 ## Codex
 
 ### Availability
@@ -27,7 +51,11 @@ The fourth says "every" rather than "any" because the signals fail independently
 command -v codex && codex --version
 ```
 
-Authentication failures surface when the review runs, not before. Treat a non-zero exit with an authentication message as "backend unavailable" rather than as a failed round, and say which command reported it.
+Authentication failures surface when the review runs, not before, so the availability check above can pass and the round still end without a review.
+
+**Report it as a backend problem, and still classify it as a failed round.** Name the command that reported it, say the backend is unauthenticated rather than that the reviewer found nothing, and do not attempt to authenticate. The status is nonetheless `failed`, exactly as `./stop-rules.md` classifies any non-zero exit: no review was produced, so the round carries no information about the code. What the authentication message changes is the diagnosis handed to the user, not what the loop is allowed to conclude.
+
+Do not silently switch to the other backend to rescue the round. Substituting a backend is step 2's decision, taken before any review and recorded in the ledger; doing it mid-round changes the reviewer and the coverage of a round already under way. Report the failure and name `--reviewer` as the way to rerun against the other family.
 
 ### Use `codex exec`, not `codex exec review`
 
@@ -86,7 +114,7 @@ Set "reviewed" to exactly: <snapshot>
 
 Two things about building that prompt:
 
-- **Pass the untracked paths explicitly, and say they are not in any diff.** A reviewer told to look at "the diff" will not find a file that is not in one, and untracked files are usually the newest and least reviewed code in the scope.
+- **Pass the untracked paths explicitly, and say they are not in any diff.** A reviewer told to look at "the diff" will not find a file that is not in one, and untracked files are usually the newest and least reviewed code in the scope. Partition them first, per the symlink rule above: a symlink goes in as `<path> -> <target>`, not as a path to open.
 - **Omit a bucket `review-scope` reported empty.** On a branch with no commits ahead of its base, the committed line renders as `git diff <sha> <sha>`, which returns nothing. Listing a command that produces nothing invites the reviewer to conclude the scope is smaller than it is. Leave the line out instead.
 
 ### Reading the output
@@ -170,7 +198,7 @@ Because the reviewer does not echo the snapshot, `reviewed` is filled in by you.
 `/code-review`'s default scope is the branch's commits **ahead of its upstream**, plus uncommitted changes. That differs from `review-scope`'s scope in two ways, and the first one bites on exactly the branches this skill is for.
 
 - **Upstream, not merge base.** On a branch that has been pushed, the upstream is usually at `HEAD`, so "commits ahead of upstream" is empty and a default run reviews **none of the committed work**. A defect living only in an earlier commit is then outside the review while the run still looks complete. Compare `git rev-parse @{upstream}` with the base from `review-scope`: when they differ, a no-target run cannot claim the committed bucket. Pass `<base>...HEAD` as the target to review that range instead.
-- **Untracked files.** Whether the default scope includes them is not documented. Treat them as excluded until a run shows otherwise, which is what step 3's question is for. `git add -N` records an intent to add and puts the file in the diff without staging its content; `git reset -- <paths>` undoes it. The snapshot is content-addressed and does not move either way.
+- **Untracked files.** Whether the default scope includes them is not documented. Treat them as excluded until a run shows otherwise, which is what step 3's question is for. `git add -N` records an intent to add and puts the file in the diff without staging its content; `git reset -- <paths>` undoes it. The snapshot is content-addressed and does not move either way. The symlink rule above applies here too, and `git add -N` satisfies it on its own: git diffs a symlink as its target string, so the link text reaches the review and the target's contents do not.
 
 Whether passing a ref-range target keeps the uncommitted changes in scope or replaces them is **not established**. Until it is, do not assume one run covers both.
 

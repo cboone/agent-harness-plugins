@@ -172,6 +172,12 @@ function working_tree_digest() {
   real_index="$(git rev-parse --git-path index)" \
     || die "could not locate the repository index"
 
+  # The caller's index is copied, not HEAD read in, because the set of tracked
+  # paths lives in the index and not in the commit. A path matched by
+  # .gitignore but force-added with `git add -f` is tracked and in the scope,
+  # and `git add --all` will not re-add it, so a digest seeded from HEAD drops
+  # it: rewriting that file would not move the snapshot, and a stale clean
+  # result would stand over it.
   if [[ -f "${real_index}" ]]; then
     cp "${real_index}" "${tmp_index}" \
       || die "could not copy the index to ${tmp_index}"
@@ -180,8 +186,29 @@ function working_tree_digest() {
       || die "could not read HEAD into the temporary index"
   fi
 
+  # Two passes, and both are needed.
+  #
+  # The first settles which paths the tree covers: --all brings in untracked
+  # files and drops entries whose file is gone.
+  #
+  # The second is what makes the copied index safe to use at all. `git add`
+  # trusts the stat cache it was handed and skips hashing a file the cache calls
+  # unchanged, and that cache can be wrong: a file staged and then edited back
+  # to the same size keeps its recorded stat, so the *staged* blob is carried
+  # into the tree in place of the bytes on disk. The snapshot then describes
+  # content no reviewer was given, and a round can be reported clean over the
+  # file that is actually there. It reproduced intermittently, which is the
+  # worst possible form for the guarantee the whole loop rests on.
+  #
+  # --renormalize re-reads and re-hashes every tracked entry whatever its
+  # recorded stat says, so after this pass the tree depends on the bytes on disk
+  # and on nothing that happened earlier. It cannot replace the first pass:
+  # --renormalize acts on tracked entries only, so on its own it silently leaves
+  # every untracked file out of the tree.
   GIT_INDEX_FILE="${tmp_index}" git add --all \
     || die "could not stage the working tree into the temporary index; the snapshot would describe HEAD instead of what is on disk"
+  GIT_INDEX_FILE="${tmp_index}" git add --all --renormalize \
+    || die "could not rehash the working tree into the temporary index; the snapshot could describe staged content instead of what is on disk"
   GIT_INDEX_FILE="${tmp_index}" git write-tree \
     || die "could not write a tree from the temporary index"
 }
@@ -317,6 +344,24 @@ function main() {
   # temporary files land beside it and one rm removes the lot.
   TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/review-scope.XXXXXX")"
 
+  # The tree is written before the buckets are read, and is written again after
+  # them. Both describe the working tree, they are separate git invocations,
+  # and nothing stops the tree from changing in between. Without a stability
+  # check the gap fails silently and in the worst direction: a file created
+  # after the buckets were read but before the tree was written lands in the
+  # tree and in no bucket, so the reviewer is never shown it while the snapshot
+  # already covers it, and the caller's recheck then confirms a snapshot that
+  # never moved. That is a clean result over unread code, which is the one
+  # outcome this script exists to make impossible.
+  #
+  # Bracketing the buckets closes it. Equal trees before and after mean nothing
+  # on disk changed while the scope was being read, so the buckets and the
+  # snapshot describe one state. Unequal trees mean they may not, and that is
+  # reported rather than guessed at: the caller reruns against a settled tree.
+  local tree digest
+  tree="$(working_tree_digest "${TMP_DIR}/index")"
+  digest="$(printf 'head %s\nbase %s\ntree %s\n' "${head}" "${merge_base:--}" "${tree}" | git hash-object --stdin)"
+
   # Each bucket goes to a file rather than into a jq argument. A large scope
   # makes the combined argument list exceed the execve limit, and on Linux a
   # single argument is capped far lower than the total, so a few thousand
@@ -330,9 +375,22 @@ function main() {
   write_bucket unstaged git diff -z --name-only
   write_bucket untracked git ls-files -z --others --exclude-standard
 
-  local tree digest
-  tree="$(working_tree_digest "${TMP_DIR}/index")"
-  digest="$(printf 'head %s\nbase %s\ntree %s\n' "${head}" "${merge_base:--}" "${tree}" | git hash-object --stdin)"
+  # Read inside the bracket like the others, because it is another read of the
+  # working tree and the guard below is only sound over one state. It compares
+  # against HEAD rather than against the staged and unstaged buckets: those
+  # record where a change sits, not whether the working tree differs from HEAD,
+  # and staging a file and then editing it back to its committed content fills
+  # both while leaving the tree identical to HEAD, which is a legitimate state
+  # this guard must not reject.
+  write_bucket worktree_vs_head git diff -z --name-only HEAD
+
+  # The closing half of the bracket. A second index file is used rather than
+  # reusing the first, so this is a genuinely independent read of the tree and
+  # not a report on whatever the earlier run left behind.
+  local tree_after
+  tree_after="$(working_tree_digest "${TMP_DIR}/index-recheck")"
+  [[ "${tree_after}" == "${tree}" ]] \
+    || die "the working tree changed while the scope was being read, so the file lists and the snapshot may describe different states; rerun once it has settled"
 
   # An independent cross-check on the digest. The buckets and the tree come
   # from different git commands and have to agree: if anything is staged,
@@ -346,13 +404,6 @@ function main() {
   local head_tree
   head_tree="$(git rev-parse "${head}^{tree}")" \
     || die "could not resolve HEAD's tree"
-
-  # The comparison is against HEAD, not against the staged and unstaged
-  # buckets. Those record where a change sits, not whether the working tree
-  # differs from HEAD: staging a file and then editing it back to its committed
-  # content fills both buckets while leaving the tree identical to HEAD, which
-  # is a legitimate state this guard must not reject.
-  write_bucket worktree_vs_head git diff -z --name-only HEAD
 
   local worktree_differs
   worktree_differs="$(jq -n \

@@ -202,7 +202,7 @@ Ledger: docs/reviews/2026-09-22-feature-465-add-review-until-clean-skill-until-c
 ## Error Handling
 
 - **No backend installed**: report which ones were tried and how to install one, then stop.
-- **Backend not authenticated**: report the command that failed, then stop. Do not attempt to authenticate.
+- **Backend not authenticated**: a failed round, like any non-zero exit. Report the command that failed and that the backend is unauthenticated, stop with `failed`, and do not attempt to authenticate.
 - **Empty scope**: report that there is nothing to review and stop.
 - **Repository has no commits**: `review-scope` reports it; stop.
 - **Backend exits non-zero, times out, or returns nothing**: a failed round, per step 5. Report and stop.

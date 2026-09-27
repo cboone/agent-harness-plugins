@@ -479,6 +479,53 @@ $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
 {"staged":["f.txt"],"unstaged":["f.txt"],"empty":false}
 ```
 
+## The digest describes the working tree, never the staged blob
+
+The same fixture, checking the value the previous case does not. `one` is on
+disk and `two` is staged, and both are four bytes, so an index whose stat cache
+is trusted reports the staged blob and the snapshot describes content no
+reviewer was given. Seeding the temporary index from `HEAD` instead of from the
+caller's index is what keeps these two trees equal.
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && git init -q --template= . \
+>   && git checkout -q -b base \
+>   && printf 'one\n' > f.txt \
+>   && git add f.txt \
+>   && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init \
+>   && printf 'two\n' > f.txt \
+>   && git add f.txt \
+>   && printf 'one\n' > f.txt \
+>   && tree="$("${REVIEW_SCOPE_BIN}" --base base | jq -r .tree)" \
+>   && [[ "${tree}" == "$(git rev-parse 'HEAD^{tree}')" ]] \
+>   && git cat-file blob "${tree}:f.txt"
+one
+```
+
+## Identical working trees digest identically whatever the index holds
+
+Two repositories with the same commit and the same bytes on disk, one with a
+same-size change staged and edited back. The digest is a function of the working
+tree, so the staged state must not reach it.
+
+```scrut
+$ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${work}" \
+>   && for r in clean staged; do \
+>        git init -q --template= "${r}" \
+>          && ( cd "${r}" \
+>            && git checkout -q -b base \
+>            && printf 'one\n' > f.txt \
+>            && git add f.txt \
+>            && git -c commit.gpgsign=false -c user.email=t@t -c user.name=t commit -qm init ); \
+>      done \
+>   && ( cd staged && printf 'two\n' > f.txt && git add f.txt && printf 'one\n' > f.txt ) \
+>   && a="$(cd clean && "${REVIEW_SCOPE_BIN}" --base base | jq -r .tree)" \
+>   && b="$(cd staged && "${REVIEW_SCOPE_BIN}" --base base | jq -r .tree)" \
+>   && [[ "${a}" == "${b}" ]] && echo "identical: ${a}"
+identical: 7385b9ca65269b27de63aea3ddff716dd768c253
+```
+
 ## An inferred base with no shared history is reported, not dropped
 
 Clearing the ref would empty the committed bucket and let a branch's whole

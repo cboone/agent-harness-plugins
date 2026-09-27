@@ -46,11 +46,22 @@ The same property covers deletions, symlinks, the executable bit, and file names
 
 The last row is the reason step 8 recomputes the snapshot instead of trusting the value from step 1. A worktree is not private, and a clean result is a claim about the code on disk now.
 
+## One run reports one state
+
+The file lists and the digest come from different git invocations, and a tree that changes between them would make a single `review-scope` run self-inconsistent. That is worse than it sounds. A file created after the lists were read but before the digest was written would be covered by the snapshot and named in no list, so the reviewer would never be shown it, and step 8 would find the snapshot exactly where it left it. The round would report clean over code nobody read, which is the one result the whole design exists to prevent.
+
+So the helper writes the tree, reads the lists, and writes the tree again. Equal trees mean nothing on disk moved while the scope was being read, so everything the run reports describes one state. Unequal trees mean it might not, and the run fails with `the working tree changed while the scope was being read` rather than emitting a scope it cannot vouch for. Rerun once the tree has settled; a formatter on save or another session in the same worktree is the usual cause.
+
 ## What it costs
 
-The digest is built by reading `HEAD` into a temporary index and adding the whole working tree, so it stats every file git tracks or would track. The caller's real index is never touched, which is what makes the loop safe to run on a partly staged tree. The scrut suite asserts that, because a helper that quietly restaged someone's work would be worse than no helper.
+The digest is built by copying the repository index to a temporary path and adding the whole working tree to the copy, so it hashes every file git tracks or would track. The caller's real index is never touched, which is what makes the loop safe to run on a partly staged tree. The scrut suite asserts that, because a helper that quietly restaged someone's work would be worse than no helper.
 
-On a very large repository the stat pass is the slowest part of a round. It is still far cheaper than the review it guards.
+Two details of that are load-bearing, and each has a scrut case standing over it.
+
+- **The copy starts from the index, not from `HEAD`.** Which paths are tracked is a property of the index, not of the commit. A path matched by `.gitignore` and force-added with `git add -f` is tracked and in the scope, and `git add --all` will not re-add it, so seeding from `HEAD` drops it: rewriting that file would not move the snapshot, and a stale clean result would stand over it.
+- **The copy's stat cache is not trusted.** `git add` skips hashing a file its cache calls unchanged, and that cache can be wrong: a file staged and then edited back to the same size keeps its recorded stat, so the staged blob goes into the tree in place of the bytes on disk. The snapshot then describes content no reviewer was given. So the add runs twice, `--all` to settle which paths the tree covers and `--all --renormalize` to re-hash every tracked entry whatever its stat says. Neither pass replaces the other: `--renormalize` acts on tracked entries alone, so by itself it leaves every untracked file out of the tree.
+
+That is the cost: two hashing passes for each half of the stability check above, against two separate temporary indexes. On this repository, 1,359 tracked files, a run takes about half a second. On a very large repository it is the slowest part of a round, and still far cheaper than the review it guards, let alone than a clean result that covered less than it claimed.
 
 ## Checking it by hand
 
