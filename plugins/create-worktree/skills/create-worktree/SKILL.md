@@ -17,13 +17,62 @@ This skill creates the worktree and stops. It does not start the work. To have t
 
 The user may provide these options inline:
 
-- **--issue `<number>`**: Force issue lookup, for when a task description is itself a number
+- **--issue `<number>`**: Force issue lookup, for when a task description is itself a number. Repeat it, or pass comma-separated numbers, for several issues
 - **--no-issue**: Force description handling, even if the argument looks like an issue number
 - **--branch `<name>`**: Use this exact branch name and skip generation, for a name that does not look like one
 - **--base `<branch>`**: Base the worktree on a specific branch instead of the repository's default branch
 - **--resource `<name>`**: Claim a named exclusive resource for the new worktree, and report the holder first if one holds it already
 - **--release-resource `<name>`**: Release a claim and stop, creating nothing
 - **--list-resources**: Report every claim and stop, creating nothing
+- **--fan-out**: With several issue numbers, create one worktree, branch and tmux window per issue instead of one for all of them. `--each` and `--separate` are aliases with identical behavior; treat all three as the same fan-out mode before checking how it combines with other options
+
+## Several Issues
+
+Several issue numbers, as in `/create-worktree 42 57`, have two readings, and each is a defined mode rather than a judgment call:
+
+- **Combined (default).** One worktree, branch and tmux window for all the issues together, as one piece of work. Run the workflow below once, with the changes listed under "Combined mode".
+- **Fan-out (`--fan-out`, `--each`, `--separate`).** One worktree per issue. Follow "Fan-Out Workflow" instead of steps 3 to 7.
+
+The user knows which reading they mean when they type the command, so the flag decides; do not ask which mode to use. Any of the three flags with a single issue is accepted and behaves exactly like the single-issue workflow.
+
+This skill marks nothing in progress in either mode, for the same reason it does not for one issue.
+
+### Option interactions
+
+Check these before fetching anything, so a rejected combination does no work.
+
+| Option              | Combined                                             | Fan-out                                                                                     |
+| ------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `--resource <name>` | Claims the resource for the one worktree             | Rejected before anything is fetched: an exclusive resource can be held by only one worktree |
+| `--base <branch>`   | Used for the one worktree                            | Used for every worktree                                                                     |
+| `--branch <name>`   | Used as the one branch name                          | Rejected: one name cannot serve several branches                                            |
+| `--issue <number>`  | Repeatable, or accepts several numbers               | Same                                                                                        |
+| `--no-issue`        | Forces the description path, so neither mode applies | Rejected as contradictory                                                                   |
+
+### Combined mode
+
+The single-issue workflow applies, with these changes:
+
+- **Step 3:** fetch every issue into its own `mktemp` file, and remove every one once the worktree exists or the run stops. Warn about and ask about each closed issue. The first issue given is the primary one: it supplies `--issue` to the launcher, so it owns the branch number and the lookup that reuses an existing branch. Name the candidate for the combined work, not only the primary issue.
+- **Step 5:** run `compose-issue-prompt` once per issue, in the order given, and join the outputs with a blank line. Pass no `--chain-command`, as for one issue.
+
+```bash
+{
+  bash "SCRIPTS_DIR/compose-issue-prompt" < ISSUE_JSON_42
+  printf '\n'
+  bash "SCRIPTS_DIR/compose-issue-prompt" < ISSUE_JSON_57
+} | bash "SCRIPTS_DIR/launch-workmux" --generated-name "CANDIDATE" --issue 42 --base "BASE_BRANCH"
+```
+
+`ISSUE_JSON_42` and `ISSUE_JSON_57` stand for the literal paths `mktemp` printed for each issue:
+
+```bash
+mktemp "${TMPDIR:-/tmp}/issue-json-XXXXXX"
+```
+
+Shell variables do not survive between separate command invocations, so substitute each literal path. `SCRIPTS_DIR` is the shorthand step 6 defines.
+
+- **Step 7:** report every issue number and title.
 
 ## Workflow
 
@@ -57,10 +106,11 @@ For the rest of the workflow, skip to the next step.
 Decide what the user gave you, in this order:
 
 1. **An issue number**: a bare integer or `#N` (e.g. `/create-worktree 42`, `/create-worktree #42`), or anything passed via `--issue N`
-2. **An explicit branch name**: anything passed via `--branch NAME`, or a string containing `/` that looks like `type/slug` (e.g. `/create-worktree feature/my-thing`) -- use as-is
-3. **A task description**: anything else (e.g. `/create-worktree Fix a bug`)
+2. **Several issue numbers**: two or more tokens separated by whitespace or commas, each a bare integer or `#N` (e.g. `/create-worktree 42 57`, `/create-worktree #42, #57`), or several numbers passed through repeated `--issue` options or one `--issue 42,57`. See "Several Issues" for the combined and fan-out modes
+3. **An explicit branch name**: anything passed via `--branch NAME`, or a string containing `/` that looks like `type/slug` (e.g. `/create-worktree feature/my-thing`) -- use as-is
+4. **A task description**: anything else (e.g. `/create-worktree Fix a bug`)
 
-`--no-issue` forces a bare integer down the description path.
+`--no-issue` forces a bare integer, or a list of them, down the description path. That is how a task that happens to be a list of numbers gets through.
 
 The generator can return a name with no `/` in it, so a prefixless branch such as `make-things-better` is indistinguishable from a task description by shape alone. `--branch` is how the user names one: without it, passing a prefixless branch back would generate a second branch rather than reopening the first. Prefer it whenever you are echoing a name the launcher reported earlier, and offer it by name when you ask the user to choose between candidate branches.
 
@@ -271,6 +321,65 @@ After confirming the worktree exists in `git worktree list`, report:
 
 Then stop. Do not start the work.
 
+## Fan-Out Workflow
+
+With `--fan-out` (or `--each`, or `--separate`) and several issues, loop over the single-issue steps in two phases. The loop lives here rather than in the scripts: each helper already handles one issue, and the launcher gains only what the loop needs to be safe.
+
+Run every phase 1 check before launching anything, so a problem with the third issue surfaces before the first two already have worktrees.
+
+### Phase 1: Gather and Validate
+
+1. **Check options first.** Reject `--resource`, `--branch` and `--no-issue` as described under "Option interactions", before any fetch.
+1. **Drop duplicates.** The same issue number given twice launches once; say so.
+1. **Fetch every issue** into its own `mktemp` file, as combined mode does. Collect every closed issue.
+1. **Resolve the base branch once**, as step 6 describes, and use it for every launch.
+1. **Generate every candidate** in this session, using step 3's rules for each issue on its own.
+1. **Resolve existing branches** for every issue with the launcher's read-only mode, so preflight applies the same matching rules the launch will:
+
+   ```bash
+   bash "SCRIPTS_DIR/launch-workmux" --resolve-issue-branch NUMBER
+   ```
+
+   Exit 0 with a name means the launch will reuse that branch; exit 0 with no output means it will generate one from the candidate. Exit 3 lists several matching branches on stderr, and the user must choose one.
+
+1. **Ask every outstanding question in one batch:** whether to proceed with each closed issue, and which branch to use for each ambiguous issue. Drop any issue the user declines, and remove its JSON file.
+
+Nothing has been launched yet, so stopping anywhere in this phase leaves nothing behind but the JSON files, which are removed on the way out.
+
+### Phase 2: Launch One at a Time
+
+For each issue in the order given:
+
+1. **Compose and launch** with `--await-completion`, which waits for `workmux add` to exit rather than for a fixed interval, then confirms the branch's worktree:
+
+   ```bash
+   bash "SCRIPTS_DIR/compose-issue-prompt" < ISSUE_JSON \
+     | bash "SCRIPTS_DIR/launch-workmux" --generated-name "CANDIDATE" --issue NUMBER --base "BASE_BRANCH" --await-completion
+   ```
+
+   When the user chose a branch in phase 1, pass that name positionally instead of `--generated-name` and `--issue`.
+
+1. **Read the result from the exit status:**
+   - **0:** the launcher printed `Worktree ready: PATH`. Confirm the tmux window with `workmux list --json BRANCH_NAME`, which reports the window's `handle` and whether it `is_open`.
+   - **1:** the launch finished and failed, or the launcher rejected its input. Nothing is still running. Record the error for this issue and continue with the next one. A `Generated branch name:` line printed before the failure is not a success.
+   - **124:** `workmux add` was still running when the wait ran out (`WORKMUX_LAUNCH_TIMEOUT_SECONDS`, 120 by default). Stop the loop: starting another `workmux add` while this one runs can race in Git and tmux. Report this launch as uncertain, with its branch and the worktree state the launcher printed, and report every later issue as not launched.
+1. **Recheck the branch.** Compare the branch the launcher reports with the phase 1 result. Another process can create a matching branch after preflight; if the launcher now reuses a branch preflight did not see, say so in the report. If the new branch makes the issue ambiguous, the launcher fails with exit 1 and lists the candidates: record that for the issue rather than choosing one.
+1. **Remove the issue's JSON file.** The launcher owns its prompt and log: it removes them after a completed launch, and after a timeout the detached launch removes them itself when it exits.
+
+Remove the JSON file of every issue that was never launched, too.
+
+### Fan-Out Report
+
+End with one table, one row per issue:
+
+| Issue | Title             | Branch                                 | Window             | Result   |
+| ----- | ----------------- | -------------------------------------- | ------------------ | -------- |
+| #42   | Add dark mode     | `feature/42-add-dark-mode` (generated) | `42-add-dark-mode` | Launched |
+| #57   | Fix login timeout | `fix/57-login-timeout` (reused)        | `57-login-timeout` | Launched |
+| #61   | Update README     | -                                      | -                  | Error    |
+
+Give the error text for any issue that failed, timed out or was not launched. The per-issue items from step 7 still apply to each row. Nothing was marked in progress; say so once rather than adding a column for it.
+
 ## Error Handling
 
 - If `workmux` is not installed, inform the user and suggest installing it
@@ -284,3 +393,6 @@ Then stop. Do not start the work.
 - If the claim file cannot be read, report the error and ask whether to proceed without a claim. A malformed file is never rewritten automatically
 - If the claim cannot be written after the worktree exists, report it and continue. The claim is advisory, so a failure to record one does not undo the worktree
 - If `--resource` is given outside a git repository, `manage-resource-claims` cannot resolve the shared claim file; report that and stop
+- If `--fan-out`, `--each` or `--separate` is combined with `--resource`, `--branch` or `--no-issue`, reject the request before fetching anything and say why
+- If a fan-out launch fails after `workmux add` has exited, record the failure for that issue and continue with the next one
+- If a fan-out launch exceeds the completion wait, stop the loop, report that launch as uncertain, and report the remaining issues as not launched

@@ -29,14 +29,23 @@ The "in progress" label is retained until the related PR is merged or the user e
 /address-issue-in-worktree the dark mode issue
 /address-issue-in-worktree 42 --no-approval
 /address-issue-in-worktree 42 --resource logic
+/address-issue-in-worktree 42 57
+/address-issue-in-worktree 42 57 61 --fan-out
 ```
 
-Provide either an issue number or descriptive text to search for.
+Provide an issue number, several issue numbers, or descriptive text to search for.
 
-| Option              | Description                                                                          |
-| ------------------- | ------------------------------------------------------------------------------------ |
-| `--no-approval`     | Pass `--no-approval` through, so the new session plans and executes without stopping |
-| `--resource <name>` | Claim a named exclusive resource, reporting the holder first if one holds it already |
+| Option              | Description                                                                             |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| `--no-approval`     | Pass `--no-approval` through, so the new session plans and executes without stopping    |
+| `--resource <name>` | Claim a named exclusive resource, reporting the holder first if one holds it already    |
+| `--fan-out`         | With several issues, open one worktree per issue; `--each` and `--separate` are aliases |
+
+### Several issues
+
+By default, several issue numbers open **one** worktree for the combined work. The first issue supplies the branch number, the prompt carries every issue, every open issue is marked in progress, and the new session runs `/address-issue 42 57` to plan them together under one approval.
+
+With `--fan-out` (or its aliases `--each` and `--separate`), each issue gets its own worktree, branch, tmux window and session, running `/address-issue N` for that issue. Every issue is fetched and checked, and every question about closed issues or ambiguous branches is asked, before the first worktree is created. Worktrees are then created one at a time, and each issue is marked in progress only after its worktree exists. The run ends with one table covering every issue. `--resource` is rejected with `--fan-out`, since one exclusive resource cannot be held by several worktrees.
 
 `--resource` records which worktree holds a resource that only one worktree can use at a time: a DAW, a simulator, a device, a database, a port, a shared install location. The check runs before the issue is self-assigned and labeled, so declining a held resource leaves nothing behind on an issue nobody started. See [Create Worktree](../create-worktree/README.md) for how claims are stored, when they go stale, and how to list or release them.
 
@@ -60,6 +69,8 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 - "start issue #42": same thing
 - "work on the dark mode issue in a worktree": searches for a matching issue by title
 - "start issue #42, it needs the simulator": claims `simulator` for the new worktree, or reports which branch already holds it and asks first
+- "work on #42 and #57 together in a worktree": opens one worktree whose session plans both issues
+- "start #42, #57 and #61, each in its own worktree": opens three worktrees with `--fan-out`
 
 ## See Also
 
