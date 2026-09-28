@@ -29,6 +29,7 @@ The "in progress" label is retained until the related PR is merged or the user e
 /address-issue-in-worktree the dark mode issue
 /address-issue-in-worktree 42 --no-approval
 /address-issue-in-worktree 42 --resource logic
+/address-issue-in-worktree 42 --each --resource logic
 /address-issue-in-worktree 42 57
 /address-issue-in-worktree 42 57 61 --fan-out
 ```
@@ -45,7 +46,7 @@ Provide an issue number, several issue numbers, or descriptive text to search fo
 
 By default, several issue numbers open **one** worktree for the combined work. The first issue supplies the branch number, the prompt carries every issue, every open issue is marked in progress, and the new session runs `/address-issue 42 57` to plan them together under one approval.
 
-With `--fan-out` (or its aliases `--each` and `--separate`), each issue gets its own worktree, branch, tmux window and session, running `/address-issue N` for that issue. Every issue is fetched and checked, and every question about closed issues or ambiguous branches is asked, before the first worktree is created. Worktrees are then created one at a time, and each issue is marked in progress only after its worktree exists. The run ends with one table covering every issue. `--resource` is rejected with `--fan-out`, since one exclusive resource cannot be held by several worktrees.
+With `--fan-out` (or its aliases `--each` and `--separate`), each issue gets its own worktree, branch, tmux window and session, running `/address-issue N` for that issue. Every issue is fetched and checked, and every question about closed issues or ambiguous branches is asked, before the first worktree is created. Worktrees are then created one at a time, and each issue is marked in progress only after its worktree exists. The run ends with one table covering every issue. With one distinct issue, the flag has no effect and `--resource` works as usual. With several distinct issues, `--resource` is rejected because one exclusive resource cannot be held by several worktrees.
 
 `--resource` records which worktree holds a resource that only one worktree can use at a time: a DAW, a simulator, a device, a database, a port, a shared install location. The check runs before the issue is self-assigned and labeled, so declining a held resource leaves nothing behind on an issue nobody started. See [Create Worktree](../create-worktree/README.md) for how claims are stored, when they go stale, and how to list or release them.
 

@@ -35,7 +35,7 @@ Either way, it creates the worktree via `workmux add` and stops. It does not sta
 
 Two or more issue numbers, such as `42 57` or `#42, #57`, are read as a list of issues rather than a task description; `--no-issue` still forces the description path. By default they produce **one** worktree for the combined work: the first issue supplies the branch number, and the prompt carries every issue.
 
-With `--fan-out` (or its aliases `--each` and `--separate`), each issue gets its own worktree, branch and tmux window. Every issue is fetched and checked, and every question about closed issues or ambiguous branches is asked, before the first worktree is created. Worktrees are then created one at a time, and the run ends with one table covering every issue. Nothing is marked in progress in either mode. `--resource`, `--branch` and `--no-issue` are rejected with `--fan-out`.
+With `--fan-out` (or its aliases `--each` and `--separate`), each issue gets its own worktree, branch and tmux window. Every issue is fetched and checked, and every question about closed issues or ambiguous branches is asked, before the first worktree is created. Worktrees are then created one at a time, and the run ends with one table covering every issue. Nothing is marked in progress in either mode. With one distinct issue, the flag has no effect and `--resource` and `--branch` work as usual. With several distinct issues, those two options are rejected. `--no-issue` cannot accompany a fan-out flag because it forces the description path.
 
 ### Exclusive resources
 
@@ -65,6 +65,7 @@ Where a project declares its resources under an "exclusive resources" heading in
 /create-worktree --release-resource logic
 /create-worktree 42 57
 /create-worktree 42 57 --fan-out
+/create-worktree 42 --separate --branch feature/my-branch-name
 ```
 
 | Option                      | Description                                                                               |

@@ -15,14 +15,14 @@ The goal is a second, explicit behavior: pass several issue numbers and get one 
 - **Combined (default).** Several issue numbers produce one worktree. This keeps the behavior already relied on, now written down.
 - **`--fan-out`.** Several issue numbers produce one worktree per issue. `--each` and `--separate` are aliases with identical behavior.
 
-An explicit flag beats asking every time, since both readings are reasonable and the user knows which one they want when they type the command. Use `--fan-out` as the primary name in examples and report text; document the aliases in both skills and READMEs. Each flag with a single issue is accepted and behaves exactly like the single-issue path.
+An explicit flag beats asking every time, since both readings are reasonable and the user knows which one they want when they type the command. Use `--fan-out` as the primary name in examples and report text; document the aliases in both skills and READMEs. Count distinct issues after removing duplicates. Each flag with one distinct issue is a no-op and follows the single-issue path, including its `--resource` and `--branch` options.
 
 ### Combined mode, specified
 
 - Fetch every issue into its own `mktemp` file.
 - The first issue given is the primary one: it supplies `--issue` to `launch-workmux`, so it owns the branch number and the branch-reuse lookup.
 - The branch candidate is named for the combined work, not only the primary issue.
-- The prompt carries every issue. Run `compose-issue-prompt` once per issue and join the outputs. Omit `--chain-command` on all but the last call; the helper already emits the footer only when that option is present.
+- The prompt carries every issue. Run `compose-issue-prompt` once per issue and check that every composition succeeds before invoking the launcher; a failed early issue must not leave a partial prompt to launch. Join the successful outputs. Omit `--chain-command` on all but the last call; the helper already emits the footer only when that option is present.
 - In `address-issue-in-worktree`, the chain command lists every number: `/address-issue 42 57`. Update `address-issue` throughout its workflow, not only its entry point: fetch and show every issue, check each state, self-assign and label each open issue, collect the requirements into one plan with one approval gate, and report status for every issue. Its commits must reference every issue addressed by the combined work. Keep `--dry-run`, `--no-approval`, `--no-commit`, and `--commit-per-change` scoped to the one combined plan.
 - In `address-issue-in-worktree`, every issue is self-assigned and labeled "in progress", since the session starts work on all of them.
 
@@ -51,9 +51,9 @@ The preflight branch check must agree with the launcher's final branch selection
 | Option                                            | Combined                                             | `--fan-out`                                                                       |
 | ------------------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `--no-approval` (`address-issue-in-worktree`)     | Passed to the one chained command                    | Passed to every chained command                                                   |
-| `--resource`                                      | Claims for the one worktree                          | Rejected, with the reason: an exclusive resource can be held by only one worktree |
+| `--resource`                                      | Claims for the one worktree                          | Rejected for several distinct issues: one resource cannot cover several worktrees |
 | `--base` (`create-worktree`), or a requested base | Used for the one worktree                            | Used for every worktree                                                           |
-| `--branch` (`create-worktree`)                    | Used as the one branch name                          | Rejected: one name cannot serve several branches                                  |
+| `--branch` (`create-worktree`)                    | Used as the one branch name                          | Rejected for several distinct issues: one name cannot serve several branches      |
 | `--issue` (`create-worktree`)                     | Repeatable, or accepts several numbers               | Same                                                                              |
 | `--no-issue` (`create-worktree`)                  | Forces the description path, so neither mode applies | Rejected as contradictory                                                         |
 
@@ -88,9 +88,10 @@ Fan-out ends with one table: issue, title, branch (generated or reused), tmux wi
   - Fan-out: `/address-issue-in-worktree A B C --fan-out` opens three worktrees, each running `/address-issue N` for its own issue.
   - Fan-out with one closed issue asks before launching anything.
   - Fan-out with an ambiguous branch for the last issue asks for a choice before launching the first; a branch created after preflight is detected at launch.
-  - Fan-out with `--resource` is rejected before anything is fetched or marked.
+  - Fan-out with several distinct issues and `--resource` is rejected before anything is fetched or marked.
   - `/create-worktree A B --fan-out` opens two worktrees and marks nothing in progress.
   - `--each` and `--separate` produce the same per-issue behavior as `--fan-out` in both worktree skills, including the single-issue path and option rejections.
+  - With one distinct issue, an alias and `--resource` use the ordinary resource path; `create-worktree` also accepts an alias with `--branch` and retains the issue prompt.
   - `/create-worktree A B` is classified as issues, not a task description.
   - No `issue-json-*` or `workmux-prompt-*` temp files remain after completed launches. After a timeout, the detached process removes its prompt and log when it exits.
   - A launch that fails or exceeds the completion wait is reported for its issue without starting another `workmux add` while it is still running. A completed failed launch does not appear as a success just because the launcher printed a generated branch name.
