@@ -91,6 +91,23 @@ function main() {
   else
     printf 'no\n'
   fi
+
+  # STUB_WORKMUX_SLEEP holds the stub open, so a caller can be observed waiting
+  # for it or giving up on it.
+  if [[ -n "${STUB_WORKMUX_SLEEP:-}" ]]; then
+    sleep "${STUB_WORKMUX_SLEEP}"
+  fi
+
+  # Records the worktree where the git stub reads STUB_GIT_WORKTREE_PORCELAIN_FILE,
+  # so `git worktree list` sees what this invocation created.
+  if [[ -n "${STUB_GIT_WORKTREE_PORCELAIN_FILE:-}" && "${STUB_WORKMUX_SKIP_WORKTREE:-}" != "1" ]]; then
+    printf 'worktree /worktrees/%s\nHEAD abc123\nbranch refs/heads/%s\n\n' "${branch//\//-}" "${branch}" >> "${STUB_GIT_WORKTREE_PORCELAIN_FILE}"
+  fi
+
+  if [[ -n "${STUB_WORKMUX_EXIT:-}" ]]; then
+    printf 'workmux-stub: failing with status %s\n' "${STUB_WORKMUX_EXIT}" >&2
+    exit "${STUB_WORKMUX_EXIT}"
+  fi
 }
 
 main "$@"

@@ -67,6 +67,12 @@ function main() {
     die "expected git worktree list --porcelain, for-each-ref, or check-ref-format invocation"
   fi
 
+  # STUB_GIT_WORKTREE_PORCELAIN_FILE lets the workmux stub add a worktree while
+  # a test runs; an environment variable is fixed once the launcher starts.
+  if [[ -n "${STUB_GIT_WORKTREE_PORCELAIN_FILE:-}" && -f "${STUB_GIT_WORKTREE_PORCELAIN_FILE}" ]]; then
+    STUB_GIT_WORKTREE_PORCELAIN="$(cat "${STUB_GIT_WORKTREE_PORCELAIN_FILE}")"$'\n\n'
+  fi
+
   # STUB_GIT_WORKTREE_PORCELAIN is written in the readable newline form. Under
   # -z git terminates each field with a NUL instead of a newline, and separates
   # records with an extra one, which is exactly what translating every newline
