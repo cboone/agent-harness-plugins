@@ -1,0 +1,13 @@
+{
+  "author": {
+    "name": "Christopher Boone"
+  },
+  "description": "Run a read-only reviewer from another model family over every local change, fix the findings at or above a severity threshold, and repeat until the exact snapshot on disk comes back clean or a round limit stops the loop.",
+  "homepage": "https://github.com/cboone/agent-harness-plugins",
+  "keywords": ["code-review", "codex", "loop", "pre-push", "review"],
+  "license": "MIT",
+  "name": "review-until-clean",
+  "repository": "https://github.com/cboone/agent-harness-plugins",
+  "skills": "./skills",
+  "version": "1.0.0"
+}

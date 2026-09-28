@@ -2,7 +2,7 @@
 name: create-issue
 description: >-
   Create a GitHub issue with gh, passing the body through a tmpfile. Use for
-  "create an issue", "file an issue", "report a bug", or "request a feature".
+  "create an issue", "report a bug", or "file a feature request".
 ---
 
 # Create Issue
