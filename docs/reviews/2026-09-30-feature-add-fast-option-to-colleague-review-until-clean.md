@@ -46,3 +46,5 @@ Error: failed to initialize in-process app-server client: Operation not permitte
 ## Result
 
 Review-until-clean status: `failed`. F1 and F2 from the partial Claude round were fixed. The Codex round did not produce a review, so the current snapshot has no full-scope clean result.
+
+The Claude backend's committed-diff coverage defect is tracked in [issue #538](https://github.com/cboone/agent-harness-plugins/issues/538).
