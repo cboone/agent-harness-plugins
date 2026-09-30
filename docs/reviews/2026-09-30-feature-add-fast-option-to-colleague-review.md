@@ -5,6 +5,15 @@ Commits: 3
 Files changed: 7 (1 added, 6 modified, 0 deleted, 0 renamed)
 Reviewed through: `2e3fab71`
 
+## Resolution status
+
+The assessment below records the branch through `2e3fab71`. Commit `e354c7aa` addresses both source findings and regenerates the Codex mirror.
+
+- [x] **R1:** Fast mode now reads complete diffs for files that define behavior or policy, including skill and agent instructions, regardless of format. It also reads files with lower risk when they contain the only substantive change.
+- [x] **R2:** Fast reports retain a Requirements source-coverage line when sources were skipped, even if the requirements read appear met.
+
+`make build`, `make lint validate`, `git diff --check`, and the mirror-specific Scrut file passed after the changes. The Scrut file reported 7 successful cases. `make test-all` passed lint and validation, then remained silent in Scrut before interruption; a later repository-tooling Scrut run was also interrupted without a final result. The planned comparison of both modes on a real open PR has not been run. No open PR was available in `cboone/agent-harness-plugins`; other `cboone` repositories have open PRs, but no separate checkout was prepared for this verification.
+
 ## Summary
 
 This branch makes fast review the default for `review-colleague-pr` and adds `--thorough` to retain the existing full review. It updates the skill instructions, README, version, and generated Codex mirror, and records the implementation plan. The mode distinction is clear, but the fast path can omit a PR's actual behavior when that behavior lives in a Markdown file.
