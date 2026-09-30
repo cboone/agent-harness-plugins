@@ -41,7 +41,7 @@ Fast mode changes only these stages. Everything else runs identically in both mo
 
 For the fast reading rule, treat files that define behavior or policy, including `SKILL.md` and agent instructions, as substantive even though they are Markdown. If documentation, fixtures, snapshots, or other low-risk assets hold the only substantive change, read their complete diffs. Apply the step 5 disclosure rule to anything not read in detail.
 
-In fast mode, keep a Requirements line naming sources read and sources skipped even when no core requirement gap is found. The skipped-source disclosure in the table is required coverage information, not an optional finding.
+In fast mode, keep a Requirements line naming sources read and skipped whenever a source was skipped, even when no core requirement gap is found. The skipped-source disclosure in the table is required coverage information, not an optional finding.
 
 ## Review Principles
 
@@ -303,7 +303,7 @@ In fast mode, narrow the assessment to what would block merge or change the verd
 
 - **Before merge**: assess in full, with the same confirmation bar.
 - **Direction**: report only a concrete problem; leave it out when the direction is sound.
-- **Requirements**: report only core requirements that are missing or partly met, plus a brief source-coverage line. Name skipped issue comments, parents, and sub-issues even when the requirements read appear met.
+- **Requirements**: report only core requirements that are missing or partly met. Add a brief source-coverage line when issue comments, parents, or sub-issues were skipped, even when the requirements read appear met.
 - **Questions for the author**: keep only those whose answer could move a concern into "Before merge" or change the verdict.
 - **Prior discussion**: unchanged, including the status of the user's earlier points on a re-review.
 - **Could be follow-ups**, **Pre-existing**, and **Done well**: leave out, and do not look for them.
@@ -318,7 +318,7 @@ A thorough report:
 ```markdown
 ## PR #123: Add retries to the webhook sender (@author)
 
-**Verdict:** Needs changes. One bug to fix before merge; the rest can follow.
+**Verdict:** Needs changes. Two problems to fix before merge; the rest can follow.
 Thorough review of `a1b2c3d` (checkout unchanged): 12 files, +340/-58. CI: 1 failing (`integration`).
 
 **Since your last review**
@@ -335,6 +335,7 @@ Thorough review of `a1b2c3d` (checkout unchanged): 12 files, +340/-58. CI: 1 fai
 **Before merge**
 
 1. A timeout after the request is sent triggers a retry, so the receiver gets the webhook twice (`src/sender.ts:84`).
+1. The retry interval has no cap, so extended endpoint failures exceed the maximum #118 requires (`src/sender.ts:102`).
 
 **Could be follow-ups**
 
@@ -358,7 +359,7 @@ A fast report of the same PR:
 ```markdown
 ## PR #123: Add retries to the webhook sender (@author)
 
-**Verdict:** Needs changes. One bug to fix before merge.
+**Verdict:** Needs changes. Two problems to fix before merge.
 Fast review of `a1b2c3d` (checkout unchanged): 12 files, +340/-58. CI: 1 failing (`integration`). Not read in detail: `docs/webhooks.md`, `test/fixtures/`. `--thorough` adds follow-ups, pre-existing issues, and strengths.
 
 **Summary.** Two or three sentences on what the PR actually does.
@@ -370,6 +371,7 @@ Fast review of `a1b2c3d` (checkout unchanged): 12 files, +340/-58. CI: 1 failing
 **Before merge**
 
 1. A timeout after the request is sent triggers a retry, so the receiver gets the webhook twice (`src/sender.ts:84`).
+1. The retry interval has no cap, so extended endpoint failures exceed the maximum #118 requires (`src/sender.ts:102`).
 
 **Questions for the author**
 

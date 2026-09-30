@@ -84,7 +84,7 @@ A thorough report:
 ```markdown
 ## PR #123: Add retries to the webhook sender (@author)
 
-**Verdict:** Needs changes. One bug to fix before merge; the rest can follow.
+**Verdict:** Needs changes. Two problems to fix before merge; the rest can follow.
 Thorough review of `a1b2c3d` (checkout unchanged): 12 files, +340/-58. CI: 1 failing (`integration`).
 
 **Summary.** Adds retry with exponential backoff to outgoing webhooks, with a per-endpoint attempt limit.
@@ -96,6 +96,7 @@ Thorough review of `a1b2c3d` (checkout unchanged): 12 files, +340/-58. CI: 1 fai
 **Before merge**
 
 1. A timeout after the request is sent triggers a retry, so the receiver gets the webhook twice (`src/sender.ts:84`).
+1. The retry interval has no cap, so extended endpoint failures exceed the maximum #118 requires (`src/sender.ts:102`).
 
 **Could be follow-ups**
 
