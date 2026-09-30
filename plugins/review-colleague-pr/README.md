@@ -29,6 +29,12 @@ The report covers:
 
 Empty sections are left out, and the length follows the size of the PR.
 
+### Fast and thorough modes
+
+By default the skill runs a **fast** review focused on the most significant problems: what would block merge or change the verdict. It reads the complete diff of source, tests, configuration, build, schema, and security-relevant files, and lists documentation, fixtures, and other low-risk files in the header as not read in detail. It reads issue comments, parent issues, and sub-issues only when the PR and its closing issues do not say what the PR must do. Its report keeps the verdict, summary, core requirement gaps, direction problems, before-merge concerns, verdict-changing questions, and your earlier points on a re-review. Its verdict is needs a rethink, needs changes, or no blockers found.
+
+Pass `--thorough` for the full review: every requirements source, every reviewable diff, commit-level attribution on re-reviews, and every section above, including follow-ups, pre-existing problems, and strengths. Both modes follow the same read-only and secret-exclusion rules, and both state a concern as fact only after tracing it through the code.
+
 ### How it reviews
 
 The skill follows a set of principles meant to produce a fair review rather than a long one:
@@ -53,26 +59,33 @@ gh pr checkout 123           # or: workmux add --pr 123
 /review-colleague-pr
 /review-colleague-pr 123
 /review-colleague-pr 123 https://example.com/specs/webhook-retries
+/review-colleague-pr 123 --thorough
 /review-colleague-pr --full
 /review-colleague-pr --since a1b2c3d
 ```
 
-| Option           | Description                                                           |
-| ---------------- | --------------------------------------------------------------------- |
-| `<pr-number>`    | The PR to review; defaults to the PR for the current branch           |
-| Requirement docs | URLs or pasted text after the number, read as additional requirements |
-| `--full`         | Review the whole PR even if you have reviewed it before               |
-| `--since <ref>`  | Treat this commit as the point of your last review                    |
+| Option           | Description                                                                     |
+| ---------------- | ------------------------------------------------------------------------------- |
+| `<pr-number>`    | The PR to review; defaults to the PR for the current branch                     |
+| Requirement docs | URLs or pasted text after the number, read as additional requirements           |
+| `--fast`         | Focus on the most significant problems (the default)                            |
+| `--thorough`     | Run the full review, including follow-ups, pre-existing problems, and strengths |
+| `--full`         | Review the whole PR even if you have reviewed it before                         |
+| `--since <ref>`  | Treat this commit as the point of your last review                              |
+
+`--full` and `--since` choose how much of the PR's history to review, not how deeply, so they combine with either mode.
 
 If the PR's description, linked issues, and your docs say little about what the PR is for, the skill asks for more before it reads the code, rather than reviewing against a guess.
 
 ## Example
 
+A thorough report:
+
 ```markdown
 ## PR #123: Add retries to the webhook sender (@author)
 
 **Verdict:** Needs changes. One bug to fix before merge; the rest can follow.
-Reviewed `a1b2c3d` (checkout unchanged): 12 files, +340/-58. CI: 1 failing (`integration`).
+Thorough review of `a1b2c3d` (checkout unchanged): 12 files, +340/-58. CI: 1 failing (`integration`).
 
 **Summary.** Adds retry with exponential backoff to outgoing webhooks, with a per-endpoint attempt limit.
 
