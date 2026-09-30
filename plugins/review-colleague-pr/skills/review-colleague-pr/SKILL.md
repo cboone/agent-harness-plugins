@@ -32,12 +32,16 @@ Fast mode is the default. It answers one question: is there anything significant
 
 Fast mode changes only these stages. Everything else runs identically in both modes. The Ground Rules, secret exclusions, snapshot fetching, revalidation, the two-restart limit, and the confirmation bar never relax in fast mode.
 
-| Stage                                 | Fast                                                                                                                                                                                                                                                                                                          | Thorough               |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| Requirements (step 3)                 | Read the PR title and body, the bodies of issues in `closingIssuesReferences`, and user-supplied requirements. Read issue comments, parent issues, and sub-issues only when those sources do not state what the PR must do. Name the sources not read under Requirements.                                     | Every source.          |
-| Reading (step 5)                      | Read the complete diff of source, tests, configuration, build, schema and migration, and security-relevant files. List documentation, fixtures, snapshots, and other low-risk assets in the header as not read in detail, following the step 5 disclosure rule; secret-bearing paths are still never printed. | Every reviewable diff. |
-| Re-review (step 5)                    | Establish the rename chain and read the baseline-to-head delta as written. Skip the per-commit parent-aware patches, except for a path where a significant concern's attribution depends on them. Make no attribution claims without them.                                                                    | As written.            |
-| Assessment and report (steps 6 and 7) | Report only Before merge, concrete Direction problems, core requirement gaps, and verdict-changing questions, as described in step 6.                                                                                                                                                                         | Every section.         |
+| Stage                                 | Fast                                                                                                                                                                                                                                                                                                                   | Thorough               |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| Requirements (step 3)                 | Read the PR title and body, the bodies of issues in `closingIssuesReferences`, and user-supplied requirements. Read issue comments, parent issues, and sub-issues only when those sources do not state what the PR must do. Name the sources not read under Requirements.                                              | Every source.          |
+| Reading (step 5)                      | Read the complete diff of source, tests, configuration, build, schema and migration, files relevant to security, and files that define behavior regardless of format. Read files with lower risk when they contain the only substantive change. Disclose unread files in the header; never print secret-bearing paths. | Every reviewable diff. |
+| Re-review (step 5)                    | Establish the rename chain and read the baseline-to-head delta as written. Skip the per-commit parent-aware patches, except for a path where a significant concern's attribution depends on them. Make no attribution claims without them.                                                                             | As written.            |
+| Assessment and report (steps 6 and 7) | Report only Before merge, concrete Direction problems, core requirement gaps, and verdict-changing questions, as described in step 6.                                                                                                                                                                                  | Every section.         |
+
+For the fast reading rule, treat files that define behavior or policy, including `SKILL.md` and agent instructions, as substantive even though they are Markdown. If documentation, fixtures, snapshots, or other low-risk assets hold the only substantive change, read their complete diffs. Apply the step 5 disclosure rule to anything not read in detail.
+
+In fast mode, keep a Requirements line naming sources read and sources skipped even when no core requirement gap is found. The skipped-source disclosure in the table is required coverage information, not an optional finding.
 
 ## Review Principles
 
@@ -299,7 +303,7 @@ In fast mode, narrow the assessment to what would block merge or change the verd
 
 - **Before merge**: assess in full, with the same confirmation bar.
 - **Direction**: report only a concrete problem; leave it out when the direction is sound.
-- **Requirements**: report only core requirements that are missing or partly met.
+- **Requirements**: report only core requirements that are missing or partly met, plus a brief source-coverage line. Name skipped issue comments, parents, and sub-issues even when the requirements read appear met.
 - **Questions for the author**: keep only those whose answer could move a concern into "Before merge" or change the verdict.
 - **Prior discussion**: unchanged, including the status of the user's earlier points on a re-review.
 - **Could be follow-ups**, **Pre-existing**, and **Done well**: leave out, and do not look for them.
@@ -307,7 +311,7 @@ In fast mode, narrow the assessment to what would block merge or change the verd
 
 ### 7. Report
 
-Print the report in chat. Leave out any section with nothing in it. Let the length follow the PR: a small, sound PR may need only the verdict, a summary, and a line on requirements. Keep every point to a sentence or two.
+Print the report in chat. Leave out any section with nothing in it, except the fast-mode Requirements line when sources were skipped. Let the length follow the PR: a small, sound PR may need only the verdict, a summary, and a line on requirements. Keep every point to a sentence or two.
 
 A thorough report:
 
