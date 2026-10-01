@@ -19,6 +19,14 @@ A linked worktree has a `--git-dir` that differs from `--git-common-dir`. Report
 
 An operation in progress shows as one of these under the Git directory: `MERGE_HEAD`, `rebase-merge/`, `rebase-apply/`, `CHERRY_PICK_HEAD`, `BISECT_LOG`.
 
+Never print a raw remote URL: one can embed a token or password, and printing it puts the secret in the transcript. Read remotes only through this filter, which prints each remote's name, direction, and `HOST/OWNER/REPO` path with any credentials removed:
+
+```bash
+git remote -v | awk '{ url = $2; sub(/^[A-Za-z][A-Za-z0-9+.-]*:\/\//, "", url); sub(/^[^\/@]*@/, "", url); sub(/[?#].*$/, "", url); sub(/:/, "/", url); sub(/\.git$/, "", url); print $1, $3, url }'
+```
+
+Take `$host`, `$current_repo` (the `origin` fetch path), and each remote's push repository from that output.
+
 Detect the base branch in this order, stopping at the first that answers:
 
 1. The open PR's base, `baseRefName` from the PR read under GitHub below. A PR can target a release or integration branch rather than the default, and comparing against the default would then count that branch's unrelated commits as this branch's work.
@@ -33,7 +41,7 @@ Detect the base branch in this order, stopping at the first that answers:
 
 1. `main`, `master`, and `develop`, in that order, saying which one was assumed.
 
-Name the base used, and its source, in the summary when it is not the default branch. `$current_repo` is this checkout's own `OWNER/REPO`, the fork in a fork; take it from the `origin` fetch URL (`git remote get-url origin`), since a bare `gh` command can resolve to the upstream.
+Name the base used, and its source, in the summary when it is not the default branch. `$current_repo` is this checkout's own `OWNER/REPO`, the fork in a fork; take it from the `origin` fetch path in the filtered remote list above, since a bare `gh` command can resolve to the upstream.
 
 In a repository with no remote, compare against the local branch, `base_ref="$base"`, and skip pushed-state checks. Otherwise compare against the base as a remote-tracking ref, `base_ref="$remote/$base"`, where `$remote` is the remote that holds the base: `origin` normally, or the remote whose fetch URL names the parent repository (often `upstream`) when a fork branch's PR targets the parent. When no local remote names that repository, fetch the base by URL with `git fetch --no-tags "$parent_url" "refs/heads/$base"`, which writes only `FETCH_HEAD`, then record its commit at once with `base_ref="$(git rev-parse FETCH_HEAD)"` and compare against that SHA. Any later fetch, including one running in parallel, replaces `FETCH_HEAD`, so never compare against the name itself. Offline, take the commit and file counts from the PR (`gh pr view --json commits,files`) instead, and say the local comparison was skipped. With the base in hand:
 
@@ -45,7 +53,7 @@ git for-each-ref --format='%(refname:short)' "refs/remotes/*/$branch"
 git rev-list --left-right --count "$pushed_ref...HEAD"
 ```
 
-Judge whether the branch has been pushed from whether a branch of the same name exists on a remote, not from `@{upstream}` or `@{push}`: a new branch created with `--track origin/main` has an upstream before any push, and `@{push}` depends on push configuration, so a branch pushed with an explicit refspec can lack one. Look where pushes go, not where fetches come from: a remote can fetch from the upstream and push to a fork, and the upstream may hold an unrelated branch of the same name. When a remote's push URL (`git remote get-url --push <remote>`) equals its fetch URL, a remote-tracking ref `<remote>/$branch` after fetching is the pushed copy. Otherwise, or when there is no such ref and the network is available, `git ls-remote --heads "$push_url" "$branch"` settles it; fetch that commit into `FETCH_HEAD` and pin its SHA, as for the base, to count unpushed commits. When a pushed copy exists, set `pushed_ref` to it and count unpushed commits; otherwise report the branch as not pushed, or as unknown when offline. `git fetch --no-tags` of the remotes holding the base and this branch is allowed first, since it touches only remote-tracking refs; skip it when offline.
+Judge whether the branch has been pushed from whether a branch of the same name exists on a remote, not from `@{upstream}` or `@{push}`: a new branch created with `--track origin/main` has an upstream before any push, and `@{push}` depends on push configuration, so a branch pushed with an explicit refspec can lack one. Look where pushes go, not where fetches come from: a remote can fetch from the upstream and push to a fork, and the upstream may hold an unrelated branch of the same name. When a remote's push path equals its fetch path in the filtered list, a remote-tracking ref `<remote>/$branch` after fetching is the pushed copy. Otherwise, or when there is no such ref and the network is available, ask GitHub about the push repository: `gh api --hostname "$host" "repos/$head_repo/branches/$branch" --jq .commit.sha` gives the pushed commit, and `git merge-base --is-ancestor` against HEAD, or a fetch of that commit pinned to its SHA as for the base, gives the unpushed count. When a pushed copy exists, set `pushed_ref` to it and count unpushed commits; otherwise report the branch as not pushed, or as unknown when offline. `git fetch --no-tags` of the remotes holding the base and this branch is allowed first, since it touches only remote-tracking refs; skip it when offline.
 
 Thorough adds the full branch history with dates and authors, which shows work from other agents or people:
 
@@ -64,7 +72,7 @@ Match a plan to the work by branch name, the issue number at the start of the br
 
 ## GitHub
 
-Every `gh` command below names its repository explicitly: `$pr_repo` is the `OWNER/REPO` that holds the PR, `$issue_repo` the one that holds the issue, and `$owner` and `$repo` the two halves of `$pr_repo`. Outside a fork, `$pr_repo` is the current repository. Take `$issue_repo` from the issue reference itself: a closing reference can name an issue in another repository, so read its repository from each `closingIssuesReferences` entry's `url`, or from a full `OWNER/REPO#N` or issue URL. Only a bare number, such as one from the branch name, defaults to `$pr_repo`. Never leave `--repo` off and let the CLI choose. For GitHub Enterprise, `--repo` takes `HOST/OWNER/REPO`, and every `gh api` call takes `--hostname "$host"`, since `gh api` otherwise defaults to github.com; `$host` comes from the remote URL.
+Every `gh` command below names its repository explicitly: `$pr_repo` is the `OWNER/REPO` that holds the PR, `$issue_repo` the one that holds the issue, and `$owner` and `$repo` the two halves of `$pr_repo`. Outside a fork, `$pr_repo` is the current repository. Take `$issue_repo` from the issue reference itself: a closing reference can name an issue in another repository, so read its repository from each `closingIssuesReferences` entry's `url`, or from a full `OWNER/REPO#N` or issue URL. Only a bare number, such as one from the branch name, defaults to `$pr_repo`. Never leave `--repo` off and let the CLI choose. For GitHub Enterprise, `--repo` takes `HOST/OWNER/REPO`, and every `gh api` call takes `--hostname "$host"`, since `gh api` otherwise defaults to github.com; `$host` comes from the filtered remote list.
 
 Fast and thorough:
 
@@ -73,13 +81,13 @@ gh pr view "$number" --repo "$pr_repo" --json number,url,title,state,isDraft,mer
 gh issue view "$issue" --repo "$issue_repo" --json number,title,state,milestone,labels,updatedAt
 ```
 
-Find `$number` and `$pr_repo` this way. Outside a fork, only the current repository is searched. In a fork, a PR lives in the repository it targets, which may be the fork or its parent:
+Find `$number` and `$pr_repo` this way. A PR lives in the repository it targets, which may be the repository the branch is pushed to (`$head_repo`), the repository `origin` fetches from (`$current_repo`), or the parent of either when it is a fork. Search each distinct one of those, in that order:
 
-1. In a fork, find the parent with `gh repo view FORK_OWNER/REPO --json parent`. When that returns none, as for a repository that began as a fork but is not marked as one, treat the repository an `upstream` remote names as the parent.
-1. Never look a PR up by branch name with `gh pr view "$branch"`: a branch name can be reused, and that lookup can return an earlier merged PR. Instead, in the current repository and then, in a fork, in the parent, run `gh pr list --repo OWNER/REPO --head "$branch" --state open --limit 1000 --json number,headRepository,headRepositoryOwner,baseRefName`. The limit matters: the default of 30 can leave the matching PR off the page when many forks reuse the branch name.
-1. `--head` matches the branch name across every fork, so keep only PRs whose head repository is this one: `headRepositoryOwner.login` plus `headRepository.name` must equal `$head_repo`, the `OWNER/REPO` this branch is pushed to. Take it from the push URL of the remote that holds the pushed copy (`git remote get-url --push <remote>`), not from a fetch URL: a checkout can fetch from the upstream and push to a fork through the same remote. Before the branch is pushed there is no PR to find.
+1. For a repository that is a fork, find its parent with `gh repo view OWNER/REPO --json parent`. When that returns none, as for a repository that began as a fork but is not marked as one, treat the repository an `upstream` remote names as the parent.
+1. Never look a PR up by branch name with `gh pr view "$branch"`: a branch name can be reused, and that lookup can return an earlier merged PR. Instead, in each repository to search, run `gh pr list --repo OWNER/REPO --head "$branch" --state open --limit 1000 --json number,headRepository,headRepositoryOwner,baseRefName`. The limit matters: the default of 30 can leave the matching PR off the page when many forks reuse the branch name.
+1. `--head` matches the branch name across every fork, so keep only PRs whose head repository is this one: `headRepositoryOwner.login` plus `headRepository.name` must equal `$head_repo`, the `OWNER/REPO` this branch is pushed to. Take it from the push path, in the filtered remote list, of the remote that holds the pushed copy, not from a fetch path: a checkout can fetch from the upstream and push to a fork through the same remote. Before the branch is pushed there is no PR to find.
 1. Require exactly one match. Read it by number with the same `--repo`, which sets `$pr_repo`. With two or more, report the candidates and say the PR is ambiguous rather than picking one.
-1. Only when neither repository has an open match, repeat with `--state all` and report the most recent match as closed or merged, never as the current PR.
+1. Only when no searched repository has an open match, repeat with `--state all` and report the most recent match as closed or merged, never as the current PR.
 1. On a detached HEAD there is no branch to match. Use a PR number the user or conversation names; otherwise search by commit with `gh pr list --repo OWNER/REPO --state all --search "$(git rev-parse HEAD)" --json number,headRefOid` and keep a PR only when HEAD is one of its commits (`gh pr view <number> --repo OWNER/REPO --json commits --jq '.commits[].oid'`), since the checkout may sit at an earlier commit than the PR's tip; say so when it does. If none matches, say the checkout is detached and no PR was identified.
 
 A missing PR is a normal state for an early branch; distinguish GitHub CLI's "no pull requests found" result from authentication or network errors. Summarize `statusCheckRollup` as passing, failing (with the failing check names), or pending. It is the PR's CI wherever the runs live, so prefer it over run listings.
