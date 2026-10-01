@@ -2,7 +2,7 @@
 name: write-go-code
 description: >-
   Apply Go style from Google's guide, Effective Go, and Code Review Comments,
-  plus Cobra CLI behavior. Use when writing or reviewing Go.
+  plus Cobra CLI behavior. Use when writing, reviewing, or refactoring Go.
 ---
 
 # Write Go Code
