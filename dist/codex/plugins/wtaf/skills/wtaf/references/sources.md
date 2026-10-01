@@ -41,10 +41,11 @@ Compare against the base as a remote-tracking ref, `base_ref="$remote/$base"`, w
 git rev-list --left-right --count "$base_ref...HEAD"
 git log --oneline --no-decorate "$base_ref..HEAD"
 git diff --stat "$base_ref...HEAD"
-git rev-list --left-right --count "@{upstream}...HEAD"
+git rev-parse --abbrev-ref --symbolic-full-name "@{push}"
+git rev-list --left-right --count "@{push}...HEAD"
 ```
 
-The upstream comparison fails when the branch has never been pushed; report that instead. `git fetch --no-tags` of the base and the upstream is allowed first, since it touches only remote-tracking refs; skip it when offline.
+Judge whether the branch has been pushed from its push destination, `@{push}`, not from `@{upstream}`: a new branch created with `--track origin/main` has an upstream before any push. The branch is pushed when `@{push}` resolves to a remote-tracking ref for this branch, and the count then gives unpushed commits. When `@{push}` does not resolve, or names a ref that does not exist, report the branch as not pushed. `git fetch --no-tags` of the base and the upstream is allowed first, since it touches only remote-tracking refs; skip it when offline.
 
 Thorough adds the full branch history with dates and authors, which shows work from other agents or people:
 
