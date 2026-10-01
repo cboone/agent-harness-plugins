@@ -37,7 +37,7 @@ Fast mode is the default. It answers: where does this stand, and what is next? T
 
 ## Ground Rules
 
-- **Read-only.** Never edit files, commit, push, pull, merge, stash, switch branches, run formatters, file issues, comment, react, or resolve threads. Fetching remote-tracking refs is allowed. Offer actions at the end; never take them.
+- **Read-only.** Never edit files, commit, push, pull, merge, stash, switch branches, run formatters, file issues, comment, react, or resolve threads. Fetching into remote-tracking refs or `FETCH_HEAD` is allowed. Offer actions at the end; never take them.
 - **Verify, then report.** Check facts the user states and facts the conversation recorded earlier against the repository and GitHub. When they disagree, say so plainly.
 - **Label provenance.** Mark each claim that matters as measured now, from the conversation, or assumed. "CI passed" from an earlier message is not the same as a check read just now.
 - **Use the plan's words.** If the plan says steps, say steps. If the user's wording differs from the plan's, gently note the plan's term once.

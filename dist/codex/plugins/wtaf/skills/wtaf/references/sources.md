@@ -35,7 +35,7 @@ Detect the base branch in this order, stopping at the first that answers:
 
 Name the base used, and its source, in the summary when it is not the default branch. In a fork, pass the fork's `OWNER/REPO` to `gh repo view` explicitly.
 
-Compare against the base as a remote-tracking ref, `base_ref="$remote/$base"`, where `$remote` is the remote that holds the base: `origin` normally, or the remote whose fetch URL names the parent repository (often `upstream`) when a fork branch's PR targets the parent. With the base in hand:
+Compare against the base as a remote-tracking ref, `base_ref="$remote/$base"`, where `$remote` is the remote that holds the base: `origin` normally, or the remote whose fetch URL names the parent repository (often `upstream`) when a fork branch's PR targets the parent. When no local remote names that repository, fetch the base by URL with `git fetch --no-tags "$parent_url" "refs/heads/$base"`, which writes only `FETCH_HEAD`, and use `base_ref=FETCH_HEAD`. Offline, take the commit and file counts from the PR (`gh pr view --json commits,files`) instead, and say the local comparison was skipped. With the base in hand:
 
 ```bash
 git rev-list --left-right --count "$base_ref...HEAD"
@@ -70,7 +70,7 @@ gh pr view --json number,url,title,state,isDraft,mergeStateStatus,reviewDecision
 gh issue view "$issue" --json number,title,state,milestone,labels,updatedAt
 ```
 
-In a fork, a PR lives in the repository it targets, which may be the fork or its parent; `gh repo view FORK_OWNER/REPO --json parent` names the parent. Never look a fork PR up by branch name with `gh pr view "$branch"`: a branch name can be reused, and that lookup can return an earlier merged PR. Instead, in the fork and then in the parent, run `gh pr list --repo OWNER/REPO --head "$branch" --state open --json number,headRepositoryOwner,baseRefName`, keep only PRs whose `headRepositoryOwner.login` is the fork owner, and read the match by number with the same `--repo`. Only when neither has an open PR, repeat with `--state all` and report the most recent one as closed or merged, never as the current PR. Pass an explicit `--repo` to `gh issue view` as well, naming the repository that holds the issue.
+In a fork, a PR lives in the repository it targets, which may be the fork or its parent. Find the parent with `gh repo view FORK_OWNER/REPO --json parent`; when that returns none, as for a repository that began as a fork but is not marked as one, treat the repository an `upstream` remote names as the parent. Never look a fork PR up by branch name with `gh pr view "$branch"`: a branch name can be reused, and that lookup can return an earlier merged PR. Instead, in the fork and then in the parent, run `gh pr list --repo OWNER/REPO --head "$branch" --state open --json number,headRepositoryOwner,baseRefName`, keep only PRs whose `headRepositoryOwner.login` is the fork owner, and read the match by number with the same `--repo`. Only when neither has an open PR, repeat with `--state all` and report the most recent one as closed or merged, never as the current PR. Pass an explicit `--repo` to `gh issue view` as well, naming the repository that holds the issue.
 
 A missing PR is a normal state for an early branch; distinguish GitHub CLI's "no pull requests found" result from authentication or network errors. Summarize `statusCheckRollup` as passing, failing (with the failing check names), or pending.
 
