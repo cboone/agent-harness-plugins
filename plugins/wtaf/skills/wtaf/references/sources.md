@@ -29,18 +29,18 @@ Detect the base branch in this order, stopping at the first that answers:
    git rev-parse --abbrev-ref origin/HEAD
    ```
 
-   The second prints `origin/<name>`.
+   The second prints `origin/<name>`; strip the `origin/` prefix to get the branch name.
 
 1. `main`, `master`, and `develop`, in that order, saying which one was assumed.
 
 Name the base used, and its source, in the summary when it is not the default branch. In a fork, pass the fork's `OWNER/REPO` to `gh repo view` explicitly.
 
-With the base in hand:
+Compare against the base as a remote-tracking ref, `base_ref="$remote/$base"`, where `$remote` is the remote that holds the base: `origin` normally, or the remote whose fetch URL names the parent repository (often `upstream`) when a fork branch's PR targets the parent. With the base in hand:
 
 ```bash
-git rev-list --left-right --count "origin/$base...HEAD"
-git log --oneline --no-decorate "origin/$base..HEAD"
-git diff --stat "origin/$base...HEAD"
+git rev-list --left-right --count "$base_ref...HEAD"
+git log --oneline --no-decorate "$base_ref..HEAD"
+git diff --stat "$base_ref...HEAD"
 git rev-list --left-right --count "@{upstream}...HEAD"
 ```
 
@@ -49,7 +49,7 @@ The upstream comparison fails when the branch has never been pushed; report that
 Thorough adds the full branch history with dates and authors, which shows work from other agents or people:
 
 ```bash
-git log --format='%h %ad %an %s' --date=short "origin/$base..HEAD"
+git log --format='%h %ad %an %s' --date=short "$base_ref..HEAD"
 ```
 
 ## Plans and docs
@@ -69,6 +69,8 @@ Fast and thorough:
 gh pr view --json number,url,title,state,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,closingIssuesReferences,baseRefName,headRefName,updatedAt
 gh issue view "$issue" --json number,title,state,milestone,labels,updatedAt
 ```
+
+In a fork, a PR lives in the repository it targets, which may be the fork or its parent; `gh repo view FORK_OWNER/REPO --json parent` names the parent. Look in the fork first with `gh pr view "$branch" --repo FORK_OWNER/REPO`, then in the parent with `gh pr list --repo PARENT_OWNER/REPO --head "$branch" --state all --json number,headRepositoryOwner`, keeping only the PR whose `headRepositoryOwner.login` is the fork owner, and read that PR by number with `--repo PARENT_OWNER/REPO`. Pass an explicit `--repo` to `gh issue view` as well, naming the repository that holds the issue.
 
 A missing PR is a normal state for an early branch; distinguish GitHub CLI's "no pull requests found" result from authentication or network errors. Summarize `statusCheckRollup` as passing, failing (with the failing check names), or pending.
 
