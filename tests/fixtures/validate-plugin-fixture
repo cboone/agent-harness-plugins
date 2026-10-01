@@ -15,8 +15,9 @@ function mutate_catalog() {
   mv "${FIXTURE_ROOT}/catalog.json" "${catalog}"
 }
 
-# The skill most scenarios mutate. release carries no extended frontmatter field
-# of its own beyond argument-hint, so each scenario adds exactly the one it tests.
+# The skill most scenarios mutate. Its only extended frontmatter field is the
+# argument-hint its options require, so each scenario adds or removes exactly
+# the one field it tests.
 readonly RELEASE_SKILL="plugins/release/skills/release/SKILL.md"
 
 # The review checklist scenarios mutate a source, a copy or guides.md without

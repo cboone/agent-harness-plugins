@@ -807,6 +807,10 @@ validate_review_checklists
 # docs/plugin-development.md, because a field Claude Code honors can be silently
 # dropped by the other two. `disable-model-invocation` is the case in point, and
 # the only field with a Codex counterpart today.
+#
+# The rule also requires a non-empty `argument-hint` on every skill with an
+# `## Options` section, since Claude Code shows that hint after a typed slash
+# command and the options stay hidden there without it.
 
 SKILL_FRONTMATTER_ALLOWLIST=(
   name
@@ -869,7 +873,7 @@ for skill_md in plugins/*/skills/*/SKILL.md; do
   while IFS=$'\t' read -r field value; do
     [[ -n "${field}" ]] || continue
 
-    if [[ "${field}" == "argument-hint" && -n "${value}" && "${value}" != '""' ]]; then
+    if [[ "${field}" == "argument-hint" && -n "${value}" && "${value}" != '""' && "${value}" != "''" ]]; then
       has_argument_hint=true
     fi
 
