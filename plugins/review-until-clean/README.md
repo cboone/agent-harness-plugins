@@ -66,16 +66,16 @@ Also required:
                     [--report-only] [--no-save]
 ```
 
-| Option                              | Description                                                                                     |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `--reviewer <codex\|claude>`        | Choose the backend instead of taking the model-diverse default                                  |
-| `--base <ref>`                      | Take the merge base with this ref instead of with the default branch                            |
-| `--effort <low\|medium\|high\|max>` | Effort for the Claude backend; the Codex backend takes its effort from your Codex configuration |
-| `--severity <important\|nit>`       | Lowest severity the loop fixes; default `important`                                             |
-| `--max-rounds <n>`                  | Cap the rounds; default 3                                                                       |
-| `--confirm-clean`                   | Require two consecutive clean rounds over the same snapshot rather than one                     |
-| `--report-only`                     | Run one round, write the ledger, change nothing                                                 |
-| `--no-save`                         | Leave the ledger at its temporary path instead of saving it to `docs/reviews/`                  |
+| Option                              | Description                                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `--reviewer <codex\|claude>`        | Choose the backend instead of taking the model-diverse default                                                                 |
+| `--base <ref>`                      | Take the merge base with this ref instead of with the default branch                                                           |
+| `--effort <low\|medium\|high\|max>` | Effort for the Claude backend; the Codex backend takes its effort from your Codex configuration                                |
+| `--severity <important\|nit>`       | Lowest severity the loop fixes; default `important`                                                                            |
+| `--max-rounds <n>`                  | Cap the rounds; default 3                                                                                                      |
+| `--confirm-clean`                   | Require two consecutive clean rounds over the same snapshot rather than one                                                    |
+| `--report-only`                     | Run one round, write the ledger, change nothing; with `--confirm-clean`, also run the confirming round when the first is clean |
+| `--no-save`                         | Leave the ledger at its temporary path instead of saving it to `docs/reviews/`                                                 |
 
 Each round asks you to confirm the item list before anything is edited, because [Address Review](../address-review/README.md) does the fixing and always confirms first. This is a gate you watch, not an unattended job.
 
