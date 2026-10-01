@@ -2,7 +2,7 @@
 
 Base: main (10fe5f677ab6761a7b6bef92cc90f99cf563de46)
 Reviewer: codex
-Rounds: 3 of 3
+Rounds: 4 (3, then 1 more on request)
 Status: stopped
 
 ## Round 1
@@ -44,6 +44,21 @@ Coverage: full (committed changes; other buckets empty)
 
 Round 3 outcome: F4 fixed in c4739b0d. The round limit was reached, so no round reviewed that fix.
 
+## Round 4
+
+Snapshot: 5fda481b9651801a0a7a451678a4c9ebce42575f
+Invocation: same as round 1, against head e7d2701b, run as one further round on request
+Coverage: full (committed changes; other buckets empty)
+
+- [x] **F5** Important. `plugins/wtaf/skills/wtaf/references/sources.md:73`. PR discovery misses upstream repositories without GitHub parent metadata.
+      Detail: a repository that began as a fork but has `isFork: false` has no `parent`, so a PR in its `upstream` remote is never found.
+      Evidence: the second PR repository was discovered only through `gh repo view ... --json parent`.
+- [x] **F6** Important. `plugins/wtaf/skills/wtaf/references/sources.md:38`. Branch comparisons fail for parent-targeted PRs when the parent has no local remote.
+      Detail: a fork with only `origin` can have a PR targeting its parent, but `$base_ref` requires a local remote naming the parent.
+      Evidence: every branch comparison used `$base_ref`, built only from a local remote.
+
+Round 4 outcome: F5 and F6 fixed in 57bd44dd. No further round reviewed that fix.
+
 ## Result
 
-Stopped at the 3-round limit. All four findings (F1 to F4) were fixed and none was declined. The last snapshot reviewed was 3fb4c167d387202f04ba7f4830a4a9d241464bfe, covering the full scope; the F4 fix in c4739b0d has not been reviewed.
+Stopped after round 4. All six findings (F1 to F6) were fixed and none was declined. The last snapshot reviewed was 5fda481b9651801a0a7a451678a4c9ebce42575f, covering the full scope; the F5 and F6 fix in 57bd44dd has not been reviewed.
