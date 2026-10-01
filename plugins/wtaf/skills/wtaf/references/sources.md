@@ -22,8 +22,28 @@ An operation in progress shows as one of these under the Git directory: `MERGE_H
 Never print a raw remote URL: one can embed a token or password, and printing it puts the secret in the transcript. Read remotes only through this filter, which prints each remote's name, direction, and `HOST/OWNER/REPO` path with any credentials removed:
 
 ```bash
-git remote -v | awk '{ url = $2; sub(/^[A-Za-z][A-Za-z0-9+.-]*:\/\//, "", url); sub(/^[^\/@]*@/, "", url); sub(/[?#].*$/, "", url); sub(/:/, "/", url); sub(/\.git$/, "", url); print $1, $3, url }'
+git remote -v | awk '
+  {
+    url = $2
+    if (url ~ /^[A-Za-z][A-Za-z0-9+.-]*:\/\//) {
+      sub(/^[A-Za-z][A-Za-z0-9+.-]*:\/\//, "", url)
+      sub(/^[^\/@]*@/, "", url)
+      slash = index(url, "/")
+      host = substr(url, 1, slash - 1)
+      sub(/:[0-9]*$/, "", host)
+      url = host substr(url, slash)
+    } else {
+      sub(/^[^\/@:]*@/, "", url)
+      sub(/:/, "/", url)
+    }
+    sub(/[?#].*$/, "", url)
+    sub(/\.git$/, "", url)
+    sub(/\/$/, "", url)
+    print $1, $3, url
+  }'
 ```
+
+The filter drops credentials and any port, and turns the `git@host:owner/repo` form into `host/owner/repo`. An SSH remote may name a host alias from SSH configuration, such as `github-work`, rather than the real host. Resolve one with `ssh -G "$alias" | awk '$1 == "hostname" { print $2 }'`, which reads the configuration without connecting, and use the result as `$host`.
 
 Take `$host`, `$current_repo` (the `origin` fetch path), and each remote's push repository from that output.
 
