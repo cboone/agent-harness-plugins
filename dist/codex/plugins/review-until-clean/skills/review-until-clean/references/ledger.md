@@ -110,9 +110,9 @@ A clean run still writes its ledger, and the final section states the coverage r
 ```markdown
 ## Result
 
-No findings at or above Important from <backend> over snapshot <snapshot>, covering <coverage>.
+No undeclined findings at or above <threshold> from <backend> over snapshot <snapshot>, covering <coverage>.
 ```
 
-Under `--confirm-clean`, the result names both rounds of the pair: "No findings at or above Important from `<backend>` in rounds 2 and 3, both over snapshot `<snapshot>`, covering `<coverage>`."
+Under `--confirm-clean`, the result names both rounds of the pair: "No undeclined findings at or above `<threshold>` from `<backend>` in rounds 2 and 3, both over snapshot `<snapshot>`, covering `<coverage>`." `<threshold>` is the `--severity` in effect, Important or Nit, and "undeclined" leaves room for the carried declines a `clean-with-declines` result still has.
 
 One reviewer pass is a sample. The ledger records what was reviewed and by what, which is a claim that can be checked, unlike "the branch is clean".
