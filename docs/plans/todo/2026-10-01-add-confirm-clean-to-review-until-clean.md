@@ -8,10 +8,11 @@ A reviewer's output varies between runs over identical code, so one clean round 
 
 - **Off by default.** Without the flag, behavior is unchanged.
 - **Two consecutive clean rounds against the same snapshot.** The first clean round (including `clean-with-declines`) does not end the run. Run a confirming round from step 1 with the same backend, same coverage choice, no fix pass in between. The pair completes only if step 8 finds the second round clean and the snapshot unchanged from the first.
-- **The confirming round always runs**, even when the first clean round used the last of `--max-rounds` (user decision). It is a review, not a fix pass. If it turns up findings and rounds remain, fix them and the count resets to zero; if none remain, the run ends `stopped` with the findings listed.
+- **The confirming round always runs**, even when the first clean round used the last of `--max-rounds` (user decision). It uses a round from the budget when one is left; otherwise it runs as one round past the cap. If it turns up findings and rounds remain, fix them and the count resets to zero. The round past the cap is review-only: step 8 records its findings and ends `stopped` without reaching the fixer, and it does not run at all if the snapshot moved after the last clean round, which also ends `stopped` (the status table covers both cases).
+- **Snapshot check at the start of the confirming round.** Compare its starting snapshot with the first clean round's; a mismatch resets the pair, and the round is an ordinary round while the budget allows.
 - **Any snapshot movement resets the pair**, whatever its source (fix, formatter, another session). Step 8's existing invalidation rule already discards that round; the confirmation count also returns to zero.
 - **Terminal status:** statuses do not change. `clean-with-declines` if either round of the pair relied on carried declines, else `clean`. The report and ledger name both rounds and their shared snapshot so the confirmation is visible. Coverage rules unchanged (`partial scope` still applies).
-- **With `--report-only`:** still no edits. If the first round is clean, run the confirming round too; otherwise stop after one round.
+- **With `--report-only`:** still no edits. If the first round is clean and the snapshot has not moved, run the confirming round too; otherwise stop after one round. It has no round budget and never reports `stopped`: a moved snapshot leaves the clean result unconfirmed, and confirming-round findings are reported like a first round's.
 - **Failed rounds:** unchanged. A confirming round with empty or unparseable output ends `failed`, never confirmed.
 
 ## Changes
