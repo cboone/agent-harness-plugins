@@ -3,6 +3,7 @@ name: review-plan
 description: >-
   Review an implementation plan against the repository before work starts,
   reporting blockers and needed revisions. Use for "review the plan".
+argument-hint: "[path]"
 ---
 
 # Review Plan

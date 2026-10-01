@@ -3,6 +3,7 @@ name: address-issue
 description: >-
   Plan and implement a GitHub issue on the current branch, stopping for approval
   first. Use for "address issue #42" or "fix issue #42".
+argument-hint: "<issue-number|description> [--dry-run|--no-approval] [--no-commit] [--commit-per-change]"
 ---
 
 # Address Issue

@@ -3,6 +3,7 @@ name: address-review
 description: >-
   Work through the actionable items in a review document and track their
   resolution. Use for "address the review" or "address @docs/reviews/...".
+argument-hint: "<review-path> [--dry-run] [--skip <numbers>] [--commit-per-item]"
 ---
 
 # Address Review

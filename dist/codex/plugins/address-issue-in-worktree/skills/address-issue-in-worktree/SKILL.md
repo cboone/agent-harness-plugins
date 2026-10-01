@@ -3,6 +3,7 @@ name: address-issue-in-worktree
 description: >-
   Open a workmux worktree and tmux window for a GitHub issue, where a new
   session plans the work. Use for "start issue" or "work on #42 in a worktree".
+argument-hint: "<issue-number|description> [--no-approval] [--resource <name>]"
 ---
 
 # Address Issue in Worktree
