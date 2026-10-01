@@ -45,7 +45,7 @@ This is an absence claim, so it has a bad default answer: a loop that never chec
 
 A clean result is a statement about specific content. If the tree changes after the review and before the decision, the statement is about code that no longer exists.
 
-Recompute the snapshot at step 8 every time. When it moved, discard the clean result, say so, and start another round if the limit allows. The usual cause is benign, such as a formatter on save or another session in the same worktree, and it is still a reason to review again rather than to assume the change was harmless.
+Recompute the snapshot at step 8 every time. When it moved, discard the clean result, say so, and start another round if the limit allows. If it does not, the run ends `stopped`, saying the tree changed during the last round; any clean round that round was confirming is reported unconfirmed, and under `--report-only` that is the whole report. The usual cause is benign, such as a formatter on save or another session in the same worktree, and it is still a reason to review again rather than to assume the change was harmless.
 
 ## Confirming a clean result
 
