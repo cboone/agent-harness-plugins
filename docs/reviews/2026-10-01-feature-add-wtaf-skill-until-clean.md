@@ -2,8 +2,8 @@
 
 Base: main (10fe5f677ab6761a7b6bef92cc90f99cf563de46)
 Reviewer: codex
-Rounds: 4 (3, then 1 more on request)
-Status: stopped
+Rounds: 16 (3, then 1 more, then resumed until clean)
+Status: clean
 
 ## Round 1
 
@@ -59,6 +59,118 @@ Coverage: full (committed changes; other buckets empty)
 
 Round 4 outcome: F5 and F6 fixed in 57bd44dd. No further round reviewed that fix.
 
+## Round 5
+
+Snapshot: 9c6009af85ee32171805874a067e2efd2c7387e6
+Invocation: same as round 1, against head 0885afee; the loop was resumed on request to run until clean
+Coverage: full (committed changes; other buckets empty)
+
+- [x] **F7** Important. `plugins/wtaf/skills/wtaf/references/sources.md:47`. The upstream comparison cannot establish whether a branch has been pushed.
+      Detail: a branch created with `--track origin/main` has an upstream before any push, so it read as pushed.
+      Fixed in 07c26a0e.
+
+## Round 6
+
+Snapshot: 045fcac509249e7c0d6ce20846310a284de90356
+Coverage: full
+
+- [x] **F8** Important. `plugins/wtaf/skills/wtaf/references/sources.md:74`. PR discovery can select another repository's branch.
+      Detail: filtering on head owner alone accepts a same-named branch from another repository of the same owner.
+      Fixed in baa65e85.
+- [x] **F9** Important. `plugins/wtaf/skills/wtaf/references/sources.md:82`. Thorough-mode GitHub reads can target the wrong repository.
+      Detail: issue-comment and run commands omitted `--repo`.
+      Fixed in baa65e85.
+
+## Round 7
+
+Snapshot: 790325351a0a751c891965ac50bebac2bf97d6af
+Coverage: full
+
+- [x] **F10** Important. `plugins/wtaf/skills/wtaf/references/sources.md:48`. Push status misclassifies branches published without a configured push destination.
+      Detail: `@{push}` depends on push configuration, so a branch pushed with an explicit refspec read as unpushed.
+      Fixed in ca34c112.
+
+## Round 8
+
+Snapshot: 2efd12874372732b662f861570de841d948c48c6 (reviewed at head ca34c112)
+Coverage: full
+
+- [x] **F11** Important. `plugins/wtaf/skills/wtaf/references/sources.md:79`. PR discovery has no valid lookup for detached HEAD.
+      Fixed in 97cdbd36.
+- [x] **F12** Important. `plugins/wtaf/skills/wtaf/references/sources.md:79`. PR discovery can miss matches beyond the default result limit of 30.
+      Fixed in 97cdbd36.
+- [x] **F13** Important. `plugins/wtaf/skills/wtaf/references/sources.md:89`. Thorough mode omits review threads after the first page.
+      Fixed in 97cdbd36.
+
+## Round 9
+
+Snapshot: 2efd12874372732b662f861570de841d948c48c6
+Coverage: full
+
+- [x] **F14** Important. `plugins/wtaf/skills/wtaf/references/sources.md:67`. Closing issues are resolved in the wrong repository when a reference names another one.
+      Fixed in 760049df.
+
+## Round 10
+
+Snapshot: 6ba69e87bdceefbddc4bf9d7701460844773b38f
+Coverage: full
+
+- [x] **F15** Important. `plugins/wtaf/skills/wtaf/references/sources.md:38`. Later fetches can replace the PR base in `FETCH_HEAD`.
+      Fixed in 1d1394d7.
+
+## Round 11
+
+Snapshot: 267f7fb2b531ff35f59d4760d19dfe0ff73d15d1
+Coverage: full
+
+- [x] **F16** Important. `plugins/wtaf/skills/wtaf/references/sources.md:36`. PR discovery uses the fetch repository as the branch's head identity.
+      Fixed in a1ad43a6.
+
+## Round 12
+
+Snapshot: 2a04889941b39f830bbf30bf8dfb50db37817188
+Coverage: full
+
+- [x] **F17** Important. `plugins/wtaf/skills/wtaf/references/sources.md:48`. A same-named remote branch can produce a false pushed status.
+      Fixed in ba918b96.
+- [x] **F18** Important. `plugins/wtaf/skills/wtaf/references/sources.md:83`. Detached checkouts at earlier PR commits lose their PR status.
+      Fixed in ba918b96.
+
+## Round 13
+
+Snapshot: 427073a269e7dd1acebcbee7967601233fbfea88
+Coverage: full
+
+- [x] **F19** Important. `plugins/wtaf/skills/wtaf/references/sources.md:38`. Repository commands require a remote for a local repository.
+      Fixed in 2ebfa3d0.
+- [x] **F20** Important. `plugins/wtaf/skills/wtaf/references/sources.md:90`. Thorough-mode API commands omit the repository host.
+      Fixed in 2ebfa3d0.
+
+## Round 14
+
+Snapshot: 49fd8371227874981b44936a2213872d994a8e41
+Coverage: full
+
+- [x] **F21** Important. `plugins/wtaf/skills/wtaf/references/sources.md:36`. PR discovery misses fork PRs when `origin` fetches from the upstream.
+      Fixed in 0ed680d1.
+- [x] **F22** Important. `plugins/wtaf/skills/wtaf/references/sources.md:36`. Reading the raw origin URL can expose embedded credentials.
+      Fixed in 0ed680d1.
+
+## Round 15
+
+Snapshot: af67b123d2c59f60e6a24fec1fd38159fb03e843
+Coverage: full
+
+- [x] **F23** Important. `plugins/wtaf/skills/wtaf/references/sources.md:25`. Remote parsing misidentifies SSH ports and host aliases.
+      Fixed in 4d5b3881.
+
+## Round 16
+
+Snapshot: 3a4f5a0bae6b95fe4560b3b5ff454943c7ab084e
+Coverage: full
+
+No findings. The output was well formed, `reviewed` matched the snapshot, and the snapshot was unchanged when the round was checked.
+
 ## Result
 
-Stopped after round 4. All six findings (F1 to F6) were fixed and none was declined. The last snapshot reviewed was 5fda481b9651801a0a7a451678a4c9ebce42575f, covering the full scope; the F5 and F6 fix in 57bd44dd has not been reviewed.
+No findings at or above Important from codex over snapshot 3a4f5a0bae6b95fe4560b3b5ff454943c7ab084e, covering the full scope (committed changes from main; staged, unstaged and untracked buckets empty). All 23 findings across 16 rounds were fixed; none was declined.
