@@ -3,6 +3,7 @@ name: rebase-onto-main
 description: >-
   Rebase the current branch onto the base branch, resolving conflicts per
   commit, then force-with-lease push. Use for "rebase onto main".
+argument-hint: "[--base <branch>]"
 ---
 
 # Rebase Onto Main
