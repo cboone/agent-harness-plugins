@@ -53,7 +53,7 @@ A single clean round is the default finish. It is also the weakest point in the 
 
 1. **The first clean round does not end the run.** Record it in the ledger with its snapshot, then start a confirming round at step 1 with the same backend and the same coverage. There is no fix pass between the two, because there is nothing to fix.
 1. **The pair completes when the confirming round is clean under all three clean rules and its snapshot is the one the first round reviewed.** Report both rounds and the snapshot they share.
-1. **Any snapshot movement resets the pair**, whatever its source: a fix, a formatter, another session. Check it at the start of the confirming round, not only at its decision: compare the snapshot step 1 reports with the one the first round recorded. A tree changed between the two rounds would otherwise let a clean review of different content complete the pair. When they differ, the round is an ordinary round over the new snapshot, so its clean result is again only the first of two.
+1. **Any snapshot movement resets the pair**, whatever its source: a fix, a formatter, another session. Check it at the start of the confirming round, not only at its decision: compare the snapshot step 1 reports with the one the first round recorded. A tree changed between the two rounds would otherwise let a clean review of different content complete the pair. When they differ and a round is left in the budget, the round is an ordinary round over the new snapshot, so its clean result is again only the first of two. When none is left, the extra-round rule below applies, and `--report-only` follows the last paragraph of this section.
 1. **A confirming round that turns up findings resets the pair too.** Within the budget, those findings go through steps 7 and 9 like any other round's. The extra round past the cap, described below, never reaches step 9: its findings are recorded and the run stops. Findings that match carried declines do not count against the confirmation, since they do not block a clean round either.
 1. **A failed confirming round is `failed`**, never a confirmation. Empty is not clean in the second round any more than in the first.
 
@@ -61,7 +61,10 @@ A single clean round is the default finish. It is also the weakest point in the 
 
 The terminal status follows the same table as an unconfirmed run: `clean-with-declines` when either round of the pair relied on carried declines, and `clean` otherwise. Coverage still applies, so a confirmed pair that did not reach the untracked files is `clean, partial scope`.
 
-Under `--report-only`, the confirming round still runs when the first round is clean. Neither round edits anything. If the confirming round turns up findings, the run reports them exactly as a `--report-only` run reports a first round with findings, not as `stopped`: no round budget was in play, so none ran out.
+Under `--report-only`, the confirming round still runs when the first round is clean and the snapshot has not moved since. Neither round edits anything. `--report-only` has no round budget, so the cap rules above do not apply to it and it never reports `stopped`:
+
+- **The confirming round turns up findings.** The run reports them exactly as a `--report-only` run reports a first round with findings.
+- **The snapshot moved before the confirming round.** The confirming round does not run. The run reports the first round's clean result as unconfirmed, says the tree changed after it, and records `Confirmation: unconfirmed` in the ledger.
 
 ## Convergence
 
