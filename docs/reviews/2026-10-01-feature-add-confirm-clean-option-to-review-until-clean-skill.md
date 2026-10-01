@@ -86,12 +86,12 @@ Verification:
 
 **Issues to address:**
 
-- [ ] **Issue 1 (Important): contradictory rules for counting the confirming round against `--max-rounds`.**
+- [x] **Issue 1 (Important): contradictory rules for counting the confirming round against `--max-rounds`.**
   - **The conflict.** The Convergence bullet in `references/stop-rules.md` says a confirming round "does not count against" the round limit, which means it never uses up any of the budget. `SKILL.md` step 10 says it is an "exception to that cap" only when "the first clean round used the last round". The `SKILL.md` example shows the confirming round as `Round 3 of 3`, which means it does use a slot when one is free.
   - **A case where they disagree.** With `--max-rounds 3`: round 1 has findings and they are fixed, round 2 is clean, and round 3, the confirming round, finds something. Under the stop-rules wording, only 2 rounds have been counted, so the loop fixes and goes on to a fourth round. Under `SKILL.md` and the example, no rounds remain and the run ends `stopped`. The same uncertainty affects the ledger's `Rounds: <n> of <max>` line.
   - **Fix.** Pick one rule and state it identically in all three places. The rule most consistent with the plan and the example: "The confirming round uses a round from the budget when one is left. When the first clean round used the last one, the confirming round runs anyway as one extra round, and it never earns another fix pass."
 
 **Suggestions:**
 
-- [ ] **Suggestion 1 (Nit): two notations for the confirming round.** `ledger.md` writes its heading as `## Round 3 (confirming round 2)`, while the `SKILL.md` example writes `Round 3 of 3 (confirming 2/2)`. Both work, but using the same "confirming 2/2" form in both would let a reader match ledger sections to terminal output at a glance.
-- [ ] **Suggestion 2 (Nit): status for a `--report-only` run whose confirming round finds something.** The stop rules say such a run ends `stopped` when no rounds remain. `--report-only` never has fix rounds anyway, so it is unclear whether the status should be `stopped` or simply the round's findings, as a plain `--report-only` run would report today. The statuses for `--report-only` were already loosely defined before this branch, so this is optional.
+- [x] **Suggestion 1 (Nit): two notations for the confirming round.** `ledger.md` writes its heading as `## Round 3 (confirming round 2)`, while the `SKILL.md` example writes `Round 3 of 3 (confirming 2/2)`. Both work, but using the same "confirming 2/2" form in both would let a reader match ledger sections to terminal output at a glance.
+- [x] **Suggestion 2 (Nit): status for a `--report-only` run whose confirming round finds something.** The stop rules say such a run ends `stopped` when no rounds remain. `--report-only` never has fix rounds anyway, so it is unclear whether the status should be `stopped` or simply the round's findings, as a plain `--report-only` run would report today. The statuses for `--report-only` were already loosely defined before this branch, so this is optional.
