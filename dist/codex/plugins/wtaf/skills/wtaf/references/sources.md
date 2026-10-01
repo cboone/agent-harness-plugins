@@ -19,14 +19,21 @@ A linked worktree has a `--git-dir` that differs from `--git-common-dir`. Report
 
 An operation in progress shows as one of these under the Git directory: `MERGE_HEAD`, `rebase-merge/`, `rebase-apply/`, `CHERRY_PICK_HEAD`, `BISECT_LOG`.
 
-Detect the base branch, preferring GitHub and falling back to the remote's HEAD:
+Detect the base branch in this order, stopping at the first that answers:
 
-```bash
-gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
-git rev-parse --abbrev-ref origin/HEAD
-```
+1. The open PR's base, `baseRefName` from the PR read under GitHub below. A PR can target a release or integration branch rather than the default, and comparing against the default would then count that branch's unrelated commits as this branch's work.
+1. The repository's default branch:
 
-The second prints `origin/<name>`. If both fail, try `main`, `master`, and `develop` in that order and say which one was assumed. In a fork, pass the fork's `OWNER/REPO` to `gh repo view` explicitly.
+   ```bash
+   gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
+   git rev-parse --abbrev-ref origin/HEAD
+   ```
+
+   The second prints `origin/<name>`.
+
+1. `main`, `master`, and `develop`, in that order, saying which one was assumed.
+
+Name the base used, and its source, in the summary when it is not the default branch. In a fork, pass the fork's `OWNER/REPO` to `gh repo view` explicitly.
 
 With the base in hand:
 
