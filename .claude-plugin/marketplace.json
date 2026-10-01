@@ -839,6 +839,19 @@
       "name": "write-zsh-scripts",
       "repository": "https://github.com/cboone/agent-harness-plugins",
       "source": "./plugins/write-zsh-scripts"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
+      "category": "issues-and-worktrees",
+      "description": "Summarize where the conversation, branch, and tasks stand and what comes next, with a thorough mode that also reads the history.",
+      "homepage": "https://github.com/cboone/agent-harness-plugins",
+      "keywords": ["context", "git", "plans", "recap", "status", "summary"],
+      "license": "MIT",
+      "name": "wtaf",
+      "repository": "https://github.com/cboone/agent-harness-plugins",
+      "source": "./plugins/wtaf"
     }
   ]
 }
