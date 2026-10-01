@@ -81,7 +81,7 @@ When the working directory is inside a Git repository, gather:
 
 - The current branch, HEAD, and whether this is a linked worktree; the list of worktrees.
 - The base branch, detected rather than assumed: the open PR's base when there is one, otherwise the repository default (`main`, `master`, `develop`, or other).
-- Commits ahead of and behind the base; whether the branch has been pushed, judged from its push destination rather than its upstream, and how many commits are unpushed.
+- Commits ahead of and behind the base; whether the branch has been pushed, judged from whether a branch of the same name exists on a remote rather than from its upstream, and how many commits are unpushed.
 - Uncommitted, staged, and untracked files, flagging untracked plan or review documents.
 - Stash entries whose message names this branch. The stash stack is shared across worktrees; report, never touch.
 - An in-progress merge, rebase, cherry-pick, or bisect.

@@ -41,11 +41,11 @@ Compare against the base as a remote-tracking ref, `base_ref="$remote/$base"`, w
 git rev-list --left-right --count "$base_ref...HEAD"
 git log --oneline --no-decorate "$base_ref..HEAD"
 git diff --stat "$base_ref...HEAD"
-git rev-parse --abbrev-ref --symbolic-full-name "@{push}"
-git rev-list --left-right --count "@{push}...HEAD"
+git for-each-ref --format='%(refname:short)' "refs/remotes/*/$branch"
+git rev-list --left-right --count "$pushed_ref...HEAD"
 ```
 
-Judge whether the branch has been pushed from its push destination, `@{push}`, not from `@{upstream}`: a new branch created with `--track origin/main` has an upstream before any push. The branch is pushed when `@{push}` resolves to a remote-tracking ref for this branch, and the count then gives unpushed commits. When `@{push}` does not resolve, or names a ref that does not exist, report the branch as not pushed. `git fetch --no-tags` of the base and the upstream is allowed first, since it touches only remote-tracking refs; skip it when offline.
+Judge whether the branch has been pushed from whether a branch of the same name exists on a remote, not from `@{upstream}` or `@{push}`: a new branch created with `--track origin/main` has an upstream before any push, and `@{push}` depends on push configuration, so a branch pushed with an explicit refspec can lack one. After fetching, a remote-tracking ref `<remote>/$branch` is the pushed copy; when there is none and the network is available, `git ls-remote --heads <remote> "$branch"` settles it. When a pushed copy exists, set `pushed_ref` to it and count unpushed commits; otherwise report the branch as not pushed, or as unknown when offline. `git fetch --no-tags` of the remotes holding the base and this branch is allowed first, since it touches only remote-tracking refs; skip it when offline.
 
 Thorough adds the full branch history with dates and authors, which shows work from other agents or people:
 
