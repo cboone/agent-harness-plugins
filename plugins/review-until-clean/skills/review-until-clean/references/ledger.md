@@ -27,6 +27,7 @@ Base: <base-ref> (<base-sha>)
 Reviewer: <backend>
 Rounds: <n> of <max>
 Status: <clean|clean-with-declines|decisions-needed|stopped|failed>
+Confirmation: <off | rounds <n> and <m> over snapshot <snapshot> | unconfirmed>
 
 ## Round 1
 
@@ -45,6 +46,8 @@ Coverage: <full | partial, and what was excluded>
 ```
 
 Each round appends a section. Earlier rounds are never rewritten, because the point of the record is what was true when the review ran.
+
+`Confirmation` is `off` without `--confirm-clean`. With it, a confirming round's heading says so in the same form the terminal output uses, as in `## Round 3 (confirming 2/2)`, and the header names the completed pair, or reads `unconfirmed` when the run ended before one completed. A pair that reset leaves both its rounds in the document; the header names only the pair that completed. A confirming round counts in `Rounds` like any other, so one that ran past the cap shows as, for example, `Rounds: 4 of 3`.
 
 ## Findings
 
@@ -107,7 +110,9 @@ A clean run still writes its ledger, and the final section states the coverage r
 ```markdown
 ## Result
 
-No findings at or above Important from <backend> over snapshot <snapshot>, covering <coverage>.
+No undeclined findings at or above <threshold> from <backend> over snapshot <snapshot>, covering <coverage>.
 ```
+
+Under `--confirm-clean`, the result names both rounds of the pair: "No undeclined findings at or above `<threshold>` from `<backend>` in rounds 2 and 3, both over snapshot `<snapshot>`, covering `<coverage>`." `<threshold>` is the `--severity` in effect, Important or Nit, and "undeclined" leaves room for the carried declines a `clean-with-declines` result still has.
 
 One reviewer pass is a sample. The ledger records what was reviewed and by what, which is a claim that can be checked, unlike "the branch is clean".
