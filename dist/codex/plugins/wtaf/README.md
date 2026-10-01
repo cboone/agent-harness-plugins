@@ -60,16 +60,27 @@ This skill runs read-only git and GitHub CLI commands. To allow them without pro
       "Bash(git branch --show-current)",
       "Bash(git worktree list*)",
       "Bash(git stash list*)",
+      "Bash(git remote -v*)",
+      "Bash(git for-each-ref *)",
+      "Bash(git merge-base *)",
+      "Bash(git ls-remote *)",
+      "Bash(git tag --sort*)",
+      "Bash(git fetch --no-tags *)",
       "Bash(gh pr view *)",
+      "Bash(gh pr list *)",
       "Bash(gh issue view *)",
       "Bash(gh repo view *)",
-      "Bash(gh run list *)"
+      "Bash(gh run list *)",
+      "Bash(gh api --hostname *)",
+      "Bash(ssh -G *)",
+      "Bash(workmux list*)",
+      "Bash(make help)"
     ]
   }
 }
 ```
 
-If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
+`gh api --hostname *` also matches write requests; the skill sends only GET requests and read-only GraphQL queries, but narrow that rule if you prefer prompts for it. The `awk` and `jq` filters the skill pipes output through are left out on purpose, because a broad rule for either allows arbitrary programs (`awk` can run commands through `system()`), so expect a prompt for those pipelines. Thorough mode also runs the project's own documented check command, such as `make test`, which these rules do not cover. If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
 ## Examples
 
