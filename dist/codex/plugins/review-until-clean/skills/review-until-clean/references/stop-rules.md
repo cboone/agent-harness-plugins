@@ -76,15 +76,15 @@ Three rules keep a run from spending every round on the same disagreement:
 
 ## Terminal statuses
 
-| Status                | Meaning                                                         |
-| --------------------- | --------------------------------------------------------------- |
-| `clean`               | A clean round, with the coverage stated                         |
-| `clean-with-declines` | A clean round whose remaining findings are all carried declines |
-| `decisions-needed`    | Findings remain that the loop cannot resolve on its own         |
-| `stopped`             | The round limit was reached with findings outstanding           |
-| `failed`              | A round did not produce a usable review                         |
+| Status                | Meaning                                                                                                                                                     |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `clean`               | A clean round, with the coverage stated                                                                                                                     |
+| `clean-with-declines` | A clean round whose remaining findings are all carried declines                                                                                             |
+| `decisions-needed`    | Findings remain that the loop cannot resolve on its own                                                                                                     |
+| `stopped`             | The round limit was reached with findings outstanding, or, under `--confirm-clean`, with the last clean round unconfirmed because the tree changed after it |
+| `failed`              | A round did not produce a usable review                                                                                                                     |
 
-`failed` is not a softer `stopped`. `stopped` means the loop worked and ran out of rounds; `failed` means the loop learned nothing and its result carries no information about the code.
+`failed` is not a softer `stopped`. `stopped` means the loop worked and ran out of rounds, either with findings left or before a clean result could be confirmed; `failed` means the loop learned nothing and its result carries no information about the code.
 
 ## What a clean result does not mean
 
