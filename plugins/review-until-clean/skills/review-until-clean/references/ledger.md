@@ -47,7 +47,7 @@ Coverage: <full | partial, and what was excluded>
 
 Each round appends a section. Earlier rounds are never rewritten, because the point of the record is what was true when the review ran.
 
-`Confirmation` is `off` without `--confirm-clean`. With it, a confirming round's heading says so, as in `## Round 3 (confirming round 2)`, and the header names the completed pair, or reads `unconfirmed` when the run ended before one completed. A pair that reset leaves both its rounds in the document; the header names only the pair that completed.
+`Confirmation` is `off` without `--confirm-clean`. With it, a confirming round's heading says so in the same form the terminal output uses, as in `## Round 3 (confirming 2/2)`, and the header names the completed pair, or reads `unconfirmed` when the run ended before one completed. A pair that reset leaves both its rounds in the document; the header names only the pair that completed. A confirming round counts in `Rounds` like any other, so one that ran past the cap shows as, for example, `Rounds: 4 of 3`.
 
 ## Findings
 

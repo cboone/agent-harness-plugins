@@ -57,11 +57,11 @@ A single clean round is the default finish. It is also the weakest point in the 
 1. **A confirming round that turns up findings resets the pair too.** Those findings go through steps 7 and 9 like any other round's. Findings that match carried declines do not count against the confirmation, since they do not block a clean round either.
 1. **A failed confirming round is `failed`**, never a confirmation. Empty is not clean in the second round any more than in the first.
 
-**The confirming round is exempt from `--max-rounds`.** It is a review, not a fix pass, so it runs even when the first clean round used the last round the budget allowed. If it turns up findings and no rounds remain, the run ends `stopped` with them listed. Without the exemption, a run whose first clean round lands on the last round could never be confirmed.
+**The confirming round counts against `--max-rounds`, with one exception.** When a round is left in the budget, the confirming round uses it, like any other round. When the first clean round used the last round, the confirming round runs anyway, as one round past the cap. That extra round is a review only: if it turns up findings, they are not fixed, and the run ends `stopped` with them listed. Without the exception, a run whose first clean round lands on the last round could never be confirmed.
 
 The terminal status follows the same table as an unconfirmed run: `clean-with-declines` when either round of the pair relied on carried declines, and `clean` otherwise. Coverage still applies, so a confirmed pair that did not reach the untracked files is `clean, partial scope`.
 
-Under `--report-only`, the confirming round still runs when the first round is clean. Neither round edits anything.
+Under `--report-only`, the confirming round still runs when the first round is clean. Neither round edits anything. If the confirming round turns up findings, the run reports them exactly as a `--report-only` run reports a first round with findings, not as `stopped`: no round budget was in play, so none ran out.
 
 ## Convergence
 
@@ -69,7 +69,7 @@ Three rules keep a run from spending every round on the same disagreement:
 
 - **Carried declines.** A finding declined in an earlier round is recorded as declined when it comes back, and does not block a clean result. `./ledger.md` covers the matching.
 - **No progress stops the loop.** If a round produced findings, the fix step ran, and the snapshot did not move, then nothing changed and the next round would read the same code and return the same findings. Stop with `decisions-needed` instead of burning the remaining rounds.
-- **The round limit.** Default 3. Reaching it with findings outstanding is `stopped`, with the unresolved items listed. A confirming round under `--confirm-clean` does not count against it, per [Confirming a clean result](#confirming-a-clean-result).
+- **The round limit.** Default 3. Reaching it with findings outstanding is `stopped`, with the unresolved items listed. A confirming round under `--confirm-clean` counts against it, except that one may run past the cap to confirm a clean last round, per [Confirming a clean result](#confirming-a-clean-result).
 
 ## Terminal statuses
 

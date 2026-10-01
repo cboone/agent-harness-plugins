@@ -130,7 +130,7 @@ Check the snapshot again here rather than trusting step 1. Anything that touched
 
 **A moved snapshot invalidates the findings, not only a clean result.** The findings name paths and lines in the tree the reviewer read, and that tree is gone. Handing them to the fixer would apply edits computed for one version of a file to a different one, which is how a review turns into damage. So when the snapshot has moved, discard the round's findings along with any clean verdict, record in the ledger that the round was invalidated and why, and start a new round from step 1 against the current snapshot. Do not go to step 9 with findings from a snapshot that no longer exists.
 
-If the round is clean, go to step 11, unless `--confirm-clean` is set and this is the first clean round of a pair. Then record it in the ledger with its snapshot and start a confirming round at step 1, with the same backend and coverage and no fix pass. A reviewer's output varies between runs over identical code, so a round that found nothing is not proof that there is nothing to find. `./references/stop-rules.md` has the pair rules: when the pair completes, when it resets, and why the confirming round runs even past `--max-rounds`.
+If the round is clean, go to step 11, unless `--confirm-clean` is set and this is the first clean round of a pair. Then record it in the ledger with its snapshot and start a confirming round at step 1, with the same backend and coverage and no fix pass. A reviewer's output varies between runs over identical code, so a round that found nothing is not proof that there is nothing to find. `./references/stop-rules.md` has the pair rules: when the pair completes, when it resets, and how the confirming round counts against `--max-rounds`.
 
 Under `--report-only`, go to step 11 whatever the result, except that the confirming round above still runs when `--confirm-clean` is set. It edits nothing either.
 
@@ -152,7 +152,7 @@ Never push. A finding you decline goes back into the ledger with its reason, und
 
 ### 10. Loop
 
-Recompute the snapshot. If it did not move and findings remain, nothing was fixed and the next round would read exactly the same code and return exactly the same findings: stop with `decisions-needed` rather than spending the remaining rounds. Otherwise start the next round at step 1, up to `--max-rounds`. A confirming round under `--confirm-clean` is the one exception to that cap: it is a review, not a fix pass, so it runs even when the first clean round used the last round. If it turns up findings with no rounds left, stop with `stopped`.
+Recompute the snapshot. If it did not move and findings remain, nothing was fixed and the next round would read exactly the same code and return exactly the same findings: stop with `decisions-needed` rather than spending the remaining rounds. Otherwise start the next round at step 1, up to `--max-rounds`. A confirming round under `--confirm-clean` uses a round from that budget when one is left. When the first clean round used the last round, the confirming round runs anyway as one round past the cap, and it is a review only: if it turns up findings, do not fix them; stop with `stopped`.
 
 ### 11. Report
 
