@@ -104,7 +104,7 @@ Widening the allowlist means measuring the new field first. Install a skill that
 
 ### Argument hints
 
-Claude Code shows a skill's `argument-hint` as ghost text after the user types its slash command, which is how `/monitor-pr` displays its options. Every skill that accepts arguments declares one as a double-quoted string: positional arguments first, then flags in the order its `## Options` section lists them, with `<x>` for a required value, `[x]` for an optional argument and `a|b` for alternatives. Rule 21 of `bin/validate-plugins` requires the field on every skill with an `## Options` section. Codex CLI and OpenCode ignore it, so it passes through both mirrors unchanged.
+Claude Code shows a skill's `argument-hint` as ghost text after the user types its slash command, which is how `/monitor-pr` displays its options. Every skill that accepts arguments should declare one as a double-quoted string: positional arguments first, then flags in the order its `## Options` section lists them, with `<x>` for a required value, `[x]` for an optional argument and `a|b` for alternatives. Rule 21 of `bin/validate-plugins` enforces this only for skills with an `## Options` section, so a skill that describes its arguments in prose elsewhere, such as `review-plan`, needs the hint added by hand. Codex CLI and OpenCode ignore it, so it passes through both mirrors unchanged.
 
 ### Invocation policy
 
