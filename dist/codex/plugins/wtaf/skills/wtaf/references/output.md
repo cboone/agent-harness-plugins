@@ -73,7 +73,7 @@ A personal project, phase-based roadmap, fast mode:
 | 2. Styling  | Next    | Plan in `docs/plans/todo/`; no issues filed |
 | 3. Export   | Planned | Depends on phase 2's theme API              |
 
-Health, measured now: `make test` passes on `main`; CI on `main` is green.
+CI on `main`, latest known: green after the PR #41 merge.
 
 **Loose ends:** The phase 1 milestone is still open with no open issues.
 
