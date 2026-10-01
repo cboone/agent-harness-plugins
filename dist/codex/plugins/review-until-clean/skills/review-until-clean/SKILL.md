@@ -154,7 +154,7 @@ Never push. A finding you decline goes back into the ledger with its reason, und
 
 ### 10. Loop
 
-Recompute the snapshot. If it did not move and findings remain, nothing was fixed and the next round would read exactly the same code and return exactly the same findings: stop with `decisions-needed` rather than spending the remaining rounds. Otherwise start the next round at step 1, up to `--max-rounds`. A confirming round under `--confirm-clean` uses a round from that budget when one is left. When the first clean round used the last round, the confirming round runs anyway as one round past the cap, and it is a review only: if it turns up findings, do not fix them; stop with `stopped`. That extra round exists only to confirm, so if its step 1 reports a snapshot other than the one the last clean round reviewed, do not run it: stop with `stopped`, and report that the tree changed after the last clean round.
+Recompute the snapshot. If it did not move and findings remain, nothing was fixed and the next round would read exactly the same code and return exactly the same findings: stop with `decisions-needed` rather than spending the remaining rounds. Otherwise start the next round at step 1, up to `--max-rounds`. A confirming round under `--confirm-clean` uses a round from that budget when one is left. When the first clean round used the last round, the confirming round runs anyway as one round past the cap, and it is a review only: if it leaves an undeclined finding at or above `--severity`, do not fix it; stop with `stopped`. That extra round exists only to confirm, so if its step 1 reports a snapshot other than the one the last clean round reviewed, do not run it: stop with `stopped`, and report that the tree changed after the last clean round.
 
 ### 11. Report
 
@@ -222,5 +222,5 @@ Review-until-clean status: clean-with-declines, full scope, confirmed by rounds 
 - **Backend exits non-zero, times out, or returns nothing**: a failed round, per step 5. Report and stop.
 - **The snapshot moved during a round**: discard that round's clean result, say so, and start another round if one remains.
 - **The round limit is reached with findings outstanding**: stop with `stopped`, and list what is unresolved.
-- **The confirming round finds something**: the pair resets. Fix the findings and continue if rounds remain, so the next clean round is again only the first of two; otherwise stop with `stopped`.
+- **The confirming round leaves an undeclined finding at or above `--severity`**: the pair resets. Findings below the threshold and carried declines do not; the pair still completes, as `clean-with-declines` where declines carried. Fix the findings and continue if rounds remain, so the next clean round is again only the first of two; otherwise stop with `stopped`.
 - **`address-review` fixes nothing**: stop with `decisions-needed`, per step 10.
