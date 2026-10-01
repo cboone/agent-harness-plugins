@@ -88,4 +88,4 @@ Three rules keep a run from spending every round on the same disagreement:
 
 ## What a clean result does not mean
 
-It means one reviewer, at one effort, over one snapshot, returned no findings at or above the threshold. Under `--confirm-clean` it means that reviewer did so twice in a row, which narrows the variance between runs without changing what kind of claim it is. It is not evidence that the branch is free of defects, and the report says the former rather than implying the latter. The loop shortens the external review cycle; it does not replace it.
+It means one reviewer, at one effort, over one snapshot, left no undeclined findings at or above the threshold. Under `--confirm-clean` it means that reviewer did so twice in a row, which narrows the variance between runs without changing what kind of claim it is. It is not evidence that the branch is free of defects, and the report says the former rather than implying the latter. The loop shortens the external review cycle; it does not replace it.
