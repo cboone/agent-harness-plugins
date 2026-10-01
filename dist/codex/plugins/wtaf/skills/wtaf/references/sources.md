@@ -64,7 +64,7 @@ Match a plan to the work by branch name, the issue number at the start of the br
 
 ## GitHub
 
-Every `gh` command below names its repository explicitly: `$pr_repo` is the `OWNER/REPO` that holds the PR, `$issue_repo` the one that holds the issue, and `$owner` and `$repo` the two halves of `$pr_repo`. Outside a fork, both are the current repository. Never leave `--repo` off and let the CLI choose.
+Every `gh` command below names its repository explicitly: `$pr_repo` is the `OWNER/REPO` that holds the PR, `$issue_repo` the one that holds the issue, and `$owner` and `$repo` the two halves of `$pr_repo`. Outside a fork, `$pr_repo` is the current repository. Take `$issue_repo` from the issue reference itself: a closing reference can name an issue in another repository, so read its repository from each `closingIssuesReferences` entry's `url`, or from a full `OWNER/REPO#N` or issue URL. Only a bare number, such as one from the branch name, defaults to `$pr_repo`. Never leave `--repo` off and let the CLI choose.
 
 Fast and thorough:
 
