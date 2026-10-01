@@ -47,13 +47,29 @@ A clean result is a statement about specific content. If the tree changes after 
 
 Recompute the snapshot at step 8 every time. When it moved, discard the clean result, say so, and start another round if the limit allows. The usual cause is benign, such as a formatter on save or another session in the same worktree, and it is still a reason to review again rather than to assume the change was harmless.
 
+## Confirming a clean result
+
+A single clean round is the default finish. It is also the weakest point in the clean rule, because a reviewer's output varies between runs over identical code: a round that found nothing is not proof that there is nothing to find. Under `--confirm-clean`, the loop requires two consecutive clean rounds instead.
+
+1. **The first clean round does not end the run.** Record it in the ledger with its snapshot, then start a confirming round at step 1 with the same backend and the same coverage. There is no fix pass between the two, because there is nothing to fix.
+1. **The pair completes when the confirming round is clean under all three clean rules and its snapshot is the one the first round reviewed.** Report both rounds and the snapshot they share.
+1. **Any snapshot movement resets the pair**, whatever its source: a fix, a formatter, another session. Both clean rounds must be about the same content, so the next clean round is again only the first of two.
+1. **A confirming round that turns up findings resets the pair too.** Those findings go through steps 7 and 9 like any other round's. Findings that match carried declines do not count against the confirmation, since they do not block a clean round either.
+1. **A failed confirming round is `failed`**, never a confirmation. Empty is not clean in the second round any more than in the first.
+
+**The confirming round is exempt from `--max-rounds`.** It is a review, not a fix pass, so it runs even when the first clean round used the last round the budget allowed. If it turns up findings and no rounds remain, the run ends `stopped` with them listed. Without the exemption, a run whose first clean round lands on the last round could never be confirmed.
+
+The terminal status follows the same table as an unconfirmed run: `clean-with-declines` when either round of the pair relied on carried declines, and `clean` otherwise. Coverage still applies, so a confirmed pair that did not reach the untracked files is `clean, partial scope`.
+
+Under `--report-only`, the confirming round still runs when the first round is clean. Neither round edits anything.
+
 ## Convergence
 
 Three rules keep a run from spending every round on the same disagreement:
 
 - **Carried declines.** A finding declined in an earlier round is recorded as declined when it comes back, and does not block a clean result. `./ledger.md` covers the matching.
 - **No progress stops the loop.** If a round produced findings, the fix step ran, and the snapshot did not move, then nothing changed and the next round would read the same code and return the same findings. Stop with `decisions-needed` instead of burning the remaining rounds.
-- **The round limit.** Default 3. Reaching it with findings outstanding is `stopped`, with the unresolved items listed.
+- **The round limit.** Default 3. Reaching it with findings outstanding is `stopped`, with the unresolved items listed. A confirming round under `--confirm-clean` does not count against it, per [Confirming a clean result](#confirming-a-clean-result).
 
 ## Terminal statuses
 
@@ -69,4 +85,4 @@ Three rules keep a run from spending every round on the same disagreement:
 
 ## What a clean result does not mean
 
-It means one reviewer, at one effort, over one snapshot, returned no findings at or above the threshold. It is not evidence that the branch is free of defects, and the report says the former rather than implying the latter. The loop shortens the external review cycle; it does not replace it.
+It means one reviewer, at one effort, over one snapshot, returned no findings at or above the threshold. Under `--confirm-clean` it means that reviewer did so twice in a row, which narrows the variance between runs without changing what kind of claim it is. It is not evidence that the branch is free of defects, and the report says the former rather than implying the latter. The loop shortens the external review cycle; it does not replace it.

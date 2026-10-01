@@ -42,6 +42,8 @@ Review-until-clean status: clean | clean-with-declines | decisions-needed | stop
 
 Every status carries its coverage. A clean result that could not reach the untracked files in scope is reported as `clean, partial scope`, never as plain `clean`. One reviewer pass is a sample, not proof that the branch is defect-free, and the report says what was covered rather than claiming more.
 
+A reviewer's output varies between runs over identical code, so a round that finds nothing is not proof that there was nothing to find. `--confirm-clean` requires two consecutive clean rounds instead of one: the first clean round does not end the run, a second review runs over the same snapshot with no fix pass in between, and only two in a row satisfy the clean rule. Any change to the snapshot resets the pair, and if the confirming round turns something up, the count starts over after it is fixed. The confirming round runs even when the first clean round used the last of `--max-rounds`, since it reviews without fixing; if it finds something with no rounds left, the run ends `stopped`.
+
 The skill never pushes.
 
 ## Requirements
@@ -60,7 +62,8 @@ Also required:
 
 ```text
 /review-until-clean [--reviewer <codex|claude>] [--base <ref>] [--effort <level>]
-                    [--severity <important|nit>] [--max-rounds <n>] [--report-only] [--no-save]
+                    [--severity <important|nit>] [--max-rounds <n>] [--confirm-clean]
+                    [--report-only] [--no-save]
 ```
 
 | Option                              | Description                                                                                     |
@@ -70,6 +73,7 @@ Also required:
 | `--effort <low\|medium\|high\|max>` | Effort for the Claude backend; the Codex backend takes its effort from your Codex configuration |
 | `--severity <important\|nit>`       | Lowest severity the loop fixes; default `important`                                             |
 | `--max-rounds <n>`                  | Cap the rounds; default 3                                                                       |
+| `--confirm-clean`                   | Require two consecutive clean rounds over the same snapshot rather than one                     |
 | `--report-only`                     | Run one round, write the ledger, change nothing                                                 |
 | `--no-save`                         | Leave the ledger at its temporary path instead of saving it to `docs/reviews/`                  |
 
@@ -104,6 +108,7 @@ The first two rules cover the bundled helper, which runs every round. `git add -
 - "/review-until-clean --reviewer claude --effort max": a Claude review at maximum effort instead
 - "/review-until-clean --severity nit": fix the nits too, not just the Important findings
 - "/review-until-clean --max-rounds 1": one review and one fix pass, then stop whatever the result
+- "/review-until-clean --confirm-clean": keep going after the first clean round until a second one confirms it
 
 ## See Also
 

@@ -16,7 +16,8 @@ Run a read-only reviewer over every local change, fix the findings at or above a
 - **--effort `<low|medium|high|max>`**: effort for the Claude backend
 - **--severity `<important|nit>`**: lowest severity the loop fixes; default `important`
 - **--max-rounds `<n>`**: cap the rounds; default 3
-- **--report-only**: run one round, write the ledger, change nothing
+- **--confirm-clean**: require two consecutive clean rounds over the same snapshot rather than one. After the first clean round, run a confirming round with no fix pass in between
+- **--report-only**: run one round, write the ledger, change nothing; under `--confirm-clean`, also run the confirming round when the first is clean
 - **--no-save**: leave the ledger at its temporary path instead of saving it to `docs/reviews/`
 
 ## Skill dependencies
@@ -129,7 +130,9 @@ Check the snapshot again here rather than trusting step 1. Anything that touched
 
 **A moved snapshot invalidates the findings, not only a clean result.** The findings name paths and lines in the tree the reviewer read, and that tree is gone. Handing them to the fixer would apply edits computed for one version of a file to a different one, which is how a review turns into damage. So when the snapshot has moved, discard the round's findings along with any clean verdict, record in the ledger that the round was invalidated and why, and start a new round from step 1 against the current snapshot. Do not go to step 9 with findings from a snapshot that no longer exists.
 
-If the round is clean, go to step 11. Under `--report-only`, go to step 11 whatever the result.
+If the round is clean, go to step 11, unless `--confirm-clean` is set and this is the first clean round of a pair. Then record it in the ledger with its snapshot and start a confirming round at step 1, with the same backend and coverage and no fix pass. A reviewer's output varies between runs over identical code, so a round that found nothing is not proof that there is nothing to find. `./references/stop-rules.md` has the pair rules: when the pair completes, when it resets, and why the confirming round runs even past `--max-rounds`.
+
+Under `--report-only`, go to step 11 whatever the result, except that the confirming round above still runs when `--confirm-clean` is set. It edits nothing either.
 
 ### 9. Fix
 
@@ -149,7 +152,7 @@ Never push. A finding you decline goes back into the ledger with its reason, und
 
 ### 10. Loop
 
-Recompute the snapshot. If it did not move and findings remain, nothing was fixed and the next round would read exactly the same code and return exactly the same findings: stop with `decisions-needed` rather than spending the remaining rounds. Otherwise start the next round at step 1, up to `--max-rounds`.
+Recompute the snapshot. If it did not move and findings remain, nothing was fixed and the next round would read exactly the same code and return exactly the same findings: stop with `decisions-needed` rather than spending the remaining rounds. Otherwise start the next round at step 1, up to `--max-rounds`. A confirming round under `--confirm-clean` is the one exception to that cap: it is a review, not a fix pass, so it runs even when the first clean round used the last round. If it turns up findings with no rounds left, stop with `stopped`.
 
 ### 11. Report
 
@@ -161,7 +164,7 @@ Print the status line, the ledger path, and the coverage:
 Review-until-clean status: <clean|clean-with-declines|decisions-needed|stopped|failed>
 ```
 
-State the coverage alongside it. A clean result that did not reach the untracked files in scope is `clean, partial scope`, never plain `clean`. One reviewer pass is a sample, so report what was covered rather than that the branch is free of defects.
+State the coverage alongside it. Under `--confirm-clean`, also name the two rounds that confirmed the result and the snapshot they share, so the report shows the confirmation happened. A clean result that did not reach the untracked files in scope is `clean, partial scope`, never plain `clean`. One reviewer pass is a sample, so report what was covered rather than that the branch is free of defects.
 
 ## Key Conventions
 
@@ -199,6 +202,15 @@ Review-until-clean status: clean-with-declines, full scope
 Ledger: docs/reviews/2026-09-22-feature-465-add-review-until-clean-skill-until-clean.md
 ```
 
+Under `--confirm-clean`, the same run continues past round 2 instead of ending there:
+
+```text
+Round 3 of 3 (confirming 2/2), snapshot 9b7e034, reviewer codex, coverage full
+  No findings at or above important. F2 carried as declined.
+
+Review-until-clean status: clean-with-declines, full scope, confirmed by rounds 2 and 3 over snapshot 9b7e034
+```
+
 ## Error Handling
 
 - **No backend installed**: report which ones were tried and how to install one, then stop.
@@ -208,4 +220,5 @@ Ledger: docs/reviews/2026-09-22-feature-465-add-review-until-clean-skill-until-c
 - **Backend exits non-zero, times out, or returns nothing**: a failed round, per step 5. Report and stop.
 - **The snapshot moved during a round**: discard that round's clean result, say so, and start another round if one remains.
 - **The round limit is reached with findings outstanding**: stop with `stopped`, and list what is unresolved.
+- **The confirming round finds something**: the pair resets. Fix the findings and continue if rounds remain, so the next clean round is again only the first of two; otherwise stop with `stopped`.
 - **`address-review` fixes nothing**: stop with `decisions-needed`, per step 10.
