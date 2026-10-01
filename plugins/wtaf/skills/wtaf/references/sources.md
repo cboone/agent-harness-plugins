@@ -76,22 +76,24 @@ gh issue view "$issue" --repo "$issue_repo" --json number,title,state,milestone,
 Find `$number` and `$pr_repo` this way. Outside a fork, only the current repository is searched. In a fork, a PR lives in the repository it targets, which may be the fork or its parent:
 
 1. In a fork, find the parent with `gh repo view FORK_OWNER/REPO --json parent`. When that returns none, as for a repository that began as a fork but is not marked as one, treat the repository an `upstream` remote names as the parent.
-1. Never look a PR up by branch name with `gh pr view "$branch"`: a branch name can be reused, and that lookup can return an earlier merged PR. Instead, in the current repository and then, in a fork, in the parent, run `gh pr list --repo OWNER/REPO --head "$branch" --state open --json number,headRepository,headRepositoryOwner,baseRefName`.
+1. Never look a PR up by branch name with `gh pr view "$branch"`: a branch name can be reused, and that lookup can return an earlier merged PR. Instead, in the current repository and then, in a fork, in the parent, run `gh pr list --repo OWNER/REPO --head "$branch" --state open --limit 1000 --json number,headRepository,headRepositoryOwner,baseRefName`. The limit matters: the default of 30 can leave the matching PR off the page when many forks reuse the branch name.
 1. `--head` matches the branch name across every fork, so keep only PRs whose head repository is this one: `headRepositoryOwner.login` plus `headRepository.name` must equal the current repository's `OWNER/REPO`.
 1. Require exactly one match. Read it by number with the same `--repo`, which sets `$pr_repo`. With two or more, report the candidates and say the PR is ambiguous rather than picking one.
 1. Only when neither repository has an open match, repeat with `--state all` and report the most recent match as closed or merged, never as the current PR.
+1. On a detached HEAD there is no branch to match. Use a PR number the user or conversation names; otherwise search by commit with `gh pr list --repo OWNER/REPO --state all --search "$(git rev-parse HEAD)" --json number,headRefOid` and keep a PR only when its `headRefOid` is HEAD. If none matches, say the checkout is detached and no PR was identified.
 
 A missing PR is a normal state for an early branch; distinguish GitHub CLI's "no pull requests found" result from authentication or network errors. Summarize `statusCheckRollup` as passing, failing (with the failing check names), or pending. It is the PR's CI wherever the runs live, so prefer it over run listings.
 
 Thorough adds:
 
 ```bash
-gh api graphql -f query='query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100){nodes{isResolved isOutdated path comments(first:1){nodes{author{login} body}}}}}}}' -F owner="$owner" -F repo="$repo" -F number="$number"
+gh api graphql --paginate -f query='query($owner:String!,$repo:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated path comments(first:1){nodes{author{login} body}}}}}}}' -F owner="$owner" -F repo="$repo" -F number="$number"
 gh issue view "$issue" --repo "$issue_repo" --comments
 gh api "repos/$issue_repo/milestones" --jq '.[] | {title, open_issues, closed_issues, due_on}'
 gh run list --repo "$pr_repo" --branch "$branch" --limit 5
 ```
 
+`--paginate` follows `endCursor` until `hasNextPage` is false, so review threads past the first hundred are counted.
 For repositories that deploy, thorough mode also reads deploy state: recent runs of deploy workflows on the base branch (`gh run list --repo "$pr_repo" --workflow <name> --branch "$base"`), the latest release tags (`git tag --sort=-creatordate | head`), or GitHub deployments (`gh api "repos/$pr_repo/deployments" --jq '.[:5]'`). Name the environment each result covers, and do not infer production state from a staging result.
 
 Every GraphQL call is a read-only query. Never send a mutation or a REST request with a method other than GET.
