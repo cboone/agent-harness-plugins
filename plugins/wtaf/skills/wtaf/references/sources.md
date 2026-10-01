@@ -35,7 +35,7 @@ Detect the base branch in this order, stopping at the first that answers:
 
 Name the base used, and its source, in the summary when it is not the default branch. `$current_repo` is this checkout's own `OWNER/REPO`, the fork in a fork; take it from the `origin` fetch URL (`git remote get-url origin`), since a bare `gh` command can resolve to the upstream.
 
-Compare against the base as a remote-tracking ref, `base_ref="$remote/$base"`, where `$remote` is the remote that holds the base: `origin` normally, or the remote whose fetch URL names the parent repository (often `upstream`) when a fork branch's PR targets the parent. When no local remote names that repository, fetch the base by URL with `git fetch --no-tags "$parent_url" "refs/heads/$base"`, which writes only `FETCH_HEAD`, then record its commit at once with `base_ref="$(git rev-parse FETCH_HEAD)"` and compare against that SHA. Any later fetch, including one running in parallel, replaces `FETCH_HEAD`, so never compare against the name itself. Offline, take the commit and file counts from the PR (`gh pr view --json commits,files`) instead, and say the local comparison was skipped. With the base in hand:
+In a repository with no remote, compare against the local branch, `base_ref="$base"`, and skip pushed-state checks. Otherwise compare against the base as a remote-tracking ref, `base_ref="$remote/$base"`, where `$remote` is the remote that holds the base: `origin` normally, or the remote whose fetch URL names the parent repository (often `upstream`) when a fork branch's PR targets the parent. When no local remote names that repository, fetch the base by URL with `git fetch --no-tags "$parent_url" "refs/heads/$base"`, which writes only `FETCH_HEAD`, then record its commit at once with `base_ref="$(git rev-parse FETCH_HEAD)"` and compare against that SHA. Any later fetch, including one running in parallel, replaces `FETCH_HEAD`, so never compare against the name itself. Offline, take the commit and file counts from the PR (`gh pr view --json commits,files`) instead, and say the local comparison was skipped. With the base in hand:
 
 ```bash
 git rev-list --left-right --count "$base_ref...HEAD"
@@ -64,7 +64,7 @@ Match a plan to the work by branch name, the issue number at the start of the br
 
 ## GitHub
 
-Every `gh` command below names its repository explicitly: `$pr_repo` is the `OWNER/REPO` that holds the PR, `$issue_repo` the one that holds the issue, and `$owner` and `$repo` the two halves of `$pr_repo`. Outside a fork, `$pr_repo` is the current repository. Take `$issue_repo` from the issue reference itself: a closing reference can name an issue in another repository, so read its repository from each `closingIssuesReferences` entry's `url`, or from a full `OWNER/REPO#N` or issue URL. Only a bare number, such as one from the branch name, defaults to `$pr_repo`. Never leave `--repo` off and let the CLI choose.
+Every `gh` command below names its repository explicitly: `$pr_repo` is the `OWNER/REPO` that holds the PR, `$issue_repo` the one that holds the issue, and `$owner` and `$repo` the two halves of `$pr_repo`. Outside a fork, `$pr_repo` is the current repository. Take `$issue_repo` from the issue reference itself: a closing reference can name an issue in another repository, so read its repository from each `closingIssuesReferences` entry's `url`, or from a full `OWNER/REPO#N` or issue URL. Only a bare number, such as one from the branch name, defaults to `$pr_repo`. Never leave `--repo` off and let the CLI choose. For GitHub Enterprise, `--repo` takes `HOST/OWNER/REPO`, and every `gh api` call takes `--hostname "$host"`, since `gh api` otherwise defaults to github.com; `$host` comes from the remote URL.
 
 Fast and thorough:
 
@@ -87,14 +87,14 @@ A missing PR is a normal state for an early branch; distinguish GitHub CLI's "no
 Thorough adds:
 
 ```bash
-gh api graphql --paginate -f query='query($owner:String!,$repo:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated path comments(first:1){nodes{author{login} body}}}}}}}' -F owner="$owner" -F repo="$repo" -F number="$number"
+gh api --hostname "$host" graphql --paginate -f query='query($owner:String!,$repo:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated path comments(first:1){nodes{author{login} body}}}}}}}' -F owner="$owner" -F repo="$repo" -F number="$number"
 gh issue view "$issue" --repo "$issue_repo" --comments
-gh api "repos/$issue_repo/milestones" --jq '.[] | {title, open_issues, closed_issues, due_on}'
+gh api --hostname "$host" "repos/$issue_repo/milestones" --jq '.[] | {title, open_issues, closed_issues, due_on}'
 gh run list --repo "$pr_repo" --branch "$branch" --limit 5
 ```
 
 `--paginate` follows `endCursor` until `hasNextPage` is false, so review threads past the first hundred are counted.
-For repositories that deploy, thorough mode also reads deploy state: recent runs of deploy workflows on the base branch (`gh run list --repo "$pr_repo" --workflow <name> --branch "$base"`), the latest release tags (`git tag --sort=-creatordate | head`), or GitHub deployments (`gh api "repos/$pr_repo/deployments" --jq '.[:5]'`). Name the environment each result covers, and do not infer production state from a staging result.
+For repositories that deploy, thorough mode also reads deploy state: recent runs of deploy workflows on the base branch (`gh run list --repo "$pr_repo" --workflow <name> --branch "$base"`), the latest release tags (`git tag --sort=-creatordate | head`), or GitHub deployments (`gh api --hostname "$host" "repos/$pr_repo/deployments" --jq '.[:5]'`). Name the environment each result covers, and do not infer production state from a staging result.
 
 Every GraphQL call is a read-only query. Never send a mutation or a REST request with a method other than GET.
 
