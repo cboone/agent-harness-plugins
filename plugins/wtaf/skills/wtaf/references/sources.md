@@ -25,7 +25,7 @@ Detect the base branch in this order, stopping at the first that answers:
 1. The repository's default branch:
 
    ```bash
-   gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
+   gh repo view "$current_repo" --json defaultBranchRef --jq .defaultBranchRef.name
    git rev-parse --abbrev-ref origin/HEAD
    ```
 
@@ -33,7 +33,7 @@ Detect the base branch in this order, stopping at the first that answers:
 
 1. `main`, `master`, and `develop`, in that order, saying which one was assumed.
 
-Name the base used, and its source, in the summary when it is not the default branch. In a fork, pass the fork's `OWNER/REPO` to `gh repo view` explicitly.
+Name the base used, and its source, in the summary when it is not the default branch. `$current_repo` is this checkout's own `OWNER/REPO`, the fork in a fork; take it from the `origin` fetch URL (`git remote get-url origin`), since a bare `gh` command can resolve to the upstream.
 
 Compare against the base as a remote-tracking ref, `base_ref="$remote/$base"`, where `$remote` is the remote that holds the base: `origin` normally, or the remote whose fetch URL names the parent repository (often `upstream`) when a fork branch's PR targets the parent. When no local remote names that repository, fetch the base by URL with `git fetch --no-tags "$parent_url" "refs/heads/$base"`, which writes only `FETCH_HEAD`, and use `base_ref=FETCH_HEAD`. Offline, take the commit and file counts from the PR (`gh pr view --json commits,files`) instead, and say the local comparison was skipped. With the base in hand:
 
@@ -64,27 +64,35 @@ Match a plan to the work by branch name, the issue number at the start of the br
 
 ## GitHub
 
+Every `gh` command below names its repository explicitly: `$pr_repo` is the `OWNER/REPO` that holds the PR, `$issue_repo` the one that holds the issue, and `$owner` and `$repo` the two halves of `$pr_repo`. Outside a fork, both are the current repository. Never leave `--repo` off and let the CLI choose.
+
 Fast and thorough:
 
 ```bash
-gh pr view --json number,url,title,state,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,closingIssuesReferences,baseRefName,headRefName,updatedAt
-gh issue view "$issue" --json number,title,state,milestone,labels,updatedAt
+gh pr view "$number" --repo "$pr_repo" --json number,url,title,state,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,closingIssuesReferences,baseRefName,headRefName,updatedAt
+gh issue view "$issue" --repo "$issue_repo" --json number,title,state,milestone,labels,updatedAt
 ```
 
-In a fork, a PR lives in the repository it targets, which may be the fork or its parent. Find the parent with `gh repo view FORK_OWNER/REPO --json parent`; when that returns none, as for a repository that began as a fork but is not marked as one, treat the repository an `upstream` remote names as the parent. Never look a fork PR up by branch name with `gh pr view "$branch"`: a branch name can be reused, and that lookup can return an earlier merged PR. Instead, in the fork and then in the parent, run `gh pr list --repo OWNER/REPO --head "$branch" --state open --json number,headRepositoryOwner,baseRefName`, keep only PRs whose `headRepositoryOwner.login` is the fork owner, and read the match by number with the same `--repo`. Only when neither has an open PR, repeat with `--state all` and report the most recent one as closed or merged, never as the current PR. Pass an explicit `--repo` to `gh issue view` as well, naming the repository that holds the issue.
+Find `$number` and `$pr_repo` this way. Outside a fork, only the current repository is searched. In a fork, a PR lives in the repository it targets, which may be the fork or its parent:
 
-A missing PR is a normal state for an early branch; distinguish GitHub CLI's "no pull requests found" result from authentication or network errors. Summarize `statusCheckRollup` as passing, failing (with the failing check names), or pending.
+1. In a fork, find the parent with `gh repo view FORK_OWNER/REPO --json parent`. When that returns none, as for a repository that began as a fork but is not marked as one, treat the repository an `upstream` remote names as the parent.
+1. Never look a PR up by branch name with `gh pr view "$branch"`: a branch name can be reused, and that lookup can return an earlier merged PR. Instead, in the current repository and then, in a fork, in the parent, run `gh pr list --repo OWNER/REPO --head "$branch" --state open --json number,headRepository,headRepositoryOwner,baseRefName`.
+1. `--head` matches the branch name across every fork, so keep only PRs whose head repository is this one: `headRepositoryOwner.login` plus `headRepository.name` must equal the current repository's `OWNER/REPO`.
+1. Require exactly one match. Read it by number with the same `--repo`, which sets `$pr_repo`. With two or more, report the candidates and say the PR is ambiguous rather than picking one.
+1. Only when neither repository has an open match, repeat with `--state all` and report the most recent match as closed or merged, never as the current PR.
+
+A missing PR is a normal state for an early branch; distinguish GitHub CLI's "no pull requests found" result from authentication or network errors. Summarize `statusCheckRollup` as passing, failing (with the failing check names), or pending. It is the PR's CI wherever the runs live, so prefer it over run listings.
 
 Thorough adds:
 
 ```bash
 gh api graphql -f query='query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100){nodes{isResolved isOutdated path comments(first:1){nodes{author{login} body}}}}}}}' -F owner="$owner" -F repo="$repo" -F number="$number"
-gh issue view "$issue" --comments
-gh api "repos/$owner/$repo/milestones" --jq '.[] | {title, open_issues, closed_issues, due_on}'
-gh run list --branch "$branch" --limit 5
+gh issue view "$issue" --repo "$issue_repo" --comments
+gh api "repos/$issue_repo/milestones" --jq '.[] | {title, open_issues, closed_issues, due_on}'
+gh run list --repo "$pr_repo" --branch "$branch" --limit 5
 ```
 
-For repositories that deploy, thorough mode also reads deploy state: recent runs of deploy workflows on the base branch (`gh run list --workflow <name> --branch "$base"`), the latest release tags (`git tag --sort=-creatordate | head`), or GitHub deployments (`gh api "repos/$owner/$repo/deployments" --jq '.[:5]'`). Name the environment each result covers, and do not infer production state from a staging result.
+For repositories that deploy, thorough mode also reads deploy state: recent runs of deploy workflows on the base branch (`gh run list --repo "$pr_repo" --workflow <name> --branch "$base"`), the latest release tags (`git tag --sort=-creatordate | head`), or GitHub deployments (`gh api "repos/$pr_repo/deployments" --jq '.[:5]'`). Name the environment each result covers, and do not infer production state from a staging result.
 
 Every GraphQL call is a read-only query. Never send a mutation or a REST request with a method other than GET.
 
