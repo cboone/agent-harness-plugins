@@ -83,7 +83,7 @@ Coverage: full
 
 ## Round 7
 
-Snapshot: 790325351a0a751c891965ac50bebac2bf97d6af
+Snapshot: eeb15cade8279fb1769684ab2827ce085f6a0e88
 Coverage: full
 
 - [x] **F10** Important. `plugins/wtaf/skills/wtaf/references/sources.md:48`. Push status misclassifies branches published without a configured push destination.
@@ -92,7 +92,7 @@ Coverage: full
 
 ## Round 8
 
-Snapshot: 2efd12874372732b662f861570de841d948c48c6 (reviewed at head ca34c112)
+Snapshot: 790325351a0a751c891965ac50bebac2bf97d6af
 Coverage: full
 
 - [x] **F11** Important. `plugins/wtaf/skills/wtaf/references/sources.md:79`. PR discovery has no valid lookup for detached HEAD.
