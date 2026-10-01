@@ -229,6 +229,18 @@ Codex skill inventory: * (glob)
 [1]
 ```
 
+Claude Code shows `argument-hint` after a typed slash command, so a skill that
+documents an `## Options` section must declare one, or its options stay
+hidden at the prompt.
+
+```scrut
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" missing-argument-hint 2>&1
+Codex skill inventory: * (glob)
+::error::Skill 'plugins/release/skills/release/SKILL.md' has an ## Options section but no argument-hint; see the skill frontmatter section of docs/plugin-development.md
+1 plugin validation error(s) found.
+[1]
+```
+
 ## Cross-reference warnings reach a passing run
 
 Rule 19 relays `bin/check-cross-references` output. A run that passes still
