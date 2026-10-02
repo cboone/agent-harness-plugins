@@ -65,7 +65,7 @@ raised to fit content.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" valid 2>&1 | grep '^Codex skill inventory:'
-Codex skill inventory: * skills cost * of 4840 tokens available under the 5440-token budget for gpt-6-astra, and * of 5600 characters available under the 8000-character fallback. (glob)
+Codex skill inventory: * skills cost * of 4840 tokens available under the 5440-token budget for gpt-6-astra, and * of 5600 characters available under the 8000-character fallback. Withheld from implicit invocation and not charged: *. (glob)
 ```
 
 A single description over Codex's 1,024-character limit is an error however
@@ -81,7 +81,8 @@ Codex skill inventory: * (glob)
 ```
 
 A routing description over 150 characters, its average share of the primary
-budget, draws a warning but does not fail the run.
+budget, draws a warning but does not fail the run. Like the previous scenario, it
+widens the context window so catalog headroom cannot decide the outcome.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" long-description 2>&1
@@ -126,10 +127,23 @@ An empty context window models Codex not knowing it, which selects the
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" fallback 2>&1
-Codex skill inventory: * skills cost * of 5600 characters available under the 8000-character fallback; no reference context window is set. (glob)
+Codex skill inventory: * skills cost * of 5600 characters available under the 8000-character fallback; no reference context window is set. Withheld from implicit invocation and not charged: *. (glob)
 ::error::Codex skill inventory is * characters, over the 5600 available (8000-character fallback budget less a 2400-character system-skill reserve). Descriptions are * (glob)
 1 plugin validation error(s) found.
 [1]
+```
+
+A skill whose generated manifest sets `policy.allow_implicit_invocation: false`
+is withheld from Codex's list, so it costs nothing. Withholding `release`
+drops it from the charged count and the token total, and the run reports it
+among the withheld skills.
+
+```scrut
+$ charged() { "${VALIDATE_PLUGIN_FIXTURE_BIN}" "${1}" 2>&1 | awk '/^Codex skill inventory:/ { withheld = 0; if (match($0, /not charged: [0-9]+/)) withheld = substr($0, RSTART + 13, RLENGTH - 13); print $4, $7, withheld }'; }
+> read -r count tokens withheld <<< "$(charged valid)"
+> read -r count_after tokens_after withheld_after <<< "$(charged translated-frontmatter)"
+> [[ ${count_after} -eq $((count - 1)) && ${tokens_after} -lt ${tokens} && ${withheld_after} -eq $((withheld + 1)) ]] && echo "withheld skill is not charged"
+withheld skill is not charged
 ```
 
 ## Generated Codex skills match their canonical sources

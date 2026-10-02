@@ -477,6 +477,11 @@ done
 # rule renders every generated dist/codex skill the way Codex does and budgets
 # the whole line. It ignores Codex's path aliasing, which only lowers the cost.
 #
+# A skill whose generated agents/openai.yaml sets
+# policy.allow_implicit_invocation to false is withheld from that list, so it
+# costs nothing and is counted separately. Explicit $skill-name invocation
+# still reaches it, which is what alias skills rely on.
+#
 # The generated copy is what Codex reads, so the inventory is measured there.
 # Rule 16b holds each generated SKILL.md byte-identical to its canonical
 # source, so the per-description checks run once, on the canonical copies that
@@ -621,6 +626,7 @@ fi
 
 marketplace_name="$(jq -r '.name // empty' "${CODEX_MARKETPLACE}" 2> /dev/null || true)"
 inventory_count=0
+inventory_withheld=0
 inventory_tokens=0
 inventory_bytes=0
 inventory_characters=0
@@ -629,6 +635,14 @@ inventory_entries=""
 
 for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
   [[ -f "${skill_md}" ]] || continue
+
+  # A manifest stating only the policy is what the generator writes; rule 16b
+  # rejects any other, so a skill is never skipped on an unchecked manifest.
+  withheld_manifest="$(dirname "${skill_md}")/agents/openai.yaml"
+  if [[ -f "${withheld_manifest}" ]] && manifest_states_only_the_policy "${withheld_manifest}"; then
+    inventory_withheld=$((inventory_withheld + 1))
+    continue
+  fi
 
   skill_plugin="${skill_md#"${CODEX_DIST_DIR}/plugins/"}"
   skill_plugin="${skill_plugin%%/*}"
@@ -664,9 +678,11 @@ if [[ "${CODEX_SYSTEM_SKILL_RESERVE_BYTES}" =~ ^[0-9]+$ ]] && [[ ${inventory_cou
   fallback_available=$((CODEX_FALLBACK_BUDGET_CHARACTERS - CODEX_SYSTEM_SKILL_RESERVE_BYTES))
   largest_entries="$(printf '%s' "${inventory_entries}" | sort -t $'\t' -k1,1nr -k2,2 | head -5 | awk -F '\t' '{ printf "%s%s (%s)", (NR > 1 ? ", " : ""), $2, $1 }')"
   inventory_breakdown="Descriptions are ${inventory_description_bytes} of its ${inventory_bytes} bytes; names, paths and line syntax are the rest. Largest entries in tokens: ${largest_entries}. Tighten the largest routing descriptions rather than raising the budget."
+  withheld_note=""
+  [[ ${inventory_withheld} -eq 0 ]] || withheld_note=" Withheld from implicit invocation and not charged: ${inventory_withheld}."
 
   if [[ -z "${CODEX_REFERENCE_CONTEXT_WINDOW}" ]]; then
-    echo "Codex skill inventory: ${inventory_count} skills cost ${inventory_characters} of ${fallback_available} characters available under the ${CODEX_FALLBACK_BUDGET_CHARACTERS}-character fallback; no reference context window is set."
+    echo "Codex skill inventory: ${inventory_count} skills cost ${inventory_characters} of ${fallback_available} characters available under the ${CODEX_FALLBACK_BUDGET_CHARACTERS}-character fallback; no reference context window is set.${withheld_note}"
     if [[ ${inventory_characters} -gt ${fallback_available} ]]; then
       error "Codex skill inventory is ${inventory_characters} characters, over the ${fallback_available} available (${CODEX_FALLBACK_BUDGET_CHARACTERS}-character fallback budget less a ${CODEX_SYSTEM_SKILL_RESERVE_BYTES}-character system-skill reserve). ${inventory_breakdown}"
     fi
@@ -674,7 +690,7 @@ if [[ "${CODEX_SYSTEM_SKILL_RESERVE_BYTES}" =~ ^[0-9]+$ ]] && [[ ${inventory_cou
     primary_budget=$((CODEX_REFERENCE_CONTEXT_WINDOW * CODEX_CONTEXT_WINDOW_PERCENT / 100))
     [[ ${primary_budget} -gt 0 ]] || primary_budget=1
     primary_available=$((primary_budget - reserve_tokens))
-    echo "Codex skill inventory: ${inventory_count} skills cost ${inventory_tokens} of ${primary_available} tokens available under the ${primary_budget}-token budget for ${CODEX_REFERENCE_MODEL}, and ${inventory_characters} of ${fallback_available} characters available under the ${CODEX_FALLBACK_BUDGET_CHARACTERS}-character fallback."
+    echo "Codex skill inventory: ${inventory_count} skills cost ${inventory_tokens} of ${primary_available} tokens available under the ${primary_budget}-token budget for ${CODEX_REFERENCE_MODEL}, and ${inventory_characters} of ${fallback_available} characters available under the ${CODEX_FALLBACK_BUDGET_CHARACTERS}-character fallback.${withheld_note}"
     if [[ ${inventory_tokens} -gt ${primary_available} ]]; then
       error "Codex skill inventory costs ${inventory_tokens} tokens, over the ${primary_available} available (${primary_budget}-token budget for ${CODEX_REFERENCE_MODEL} less a ${reserve_tokens}-token system-skill reserve). ${inventory_breakdown}"
     fi

@@ -188,13 +188,15 @@ function main() {
     invalid-review-checklist)
       printf '%s\n' '- plain item' >> "${FIXTURE_ROOT}/${GO_REVIEW_CHECKLIST}"
       ;;
-    # The window leaves the budget ample room, so only the length is at fault.
+    # In both length scenarios the window leaves the budget ample room, so only
+    # the length is at fault, however little headroom the catalog has.
     oversized-description)
       replace_description "${FIXTURE_ROOT}/${RELEASE_SKILL}" "$(description_of_length 1100)"
       export CODEX_REFERENCE_CONTEXT_WINDOW=1000000
       ;;
     long-description)
       replace_description "${FIXTURE_ROOT}/${RELEASE_SKILL}" "$(description_of_length 200)"
+      export CODEX_REFERENCE_CONTEXT_WINDOW=1000000
       ;;
     empty-name) perl -pi -e 's/^name: release$/name:/' "${FIXTURE_ROOT}/${RELEASE_SKILL}" ;;
     # release declares no dependencies, so bin/check-cross-references warns
