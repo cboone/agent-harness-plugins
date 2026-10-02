@@ -1,8 +1,8 @@
 ---
 name: write-formalization-roadmap
 description: >-
-  Structure multi-milestone formalization roadmaps for any proof assistant, when
-  writing, reviewing, or updating one. For math prose, use write-math.
+  Structure formalization roadmaps for any proof assistant when writing or
+  reviewing one. For math prose, use write-math.
 ---
 
 # Write Formalization Roadmap

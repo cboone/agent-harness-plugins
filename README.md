@@ -73,12 +73,14 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Create Issue](./plugins/create-issue/README.md)                           | `/create-issue`                           | Create GitHub issues using tmpfiles to avoid permission prompts from large multiline Bash arguments.                                                       |
 | [Create Worktree](./plugins/create-worktree/README.md)                     | `/create-worktree <issue-or-description>` | Create a git worktree, branch, and tmux window from an issue number or a task description, with a prompt injected using workmux.                           |
 | [Suggest Next Issue](./plugins/suggest-next-issue/README.md)               | `/suggest-next-issue`                     | Review open GitHub issues and recommend what to work on next with prioritized reasoning.                                                                   |
+| [WTAF](./plugins/wtaf/README.md)                                           | `/wtaf`                                   | Summarize where the conversation, branch, and tasks stand and what comes next, with a thorough mode that also reads the history.                           |
 
 **External tools:**
 
 - _Address Issue, Create Deferred Issues, Create Issue, Suggest Next Issue:_ [`gh`](https://cli.github.com/)
 - _Address Issue in Worktree:_ [`gh`](https://cli.github.com/), [`workmux`](https://github.com/raine/workmux), [`jq`](https://jqlang.org/)
 - _Create Worktree:_ [`workmux`](https://github.com/raine/workmux), plus [`gh`](https://cli.github.com/) when given an issue number and [`jq`](https://jqlang.org/) for an issue number or a resource claim
+- _WTAF:_ optional [`gh`](https://cli.github.com/) for pull request, issue, and CI state; without it, the summary uses the conversation and local git alone
 
 ### Code Review
 

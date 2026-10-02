@@ -1,8 +1,8 @@
 ---
 name: bootstrap-project
 description: >-
-  Plan and run the scaffolding and setup skills a repository needs, in order.
-  Use for "bootstrap this project" or "set up everything"; not to refresh.
+  Plan and run the setup skills a repository needs, in order. Use for
+  "bootstrap this project" or "set up everything"; not to refresh.
 ---
 
 # Bootstrap Project

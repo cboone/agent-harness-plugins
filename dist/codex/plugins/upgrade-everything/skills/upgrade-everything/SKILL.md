@@ -1,8 +1,8 @@
 ---
 name: upgrade-everything
 description: >-
-  Audit every version reference for upgrades, weigh their risk, and apply only
-  the selected ones. Use for "upgrade everything" or "what can I upgrade".
+  Audit version references for upgrades, weigh risk, and apply the selected
+  ones. Use for "upgrade everything" or "what can I upgrade".
 ---
 
 # Upgrade Everything
