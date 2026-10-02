@@ -225,6 +225,15 @@ function main() {
     missing-argument-hint)
       perl -ni -e 'print unless /^argument-hint:/' "${FIXTURE_ROOT}/${RELEASE_SKILL}"
       ;;
+    # A block scalar parses, but rule 21 reads only the documented quoted form.
+    block-scalar-argument-hint)
+      perl -pi -e 's/^argument-hint: .*$/argument-hint: >-\n  [--dry-run]/' "${FIXTURE_ROOT}/${RELEASE_SKILL}"
+      ;;
+    # create-issue takes no options, so a heading inside an example fence must
+    # not demand a hint of it.
+    fenced-options-heading)
+      printf '%s\n' '' '```markdown' '## Options' '```' >> "${FIXTURE_ROOT}/plugins/create-issue/skills/create-issue/SKILL.md"
+      ;;
     # The translation itself: the generated copy loses the line and gains the
     # policy Codex reads, and validation passes.
     translated-frontmatter)
