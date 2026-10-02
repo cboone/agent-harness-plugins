@@ -2,7 +2,7 @@
 
 ## Context
 
-#533: the scrut job took 9m17s on `ubuntu-latest` against a 10-minute timeout, and #465 raised the timeout to 20 to unblock CI. The issue asks to measure first, then choose a budget the suite sits comfortably inside. #527: `validate-plugin-fixture` cases in `tests/scrut/repo-tooling.md` fail with `timeout in execution` and no output under load. One PR closes both.
+Issue #533: the scrut job took 9m17s on `ubuntu-latest` against a 10-minute timeout, and #465 raised the timeout to 20 to unblock CI. The issue asks to measure first, then choose a budget the suite sits comfortably inside. Issue #527: `validate-plugin-fixture` cases in `tests/scrut/repo-tooling.md` fail with `timeout in execution` and no output under load. One PR closes both.
 
 ### Measurements (2026-10-01, this Mac, documents run one at a time)
 
