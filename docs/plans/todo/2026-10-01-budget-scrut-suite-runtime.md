@@ -80,3 +80,18 @@ PR body: `Closes #533` and `Closes #527`, with before and after timings.
 ## Open risk
 
 The size of the speedup is unknown until the profile-and-fix loop runs. If the validator changes alone do not bring `validate-plugins.md` comfortably under the local 15-minute document budget, step 4 still isolates it. The fallback is to shard that document's cases across two files, which does not touch the assertions.
+
+## Outcome (local, same Mac)
+
+| Measure                                       | Before             | After            |
+| --------------------------------------------- | ------------------ | ---------------- |
+| `bin/check-cross-references`                  | 11s                | 4.5s             |
+| `bin/validate-plugins`                        | 24s                | about 12s        |
+| One `validate-plugin-fixture` run             | 28s                | about 16s        |
+| `repo-tooling.md` (51 cases before the split) | over 900s, aborted | 5s (25 cases)    |
+| `validate-plugins.md` (26 cases)              | not separate       | 445s             |
+| `make test-all`                               | could not pass     | 567s, 638 of 638 |
+
+Every validator output captured before the change, on the real repository and on seven fixture scenarios, is byte-identical after it. Eleven mutated catalogs and manifests produce identical errors from the old and new `bin/validate-plugins`, with one intended exception: a marketplace `source` that is not a string now prints as compact JSON on one line, where the old output spread it over several and broke the `::error::` annotation. `bin/check-cross-references` is also identical under macOS Bash 3.2 when given explicit files.
+
+Found along the way and left out of scope: with no arguments, `bin/check-cross-references` exits on `main "${@}"` under Bash 3.2 (`@: unbound variable`). This predates the branch, and `bin/validate-plugins` reaches it through a Bash 5 `env bash` on this machine.
