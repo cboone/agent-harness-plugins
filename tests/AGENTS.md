@@ -9,6 +9,6 @@
 
 ## Runtime budget
 
-- The CI scrut job stops at 10 minutes, and the suite should finish within half of that on `ubuntu-latest`. When it outgrows the half, cut runtime or shard the job across test directories. Do not raise the ceiling.
+- CI runs each document under `tests/scrut/` as its own job, listed from the tree, so the suite takes as long as its slowest document. Each job stops at 10 minutes, and every document should finish within half of that on `ubuntu-latest`. When one outgrows the half, cut its runtime or split it into two documents, as `validate-plugins-catalog.md` and `validate-plugins-skills.md` are. Do not raise the ceiling.
 - Time one document with `make test-scrut SCRUT_TEST_DIR=tests/scrut/NAME.md`. A case that needs a repository or a fixture tree pays for every process it starts, so prefer one prepared fixture per document to one per case, and keep tooling the suite runs repeatedly, such as `bin/validate-plugins`, free of per-item process starts.
 - scrut runs documents one after another and gives each a 15-minute total timeout. `timeout in execution` with no stdout or stderr means a document ran out of that budget, not that an assertion failed; the named case is only where execution happened to be, and the rest of the document is skipped. Split or speed up the document.

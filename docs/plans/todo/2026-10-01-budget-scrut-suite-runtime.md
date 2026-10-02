@@ -94,4 +94,12 @@ The size of the speedup is unknown until the profile-and-fix loop runs. If the v
 
 Every validator output captured before the change, on the real repository and on seven fixture scenarios, is byte-identical after it. Eleven mutated catalogs and manifests produce identical errors from the old and new `bin/validate-plugins`, with one intended exception: a marketplace `source` that is not a string now prints as compact JSON on one line, where the old output spread it over several and broke the `::error::` annotation. `bin/check-cross-references` is also identical under macOS Bash 3.2 when given explicit files.
 
+## Sharding (added after the first CI run)
+
+On `ubuntu-latest` the single scrut job then took 6m24s for 641 cases, against 9m17s for 582 before. That is 64 percent of the 10-minute ceiling, over the half this plan set as the budget, and the validator document was about three-quarters of it. With the remaining per-run costs smaller and harder to remove, sharding was chosen:
+
+- CI lists the documents under `tests/scrut/` in a small job and runs the reusable workflow as a matrix over them, one job per document. The list comes from the tree, so no shard list can drift from the suite, and the budget now applies per document: each finishes within half the ceiling.
+- The validator document is split into `validate-plugins-catalog.md` (manifests, catalog version state and the Codex inventory budget) and `validate-plugins-skills.md` (generated Codex skills, frontmatter, cross-references and review checklists), so no single job carries it all.
+- Everything stays under `tests/scrut/`, so the review-checklist mapping for `tests/scrut/**` and `make test-scrut` are unchanged.
+
 Found along the way and left out of scope: with no arguments, `bin/check-cross-references` exits on `main "${@}"` under Bash 3.2 (`@: unbound variable`). This predates the branch, and `bin/validate-plugins` reaches it through a Bash 5 `env bash` on this machine.
