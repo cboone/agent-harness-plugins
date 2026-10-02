@@ -17,89 +17,99 @@ Issue #533: the scrut job took 9m17s on `ubuntu-latest` against a 10-minute time
 Findings:
 
 - **The time is concentrated, not spread.** Twelve documents take 155s together. `repo-tooling.md` alone exceeds 15 minutes. Its 25 `validate-plugin-fixture` cases each run a full `bin/build-codex-marketplace` plus `bin/validate-plugins` over a repository copy.
-- **#527's root cause is the per-document timeout, not a per-case one.** scrut 0.4.3 sets no per-case timeout by default. Each document gets a 15-minute `total_timeout`, and documents run sequentially. `timeout in execution` names whichever case was running when the document's budget ran out. That is why the failing case moved between runs (lines 199 and 242). On this machine the document now exceeds the budget even with nothing else running.
-- **`bin/validate-plugins` takes 28s (11s user, 22s system).** The high system time means the cost is process spawning, not computation. A timestamped xtrace attributes about half of it to rule 19, `bin/check-cross-references` (14s on its own). The hottest line there is `contains_line`, which runs `printf | grep -Fxq` about 2,000 times. The next costliest rules are 17, 16, 7 and 4, at 2–3s each, and rules 4 and 7 spawn one `jq` per field per plugin.
+- **#527's root cause is the per-document timeout, not a per-case one.** scrut 0.4.3 sets no per-case timeout by default. Each document gets a 15-minute `total_timeout`, and documents run sequentially. `timeout in execution` names whichever case was running when the document's budget ran out. That is why the failing case moved between runs (lines 199 and 242). On this machine the document exceeds the budget even with nothing else running.
+- **`bin/validate-plugins` spends its time starting processes.** A first timing gave 28s, 11s of it user time and 22s system time. A timestamped xtrace attributes about half of it to rule 19, `bin/check-cross-references`, 14s in that run. The hottest line there is `contains_line`, which runs `printf | grep -Fxq` about 2,000 times. The next costliest rules are 17, 16, 7 and 4, at 2 to 3s each, and rules 4 and 7 start one `jq` per field per plugin. Timings vary from run to run on this machine, so the Outcome table compares paired runs taken minutes apart instead.
 - The copy step is small (674 files) and `build-codex-marketplace` takes 2.5s. Trimming the fixture copy would save little, and it would break the `aggregate-overflow` and `path-overhead` scenarios, which are tuned to the full catalog's token count.
 
 ## Approach
 
-Fix the cost where it lives: in the validator that every fixture case runs. Also split the slow document, so a timeout names a narrow suite and each part has its own budget. Then restore a 10-minute CI ceiling, written down as the budget.
+Fix the cost where it lives, in the validator that every fixture case runs. Split the slow document, and run each scrut document as its own CI job, so the suite takes as long as its slowest document. Restore the 10-minute CI ceiling, written down as a budget: every document's job finishes within half of it.
 
-### 1. Rename the plan file
+### 1. Speed up `bin/check-cross-references`
 
-Move this file to `docs/plans/todo/2026-10-01-budget-scrut-suite-runtime.md` to follow the dated naming convention, then commit it.
+- `contains_line` matches in the shell instead of starting a `grep`.
+- Each extraction pipeline in `collect_candidates`, and the composition and near-miss extractions, runs only when the body contains a substring that every match of its pattern must contain. A guard can only skip an extraction that would have found nothing.
+- Each file's scannable body is computed once and passed to every check that reads it.
+- A full pass selects candidate files and files with declaration comments in two `grep -l` runs over every file instead of two per file. A `grep` status above 1 stops the run, so a failure cannot empty the list and report success having checked nothing. The explicit-file path keeps its per-file checks.
 
-### 2. Speed up `bin/check-cross-references`
+### 2. Speed up `bin/validate-plugins`
 
-- Replace `contains_line` with a Bash-builtin newline-delimited membership test, which spawns no processes.
-- Re-profile with `PS4='+${EPOCHREALTIME} ${LINENO} '` and remove the next hotspots the same way. Candidates are the repeated `printf "${body}" | grep | sed | sort` pipelines in `collect_candidates`, and the `scannable_lines` reruns across `check_compositions`, `check_near_misses` and `check_declarations` for the same file, which could compute once per file. Output must stay byte-identical.
-- Follow the `write-bash-scripts` skill.
+- Required-field checks (rules 4, 7 and 12) use one `jq` run per manifest or catalog instead of one per field. A manifest with no JSON value reads as null, so every field is still reported.
+- Rules 6, 6b, 8 and 15 read the catalog once instead of twice per entry, joining fields with the unit separator.
+- Rule 17's byte and character counts use Bash builtins under a function-local `LC_ALL=C` instead of three processes each.
 
-### 3. Speed up `bin/validate-plugins`
+### 3. Split the validator scrut cases
 
-- Rules 4, 7 and 12 call `jq` once per required field. Collapse each into one `jq` call per manifest or entry that reports the missing fields, keeping the existing `::error::` text.
-- Re-profile, and treat any rule still above about 1s the same way where the change is mechanical. Error messages and ordering stay identical, because the scrut snapshots assert on them.
+The validator cases leave `tests/scrut/repo-tooling.md` for `tests/scrut/validate-plugins-catalog.md` (manifests, catalog version state and the Codex inventory budget) and `tests/scrut/validate-plugins-skills.md` (generated Codex skills, frontmatter, cross-references and review checklists). Release automation, version comparison, the shell script list and the byte-identical script checks stay in `repo-tooling.md`. No environment variable changes, so `Makefile` `SCRUT_ENV` and the `ci.yml` `scrut-env` block stay as they are.
 
-### 4. Split `tests/scrut/repo-tooling.md`
+### 4. Run each scrut document as its own CI job
 
-Move the validator sections (lines 5–302: version state, Codex inventory budget, generated Codex skills, the frontmatter allowlist, cross-reference warnings and stale review checklists) into a new `tests/scrut/validate-plugins.md`. Release automation, version comparison, the shell script list and the byte-identical script checks stay in `repo-tooling.md`. No environment variables change, so `Makefile` `SCRUT_ENV` and `ci.yml` `scrut-env` stay as they are. Follow the `write-scrut-tests` skill.
+A small job lists the documents under `tests/scrut/`, matching the files `scrut test` would read, and the reusable workflow runs as a matrix over them with `fail-fast: false`. The list comes from the tree, so a new document joins without registration and no shard list can drift from the suite. Everything stays under `tests/scrut/`, so `make test-scrut` and the review-checklist mapping for `tests/scrut/**` are unchanged.
 
-### 5. Set the budget in CI and document it
+### 5. Set the budget and document it
 
-- `.github/workflows/ci.yml`: set `timeout-minutes: 10`. Replace the comment with the budget: the suite should finish within about half the ceiling on `ubuntu-latest`. When it outgrows that, the fix is to cut runtime or shard the job, not to raise the ceiling. Sharding (a matrix over test directories) stays deferred while the single job fits.
-- `tests/AGENTS.md`: add the budget and how to measure it (time each document on its own). Add how to read `timeout in execution` with empty output: it is the document's 15-minute `total_timeout`, and the named case is only where execution happened to be. That covers #527's "name the resource problem" criterion, since scrut's own message cannot change. Keep this file within the instruction-size limits.
+- `.github/workflows/ci.yml`: `timeout-minutes: 10`, with the budget stated beside it.
+- `tests/AGENTS.md`: the budget, how to time one document, where the time usually goes, and how to read `timeout in execution` locally, where it is the document's 15-minute `total_timeout`. In CI the job timeout stops a slow document first. That covers #527's "name the resource problem" criterion, since scrut's own message cannot change.
 
-### 6. Commits
+### 6. Test coverage added for the changes
 
-Conventional Commits, signed with `-S`, each referencing both issues where relevant:
+- `tests/scrut/check-cross-references.md`: a full scan with findings in its first and last files, which fails if the scan stops early or reorders, and a full-scan `repository-paths` declaration, which fails if declaration comments stop being read.
+- `tests/fixtures/validate-plugin-fixture`: the `long-description` scenario uses a 200-character, 240-byte description, so a character count that regressed to bytes fails the case.
 
-- `docs: add plan for scrut runtime budget (#533, #527)`
-- `perf: stop check-cross-references forking per membership test (#527)`
-- `perf: batch manifest field checks in validate-plugins (#527)`
-- `test: split validator cases out of repo-tooling scrut suite (#533)`
-- `ci: hold the scrut job to a 10-minute budget (#533)`
-
-`bin/` and `tests/` are not plugins, so no version bumps are needed. Run the `check-versions` skill before the PR anyway.
-
-PR body: `Closes #533` and `Closes #527`, with before and after timings.
+`bin/` and `tests/` are not plugins, so no version bumps are needed.
 
 ## Critical files
 
 - `bin/check-cross-references`, `bin/validate-plugins`
-- `tests/scrut/repo-tooling.md` and the new `tests/scrut/validate-plugins.md`
+- `tests/scrut/repo-tooling.md`, `tests/scrut/validate-plugins-catalog.md`, `tests/scrut/validate-plugins-skills.md`, `tests/scrut/check-cross-references.md`, `tests/fixtures/validate-plugin-fixture`
 - `.github/workflows/ci.yml`, `tests/AGENTS.md`
 
 ## Verification
 
-1. Before and after, capture `bin/validate-plugins` and `bin/check-cross-references` stdout and stderr on the real repo and on several fixture scenarios (`valid`, `invalid-review-checklist`, `near-miss-invocation`, `aggregate-overflow`). Diff them: they must be byte-identical.
-2. Re-time `bin/validate-plugins`, one `validate-plugin-fixture invalid-review-checklist` run, and each scrut document. Record the numbers in the PR.
-3. `make test-scrut`: all documents pass with no per-document timeout. Observe the final result.
-4. `make lint` and `make validate`, then `make test-all`.
-5. After pushing, confirm the CI scrut job time on `ubuntu-latest` is under 5 minutes. If it is not, profile the next hotspot before opening the PR, rather than raising the timeout.
+1. Capture `bin/validate-plugins` and `bin/check-cross-references` output and exit status before and after, on the real repository and on several fixture scenarios (`valid`, `invalid-review-checklist`, `near-miss-invocation`, `aggregate-overflow`, `missing-openai-yaml`, `unknown-frontmatter-field`, `leading-zero`), and diff them.
+2. Run the merge-base and new `bin/validate-plugins` over mutated catalogs and manifests and diff their output.
+3. Plant the defects each new guard and test case claims to catch, and confirm a case fails.
+4. `make test-all`: every document passes with no per-document timeout.
+5. On `ubuntu-latest`, every per-document job finishes within 5 minutes.
 
-## Open risk
+## Outcome
 
-The size of the speedup is unknown until the profile-and-fix loop runs. If the validator changes alone do not bring `validate-plugins.md` comfortably under the local 15-minute document budget, step 4 still isolates it. The fallback is to shard that document's cases across two files, which does not touch the assertions.
+### Local, same Mac
 
-## Outcome (local, same Mac)
+| Measure                                   | Before             | After            |
+| ----------------------------------------- | ------------------ | ---------------- |
+| `bin/check-cross-references`              | 11s                | 4.5s             |
+| `bin/validate-plugins`                    | 24s                | about 12s        |
+| One `validate-plugin-fixture` run         | 28s                | about 16s        |
+| `repo-tooling.md`                         | over 900s, aborted | 5s (25 cases)    |
+| `validate-plugins-catalog.md` (13 cases)  | part of the above  | 209s             |
+| `validate-plugins-skills.md` (16 cases)   | part of the above  | 238s             |
+| `make test-all`, before the merge of main | could not pass     | 567s, 638 of 638 |
 
-| Measure                                       | Before             | After            |
-| --------------------------------------------- | ------------------ | ---------------- |
-| `bin/check-cross-references`                  | 11s                | 4.5s             |
-| `bin/validate-plugins`                        | 24s                | about 12s        |
-| One `validate-plugin-fixture` run             | 28s                | about 16s        |
-| `repo-tooling.md` (51 cases before the split) | over 900s, aborted | 5s (25 cases)    |
-| `validate-plugins.md` (26 cases)              | not separate       | 445s             |
-| `make test-all`                               | could not pass     | 567s, 638 of 638 |
+### CI on `ubuntu-latest`
 
-Every validator output captured before the change, on the real repository and on seven fixture scenarios, is byte-identical after it. Eleven mutated catalogs and manifests produce identical errors from the old and new `bin/validate-plugins`, with one intended exception: a marketplace `source` that is not a string now prints as compact JSON on one line, where the old output spread it over several and broke the `::error::` annotation. `bin/check-cross-references` is also identical under macOS Bash 3.2 when given explicit files.
+| Measure                                       | Time                                |
+| --------------------------------------------- | ----------------------------------- |
+| Single job before this work, 582 cases        | 9m17s                               |
+| Single job with the speedups alone, 641 cases | 6m24s                               |
+| Per-document jobs, wall clock, 641 cases      | 2m25s                               |
+| Slowest document                              | `validate-plugins-skills.md`, 2m16s |
 
-## Sharding (added after the first CI run)
+The case count rose from 638 to 641 when main, with three new argument-hint cases, was merged in. The single job with the speedups alone was 64 percent of the ceiling, over the half the budget allows, which is why the per-document jobs were added.
 
-On `ubuntu-latest` the single scrut job then took 6m24s for 641 cases, against 9m17s for 582 before. That is 64 percent of the 10-minute ceiling, over the half this plan set as the budget, and the validator document was about three-quarters of it. With the remaining per-run costs smaller and harder to remove, sharding was chosen:
+### Behavior preserved
 
-- CI lists the documents under `tests/scrut/` in a small job and runs the reusable workflow as a matrix over them, one job per document. The list comes from the tree, so no shard list can drift from the suite, and the budget now applies per document: each finishes within half the ceiling.
-- The validator document is split into `validate-plugins-catalog.md` (manifests, catalog version state and the Codex inventory budget) and `validate-plugins-skills.md` (generated Codex skills, frontmatter, cross-references and review checklists), so no single job carries it all.
-- Everything stays under `tests/scrut/`, so the review-checklist mapping for `tests/scrut/**` and `make test-scrut` are unchanged.
+For well-formed input, the validators' output and exit status are unchanged:
 
-Found along the way and left out of scope: with no arguments, `bin/check-cross-references` exits on `main "${@}"` under Bash 3.2 (`@: unbound variable`). This predates the branch, and `bin/validate-plugins` reaches it through a Bash 5 `env bash` on this machine.
+- Output captured before the change is byte-identical after it, on the real repository under Bash 5 and macOS Bash 3.2, and on the seven fixture scenarios above.
+- Twelve mutated catalogs and manifests produce identical errors from the merge-base and new `bin/validate-plugins`: missing, false, null and empty fields, empty and missing names, bad sources, versioned entries, a shorter or mismatched Codex catalog, and an empty manifest.
+
+Three differences remain, all on malformed input, and none changes whether the run passes:
+
+- A marketplace `source` that is not a string prints as compact JSON on one line. The old output spread it over several lines, which split the `::error::` annotation.
+- A required field holding only newlines counts as present. The old shell comparison stripped trailing newlines and reported it missing.
+- A newline inside a marketplace name or source splits that entry's line, so its errors are attributed differently and counted more than once. The old output spread such a value over several lines too.
+
+## Follow-up, not in this work
+
+With no arguments, `bin/check-cross-references` exits on `main "${@}"` under macOS Bash 3.2 (`@: unbound variable`). This predates the work, and `bin/validate-plugins` reaches it through a Bash 5 `env bash` on this machine.
