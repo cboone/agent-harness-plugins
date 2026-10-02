@@ -66,11 +66,44 @@ jobs:
             exit 1
           fi
 
+  # Each scrut document runs as its own job, so the suite takes as long as its
+  # slowest document, plus per-job setup, rather than the sum of all of them.
+  # The list is read from the tree, so a new document joins the matrix without
+  # anyone registering it. scrut test recurses into directories and reads
+  # Markdown (*.md, *.markdown, *.scrut) and Cram (*.t, *.cram) documents, and
+  # this search lists the same files under tests/scrut/. The step sets bash
+  # explicitly for pipefail, so a find that fails partway fails the job rather
+  # than shortening the matrix.
+  scrut-documents:
+    name: List scrut documents
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      documents: ${{ steps.list.outputs.documents }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: list
+        shell: bash
+        run: |
+          documents="$(find tests/scrut \( -type f -o -type l \) \( -name '*.md' -o -name '*.markdown' -o -name '*.scrut' -o -name '*.t' -o -name '*.cram' \) | sort | jq -Rcs 'split("\n") | map(select(length > 0))')"
+          if [[ "${documents}" == "[]" ]]; then
+            echo "::error::No scrut documents found under tests/scrut/"
+            exit 1
+          fi
+          echo "documents=${documents}" >> "${GITHUB_OUTPUT}"
+
   test-scrut:
     name: Scrut tests
+    needs: scrut-documents
+    strategy:
+      fail-fast: false
+      matrix:
+        document: ${{ fromJSON(needs.scrut-documents.outputs.documents) }}
     uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@3c9adb5a8b166444d3c0e3fe606d55f0dc7ac726 # v5.0.0
-    # Every value below must start with "./". scrut runs each testcase from a
-    # temporary directory, and the reusable workflow rewrites only values
+    # Every scrut-env path below must start with "./". scrut runs each testcase
+    # from a temporary directory, and the reusable workflow rewrites only values
     # matching ./* into absolute paths before exporting them. A bare "." is left
     # untouched, so REPO_ROOT=. pointed at that temp dir: binaries still ran, but
     # `cd "${REPO_ROOT}"` landed nowhere useful and the repository-wide grep
@@ -121,9 +154,9 @@ jobs:
       # copy: an image that drops it, or swaps in python-yq with jq's flags,
       # fails here with a clear message rather than as a scrut output diff.
       scrut-setup-cmd: "yq --version | grep -q mikefarah"
-      scrut-test-dir: "tests/scrut/"
-      # The reusable workflow defaults to 10 minutes, which the suite outgrew:
-      # main at 9e76eb82 took 9m17s, and the next branch to add a case was
-      # cancelled at 10m01s. Raising the ceiling buys room; it does not address
-      # why 600-odd cases take that long, which is tracked separately.
-      timeout-minutes: 20
+      scrut-test-dir: ${{ matrix.document }}
+      # The budget: every document's job finishes within half of this ceiling.
+      # When one outgrows that, cut its runtime or split it; do not raise the
+      # ceiling. tests/AGENTS.md says how to measure a document and where the
+      # time usually goes.
+      timeout-minutes: 10

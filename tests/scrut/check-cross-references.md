@@ -285,6 +285,30 @@ $ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" && mkdir -p plugins/demo/skills/demo/
 ::error::plugins/demo/skills/demo/references/tools/nested.md references plugins/other/gone.md but no such path exists in this repository
 ```
 
+The scan selects candidates with one `grep` over every file, so it must still
+reach each of them, and report in sorted order. Findings in the first and last
+files, with a file between them that has none, would fail if the scan stopped
+early or reordered.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" \
+>   && printf '%s\n' 'Read `plugins/other/missing.md` first.' > plugins/demo/skills/demo/SKILL.md \
+>   && printf '%s\n' 'See `./references/gone.md`.' > plugins/other/skills/other/SKILL.md \
+>   && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1 | grep '^::error::'
+::error::plugins/demo/skills/demo/SKILL.md references plugins/other/missing.md but no such path exists in this repository
+::error::plugins/other/skills/other/SKILL.md references ./references/gone.md but plugins/other/skills/other/references/gone.md does not exist
+```
+
+The scan reads declaration comments only from files that carry one, so a
+`repository-paths` declaration must still widen the checked prefixes there.
+
+```scrut
+$ cd "$("${CROSS_REFERENCE_FIXTURE_BIN}")" \
+>   && printf '%s\n' '<!-- validate-plugins: repository-paths -->' 'Run `bin/nonexistent-tool`.' > plugins/demo/skills/demo/SKILL.md \
+>   && "${CHECK_CROSS_REFERENCES_BIN}" 2>&1 | head -1
+::error::plugins/demo/skills/demo/SKILL.md references bin/nonexistent-tool but no such path exists in this repository
+```
+
 ## A findings run exits non-zero
 
 ```scrut
