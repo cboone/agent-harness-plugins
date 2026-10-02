@@ -42,7 +42,7 @@ The skill is read-only. It never edits, commits, pushes, stashes, or posts anyth
 | `--thorough` | Also read earlier sessions in this directory, the branch history against its plan, review threads and issue discussion, sibling worktrees, and health measured now |
 | scope (text) | An issue or PR number, a plan, a phase or step, "cross-repo", or another worktree to compare against                                                               |
 
-`/summary`, `/recap`, and `/where-are-we` are aliases that run `wtaf` with the same arguments. Only `wtaf` is selected automatically from natural phrasing; the aliases run when typed.
+`/summary`, `/recap`, and `/where-are-we` are aliases that run `wtaf` with the same arguments. In Claude Code and Codex CLI, only `wtaf` is selected automatically from natural phrasing and the aliases run when typed. OpenCode ignores `disable-model-invocation`, so there the aliases stay selectable from natural phrasing too; see [Using with OpenCode](../../README.md#using-with-opencode).
 
 ## Recommended Permissions
 
