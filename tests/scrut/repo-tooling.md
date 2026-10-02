@@ -1,7 +1,8 @@
 # Repository tooling
 
 Tests for the release automation and the repository-wide guards over bundled
-scripts. `bin/validate-plugins` has its own suite in `validate-plugins.md`.
+scripts. `bin/validate-plugins` has its own suites in `validate-plugins-catalog.md`
+and `validate-plugins-skills.md`.
 
 ## Release automation uses immutable tags and ignores documentation-only changes
 
