@@ -72,6 +72,8 @@ COMPOSITION_PATTERN='[Ii]nvoke the `/?[a-z][a-z0-9-]*` skill'
 NEAR_MISS_PATTERN='[Ii]nvoke `/?[a-z][a-z0-9-]*`'
 
 # Every declaration comment, ignore and repository-paths alike, matches this.
+# check_candidate_file reads ignores and repository paths only from a file that
+# matches it, so any new directive must start with this text too.
 DIRECTIVE_PATTERN='<!--[[:space:]]*validate-plugins:'
 
 readonly UNAMBIGUOUS_PREFIXES DECLARED_PREFIXES CANDIDATE_PREFILTER COMPOSITION_PATTERN NEAR_MISS_PATTERN DIRECTIVE_PATTERN
@@ -387,8 +389,8 @@ function lines_outside_dependency_section() {
   ' "${1}"
 }
 
-# Reads a file's scannable lines. Both composition patterns contain "nvoke ", so
-# a body without it is skipped before any process starts.
+# Takes a file's scannable lines as text. Both composition patterns contain
+# "nvoke ", so a body without it returns before any process starts.
 function composition_references() {
   [[ "${1}" == *'nvoke '* ]] || return 0
 
@@ -520,6 +522,21 @@ function check_declarations() {
   done < <(printf '%s' "${required}${optional}" | sort -u)
 }
 
+# Lists the files that match the pattern. One grep covers every file in a full
+# pass, so its failure would otherwise empty the list and the run would report
+# success having checked nothing. Status 1 only means no file matched; anything
+# higher, such as an unreadable file or a broken pattern, stops the run.
+function files_matching() {
+  local pattern="${1}" status=0
+  shift
+
+  grep -lE "${pattern}" "$@" || status=$?
+  if [[ ${status} -gt 1 ]]; then
+    echo "check-cross-references: grep failed with status ${status} while listing files to check" >&2
+    exit 2
+  fi
+}
+
 function check_file() {
   local file="${1}" has_directives=false
 
@@ -592,31 +609,32 @@ function main() {
     exit 2
   fi
 
-  local file candidate_files directive_files has_directives
+  local file skill_files candidate_files="" directive_files="" has_directives
   local -a files=() candidates=()
   if [[ ${#} -gt 0 ]]; then
     for file in "${@}"; do
       check_file "${file}"
     done
   else
+    # Captured rather than read from a process substitution, so a failing find
+    # stops the run instead of leaving nothing to check.
+    skill_files="$(skill_markdown_files)"
     while IFS= read -r file; do
-      files+=("${file}")
-    done < <(skill_markdown_files)
+      [[ -n "${file}" ]] && files+=("${file}")
+    done <<< "${skill_files}"
 
-    # grep -l lists matching files in argument order, so the files are still
-    # checked, and their findings reported, in sorted order.
+    # grep -l lists matching files in argument order, so the files are checked,
+    # and their findings reported, in the sorted order skill_markdown_files
+    # gives.
     if [[ ${#files[@]} -gt 0 ]]; then
-      candidate_files="$(grep -lE "${CANDIDATE_PREFILTER}" "${files[@]}" || true)"
-    else
-      candidate_files=""
+      candidate_files="$(files_matching "${CANDIDATE_PREFILTER}" "${files[@]}")"
     fi
     while IFS= read -r file; do
       [[ -n "${file}" ]] && candidates+=("${file}")
     done <<< "${candidate_files}"
 
-    directive_files=""
     if [[ ${#candidates[@]} -gt 0 ]]; then
-      directive_files="$(grep -lE "${DIRECTIVE_PATTERN}" "${candidates[@]}" || true)"
+      directive_files="$(files_matching "${DIRECTIVE_PATTERN}" "${candidates[@]}")"
     fi
 
     for file in ${candidates[@]+"${candidates[@]}"}; do
