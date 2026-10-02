@@ -22,6 +22,21 @@ function is_semver() {
   [[ "${1}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
 }
 
+# Prints each named field the JSON on stdin lacks, in the order given. A field
+# counts as missing when it is absent, null, false or the empty string, which is
+# what `jq -r '.FIELD // empty'` printing nothing means. One jq run per manifest
+# rather than one per field keeps the validator from spending its time starting
+# processes, which matters because the scrut suite runs it dozens of times.
+function missing_fields() {
+  # shellcheck disable=SC2016
+  jq -r --args '$ARGS.positional[] as $field | select((.[$field] // "") == "") | $field' "$@"
+}
+
+# Marketplace entry fields are joined with the unit separator rather than a tab,
+# because read collapses consecutive tabs and would shift an empty field.
+UNIT_SEPARATOR=$'\x1f'
+readonly UNIT_SEPARATOR
+
 # ─── 1. Every plugin directory has plugin.json ───────────────────────────────
 
 for dir in plugins/*/; do
@@ -67,12 +82,11 @@ for dir in plugins/*/; do
     continue
   fi
 
-  for field in "${PLUGIN_REQUIRED_FIELDS[@]}"; do
-    value="$(jq -r ".${field} // empty" "${local_json}")"
-    if [[ -z "${value}" ]]; then
-      error "Plugin '${local_name}': plugin.json missing required field '${field}'"
-    fi
-  done
+  missing="$(missing_fields "${PLUGIN_REQUIRED_FIELDS[@]}" < "${local_json}")"
+  while IFS= read -r field; do
+    [[ -n "${field}" ]] || continue
+    error "Plugin '${local_name}': plugin.json missing required field '${field}'"
+  done <<< "${missing}"
 done
 
 # ─── 4b. Plugin manifest versions are strict SemVer ─────────────────────────
@@ -100,39 +114,56 @@ done
 
 # ─── 6. Every marketplace entry points to an existing directory ──────────────
 
+# Each line below starts with the unit separator, so a line is never empty even
+# when every field is. A string field prints raw and anything else as compact
+# JSON, so a missing name reads "null" and an object source stays on the one
+# line an ::error:: annotation can hold.
+readonly JQ_RAW='def raw: if type == "string" then . else tojson end;'
+
 marketplace_count="$(jq '.plugins | length' "${MARKETPLACE}")"
-for ((i = 0; i < marketplace_count; i++)); do
-  entry_name="$(jq -r ".plugins[${i}].name" "${MARKETPLACE}")"
-  entry_source="$(jq -r ".plugins[${i}].source" "${MARKETPLACE}")"
+
+# One "<US>name<US>source" line per entry, read once for rules 6 and 6b.
+marketplace_sources="$(jq -r --arg sep "${UNIT_SEPARATOR}" "${JQ_RAW}"' .plugins[] | "\($sep)\(.name | raw)\($sep)\(.source | raw)"' "${MARKETPLACE}")"
+
+while IFS= read -r line; do
+  [[ -n "${line}" ]] || continue
+  line="${line#"${UNIT_SEPARATOR}"}"
+  entry_name="${line%%"${UNIT_SEPARATOR}"*}"
+  entry_source="${line#*"${UNIT_SEPARATOR}"}"
   if [[ ! -d "${entry_source}" ]]; then
     error "Marketplace entry '${entry_name}': source '${entry_source}' does not exist"
   fi
-done
+done <<< "${marketplace_sources}"
 
 # ─── 6b. Source paths start with ./ ──────────────────────────────────────────
 
-for ((i = 0; i < marketplace_count; i++)); do
-  entry_name="$(jq -r ".plugins[${i}].name" "${MARKETPLACE}")"
-  entry_source="$(jq -r ".plugins[${i}].source" "${MARKETPLACE}")"
+while IFS= read -r line; do
+  [[ -n "${line}" ]] || continue
+  line="${line#"${UNIT_SEPARATOR}"}"
+  entry_name="${line%%"${UNIT_SEPARATOR}"*}"
+  entry_source="${line#*"${UNIT_SEPARATOR}"}"
   if [[ "${entry_source}" != ./* ]]; then
     error "Marketplace entry '${entry_name}': source '${entry_source}' must start with ./"
   fi
-done
+done <<< "${marketplace_sources}"
 
 # ─── 7. Required fields in marketplace entries ───────────────────────────────
 
 MARKETPLACE_REQUIRED_FIELDS=("author" "category" "description" "homepage" "keywords" "license" "name" "repository" "source")
 readonly MARKETPLACE_REQUIRED_FIELDS
 
-for ((i = 0; i < marketplace_count; i++)); do
-  entry_name="$(jq -r ".plugins[${i}].name" "${MARKETPLACE}")"
-  for field in "${MARKETPLACE_REQUIRED_FIELDS[@]}"; do
-    value="$(jq -r ".plugins[${i}].${field} // empty" "${MARKETPLACE}")"
-    if [[ -z "${value}" ]]; then
-      error "Marketplace entry '${entry_name}': missing required field '${field}'"
-    fi
-  done
-done
+# One "<US>name<US>field" line per missing field, in entry then field order.
+# shellcheck disable=SC2016
+missing="$(jq -r --arg sep "${UNIT_SEPARATOR}" "${JQ_RAW}"' .plugins[] as $entry
+  | $ARGS.positional[] as $field
+  | select(($entry[$field] // "") == "")
+  | "\($sep)\($entry.name | raw)\($sep)\($field)"' --args "${MARKETPLACE_REQUIRED_FIELDS[@]}" < "${MARKETPLACE}")"
+
+while IFS= read -r line; do
+  [[ -n "${line}" ]] || continue
+  line="${line#"${UNIT_SEPARATOR}"}"
+  error "Marketplace entry '${line%%"${UNIT_SEPARATOR}"*}': missing required field '${line#*"${UNIT_SEPARATOR}"}'"
+done <<< "${missing}"
 
 # ─── 8. Marketplace holds no duplicate version state ────────────────────────
 
@@ -140,12 +171,12 @@ if jq -e '.metadata | has("version")' "${MARKETPLACE}" > /dev/null; then
   error "Marketplace metadata must not contain a version"
 fi
 
-for ((i = 0; i < marketplace_count; i++)); do
-  entry_name="$(jq -r ".plugins[${i}].name" "${MARKETPLACE}")"
-  if jq -e ".plugins[${i}] | has(\"version\")" "${MARKETPLACE}" > /dev/null; then
-    error "Marketplace entry '${entry_name}' must not contain a version"
-  fi
-done
+versioned_entries="$(jq -r --arg sep "${UNIT_SEPARATOR}" "${JQ_RAW}"' .plugins[] | select(has("version")) | "\($sep)\(.name | raw)"' "${MARKETPLACE}")"
+
+while IFS= read -r line; do
+  [[ -n "${line}" ]] || continue
+  error "Marketplace entry '${line#"${UNIT_SEPARATOR}"}' must not contain a version"
+done <<< "${versioned_entries}"
 
 # ─── 9. Marketplace plugins array is in alphabetical order ──────────────────
 
@@ -180,12 +211,11 @@ for dir in plugins/*/; do
     continue
   fi
 
-  for field in "${PLUGIN_REQUIRED_FIELDS[@]}"; do
-    value="$(jq -r ".${field} // empty" "${codex_json}")"
-    if [[ -z "${value}" ]]; then
-      error "Plugin '${local_name}': .codex-plugin/plugin.json missing required field '${field}'"
-    fi
-  done
+  missing="$(missing_fields "${PLUGIN_REQUIRED_FIELDS[@]}" < "${codex_json}")"
+  while IFS= read -r field; do
+    [[ -n "${field}" ]] || continue
+    error "Plugin '${local_name}': .codex-plugin/plugin.json missing required field '${field}'"
+  done <<< "${missing}"
 done
 
 # ─── 13. Dual manifests agree on shared fields ──────────────────────────────
@@ -253,14 +283,22 @@ else
     error "Codex marketplace metadata differs from ${MARKETPLACE}"
   fi
 
-  for ((i = 0; i < marketplace_count; i++)); do
-    entry_name="$(jq -r ".plugins[${i}].name" "${CODEX_MARKETPLACE}")"
-    entry_source="$(jq -r ".plugins[${i}].source" "${CODEX_MARKETPLACE}")"
+  # One line per Claude marketplace entry, so a shorter Codex catalog shows its
+  # missing entries as null rather than escaping the check.
+  codex_sources="$(jq -r --arg sep "${UNIT_SEPARATOR}" --argjson count "${marketplace_count}" "${JQ_RAW}"' range(0; $count) as $i
+    | .plugins[$i]
+    | "\($sep)\(.name | raw)\($sep)\(.source | raw)"' "${CODEX_MARKETPLACE}")"
+
+  while IFS= read -r line; do
+    [[ -n "${line}" ]] || continue
+    line="${line#"${UNIT_SEPARATOR}"}"
+    entry_name="${line%%"${UNIT_SEPARATOR}"*}"
+    entry_source="${line#*"${UNIT_SEPARATOR}"}"
     expected_source="./${CODEX_DIST_DIR}/plugins/${entry_name}"
     if [[ "${entry_source}" != "${expected_source}" ]]; then
       error "Codex marketplace entry '${entry_name}': source '${entry_source}' must be '${expected_source}'"
     fi
-  done
+  done <<< "${codex_sources}"
 fi
 
 # ─── 16. Generated Codex plugin roots are current ───────────────────────────
@@ -582,14 +620,22 @@ function frontmatter_description() {
   ' "${file}"
 }
 
+# Both counters store their result in the variable named by the second argument
+# rather than printing it, because this rule counts several strings per skill
+# and a command substitution would start a subshell for each. Under the C locale
+# Bash measures and matches bytes, and the local assignment restores the
+# caller's locale on return.
 function byte_count() {
-  printf '%s' "${1}" | LC_ALL=C wc -c | tr -d ' '
+  local LC_ALL=C
+  printf -v "${2}" '%s' "${#1}"
 }
 
 # UTF-8 continuation bytes are 0x80 through 0xBF; every other byte starts a
 # character. Counting that way gives the same answer under any locale.
 function character_count() {
-  printf '%s' "${1}" | LC_ALL=C tr -d '\200-\277' | wc -c | tr -d ' '
+  local LC_ALL=C
+  local starts="${1//[$'\x80'-$'\xbf']/}"
+  printf -v "${2}" '%s' "${#starts}"
 }
 
 function check_skill_fields() {
@@ -598,7 +644,7 @@ function check_skill_fields() {
 
   name="$(frontmatter_name "${skill_md}")"
   description="$(frontmatter_description "${skill_md}")"
-  description_length="$(character_count "${description}")"
+  character_count "${description}" description_length
 
   if [[ -z "${name}" ]]; then
     error "Skill '${skill_md}' has an empty name"
@@ -632,6 +678,9 @@ inventory_bytes=0
 inventory_characters=0
 inventory_description_bytes=0
 inventory_entries=""
+line_bytes=0
+line_characters=0
+description_bytes=0
 
 for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
   [[ -f "${skill_md}" ]] || continue
@@ -649,7 +698,7 @@ for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
   skill_dir="$(basename "$(dirname "${skill_md}")")"
   skill_name="$(frontmatter_name "${skill_md}")"
   description="$(frontmatter_description "${skill_md}")"
-  description_length="$(character_count "${description}")"
+  character_count "${description}" description_length
 
   plugin_manifest="${CODEX_DIST_DIR}/plugins/${skill_plugin}/.codex-plugin/plugin.json"
   [[ -f "${plugin_manifest}" ]] || plugin_manifest="${CODEX_DIST_DIR}/plugins/${skill_plugin}/.claude-plugin/plugin.json"
@@ -662,14 +711,17 @@ for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
   fi
 
   line="- ${skill_plugin}:${skill_name}: ${description} (file: ${CODEX_INVENTORY_HOME}/.codex/plugins/cache/${marketplace_name}/${skill_plugin}/${plugin_version}/skills/${skill_dir}/SKILL.md)"
-  line_bytes=$(($(byte_count "${line}") + 1))
+  byte_count "${line}" line_bytes
+  line_bytes=$((line_bytes + 1))
   line_tokens=$(((line_bytes + CODEX_BYTES_PER_TOKEN - 1) / CODEX_BYTES_PER_TOKEN))
+  character_count "${line}" line_characters
+  byte_count "${description}" description_bytes
 
   inventory_count=$((inventory_count + 1))
   inventory_tokens=$((inventory_tokens + line_tokens))
   inventory_bytes=$((inventory_bytes + line_bytes))
-  inventory_characters=$((inventory_characters + $(character_count "${line}") + 1))
-  inventory_description_bytes=$((inventory_description_bytes + $(byte_count "${description}")))
+  inventory_characters=$((inventory_characters + line_characters + 1))
+  inventory_description_bytes=$((inventory_description_bytes + description_bytes))
   inventory_entries+="${line_tokens}"$'\t'"${skill_plugin}:${skill_name}"$'\n'
 done
 
