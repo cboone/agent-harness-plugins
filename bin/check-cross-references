@@ -147,8 +147,10 @@ function is_placeholder() {
   return 1
 }
 
+# Whether the newline-separated list holds the line exactly. It runs thousands
+# of times per pass, so it matches in the shell rather than starting a grep.
 function contains_line() {
-  printf '%s\n' "${1}" | grep -Fxq -- "${2}"
+  [[ $'\n'"${1}"$'\n' == *$'\n'"${2}"$'\n'* ]]
 }
 
 # Emits one "kind<TAB>reference<TAB>resolved path" record per distinct candidate
@@ -169,60 +171,83 @@ function contains_line() {
 # directory under plugins/. A bare backticked name is not checked, because
 # nothing distinguishes `set-up-ci` from `lean-toolchain` without reading the
 # sentence around it.
+#
+# Each extraction costs several processes, and most files hold nothing for most
+# of them, so each runs only when the body contains a string every one of its
+# matches must contain. A guard can only skip an extraction that would have
+# found nothing, so it never changes the records; keep each guard in step with
+# its pattern.
 function collect_candidates() {
-  local file="${1}" plugin="${2}" skill_dir="${3}" prefixes="${4}"
-  local body rest candidate name
+  local body="${1}" plugin="${2}" skill_dir="${3}" prefixes="${4}"
+  local rest candidate name prefix has_prefix=false
+  local -a prefix_list
 
-  body="$(scannable_lines "${file}")"
+  IFS='|' read -r -a prefix_list <<< "${prefixes}"
+  for prefix in "${prefix_list[@]}"; do
+    if [[ "${body}" == *"${prefix}/"* ]]; then
+      has_prefix=true
+      break
+    fi
+  done
 
   # The ${CLAUDE_PLUGIN_ROOT} and the backticks in the extractions below are
   # literal text this script matches, not an expansion or a substitution.
   # shellcheck disable=SC2016
   {
-    while IFS= read -r rest; do
-      [[ -n "${rest}" ]] || continue
-      [[ "${rest}" == scripts/* ]] && continue
-      is_placeholder "${rest}" && continue
-      printf 'plugin-root\t${CLAUDE_PLUGIN_ROOT}/%s\tplugins/%s/%s\n' "${rest}" "${plugin}" "${rest}"
-    done < <(printf '%s\n' "${body}" \
-      | grep -oE '\$\{CLAUDE_PLUGIN_ROOT\}/[A-Za-z0-9._${}/*<>-]+' \
-      | sed -e 's|^\${CLAUDE_PLUGIN_ROOT}/||' -e 's|/*$||' \
-      | sort -u)
+    if [[ "${body}" == *'${CLAUDE_PLUGIN_ROOT}/'* ]]; then
+      while IFS= read -r rest; do
+        [[ -n "${rest}" ]] || continue
+        [[ "${rest}" == scripts/* ]] && continue
+        is_placeholder "${rest}" && continue
+        printf 'plugin-root\t${CLAUDE_PLUGIN_ROOT}/%s\tplugins/%s/%s\n' "${rest}" "${plugin}" "${rest}"
+      done < <(printf '%s\n' "${body}" \
+        | grep -oE '\$\{CLAUDE_PLUGIN_ROOT\}/[A-Za-z0-9._${}/*<>-]+' \
+        | sed -e 's|^\${CLAUDE_PLUGIN_ROOT}/||' -e 's|/*$||' \
+        | sort -u)
+    fi
 
-    while IFS= read -r rest; do
-      [[ -n "${rest}" ]] || continue
-      is_placeholder "${rest}" && continue
-      printf 'references\t./references/%s\t%s/references/%s\n' "${rest}" "${skill_dir}" "${rest}"
-    done < <(printf '%s\n' "${body}" \
-      | grep -oE '(^|[^A-Za-z0-9._/-])\./references/[A-Za-z0-9._*<>-]+(/[A-Za-z0-9._*<>-]+)*' \
-      | sed -E -e 's|^.*\./references/||' -e 's|/*$||' \
-      | sort -u)
+    if [[ "${body}" == *'./references/'* ]]; then
+      while IFS= read -r rest; do
+        [[ -n "${rest}" ]] || continue
+        is_placeholder "${rest}" && continue
+        printf 'references\t./references/%s\t%s/references/%s\n' "${rest}" "${skill_dir}" "${rest}"
+      done < <(printf '%s\n' "${body}" \
+        | grep -oE '(^|[^A-Za-z0-9._/-])\./references/[A-Za-z0-9._*<>-]+(/[A-Za-z0-9._*<>-]+)*' \
+        | sed -E -e 's|^.*\./references/||' -e 's|/*$||' \
+        | sort -u)
+    fi
 
-    while IFS= read -r candidate; do
-      [[ -n "${candidate}" ]] || continue
-      is_placeholder "${candidate}" && continue
-      printf 'path\t%s\t%s\n' "${candidate}" "${candidate}"
-    done < <(printf '%s\n' "${body}" \
-      | grep -oE "(^|[^A-Za-z0-9._/-])(${prefixes})/[A-Za-z0-9._*<>-]+(/[A-Za-z0-9._*<>-]+)*" \
-      | sed -E -e 's|^[^A-Za-z0-9._/-]||' -e 's|/*$||' \
-      | sort -u)
+    if [[ "${has_prefix}" == true ]]; then
+      while IFS= read -r candidate; do
+        [[ -n "${candidate}" ]] || continue
+        is_placeholder "${candidate}" && continue
+        printf 'path\t%s\t%s\n' "${candidate}" "${candidate}"
+      done < <(printf '%s\n' "${body}" \
+        | grep -oE "(^|[^A-Za-z0-9._/-])(${prefixes})/[A-Za-z0-9._*<>-]+(/[A-Za-z0-9._*<>-]+)*" \
+        | sed -E -e 's|^[^A-Za-z0-9._/-]||' -e 's|/*$||' \
+        | sort -u)
+    fi
 
-    while IFS= read -r name; do
-      [[ -n "${name}" ]] || continue
-      printf 'skill\t/%s\tplugins/%s\n' "${name}" "${name}"
-    done < <(printf '%s\n' "${body}" \
-      | grep -oE '`/[a-z][a-z0-9-]*`' \
-      | tr -d '`' \
-      | sed 's|^/||' \
-      | sort -u)
+    if [[ "${body}" == *'`/'* ]]; then
+      while IFS= read -r name; do
+        [[ -n "${name}" ]] || continue
+        printf 'skill\t/%s\tplugins/%s\n' "${name}" "${name}"
+      done < <(printf '%s\n' "${body}" \
+        | grep -oE '`/[a-z][a-z0-9-]*`' \
+        | tr -d '`' \
+        | sed 's|^/||' \
+        | sort -u)
+    fi
 
-    while IFS= read -r name; do
-      [[ -n "${name}" ]] || continue
-      printf 'skill\t%s\tplugins/%s\n' "${name}" "${name}"
-    done < <({
-      printf '%s\n' "${body}" | grep -oE '`[a-z][a-z0-9-]+`[[:space:]]+skills?([^A-Za-z0-9-]|$)'
-      printf '%s\n' "${body}" | grep -oE 'skills?[[:space:]]+`[a-z][a-z0-9-]+`'
-    } | grep -oE '`[a-z0-9-]+`' | tr -d '`' | sort -u)
+    if [[ "${body}" == *skill* ]]; then
+      while IFS= read -r name; do
+        [[ -n "${name}" ]] || continue
+        printf 'skill\t%s\tplugins/%s\n' "${name}" "${name}"
+      done < <({
+        printf '%s\n' "${body}" | grep -oE '`[a-z][a-z0-9-]+`[[:space:]]+skills?([^A-Za-z0-9-]|$)'
+        printf '%s\n' "${body}" | grep -oE 'skills?[[:space:]]+`[a-z][a-z0-9-]+`'
+      } | grep -oE '`[a-z0-9-]+`' | tr -d '`' | sort -u)
+    fi
   } | sort -u
 }
 
@@ -359,10 +384,14 @@ function lines_outside_dependency_section() {
   ' "${1}"
 }
 
+# Reads a file's scannable lines. Both composition patterns contain "nvoke ", so
+# a body without it is skipped before any process starts.
 function composition_references() {
+  [[ "${1}" == *'nvoke '* ]] || return 0
+
   # The backticks in the sed expression are literal text, not a substitution.
   # shellcheck disable=SC2016
-  scannable_lines "${1}" \
+  printf '%s\n' "${1}" \
     | { grep -oE "${COMPOSITION_PATTERN}" || true; } \
     | sed -E 's|^.*`/?([a-z0-9-]+)`.*$|\1|' \
     | sort -u
@@ -387,11 +416,11 @@ function skill_exists() {
 # A composition in a reference file belongs to the workflow that loads it, so
 # it is checked against the owning SKILL.md's declarations.
 function check_compositions() {
-  local file="${1}" skill_dir="${2}"
+  local file="${1}" skill_dir="${2}" body="${3}"
   local skill_md="${skill_dir}/SKILL.md"
   local references declared name
 
-  references="$(composition_references "${file}")"
+  references="$(composition_references "${body}")"
   [[ -n "${references}" ]] || return 0
 
   declared="$(declared_dependencies "${skill_md}")"
@@ -410,13 +439,16 @@ function check_compositions() {
 # is not the file's own, and is not already declared is reported, and only as a
 # warning, since an ignore comment does not reach dependency findings.
 function check_near_misses() {
-  local file="${1}" skill_dir="${2}"
+  local file="${1}" skill_dir="${2}" body="${3}"
   local names declared name
+
+  # NEAR_MISS_PATTERN contains "nvoke ", so a body without it has no near miss.
+  [[ "${body}" == *'nvoke '* ]] || return 0
 
   # The backticks in the sed expression are literal text, not a substitution.
   # shellcheck disable=SC2016
   names="$(
-    scannable_lines "${file}" \
+    printf '%s\n' "${body}" \
       | { grep -oE "${NEAR_MISS_PATTERN}" || true; } \
       | sed -E 's|^.*`/?([a-z0-9-]+)`$|\1|' \
       | sort -u
@@ -487,7 +519,7 @@ function check_declarations() {
 
 function check_file() {
   local file="${1}"
-  local plugin skill_dir prefixes candidates ignores matched
+  local plugin skill_dir prefixes body directives candidates ignores="" matched
   local kind reference resolved entry
 
   grep -qE "${CANDIDATE_PREFILTER}" "${file}" || return 0
@@ -498,13 +530,20 @@ function check_file() {
   skill_dir="${file%/references/*}"
   skill_dir="${skill_dir%/SKILL.md}"
 
+  # Every declaration comment matches this, so a file with none declares no
+  # repository paths and no ignores, and neither needs checking.
+  directives="$(grep -E '<!--[[:space:]]*validate-plugins:' "${file}" || true)"
+
   prefixes="${UNAMBIGUOUS_PREFIXES}"
-  if declares_repository_paths "${file}"; then
+  if [[ -n "${directives}" ]] && declares_repository_paths "${file}"; then
     prefixes="${prefixes}|${DECLARED_PREFIXES}"
   fi
 
-  candidates="$(collect_candidates "${file}" "${plugin}" "${skill_dir}" "${prefixes}")"
-  ignores="$(declared_ignores "${file}")"
+  body="$(scannable_lines "${file}")"
+  candidates="$(collect_candidates "${body}" "${plugin}" "${skill_dir}" "${prefixes}")"
+  if [[ -n "${directives}" ]]; then
+    ignores="$(declared_ignores "${file}")"
+  fi
   matched=""
 
   while IFS=$'\t' read -r kind reference resolved; do
@@ -529,8 +568,8 @@ function check_file() {
     fi
   done <<< "${ignores}"
 
-  check_compositions "${file}" "${skill_dir}"
-  check_near_misses "${file}" "${skill_dir}"
+  check_compositions "${file}" "${skill_dir}" "${body}"
+  check_near_misses "${file}" "${skill_dir}" "${body}"
   if [[ "${file}" == */SKILL.md ]]; then
     check_declarations "${file}" "${skill_dir}"
   fi
