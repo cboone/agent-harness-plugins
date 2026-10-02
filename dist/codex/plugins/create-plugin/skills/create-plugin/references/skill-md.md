@@ -18,7 +18,7 @@ The skill directory name usually matches the plugin name (e.g., `plugins/suggest
 
 ## Frontmatter
 
-The file starts with YAML frontmatter containing exactly two fields:
+The file starts with YAML frontmatter containing two fields, plus `argument-hint` when the skill accepts arguments:
 
 ```yaml
 ---
@@ -27,6 +27,7 @@ description: >-
   The primary action first, then the trigger phrases that should activate
   the skill. Use the YAML folded block scalar (>-) for multi-line
   descriptions.
+argument-hint: "[pr-number] [--dry-run]"
 ---
 ```
 
@@ -65,6 +66,10 @@ description: >-
   Apply Bash style conventions when creating, editing, or reviewing Bash
   scripts. Not for zsh; use write-zsh-scripts.
 ```
+
+### Argument hint
+
+Claude Code shows `argument-hint` as ghost text after the user types the skill's slash command, so a skill that accepts arguments should declare one. Write it as a double-quoted string: positional arguments first, then flags in the order the `## Options` section lists them. Use `<x>` for a required value, `[x]` for an optional argument and `a|b` for alternatives. A skill with an `## Options` section must declare it, and repository validation enforces this. Codex CLI and OpenCode ignore the field.
 
 ## Body Structure
 

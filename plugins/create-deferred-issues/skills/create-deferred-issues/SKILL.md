@@ -3,6 +3,7 @@ name: create-deferred-issues
 description: >-
   File GitHub issues for concerns the current work set aside. Use for "create
   deferred issues" or "file the follow-ups".
+argument-hint: "[--dry-run] [--no-comment]"
 ---
 
 # Create Deferred Issues

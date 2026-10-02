@@ -102,6 +102,10 @@ Measured against Codex CLI 0.155.1 and OpenCode 1.18.31: a skill carrying every 
 
 Widening the allowlist means measuring the new field first. Install a skill that carries it under a throwaway `CODEX_HOME` and a throwaway project directory, list what each harness offers the model with `codex debug prompt-input` and `opencode debug skill`, then record the outcome in the table above. A field Claude Code honors can be dropped silently by the other two, which changes what the skill does there without failing anywhere.
 
+### Argument hints
+
+Claude Code shows a skill's `argument-hint` as ghost text after the user types its slash command, which is how `/monitor-pr` displays its options. Every skill that accepts arguments should declare one as a double-quoted string: positional arguments first, then flags in the order its `## Options` section lists them, with `<x>` for a required value, `[x]` for an optional argument and `a|b` for alternatives. Rule 21 of `bin/validate-plugins` rejects any other form of the value, and requires the field only on skills with an `## Options` heading outside fenced code, so a skill that describes its arguments in prose elsewhere, such as `review-plan`, needs the hint added by hand. Codex CLI and OpenCode ignore it, so it passes through both mirrors unchanged.
+
 ### Invocation policy
 
 `disable-model-invocation: true` keeps a skill out of implicit selection in Claude Code. Codex ignores the field and offers the skill to the model anyway. Its counterpart is `policy.allow_implicit_invocation: false` in an `agents/openai.yaml` beside the skill, which withholds the skill from that list while explicit `$skill-name` invocation still works.

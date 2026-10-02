@@ -3,6 +3,7 @@ name: set-up-review-config
 description: >-
   Install style-guide review checklists for Copilot, Codex, and Claude Code
   Review. Use for "set up review config" or "configure Copilot code review".
+argument-hint: "[--dry-run]"
 ---
 
 # Set-Up Review Config

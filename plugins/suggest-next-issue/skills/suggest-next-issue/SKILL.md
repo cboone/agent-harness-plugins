@@ -3,6 +3,7 @@ name: suggest-next-issue
 description: >-
   Recommend which open GitHub issue to work on next. Use for "suggest next
   issue" or "what should I work on next".
+argument-hint: "[--label <name>] [--parallel-only] [filters...]"
 ---
 
 # Suggest Next Issue

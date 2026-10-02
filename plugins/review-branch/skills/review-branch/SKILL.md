@@ -3,6 +3,7 @@ name: review-branch
 description: >-
   Review the current branch: summarize changes, check plan compliance, and
   evaluate quality. Use for "review branch" or "summarize this branch".
+argument-hint: "[--plan <path>] [--since <ref>] [--brief] [--no-save]"
 ---
 
 # Review Branch

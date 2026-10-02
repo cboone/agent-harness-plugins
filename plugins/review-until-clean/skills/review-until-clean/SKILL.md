@@ -3,6 +3,7 @@ name: review-until-clean
 description: >-
   Loop a read-only reviewer and fix findings until the snapshot is clean. Use
   for "review until clean".
+argument-hint: "[--reviewer codex|claude] [--base <ref>] [--effort <level>] [--severity important|nit] [--max-rounds <n>] [--confirm-clean] [--report-only] [--no-save]"
 ---
 
 # Review Until Clean
