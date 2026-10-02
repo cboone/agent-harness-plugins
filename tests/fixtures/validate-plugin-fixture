@@ -194,8 +194,12 @@ function main() {
       replace_description "${FIXTURE_ROOT}/${RELEASE_SKILL}" "$(description_of_length 1100)"
       export CODEX_REFERENCE_CONTEXT_WINDOW=1000000
       ;;
+    # 200 characters in 240 bytes, so a length measured in bytes rather than
+    # characters reads 240 and fails the case. It is spelled out rather than
+    # cut to length, because cutting by ${#text} counts bytes under the C
+    # locale and could split a character.
     long-description)
-      replace_description "${FIXTURE_ROOT}/${RELEASE_SKILL}" "$(description_of_length 200)"
+      replace_description "${FIXTURE_ROOT}/${RELEASE_SKILL}" "$(printf 'café %.0s' {1..39})cafés"
       export CODEX_REFERENCE_CONTEXT_WINDOW=1000000
       ;;
     empty-name) perl -pi -e 's/^name: release$/name:/' "${FIXTURE_ROOT}/${RELEASE_SKILL}" ;;
