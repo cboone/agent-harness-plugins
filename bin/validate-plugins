@@ -23,17 +23,22 @@ function is_semver() {
 }
 
 # Prints each named field the JSON on stdin lacks, in the order given. A field
-# counts as missing when it is absent, null, false or the empty string, which is
-# what `jq -r '.FIELD // empty'` printing nothing means. One jq run per manifest
-# rather than one per field keeps the validator from spending its time starting
-# processes, which matters because the scrut suite runs it dozens of times.
+# counts as missing when it is absent, null, false or the empty string. A
+# manifest with no JSON value at all, such as an empty file, reads as null, so
+# every field is reported rather than none. One jq run per manifest rather than
+# one per field keeps the validator from spending its time starting processes,
+# which matters because the scrut suite runs it dozens of times.
 function missing_fields() {
   # shellcheck disable=SC2016
-  jq -r --args '$ARGS.positional[] as $field | select((.[$field] // "") == "") | $field' "$@"
+  jq -n -r --args 'first(inputs, null) as $manifest
+    | $ARGS.positional[] as $field
+    | select(($manifest[$field] // "") == "")
+    | $field' "$@"
 }
 
-# Marketplace entry fields are joined with the unit separator rather than a tab,
-# because read collapses consecutive tabs and would shift an empty field.
+# Marketplace entry fields are joined with the unit separator, a byte no catalog
+# name or path contains, and split with parameter expansion. jq prints string
+# fields raw, so a tab, which a string can hold, would split a line wrongly.
 UNIT_SEPARATOR=$'\x1f'
 readonly UNIT_SEPARATOR
 
@@ -624,7 +629,9 @@ function frontmatter_description() {
 # rather than printing it, because this rule counts several strings per skill
 # and a command substitution would start a subshell for each. Under the C locale
 # Bash measures and matches bytes, and the local assignment restores the
-# caller's locale on return.
+# caller's locale on return. A target named like one of the function's own
+# locals would be assigned to that local instead, so the locals carry the
+# function's name.
 function byte_count() {
   local LC_ALL=C
   printf -v "${2}" '%s' "${#1}"
@@ -634,8 +641,8 @@ function byte_count() {
 # character. Counting that way gives the same answer under any locale.
 function character_count() {
   local LC_ALL=C
-  local starts="${1//[$'\x80'-$'\xbf']/}"
-  printf -v "${2}" '%s' "${#starts}"
+  local character_count_lead_bytes="${1//[$'\x80'-$'\xbf']/}"
+  printf -v "${2}" '%s' "${#character_count_lead_bytes}"
 }
 
 function check_skill_fields() {
