@@ -3,6 +3,7 @@ name: wtaf
 description: >-
   Say where the work stands and what's next. Use for "wtaf" or "where are we";
   for code review, use review-branch.
+argument-hint: "[--fast|--thorough] [scope]"
 ---
 
 # WTAF

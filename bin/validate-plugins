@@ -823,6 +823,10 @@ validate_review_checklists
 # docs/plugin-development.md, because a field Claude Code honors can be silently
 # dropped by the other two. `disable-model-invocation` is the case in point, and
 # the only field with a Codex counterpart today.
+#
+# The rule also requires a non-empty, double-quoted `argument-hint` on every
+# skill with an `## Options` section, since Claude Code shows that hint after a
+# typed slash command and the options stay hidden there without it.
 
 SKILL_FRONTMATTER_ALLOWLIST=(
   name
@@ -878,11 +882,43 @@ function frontmatter_entries() {
   ' "${skill_md}"
 }
 
+# Succeeds when a SKILL.md has an `## Options` heading outside fenced code.
+function has_options_section() {
+  local skill_md="${1}"
+
+  awk '
+    /^[[:space:]]*(```|~~~)/ {
+      in_fence = !in_fence
+      next
+    }
+
+    !in_fence && $0 == "## Options" {
+      found = 1
+      exit
+    }
+
+    END {
+      exit !found
+    }
+  ' "${skill_md}"
+}
+
 for skill_md in plugins/*/skills/*/SKILL.md; do
   [[ -f "${skill_md}" ]] || continue
+  has_argument_hint=false
 
   while IFS=$'\t' read -r field value; do
     [[ -n "${field}" ]] || continue
+
+    # A block scalar or an empty or single-quoted value would show nothing, or
+    # something other than intended, so only the documented form counts.
+    if [[ "${field}" == "argument-hint" ]]; then
+      if [[ "${value}" =~ ^\"[^\"]+\"$ ]]; then
+        has_argument_hint=true
+      else
+        error "Skill '${skill_md}' must write argument-hint as a non-empty double-quoted string"
+      fi
+    fi
 
     if ! is_allowed_frontmatter_field "${field}"; then
       error "Skill '${skill_md}' declares frontmatter field '${field}', which is not on the allowlist; see the skill frontmatter section of docs/plugin-development.md"
@@ -895,6 +931,13 @@ for skill_md in plugins/*/skills/*/SKILL.md; do
       error "Skill '${skill_md}' must write disable-model-invocation as an unquoted true or false"
     fi
   done < <(frontmatter_entries "${skill_md}")
+
+  # Claude Code shows argument-hint as the inline hint after a typed slash
+  # command, so a skill that documents options without one hides them there.
+  # A heading inside a fenced example is not the skill's own section.
+  if [[ "${has_argument_hint}" == false ]] && has_options_section "${skill_md}"; then
+    error "Skill '${skill_md}' has an ## Options section but no argument-hint; see the skill frontmatter section of docs/plugin-development.md"
+  fi
 done
 
 # ─── Summary ────────────────────────────────────────────────────────────────

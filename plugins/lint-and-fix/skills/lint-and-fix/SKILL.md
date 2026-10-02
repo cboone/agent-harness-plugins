@@ -3,6 +3,7 @@ name: lint-and-fix
 description: >-
   Run a project's linters and formatters with auto-fix, fix the rest, then
   commit and push. Use for "lint and fix", "run the linters", or "fix lint".
+argument-hint: "[--no-commit] [--no-push] [--tool <name>] [--check]"
 ---
 
 # Lint and Fix

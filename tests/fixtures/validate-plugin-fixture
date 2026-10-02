@@ -15,8 +15,9 @@ function mutate_catalog() {
   mv "${FIXTURE_ROOT}/catalog.json" "${catalog}"
 }
 
-# The skill most scenarios mutate. release carries no extended frontmatter field
-# of its own, so each scenario adds exactly the one it tests.
+# The skill most scenarios mutate. Its only extended frontmatter field is the
+# argument-hint its options require, so each scenario adds or removes exactly
+# the one field it tests.
 readonly RELEASE_SKILL="plugins/release/skills/release/SKILL.md"
 
 # The review checklist scenarios mutate a source, a copy or guides.md without
@@ -221,6 +222,19 @@ function main() {
     # 21 the skill would stay implicitly invocable in every harness.
     quoted-invocation-value)
       add_frontmatter_line "${FIXTURE_ROOT}/${RELEASE_SKILL}" 'disable-model-invocation: "true"'
+      ;;
+    # release documents options, so dropping its hint hides them after /release.
+    missing-argument-hint)
+      perl -ni -e 'print unless /^argument-hint:/' "${FIXTURE_ROOT}/${RELEASE_SKILL}"
+      ;;
+    # A block scalar parses, but rule 21 reads only the documented quoted form.
+    block-scalar-argument-hint)
+      perl -pi -e 's/^argument-hint: .*$/argument-hint: >-\n  [--dry-run]/' "${FIXTURE_ROOT}/${RELEASE_SKILL}"
+      ;;
+    # create-issue takes no options, so a heading inside an example fence must
+    # not demand a hint of it.
+    fenced-options-heading)
+      printf '%s\n' '' '```markdown' '## Options' '```' >> "${FIXTURE_ROOT}/plugins/create-issue/skills/create-issue/SKILL.md"
       ;;
     # The translation itself: the generated copy loses the line and gains the
     # policy Codex reads, and validation passes.

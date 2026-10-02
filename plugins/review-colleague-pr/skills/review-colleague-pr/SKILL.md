@@ -3,6 +3,7 @@ name: review-colleague-pr
 description: >-
   Brief the user on a colleague's PR, posting nothing to GitHub. Use for
   "review a teammate's PR"; for your branch, use review-branch.
+argument-hint: "[pr-number] [requirement-docs...] [--fast|--thorough] [--full] [--since <ref>]"
 ---
 
 # Review Colleague PR

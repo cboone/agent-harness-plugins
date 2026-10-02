@@ -3,6 +3,7 @@ name: review-dependabot-config
 description: >-
   Review dependabot.yml and Dependabot settings, then apply selected fixes. Use
   for "review dependabot config"; for PRs, use triage-dependabot-prs.
+argument-hint: "[--repo OWNER/REPO] [--report-only]"
 ---
 
 # Review Dependabot Config

@@ -102,7 +102,7 @@ Create `skills/PLUGIN-NAME/SKILL.md`. See `./references/skill-md.md` for the fro
 
 Key points:
 
-- Frontmatter has exactly two fields: `name` and `description`
+- Frontmatter has `name` and `description`, plus `argument-hint` when the skill accepts arguments (required with an `## Options` section)
 - The `description` is the routing description: it opens with the primary action, names the trigger phrases that distinguish the skill from its neighbors, and stays short. The catalog summary in `marketplace.json` is written separately
 - Use `>-` (folded block scalar) for multi-line descriptions
 - Structure the body with a `## Workflow` section using numbered steps
@@ -198,7 +198,7 @@ Before finishing, verify:
 - [ ] Root `README.md` external-tool bullets are updated if the plugin needs external tools
 - [ ] `plugins/PLUGIN-NAME/README.md` exists and documents installation, usage, requirements, examples, and related plugins
 - [ ] Project-level instruction files such as `AGENTS.md` or `CLAUDE.md` were updated only if the new plugin changes current repository conventions
-- [ ] `SKILL.md` frontmatter has only `name` and `description` fields (skills only)
+- [ ] `SKILL.md` frontmatter has only `name`, `description` and, for a skill that accepts arguments, `argument-hint` (skills only)
 - [ ] The `description` opens with the primary action and carries the distinguishing trigger phrases, without restating the catalog summary (skills only)
 - [ ] Steps name the capability they need and a fallback for when it is absent, rather than a single harness's tools (skills only)
 - [ ] Every "Invoke the `NAME` skill" reference is declared under `## Skill dependencies` as required or optional, with the missing-skill behavior described (skills that compose others only)

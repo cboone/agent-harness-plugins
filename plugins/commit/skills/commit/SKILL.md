@@ -3,6 +3,7 @@ name: commit
 description: >-
   Create git commits with context-aware messages and plan awareness. Use for
   "commit", "commit and push", "commit staged", or "commit the plan".
+argument-hint: "[--push] [--staged|--plan|--all]"
 ---
 
 # Commit
