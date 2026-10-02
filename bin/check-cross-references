@@ -71,7 +71,10 @@ COMPOSITION_PATTERN='[Ii]nvoke the `/?[a-z][a-z0-9-]*` skill'
 # shellcheck disable=SC2016
 NEAR_MISS_PATTERN='[Ii]nvoke `/?[a-z][a-z0-9-]*`'
 
-readonly UNAMBIGUOUS_PREFIXES DECLARED_PREFIXES CANDIDATE_PREFILTER COMPOSITION_PATTERN NEAR_MISS_PATTERN
+# Every declaration comment, ignore and repository-paths alike, matches this.
+DIRECTIVE_PATTERN='<!--[[:space:]]*validate-plugins:'
+
+readonly UNAMBIGUOUS_PREFIXES DECLARED_PREFIXES CANDIDATE_PREFILTER COMPOSITION_PATTERN NEAR_MISS_PATTERN DIRECTIVE_PATTERN
 
 errors=0
 reference_errors=0
@@ -126,7 +129,7 @@ function declares_repository_paths() {
 # an ignore comment is not itself mistaken for a reference. A declaration
 # therefore belongs on a line of its own: prose sharing the line goes with it.
 function scannable_lines() {
-  grep -v '<!--[[:space:]]*validate-plugins:' "${1}" || true
+  grep -vE "${DIRECTIVE_PATTERN}" "${1}" || true
 }
 
 # A path- or name-shaped string is a stand-in rather than a reference when a
@@ -518,11 +521,23 @@ function check_declarations() {
 }
 
 function check_file() {
-  local file="${1}"
-  local plugin skill_dir prefixes body directives candidates ignores="" matched
-  local kind reference resolved entry
+  local file="${1}" has_directives=false
 
   grep -qE "${CANDIDATE_PREFILTER}" "${file}" || return 0
+  if grep -qE "${DIRECTIVE_PATTERN}" "${file}"; then
+    has_directives=true
+  fi
+  check_candidate_file "${file}" "${has_directives}"
+}
+
+# Checks a file that passed CANDIDATE_PREFILTER. The caller says whether it holds
+# a declaration comment, because a full pass answers both questions for every
+# file in two grep runs instead of two per file. A file with no declaration
+# comment declares no repository paths and no ignores.
+function check_candidate_file() {
+  local file="${1}" has_directives="${2}"
+  local plugin skill_dir prefixes body candidates ignores="" matched
+  local kind reference resolved entry
 
   plugin="${file#plugins/}"
   plugin="${plugin%%/*}"
@@ -530,18 +545,14 @@ function check_file() {
   skill_dir="${file%/references/*}"
   skill_dir="${skill_dir%/SKILL.md}"
 
-  # Every declaration comment matches this, so a file with none declares no
-  # repository paths and no ignores, and neither needs checking.
-  directives="$(grep -E '<!--[[:space:]]*validate-plugins:' "${file}" || true)"
-
   prefixes="${UNAMBIGUOUS_PREFIXES}"
-  if [[ -n "${directives}" ]] && declares_repository_paths "${file}"; then
+  if [[ "${has_directives}" == true ]] && declares_repository_paths "${file}"; then
     prefixes="${prefixes}|${DECLARED_PREFIXES}"
   fi
 
   body="$(scannable_lines "${file}")"
   candidates="$(collect_candidates "${body}" "${plugin}" "${skill_dir}" "${prefixes}")"
-  if [[ -n "${directives}" ]]; then
+  if [[ "${has_directives}" == true ]]; then
     ignores="$(declared_ignores "${file}")"
   fi
   matched=""
@@ -581,15 +592,40 @@ function main() {
     exit 2
   fi
 
-  local file
+  local file candidate_files directive_files has_directives
+  local -a files=() candidates=()
   if [[ ${#} -gt 0 ]]; then
     for file in "${@}"; do
       check_file "${file}"
     done
   else
     while IFS= read -r file; do
-      check_file "${file}"
+      files+=("${file}")
     done < <(skill_markdown_files)
+
+    # grep -l lists matching files in argument order, so the files are still
+    # checked, and their findings reported, in sorted order.
+    if [[ ${#files[@]} -gt 0 ]]; then
+      candidate_files="$(grep -lE "${CANDIDATE_PREFILTER}" "${files[@]}" || true)"
+    else
+      candidate_files=""
+    fi
+    while IFS= read -r file; do
+      [[ -n "${file}" ]] && candidates+=("${file}")
+    done <<< "${candidate_files}"
+
+    directive_files=""
+    if [[ ${#candidates[@]} -gt 0 ]]; then
+      directive_files="$(grep -lE "${DIRECTIVE_PATTERN}" "${candidates[@]}" || true)"
+    fi
+
+    for file in ${candidates[@]+"${candidates[@]}"}; do
+      has_directives=false
+      if contains_line "${directive_files}" "${file}"; then
+        has_directives=true
+      fi
+      check_candidate_file "${file}" "${has_directives}"
+    done
   fi
 
   if [[ ${errors} -gt 0 ]]; then
