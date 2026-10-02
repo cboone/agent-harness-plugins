@@ -27,14 +27,17 @@ git remote -v | awk '
     url = $2
     if (url ~ /^[A-Za-z][A-Za-z0-9+.-]*:\/\//) {
       sub(/^[A-Za-z][A-Za-z0-9+.-]*:\/\//, "", url)
-      sub(/^[^\/@]*@/, "", url)
       slash = index(url, "/")
-      host = substr(url, 1, slash - 1)
+      authority = slash ? substr(url, 1, slash - 1) : url
+      path = slash ? substr(url, slash) : ""
+      count = split(authority, parts, "@")
+      host = parts[count]
       sub(/:[0-9]*$/, "", host)
-      url = host substr(url, slash)
-    } else {
-      sub(/^[^\/@:]*@/, "", url)
-      sub(/:/, "/", url)
+      url = host path
+    } else if ((colon = index(url, ":")) > 0) {
+      authority = substr(url, 1, colon - 1)
+      count = split(authority, parts, "@")
+      url = parts[count] "/" substr(url, colon + 1)
     }
     sub(/[?#].*$/, "", url)
     sub(/\.git$/, "", url)
@@ -43,7 +46,7 @@ git remote -v | awk '
   }'
 ```
 
-The filter drops credentials and any port, and turns the `git@host:owner/repo` form into `host/owner/repo`. An SSH remote may name a host alias from SSH configuration, such as `github-work`, rather than the real host. Resolve one with `ssh -G "$alias" | awk '$1 == "hostname" { print $2 }'`, which reads the configuration without connecting, and use the result as `$host`.
+The filter drops credentials (everything through the last `@` of the authority, so a password containing `@` cannot survive) and any port, and turns the `git@host:owner/repo` form into `host/owner/repo`. An SSH remote may name a host alias from SSH configuration, such as `github-work`, rather than the real host. Resolve one with `ssh -G "$alias" | awk '$1 == "hostname" { print $2 }'`, which reads the configuration without connecting, and use the result as `$host`.
 
 Take `$host`, `$current_repo`, and each remote's push repository from that output. `$current_repo` is the fetch path of `$fetch_remote`: the remote the current branch tracks (`git config branch.<branch>.remote`), else `origin`, else the only remote. Do not assume a remote named `origin` exists; a checkout may have only `upstream` or another name.
 
