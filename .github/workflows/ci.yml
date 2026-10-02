@@ -122,8 +122,8 @@ jobs:
       # fails here with a clear message rather than as a scrut output diff.
       scrut-setup-cmd: "yq --version | grep -q mikefarah"
       scrut-test-dir: "tests/scrut/"
-      # The reusable workflow defaults to 10 minutes, which the suite outgrew:
-      # main at 9e76eb82 took 9m17s, and the next branch to add a case was
-      # cancelled at 10m01s. Raising the ceiling buys room; it does not address
-      # why 600-odd cases take that long, which is tracked separately.
-      timeout-minutes: 20
+      # The budget: the suite finishes within half of this ceiling. When it
+      # outgrows that, cut runtime or shard the job; do not raise the ceiling.
+      # tests/AGENTS.md says how to measure a document and where the time
+      # usually goes.
+      timeout-minutes: 10
