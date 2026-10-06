@@ -557,7 +557,8 @@ CODEX_REFERENCE_MODEL="gpt-6.1-sol"
 CODEX_REFERENCE_CONTEXT_WINDOW="${CODEX_REFERENCE_CONTEXT_WINDOW-272000}"
 CODEX_CONTEXT_WINDOW_PERCENT=2
 CODEX_BYTES_PER_TOKEN=4
-# 47 of the catalog's 64 listed skills were enabled, 73 percent, rounded up.
+# 47 of the catalog's 64 listed skills were enabled, 73.4 percent, rounded up
+# to the next multiple of 5 so the share leans toward charging more.
 CODEX_ENABLED_SKILL_PERCENT="${CODEX_ENABLED_SKILL_PERCENT-75}"
 # Every other line in the maintainer's list: 4 system skills and 7 skills from
 # other marketplaces with their roots table rows cost 1,111 tokens, rounded up.

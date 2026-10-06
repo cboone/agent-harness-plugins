@@ -141,17 +141,17 @@ Whether `codex plugin marketplace upgrade` refreshes an installed plugin whose v
 
 These constants define the Codex inventory budget that repository validation models. The model is the maintainer's installation, not the whole catalog, so the modeled budget is the one real sessions get. They were last measured on 2026-10-06 with `codex-cli 0.160.1`, for `gpt-6.1-sol` at `low` reasoning effort: `codex plugin list --json` for the enabled plugins, and `codex debug prompt-input` with the maintainer's Codex home for the rendered skill list. The rest of this baseline describes `0.155.1` and `gpt-6-astra`.
 
-| Constant            | Value                                                                                       | Source                                                           |
-| ------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Reference model     | `gpt-6.1-sol`, `low` reasoning effort                                                       | The maintainer's configured `model` and `model_reasoning_effort` |
-| Context window      | 272,000 tokens                                                                              | `codex debug models`, live and bundled                           |
-| Primary budget      | 5,440 tokens, 2 percent of the context window                                               | Upstream source and documentation                                |
-| Bytes per token     | 4, rounded up per entry                                                                     | Upstream source                                                  |
-| Enabled share       | The most expensive 75 percent of the catalog's listed skills; 47 of 64 observed, 73 percent | Observed                                                         |
-| Other-skill reserve | 1,150 tokens; 1,111 observed                                                                | Observed                                                         |
-| Name form           | `plugin:skill`                                                                              | Observed                                                         |
-| Path form           | `r1/<plugin>/<version>/skills/<skill>/SKILL.md`, plus one roots table row for `r1`          | Observed aliasing, 15-character home placeholder in the row      |
-| Description warning | Over 240 characters                                                                         | Derived below                                                    |
+| Constant            | Value                                                                                                                               | Source                                                           |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Reference model     | `gpt-6.1-sol`, `low` reasoning effort                                                                                               | The maintainer's configured `model` and `model_reasoning_effort` |
+| Context window      | 272,000 tokens                                                                                                                      | `codex debug models`, live and bundled                           |
+| Primary budget      | 5,440 tokens, 2 percent of the context window                                                                                       | Upstream source and documentation                                |
+| Bytes per token     | 4, rounded up per entry                                                                                                             | Upstream source                                                  |
+| Enabled share       | The most expensive 75 percent of the catalog's listed skills; 47 of 64 observed, 73.4 percent, rounded up to the next multiple of 5 | Observed                                                         |
+| Other-skill reserve | 1,150 tokens; 1,111 observed                                                                                                        | Observed                                                         |
+| Name form           | `plugin:skill`                                                                                                                      | Observed                                                         |
+| Path form           | `r1/<plugin>/<version>/skills/<skill>/SKILL.md`, plus one roots table row for `r1`                                                  | Observed aliasing, 15-character home placeholder in the row      |
+| Description warning | Over 240 characters                                                                                                                 | Derived below                                                    |
 
 The maintainer's rendered list held 58 skills from five roots: the system skills, this catalog, `openai-bundled`, `openai-primary-runtime`, and a separate root for the `spreadsheets` plugin inside `openai-primary-runtime`, whose 2 skills are counted with that marketplace below.
 
