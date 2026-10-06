@@ -875,26 +875,42 @@ $ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_
 ## The step 3 selection filter pins its own output shape
 
 `monitor-pr` does not read the whole `fetch-reviews` result. It selects the one
-review the metadata probe named and projects four fields, because the raw result
-carries every Copilot review on the PR with its complete body and the watch
-prints this on every tick. These testcases run the filter exactly as the skill
-documents it, over `parse-reviews` so no authenticated `gh` is needed.
+review the metadata probe named and projects seven fields, because the raw
+result carries every Copilot review on the PR with its complete body and the
+watch prints this on every tick. These testcases run the filter exactly as the
+skill documents it, over `parse-reviews` so no authenticated `gh` is needed.
 
 ```scrut
-$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | jq -c --argjson review_id 6000000004 '[.[] | select(.id == $review_id)] | last | {id, url, hasFormatDrift, findings: (.findings | length)}'
-{"id":6000000004,"url":"https://github.com/o/r/pull/1#pullrequestreview-6000000004","hasFormatDrift":false,"findings":0}
+$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | jq -c --argjson review_id 6000000004 '[.[] | select(.id == $review_id)] | last | {id, url, reviewKind, hasFormatDrift, needsRead, findings: (.findings | length), unaccounted: (.unaccounted | length)}'
+{"id":6000000004,"url":"https://github.com/o/r/pull/1#pullrequestreview-6000000004","reviewKind":"review","hasFormatDrift":false,"needsRead":false,"findings":0,"unaccounted":0}
+```
+
+A review that needs a read carries its lead as one finding, so the watch
+dispatches it to the resolver like any other review-body finding, with no
+separate rule.
+
+```scrut
+$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-advisory-lead.json" | jq -c --argjson review_id 6000000033 '[.[] | select(.id == $review_id)] | last | {id, url, reviewKind, hasFormatDrift, needsRead, findings: (.findings | length), unaccounted: (.unaccounted | length)}'
+{"id":6000000033,"url":"https://github.com/o/r/pull/1#pullrequestreview-6000000033","reviewKind":"review","hasFormatDrift":false,"needsRead":true,"findings":1,"unaccounted":0}
+```
+
+A notice reads exactly like a clean review on every field but one. The watch
+must check `reviewKind` before it treats zero findings and no drift as clean.
+
+```scrut
+$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/notice-error.json" | jq -c --argjson review_id 6000000036 '[.[] | select(.id == $review_id)] | last | {id, url, reviewKind, hasFormatDrift, needsRead, findings: (.findings | length), unaccounted: (.unaccounted | length)}'
+{"id":6000000036,"url":"https://github.com/o/r/pull/1#pullrequestreview-6000000036","reviewKind":"error","hasFormatDrift":false,"needsRead":false,"findings":0,"unaccounted":0}
 ```
 
 A review id the result does not carry, which is what an empty review body
 produces, does **not** yield `null`. jq builds the object from `null` anyway, and
-`.findings | length` over an absent review is `0` rather than an error. The skill
-documents this shape so a reader does not mistake the all-null object for a
-review that parsed cleanly: a null `hasFormatDrift` is an absent answer, not
-`false`.
+`length` over an absent field is `0` rather than an error. The skill documents
+this shape so a reader does not mistake the all-null object for a review that
+parsed cleanly: a null `hasFormatDrift` is an absent answer, not `false`.
 
 ```scrut
-$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | jq -c --argjson review_id 6000000099 '[.[] | select(.id == $review_id)] | last | {id, url, hasFormatDrift, findings: (.findings | length)}'
-{"id":null,"url":null,"hasFormatDrift":null,"findings":0}
+$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | jq -c --argjson review_id 6000000099 '[.[] | select(.id == $review_id)] | last | {id, url, reviewKind, hasFormatDrift, needsRead, findings: (.findings | length), unaccounted: (.unaccounted | length)}'
+{"id":null,"url":null,"reviewKind":null,"hasFormatDrift":null,"needsRead":null,"findings":0,"unaccounted":0}
 ```
 
 The thread-side filter reduces `fetch` the same way, to a count plus locations.
