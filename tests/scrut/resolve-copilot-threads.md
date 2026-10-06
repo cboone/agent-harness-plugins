@@ -535,6 +535,15 @@ $ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"
 [{"hasSuppressedMarker":false,"findings":0}]
 ```
 
+It is still a location line nothing parsed, though, so the census reports it
+rather than letting it pass as prose. A location heading Copilot moved out of
+its section would look exactly like this.
+
+```scrut
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"## Pull request overview\n\n**src/lib/heading.js:12**\n\nProse that names a location."}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | "\(.kind) \(.region) line \(.line)"]}'
+{"hasFormatDrift":true,"unaccounted":["location lead line 3"]}
+```
+
 ## Headline captures the verdict and drops the boilerplate
 
 ```scrut
