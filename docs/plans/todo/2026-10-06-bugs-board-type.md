@@ -34,10 +34,21 @@ Run on 2026-10-06 against `swing-left/votefwd` at `develop` `8135b4cb`, with Zen
 
 Confirmed by the user on 2026-10-06, after reviewing this gather:
 
-- An urgent label or pipeline is a signal only. It adds rank weight and places nothing; reading and the triage note decide the tier. This replaces the urgent clause of the `now` rule below.
+- An urgent label or pipeline is a signal only. It adds rank weight and places nothing; reading and the triage note decide the tier.
 - "Must Do" and "Should Do" pipelines add rank weight only.
 - An in-progress bug stays in its tier with an "In progress" tag naming its pull request, label, or pipeline, so an urgent one's action becomes landing the fix. A non-urgent in-progress bug goes to Ready to go.
 - Calibrate on a sample of about 15 varied bugs before assessing the rest.
+
+## Sample Calibration
+
+Fifteen `votefwd` bugs were assessed on 2026-10-06 by three parallel readers in about 39 s of wall-clock time, then placed by the drafted rules. Now held #4579 (every pledge crashes the instance and loses the COMMIT activity) and #4518 (241 banned accounts can still log in), which matched the user's reading. Today held five of the fifteen, which would extrapolate to about twenty, so the user tightened it.
+
+Confirmed by the user on 2026-10-06, after reviewing the sample:
+
+- A dated deadline is recorded as `deadline` and places a bug in Today only within `deadlineDays` (default 14); further out it adds rank weight and a dated chip. Undated time sensitivity, such as damage accruing with every event, still places it in Today.
+- A security bug on a public surface goes to Now on code-reading evidence, because exposure does not wait for a confirmed exploit. Other high-impact bugs known only from source stay in Today with "confirm on production".
+- A new assessment field, `mitigated`, marks a bug whose harm has been stopped while its fix remains. A mitigated bug skips Now and Today.
+- Today needs a reach of `some` or more, or no workaround. A production bug that reaches few people who have a workaround goes to Ready to go, ranked high.
 
 Two adjustments from building the gatherer:
 
@@ -83,6 +94,8 @@ Each bug gets one cached assessment, written by the model from the body and rece
 | `workaround`    | `none`, `exists`, `unknown`                                                                                                |
 | `cause`         | `known`, `suspected`, `unknown`                                                                                            |
 | `timeSensitive` | `true` when waiting makes it worse, such as a deadline, damage accruing in data, or reports increasing                     |
+| `deadline`      | The date, `YYYY-MM-DD`, after which waiting makes it worse, such as an election day, or `null`                             |
+| `mitigated`     | `true` when the harm has been stopped, such as by a configuration change, while the fix remains open                       |
 | `gist`          | One sentence on what is wrong                                                                                              |
 | `nextStep`      | One sentence on the next concrete action                                                                                   |
 | `question`      | What has to be learned first, when anything above is `unknown`                                                             |
@@ -93,15 +106,15 @@ Each bug gets one cached assessment, written by the model from the body and rece
 
 `bugs-gather score` places every bug in exactly one tier with deterministic rules over the assessment, the gathered facts and the triage note. Triage entries win over assessment fields. Within a tier, bugs rank by a weighted urgency score (`weights`, defaults documented in the script) built from impact, reach, surface, user involvement, time sensitivity, regression and time open on production.
 
-| Tier          | Rule                                                                                                                                                                                                                                                                         | Above the fold |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| `now`         | An unexpired `escalate` entry; an `urgentLabels` label or `urgentPipelines` pipeline; or production, `evidence` other than `code-reading`, a `surface` of `public` or `signed-in`, an impact of `security`, `data-loss`, `money`, `access` or `core-flow`, and no workaround | Yes            |
-| `today`       | Production and user facing at any other impact; a `now`-level impact whose environment or evidence is unconfirmed, with the action "confirm on production"; or `timeSensitive`                                                                                               | Yes            |
-| `ready`       | Not `now` or `today`, and either a fix pull request that is open and not a draft (grouped as "ship" when approved and green, otherwise "review" or "checks failing"), or `cause` `known` with a `nextStep` that names the fix ("ready to fix")                               | Yes            |
-| `investigate` | Any of `environment`, `surface`, `impact` or `cause` is `unknown`, or reproduction failed                                                                                                                                                                                    | No             |
-| `later`       | Everything else, with a `reason`: in sprint, not production, internal, cosmetic, or backlog                                                                                                                                                                                  | No             |
-| `parked`      | Snoozed or parked by the note, a `parkLabels` label, or a container                                                                                                                                                                                                          | No             |
-| `fixed`       | Closed within `recentDays`; a production bug carries a "verify on production" tag                                                                                                                                                                                            | No             |
+| Tier          | Rule                                                                                                                                                                                                                                                                                                                                                                   | Above the fold |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `now`         | An unexpired `escalate` entry; or, unless `mitigated`: production, `evidence` of `user-report`, `production-observed` or `reproduced`, a `surface` of `public` or `signed-in`, an impact of `security`, `data-loss`, `money`, `access` or `core-flow`, and no workaround; or `security` on a `public` surface in production or an unknown environment, on any evidence | Yes            |
+| `today`       | Unless `mitigated`, any of: confirmed on production for `public` or `signed-in` users with a reach of `some` or more or no workaround; a Now-level impact on those surfaces known only from source or not yet placed in an environment, with the action "confirm on production"; undated `timeSensitive`; a `deadline` within `deadlineDays`                           | Yes            |
+| `ready`       | Not `now` or `today`, and any of: in progress; a fix pull request that is open and not a draft (grouped as "ship" when approved and green, otherwise "review" or "checks failing"); `mitigated`; or `cause` `known` with a `nextStep` that names the fix ("ready to fix")                                                                                              | Yes            |
+| `investigate` | Any of `environment`, `surface`, `impact` or `cause` is `unknown`, or reproduction failed                                                                                                                                                                                                                                                                              | No             |
+| `later`       | Everything else, with a `reason`: in sprint, not production, internal, cosmetic, or backlog                                                                                                                                                                                                                                                                            | No             |
+| `parked`      | Snoozed or parked by the note, a `parkLabels` label, or a container                                                                                                                                                                                                                                                                                                    | No             |
+| `fixed`       | Closed within `recentDays`; a production bug carries a "verify on production" tag                                                                                                                                                                                                                                                                                      | No             |
 
 A `now` or `today` bug that also has a fix pull request stays in its tier and shows the pull request's state on its row: urgency wins over readiness. A snoozed or parked bug never reaches `now` or `today` unless a later `escalate` brings it back. Sections hold only what earns a place; an empty one shows its heading and one line.
 
