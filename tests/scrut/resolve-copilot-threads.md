@@ -417,11 +417,12 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"hasFormatDrift":false,"unaccounted":[],"bySource":{"bullets":7,"suppressed":4}}
 ```
 
-The other bullet shape names its location first, with a dash of any width.
+The other bullet shape names its location first, with a dash of any width. A
+lowercase severity is reported with a capital here too.
 
 ```scrut
-$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"### 🔵 Needs a closer look\n\nTwo findings.\n\n<details>\n<summary>Pull request overview</summary>\n\n**Review findings:**\n- `tests/audit.py:122` — Moderate (1 vote): use a scrut fence.\n- `tests/audit.py:101` - Moderate (1 vote): preserve archive modes.\n</details>"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {unaccounted, findings: [.findings[] | {path, line, body}]}'
-{"unaccounted":[],"findings":[{"path":"tests/audit.py","line":122,"body":"use a scrut fence."},{"path":"tests/audit.py","line":101,"body":"preserve archive modes."}]}
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"### 🔵 Needs a closer look\n\nTwo findings.\n\n<details>\n<summary>Pull request overview</summary>\n\n**Review findings:**\n- `tests/audit.py:122` \u2014 Moderate (1 vote): use a scrut fence.\n- `tests/audit.py:101` - moderate (1 vote): preserve archive modes.\n</details>"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {unaccounted, findings: [.findings[] | {path, line, severity, body}]}'
+{"unaccounted":[],"findings":[{"path":"tests/audit.py","line":122,"severity":"Moderate","body":"use a scrut fence."},{"path":"tests/audit.py","line":101,"severity":"Moderate","body":"preserve archive modes."}]}
 ```
 
 ## The census reports what no parser reads

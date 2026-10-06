@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# resolve-copilot-threads — Fetch, reply to, and resolve Copilot PR review threads
+# resolve-copilot-threads \u2014 Fetch, reply to, and resolve Copilot PR review threads
 # Author: Christopher Boone
 # Date: 2026-02-06
 set -euo pipefail
@@ -836,7 +836,7 @@ function do_parse_reviews() {
           | .n as $at
           | .raw
           | capture(
-              "^[[:space:]]*[-*][[:space:]]+(?:`(?<location>[^`]+)`[[:space:]]*[-–—]+[[:space:]]*)?"
+              "^[[:space:]]*[-*][[:space:]]+(?:`(?<location>[^`]+)`[[:space:]]*[-\u2013\u2014]+[[:space:]]*)?"
               + vote_token_pattern
               + "(?<text>.*)$"
             )
