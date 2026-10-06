@@ -24,7 +24,7 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 
 - Fetch unresolved Copilot threads using the script's `fetch` command
 - Fetch Copilot review-body findings using the script's `fetch-reviews` command
-- Audit every Copilot item on the PR using the script's `audit` command, which only reads
+- Audit every Copilot item on the PR using the script's read-only `audit` command
 - Read existing PR comments (never write them) to check for prior summaries
 - Reply to EXISTING Copilot threads using the script's `reply` command
 - Resolve Copilot threads using the script's `resolve` command
