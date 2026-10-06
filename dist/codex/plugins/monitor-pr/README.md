@@ -47,7 +47,7 @@ Dependabot owns its branches. Once anyone else pushes to one, Dependabot stops r
 
 - A conflicted or out-of-date branch gets a `@dependabot rebase` comment, once per head, instead of `merge-main`.
 - A failing check is diagnosed but not repaired, and the watch stops there. A failure caused by a secret that Dependabot runs cannot read is reported as an environment problem, pointing at [Review Dependabot Config](../review-dependabot-config/README.md). Anything else points at [Triage Dependabot PRs](../triage-dependabot-prs/README.md).
-- The Copilot axis counts as clean unless a Copilot review of the current head left findings or format drift, or the audit reports Copilot feedback outside threads and review bodies, any of which escalates. The feedback probe settles that question here as it does anywhere else: both of its commands are reads, so the Dependabot path sees what Copilot found without running a skill that would push. The skill never requests or waits for a review, since every rebase leaves any earlier review behind.
+- The Copilot axis counts as clean unless a Copilot review of the current head left findings or format drift, or the audit reports Copilot feedback outside threads and review bodies, any of which escalates. The feedback probe settles that question here as it does anywhere else: all of its commands are reads, so the Dependabot path sees what Copilot found without running a skill that would push. The skill never requests or waits for a review, since every rebase leaves any earlier review behind.
 
 ### What does not gate
 

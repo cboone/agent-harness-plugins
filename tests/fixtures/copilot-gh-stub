@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# copilot-gh-stub -- Test stub for the gh calls resolve-copilot-threads audit
+# and bin/copilot-review-canary make.
+#
+# Install it as "gh" in a directory placed first on PATH. Responses are files
+# under STUB_COPILOT_GH_DIR:
+#   repos/OWNER_REPO.missing   gh repo view fails as for an unknown repository
+#   prs/OWNER_REPO.txt         gh pr list output, one pull request number per
+#                              line (the stub ignores --search, --limit and
+#                              --jq, which the caller would apply)
+#   api/KEY.json               gh api ENDPOINT, where KEY is the endpoint with
+#                              the repos/OWNER/REPO/ prefix removed and each /
+#                              replaced by _ (pulls_7_reviews, issues_7_comments)
+#   graphql/OWNER_REPO_N.json  gh api graphql for that owner, repo and pull
+#                              request number, as gh --paginate --slurp prints it
+#
+# A REST endpoint or GraphQL query with no response file fails the way gh does
+# for a missing resource. gh auth status always succeeds.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function data_dir() {
+  printf '%s' "${STUB_COPILOT_GH_DIR:?STUB_COPILOT_GH_DIR must be set}"
+}
+
+function do_repo_view() {
+  local repo="${1:?gh repo view needs a repository}"
+  if [[ -f "$(data_dir)/repos/${repo//\//_}.missing" ]]; then
+    echo "GraphQL: Could not resolve to a Repository with the name '${repo}'. (repository)" >&2
+    exit 1
+  fi
+  printf '{"nameWithOwner":"%s"}\n' "${repo}"
+}
+
+function do_pr_list() {
+  local repo=""
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --repo)
+        repo="${2}"
+        shift 2
+        ;;
+      *) shift ;;
+    esac
+  done
+  [[ -n "${repo}" ]] || die "gh pr list needs --repo"
+
+  local file
+  file="$(data_dir)/prs/${repo//\//_}.txt"
+  if [[ -f "${file}" ]]; then
+    cat "${file}"
+  fi
+}
+
+function do_graphql() {
+  local owner="" repo="" number=""
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      -f | -F)
+        case "${2}" in
+          owner=*) owner="${2#owner=}" ;;
+          repo=*) repo="${2#repo=}" ;;
+          pr_number=*) number="${2#pr_number=}" ;;
+          *) ;;
+        esac
+        shift 2
+        ;;
+      *) shift ;;
+    esac
+  done
+
+  local file
+  file="$(data_dir)/graphql/${owner}_${repo}_${number}.json"
+  if [[ ! -f "${file}" ]]; then
+    echo "gh: Not Found (HTTP 404)" >&2
+    exit 1
+  fi
+  cat "${file}"
+}
+
+function do_api() {
+  if [[ "${1:-}" == "--paginate" ]]; then
+    shift
+  fi
+  if [[ "${1:-}" == "graphql" ]]; then
+    shift
+    do_graphql "$@"
+    return
+  fi
+
+  local endpoint="${1:?gh api needs an endpoint}"
+  local key="${endpoint}"
+  if [[ "${key}" =~ ^repos/[^/]+/[^/]+/(.*)$ ]]; then
+    key="${BASH_REMATCH[1]}"
+  fi
+  key="${key//\//_}"
+
+  local file
+  file="$(data_dir)/api/${key}.json"
+  if [[ ! -f "${file}" ]]; then
+    echo "gh: Not Found (HTTP 404)" >&2
+    exit 1
+  fi
+  cat "${file}"
+}
+
+function main() {
+  case "${1:-} ${2:-}" in
+    "auth status") exit 0 ;;
+    "repo view")
+      shift 2
+      do_repo_view "$@"
+      ;;
+    "pr list")
+      shift 2
+      do_pr_list "$@"
+      ;;
+    api\ *)
+      shift
+      do_api "$@"
+      ;;
+    *) die "unexpected gh invocation: $*" ;;
+  esac
+}
+
+main "$@"

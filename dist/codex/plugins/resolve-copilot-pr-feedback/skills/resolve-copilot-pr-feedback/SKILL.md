@@ -209,6 +209,7 @@ Copilot does not always open a thread. When it declines to comment on a line the
     "id": 5035762218,
     "url": "https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762218",
     "submittedAt": "2026-08-21T18:02:11Z",
+    "commitId": "abc1234def5678",
     "headline": "### 🔵 Needs a closer look\n\nThe Phase 2 plan section is internally inconsistent...",
     "verdict": "### 🔵 Needs a closer look",
     "hasSuppressedMarker": true,
@@ -225,8 +226,9 @@ Copilot does not always open a thread. When it declines to comment on a line the
 
 - **`findings`**: the structured parse. Treat each entry exactly like a thread comment, except that it cannot be replied to or resolved.
   - **`source`** says which layout it came from: `suppressed`, `previously-missed`, `table` (a vote-tagged item in a file-summary cell), `bullets` (a vote-tagged bullet under a findings label), or `lead`. **`region`** names the body section it sits in.
-  - A `lead` finding is the review's lead paragraph, emitted when `needsRead` is true, after any parsed findings. It has `location: "(review overview)"`, no path, no line and no severity. Its body keeps every line of the lead, bullets and bold text included. It may hold several concerns: handle it as step 1d describes.
+  - A `lead` finding is the review's lead paragraph, emitted when `needsRead` is true, after any parsed findings. It has `location: "(review overview)"`, no path, no line and no severity. Its body keeps every line of the lead, bullets and bold text included. When a non-clean verdict needs a read but has no lead at all, the body is the verdict heading itself, so the finding always has text to quote and match. It may hold several concerns: handle it as step 1d describes.
   - A `bullets` finding that names no file has `path: null` and `location: "(review body)"`.
+- **`commitId`**: the commit the review ran against. Compare it with the pull request's `headRefOid` (`gh pr view PR_NUMBER --repo OWNER/REPO --json headRefOid`) to tell a review of the current head from one of an older push.
 - **`verdict`**: the first `###` heading in the body. On `ccr-overview-v2` reviews it is the verdict heading, exposed separately from the lead paragraph in `headline`. Older layouts can report a section heading such as `### Reviewed changes`, or `null`, so read `headline` rather than `verdict` there.
 - **`reviewKind`**: `review`, or one of two notices Copilot posts through the review API that are **not reviews**: `error` ("Copilot encountered an error and was unable to review this pull request") and `no-files` (every changed file was excluded). A notice has no verdict and no findings, which is exactly what a clean review looks like, so never read one as clean. `unknown` is a body that is neither, and it also sets drift.
 - **`hasFormatDrift`**: the layout could not be read, which only a parser change fixes. It is true for:
@@ -236,14 +238,14 @@ Copilot does not always open a thread. When it declines to comment on a line the
   - **`reviewKind: unknown`.**
 - **`unaccounted`**: what the census found that nothing explains. The census checks every finding-shaped signal in the body against what the parsers returned: each vote tag such as `(2 votes)` against the findings parsed from its line, each `path:line` heading or list item against the located findings in its section, each section count such as `Open (3)` against the findings and thread links that section holds, and, on `ccr-overview-v2` bodies, each HTML element against the small set that layout is built from. Every entry is `{kind, region, line, text}`, where `kind` is `vote`, `location`, `section-count` or `element`, `line` is the body line and `text` quotes it. A non-empty list means a parser read the layout only partly, or not at all.
 - **`needsRead`**: the lead paragraph has to be read, because it is the place a concern may be stated that nothing else records. That is a reading task, not a format change: the lead may state a new finding, restate a thread or a parsed finding, ask for human review without naming a defect, or say nothing of concern. It is true on a `ccr-overview-v2` review when either:
-  - the lead is anything but a known no-finding sentence, whatever the verdict and whatever else parsed, so an approval that names a nit is read; or
-  - a non-clean verdict has no open thread and no parsed finding behind it, unless the round lists `Resolved since last review (N)` and its lead is a known no-finding sentence.
+  - the lead is not empty and is anything but a known no-finding sentence, whatever the verdict and whatever else parsed, so an approval that names a nit is read; or
+  - a verdict other than `Approval recommended`, or no verdict at all, has no open thread and no parsed finding behind it, unless the round lists `Resolved since last review (N)` and its lead is a known no-finding sentence.
 
   The known sentences, such as "One or more issues must be addressed before approval." and "No unresolved review issues were identified.", must be the whole lead: one followed by anything else is read. The lead arrives as one `lead` finding.
 
 - **`suppressed`**: the raw legacy section, verbatim, beginning with the line that announced it.
 - **`reviewBody`**: the complete immutable review body, for reading what the parsers could not.
-- **`headline`**: Copilot's verdict and lead paragraph.
+- **`headline`**: everything before the first details block: the marker, the title, the verdict, the lead and the `**Review effort:**` and `**Findings:**` lines, without the calls to action.
 
 `**Findings:** None` never means "this review has no findings". The count covers inline threads only: a review stating `None` can carry `Previously missed (3)` and findings in file-summary cells.
 
@@ -454,8 +456,8 @@ Do not run this step if step 5 recorded a lint failure or skipped required lint 
    **Do not re-run `fetch-reviews` as a completion check.** Review bodies are immutable, so a review-body finding you just fixed still appears in the old body and always will. It will never go empty, and treating it as a verification signal produces a false Partial forever. Only the thread `fetch` is expected to reach `[]`.
 
 1. Determine terminal workflow status and counts:
-   - **No unresolved Copilot feedback**: the initial `fetch` returned `[]`, `fetch-reviews` returned at least one entry with `reviewKind: review` against the current head, every entry had `hasFormatDrift: false` and `needsRead: false` and every finding was absent or `Previously handled`, and `audit` reported nothing `uncovered` and nothing in `legacyNeedsRead`. Never use this status without having run `fetch-reviews` and `audit`. An empty `fetch-reviews` is not "nothing to process": every entry being clean is trivially true of no entries. If Copilot has not reviewed the current head, record a workflow-level failure that says so instead.
-   - **Completed**: Every fetched thread, review-body finding, lead concern and uncovered item was handled according to its category, no failed or pending items remain, and any required code changes were pushed. Advisory items do not prevent this status.
+   - **No unresolved Copilot feedback**: the initial `fetch` returned `[]`, `fetch-reviews` returned at least one entry with `reviewKind: review` whose `commitId` is the current `headRefOid`, every entry had `hasFormatDrift: false` and `needsRead: false` and every finding was absent or `Previously handled`, and `audit` reported nothing `uncovered` and nothing in `legacyNeedsRead`. Never use this status without having run `fetch-reviews` and `audit`. An empty `fetch-reviews` is not "nothing to process": every entry being clean is trivially true of no entries. If Copilot has not reviewed the current head, record a workflow-level failure that says so instead.
+   - **Completed**: Every fetched thread, review-body finding, lead concern and uncovered item was handled according to its category, `audit` ran successfully, no failed or pending items remain, and any required code changes were pushed. Advisory items do not prevent this status. A failed `audit` is a workflow-level failure, because the items it would have reported went unread.
    - **Partial**: At least one item was handled, but one or more items, replies, resolutions, tracking items, instruction updates, lint runs, pushes, or verification checks failed or remain pending, or a workflow-level failure was recorded
    - **Failed**: The workflow could not fetch or process feedback, or no required processing step succeeded. This includes a run whose only Copilot review for the current head is an `error` or `no-files` notice: nothing was reviewed.
 1. Track feedback metrics separately from workflow-level failures. Feedback metrics cover fetched, resolved, pending, failed, deferred, code-change, review-body, uncovered, advisory and previously handled items. Workflow-level failures cover non-thread steps such as instruction updates, follow-up tracking, lint runs, pushes, verification checks, review-body format drift, and a Copilot notice in place of a review.

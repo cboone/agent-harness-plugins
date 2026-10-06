@@ -201,8 +201,8 @@ A section summary counts at one depth only, the summary of a block opened at
 the top of the body. `Previously missed` nests a details block per finding, so
 accepting any depth would let one of those carry a section name: a `Resolved
 since last review (1)` tucked inside `What changed in this PR` would clear the
-lead although the review lists no resolved section. Here the lead still needs
-a read.
+read that a non-clean verdict with a known lead gets, although the review lists
+no resolved section. Here the lead still needs a read.
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-nested-impersonation.json" | jq -c '.[0] | {verdict, hasFormatDrift, needsRead}'
@@ -520,6 +520,17 @@ $ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"
 {"hasFormatDrift":true,"findings":["src/a.js:12"],"unaccounted":["location Suppressed comments line 10","location Suppressed comments line 13"]}
 ```
 
+The same holds for the other list markers Markdown allows, and for a location
+in bold.
+
+```scrut
+$ for item in '+ `src/a.js:10` misses a null check' '1. `src/a.js:10` misses a null check' '2) `src/a.js:10` misses a null check' '- **`src/a.js:10`** misses a null check'; do printf '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"y","body":"## Pull request overview\\n\\n<details>\\n<summary>Review details</summary>\\n\\n%s\\n</details>"}]' "${item}" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '[.[0].unaccounted[] | .kind]'; done
+["location"]
+["location"]
+["location"]
+["location"]
+```
+
 A bullet that opens with a file and line counts as a location even without a
 vote tag, so a finding listed that way cannot slip past every parser.
 
@@ -593,8 +604,9 @@ $ jq '.[0].body |= sub("approval\\."; "approval.\n- **Rollback:** the down migra
 {"needsRead":true,"findings":[{"source":"lead","body":"One or more issues must be addressed before approval.\n- **Rollback:** the down migration drops the users table."}]}
 ```
 
-A known sentence clears only a round that lists a resolved section. Without
-one, the sentence that says issues remain is read rather than trusted.
+On a non-clean verdict with nothing else behind it, a known sentence clears
+only a round that lists a resolved section. Without one, the sentence that
+says issues remain is read rather than trusted.
 
 ```scrut
 $ jq '.[0].body |= sub("(?s)<details>.*"; "")' "${COPILOT_REVIEW_DATA_DIR}/format-d-resolved-only.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead}'
@@ -621,6 +633,56 @@ of its concerns to what parsed.
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d.json" | jq -c '.[0] | {needsRead, sources: [.findings[] | .source], lead: ([.findings[] | select(.source == "lead") | .body][0])}'
 {"needsRead":true,"sources":["table","table","lead"],"lead":"A moderate validation issue and a documentation nit remain unresolved."}
+```
+
+The calls to action Copilot puts in the preamble are boilerplate, not lead.
+An approval whose lead is a known sentence stays clean with both of them
+present.
+
+```scrut
+$ jq '.[0].body |= sub("No unresolved correctness issues were identified\\."; "No unresolved correctness issues were identified.\n\n*Get a fresh assessment by requesting another Copilot review.*\n\n*Once you have addressed the feedback, request another review.*")' "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {needsRead, findings}'
+{"needsRead":false,"findings":[]}
+```
+
+An approval with no lead at all needs no read. A non-clean verdict with no
+lead and nothing behind it does, and the verdict heading stands in as the
+lead finding's body, so the finding always has text to quote and match.
+
+```scrut
+$ jq '.[0].body |= sub("\n\nNo unresolved correctness issues were identified\\."; "")' "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {verdict, needsRead, findings}'
+{"verdict":"### 🟢 Approval recommended","needsRead":false,"findings":[]}
+```
+
+```scrut
+$ jq '.[0].body |= (sub("\n\nOne or more issues must be addressed before approval\\."; "") | sub("(?s)<details>.*"; ""))' "${COPILOT_REVIEW_DATA_DIR}/format-d-resolved-only.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {needsRead, findings: [.findings[] | {source, body}]}'
+{"needsRead":true,"findings":[{"source":"lead","body":"### 🔵 Needs a closer look"}]}
+```
+
+A lead that lists a finding as a located bullet is read, not drift. The
+census would otherwise count the bullet as a location nothing parsed, but the
+lead finding carries that line verbatim, so it is accounted for.
+
+```scrut
+$ jq '.[0].body |= sub("approval\\."; "approval.\n- `src/a.js:10` misses a null check.")' "${COPILOT_REVIEW_DATA_DIR}/format-d-resolved-only.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead, unaccounted, findings: [.findings[] | .body]}'
+{"hasFormatDrift":false,"needsRead":true,"unaccounted":[],"findings":["One or more issues must be addressed before approval.\n- `src/a.js:10` misses a null check."]}
+```
+
+Only real layout is dropped from the lead: a heading is `#` marks then a space,
+and a comment is a whole line. A line that starts with an issue number, or with
+a comment followed by text, is lead content.
+
+```scrut
+$ for extra in '#42 regressed: retries never stop.' '<!-- note --> The lock is never released on error.'; do jq --arg e "${extra}" '.[0].body |= sub("approval\\."; "approval.\n" + $e)' "${COPILOT_REVIEW_DATA_DIR}/format-d-resolved-only.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {needsRead, body: [.findings[] | .body][0]}'; done
+{"needsRead":true,"body":"One or more issues must be addressed before approval.\n#42 regressed: retries never stop."}
+{"needsRead":true,"body":"One or more issues must be addressed before approval.\n<!-- note --> The lock is never released on error."}
+```
+
+Each review reports the commit it ran against, which is how a caller tells a
+review of the current head from one of an older push.
+
+```scrut
+$ jq '.[0].commit_id = "abc1234"' "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0].commitId'
+"abc1234"
 ```
 
 The lead ends where the first details block starts, including an `Open`
@@ -687,6 +749,14 @@ $ jq '.[0].body |= sub("\\| File \\| Summary \\|"; "| File | Summary |\n|---|---
 ```scrut
 $ jq '.[0].body |= sub("Two inline issues remain unresolved."; "Two inline issues remain; one concerns the wasn'"'"'t able to review any files notice.")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-only.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {reviewKind}'
 {"reviewKind":"review"}
+```
+
+The same ordering protects an older-layout review, which the v2 marker does not
+cover, from the excluded-files notice text.
+
+```scrut
+$ jq '.[0].body |= sub("\\| File \\| Summary \\|"; "| File | Summary |\n|---|---|\n| `docs/notices.md` | Documents the \"Copilot wasn'"'"'t able to review any files\" notice. |\n| File | Summary |")' "${COPILOT_REVIEW_DATA_DIR}/format-b-overview-bullets.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {reviewKind, parsed: ([.findings[] | select(.source != "lead")] | length)}'
+{"reviewKind":"review","parsed":11}
 ```
 
 ## A review body that is not a string is skipped, not fatal
@@ -955,8 +1025,9 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit < "${COPILOT_AUDIT_DATA_DIR}/lega
 ```
 
 An older body with no heading at all cannot say it was clean, so it is listed
-too. An older body whose findings parsed, and a v2 body, which states its own
-findings and leads, are accounted for by other means and are not.
+too. Each of the others is excluded by exactly one filter: an older body whose
+findings parsed, a v2 body with a known lead and an open thread, which states
+its own findings, and an error notice, which is not a review.
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit < "${COPILOT_AUDIT_DATA_DIR}/legacy-filters.json" | jq -c '{legacyNeedsRead}'
@@ -995,6 +1066,46 @@ Error: Invalid audit JSON: reviewComments: every element must be an object.
 ```
 
 ```scrut
+$ echo '{"reviews":[],"reviewComments":[],"issueComments":["x"],"threads":[]}' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit 2>&1
+Error: Invalid audit JSON: issueComments: every element must be an object.
+[1]
+```
+
+```scrut
+$ echo '{"reviews":[],"reviewComments":[],"issueComments":[],"threads":[{"isResolved":false,"comments":[1]}]}' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit 2>&1
+Error: Invalid audit JSON: threads: every element must be an object with a comments array of objects.
+[1]
+```
+
+A login or body that is not a string inside an element reads as empty, so one
+malformed comment is judged rather than aborting the join.
+
+```scrut
+$ echo '{"reviews":[],"reviewComments":[{"id":1,"user":{"login":"github-actions[bot]"},"body":5}],"issueComments":[{"id":2,"user":{"login":7},"body":null}],"threads":[]}' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit | jq -c '{surfaces, uncovered}'
+{"surfaces":{"reviews":0,"reviewComments":0,"issueComments":0},"uncovered":[]}
+```
+
+`audit` itself is exercised against `copilot-gh-stub`, installed as `gh` first
+on `PATH`, which answers from `tests/data/copilot-gh/`. On pull request 7 the
+only thread was opened by `github-actions[bot]` with a severity tag, so the
+opener's body has to come through the thread fetch for it to count as Copilot
+feedback the thread fetch reports.
+
+```scrut
+$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${RESOLVE_COPILOT_THREADS_BIN}" audit o r 7 | jq -c .; rm -rf "${stub}"
+{"surfaces":{"reviews":1,"reviewComments":1,"issueComments":0},"uncovered":[],"legacyNeedsRead":[]}
+```
+
+A thread query that finds no such pull request fails loudly. Read as an empty
+index, it would report every Copilot review comment as being in no thread.
+
+```scrut
+$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${RESOLVE_COPILOT_THREADS_BIN}" audit o r 9 2>&1; echo "exit=$?"; rm -rf "${stub}"
+Error: Invalid response while fetching threads for o/r#9: no such pull request.
+exit=1
+```
+
+```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit extra < /dev/null 2>&1
 Error: Usage: resolve-copilot-threads parse-audit (reads pull request JSON on stdin)
 [1]
@@ -1003,7 +1114,8 @@ Error: Usage: resolve-copilot-threads parse-audit (reads pull request JSON on st
 ## The copy `monitor-pr` ships parses the same way
 
 `monitor-pr` runs this script's read-only commands in its snapshot step, to see
-whether a current-head Copilot review left findings or format drift before it
+whether a current-head Copilot review left findings, format drift or audit
+items before it
 decides whether to dispatch to `resolve-copilot-pr-feedback`. A `cmp` testcase
 in `repo-tooling.md` holds the two copies byte-identical; these two run the
 shipped file, so a copy that matches but cannot execute still fails.
@@ -1065,18 +1177,27 @@ $ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_
 {"id":null,"url":null,"reviewKind":null,"hasFormatDrift":null,"needsRead":null,"findings":0,"unaccounted":0}
 ```
 
-The audit filter reduces `audit` to the ids step 7b records as processed. The
-`audited` field is what tells an empty audit from a failed one: a failed
-`audit` emits nothing, and the filter then emits nothing too, so the watch
-reads "not observed" rather than "nothing uncovered".
+The audit filter reduces `audit` to the items step 7b records as processed,
+each named by its surface, because ids from different GitHub tables can
+coincide. The `audited` field is what tells an empty audit from a failed one:
+a failed `audit` emits nothing, and the filter then emits nothing too, so the
+watch reads "not observed" rather than "nothing uncovered".
 
 ```scrut
-$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-audit < "${COPILOT_AUDIT_DATA_DIR}/uncovered.json" | jq -c '{audited: true, uncovered: [.uncovered[].id], legacyNeedsRead}'
-{"audited":true,"uncovered":[9103,9104,9202],"legacyNeedsRead":[]}
+$ jq '.reviews += [{"id":6100000011,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"y","body":"## Pull request overview\n\nA race remains."}]' "${COPILOT_AUDIT_DATA_DIR}/uncovered.json" | "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-audit | jq -c '{audited: true, items: ([.uncovered[] | "\(.surface):\(.id)"] + [(.legacyNeedsRead // error("no legacyNeedsRead"))[] | "review:\(.)"])}'
+{"audited":true,"items":["review-comment:9103","review-comment:9104","issue-comment:9202","review:6100000011"]}
 ```
 
 ```scrut
-$ printf '' | jq -c '{audited: true, uncovered: [.uncovered[].id], legacyNeedsRead}'
+$ printf '' | jq -c '{audited: true, items: ([.uncovered[] | "\(.surface):\(.id)"] + [(.legacyNeedsRead // error("no legacyNeedsRead"))[] | "review:\(.)"])}'
+```
+
+An audit result missing either list is a failed probe, not an empty one: the
+filter emits nothing.
+
+```scrut
+$ echo '{"uncovered":[]}' | jq -c '{audited: true, items: ([.uncovered[] | "\(.surface):\(.id)"] + [(.legacyNeedsRead // error("no legacyNeedsRead"))[] | "review:\(.)"])}' 2> /dev/null
+[5]
 ```
 
 The thread-side filter reduces `fetch` the same way, to a count plus locations.

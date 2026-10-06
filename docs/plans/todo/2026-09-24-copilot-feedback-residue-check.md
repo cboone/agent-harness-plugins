@@ -110,9 +110,9 @@ Redefine the output around the two meanings:
 
 When `needsRead` is true, the script also emits the lead as one finding: `{source: "lead", region: "lead", path: null, line: null, location: "(review overview)", severity: null, body: <lead paragraph>}`. This is #492's proposal. Severity stays null rather than being inferred from the verdict color.
 
-**Known no-finding leads.** #516's exact match on "One or more issues must be addressed before approval." becomes a short allowlist, seeded from the samples. A lead on the list clears `needsRead`. A lead not on the list costs a read, never an escalation. That resolves #529: a reworded boilerplate sentence now produces a lead finding that the agent recognizes as a no-op, instead of an escalation that can never clear. The resolved-round exemption and `has_unrecognized_element` stay as #516 left them, guarding the clean path. They no longer decide drift, because prose is no longer drift.
+**Known no-finding leads.** #516's exact match on "One or more issues must be addressed before approval." becomes a short allowlist, seeded from the samples. A lead on the list clears `needsRead`. A lead not on the list costs a read, never an escalation. That resolves #529: a reworded boilerplate sentence now produces a lead finding that the agent recognizes as a no-op, instead of an escalation that can never clear. The resolved-round rule stays as #516 left it, guarding the clean path; it no longer decides drift, because prose is no longer drift.
 
-`has_unrecognized_element` stays scoped to the resolved-round path. Applied to every v2 body, it would fire on 2 of the 320 recent reviews, where finding prose contains placeholders such as `<out-file>` and `<name>` outside code spans.
+The `has_unrecognized_element` check from #516 became `element_signals`, which reports to `unaccounted` on every v2 body. Scanning raw text, it would fire on 2 of the 320 recent reviews, whose finding prose quotes placeholders such as `<out-file>` and `<name>` in code spans, so it skips code spans and fenced blocks; with those skipped, no live review triggers it.
 
 ### Layer 3: review kind (`reviewKind`)
 
@@ -175,20 +175,20 @@ Add an **Advisory** category to step 2: a concern that names no defect and asks 
 **Lead settlement line.** When any review in scope produced a lead finding, the step 7 summary adds one count line under its table, recording how the lead concerns were settled:
 
 ```markdown
-Lead findings: 3 matched to threads, 1 handled as new, 1 advisory
+Lead findings: 3 matched, 1 handled as new, 1 advisory, 2 no concern.
 ```
 
-Each concern counts once, in the first of these that applies: matched to a thread or a `Previously handled` row, handled as a new finding, or Advisory. The line is what makes it possible to measure, from the PR's own summaries, how often leads only restate threads. That measurement decides whether mechanical matching is ever worth building (see [Decisions](#decisions)).
+Each concern counts once, in the first of these that applies: matched to a thread, a parsed finding or a `Previously handled` row; handled as a new finding; Advisory; or no concern. The line is what makes it possible to measure, from the PR's own summaries, how often leads only restate other feedback. That measurement decides whether mechanical matching is ever worth building (see [Decisions](#decisions)).
 
 **Terminal status.**
 
 - `hasFormatDrift` keeps today's meaning: a workflow-level failure, so the run reports `Partial`.
-- `needsRead` is not a failure. Once each lead concern is matched, handled or recorded as Advisory, the run can report `Completed`.
+- `needsRead` is not a failure. Once each lead concern is matched, handled, recorded as Advisory or settled as no concern, the run can report `Completed`.
 - An `error` or `no-files` review against the current head makes the status `Failed` for that review, with the notice quoted.
 
 ### Layer 8: `monitor-pr`
 
-The step 3 probe projects `needsRead`, `reviewKind` and `unaccounted | length` alongside the fields it projects today, and runs `audit` as a third command, projecting the `uncovered` and `legacyNeedsRead` ids. Audit items are PR-wide and persist like review-body findings: a new id dispatches to step 7b even against a review already processed, and step 7b's record of an id clears it.
+The step 3 probe projects `needsRead`, `reviewKind` and `unaccounted | length` alongside the fields it projects today, and runs `audit` as a third command, projecting its `uncovered` and `legacyNeedsRead` entries as surface-prefixed `items`. Audit items are PR-wide and persist like review-body findings: a new item dispatches to step 7b even against a review already processed, and step 7b's record of an item under a clearing outcome clears it. Two consecutive failed audits escalate.
 
 - Step 4 dispatches a `needsRead` review to the resolver once per review id, like review-body findings. A `needsRead` review that the resolver has already processed clears the axis on a `Completed` outcome and never escalates on its own.
 - Drift keeps its escalation path.
@@ -202,7 +202,7 @@ Add `bin/copilot-review-canary`, following `bin/version-audit`: it prints nothin
 - `unaccounted` entries;
 - `reviewKind: unknown`;
 - `uncovered` items;
-- a lead that matches no known no-finding sentence on an otherwise clean round.
+- a lead that matches no known no-finding sentence and appears word for word on two or more pull requests, whatever the verdict.
 
 The last check is the early warning #529 asks for. It also prints a structural inventory (headings, `<summary>` titles, line-start labels and list-item shapes, with counts and first-seen dates) and marks entries not seen in a committed baseline. That is how the `Review findings:` bullets would have been noticed on 2026-10-02.
 
@@ -326,5 +326,5 @@ All decided on 2026-10-06.
 1. **Canary scope.** The canary is local-only, with no scheduled workflow, for the reasons given under Layer 9.
 1. **Advisory reach.** Advisory concerns do not block `monitor-pr`. They surface in the resolver's summary and in `monitor-pr`'s ready report (Layer 8). Blocking was rejected for two reasons. Review bodies never change, so a blocking advisory would need an acknowledgment mechanism to ever clear, without which it recreates #536. And advisory leads are common enough that acknowledging each one would interrupt most watches. If an advisory is ever missed at merge time, an acknowledgment rule can be added on top of this without changing the parser.
 1. **`monitor-pr` runs the audit (2026-10-06, after the branch review).** Without it, a Copilot reply inside a thread someone else opened, a Copilot comment on the PR itself, or an older-layout review only a read can settle would leave the Copilot axis clean while the feedback sat unread.
-1. **Every lead that is not known boilerplate is read (2026-10-06, after the branch review).** The earlier rule read a lead only for a non-green verdict with nothing else parsed, so an approval naming a nit, or a lead naming a defect beside one parsed finding, was dropped. Across the 320-review sample this raises the reviews needing a read from 95 to 297 of 317 v2 reviews; the lead settlement line now also counts leads that state no concern, which measures that cost.
+1. **Every lead that is not known boilerplate is read (2026-10-06, after the branch review).** The earlier rule read a lead only for a non-green verdict with nothing else parsed, so an approval naming a nit, or a lead naming a defect beside one parsed finding, was dropped. Across the 320-review sample, 317 of which are v2 reviews and 3 are notices, this raises the reviews needing a read from 95 to 297; the lead settlement line now also counts leads that state no concern, which measures that cost.
 1. **Restated threads.** The agent matches lead concerns to threads in step 1d, and the script does not attempt it. Leads paraphrase and blend several concerns into one sentence, so a keyword match can pair a new concern with an old thread and clear it without anyone noticing, which is the failure this plan exists to remove. The lead settlement line (Layer 7) measures how often leads are pure restatements. Mechanical matching is worth revisiting only if those summaries show restatements are most lead findings, and even then it should clear only a lead whose every concern matches.

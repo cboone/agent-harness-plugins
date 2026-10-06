@@ -342,9 +342,10 @@ function do_fetch() {
 # line, section count and element against what the parsers returned, is what
 # catches a layout that a parser reads only partly.
 #
-# A lead paragraph that is not a known no-finding sentence is not drift: the
-# layout was read, and what remains is prose. It sets needsRead and arrives as
-# a finding of its own.
+# On a ccr-overview-v2 body, a lead paragraph that is not a known no-finding
+# sentence is not drift: the layout was read, and what remains is prose. It
+# sets needsRead and arrives as a finding of its own. So does a non-clean
+# verdict with nothing behind it, even when its lead is empty or known.
 # =============================================================================
 
 # Normalizes an array of GitHub review objects into Copilot review-body findings.
@@ -450,8 +451,9 @@ function do_parse_reviews() {
         | .out;
 
       # The first level-3 heading. On ccr-overview-v2 bodies this is the
-      # verdict the needsRead check compares; older layouts can yield a
-      # section heading such as "### Reviewed changes", or null. Trimming drops a
+      # verdict the needsRead check compares. Older layouts can yield a
+      # section heading such as "### Reviewed changes", or null, and there
+      # review_kind and legacyNeedsRead in the audit read it. Trimming drops a
       # trailing carriage return so a CRLF body still compares equal.
       def verdict:
         split("\n")
@@ -466,8 +468,9 @@ function do_parse_reviews() {
       # words stand in for a section Copilot emits. Both matchers below decide
       # whether something goes unreported: a spoofed "Open" count can absorb
       # a stated shortfall and hide drift, and a spoofed resolved section can
-      # clear a lead that needs a read. So a loose match is a way to suppress
-      # a signal rather than a cosmetic imprecision.
+      # clear the read that a non-clean verdict with a known lead would
+      # otherwise get. So a loose match is a way to suppress a signal rather
+      # than a cosmetic imprecision.
       #
       # Depth one exactly, which is the summary of a details block opened at
       # the top of the body. Every section summary observed on a live review
@@ -475,8 +478,8 @@ function do_parse_reviews() {
       # that "Previously missed" nests, at depth two. Accepting any positive
       # depth would let one of those nested blocks carry a section name and
       # impersonate the real thing, so a "Resolved since last review (1)"
-      # tucked inside "What changed in this PR" would clear the lead although
-      # the review lists no resolved section at all.
+      # tucked inside "What changed in this PR" would clear that read
+      # although the review lists no resolved section at all.
       #
       # A closing tag at depth zero is ignored so unbalanced markup cannot
       # drive the count negative and shift every later line down a level.
@@ -667,7 +670,7 @@ function do_parse_reviews() {
         | map(
             select(
               . != ""
-              and (test("^<!--|^#|^\\*\\*Review effort:\\*\\*|^\\*\\*Findings:\\*\\*") | not)
+              and (test("^<!--.*-->$|^#{1,6}([[:space:]]|$)|^\\*\\*Review effort:\\*\\*|^\\*\\*Findings:\\*\\*") | not)
             )
           );
 
@@ -1017,7 +1020,7 @@ function do_parse_reviews() {
               # the vote check, which already reconciles it.
               (
                 select(
-                  ($l.raw | test("^[[:space:]]*(\\*\\*[^*`]+:[0-9]+\\*\\*[[:space:]]*$|([-*][[:space:]]+)?`[^`]+:[0-9]+`)"))
+                  ($l.raw | test("^[[:space:]]*(\\*\\*[^*`]+:[0-9]+\\*\\*[[:space:]]*$|(([-*+]|[0-9]+[.)])[[:space:]]+)?(\\*\\*)?`[^`]+:[0-9]+`)"))
                   and ($l.text | test("\\([0-9]+ votes?(?: each)?\\)"; "i") | not)
                 )
                 | {kind: "location", line: $l.n, region: $l.region, text: $l.raw}
@@ -1102,7 +1105,7 @@ function do_parse_reviews() {
             ($lines | signals | unaccounted($findings))
             + (if $is_v2 then element_signals($lines) else [] end)
             | sort_by(.line)
-          ) as $unaccounted
+          ) as $census
         | (.body | has_suppressed_marker) as $has_suppressed_marker
         | (.body | review_kind($is_v2; $has_suppressed_marker)) as $review_kind
         | ($is_v2 and (.body | lists_open_threads)) as $lists_open_threads
@@ -1139,7 +1142,10 @@ function do_parse_reviews() {
         # The lead as one finding, so it flows through categorization and
         # the summary like any other review-body finding instead of
         # depending on a caller noticing a flag. Copilot gives it no
-        # location and no severity, and none is invented.
+        # location and no severity, and none is invented. A non-clean
+        # verdict can need a read with no lead at all; the verdict then
+        # stands in as the body, so the finding always has text a summary
+        # can quote and a later run can match.
         | (
             if $needs_read then
               [{
@@ -1147,13 +1153,23 @@ function do_parse_reviews() {
                 path: null,
                 line: null,
                 severity: null,
-                body: $lead_paragraph,
+                body: (if $lead_paragraph != "" then $lead_paragraph else ($verdict // "(no verdict)") end),
                 source: "lead",
                 region: "lead"
               }]
             else []
             end
           ) as $lead_findings
+        # A vote tag or location written in the lead is part of the lead
+        # finding, which carries that line verbatim, so it is accounted for
+        # whenever the lead is read. Reporting it as well would turn a lead
+        # that lists its findings as bullets into drift that never clears.
+        | (
+            if $needs_read then
+              $census | map(select((.region == "lead" and (.kind == "vote" or .kind == "location")) | not))
+            else $census
+            end
+          ) as $unaccounted
         # Every ccr-overview-v2 body carries a "**Findings:**" line, in every
         # fixture and every observed live review, so its absence on a v2 body
         # is a renamed or removed header rather than an older layout.
@@ -1180,6 +1196,9 @@ function do_parse_reviews() {
             id: .id,
             url: .html_url,
             submittedAt: .submitted_at,
+            # The commit the review ran against, which is how a caller tells
+            # a review of the current head from one of an older push.
+            commitId: .commit_id,
             headline: (.body | headline),
             verdict: $verdict,
             hasSuppressedMarker: $has_suppressed_marker,
@@ -1198,9 +1217,9 @@ function do_parse_reviews() {
             #     yields no parsed findings at all.
             #   - A body that is neither a review nor a known notice.
             #
-            # A lead with nothing but prose behind it is not on this list. It is needsRead below, which costs a read rather
-            # than an escalation, because a review body never changes and
-            # drift on one can never clear.
+            # The lead paragraph is not on this list. It sets needsRead below,
+            # which costs a read rather than an escalation, because a review
+            # body never changes and drift on one can never clear.
             hasFormatDrift: (
               ($is_v2 and $stated_shortfall)
               or (($unaccounted | length) > 0)
@@ -1314,12 +1333,16 @@ function do_parse_audit() {
     '
       .[1] as $parsed
       | .[0]
-      | def is_copilot($login; $body):
-        ($login // "" | ascii_downcase) as $lower
-        | ($direct_logins | map(ascii_downcase) | any(. == $lower))
-          or ($lower == $actions_login and (($body // "") | test($severity_pattern; "i")));
+      # A login or body that is not a string reads as empty, so one
+      # malformed comment cannot abort the join with a raw jq error.
+      | def text: if type == "string" then . else "" end;
 
-      def excerpt: (. // "") | gsub("[[:space:]]+"; " ") | .[0:200];
+      def is_copilot($login; $body):
+        ($login | text | ascii_downcase) as $lower
+        | ($direct_logins | map(ascii_downcase) | any(. == $lower))
+          or ($lower == $actions_login and ($body | text | test($severity_pattern; "i")));
+
+      def excerpt: text | gsub("[[:space:]]+"; " ") | .[0:200];
 
       (.reviews | map(select(is_copilot(.user.login?; .body)))) as $reviews
       | (.reviewComments | map(select(is_copilot(.user.login?; .body)))) as $review_comments
@@ -1349,8 +1372,8 @@ function do_parse_audit() {
               | if $thread == null then
                   {surface: "review-comment", reason: "in no thread", id: .id, url: .html_url, path: .path, excerpt: (.body | excerpt)}
                 # The opener is judged the way the thread fetch judges it,
-                # body included, so a thread fetch reports is never also
-                # reported here.
+                # body included, so a thread that the thread fetch reports
+                # is never reported here as well.
                 elif ($thread.isResolved | not)
                      and (is_copilot($thread.comments[0].login; $thread.comments[0].body) | not) then
                   {surface: "review-comment", reason: "reply in a thread Copilot did not open", id: .id, url: .html_url, path: .path, excerpt: (.body | excerpt)}
@@ -1379,13 +1402,15 @@ function do_parse_audit() {
 }
 
 # Fetches every review thread on a PR, resolved or not, with the database id
-# and author of each comment, for the surface audit.
+# and author of each comment and the first comment's body, for the surface
+# audit.
 # Arguments:
 #   $1 - Repository owner
 #   $2 - Repository name
 #   $3 - Pull request number
 # Outputs:
-#   JSON array of {isResolved, comments: [{databaseId, login}]} to stdout
+#   JSON array of {isResolved, comments: [{databaseId, login, body}]} to
+#   stdout, where body is null on every comment but the first
 function fetch_thread_index() {
   local owner="${1}"
   local repo="${2}"

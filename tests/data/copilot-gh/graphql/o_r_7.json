@@ -1,0 +1,39 @@
+[
+  {
+    "data": {
+      "repository": {
+        "pullRequest": {
+          "reviewThreads": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": [
+              {
+                "isResolved": false,
+                "comments": {
+                  "nodes": [
+                    {
+                      "databaseId": 7001,
+                      "author": {
+                        "login": "github-actions[bot]"
+                      },
+                      "body": "[nitpick] Rename the helper."
+                    },
+                    {
+                      "databaseId": 7002,
+                      "author": {
+                        "login": "cboone"
+                      },
+                      "body": "Renamed."
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+]
