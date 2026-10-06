@@ -205,11 +205,11 @@ Sampled 1 Copilot review on 1 pull request.
 [2]
 ```
 
-An uncovered item with no excerpt is still reported.
+An uncovered item with no excerpt is still reported, without a dangling colon.
 
 ```scrut
 $ jq '.[0].audit.uncovered = [{"surface":"issue-comment","reason":"pull request comment","id":5,"url":"https://github.com/o/r/pull/1#issuecomment-5"}]' "${COPILOT_CANARY_DATA_DIR}/clean.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null | grep -F 'issuecomment-5'
-- https://github.com/o/r/pull/1#issuecomment-5 (issue-comment, pull request comment):
+- https://github.com/o/r/pull/1#issuecomment-5 (issue-comment, pull request comment)
 ```
 
 A sample with no Copilot reviews at all says so, rather than printing nothing,

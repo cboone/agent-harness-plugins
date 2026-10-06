@@ -334,7 +334,8 @@ function do_analyze() {
             $sample[]
             | select(audited)
             | .audit.uncovered[]
-            | "\(.url) (\(.surface), \(.reason)): \(.excerpt // "" | tostring | gsub("`"; "") | .[0:120])"
+            | (.excerpt // "" | tostring | gsub("`"; "") | .[0:120]) as $excerpt
+            | "\(.url) (\(.surface), \(.reason))" + (if $excerpt == "" then "" else ": " + $excerpt end)
           ] as $uncovered
         # Every lead that is not a known no-finding sentence costs a read,
         # which is the safe direction. Most leads are prose that never
