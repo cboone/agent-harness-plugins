@@ -170,7 +170,15 @@ Add a step 1d, "Reconcile what the parsers could not":
 1. For each review in scope, list every concern that `headline` and `reviewBody` state, skipping file-summary rows with no signal. Match each concern to a thread from `fetch` (open or already resolved), a parsed finding, or a `Previously handled` row. Handle each unmatched concern as a finding with source `Review prose` and the most specific location the text supports, never an invented line.
 1. Report every `unaccounted` entry and every `unknown` review in the step 7 summary, under a "Format drift" note with the review link, so the parser gap gets fixed.
 
-Add an **Advisory** category to step 2: a concern that names no defect and asks for human judgment, such as "Authentication and logout changes warrant final human review". It needs no code change, is recorded as `Noted` in the summary, and is listed in the summary's opening lines so the request reaches a person. This resolves #536.
+Add an **Advisory** category to step 2: a concern that names no defect and asks for human judgment, such as "Authentication and logout changes warrant final human review". It needs no code change, is recorded as `Noted` in the summary, and is listed in the summary's opening lines so the request reaches a person. It never blocks. This resolves #536.
+
+**Lead settlement line.** When any review in scope produced a lead finding, the step 7 summary adds one count line under its table, recording how the lead concerns were settled:
+
+```markdown
+Lead findings: 3 matched to threads, 1 handled as new, 1 advisory
+```
+
+Each concern counts once, in the first of these that applies: matched to a thread or a `Previously handled` row, handled as a new finding, or Advisory. The line is what makes it possible to measure, from the PR's own summaries, how often leads only restate threads. That measurement decides whether mechanical matching is ever worth building (see [Decisions](#decisions)).
 
 **Terminal status.**
 
@@ -184,6 +192,7 @@ The step 3 probe projects `needsRead`, `reviewKind` and `unaccounted | length` a
 
 - Step 4 dispatches a `needsRead` review to the resolver once per review id, like review-body findings. A `needsRead` review that the resolver has already processed clears the axis on a `Completed` outcome and never escalates on its own.
 - Drift keeps its escalation path.
+- Advisory concerns never hold the watch short of ready. When the resolver's summary for the current head records any, the step 8 ready report reads "Ready, with N advisory requests for human review" and quotes each one with its review link. The request then reaches the user in the message they act on, not only in a PR comment.
 - An `error` or `no-files` review against the current head never satisfies the Copilot axis. The watch requests a fresh review once per head, under the existing request guard, and escalates if the next review is also a notice. That covers #449's acceptance criteria for the decision flow. The criteria about `--confirm-clean` pairs follow from the same rule, because a notice is never a clean review.
 
 ### Layer 9: format canary
@@ -265,9 +274,9 @@ Add scrut cases to `tests/scrut/resolve-copilot-threads.md` that assert today's 
    - the step 1b output contract: `unaccounted`, `needsRead`, `reviewKind`, `source`, `region`, findings with no path, and the narrowed `hasFormatDrift`;
    - the new step 1d, and the Advisory category in step 2;
    - the step 1c identity rule for findings with no path;
-   - the `Review prose`, `Uncovered <surface>` and `lead` sources in the step 7 table, and the terminal-status rules from Layer 7;
+   - the `Review prose`, `Uncovered <surface>` and `lead` sources in the step 7 table, the lead settlement line, and the terminal-status rules from Layer 7;
    - `audit` in the permitted-operations list, as a read.
-1. `plugins/monitor-pr/skills/monitor-pr/SKILL.md` and `references/checkpoint.md`: the probe projection, the dispatch rule, the notice rule and the escalation table (Layer 8). The README notes the new fields.
+1. `plugins/monitor-pr/skills/monitor-pr/SKILL.md` and `references/checkpoint.md`: the probe projection, the dispatch rule, the notice rule, the advisory wording in the step 8 terminal report and the `## Reporting Format` example, and the escalation table (Layer 8). The README notes the new fields.
 1. Plugin versions: `resolve-copilot-pr-feedback` from `1.7.0`, and `monitor-pr` from `1.6.1`. Both are minor bumps, following #516's precedent: new commands and fields, and drift results that move in both directions. Run the `check-versions` skill before opening the PR.
 1. `make build` to regenerate `dist/codex/` for both plugins.
 
@@ -312,9 +321,8 @@ Close #536, #529, #492 and #526 from the PR. #449 can close too, once its regres
 
 ## Decisions
 
-1. **Canary scope (2026-10-06).** The canary is local-only, with no scheduled workflow, for the reasons given under Layer 9.
+All decided on 2026-10-06.
 
-## Open questions
-
-1. **Advisory reach.** An Advisory concern is recorded and surfaced, but it does not block. If such leads should hold `monitor-pr` short of ready until a person acknowledges them, that is a separate escalation rule. This plan does not add it.
-1. **Restated threads.** A lead that restates earlier threads is matched against `fetch` by the agent in step 1d. If calibration shows these dominate `needsRead`, a later change could match thread titles mechanically. This plan leaves the matching to the agent, because the leads paraphrase freely.
+1. **Canary scope.** The canary is local-only, with no scheduled workflow, for the reasons given under Layer 9.
+1. **Advisory reach.** Advisory concerns do not block `monitor-pr`. They surface in the resolver's summary and in `monitor-pr`'s ready report (Layer 8). Blocking was rejected for two reasons. Review bodies never change, so a blocking advisory would need an acknowledgment mechanism to ever clear, without which it recreates #536. And advisory leads are common enough that acknowledging each one would interrupt most watches. If an advisory is ever missed at merge time, an acknowledgment rule can be added on top of this without changing the parser.
+1. **Restated threads.** The agent matches lead concerns to threads in step 1d, and the script does not attempt it. Leads paraphrase and blend several concerns into one sentence, so a keyword match can pair a new concern with an old thread and clear it without anyone noticing, which is the failure this plan exists to remove. The lead settlement line (Layer 7) measures how often leads are pure restatements. Mechanical matching is worth revisiting only if those summaries show restatements are most lead findings, and even then it should clear only a lead whose every concern matches.
