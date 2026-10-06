@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# resolve-copilot-threads \u2014 Fetch, reply to, and resolve Copilot PR review threads
+# resolve-copilot-threads: Fetch, reply to, and resolve Copilot PR review threads
 # Author: Christopher Boone
 # Date: 2026-02-06
 set -euo pipefail
@@ -334,13 +334,17 @@ function do_fetch() {
 # those layouts are parsed separately below.
 #
 # The raw legacy slice, complete review body, and structured parse are emitted.
-# hasFormatDrift covers an unparsed legacy section, a v2 review that states
-# more findings than the inline threads it lists, a non-clean v2 verdict that
-# neither open threads nor a resolved-only round explains, and any signal the
-# census leaves unaccounted, keeping a format change visible instead of
-# silently reporting no feedback. The census, which checks every vote tag,
-# location line and section count against what the parsers returned, is what
+# hasFormatDrift covers an announced suppressed section that yields nothing, a
+# v2 review that states more findings than the inline threads it lists, a body
+# that is neither a review nor a known notice, and any signal the census
+# leaves unaccounted, keeping a format change visible instead of silently
+# reporting no feedback. The census, which checks every vote tag, location
+# line, section count and element against what the parsers returned, is what
 # catches a layout that a parser reads only partly.
+#
+# A lead paragraph that is not a known no-finding sentence is not drift: the
+# layout was read, and what remains is prose. It sets needsRead and arrives as
+# a finding of its own.
 # =============================================================================
 
 # Normalizes an array of GitHub review objects into Copilot review-body findings.
@@ -446,8 +450,8 @@ function do_parse_reviews() {
         | .out;
 
       # The first level-3 heading. On ccr-overview-v2 bodies this is the
-      # verdict the drift check compares; older layouts can yield a section
-      # heading such as "### Reviewed changes", or null. Trimming drops a
+      # verdict the needsRead check compares; older layouts can yield a
+      # section heading such as "### Reviewed changes", or null. Trimming drops a
       # trailing carriage return so a CRLF body still compares equal.
       def verdict:
         split("\n")
@@ -459,9 +463,11 @@ function do_parse_reviews() {
       # Copilot announces every section as a <summary> inside a <details>
       # block, so the nesting is part of what identifies one. Matching the
       # summary text alone would let an unfamiliar wrapper carrying the same
-      # words stand in for a section Copilot emits, and both section matchers
-      # below grant an exemption, so a spoofable match is a way to suppress
-      # drift rather than a cosmetic imprecision.
+      # words stand in for a section Copilot emits. Both matchers below decide
+      # whether something goes unreported: a spoofed "Open" count can absorb
+      # a stated shortfall and hide drift, and a spoofed resolved section can
+      # clear a lead that needs a read. So a loose match is a way to suppress
+      # a signal rather than a cosmetic imprecision.
       #
       # Depth one exactly, which is the summary of a details block opened at
       # the top of the body. Every section summary observed on a live review
@@ -469,8 +475,8 @@ function do_parse_reviews() {
       # that "Previously missed" nests, at depth two. Accepting any positive
       # depth would let one of those nested blocks carry a section name and
       # impersonate the real thing, so a "Resolved since last review (1)"
-      # tucked inside "What changed in this PR" would grant the exemption
-      # although the review lists no resolved section at all.
+      # tucked inside "What changed in this PR" would clear the lead although
+      # the review lists no resolved section at all.
       #
       # A closing tag at depth zero is ignored so unbalanced markup cannot
       # drive the count negative and shift every later line down a level.
@@ -496,7 +502,8 @@ function do_parse_reviews() {
       # ccr-overview-v2 lists the inline threads that were open when the
       # review was written under an "Open (N)" summary. Those threads explain
       # a non-clean verdict by themselves, and the thread fetch reports them,
-      # so a review whose only findings are inline threads is not drift.
+      # so a review whose only findings are inline threads is neither drift
+      # nor, on its verdict alone, a lead to read.
       def lists_open_threads:
         (section_summary("Open") // 0) > 0;
 
@@ -520,10 +527,11 @@ function do_parse_reviews() {
         (section_summary("Resolved since last review") // 0) > 0;
 
       # Lines of a ccr-overview-v2 body that use an element outside the
-      # vocabulary the layout is built from, each reported to the census as
-      # an "element" signal that nothing accounts for. Measured across every
-      # observed live review, that vocabulary is seven elements and nothing
-      # else: details, summary, strong, picture, source, img and a.
+      # vocabulary the layout is built from. Each is reported in unaccounted
+      # beside the census signals, as an "element" entry nothing accounts
+      # for. Only v2 bodies are checked. In every observed live review that
+      # vocabulary is seven elements and nothing else: details, summary,
+      # strong, picture, source, img and a.
       #
       # Elements rather than section names, deliberately. Copilot adds
       # sections over time, and this repository has already seen "Open",
@@ -539,7 +547,7 @@ function do_parse_reviews() {
       #
       # Only markup counts. Inline code spans and fenced blocks are skipped,
       # because a finding that quotes a placeholder such as `<out-file>` is
-      # prose: across 320 live reviews, every element outside the vocabulary
+      # prose: in observed live reviews, every element outside the vocabulary
       # sat inside a code span. The marker comment does not match, because
       # "<!" is not the start of an element name.
       def element_signals($lines):
@@ -592,9 +600,10 @@ function do_parse_reviews() {
       #
       # Validating the whole value is load-bearing. Matching a leading token
       # instead would read "None plus hidden text" as zero and "0 plus hidden
-      # text" as a count of zero, and either one then satisfies the
-      # resolved-round exemption and suppresses an unparsed finding, which is
-      # the failure this command exists to prevent.
+      # text" as a count of zero. Either one reads as no shortfall, and a
+      # resolved-only round with a known lead then needs no read either, so an
+      # unparsed finding goes unreported, which is the failure this command
+      # exists to prevent.
       #
       # "unparseable" is deliberately distinct from null, which means no
       # "**Findings" line at all. The caller turns that null into
@@ -602,8 +611,8 @@ function do_parse_reviews() {
       # keeps it as null on the older layouts that never carried one.
       #
       # Only the preamble is searched, the region before the first details
-      # block, which is where Copilot states the count in all 18 observed
-      # live review bodies. Searching the whole body would let a renamed
+      # block, which is where Copilot states the count in every observed live
+      # review body. Searching the whole body would let a renamed
       # header fall through to a "**Findings" line quoted at the start of a
       # line inside a section, reading a quoted value as the count instead of
       # reporting the rename. The stop pattern omits the closing angle
@@ -632,52 +641,65 @@ function do_parse_reviews() {
           end;
 
       # Copilot puts its verdict heading and lead paragraph before the first
-      # <details> block. The "Once you have addressed..." call to action is
-      # boilerplate on every review and carries no finding.
+      # details block. The stop pattern omits the closing angle bracket, as
+      # stated_finding_count does, so an "Open" section opened with
+      # "<details open>" ends the headline too rather than leaking its thread
+      # list into it. The calls to action ("Once you have addressed...",
+      # "Get a fresh assessment...") are boilerplate and carry no finding.
       def headline:
         split("\n")
-        | (map(test("^<details>")) | index(true)) as $stop
+        | (map(test("^<details")) | index(true)) as $stop
         | (if $stop then .[0:$stop] else . end)
-        | map(select(test("^\\*Once you") | not))
+        | map(select(test("^\\*(Once you|Get a fresh assessment)") | not))
         | join("\n")
         | trim;
 
-      # The prose of the lead paragraph: the lines of headline that are not
-      # markup, headings, emphasis, list items or table rows, joined with a
-      # space. Empty when the lead has no prose.
-      def lead_paragraph:
+      # The lines of the lead: everything in headline except the layout
+      # around it, which is the marker comment, headings (the overview title
+      # and the verdict) and the "**Review effort:**" and "**Findings:**"
+      # labels. List items, bold text and anything else stay, because a lead
+      # that states its findings as bullets states them there and nowhere
+      # else.
+      def lead_lines:
         headline
         | split("\n")
         | map(trim)
-        | map(select(. != "" and (test("^<|^#|^\\*|^-|^\\|") | not)))
-        | join(" ");
+        | map(
+            select(
+              . != ""
+              and (test("^<!--|^#|^\\*\\*Review effort:\\*\\*|^\\*\\*Findings:\\*\\*") | not)
+            )
+          );
+
+      # The lead as a reader sees it, one line per line of the body. Empty
+      # when the lead says nothing.
+      def lead_paragraph: lead_lines | join("\n");
 
       # Lead sentences Copilot writes when a round names no finding, seeded
-      # from live reviews. Each is matched whole, so a lead that opens with
-      # the same words and goes on to name something is not on the list.
+      # from live reviews, as patterns. Each must match the whole lead, so a
+      # lead that opens with the same words and goes on to name something,
+      # in prose or in bullets, is not on the list.
       def no_finding_leads: [
-        "One or more issues must be addressed before approval.",
-        "No unresolved review issues were identified.",
-        "No unresolved blocking issues were identified.",
-        "No unresolved review issues remain."
+        "^One or more issues must be addressed before approval\\.$",
+        "^No unresolved( [a-z]+)? issues (were identified|remain)\\.$"
       ];
 
       # A ccr-overview-v2 review opens with either a lead paragraph naming
-      # the findings it is reporting, or a fixed sentence that names none.
-      # The fixed sentence accompanies reviews with nothing outstanding,
-      # including the review that issue #491 was filed for, while other
-      # leads read like "Unresolved moderate findings affect detection,
-      # reviewer exclusions, and checklist accuracy" and state findings that
-      # appear nowhere else in the body.
+      # what it found, or a fixed sentence that names nothing. Other leads
+      # read like "Unresolved moderate findings affect detection, reviewer
+      # exclusions, and checklist accuracy", which may state a finding that
+      # appears nowhere else in the body, or like "No blocking issues were
+      # identified; only a minor documentation nit remains", which does so on
+      # an approval.
       #
-      # So the lead is what separates a resolved-only round with nothing
-      # left to do from one whose findings live only in prose. A lead that
-      # is not on the list costs a read (see needsRead), never drift, so a
-      # reworded sentence surfaces as one lead finding the agent recognizes
-      # rather than as an escalation nothing can clear.
+      # So the lead is what separates a review with nothing to read from one
+      # whose concerns live only in prose. A lead that is not on the list
+      # costs a read (see needsRead), never drift, so a reworded sentence
+      # surfaces as one lead finding the agent recognizes rather than as an
+      # escalation nothing can clear.
       def lead_states_no_findings:
-        lead_paragraph as $lead
-        | no_finding_leads | any(. == $lead);
+        (lead_lines | join(" ")) as $lead
+        | no_finding_leads | any(. as $pattern | $lead | test($pattern));
 
       # What kind of Copilot output a body is. A ccr-overview-v2 body is a
       # review. So is an older body with a heading, an overview section, a
@@ -687,16 +709,21 @@ function do_parse_reviews() {
       # Both have no verdict and no findings, which is exactly what a clean
       # review looks like, so a caller has to tell them apart by kind.
       #
+      # Review structure is checked before the notice text, because a real
+      # review can quote that text: a review of a change to this very
+      # command, for one. Taking it for a notice would leave its findings
+      # unprocessed. A notice is a bare sentence with none of that structure.
+      #
       # Anything else is "unknown": a body that is neither a review nor a
       # known notice is a layout nothing here reads, and it reports drift.
       def review_kind($is_v2; $has_suppressed_marker):
         if $is_v2 then "review"
-        elif test("encountered an error and was unable to review"; "i") then "error"
-        elif test("(was not|wasn.t) able to review any files"; "i") then "no-files"
         elif (verdict != null)
              or test("Pull request overview|<summary>Review details</summary>"; "i")
              or $has_suppressed_marker
         then "review"
+        elif test("encountered an error and was unable to review"; "i") then "error"
+        elif test("(was not|wasn.t) able to review any files"; "i") then "no-files"
         else "unknown"
         end;
 
@@ -984,10 +1011,14 @@ function do_parse_reviews() {
                 | scan("\\([0-9]+ votes?(?: each)?\\)"; "i")
                 | {kind: "vote", line: $l.n, region: $l.region, text: $l.raw}
               ),
+              # A list item that opens with a location counts too, so a
+              # bullet naming a file and line without a vote tag cannot slip
+              # past every parser. A line that carries a vote tag is left to
+              # the vote check, which already reconciles it.
               (
                 select(
-                  $l.raw
-                  | test("^[[:space:]]*(\\*\\*[^*`]+:[0-9]+\\*\\*[[:space:]]*$|`[^`]+:[0-9]+`)")
+                  ($l.raw | test("^[[:space:]]*(\\*\\*[^*`]+:[0-9]+\\*\\*[[:space:]]*$|([-*][[:space:]]+)?`[^`]+:[0-9]+`)"))
+                  and ($l.text | test("\\([0-9]+ votes?(?: each)?\\)"; "i") | not)
                 )
                 | {kind: "location", line: $l.n, region: $l.region, text: $l.raw}
               ),
@@ -1077,20 +1108,33 @@ function do_parse_reviews() {
         | ($is_v2 and (.body | lists_open_threads)) as $lists_open_threads
         | ($is_v2 and (.body | lists_resolved_threads)) as $lists_resolved_threads
         | ($is_v2 and (.body | lead_states_no_findings)) as $lead_states_no_findings
-        # A non-clean v2 verdict that no open thread and no parsed finding
-        # accounts for leaves the lead paragraph as the only place a concern
-        # can be stated. That is a reading task, not a format change: the
-        # layout was read, and what remains is prose. The lead may state a
-        # new finding, restate threads from an earlier round, or ask for
-        # human review without naming a defect, and only a reader can tell
-        # which. A resolved-only round whose lead is a known no-finding
-        # sentence is the one shape that needs no reading.
+        | (.body | lead_paragraph) as $lead_paragraph
+        # The lead is a reading task, not a format change: the layout was
+        # read, and what remains is prose. It may state a new finding,
+        # restate a thread or a parsed finding, ask for human review without
+        # naming a defect, or say nothing of concern, and only a reader can
+        # tell which. Two shapes need that read:
+        #
+        #   - Any lead that is not a known no-finding sentence, whatever the
+        #     verdict and whatever else parsed. An approval can still name a
+        #     nit, and a lead beside one parsed finding can name a second
+        #     that appears nowhere else.
+        #   - A non-clean verdict that no open thread and no parsed finding
+        #     accounts for, even when its lead is empty or known, unless the
+        #     round lists a resolved section and its lead is known. "One or
+        #     more issues must be addressed" with nothing behind it is read,
+        #     not trusted.
         | (
             $is_v2
-            and $verdict != "### 🟢 Approval recommended"
-            and ($lists_open_threads | not)
-            and ($findings | length) == 0
-            and (($lists_resolved_threads and $lead_states_no_findings) | not)
+            and (
+              ($lead_paragraph != "" and ($lead_states_no_findings | not))
+              or (
+                $verdict != "### 🟢 Approval recommended"
+                and ($lists_open_threads | not)
+                and ($findings | length) == 0
+                and (($lists_resolved_threads and $lead_states_no_findings) | not)
+              )
+            )
           ) as $needs_read
         # The lead as one finding, so it flows through categorization and
         # the summary like any other review-body finding instead of
@@ -1103,7 +1147,7 @@ function do_parse_reviews() {
                 path: null,
                 line: null,
                 severity: null,
-                body: (.body | lead_paragraph),
+                body: $lead_paragraph,
                 source: "lead",
                 region: "lead"
               }]
@@ -1111,12 +1155,12 @@ function do_parse_reviews() {
             end
           ) as $lead_findings
         # Every ccr-overview-v2 body carries a "**Findings:**" line, in every
-        # fixture and in all 13 observed live reviews, so its absence on a v2
-        # body is a renamed or removed header rather than an older layout.
+        # fixture and every observed live review, so its absence on a v2 body
+        # is a renamed or removed header rather than an older layout.
         # Reporting it as unparseable is what keeps a header rename from
-        # reading as "this layout never had a count" and taking the
-        # resolved-round exemption. Only a pre-v2 body reports null and is
-        # excluded from the comparison.
+        # reading as "this layout never had a count", which would report no
+        # shortfall. Only a pre-v2 body reports null and is excluded from the
+        # comparison.
         | (
             if $is_v2 | not then null
             else ((.body | stated_finding_count) // "unparseable")
@@ -1150,11 +1194,11 @@ function do_parse_reviews() {
             #     does not wait for an empty parse.
             #   - Any signal the census leaves unaccounted, including an
             #     element outside the v2 vocabulary.
-            #   - A legacy suppressed section that yields no findings.
+            #   - A body that announces a suppressed-comments section and
+            #     yields no parsed findings at all.
             #   - A body that is neither a review nor a known notice.
             #
-            # A non-clean verdict with nothing but prose behind it is not on
-            # this list. It is needsRead below, which costs a read rather
+            # A lead with nothing but prose behind it is not on this list. It is needsRead below, which costs a read rather
             # than an escalation, because a review body never changes and
             # drift on one can never clear.
             hasFormatDrift: (
@@ -1213,9 +1257,10 @@ function do_fetch_reviews() {
 # up as an entry rather than as silence.
 #
 # It also reports the older-layout reviews that only a read can settle. An
-# older body cannot say whether its findings are inline, so a non-clean
-# verdict with no parsed finding is clean only if inline comments are
-# attached to that review. Only the join with the review comments can tell.
+# older body cannot say whether its findings are inline, so a review whose
+# first heading is not the approval verdict, with nothing parsed, is
+# accounted for only when inline comments are attached to it. Only the join
+# with the review comments can tell.
 #
 # REST reports Copilot's inline comments as "Copilot", GraphQL as
 # "copilot-pull-request-reviewer", and REST reviews as
@@ -1227,7 +1272,8 @@ function do_fetch_reviews() {
 # Arguments:
 #   None; reads {reviews, reviewComments, issueComments, threads} on stdin.
 #   reviews, reviewComments and issueComments are REST arrays; threads is an
-#   array of {isResolved, comments: [{databaseId, login}]}.
+#   array of {isResolved, comments: [{databaseId, login, body}]}, where only
+#   the first comment needs a body.
 # Outputs:
 #   JSON audit object to stdout
 function do_parse_audit() {
@@ -1236,6 +1282,21 @@ function do_parse_audit() {
 
   if ! jq -e 'type == "object" and ([.reviews, .reviewComments, .issueComments, .threads] | all(type == "array"))' > /dev/null 2>&1 <<< "${input}"; then
     die "Invalid audit JSON: expected an object with reviews, reviewComments, issueComments and threads arrays."
+  fi
+
+  # The join below indexes into every element, so a malformed one would
+  # otherwise abort with a raw jq error that names no field.
+  local malformed
+  malformed="$(jq -r '
+    if (.reviewComments | all(type == "object")) | not then "reviewComments: every element must be an object"
+    elif (.issueComments | all(type == "object")) | not then "issueComments: every element must be an object"
+    elif (.threads | all(type == "object" and (.comments | type) == "array" and (.comments | all(type == "object")))) | not
+    then "threads: every element must be an object with a comments array of objects"
+    else empty
+    end
+  ' <<< "${input}")"
+  if [[ -n "${malformed}" ]]; then
+    die "Invalid audit JSON: ${malformed}."
   fi
 
   local parsed
@@ -1287,8 +1348,11 @@ function do_parse_audit() {
               | $thread_of[$comment.id | tostring] as $thread
               | if $thread == null then
                   {surface: "review-comment", reason: "in no thread", id: .id, url: .html_url, path: .path, excerpt: (.body | excerpt)}
+                # The opener is judged the way the thread fetch judges it,
+                # body included, so a thread fetch reports is never also
+                # reported here.
                 elif ($thread.isResolved | not)
-                     and (is_copilot($thread.comments[0].login; "") | not) then
+                     and (is_copilot($thread.comments[0].login; $thread.comments[0].body) | not) then
                   {surface: "review-comment", reason: "reply in a thread Copilot did not open", id: .id, url: .html_url, path: .path, excerpt: (.body | excerpt)}
                 else empty
                 end
@@ -1302,7 +1366,9 @@ function do_parse_audit() {
             $parsed[]
             | select(.reviewKind == "review")
             | select(.reviewBody | contains("<!-- ccr-overview-v2 -->") | not)
-            | select(.verdict != null and .verdict != "### 🟢 Approval recommended")
+            # A body with no heading at all cannot say it was clean, so it is
+            # read rather than trusted. Only the approval verdict is skipped.
+            | select(.verdict != "### 🟢 Approval recommended")
             | select((.findings | length) == 0)
             | .id as $id
             | select(($review_comments | map(select(.pull_request_review_id == $id)) | length) == 0)
@@ -1350,6 +1416,7 @@ function fetch_thread_index() {
                     nodes {
                       databaseId
                       author { login }
+                      body
                     }
                   }
                 }
@@ -1368,12 +1435,29 @@ function fetch_thread_index() {
     die "GraphQL error while fetching threads: ${graphql_error}"
   fi
 
+  # A wrong owner, repo or number returns null data without an error, the
+  # same shape do_fetch guards against. Read as an empty index, it would
+  # report every Copilot review comment as being in no thread.
+  if jq -e 'any(.[]; .data.repository == null or .data.repository.pullRequest == null)' > /dev/null <<< "${response}"; then
+    die "Invalid response while fetching threads for ${owner}/${repo}#${pr_number}: no such pull request."
+  fi
+
+  # Only the first comment keeps its body, which is all the audit reads,
+  # to judge the thread opener as the thread fetch does.
   jq '
     [
-      .[].data.repository.pullRequest.reviewThreads.nodes[]?
+      .[].data.repository.pullRequest.reviewThreads.nodes[]
       | {
           isResolved,
-          comments: [.comments.nodes[] | {databaseId, login: (.author.login? // "")}]
+          comments: [
+            .comments.nodes
+            | to_entries[]
+            | {
+                databaseId: .value.databaseId,
+                login: (.value.author.login? // ""),
+                body: (if .key == 0 then .value.body else null end)
+              }
+          ]
         }
     ]
   ' <<< "${response}"
