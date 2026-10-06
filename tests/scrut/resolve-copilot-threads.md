@@ -59,9 +59,11 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 An item runs from its severity token to the next one. A semicolon inside the
 finding text, a missing final period, an unfamiliar severity name, and an
 escaped pipe must not drop or truncate a finding. After the first item, only a
-token that follows the separator, a semicolon and a space, opens another, so a
-severity label quoted in a finding's prose stays in its text instead of
-splitting it.
+token that follows an item separator, a semicolon or a period and then a
+space, opens another, so a severity label quoted mid-sentence in a finding's
+prose stays in its text. A label right after a period cannot be told apart
+from the next item, because Copilot also writes items as sentences, so it
+splits: an extra finding gets read, where the opposite rule would merge two.
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-table-edge.json" | jq -c '.[0].findings[] | {location, severity, body}'
@@ -69,7 +71,8 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"location":"src/parsers/split.js","severity":"Critical","body":"reject naïve input"}
 {"location":"src/parsers/split.js","severity":"Nit","body":"rename the helper"}
 {"location":"src/parsers/match.js","severity":"Low","body":"handle `a | b` alternation"}
-{"location":"src/parsers/label.js","severity":"Moderate","body":"keep the literal Nit (1 vote): prefix intact. Low (2 votes): appears in the same sentence"}
+{"location":"src/parsers/label.js","severity":"Moderate","body":"keep the literal Nit (1 vote): prefix intact"}
+{"location":"src/parsers/label.js","severity":"Low","body":"appears in the same sentence"}
 {"location":"src/parsers/label.js","severity":"Nit","body":"trim the comment"}
 ```
 
@@ -351,58 +354,88 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 
 ## Layouts Copilot shipped after the parser was written
 
-These fixtures record shapes taken from live reviews: bold severity tokens in
-file-summary cells, tokens after a cell's description, items separated by a
-period, lowercase severities, and vote-tagged bullets under a findings label.
-The parsers do not read them yet, so each one would look like a review with
-nothing to say. The census is what makes the gap visible: every vote tag a
-body line carries must be matched by a finding parsed from that line, and each
-line that falls short is reported in `unaccounted` and sets `hasFormatDrift`.
+These fixtures record shapes taken from live reviews. Each yields every
+finding it carries, and the census, which checks each vote tag against the
+findings parsed from its line, finds nothing left over.
+
+Bold severity tokens in file-summary cells, including one placed after the
+cell's description sentence.
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-bold-votes.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
-{"hasFormatDrift":true,"findings":0,"unaccounted":["vote line 26","vote line 27"]}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-bold-votes.json" | jq -c '.[0] | {hasFormatDrift, unaccounted, findings: [.findings[] | {location, severity, body}]}'
+{"hasFormatDrift":false,"unaccounted":[],"findings":[{"location":"test/e2e/lib/browser.mjs","severity":"Critical","body":"full URLs may expose credentials in query parameters and must be redacted"},{"location":"test/e2e/beacon-test.js","severity":"Nit","body":"still launches the browser directly instead of using the shared launcher"}]}
 ```
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-bold-after-description.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
-{"hasFormatDrift":true,"findings":0,"unaccounted":["vote line 26","vote line 27","vote line 28"]}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-bold-after-description.json" | jq -c '.[0] | {hasFormatDrift, unaccounted, findings: [.findings[] | {location, body}]}'
+{"hasFormatDrift":false,"unaccounted":[],"findings":[{"location":"api/alerts/summarize.ts","body":"make the post and save boundary idempotent across retries"},{"location":"api/alerts/follow-up.ts","body":"make sequence updates idempotent"},{"location":"api/alerts/follow-up.ts","body":"guard every close transition with the follow-up thread"},{"location":"api/alerts/redact.ts","body":"redact credential values after every auth scheme"}]}
 ```
 
-A partial parse is caught too. These two bodies each yield some findings, and
-before the census that was enough to read as fully parsed.
+Items written as sentences, separated by a period rather than a semicolon. A
+`( each)` item names several defects under one tag and stays one finding.
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-sentence-items.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
-{"hasFormatDrift":true,"findings":2,"unaccounted":["vote line 27"]}
-```
-
-```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-lowercase-severity.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
-{"hasFormatDrift":true,"findings":5,"unaccounted":["vote line 35"]}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-sentence-items.json" | jq -c '.[0] | {hasFormatDrift, unaccounted, findings: [.findings[] | {location, severity, body}]}'
+{"hasFormatDrift":false,"unaccounted":[],"findings":[{"location":"src/admin/Bundles.js","severity":"Critical","body":"kit requests can leave records inconsistent when the record update fails"},{"location":"src/admin/Bundles.js","severity":"Moderate","body":"empty update results are reported as success"},{"location":"src/admin/Bundles.js","severity":"Moderate","body":"missing identifiers do not refresh the table, and one path also leaves the dialog open"},{"location":"server/api/bundles.js","severity":"Moderate","body":"add an HTTP-level test that the bundle filter is preserved"}]}
 ```
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-review-findings-bullets.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
-{"hasFormatDrift":true,"findings":0,"unaccounted":["vote line 31","vote line 32","vote line 33","vote line 34","vote line 35"]}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-each-item.json" | jq -c '.[0] | {hasFormatDrift, unaccounted, findings: [.findings[] | {location, body}]}'
+{"hasFormatDrift":false,"unaccounted":[],"findings":[{"location":"src/sweep.py","body":"zero-count sweeps are accepted, and duplicate-producing sweeps are accepted"}]}
 ```
 
+A lowercase severity after a semicolon, taken verbatim from a review of this
+repository. The severity is reported with a capital, as Copilot titles it.
+
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-b-overview-bullets.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
-{"hasFormatDrift":true,"findings":4,"unaccounted":["vote line 18","vote line 19","vote line 20","vote line 21","vote line 22","vote line 23","vote line 24"]}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-lowercase-severity.json" | jq -c '.[0] | {hasFormatDrift, unaccounted, findings: [.findings[] | select(.path == "bin/validate-plugins") | {severity, body}]}'
+{"hasFormatDrift":false,"unaccounted":[],"findings":[{"severity":"Critical","body":"preserve newline-containing JSON strings"},{"severity":"Moderate","body":"correct UTF-8 character counting"}]}
 ```
 
+Vote-tagged bullets under a findings label. A backticked path that opens the
+text is the finding's location, split into path and line when it carries one.
+A backticked option is not a path, and a bullet that names no file reports a
+null path.
+
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-each-item.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
-{"hasFormatDrift":true,"findings":0,"unaccounted":["vote line 25"]}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-review-findings-bullets.json" | jq -c '.[0] | {hasFormatDrift, unaccounted}, (.findings[] | {location, path, line, severity, source})'
+{"hasFormatDrift":false,"unaccounted":[]}
+{"location":".github/workflows/ci.yml","path":".github/workflows/ci.yml","line":null,"severity":"Critical","source":"bullets"}
+{"location":"src/lab/runner.py:41","path":"src/lab/runner.py","line":41,"severity":"Critical","source":"bullets"}
+{"location":"(review body)","path":null,"line":null,"severity":"Moderate","source":"bullets"}
+{"location":"(review body)","path":null,"line":null,"severity":"Moderate","source":"bullets"}
+{"location":"(review body)","path":null,"line":null,"severity":"Moderate","source":"bullets"}
 ```
 
-Each entry names the region and quotes the line, so a reader can find the
-content without opening the review.
+The same bullets under the older "Pull request overview", labelled
+`Outstanding findings:` there, taken verbatim from a review of this repository.
+The label varies, so the vote tag is what identifies a finding. These sit
+beside four suppressed-section findings in the same review.
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-bold-votes.json" | jq -c '.[0].unaccounted[0] | {kind, region, line}'
-{"kind":"vote","region":"What changed in this PR","line":26}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-b-overview-bullets.json" | jq -c '.[0] | {hasFormatDrift, unaccounted, bySource: (.findings | group_by(.source) | map({key: .[0].source, value: length}) | from_entries)}'
+{"hasFormatDrift":false,"unaccounted":[],"bySource":{"bullets":7,"suppressed":4}}
+```
+
+The other bullet shape names its location first, with a dash of any width.
+
+```scrut
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"### 🔵 Needs a closer look\n\nTwo findings.\n\n<details>\n<summary>Pull request overview</summary>\n\n**Review findings:**\n- `tests/audit.py:122` — Moderate (1 vote): use a scrut fence.\n- `tests/audit.py:101` - Moderate (1 vote): preserve archive modes.\n</details>"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {unaccounted, findings: [.findings[] | {path, line, body}]}'
+{"unaccounted":[],"findings":[{"path":"tests/audit.py","line":122,"body":"use a scrut fence."},{"path":"tests/audit.py","line":101,"body":"preserve archive modes."}]}
+```
+
+## The census reports what no parser reads
+
+Every parser recognizes a layout it was written for and returns nothing for
+one it was not. The census is what keeps that from looking like a review with
+nothing to say: every vote tag a body line carries must be matched by a
+finding parsed from that line, and each line that falls short is reported in
+`unaccounted` and sets `hasFormatDrift`. A tag in a paragraph, where no parser
+looks, is the simplest case.
+
+```scrut
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"<!-- ccr-overview-v2 -->\n\n### 🟡 Changes recommended\n\nOne finding.\n\n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nThe cache helper never expires entries. Moderate (2 votes): expire entries on restart.\n</details>"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | {kind, region, line}]}'
+{"hasFormatDrift":true,"findings":0,"unaccounted":[{"kind":"vote","region":"What changed in this PR","line":12}]}
 ```
 
 A vote tag quoted in a finding's prose cannot be told apart from an item the

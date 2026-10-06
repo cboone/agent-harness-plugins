@@ -741,19 +741,40 @@ function do_parse_reviews() {
             }
         ];
 
-      # A newer ccr-overview-v2 variant appends line-less findings to a file
-      # summary cell as "<Severity> (<N> votes): <text>" items separated by
-      # "; " and ending with ".". Each item runs from its own severity token to
-      # the next one, so text that contains a semicolon or lacks the final
-      # period is kept rather than dropped. Any capitalized word followed by a
-      # vote count is a severity token, so a severity name not seen before
-      # still parses. The first token opens the first item wherever the file
-      # description ends; every later token must follow the "; " separator, so
-      # prose such as "Nit (1 vote):" inside a finding stays in its text rather
-      # than splitting it into a false finding. Joining every cell after the
-      # path keeps escaped pipes inside the summary, and they are unescaped to
-      # the text GitHub renders. Restrict this parser to marked v2 bodies so
-      # ordinary file-summary tables remain negative controls.
+      # A severity word as Copilot displays it in a title, whatever case the
+      # body used: "moderate" and "Moderate" are the same severity.
+      def severity_name: (.[0:1] | ascii_upcase) + .[1:];
+
+      # The severity token that opens a vote-tagged item, in every form seen
+      # on live reviews: "Moderate (2 votes): ", "**Critical (1 vote):** ",
+      # "moderate (1 vote): " and "Moderate (1 vote each): ". Any word works,
+      # so a severity name not seen before still parses.
+      def vote_token_pattern:
+        "(?:\\*\\*)?\\b(?<severity>[A-Za-z]+) \\([0-9]+ votes?(?: each)?\\):(?:\\*\\*)?[[:space:]]+";
+
+      # ccr-overview-v2 appends line-less findings to a file summary cell as
+      # vote-tagged items. Each item runs from its own severity token to the
+      # next one, so text that contains a separator or lacks the final period
+      # is kept rather than dropped.
+      #
+      # The first token opens the first item wherever the file description
+      # ends, including after a description sentence, which is where the bold
+      # form puts it. Every later token must follow an item separator, a
+      # semicolon or a period and then a space, so a token quoted mid-sentence
+      # in a finding stays in its text. Both separators ship: earlier reviews
+      # joined items with "; ", later ones write each item as a sentence. A
+      # token quoted right after a period is indistinguishable from the next
+      # item and splits, which is the safe direction: an extra finding is
+      # read, where the opposite rule would merge two.
+      #
+      # A "( each)" item names several defects under one tag. They are joined
+      # by commas and "and" in prose, so the item is kept whole as one
+      # finding rather than split on a guess.
+      #
+      # Joining every cell after the path keeps escaped pipes inside the
+      # summary, and they are unescaped to the text GitHub renders. The vote
+      # tag is what makes a cell a finding, so this runs on every layout: a
+      # file-summary table without one yields nothing.
       def table_findings($lines):
         [
           $lines[]
@@ -765,9 +786,12 @@ function do_parse_reviews() {
           | ($cells[1] | trim | ltrimstr("`") | rtrimstr("`") | normalize_path) as $path
           | ($cells[2:-1] | join("|") | gsub("\\\\\\|"; "|") | trim) as $summary
           | [
-              [$summary | match("\\b(?<severity>[A-Z][A-Za-z]*) \\([0-9]+ votes?\\): "; "g")]
+              [$summary | match(vote_token_pattern; "g")]
               | to_entries[]
-              | select(.key == 0 or $summary[(.value.offset - 2):.value.offset] == "; ")
+              | select(
+                  .key == 0
+                  or ($summary[(.value.offset - 2):.value.offset] | IN("; ", ". "))
+                )
               | .value
             ] as $items
           | range(0; $items | length) as $i
@@ -777,7 +801,7 @@ function do_parse_reviews() {
               location: $path,
               path: $path,
               line: null,
-              severity: $item.captures[0].string,
+              severity: ($item.captures[0].string | severity_name),
               body: (
                 $summary[($item.offset + $item.length):$end]
                 | trim
@@ -786,6 +810,66 @@ function do_parse_reviews() {
                 | trim
               ),
               source: "table",
+              region: $region,
+              at: $at
+            }
+        ];
+
+      # Copilot also lists findings as vote-tagged bullets under a label such
+      # as "Review findings:" or "Outstanding findings:", in ccr-overview-v2
+      # bodies and in the older "Pull request overview". The label varies, so
+      # the vote tag is what identifies a bullet as a finding, not the label
+      # above it.
+      #
+      # Two bullet shapes ship. One opens with the token and may name its
+      # file in the text: "- **Critical (2 votes):** `ci.yml` uses ...". The
+      # other names its location first: "- `path:122` - Moderate (1 vote):
+      # ...", with a dash of any width. A backticked leading path counts only
+      # when it looks like one, with a slash or a dot and no leading dash, so
+      # an option such as `--repeat` stays text. A bullet with no path is a
+      # finding about the change as a whole and reports a null path.
+      def bullet_findings($lines):
+        [
+          $lines[]
+          | select(.fence | not)
+          | .region as $region
+          | .n as $at
+          | .raw
+          | capture(
+              "^[[:space:]]*[-*][[:space:]]+(?:`(?<location>[^`]+)`[[:space:]]*[-–—]+[[:space:]]*)?"
+              + vote_token_pattern
+              + "(?<text>.*)$"
+            )
+          | (.text | trim) as $text
+          | (
+              .location
+              // ($text | capture("^`(?<path>[^`[:space:]]+)`[[:space:]]").path)
+              // null
+            ) as $named
+          | (
+              if $named != null
+                 and ($named | test("[./]"))
+                 and ($named | test("^-") | not)
+              then ($named | normalize_path)
+              else null
+              end
+            ) as $location
+          | (
+              if $location != null and ($location | test(":[0-9]+$"))
+              then {
+                  path: ($location | sub(":[0-9]+$"; "")),
+                  line: ($location | capture(":(?<line>[0-9]+)$").line | tonumber)
+                }
+              else {path: $location, line: null}
+              end
+            ) as $where
+          | {
+              location: ($location // "(review body)"),
+              path: $where.path,
+              line: $where.line,
+              severity: (.severity | severity_name),
+              body: $text,
+              source: "bullets",
               region: $region,
               at: $at
             }
@@ -929,8 +1013,9 @@ function do_parse_reviews() {
           ) as $suppressed_region
         | ($slice | suppressed_findings($suppressed_region)) as $suppressed_findings
         | (if $is_v2 then (.body | previously_missed_findings) else [] end) as $missed_findings
-        | (if $is_v2 then table_findings($lines) else [] end) as $table_findings
-        | ($suppressed_findings + $missed_findings + $table_findings) as $findings
+        | table_findings($lines) as $table_findings
+        | bullet_findings($lines) as $bullet_findings
+        | ($suppressed_findings + $missed_findings + $table_findings + $bullet_findings) as $findings
         | ($lines | signals | unaccounted($findings)) as $unaccounted
         | (.body | has_suppressed_marker) as $has_suppressed_marker
         | ($is_v2 and (.body | lists_open_threads)) as $lists_open_threads
