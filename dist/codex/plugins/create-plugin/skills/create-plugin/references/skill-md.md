@@ -45,7 +45,7 @@ The description is the skill's routing description: harnesses use it to decide w
 1. **State a negative boundary** when an adjacent skill would otherwise activate instead
 1. **Mention a prerequisite** only when it affects selection (e.g., "Requires the gh CLI")
 
-Keep it short, because every installed skill's description shares Codex's discovery budget.
+Keep it short, because every enabled skill's description shares Codex's discovery budget.
 
 Every harness routes on this description: `bin/build-codex-marketplace` copies `SKILL.md` into `dist/codex/` unchanged, and the OpenCode mirror links to it. Change it here. The plugin `description` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` is the separate catalog summary and does not affect routing.
 
