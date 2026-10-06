@@ -61,35 +61,56 @@ readonly STANDALONE_OPENING='<!DOCTYPE html>
 readonly ZONE_PATTERN='^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+)*$'
 readonly ZONEINFO_DIR="${TZDIR:-/usr/share/zoneinfo}"
 
+# The board types this script validates, each with its own rules.
+readonly BOARD_TYPES='backlog-triage'
+
 # True when no string and no field name carries a control character. validate
-# and render apply this through VALIDATE_FILTER, but compare reads a previous
-# board out of a published page, which never went through that check here, and
-# compare is the command that prints board text to a terminal.
+# and render apply this through each validation filter, but compare reads a
+# previous board out of a published page, which never went through that check
+# here, and compare is the command that prints board text to a terminal.
 readonly NO_CONTROL_FILTER='([.. | strings] + [.. | objects | keys[]] | map(select(test("[[:cntrl:]]"))) | length) == 0'
 
-# Emits one line per problem and nothing when the data is valid. Messages avoid
-# apostrophes because the filter lives inside a single-quoted shell string.
-# Every field is type-checked before it is used, so malformed data produces a
-# message rather than a jq error. It takes $zone_pattern, and $zone_known from
-# zone_status.
-# The $names in the filter are jq bindings, not shell expansions.
+# Helpers every validation filter starts with. Messages avoid apostrophes
+# because each filter lives inside a single-quoted shell string, and every field
+# is type-checked before it is used, so malformed data produces a message
+# rather than a jq error. The sync checks take $zone_pattern, and $zone_known
+# from zone_status.
+# The $names in these filters are jq bindings, not shell expansions.
 # shellcheck disable=SC2016
-readonly VALIDATE_FILTER='
+readonly SHARED_DEFS='
 def is_int: type == "number" and . == floor;
 def is_text: type == "string" and test("\\S");
 def as_list: if type == "array" then . else [] end;
 def absent_or(f): . == null or f;
 def check(condition; message): if condition then empty else message end;
 def duplicates: group_by(.) | map(select(length > 1) | .[0]) | .[];
+# True when an ISO 8601 time falls on a day the calendar has. strptime takes
+# February 31 and mktime rolls it into March, so a real date survives the
+# round trip and an impossible one does not.
+def calendar_date: .[0:10] as $day | ($day | try (strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d")) catch null) == $day;
+def iso_time: is_text and test("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9](\\.[0-9]+)?)?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$");
+# The sync time and zone checks every board type makes.
+def sync_time_problems($sync):
+  (if ($sync.at | iso_time) | not then "sync.at: expected an ISO 8601 time with a zone, such as 2026-09-10T19:43:00-04:00"
+   elif ($sync.at | calendar_date | not) then "sync.at: \($sync.at[0:10]) is not a date on the calendar"
+   else empty end),
+  check($sync.timeZone | absent_or(is_text and test($zone_pattern)); "sync.timeZone: expected an IANA zone name, such as America/New_York"),
+  check($zone_known != false; "sync.timeZone: \($sync.timeZone) is not a zone in the time zone database");
+# The optional sync counts and markers every board type accepts.
+def sync_extra_problems($sync):
+  check($sync.openPullRequests | absent_or(is_int and . >= 0); "sync.openPullRequests: expected a count"),
+  check($sync.extra | absent_or(type == "array" and all(.[]; is_text)); "sync.extra: expected a list of text");
+'
+
+# Emits one line per problem with backlog-triage data, and nothing when it is
+# valid.
+# shellcheck disable=SC2016
+readonly BACKLOG_TRIAGE_VALIDATE_FILTER="${SHARED_DEFS}"'
 # The host and port of an https address, shared by every URL this file checks.
 # A port is 1 to 65535: an unbounded run of digits satisfies a pattern but names
 # no port, and the page would build a link no browser can open.
 def host_re: "[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*";
 def port_re: "(:(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3}))?";
-# True when an ISO 8601 time falls on a day the calendar has. strptime takes
-# February 31 and mktime rolls it into March, so a real date survives the
-# round trip and an impossible one does not.
-def calendar_date: .[0:10] as $day | ($day | try (strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d")) catch null) == $day;
 # Always text, whatever the reference holds. A previous board reaches compare
 # without being validated, and validate itself is meant to report a malformed
 # reference rather than die on one; both feed this to join, which adds its
@@ -185,15 +206,10 @@ else
 
     (if ($d.sync | type) != "object" then "sync: expected an object with at, branch, and commit"
      else
-       (if ($d.sync.at | is_text and test("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9](\\.[0-9]+)?)?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$")) | not then "sync.at: expected an ISO 8601 time with a zone, such as 2026-09-10T19:43:00-04:00"
-        elif ($d.sync.at | calendar_date | not) then "sync.at: \($d.sync.at[0:10]) is not a date on the calendar"
-        else empty end),
-       check($d.sync.timeZone | absent_or(is_text and test($zone_pattern)); "sync.timeZone: expected an IANA zone name, such as America/New_York"),
-       check($zone_known != false; "sync.timeZone: \($d.sync.timeZone) is not a zone in the time zone database"),
+       sync_time_problems($d.sync),
        check($d.sync.branch | is_text and test("^\\S+$") and (test("(^|/)\\.{1,2}(/|$)") | not); "sync.branch: expected the branch the board was synced against"),
        check($d.sync.commit | is_text and test("^([0-9a-f]{40}|[0-9a-f]{64})$"); "sync.commit: expected the full commit SHA"),
-       check($d.sync.openPullRequests | absent_or(is_int and . >= 0); "sync.openPullRequests: expected a count"),
-       check($d.sync.extra | absent_or(type == "array" and all(.[]; is_text)); "sync.extra: expected a list of text")
+       sync_extra_problems($d.sync)
      end),
 
     (if ($d.issues | type) != "array" or ($d.issues | length) == 0 then "issues: expected a non-empty list of open issues"
@@ -368,7 +384,7 @@ end
 # type count as empty, so an older or damaged board still compares.
 # As above, the $names are jq bindings.
 # shellcheck disable=SC2016
-readonly COMPARE_FILTER='
+readonly BACKLOG_TRIAGE_COMPARE_FILTER='
 def as_list: if type == "array" then . else [] end;
 # Always text, whatever the reference holds. A previous board reaches compare
 # without being validated, and validate itself is meant to report a malformed
@@ -594,6 +610,11 @@ function require_single_document() {
   jq -e -s 'length == 1' "${data_file}" > /dev/null 2>&1 || die "${E_INVALID}" "${data_file} must hold exactly one JSON document"
 }
 
+# Prints the board type a data file names, or nothing when it names none.
+function board_type() {
+  jq -r 'if type == "object" then .board | strings else empty end' "${1}"
+}
+
 # Prints "N issues in M lanes" for a data file already known to be valid.
 function board_summary() {
   local data_file="${1}"
@@ -622,10 +643,26 @@ function zone_status() {
 # Exits with every problem listed when the data breaks a board rule.
 function validate_data() {
   local data_file="${1}"
-  local problems line
+  local problems line board zone_known
 
   require_single_document "${data_file}"
-  problems="$(jq -r --arg zone_pattern "${ZONE_PATTERN}" --argjson zone_known "$(zone_status "${data_file}")" "${VALIDATE_FILTER}" "${data_file}")"
+  board="$(board_type "${data_file}")"
+  zone_known="$(zone_status "${data_file}")"
+  case " ${BOARD_TYPES} " in
+    *" ${board} "*)
+      problems="$(jq -r --arg zone_pattern "${ZONE_PATTERN}" --argjson zone_known "${zone_known}" "${BACKLOG_TRIAGE_VALIDATE_FILTER}" "${data_file}")"
+      ;;
+    *)
+      # A board value that is missing or malformed goes through the backlog
+      # rules, which report it along with everything else. A well-formed name
+      # of a type this script does not know is the whole problem.
+      if [[ "${board}" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+        problems="board: ${board} is not a board type this script knows; expected one of: ${BOARD_TYPES// /, }"
+      else
+        problems="$(jq -r --arg zone_pattern "${ZONE_PATTERN}" --argjson zone_known "${zone_known}" "${BACKLOG_TRIAGE_VALIDATE_FILTER}" "${data_file}")"
+      fi
+      ;;
+  esac
   [[ -z "${problems}" ]] && return 0
 
   printf '%s: %s is not valid board data:\n' "${SCRIPT_NAME}" "${data_file}" >&2
@@ -827,16 +864,19 @@ function cmd_extract() {
 
 function cmd_compare() {
   [[ $# -eq 2 ]] || usage_error "compare takes the previous board and the current data"
-  local previous_file current_file previous current
+  local previous_file current_file previous current filter
   previous_file="$(operand "${1}")"
   current_file="$(operand "${2}")"
 
   previous="$(read_board_data "${previous_file}")"
   current="$(read_board_data "${current_file}")"
+  # The current board picks the report. A board whose type changed reports the
+  # change as an identity change either way.
+  filter="${BACKLOG_TRIAGE_COMPARE_FILTER}"
   jq -n -r \
     --slurpfile previous <(printf '%s\n' "${previous}") \
     --slurpfile current <(printf '%s\n' "${current}") \
-    "${COMPARE_FILTER}"
+    "${filter}"
 }
 
 function main() {

@@ -102,9 +102,13 @@ $ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && "${REPORT_BOA
 
 ## Unknown board type
 
+Each board type has its own rules, so a type the script does not know fails
+validation before render looks for a template.
+
 ```scrut
 $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.board = "ci-health"' "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" render "${dir}/data.json" "${dir}/board.html" 2>&1
-report-board: no template for board type ci-health; available: backlog-triage
+report-board: */data.json is not valid board data: (glob)
+  - board: ci-health is not a board type this script knows; expected one of: backlog-triage
 [1]
 ```
 
