@@ -199,7 +199,13 @@ The last check is the early warning #529 asks for. It also prints a structural i
 
 The canary never writes fixtures. Turning a report into a fixture is a manual step, because reviews from private repositories must be rewritten before they enter this public repository.
 
-Add a weekly `.github/workflows/copilot-review-canary.yml`, modeled on `version-audit.yml`, that runs the canary over this repository with `GITHUB_TOKEN` and opens or updates one labeled issue. See Open questions for cross-repository coverage.
+The canary runs locally only, with the user's own `gh` login, and prints its report to the terminal. It has no scheduled workflow, for three reasons:
+
+- A workflow's `GITHUB_TOKEN` reads only this repository. That sample is too thin, and most format changes so far appeared first in other repositories, several of them private.
+- Reading both the `cboone` and `swing-left` repositories from a workflow would need a token for each owner, a classic token, or a GitHub App.
+- A report filed as an issue here would be public, and it would name or quote PRs in private repositories.
+
+Running it locally needs no new credential and publishes nothing. Revisit a scheduled run if local sweeps prove too infrequent to give early warning.
 
 ## Phases and files
 
@@ -269,11 +275,7 @@ Add scrut cases to `tests/scrut/resolve-copilot-threads.md` that assert today's 
 
 1. `bin/copilot-review-canary`, requiring `jq` and an authenticated `gh`. Include it in `bin/list-shell-scripts` coverage, and document it in `bin/AGENTS.md` next to `version-audit`. Commit the structural baseline as `tests/data/copilot-review-structure.json`. It holds skeletons only, never body text.
 1. Scrut coverage that runs the canary against a stubbed `gh` in `tests/fixtures/`. It must print a report for a drift fixture and for an unseen skeleton, and nothing for a clean one.
-1. `.github/workflows/copilot-review-canary.yml`:
-   - remote `uses:` pinned to full SHAs, with version comments;
-   - `permissions: {contents: read, issues: write, pull-requests: read}`;
-   - a concurrency group and a timeout.
-1. Mention the canary in the root `CLAUDE.md` tooling paragraph, next to `bin/version-audit`, as a weekly audit that is not a merge gate.
+1. Mention the canary in the root `CLAUDE.md` tooling paragraph, next to `bin/version-audit`, as a local audit that is neither scheduled nor a merge gate.
 
 ## Verification
 
@@ -308,8 +310,11 @@ Record the counts in the PR body. Never include body text from private repositor
 
 Close #536, #529, #492 and #526 from the PR. #449 can close too, once its regression scenario is in place in the scrut suite.
 
+## Decisions
+
+1. **Canary scope (2026-10-06).** The canary is local-only, with no scheduled workflow, for the reasons given under Layer 9.
+
 ## Open questions
 
-1. **Canary scope.** `GITHUB_TOKEN` reads only this repository. Covering the `cboone` and `swing-left` repositories in the scheduled workflow needs a fine-grained PAT stored as a secret, with read access to pull requests. Recommendation: ship the workflow for this repository only, and run the cross-repository sweep locally until the need for a PAT is clear.
 1. **Advisory reach.** An Advisory concern is recorded and surfaced, but it does not block. If such leads should hold `monitor-pr` short of ready until a person acknowledges them, that is a separate escalation rule. This plan does not add it.
 1. **Restated threads.** A lead that restates earlier threads is matched against `fetch` by the agent in step 1d. If calibration shows these dominate `needsRead`, a later change could match thread titles mechanically. This plan leaves the matching to the agent, because the leads paraphrase freely.
