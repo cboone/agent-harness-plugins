@@ -22,6 +22,21 @@ Gathered on 2026-10-06 against live Swing Left data.
 - **Most bugs are found by code reading, not reported by users.** The fifteen newest `votefwd` bugs were all filed by `cboone` from audits, and bodies say so ("This is source verification, not a live production endpoint test"). Whether a bug is confirmed on production, reproduced, or inferred from source is therefore a first-class field; it is the main thing separating Act now from Needs investigation.
 - **Impact ranges widely within one list.** The same week in `votefwd` holds "Pledging crashes the app instance" (core flow), "Banning an account does not stop it logging in" (access, security), and "check-cloud-run-config reports CPU drift" (internal tooling). Tiers must separate these without any label to lean on.
 
+## First Live Gather
+
+Run on 2026-10-06 against `swing-left/votefwd` at `develop` `8135b4cb`, with ZenHub, in 4.5 s (3.7 s without ZenHub).
+
+- **Volume.** 64 open bugs: 51 by label alone, 10 by issue type alone, 3 by both. 7 closed in the last 7 days, 5 of them with a merged closing pull request, one closed as a duplicate.
+- **ZenHub covers every bug**, in seven pipelines: New Issues 47, Must Do 6, In Progress 5, Product Backlog 2, Should Do 2, High Priority 1, Review/QA 1. Six are in the current sprint. "Must Do" and "Should Do" are pipelines the plan did not anticipate, and they are triage decisions someone already made.
+- **GitHub carries no user-involvement signal here.** All 64 open bugs were filed by three maintainers (60 by `cboone`), none has a reaction, and no one outside the repository has commented. Reach and user involvement come from reading and from the triage note, as the plan expects; the gathered facts stay in the board for repositories where they fire.
+- **Work in progress is common.** Eleven bugs carry an `in progress` label or sit in In Progress or Review/QA, and six have an open fix pull request (one with failing checks). The plan's tiers do not yet say how in-progress work shows.
+- **The urgent label alone fills Now.** Four open bugs carry `high-priority` and one sits in High Priority, which under the drafted rule puts five bugs in Now before any reading, equal to the default `nowWarn`. Three of those are already in progress.
+
+Two adjustments from building the gatherer:
+
+- ZenHub needs the repository's numeric ID, which the gatherer reads from the GitHub API, so the config does not carry it.
+- `bugTypes` names GitHub issue types, searched with `type:`. ZenHub-only issue types cannot be found without enumerating the workspace, so they are out of scope.
+
 ## Naming and Settings
 
 | Setting     | Value                                                                                                           |
@@ -41,7 +56,7 @@ Gathered on 2026-10-06 against live Swing Left data.
 
 ## Scope
 
-- Open issues in the repository that are bugs: GitHub issue type `Bug`, a label in `bugLabels` (default `["bug"]`), or a ZenHub issue type named in `bugTypes`.
+- Open issues in the repository that are bugs: GitHub issue type `Bug`, a label in `bugLabels` (default `["bug"]`), or an issue type named in `bugTypes` (default `["Bug"]`).
 - Open pull requests that close any of those bugs, found through `closingIssuesReferences`, for Ready to go and the fix state on every row.
 - Bugs closed within `recentDays` (default 7), with the pull request that closed them, for Recently fixed.
 
@@ -99,7 +114,7 @@ For `votefwd` the note is `~/Work/docs/bugs/votefwd.md`, committed to `sl-vf` th
 
 ## Repository Config
 
-Optional. Without one, defaults apply and the first sync that needs a triage note asks the user for its path and writes the config with the Write tool. Fields: `timeZone`, `bugLabels`, `bugTypes`, `urgentLabels`, `urgentPipelines`, `regressionLabels`, `parkLabels`, `containerLevels`, `bots`, `recentDays`, `nowWarn` (a soft cap the page flags when exceeded, default 5), `weights`, `triageNote`, `triageGit`, and `zenhub` (`workspace`, `tokenVariable`, the repository's numeric `id`). Names shared with focus keep focus's meanings. Without `zenhub`, its fields are absent and the rules that use them never fire. The ZenHub token stays in its environment variable and reaches `curl` only through a mode-600 header file, as in focus.
+Optional. Without one, defaults apply and the first sync that needs a triage note asks the user for its path and writes the config with the Write tool. Fields: `timeZone`, `bugLabels`, `bugTypes`, `urgentLabels`, `urgentPipelines`, `regressionLabels`, `parkLabels`, `containerLevels`, `bots`, `recentDays`, `nowWarn` (a soft cap the page flags when exceeded, default 5), `weights`, `triageNote`, `triageGit`, and `zenhub` (`workspace`, `tokenVariable`). Names shared with focus keep focus's meanings. Without `zenhub`, its fields are absent and the rules that use them never fire. The ZenHub token stays in its environment variable and reaches `curl` only through a mode-600 header file, as in focus.
 
 `votefwd`'s first config: `bugLabels` `["bug"]`, `bugTypes` `["Bug"]`, `urgentLabels` `["high-priority"]`, `urgentPipelines` `["High Priority"]`, `timeZone` `America/New_York`, and the existing ZenHub workspace and token variable.
 
