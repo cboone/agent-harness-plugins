@@ -1,0 +1,94 @@
+{
+  "reviews": [
+    {
+      "id": 6100000002,
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]"
+      },
+      "state": "COMMENTED",
+      "submitted_at": "2026-10-06T12:00:00Z",
+      "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6100000002",
+      "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🟡 Changes recommended\n\nOne finding remains.\n\n**Review effort:** Lite  \n**Findings:** 1 <picture><img alt=\"Low severity\"></picture>\n\n<details open>\n<summary><strong>Open (1)</strong></summary>\n\n- <picture><img alt=\"Low severity\"></picture> [Validate the retry limit](#discussion_r9101) · New\n</details>"
+    }
+  ],
+  "reviewComments": [
+    {
+      "id": 9102,
+      "pull_request_review_id": null,
+      "user": {
+        "login": "cboone"
+      },
+      "path": "src/cache.js",
+      "html_url": "https://github.com/o/r/pull/1#discussion_r9102",
+      "body": "Should this expire?"
+    },
+    {
+      "id": 9103,
+      "pull_request_review_id": 6100000002,
+      "user": {
+        "login": "Copilot"
+      },
+      "path": "src/cache.js",
+      "html_url": "https://github.com/o/r/pull/1#discussion_r9103",
+      "body": "Yes: entries written before a restart never expire."
+    },
+    {
+      "id": 9104,
+      "pull_request_review_id": 6100000002,
+      "user": {
+        "login": "Copilot"
+      },
+      "path": "src/parse.js",
+      "html_url": "https://github.com/o/r/pull/1#discussion_r9104",
+      "body": "An empty delimiter loops forever."
+    },
+    {
+      "id": 9105,
+      "pull_request_review_id": 6100000002,
+      "user": {
+        "login": "Copilot"
+      },
+      "path": "src/old.js",
+      "html_url": "https://github.com/o/r/pull/1#discussion_r9105",
+      "body": "A reply in a thread that is already resolved."
+    }
+  ],
+  "issueComments": [
+    {
+      "id": 9202,
+      "user": {
+        "login": "Copilot"
+      },
+      "html_url": "https://github.com/o/r/pull/1#issuecomment-9202",
+      "body": "Copilot reviewed this pull request and found one issue in the release workflow."
+    }
+  ],
+  "threads": [
+    {
+      "isResolved": false,
+      "comments": [
+        {
+          "databaseId": 9102,
+          "login": "cboone"
+        },
+        {
+          "databaseId": 9103,
+          "login": "copilot-pull-request-reviewer"
+        }
+      ]
+    },
+    {
+      "isResolved": true,
+      "comments": [
+        {
+          "databaseId": 9106,
+          "login": "cboone"
+        },
+        {
+          "databaseId": 9105,
+          "login": "copilot-pull-request-reviewer"
+        }
+      ]
+    }
+  ]
+}

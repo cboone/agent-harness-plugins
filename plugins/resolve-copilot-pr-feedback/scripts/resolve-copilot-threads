@@ -41,6 +41,8 @@ Commands:
   fetch <owner> <repo> <pr_number>                    Fetch unresolved Copilot threads
   fetch-reviews <owner> <repo> <pr_number>            Fetch Copilot review-body findings
   parse-reviews                                        Normalize review JSON read from stdin
+  audit <owner> <repo> <pr_number>                    List Copilot items the fetches cannot reach
+  parse-audit                                          Audit pull request JSON read from stdin
   resolve <thread_id>                                  Resolve a review thread
   reply <thread_id> [--body-file <path>]               Reply to a review thread
   reply-and-resolve <thread_id> [--body-file <path>]   Reply and resolve
@@ -56,10 +58,16 @@ they have no thread id and cannot be replied to or resolved. fetch-reviews
 surfaces those. parse-reviews is the same normalization over review JSON on
 stdin, for testing and for reprocessing a saved response.
 
+audit lists every Copilot review, review comment and pull request comment,
+and reports any the two fetch commands do not reach, along with older-layout
+reviews that only a read can settle. parse-audit is the same join over
+{reviews, reviewComments, issueComments, threads} JSON on stdin.
+
 Examples:
   ${SCRIPT_NAME} fetch octocat hello-world 42
   ${SCRIPT_NAME} fetch-reviews octocat hello-world 42
   gh api repos/octocat/hello-world/pulls/42/reviews | ${SCRIPT_NAME} parse-reviews
+  ${SCRIPT_NAME} audit octocat hello-world 42
   ${SCRIPT_NAME} resolve PRRT_kwDONZ...
   echo "Explanation here" | ${SCRIPT_NAME} reply PRRT_kwDONZ...
   ${SCRIPT_NAME} reply PRRT_kwDONZ... --body-file response.md
@@ -1193,6 +1201,228 @@ function do_fetch_reviews() {
   do_parse_reviews <<< "${response}"
 }
 
+# =============================================================================
+# Surface audit
+# =============================================================================
+# fetch reads unresolved threads that Copilot opened, and fetch-reviews reads
+# Copilot review bodies. Copilot can also write somewhere neither looks: a
+# comment on the pull request itself, a reply inside a thread someone else
+# opened, or a review comment no thread holds. The audit lists every Copilot
+# item on the pull request by where it appears and reports any item the two
+# typed commands do not reach, so feedback that arrives somewhere new shows
+# up as an entry rather than as silence.
+#
+# It also reports the older-layout reviews that only a read can settle. An
+# older body cannot say whether its findings are inline, so a non-clean
+# verdict with no parsed finding is clean only if inline comments are
+# attached to that review. Only the join with the review comments can tell.
+#
+# REST reports Copilot's inline comments as "Copilot", GraphQL as
+# "copilot-pull-request-reviewer", and REST reviews as
+# "copilot-pull-request-reviewer[bot]", so logins are compared lowercased
+# against the direct-login list.
+# =============================================================================
+
+# Joins already-fetched pull request data into the surface audit.
+# Arguments:
+#   None; reads {reviews, reviewComments, issueComments, threads} on stdin.
+#   reviews, reviewComments and issueComments are REST arrays; threads is an
+#   array of {isResolved, comments: [{databaseId, login}]}.
+# Outputs:
+#   JSON audit object to stdout
+function do_parse_audit() {
+  local input
+  input="$(cat)"
+
+  if ! jq -e 'type == "object" and ([.reviews, .reviewComments, .issueComments, .threads] | all(type == "array"))' > /dev/null 2>&1 <<< "${input}"; then
+    die "Invalid audit JSON: expected an object with reviews, reviewComments, issueComments and threads arrays."
+  fi
+
+  local parsed
+  parsed="$(jq '.reviews' <<< "${input}" | do_parse_reviews)"
+
+  # The input and its parsed reviews reach jq on stdin as two documents
+  # rather than as arguments, because review bodies can be long enough
+  # together to exceed the argument size limit.
+  # shellcheck disable=SC2016
+  # $variables in the filter are jq bindings, not shell variables
+  printf '%s\n%s\n' "${input}" "${parsed}" | jq -s \
+    --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" \
+    --arg actions_login "${COPILOT_ACTIONS_LOGIN}" \
+    --arg severity_pattern "${COPILOT_SEVERITY_PATTERN}" \
+    '
+      .[1] as $parsed
+      | .[0]
+      | def is_copilot($login; $body):
+        ($login // "" | ascii_downcase) as $lower
+        | ($direct_logins | map(ascii_downcase) | any(. == $lower))
+          or ($lower == $actions_login and (($body // "") | test($severity_pattern; "i")));
+
+      def excerpt: (. // "") | gsub("[[:space:]]+"; " ") | .[0:200];
+
+      (.reviews | map(select(is_copilot(.user.login?; .body)))) as $reviews
+      | (.reviewComments | map(select(is_copilot(.user.login?; .body)))) as $review_comments
+      | (.issueComments | map(select(is_copilot(.user.login?; .body)))) as $issue_comments
+      | .threads as $threads
+      # Each thread, keyed by the database id of every comment it holds.
+      | (
+          [
+            $threads[]
+            | . as $thread
+            | .comments[]
+            | {key: (.databaseId | tostring), value: $thread}
+          ]
+          | from_entries
+        ) as $thread_of
+      | {
+          surfaces: {
+            reviews: ($reviews | length),
+            reviewComments: ($review_comments | length),
+            issueComments: ($issue_comments | length)
+          },
+          uncovered: (
+            [
+              $review_comments[]
+              | . as $comment
+              | $thread_of[$comment.id | tostring] as $thread
+              | if $thread == null then
+                  {surface: "review-comment", reason: "in no thread", id: .id, url: .html_url, path: .path, excerpt: (.body | excerpt)}
+                elif ($thread.isResolved | not)
+                     and (is_copilot($thread.comments[0].login; "") | not) then
+                  {surface: "review-comment", reason: "reply in a thread Copilot did not open", id: .id, url: .html_url, path: .path, excerpt: (.body | excerpt)}
+                else empty
+                end
+            ]
+            + [
+              $issue_comments[]
+              | {surface: "issue-comment", reason: "pull request comment", id: .id, url: .html_url, path: null, excerpt: (.body | excerpt)}
+            ]
+          ),
+          legacyNeedsRead: [
+            $parsed[]
+            | select(.reviewKind == "review")
+            | select(.reviewBody | contains("<!-- ccr-overview-v2 -->") | not)
+            | select(.verdict != null and .verdict != "### 🟢 Approval recommended")
+            | select((.findings | length) == 0)
+            | .id as $id
+            | select(($review_comments | map(select(.pull_request_review_id == $id)) | length) == 0)
+            | .id
+          ]
+        }
+    '
+}
+
+# Fetches every review thread on a PR, resolved or not, with the database id
+# and author of each comment, for the surface audit.
+# Arguments:
+#   $1 - Repository owner
+#   $2 - Repository name
+#   $3 - Pull request number
+# Outputs:
+#   JSON array of {isResolved, comments: [{databaseId, login}]} to stdout
+function fetch_thread_index() {
+  local owner="${1}"
+  local repo="${2}"
+  local pr_number="${3}"
+
+  local response
+  # shellcheck disable=SC2016
+  # $variables in the query are GraphQL references, not shell variables
+  if ! response="$(
+    gh api graphql \
+      --paginate \
+      --slurp \
+      -f owner="${owner}" \
+      -f repo="${repo}" \
+      -F pr_number="${pr_number}" \
+      -f query='
+        query($owner: String!, $repo: String!, $pr_number: Int!, $endCursor: String) {
+          repository(owner: $owner, name: $repo) {
+            pullRequest(number: $pr_number) {
+              reviewThreads(first: 100, after: $endCursor) {
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+                nodes {
+                  isResolved
+                  comments(first: 100) {
+                    nodes {
+                      databaseId
+                      author { login }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      '
+  )"; then
+    die "Failed to fetch review threads for ${owner}/${repo}#${pr_number}. See the gh error above for the cause."
+  fi
+
+  local graphql_error
+  graphql_error="$(jq -r 'map(.errors? // []) | add | .[0].message? // empty' <<< "${response}")"
+  if [[ -n "${graphql_error}" ]]; then
+    die "GraphQL error while fetching threads: ${graphql_error}"
+  fi
+
+  jq '
+    [
+      .[].data.repository.pullRequest.reviewThreads.nodes[]?
+      | {
+          isResolved,
+          comments: [.comments.nodes[] | {databaseId, login: (.author.login? // "")}]
+        }
+    ]
+  ' <<< "${response}"
+}
+
+# Fetches every Copilot surface on a PR and audits what the typed commands
+# cannot reach.
+# Arguments:
+#   $1 - Repository owner
+#   $2 - Repository name
+#   $3 - Pull request number
+# Outputs:
+#   JSON audit object to stdout
+function do_audit() {
+  local owner="${1}"
+  local repo="${2}"
+  local pr_number="${3}"
+
+  local reviews
+  local review_comments
+  local issue_comments
+  local threads
+
+  if ! reviews="$(gh api --paginate "repos/${owner}/${repo}/pulls/${pr_number}/reviews")"; then
+    die "Failed to fetch reviews for ${owner}/${repo}#${pr_number}. See the gh error above for the cause."
+  fi
+  if ! review_comments="$(gh api --paginate "repos/${owner}/${repo}/pulls/${pr_number}/comments")"; then
+    die "Failed to fetch review comments for ${owner}/${repo}#${pr_number}. See the gh error above for the cause."
+  fi
+  if ! issue_comments="$(gh api --paginate "repos/${owner}/${repo}/issues/${pr_number}/comments")"; then
+    die "Failed to fetch pull request comments for ${owner}/${repo}#${pr_number}. See the gh error above for the cause."
+  fi
+  threads="$(fetch_thread_index "${owner}" "${repo}" "${pr_number}")"
+
+  # Passed on stdin rather than as arguments, for the size reason given in
+  # do_parse_audit. Each REST response is flattened to one array first, so a
+  # response that arrives as one array per page cannot shift the documents
+  # this join reads by position.
+  local surface
+  local flattened=()
+  for surface in "${reviews}" "${review_comments}" "${issue_comments}"; do
+    flattened+=("$(jq -sc 'add // []' <<< "${surface}")")
+  done
+
+  printf '%s\n%s\n%s\n%s\n' "${flattened[0]}" "${flattened[1]}" "${flattened[2]}" "${threads}" \
+    | jq -s '{reviews: .[0], reviewComments: .[1], issueComments: .[2], threads: .[3]}' \
+    | do_parse_audit
+}
+
 # Resolves a review thread via GraphQL mutation.
 # Arguments:
 #   $1 - Thread ID (e.g., PRRT_kwDONZ...)
@@ -1284,10 +1514,10 @@ function main() {
   # Validate command before checking dependencies so that missing/unknown
   # commands show usage errors rather than confusing dependency failures.
   case "${command}" in
-    fetch | fetch-reviews | resolve | reply | reply-and-resolve)
+    fetch | fetch-reviews | audit | resolve | reply | reply-and-resolve)
       check_dependencies
       ;;
-    parse-reviews)
+    parse-reviews | parse-audit)
       # Reads stdin and touches no GitHub API, so it needs neither the CLI nor
       # credentials.
       require_jq
@@ -1313,6 +1543,14 @@ function main() {
     parse-reviews)
       [[ $# -ne 0 ]] && die "Usage: ${SCRIPT_NAME} parse-reviews (reads review JSON on stdin)"
       do_parse_reviews
+      ;;
+    audit)
+      [[ $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} audit <owner> <repo> <pr_number>"
+      do_audit "$1" "$2" "$3"
+      ;;
+    parse-audit)
+      [[ $# -ne 0 ]] && die "Usage: ${SCRIPT_NAME} parse-audit (reads pull request JSON on stdin)"
+      do_parse_audit
       ;;
     resolve)
       [[ $# -ne 1 ]] && die "Usage: ${SCRIPT_NAME} resolve <thread_id>"

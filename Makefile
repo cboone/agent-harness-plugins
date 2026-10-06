@@ -37,6 +37,7 @@ SCRUT_ENV := \
 	REVIEW_CORPUS_FIXTURE_BIN="$(CURDIR)/tests/fixtures/review-corpus-fixture" \
 	REPO_ROOT="$(CURDIR)" \
 	COPILOT_REVIEW_DATA_DIR="$(CURDIR)/tests/data/copilot-reviews" \
+	COPILOT_AUDIT_DATA_DIR="$(CURDIR)/tests/data/copilot-audit" \
 	CROSS_REFERENCE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/cross-reference-fixture" \
 	CATALOG_RELEASE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/catalog-release-fixture" \
 	VALIDATE_PLUGIN_FIXTURE_BIN="$(CURDIR)/tests/fixtures/validate-plugin-fixture" \

@@ -776,12 +776,76 @@ Error: Usage: resolve-copilot-threads parse-reviews (reads review JSON on stdin)
 
 `fetch-reviews` is not exercised here: it requires an authenticated `gh`, which the test environment does not have. `parse-reviews` is the seam that makes the parsing testable without one.
 
-## Help lists the review-body commands
+## Help lists the review-body and audit commands
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" --help | grep -E '^  (fetch-reviews|parse-reviews)'
+$ "${RESOLVE_COPILOT_THREADS_BIN}" --help | grep -E '^  (fetch-reviews|parse-reviews|audit|parse-audit)'
   fetch-reviews <owner> <repo> <pr_number>            Fetch Copilot review-body findings
   parse-reviews                                        Normalize review JSON read from stdin
+  audit <owner> <repo> <pr_number>                    List Copilot items the fetches cannot reach
+  parse-audit                                          Audit pull request JSON read from stdin
+```
+
+## The surface audit
+
+`fetch` reads unresolved threads Copilot opened and `fetch-reviews` reads its
+review bodies. `audit` lists every Copilot item on a pull request by where it
+appears and reports any the two do not reach, so feedback that arrives
+somewhere new is an entry rather than silence. `parse-audit` is the same join
+over saved JSON, which is what these cases run, since `audit` needs an
+authenticated `gh`.
+
+When every Copilot item is reachable, nothing is reported. A summary comment
+the resolver posted is not a Copilot item. The inline comment's REST login is
+`Copilot`, which matches regardless of case.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit < "${COPILOT_AUDIT_DATA_DIR}/covered.json" | jq -c .
+{"surfaces":{"reviews":1,"reviewComments":1,"issueComments":0},"uncovered":[],"legacyNeedsRead":[]}
+```
+
+A reply inside an unresolved thread a person opened, a review comment that no
+thread holds, and a comment on the pull request itself are all out of reach
+of the fetch commands, and each is reported. A reply in a resolved thread is
+settled, and is not.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit < "${COPILOT_AUDIT_DATA_DIR}/uncovered.json" | jq -c '.uncovered[] | {surface, reason, id}'
+{"surface":"review-comment","reason":"reply in a thread Copilot did not open","id":9103}
+{"surface":"review-comment","reason":"in no thread","id":9104}
+{"surface":"issue-comment","reason":"pull request comment","id":9202}
+```
+
+Each entry carries a link and an excerpt, so it can be read without opening
+the pull request.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit < "${COPILOT_AUDIT_DATA_DIR}/uncovered.json" | jq -c '.uncovered[0] | {url, path, excerpt}'
+{"url":"https://github.com/o/r/pull/1#discussion_r9103","path":"src/cache.js","excerpt":"Yes: entries written before a restart never expire."}
+```
+
+An older-layout body cannot say whether its findings are inline. A non-clean
+verdict with nothing parsed is explained when inline comments are attached to
+that review, and otherwise only its prose can say what it found, so it is
+listed for a read. A clean older review is never listed.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit < "${COPILOT_AUDIT_DATA_DIR}/legacy-prose.json" | jq -c '{legacyNeedsRead}'
+{"legacyNeedsRead":[6100000003]}
+```
+
+The input must carry all four arrays.
+
+```scrut
+$ echo '{"reviews":[]}' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit 2>&1
+Error: Invalid audit JSON: expected an object with reviews, reviewComments, issueComments and threads arrays.
+[1]
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit extra < /dev/null 2>&1
+Error: Usage: resolve-copilot-threads parse-audit (reads pull request JSON on stdin)
+[1]
 ```
 
 ## The copy `monitor-pr` ships parses the same way
