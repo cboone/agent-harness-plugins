@@ -32,6 +32,13 @@ Run on 2026-10-06 against `swing-left/votefwd` at `develop` `8135b4cb`, with Zen
 - **Work in progress is common.** Eleven bugs carry an `in progress` label or sit in In Progress or Review/QA, and six have an open fix pull request (one with failing checks). The plan's tiers do not yet say how in-progress work shows.
 - **The urgent label alone fills Now.** Four open bugs carry `high-priority` and one sits in High Priority, which under the drafted rule puts five bugs in Now before any reading, equal to the default `nowWarn`. Three of those are already in progress.
 
+Confirmed by the user on 2026-10-06, after reviewing this gather:
+
+- An urgent label or pipeline is a signal only. It adds rank weight and places nothing; reading and the triage note decide the tier. This replaces the urgent clause of the `now` rule below.
+- "Must Do" and "Should Do" pipelines add rank weight only.
+- An in-progress bug stays in its tier with an "In progress" tag naming its pull request, label, or pipeline, so an urgent one's action becomes landing the fix. A non-urgent in-progress bug goes to Ready to go.
+- Calibrate on a sample of about 15 varied bugs before assessing the rest.
+
 Two adjustments from building the gatherer:
 
 - ZenHub needs the repository's numeric ID, which the gatherer reads from the GitHub API, so the config does not carry it.
