@@ -193,6 +193,17 @@ function send_reply() {
   printf '%s\n' "${comment_id}"
 }
 
+# Exits with the first GraphQL error in a paginated review-thread response.
+# Arguments:
+#   $1 - Response from gh api graphql --paginate --slurp, one object per page
+function die_on_thread_query_errors() {
+  local graphql_error
+  graphql_error="$(jq -r 'map(.errors? // []) | add | .[0].message? // empty' <<< "${1}")"
+  if [[ -n "${graphql_error}" ]]; then
+    die "GraphQL error while fetching threads: ${graphql_error}"
+  fi
+}
+
 # Fetches all unresolved Copilot-authored review threads for a PR.
 # Uses gh --paginate --slurp for automatic cursor-based pagination.
 # Arguments:
@@ -250,15 +261,7 @@ function do_fetch() {
   )"
 
   # Check for GraphQL errors before running the normalization filter
-  local graphql_error
-  graphql_error="$(
-    printf '%s' "${response}" \
-      | jq -r 'map(.errors? // []) | add | .[0].message? // empty'
-  )"
-
-  if [[ -n "${graphql_error}" ]]; then
-    die "GraphQL error while fetching threads: ${graphql_error}"
-  fi
+  die_on_thread_query_errors "${response}"
 
   # Validate that the response contains the expected data shape.
   # Invalid owner/repo/PR number can return null data without GraphQL errors.
@@ -502,20 +505,20 @@ function do_parse_reviews() {
             end)
         | .value;
 
+      # The number of inline threads the "Open (N)" summary announced, or 0
+      # when there is no such section. Reconciling it against the stated
+      # count is what makes a shortfall visible, so the count is parsed
+      # rather than the section merely detected.
+      def open_thread_count:
+        section_summary("Open") // 0;
+
       # ccr-overview-v2 lists the inline threads that were open when the
       # review was written under an "Open (N)" summary. Those threads explain
       # a non-clean verdict by themselves, and the thread fetch reports them,
       # so a review whose only findings are inline threads is neither drift
       # nor, on its verdict alone, a lead to read.
       def lists_open_threads:
-        (section_summary("Open") // 0) > 0;
-
-      # The number of inline threads that summary announced, or 0 when there
-      # is no such section. Reconciling it against the stated count is what
-      # makes a shortfall visible, so the count is parsed rather than the
-      # section merely detected.
-      def open_thread_count:
-        section_summary("Open") // 0;
+        open_thread_count > 0;
 
       # ccr-overview-v2 also lists the findings closed since the previous
       # round under a "Resolved since last review (N)" summary. Those links
@@ -565,6 +568,14 @@ function do_parse_reviews() {
               )
             | {kind: "element", line: $l.n, region: $l.region, text: ($l.raw | .[0:200])}
           ];
+
+      # The lines before the first details block, which stated_finding_count
+      # and headline both read. The reasons the stop pattern omits the
+      # closing angle bracket are given beside each of them.
+      def preamble_lines:
+        split("\n")
+        | (map(test("^<details")) | index(true)) as $stop
+        | if $stop then .[0:$stop] else . end;
 
       # ccr-overview-v2 states a count on a "**Findings:**" line, as either
       # "None" or a number. Across every observed body, in the fixtures and
@@ -622,9 +633,7 @@ function do_parse_reviews() {
       # bracket so an opened section, "<details open>", ends the preamble too.
       def stated_finding_count:
         (
-          split("\n")
-          | (map(test("^<details")) | index(true)) as $stop
-          | (if $stop then .[0:$stop] else . end)
+          preamble_lines
           | map(select(test("^\\*\\*Findings"; "i")))
           | first
         ) as $line
@@ -650,9 +659,7 @@ function do_parse_reviews() {
       # list into it. The calls to action ("Once you have addressed...",
       # "Get a fresh assessment...") are boilerplate and carry no finding.
       def headline:
-        split("\n")
-        | (map(test("^<details")) | index(true)) as $stop
-        | (if $stop then .[0:$stop] else . end)
+        preamble_lines
         | map(select(test("^\\*(Once you|Get a fresh assessment)") | not))
         | join("\n")
         | trim;
@@ -1454,11 +1461,7 @@ function fetch_thread_index() {
     die "Failed to fetch review threads for ${owner}/${repo}#${pr_number}. See the gh error above for the cause."
   fi
 
-  local graphql_error
-  graphql_error="$(jq -r 'map(.errors? // []) | add | .[0].message? // empty' <<< "${response}")"
-  if [[ -n "${graphql_error}" ]]; then
-    die "GraphQL error while fetching threads: ${graphql_error}"
-  fi
+  die_on_thread_query_errors "${response}"
 
   # A wrong owner, repo or number returns null data without an error, the
   # same shape do_fetch guards against. Read as an empty index, it would

@@ -198,6 +198,18 @@ readonly SKELETON_FILTER='
     | any(. == $login);
 '
 
+# An audit counts only when it has the shape the resolver writes and carries
+# no error. Anything else, null or {} or a future schema without these lists,
+# is reported as missing rather than read as an audit that found nothing. The
+# report and the exit status both apply this rule, so they share it.
+readonly AUDITED_FILTER='
+  def audited:
+    (.audit | type) == "object"
+    and .audit.error == null
+    and (.audit.uncovered | type) == "array"
+    and (.audit.legacyNeedsRead | type) == "array";
+'
+
 # Prints the sorted, unique skeletons of every Copilot review in a sample.
 function do_skeletons() {
   jq "${SKELETON_FILTER}"'
@@ -276,10 +288,13 @@ function do_analyze() {
       '{pr: $pr, reviews: map(. + {pr: $pr}), skipped: ($warnings | split("\n") | map(select(test("^Warning: skipping review"))))}')"$'\n'
   done < <(jq -c '.[]' <<< "${sample}")
 
+  local results_json
+  results_json="$(jq -s -c '.' <<< "${results}")"
+
   local report
   report="$(
-    printf '%s\n%s\n%s' "${sample}" "$(cat "${baseline}")" "$(jq -s -c '.' <<< "${results}")" \
-      | jq -r -s "${SKELETON_FILTER}"'
+    printf '%s\n%s\n%s' "${sample}" "$(cat "${baseline}")" "${results_json}" \
+      | jq -r -s "${SKELETON_FILTER}${AUDITED_FILTER}"'
         .[0] as $sample
         | .[1].skeletons as $known
         | .[2] as $results
@@ -289,16 +304,6 @@ function do_analyze() {
           if ($lines | length) == 0 then empty
           else "", "## " + $title, "", ($lines[] | bullet)
           end;
-
-        # An audit counts only when it has the shape the resolver writes and
-        # carries no error. Anything else, null or {} or a future schema
-        # without these lists, is reported as missing rather than read as an
-        # audit that found nothing.
-        def audited:
-          (.audit | type) == "object"
-          and .audit.error == null
-          and (.audit.uncovered | type) == "array"
-          and (.audit.legacyNeedsRead | type) == "array";
 
         def one_line: tostring | gsub("[[:space:]]*\n[[:space:]]*"; " / ");
 
@@ -397,15 +402,8 @@ function do_analyze() {
 
   local status
   status="$(
-    printf '%s\n%s' "${sample}" "$(jq -s -c '.' <<< "${results}")" \
-      | jq -s -r '
-        # The same rule the report applies; see audited there.
-        def audited:
-          (.audit | type) == "object"
-          and .audit.error == null
-          and (.audit.uncovered | type) == "array"
-          and (.audit.legacyNeedsRead | type) == "array";
-
+    printf '%s\n%s' "${sample}" "${results_json}" \
+      | jq -s -r "${AUDITED_FILTER}"'
         .[0] as $sample
         | .[1] as $results
         | ($results | map(.reviews | length) | add // 0) as $reviews
@@ -499,7 +497,15 @@ function gather() {
   # gone by the time that subshell exits.
   trap "rm -f '${error_file}'" EXIT
 
-  local error_lines='split("\n") | map(select(. != "")) | join(" / ")'
+  # Every non-empty line of a captured error, joined into one, or $fallback
+  # when the command printed nothing.
+  # shellcheck disable=SC2016
+  # $fallback is a jq binding, not a shell variable
+  local error_text='
+    def error_text($fallback):
+      split("\n") | map(select(. != "")) | join(" / ")
+      | if . == "" then $fallback else . end;
+  '
 
   while read -r repo number; do
     [[ -n "${repo}" ]] || continue
@@ -512,14 +518,14 @@ function gather() {
     if ! reviews="$(gh api --paginate "repos/${repo}/pulls/${number}/reviews" 2> "${error_file}" | jq -s -c 'add // []')"; then
       cat "${error_file}" >&2
       entries+="$(jq -n -c --arg repo "${repo}" --argjson number "${number}" --rawfile error "${error_file}" \
-        "{repo: \$repo, number: \$number, reviews: [], audit: null, fetchError: ((\$error | ${error_lines}) | if . == \"\" then \"gh exited with no message\" else . end)}")"$'\n'
+        "${error_text}"'{repo: $repo, number: $number, reviews: [], audit: null, fetchError: ($error | error_text("gh exited with no message"))}')"$'\n'
       continue
     fi
 
     if ! audit="$(bash "${RESOLVER}" audit "${repo%%/*}" "${repo#*/}" "${number}" 2> "${error_file}" | jq -c .)"; then
       cat "${error_file}" >&2
       audit="$(jq -n -c --rawfile error "${error_file}" \
-        "{error: ((\$error | ${error_lines}) | if . == \"\" then \"the audit exited with no message\" else . end)}")"
+        "${error_text}"'{error: ($error | error_text("the audit exited with no message"))}')"
     fi
 
     # Reviews and audit reach jq on stdin, not as arguments, because review

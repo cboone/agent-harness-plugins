@@ -59,6 +59,16 @@ function do_pr_list() {
   fi
 }
 
+# Prints a response file, or fails the way gh does for a missing resource.
+function print_response() {
+  local file="${1}"
+  if [[ ! -f "${file}" ]]; then
+    echo "gh: Not Found (HTTP 404)" >&2
+    exit 1
+  fi
+  cat "${file}"
+}
+
 function do_graphql() {
   local owner="" repo="" number=""
   while [[ $# -gt 0 ]]; do
@@ -78,11 +88,7 @@ function do_graphql() {
 
   local file
   file="$(data_dir)/graphql/${owner}_${repo}_${number}.json"
-  if [[ ! -f "${file}" ]]; then
-    echo "gh: Not Found (HTTP 404)" >&2
-    exit 1
-  fi
-  cat "${file}"
+  print_response "${file}"
 }
 
 function do_api() {
@@ -104,11 +110,7 @@ function do_api() {
 
   local file
   file="$(data_dir)/api/${key}.json"
-  if [[ ! -f "${file}" ]]; then
-    echo "gh: Not Found (HTTP 404)" >&2
-    exit 1
-  fi
-  cat "${file}"
+  print_response "${file}"
 }
 
 function main() {
