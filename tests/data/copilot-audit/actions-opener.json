@@ -1,0 +1,28 @@
+{
+  "reviews": [],
+  "reviewComments": [
+    {
+      "id": 9110,
+      "pull_request_review_id": 6100000009,
+      "user": {
+        "login": "github-actions[bot]"
+      },
+      "path": "src/a.js",
+      "html_url": "https://github.com/o/r/pull/1#discussion_r9110",
+      "body": "[nitpick] Rename the helper."
+    }
+  ],
+  "issueComments": [],
+  "threads": [
+    {
+      "isResolved": false,
+      "comments": [
+        {
+          "databaseId": 9110,
+          "login": "github-actions[bot]",
+          "body": "[nitpick] Rename the helper."
+        }
+      ]
+    }
+  ]
+}

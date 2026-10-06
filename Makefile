@@ -10,7 +10,7 @@ SCRUT_TEST_DIR := tests/scrut/
 SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u WORKMUX_LAUNCH_WAIT_SECONDS -u WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS \
 	-u STUB_CAPTURE_TERM -u STUB_CAPTURE_TMUX \
-	-u STUB_GH_API_FAIL -u STUB_GH_AUTH_FAIL -u STUB_GH_DIR -u STUB_GH_LOG \
+	-u STUB_GH_API_FAIL -u STUB_GH_AUTH_FAIL -u STUB_GH_DIR -u STUB_GH_LOG -u STUB_COPILOT_GH_DIR \
 	-u STUB_GIT_BRANCHES -u STUB_GIT_INVALID_REF -u STUB_GIT_WORKTREE_PORCELAIN \
 	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES \
 	-u TZDIR -u WORKTREE_RESOURCES_FILE -u REVIEW_CHECKLISTS_DIR \
@@ -37,6 +37,11 @@ SCRUT_ENV := \
 	REVIEW_CORPUS_FIXTURE_BIN="$(CURDIR)/tests/fixtures/review-corpus-fixture" \
 	REPO_ROOT="$(CURDIR)" \
 	COPILOT_REVIEW_DATA_DIR="$(CURDIR)/tests/data/copilot-reviews" \
+	COPILOT_AUDIT_DATA_DIR="$(CURDIR)/tests/data/copilot-audit" \
+	COPILOT_CANARY_DATA_DIR="$(CURDIR)/tests/data/copilot-canary" \
+	COPILOT_REVIEW_CANARY_BIN="$(CURDIR)/bin/copilot-review-canary" \
+	COPILOT_GH_STUB_BIN="$(CURDIR)/tests/fixtures/copilot-gh-stub" \
+	COPILOT_GH_DATA_DIR="$(CURDIR)/tests/data/copilot-gh" \
 	CROSS_REFERENCE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/cross-reference-fixture" \
 	CATALOG_RELEASE_FIXTURE_BIN="$(CURDIR)/tests/fixtures/catalog-release-fixture" \
 	VALIDATE_PLUGIN_FIXTURE_BIN="$(CURDIR)/tests/fixtures/validate-plugin-fixture" \

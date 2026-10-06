@@ -1,0 +1,640 @@
+#!/usr/bin/env bash
+# Samples recent Copilot reviews and reports layout changes the parser in
+# resolve-copilot-threads has not caught up with. Prints a Markdown report,
+# or nothing when the sample is clean.
+#
+# The parser's own checks run inside a resolver run, one pull request at a
+# time, so a new layout is otherwise found by the first pull request it
+# breaks. This looks across many pull requests at once, and also compares the
+# layout elements themselves (headings, section titles, labels, list and
+# table shapes) against a committed baseline, so a new element shows up on
+# the first run after it appears, before it carries a finding the parser
+# drops.
+#
+# Empty output must mean the sample was read and found clean, never that
+# reading it failed. So a pull request the parser could not read, a review it
+# skipped, a pull request whose reviews or surface audit could not be
+# fetched, and a named repository with no pull requests in the window are each
+# reported, a sample with no Copilot reviews says so, and the sample size
+# always goes to stderr.
+#
+# Exit status: 0 when the sample is clean, 1 when the report lists something
+# to look at, 2 when the sample was incomplete or empty, so whatever it
+# reports may be missing something, and 3 when the canary could not run at
+# all (a usage error, a missing tool, an invalid sample or baseline, or a
+# failed listing), with the cause on stderr and nothing on stdout.
+#
+# It is a local audit, never scheduled and never a merge gate. Its report can
+# quote reviews from private repositories, so it is printed rather than filed
+# anywhere, and turning a report into a test fixture is a manual step.
+#
+# Requires: jq 1.7 or later; gh, authenticated, for the gathering mode.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+# Resolve the repository from this script's location, so it runs from any
+# working directory, including the temporary directory scrut uses.
+REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly REPO_ROOT
+
+readonly RESOLVER="${REPO_ROOT}/plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads"
+readonly DEFAULT_BASELINE="${REPO_ROOT}/bin/data/copilot-review-structure.json"
+readonly DEFAULT_LIMIT=50
+readonly DEFAULT_WINDOW_DAYS=14
+
+function usage() {
+  cat << USAGE_TEXT
+Usage:
+  ${SCRIPT_NAME} [--repo OWNER/REPO]... [--author LOGIN] [--since YYYY-MM-DD]
+                 [--limit N] [--baseline FILE] [--save FILE]
+  ${SCRIPT_NAME} analyze [--baseline FILE] < sample.json
+  ${SCRIPT_NAME} skeletons < sample.json
+
+Samples recent pull requests, runs the Copilot review parser and the surface
+audit over each, and prints a Markdown report of anything that suggests a
+layout change. Prints nothing when the sample is clean.
+
+Modes:
+  (default)   Gather pull requests with gh, then analyze them.
+  analyze     Analyze a sample saved with --save, read on stdin.
+  skeletons   Print the sorted layout elements of a sample, as a baseline.
+
+Options:
+  --repo OWNER/REPO   Sample this repository. Repeatable.
+  --author LOGIN      Sample pull requests this login authored, in any
+                      repository it can read.
+  --since DATE        Only pull requests updated on or after DATE.
+                      Default: ${DEFAULT_WINDOW_DAYS} days ago.
+  --limit N           Pull requests per --repo, or in total for --author.
+                      Default: ${DEFAULT_LIMIT}.
+  --baseline FILE     Layout baseline. Default: bin/data/copilot-review-structure.json
+  --save FILE         Also write the gathered sample to FILE.
+  -h, --help          Show this help.
+
+Exit status: 0 for a clean sample, 1 when the report lists something to look
+at, 2 when the sample was incomplete or held no Copilot reviews, 3 when the
+canary could not run.
+
+A sample is a JSON array of {repo, number, reviews, audit}, where reviews is
+the REST reviews array and audit is the resolve-copilot-threads audit result.
+An entry whose reviews could not be fetched also carries a fetchError, with
+empty reviews and a null audit, and one whose audit failed carries
+{"error": "..."} as its audit.
+
+Examples:
+  ${SCRIPT_NAME} --author octocat --since 2026-09-01
+  ${SCRIPT_NAME} --repo octocat/hello-world --save sample.json
+  ${SCRIPT_NAME} analyze < sample.json
+  ${SCRIPT_NAME} skeletons < sample.json > bin/data/copilot-review-structure.json
+USAGE_TEXT
+}
+
+# Exits 3, which the header reserves for "could not run", so an error is never
+# read as a report with something in it.
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-3}"
+}
+
+# The resolver this calls needs jq 1.7 or later, and would refuse an older
+# one with an error this script reports per pull request. Checking here
+# names the cause once, before any sampling starts. A version string that
+# does not read as "jq-MAJOR.MINOR" is let through, as the resolver does.
+function require_jq() {
+  command -v jq > /dev/null 2>&1 || die "jq is required but not found."
+
+  local version
+  version="$(jq --version 2> /dev/null || true)"
+  if [[ "${version}" =~ ^jq-([0-9]+)\.([0-9]+) ]]; then
+    local major="${BASH_REMATCH[1]}"
+    local minor="${BASH_REMATCH[2]}"
+    if ((major < 1 || (major == 1 && minor < 7))); then
+      die "jq 1.7 or later is required, found ${version}."
+    fi
+  fi
+}
+
+function require_gh() {
+  command -v gh > /dev/null 2>&1 || die "gh is required but not found."
+}
+
+# Reduces each structural line of every Copilot review body in a sample to a
+# skeleton, so two reviews with the same layout produce the same lines.
+# Counts, paths, inline code, vote tags, thread links, badges and table cells
+# are replaced by placeholders, and prose lines are dropped. Fenced blocks are
+# skipped, since a finding that quotes a file can carry any line at all.
+#
+# Some line types are kept as written, because their wording is the layout:
+# headings, comment markers, labels ending in a colon, italic lines, table
+# header rows, section summaries without a badge, and details tags with their
+# attributes. On Copilot reviews these are its own boilerplate, but a
+# finding that quotes a heading or an italic line would carry it through, so
+# review a baseline built from private repositories before committing it.
+# shellcheck disable=SC2016
+# $variables in the filter are jq bindings, not shell variables
+readonly SKELETON_FILTER='
+  def skeleton_of_line:
+    gsub("\r"; "")
+    | gsub("\u200b"; "")
+    | gsub("<picture>.*?</picture>"; "[badge]")
+    | gsub("`[^`]*`"; "`CODE`")
+    | gsub("\\([0-9]+ votes?( each)?\\)"; "(N votes)"; "i")
+    | gsub("\\(#discussion_r[0-9]+\\)"; "(#thread)")
+    | if test("^[[:space:]]*$") then empty
+      elif test("^<!--") then .
+      elif test("^#+ ") then gsub("\\([0-9]+\\)"; "(N)")
+      elif test("^<summary>") then
+        if test("\\[badge\\]") then "<summary>[badge] TITLE</summary>"
+        else gsub("\\([0-9]+\\)"; "(N)")
+        end
+      elif test("^</?details") then .
+      elif test("^[[:space:]]*\\|[[:space:]:-]+\\|[[:space:]:|-]*$") then "| --- |"
+      elif test("^[[:space:]]*\\|") then
+        # A header row, whose cells are plain words, is kept as written: its
+        # column names are the layout. Any other row is a file summary, kept
+        # only as its column count and whether it carries a vote tag.
+        (sub("^[[:space:]]*\\|"; "") | sub("\\|[[:space:]]*$"; "") | split("|") | map(gsub("^[[:space:]]+|[[:space:]]+$"; ""))) as $cells
+        | if ($cells | all(test("^[A-Za-z][A-Za-z /]*$")))
+          then "| " + ($cells | join(" | ")) + " |"
+          else
+            "| PATH |"
+            + ([range(1; $cells | length)] | map(" TEXT |") | join(""))
+            + (if test("\\(N votes\\)") then " with (N votes)" else "" end)
+          end
+      elif test("^- \\[badge\\]") then
+        "- [badge] [TITLE](#thread)" + ((capture(" · (?<tag>[A-Za-z]+)[[:space:]]*$") | " · " + .tag) // "")
+      elif test("^[[:space:]]*[-*] .*\\(N votes\\)") then
+        (capture("^[[:space:]]*[-*] (?<lead>(`CODE`[[:space:]]*\\S+[[:space:]]*)?(\\*\\*)?)").lead) as $lead
+        | "- " + $lead + "SEVERITY (N votes): TEXT"
+      # A list item that opens with code is kept as that shape: one naming a
+      # file and line without a vote tag is a finding no parser reads, and
+      # the shape is what makes it visible here.
+      elif test("^[[:space:]]*([-*+]|[0-9]+[.)]) (\\*\\*)?`CODE`") then "- `CODE` TEXT"
+      elif test("^\\*\\*[^*]+:\\*\\*") then capture("^(?<label>\\*\\*[^*]+:\\*\\*)").label
+      elif test("^- \\*\\*[^*]+:\\*\\*") then "- " + capture("^- (?<label>\\*\\*[^*]+:\\*\\*)").label
+      elif test("^[A-Z][A-Za-z ]+:$") then .
+      elif test("^\\*\\*[^*]+:[0-9]+\\*\\*$") then "**PATH:LINE**"
+      elif test("^`CODE`$") then "`PATH:LINE`"
+      elif test("^\\*[^*].*\\*$") then .
+      elif test("^✨|^💡") then "TIP"
+      else empty
+      end;
+
+  def skeletons:
+    split("\n")
+    | reduce .[] as $line ({fence: false, out: []};
+        if ($line | test("^[[:space:]]*```"))
+        then .fence = (.fence | not)
+        elif .fence then .
+        else .out += [$line | skeleton_of_line]
+        end)
+    | .out;
+
+  def copilot_review:
+    (.user.login? // "" | ascii_downcase) as $login
+    | ["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"]
+    | any(. == $login);
+'
+
+# An audit counts only when it has the shape the resolver writes and carries
+# no error. Anything else, null or {} or a future schema without these lists,
+# is reported as missing rather than read as an audit that found nothing. The
+# report and the exit status both apply this rule, so they share it.
+readonly AUDITED_FILTER='
+  def audited:
+    (.audit | type) == "object"
+    and .audit.error == null
+    and (.audit.uncovered | type) == "array"
+    and (.audit.legacyNeedsRead | type) == "array";
+'
+
+# Prints the sorted, unique skeletons of every Copilot review in a sample.
+function do_skeletons() {
+  jq "${SKELETON_FILTER}"'
+    [.[].reviews[] | select(type == "object" and copilot_review) | select((.body | type) == "string") | .body | skeletons[]]
+    | unique
+    | {skeletons: .}
+  '
+}
+
+# Analyzes a sample, prints the Markdown report, and exits with the status the
+# header describes.
+# Arguments:
+#   $1 - Baseline file
+function do_analyze() {
+  local baseline="${1}"
+  local sample
+  sample="$(cat)"
+
+  if ! jq -e 'type == "array" and all(.[]; type == "object" and (.reviews | type) == "array")' > /dev/null 2>&1 <<< "${sample}"; then
+    die "Invalid sample: expected an array of {repo, number, reviews, audit} objects."
+  fi
+  [[ -f "${baseline}" ]] || die "Baseline not found: ${baseline}"
+  if ! jq -e '(.skeletons | type) == "array" and all(.skeletons[]; type == "string")' > /dev/null 2>&1 < "${baseline}"; then
+    die "Invalid baseline: expected {skeletons: [...]} as written by the skeletons mode, in ${baseline}"
+  fi
+
+  local stderr_file
+  stderr_file="$(mktemp "${TMPDIR:-/tmp}/copilot-review-canary.XXXXXX")"
+  # shellcheck disable=SC2064
+  # Expanded now on purpose: the path is fixed for the life of the run.
+  trap "rm -f '${stderr_file}'" EXIT
+
+  # Each pull request goes through the parser on its own, as a resolver run
+  # would see it. A failure is recorded against that pull request rather than
+  # ending the run, with its cause, and a review the parser skipped is
+  # recorded from its warning, so neither can shrink the sample without a
+  # trace. Output that is not an array of parsed reviews counts as a failure
+  # too, whatever the exit status said. Any other stderr line is passed
+  # through. Results are collected as one JSON document per line.
+  local results=""
+  local entry
+  local label
+  local parsed
+  local cause
+  while IFS= read -r entry; do
+    # A named repository with no pull requests in the window is reported
+    # from the sample itself; there is nothing to parse.
+    if jq -e '.noPullRequests == true' > /dev/null <<< "${entry}"; then
+      continue
+    fi
+
+    label="$(jq -r '"\(.repo)#\(.number)"' <<< "${entry}")"
+    cause=""
+    : > "${stderr_file}"
+    # The parser and the jq that re-emits its output share the stderr file,
+    # so whichever of them failed is the cause recorded.
+    if ! parsed="$(jq -c '.reviews' <<< "${entry}" | bash "${RESOLVER}" parse-reviews 2> "${stderr_file}" | jq -c . 2>> "${stderr_file}")"; then
+      cause="$(jq -Rrs 'split("\n") | map(select(. != "")) | last // "the parser exited with no message"' "${stderr_file}")"
+    elif [[ -z "${parsed}" ]]; then
+      cause="the parser printed nothing"
+    elif ! jq -e 'type == "array" and all(.[]; type == "object" and (.unaccounted | type) == "array" and (.findings | type) == "array")' > /dev/null 2>&1 <<< "${parsed}"; then
+      cause="the parser printed something other than an array of parsed reviews"
+    fi
+
+    if [[ -n "${cause}" ]]; then
+      results+="$(jq -n -c --arg pr "${label}" --arg cause "${cause}" '{pr: $pr, reviews: [], skipped: [], parseError: $cause}')"$'\n'
+      continue
+    fi
+
+    grep -v '^Warning: skipping review' "${stderr_file}" >&2 || true
+    # The parsed reviews reach jq on stdin, not as an argument, because their
+    # bodies can together exceed the argument size limit.
+    results+="$(printf '%s' "${parsed}" | jq -c \
+      --arg pr "${label}" \
+      --rawfile warnings "${stderr_file}" \
+      '{pr: $pr, reviews: map(. + {pr: $pr}), skipped: ($warnings | split("\n") | map(select(test("^Warning: skipping review"))))}')"$'\n'
+  done < <(jq -c '.[]' <<< "${sample}")
+
+  local results_json
+  results_json="$(jq -s -c '.' <<< "${results}")"
+
+  local report
+  report="$(
+    printf '%s\n%s\n%s' "${sample}" "$(cat "${baseline}")" "${results_json}" \
+      | jq -r -s "${SKELETON_FILTER}${AUDITED_FILTER}"'
+        .[0] as $sample
+        | .[1].skeletons as $known
+        | .[2] as $results
+        | ($results | map(.reviews[])) as $reviews
+        | def bullet: "- " + .;
+        def section($title; $lines):
+          if ($lines | length) == 0 then empty
+          else "", "## " + $title, "", ($lines[] | bullet)
+          end;
+
+        def one_line: tostring | gsub("[[:space:]]*\n[[:space:]]*"; " / ");
+
+        # Incomplete samples first: anything reported below may be missing
+        # what these pull requests would have shown.
+        [$sample[] | select(.noPullRequests == true) | "\(.repo): \(.reason // "no pull requests in the window")"] as $empty_repos
+        | [
+          $sample[]
+          | select(.fetchError != null)
+          | "\(.repo)#\(.number): \(.fetchError | one_line)"
+        ] as $unfetched
+        | [$results[] | select(.parseError != null) | "\(.pr): \(.parseError | one_line)"] as $unparsed
+        | [$results[] | .pr as $pr | .skipped[] | "\($pr): \(.)"] as $skipped
+        | [
+            $sample[]
+            | select(.fetchError == null and .noPullRequests != true)
+            | select(audited | not)
+            | "\(.repo)#\(.number): \(
+                if (.audit | type) == "object" and (.audit.error | type) == "string" then .audit.error | one_line
+                elif .audit == null then "no audit in the sample"
+                else "the audit has an unexpected shape"
+                end
+              )"
+          ] as $unaudited
+        | [
+            $reviews[]
+            | . as $review
+            | .unaccounted[]
+            | "\($review.url): `\(.kind)` at line \(.line), in \(.region): `\(.text | gsub("`"; "") | .[0:120])`"
+          ] as $unaccounted
+        | [$reviews[] | select(.reviewKind == "unknown") | "\(.url): `\(.headline | gsub("`"; "") | gsub("\n"; " ") | .[0:120])`"] as $unknown
+        | [
+            $sample[]
+            | select(audited)
+            | .audit.uncovered[]
+            | (.excerpt // "" | tostring | gsub("`"; "") | .[0:120]) as $excerpt
+            | "\(.url) (\(.surface), \(.reason))" + (if $excerpt == "" then "" else ": " + $excerpt end)
+          ] as $uncovered
+        # Every lead that is not a known no-finding sentence costs a read,
+        # which is the safe direction. Most leads are prose that never
+        # repeats, and Copilot restates its own lead from round to round on
+        # one pull request. A sentence it writes word for word on two
+        # different pull requests is boilerplate, though, whatever the verdict
+        # or sections around it: a reworded no-finding sentence to add to the
+        # parser list, or a fixed advisory. So a lead seen on at least two
+        # pull requests is reported, and nothing else is.
+        #
+        # legacyNeedsRead from the audit is deliberately not reported: it is
+        # reading work for the resolver, not a sign the layout changed.
+        | [
+            $reviews[]
+            | select(.needsRead)
+            | {url, pr, lead: (.findings[] | select(.source == "lead") | .body)}
+          ]
+          | group_by(.lead)
+          | map(select((map(.pr) | unique | length) >= 2))
+          | map("\"\(.[0].lead | one_line)\": \(map(.pr) | unique | length) pull requests, for example \(.[0].url)")
+          | . as $leads
+        | (
+            [
+              $sample[] as $pr
+              | $pr.reviews[]
+              | select(type == "object" and copilot_review)
+              | select((.body | type) == "string")
+              | . as $review
+              | .body
+              | skeletons[]
+              | {skeleton: ., url: $review.html_url, date: ($review.submitted_at // "" | .[0:10])}
+            ]
+            | map(select(.skeleton as $s | $known | any(. == $s) | not))
+            | group_by(.skeleton)
+            | map("`\(.[0].skeleton)`: \(length) time\(if length == 1 then "" else "s" end), first \(map(.date) | min), for example \(.[0].url)")
+          ) as $structure
+        | ([$empty_repos, $unfetched, $unparsed, $skipped, $unaudited] | map(length) | add) as $gaps
+        | ([$unaccounted, $unknown, $uncovered, $leads, $structure] | map(length) | add) as $findings
+        | ([$sample[] | select(.noPullRequests != true)] | length) as $pulls
+        | if $gaps + $findings == 0 and ($reviews | length) > 0 then empty
+          else
+            "# Copilot review canary",
+            "",
+            "Sampled \($reviews | length) Copilot review\(if ($reviews | length) == 1 then "" else "s" end) on \($pulls) pull request\(if $pulls == 1 then "" else "s" end).",
+            (if ($reviews | length) == 0 then "", "Nothing was analyzed: the sample holds no Copilot reviews. Check the --repo, --author and --since values." else empty end),
+            section("Named repositories with no pull requests in the window"; $empty_repos),
+            section("Pull requests whose reviews could not be fetched"; $unfetched),
+            section("Pull requests the parser could not read"; $unparsed),
+            section("Reviews the parser skipped"; $skipped),
+            section("Pull requests with no surface audit"; $unaudited),
+            section("Signals the parser left unaccounted"; $unaccounted),
+            section("Bodies that are neither a review nor a known notice"; $unknown),
+            section("Copilot items the fetches cannot reach"; $uncovered),
+            section("Leads repeated across pull requests"; $leads),
+            section("Layout elements not in the baseline"; $structure)
+          end
+      '
+  )"
+
+  local status
+  status="$(
+    printf '%s\n%s' "${sample}" "${results_json}" \
+      | jq -s -r "${AUDITED_FILTER}"'
+        .[0] as $sample
+        | .[1] as $results
+        | ($results | map(.reviews | length) | add // 0) as $reviews
+        | (
+            ($sample | map(select(.noPullRequests == true)) | length)
+            + ($sample | map(select(.noPullRequests != true and (.fetchError != null or (audited | not)))) | length)
+            + ($results | map(select(.parseError != null)) | length)
+            + ($results | map(.skipped | length) | add // 0)
+          ) as $gaps
+        | "\($reviews) \($sample | map(select(.noPullRequests != true)) | length) \($gaps)"
+      '
+  )"
+
+  local reviews pulls gaps
+  read -r reviews pulls gaps <<< "${status}"
+  local review_noun="reviews"
+  local pull_noun="pull requests"
+  [[ "${reviews}" == 1 ]] && review_noun="review"
+  [[ "${pulls}" == 1 ]] && pull_noun="pull request"
+  echo "${SCRIPT_NAME}: sampled ${reviews} Copilot ${review_noun} on ${pulls} ${pull_noun}." >&2
+
+  if [[ -n "${report}" ]]; then
+    printf '%s\n' "${report}"
+  fi
+
+  if ((gaps > 0 || reviews == 0)); then
+    return 2
+  elif [[ -n "${report}" ]]; then
+    return 1
+  fi
+  return 0
+}
+
+# Looks up every named repository before anything is listed or fetched. The
+# search the listing uses answers a repository that does not exist, or cannot
+# be read, with an empty list rather than an error, so a typo in one --repo
+# would otherwise drop that repository from the sample without a trace.
+# Checking them all first also stops the run before any pull request is
+# gathered, rather than partway through.
+function require_readable_repos() {
+  local repo
+  for repo in "$@"; do
+    gh repo view "${repo}" --json nameWithOwner > /dev/null \
+      || die "Cannot read repository ${repo}. See the gh error above for the cause."
+  done
+}
+
+# Lists the pull requests to sample, one "OWNER/REPO NUMBER" per line. A named
+# repository with no pull requests in the window is listed as "OWNER/REPO"
+# alone, so the report can say so. Each repository has already passed
+# require_readable_repos.
+function list_pull_requests() {
+  local since="${1}"
+  local limit="${2}"
+  local author="${3}"
+  shift 3
+
+  local repo
+  local numbers
+  for repo in "$@"; do
+    numbers="$(gh pr list --repo "${repo}" --state all --limit "${limit}" \
+      --search "updated:>=${since}" --json number --jq '.[].number')" \
+      || die "Failed to list pull requests for ${repo}. See the gh error above for the cause."
+    if [[ -z "${numbers}" ]]; then
+      printf '%s\n' "${repo}"
+    else
+      printf '%s\n' "${numbers}" | sed "s#^#${repo} #"
+    fi
+  done
+
+  if [[ -n "${author}" ]]; then
+    gh search prs --author "${author}" --updated ">=${since}" --limit "${limit}" \
+      --json repository,number --jq '.[] | "\(.repository.nameWithOwner) \(.number)"' \
+      || die "Failed to search pull requests by ${author}. See the gh error above for the cause."
+  fi
+}
+
+# Gathers each pull request's reviews and surface audit into a sample. A
+# failure is recorded in the entry, with every line of its error, rather than
+# dropping the pull request, so the report can say what it could not see:
+# the resolver ends with "See the gh error above", and the line above is the
+# one that names the cause. The errors are also passed through to stderr as
+# they happen.
+function gather() {
+  local repo number reviews audit
+  local entries=""
+  local error_file
+  error_file="$(mktemp "${TMPDIR:-/tmp}/copilot-review-canary.XXXXXX")"
+  # shellcheck disable=SC2064
+  # Expanded now on purpose: gather runs in a subshell, and the local is
+  # gone by the time that subshell exits.
+  trap "rm -f '${error_file}'" EXIT
+
+  # Every non-empty line of a captured error, joined into one, or $fallback
+  # when the command printed nothing.
+  # shellcheck disable=SC2016
+  # $fallback is a jq binding, not a shell variable
+  local error_text='
+    def error_text($fallback):
+      split("\n") | map(select(. != "")) | join(" / ")
+      | if . == "" then $fallback else . end;
+  '
+
+  while read -r repo number; do
+    [[ -n "${repo}" ]] || continue
+
+    if [[ -z "${number}" ]]; then
+      entries+="$(jq -n -c --arg repo "${repo}" '{repo: $repo, number: null, reviews: [], audit: null, noPullRequests: true}')"$'\n'
+      continue
+    fi
+
+    if ! reviews="$(gh api --paginate "repos/${repo}/pulls/${number}/reviews" 2> "${error_file}" | jq -s -c 'add // []')"; then
+      cat "${error_file}" >&2
+      entries+="$(jq -n -c --arg repo "${repo}" --argjson number "${number}" --rawfile error "${error_file}" \
+        "${error_text}"'{repo: $repo, number: $number, reviews: [], audit: null, fetchError: ($error | error_text("gh exited with no message"))}')"$'\n'
+      continue
+    fi
+
+    if ! audit="$(bash "${RESOLVER}" audit "${repo%%/*}" "${repo#*/}" "${number}" 2> "${error_file}" | jq -c .)"; then
+      cat "${error_file}" >&2
+      audit="$(jq -n -c --rawfile error "${error_file}" \
+        "${error_text}"'{error: ($error | error_text("the audit exited with no message"))}')"
+    fi
+
+    # Reviews and audit reach jq on stdin, not as arguments, because review
+    # bodies can together exceed the argument size limit.
+    entries+="$(printf '%s\n%s\n' "${reviews}" "${audit}" \
+      | jq -s -c --arg repo "${repo}" --argjson number "${number}" \
+        '{repo: $repo, number: $number, reviews: .[0], audit: .[1]}')"$'\n'
+  done
+
+  jq -s -c '.' <<< "${entries}"
+}
+
+function default_since() {
+  jq -rn --argjson days "${DEFAULT_WINDOW_DAYS}" 'now - ($days * 86400) | strftime("%Y-%m-%d")'
+}
+
+function main() {
+  local mode="gather"
+  case "${1:-}" in
+    analyze | skeletons)
+      mode="${1}"
+      shift
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *) ;;
+  esac
+
+  local repos=()
+  local author=""
+  local since=""
+  local limit="${DEFAULT_LIMIT}"
+  local baseline="${DEFAULT_BASELINE}"
+  local save=""
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --repo)
+        [[ $# -ge 2 ]] || die "--repo needs OWNER/REPO."
+        [[ "${2}" == */* ]] || die "--repo needs OWNER/REPO, got ${2}."
+        repos+=("${2}")
+        shift 2
+        ;;
+      --author)
+        [[ $# -ge 2 ]] || die "--author needs a login."
+        author="${2}"
+        shift 2
+        ;;
+      --since)
+        [[ $# -ge 2 && "${2}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die "--since needs a YYYY-MM-DD date."
+        since="${2}"
+        shift 2
+        ;;
+      --limit)
+        [[ $# -ge 2 && "${2}" =~ ^[1-9][0-9]*$ ]] || die "--limit needs a positive number."
+        limit="${2}"
+        shift 2
+        ;;
+      --baseline)
+        [[ $# -ge 2 ]] || die "--baseline needs a file."
+        baseline="${2}"
+        shift 2
+        ;;
+      --save)
+        [[ $# -ge 2 ]] || die "--save needs a file."
+        save="${2}"
+        shift 2
+        ;;
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      *)
+        die "Unknown argument: ${1}. Use '${SCRIPT_NAME} --help' for usage."
+        ;;
+    esac
+  done
+
+  case "${mode}" in
+    skeletons)
+      require_jq
+      do_skeletons
+      ;;
+    analyze)
+      require_jq
+      do_analyze "${baseline}"
+      ;;
+    gather)
+      if [[ ${#repos[@]} -eq 0 && -z "${author}" ]]; then
+        die "Name at least one --repo, or an --author. Use '${SCRIPT_NAME} --help' for usage."
+      fi
+      require_jq
+      require_gh
+      [[ -n "${since}" ]] || since="$(default_since)"
+      require_readable_repos ${repos[@]+"${repos[@]}"}
+
+      local sample
+      sample="$(list_pull_requests "${since}" "${limit}" "${author}" ${repos[@]+"${repos[@]}"} | sort -u | gather)"
+      if [[ -n "${save}" ]]; then
+        printf '%s\n' "${sample}" > "${save}"
+      fi
+      do_analyze "${baseline}" <<< "${sample}"
+      ;;
+    *)
+      die "Unknown mode: ${mode}"
+      ;;
+  esac
+}
+
+main "$@"

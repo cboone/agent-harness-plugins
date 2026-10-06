@@ -1,0 +1,3 @@
+{
+  "skeletons": ["## Copilot review overview", "### 🔵 Needs a closer look", "### 🟡 Changes recommended", "### 🟢 Approval recommended", "**Findings:**", "**Review effort:**", "- [badge] [TITLE](#thread)", "- [badge] [TITLE](#thread) · New", "<!-- ccr-overview-v2 -->", "</details>", "<details open>", "<details>", "<summary><strong>Also worth checking (N)</strong></summary>", "<summary><strong>Open (N)</strong></summary>", "<summary><strong>Resolved since last review (N)</strong></summary>"]
+}
