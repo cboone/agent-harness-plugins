@@ -282,8 +282,8 @@ Add scrut cases to `tests/scrut/resolve-copilot-threads.md` that assert today's 
 
 ### Phase 7: canary
 
-1. `bin/copilot-review-canary`, requiring `jq` and an authenticated `gh`. Include it in `bin/list-shell-scripts` coverage, and document it in `bin/AGENTS.md` next to `version-audit`. Commit the structural baseline as `tests/data/copilot-review-structure.json`. It holds skeletons only, never body text.
-1. Scrut coverage that runs the canary against a stubbed `gh` in `tests/fixtures/`. It must print a report for a drift fixture and for an unseen skeleton, and nothing for a clean one.
+1. `bin/copilot-review-canary`, requiring `jq` and an authenticated `gh`. Include it in `bin/list-shell-scripts` coverage, and document it in `bin/AGENTS.md` next to `version-audit`. Commit the structural baseline as `bin/data/copilot-review-structure.json`, beside the tool that reads it, since it is the canary's configuration rather than test input. It holds skeletons only, never body text.
+1. Scrut coverage that runs the canary's `analyze` mode over saved samples in `tests/data/copilot-canary/`, with a baseline of their own. It must print a report for each kind of change and for an unseen skeleton, and nothing for a clean sample. The gathering mode needs an authenticated `gh`, so `analyze` is the testable seam, as `parse-reviews` is for `fetch-reviews`.
 1. Mention the canary in the root `CLAUDE.md` tooling paragraph, next to `bin/version-audit`, as a local audit that is neither scheduled nor a merge gate.
 
 ## Verification
