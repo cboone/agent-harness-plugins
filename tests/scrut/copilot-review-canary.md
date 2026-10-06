@@ -33,7 +33,7 @@ Sampled 5 Copilot reviews on 5 pull requests.
 ## Signals the parser left unaccounted
 ## Bodies that are neither a review nor a known notice
 ## Copilot items the fetches cannot reach
-## Resolved-round leads not on the no-finding list
+## Leads repeated across pull requests
 ## Layout elements not in the baseline
 ```
 
@@ -67,10 +67,10 @@ $ "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/
 
 ## A lead repeated across pull requests is reported, one restated on a single pull request is not
 
-A resolved-only round whose lead is not a known no-finding sentence costs a
-read. A sentence Copilot writes word for word on two different pull requests
-is boilerplate: a reworded no-finding sentence the parser list should learn,
-or a fixed advisory.
+Every lead that is not a known no-finding sentence costs a read. A sentence
+Copilot writes word for word on two different pull requests is boilerplate: a
+reworded no-finding sentence the parser list should learn, or a fixed
+advisory.
 
 ```scrut
 $ "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" < "${COPILOT_CANARY_DATA_DIR}/findings.json" 2> /dev/null | grep -F 'need attention'
@@ -84,12 +84,21 @@ same sentence twice there is not boilerplate.
 $ jq '[.[] | select(.number == 5) | .reviews += (.reviews | map(.id = 6000000098))]' "${COPILOT_CANARY_DATA_DIR}/findings.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null
 ```
 
-Only a resolved-only round counts. The same prose lead repeated on rounds that
-list open threads is ordinary prose about those threads, and this sample is
-clean.
+The verdict and sections around the lead do not matter. A reworded approval
+sentence repeated on two pull requests is exactly the boilerplate this looks
+for, and it is the commonest case, since every approval lead that is not on
+the parser list is read.
 
 ```scrut
-$ jq '[.[] | select(.number == 5 or .number == 6) | .reviews[].body |= sub("<details>\n<summary><strong>Resolved since last review"; "<details open>\n<summary><strong>Open (1)</strong></summary>\n\n- <picture><img alt=\"Low severity\"></picture> [A thread](#discussion_r9) · New\n</details>\n\n<details>\n<summary><strong>Resolved since last review")]' "${COPILOT_CANARY_DATA_DIR}/findings.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null
+$ jq '[.[] | select(.number == 5 or .number == 6) | .reviews[].body |= (sub("### 🔵 Needs a closer look"; "### 🟢 Approval recommended") | sub("One or more issues need attention before approval\\."; "No unresolved review issues were found."))]' "${COPILOT_CANARY_DATA_DIR}/findings.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null | grep -F 'were found'
+- "No unresolved review issues were found.": 2 pull requests, for example https://github.com/o/r/pull/1#pullrequestreview-6000000035
+```
+
+A lead spread over several lines is reported on one.
+
+```scrut
+$ jq '[.[] | select(.number == 5 or .number == 6) | .reviews[].body |= sub("One or more issues need attention before approval\\."; "One issue remains.\n- The cache never expires.")]' "${COPILOT_CANARY_DATA_DIR}/findings.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null | grep -F 'One issue remains'
+- "One issue remains. / - The cache never expires.": 2 pull requests, for example https://github.com/o/r/pull/1#pullrequestreview-6000000035
 ```
 
 ## A new layout element is reported before it carries a finding
@@ -110,13 +119,16 @@ the parser could not read, one whose reviews could not be fetched, and one with
 no surface audit each get a section of their own, ahead of everything else,
 because whatever is reported below them may be missing something.
 
+Each case below adds one cause to an otherwise clean sample, so the exit
+status shows that cause alone makes the sample incomplete.
+
+A pull request the parser could not read is listed with the parser's error.
+
 ```scrut
-$ echo '[{"repo":"a/b","number":1,"reviews":[1],"audit":{"uncovered":[]}}]' | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null
+$ jq '. + [{"repo":"a/b","number":1,"reviews":[1],"audit":{"uncovered":[],"legacyNeedsRead":[]}}]' "${COPILOT_CANARY_DATA_DIR}/clean.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null
 # Copilot review canary
 
-Sampled 0 Copilot reviews on 1 pull request.
-
-Nothing was analyzed: the sample holds no Copilot reviews. Check the --repo, --author and --since values.
+Sampled 1 Copilot review on 2 pull requests.
 
 ## Pull requests the parser could not read
 
@@ -124,29 +136,80 @@ Nothing was analyzed: the sample holds no Copilot reviews. Check the --repo, --a
 [2]
 ```
 
+A pull request whose reviews could not be fetched is listed with the `gh` error.
+
 ```scrut
-$ jq '. + [{"repo":"a/b","number":2,"reviews":[],"audit":null,"fetchError":"gh: Not Found (HTTP 404)"},{"repo":"a/b","number":3,"reviews":[],"audit":{"error":"Error: GraphQL error while fetching threads: rate limited"}},{"repo":"a/b","number":4,"reviews":[],"audit":null}]' "${COPILOT_CANARY_DATA_DIR}/clean.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null
+$ jq '. + [{"repo":"a/b","number":2,"reviews":[],"audit":null,"fetchError":"gh: Not Found (HTTP 404)"}]' "${COPILOT_CANARY_DATA_DIR}/clean.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null
 # Copilot review canary
 
-Sampled 1 Copilot review on 4 pull requests.
+Sampled 1 Copilot review on 2 pull requests.
 
 ## Pull requests whose reviews could not be fetched
 
 - a/b#2: gh: Not Found (HTTP 404)
+[2]
+```
+
+A pull request whose audit failed is listed with the audit's error.
+
+```scrut
+$ jq '.[0].audit = {"error":"Error: GraphQL error while fetching threads: rate limited"}' "${COPILOT_CANARY_DATA_DIR}/clean.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null
+# Copilot review canary
+
+Sampled 1 Copilot review on 1 pull request.
 
 ## Pull requests with no surface audit
 
-- a/b#3: Error: GraphQL error while fetching threads: rate limited
-- a/b#4: no audit in the sample
+- o/r#1: Error: GraphQL error while fetching threads: rate limited
 [2]
+```
+
+An audit that is missing, or that lacks the lists the resolver writes, counts
+as no audit rather than as an audit that found nothing.
+
+```scrut
+$ for audit in 'null' '{}' '"oops"' '{"uncovered":[]}'; do jq --argjson audit "${audit}" '.[0].audit = $audit' "${COPILOT_CANARY_DATA_DIR}/clean.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null | grep -F 'o/r#1'; done
+- o/r#1: no audit in the sample
+- o/r#1: the audit has an unexpected shape
+- o/r#1: the audit has an unexpected shape
+- o/r#1: the audit has an unexpected shape
 ```
 
 A review the parser skipped is reported from the parser's own warning, so a
 malformed review cannot leave the sample smaller without a trace.
 
 ```scrut
-$ jq '.[0].reviews += [{"id":7,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"y","body":12345}]' "${COPILOT_CANARY_DATA_DIR}/clean.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null | grep -F 'skipping'
+$ jq '.[0].reviews += [{"id":7,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"y","body":12345}]' "${COPILOT_CANARY_DATA_DIR}/clean.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null
+# Copilot review canary
+
+Sampled 1 Copilot review on 1 pull request.
+
+## Reviews the parser skipped
+
 - o/r#1: Warning: skipping review 7: its body is not a string.
+[2]
+```
+
+A named repository with no pull requests in the window is listed too, since it
+contributed nothing to the sample.
+
+```scrut
+$ jq '. + [{"repo":"o/quiet","number":null,"reviews":[],"audit":null,"noPullRequests":true}]' "${COPILOT_CANARY_DATA_DIR}/clean.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null
+# Copilot review canary
+
+Sampled 1 Copilot review on 1 pull request.
+
+## Named repositories with no pull requests in the window
+
+- o/quiet: no pull requests in the window
+[2]
+```
+
+An uncovered item with no excerpt is still reported.
+
+```scrut
+$ jq '.[0].audit.uncovered = [{"surface":"issue-comment","reason":"pull request comment","id":5,"url":"https://github.com/o/r/pull/1#issuecomment-5"}]' "${COPILOT_CANARY_DATA_DIR}/clean.json" | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null | grep -F 'issuecomment-5'
+- https://github.com/o/r/pull/1#issuecomment-5 (issue-comment, pull request comment):
 ```
 
 A sample with no Copilot reviews at all says so, rather than printing nothing,
@@ -163,13 +226,62 @@ Nothing was analyzed: the sample holds no Copilot reviews. Check the --repo, --a
 [2]
 ```
 
+## Gathering through gh
+
+These cases run the gathering mode against `copilot-gh-stub`, installed as
+`gh` first on `PATH`, which answers from `tests/data/copilot-gh/`. Pull
+request 7 there is healthy, 8 has no reviews to fetch, and 9 points its thread
+query at a pull request that does not exist. Each failure is recorded in the
+sample rather than dropping the pull request, and the report says what could
+not be seen.
+
+```scrut
+$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${COPILOT_REVIEW_CANARY_BIN}" --repo o/r --repo o/quiet --since 2026-10-01 --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" 2> /dev/null; echo "exit=$?"; rm -rf "${stub}"
+# Copilot review canary
+
+Sampled 2 Copilot reviews on 3 pull requests.
+
+## Named repositories with no pull requests in the window
+
+- o/quiet: no pull requests in the window
+
+## Pull requests whose reviews could not be fetched
+
+- o/r#8: gh: Not Found (HTTP 404)
+
+## Pull requests with no surface audit
+
+- o/r#9: Error: Invalid response while fetching threads for o/r#9: no such pull request.
+exit=2
+```
+
+`--save` writes the gathered sample, with each failure recorded in its entry.
+
+```scrut
+$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${COPILOT_REVIEW_CANARY_BIN}" --repo o/r --since 2026-10-01 --baseline "${COPILOT_CANARY_DATA_DIR}/baseline.json" --save "${stub}/sample.json" > /dev/null 2>&1; jq -c '.[] | {number, reviews: (.reviews | length), fetchError, audit: (if .audit == null then null elif .audit.error then "error" else "ok" end)}' "${stub}/sample.json"; rm -rf "${stub}"
+{"number":7,"reviews":1,"fetchError":null,"audit":"ok"}
+{"number":8,"reviews":0,"fetchError":"gh: Not Found (HTTP 404)","audit":null}
+{"number":9,"reviews":1,"fetchError":null,"audit":"error"}
+```
+
+A repository that cannot be read stops the run before sampling, rather than
+quietly contributing nothing, because the search the listing uses answers an
+unknown repository with an empty list.
+
+```scrut
+$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${COPILOT_REVIEW_CANARY_BIN}" --repo o/r --repo o/missing --since 2026-10-01 2>&1; echo "exit=$?"; rm -rf "${stub}"
+GraphQL: Could not resolve to a Repository with the name 'o/missing'. (repository)
+copilot-review-canary: Cannot read repository o/missing. See the gh error above for the cause.
+exit=3
+```
+
 ## Skeletons carry layout, not prose
 
 A skeleton replaces counts, paths, inline code, link text, badges and table
 cells, and drops prose, so two reviews with the same layout produce the same
-lines. Headings, comment markers, labels, italic lines and table headers are
-kept as written, because their wording is the layout; on Copilot reviews they
-are its own boilerplate.
+lines. Headings, comment markers, labels, italic lines, table headers, section
+summaries without a badge and details tags are kept as written, because their
+wording is the layout; on Copilot reviews they are its own boilerplate.
 
 ```scrut
 $ "${COPILOT_REVIEW_CANARY_BIN}" skeletons < "${COPILOT_CANARY_DATA_DIR}/clean.json" | jq -r '.skeletons[]'
@@ -198,31 +310,31 @@ $ printf '[{"repo":"o/r","number":1,"reviews":[{"id":1,"user":{"login":"copilot-
 ```scrut
 $ "${COPILOT_REVIEW_CANARY_BIN}" 2>&1
 copilot-review-canary: Name at least one --repo, or an --author. Use 'copilot-review-canary --help' for usage.
-[1]
+[3]
 ```
 
 ```scrut
 $ "${COPILOT_REVIEW_CANARY_BIN}" --repo nope 2>&1
 copilot-review-canary: --repo needs OWNER/REPO, got nope.
-[1]
+[3]
 ```
 
 ```scrut
 $ "${COPILOT_REVIEW_CANARY_BIN}" --author octocat --since yesterday 2>&1
 copilot-review-canary: --since needs a YYYY-MM-DD date.
-[1]
+[3]
 ```
 
 ```scrut
 $ echo '{}' | "${COPILOT_REVIEW_CANARY_BIN}" analyze 2>&1
 copilot-review-canary: Invalid sample: expected an array of {repo, number, reviews, audit} objects.
-[1]
+[3]
 ```
 
 ```scrut
 $ echo '[]' | "${COPILOT_REVIEW_CANARY_BIN}" analyze --baseline /nonexistent/baseline.json 2>&1
 copilot-review-canary: Baseline not found: /nonexistent/baseline.json
-[1]
+[3]
 ```
 
 The canary checks the jq version itself, so a jq too old for the resolver is
