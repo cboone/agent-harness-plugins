@@ -153,7 +153,7 @@ These constants define the Codex inventory budget that repository validation mod
 | Path form           | `r1/<plugin>/<version>/skills/<skill>/SKILL.md`, plus one roots table row for `r1`          | Observed aliasing, 15-character home placeholder in the row      |
 | Description warning | Over 240 characters                                                                         | Derived below                                                    |
 
-The maintainer's rendered list held 58 skills from five roots:
+The maintainer's rendered list held 58 skills from five roots: the system skills, this catalog, `openai-bundled`, `openai-primary-runtime`, and a separate root for the `spreadsheets` plugin inside `openai-primary-runtime`, whose 2 skills are counted with that marketplace below.
 
 | Source                                     | Skills | Tokens |
 | ------------------------------------------ | -----: | -----: |
@@ -165,9 +165,9 @@ The maintainer's rendered list held 58 skills from five roots:
 
 The other-skill reserve is every line except this catalog's: 1,111 tokens with the home directory normalized to 15 characters, rounded up to 1,150. Of the 65 enabled plugins, 48 came from this catalog; `notify` contributes hooks and no skill. The other 17 enabled plugins came from OpenAI marketplaces, and 11 of them listed no skill.
 
-The warning threshold is the budget's average share per counted skill. After the reserve, 4,290 tokens is 17,160 bytes, or 357 bytes for each of 48 counted skills. Names, aliased paths, and line syntax average 116 bytes of each counted line, which leaves 241 characters for a description, rounded down to 240.
+The warning threshold is the budget's average share per counted skill. After the reserve and this catalog's 18-token roots table row, 4,272 tokens is 17,088 bytes, or 356 bytes for each of 48 counted skills. Names, aliased paths, and line syntax average 116 bytes of each counted line, which leaves 240 characters for a description.
 
-Rule 17 of `bin/validate-plugins` records these constants. It fails when the counted share exceeds the primary budget less the reserve and prints the cost against that budget on every run. Measured this way, the most expensive 48 of the 64 listed skills cost 3,091 of 4,290 available tokens. The earlier measure charged every skill with unaliased paths; at `046f1389` the catalog-summary inventory cost 4,472 of 4,840 available tokens that way, and with canonical descriptions it would have cost 10,966.
+Rule 17 of `bin/validate-plugins` records these constants. It fails when the counted share exceeds the primary budget less the reserve and prints the cost against that budget on every run. The most expensive 48 of the 64 listed skills, with this catalog's roots table row, cost 3,091 of 4,290 available tokens.
 
 Codex budgets 8,000 characters instead when it cannot resolve the model's context window, as with an unrecognized model on a custom or local provider. That configuration is not in use, so validation does not model it.
 
@@ -305,7 +305,7 @@ The generated descriptions total **6,881 characters**, against a repository limi
 
 Codex’s initial skill list includes paths and may shorten descriptions or omit skills when its budget is exceeded. Therefore, the current check cannot establish that the entire installed catalog remains discoverable. [Official skill documentation](https://learn.chatgpt.com/docs/build-skills).
 
-**Milestone 1: resolved.** Rule 17 of `bin/validate-plugins` renders each skill's full inventory line, name and installed path included, and budgets it against 2 percent of the reference model's context window less a system-skill reserve, reporting the 8,000-character fallback on every run. The catalog costs 4,689 of the 4,840 tokens available.
+**Milestone 1: resolved.** Rule 17 of `bin/validate-plugins` rendered each skill's full inventory line, name and installed path included, and budgeted it against 2 percent of the reference model's context window less a system-skill reserve, reporting the 8,000-character fallback on every run. The catalog cost 4,689 of the 4,840 tokens available. Rule 17 now models the maintainer's installation instead; see [Validation constants](#validation-constants).
 
 **8. Codex-specific metadata is unused. Improvement opportunity.**
 
