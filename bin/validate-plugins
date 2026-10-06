@@ -517,8 +517,16 @@ done
 # ceil(bytes / 4) tokens per line. Over budget it shortens descriptions from
 # the end, then omits skills. Names and paths cost about as much as the
 # descriptions, so this rule renders every generated dist/codex skill the way
-# Codex does and budgets the whole line. It ignores Codex's path aliasing,
-# which only lowers the cost.
+# Codex does and budgets the whole line. Codex aliases each plugin cache root
+# to a short name such as r1 and lists the alias once in a roots table, which
+# the budget also charges, so the rule renders paths and that row the same way.
+#
+# The budget models the maintainer's installation rather than the whole
+# catalog: about three quarters of the catalog's skills are enabled, alongside
+# Codex's bundled system skills and skills from other marketplaces. The rule
+# charges the most expensive CODEX_ENABLED_SKILL_PERCENT of this catalog's
+# skills, so one long description is never averaged away, and reserves
+# CODEX_OTHER_SKILL_RESERVE_TOKENS for everything else in the list.
 #
 # A skill whose generated agents/openai.yaml sets
 # policy.allow_implicit_invocation to false is withheld from that list, so it
@@ -537,30 +545,34 @@ done
 # is not in use, so it is not modeled.
 #
 # The constants come from the validation constants in
-# docs/reviews/codex-consumption.md. Revisit them only when the reference model
-# or the set of skills Codex bundles changes, since the reserve measures those
-# skills, and record that change there. Never raise them to fit content; tighten
-# the routing descriptions instead.
+# docs/reviews/codex-consumption.md. Revisit them when the reference model, the
+# enabled share or the skills installed from other sources change, and record
+# that change there. Never raise them to fit content; tighten the routing
+# descriptions instead.
 
 CODEX_REFERENCE_MODEL="gpt-6.1-sol"
 # The model's context_window in tokens, from `codex debug models --bundled`.
 CODEX_REFERENCE_CONTEXT_WINDOW="${CODEX_REFERENCE_CONTEXT_WINDOW-272000}"
 CODEX_CONTEXT_WINDOW_PERCENT=2
 CODEX_BYTES_PER_TOKEN=4
-# Codex's bundled system skills share the budget: 427 tokens with unaliased
-# paths for the reference model, rounded up to 450 tokens.
-CODEX_SYSTEM_SKILL_RESERVE_BYTES="${CODEX_SYSTEM_SKILL_RESERVE_BYTES-1800}"
+# 47 of the catalog's 64 listed skills were enabled, 73 percent, rounded up.
+CODEX_ENABLED_SKILL_PERCENT="${CODEX_ENABLED_SKILL_PERCENT-75}"
+# Every other line in the maintainer's list: 4 system skills and 7 skills from
+# other marketplaces with their roots table rows cost 1,111 tokens, rounded up.
+CODEX_OTHER_SKILL_RESERVE_TOKENS="${CODEX_OTHER_SKILL_RESERVE_TOKENS-1150}"
+CODEX_INVENTORY_ALIAS="r1"
 # A fixed 15-character home directory keeps the cost independent of the machine.
 CODEX_INVENTORY_HOME="/Users/username"
 MAX_SKILL_DESCRIPTION_CHARACTERS=1024
-# The primary budget's average share per skill at the baseline: 4,840 tokens
-# after the reserve is 19,360 bytes, or 317 per skill across 61 skills. Names,
-# paths and line syntax average 164 bytes of each line, leaving 153 characters
-# for a description, rounded down.
-ROUTED_DESCRIPTION_WARNING_CHARACTERS=150
+# The budget's average share per counted skill: 4,290 tokens after the reserve
+# is 17,160 bytes, or 357 for each of 48 counted skills. Names, aliased paths
+# and line syntax average 116 bytes of each line, leaving 241 characters for a
+# description, rounded down.
+ROUTED_DESCRIPTION_WARNING_CHARACTERS=240
 readonly CODEX_REFERENCE_MODEL CODEX_REFERENCE_CONTEXT_WINDOW CODEX_CONTEXT_WINDOW_PERCENT \
-  CODEX_BYTES_PER_TOKEN CODEX_SYSTEM_SKILL_RESERVE_BYTES \
-  CODEX_INVENTORY_HOME MAX_SKILL_DESCRIPTION_CHARACTERS ROUTED_DESCRIPTION_WARNING_CHARACTERS
+  CODEX_BYTES_PER_TOKEN CODEX_ENABLED_SKILL_PERCENT CODEX_OTHER_SKILL_RESERVE_TOKENS \
+  CODEX_INVENTORY_ALIAS CODEX_INVENTORY_HOME MAX_SKILL_DESCRIPTION_CHARACTERS \
+  ROUTED_DESCRIPTION_WARNING_CHARACTERS
 
 function frontmatter_name() {
   awk '
@@ -676,16 +688,16 @@ done
 if ! [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]*$ ]]; then
   error "CODEX_REFERENCE_CONTEXT_WINDOW must be a positive integer"
 fi
-if ! [[ "${CODEX_SYSTEM_SKILL_RESERVE_BYTES}" =~ ^[0-9]+$ ]]; then
-  error "CODEX_SYSTEM_SKILL_RESERVE_BYTES must be a non-negative integer"
+if ! [[ "${CODEX_ENABLED_SKILL_PERCENT}" =~ ^[1-9][0-9]*$ ]] || [[ "${CODEX_ENABLED_SKILL_PERCENT}" -gt 100 ]]; then
+  error "CODEX_ENABLED_SKILL_PERCENT must be an integer from 1 to 100"
+fi
+if ! [[ "${CODEX_OTHER_SKILL_RESERVE_TOKENS}" =~ ^[0-9]+$ ]]; then
+  error "CODEX_OTHER_SKILL_RESERVE_TOKENS must be a non-negative integer"
 fi
 
 marketplace_name="$(jq -r '.name // empty' "${CODEX_MARKETPLACE}" 2> /dev/null || true)"
 inventory_count=0
 inventory_withheld=0
-inventory_tokens=0
-inventory_bytes=0
-inventory_description_bytes=0
 inventory_entries=""
 line_bytes=0
 description_bytes=0
@@ -718,32 +730,49 @@ for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
     description="$(printf '%s' "${description}" | awk -v limit="$((MAX_SKILL_DESCRIPTION_CHARACTERS - 3))" '{ print substr($0, 1, limit) "..." }')"
   fi
 
-  line="- ${skill_plugin}:${skill_name}: ${description} (file: ${CODEX_INVENTORY_HOME}/.codex/plugins/cache/${marketplace_name}/${skill_plugin}/${plugin_version}/skills/${skill_dir}/SKILL.md)"
+  line="- ${skill_plugin}:${skill_name}: ${description} (file: ${CODEX_INVENTORY_ALIAS}/${skill_plugin}/${plugin_version}/skills/${skill_dir}/SKILL.md)"
   byte_count "${line}" line_bytes
   line_bytes=$((line_bytes + 1))
   line_tokens=$(((line_bytes + CODEX_BYTES_PER_TOKEN - 1) / CODEX_BYTES_PER_TOKEN))
   byte_count "${description}" description_bytes
 
   inventory_count=$((inventory_count + 1))
-  inventory_tokens=$((inventory_tokens + line_tokens))
-  inventory_bytes=$((inventory_bytes + line_bytes))
-  inventory_description_bytes=$((inventory_description_bytes + description_bytes))
-  inventory_entries+="${line_tokens}"$'\t'"${skill_plugin}:${skill_name}"$'\n'
+  inventory_entries+="${line_tokens}"$'\t'"${description_bytes}"$'\t'"${line_bytes}"$'\t'"${skill_plugin}:${skill_name}"$'\n'
 done
 
-if [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]*$ ]] && [[ "${CODEX_SYSTEM_SKILL_RESERVE_BYTES}" =~ ^[0-9]+$ ]] && [[ ${inventory_count} -gt 0 ]]; then
-  reserve_tokens=$(((CODEX_SYSTEM_SKILL_RESERVE_BYTES + CODEX_BYTES_PER_TOKEN - 1) / CODEX_BYTES_PER_TOKEN))
-  largest_entries="$(printf '%s' "${inventory_entries}" | sort -t $'\t' -k1,1nr -k2,2 | head -5 | awk -F '\t' '{ printf "%s%s (%s)", (NR > 1 ? ", " : ""), $2, $1 }')"
-  inventory_breakdown="Descriptions are ${inventory_description_bytes} of its ${inventory_bytes} bytes; names, paths and line syntax are the rest. Largest entries in tokens: ${largest_entries}. Tighten the largest routing descriptions rather than raising the budget."
+if [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]*$ ]] && [[ "${CODEX_ENABLED_SKILL_PERCENT}" =~ ^[1-9][0-9]*$ ]] \
+  && [[ "${CODEX_ENABLED_SKILL_PERCENT}" -le 100 ]] && [[ "${CODEX_OTHER_SKILL_RESERVE_TOKENS}" =~ ^[0-9]+$ ]] \
+  && [[ ${inventory_count} -gt 0 ]]; then
+  counted_count=$(((inventory_count * CODEX_ENABLED_SKILL_PERCENT + 99) / 100))
+  # Sum the most expensive entries in one pass; the five largest name the
+  # skills to tighten first.
+  counted_summary="$(printf '%s' "${inventory_entries}" | sort -t $'\t' -k1,1nr -k4,4 | awk -F '\t' -v limit="${counted_count}" '
+    NR <= limit {
+      tokens += $1
+      description_bytes += $2
+      line_bytes += $3
+      if (NR <= 5) {
+        largest = largest (NR > 1 ? ", " : "") $4 " (" $1 ")"
+      }
+    }
+    END { printf "%d\t%d\t%d\t%s", tokens, description_bytes, line_bytes, largest }
+  ')"
+  IFS=$'\t' read -r counted_tokens counted_description_bytes counted_bytes largest_entries <<< "${counted_summary}"
+
+  root_line="- \`${CODEX_INVENTORY_ALIAS}\` = \`${CODEX_INVENTORY_HOME}/.codex/plugins/cache/${marketplace_name}\`"
+  byte_count "${root_line}" line_bytes
+  counted_tokens=$((counted_tokens + (line_bytes + 1 + CODEX_BYTES_PER_TOKEN - 1) / CODEX_BYTES_PER_TOKEN))
+
+  inventory_breakdown="Descriptions are ${counted_description_bytes} of its ${counted_bytes} bytes; names, paths and line syntax are the rest. Largest entries in tokens: ${largest_entries}. Tighten the largest routing descriptions rather than raising the budget."
   withheld_note=""
   [[ ${inventory_withheld} -eq 0 ]] || withheld_note=" Withheld from implicit invocation and not charged: ${inventory_withheld}."
 
   primary_budget=$((CODEX_REFERENCE_CONTEXT_WINDOW * CODEX_CONTEXT_WINDOW_PERCENT / 100))
   [[ ${primary_budget} -gt 0 ]] || primary_budget=1
-  primary_available=$((primary_budget - reserve_tokens))
-  echo "Codex skill inventory: ${inventory_count} skills cost ${inventory_tokens} of ${primary_available} tokens available under the ${primary_budget}-token budget for ${CODEX_REFERENCE_MODEL}.${withheld_note}"
-  if [[ ${inventory_tokens} -gt ${primary_available} ]]; then
-    error "Codex skill inventory costs ${inventory_tokens} tokens, over the ${primary_available} available (${primary_budget}-token budget for ${CODEX_REFERENCE_MODEL} less a ${reserve_tokens}-token system-skill reserve). ${inventory_breakdown}"
+  primary_available=$((primary_budget - CODEX_OTHER_SKILL_RESERVE_TOKENS))
+  echo "Codex skill inventory: the ${counted_count} most expensive of ${inventory_count} skills (${CODEX_ENABLED_SKILL_PERCENT} percent) cost ${counted_tokens} of ${primary_available} tokens available under the ${primary_budget}-token budget for ${CODEX_REFERENCE_MODEL}.${withheld_note}"
+  if [[ ${counted_tokens} -gt ${primary_available} ]]; then
+    error "Codex skill inventory costs ${counted_tokens} tokens, over the ${primary_available} available (${primary_budget}-token budget for ${CODEX_REFERENCE_MODEL} less a ${CODEX_OTHER_SKILL_RESERVE_TOKENS}-token reserve for skills from other sources). ${inventory_breakdown}"
   fi
 fi
 

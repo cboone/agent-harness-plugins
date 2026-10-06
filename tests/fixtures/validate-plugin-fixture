@@ -194,12 +194,12 @@ function main() {
       replace_description "${FIXTURE_ROOT}/${RELEASE_SKILL}" "$(description_of_length 1100)"
       export CODEX_REFERENCE_CONTEXT_WINDOW=1000000
       ;;
-    # 200 characters in 240 bytes, so a length measured in bytes rather than
-    # characters reads 240 and fails the case. It is spelled out rather than
+    # 250 characters in 300 bytes, so a length measured in bytes rather than
+    # characters reads 300 and fails the case. It is spelled out rather than
     # cut to length, because cutting by ${#text} counts bytes under the C
     # locale and could split a character.
     long-description)
-      replace_description "${FIXTURE_ROOT}/${RELEASE_SKILL}" "$(printf 'café %.0s' {1..39})cafés"
+      replace_description "${FIXTURE_ROOT}/${RELEASE_SKILL}" "$(printf 'café %.0s' {1..49})cafés"
       export CODEX_REFERENCE_CONTEXT_WINDOW=1000000
       ;;
     empty-name) perl -pi -e 's/^name: release$/name:/' "${FIXTURE_ROOT}/${RELEASE_SKILL}" ;;
@@ -257,12 +257,12 @@ function main() {
       add_frontmatter_line "${FIXTURE_ROOT}/${RELEASE_SKILL}" 'disable-model-invocation: true'
       wrap_generator_to_extend_manifest
       ;;
-    # 2 percent of 100,000 is a 2,000-token budget, 1,550 after the reserve:
-    # less than the descriptions alone cost.
+    # 2 percent of 100,000 is a 2,000-token budget, 850 after the reserve: less
+    # than the counted descriptions alone cost.
     aggregate-overflow) export CODEX_REFERENCE_CONTEXT_WINDOW=100000 ;;
-    # A 3,400-token budget, 2,950 after the reserve: more than the descriptions
-    # alone cost, less than the full lines with their names and paths.
-    path-overhead) export CODEX_REFERENCE_CONTEXT_WINDOW=170000 ;;
+    # A 3,500-token budget, 2,350 after the reserve: more than the counted
+    # descriptions alone cost, less than their full lines with names and paths.
+    path-overhead) export CODEX_REFERENCE_CONTEXT_WINDOW=175000 ;;
     empty-context-window) export CODEX_REFERENCE_CONTEXT_WINDOW="" ;;
     *)
       echo "Unknown scenario: ${scenario}" >&2

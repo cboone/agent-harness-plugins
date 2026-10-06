@@ -60,16 +60,19 @@ Codex skill inventory: * (glob)
 ## The Codex skill inventory fits Codex's discovery budget
 
 Rule 17 renders each generated skill as the line Codex puts in its initial skill
-list, name and installed path included, and budgets the whole list at 2 percent
-of the reference model's context window, less a reserve for Codex's own system
-skills. Every normal run reports the cost against that budget.
+list, name and aliased installed path included. It charges the most expensive
+75 percent of those lines, the share of the catalog the maintainer enables,
+against 2 percent of the reference model's context window, less a reserve for
+skills from other sources. Every normal run reports the cost against that
+budget. The counted share rounds up, so a partial skill counts as a whole one.
 
 The limits below are exercised through overrides; the recorded budget is never
 raised to fit content.
 
 ```scrut
-$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" valid 2>&1 | grep '^Codex skill inventory:'
-Codex skill inventory: * skills cost * of 4990 tokens available under the 5440-token budget for gpt-6.1-sol. Withheld from implicit invocation and not charged: *. (glob)
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" valid 2>&1 | grep '^Codex skill inventory:' | awk '{ print; counted = $5; total = $9; print (counted == int((total * 75 + 99) / 100)) ? "counted share rounds up" : "unexpected count: " counted " of " total }'
+Codex skill inventory: the * most expensive of * skills (75 percent) cost * of 4290 tokens available under the 5440-token budget for gpt-6.1-sol. Withheld from implicit invocation and not charged: *. (glob)
+counted share rounds up
 ```
 
 A single description over Codex's 1,024-character limit is an error however
@@ -84,13 +87,13 @@ Codex skill inventory: * (glob)
 [1]
 ```
 
-A routing description over 150 characters, its average share of the primary
-budget, draws a warning but does not fail the run. Like the previous scenario, it
-widens the context window so catalog headroom cannot decide the outcome.
+A routing description over 240 characters, its average share of the budget,
+draws a warning but does not fail the run. Like the previous scenario, it widens
+the context window so catalog headroom cannot decide the outcome.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" long-description 2>&1
-::warning::Skill 'plugins/release/skills/release/SKILL.md' routing description is 200 characters; keep it within 150, its average share of the Codex discovery budget
+::warning::Skill 'plugins/release/skills/release/SKILL.md' routing description is 250 characters; keep it within 240, its average share of the Codex discovery budget
 Codex skill inventory: * (glob)
 All plugin validations passed.
 ```
@@ -111,15 +114,14 @@ the largest entries, and what to do about it.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" aggregate-overflow 2>&1
-Codex skill inventory: * skills cost * of 1550 tokens available under the 2000-token budget for gpt-6.1-sol.* (glob)
-::error::Codex skill inventory costs * tokens, over the 1550 available (2000-token budget for gpt-6.1-sol less a 450-token system-skill reserve). Descriptions are * of its * bytes; names, paths and line syntax are the rest. Largest entries in tokens: *. Tighten the largest routing descriptions rather than raising the budget. (glob)
+Codex skill inventory: the * most expensive of * skills (75 percent) cost * of 850 tokens available under the 2000-token budget for gpt-6.1-sol.* (glob)
+::error::Codex skill inventory costs * tokens, over the 850 available (2000-token budget for gpt-6.1-sol less a 1150-token reserve for skills from other sources). Descriptions are * of its * bytes; names, paths and line syntax are the rest. Largest entries in tokens: *. Tighten the largest routing descriptions rather than raising the budget. (glob)
 1 plugin validation error(s) found.
 [1]
 ```
 
-Names and paths count. Here the descriptions alone fit the budget, as the
-previous description-only check would have measured them, but the full lines do
-not.
+Names and paths count. Here the counted descriptions alone fit the budget, as a
+description-only check would measure them, but their full lines do not.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" path-overhead 2>&1 | sed -nE 's/^::error::Codex skill inventory costs ([0-9]+) tokens, over the ([0-9]+) available.* Descriptions are ([0-9]+) of .*/\1 \2 \3/p' | awk '{ print (($3 + 3) / 4 <= $2 && $2 < $1) ? "descriptions fit; names and paths exceed the budget" : "premise not met: " $0 }'
@@ -138,11 +140,12 @@ $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" empty-context-window 2>&1
 
 A skill whose generated manifest sets `policy.allow_implicit_invocation: false`
 is withheld from Codex's list, so it costs nothing. Withholding `release`
-drops it from the charged count and the token total, and the run reports it
-among the withheld skills.
+drops it from the skill count and the token total, and the run reports it among
+the withheld skills. Charging the whole catalog keeps another skill from taking
+its place among the counted share.
 
 ```scrut
-$ charged() { "${VALIDATE_PLUGIN_FIXTURE_BIN}" "${1}" 2>&1 | awk '/^Codex skill inventory:/ { withheld = 0; if (match($0, /not charged: [0-9]+/)) withheld = substr($0, RSTART + 13, RLENGTH - 13); print $4, $7, withheld }'; }
+$ charged() { CODEX_ENABLED_SKILL_PERCENT=100 "${VALIDATE_PLUGIN_FIXTURE_BIN}" "${1}" 2>&1 | awk '/^Codex skill inventory:/ { withheld = 0; if (match($0, /not charged: [0-9]+/)) withheld = substr($0, RSTART + 13, RLENGTH - 13); print $9, $14, withheld }'; }
 > read -r count tokens withheld <<< "$(charged valid)"
 > read -r count_after tokens_after withheld_after <<< "$(charged translated-frontmatter)"
 > [[ ${count_after} -eq $((count - 1)) && ${tokens_after} -lt ${tokens} && ${withheld_after} -eq $((withheld + 1)) ]] && echo "withheld skill is not charged"
