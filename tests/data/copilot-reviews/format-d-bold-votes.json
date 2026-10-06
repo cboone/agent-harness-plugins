@@ -1,0 +1,12 @@
+[
+  {
+    "id": 6000000027,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-10-06T12:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6000000027",
+    "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🟡 Changes recommended\n\nRequest logging must redact credentials, and one suite should use the shared launcher.\n\n**Review effort:** Lite  \n**Findings:** 1 <picture><img alt=\"Low severity\"></picture>\n\n<details open>\n<summary><strong>Open (2)</strong></summary>\n\n- <picture><img alt=\"High severity\"></picture> [Redact credentials before logging request URLs](#discussion_r701) · New\n- <picture><img alt=\"Low severity\"></picture> [Use the shared launcher in the skipped suite](#discussion_r702) · New\n</details>\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nAdds request tracking to the end-to-end tests and logs in-flight requests after a failure.\n\n| File | Summary |\n|---|---|\n| `test/e2e/lib/browser.mjs` | Implements request tracking and logging. **Critical (1 vote):** full URLs may expose credentials in query parameters and must be redacted. |\n| `test/e2e/beacon-test.js` | **Nit (2 votes):** still launches the browser directly instead of using the shared launcher. |\n| `docs/testing.md` | Documents the diagnostic output. |\n</details>"
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "id": 6000000037,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-10-06T12:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6000000037",
+    "body": "Copilot wasn't able to review any files in this pull request. Check if the **Files changed** in this pull request are included in [default exclusions](https://docs.github.com/en/copilot/reference/review-excluded-files)."
+  }
+]

@@ -349,6 +349,105 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🔵 Needs a closer look","hasFormatDrift":true,"findings":[]}
 ```
 
+## Layouts Copilot shipped after the parser was written
+
+These fixtures record shapes taken from live reviews: bold severity tokens in
+file-summary cells, tokens after a cell's description, items separated by a
+period, lowercase severities, and vote-tagged bullets under a findings label.
+Each case pins what the parser returns for that shape.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-bold-votes.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":false,"findings":0}
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-bold-after-description.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":false,"findings":0}
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-sentence-items.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":false,"findings":2}
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-lowercase-severity.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":false,"findings":5}
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-review-findings-bullets.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":false,"findings":0}
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-b-overview-bullets.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":false,"findings":4}
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-each-item.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":false,"findings":0}
+```
+
+A section Copilot has not shipped before, listing thread links or prose.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-new-thread-section.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":false,"findings":0}
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-new-prose-section.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":false,"findings":0}
+```
+
+## Reviews whose only content is the lead paragraph
+
+An advisory request for human review, a reworded no-findings sentence, and a
+finding stated only in prose.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-advisory-lead.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":true,"findings":0}
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-reworded-boilerplate.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":true,"findings":0}
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-prose-lead.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
+{"hasFormatDrift":true,"findings":0}
+```
+
+## Copilot notices that are not reviews
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/notice-error.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings: (.findings | length)}'
+{"verdict":null,"hasFormatDrift":false,"findings":0}
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/notice-no-files.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings: (.findings | length)}'
+{"verdict":null,"hasFormatDrift":false,"findings":0}
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/notice-unknown.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings: (.findings | length)}'
+{"verdict":null,"hasFormatDrift":false,"findings":0}
+```
+
+## A review body that is not a string
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/malformed-body.json" 2>&1
+jq: error (at <stdin>:*): split input and separator must be strings (glob)
+[5]
+```
+
 ## Finding bodies keep their prose and fenced context
 
 ```scrut
