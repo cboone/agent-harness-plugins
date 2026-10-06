@@ -514,11 +514,11 @@ done
 #   - {plugin}:{skill}: {description} (file: {path})
 #
 # It budgets that list at 2 percent of the model's context window, charging
-# ceil(bytes / 4) tokens per line, or at 8,000 characters when the context
-# window is unknown. Over budget it shortens descriptions from the end, then
-# omits skills. Names and paths cost about as much as the descriptions, so this
-# rule renders every generated dist/codex skill the way Codex does and budgets
-# the whole line. It ignores Codex's path aliasing, which only lowers the cost.
+# ceil(bytes / 4) tokens per line. Over budget it shortens descriptions from
+# the end, then omits skills. Names and paths cost about as much as the
+# descriptions, so this rule renders every generated dist/codex skill the way
+# Codex does and budgets the whole line. It ignores Codex's path aliasing,
+# which only lowers the cost.
 #
 # A skill whose generated agents/openai.yaml sets
 # policy.allow_implicit_invocation to false is withheld from that list, so it
@@ -530,23 +530,26 @@ done
 # source, so the per-description checks run once, on the canonical copies that
 # every harness shares.
 #
-# The constants come from the milestone 1 baseline in
+# The reference is the model and Codex release the maintainer runs, so the
+# budget is the one their sessions actually get. Codex also has an
+# 8,000-character budget for models whose context window it cannot resolve,
+# such as unrecognized models on custom or local providers; that configuration
+# is not in use, so it is not modeled.
+#
+# The constants come from the validation constants in
 # docs/reviews/codex-consumption.md. Revisit them only when the reference model
 # or the set of skills Codex bundles changes, since the reserve measures those
 # skills, and record that change there. Never raise them to fit content; tighten
 # the routing descriptions instead.
 
-CODEX_REFERENCE_MODEL="gpt-6-astra"
-# The model's context window in tokens. Set it empty to model an unknown window,
-# which selects Codex's character fallback.
+CODEX_REFERENCE_MODEL="gpt-6.1-sol"
+# The model's context_window in tokens, from `codex debug models --bundled`.
 CODEX_REFERENCE_CONTEXT_WINDOW="${CODEX_REFERENCE_CONTEXT_WINDOW-272000}"
 CODEX_CONTEXT_WINDOW_PERCENT=2
 CODEX_BYTES_PER_TOKEN=4
-CODEX_FALLBACK_BUDGET_CHARACTERS=8000
-# Codex's bundled system skills share the budget: 567 tokens with unaliased
-# paths at the baseline, rounded up. Held in bytes so the same reserve applies
-# to the character fallback, where characters never outnumber bytes.
-CODEX_SYSTEM_SKILL_RESERVE_BYTES="${CODEX_SYSTEM_SKILL_RESERVE_BYTES-2400}"
+# Codex's bundled system skills share the budget: 427 tokens with unaliased
+# paths for the reference model, rounded up to 450 tokens.
+CODEX_SYSTEM_SKILL_RESERVE_BYTES="${CODEX_SYSTEM_SKILL_RESERVE_BYTES-1800}"
 # A fixed 15-character home directory keeps the cost independent of the machine.
 CODEX_INVENTORY_HOME="/Users/username"
 MAX_SKILL_DESCRIPTION_CHARACTERS=1024
@@ -556,7 +559,7 @@ MAX_SKILL_DESCRIPTION_CHARACTERS=1024
 # for a description, rounded down.
 ROUTED_DESCRIPTION_WARNING_CHARACTERS=150
 readonly CODEX_REFERENCE_MODEL CODEX_REFERENCE_CONTEXT_WINDOW CODEX_CONTEXT_WINDOW_PERCENT \
-  CODEX_BYTES_PER_TOKEN CODEX_FALLBACK_BUDGET_CHARACTERS CODEX_SYSTEM_SKILL_RESERVE_BYTES \
+  CODEX_BYTES_PER_TOKEN CODEX_SYSTEM_SKILL_RESERVE_BYTES \
   CODEX_INVENTORY_HOME MAX_SKILL_DESCRIPTION_CHARACTERS ROUTED_DESCRIPTION_WARNING_CHARACTERS
 
 function frontmatter_name() {
@@ -670,8 +673,8 @@ for skill_md in plugins/*/skills/*/SKILL.md; do
   check_skill_fields "${skill_md}"
 done
 
-if [[ -n "${CODEX_REFERENCE_CONTEXT_WINDOW}" ]] && ! [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]*$ ]]; then
-  error "CODEX_REFERENCE_CONTEXT_WINDOW must be a positive integer or empty"
+if ! [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]*$ ]]; then
+  error "CODEX_REFERENCE_CONTEXT_WINDOW must be a positive integer"
 fi
 if ! [[ "${CODEX_SYSTEM_SKILL_RESERVE_BYTES}" =~ ^[0-9]+$ ]]; then
   error "CODEX_SYSTEM_SKILL_RESERVE_BYTES must be a non-negative integer"
@@ -682,11 +685,9 @@ inventory_count=0
 inventory_withheld=0
 inventory_tokens=0
 inventory_bytes=0
-inventory_characters=0
 inventory_description_bytes=0
 inventory_entries=""
 line_bytes=0
-line_characters=0
 description_bytes=0
 
 for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
@@ -721,38 +722,28 @@ for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
   byte_count "${line}" line_bytes
   line_bytes=$((line_bytes + 1))
   line_tokens=$(((line_bytes + CODEX_BYTES_PER_TOKEN - 1) / CODEX_BYTES_PER_TOKEN))
-  character_count "${line}" line_characters
   byte_count "${description}" description_bytes
 
   inventory_count=$((inventory_count + 1))
   inventory_tokens=$((inventory_tokens + line_tokens))
   inventory_bytes=$((inventory_bytes + line_bytes))
-  inventory_characters=$((inventory_characters + line_characters + 1))
   inventory_description_bytes=$((inventory_description_bytes + description_bytes))
   inventory_entries+="${line_tokens}"$'\t'"${skill_plugin}:${skill_name}"$'\n'
 done
 
-if [[ "${CODEX_SYSTEM_SKILL_RESERVE_BYTES}" =~ ^[0-9]+$ ]] && [[ ${inventory_count} -gt 0 ]]; then
+if [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]*$ ]] && [[ "${CODEX_SYSTEM_SKILL_RESERVE_BYTES}" =~ ^[0-9]+$ ]] && [[ ${inventory_count} -gt 0 ]]; then
   reserve_tokens=$(((CODEX_SYSTEM_SKILL_RESERVE_BYTES + CODEX_BYTES_PER_TOKEN - 1) / CODEX_BYTES_PER_TOKEN))
-  fallback_available=$((CODEX_FALLBACK_BUDGET_CHARACTERS - CODEX_SYSTEM_SKILL_RESERVE_BYTES))
   largest_entries="$(printf '%s' "${inventory_entries}" | sort -t $'\t' -k1,1nr -k2,2 | head -5 | awk -F '\t' '{ printf "%s%s (%s)", (NR > 1 ? ", " : ""), $2, $1 }')"
   inventory_breakdown="Descriptions are ${inventory_description_bytes} of its ${inventory_bytes} bytes; names, paths and line syntax are the rest. Largest entries in tokens: ${largest_entries}. Tighten the largest routing descriptions rather than raising the budget."
   withheld_note=""
   [[ ${inventory_withheld} -eq 0 ]] || withheld_note=" Withheld from implicit invocation and not charged: ${inventory_withheld}."
 
-  if [[ -z "${CODEX_REFERENCE_CONTEXT_WINDOW}" ]]; then
-    echo "Codex skill inventory: ${inventory_count} skills cost ${inventory_characters} of ${fallback_available} characters available under the ${CODEX_FALLBACK_BUDGET_CHARACTERS}-character fallback; no reference context window is set.${withheld_note}"
-    if [[ ${inventory_characters} -gt ${fallback_available} ]]; then
-      error "Codex skill inventory is ${inventory_characters} characters, over the ${fallback_available} available (${CODEX_FALLBACK_BUDGET_CHARACTERS}-character fallback budget less a ${CODEX_SYSTEM_SKILL_RESERVE_BYTES}-character system-skill reserve). ${inventory_breakdown}"
-    fi
-  elif [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]*$ ]]; then
-    primary_budget=$((CODEX_REFERENCE_CONTEXT_WINDOW * CODEX_CONTEXT_WINDOW_PERCENT / 100))
-    [[ ${primary_budget} -gt 0 ]] || primary_budget=1
-    primary_available=$((primary_budget - reserve_tokens))
-    echo "Codex skill inventory: ${inventory_count} skills cost ${inventory_tokens} of ${primary_available} tokens available under the ${primary_budget}-token budget for ${CODEX_REFERENCE_MODEL}, and ${inventory_characters} of ${fallback_available} characters available under the ${CODEX_FALLBACK_BUDGET_CHARACTERS}-character fallback.${withheld_note}"
-    if [[ ${inventory_tokens} -gt ${primary_available} ]]; then
-      error "Codex skill inventory costs ${inventory_tokens} tokens, over the ${primary_available} available (${primary_budget}-token budget for ${CODEX_REFERENCE_MODEL} less a ${reserve_tokens}-token system-skill reserve). ${inventory_breakdown}"
-    fi
+  primary_budget=$((CODEX_REFERENCE_CONTEXT_WINDOW * CODEX_CONTEXT_WINDOW_PERCENT / 100))
+  [[ ${primary_budget} -gt 0 ]] || primary_budget=1
+  primary_available=$((primary_budget - reserve_tokens))
+  echo "Codex skill inventory: ${inventory_count} skills cost ${inventory_tokens} of ${primary_available} tokens available under the ${primary_budget}-token budget for ${CODEX_REFERENCE_MODEL}.${withheld_note}"
+  if [[ ${inventory_tokens} -gt ${primary_available} ]]; then
+    error "Codex skill inventory costs ${inventory_tokens} tokens, over the ${primary_available} available (${primary_budget}-token budget for ${CODEX_REFERENCE_MODEL} less a ${reserve_tokens}-token system-skill reserve). ${inventory_breakdown}"
   fi
 fi
 

@@ -62,15 +62,14 @@ Codex skill inventory: * (glob)
 Rule 17 renders each generated skill as the line Codex puts in its initial skill
 list, name and installed path included, and budgets the whole list at 2 percent
 of the reference model's context window, less a reserve for Codex's own system
-skills. Every normal run reports the cost against that budget and against the
-8,000-character fallback Codex uses when the context window is unknown.
+skills. Every normal run reports the cost against that budget.
 
 The limits below are exercised through overrides; the recorded budget is never
 raised to fit content.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" valid 2>&1 | grep '^Codex skill inventory:'
-Codex skill inventory: * skills cost * of 4840 tokens available under the 5440-token budget for gpt-6-astra, and * of 5600 characters available under the 8000-character fallback. Withheld from implicit invocation and not charged: *. (glob)
+Codex skill inventory: * skills cost * of 4990 tokens available under the 5440-token budget for gpt-6.1-sol. Withheld from implicit invocation and not charged: *. (glob)
 ```
 
 A single description over Codex's 1,024-character limit is an error however
@@ -112,8 +111,8 @@ the largest entries, and what to do about it.
 
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" aggregate-overflow 2>&1
-Codex skill inventory: * skills cost * of 1400 tokens available under the 2000-token budget for gpt-6-astra, and * (glob)
-::error::Codex skill inventory costs * tokens, over the 1400 available (2000-token budget for gpt-6-astra less a 600-token system-skill reserve). Descriptions are * of its * bytes; names, paths and line syntax are the rest. Largest entries in tokens: *. Tighten the largest routing descriptions rather than raising the budget. (glob)
+Codex skill inventory: * skills cost * of 1550 tokens available under the 2000-token budget for gpt-6.1-sol.* (glob)
+::error::Codex skill inventory costs * tokens, over the 1550 available (2000-token budget for gpt-6.1-sol less a 450-token system-skill reserve). Descriptions are * of its * bytes; names, paths and line syntax are the rest. Largest entries in tokens: *. Tighten the largest routing descriptions rather than raising the budget. (glob)
 1 plugin validation error(s) found.
 [1]
 ```
@@ -127,13 +126,12 @@ $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" path-overhead 2>&1 | sed -nE 's/^::error::Cod
 descriptions fit; names and paths exceed the budget
 ```
 
-An empty context window models Codex not knowing it, which selects the
-8,000-character fallback.
+The budget is always the reference model's, so an empty context window is an
+error rather than a request for Codex's character budget for unknown models.
 
 ```scrut
-$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" fallback 2>&1
-Codex skill inventory: * skills cost * of 5600 characters available under the 8000-character fallback; no reference context window is set. Withheld from implicit invocation and not charged: *. (glob)
-::error::Codex skill inventory is * characters, over the 5600 available (8000-character fallback budget less a 2400-character system-skill reserve). Descriptions are * (glob)
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" empty-context-window 2>&1
+::error::CODEX_REFERENCE_CONTEXT_WINDOW must be a positive integer
 1 plugin validation error(s) found.
 [1]
 ```

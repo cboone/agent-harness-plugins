@@ -257,13 +257,13 @@ function main() {
       add_frontmatter_line "${FIXTURE_ROOT}/${RELEASE_SKILL}" 'disable-model-invocation: true'
       wrap_generator_to_extend_manifest
       ;;
-    # 2 percent of 100,000 is a 2,000-token budget, 1,400 after the reserve:
+    # 2 percent of 100,000 is a 2,000-token budget, 1,550 after the reserve:
     # less than the descriptions alone cost.
     aggregate-overflow) export CODEX_REFERENCE_CONTEXT_WINDOW=100000 ;;
-    # A 3,400-token budget, 2,800 after the reserve: more than the descriptions
+    # A 3,400-token budget, 2,950 after the reserve: more than the descriptions
     # alone cost, less than the full lines with their names and paths.
     path-overhead) export CODEX_REFERENCE_CONTEXT_WINDOW=170000 ;;
-    fallback) export CODEX_REFERENCE_CONTEXT_WINDOW="" ;;
+    empty-context-window) export CODEX_REFERENCE_CONTEXT_WINDOW="" ;;
     *)
       echo "Unknown scenario: ${scenario}" >&2
       return 2

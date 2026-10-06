@@ -139,26 +139,27 @@ Whether `codex plugin marketplace upgrade` refreshes an installed plugin whose v
 
 ### Validation constants
 
-These constants define the Codex inventory budget that repository validation models:
+These constants define the Codex inventory budget that repository validation models. The reference is the configuration the maintainer runs, so the modeled budget is the one real sessions get. They were last measured on 2026-10-06 with `codex-cli 0.160.1`, for `gpt-6.1-sol` at `low` reasoning effort, by rendering `codex debug prompt-input -c model=gpt-6.1-sol -c model_reasoning_effort=low` in a temporary `$CODEX_HOME`; the rest of this baseline describes `0.155.1` and `gpt-6-astra`.
 
-| Constant                     | Value                                                                                                   | Source                                         |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Reference model              | `gpt-6-astra`                                                                                           | Observed default model                         |
-| Context window               | 272,000 tokens                                                                                          | `codex debug models --bundled`                 |
-| Primary budget               | 5,440 tokens, 2 percent of the context window                                                           | Upstream source and documentation              |
-| Bytes per token              | 4, rounded up per entry                                                                                 | Upstream source                                |
-| Fallback budget              | 8,000 characters, when the context window is unknown                                                    | Upstream source and documentation              |
-| Framing reserve              | None; framing is outside the budget, and the check ignores aliasing                                     | Upstream source                                |
-| Bundled system skill reserve | 2,400 bytes, or 600 tokens; 567 tokens observed                                                         | Observed                                       |
-| Name form                    | `plugin:skill`                                                                                          | Observed                                       |
-| Path form                    | `/Users/username/.codex/plugins/cache/agent-harness-plugins/<plugin>/<version>/skills/<skill>/SKILL.md` | Observed layout, 15-character home placeholder |
-| Description warning          | Over 150 characters                                                                                     | Derived below                                  |
+| Constant                     | Value                                                                                                                 | Source                                                           |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Reference model              | `gpt-6.1-sol`, `low` reasoning effort                                                                                 | The maintainer's configured `model` and `model_reasoning_effort` |
+| Context window               | 272,000 tokens                                                                                                        | `codex debug models --bundled`                                   |
+| Primary budget               | 5,440 tokens, 2 percent of the context window                                                                         | Upstream source and documentation                                |
+| Bytes per token              | 4, rounded up per entry                                                                                               | Upstream source                                                  |
+| Framing reserve              | None; framing is outside the budget, and the check ignores aliasing                                                   | Upstream source                                                  |
+| Bundled system skill reserve | 1,800 bytes, or 450 tokens; 427 tokens observed for `imagegen`, `openai-docs`, `skill-creator`, and `skill-installer` | Observed                                                         |
+| Name form                    | `plugin:skill`                                                                                                        | Observed                                                         |
+| Path form                    | `/Users/username/.codex/plugins/cache/agent-harness-plugins/<plugin>/<version>/skills/<skill>/SKILL.md`               | Observed layout, 15-character home placeholder                   |
+| Description warning          | Over 150 characters                                                                                                   | Derived below                                                    |
 
 The warning threshold is the primary budget's average share per skill at the baseline. After the reserve, 4,840 tokens is 19,360 bytes, or 317 bytes for each of 61 skills. Names, paths, and line syntax average 164 bytes of each line, which leaves 153 characters for a description, rounded down to 150.
 
-Rule 17 of `bin/validate-plugins` records these constants. It fails when the catalog exceeds the primary budget less the reserve, prints the catalog's cost against both budgets on every run, and applies the fallback as its gate when `CODEX_REFERENCE_CONTEXT_WINDOW` is set empty. Measured this way at `046f1389`, the catalog-summary inventory cost 4,472 of 4,840 available tokens; with canonical descriptions it would have cost 10,966.
+Rule 17 of `bin/validate-plugins` records these constants. It fails when the catalog exceeds the primary budget less the reserve and prints the catalog's cost against that budget on every run. Measured this way at `046f1389`, the catalog-summary inventory cost 4,472 of 4,840 available tokens; with canonical descriptions it would have cost 10,966. With the reference model's reserve, the 64-skill catalog costs 4,837 of 4,990 available tokens.
 
-Revisit these constants only when the reference model changes or a Codex release changes its bundled system skills, which the reserve measures, and record the change here.
+Codex budgets 8,000 characters instead when it cannot resolve the model's context window, as with an unrecognized model on a custom or local provider. That configuration is not in use, so validation does not model it.
+
+Revisit these constants when the reference model changes or a Codex release changes its bundled system skills, which the reserve measures, and record the change here.
 
 ## Milestone 1 verification
 
