@@ -509,7 +509,7 @@ done
 
 # ─── 17. The Codex skill inventory fits Codex's discovery budget ────────────
 #
-# Codex starts each session with one line per installed skill:
+# Codex starts each session with one line per enabled skill:
 #
 #   - {plugin}:{skill}: {description} (file: {path})
 #

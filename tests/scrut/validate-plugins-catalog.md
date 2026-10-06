@@ -76,11 +76,11 @@ Codex skill inventory: the * most expensive of * skills (75 percent) cost * of 4
 
 A single description over Codex's 1,024-character limit is an error however
 much room the budget has left; the scenario widens the context window so the
-length is the only fault. Its line, cut to 1,024 characters, is the most
-expensive in the catalog by far, so charging 1 percent of the catalog shows
-both that the share rounds up, a fraction of a skill counting as a whole one,
-and that the counted skill is the most expensive one: no other line reaches
-256 tokens.
+length is the only fault. Its description, cut to 1,024 characters, makes its
+line the most expensive in the catalog by far, so charging 1 percent of the
+catalog shows both that the share rounds up, a fraction of a skill counting as
+a whole one, and that the counted skill is the most expensive one: no other
+line, even with the 18-token roots table row, reaches 256 tokens.
 
 ```scrut
 $ { CODEX_ENABLED_SKILL_PERCENT=1 "${VALIDATE_PLUGIN_FIXTURE_BIN}" oversized-description 2>&1; echo "exit ${?}"; } | awk '{ print } /^Codex skill inventory:/ { verdict = ($5 == 1 && $14 >= 256) ? "the most expensive skill is counted" : "unexpected selection: " $5 " costing " $14 } END { print verdict }'
