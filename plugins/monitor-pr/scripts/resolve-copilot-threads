@@ -1411,6 +1411,13 @@ function do_parse_audit() {
 # Fetches every review thread on a PR, resolved or not, with the database id
 # and author of each comment and the first comment's body, for the surface
 # audit.
+#
+# Each thread's comments are read only to their first 100, deliberately. The
+# index never decides which comments the audit sees: those come from the
+# paginated REST read of every review comment, and each is then looked up
+# here. A comment past the cap is absent from the index, so the audit reports
+# it as being in no thread rather than leaving it out. The cap can mislabel
+# the reason on such a thread, but it cannot hide a comment.
 # Arguments:
 #   $1 - Repository owner
 #   $2 - Repository name
