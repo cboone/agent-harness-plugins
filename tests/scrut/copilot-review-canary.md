@@ -341,6 +341,7 @@ The canary checks the jq version itself, so a jq too old for the resolver is
 named once rather than failing every pull request in turn.
 
 ```scrut
-$ fake="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '#!/usr/bin/env bash\necho jq-1.6\n' > "${fake}/jq" && chmod +x "${fake}/jq" && echo '[]' | PATH="${fake}:${PATH}" "${COPILOT_REVIEW_CANARY_BIN}" analyze 2>&1; rm -rf "${fake}"
+$ fake="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '#!/usr/bin/env bash\necho jq-1.6\n' > "${fake}/jq" && chmod +x "${fake}/jq" && echo '[]' | PATH="${fake}:${PATH}" "${COPILOT_REVIEW_CANARY_BIN}" analyze 2>&1; rc=$?; rm -rf "${fake}"; (exit "${rc}")
 copilot-review-canary: jq 1.7 or later is required, found jq-1.6.
+[3]
 ```
