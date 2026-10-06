@@ -517,9 +517,10 @@ done
 # ceil(bytes / 4) tokens per line. Over budget it shortens descriptions from
 # the end, then omits skills. Names and paths cost about as much as the
 # descriptions, so this rule renders every generated dist/codex skill the way
-# Codex does and budgets the whole line. Codex aliases each plugin cache root
-# to a short name such as r1 and lists the alias once in a roots table, which
-# the budget also charges, so the rule renders paths and that row the same way.
+# Codex does and budgets the whole line. Codex aliases each marketplace's
+# plugin cache root to a short name such as r1 and lists the alias once in a
+# roots table, which the budget also charges, so the rule renders paths and
+# that row the same way.
 #
 # The budget models the maintainer's installation rather than the whole
 # catalog: about three quarters of the catalog's skills are enabled, alongside
@@ -551,7 +552,8 @@ done
 # descriptions instead.
 
 CODEX_REFERENCE_MODEL="gpt-6.1-sol"
-# The model's context_window in tokens, from `codex debug models --bundled`.
+# The model's context_window in tokens, from `codex debug models`, live and
+# bundled.
 CODEX_REFERENCE_CONTEXT_WINDOW="${CODEX_REFERENCE_CONTEXT_WINDOW-272000}"
 CODEX_CONTEXT_WINDOW_PERCENT=2
 CODEX_BYTES_PER_TOKEN=4
@@ -564,10 +566,10 @@ CODEX_INVENTORY_ALIAS="r1"
 # A fixed 15-character home directory keeps the cost independent of the machine.
 CODEX_INVENTORY_HOME="/Users/username"
 MAX_SKILL_DESCRIPTION_CHARACTERS=1024
-# The budget's average share per counted skill: 4,290 tokens after the reserve
-# is 17,160 bytes, or 357 for each of 48 counted skills. Names, aliased paths
-# and line syntax average 116 bytes of each line, leaving 241 characters for a
-# description, rounded down.
+# The budget's average share per counted skill: 4,272 tokens after the reserve
+# and the catalog's 18-token roots table row is 17,088 bytes, or 356 for each of
+# 48 counted skills. Names, aliased paths and line syntax average 116 bytes of
+# each line, leaving 240 characters for a description.
 ROUTED_DESCRIPTION_WARNING_CHARACTERS=240
 readonly CODEX_REFERENCE_MODEL CODEX_REFERENCE_CONTEXT_WINDOW CODEX_CONTEXT_WINDOW_PERCENT \
   CODEX_BYTES_PER_TOKEN CODEX_ENABLED_SKILL_PERCENT CODEX_OTHER_SKILL_RESERVE_TOKENS \
@@ -685,14 +687,21 @@ for skill_md in plugins/*/skills/*/SKILL.md; do
   check_skill_fields "${skill_md}"
 done
 
-if ! [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]*$ ]]; then
-  error "CODEX_REFERENCE_CONTEXT_WINDOW must be a positive integer"
+# Bash arithmetic reads a leading zero as octal and wraps past 64 bits, so each
+# override is held to plain decimal of bounded length before any arithmetic
+# uses it. An invalid override is an error and skips the budget check below.
+codex_settings_valid=true
+if ! [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]{0,8}$ ]]; then
+  error "CODEX_REFERENCE_CONTEXT_WINDOW must be a positive decimal integer below 1000000000"
+  codex_settings_valid=false
 fi
-if ! [[ "${CODEX_ENABLED_SKILL_PERCENT}" =~ ^[1-9][0-9]*$ ]] || [[ "${CODEX_ENABLED_SKILL_PERCENT}" -gt 100 ]]; then
-  error "CODEX_ENABLED_SKILL_PERCENT must be an integer from 1 to 100"
+if ! [[ "${CODEX_ENABLED_SKILL_PERCENT}" =~ ^[1-9][0-9]{0,2}$ ]] || [[ "${CODEX_ENABLED_SKILL_PERCENT}" -gt 100 ]]; then
+  error "CODEX_ENABLED_SKILL_PERCENT must be a decimal integer from 1 to 100"
+  codex_settings_valid=false
 fi
-if ! [[ "${CODEX_OTHER_SKILL_RESERVE_TOKENS}" =~ ^[0-9]+$ ]]; then
-  error "CODEX_OTHER_SKILL_RESERVE_TOKENS must be a non-negative integer"
+if ! [[ "${CODEX_OTHER_SKILL_RESERVE_TOKENS}" =~ ^(0|[1-9][0-9]{0,8})$ ]]; then
+  error "CODEX_OTHER_SKILL_RESERVE_TOKENS must be a non-negative decimal integer below 1000000000"
+  codex_settings_valid=false
 fi
 
 marketplace_name="$(jq -r '.name // empty' "${CODEX_MARKETPLACE}" 2> /dev/null || true)"
@@ -740,9 +749,12 @@ for skill_md in "${CODEX_DIST_DIR}"/plugins/*/skills/*/SKILL.md; do
   inventory_entries+="${line_tokens}"$'\t'"${description_bytes}"$'\t'"${line_bytes}"$'\t'"${skill_plugin}:${skill_name}"$'\n'
 done
 
-if [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]*$ ]] && [[ "${CODEX_ENABLED_SKILL_PERCENT}" =~ ^[1-9][0-9]*$ ]] \
-  && [[ "${CODEX_ENABLED_SKILL_PERCENT}" -le 100 ]] && [[ "${CODEX_OTHER_SKILL_RESERVE_TOKENS}" =~ ^[0-9]+$ ]] \
-  && [[ ${inventory_count} -gt 0 ]]; then
+withheld_note=""
+[[ ${inventory_withheld} -eq 0 ]] || withheld_note=" Withheld from implicit invocation and not charged: ${inventory_withheld}."
+
+if [[ "${codex_settings_valid}" == true ]] && [[ ${inventory_count} -eq 0 ]]; then
+  echo "Codex skill inventory: no skills charged.${withheld_note}"
+elif [[ "${codex_settings_valid}" == true ]]; then
   counted_count=$(((inventory_count * CODEX_ENABLED_SKILL_PERCENT + 99) / 100))
   # Sum the most expensive entries in one pass; the five largest name the
   # skills to tighten first.
@@ -759,13 +771,14 @@ if [[ "${CODEX_REFERENCE_CONTEXT_WINDOW}" =~ ^[1-9][0-9]*$ ]] && [[ "${CODEX_ENA
   ')"
   IFS=$'\t' read -r counted_tokens counted_description_bytes counted_bytes largest_entries <<< "${counted_summary}"
 
+  # The catalog's roots table row is charged like any other line.
   root_line="- \`${CODEX_INVENTORY_ALIAS}\` = \`${CODEX_INVENTORY_HOME}/.codex/plugins/cache/${marketplace_name}\`"
   byte_count "${root_line}" line_bytes
-  counted_tokens=$((counted_tokens + (line_bytes + 1 + CODEX_BYTES_PER_TOKEN - 1) / CODEX_BYTES_PER_TOKEN))
+  line_bytes=$((line_bytes + 1))
+  counted_tokens=$((counted_tokens + (line_bytes + CODEX_BYTES_PER_TOKEN - 1) / CODEX_BYTES_PER_TOKEN))
+  counted_bytes=$((counted_bytes + line_bytes))
 
-  inventory_breakdown="Descriptions are ${counted_description_bytes} of its ${counted_bytes} bytes; names, paths and line syntax are the rest. Largest entries in tokens: ${largest_entries}. Tighten the largest routing descriptions rather than raising the budget."
-  withheld_note=""
-  [[ ${inventory_withheld} -eq 0 ]] || withheld_note=" Withheld from implicit invocation and not charged: ${inventory_withheld}."
+  inventory_breakdown="Descriptions are ${counted_description_bytes} of its ${counted_bytes} bytes; names, paths, the roots table row and line syntax are the rest. Largest entries in tokens: ${largest_entries}. Tighten the largest routing descriptions rather than raising the budget."
 
   primary_budget=$((CODEX_REFERENCE_CONTEXT_WINDOW * CODEX_CONTEXT_WINDOW_PERCENT / 100))
   [[ ${primary_budget} -gt 0 ]] || primary_budget=1

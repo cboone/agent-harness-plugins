@@ -64,27 +64,31 @@ list, name and aliased installed path included. It charges the most expensive
 75 percent of those lines, the share of the catalog the maintainer enables,
 against 2 percent of the reference model's context window, less a reserve for
 skills from other sources. Every normal run reports the cost against that
-budget. The counted share rounds up, so a partial skill counts as a whole one.
+budget.
 
 The limits below are exercised through overrides; the recorded budget is never
 raised to fit content.
 
 ```scrut
-$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" valid 2>&1 | grep '^Codex skill inventory:' | awk '{ print; counted = $5; total = $9; print (counted == int((total * 75 + 99) / 100)) ? "counted share rounds up" : "unexpected count: " counted " of " total }'
+$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" valid 2>&1 | grep '^Codex skill inventory:'
 Codex skill inventory: the * most expensive of * skills (75 percent) cost * of 4290 tokens available under the 5440-token budget for gpt-6.1-sol. Withheld from implicit invocation and not charged: *. (glob)
-counted share rounds up
 ```
 
 A single description over Codex's 1,024-character limit is an error however
 much room the budget has left; the scenario widens the context window so the
-length is the only fault.
+length is the only fault. Its line, cut to 1,024 characters, is the most
+expensive in the catalog by far, so charging 1 percent of the catalog shows
+both that the share rounds up, a fraction of a skill counting as a whole one,
+and that the counted skill is the most expensive one: no other line reaches
+256 tokens.
 
 ```scrut
-$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" oversized-description 2>&1
+$ { CODEX_ENABLED_SKILL_PERCENT=1 "${VALIDATE_PLUGIN_FIXTURE_BIN}" oversized-description 2>&1; echo "exit ${?}"; } | awk '{ print } /^Codex skill inventory:/ { verdict = ($5 == 1 && $14 >= 256) ? "the most expensive skill is counted" : "unexpected selection: " $5 " costing " $14 } END { print verdict }'
 ::error::Skill 'plugins/release/skills/release/SKILL.md' description is 1100 characters, exceeding the 1024-character limit
-Codex skill inventory: * (glob)
+Codex skill inventory: the 1 most expensive of * skills (1 percent) cost * (glob)
 1 plugin validation error(s) found.
-[1]
+exit 1
+the most expensive skill is counted
 ```
 
 A routing description over 240 characters, its average share of the budget,
@@ -115,7 +119,7 @@ the largest entries, and what to do about it.
 ```scrut
 $ "${VALIDATE_PLUGIN_FIXTURE_BIN}" aggregate-overflow 2>&1
 Codex skill inventory: the * most expensive of * skills (75 percent) cost * of 850 tokens available under the 2000-token budget for gpt-6.1-sol.* (glob)
-::error::Codex skill inventory costs * tokens, over the 850 available (2000-token budget for gpt-6.1-sol less a 1150-token reserve for skills from other sources). Descriptions are * of its * bytes; names, paths and line syntax are the rest. Largest entries in tokens: *. Tighten the largest routing descriptions rather than raising the budget. (glob)
+::error::Codex skill inventory costs * tokens, over the 850 available (2000-token budget for gpt-6.1-sol less a 1150-token reserve for skills from other sources). Descriptions are * of its * bytes; names, paths, the roots table row and line syntax are the rest. Largest entries in tokens: *. Tighten the largest routing descriptions rather than raising the budget. (glob)
 1 plugin validation error(s) found.
 [1]
 ```
@@ -130,11 +134,17 @@ descriptions fit; names and paths exceed the budget
 
 The budget is always the reference model's, so an empty context window is an
 error rather than a request for Codex's character budget for unknown models.
+The other overrides are held to plain decimal of bounded length, because Bash
+arithmetic reads a leading zero as octal and wraps a value past 64 bits: this
+enabled share wraps to 10 percent, and this reserve is not valid octal. Each
+invalid override is an error, and none reaches the budget check.
 
 ```scrut
-$ "${VALIDATE_PLUGIN_FIXTURE_BIN}" empty-context-window 2>&1
-::error::CODEX_REFERENCE_CONTEXT_WINDOW must be a positive integer
-1 plugin validation error(s) found.
+$ CODEX_ENABLED_SKILL_PERCENT=18446744073709551626 CODEX_OTHER_SKILL_RESERVE_TOKENS=0900 "${VALIDATE_PLUGIN_FIXTURE_BIN}" empty-context-window 2>&1
+::error::CODEX_REFERENCE_CONTEXT_WINDOW must be a positive decimal integer below 1000000000
+::error::CODEX_ENABLED_SKILL_PERCENT must be a decimal integer from 1 to 100
+::error::CODEX_OTHER_SKILL_RESERVE_TOKENS must be a non-negative decimal integer below 1000000000
+3 plugin validation error(s) found.
 [1]
 ```
 
