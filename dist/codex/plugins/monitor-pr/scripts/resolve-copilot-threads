@@ -76,6 +76,22 @@ function require_jq() {
   if ! command -v jq > /dev/null 2>&1; then
     die "jq is required but not found. Install it: https://jqlang.github.io/jq/download/"
   fi
+
+  # The review-body filter calls scan with a flags argument, which jq 1.7
+  # introduced. An older jq fails it as a compile error that names neither
+  # the version nor the cause, so the version is checked here instead. A
+  # version string that does not read as "jq-MAJOR.MINOR" (another
+  # implementation, or a development build) is let through rather than
+  # refused, since this check cannot tell what it supports.
+  local version
+  version="$(jq --version 2> /dev/null || true)"
+  if [[ "${version}" =~ ^jq-([0-9]+)\.([0-9]+) ]]; then
+    local major="${BASH_REMATCH[1]}"
+    local minor="${BASH_REMATCH[2]}"
+    if ((major < 1 || (major == 1 && minor < 7))); then
+      die "jq 1.7 or later is required, found ${version}. Install it: https://jqlang.github.io/jq/download/"
+    fi
+  fi
 }
 
 # Checks the GitHub CLI is installed and authenticated. Kept separate from
@@ -311,9 +327,12 @@ function do_fetch() {
 #
 # The raw legacy slice, complete review body, and structured parse are emitted.
 # hasFormatDrift covers an unparsed legacy section, a v2 review that states
-# more findings than the inline threads it lists, and a non-clean v2 verdict
-# that neither open threads nor a resolved-only round explains, keeping a
-# format change visible instead of silently reporting no feedback.
+# more findings than the inline threads it lists, a non-clean v2 verdict that
+# neither open threads nor a resolved-only round explains, and any signal the
+# census leaves unaccounted, keeping a format change visible instead of
+# silently reporting no feedback. The census, which checks every vote tag,
+# location line and section count against what the parsers returned, is what
+# catches a layout that a parser reads only partly.
 # =============================================================================
 
 # Normalizes an array of GitHub review objects into Copilot review-body findings.
@@ -340,6 +359,16 @@ function do_parse_reviews() {
     die "Invalid review JSON: every element must be a review object."
   fi
 
+  # A body that is present but not a string would reach the first split in
+  # the filter and abort the whole run, taking every well-formed review with
+  # it. Those reviews are skipped by the filter below; this names each one so
+  # the skip is visible rather than silent. A null or absent body is an
+  # ordinary review with nothing to read and is skipped without a warning.
+  local skipped_id
+  while IFS= read -r skipped_id; do
+    echo "Warning: skipping review ${skipped_id}: its body is not a string." >&2
+  done < <(jq -r '.[] | select(.body != null and (.body | type) != "string") | .id // "with no id"' <<< "${input}")
+
   # shellcheck disable=SC2016
   # $variables in the filter are jq bindings, not shell variables
   jq \
@@ -348,6 +377,65 @@ function do_parse_reviews() {
       def trim: sub("^[[:space:]]+"; "") | sub("[[:space:]]+$"; "");
 
       def normalize_path: gsub("\u200b"; "");
+
+      # A section title as a reader sees it: markup, a trailing "(N)" count
+      # and a heading marker removed.
+      def section_title:
+        gsub("<[^>]*>"; "")
+        | sub("^###[[:space:]]+"; "")
+        | sub("[[:space:]]*\\([0-9]+\\)[[:space:]]*$"; "")
+        | trim;
+
+      # The "(N)" count a section heading or summary ends with, or null.
+      def section_count:
+        (gsub("<[^>]*>"; "") | capture("\\((?<count>[0-9]+)\\)[[:space:]]*$").count | tonumber)
+        // null;
+
+      # Splits a body into numbered lines, each tagged with the region it
+      # sits in, its details depth, and whether it is inside a fenced block.
+      # "text" is the line with inline code spans emptied, for scans that
+      # must not match quoted text; "raw" keeps them for parsers that read
+      # paths out of code spans.
+      #
+      # A region is the depth-one section around a line: the summary of a
+      # details block opened at the top of the body, or a "###" heading
+      # inside one, which is how the older layout nests "### Suppressed
+      # comments (N)" inside "Review details". Text before the first block
+      # is "lead", and text after a top-level block closes is "trailer".
+      # Deeper summaries, such as the one "Previously missed" opens for each
+      # finding, stay in their section, matching the depth rule that
+      # section_summary applies.
+      def annotate:
+        split("\n")
+        | to_entries
+        | reduce .[] as $entry ({fence: false, depth: 0, region: "lead", out: []};
+            ($entry.value | sub("\r$"; "")) as $raw
+            | ($entry.key + 1) as $n
+            | if ($raw | test("^[[:space:]]*```")) or .fence then
+                (if ($raw | test("^[[:space:]]*```")) then .fence = (.fence | not) else . end)
+                | .out += [{n: $n, raw: $raw, text: "", region: .region, depth: .depth, fence: true}]
+              else
+                (
+                  if ($raw | test("^<details")) then .depth += 1
+                  elif ($raw | test("^</details>")) then
+                    (if .depth > 0 then .depth -= 1 else . end)
+                    | (if .depth == 0 then .region = "trailer" else . end)
+                  elif (.depth == 1 and ($raw | test("^<summary>")))
+                       or (.depth >= 1 and ($raw | test("^### "))) then
+                    .region = ($raw | section_title)
+                  else .
+                  end
+                )
+                | .out += [{
+                    n: $n,
+                    raw: $raw,
+                    text: ($raw | gsub("`[^`]*`"; "``")),
+                    region: .region,
+                    depth: .depth,
+                    fence: false
+                  }]
+              end)
+        | .out;
 
       # The first level-3 heading. On ccr-overview-v2 bodies this is the
       # verdict the drift check compares; older layouts can yield a section
@@ -606,7 +694,7 @@ function do_parse_reviews() {
       # The trailing $ anchor is load-bearing: it keeps the
       # "**Previously missed (1)** - in code that..." subheading from parsing
       # as a finding, since that line continues past the closing asterisks.
-      def suppressed_findings:
+      def suppressed_findings($region):
         split("\n")
         | reduce .[] as $line ({current: null, out: []};
             if $line | test("^\\*\\*[^*]+:[0-9]+\\*\\*$")
@@ -624,7 +712,9 @@ function do_parse_reviews() {
                 path: ($parts[0:-1] | join(":")),
                 line: ($parts[-1] | tonumber),
                 severity: null,
-                body: (.lines | join("\n") | trim)
+                body: (.lines | join("\n") | trim),
+                source: "suppressed",
+                region: $region
               }
           );
 
@@ -645,7 +735,9 @@ function do_parse_reviews() {
               path: (.[2] | normalize_path),
               line: (.[3] | tonumber),
               severity: .[0],
-              body: ((.[1] + "\n\n" + .[4]) | trim)
+              body: ((.[1] + "\n\n" + .[4]) | trim),
+              source: "previously-missed",
+              region: "Previously missed"
             }
         ];
 
@@ -662,10 +754,13 @@ function do_parse_reviews() {
       # path keeps escaped pipes inside the summary, and they are unescaped to
       # the text GitHub renders. Restrict this parser to marked v2 bodies so
       # ordinary file-summary tables remain negative controls.
-      def table_findings:
+      def table_findings($lines):
         [
-          split("\n")[]
-          | select(test("^[[:space:]]*\\|[[:space:]]*`[^`]+`[[:space:]]*\\|"))
+          $lines[]
+          | select((.fence | not) and (.raw | test("^[[:space:]]*\\|[[:space:]]*`[^`]+`[[:space:]]*\\|")))
+          | .region as $region
+          | .n as $at
+          | .raw
           | split("|") as $cells
           | ($cells[1] | trim | ltrimstr("`") | rtrimstr("`") | normalize_path) as $path
           | ($cells[2:-1] | join("|") | gsub("\\\\\\|"; "|") | trim) as $summary
@@ -689,9 +784,125 @@ function do_parse_reviews() {
                 | sub(";$"; "")
                 | sub("\\.$"; "")
                 | trim
-              )
+              ),
+              source: "table",
+              region: $region,
+              at: $at
             }
         ];
+
+      # The census. Every parser above recognizes a layout it was written
+      # for and returns nothing for one it was not, so on its own a gap in a
+      # parser looks exactly like a review with nothing to say. The census is
+      # how that gap becomes visible: it scans the body for finding-shaped
+      # signals with patterns that do not depend on the layout, and reports
+      # any signal that no parsed finding or inline thread accounts for.
+      #
+      # It is a counting check, not a second parser. It never extracts a
+      # finding, so it stays simple enough to be right while the parsers
+      # around it keep changing.
+      #
+      # Signals:
+      #   thread-link    a list item linking "#discussion_r<id>", which is an
+      #                  inline thread the thread fetch reports
+      #   vote           a "(N votes)" or "(N vote each)" tag on any other line
+      #   location       a line that is only "**path:line**", or that opens
+      #                  with "`path:line`"
+      #   section-count  a section heading or summary ending in "(N)"
+      #
+      # Fenced blocks are skipped, and vote tags inside inline code spans do
+      # not count, so a finding that quotes the format cannot trip it.
+      #
+      # Vote tags are reconciled line by line. A finding that carries a vote
+      # tag comes from one body line, and its parser records that line in
+      # "at", so a line holding more tags than it yielded findings is a gap,
+      # reported once with the line it sits on. Reconciling a whole region
+      # instead would report every tag in it when one item was missed.
+      #
+      # Location lines are reconciled by region, because the parsers that
+      # read them take a finding from several lines. Each signal belongs to
+      # the region it sits in (see annotate), and every parser tags its
+      # findings with a region the same way, so a region whose parsers
+      # returned fewer located findings than it has location lines is a gap.
+      #
+      # Either way a "( each)" tag stands for at least one finding, so the
+      # comparison is "fewer than", never "not equal".
+      #
+      # A section count is accounted for when it equals the parsed findings
+      # plus the thread links in its region. That holds whatever the section is
+      # called, so a new section that lists threads, the way "Open" and
+      # "Resolved since last review" do, is read correctly the first time it
+      # appears, and a new section whose items nothing parses is not. Two
+      # counted sections list files rather than findings, and are exempt.
+      def non_finding_sections: ["Files not reviewed", "New files"];
+
+      def signals:
+        [
+          .[]
+          | select(.fence | not)
+          | . as $l
+          | if ($l.text | test("\\(#discussion_r[0-9]+\\)")) then
+              {kind: "thread-link", line: $l.n, region: $l.region, text: $l.raw}
+            else
+              (
+                $l.text
+                | scan("\\([0-9]+ votes?(?: each)?\\)"; "i")
+                | {kind: "vote", line: $l.n, region: $l.region, text: $l.raw}
+              ),
+              (
+                select(
+                  $l.raw
+                  | test("^[[:space:]]*(\\*\\*[^*`]+:[0-9]+\\*\\*[[:space:]]*$|`[^`]+:[0-9]+`)")
+                )
+                | {kind: "location", line: $l.n, region: $l.region, text: $l.raw}
+              ),
+              (
+                select(
+                  ($l.depth == 1 and ($l.raw | test("^<summary>")))
+                  or ($l.depth >= 1 and ($l.raw | test("^### ")))
+                )
+                | ($l.raw | section_count) as $count
+                | select($count != null and $count > 0)
+                | {kind: "section-count", line: $l.n, region: $l.region, text: $l.raw, count: $count}
+              )
+            end
+        ];
+
+      def count_by(f):
+        group_by(f) | map({key: (.[0] | f | tostring), value: length}) | from_entries;
+
+      def unaccounted($findings):
+        . as $signals
+        | ($findings | count_by(.region)) as $found
+        | ($findings | map(select(.at != null)) | count_by(.at)) as $found_at
+        | ($findings | map(select(.at == null)) | count_by(.region)) as $located
+        | ($signals | map(select(.kind == "thread-link")) | count_by(.region)) as $links
+        | ($signals | map(select(.kind == "location")) | count_by(.region)) as $locations
+        | [
+            (
+              $signals
+              | map(select(.kind == "vote"))
+              | group_by(.line)[]
+              | select(length > ($found_at[.[0].line | tostring] // 0))
+              | .[0]
+            ),
+            (
+              $signals[]
+              | select(
+                  (
+                    .kind == "location"
+                    and (($located[.region] // 0) < ($locations[.region] // 0))
+                  )
+                  or (
+                    .kind == "section-count"
+                    and (.region as $region | non_finding_sections | any(. == $region) | not)
+                    and .count != (($found[.region] // 0) + ($links[.region] // 0))
+                  )
+                )
+            )
+          ]
+          | sort_by(.line)
+          | map({kind, region, line, text: (.text | .[0:200])});
 
       [
         .[]
@@ -704,14 +915,23 @@ function do_parse_reviews() {
         # tag, and review bodies open with a verdict heading instead, so it has
         # nothing to match on.
         | select((.user.login? // "") as $login | $direct_logins | any(. == $login))
-        | select((.body // "") != "")
+        # The shell names any skipped non-string body before this runs.
+        | select((.body | type) == "string" and .body != "")
+        | (.body | annotate) as $lines
         | (.body | suppressed_slice) as $slice
         | (.body | verdict) as $verdict
         | (.body | is_overview_v2) as $is_v2
-        | ($slice | suppressed_findings) as $suppressed_findings
+        # A legacy section is announced by its first matching line, and its
+        # findings belong to the region that line opened.
+        | (
+            first($lines[] | select((.fence | not) and announces_section(.raw)) | .region)
+            // "lead"
+          ) as $suppressed_region
+        | ($slice | suppressed_findings($suppressed_region)) as $suppressed_findings
         | (if $is_v2 then (.body | previously_missed_findings) else [] end) as $missed_findings
-        | (if $is_v2 then (.body | table_findings) else [] end) as $table_findings
+        | (if $is_v2 then table_findings($lines) else [] end) as $table_findings
         | ($suppressed_findings + $missed_findings + $table_findings) as $findings
+        | ($lines | signals | unaccounted($findings)) as $unaccounted
         | (.body | has_suppressed_marker) as $has_suppressed_marker
         | ($is_v2 and (.body | lists_open_threads)) as $lists_open_threads
         | ($is_v2 and (.body | lists_resolved_threads)) as $lists_resolved_threads
@@ -770,6 +990,7 @@ function do_parse_reviews() {
             # section reads as clean.
             hasFormatDrift: (
               ($is_v2 and $stated_shortfall)
+              or (($unaccounted | length) > 0)
               or (
                 ($findings | length) == 0
                 and (
@@ -790,9 +1011,12 @@ function do_parse_reviews() {
                 )
               )
             ),
+            unaccounted: $unaccounted,
             suppressed: $slice,
             reviewBody: .body,
-            findings: $findings
+            # "at" is the census bookkeeping described above, not part of
+            # a finding a caller reads.
+            findings: ($findings | map(del(.at)))
           }
       ]
     ' <<< "${input}"

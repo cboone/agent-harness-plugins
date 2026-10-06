@@ -41,7 +41,7 @@ and resolved findings in the same review are not emitted again.
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | jq -c '[.[] | {id, url, findings}]'
-[{"id":6000000002,"url":"https://github.com/o/r/pull/1#pullrequestreview-6000000002","findings":[{"location":"src/report/render.js:197","path":"src/report/render.js","line":197,"severity":"Medium","body":"Handle null timeZone before constructing the formatter\n\nPassing null as the formatter time zone throws. Normalize null to undefined before constructing the formatter."}]},{"id":6000000003,"url":"https://github.com/o/r/pull/1#pullrequestreview-6000000003","findings":[{"location":"src/domain/report-contract.js:171","path":"src/domain/report-contract.js","line":171,"severity":"Medium","body":"Reject sparse arrays\n\nReject missing indexed elements so malformed input cannot bypass the contract."}]}]
+[{"id":6000000002,"url":"https://github.com/o/r/pull/1#pullrequestreview-6000000002","findings":[{"location":"src/report/render.js:197","path":"src/report/render.js","line":197,"severity":"Medium","body":"Handle null timeZone before constructing the formatter\n\nPassing null as the formatter time zone throws. Normalize null to undefined before constructing the formatter.","source":"previously-missed","region":"Previously missed"}]},{"id":6000000003,"url":"https://github.com/o/r/pull/1#pullrequestreview-6000000003","findings":[{"location":"src/domain/report-contract.js:171","path":"src/domain/report-contract.js","line":171,"severity":"Medium","body":"Reject sparse arrays\n\nReject missing indexed elements so malformed input cannot bypass the contract.","source":"previously-missed","region":"Previously missed"}]}]
 ```
 
 ## Overview v2 table findings
@@ -51,7 +51,7 @@ entry. Formatting U+200B characters are removed from the path.
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d.json" | jq -c '.[0] | {verdict, hasFormatDrift, findings}'
-{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":false,"findings":[{"location":"src/handlers/example.js","path":"src/handlers/example.js","line":null,"severity":"Moderate","body":"validate optional replacement values"},{"location":"src/handlers/example.js","path":"src/handlers/example.js","line":null,"severity":"Nit","body":"narrow the error documentation"}]}
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":false,"findings":[{"location":"src/handlers/example.js","path":"src/handlers/example.js","line":null,"severity":"Moderate","body":"validate optional replacement values","source":"table","region":"What changed in this PR"},{"location":"src/handlers/example.js","path":"src/handlers/example.js","line":null,"severity":"Nit","body":"narrow the error documentation","source":"table","region":"What changed in this PR"}]}
 ```
 
 ## Overview v2 table findings survive unusual text
@@ -354,53 +354,93 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 These fixtures record shapes taken from live reviews: bold severity tokens in
 file-summary cells, tokens after a cell's description, items separated by a
 period, lowercase severities, and vote-tagged bullets under a findings label.
-Each case pins what the parser returns for that shape.
+The parsers do not read them yet, so each one would look like a review with
+nothing to say. The census is what makes the gap visible: every vote tag a
+body line carries must be matched by a finding parsed from that line, and each
+line that falls short is reported in `unaccounted` and sets `hasFormatDrift`.
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-bold-votes.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
-{"hasFormatDrift":false,"findings":0}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-bold-votes.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
+{"hasFormatDrift":true,"findings":0,"unaccounted":["vote line 26","vote line 27"]}
 ```
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-bold-after-description.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
-{"hasFormatDrift":false,"findings":0}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-bold-after-description.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
+{"hasFormatDrift":true,"findings":0,"unaccounted":["vote line 26","vote line 27","vote line 28"]}
+```
+
+A partial parse is caught too. These two bodies each yield some findings, and
+before the census that was enough to read as fully parsed.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-sentence-items.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
+{"hasFormatDrift":true,"findings":2,"unaccounted":["vote line 27"]}
 ```
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-sentence-items.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
-{"hasFormatDrift":false,"findings":2}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-lowercase-severity.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
+{"hasFormatDrift":true,"findings":5,"unaccounted":["vote line 35"]}
 ```
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-lowercase-severity.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
-{"hasFormatDrift":false,"findings":5}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-review-findings-bullets.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
+{"hasFormatDrift":true,"findings":0,"unaccounted":["vote line 31","vote line 32","vote line 33","vote line 34","vote line 35"]}
 ```
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-review-findings-bullets.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
-{"hasFormatDrift":false,"findings":0}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-b-overview-bullets.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
+{"hasFormatDrift":true,"findings":4,"unaccounted":["vote line 18","vote line 19","vote line 20","vote line 21","vote line 22","vote line 23","vote line 24"]}
 ```
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-b-overview-bullets.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
-{"hasFormatDrift":false,"findings":4}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-each-item.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
+{"hasFormatDrift":true,"findings":0,"unaccounted":["vote line 25"]}
+```
+
+Each entry names the region and quotes the line, so a reader can find the
+content without opening the review.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-bold-votes.json" | jq -c '.[0].unaccounted[0] | {kind, region, line}'
+{"kind":"vote","region":"What changed in this PR","line":26}
+```
+
+A vote tag quoted in a finding's prose cannot be told apart from an item the
+parser missed, so it is reported. That is the safe direction: the cost is one
+read, where the opposite rule would let a missed item through.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-table-edge.json" | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
+{"hasFormatDrift":true,"unaccounted":["vote line 22"]}
+```
+
+A vote tag inside an inline code span is quoted text and does not count.
+
+```scrut
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"<!-- ccr-overview-v2 -->\n\n### 🟢 Approval recommended\n\nNo issues.\n\n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\n| File | Summary |\n|---|---|\n| `src/a.js` | Parses `Nit (1 vote):` tags. |\n</details>"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":false,"unaccounted":[]}
+```
+
+A section Copilot has not shipped before is read by what it lists, not by its
+name. One whose count matches the thread links it carries is accounted for the
+first time it appears. One whose items nothing parses leaves its count
+unaccounted.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-new-thread-section.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted}'
+{"hasFormatDrift":false,"findings":0,"unaccounted":[]}
 ```
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-each-item.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
-{"hasFormatDrift":false,"findings":0}
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-new-prose-section.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length), unaccounted: [.unaccounted[] | "\(.kind) \(.region) line \(.line)"]}'
+{"hasFormatDrift":true,"findings":0,"unaccounted":["section-count Also worth checking line 19"]}
 ```
 
-A section Copilot has not shipped before, listing thread links or prose.
+Two counted sections list files rather than findings and are exempt.
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-new-thread-section.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
-{"hasFormatDrift":false,"findings":0}
-```
-
-```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-new-prose-section.json" | jq -c '.[0] | {hasFormatDrift, findings: (.findings | length)}'
-{"hasFormatDrift":false,"findings":0}
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"<!-- ccr-overview-v2 -->\n\n### 🟢 Approval recommended\n\nNo issues.\n\n**Findings:** None\n\n<details>\n<summary>Files not reviewed (2)</summary>\n\n* **a.lock**: Generated file\n* **b.lock**: Generated file\n</details>"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":false,"unaccounted":[]}
 ```
 
 ## Reviews whose only content is the lead paragraph
@@ -440,12 +480,31 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/n
 {"verdict":null,"hasFormatDrift":false,"findings":0}
 ```
 
-## A review body that is not a string
+## A review body that is not a string is skipped, not fatal
+
+One malformed review used to abort the whole run and take every well-formed
+review with it. It is now skipped, and the well-formed review still parses.
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/malformed-body.json" 2>&1
-jq: error (at <stdin>:*): split input and separator must be strings (glob)
-[5]
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/malformed-body.json" 2> /dev/null | jq -c '[.[].id]'
+[6000000042]
+```
+
+The skip is named on stderr, with the review id, so it is never silent.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/malformed-body.json" 2>&1 > /dev/null
+Warning: skipping review 6000000043: its body is not a string.
+```
+
+## A jq too old for the filter is named
+
+The filter needs jq 1.7 or later. An older jq would fail it as a compile error
+that names neither the version nor the cause.
+
+```scrut
+$ fake="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '#!/usr/bin/env bash\necho jq-1.6\n' > "${fake}/jq" && chmod +x "${fake}/jq" && echo '[]' | PATH="${fake}:${PATH}" "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews 2>&1; rm -rf "${fake}"
+Error: jq 1.7 or later is required, found jq-1.6. Install it: https://jqlang.github.io/jq/download/
 ```
 
 ## Finding bodies keep their prose and fenced context
