@@ -106,7 +106,7 @@ Redefine the output around the two meanings:
 
   It keeps today's consequence: a workflow-level failure, `Partial`, and a `monitor-pr` escalation.
 
-- **`needsRead`** means the layout was read, and the lead paragraph is the only place a concern can be stated. It is true for a non-green verdict when the body has no `Open (N)` threads and no parsed findings, and the lead is not one of the known no-finding sentences. This is the branch that currently reports drift through #516's unexplained-verdict rule.
+- **`needsRead`** means the layout was read, and the lead paragraph may state a concern nothing else records. It is true when the lead is anything but a known no-finding sentence, whatever the verdict and whatever else parsed, and also for a non-green verdict with no `Open (N)` threads and no parsed findings unless a resolved-only round's lead is known. The second case is what #516's unexplained-verdict rule reported as drift. The first was widened after the branch review (see [Decisions](#decisions)), because an approval can name a nit and a lead beside a parsed finding can name a second one.
 
 When `needsRead` is true, the script also emits the lead as one finding: `{source: "lead", region: "lead", path: null, line: null, location: "(review overview)", severity: null, body: <lead paragraph>}`. This is #492's proposal. Severity stays null rather than being inferred from the verdict color.
 
@@ -188,7 +188,7 @@ Each concern counts once, in the first of these that applies: matched to a threa
 
 ### Layer 8: `monitor-pr`
 
-The step 3 probe projects `needsRead`, `reviewKind` and `unaccounted | length` alongside the fields it projects today.
+The step 3 probe projects `needsRead`, `reviewKind` and `unaccounted | length` alongside the fields it projects today, and runs `audit` as a third command, projecting the `uncovered` and `legacyNeedsRead` ids. Audit items are PR-wide and persist like review-body findings: a new id dispatches to step 7b even against a review already processed, and step 7b's record of an id clears it.
 
 - Step 4 dispatches a `needsRead` review to the resolver once per review id, like review-body findings. A `needsRead` review that the resolver has already processed clears the axis on a `Completed` outcome and never escalates on its own.
 - Drift keeps its escalation path.
@@ -325,4 +325,6 @@ All decided on 2026-10-06.
 
 1. **Canary scope.** The canary is local-only, with no scheduled workflow, for the reasons given under Layer 9.
 1. **Advisory reach.** Advisory concerns do not block `monitor-pr`. They surface in the resolver's summary and in `monitor-pr`'s ready report (Layer 8). Blocking was rejected for two reasons. Review bodies never change, so a blocking advisory would need an acknowledgment mechanism to ever clear, without which it recreates #536. And advisory leads are common enough that acknowledging each one would interrupt most watches. If an advisory is ever missed at merge time, an acknowledgment rule can be added on top of this without changing the parser.
+1. **`monitor-pr` runs the audit (2026-10-06, after the branch review).** Without it, a Copilot reply inside a thread someone else opened, a Copilot comment on the PR itself, or an older-layout review only a read can settle would leave the Copilot axis clean while the feedback sat unread.
+1. **Every lead that is not known boilerplate is read (2026-10-06, after the branch review).** The earlier rule read a lead only for a non-green verdict with nothing else parsed, so an approval naming a nit, or a lead naming a defect beside one parsed finding, was dropped. Across the 320-review sample this raises the reviews needing a read from 95 to 297 of 317 v2 reviews; the lead settlement line now also counts leads that state no concern, which measures that cost.
 1. **Restated threads.** The agent matches lead concerns to threads in step 1d, and the script does not attempt it. Leads paraphrase and blend several concerns into one sentence, so a keyword match can pair a new concern with an old thread and clear it without anyone noticing, which is the failure this plan exists to remove. The lead settlement line (Layer 7) measures how often leads are pure restatements. Mechanical matching is worth revisiting only if those summaries show restatements are most lead findings, and even then it should clear only a lead whose every concern matches.

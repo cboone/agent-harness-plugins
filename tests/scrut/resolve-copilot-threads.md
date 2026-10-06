@@ -1065,6 +1065,20 @@ $ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_
 {"id":null,"url":null,"reviewKind":null,"hasFormatDrift":null,"needsRead":null,"findings":0,"unaccounted":0}
 ```
 
+The audit filter reduces `audit` to the ids step 7b records as processed. The
+`audited` field is what tells an empty audit from a failed one: a failed
+`audit` emits nothing, and the filter then emits nothing too, so the watch
+reads "not observed" rather than "nothing uncovered".
+
+```scrut
+$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-audit < "${COPILOT_AUDIT_DATA_DIR}/uncovered.json" | jq -c '{audited: true, uncovered: [.uncovered[].id], legacyNeedsRead}'
+{"audited":true,"uncovered":[9103,9104,9202],"legacyNeedsRead":[]}
+```
+
+```scrut
+$ printf '' | jq -c '{audited: true, uncovered: [.uncovered[].id], legacyNeedsRead}'
+```
+
 The thread-side filter reduces `fetch` the same way, to a count plus locations.
 `fetch` needs GraphQL credentials, so this runs the filter over the shape that
 command returns.
