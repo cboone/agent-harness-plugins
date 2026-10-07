@@ -24,7 +24,8 @@ An explicit flag beats asking every time, since both readings are reasonable and
 - The branch candidate is named for the combined work, not only the primary issue.
 - The prompt carries every issue. Run `compose-issue-prompt` once per issue and check that every composition succeeds before invoking the launcher; a failed early issue must not leave a partial prompt to launch. Join the successful outputs. Omit `--chain-command` on all but the last call; the helper already emits the footer only when that option is present.
 - In `address-issue-in-worktree`, the chain command lists every number: `/address-issue 42 57`. Update `address-issue` throughout its workflow, not only its entry point: fetch and show every issue, check each state, self-assign and label each open issue, collect the requirements into one plan with one approval gate, and report status for every issue. Its commits must reference every issue addressed by the combined work. Keep `--dry-run`, `--no-approval`, `--no-commit`, and `--commit-per-change` scoped to the one combined plan.
-- In `address-issue-in-worktree`, every issue is self-assigned and labeled "in progress", since the session starts work on all of them.
+- In `address-issue-in-worktree`, every issue is self-assigned and labeled "in progress", since the session starts work on all of them. Compose the combined prompt into a temporary file before marking, so a failed composition leaves no issue marked without a worktree.
+- Several issues are always issue numbers. Descriptive text names one issue, so a list never mixes numbers with search text.
 
 ### Fan-out mode
 
@@ -34,7 +35,7 @@ Run it in two phases so a problem with one issue surfaces before anything is lau
 
 1. **Gather and validate everything first.**
    - Fetch every issue into its own `mktemp` file.
-   - Flag closed issues and ambiguous text searches.
+   - Flag closed issues.
    - Resolve the default base branch once.
    - Generate every branch candidate.
    - Resolve existing local branches for every issue through a read-only `launch-workmux --resolve-issue-branch NUMBER` mode, so preflight uses the launcher's matching rules. Flag multiple matches and settle each branch choice before launch. Check for duplicate issue numbers so the same worktree is not launched twice.
@@ -42,7 +43,9 @@ Run it in two phases so a problem with one issue surfaces before anything is lau
 2. **Launch one at a time.** For each issue: compose its prompt, launch it, confirm its worktree and tmux window, mark it in progress after success (in `address-issue-in-worktree` only), and remove its temp file. Marking after success avoids leaving a newly assigned and labeled issue when its worktree was not created.
    - Extend `launch-workmux` with an `--await-completion` mode for the fan-out loop. Keep `workmux add` detached from the invoking agent, but have the detached process record its final exit status and log in per-launch temporary files. The caller waits for that result, verifies the selected branch's worktree and tmux window, and only then starts the next launch. A fixed sleep is not a completion signal; the current helper returns after `WORKMUX_LAUNCH_WAIT_SECONDS` even if `workmux add` is still running or has failed.
    - Put an explicit bound on waiting and report a timeout as an uncertain launch, with the branch and any observed worktree or window state. Do not launch another issue while the prior `workmux add` is still running, because concurrent additions can race in Git and tmux. Define cleanup ownership so neither the prompt nor the log is removed before the detached process finishes.
-3. **Continue past a completed failure.** Record the failure and move to the next issue only after the failed `workmux add` has exited. If the completion wait expires while it is still running, stop the loop and report the remaining issues as unlaunched. Remove each issue JSON file when no longer needed; the detached process owns its prompt and log files until it exits, including after a timeout.
+   - Keep the bound below the agent's shell tool timeout: default `WORKMUX_LAUNCH_TIMEOUT_SECONDS` to 90, below Claude Code's 120-second Bash default, and tell the skills to run the launch with a longer tool timeout. Treat any other result, such as a tool timeout, like a timeout. Run the detached launch in its own process group with hangups ignored, so a harness stopping the launcher does not stop `workmux add`.
+   - After a timeout, keep the detached launch's exit status and log in its state directory and print that path, so the user can settle the uncertain result later.
+3. **Continue past a completed failure.** Record the failure and move to the next issue only after the failed `workmux add` has exited. If the completion wait expires while it is still running, stop the loop and report the remaining issues as unlaunched. Remove each issue JSON file when no longer needed; the detached process owns its prompt until it exits, and after a timeout leaves its state directory for the user.
 
 The preflight branch check must agree with the launcher's final branch selection. Recheck at launch because another process can create a branch after preflight; if that creates a new ambiguity, record it for that issue rather than choosing a branch silently. If best-effort status marking fails after a successful launch, report the worktree as created and the marking result separately.
 
@@ -93,6 +96,6 @@ Fan-out ends with one table: issue, title, branch (generated or reused), tmux wi
   - `--each` and `--separate` produce the same per-issue behavior as `--fan-out` in both worktree skills, including the single-issue path and option rejections.
   - With one distinct issue, an alias and `--resource` use the ordinary resource path; `create-worktree` also accepts an alias with `--branch` and retains the issue prompt.
   - `/create-worktree A B` is classified as issues, not a task description.
-  - No `issue-json-*` or `workmux-prompt-*` temp files remain after completed launches. After a timeout, the detached process removes its prompt and log when it exits.
+  - No `issue-json-*` or `workmux-prompt-*` temp files remain after completed launches. After a timeout, the detached process removes its prompt when it exits and leaves its status and log in the state directory the launcher printed.
   - A launch that fails or exceeds the completion wait is reported for its issue without starting another `workmux add` while it is still running. A completed failed launch does not appear as a success just because the launcher printed a generated branch name.
   - Combined `/address-issue A B` fetches and plans both issues under one approval gate, marks both open issues in progress, and includes both issue references in commits and completion reporting.
