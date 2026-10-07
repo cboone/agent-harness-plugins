@@ -234,6 +234,16 @@ $ jq -r '.tiers.now[] | select(.number == 11 or .number == 25) | "#\(.number)", 
   triage set: two donors reported it
 ```
 
+## A public security bug needs some evidence to reach Now
+
+`#11` is known from source, so it sits in Now. With its evidence and environment `unknown`, as
+for an audit nobody has run, it needs investigating instead.
+
+```scrut
+$ jq 'map(if .number == 11 then .evidence = "unknown" | .environment = "unknown" | .question = "Is the API reachable?" else . end)' "${assessments}" > "${work}/unverified.json" && bugs score "${work}/config.json" "${work}/gather.json" "${work}/unverified.json" "${work}/unverified-scored.json" > /dev/null && jq -r '[.tiers | to_entries[] | select(.value | any(.number == 11)) | .key] | first' "${work}/unverified-scored.json"
+investigate
+```
+
 ## A deadline inside the window places a bug in Today
 
 `#15` is due 2026-10-20, five days after the gather.

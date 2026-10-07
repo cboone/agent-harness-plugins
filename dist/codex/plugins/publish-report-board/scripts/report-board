@@ -413,7 +413,7 @@ def earns_now:
   and ((.environment == "production" and (.evidence | in_list(["user-report", "production-observed", "reproduced"]))
         and (.surface | in_list(["public", "signed-in"])) and (.impact | in_list(["security", "data-loss", "money", "access", "core-flow"]))
         and .workaround == "none")
-       or (.impact == "security" and .surface == "public" and (.environment | in_list(["production", "unknown"]))));
+       or (.impact == "security" and .surface == "public" and .evidence != "unknown" and (.environment | in_list(["production", "unknown"]))));
 
 if type != "object" then "the top level must be a JSON object"
 # A control character answers alone, because later messages quote the values

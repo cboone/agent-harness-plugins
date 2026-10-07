@@ -470,9 +470,9 @@ $config as $c
       elif $b.parkLabel then {tier: "parked", reason: "labeled \([$b.labels[] | select(in_list($c.parkLabels))] | join(", "))"}
       elif $b.zenhub.level != null and ($b.zenhub.level | in_list($c.containerLevels)) then {tier: "parked", reason: "a container"}
       elif ($a.mitigated | not) and $confirmed and ($a.surface | user_surface) and ($a.impact | high_impact) and $a.workaround == "none" then {tier: "now", why: "hurting users on production"}
-      elif ($a.mitigated | not) and $a.impact == "security" and $a.surface == "public" and ($a.environment | in_list(["production", "unknown"])) then {tier: "now", why: "public security exposure"}
+      elif ($a.mitigated | not) and $a.impact == "security" and $a.surface == "public" and $a.evidence != "unknown" and ($a.environment | in_list(["production", "unknown"])) then {tier: "now", why: "public security exposure"}
       elif ($a.mitigated | not) and $confirmed and ($a.surface | user_surface) and (($a.reach | in_list(["some", "many", "all"])) or $a.workaround == "none") then {tier: "today", why: "affecting users on production"}
-      elif ($a.mitigated | not) and ($a.impact | high_impact) and ($a.surface | user_surface) and ($a.environment | in_list(["production", "unknown"])) and ($confirmed | not) and ($a.deadline == null or due($a))
+      elif ($a.mitigated | not) and ($a.impact | high_impact) and ($a.surface | user_surface) and ($a.environment | in_list(["production", "unknown"])) and ($confirmed | not) and $a.evidence != "unknown" and ($a.deadline == null or due($a))
         then {tier: "today", why: "confirm on production", confirm: true}
       elif ($a.mitigated | not) and $a.timeSensitive and $a.deadline == null then {tier: "today", why: "worse with every event"}
       elif ($a.mitigated | not) and due($a) then {tier: "today", why: "due \($a.deadline)"}
