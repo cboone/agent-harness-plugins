@@ -562,7 +562,13 @@ else
                     check($entry.action | is_text; "\($at): action is required, the next concrete step"),
                     check($entry.impact | is_text; "\($at): impact is required, who is affected and how"),
                     check($entry.signals | type == "array" and length > 0; "\($at): needs at least one signal"),
-                    ($entry | signal_problems($at))
+                    ($entry | signal_problems($at)),
+                    (placement($b.number) as $p
+                     | (if $name == "critical" then
+                          check(($p.verb == "escalate") or ($b.assessment | objects | earns_critical) or any($entry.signals | as_list | .[]; .source == "triage" and .kind == "escalate");
+                            "\($at) has neither an escalate entry nor an assessment that earns Critical")
+                        else empty end),
+                       (if $p != null and ($p.verb | IN("snooze", "park")) then "\($at) is \(if $p.verb == "snooze" then "snoozed" else "parked" end) by \($p.id); only a later escalate brings it back" else empty end))
                   elif $name == "ready" then
                     check($entry.why | is_text; "\($at): why is required"),
                     (if ($entry.group | IN(ready_groups[]) | not) then "\($at): group must be one of \(ready_groups | join(", "))"
@@ -577,16 +583,7 @@ else
                     check($entry.reason | is_text; "\($at): reason is required")
                   else
                     check($entry.verify | absent_or(type == "boolean"); "\($at): verify must be true or false")
-                  end),
-                 (if $name == "critical" then
-                    (placement($b.number) as $p
-                     | check(($p.verb == "escalate") or ($b.assessment | objects | earns_critical) or any($entry.signals | as_list | .[]; .source == "triage" and .kind == "escalate");
-                         "\($at) has neither an escalate entry nor an assessment that earns Critical"))
-                  else empty end),
-                 (if $name | IN("critical", "high") then
-                    (placement($b.number) as $p
-                     | if $p != null and ($p.verb | IN("snooze", "park")) then "\($at) is \(if $p.verb == "snooze" then "snoozed" else "parked" end) by \($p.id); only a later escalate brings it back" else empty end)
-                  else empty end)
+                  end)
                end
            end
        end),
@@ -930,28 +927,21 @@ function validate_data() {
   require_single_document "${data_file}"
   board="$(board_type "${data_file}")"
   zone_known="$(zone_status "${data_file}")"
-  case " ${BOARD_TYPES} " in
-    *" ${board} "*)
-      if [[ "${board}" == "bugs" ]]; then
-        # Triage until dates count in the local days of sync.timeZone. An
-        # unknown zone is reported, and the dates then count in UTC.
-        [[ "${zone_known}" != true ]] || time_zone="$(jq -r '.sync.timeZone' "${data_file}")"
-        problems="$(TZ="${time_zone}" jq -r --arg zone_pattern "${ZONE_PATTERN}" --argjson zone_known "${zone_known}" "${BUGS_VALIDATE_FILTER}" "${data_file}")"
-      else
-        problems="$(jq -r --arg zone_pattern "${ZONE_PATTERN}" --argjson zone_known "${zone_known}" "${BACKLOG_TRIAGE_VALIDATE_FILTER}" "${data_file}")"
-      fi
-      ;;
-    *)
-      # A board value that is missing or malformed goes through the backlog
-      # rules, which report it along with everything else. A well-formed name
-      # of a type this script does not know is the whole problem.
-      if [[ "${board}" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
-        problems="board: ${board} is not a board type this script knows; expected one of: ${BOARD_TYPES// /, }"
-      else
-        problems="$(jq -r --arg zone_pattern "${ZONE_PATTERN}" --argjson zone_known "${zone_known}" "${BACKLOG_TRIAGE_VALIDATE_FILTER}" "${data_file}")"
-      fi
-      ;;
-  esac
+  if [[ "${board}" == "bugs" ]]; then
+    # Triage until dates count in the local days of sync.timeZone. An unknown
+    # zone is reported, and the dates then count in UTC.
+    [[ "${zone_known}" != true ]] || time_zone="$(jq -r '.sync.timeZone' "${data_file}")"
+    problems="$(TZ="${time_zone}" jq -r --arg zone_pattern "${ZONE_PATTERN}" --argjson zone_known "${zone_known}" "${BUGS_VALIDATE_FILTER}" "${data_file}")"
+  elif [[ " ${BOARD_TYPES} " != *" ${board} "* && "${board}" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+    # A well-formed name of a type this script does not know is the whole
+    # problem.
+    problems="board: ${board} is not a board type this script knows; expected one of: ${BOARD_TYPES// /, }"
+  else
+    # Backlog triage data goes through the backlog rules, and so does a board
+    # value that is missing or malformed, which they report along with
+    # everything else.
+    problems="$(jq -r --arg zone_pattern "${ZONE_PATTERN}" --argjson zone_known "${zone_known}" "${BACKLOG_TRIAGE_VALIDATE_FILTER}" "${data_file}")"
+  fi
   [[ -z "${problems}" ]] && return 0
 
   printf '%s: %s is not valid board data:\n' "${SCRIPT_NAME}" "${data_file}" >&2

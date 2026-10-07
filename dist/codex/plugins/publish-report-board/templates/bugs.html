@@ -741,7 +741,7 @@
     try {
       origin = new URL(repoUrl).origin;
     } catch {
-      origin = "https://github.com";
+      // An unparsable repoUrl keeps the GitHub origin.
     }
     const repoBase = data.repo && repoUrl.endsWith(`/${data.repo}`) ? repoUrl.slice(0, -(data.repo.length + 1)) : origin;
     const pathPart = (text) => String(text).split("/").map(encodeURIComponent).join("/");
@@ -805,6 +805,9 @@
     // The local calendar day of the sync, which a triage until date and an
     // assessment deadline count against.
     const syncDay = formatSync("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" });
+    const syncText = [dateText, timeText].filter(Boolean).join(", ");
+    const branchLink = () => link(`${repoUrl}/tree/${pathPart(data.sync.branch)}`, data.sync.branch);
+    const commitLink = () => link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8));
 
     const age = h("p", { class: "when-age" });
     // Adapted from refreshAge() in backlog-triage.html, which counts in days;
@@ -955,12 +958,8 @@
           h("h1", { class: "repo" }, link(repoUrl, name)),
         ]),
         h("div", { class: "when" }, [
-          h("time", { class: "when-time", datetime: data.sync.at }, [dateText, timeText].filter(Boolean).join(", ")),
-          h("p", null, [
-            link(`${repoUrl}/tree/${pathPart(data.sync.branch)}`, data.sync.branch),
-            " @ ",
-            link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8)),
-          ]),
+          h("time", { class: "when-time", datetime: data.sync.at }, syncText),
+          h("p", null, [branchLink(), " @ ", commitLink()]),
           age,
         ]),
       ]),
@@ -999,15 +998,18 @@
         : "Nothing else is pressing.",
       high.length ? h("ol", { class: "ruled" }, high.map((entry, i) => urgentRow(entry, i, "high"))) : null,
     );
+    function readyNote() {
+      if (!ready.length) return "Nothing is ready to land or fix.";
+      if (readyRest.length) {
+        return `The top ${readyTop.length} of ${ready.length}: fixes to land, work underway, and bugs whose cause is known.`;
+      }
+      return "Fixes to land, work underway, and bugs whose cause is known.";
+    }
     const readySection = section(
       "ready",
       "ready",
       "Ready to go",
-      ready.length
-        ? readyRest.length
-          ? `The top ${readyTop.length} of ${ready.length}: fixes to land, work underway, and bugs whose cause is known.`
-          : "Fixes to land, work underway, and bugs whose cause is known."
-        : "Nothing is ready to land or fix.",
+      readyNote(),
       ready.length
         ? [
             readyColumns(readyTop),
@@ -1073,33 +1075,41 @@
         ]),
       ]);
     }
-    const lowerReasons = [...new Set(lower.map((entry) => entry.reason))];
-    const lowerSection = section(
-      "lower",
-      "report",
-      "Lower priority",
-      lower.length
-        ? lowerReasons.length === 1 && lowerReasons[0] === "internal"
-          ? `${count(lower.length, "bug", "bugs")} that only reach maintainers: tooling, tests, alerts, and deploy scripts.`
-          : `${count(lower.length, "bug", "bugs")} that reach only maintainers or change nothing a person relies on.`
-        : "Nothing sits at lower priority.",
-      lower.length ? lowerTable() : null,
-    );
+    function lowerNote() {
+      if (!lower.length) return "Nothing sits at lower priority.";
+      const bugs = count(lower.length, "bug", "bugs");
+      if (lower.every((entry) => entry.reason === "internal")) {
+        return `${bugs} that only reach maintainers: tooling, tests, alerts, and deploy scripts.`;
+      }
+      return `${bugs} that reach only maintainers or change nothing a person relies on.`;
+    }
+    const lowerSection = section("lower", "report", "Lower priority", lowerNote(), lower.length ? lowerTable() : null);
 
-    const checkIcon = () => {
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.setAttribute("width", "14");
-      svg.setAttribute("height", "14");
-      svg.setAttribute("viewBox", "0 0 14 14");
-      svg.setAttribute("fill", "none");
-      svg.setAttribute("stroke", "currentColor");
-      svg.setAttribute("stroke-width", "2");
-      svg.setAttribute("aria-hidden", "true");
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", "M2 7.5 5.5 11 12 3");
-      svg.append(path);
+    function svgElement(tag, attributes) {
+      const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
+      return element;
+    }
+    function checkIcon() {
+      const svg = svgElement("svg", {
+        width: "14",
+        height: "14",
+        viewBox: "0 0 14 14",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "2",
+        "aria-hidden": "true",
+      });
+      svg.append(svgElement("path", { d: "M2 7.5 5.5 11 12 3" }));
       return svg;
-    };
+    }
+    // How a fixed bug closed: the pull requests that fixed it, or its close
+    // reason.
+    function closedBy(bug) {
+      if (bug.fixedBy?.length) return ["fixed by ", bug.fixedBy.map((n, i) => [i ? ", " : "", pullRef(n)])];
+      const reason = String(bug.stateReason ?? "closed").toLowerCase().replace(/_/g, " ");
+      return reason === "completed" ? "closed" : reason;
+    }
     const fixedSection = section(
       "fixed",
       "report",
@@ -1111,21 +1121,12 @@
             { class: "ruled" },
             fixed.map((entry) => {
               const bug = byNumber.get(entry.item);
-              const reason = String(bug.stateReason ?? "closed").toLowerCase().replace(/_/g, " ");
               return h("li", { class: "fixed-row" }, [
                 checkIcon(),
                 ref(bug.number),
                 h("span", { class: "fixed-title" }, bug.title),
                 entry.verify ? h("span", { class: "tag tag--verify" }, "Verify on production") : null,
-                h(
-                  "span",
-                  { class: "label" },
-                  bug.fixedBy?.length
-                    ? ["fixed by ", bug.fixedBy.map((n, i) => [i ? ", " : "", pullRef(n)])]
-                    : reason === "completed"
-                      ? "closed"
-                      : reason,
-                ),
+                h("span", { class: "label" }, closedBy(bug)),
               ]);
             }),
           )
@@ -1194,11 +1195,11 @@
 
     const footer = h("footer", { class: "footer" }, [
       "Synced ",
-      [dateText, timeText].filter(Boolean).join(", "),
+      syncText,
       " against ",
-      link(`${repoUrl}/tree/${pathPart(data.sync.branch)}`, data.sync.branch),
+      branchLink(),
       " at ",
-      link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8)),
+      commitLink(),
       ". ",
       count(openBugs.length, "open bug", "open bugs"),
       typeof data.sync.openPullRequests === "number" ? `, ${count(data.sync.openPullRequests, "open fix", "open fixes")}` : "",

@@ -217,6 +217,7 @@ $config.bots as $bots
     | [$n.labels.nodes | as_list | .[] | .name] as $labels
     | [$n.comments.nodes | as_list | .[] | select(.author | is_bot($bots) | not)] as $people
     | [$n.closedByPullRequestsReferences.nodes | as_list | .[] | pr_of] as $prs
+    | (($n.authorAssociation | outside) and ($n.author | is_bot($bots) | not)) as $outside_reporter
     | {
         number: $n.number,
         title: $n.title,
@@ -229,7 +230,7 @@ $config.bots as $bots
         foundBy: $found,
         author: ($n.author.login // "ghost"),
         authorIsBot: ($n.author | is_bot($bots)),
-        outsideReporter: (($n.authorAssociation | outside) and ($n.author | is_bot($bots) | not)),
+        outsideReporter: $outside_reporter,
         assignees: [$n.assignees.nodes | as_list | .[] | .login],
         labels: $labels,
         type: ($n.issueType.name // null),
@@ -241,7 +242,7 @@ $config.bots as $bots
         # People outside the repository who reported or commented, counting
         # commenters among the most recent 30 comments, which is how many
         # users the bug has visibly reached.
-        outsidePeople: ([(select(($n.authorAssociation | outside) and ($n.author | is_bot($bots) | not)) | $n.author.login), ($people[] | select(.authorAssociation | outside) | .author.login)] | unique | length),
+        outsidePeople: ([(select($outside_reporter) | $n.author.login),($people[] | select(.authorAssociation | outside) | .author.login)] | unique | length),
         lastComment: ($people | last | if . == null then null else {author: (.author.login // "ghost"), at: .createdAt, outside: (.authorAssociation | outside)} end),
         fixes: [$prs[] | select(.state == "OPEN")],
         fixedBy: [$prs[] | select(.state == "MERGED")],
@@ -274,6 +275,15 @@ $response.data.workspace.activeSprint as $sprint
       truncated: [(select(.sprints.pageInfo.hasNextPage == true) | "sprints"), (select(.blockingIssues.pageInfo.hasNextPage == true) | "blocking issues"), (select(.blockedIssues.pageInfo.hasNextPage == true) | "blocked issues")]
     } end)}) | from_entries)
   }
+'
+
+# Sorts the errors in one ZenHub response. A lookup for an issue ZenHub does
+# not track fails on its own alias, a path of exactly one element, and leaves
+# that bug without ZenHub state; any other error, including one on a field
+# inside a lookup, is unexpected.
+readonly ZENHUB_ERROR_DEFS='
+def lookup_error: (.path // []) | length == 1 and (.[0] | type == "string" and test("^i[0-9]+$"));
+def unexpected_errors: [.errors[]? | select(lookup_error | not)];
 '
 
 # Assembles the gather document. Takes $config, $repository, $bugs, $zenhub
@@ -314,25 +324,27 @@ def entry($heading; $lines): if ($lines | length) > 0 then "- \($heading):", ($l
 def shown: if . == null then "none" else tostring end;
 def fix_state: [.fixes | as_list | .[] | "#\(.number) \(if .isDraft then "draft" else (.checks // "no checks" | ascii_downcase) end), \(.reviewDecision // "no review" | ascii_downcase | gsub("_"; " "))"];
 ($old.bugs | as_list | by_number) as $was
-| ($new.bugs | by_number) as $now
+# The cached copy of a bug in this gather, or null when the cache lacks it.
+| def cached: $was[.number | tostring];
+  ($new.bugs | by_number) as $now
 | [$new.bugs[] | select(.state == "open")] as $open
-| [$open[] | select($was[.number | tostring].state == "open")] as $kept
+| [$open[] | select(cached.state == "open")] as $kept
 | "Previous gather: \($old.gatheredAt // "unknown")",
   "This gather: \($new.gatheredAt)",
   "",
   ([
-    entry("New bugs"; [$open[] | select($was[.number | tostring] == null) | "\(describe) (by @\(.author)\(if .outsideReporter then ", outside reporter" else "" end))"]),
-    entry("Reopened"; [$open[] | select($was[.number | tostring].state == "closed") | describe]),
-    entry("Closed"; [$new.bugs[] | select(.state == "closed" and ($was[.number | tostring].state // "open") == "open" and $was[.number | tostring] != null) | "\(describe) (\(.stateReason // "closed" | ascii_downcase | gsub("_"; " ")))"]),
+    entry("New bugs"; [$open[] | select(cached == null) | "\(describe) (by @\(.author)\(if .outsideReporter then ", outside reporter" else "" end))"]),
+    entry("Reopened"; [$open[] | select(cached.state == "closed") | describe]),
+    entry("Closed"; [$new.bugs[] | select(.state == "closed" and (cached.state // "open") == "open" and cached != null) | "\(describe) (\(.stateReason // "closed" | ascii_downcase | gsub("_"; " ")))"]),
     entry("Left the board"; [$old.bugs | as_list | .[] | select(.state == "open" and $now[.number | tostring] == null) | "\(describe) (no longer a bug, or closed before this window)"]),
-    entry("New comments"; [$kept[] | select(.lastComment != null and .lastComment != $was[.number | tostring].lastComment) | "\(describe) (@\(.lastComment.author)\(if .lastComment.outside then ", outside" else "" end))"]),
-    entry("More reactions"; [$kept[] | $was[.number | tostring] as $w | select(.reactions > ($w.reactions // 0)) | "\(describe) (\($w.reactions // 0) to \(.reactions))"]),
-    entry("Fix changed"; [$kept[] | $was[.number | tostring] as $w | select(fix_state != ($w | fix_state)) | "\(describe) (\(fix_state | if length == 0 then "no open fix" else join("; ") end))"]),
-    entry("Labels changed"; [$kept[] | $was[.number | tostring] as $w | select((.labels | sort) != ($w.labels | as_list | sort)) | "\(describe) (now \(.labels | if length == 0 then "none" else join(", ") end))"]),
-    entry("Pipeline changed"; [$kept[] | $was[.number | tostring] as $w | select(.zenhub.pipeline != $w.zenhub.pipeline) | "\(describe) (\($w.zenhub.pipeline | shown) to \(.zenhub.pipeline | shown))"]),
-    entry("Joined the sprint"; [$kept[] | select(.zenhub.sprint == true and ($was[.number | tostring].zenhub.sprint != true)) | describe]),
-    entry("Left the sprint"; [$kept[] | select(.zenhub != null and .zenhub.sprint != true and ($was[.number | tostring].zenhub.sprint == true)) | describe]),
-    entry("Otherwise updated"; [$kept[] | $was[.number | tostring] as $w
+    entry("New comments"; [$kept[] | select(.lastComment != null and .lastComment != cached.lastComment) | "\(describe) (@\(.lastComment.author)\(if .lastComment.outside then ", outside" else "" end))"]),
+    entry("More reactions"; [$kept[] | cached as $w | select(.reactions > ($w.reactions // 0)) | "\(describe) (\($w.reactions // 0) to \(.reactions))"]),
+    entry("Fix changed"; [$kept[] | cached as $w | select(fix_state != ($w | fix_state)) | "\(describe) (\(fix_state | if length == 0 then "no open fix" else join("; ") end))"]),
+    entry("Labels changed"; [$kept[] | cached as $w | select((.labels | sort) != ($w.labels | as_list | sort)) | "\(describe) (now \(.labels | if length == 0 then "none" else join(", ") end))"]),
+    entry("Pipeline changed"; [$kept[] | cached as $w | select(.zenhub.pipeline != $w.zenhub.pipeline) | "\(describe) (\($w.zenhub.pipeline | shown) to \(.zenhub.pipeline | shown))"]),
+    entry("Joined the sprint"; [$kept[] | select(.zenhub.sprint == true and (cached.zenhub.sprint != true)) | describe]),
+    entry("Left the sprint"; [$kept[] | select(.zenhub != null and .zenhub.sprint != true and (cached.zenhub.sprint == true)) | describe]),
+    entry("Otherwise updated"; [$kept[] | cached as $w
       | select(.updatedAt != $w.updatedAt and .lastComment == $w.lastComment and .reactions == $w.reactions and fix_state == ($w | fix_state) and (.labels | sort) == ($w.labels | as_list | sort) and .zenhub == $w.zenhub) | describe])
   ] | if length == 0 then ["- Nothing moved."] else . end | .[])
 '
@@ -449,13 +461,15 @@ $config as $c
   def overrides($n): [$active[] | select(.target == $n and .verb == "set")] | sort_by(.instant);
   def due($a): $a.deadline != null and $a.deadline >= $today
     and (($a.deadline + "T00:00:00Z" | fromdateiso8601) - ($today + "T00:00:00Z" | fromdateiso8601)) <= $c.deadlineDays * 86400;
+  # The first open fix that is not a draft, or null.
+  def nondraft_fix($b): [$b.fixes[] | select(.isDraft | not)] | first;
   def progress_of($b):
-    ([$b.fixes[] | select(.isDraft | not)] | first | if . != null then "fix #\(.number)" else null end)
+    (nondraft_fix($b) | if . != null then "fix #\(.number)" else null end)
     // ([$b.fixes[] | select(.isDraft)] | first | if . != null then "draft fix #\(.number)" else null end)
     // ($b.zenhub.pipeline | if . != null and in_list($c.progressPipelines) then "the \(.) pipeline" else null end)
     // ([$b.labels[] | select(in_list($c.progressLabels))] | first | if . != null then "the \(.) label" else null end);
   def ready_group($b):
-    ([$b.fixes[] | select(.isDraft | not)] | first) as $fix
+    nondraft_fix($b) as $fix
     | if $fix == null then (if progress_of($b) != null then "in-progress" else "ready-to-fix" end)
       elif $fix.checks == "SUCCESS" and ($fix.reviewDecision == "APPROVED" or $fix.reviewDecision == null) then "ship"
       else "review" end;
@@ -527,7 +541,7 @@ $config as $c
      | place($a; $b) as $t
      | {number, title, url, author, assignees, labels, createdAt, updatedAt, outsidePeople, reactions,
         pipeline: ($b.zenhub.pipeline // null), sprint: ($b.zenhub.sprint // false),
-        fix: ([$b.fixes[] | select(.isDraft | not)] | first) // ($b.fixes | first),
+        fix: (nondraft_fix($b) // ($b.fixes | first)),
         assessment: ($a | {environment, evidence, surface, impact, reach, workaround, cause, timeSensitive, deadline, mitigated, gist, nextStep, question}),
         overridden: ([$set[] | .fields | keys[]] | unique),
         score: score_of($a; $b),
@@ -602,10 +616,10 @@ listed("Ready to go, top \(.readyLimit) above the fold"; .tiers.ready[0:.readyLi
 # triageProblems, which validation refuses until the note is fixed.
 # shellcheck disable=SC2016
 readonly DRAFT_FILTER='
-def as_list: if type == "array" then . else [] end;
 def open_bug: {number, title, url, state: "open", tier, author, createdAt, updatedAt, labels, pipeline, sprint, outsidePeople, reactions,
   fix: (if .fix == null then null else .fix | {number, url, isDraft, checks, reviewDecision} end),
   inProgress, assessment, overridden, score};
+def urgent_entry: {item: .number, why, confirm, action: .assessment.nextStep, impact: null, signals};
 ($scored.tiers | [.critical, .high, .ready, .investigate, .lower, .parked] | add) as $open
 | {
     board: "bugs",
@@ -626,8 +640,8 @@ def open_bug: {number, title, url, state: "open", tier, author, createdAt, updat
     triage: [$scored.triage.entries[] | del(.expired)],
     triageProblems: $scored.triage.problems,
     bugs: ([$open[] | open_bug] + [$scored.tiers.fixed[] | {number, title, url, state: "closed", tier, closedAt, stateReason, fixedBy}] | sort_by(.number)),
-    critical: [$scored.tiers.critical[] | {item: .number, why, confirm, action: .assessment.nextStep, impact: null, signals}],
-    high: [$scored.tiers.high[] | {item: .number, why, confirm, action: .assessment.nextStep, impact: null, signals}],
+    critical: [$scored.tiers.critical[] | urgent_entry],
+    high: [$scored.tiers.high[] | urgent_entry],
     ready: [$scored.tiers.ready[] | {item: .number, group, why, signals}],
     investigate: [$scored.tiers.investigate[] | {item: .number, why, question: .assessment.question, signals}],
     lower: [$scored.tiers.lower[] | {item: .number, reason}],
@@ -724,7 +738,7 @@ function require_json_file() {
 # failed check.
 function load_config() {
   local reference="${1}"
-  local path="" repo_arg="null" result line
+  local path="" repo_arg="null" result
   if [[ -f "${reference}" ]]; then
     path="${reference}"
   elif [[ "${reference}" =~ ${REPO_PATTERN} ]]; then
@@ -743,9 +757,7 @@ function load_config() {
   fi
   if [[ "$(jq '.problems | length' <<< "${result}")" -gt 0 ]]; then
     printf '%s: %s is not a valid bugs config:\n' "${SCRIPT_NAME}" "${path}" >&2
-    while IFS= read -r line; do
-      printf '  - %s\n' "${line}" >&2
-    done < <(jq -r '.problems[]' <<< "${result}")
+    jq -r '.problems[]' <<< "${result}" | sed 's/^/  - /' >&2
     exit "${E_INVALID}"
   fi
   CONFIG="$(jq -c '.config' <<< "${result}")"
@@ -755,9 +767,24 @@ function config_field() {
   jq -r "${2}" <<< "${1}"
 }
 
+# Prints the cache directory for the repository a normalized config names.
 function cache_dir() {
-  local repo="${1}"
+  local config="${1}"
+  local repo
+  repo="$(config_field "${config}" '.repo')"
   printf '%s/report-boards/bugs/%s/%s' "${XDG_CACHE_HOME:-${HOME}/.cache}" "${GITHUB_HOST}" "${repo}"
+}
+
+function require_output_dir() {
+  local output_file="${1}"
+  local directory
+  directory="$(dirname -- "${output_file}")"
+  [[ -d "${directory}" ]] || die "${E_INVALID}" "directory ${directory} does not exist"
+}
+
+# Prints the current time as ISO 8601 UTC, or BUGS_GATHER_NOW when it is set.
+function utc_now() {
+  printf '%s' "${BUGS_GATHER_NOW:-$(date -u '+%Y-%m-%dT%H:%M:%SZ')}"
 }
 
 # Replaces a file in one step, so an interrupted write leaves the previous
@@ -855,13 +882,12 @@ function gather_zenhub() {
       sed 's/^/  /' "${chunk_file}.err" "${chunk_file}.response" >&2
       exit "${E_INVALID}"
     }
-    # A lookup for an issue ZenHub does not track fails on its own alias, a
-    # path of exactly one element, and leaves that bug without ZenHub state;
-    # the bugs it leaves out are listed below. Any other error, including one
-    # on a field inside a lookup, stops the gather.
-    if ! jq -e '(.data.workspace != null) and ([.errors[]? | select(((.path // []) | length == 1 and (.[0] | type == "string" and test("^i[0-9]+$"))) | not)] | length == 0)' "${chunk_file}.response" > /dev/null 2>&1; then
+    # A failed lookup leaves its bug without ZenHub state, and the bugs left
+    # out are listed below. A missing workspace or an unexpected error stops
+    # the gather.
+    if ! jq -e "${ZENHUB_ERROR_DEFS}"'(.data.workspace != null) and (unexpected_errors | length == 0)' "${chunk_file}.response" > /dev/null 2>&1; then
       printf '%s: ZenHub returned errors:\n' "${SCRIPT_NAME}" >&2
-      jq -r 'if .data.workspace == null then "no workspace in the response" else empty end, (.errors[]? | select(((.path // []) | length == 1 and (.[0] | type == "string" and test("^i[0-9]+$"))) | not) | "\(.message // "no message")\(if .path then " (at \(.path | map(tostring) | join(".")))" else "" end)")' "${chunk_file}.response" 2> /dev/null | sed 's/^/  /' >&2 || sed 's/^/  /' "${chunk_file}.response" >&2
+      jq -r "${ZENHUB_ERROR_DEFS}"'if .data.workspace == null then "no workspace in the response" else empty end, (unexpected_errors[] | "\(.message // "no message")\(if .path then " (at \(.path | map(tostring) | join(".")))" else "" end)")' "${chunk_file}.response" 2> /dev/null | sed 's/^/  /' >&2 || sed 's/^/  /' "${chunk_file}.response" >&2
       exit "${E_INVALID}"
     fi
     jq 'map({key: .alias, value: .number}) | from_entries | {aliases: .}' "${chunk_file}.aliases" > "${chunk_file}.map"
@@ -898,22 +924,23 @@ function gather_zenhub() {
 function cmd_gather() {
   [[ $# -eq 2 ]] || usage_error "gather takes a repository and an output path"
   local output_file="${2}"
-  local config repo qualifiers token_variable now since labels type_name
+  local config repo has_zenhub qualifiers token_variable now since labels type_name type_query
   local repo_id repo_name
   local -i index=0
   require_tools jq gh
   load_config "${1}"
   config="${CONFIG}"
   repo="$(config_field "${config}" '.repo')"
-  if [[ "$(config_field "${config}" '.zenhub != null')" == true ]]; then
+  has_zenhub="$(config_field "${config}" '.zenhub != null')"
+  if [[ "${has_zenhub}" == true ]]; then
     require_tools curl
     token_variable="$(config_field "${config}" '.zenhub.tokenVariable')"
     [[ -n "${!token_variable:-}" ]] || die "${E_INVALID}" "the ZenHub token variable ${token_variable} is not set"
     ZENHUB_TOKEN="${!token_variable}"
   fi
-  [[ -d "$(dirname -- "${output_file}")" ]] || die "${E_INVALID}" "directory $(dirname -- "${output_file}") does not exist"
+  require_output_dir "${output_file}"
 
-  now="${BUGS_GATHER_NOW:-$(date -u '+%Y-%m-%dT%H:%M:%SZ')}"
+  now="$(utc_now)"
   since="$(jq -n -r --arg now "${now}" --argjson days "$(config_field "${config}" '.recentDays')" \
     '$now | fromdateiso8601 - $days * 86400 | strftime("%Y-%m-%d")')" \
     || die "${E_INVALID}" "BUGS_GATHER_NOW must be an ISO 8601 UTC time, such as 2026-10-06T12:00:00Z"
@@ -928,8 +955,9 @@ function cmd_gather() {
   start_job search-closed-labels github_search "${qualifiers} is:closed closed:>=${since} label:${labels}"
   while IFS= read -r type_name; do
     [[ -n "${type_name}" ]] || continue
-    start_job "search-open-type-${index}" github_search "${qualifiers} is:open type:$(jq -n -r --arg t "${type_name}" '$t | @json')"
-    start_job "search-closed-type-${index}" github_search "${qualifiers} is:closed closed:>=${since} type:$(jq -n -r --arg t "${type_name}" '$t | @json')"
+    type_query="type:$(jq -n -r --arg t "${type_name}" '$t | @json')"
+    start_job "search-open-type-${index}" github_search "${qualifiers} is:open ${type_query}"
+    start_job "search-closed-type-${index}" github_search "${qualifiers} is:closed closed:>=${since} ${type_query}"
     index=$((index + 1))
   done < <(jq -r '.bugTypes[]' <<< "${config}")
   wait_jobs
@@ -939,18 +967,20 @@ function cmd_gather() {
   [[ "$(jq -r '.data.repository.isArchived' "${TEMP_DIR}/repository.json")" != true ]] \
     || die "${E_INVALID}" "${repo} is archived; its bugs cannot change, so there is nothing to sync"
 
-  local search_file
+  local search_file search_name
   printf '[]' > "${TEMP_DIR}/searches.json"
   for search_file in "${TEMP_DIR}"/search-*.json; do
+    search_name="$(basename -- "${search_file}" .json)"
+    search_name="${search_name#search-}"
     # GitHub search stops at 1000 results and then reports no further page,
     # so a search that returned fewer issues than it counted was cut short,
     # and the bugs past the cap would vanish from the board unremarked.
     jq -e 'all(.[]; .data.search.issueCount | type == "number")' "${search_file}" > /dev/null \
-      || die "${E_INVALID}" "the $(basename -- "${search_file}" .json | sed 's/^search-//') search came back without a result count, so its results cannot be trusted"
+      || die "${E_INVALID}" "the ${search_name} search came back without a result count, so its results cannot be trusted"
     jq -e '([.[] | .data.search.nodes | length] | add // 0) >= .[0].data.search.issueCount' "${search_file}" > /dev/null \
-      || die "${E_INVALID}" "the $(basename -- "${search_file}" .json | sed 's/^search-//') search returned $(jq '[.[] | .data.search.nodes | length] | add // 0' "${search_file}") of $(jq '.[0].data.search.issueCount' "${search_file}") issues; GitHub search stops at 1000, so narrow bugLabels or bugTypes, or run gather again if the bugs changed while it read them"
-    jq --arg name "$(basename -- "${search_file}" .json)" --slurpfile pages "${search_file}" \
-      '. + [{name: ($name | sub("^search-"; "") | sub("-[0-9]+$"; "")), pages: $pages[0]}]' \
+      || die "${E_INVALID}" "the ${search_name} search returned $(jq '[.[] | .data.search.nodes | length] | add // 0' "${search_file}") of $(jq '.[0].data.search.issueCount' "${search_file}") issues; GitHub search stops at 1000, so narrow bugLabels or bugTypes, or run gather again if the bugs changed while it read them"
+    jq --arg name "${search_name}" --slurpfile pages "${search_file}" \
+      '. + [{name: ($name | sub("-[0-9]+$"; "")), pages: $pages[0]}]' \
       "${TEMP_DIR}/searches.json" > "${TEMP_DIR}/searches.next"
     mv -- "${TEMP_DIR}/searches.next" "${TEMP_DIR}/searches.json"
   done
@@ -962,7 +992,7 @@ function cmd_gather() {
     printf '%s: GitHub cut these lists short, so a label or a fix past the cut is missing:\n%s\n' "${SCRIPT_NAME}" "${truncated}" >&2
   fi
 
-  if [[ "$(config_field "${config}" '.zenhub != null')" == true ]]; then
+  if [[ "${has_zenhub}" == true ]]; then
     repo_id="$(jq -r '.data.repository.databaseId' "${TEMP_DIR}/repository.json")"
     repo_name="${repo#*/}"
     gather_zenhub "${config}" "${TEMP_DIR}/bugs.json" "${repo_id}" "${repo_name}"
@@ -1004,7 +1034,7 @@ function report_moved() {
   local config="${1}"
   local gather_file="${2}"
   local cached
-  cached="$(cache_dir "$(config_field "${config}" '.repo')")/gather.json"
+  cached="$(cache_dir "${config}")/gather.json"
   # The $version in the check is a jq binding, not a shell expansion.
   # shellcheck disable=SC2016
   if ! cache_usable "${cached}" '.version == $version and (.bugs | type == "array")'; then
@@ -1045,7 +1075,7 @@ function require_assessments() {
 function cached_assessments() {
   local config="${1}"
   local cached
-  cached="$(cache_dir "$(config_field "${config}" '.repo')")/assessments.json"
+  cached="$(cache_dir "${config}")/assessments.json"
   if cache_usable "${cached}" 'type == "array" and all(.[]; type == "object" and (.number | type == "number"))'; then
     cat -- "${cached}"
   else
@@ -1060,7 +1090,7 @@ function cmd_reuse() {
   load_config "${1}"
   config="${CONFIG}"
   require_gather "${config}" "${gather_file}"
-  [[ -d "$(dirname -- "${output_file}")" ]] || die "${E_INVALID}" "directory $(dirname -- "${output_file}") does not exist"
+  require_output_dir "${output_file}"
 
   make_temp_dir
   cached_assessments "${config}" > "${TEMP_DIR}/cached.json"
@@ -1081,13 +1111,13 @@ function cmd_reuse() {
 
 function cmd_score() {
   [[ $# -eq 4 ]] || usage_error "score takes a repository, a gather file, an assessments file, and an output path"
-  local config gather_file="${2}" assessments_file="${3}" output_file="${4}" note_file cached line
+  local config gather_file="${2}" assessments_file="${3}" output_file="${4}" note_file cached
   require_tools jq
   load_config "${1}"
   config="${CONFIG}"
   require_gather "${config}" "${gather_file}"
   require_assessments "${assessments_file}"
-  [[ -d "$(dirname -- "${output_file}")" ]] || die "${E_INVALID}" "directory $(dirname -- "${output_file}") does not exist"
+  require_output_dir "${output_file}"
 
   make_temp_dir
   # A configured note that cannot be read stops the score: scoring without it
@@ -1099,7 +1129,7 @@ function cmd_score() {
   else
     : > "${TEMP_DIR}/note"
   fi
-  cached="$(cache_dir "$(config_field "${config}" '.repo')")/scored.json"
+  cached="$(cache_dir "${config}")/scored.json"
   # shellcheck disable=SC2016
   if cache_usable "${cached}" '.version == $version and (.tiers | type == "object")'; then
     cp -- "${cached}" "${TEMP_DIR}/previous"
@@ -1107,15 +1137,13 @@ function cmd_score() {
     printf 'null' > "${TEMP_DIR}/previous"
   fi
   TZ="$(config_field "${config}" '.timeZone')" jq -n --argjson config "${config}" --argjson version "${CACHE_VERSION}" \
-    --arg scored_at "${BUGS_GATHER_NOW:-$(date -u '+%Y-%m-%dT%H:%M:%SZ')}" \
+    --arg scored_at "$(utc_now)" \
     --slurpfile gather "${gather_file}" --slurpfile assessments "${assessments_file}" \
     --rawfile note "${TEMP_DIR}/note" --slurpfile previous "${TEMP_DIR}/previous" \
     "\$gather[0] as \$gather | \$assessments[0] as \$assessments | \$previous[0] as \$previous | ${SCORE_FILTER}" > "${TEMP_DIR}/scored.json"
   if jq -e 'has("problems")' "${TEMP_DIR}/scored.json" > /dev/null; then
     printf '%s: %s does not cover the gather:\n' "${SCRIPT_NAME}" "${assessments_file}" >&2
-    while IFS= read -r line; do
-      printf '  - %s\n' "${line}" >&2
-    done < <(jq -r '.problems[]' "${TEMP_DIR}/scored.json")
+    jq -r '.problems[]' "${TEMP_DIR}/scored.json" | sed 's/^/  - /' >&2
     exit "${E_INVALID}"
   fi
   write_atomic "${output_file}" "${TEMP_DIR}/scored.json"
@@ -1132,7 +1160,7 @@ function cmd_draft() {
   require_json_file "${scored_file}"
   jq -e --slurpfile gather "${gather_file}" '.repo == $gather[0].repo and .gatheredAt == $gather[0].gatheredAt and (.tiers | type == "object")' "${scored_file}" > /dev/null 2>&1 \
     || die "${E_INVALID}" "${scored_file} was not scored from ${gather_file}"
-  [[ -d "$(dirname -- "${output_file}")" ]] || die "${E_INVALID}" "directory $(dirname -- "${output_file}") does not exist"
+  require_output_dir "${output_file}"
 
   make_temp_dir
   jq -n --slurpfile gather "${gather_file}" --slurpfile scored "${scored_file}" \
@@ -1152,7 +1180,7 @@ function cmd_save() {
   require_json_file "${scored_file}"
   jq -e --slurpfile gather "${gather_file}" '.repo == $gather[0].repo and .gatheredAt == $gather[0].gatheredAt' "${scored_file}" > /dev/null 2>&1 \
     || die "${E_INVALID}" "${scored_file} was not scored from ${gather_file}"
-  directory="$(cache_dir "$(config_field "${config}" '.repo')")"
+  directory="$(cache_dir "${config}")"
   (umask 077 && mkdir -p -- "${directory}") || die "${E_INVALID}" "cannot create ${directory}"
   make_temp_dir
   # Cached assessments missing from ASSESSMENTS carry over, so a closed bug
