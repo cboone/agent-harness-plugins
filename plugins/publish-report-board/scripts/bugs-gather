@@ -880,7 +880,13 @@ function gather_zenhub() {
       | [to_entries[] | {alias: "i\(.key + $start)", number: .value, line: "  i\(.key + $start): issueByInfo(repositoryGhId: \($id), issueNumber: \(.value)) { ...BugIssue }"}]
     ' "${TEMP_DIR}/zenhub-numbers" > "${chunk_file}.aliases"
     {
-      cat -- "${QUERY_DIR}/zenhub.graphql"
+      # GraphQL refuses a fragment nothing spreads, so a request with no bugs
+      # to look up, sent only for the active sprint, leaves BugIssue out.
+      if jq -e 'length > 0' "${chunk_file}.aliases" > /dev/null; then
+        cat -- "${QUERY_DIR}/zenhub.graphql"
+      else
+        sed -n '/^query /,$p' "${QUERY_DIR}/zenhub.graphql"
+      fi
       jq -r '.[].line' "${chunk_file}.aliases"
       printf '}\n'
     } > "${chunk_file}.graphql"

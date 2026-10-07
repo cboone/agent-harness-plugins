@@ -117,6 +117,16 @@ $ log="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && bugs STUB_CURL_LOG="${log}" 
 header matches: true, mode 600
 ```
 
+## With no open bugs, the ZenHub query asks only for the active sprint
+
+GraphQL refuses a fragment nothing uses, so the request leaves `BugIssue` out.
+
+```scrut
+$ github="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${github}/graphql" && cp "${BUGS_GATHER_DATA_DIR}/github/graphql/repository-widgets.json" "${github}/graphql/" && log="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && bugs STUB_GH_DIR="${github}" STUB_CURL_LOG="${log}" gather "${work}/config.json" "${work}/no-bugs.json" > /dev/null && grep -c 'BugIssue' "${log}"; jq -r '[(.bugs | length), .zenhub.activeSprint.name] | join(" bugs, ")' "${work}/no-bugs.json"
+0
+0 bugs, Sprint: Oct 12 - Oct 26, 2026
+```
+
 ## ZenHub state joins each bug, and the active sprint marks its members
 
 ```scrut
