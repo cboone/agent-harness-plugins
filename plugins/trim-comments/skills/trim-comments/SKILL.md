@@ -33,22 +33,33 @@ One line is the default. Two lines when the why genuinely needs a clause. Three 
 // FormData because multipart/form-data is the documented encoding for this endpoint.
 ```
 
+## Write comments that stay true
+
+A stale comment is worse than none: the reader trusts it, and nothing fails when it drifts. Prefer the wording that will stay true longest, and let that decide between otherwise equal rewrites.
+
+- **Describe the code in front of the comment.** Nearby code changes in the same diff as the comment, so a reviewer sees both. Code elsewhere changes without anyone rereading the comment.
+- **Never cite line numbers.** Any edit above them shifts them. Name a function, type, constant, or file instead, so a rename makes the reference visibly wrong rather than quietly off by a few lines.
+- **Leave out facts that change on their own schedule**: counts of callers or cases, version numbers, dates, "currently", "for now", "new", and lists of the places that use something.
+- **Prefer a lasting reason to a passing one.** "The API rejects more than 3 tags" outlives "the API rejected 4 tags in last week's outage".
+
 ## Cut these
 
-| Cut | Example to delete |
-| --- | --- |
-| Runtime, library, or language trivia | "Node 22 ships a global FormData" |
-| Cross-references to other files | "See the send guard in send.ts", "unlike sms.ts and push/index.ts" |
-| Spec and RFC citations | "local-parts are case-sensitive per RFC 5321" |
-| Justification for why the comment's own claim matters | "Two passes, because neither is sufficient alone" |
-| Consequence chains | "turns a provider 400, classified non-retryable so the message would be dropped, into a failure at the call site that tests catch" |
-| Restating code that sits within a few lines, not just the next one | "Enforcement is gated on NODE_ENV=production, which the tests below set explicitly" when a `beforeEach` three lines down plainly sets it |
-| Arguing for a design decision the code has already made | "Shared with the welcome-step capture, **so anything the full submit would reject is not worth capturing early either**" |
-| The same subject described from two vantage points | "the upsert **is stubbed here, and covered against real Postgres in its own DB test**": the reader has to track which file each clause is about |
-| Asides about alternatives not taken | "The name matches the Python client's; basic auth passes either key type" |
-| Lists of what something is not | "No templating, no retries, no idempotency" |
-| Anything the type signature, function name, or assertion already says | a docstring that repeats the parameter names |
-| Anything a language or framework construct already says | "A ref, not state: nothing renders from it and it needn't survive a refresh" above a `useRef`: "ref, not state" is the API name, and the rest is what every ref does |
+| Cut                                                                              | Example to delete                                                                                                                                                    |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime, library, or language trivia                                             | "Node 22 ships a global FormData"                                                                                                                                    |
+| Cross-references to other files, unless the reader needs them (see "Keep these") | "See the send guard in send.ts", "unlike sms.ts and push/index.ts"                                                                                                   |
+| Line numbers                                                                     | "the retry loop at line 142 of client.ts"                                                                                                                            |
+| Facts that drift on their own                                                    | "currently only called from the signup flow", "new in v3", "one of four handlers"                                                                                    |
+| Spec and RFC citations                                                           | "local-parts are case-sensitive per RFC 5321"                                                                                                                        |
+| Justification for why the comment's own claim matters                            | "Two passes, because neither is sufficient alone"                                                                                                                    |
+| Consequence chains                                                               | "turns a provider 400, classified non-retryable so the message would be dropped, into a failure at the call site that tests catch"                                   |
+| Restating code that sits within a few lines, not just the next one               | "Enforcement is gated on NODE_ENV=production, which the tests below set explicitly" when a `beforeEach` three lines down plainly sets it                             |
+| Arguing for a design decision the code has already made                          | "Shared with the welcome-step capture, **so anything the full submit would reject is not worth capturing early either**"                                             |
+| The same subject described from two vantage points                               | "the upsert **is stubbed here, and covered against real Postgres in its own DB test**": the reader has to track which file each clause is about                      |
+| Asides about alternatives not taken                                              | "The name matches the Python client's; basic auth passes either key type"                                                                                            |
+| Lists of what something is not                                                   | "No templating, no retries, no idempotency"                                                                                                                          |
+| Anything the type signature, function name, or assertion already says            | a docstring that repeats the parameter names                                                                                                                         |
+| Anything a language or framework construct already says                          | "A ref, not state: nothing renders from it and it needn't survive a refresh" above a `useRef`: "ref, not state" is the API name, and the rest is what every ref does |
 
 When cut material is genuinely worth recording, it goes in the commit message, the PR description, the plan doc, or the repository's review instructions (such as `.github/*.instructions.md`) if its job is to stop a reviewer or Copilot re-raising it. Not inline.
 
@@ -60,6 +71,7 @@ Deleting is the default, not the goal. A comment earns its place when:
 - **The code looks wrong or arbitrary but is deliberate.** `// Deliberately one recipient per call: bulk sending is not supported here and would need its own function.`
 - **A non-obvious external constraint drives it.** `// The mail API documents at most 3 tags per message, ASCII only, 128 characters max.`
 - **Absence is the requirement.** `// Content-Type is deliberately unset: fetch derives it from the FormData body.`
+- **The code cannot be understood without another file.** Name the file and a stable symbol in it, never a line number. `// Column order must match the users table in schema.sql: inserts are positional.`
 
 ## Test scaffolding
 
@@ -110,17 +122,17 @@ One line, and let the declaration below carry the rest. The same applies to a co
 
 Replace terms of art with what they mean:
 
-| Jargon | Write instead |
-| --- | --- |
-| case folding, folds case | lowercases |
-| needle | the literal, the search string, or restructure the sentence |
-| load-bearing | required, or state the consequence plainly |
-| sentinel | name the value: "`*` means unrestricted" |
-| belt-and-braces, defense in depth | say what the second check catches |
-| blast radius | what a leak can reach |
-| escape hatch | override |
-| wart, smell | the actual problem |
-| discriminator | "tells staging from prod" |
+| Jargon                            | Write instead                                               |
+| --------------------------------- | ----------------------------------------------------------- |
+| case folding, folds case          | lowercases                                                  |
+| needle                            | the literal, the search string, or restructure the sentence |
+| load-bearing                      | required, or state the consequence plainly                  |
+| sentinel                          | name the value: "`*` means unrestricted"                    |
+| belt-and-braces, defense in depth | say what the second check catches                           |
+| blast radius                      | what a leak can reach                                       |
+| escape hatch                      | override                                                    |
+| wart, smell                       | the actual problem                                          |
+| discriminator                     | "tells staging from prod"                                   |
 
 ## Name real values
 
@@ -145,11 +157,11 @@ Good: we'd rather send a duplicate email than lose a message
 
 The worst comments in practice were not too long, they were ambiguous. Reread each as someone who has never seen the code:
 
-| Comment | Misread as | Actually meant |
-| --- | --- | --- |
-| `Optional override, defaults to …/v3. For the EU region.` | the default is the EU region | the override is for the EU |
-| `read per call rather than at module load` | this costs a network read per call | where the declaration sits |
-| `…stubbed to drive branching, and covered against real Postgres in its own DB test` | which file is each clause about? | the subject moved mid-sentence |
+| Comment                                                                             | Misread as                         | Actually meant                 |
+| ----------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------ |
+| `Optional override, defaults to …/v3. For the EU region.`                           | the default is the EU region       | the override is for the EU     |
+| `read per call rather than at module load`                                          | this costs a network read per call | where the declaration sits     |
+| `…stubbed to drive branching, and covered against real Postgres in its own DB test` | which file is each clause about?   | the subject moved mid-sentence |
 
 If a comment can be parsed two ways, rewrite it even if it is already short.
 
@@ -210,7 +222,7 @@ Fix failures the edits caused. Report pre-existing failures without fixing them.
 
 ### 6. Report
 
-Report a table: file and symbol or nearest heading, action, before, after. Keep before and after to one line each, truncating with `…`. With `--dry-run`, the table lists proposed changes.
+Report a table: `file:line` (in the edited file), action, before, after. The report is read once, so line numbers are fine here. Keep before and after to one line each, truncating with `…`. With `--dry-run`, the table lists proposed changes.
 
 Leave the edits uncommitted for the user to review. Suggest a `refactor:` or `style:` commit naming what was trimmed, made with the `commit` skill when it is installed, and list any cut material worth moving into that commit message or the PR description.
 
@@ -218,24 +230,26 @@ Leave the edits uncommitted for the user to review. Suggest a `refactor:` or `st
 
 One per failure class, all from review feedback. `…` marks a truncated original.
 
-| Failure | Before | After |
-| --- | --- | --- |
-| Config narration | `…read per call rather than at module load so the secret binding only…` | deleted |
-| Language construct | `A ref, not state: nothing renders from it…` above `useRef(false)` | deleted |
-| CSS restating the declaration | `The label and the reserved width stack in one grid cell.` above `display: grid` | deleted |
-| CSS naming the property, not the value | `Reserves all three dots up front so the label never shifts as they cycle.` | `Full three-dot width, so the label doesn't shift.` |
-| Argues a decision | `Shared with the welcome-step capture, so anything the full submit would reject…` | `Shared with the welcome-step capture.` |
-| Consequence chain | `Timeouts and network failures are both ambiguous… deliberately unlike sms.ts… the worst case is one duplicate email…` | `Ambiguous: the request may have reached the mail API. Retryable anyway, since a retry re-sends identical content and we'd rather send a duplicate email than lose a message.` |
-| Two vantage points | `Token checks talk to the auth SDK; stub it… Enforcement is gated on NODE_ENV=production, which the tests below set…` | `Stub the auth SDK so the token-check tests run without a real auth service.` |
-| Coverage cross-reference | `…the upsert is stubbed…, and covered against real Postgres in its own DB test.` | `Stub the DB write so these tests exercise only the handler's branches.` |
-| Run-on with a trailing "which" | `Fires on every forward exit from welcome, so a corrected phone or ZIP is resent, and on any later forward move…, which is the retry.` | `Re-sends on every forward exit from welcome, so an edited phone or ZIP is captured. Later forward moves retry, until one capture lands.` |
+| Failure                                | Before                                                                                                                                 | After                                                                                                                                                                          |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Config narration                       | `…read per call rather than at module load so the secret binding only…`                                                                | deleted                                                                                                                                                                        |
+| Language construct                     | `A ref, not state: nothing renders from it…` above `useRef(false)`                                                                     | deleted                                                                                                                                                                        |
+| CSS restating the declaration          | `The label and the reserved width stack in one grid cell.` above `display: grid`                                                       | deleted                                                                                                                                                                        |
+| CSS naming the property, not the value | `Reserves all three dots up front so the label never shifts as they cycle.`                                                            | `Full three-dot width, so the label doesn't shift.`                                                                                                                            |
+| Argues a decision                      | `Shared with the welcome-step capture, so anything the full submit would reject…`                                                      | `Shared with the welcome-step capture.`                                                                                                                                        |
+| Consequence chain                      | `Timeouts and network failures are both ambiguous… deliberately unlike sms.ts… the worst case is one duplicate email…`                 | `Ambiguous: the request may have reached the mail API. Retryable anyway, since a retry re-sends identical content and we'd rather send a duplicate email than lose a message.` |
+| Two vantage points                     | `Token checks talk to the auth SDK; stub it… Enforcement is gated on NODE_ENV=production, which the tests below set…`                  | `Stub the auth SDK so the token-check tests run without a real auth service.`                                                                                                  |
+| Coverage cross-reference               | `…the upsert is stubbed…, and covered against real Postgres in its own DB test.`                                                       | `Stub the DB write so these tests exercise only the handler's branches.`                                                                                                       |
+| Run-on with a trailing "which"         | `Fires on every forward exit from welcome, so a corrected phone or ZIP is resent, and on any later forward move…, which is the retry.` | `Re-sends on every forward exit from welcome, so an edited phone or ZIP is captured. Later forward moves retry, until one capture lands.`                                      |
 
 ## Final checks
 
 Before finishing, confirm:
 
 - No comment restates its own next line, or code within a few lines of it
-- No file, spec, or version reference that is not preventing a regression
+- No file, spec, or version reference unless it prevents a regression or the reader cannot understand this code without it
+- No line numbers, and no counts, dates, or "currently" that will drift
+- Where two rewrites say the same thing, the one that will stay true longer won
 - No word from the jargon table
 - Every remaining comment starts with what, not why
 - No comment can be read two ways
