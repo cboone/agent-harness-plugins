@@ -1,6 +1,6 @@
 [
   {
-    "total_count": 3,
+    "total_count": 4,
     "jobs": [
       {
         "name": "Lint",
@@ -11,6 +11,17 @@
           { "name": "Post Run actions/checkout@0000000000000000000000000000000000000000", "conclusion": "success" }
         ]
       },
+      { "name": "Queued", "run_attempt": 2, "steps": [] },
+      {
+        "name": "Cancelled",
+        "run_attempt": 2,
+        "steps": [{ "name": "Run actions/checkout@0000000000000000000000000000000000000000", "conclusion": "cancelled" }]
+      }
+    ]
+  },
+  {
+    "total_count": 4,
+    "jobs": [
       {
         "name": "Lint",
         "run_attempt": 2,
@@ -23,17 +34,6 @@
         "name": "Deploy",
         "run_attempt": 2,
         "steps": [{ "name": "Run actions/checkout@0000000000000000000000000000000000000000", "conclusion": "skipped" }]
-      }
-    ]
-  },
-  {
-    "total_count": 1,
-    "jobs": [
-      { "name": "Queued", "run_attempt": 2, "steps": [] },
-      {
-        "name": "Cancelled",
-        "run_attempt": 2,
-        "steps": [{ "name": "Run actions/checkout@0000000000000000000000000000000000000000", "conclusion": "cancelled" }]
       }
     ]
   }

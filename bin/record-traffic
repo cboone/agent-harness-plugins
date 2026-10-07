@@ -10,15 +10,19 @@
 #   snapshots/paths/D.json      traffic/popular/paths as fetched on day D
 #   README.md                   daily and weekly summary tables, regenerated
 #
-# Each run overwrites the days GitHub still reports, because its latest figures
-# for a day are the most complete, and keeps every older day untouched.
+# Each run replaces the clone and view figures for the days GitHub still
+# reports, because its latest figures for a day are the most complete. It keeps
+# those days' automation counts and leaves every older day untouched.
 #
-# Automation clones are counted once per completed UTC day inside the current
-# traffic window, from the Actions runs created that day: every `actions/checkout`
-# step that ran, across all jobs and attempts, plus every job of a `dynamic`
-# Copilot agent run, which clones the repository without a checkout step. A
-# checkout step given its own `name:` is not recognized, because the jobs API
-# reports the step name rather than the action it uses.
+# Automation clones are counted from the Actions runs created on each completed
+# UTC day inside the current traffic window: every `actions/checkout` step that
+# ran, across all jobs and attempts, plus every job of a run with the `dynamic`
+# event (Copilot agent runs such as pull request reviews, and Dependabot
+# updates), which clone the repository without a checkout step. A day is
+# counted once, on the first run that finds all of its Actions runs completed,
+# so a re-run attempt that starts after that is missed. A checkout step given
+# its own `name:` is not recognized, because the jobs API reports the step name
+# rather than the action it uses.
 #
 # Requires authenticated `gh` and `jq`. The traffic endpoints need a token with
 # Administration read access; the default GITHUB_TOKEN cannot read them. The
@@ -28,9 +32,12 @@ set -euo pipefail
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
-# Steps that ran far enough to fetch the repository. A cancelled or skipped
-# step did not.
+# Step conclusions that count as a clone. A failed checkout usually fails
+# during or after its fetch, so it counts; skipped and cancelled steps do not.
 readonly RAN_CONCLUSIONS='["success", "failure"]'
+
+# GitHub lists at most this many runs for a filtered query.
+readonly RUNS_LIST_LIMIT=1000
 
 function usage() {
   cat << EOF
@@ -51,12 +58,18 @@ function die() {
   exit "${2:-1}"
 }
 
+function fetch_failed() {
+  die "could not fetch ${1}; the token needs Administration read access for traffic and Actions read access for runs"
+}
+
+# stdin comes from /dev/null so a gh call inside a `while read` loop can never
+# consume the loop's input.
 function fetch() {
   local endpoint="${1}"
   local output
 
-  if ! output="$(gh api "${endpoint}")"; then
-    die "could not fetch ${endpoint}"
+  if ! output="$(gh api "${endpoint}" < /dev/null)"; then
+    fetch_failed "${endpoint}"
   fi
   printf '%s\n' "${output}"
 }
@@ -66,10 +79,32 @@ function fetch_pages() {
   local endpoint="${1}"
   local output
 
-  if ! output="$(gh api --paginate --slurp "${endpoint}")"; then
-    die "could not fetch ${endpoint}"
+  if ! output="$(gh api --paginate --slurp "${endpoint}" < /dev/null)"; then
+    fetch_failed "${endpoint}"
   fi
   printf '%s\n' "${output}"
+}
+
+# Fails with the endpoint's name unless the response passes the jq filter, so
+# an unexpected shape stops the run rather than being read as no data.
+function require_shape() {
+  local endpoint="${1}"
+  local json="${2}"
+  local filter="${3}"
+
+  if ! jq -e "${filter}" <<< "${json}" > /dev/null 2>&1; then
+    die "unexpected response from ${endpoint}"
+  fi
+}
+
+# Replaces a file only once its new content is complete, so a failed write
+# never leaves it truncated.
+function write_file() {
+  local file="${1}"
+  local content="${2}"
+
+  printf '%s\n' "${content}" > "${file}.tmp"
+  mv "${file}.tmp" "${file}"
 }
 
 function merge_daily() {
@@ -87,7 +122,7 @@ function merge_daily() {
       .[$day.timestamp[:10]] += {views: $day.count, view_uniques: $day.uniques})
     | to_entries | sort_by(.key) | from_entries
   ' "${daily_file}")"
-  printf '%s\n' "${merged}" > "${daily_file}"
+  write_file "${daily_file}" "${merged}"
 }
 
 # Prints, one per line, the completed days GitHub still reports whose automation
@@ -114,10 +149,7 @@ function uncounted_days() {
 function count_automation() {
   local repo="${1}"
   local daily_file="${2}"
-  local work_dir="${3}"
-  shift 3
-  local days_json
-  days_json="$(printf '%s\n' "${@}" | jq -R . | jq -sc .)"
+  local days_json="${3}"
 
   # The created filter is widened by a day on each side and the runs filtered
   # by their UTC timestamps here, so the result does not depend on how the
@@ -128,107 +160,152 @@ function count_automation() {
     "\($days | min | shift_day(-1))..\($days | max | shift_day(1))"
   ')"
 
+  local runs_endpoint="repos/${repo}/actions/runs?created=${range}&per_page=100"
   local runs_pages
-  runs_pages="$(fetch_pages "repos/${repo}/actions/runs?created=${range}&per_page=100")"
+  runs_pages="$(fetch_pages "${runs_endpoint}")"
+  require_shape "${runs_endpoint}" "${runs_pages}" '
+    type == "array" and length > 0
+    and all(.[]; (.total_count | type) == "number" and (.workflow_runs | type) == "array")
+  '
 
-  local counts_file="${work_dir}/counts.jsonl"
-  : > "${counts_file}"
+  # Pages are offsets into a newest-first list, so a run created while they are
+  # fetched pushes a run already seen onto the next page. Duplicates are
+  # dropped, and every run the first page counted must still be present.
+  local runs
+  runs="$(jq -c --argjson days "${days_json}" '
+    [.[].workflow_runs[]] | unique_by(.id)
+    | {total: length,
+       runs: [.[] | select(.created_at[:10] as $day | $days | index($day))
+              | {id, day: .created_at[:10], event, status}]}
+  ' <<< "${runs_pages}")"
 
-  local id day event jobs_pages
+  local listed expected
+  listed="$(jq -r '.total' <<< "${runs}")"
+  expected="$(jq -r '.[0].total_count' <<< "${runs_pages}")"
+  if [[ "${listed}" -lt "${expected}" ]]; then
+    die "listed ${listed} of ${expected} runs for ${range}; GitHub lists at most ${RUNS_LIST_LIMIT} runs per query"
+  fi
+
+  # A day with a run still queued or in progress is left for a later run, so
+  # its checkouts are not frozen at a partial count.
+  local pending
+  pending="$(jq -c '[.runs[] | select(.status != "completed") | .day] | unique' <<< "${runs}")"
+  local pending_days day
+  pending_days="$(jq -r '.[]' <<< "${pending}")"
+  while IFS= read -r day; do
+    [[ -n "${day}" ]] || continue
+    echo "${SCRIPT_NAME}: leaving ${day} uncounted until its Actions runs complete" >&2
+  done <<< "${pending_days}"
+
+  local runs_tsv
+  runs_tsv="$(jq -r --argjson pending "${pending}" '
+    .runs[] | select(.day as $day | $pending | index($day) | not)
+    | [.id, .day, .event] | @tsv
+  ' <<< "${runs}")"
+
+  local counts="[]"
+  local id event jobs_endpoint jobs_pages run_counts
   while IFS=$'\t' read -r id day event; do
-    jobs_pages="$(fetch_pages "repos/${repo}/actions/runs/${id}/jobs?filter=all&per_page=100")"
-    jq -c \
+    [[ -n "${id}" ]] || continue
+    jobs_endpoint="repos/${repo}/actions/runs/${id}/jobs?filter=all&per_page=100"
+    jobs_pages="$(fetch_pages "${jobs_endpoint}")"
+    require_shape "${jobs_endpoint}" "${jobs_pages}" '
+      type == "array"
+      and all(.[]; (.jobs | type) == "array" and all(.jobs[]; (.steps | type) == "array"))
+    '
+    run_counts="$(jq -c \
       --arg day "${day}" \
       --arg event "${event}" \
       --argjson ran "${RAN_CONCLUSIONS}" '
+      def ran: .conclusion as $c | $ran | index($c);
       [.[].jobs[]] as $jobs
       | if $event == "dynamic" then
           {day: $day, ci_checkouts: 0,
-           copilot_jobs: ([$jobs[] | select(any(.steps[]?; .conclusion as $c | $ran | index($c)))] | length)}
+           dynamic_jobs: ([$jobs[] | select(any(.steps[]; ran))] | length)}
         else
-          {day: $day, copilot_jobs: 0,
-           ci_checkouts: ([$jobs[].steps[]?
-             | select((.name | startswith("Run actions/checkout@")) and (.conclusion as $c | $ran | index($c)))]
+          {day: $day, dynamic_jobs: 0,
+           ci_checkouts: ([$jobs[].steps[]
+             | select((.name | startswith("Run actions/checkout@")) and ran)]
              | length)}
         end
-    ' <<< "${jobs_pages}" >> "${counts_file}"
-  done < <(jq -r --argjson days "${days_json}" '
-    .[].workflow_runs[]
-    | select(.created_at[:10] as $day | $days | index($day))
-    | [.id, .created_at[:10], .event]
-    | @tsv
-  ' <<< "${runs_pages}")
+    ' <<< "${jobs_pages}")"
+    counts="$(jq -c --argjson run "${run_counts}" '. + [$run]' <<< "${counts}")"
+  done <<< "${runs_tsv}"
 
   local merged
   merged="$(jq \
     --argjson days "${days_json}" \
-    --slurpfile counts "${counts_file}" '
-    reduce $days[] as $day (.;
+    --argjson pending "${pending}" \
+    --argjson counts "${counts}" '
+    reduce ($days - $pending)[] as $day (.;
       .[$day] += {
         ci_checkouts: ([$counts[] | select(.day == $day) | .ci_checkouts] | add // 0),
-        copilot_jobs: ([$counts[] | select(.day == $day) | .copilot_jobs] | add // 0)
+        dynamic_jobs: ([$counts[] | select(.day == $day) | .dynamic_jobs] | add // 0)
       })
   ' "${daily_file}")"
-  printf '%s\n' "${merged}" > "${daily_file}"
+  write_file "${daily_file}" "${merged}"
 }
 
 function write_readme() {
   local repo="${1}"
   local daily_file="${2}"
   local readme_file="${3}"
+  local tables
 
-  {
+  tables="$(jq -r '
+    def cell: if . == null then "n/a" else tostring end;
+    def external:
+      if .clones == null or .ci_checkouts == null then null
+      else [.clones - .ci_checkouts - .dynamic_jobs, 0] | max end;
+    def monday:
+      strptime("%Y-%m-%d") | mktime
+      | . - (((. / 86400 | floor) + 3) % 7) * 86400
+      | strftime("%Y-%m-%d");
+
+    to_entries | sort_by(.key) | reverse
+    | (
+        "## Latest 14 days on record",
+        "",
+        "| Date | Clones | Unique cloners | CI checkouts | Dynamic jobs | Est. external clones | Views | Unique visitors |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        (.[:14][]
+          | .key as $day | .value
+          | "| \($day) | \(.clones | cell) | \(.clone_uniques | cell) | \(.ci_checkouts | cell) | \(.dynamic_jobs | cell) | \(external | cell) | \(.views | cell) | \(.view_uniques | cell) |"),
+        "",
+        "## Weekly totals",
+        "",
+        "Weeks start on Monday. An asterisk marks a week with clones on days not yet counted: its automation and external figures leave those days out, while its clone total includes them.",
+        "",
+        "| Week of | Clones | Automation clones | Est. external clones | Views |",
+        "| --- | ---: | ---: | ---: | ---: |",
+        (group_by(.key | monday) | reverse[]
+          | (.[0].key | monday) as $week
+          | [.[].value] as $days
+          | [$days[] | select(.ci_checkouts != null)] as $counted
+          | (if any($days[]; .clones != null and .ci_checkouts == null) then "*" else "" end) as $mark
+          | "| \($week) | \([$days[].clones // 0] | add) | \([$counted[] | .ci_checkouts + .dynamic_jobs] | add // 0)\($mark) | \([$counted[] | external // 0] | add // 0)\($mark) | \([$days[].views // 0] | add) |")
+      )
+  ' "${daily_file}")"
+
+  write_file "${readme_file}" "$(
     cat << EOF
 # Traffic history for ${repo}
 
-Generated by \`bin/record-traffic\` on the default branch. Do not edit this file by hand.
+Generated daily by the Traffic history workflow, using \`bin/record-traffic\` from the default branch. Do not edit this file by hand.
 
-GitHub keeps traffic data for 14 days. This branch keeps it indefinitely: \`daily.json\` holds clones and views per UTC day, and \`snapshots/\` holds the popular referrers and paths as they stood on each run.
+GitHub keeps traffic data for 14 days. This branch keeps it indefinitely: \`daily.json\` holds clones and views per UTC day, and \`snapshots/\` holds GitHub's popular referrers and paths, each a 14-day total, as fetched on each date.
 
 ## Reading the clone counts
 
-- **CI checkouts** are the \`actions/checkout\` steps that ran in this repository's Actions runs created that day, across every job and attempt.
-- **Copilot jobs** are the jobs of Copilot's agent runs, such as pull request reviews, which clone the repository without a checkout step.
-- **Est. external clones** are clones minus both, floored at zero. They still include marketplace update fetches from existing installs and the maintainer's own machines.
+- **CI checkouts** are the \`actions/checkout\` steps that ran in this repository's Actions runs created that day, across every job and attempt. Checkout steps given a custom name are not recognized.
+- **Dynamic jobs** are the jobs of GitHub-managed runs with the \`dynamic\` event, such as Copilot pull request reviews and Dependabot updates, which clone the repository without a checkout step.
+- **Est. external clones** are clones minus both, floored at zero. They still include marketplace update fetches from existing installs, the maintainer's own machines, and any automation the counts miss, such as this workflow's own fetch of this branch.
 - Unique cloner counts cannot be adjusted the same way, so they are shown as GitHub reports them.
-- \`n/a\` marks a day not yet counted: the current day, or a day recorded before counting began.
+- \`n/a\` marks a figure that is not available. In the clone and view columns, GitHub reported nothing for that day. In the automation and estimate columns, the day has not been counted: it is the current day, it still had Actions runs in progress, or it left GitHub's 14-day window before a run counted it.
 
+${tables}
 EOF
-    jq -r '
-      def cell: if . == null then "n/a" else tostring end;
-      def external:
-        if .clones == null or .ci_checkouts == null then null
-        else [.clones - .ci_checkouts - .copilot_jobs, 0] | max end;
-      def monday:
-        strptime("%Y-%m-%d") | mktime
-        | . - (((. / 86400 | floor) + 3) % 7) * 86400
-        | strftime("%Y-%m-%d");
-
-      to_entries | sort_by(.key) | reverse
-      | (
-          "## Last 14 days",
-          "",
-          "| Date | Clones | Unique cloners | CI checkouts | Copilot jobs | Est. external clones | Views | Unique visitors |",
-          "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
-          (.[:14][]
-            | .key as $day | .value
-            | "| \($day) | \(.clones | cell) | \(.clone_uniques | cell) | \(.ci_checkouts | cell) | \(.copilot_jobs | cell) | \(external | cell) | \(.views | cell) | \(.view_uniques | cell) |"),
-          "",
-          "## Weekly totals",
-          "",
-          "Weeks start on Monday. An asterisk marks an external estimate that leaves out days not yet counted.",
-          "",
-          "| Week of | Clones | Automation clones | Est. external clones | Views |",
-          "| --- | ---: | ---: | ---: | ---: |",
-          (group_by(.key | monday) | reverse[]
-            | (.[0].key | monday) as $week
-            | [.[].value] as $days
-            | [$days[] | select(.ci_checkouts != null)] as $counted
-            | (if ($counted | length) < ([$days[] | select(.clones != null)] | length) then "*" else "" end) as $mark
-            | "| \($week) | \([$days[].clones // 0] | add) | \([$counted[] | .ci_checkouts + .copilot_jobs] | add // 0) | \([$counted[] | external // 0] | add // 0)\($mark) | \([$days[].views // 0] | add) |")
-        )
-    ' "${daily_file}"
-  } > "${readme_file}"
+  )"
 }
 
 function main() {
@@ -266,43 +343,49 @@ function main() {
     exit 2
   }
   [[ "${repo}" =~ ^[^/]+/[^/]+$ ]] || die "--repo or GITHUB_REPOSITORY must name OWNER/REPO"
-  if [[ -z "${today}" ]]; then
-    today="$(date -u +%Y-%m-%d)"
-  fi
-  [[ "${today}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die "--today must be YYYY-MM-DD"
 
   command -v gh > /dev/null || die "gh is required"
   command -v jq > /dev/null || die "jq is required"
 
-  mkdir -p "${data_dir}/snapshots/referrers" "${data_dir}/snapshots/paths"
+  if [[ -z "${today}" ]]; then
+    today="$(date -u +%Y-%m-%d)"
+  fi
+  if ! jq -en --arg day "${today}" '
+    $day | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+    and (try (strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d") == $day) catch false)
+  ' > /dev/null; then
+    die "--today must be a valid YYYY-MM-DD date"
+  fi
+
   local daily_file="${data_dir}/daily.json"
-  if [[ ! -f "${daily_file}" ]]; then
-    echo '{}' > "${daily_file}"
+  if [[ -f "${daily_file}" ]] && ! jq -se 'length == 1 and (.[0] | type) == "object"' "${daily_file}" > /dev/null 2>&1; then
+    die "${daily_file} is not a single JSON object"
   fi
 
   local clones views referrers paths
   clones="$(fetch "repos/${repo}/traffic/clones")"
+  require_shape "repos/${repo}/traffic/clones" "${clones}" '(.clones | type) == "array"'
   views="$(fetch "repos/${repo}/traffic/views")"
+  require_shape "repos/${repo}/traffic/views" "${views}" '(.views | type) == "array"'
   referrers="$(fetch "repos/${repo}/traffic/popular/referrers")"
+  require_shape "repos/${repo}/traffic/popular/referrers" "${referrers}" 'type == "array"'
   paths="$(fetch "repos/${repo}/traffic/popular/paths")"
+  require_shape "repos/${repo}/traffic/popular/paths" "${paths}" 'type == "array"'
 
-  jq . <<< "${referrers}" > "${data_dir}/snapshots/referrers/${today}.json"
-  jq . <<< "${paths}" > "${data_dir}/snapshots/paths/${today}.json"
+  mkdir -p "${data_dir}/snapshots/referrers" "${data_dir}/snapshots/paths"
+  write_file "${data_dir}/snapshots/referrers/${today}.json" "$(jq . <<< "${referrers}")"
+  write_file "${data_dir}/snapshots/paths/${today}.json" "$(jq . <<< "${paths}")"
 
+  if [[ ! -f "${daily_file}" ]]; then
+    echo '{}' > "${daily_file}"
+  fi
   merge_daily "${daily_file}" "${clones}" "${views}"
 
-  local days=()
-  local day
-  while IFS= read -r day; do
-    days+=("${day}")
-  done < <(uncounted_days "${daily_file}" "${clones}" "${views}" "${today}")
-
-  if [[ "${#days[@]}" -gt 0 ]]; then
-    local work_dir
-    work_dir="$(mktemp -d "${TMPDIR:-/tmp}/record-traffic.XXXXXX")"
-    # shellcheck disable=SC2064 # expand now: work_dir is local to main
-    trap "rm -rf '${work_dir}'" EXIT
-    count_automation "${repo}" "${daily_file}" "${work_dir}" "${days[@]}"
+  local days_json
+  days_json="$(uncounted_days "${daily_file}" "${clones}" "${views}" "${today}")"
+  days_json="$(jq -Rsc 'split("\n") | map(select(length > 0))' <<< "${days_json}")"
+  if [[ "${days_json}" != "[]" ]]; then
+    count_automation "${repo}" "${daily_file}" "${days_json}"
   fi
 
   write_readme "${repo}" "${daily_file}" "${data_dir}/README.md"

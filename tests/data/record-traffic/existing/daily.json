@@ -1,4 +1,120 @@
 {
-  "2026-09-20": { "clones": 5, "clone_uniques": 1, "views": 1, "view_uniques": 1, "ci_checkouts": 2, "copilot_jobs": 0 },
-  "2026-09-28": { "clones": 9, "clone_uniques": 3, "ci_checkouts": 12, "copilot_jobs": 0 }
+  "2026-09-14": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-15": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-16": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-17": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-18": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-19": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-20": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-21": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-22": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-23": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-24": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-25": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-26": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-27": {
+    "clones": 5,
+    "clone_uniques": 1,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 2,
+    "dynamic_jobs": 0
+  },
+  "2026-09-28": {
+    "clones": 9,
+    "clone_uniques": 3,
+    "ci_checkouts": 12,
+    "dynamic_jobs": 0
+  }
 }
