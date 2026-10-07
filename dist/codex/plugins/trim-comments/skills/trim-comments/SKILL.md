@@ -237,7 +237,7 @@ Read each file in scope, resolving its path from the repository root (`git rev-p
 
 ### 3. Classify each comment
 
-Apply the sections above and give each collected comment one action; for a single named comment, that is the only comment classified. A comment listed under "Do not touch" is always keep, except a ticketless `TODO` or `FIXME`, which is flag:
+Apply the sections above and give each collected comment one action; for a single named comment, that is the only comment classified. A comment listed under "Do not touch" is always keep, with two exceptions: a ticketless `TODO` or `FIXME` is flag, and a public API doc comment that is redundant with the signature is classified like any other comment:
 
 - **keep**: leave it unchanged
 - **rewrite**: replace it with a shorter or clearer version
@@ -246,7 +246,7 @@ Apply the sections above and give each collected comment one action; for a singl
 
 ### 4. Edit
 
-Skip this step with `--dry-run`. Make each change a separate, minimal edit, so each one maps to one row of the report. Touch only comments: no code, whitespace, or formatting changes beyond what removing a comment line requires. Never delete a docstring that is the only statement in a function or class body; trim it instead.
+Skip this step with `--dry-run`. Make each change a separate, minimal edit, so each one maps to one row of the report. Touch only comments: no code, whitespace, or formatting changes beyond what removing a comment line requires. Never delete a docstring; trim it instead. A docstring is runtime-visible (as `__doc__` in Python), and when it is the only statement in a function or class body, deleting it is a syntax error.
 
 ### 5. Verify
 
