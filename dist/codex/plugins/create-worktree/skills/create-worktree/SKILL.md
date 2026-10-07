@@ -2,7 +2,8 @@
 name: create-worktree
 description: >-
   Create a worktree, branch, and tmux window with workmux for an issue or task.
-  Use for "create worktree", or to list or release resource claims.
+  Use for "create worktree" or "spin up a worktree", or to list or release
+  resource claims; to plan an issue there, use address-issue-in-worktree.
 argument-hint: "<issue-number|description> [--issue <n>|--no-issue] [--branch <name>] [--base <branch>] [--resource <name>] | --list-resources | --release-resource <name>"
 ---
 

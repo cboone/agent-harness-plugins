@@ -1,0 +1,71 @@
+# The ZenHub state of every bug. bugs-gather appends one aliased
+# lookup per item after this file, such as
+#   i0: issueByInfo(repositoryGhId: 106750406, issueNumber: 4034) { ...BugIssue }
+# and closes the query. issueType is a union, so its name and level come
+# through inline fragments; selecting them directly fails. Sprints and blocking
+# lists report whether they were cut short, which bugs-gather warns about.
+fragment BugIssue on Issue {
+  estimate {
+    value
+  }
+  pipelineIssue(workspaceId: $workspaceId) {
+    latestTransferTime
+    pipeline {
+      name
+    }
+  }
+  sprints(first: 10, workspaceId: $workspaceId) {
+    pageInfo {
+      hasNextPage
+    }
+    nodes {
+      id
+    }
+  }
+  issueType {
+    ... on GithubIssueType {
+      name
+      level
+    }
+    ... on ZenhubIssueType {
+      name
+      level
+    }
+  }
+  blockingIssues(first: 20) {
+    pageInfo {
+      hasNextPage
+    }
+    nodes {
+      number
+      state
+      repository {
+        ghId
+        name
+      }
+    }
+  }
+  blockedIssues(first: 20) {
+    pageInfo {
+      hasNextPage
+    }
+    nodes {
+      number
+      state
+      repository {
+        ghId
+        name
+      }
+    }
+  }
+}
+
+query ($workspaceId: ID!) {
+  workspace(id: $workspaceId) {
+    activeSprint {
+      id
+      name
+      startAt
+      endAt
+    }
+  }

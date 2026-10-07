@@ -1,8 +1,9 @@
 ---
 name: write-manual-verification-plan
 description: >-
-  Write a numbered, resumable checklist for checks run by hand, each saying what
-  to expect. Use when planning or recording manual verification.
+  Write a numbered, resumable checklist for checks run by hand in a DAW,
+  simulator, browser, or device, each saying what to expect. Use when planning
+  manual verification, reprinting steps, or recording partial results.
 ---
 
 # Write Manual Verification Plan

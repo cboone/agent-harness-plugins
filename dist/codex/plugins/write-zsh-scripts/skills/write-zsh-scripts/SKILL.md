@@ -2,7 +2,8 @@
 name: write-zsh-scripts
 description: >-
   Apply zsh style conventions when creating, editing, or reviewing zsh scripts,
-  configurations, and completions. To lint them, use check-zsh-scripts.
+  .zshrc and other startup files, plugins, and completions. To lint them, use
+  check-zsh-scripts.
 ---
 
 # Zsh Style Guide

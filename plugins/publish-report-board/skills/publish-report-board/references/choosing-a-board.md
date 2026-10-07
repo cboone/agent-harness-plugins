@@ -10,6 +10,15 @@ A board costs more than an answer. It has a URL to keep, a sync to repeat, and a
 
 With all three, a board is warranted. Missing any one, answer in the terminal and say why in a sentence, for example: "This is a one-time answer, so here it is rather than a board."
 
+## Which Board
+
+| Board type       | Fits when                                                                                                                                                      | Its constraint                                               |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `backlog-triage` | One repository's backlog is the plan, and the work is drawing it down across several branches or sessions                                                      | What can run at once without colliding                       |
+| `bugs`           | One repository's bugs need triage by urgency: which are critical because they hurt people on production, which are high priority, and which are lower priority | Harm to users: what to stop first, and what is not yet known |
+
+A request about bugs, incidents, what is broken, or what to fix first wants `bugs`. A request about one repository's issues, lanes, or what to start next wants `backlog-triage`. A repository can carry both boards: they answer different questions.
+
 ## Signals
 
 A request for a board is a strong signal but not a sufficient one. These make the case:

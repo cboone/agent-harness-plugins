@@ -2,7 +2,9 @@
 name: write-lean-tests
 description: >-
   Write compile-time, example-based Lean 4 tests that mirror a library's public
-  surface. Use for a NameTest/ directory or for wiring lake test.
+  surface. Use for a NameTest/ directory, a new module's tests, wiring lake
+  test, or checking a PR keeps tests mirrored. For library code, use
+  write-lean-code.
 ---
 
 # Write Lean Tests

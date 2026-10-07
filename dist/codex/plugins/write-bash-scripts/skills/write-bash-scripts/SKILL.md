@@ -2,7 +2,8 @@
 name: write-bash-scripts
 description: >-
   Apply Bash style conventions when creating, editing, or reviewing Bash
-  scripts. Not for zsh; use write-zsh-scripts.
+  scripts, including .sh files, bin/ scripts, and macOS bash 3.2 compatibility.
+  Not for zsh; use write-zsh-scripts.
 ---
 
 # Bash Style Guide

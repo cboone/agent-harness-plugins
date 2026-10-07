@@ -2,7 +2,8 @@
 name: manage-repo-licensing
 description: >-
   Set up and maintain REUSE licensing: SPDX headers, LICENSES/, NOTICE, and
-  REUSE.toml. Use for "license this repo" or "fix REUSE"; not legal advice.
+  REUSE.toml. Use for "license this repo", "add SPDX headers", "fix REUSE", or a
+  new file's header; not for legal advice or dependency license compatibility.
 ---
 
 <!--

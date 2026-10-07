@@ -2,7 +2,8 @@
 name: create-issue
 description: >-
   Create a GitHub issue with gh, passing the body through a tmpfile. Use for
-  "create an issue", "report a bug", or "file a feature request".
+  "create an issue", "report a bug", or "file a feature request"; for follow-ups
+  the work set aside, use create-deferred-issues.
 ---
 
 # Create Issue

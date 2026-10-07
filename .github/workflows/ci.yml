@@ -146,6 +146,9 @@ jobs:
         REPORT_BOARD_DATA_DIR=./tests/data/report-board
         RECORD_TRAFFIC_BIN=./bin/record-traffic
         RECORD_TRAFFIC_DATA_DIR=./tests/data/record-traffic
+        BUGS_GATHER_BIN=./plugins/publish-report-board/scripts/bugs-gather
+        BUGS_GATHER_DATA_DIR=./tests/data/bugs-gather
+        CURL_STUB_BIN=./tests/fixtures/curl-stub
         RESOLVE_COPILOT_THREADS_BIN=./plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads
         MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN=./plugins/monitor-pr/scripts/resolve-copilot-threads
         REVIEW_SCOPE_BIN=./plugins/review-until-clean/scripts/review-scope

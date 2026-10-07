@@ -1,0 +1,9 @@
+{
+  "repo": "acme/widgets",
+  "timeZone": "America/New_York",
+  "urgentLabels": ["high-priority"],
+  "urgentPipelines": ["High Priority"],
+  "bots": ["vf-bot"],
+  "zenhub": { "workspace": "ws123", "tokenVariable": "BUGS_TEST_ZENHUB_TOKEN" },
+  "weights": { "pipelines": { "Must Do": 10 } }
+}

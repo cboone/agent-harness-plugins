@@ -2,7 +2,9 @@
 name: refresh-project-scaffolding
 description: >-
   Update a repository's existing scaffolding, CI, and linters to current
-  templates. Use for "refresh project scaffolding" or "audit my repo".
+  templates. Use for "refresh project scaffolding", "audit my repo", or "bring
+  this repo's scaffolding up to date"; for dependency upgrades, use
+  upgrade-everything.
 ---
 
 # Refresh Project Scaffolding

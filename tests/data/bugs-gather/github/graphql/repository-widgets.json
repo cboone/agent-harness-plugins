@@ -1,0 +1,19 @@
+{
+  "data": {
+    "viewer": {
+      "login": "alice"
+    },
+    "repository": {
+      "nameWithOwner": "acme/widgets",
+      "url": "https://github.com/acme/widgets",
+      "databaseId": 101,
+      "isArchived": false,
+      "defaultBranchRef": {
+        "name": "main",
+        "target": {
+          "oid": "0123456789abcdef0123456789abcdef01234567"
+        }
+      }
+    }
+  }
+}

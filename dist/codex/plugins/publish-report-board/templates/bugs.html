@@ -1,0 +1,1231 @@
+<title>__BOARD_TITLE__</title>
+<meta name="color-scheme" content="light dark" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" />
+<style>
+  /* An editorial bug desk: IBM Plex Sans for text and Plex Mono for numbers
+     and labels. The light theme is Graphite and orange, the dark theme Night.
+     Critical carries the strongest form, a filled block and tag; High
+     priority an outlined tag; fixes a muted green. In the light theme blue is
+     reserved for focus; in the dark theme Critical takes the light blue the
+     focus ring also uses, and High priority amber. Components use tokens
+     only. */
+  :root {
+    color-scheme: light;
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --gutter: clamp(16px, 4vw, 48px);
+    --ground: #f1f1ef;
+    --ink: #1b1c1e;
+    --body: #36383c;
+    --muted: #5d6066;
+    --rule: #d6d6d2;
+    --rule-soft: #e4e4e0;
+    --critical: #26292e;
+    --on-critical: #ffb37a;
+    --high: #a8430b;
+    --fix: #2f5f28;
+    --fix-ground: #e3ebdf;
+    --aging: #a8430b;
+    --stale: #b42318;
+    --link-rule: rgb(93 96 102 / 45%);
+    --focus: #2563eb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #121417;
+      --ink: #e9ecf0;
+      --body: #c6cbd3;
+      --muted: #9aa1ad;
+      --rule: #2c3138;
+      --rule-soft: #22262c;
+      --critical: #8fb0ff;
+      --on-critical: #0b1220;
+      --high: #f2b45a;
+      --fix: #a6d492;
+      --fix-ground: #1c2819;
+      --aging: #f2b45a;
+      --stale: #ff8a80;
+      --link-rule: rgb(154 161 173 / 45%);
+      --focus: #8fb0ff;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #121417;
+    --ink: #e9ecf0;
+    --body: #c6cbd3;
+    --muted: #9aa1ad;
+    --rule: #2c3138;
+    --rule-soft: #22262c;
+    --critical: #8fb0ff;
+    --on-critical: #0b1220;
+    --high: #f2b45a;
+    --fix: #a6d492;
+    --fix-ground: #1c2819;
+    --aging: #f2b45a;
+    --stale: #ff8a80;
+    --link-rule: rgb(154 161 173 / 45%);
+    --focus: #8fb0ff;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  :where(.board) :where(p, h1, h2, dl, dd, ol, ul) {
+    margin: 0;
+  }
+
+  :where(.board) :where(ol, ul) {
+    padding: 0;
+    list-style: none;
+  }
+
+  a {
+    border-bottom: 1px solid var(--link-rule);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  a:hover {
+    border-bottom-color: currentColor;
+  }
+
+  a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .mono {
+    font-family: var(--mono);
+  }
+
+  .num {
+    font-family: var(--mono);
+    font-weight: 500;
+  }
+
+  .board {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px var(--gutter) 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+  }
+
+  .board-message {
+    padding: 40px var(--gutter);
+    color: var(--muted);
+  }
+
+  .label {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Header */
+  .head {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .masthead {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px 40px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .masthead-title {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .repo {
+    font-size: clamp(40px, 6vw, 64px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  .repo a {
+    border-bottom: none;
+  }
+
+  .when {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  .when-time {
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .when-age.is-aging {
+    color: var(--aging);
+  }
+
+  .when-age.is-stale {
+    color: var(--stale);
+  }
+
+  .counts {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .count {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 6px;
+    padding: 14px 16px;
+    border-right: 1px solid var(--rule);
+  }
+
+  .count:last-child {
+    border-right: none;
+  }
+
+  .count dt {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .count dd {
+    font-family: var(--mono);
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .count--critical {
+    border-right: none;
+    background: var(--critical);
+    color: var(--on-critical);
+  }
+
+  .count--critical dt {
+    color: var(--on-critical);
+  }
+
+  .count--high dt {
+    color: var(--high);
+  }
+
+  .count--open dd {
+    color: var(--muted);
+  }
+
+  .count-warn {
+    display: block;
+    margin-top: 4px;
+    font-size: 10.5px;
+  }
+
+  .summary {
+    max-width: 62ch;
+    font-size: clamp(19px, 2.2vw, 23px);
+    font-weight: 500;
+    line-height: 1.45;
+    letter-spacing: -0.01em;
+    text-wrap: pretty;
+  }
+
+  /* Sections */
+  .section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+  }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .section-note {
+    color: var(--muted);
+  }
+
+  .section--critical .section-title {
+    font-size: 28px;
+    letter-spacing: -0.02em;
+    color: var(--critical);
+  }
+
+  .section--high .section-title,
+  .section--ready .section-title {
+    font-size: 24px;
+    letter-spacing: -0.02em;
+  }
+
+  .section--high .section-title {
+    color: var(--high);
+  }
+
+  .ruled {
+    border-top: 1px solid var(--ink);
+  }
+
+  /* Critical and High priority rows */
+  .urgent {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) 300px;
+    column-gap: 28px;
+    row-gap: 12px;
+    padding: 24px 0 26px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .urgent-rank {
+    font-family: var(--mono);
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--critical);
+  }
+
+  .urgent-main {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .urgent-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .urgent-action {
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    text-wrap: pretty;
+  }
+
+  .urgent-impact {
+    font-size: 16px;
+    color: var(--body);
+  }
+
+  .urgent-side {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .section--high .urgent {
+    padding: 18px 0 20px;
+  }
+
+  .section--high .urgent-rank {
+    font-size: 22px;
+    color: var(--high);
+  }
+
+  .section--high .urgent-action {
+    font-size: 17px;
+  }
+
+  .section--high .urgent-impact {
+    font-size: 15px;
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1.5px solid currentColor;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .tag--critical {
+    border-color: var(--critical);
+    background: var(--critical);
+    color: var(--on-critical);
+  }
+
+  .tag--high {
+    color: var(--high);
+  }
+
+  .tag--confirm {
+    border-style: dashed;
+    color: var(--muted);
+  }
+
+  .tag--verify {
+    color: var(--high);
+  }
+
+  /* Facts: what the reading found. An unconfirmed one is italic with a
+     dashed underline; one the triage note set carries a dot. */
+  .facts {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    row-gap: 5px;
+    font-size: 13px;
+    align-content: start;
+  }
+
+  .facts dt {
+    padding-top: 2px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .fact {
+    font-weight: 500;
+  }
+
+  .fact--unsure {
+    border-bottom: 1px dashed var(--muted);
+    color: var(--muted);
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  .fact--set::after {
+    content: " \2022";
+    color: var(--high);
+  }
+
+  .fix-line {
+    padding: 8px 10px;
+    background: var(--fix-ground);
+    color: var(--fix);
+    font-size: 13px;
+  }
+
+  .calls {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* Ready to go */
+  .ready-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px 32px;
+    padding-top: 16px;
+  }
+
+  .ready-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .ready-col-head {
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .ready-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ready-title {
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .ready-title .num {
+    margin-right: 6px;
+  }
+
+  .ready-next {
+    font-size: 13.5px;
+    color: var(--body);
+  }
+
+  .carrier {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fix);
+  }
+
+  .more {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  /* The fold: everything below is the report. */
+  .fold {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .fold::before,
+  .fold::after {
+    content: "";
+    flex: 1 1 0;
+    border-top: 4px double var(--ink);
+  }
+
+  /* Report rows */
+  .report-row {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr) minmax(0, 1.1fr);
+    column-gap: 24px;
+    row-gap: 6px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .report-row .num {
+    justify-self: start;
+  }
+
+  .report-title {
+    font-weight: 500;
+  }
+
+  .report-why {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .report-question {
+    font-style: italic;
+    color: var(--body);
+  }
+
+  .report-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: var(--body);
+    font-size: 14px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  .lower-table {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  .lower-table th {
+    padding: 8px 12px 8px 0;
+    border-bottom: 1px solid var(--rule);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .lower-table td {
+    padding: 7px 12px 7px 0;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: baseline;
+  }
+
+  .lower-group td {
+    padding-top: 16px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .fixed-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .fixed-row svg {
+    flex: none;
+    align-self: center;
+    color: var(--fix);
+  }
+
+  .fixed-title {
+    flex: 1 1 320px;
+    min-width: 0;
+  }
+
+  .triage-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .triage-entry {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .triage-entry--expired .triage-text {
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+
+  .triage-empty {
+    padding: 16px;
+    border: 1px dashed var(--muted);
+    color: var(--body);
+  }
+
+  .footer {
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  @media (max-width: 860px) {
+    .urgent {
+      grid-template-columns: 44px minmax(0, 1fr);
+    }
+
+    .urgent-side {
+      grid-column: 2;
+    }
+
+    .counts {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      row-gap: 16px;
+    }
+
+    .report-row {
+      grid-template-columns: 56px minmax(0, 1fr);
+    }
+
+    .report-row > :nth-child(3) {
+      grid-column: 2;
+    }
+
+    .when {
+      align-items: flex-start;
+      text-align: left;
+    }
+  }
+</style>
+<div class="board" id="board">
+  <noscript>
+    <p class="board-message">This board draws itself from data embedded in the page, so it needs JavaScript to display.</p>
+  </noscript>
+</div>
+<script type="application/json" id="board-data">
+  "__BOARD_DATA__"
+</script>
+<script>
+  // Draws a bugs board from the JSON in #board-data. The report-board script
+  // checks that JSON before writing it into this template, so the code below
+  // trusts its shape. Every string from the data reaches the page through text
+  // nodes and attributes, never through innerHTML, because bug titles and
+  // assessments come from GitHub.
+  (() => {
+    "use strict";
+
+    // A bugs board goes stale in hours: the age turns to the aging color after
+    // AGING_AFTER_HOURS, and to the stale color after STALE_AFTER_HOURS.
+    const AGING_AFTER_HOURS = 4;
+    const STALE_AFTER_HOURS = 12;
+
+    const root = document.getElementById("board");
+
+    // Copied from backlog-triage.html; a fix to one prompts a look at the other.
+    function h(tag, attributes, children) {
+      const element = document.createElement(tag);
+      for (const [name, value] of Object.entries(attributes ?? {})) {
+        if (value === null || value === undefined || value === false) continue;
+        if (name === "class") element.className = value;
+        else element.setAttribute(name, value === true ? "" : String(value));
+      }
+      for (const child of [children ?? []].flat(Infinity)) {
+        if (child === null || child === undefined || child === false || child === "") continue;
+        element.append(child instanceof Node ? child : String(child));
+      }
+      return element;
+    }
+
+    // An unrendered template carries a placeholder string; anything else that
+    // is not a bugs board, including data that fails to parse, is reported as
+    // such rather than drawn as a blank board.
+    let data = null;
+    let unreadable = false;
+    try {
+      data = JSON.parse(document.getElementById("board-data").textContent);
+    } catch {
+      unreadable = true;
+    }
+    if (data === null || typeof data !== "object" || data.board !== "bugs" || !Array.isArray(data.bugs)) {
+      const message =
+        typeof data === "string" && !unreadable
+          ? "This page holds no board data yet. Render it with the report-board script."
+          : "This page holds board data this template cannot read. Render it again with the report-board script.";
+      root.replaceChildren(h("p", { class: "board-message" }, message));
+      return;
+    }
+
+    const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+    const repoUrl = (data.repoUrl || `https://github.com/${data.repo}`).replace(/\/+$/, "");
+    let origin = "https://github.com";
+    try {
+      origin = new URL(repoUrl).origin;
+    } catch {
+      // An unparsable repoUrl keeps the GitHub origin.
+    }
+    const repoBase = data.repo && repoUrl.endsWith(`/${data.repo}`) ? repoUrl.slice(0, -(data.repo.length + 1)) : origin;
+    const pathPart = (text) => String(text).split("/").map(encodeURIComponent).join("/");
+    const issueUrl = (n) => `${repoUrl}/issues/${n}`;
+    const pullUrl = (n) => `${repoUrl}/pull/${n}`;
+    const link = (href, text, cls) => h("a", { href, class: cls }, text);
+    const ref = (n) => link(issueUrl(n), `#${n}`, "num");
+    const pullRef = (n) => link(pullUrl(n), `#${n}`, "num");
+    // Links "#123", and "owner/repo#123" for another repository, in a prose
+    // field. Copied from backlog-triage.html; a fix to one prompts a look at
+    // the other.
+    const PROSE_REF = /([\w.-]+\/[\w.-]+)?#(\d+)(?![\w#])/g;
+    const prose = (text) => {
+      const source = String(text ?? "");
+      const out = [];
+      let last = 0;
+      for (const match of source.matchAll(PROSE_REF)) {
+        const before = source[match.index - 1];
+        if (!match[1] && before && /[\w&]/.test(before)) continue;
+        const head = source.slice(0, match.index);
+        if (/:\/\//.test(head.slice(head.search(/\S*$/)))) continue;
+        if (match[1] && match[1].split("/").some((part) => part === "." || part === "..")) continue;
+        out.push(source.slice(last, match.index));
+        out.push(match[1] ? link(`${repoBase}/${match[1]}/issues/${match[2]}`, match[0]) : link(issueUrl(match[2]), match[0]));
+        last = match.index + match[0].length;
+      }
+      out.push(source.slice(last));
+      return out;
+    };
+
+    const byNumber = new Map(data.bugs.map((bug) => [bug.number, bug]));
+    const list = (name) => data[name] ?? [];
+    const openBugs = data.bugs.filter((bug) => bug.state === "open");
+    const owner = String(data.repo ?? "").split("/")[0];
+    const name = String(data.repo ?? "").split("/")[1] ?? data.repo;
+
+    function section(id, kind, title, note, body) {
+      return h("section", { class: `section section--${kind}`, id, "aria-labelledby": `${id}-heading` }, [
+        h("div", { class: "section-head" }, [
+          h("h2", { class: "section-title", id: `${id}-heading` }, title),
+          note ? h("p", { class: "section-note" }, prose(note)) : null,
+        ]),
+        body,
+      ]);
+    }
+
+    // Sync time, formatted in the board's zone. Copied from
+    // backlog-triage.html; a fix to one prompts a look at the other.
+    const syncedAt = new Date(data.sync.at);
+    const validTime = !Number.isNaN(syncedAt.getTime());
+    function formatSync(locale, options) {
+      if (!validTime) return "";
+      try {
+        return new Intl.DateTimeFormat(locale, { ...options, timeZone: data.sync.timeZone || undefined }).format(syncedAt);
+      } catch {
+        return new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" }).format(syncedAt);
+      }
+    }
+    const dateText = validTime ? formatSync("en-GB", { day: "numeric", month: "short", year: "numeric" }) : data.sync.at;
+    const timeText = formatSync("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "short" });
+    // The local calendar day of the sync, which a triage until date and an
+    // assessment deadline count against.
+    const syncDay = formatSync("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" });
+    const syncText = [dateText, timeText].filter(Boolean).join(", ");
+    const branchLink = () => link(`${repoUrl}/tree/${pathPart(data.sync.branch)}`, data.sync.branch);
+    const commitLink = () => link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8));
+
+    const age = h("p", { class: "when-age" });
+    // Adapted from refreshAge() in backlog-triage.html, which counts in days;
+    // a fix to the wording belongs in both.
+    function refreshAge() {
+      if (!validTime) return;
+      const minutes = Math.max(0, Math.floor((Date.now() - syncedAt.getTime()) / 60000));
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      let text = "Synced just now";
+      if (days >= 1) text = `Synced ${count(days, "day", "days")} ago`;
+      else if (hours >= 1) text = `Synced ${count(hours, "hour", "hours")} ago`;
+      else if (minutes >= 1) text = `Synced ${count(minutes, "minute", "minutes")} ago`;
+      age.textContent = text;
+      age.classList.toggle("is-aging", hours >= AGING_AFTER_HOURS && hours < STALE_AFTER_HOURS);
+      age.classList.toggle("is-stale", hours >= STALE_AFTER_HOURS);
+    }
+
+    // The assessment as five facts. An unknown field, or evidence from
+    // reading code, is unconfirmed.
+    const FACTS = [
+      ["environment", "Where", { production: "Production", staging: "Staging", development: "Development", unknown: "Not yet placed" }],
+      [
+        "evidence",
+        "Known by",
+        {
+          "production-observed": "Seen live",
+          "user-report": "User report",
+          reproduced: "Reproduced",
+          "code-reading": "Found in source",
+          unknown: "Unknown",
+        },
+      ],
+      ["surface", "Who", { public: "The public", "signed-in": "Signed-in users", admin: "Admins", internal: "Maintainers", unknown: "Unknown" }],
+      ["reach", "Reach", { all: "Everyone", many: "Many", some: "Some", few: "A few", unknown: "Unknown" }],
+      ["workaround", "Workaround", { none: "None", exists: "Exists", unknown: "Unknown" }],
+    ];
+    function facts(bug) {
+      const a = bug.assessment ?? {};
+      const set = new Set(bug.overridden ?? []);
+      const rows = [];
+      for (const [field, label, words] of FACTS) {
+        const value = a[field];
+        const unsure = value === "unknown" || (field === "evidence" && value === "code-reading");
+        const classes = ["fact", unsure ? "fact--unsure" : "", set.has(field) ? "fact--set" : ""].filter(Boolean).join(" ");
+        rows.push(h("dt", null, label));
+        rows.push(
+          h("dd", null, h("span", { class: classes, title: set.has(field) ? "Set by the triage note" : null }, words[value] ?? value)),
+        );
+      }
+      if (a.mitigated) rows.push(h("dt", null, "Mitigated"), h("dd", null, h("span", { class: "fact" }, "Yes")));
+      if (a.deadline && a.deadline >= syncDay) rows.push(h("dt", null, "Due"), h("dd", null, h("span", { class: "fact" }, a.deadline)));
+      return h("dl", { class: "facts" }, rows);
+    }
+
+    // What carries the fix: an open pull request and its state, or what else
+    // marks the work in progress.
+    function carrier(bug) {
+      if (bug.fix) {
+        const state = bug.fix.isDraft
+          ? "draft"
+          : [
+              bug.fix.checks ? `checks ${String(bug.fix.checks).toLowerCase()}` : "no checks",
+              bug.fix.reviewDecision ? String(bug.fix.reviewDecision).toLowerCase().replace(/_/g, " ") : "no review",
+            ].join(" · ");
+        return ["Fix ", pullRef(bug.fix.number), ` · ${state}`];
+      }
+      if (bug.inProgress) return `In progress: ${bug.inProgress}`;
+      return null;
+    }
+
+    // The user's own calls and the tracker's signals, beside the facts.
+    const SOURCE_LABELS = { triage: "Your call", zenhub: "ZenHub", github: "GitHub" };
+    function calls(entry) {
+      const shown = (entry.signals ?? []).filter((signal) => signal.source !== "assessment");
+      if (!shown.length) return null;
+      return h(
+        "p",
+        { class: "calls" },
+        shown.map((signal, i) => [i ? " · " : "", `${SOURCE_LABELS[signal.source] ?? signal.source}: `, prose(signal.text)]),
+      );
+    }
+
+    function urgentRow(entry, index, kind) {
+      const bug = byNumber.get(entry.item);
+      const fix = carrier(bug);
+      return h("li", { class: "urgent" }, [
+        h("p", { class: "urgent-rank", "aria-hidden": "true" }, String(index + 1).padStart(2, "0")),
+        h("div", { class: "urgent-main" }, [
+          h("p", { class: "urgent-line" }, [
+            h("span", { class: `tag tag--${kind}` }, kind === "critical" ? "Critical" : "High"),
+            entry.confirm ? h("span", { class: "tag tag--confirm" }, "Confirm first") : null,
+            ref(bug.number),
+            h("span", null, bug.title),
+          ]),
+          h("p", { class: "urgent-action" }, prose(entry.action)),
+          h("p", { class: "urgent-impact" }, prose(entry.impact)),
+        ]),
+        h("div", { class: "urgent-side" }, [facts(bug), fix ? h("p", { class: "fix-line" }, fix) : null, calls(entry)]),
+      ]);
+    }
+
+    const GROUPS = [
+      ["ship", "Fix ready to ship"],
+      ["review", "Fix in review"],
+      ["in-progress", "In progress"],
+      ["ready-to-fix", "Ready to fix"],
+    ];
+    function readyItem(entry) {
+      const bug = byNumber.get(entry.item);
+      const fix = carrier(bug);
+      return h("div", { class: "ready-item" }, [
+        h("p", { class: "ready-title" }, [ref(bug.number), bug.title]),
+        h("p", { class: "ready-next" }, prose(bug.assessment?.nextStep ?? entry.why)),
+        fix ? h("p", { class: "carrier" }, fix) : null,
+      ]);
+    }
+    function readyColumns(entries) {
+      return h(
+        "div",
+        { class: "ready-cols ruled" },
+        GROUPS.filter(([group]) => entries.some((entry) => entry.group === group)).map(([group, label]) => {
+          const members = entries.filter((entry) => entry.group === group);
+          return h("div", { class: "ready-col" }, [
+            h("p", { class: "ready-col-head label" }, [h("span", null, label), h("span", null, String(members.length))]),
+            members.map(readyItem),
+          ]);
+        }),
+      );
+    }
+
+    const critical = list("critical");
+    const high = list("high");
+    const ready = list("ready");
+    const investigate = list("investigate");
+    const lower = list("lower");
+    const parked = list("parked");
+    const fixed = list("fixed");
+    const readyLimit = data.readyLimit ?? 8;
+    const readyTop = ready.slice(0, readyLimit);
+    const readyRest = ready.slice(readyLimit);
+
+    // Header
+    const header = h("header", { class: "head" }, [
+      h("div", { class: "masthead" }, [
+        h("div", { class: "masthead-title" }, [
+          h("p", { class: "label" }, owner ? `Bug triage · ${owner}` : "Bug triage"),
+          h("h1", { class: "repo" }, link(repoUrl, name)),
+        ]),
+        h("div", { class: "when" }, [
+          h("time", { class: "when-time", datetime: data.sync.at }, syncText),
+          h("p", null, [branchLink(), " @ ", commitLink()]),
+          age,
+        ]),
+      ]),
+      h("dl", { class: "counts" }, [
+        h("div", { class: "count count--critical" }, [
+          h("dt", null, [
+            "Critical",
+            critical.length > data.criticalWarn ? h("span", { class: "count-warn" }, `More than ${data.criticalWarn}`) : null,
+          ]),
+          h("dd", null, String(critical.length)),
+        ]),
+        h("div", { class: "count count--high" }, [h("dt", null, "High priority"), h("dd", null, String(high.length))]),
+        h("div", { class: "count" }, [h("dt", null, "Ready"), h("dd", null, String(ready.length))]),
+        h("div", { class: "count" }, [h("dt", null, "Investigate"), h("dd", null, String(investigate.length))]),
+        h("div", { class: "count count--open" }, [h("dt", null, "Open bugs"), h("dd", null, String(openBugs.length))]),
+      ]),
+      h("p", { class: "summary" }, prose(data.summary)),
+    ]);
+
+    // Above the fold
+    const criticalSection = section(
+      "critical",
+      "critical",
+      "Critical",
+      critical.length
+        ? "Hurting people on production, or open to anyone. Most urgent first."
+        : "Nothing is hurting people on production or open to anyone.",
+      critical.length ? h("ol", { class: "ruled" }, critical.map((entry, i) => urgentRow(entry, i, "critical"))) : null,
+    );
+    const highSection = section(
+      "high",
+      "high",
+      "High priority",
+      high.length
+        ? "Getting worse with every event, due within the window, or high stakes still to confirm on production."
+        : "Nothing else is pressing.",
+      high.length ? h("ol", { class: "ruled" }, high.map((entry, i) => urgentRow(entry, i, "high"))) : null,
+    );
+    function readyNote() {
+      if (!ready.length) return "Nothing is ready to land or fix.";
+      if (readyRest.length) {
+        return `The top ${readyTop.length} of ${ready.length}: fixes to land, work underway, and bugs whose cause is known.`;
+      }
+      return "Fixes to land, work underway, and bugs whose cause is known.";
+    }
+    const readySection = section(
+      "ready",
+      "ready",
+      "Ready to go",
+      readyNote(),
+      ready.length
+        ? [
+            readyColumns(readyTop),
+            readyRest.length
+              ? h("p", { class: "more" }, [link("#ready-more", `${readyRest.length} more ready to go`), " in the report below."])
+              : null,
+          ]
+        : null,
+    );
+
+    // The report
+    const investigateSection = section(
+      "investigate",
+      "report",
+      "Needs investigation",
+      investigate.length
+        ? "What is not yet known, ranked by the harm it would do if confirmed."
+        : "Every open bug is understood well enough to place.",
+      investigate.length
+        ? h(
+            "ol",
+            { class: "ruled" },
+            investigate.map((entry) => {
+              const bug = byNumber.get(entry.item);
+              return h("li", { class: "report-row" }, [
+                ref(bug.number),
+                h("div", null, [h("p", { class: "report-title" }, bug.title), h("p", { class: "report-why" }, entry.why)]),
+                h("p", { class: "report-question" }, prose(entry.question)),
+              ]);
+            }),
+          )
+        : null,
+    );
+
+    const moreReadySection = readyRest.length
+      ? section("ready-more", "report", "More ready to go", "The rest of Ready to go, in the same order.", readyColumns(readyRest))
+      : null;
+
+    function lowerTable() {
+      const groups = new Map();
+      for (const entry of lower) {
+        if (!groups.has(entry.reason)) groups.set(entry.reason, []);
+        groups.get(entry.reason).push(entry);
+      }
+      const rows = [];
+      for (const [reason, members] of groups) {
+        if (groups.size > 1) rows.push(h("tr", { class: "lower-group" }, h("td", { colspan: 3 }, `${reason} (${members.length})`)));
+        for (const entry of members) {
+          const bug = byNumber.get(entry.item);
+          rows.push(
+            h("tr", null, [
+              h("td", null, ref(bug.number)),
+              h("td", null, bug.title),
+              h("td", { class: "mono" }, bug.assessment?.impact ?? ""),
+            ]),
+          );
+        }
+      }
+      return h("div", { class: "table-wrap ruled" }, [
+        h("table", { class: "lower-table" }, [
+          h("thead", null, h("tr", null, ["Bug", "Title", "Impact"].map((label) => h("th", { scope: "col" }, label)))),
+          h("tbody", null, rows),
+        ]),
+      ]);
+    }
+    function lowerNote() {
+      if (!lower.length) return "Nothing sits at lower priority.";
+      const bugs = count(lower.length, "bug", "bugs");
+      if (lower.every((entry) => entry.reason === "internal")) {
+        return `${bugs} that only reach maintainers: tooling, tests, alerts, and deploy scripts.`;
+      }
+      return `${bugs} that reach only maintainers or change nothing a person relies on.`;
+    }
+    const lowerSection = section("lower", "report", "Lower priority", lowerNote(), lower.length ? lowerTable() : null);
+
+    function svgElement(tag, attributes) {
+      const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
+      return element;
+    }
+    function checkIcon() {
+      const svg = svgElement("svg", {
+        width: "14",
+        height: "14",
+        viewBox: "0 0 14 14",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "2",
+        "aria-hidden": "true",
+      });
+      svg.append(svgElement("path", { d: "M2 7.5 5.5 11 12 3" }));
+      return svg;
+    }
+    // How a fixed bug closed: the pull requests that fixed it, or its close
+    // reason.
+    function closedBy(bug) {
+      if (bug.fixedBy?.length) return ["fixed by ", bug.fixedBy.map((n, i) => [i ? ", " : "", pullRef(n)])];
+      const reason = String(bug.stateReason ?? "closed").toLowerCase().replace(/_/g, " ");
+      return reason === "completed" ? "closed" : reason;
+    }
+    const fixedSection = section(
+      "fixed",
+      "report",
+      "Fixed",
+      fixed.length ? "Closed within the window this sync covers." : "No bug closed within the window this sync covers.",
+      fixed.length
+        ? h(
+            "ul",
+            { class: "ruled" },
+            fixed.map((entry) => {
+              const bug = byNumber.get(entry.item);
+              return h("li", { class: "fixed-row" }, [
+                checkIcon(),
+                ref(bug.number),
+                h("span", { class: "fixed-title" }, bug.title),
+                entry.verify ? h("span", { class: "tag tag--verify" }, "Verify on production") : null,
+                h("span", { class: "label" }, closedBy(bug)),
+              ]);
+            }),
+          )
+        : null,
+    );
+
+    const parkedSection = parked.length
+      ? section(
+          "parked",
+          "report",
+          "Parked",
+          "Snoozed or parked by your triage note, labeled to skip, or a container.",
+          h(
+            "ol",
+            { class: "ruled" },
+            parked.map((entry) => {
+              const bug = byNumber.get(entry.item);
+              return h("li", { class: "report-row" }, [
+                ref(bug.number),
+                h("p", { class: "report-title" }, bug.title),
+                h("p", { class: "report-detail" }, prose(entry.reason)),
+              ]);
+            }),
+          ),
+        )
+      : null;
+
+    const triage = data.triage ?? [];
+    const expired = (entry) => typeof entry.until === "string" && syncDay && syncDay > entry.until;
+    const triageSection = section(
+      "triage",
+      "report",
+      "Triage note",
+      triage.length ? "Your calls, which every sync applies before its own rules." : null,
+      triage.length
+        ? h(
+            "ol",
+            { class: "triage-list ruled" },
+            triage.map((entry) =>
+              h("li", { class: expired(entry) ? "triage-entry triage-entry--expired" : "triage-entry" }, [
+                h("span", { class: "label" }, `${entry.at} `),
+                h("strong", null, entry.verb),
+                entry.target != null ? [" ", ref(entry.target)] : null,
+                entry.fields
+                  ? h(
+                      "span",
+                      { class: "mono" },
+                      ` ${Object.entries(entry.fields)
+                        .map(([key, value]) => `${key}=${value}`)
+                        .join(" ")}`,
+                    )
+                  : null,
+                entry.until ? ` until ${entry.until}` : null,
+                ": ",
+                h("span", { class: "triage-text" }, prose(entry.text)),
+                expired(entry) ? [" ", h("span", { class: "tag tag--confirm" }, "Expired")] : null,
+              ]),
+            ),
+          )
+        : h(
+            "p",
+            { class: "triage-empty" },
+            "No calls recorded yet. Escalate a bug, set what the reading got wrong, or snooze or park one at the next sync, and every sync after applies it.",
+          ),
+    );
+
+    const footer = h("footer", { class: "footer" }, [
+      "Synced ",
+      syncText,
+      " against ",
+      branchLink(),
+      " at ",
+      commitLink(),
+      ". ",
+      count(openBugs.length, "open bug", "open bugs"),
+      typeof data.sync.openPullRequests === "number" ? `, ${count(data.sync.openPullRequests, "open fix", "open fixes")}` : "",
+      (data.sync.extra ?? []).map((fact) => `, ${fact}`),
+      ". GitHub is the source of truth; this page is a snapshot.",
+    ]);
+
+    refreshAge();
+    window.setInterval(refreshAge, 60000);
+
+    // An absent section is null, which replaceChildren would draw as text.
+    root.replaceChildren(
+      ...[
+        header,
+        criticalSection,
+        highSection,
+        readySection,
+        h("p", { class: "fold label", role: "separator" }, "Report"),
+        investigateSection,
+        moreReadySection,
+        lowerSection,
+        fixedSection,
+        parkedSection,
+        triageSection,
+        footer,
+      ].filter(Boolean),
+    );
+  })();
+</script>
