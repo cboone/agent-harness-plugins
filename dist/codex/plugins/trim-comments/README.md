@@ -20,6 +20,7 @@ The scope defaults to comments in or directly above code changed since the base 
 ## Requirements
 
 - A Git repository. The [GitHub CLI](https://cli.github.com/) finds the base branch when it is available; otherwise the skill falls back to the `origin/HEAD` ref, and asks when neither is set.
+- `realpath`, which the path safety filter uses. It ships with GNU coreutils and with macOS 13 and later.
 
 ## Usage
 
