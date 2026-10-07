@@ -235,9 +235,10 @@ $ problems '.triageProblems = ["line 4: expected escalate, demote, set, snooze, 
 ## A triage signal must rest on an entry with its verb, about its bug
 
 ```scrut
-$ problems '(.critical[] | select(.item == 24) | .signals) += [{source: "triage", kind: "escalate", text: "x", at: "2026-10-13T08:00:00-04:00", entry: "2026-10-13T08:00-04:00 context"}, {source: "triage", kind: "snooze", text: "x", at: "2026-10-14T09:00:00-04:00", entry: "2026-10-14T09:00-04:00 snooze #23"}]'
+$ problems '(.critical[] | select(.item == 24) | .signals) += [{source: "triage", kind: "escalate", text: "x", at: "2026-10-13T08:00:00-04:00", entry: "2026-10-13T08:00-04:00 context"}, {source: "triage", kind: "snooze", text: "x", at: "2026-10-14T09:00:00-04:00", entry: "2026-10-14T09:00-04:00 snooze #23"}, {source: "triage", kind: "context", text: "x", at: "2026-10-13T08:00:00-04:00", entry: "2026-10-13T08:00-04:00 context"}]'
   - critical #24 signals[3]: entry 2026-10-13T08:00-04:00 context is a context entry, but the signal says escalate
   - critical #24 signals[4]: entry 2026-10-14T09:00-04:00 snooze #23 is about #23, not #24
+  - critical #24 signals[5]: entry 2026-10-13T08:00-04:00 context names no bug
 ```
 
 ## A park entry keeps a bug out of Critical and High priority too

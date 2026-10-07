@@ -454,7 +454,8 @@ else
                 elif $e == null then "\($where): entry \($s.entry) is not in triage"
                 elif ($e | expired) then "\($where): entry \($s.entry) expired on \($e.until)"
                 elif $e.verb != $s.kind then "\($where): entry \($s.entry) is a \($e.verb) entry, but the signal says \($s.kind)"
-                elif $e.target != null and $e.target != $item then "\($where): entry \($s.entry) is about #\($e.target), not #\($item)"
+                elif $e.target == null then "\($where): entry \($s.entry) names no bug"
+                elif $e.target != $item then "\($where): entry \($s.entry) is about #\($e.target), not #\($item)"
                 else empty end)
            else empty end)
         end;
