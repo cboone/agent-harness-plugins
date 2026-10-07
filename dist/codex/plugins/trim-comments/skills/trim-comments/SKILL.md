@@ -204,7 +204,7 @@ Then find the merge base:
 git merge-base origin/<base> HEAD
 ```
 
-These commands assume the remote is named `origin`; use the repository's remote name if it differs. If `origin/<base>` does not exist, try the local `<base>` branch. A local branch can be behind its remote, which moves the merge base back and pulls other people's commits into scope, so say in the report when the local branch was used. If neither works, treat it as not found and see "Error Handling".
+These commands assume the remote is named `origin`. If `git remote` lists no `origin`, use the current branch's upstream remote (`git config branch.<branch>.remote`), or the only remote when there is one, in place of `origin` throughout; with several remotes and no upstream, treat the base as not found. If `origin/<base>` does not exist, try the local `<base>` branch. A local branch can be behind its remote, which moves the merge base back and pulls other people's commits into scope, so say in the report when the local branch was used. If neither works, treat it as not found and see "Error Handling".
 
 Collect the changed files. Both commands print paths from the repository root, from any working directory; `--no-relative` keeps a `diff.relative` setting from limiting the first to the current directory:
 
@@ -215,7 +215,7 @@ git ls-files --others --exclude-standard --full-name :/
 
 The first command covers committed, staged, and unstaged changes since the merge base, without deleted files; the second adds untracked files.
 
-Filter every path list, including the file of a single named comment, before reading any file:
+Filter every path list, including the file of a single named comment, before reading any file. Every path is root-relative, so run these checks from the repository root (`git rev-parse --show-toplevel`), not the current directory:
 
 - Drop anything under "Do not touch".
 - Drop secret-bearing paths, such as real environment files, private keys, and credential stores, and any path that may hold credentials but cannot be classified without reading it. Never read, search, edit, or print them; report only that secret-bearing files were skipped.
