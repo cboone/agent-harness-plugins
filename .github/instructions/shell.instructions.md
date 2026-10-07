@@ -20,6 +20,8 @@ Bundled scripts here run on macOS and Linux alike, so portability findings are w
 
 - **A review-body section that lists only thread links is read, whatever its summary says.** Every `(#discussion_r…)` link in a Copilot review body names an inline review thread, and `fetch` reports every unresolved Copilot thread on the pull request, whichever section links it. So `parse-reviews` deliberately does not report drift for an unrecognized section, open or closed, whose only contents are thread links: nothing in it goes unread. Inside a section it does not recognize, it parses or reports finding-shaped content the census knows, such as a vote-tagged item, a `path:line` location or a count its links do not match, and it leaves descriptive prose alone, as it does in "What changed in this PR". Do not ask for an unrecognized `<details open>` block of thread links to be treated as drift.
 
+- **Some `resolve-copilot-threads` census gaps are known and tracked in issue #567.** These include: counted sections of unknown names holding prose beside thread links, vote-tag variants such as "(2 of 3 votes)", severity words with no vote tag, counts nested at depth two or under `####` headings, a `</details>` that ends a prose line, prose after the last top-level block, and canary skeletons that ignore nesting depth. Do not report these again in a pull request that does not change how they are handled.
+
 Two checks are disabled in `.shellcheckrc` by design and should not be raised in review: `check-extra-masked-returns` (SC2312) and `check-set-e-suppressed` (SC2310).
 
 ## Conventions worth enforcing
