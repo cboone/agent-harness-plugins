@@ -189,9 +189,9 @@ Two entries apply to whole files, generated files and prose documents, and step 
 
 ### 1. Resolve scope
 
-If the user pointed at a single comment, it is the whole scope: expand its file like a user-given path below, then apply the filter at the end of this step. If the file survives, go to step 3 with that one comment as the only item to classify, reading the rest of the file only for context; otherwise report that it was skipped and why, and stop. If the user gave paths, expand every one of them, whether a file, a directory, or a glob, with `git ls-files --cached --others --exclude-standard --full-name -- ':(glob)<path>'`. Quoting keeps the shell from expanding a glob first, `:(glob)` makes `**` match any depth as in a shell, and ignored files and paths outside the repository stay out, including the contents of a named directory. Then filter the paths as described at the end of this step, and go to step 2.
+If the user pointed at a single comment, it is the whole scope: expand its file like a user-given path below, then apply the filter at the end of this step. If the file survives, go to step 3 with that one comment as the only item to classify, reading the rest of the file only for context; otherwise report that it was skipped and why, and stop. If the user gave paths, expand every one of them, whether a file, a directory, or a glob, with `git ls-files -z --cached --others --exclude-standard --full-name -- ':(glob)<path>'`. Quoting keeps the shell from expanding a glob first, `:(glob)` makes `**` match any depth as in a shell, and ignored files and paths outside the repository stay out, including the contents of a named directory. Then filter the paths as described at the end of this step, and go to step 2.
 
-Never paste a path into command text. Pass each path, with any pathspec prefix, to Git as one shell argument quoted so that no character in it can end the argument, for example with `printf '%q'`. This applies to user-given paths here and to the changed filenames in step 2, since either can contain a quote.
+Every path list in this step comes from a `-z` command: split it on NUL bytes only, never on newlines, so a filename containing a newline or quote arrives intact and unescaped. Never paste a path into command text. Pass each path, with any pathspec prefix, to Git as one shell argument quoted so that no character in it can end the argument, for example with `printf '%q'`. This applies to user-given paths here and to the changed filenames in step 2, since either can contain a quote.
 
 Otherwise, choose the remote: `origin` when `git remote` lists it; otherwise the current branch's upstream remote (`git config --get branch.<branch>.remote`, ignoring `.`, which means the upstream is a local branch), or the only remote when there is one. With several remotes and no upstream, treat the base as not found. `<remote>` below means the chosen name.
 
@@ -215,8 +215,8 @@ If `<remote>/<base>` does not exist, try the local `<base>` branch. A local bran
 Collect the changed files. Both commands print paths from the repository root, from any working directory; `--no-relative` keeps a `diff.relative` setting from limiting the first to the current directory:
 
 ```bash
-git diff --name-only --no-relative --diff-filter=d <merge-base>
-git ls-files --others --exclude-standard --full-name :/
+git diff -z --name-only --no-relative --diff-filter=d <merge-base>
+git ls-files -z --others --exclude-standard --full-name :/
 ```
 
 The first command covers committed, staged, and unstaged changes since the merge base, without deleted files; the second adds untracked files.

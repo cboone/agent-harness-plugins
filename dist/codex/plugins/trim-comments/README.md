@@ -30,7 +30,7 @@ The scope defaults to comments in or directly above code changed since the base 
 /trim-comments --dry-run
 ```
 
-`--dry-run` reports the proposed changes without editing. Paths put every comment in those files in scope, changed or not.
+`--dry-run` reports the proposed changes without editing. Paths put every comment in those files in scope, changed or not, after the same safety filter drops generated files, prose documents, secret-bearing paths, symlinks, and anything that is not a regular file.
 
 ## Recommended Permissions
 
