@@ -39,7 +39,7 @@ The scope defaults to files changed since the base branch, including uncommitted
 
 ## Credits
 
-Originally written by Erica ([@acire](https://github.com/acire)) and used with her permission. This version adapts it to this repository's conventions and adds the rules on staying true.
+Originally written by Erica Oh ([@acire](https://github.com/acire)) and used with her permission. This version adapts it to this repository's conventions and adds the rules on staying true.
 
 ## See Also
 
