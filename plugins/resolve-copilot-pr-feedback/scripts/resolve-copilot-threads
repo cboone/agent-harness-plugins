@@ -834,14 +834,20 @@ function do_parse_reviews() {
         // null;
 
       # An open section whose count and thread links disagree, in either
-      # direction, or a "**N open findings**" line beside an open-findings
-      # block. The census reconciles a count with its links only above zero,
-      # so a "0 open findings" block holding a link would otherwise read as
-      # clean, and the count line stands in for a block that is absent, so
-      # the two together are two counts with no rule for which one holds.
+      # direction, or an open-findings count stated beside any other count.
+      # The census reconciles a count with its links only above zero, so a
+      # "0 open findings" block holding a link would otherwise read as clean.
+      # The open-findings layout states its count once, as a block summary
+      # or, with nothing open, a "**0 open findings**" line, and never beside
+      # a "**Findings:**" line or an "Open (N)" section, so a body mixing the
+      # forms carries counts with no rule for which one holds: "**Findings:**
+      # None" over a block of three would otherwise read as zero.
       def open_section_mismatch:
         ((open_section // open_findings_section) | . != null and .links != .count)
-        or (open_findings_line_count != null and open_findings_section != null);
+        or (
+          ([open_findings_line_count, open_findings_section] | any(. != null))
+          and ([stated_finding_count, open_findings_line_count, open_section, open_findings_section] | map(select(. != null)) | length) > 1
+        );
 
       # Copilot puts its verdict heading and lead paragraph before the first
       # details block. The stop pattern omits the closing angle bracket, as

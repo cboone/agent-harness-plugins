@@ -169,11 +169,10 @@ $ jq '.[0].body |= sub("3 open findings"; "2 open findings")' "${COPILOT_REVIEW_
 {"hasFormatDrift":true,"unaccounted":["section-count open findings line 8"]}
 ```
 
-The stated count is also checked outside the census, the way a
-`**Findings:**` count is compared with `Open (N)`. When a body carries both a
-`**Findings:**` line and an open-findings block, the line is the stated count,
-and a total above the links the block lists is a shortfall the census does not
-see.
+The open-findings layout states its count once, and never beside a
+`**Findings:**` line, so a body carrying both is drift whatever the two say.
+The census sees nothing amiss here, because the block count matches its
+links.
 
 ```scrut
 $ jq '.[0].body |= sub("\n\n<details open>"; "\n\n**Findings:** 5\n\n<details open>")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
@@ -250,12 +249,25 @@ $ jq '.[0].body |= (sub("(?s)<strong>3 open findings</strong></summary>\n\n.*?</
 {"hasFormatDrift":true,"unaccounted":[]}
 ```
 
-A `**N open findings**` line stands in for an open block that is absent. Beside
-a block, it is a second count with no rule for which one holds, so a body
-stating `**0 open findings**` over a block of three is drift rather than zero.
+A `**N open findings**` line stands in for an open block that is absent.
+Beside any open section, of either layout, or beside a `**Findings:**` line,
+it is a second count with no rule for which one holds. So a body stating
+`**0 open findings**` over a block of three is drift rather than zero, and so
+is one stating it over an `Open (1)` section, or `**Findings:** None` over a
+block of three.
 
 ```scrut
 $ jq '.[0].body |= (sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval.") | sub("\n\n<details open>"; "\n\n**0 open findings**\n\n<details open>"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":true,"unaccounted":[]}
+```
+
+```scrut
+$ jq '.[0].body |= (sub("Seven moderate[^\n]*"; "One or more issues must be addressed before approval.") | sub("\n</details>"; "\n</details>\n\n<details open>\n<summary><strong>Open (1)</strong></summary>\n\n- [x](#discussion_r7)\n</details>"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":true,"unaccounted":[]}
+```
+
+```scrut
+$ jq '.[0].body |= (sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval.") | sub("\n\n<details open>"; "\n\n**Findings:** None\n\n<details open>"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
 {"hasFormatDrift":true,"unaccounted":[]}
 ```
 
