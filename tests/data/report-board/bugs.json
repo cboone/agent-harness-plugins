@@ -1,0 +1,1224 @@
+{
+  "board": "bugs",
+  "title": "widgets bugs",
+  "repo": "acme/widgets",
+  "repoUrl": "https://github.com/acme/widgets",
+  "sync": {
+    "at": "2026-10-15T16:00:00Z",
+    "branch": "main",
+    "commit": "0123456789abcdef0123456789abcdef01234567",
+    "timeZone": "America/New_York",
+    "openPullRequests": 3,
+    "extra": ["ZenHub workspace ws123", "closed bugs from the last 7 days"]
+  },
+  "summary": "Stop the pledge crash first; #11 and #25 expose and lose data on public pages, and #15 is due before the send window opens on 2026-10-20.",
+  "nowWarn": 5,
+  "readyLimit": 8,
+  "triage": [
+    {
+      "id": "2026-10-14T09:00-04:00 escalate #24",
+      "at": "2026-10-14T09:00-04:00",
+      "verb": "escalate",
+      "target": 24,
+      "until": null,
+      "text": "the footer link sits in the donation flow during the launch"
+    },
+    {
+      "id": "2026-10-14T09:00-04:00 snooze #23",
+      "at": "2026-10-14T09:00-04:00",
+      "verb": "snooze",
+      "target": 23,
+      "until": "2026-11-10",
+      "text": "PDF size waits until after the election"
+    },
+    {
+      "id": "2026-10-14T09:05-04:00 set #25",
+      "at": "2026-10-14T09:05-04:00",
+      "verb": "set",
+      "target": 25,
+      "until": null,
+      "fields": {
+        "environment": "production",
+        "evidence": "user-report"
+      },
+      "text": "two donors reported it"
+    },
+    {
+      "id": "2026-10-13T08:00-04:00 context",
+      "at": "2026-10-13T08:00-04:00",
+      "verb": "context",
+      "target": null,
+      "until": null,
+      "text": "the send window opens 2026-10-20"
+    },
+    {
+      "id": "2026-10-01T08:00-04:00 escalate #19",
+      "at": "2026-10-01T08:00-04:00",
+      "verb": "escalate",
+      "target": 19,
+      "until": "2026-10-10",
+      "text": "the drift check gated a release"
+    }
+  ],
+  "bugs": [
+    {
+      "number": 5,
+      "title": "Verify email returns 500",
+      "url": "https://github.com/acme/widgets/issues/5",
+      "state": "closed",
+      "tier": "fixed",
+      "closedAt": "2026-10-12T10:00:00Z",
+      "stateReason": "COMPLETED",
+      "fixedBy": [41]
+    },
+    {
+      "number": 6,
+      "title": "Duplicate of the API v2 bug",
+      "url": "https://github.com/acme/widgets/issues/6",
+      "state": "closed",
+      "tier": "fixed",
+      "closedAt": "2026-10-11T10:00:00Z",
+      "stateReason": "DUPLICATE",
+      "fixedBy": []
+    },
+    {
+      "number": 10,
+      "title": "Pledging crashes the app",
+      "url": "https://github.com/acme/widgets/issues/10",
+      "state": "open",
+      "tier": "now",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": "New Issues",
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "production",
+        "evidence": "production-observed",
+        "surface": "public",
+        "impact": "money",
+        "reach": "all",
+        "workaround": "none",
+        "cause": "known",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 10 in one sentence.",
+        "nextStep": "Fix bug 10.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 77
+    },
+    {
+      "number": 11,
+      "title": "API v2 accepts unauthenticated writes",
+      "url": "https://github.com/acme/widgets/issues/11",
+      "state": "open",
+      "tier": "now",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug", "security"],
+      "pipeline": "High Priority",
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "production",
+        "evidence": "code-reading",
+        "surface": "public",
+        "impact": "security",
+        "reach": "all",
+        "workaround": "none",
+        "cause": "known",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 11 in one sentence.",
+        "nextStep": "Fix bug 11.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 87
+    },
+    {
+      "number": 12,
+      "title": "Token refresh bounces users to the dashboard",
+      "url": "https://github.com/acme/widgets/issues/12",
+      "state": "open",
+      "tier": "today",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": "In Progress",
+      "sprint": true,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": "in In Progress",
+      "assessment": {
+        "environment": "production",
+        "evidence": "production-observed",
+        "surface": "signed-in",
+        "impact": "degraded",
+        "reach": "many",
+        "workaround": "exists",
+        "cause": "known",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 12 in one sentence.",
+        "nextStep": "Fix bug 12.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 49
+    },
+    {
+      "number": 13,
+      "title": "Partner pages drop campaigns with null flags",
+      "url": "https://github.com/acme/widgets/issues/13",
+      "state": "open",
+      "tier": "today",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "unknown",
+        "evidence": "code-reading",
+        "surface": "public",
+        "impact": "core-flow",
+        "reach": "unknown",
+        "workaround": "unknown",
+        "cause": "known",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 13 in one sentence.",
+        "nextStep": "Fix bug 13.",
+        "question": "Does production hold null flags?"
+      },
+      "overridden": [],
+      "score": 51
+    },
+    {
+      "number": 14,
+      "title": "Relinquish erases bundle membership",
+      "url": "https://github.com/acme/widgets/issues/14",
+      "state": "open",
+      "tier": "today",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "production",
+        "evidence": "user-report",
+        "surface": "admin",
+        "impact": "data-loss",
+        "reach": "some",
+        "workaround": "exists",
+        "cause": "known",
+        "timeSensitive": true,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 14 in one sentence.",
+        "nextStep": "Fix bug 14.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 80
+    },
+    {
+      "number": 15,
+      "title": "Reminder batch sends twice before the send window",
+      "url": "https://github.com/acme/widgets/issues/15",
+      "state": "open",
+      "tier": "today",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "development",
+        "evidence": "code-reading",
+        "surface": "signed-in",
+        "impact": "degraded",
+        "reach": "some",
+        "workaround": "unknown",
+        "cause": "known",
+        "timeSensitive": true,
+        "deadline": "2026-10-20",
+        "mitigated": false,
+        "gist": "Bug 15 in one sentence.",
+        "nextStep": "Fix bug 15.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 49
+    },
+    {
+      "number": 16,
+      "title": "Election day counts as past",
+      "url": "https://github.com/acme/widgets/issues/16",
+      "state": "open",
+      "tier": "ready",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug", "high-priority"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": {
+        "number": 40,
+        "url": "https://github.com/acme/widgets/pull/40",
+        "isDraft": false,
+        "checks": "SUCCESS",
+        "reviewDecision": "APPROVED"
+      },
+      "inProgress": "fix #40",
+      "assessment": {
+        "environment": "production",
+        "evidence": "code-reading",
+        "surface": "signed-in",
+        "impact": "core-flow",
+        "reach": "all",
+        "workaround": "exists",
+        "cause": "known",
+        "timeSensitive": true,
+        "deadline": "2026-11-03",
+        "mitigated": false,
+        "gist": "Bug 16 in one sentence.",
+        "nextStep": "Fix bug 16.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 94
+    },
+    {
+      "number": 17,
+      "title": "Auth0 forces near-daily sign-outs",
+      "url": "https://github.com/acme/widgets/issues/17",
+      "state": "open",
+      "tier": "ready",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "production",
+        "evidence": "user-report",
+        "surface": "signed-in",
+        "impact": "access",
+        "reach": "many",
+        "workaround": "exists",
+        "cause": "known",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": true,
+        "gist": "Bug 17 in one sentence.",
+        "nextStep": "Fix bug 17.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 47
+    },
+    {
+      "number": 18,
+      "title": "A test break blocks the axios security update",
+      "url": "https://github.com/acme/widgets/issues/18",
+      "state": "open",
+      "tier": "ready",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "development",
+        "evidence": "reproduced",
+        "surface": "internal",
+        "impact": "security",
+        "reach": "all",
+        "workaround": "none",
+        "cause": "known",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 18 in one sentence.",
+        "nextStep": "Fix bug 18.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 61
+    },
+    {
+      "number": 19,
+      "title": "The CPU drift check fails on equivalent values",
+      "url": "https://github.com/acme/widgets/issues/19",
+      "state": "open",
+      "tier": "later",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "production",
+        "evidence": "production-observed",
+        "surface": "internal",
+        "impact": "internal",
+        "reach": "all",
+        "workaround": "none",
+        "cause": "known",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 19 in one sentence.",
+        "nextStep": "Fix bug 19.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 29
+    },
+    {
+      "number": 20,
+      "title": "Letter counts disagree between pages",
+      "url": "https://github.com/acme/widgets/issues/20",
+      "state": "open",
+      "tier": "investigate",
+      "author": "carol",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 2,
+      "reactions": 4,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "unknown",
+        "evidence": "user-report",
+        "surface": "signed-in",
+        "impact": "degraded",
+        "reach": "unknown",
+        "workaround": "unknown",
+        "cause": "unknown",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 20 in one sentence.",
+        "nextStep": "Fix bug 20.",
+        "question": "Which page is wrong?"
+      },
+      "overridden": [],
+      "score": 55
+    },
+    {
+      "number": 21,
+      "title": "Admin search returns 500 for long names",
+      "url": "https://github.com/acme/widgets/issues/21",
+      "state": "open",
+      "tier": "ready",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": "Must Do",
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "production",
+        "evidence": "production-observed",
+        "surface": "admin",
+        "impact": "degraded",
+        "reach": "few",
+        "workaround": "exists",
+        "cause": "known",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 21 in one sentence.",
+        "nextStep": "Fix bug 21.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 39
+    },
+    {
+      "number": 22,
+      "title": "Old export button misaligned",
+      "url": "https://github.com/acme/widgets/issues/22",
+      "state": "open",
+      "tier": "parked",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug", "wontfix"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "development",
+        "evidence": "reproduced",
+        "surface": "admin",
+        "impact": "cosmetic",
+        "reach": "few",
+        "workaround": "exists",
+        "cause": "known",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 22 in one sentence.",
+        "nextStep": "Fix bug 22.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 16
+    },
+    {
+      "number": 23,
+      "title": "PDF size is larger than needed",
+      "url": "https://github.com/acme/widgets/issues/23",
+      "state": "open",
+      "tier": "parked",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "unknown",
+        "evidence": "unknown",
+        "surface": "unknown",
+        "impact": "degraded",
+        "reach": "unknown",
+        "workaround": "unknown",
+        "cause": "suspected",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 23 in one sentence.",
+        "nextStep": "Fix bug 23.",
+        "question": "Is PDF size causing failures?"
+      },
+      "overridden": [],
+      "score": 19
+    },
+    {
+      "number": 24,
+      "title": "Footer link color is off",
+      "url": "https://github.com/acme/widgets/issues/24",
+      "state": "open",
+      "tier": "now",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "production",
+        "evidence": "reproduced",
+        "surface": "public",
+        "impact": "cosmetic",
+        "reach": "some",
+        "workaround": "exists",
+        "cause": "known",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 24 in one sentence.",
+        "nextStep": "Fix bug 24.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 29
+    },
+    {
+      "number": 25,
+      "title": "Opt-outs do not suppress adopted letters",
+      "url": "https://github.com/acme/widgets/issues/25",
+      "state": "open",
+      "tier": "now",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "production",
+        "evidence": "user-report",
+        "surface": "public",
+        "impact": "data-loss",
+        "reach": "all",
+        "workaround": "none",
+        "cause": "known",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 25 in one sentence.",
+        "nextStep": "Fix bug 25.",
+        "question": null
+      },
+      "overridden": ["environment", "evidence"],
+      "score": 80
+    },
+    {
+      "number": 26,
+      "title": "Tooltip flickers on hover",
+      "url": "https://github.com/acme/widgets/issues/26",
+      "state": "open",
+      "tier": "later",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": [],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "production",
+        "evidence": "reproduced",
+        "surface": "public",
+        "impact": "cosmetic",
+        "reach": "few",
+        "workaround": "exists",
+        "cause": "known",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 26 in one sentence.",
+        "nextStep": "Fix bug 26.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 26
+    },
+    {
+      "number": 27,
+      "title": "Callback returns 500 for invalid logins",
+      "url": "https://github.com/acme/widgets/issues/27",
+      "state": "open",
+      "tier": "ready",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug", "in progress"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": {
+        "number": 42,
+        "url": "https://github.com/acme/widgets/pull/42",
+        "isDraft": true,
+        "checks": null,
+        "reviewDecision": null
+      },
+      "inProgress": "draft fix #42",
+      "assessment": {
+        "environment": "production",
+        "evidence": "user-report",
+        "surface": "signed-in",
+        "impact": "access",
+        "reach": "few",
+        "workaround": "unknown",
+        "cause": "known",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 27 in one sentence.",
+        "nextStep": "Fix bug 27.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 59
+    },
+    {
+      "number": 28,
+      "title": "Profile form sends a request per keystroke",
+      "url": "https://github.com/acme/widgets/issues/28",
+      "state": "open",
+      "tier": "ready",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": null,
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": {
+        "number": 43,
+        "url": "https://github.com/acme/widgets/pull/43",
+        "isDraft": false,
+        "checks": "FAILURE",
+        "reviewDecision": null
+      },
+      "inProgress": "fix #43",
+      "assessment": {
+        "environment": "production",
+        "evidence": "production-observed",
+        "surface": "signed-in",
+        "impact": "degraded",
+        "reach": "unknown",
+        "workaround": "unknown",
+        "cause": "suspected",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 28 in one sentence.",
+        "nextStep": "Fix bug 28.",
+        "question": null
+      },
+      "overridden": [],
+      "score": 38
+    },
+    {
+      "number": 29,
+      "title": "Auth hardening epic",
+      "url": "https://github.com/acme/widgets/issues/29",
+      "state": "open",
+      "tier": "parked",
+      "author": "alice",
+      "createdAt": "2026-10-01T12:00:00Z",
+      "updatedAt": "2026-10-10T12:00:00Z",
+      "labels": ["bug"],
+      "pipeline": "Product Backlog",
+      "sprint": false,
+      "outsidePeople": 0,
+      "reactions": 0,
+      "fix": null,
+      "inProgress": null,
+      "assessment": {
+        "environment": "unknown",
+        "evidence": "unknown",
+        "surface": "unknown",
+        "impact": "unknown",
+        "reach": "unknown",
+        "workaround": "unknown",
+        "cause": "unknown",
+        "timeSensitive": false,
+        "deadline": null,
+        "mitigated": false,
+        "gist": "Bug 29 in one sentence.",
+        "nextStep": "Fix bug 29.",
+        "question": "What does the epic still hold?"
+      },
+      "overridden": [],
+      "score": 19
+    }
+  ],
+  "now": [
+    {
+      "item": 11,
+      "why": "public security exposure",
+      "confirm": false,
+      "action": "Fix bug 11.",
+      "impact": "Anyone can write through API v2 without signing in.",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "security for the public, reach all",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "found in source on production",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "workaround",
+          "text": "no workaround",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "zenhub",
+          "kind": "pipeline",
+          "text": "in High Priority",
+          "at": "2026-10-05T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "item": 25,
+      "why": "hurting users on production",
+      "confirm": false,
+      "action": "Fix bug 25.",
+      "impact": "Donors who opted out still get letters.",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "data loss for the public, reach all",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "reported by users on production",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "workaround",
+          "text": "no workaround",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "triage",
+          "kind": "set",
+          "text": "two donors reported it",
+          "at": "2026-10-14T09:05-04:00",
+          "entry": "2026-10-14T09:05-04:00 set #25"
+        }
+      ]
+    },
+    {
+      "item": 10,
+      "why": "hurting users on production",
+      "confirm": false,
+      "action": "Fix bug 10.",
+      "impact": "Every donor who pledges hits a crash and the pledge is never recorded.",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "money for the public, reach all",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "seen on production on production",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "workaround",
+          "text": "no workaround",
+          "at": "2026-10-10T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "item": 24,
+      "why": "escalated",
+      "confirm": false,
+      "action": "Fix bug 24.",
+      "impact": "The donation flow shows the wrong footer link during the launch.",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "cosmetic for the public, reach some",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "reproduced on production",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "triage",
+          "kind": "escalate",
+          "text": "the footer link sits in the donation flow during the launch",
+          "at": "2026-10-14T09:00-04:00",
+          "entry": "2026-10-14T09:00-04:00 escalate #24"
+        }
+      ]
+    }
+  ],
+  "today": [
+    {
+      "item": 14,
+      "why": "worse with every event",
+      "confirm": false,
+      "action": "Fix bug 14.",
+      "impact": "Signed-in volunteers lose work or see the wrong page.",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "data loss for admins, reach some",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "reported by users on production",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "time",
+          "text": "worse with every event",
+          "at": "2026-10-10T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "item": 13,
+      "why": "confirm on production",
+      "confirm": true,
+      "action": "Fix bug 13.",
+      "impact": "Signed-in volunteers lose work or see the wrong page.",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "core flow broken for the public",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "found in source, environment unknown",
+          "at": "2026-10-10T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "item": 12,
+      "why": "affecting users on production",
+      "confirm": false,
+      "action": "Fix bug 12.",
+      "impact": "Signed-in volunteers lose work or see the wrong page.",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "degraded for signed-in users, reach many",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "seen on production on production",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "zenhub",
+          "kind": "sprint",
+          "text": "in Sprint: Oct 12 - Oct 26, 2026",
+          "at": "2026-10-12T04:00:00Z"
+        }
+      ]
+    },
+    {
+      "item": 15,
+      "why": "due 2026-10-20",
+      "confirm": false,
+      "action": "Fix bug 15.",
+      "impact": "Signed-in volunteers lose work or see the wrong page.",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "degraded for signed-in users, reach some",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "found in source on development",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "deadline",
+          "text": "due 2026-10-20",
+          "at": "2026-10-10T12:00:00Z"
+        }
+      ]
+    }
+  ],
+  "ready": [
+    {
+      "item": 16,
+      "group": "ship",
+      "why": "in progress",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "core flow broken for signed-in users, reach all",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "found in source on production",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "deadline",
+          "text": "due 2026-11-03",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "github",
+          "kind": "label",
+          "text": "labeled high-priority",
+          "at": "2026-10-10T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "item": 18,
+      "group": "ready-to-fix",
+      "why": "blocks a security fix",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "security for maintainers, reach all",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "reproduced on development",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "workaround",
+          "text": "no workaround",
+          "at": "2026-10-10T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "item": 27,
+      "group": "in-progress",
+      "why": "in progress",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "access for signed-in users, reach few",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "reported by users on production",
+          "at": "2026-10-10T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "item": 17,
+      "group": "ready-to-fix",
+      "why": "mitigated",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "access for signed-in users, reach many",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "reported by users on production",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "mitigated",
+          "text": "mitigated",
+          "at": "2026-10-10T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "item": 21,
+      "group": "ready-to-fix",
+      "why": "ready to fix",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "degraded for admins, reach few",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "seen on production on production",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "zenhub",
+          "kind": "pipeline",
+          "text": "in Must Do",
+          "at": "2026-10-05T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "item": 28,
+      "group": "review",
+      "why": "in progress",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "degraded for signed-in users",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "seen on production on production",
+          "at": "2026-10-10T12:00:00Z"
+        }
+      ]
+    }
+  ],
+  "investigate": [
+    {
+      "item": 20,
+      "why": "environment unknown, cause unknown",
+      "question": "Which page is wrong?",
+      "signals": [
+        {
+          "source": "assessment",
+          "kind": "impact",
+          "text": "degraded for signed-in users",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "assessment",
+          "kind": "evidence",
+          "text": "reported by users, environment unknown",
+          "at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "source": "github",
+          "kind": "users",
+          "text": "2 outside people",
+          "at": "2026-10-12T09:00:00Z"
+        },
+        {
+          "source": "github",
+          "kind": "reactions",
+          "text": "4 reactions",
+          "at": "2026-10-10T12:00:00Z"
+        }
+      ]
+    }
+  ],
+  "later": [
+    {
+      "item": 19,
+      "reason": "internal"
+    },
+    {
+      "item": 26,
+      "reason": "cosmetic"
+    }
+  ],
+  "parked": [
+    {
+      "item": 23,
+      "reason": "snoozed until 2026-11-10"
+    },
+    {
+      "item": 29,
+      "reason": "a container"
+    },
+    {
+      "item": 22,
+      "reason": "labeled wontfix"
+    }
+  ],
+  "fixed": [
+    {
+      "item": 5,
+      "verify": false
+    },
+    {
+      "item": 6,
+      "verify": false
+    }
+  ]
+}

@@ -16,6 +16,7 @@
 #   bugs-gather moved REPO GATHER
 #   bugs-gather reuse REPO GATHER OUTPUT
 #   bugs-gather score REPO GATHER ASSESSMENTS OUTPUT
+#   bugs-gather draft REPO GATHER SCORED OUTPUT
 #   bugs-gather save REPO GATHER ASSESSMENTS SCORED
 #
 # REPO is OWNER/NAME, or the path of a config file that names one in its repo
@@ -565,6 +566,46 @@ listed("Ready to go, top \(.readyLimit) above the fold"; .tiers.ready[0:.readyLi
  end)
 '
 
+# Builds bugs board data from a gather, $gather, and its score, $scored, for
+# report-board to validate. Every placement, signal, and fact comes from the
+# score; the prose the model writes is left null, so validation names each
+# field still to write: summary, and impact for Now and Today. action starts
+# from the assessment next step, and question from the assessment question.
+# shellcheck disable=SC2016
+readonly DRAFT_FILTER='
+def as_list: if type == "array" then . else [] end;
+def open_bug: {number, title, url, state: "open", tier, author, createdAt, updatedAt, labels, pipeline, sprint, outsidePeople, reactions,
+  fix: (if .fix == null then null else .fix | {number, url, isDraft, checks, reviewDecision} end),
+  inProgress, assessment, overridden, score};
+($scored.tiers | [.now, .today, .ready, .investigate, .later, .parked] | add) as $open
+| {
+    board: "bugs",
+    title: "\($gather.repo | split("/") | .[1]) bugs",
+    repo: $gather.repo,
+    repoUrl: $gather.repoUrl,
+    sync: {
+      at: $scored.scoredAt,
+      branch: $gather.defaultBranch,
+      commit: $gather.commit,
+      timeZone: $scored.timeZone,
+      openPullRequests: ([$gather.bugs[] | select(.state == "open") | .fixes[] | .number] | unique | length),
+      extra: ([(select($gather.zenhub != null) | "ZenHub workspace \($gather.zenhub.workspace)"), "closed bugs from the last \($gather.recentDays) days"])
+    },
+    summary: null,
+    nowWarn: $scored.nowWarn,
+    readyLimit: $scored.readyLimit,
+    triage: [$scored.triage.entries[] | del(.expired)],
+    bugs: ([$open[] | open_bug] + [$scored.tiers.fixed[] | {number, title, url, state: "closed", tier, closedAt, stateReason, fixedBy}] | sort_by(.number)),
+    now: [$scored.tiers.now[] | {item: .number, why, confirm, action: .assessment.nextStep, impact: null, signals}],
+    today: [$scored.tiers.today[] | {item: .number, why, confirm, action: .assessment.nextStep, impact: null, signals}],
+    ready: [$scored.tiers.ready[] | {item: .number, group, why, signals}],
+    investigate: [$scored.tiers.investigate[] | {item: .number, why, question: .assessment.question, signals}],
+    later: [$scored.tiers.later[] | {item: .number, reason}],
+    parked: [$scored.tiers.parked[] | {item: .number, reason}],
+    fixed: [$scored.tiers.fixed[] | {item: .number, verify}]
+  }
+'
+
 # Prints the cached assessments that still describe their bugs, as a list, for
 # the gather $gather and the cache $cached (null on a cold sync).
 # shellcheck disable=SC2016
@@ -580,6 +621,7 @@ Usage:
   bugs-gather moved REPO GATHER
   bugs-gather reuse REPO GATHER OUTPUT
   bugs-gather score REPO GATHER ASSESSMENTS OUTPUT
+  bugs-gather draft REPO GATHER SCORED OUTPUT
   bugs-gather save REPO GATHER ASSESSMENTS SCORED
 
 REPO is OWNER/NAME, or a config file naming one in its repo field. For
@@ -596,6 +638,9 @@ to OUTPUT before scoring.
 
 score checks ASSESSMENTS against the gather, applies the triage note and the
 tier rules, writes the tiers to OUTPUT, and prints the check-in report.
+
+draft turns a score into bugs board data for report-board, leaving the summary
+and each Now and Today impact for the analysis to write.
 
 save stores a gather, its assessments, and its score as the cache the next
 sync starts from; run it only after the board publishes.
@@ -992,6 +1037,25 @@ function cmd_score() {
   jq -r "${REPORT_FILTER}" "${output_file}"
 }
 
+function cmd_draft() {
+  [[ $# -eq 4 ]] || usage_error "draft takes a repository, a gather file, a score file, and an output path"
+  local config gather_file="${2}" scored_file="${3}" output_file="${4}"
+  require_tools jq
+  load_config "${1}"
+  config="${CONFIG}"
+  require_gather "${config}" "${gather_file}"
+  require_json_file "${scored_file}"
+  jq -e --slurpfile gather "${gather_file}" '.repo == $gather[0].repo and .gatheredAt == $gather[0].gatheredAt and (.tiers | type == "object")' "${scored_file}" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "${scored_file} was not scored from ${gather_file}"
+  [[ -d "$(dirname -- "${output_file}")" ]] || die "${E_INVALID}" "directory $(dirname -- "${output_file}") does not exist"
+
+  make_temp_dir
+  jq -n --slurpfile gather "${gather_file}" --slurpfile scored "${scored_file}" \
+    "\$gather[0] as \$gather | \$scored[0] as \$scored | ${DRAFT_FILTER}" > "${TEMP_DIR}/draft.json"
+  write_atomic "${output_file}" "${TEMP_DIR}/draft.json"
+  printf '%s: drafted %s; write summary, and impact for each Now and Today entry, before validating\n' "${SCRIPT_NAME}" "${output_file}"
+}
+
 function cmd_save() {
   [[ $# -eq 4 ]] || usage_error "save takes a repository, a gather file, an assessments file, and a score file"
   local config gather_file="${2}" assessments_file="${3}" scored_file="${4}" directory
@@ -1032,6 +1096,7 @@ function main() {
     moved) cmd_moved "$@" ;;
     reuse) cmd_reuse "$@" ;;
     score) cmd_score "$@" ;;
+    draft) cmd_draft "$@" ;;
     save) cmd_save "$@" ;;
     *) usage_error "unknown command: ${command}" ;;
   esac

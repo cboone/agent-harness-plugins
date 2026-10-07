@@ -293,6 +293,18 @@ bugs-gather: WORK/bad-assessments.json does not cover the gather:
   - #22: gist is required
 ```
 
+## Draft builds board data that lacks only its prose
+
+Every placement, signal, and fact comes from the score, so `report-board`
+rejects the draft for the summary and the Now and Today impacts alone.
+
+```scrut
+$ bugs draft "${work}/config.json" "${work}/gather.json" "${work}/scored.json" "${work}/board.json" | sed "s|${work}|WORK|g" && "${REPORT_BOARD_BIN}" validate "${work}/board.json" 2>&1 | grep -c '^  - ' && "${REPORT_BOARD_BIN}" validate "${work}/board.json" 2>&1 | grep '^  - ' | grep -v 'impact is required\|^  - summary: ' | wc -l | tr -d ' '
+bugs-gather: drafted WORK/board.json; write summary, and impact for each Now and Today entry, before validating
+9
+0
+```
+
 ## Reuse on a cold cache lists every open bug to read
 
 ```scrut
