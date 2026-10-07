@@ -506,6 +506,37 @@ $ jq '(.[0].body | capture("(?<b><picture>.*?</picture>)").b) as $b | .[0].body 
 {"hasFormatDrift":true,"unaccounted":["badge"]}
 ```
 
+Layout whitespace is made regular before parsing. Up to three leading spaces
+before a tag or heading carry no meaning in Markdown, and a summary loses the
+spaces between and just inside its tags, so an indented or oddly spaced
+summary is read as the section it is. Each of these would otherwise escape
+the section matchers while the census still read its count: an indented
+counted summary, a resolved section with a space before its closing tag
+holding a line of prose, and a badge whose `alt` attribute is spaced.
+
+```scrut
+$ jq '.[0].body |= (sub("Seven moderate[^\n]*"; "No unresolved issues remain.") | sub("\n🧠"; "\n<details>\n  <summary> <strong>2 low-confidence findings</strong> </summary>\n\n- The retry loop never terminates.\n- The cache key ignores the locale.\n</details>\n\n🧠"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | .kind]}'
+{"hasFormatDrift":true,"unaccounted":["section-count"]}
+```
+
+```scrut
+$ jq '.[0].body |= (sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval.") | sub("(?<a>review</strong></summary>\n\n(- [^\n]*\n){3})"; "\(.a)- The retry loop never terminates.\n") | sub("since last review</strong></summary>"; "since last review</strong> </summary>"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+```
+
+```scrut
+$ jq '.[0].body += "\n\n<details>\n<summary><strong>Other notes</strong></summary>\n\n- <picture><img alt = \"Moderate severity\"></picture> Retry loop never terminates\n</details>"' "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | .kind]}'
+{"hasFormatDrift":true,"unaccounted":["badge"]}
+```
+
+The raw body is what a caller reads. Normalization changes only what the
+parsers see, and never a fenced block, where a finding quotes code.
+
+```scrut
+$ jq '.[0].body |= sub("\n<details>"; "\n   <details>")' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -r '.[0].reviewBody' | grep -c '^   <details>'
+1
+```
+
 A bold line stating a nonzero count with no open block behind it falls short
 of its own count.
 
