@@ -18,6 +18,8 @@ Bundled scripts here run on macOS and Linux alike, so portability findings are w
 
 - **`fetch_thread_index` in `resolve-copilot-threads` caps each thread at `comments(first: 100)` on purpose.** The index is a lookup table, not the audit's source of comments: `audit` reads every review comment through the paginated REST endpoint and looks each one up in it. A comment beyond the first 100 in a thread is missing from the index and is reported as `in no thread`, so the cap can mislabel a reason but cannot make the audit report a clean surface. Do not ask for the nested connection to be paginated.
 
+- **A review-body section that lists only thread links is read, whatever its summary says.** Every `(#discussion_r…)` link in a Copilot review body names an inline review thread, and `fetch` reports every unresolved Copilot thread on the pull request, whichever section links it. So `parse-reviews` deliberately does not report drift for an unrecognized section, open or closed, whose only contents are thread links: nothing in it goes unread. Inside a section it does not recognize, it parses or reports finding-shaped content the census knows, such as a vote-tagged item, a `path:line` location or a count its links do not match, and it leaves descriptive prose alone, as it does in "What changed in this PR". Do not ask for an unrecognized `<details open>` block of thread links to be treated as drift.
+
 Two checks are disabled in `.shellcheckrc` by design and should not be raised in review: `check-extra-masked-returns` (SC2312) and `check-set-e-suppressed` (SC2310).
 
 ## Conventions worth enforcing
