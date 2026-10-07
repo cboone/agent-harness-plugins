@@ -213,8 +213,8 @@ report-board: rendered 0 critical, 4 high priority, 20 open bugs to PAGE
 them would drop the calls they belong to without a word.
 
 ```scrut
-$ problems '.triageProblems = ["line 4: expected escalate, set, snooze, park, or context: - 2026-10-14T09:00-04:00 escalte #10: typo"]'
-  - triage note: line 4: expected escalate, set, snooze, park, or context: - 2026-10-14T09:00-04:00 escalte #10: typo; fix the note and score again
+$ problems '.triageProblems = ["line 4: expected escalate, demote, set, snooze, park, or context: - 2026-10-14T09:00-04:00 escalte #10: typo"]'
+  - triage note: line 4: expected escalate, demote, set, snooze, park, or context: - 2026-10-14T09:00-04:00 escalte #10: typo; fix the note and score again
 ```
 
 ## A triage signal must rest on an entry with its verb, about its bug

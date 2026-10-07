@@ -430,8 +430,8 @@ else
   | [$d.triage | as_list | .[] | objects] as $entries
   | def expired: (.until | type) == "string" and $today != null and $today > .until;
     def entry_by_id($id): first($entries[] | select(.id == $id)) // null;
-    # The latest escalate, snooze, or park still in force for a bug decides
-    # where it may go.
+    # The latest escalate, demote, snooze, or park still in force for a bug
+    # decides where it may go.
     def placement($n): [$entries[] | select(.target == $n and (.verb | IN("escalate", "demote", "snooze", "park")) and (expired | not) and (.at | real_time))] | sort_by(.at | epoch) | last;
     # A triage signal must rest on an entry that says what the signal says,
     # about the same bug, so a signal labeled escalate cannot borrow a context
@@ -566,10 +566,15 @@ else
                     (placement($b.number) as $p
                      | (if $name == "critical" then
                           check(($p.verb == "escalate") or ($b.assessment | objects | earns_critical) or any($entry.signals | as_list | .[]; .source == "triage" and .kind == "escalate");
-                            "\($at) has neither an escalate entry nor an assessment that earns Critical"),
-                          (if $p.verb == "demote" then "\($at) is demoted by \($p.id); only a later escalate brings it back" else empty end)
+                            "\($at) has neither an escalate entry nor an assessment that earns Critical")
                         else empty end),
-                       (if $p != null and ($p.verb | IN("snooze", "park")) then "\($at) is \(if $p.verb == "snooze" then "snoozed" else "parked" end) by \($p.id); only a later escalate brings it back" else empty end))
+                       # A snooze or park keeps a bug out of both tiers, and a
+                       # demote keeps it out of Critical.
+                       (if $p.verb == "snooze" then "snoozed"
+                        elif $p.verb == "park" then "parked"
+                        elif $p.verb == "demote" and $name == "critical" then "demoted"
+                        else empty end
+                        | "\($at) is \(.) by \($p.id); only a later escalate brings it back"))
                   elif $name == "ready" then
                     check($entry.why | is_text; "\($at): why is required"),
                     (if ($entry.group | IN(ready_groups[]) | not) then "\($at): group must be one of \(ready_groups | join(", "))"
