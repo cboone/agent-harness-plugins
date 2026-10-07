@@ -261,11 +261,12 @@ $config.bots as $bots
 '
 
 # Reduces one ZenHub response to {sprint, items: {alias: state}}. Takes the
-# number of every alias as $aliases. A blocking issue in this repository is
-# written #N, and one elsewhere repo#N.
+# number of every alias as $aliases, and the repository's GitHub ID as $repo_id.
+# A blocking issue in this repository is written #N, and one elsewhere
+# repo#N; the ID, not the name, decides, since two owners can share a name.
 # shellcheck disable=SC2016
 readonly ZENHUB_FILTER="${COMMON_DEFS}"'
-def key_of: if .repository.name == $repo_name then "#\(.number)" else "\(.repository.name)#\(.number)" end;
+def key_of: if .repository.ghId == $repo_id then "#\(.number)" else "\(.repository.name)#\(.number)" end;
 def open_keys: [.nodes | as_list | .[] | select(.state == "OPEN") | key_of];
 $response.data.workspace.activeSprint as $sprint
 | {
@@ -865,7 +866,6 @@ function gather_zenhub() {
   local config="${1}"
   local bugs_file="${2}"
   local repo_id="${3}"
-  local repo_name="${4}"
   local workspace chunk_file
   local -i chunk=0 start=0 total=0
 
@@ -903,7 +903,7 @@ function gather_zenhub() {
     # Every lookup that came back without state, with the error ZenHub gave for
     # it when there is one; a null lookup with no error counts too.
     jq --slurpfile map "${chunk_file}.map" '. as $response | $map[0].aliases | to_entries | map(select($response.data[.key] == null) | .key as $alias | {number: .value, message: ([$response.errors[]? | select(.path[0]? == $alias) | .message] | first // "no state and no error")})' "${chunk_file}.response" > "${chunk_file}.missing"
-    jq -n --arg repo_name "${repo_name}" --slurpfile response "${chunk_file}.response" --slurpfile map "${chunk_file}.map" \
+    jq -n --argjson repo_id "${repo_id}" --slurpfile response "${chunk_file}.response" --slurpfile map "${chunk_file}.map" \
       "\$response[0] as \$response | \$map[0].aliases as \$aliases | ${ZENHUB_FILTER}" > "${chunk_file}.state"
     start=$((start + ZENHUB_CHUNK))
     chunk=$((chunk + 1))
@@ -934,7 +934,7 @@ function cmd_gather() {
   [[ $# -eq 2 ]] || usage_error "gather takes a repository and an output path"
   local output_file="${2}"
   local config repo has_zenhub qualifiers token_variable now since labels type_name type_query
-  local repo_id repo_name
+  local repo_id
   local -i index=0
   require_tools jq gh
   load_config "${1}"
@@ -1003,8 +1003,7 @@ function cmd_gather() {
 
   if [[ "${has_zenhub}" == true ]]; then
     repo_id="$(jq -r '.data.repository.databaseId' "${TEMP_DIR}/repository.json")"
-    repo_name="${repo#*/}"
-    gather_zenhub "${config}" "${TEMP_DIR}/bugs.json" "${repo_id}" "${repo_name}"
+    gather_zenhub "${config}" "${TEMP_DIR}/bugs.json" "${repo_id}"
   else
     printf 'null' > "${TEMP_DIR}/zenhub.json"
   fi

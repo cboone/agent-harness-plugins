@@ -11,7 +11,24 @@
   },
   "issueType": null,
   "blockingIssues": {
-    "nodes": []
+    "nodes": [
+      {
+        "number": 22,
+        "state": "OPEN",
+        "repository": {
+          "ghId": 101,
+          "name": "widgets"
+        }
+      },
+      {
+        "number": 5,
+        "state": "OPEN",
+        "repository": {
+          "ghId": 202,
+          "name": "widgets"
+        }
+      }
+    ]
   },
   "blockedIssues": {
     "nodes": []

@@ -40,6 +40,7 @@ fragment BugIssue on Issue {
       number
       state
       repository {
+        ghId
         name
       }
     }
@@ -52,6 +53,7 @@ fragment BugIssue on Issue {
       number
       state
       repository {
+        ghId
         name
       }
     }

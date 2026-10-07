@@ -129,6 +129,15 @@ Sprint: Oct 12 - Oct 26, 2026
 #29 Product Backlog sprint=false level=3
 ```
 
+## A blocking issue is local only when ZenHub names this repository's ID
+
+Another owner's repository can share this one's name.
+
+```scrut
+$ jq -r '.bugs[] | select(.number == 21) | .zenhub.blockedBy | join(" ")' "${work}/gather.json"
+#22 widgets#5
+```
+
 ## Without a ZenHub workspace, the gather never calls curl
 
 ```scrut
