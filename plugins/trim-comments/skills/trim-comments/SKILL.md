@@ -1,9 +1,9 @@
 ---
 name: trim-comments
 description: >-
-  Trim and rewrite code comments so each leads with what the code does, then
-  the minimum why. Use for "trim comments", "clean up comments", or a comment
-  that is too long or jargony.
+  Trim and rewrite code comments in changed files: what the code does, then the
+  minimum why. Use for "trim comments" or a comment that is too long or jargony;
+  not for PR review comments or code cleanup (use simplify).
 argument-hint: "[paths...] [--dry-run]"
 ---
 

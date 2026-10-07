@@ -15,7 +15,7 @@ The skill reviews the comments in a branch's changed code and keeps, rewrites, o
 
 It cuts runtime trivia, consequence chains, arguments for decisions the code has already made, mock comments that narrate the author's thinking, CSS comments that restate the declaration, and jargon. It also favors wording that stays true: no line numbers, no counts or "currently", and descriptions of the code beside the comment rather than code elsewhere.
 
-The scope defaults to files changed since the base branch, including uncommitted and untracked files. The skill edits only comments, runs the project's formatter, linter, type checker, and tests, and reports a before-and-after table. It leaves the edits uncommitted for review.
+The scope defaults to comments in or directly above code changed since the base branch, including uncommitted and untracked files. The skill edits only comments, leaves directive and pragma comments alone, checks the edited files with the project's formatter and linter in check mode, its type checker, and its tests, and reports a before-and-after table. It leaves the edits uncommitted for review.
 
 ## Usage
 
@@ -25,7 +25,7 @@ The scope defaults to files changed since the base branch, including uncommitted
 /trim-comments --dry-run
 ```
 
-`--dry-run` reports the proposed changes without editing. Paths limit the scope to those files.
+`--dry-run` reports the proposed changes without editing. Paths put every comment in those files in scope, changed or not.
 
 ## Requirements
 
@@ -34,12 +34,12 @@ The scope defaults to files changed since the base branch, including uncommitted
 ## Examples
 
 - "trim the comments on this branch": reviews every changed file
-- "this comment is too long": rewrites the comments in the files you name
-- "clean up the comments before I open the PR": a pass over the diff, left uncommitted for review
+- "this comment is too long": rewrites that comment
+- "trim the code comments before I open the PR": a pass over the diff, left uncommitted for review
 
 ## Credits
 
-Originally written by Erica ([@acire](https://github.com/acire)) and used with her permission. This version adapts it to this repository's conventions and adds the rules on staying true.
+Originally written by Erica Oh ([@acire](https://github.com/acire)) and used with her permission. This version adapts it to this repository's conventions and adds the rules on staying true.
 
 ## See Also
 
