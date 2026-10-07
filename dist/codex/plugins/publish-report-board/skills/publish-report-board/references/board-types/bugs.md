@@ -110,7 +110,7 @@ Judge from what the issue and its comments say, never from a bug's plausibility;
 | `reproduced`    | `true` or `false` when the issue reports an attempt to reproduce it, otherwise `null`                                                                                                                                                                                        |
 | `gist`          | One sentence on what is wrong                                                                                                                                                                                                                                                |
 | `nextStep`      | One sentence on the next concrete action, imperative                                                                                                                                                                                                                         |
-| `question`      | When any of `environment`, `surface`, `impact`, or `cause` is `unknown`, the most useful thing to learn first, as a question; otherwise `null`                                                                                                                               |
+| `question`      | When any of `environment`, `surface`, `impact`, or `cause` is `unknown`, or `cause` is `suspected`, the most useful thing to learn first, as a question; otherwise `null`                                                                                                    |
 
 ### 3. Score
 
