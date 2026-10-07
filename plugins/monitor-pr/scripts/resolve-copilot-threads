@@ -561,7 +561,9 @@ function do_parse_reviews() {
       #
       # $pattern is the summary text after any markup tags, with a named
       # "count" group, so a caller can match the count on either side of the
-      # name. The result is the first matching section, or null when none
+      # name. The match runs to the closing summary tag, so a summary that
+      # goes on past the known words, such as "3 open findings</strong>
+      # outside the diff", is not the known section. The result is the first matching section, or null when none
       # matches, as:
       #
       #   count    the number its summary states
@@ -579,7 +581,7 @@ function do_parse_reviews() {
       # a section opened inside it, such as a resolved list, even where the
       # census does.
       def section_summary($pattern):
-        ("^<summary>(?:<[^>]+>)*" + $pattern) as $summary
+        ("^<summary>(?:<[^>]+>)*" + $pattern + "(?:</[^>]+>)*</summary>[[:space:]]*$") as $summary
         | split("\n")
         | reduce (.[] | sub("\r$"; "")) as $line ({fence: null, depth: 0, inside: false, value: null};
             (.fence | next_fence($line)) as $next
@@ -617,7 +619,7 @@ function do_parse_reviews() {
       # "**Findings:**" line, so the summary count is also the stated count.
       # See the $stated_findings binding in the main filter.
       def open_findings_section:
-        section_summary("(?<count>[0-9]+) open findings?(?:<|$)");
+        section_summary("(?<count>[0-9]+) open findings?");
 
       # Content in an open section, in either layout, that links no inline
       # thread. The open section lists threads and nothing else, so such
@@ -662,7 +664,7 @@ function do_parse_reviews() {
       # last review". The first form is read whenever it is present.
       def resolved_section:
         section_summary("Resolved since last review \\((?<count>[0-9]+)\\)")
-        // section_summary("(?<count>[0-9]+) resolved since last review(?:<|$)");
+        // section_summary("(?<count>[0-9]+) resolved since last review");
 
       # ccr-overview-v2 also lists the findings closed since the previous
       # round, under a resolved section. Those links record work already done
@@ -713,13 +715,31 @@ function do_parse_reviews() {
             | {kind: "element", line: $l.n, region: $l.region, text: ($l.raw | .[0:200])}
           ];
 
-      # The lines before the first details block, which stated_finding_count
-      # and headline both read. The reasons the stop pattern omits the
-      # closing angle bracket are given beside each of them.
+      # The lines before the first details block, which headline reads. The
+      # reasons the stop pattern omits the closing angle bracket are given
+      # beside each reader. preamble_count_lines below reads the same region,
+      # skipping fenced lines.
       def preamble_lines:
         split("\n")
         | (map(test("^<details")) | index(true)) as $stop
         | if $stop then .[0:$stop] else . end;
+
+      # The preamble lines a count is read from: those before the first
+      # details block, skipping fenced lines, so a "**Findings:**" or
+      # "**0 open findings**" line quoted in a fence is prose rather than
+      # the count, as a quoted summary is for section_summary.
+      def preamble_count_lines:
+        split("\n")
+        | reduce .[] as $line ({fence: null, stop: false, out: []};
+            if .stop then .
+            else
+              (.fence | next_fence($line)) as $next
+              | if .fence != null or $next != null then .fence = $next
+                elif ($line | test("^<details")) then .stop = true
+                else .out += [$line]
+                end
+            end)
+        | .out;
 
       # A ccr-overview-v2 body in the "Open (N)" layout states a count on a
       # "**Findings:**" line, as either "None" or a number. Across every
@@ -780,7 +800,7 @@ function do_parse_reviews() {
       # bracket so an opened section, "<details open>", ends the preamble too.
       def stated_finding_count:
         (
-          preamble_lines
+          preamble_count_lines
           | map(select(test("^\\*\\*Findings"; "i")))
           | first
         ) as $line
@@ -807,7 +827,7 @@ function do_parse_reviews() {
       # Null when no such line exists.
       def open_findings_line_count:
         (
-          preamble_lines
+          preamble_count_lines
           | map(sub("\r$"; "") | capture("^\\*\\*(?<count>[0-9]+) open findings?\\*\\*[[:space:]]*$") | .count | tonumber)
           | first
         )

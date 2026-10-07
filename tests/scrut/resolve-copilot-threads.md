@@ -265,6 +265,14 @@ $ jq '.[0].body |= sub("3 open findings"; "3 open findings outside the diff")' "
 {"hasFormatDrift":true}
 ```
 
+The match runs to the closing summary tag, so text after the bold title does
+not slip past it either.
+
+```scrut
+$ jq '.[0].body |= sub("3 open findings</strong>"; "3 open findings</strong> outside the diff")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+```
+
 The summary counts only at depth one, like every section summary. One nested
 inside another block supplies no count.
 
@@ -400,6 +408,14 @@ and the body states no count.
 $ jq '.[0].body |= (sub("\\*\\*0 open findings\\*\\*\n\n"; "") | sub("\n</details>"; "\n\n**0 open findings**\n</details>"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
 {"hasFormatDrift":true}
 ```
+
+Nor is a copy quoted in a fenced block in the preamble the count. With the
+real line replaced by a fenced one, the body states no count.
+
+````scrut
+$ jq '.[0].body |= (sub("Seven moderate[^\n]*"; "One or more issues must be addressed before approval.") | sub("\\*\\*0 open findings\\*\\*"; "```text\n**0 open findings**\n```"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+````
 
 ## Overview v2 a resolved-only round with a boilerplate lead needs nothing
 
