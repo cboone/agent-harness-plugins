@@ -3,8 +3,6 @@
 #   i0: issueByInfo(repositoryGhId: 106750406, issueNumber: 4034) { ...BugIssue }
 # and closes the query. issueType is a union, so its name and level come
 # through inline fragments; selecting them directly fails.
-# Copied from focus-gather-queries/zenhub.graphql; a fix to one prompts a look
-# at the other.
 fragment BugIssue on Issue {
   estimate {
     value

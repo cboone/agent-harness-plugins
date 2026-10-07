@@ -2,7 +2,7 @@
   {
     "data": {
       "search": {
-        "issueCount": 10,
+        "issueCount": 19,
         "pageInfo": {
           "hasNextPage": true,
           "endCursor": "cursor1"
@@ -417,7 +417,7 @@
   {
     "data": {
       "search": {
-        "issueCount": 9,
+        "issueCount": 19,
         "pageInfo": {
           "hasNextPage": false,
           "endCursor": null

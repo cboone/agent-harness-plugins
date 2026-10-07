@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# curl-stub -- Test stub for the ZenHub GraphQL requests focus-gather and
-# bugs-gather make.
+# curl-stub -- Test stub for the ZenHub GraphQL requests bugs-gather makes.
 #
-# focus-gather posts each query as --data-binary @PAYLOAD with its
+# bugs-gather posts each query as --data-binary @PAYLOAD with its
 # authorization header in a file named by -H @FILE. The stub answers from JSON
 # files under STUB_CURL_DIR:
 #   workspace.json     the workspace object, holding activeSprint
@@ -15,8 +14,11 @@
 #
 # The header file must read "Authorization: Bearer STUB_CURL_TOKEN" and be
 # readable by its owner alone, or the request fails with HTTP 401.
-# STUB_CURL_FAIL=1 makes every request fail with HTTP 500. STUB_CURL_LOG, when
-# set, receives each query and its variables, followed by the header check.
+# STUB_CURL_FAIL=1 makes every request fail with HTTP 500. STUB_CURL_ERROR,
+# when set, adds a GraphQL error on a field inside the first alias, the way
+# ZenHub reports a permission or timeout problem on part of a lookup.
+# STUB_CURL_LOG, when set, receives each query and its variables, followed by
+# the header check.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
@@ -97,6 +99,10 @@ function main() {
     fi
   done < <(jq -r '.query' "${payload_file}" \
     | sed -nE 's/^ *(i[0-9]+): issueByInfo\(repositoryGhId: ([0-9]+), issueNumber: ([0-9]+)\).*/\1 \2 \3/p')
+
+  if [[ -n "${STUB_CURL_ERROR:-}" ]]; then
+    errors="$(jq -c --arg message "${STUB_CURL_ERROR}" '. + [{message: $message, path: ["i0", "blockingIssues"]}]' <<< "${errors}")"
+  fi
 
   jq -c -n --argjson data "${data}" --argjson errors "${errors}" --slurpfile workspace "${dir}/workspace.json" \
     '{data: ($data + {workspace: $workspace[0]})} + (if ($errors | length) > 0 then {errors: $errors} else {} end)'

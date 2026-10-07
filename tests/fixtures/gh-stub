@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# gh-stub -- Test stub for the gh calls dependabot-prs fetch, focus-gather, and
-# bugs-gather make.
+# gh-stub -- Test stub for the gh calls dependabot-prs fetch and bugs-gather
+# make.
 #
 # Responses are JSON files under STUB_GH_DIR:
 #   repo.json          gh repo view
@@ -11,22 +11,18 @@
 #                      each / replaced by _ (compare_main...SHA, pulls_12_files)
 #   graphql/search-KIND.json
 #                      gh api graphql with search.graphql, where KIND is
-#                      assigned, authored, review, or mentions, read from the
-#                      qualifier in q, or open-labels, closed-labels,
-#                      open-type, or closed-type for a bugs-gather search; a
-#                      missing file answers with no results
+#                      open-labels, closed-labels, open-type, or closed-type,
+#                      read from the qualifiers in q; a missing file answers
+#                      with no results
 #   graphql/repository-NAME.json
 #                      gh api graphql with repository.graphql
-#   graphql/QUERY-NAME-NUMBER.json
-#                      gh api graphql with another query file, such as
-#                      mention-gadgets-30.json for mention.graphql
 #
 # An api call with no response file fails the way gh does for a missing
 # resource. STUB_GH_API_FAIL names one KEY that fails with a permission error
 # instead, STUB_GH_AUTH_FAIL=1 makes gh auth token fail, and STUB_GH_LOG, when
 # set, receives every invocation, one per line. A graphql call is logged as
 # its query file and variables, without the path of the query file.
-# STUB_GH_GRAPHQL_FAIL names one search KIND or QUERY-NAME-NUMBER that fails.
+# STUB_GH_GRAPHQL_FAIL names one search KIND, or repository-NAME, that fails.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
@@ -94,11 +90,12 @@ function do_pr_list() {
   respond "open.json"
 }
 
-# Answers gh api graphql. focus-gather passes the query as -F query=@FILE and
-# its variables as -f or -F NAME=VALUE, with --paginate --slurp, so each
-# response file holds the array of pages that --slurp would return.
+# Answers gh api graphql. bugs-gather passes the query as -F query=@FILE and
+# its variables as -f or -F NAME=VALUE. Its searches run with --paginate
+# --slurp, so a search file holds the array of pages --slurp returns; the
+# repository query runs without them, so its file holds one response.
 function do_graphql() {
-  local query_name="" search_text="" repo_name="" number="" arg value
+  local query_name="" search_text="" repo_name="" arg value
   local -a variables=()
   while [[ $# -gt 0 ]]; do
     arg="${1}"
@@ -123,10 +120,6 @@ function do_graphql() {
             repo_name="${value#name=}"
             variables+=("${value}")
             ;;
-          number=*)
-            number="${value#number=}"
-            variables+=("${value}")
-            ;;
           *) variables+=("${value}") ;;
         esac
         ;;
@@ -142,10 +135,6 @@ function do_graphql() {
   local key
   if [[ "${query_name}" == "search" ]]; then
     case " ${search_text} " in
-      *" assignee:"*) key="assigned" ;;
-      *" author:"*) key="authored" ;;
-      *" user-review-requested:"*) key="review" ;;
-      *" mentions:"*) key="mentions" ;;
       *" is:open "*"label:"*) key="open-labels" ;;
       *" is:closed "*"label:"*) key="closed-labels" ;;
       *" is:open "*"type:"*) key="open-type" ;;
@@ -155,7 +144,7 @@ function do_graphql() {
   elif [[ "${query_name}" == "repository" ]]; then
     key="repository-${repo_name}"
   else
-    key="${query_name}-${repo_name}-${number}"
+    die "unexpected gh api graphql query ${query_name}"
   fi
 
   if [[ "${key}" == "${STUB_GH_GRAPHQL_FAIL:-}" ]]; then
@@ -170,7 +159,7 @@ function do_graphql() {
   elif [[ "${query_name}" == "search" ]]; then
     printf '[{"data":{"search":{"issueCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}]\n'
   else
-    echo "gh: Could not resolve to an issue or pull request with the number of ${number}." >&2
+    echo "gh: Could not resolve to a Repository with the name ${repo_name}." >&2
     exit 1
   fi
 }

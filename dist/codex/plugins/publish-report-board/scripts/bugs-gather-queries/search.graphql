@@ -30,6 +30,9 @@ query ($q: String!, $endCursor: String) {
           }
         }
         labels(first: 30) {
+          pageInfo {
+            hasNextPage
+          }
           nodes {
             name
           }
@@ -52,6 +55,9 @@ query ($q: String!, $endCursor: String) {
           }
         }
         closedByPullRequestsReferences(first: 10, includeClosedPrs: true) {
+          pageInfo {
+            hasNextPage
+          }
           nodes {
             number
             title

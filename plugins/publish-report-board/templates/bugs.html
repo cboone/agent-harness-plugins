@@ -7,8 +7,10 @@
   /* An editorial bug desk: IBM Plex Sans for text and Plex Mono for numbers
      and labels. The light theme is Graphite and orange, the dark theme Night.
      Critical carries the strongest form, a filled block and tag; High
-     priority an outlined tag; fixes a muted green. Blue is reserved for
-     focus. Components use tokens only. */
+     priority an outlined tag; fixes a muted green. In the light theme blue is
+     reserved for focus; in the dark theme Critical takes the light blue the
+     focus ring also uses, and High priority amber. Components use tokens
+     only. */
   :root {
     color-scheme: light;
     --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -714,16 +716,22 @@
       return element;
     }
 
+    // An unrendered template carries a placeholder string; anything else that
+    // is not a bugs board, including data that fails to parse, is reported as
+    // such rather than drawn as a blank board.
     let data = null;
+    let unreadable = false;
     try {
       data = JSON.parse(document.getElementById("board-data").textContent);
     } catch {
-      data = null;
+      unreadable = true;
     }
     if (data === null || typeof data !== "object" || data.board !== "bugs" || !Array.isArray(data.bugs)) {
-      root.replaceChildren(
-        h("p", { class: "board-message" }, "This page holds no board data yet. Render it with the report-board script."),
-      );
+      const message =
+        typeof data === "string" && !unreadable
+          ? "This page holds no board data yet. Render it with the report-board script."
+          : "This page holds board data this template cannot read. Render it again with the report-board script.";
+      root.replaceChildren(h("p", { class: "board-message" }, message));
       return;
     }
 
@@ -1180,7 +1188,7 @@
         : h(
             "p",
             { class: "triage-empty" },
-            "No calls recorded yet. Escalate, confirm, snooze, or park a bug at the next sync, and every sync after applies it.",
+            "No calls recorded yet. Escalate a bug, set what the reading got wrong, or snooze or park one at the next sync, and every sync after applies it.",
           ),
     );
 

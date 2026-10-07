@@ -206,3 +206,37 @@ finding.
 $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.lower += [.critical[] | {item, reason: "cleared"}] | (.bugs[] | select(.tier == "critical") | .tier) = "lower" | .critical = []' "${REPORT_BOARD_DATA_DIR}/bugs.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" render "${dir}/data.json" "${dir}/board.html" 2>&1 | sed 's|to .*/board.html|to PAGE|'
 report-board: rendered 0 critical, 4 high priority, 20 open bugs to PAGE
 ```
+
+## Problems with the triage note keep the board from validating
+
+`bugs-gather draft` carries them as `triageProblems`; a board published over
+them would drop the calls they belong to without a word.
+
+```scrut
+$ problems '.triageProblems = ["line 4: expected escalate, set, snooze, park, or context: - 2026-10-14T09:00-04:00 escalte #10: typo"]'
+  - triage note: line 4: expected escalate, set, snooze, park, or context: - 2026-10-14T09:00-04:00 escalte #10: typo; fix the note and score again
+```
+
+## A triage signal must rest on an entry with its verb, about its bug
+
+```scrut
+$ problems '(.critical[] | select(.item == 24) | .signals) += [{source: "triage", kind: "escalate", text: "x", at: "2026-10-13T08:00:00-04:00", entry: "2026-10-13T08:00-04:00 context"}, {source: "triage", kind: "snooze", text: "x", at: "2026-10-14T09:00:00-04:00", entry: "2026-10-14T09:00-04:00 snooze #23"}]'
+  - critical #24 signals[3]: entry 2026-10-13T08:00-04:00 context is a context entry, but the signal says escalate
+  - critical #24 signals[4]: entry 2026-10-14T09:00-04:00 snooze #23 is about #23, not #24
+```
+
+## A park entry keeps a bug out of Critical and High priority too
+
+```scrut
+$ problems '.triage += [{id: "2026-10-14T10:00-04:00 park #14", at: "2026-10-14T10:00-04:00", verb: "park", target: 14, until: null, text: "not worth fixing"}]'
+  - high #14 is parked by 2026-10-14T10:00-04:00 park #14; only a later escalate brings it back
+```
+
+## The fields the page draws are required
+
+```scrut
+$ problems '(.bugs[] | select(.number == 21) | .assessment.nextStep) = null | (.ready[0].why) = "" | (.investigate[0].why) = null'
+  - #21: assessment.nextStep is required
+  - ready #16: why is required
+  - investigate #20: why is required, what is not yet known
+```

@@ -8,7 +8,7 @@ moved and which bugs need reading again.
 
 Every call goes through `tests/fixtures/gh-stub` and `tests/fixtures/curl-stub`,
 which answer from `tests/data/bugs-gather/`. The fixtures describe `acme/widgets`
-(ZenHub ID 101) with 20 open bugs, each built to exercise one tier rule, and 2
+(ZenHub ID 101) with 20 open bugs, built so that between them they reach every tier, and 2
 closed in the last week. The config names a test-only token variable holding a
 sample value, and the Makefile unsets the real ZenHub token variable, so no
 test can reach ZenHub. `bugs` takes settings (`NAME=value`) first, then the
@@ -267,13 +267,16 @@ $ jq -r '.triage.entries[] | "\(.id)\(if .expired then " (expired)" else "" end)
 ## Malformed triage entries are reported, not applied
 
 ```scrut
-$ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '%s\n' '- 2026-10-14T09:00-04:00 snooze #23: no date' '- 2026-10-14T09:00-04:00 pin #10: a focus verb' '- 2026-10-14T09:00-04:00 set #10 severity=high: not a field' '- 2026-10-14T09:00-04:00 set #10 impact=huge: not in the set' '- 2026-10-14T09:00-04:00 park #10 until 2026-11-01: park takes no date' '- 2026-10-20T09:00-04:00 escalate #10: later than the score' '- 2026-10-14T09:00-04:00 escalate #99: not on the board' > "${note}" && config_with ".triageNote = \"${note}\"" > "${work}/bad-note.json" && bugs score "${work}/bad-note.json" "${work}/gather.json" "${assessments}" "${work}/bad-note-scored.json" | grep -E '^    - problem: '
+$ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '%s\n' '- 2026-10-14T09:00-04:00 snooze #23: no date' '- 2026-10-14T09:00-04:00 pin #10: a focus verb' '- 2026-10-14T09:00-04:00 set #10 severity=high: not a field' '- 2026-10-14T09:00-04:00 set #10 impact=huge: not in the set' '- 2026-10-14T09:00-04:00 park #10 until 2026-11-01: park takes no date' '- 2026-10-20T09:00-04:00 escalate #10: later than the score' '- 2026-10-14T09:00-04:00 escalate #99: not on the board' '- 2026-10-14T09:00-04:00 set #10 mitigated=yes: hotfix deployed' '* 2026-10-14T09:00-04:00 escalte #12: a star marker' '  - 2026-10-14T09:00-04:00 escalte #13: an indented entry' > "${note}" && config_with ".triageNote = \"${note}\"" > "${work}/bad-note.json" && bugs score "${work}/bad-note.json" "${work}/gather.json" "${assessments}" "${work}/bad-note-scored.json" | grep -E '^    - problem: '
     - problem: line 1: snooze needs an until date
     - problem: line 2: expected escalate, set, snooze, park, or context: - 2026-10-14T09:00-04:00 pin #10: a focus verb
     - problem: line 3: severity is not an assessment field
     - problem: line 4: impact must be one of security, data-loss, money, access, core-flow, degraded, cosmetic, internal, unknown
     - problem: line 5: park lasts until the note changes and takes no until date; use snooze
     - problem: line 6: 2026-10-20T09:00-04:00 is later than this score
+    - problem: line 8: mitigated must be true or false
+    - problem: line 9: expected escalate, set, snooze, park, or context: * 2026-10-14T09:00-04:00 escalte #12: a star marker
+    - problem: line 10: expected escalate, set, snooze, park, or context:   - 2026-10-14T09:00-04:00 escalte #13: an indented entry
     - problem: 2026-10-14T09:00-04:00 escalate #99 names a bug outside this board
 ```
 
@@ -295,12 +298,15 @@ A missing assessment, one older than its bug, and one outside the closed sets
 each stop the score, all listed at once.
 
 ```scrut
-$ jq 'map(select(.number != 20)) | map(if .number == 21 then .updatedAt = "2026-10-01T00:00:00Z" elif .number == 22 then .impact = "severe" | .gist = "" else . end)' "${assessments}" > "${work}/bad-assessments.json" && bugs score "${work}/config.json" "${work}/gather.json" "${work}/bad-assessments.json" "${work}/bad-scored.json" 2>&1 | sed "s|${work}|WORK|g"
+$ jq 'map(select(.number != 20)) + [(.[] | select(.number == 11))] | map(if .number == 23 then .reproduced = "no" else . end) | map(if .number == 21 then .updatedAt = "2026-10-01T00:00:00Z" elif .number == 22 then .impact = "severe" | .gist = "" else . end)' "${assessments}" > "${work}/bad-assessments.json" && bugs score "${work}/config.json" "${work}/gather.json" "${work}/bad-assessments.json" "${work}/bad-scored.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
 bugs-gather: WORK/bad-assessments.json does not cover the gather:
   - #20: no assessment; read it
   - #21: assessed at updatedAt 2026-10-01T00:00:00Z, but the bug was updated at 2026-10-10T12:00:00Z; read it again
   - #22: impact must be one of security, data-loss, money, access, core-flow, degraded, cosmetic, internal, unknown
   - #22: gist is required
+  - #23: reproduced must be true, false, or null
+  - #11: assessed 2 times; keep one
+exit 1
 ```
 
 ## Draft builds board data that lacks only its prose
@@ -375,8 +381,9 @@ $ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cat "${BUGS_GATHER_DATA_DIR
 ## Save refuses a score from a different gather
 
 ```scrut
-$ jq '.gatheredAt = "2026-10-14T16:00:00Z"' "${work}/scored.json" > "${work}/other-scored.json" && bugs save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/other-scored.json" 2>&1 | sed "s|${work}|WORK|g"
+$ jq '.gatheredAt = "2026-10-14T16:00:00Z"' "${work}/scored.json" > "${work}/other-scored.json" && bugs save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/other-scored.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
 bugs-gather: WORK/other-scored.json was not scored from WORK/gather.json
+exit 1
 ```
 
 ## A repository with no config uses the defaults
@@ -393,22 +400,140 @@ null
 ## An invalid config lists every problem
 
 ```scrut
-$ printf '%s\n' '{"repo": "acme", "bugLabels": [], "recentDays": 0, "zenhub": {"workspace": "ws 1"}, "weights": {"impact": {"security": "high"}}}' > "${work}/bad-config.json" && bugs gather "${work}/bad-config.json" "${work}/bad.json" 2>&1 | sed "s|${work}|WORK|g"
+$ printf '%s\n' '{"repo": "acme", "bugLabels": [], "recentDays": 0, "zenhub": {"workspace": "ws 1"}, "weights": {"impact": {"security": "high"}, "impcat": {}}, "triagenote": "triage.md"}' > "${work}/bad-config.json" && bugs gather "${work}/bad-config.json" "${work}/bad.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
 bugs-gather: WORK/bad-config.json is not a valid bugs config:
   - repo: expected owner/name
   - bugLabels: expected a non-empty list of label names
   - recentDays: expected a positive whole number of days
-  - weights: expected numbers, grouped as the defaults are
+  - weights.impact.security: expected a number
+  - weights.impcat: not a weight; expected one of evidence, impact, reach, surface, pipelines, timeSensitive, mitigated, urgent, sprint, regression, outsidePerson, outsideCap, reaction, reactionCap
+  - triagenote: not a config field; expected one of repo, timeZone, bugLabels, bugTypes, urgentLabels, regressionLabels, parkLabels, urgentPipelines, containerLevels, bots, recentDays, criticalWarn, readyLimit, deadlineDays, progressLabels, progressPipelines, weights, zenhub, triageNote, triageGit
   - zenhub.workspace: expected the workspace ID
   - zenhub.tokenVariable: expected the name of the environment variable holding the token
+exit 1
 ```
 
 ## A config for another repository is refused
 
 ```scrut
-$ mkdir -p "${work}/config/report-boards/bugs/github.com/acme" && jq '.repo = "acme/gadgets"' "${work}/config.json" > "${work}/config/report-boards/bugs/github.com/acme/widgets.json" && bugs gather acme/widgets "${work}/mismatch.json" 2>&1 | sed "s|${work}|WORK|g"
+$ mkdir -p "${work}/config/report-boards/bugs/github.com/acme" && jq '.repo = "acme/gadgets"' "${work}/config.json" > "${work}/config/report-boards/bugs/github.com/acme/widgets.json" && bugs gather acme/widgets "${work}/mismatch.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
 bugs-gather: WORK/config/report-boards/bugs/github.com/acme/widgets.json is not a valid bugs config:
   - repo: the config names acme/gadgets, not acme/widgets
+exit 1
+```
+
+## A configured triage note that cannot be read stops the score
+
+Scoring without it would drop every call in it and say nothing.
+
+```scrut
+$ config_with '.triageNote = "/nonexistent/triage.md"' > "${work}/lost-note.json" && bugs score "${work}/lost-note.json" "${work}/gather.json" "${assessments}" "${work}/lost-scored.json" 2>&1
+bugs-gather: cannot read the triage note /nonexistent/triage.md; fix triageNote in the config, or restore the note
+[1]
+```
+
+## A mitigated bug never reaches Critical
+
+`#10` would be Critical, but a `set` entry records that its harm has been
+stopped.
+
+```scrut
+$ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '%s\n' '- 2026-10-14T09:00-04:00 set #10 mitigated=true: the hotfix stopped the crashes' > "${note}" && config_with ".triageNote = \"${note}\"" > "${work}/mitigated.json" && bugs score "${work}/mitigated.json" "${work}/gather.json" "${assessments}" "${work}/mitigated-scored.json" > /dev/null && jq -r '[.tiers | to_entries[] | .key as $t | .value[] | select(.number == 10) | "#10 \($t): \(.why)"] | first' "${work}/mitigated-scored.json"
+#10 ready: mitigated
+```
+
+## A deadline counts from the day of the sync through the window
+
+The sync falls on 2026-10-15 and the window is 14 days. A deadline on the day
+itself or at the edge of the window places `#15` in High priority; one past
+the window, or already gone, does not.
+
+```scrut
+$ for deadline in 2026-10-14 2026-10-15 2026-10-29 2026-10-30; do jq --arg d "${deadline}" 'map(if .number == 15 then .deadline = $d else . end)' "${assessments}" > "${work}/deadline.json" && bugs score "${work}/config.json" "${work}/gather.json" "${work}/deadline.json" "${work}/deadline-scored.json" > /dev/null && jq -r --arg d "${deadline}" '"\($d): " + ([.tiers | to_entries[] | .key as $t | .value[] | select(.number == 15) | $t] | first)' "${work}/deadline-scored.json"; done
+2026-10-14: ready
+2026-10-15: high
+2026-10-29: high
+2026-10-30: ready
+```
+
+## A fixed bug that was on production carries a reminder to verify it
+
+Reuse keeps the last assessment of a closed bug, and save keeps it in the
+cache, so every sync in the window knows the fix went to production.
+
+```scrut
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '. + [{number: 5, updatedAt: "2026-10-01T12:00:00Z", environment: "production", evidence: "user-report", surface: "signed-in", impact: "core-flow", reach: "some", workaround: "none", cause: "known", timeSensitive: false, deadline: null, mitigated: false, reproduced: null, gist: "Verify email returns 500.", nextStep: "Fix it.", question: null}]' "${assessments}" > "${work}/with-closed.json" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${work}/with-closed.json" "${work}/scored.json" 2> /dev/null && for sync in first second; do bugs XDG_CACHE_HOME="${cache}" reuse "${work}/config.json" "${work}/gather.json" "${work}/verify-reused.json" > /dev/null && bugs XDG_CACHE_HOME="${cache}" score "${work}/config.json" "${work}/gather.json" "${work}/verify-reused.json" "${work}/verify-scored.json" > /dev/null && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${work}/verify-reused.json" "${work}/verify-scored.json" 2> /dev/null && jq -r --arg sync "${sync}" '"\($sync): " + (.tiers.fixed | map("#\(.number) verify=\(.verify)") | join(", "))' "${work}/verify-scored.json"; done
+first: #5 verify=true, #6 verify=false
+second: #5 verify=true, #6 verify=false
+```
+
+## A cache file that cannot be read is named, not taken for a first sync
+
+```scrut
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${cache}/report-boards/bugs/github.com/acme/widgets" && printf 'not json' > "${cache}/report-boards/bugs/github.com/acme/widgets/assessments.json" && bugs XDG_CACHE_HOME="${cache}" reuse "${work}/config.json" "${work}/gather.json" "${work}/corrupt-reused.json" 2>&1 | head -2 | sed -e "s|${cache}|CACHE|g" -e "s|${work}|WORK|g"
+bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/assessments.json: it is unreadable or was written by another version of bugs-gather
+bugs-gather: reused 0 cached assessments in WORK/corrupt-reused.json
+```
+
+## Bugs ZenHub does not track are listed, and the gather goes on
+
+```scrut
+$ bugs gather "${work}/config.json" "${work}/listed.json" 2>&1 > /dev/null | head -3
+bugs-gather: these bugs have no ZenHub state, so they carry no pipeline, sprint, or container level:
+  - #13: Issue not found
+  - #14: Issue not found
+```
+
+## ZenHub returning no state for any bug stops the gather
+
+A wrong workspace or repository ID answers every lookup with an error, and a
+board ranked without any ZenHub state would mislead.
+
+```scrut
+$ empty="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${BUGS_GATHER_DATA_DIR}/zenhub/workspace.json" "${empty}/" && bugs STUB_CURL_DIR="${empty}" gather "${work}/config.json" "${work}/no-state.json" 2>&1 | head -2; echo "exit ${PIPESTATUS[0]}"
+bugs-gather: ZenHub returned no state for any of the 20 open bugs, so the workspace or the repository is wrong:
+  - #10: Issue not found
+exit 1
+```
+
+## A ZenHub error inside a lookup stops the gather
+
+An error on a field, such as a permission problem on the blocking issues, is
+not an untracked issue, and dropping its state would hide it.
+
+```scrut
+$ bugs STUB_CURL_ERROR="Not authorized to read blockingIssues" gather "${work}/config.json" "${work}/field-error.json" 2>&1
+bugs-gather: ZenHub returned errors:
+  Not authorized to read blockingIssues (at i0.blockingIssues)
+[1]
+```
+
+## A failed ZenHub request stops the gather
+
+```scrut
+$ bugs STUB_CURL_FAIL=1 gather "${work}/config.json" "${work}/zenhub-down.json" 2>&1 | head -2; echo "exit ${PIPESTATUS[0]}"
+bugs-gather: the ZenHub request failed:
+  curl: (22) The requested URL returned error: 500
+exit 1
+```
+
+## A search GitHub cut short stops the gather
+
+GitHub search stops at 1000 results and then reports no further page, so the
+gather compares what it collected with what the search counted.
+
+```scrut
+$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map(.data.search.issueCount = 1240)' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-labels.json" > "${capped}/graphql/search-open-labels.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/capped.json" 2>&1
+bugs-gather: the open-labels search returned 19 of 1240 issues; GitHub search stops at 1000, so narrow bugLabels or bugTypes
+[1]
+```
+
+## An archived repository stops the gather
+
+```scrut
+$ archived="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${archived}/" && jq '.data.repository.isArchived = true' "${BUGS_GATHER_DATA_DIR}/github/graphql/repository-widgets.json" > "${archived}/graphql/repository-widgets.json" && bugs STUB_GH_DIR="${archived}" gather "${work}/config.json" "${work}/archived.json" 2>&1
+bugs-gather: acme/widgets is archived; its bugs cannot change, so there is nothing to sync
+[1]
 ```
 
 ## Usage errors

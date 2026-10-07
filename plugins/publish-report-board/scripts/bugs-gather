@@ -62,7 +62,7 @@ readonly ZENHUB_URL='https://api.zenhub.com/public/graphql'
 readonly ZENHUB_CHUNK=100
 readonly CACHE_VERSION=2
 # The host every search and config path assumes. gh reaches other hosts
-# through GH_HOST, which this script does not support yet.
+# through GH_HOST, which this script does not support.
 readonly GITHUB_HOST='github.com'
 readonly REPO_PATTERN='^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
 
@@ -90,6 +90,22 @@ def check(condition; message): if condition then empty else message end;
 def expand: if type == "string" and startswith("~/") then $home + .[1:] else . end;
 def text_list: type == "array" and length > 0 and all(.[]; is_text);
 def name_list: type == "array" and all(.[]; is_text);
+# The keys a config may carry; any other is a typo that would otherwise be
+# ignored without a word.
+def config_keys: ["repo", "timeZone", "bugLabels", "bugTypes", "urgentLabels", "regressionLabels", "parkLabels", "urgentPipelines", "containerLevels", "bots", "recentDays", "criticalWarn", "readyLimit", "deadlineDays", "progressLabels", "progressPipelines", "weights", "zenhub", "triageNote", "triageGit"];
+# Weight groups keyed by an assessment value, and the single weights. A
+# pipeline weight takes any pipeline name.
+def weight_groups: {impact: ["security", "data-loss", "money", "access", "core-flow", "degraded", "cosmetic", "internal", "unknown"], surface: ["public", "signed-in", "admin", "internal", "unknown"], reach: ["all", "many", "some", "few", "unknown"], evidence: ["user-report", "production-observed", "reproduced", "code-reading", "unknown"]};
+def weight_scalars: ["timeSensitive", "mitigated", "urgent", "sprint", "regression", "outsidePerson", "outsideCap", "reaction", "reactionCap"];
+def weight_problems:
+  to_entries[] | .key as $k | .value as $v
+  | if (weight_groups | has($k)) then
+      (if ($v | type) != "object" then "weights.\($k): expected a number per \($k) value"
+       else ($v | to_entries[] | .key as $wk | if (weight_groups[$k] | index($wk)) == null then "weights.\($k).\(.key): expected one of \(weight_groups[$k] | join(", "))" elif (.value | type) != "number" then "weights.\($k).\(.key): expected a number" else empty end) end)
+    elif $k == "pipelines" then
+      (if ($v | type) != "object" then "weights.pipelines: expected a number per pipeline name" else ($v | to_entries[] | select((.value | type) != "number") | "weights.pipelines.\(.key): expected a number") end)
+    elif (weight_scalars | index($k)) != null then check($v | type == "number"; "weights.\($k): expected a number")
+    else "weights.\($k): not a weight; expected one of \((weight_groups | keys) + ["pipelines"] + weight_scalars | join(", "))" end;
 
 if type != "object" then {problems: ["the config must be a JSON object"], config: null}
 else
@@ -112,7 +128,8 @@ else
       check($c.deadlineDays | absent_or(is_int and . >= 0); "deadlineDays: expected a whole number of days"),
       check($c.progressLabels | absent_or(name_list); "progressLabels: expected a list of label names"),
       check($c.progressPipelines | absent_or(name_list); "progressPipelines: expected a list of pipeline names"),
-      check($c.weights | absent_or(type == "object" and ([.. | scalars] | all(type == "number"))); "weights: expected numbers, grouped as the defaults are"),
+      (if $c.weights == null then empty elif ($c.weights | type) != "object" then "weights: expected an object, grouped as the defaults are" else ($c.weights | weight_problems) end),
+      ($c | keys[] | select(. as $k | config_keys | index($k) | not) | "\(.): not a config field; expected one of \(config_keys | join(", "))"),
       check($c.triageNote | absent_or(is_text); "triageNote: expected the path to the triage note"),
       check($c.triageGit | absent_or(type == "object" and (.gitDir | is_text) and (.workTree | is_text)); "triageGit: expected {gitDir, workTree}"),
       (if $c.zenhub == null then empty
@@ -139,8 +156,8 @@ else
       deadlineDays: ($c.deadlineDays // 14),
       progressLabels: ($c.progressLabels // ["in progress"]),
       progressPipelines: ($c.progressPipelines // ["In Progress", "Review/QA"]),
-      # Calibrated against swing-left/votefwd on 2026-10-06. A config overrides
-      # any of them, one key at a time.
+      # Calibrated against swing-left/votefwd. A config overrides any of them,
+      # one key at a time.
       weights: ({
         impact: {security: 40, "data-loss": 35, money: 35, access: 30, "core-flow": 30, degraded: 10, cosmetic: 3, internal: 2, unknown: 10},
         surface: {public: 15, "signed-in": 12, admin: 5, internal: 0, unknown: 5},
@@ -158,8 +175,7 @@ else
 end
 '
 
-# Shared by the filters that read GitHub and ZenHub responses. epoch and utc
-# are copied from focus-gather; a fix to one prompts a look at the other.
+# Shared by the filters that read GitHub and ZenHub responses.
 # shellcheck disable=SC2016
 readonly COMMON_DEFS='
 def as_list: if type == "array" then . else [] end;
@@ -222,19 +238,23 @@ $config.bots as $bots
         parkLabel: any_in($labels; $config.parkLabels),
         reactions: ($n.reactions.totalCount // 0),
         comments: ($n.comments.totalCount // 0),
-        # People outside the repository who reported or commented, which is
-        # how many users the bug has visibly reached.
+        # People outside the repository who reported or commented, counting
+        # commenters among the most recent 30 comments, which is how many
+        # users the bug has visibly reached.
         outsidePeople: ([(select(($n.authorAssociation | outside) and ($n.author | is_bot($bots) | not)) | $n.author.login), ($people[] | select(.authorAssociation | outside) | .author.login)] | unique | length),
         lastComment: ($people | last | if . == null then null else {author: (.author.login // "ghost"), at: .createdAt, outside: (.authorAssociation | outside)} end),
         fixes: [$prs[] | select(.state == "OPEN")],
-        fixedBy: [$prs[] | select(.state == "MERGED")]
+        fixedBy: [$prs[] | select(.state == "MERGED")],
+        # Lists GitHub cut short, which gather warns about: a label or a fix
+        # past the cut is missing from this bug.
+        truncated: [(select($n.labels.pageInfo.hasNextPage == true) | "labels"), (select($n.closedByPullRequestsReferences.pageInfo.hasNextPage == true) | "linked pull requests")]
       }
   )
 '
 
 # Reduces one ZenHub response to {sprint, items: {alias: state}}. Takes the
-# number of every alias as $aliases. Copied from focus-gather, keyed by issue
-# number rather than repo#N; a fix to one prompts a look at the other.
+# number of every alias as $aliases. A blocking issue in this repository is
+# written #N, and one elsewhere repo#N.
 # shellcheck disable=SC2016
 readonly ZENHUB_FILTER="${COMMON_DEFS}"'
 def key_of: if .repository.name == $repo_name then "#\(.number)" else "\(.repository.name)#\(.number)" end;
@@ -341,6 +361,7 @@ def assessment_problems($at):
     (select($a.deadline != null and ($a.deadline | is_day | not)) | "\($at): deadline must be a date such as 2026-11-03, or null"),
     (select(($a.gist | type) != "string" or ($a.gist | test("\\S") | not)) | "\($at): gist is required"),
     (select(($a.nextStep | type) != "string" or ($a.nextStep | test("\\S") | not)) | "\($at): nextStep is required"),
+    (select($a.reproduced != null and ($a.reproduced | type) != "boolean") | "\($at): reproduced must be true, false, or null"),
     (select($a.question != null and ($a.question | type) != "string") | "\($at): question must be text or null");
 '
 
@@ -352,7 +373,7 @@ def assessment_problems($at):
 # shellcheck disable=SC2016
 readonly SCORE_FILTER="${COMMON_DEFS}${ASSESSMENT_DEFS}"'
 def in_list($l): . as $v | $l | any(. == $v);
-def entry_pattern: "^- (?<at>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2})?(Z|[+-][0-9]{2}:[0-9]{2})) (?<rest>.*)$";
+def entry_pattern: "^\\s*[-*+] (?<at>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2})?(Z|[+-][0-9]{2}:[0-9]{2})) (?<rest>.*)$";
 def target_pattern: "^(?<verb>escalate|snooze|park) #(?<target>[1-9][0-9]*)( until (?<until>[0-9]{4}-[0-9]{2}-[0-9]{2}))?: (?<text>\\S.*)$";
 def set_pattern: "^set #(?<target>[1-9][0-9]*) (?<pairs>[A-Za-z]+=[A-Za-z0-9-]+( [A-Za-z]+=[A-Za-z0-9-]+)*): (?<text>\\S.*)$";
 def context_pattern: "^context: (?<text>\\S.*)$";
@@ -375,8 +396,9 @@ $config as $c
 | ([$gathered, ($scored_at | epoch)] | max) as $scored
 | ($scored | strflocaltime("%Y-%m-%d")) as $today
 
-# The triage note: every list item must be an entry; other lines are prose.
-| ($note | split("\n") | to_entries | map(select(.value | test("^- "))) | map(
+# The triage note: every list item, at any indent and with any marker, must be
+# an entry, so a malformed one is reported rather than read as prose.
+| ($note | split("\n") | to_entries | map(select(.value | test("^\\s*[-*+]\\s"))) | map(
     .key as $line | .value as $text
     | ($text | [capture(entry_pattern)] | first) as $head
     | if $head == null then {problem: "line \($line + 1): not a triage entry: \($text)"}
@@ -390,10 +412,10 @@ $config as $c
             ($head.rest | [capture(set_pattern)] | first) as $body
             | if $body == null then {problem: "line \($line + 1): expected set #N key=value: text: \($text)"}
               else
-                ($body.pairs | split(" ") | map(split("=") as $p | {key: $p[0], value: ($p[1] | typed($p[0]))})) as $pairs
+                ($body.pairs | split(" ") | map(split("=") as $p | {key: $p[0], raw: $p[1], value: ($p[1] | typed($p[0]))})) as $pairs
                 | ([$pairs[] | .key as $k | .value as $v
                     | if (closed_sets | has($k)) then (select(closed_sets[$k] | index($v) | not) | "\($k) must be one of \(closed_sets[$k] | join(", "))")
-                      elif $k == "timeSensitive" or $k == "mitigated" then empty
+                      elif $k == "timeSensitive" or $k == "mitigated" then (select(.raw | IN("true", "false") | not) | "\($k) must be true or false")
                       elif $k == "deadline" then (select($v != null and ($v | is_day | not)) | "deadline must be a date or null")
                       else "\($k) is not an assessment field" end]) as $bad
                 | if ($bad | length) > 0 then {problem: "line \($line + 1): \($bad | join("; "))"}
@@ -418,8 +440,8 @@ $config as $c
 | [$gather.bugs[] | select(.state == "open")] as $open
 
 | def triage_signal: {source: "triage", kind: .verb, text, at, entry: .id};
-  # Among a bug s escalate, snooze, and park entries still in force, the
-  # latest decides.
+  # Among the escalate, snooze, and park entries for a bug still in force,
+  # the latest decides.
   def placement($n): [$active[] | select(.target == $n and (.verb | IN("escalate", "snooze", "park")))] | sort_by(.instant) | last;
   def overrides($n): [$active[] | select(.target == $n and .verb == "set")] | sort_by(.instant);
   def due($a): $a.deadline != null and $a.deadline >= $today
@@ -488,10 +510,12 @@ $config as $c
 
   # Assessments must cover every open bug and must describe the bug as it is
   # now; a stale one means the bug changed after it was read.
-  ([$open[] | ($assessed[.number | tostring]) as $a
+  # The same bug assessed twice would let the last silently win.
+  ([$assessments[] | .number] | group_by(.) | map(select(length > 1) | "#\(.[0]): assessed \(length) times; keep one")) as $duplicates
+  |   ([$open[] | ($assessed[.number | tostring]) as $a
     | if $a == null then "#\(.number): no assessment; read it"
       elif $a.updatedAt != .updatedAt then "#\(.number): assessed at updatedAt \($a.updatedAt), but the bug was updated at \(.updatedAt); read it again"
-      else ($a | assessment_problems("#\(.number)")) end]) as $assessment_problems
+      else ($a | assessment_problems("#\(.number)")) end] + $duplicates) as $assessment_problems
 | if ($assessment_problems | length) > 0 then {problems: $assessment_problems}
   else
     [$open[] | . as $b
@@ -569,8 +593,10 @@ listed("Ready to go, top \(.readyLimit) above the fold"; .tiers.ready[0:.readyLi
 # Builds bugs board data from a gather, $gather, and its score, $scored, for
 # report-board to validate. Every placement, signal, and fact comes from the
 # score; the prose the model writes is left null, so validation names each
-# field still to write: summary, and impact for Critical and High priority. action starts
-# from the assessment next step, and question from the assessment question.
+# field still to write: the summary, and the impact of each Critical and High
+# priority entry. action starts from the assessment next step, and question
+# from the assessment question. Problems with the triage note travel as
+# triageProblems, which validation refuses until the note is fixed.
 # shellcheck disable=SC2016
 readonly DRAFT_FILTER='
 def as_list: if type == "array" then . else [] end;
@@ -595,6 +621,7 @@ def open_bug: {number, title, url, state: "open", tier, author, createdAt, updat
     criticalWarn: $scored.criticalWarn,
     readyLimit: $scored.readyLimit,
     triage: [$scored.triage.entries[] | del(.expired)],
+    triageProblems: $scored.triage.problems,
     bugs: ([$open[] | open_bug] + [$scored.tiers.fixed[] | {number, title, url, state: "closed", tier, closedAt, stateReason, fixedBy}] | sort_by(.number)),
     critical: [$scored.tiers.critical[] | {item: .number, why, confirm, action: .assessment.nextStep, impact: null, signals}],
     high: [$scored.tiers.high[] | {item: .number, why, confirm, action: .assessment.nextStep, impact: null, signals}],
@@ -607,11 +634,13 @@ def open_bug: {number, title, url, state: "open", tier, author, createdAt, updat
 '
 
 # Prints the cached assessments that still describe their bugs, as a list, for
-# the gather $gather and the cache $cached (null on a cold sync).
+# the gather $gather and the cache $cached (null on a cold sync). An open bug
+# keeps its assessment while it is unchanged; a closed bug keeps its last one,
+# which needs no reading and tells score whether the fix went to production.
 # shellcheck disable=SC2016
 readonly REUSE_FILTER='
 ($cached // [] | map({key: (.number | tostring), value: .}) | from_entries) as $by
-| [$gather.bugs[] | select(.state == "open") | $by[.number | tostring] as $a | select($a != null and $a.updatedAt == .updatedAt) | $a]
+| [$gather.bugs[] | $by[.number | tostring] as $a | select($a != null and (.state == "closed" or $a.updatedAt == .updatedAt)) | $a]
 '
 
 function usage() {
@@ -729,8 +758,7 @@ function cache_dir() {
 }
 
 # Replaces a file in one step, so an interrupted write leaves the previous
-# version in place. Copied from focus-gather; a fix to one prompts a look at
-# the other.
+# version in place.
 function write_atomic() {
   local target="${1}"
   local source_file="${2}"
@@ -780,8 +808,7 @@ function github_repository() {
 }
 
 # Posts a query to ZenHub. The token goes into a header file only the owner
-# can read, so it never appears on a command line or in shell tracing. Copied
-# from focus-gather; a fix to one prompts a look at the other.
+# can read, so it never appears on a command line or in shell tracing.
 function zenhub_post() {
   local payload_file="${1}"
   local header_file="${TEMP_DIR}/zenhub-header"
@@ -794,8 +821,7 @@ function zenhub_post() {
 }
 
 # Writes TEMP_DIR/zenhub.json: {sprint, items} for every open bug, looked up
-# in chunks of aliased issueByInfo queries. Adapted from focus-gather, for one
-# repository; a fix to one prompts a look at the other.
+# in chunks of aliased issueByInfo queries.
 function gather_zenhub() {
   local config="${1}"
   local bugs_file="${2}"
@@ -826,20 +852,37 @@ function gather_zenhub() {
       sed 's/^/  /' "${chunk_file}.err" "${chunk_file}.response" >&2
       exit "${E_INVALID}"
     }
-    # A lookup for an issue ZenHub does not track fails on its own alias and
-    # leaves that bug without ZenHub state. Any other error stops the gather.
-    if ! jq -e '(.data.workspace != null) and ([.errors[]? | select((.path[0]? // "" | test("^i[0-9]+$")) | not)] | length == 0)' "${chunk_file}.response" > /dev/null 2>&1; then
+    # A lookup for an issue ZenHub does not track fails on its own alias, a
+    # path of exactly one element, and leaves that bug without ZenHub state;
+    # the bugs it leaves out are listed below. Any other error, including one
+    # on a field inside a lookup, stops the gather.
+    if ! jq -e '(.data.workspace != null) and ([.errors[]? | select(((.path // []) | length == 1 and (.[0] | type == "string" and test("^i[0-9]+$"))) | not)] | length == 0)' "${chunk_file}.response" > /dev/null 2>&1; then
       printf '%s: ZenHub returned errors:\n' "${SCRIPT_NAME}" >&2
-      jq -r '.errors[]?.message // "no workspace in the response"' "${chunk_file}.response" 2> /dev/null | sed 's/^/  /' >&2 || sed 's/^/  /' "${chunk_file}.response" >&2
+      jq -r 'if .data.workspace == null then "no workspace in the response" else empty end, (.errors[]? | select(((.path // []) | length == 1 and (.[0] | type == "string" and test("^i[0-9]+$"))) | not) | "\(.message // "no message")\(if .path then " (at \(.path | map(tostring) | join(".")))" else "" end)")' "${chunk_file}.response" 2> /dev/null | sed 's/^/  /' >&2 || sed 's/^/  /' "${chunk_file}.response" >&2
       exit "${E_INVALID}"
     fi
     jq 'map({key: .alias, value: .number}) | from_entries | {aliases: .}' "${chunk_file}.aliases" > "${chunk_file}.map"
+    jq --slurpfile map "${chunk_file}.map" '$map[0].aliases as $aliases | [.errors[]? | {number: $aliases[.path[0]], message: (.message // "no message")}]' "${chunk_file}.response" > "${chunk_file}.missing"
     jq -n --arg repo_name "${repo_name}" --slurpfile response "${chunk_file}.response" --slurpfile map "${chunk_file}.map" \
       "\$response[0] as \$response | \$map[0].aliases as \$aliases | ${ZENHUB_FILTER}" > "${chunk_file}.state"
     start=$((start + ZENHUB_CHUNK))
     chunk=$((chunk + 1))
   done
   jq -s '{sprint: .[0].sprint, items: (map(.items) | add)}' "${TEMP_DIR}"/zenhub-*.state > "${TEMP_DIR}/zenhub.json"
+
+  # A bug ZenHub does not track loses its pipeline, sprint, and container
+  # level, so say which; when every lookup failed, the workspace or the
+  # repository ID is wrong, and a board without any ZenHub state would
+  # mislead, so stop.
+  local missing
+  missing="$(jq -s -r 'add | .[] | "  - #\(.number): \(.message)"' "${TEMP_DIR}"/zenhub-*.missing)"
+  if [[ -n "${missing}" ]]; then
+    if ((total > 0)) && [[ "$(jq -s 'add | length' "${TEMP_DIR}"/zenhub-*.missing)" -eq "${total}" ]]; then
+      printf '%s: ZenHub returned no state for any of the %s open bugs, so the workspace or the repository is wrong:\n%s\n' "${SCRIPT_NAME}" "${total}" "$(head -n 3 <<< "${missing}")" >&2
+      exit "${E_INVALID}"
+    fi
+    printf '%s: these bugs have no ZenHub state, so they carry no pipeline, sprint, or container level:\n%s\n' "${SCRIPT_NAME}" "${missing}" >&2
+  fi
 }
 
 function cmd_gather() {
@@ -889,6 +932,11 @@ function cmd_gather() {
   local search_file
   printf '[]' > "${TEMP_DIR}/searches.json"
   for search_file in "${TEMP_DIR}"/search-*.json; do
+    # GitHub search stops at 1000 results and then reports no further page,
+    # so a search that returned fewer issues than it counted was cut short,
+    # and the bugs past the cap would vanish from the board unremarked.
+    jq -e '([.[] | .data.search.nodes | length] | add // 0) >= (.[0].data.search.issueCount // 0)' "${search_file}" > /dev/null \
+      || die "${E_INVALID}" "the $(basename -- "${search_file}" .json | sed 's/^search-//') search returned $(jq '[.[] | .data.search.nodes | length] | add // 0' "${search_file}") of $(jq '.[0].data.search.issueCount' "${search_file}") issues; GitHub search stops at 1000, so narrow bugLabels or bugTypes"
     jq --arg name "$(basename -- "${search_file}" .json)" --slurpfile pages "${search_file}" \
       '. + [{name: ($name | sub("^search-"; "") | sub("-[0-9]+$"; "")), pages: $pages[0]}]' \
       "${TEMP_DIR}/searches.json" > "${TEMP_DIR}/searches.next"
@@ -896,6 +944,11 @@ function cmd_gather() {
   done
   jq -n --argjson config "${config}" --slurpfile searches "${TEMP_DIR}/searches.json" \
     "\$searches[0] as \$searches | ${NORMALIZE_FILTER}" > "${TEMP_DIR}/bugs.json"
+  local truncated
+  truncated="$(jq -r '.[] | select(.truncated | length > 0) | "  - #\(.number): \(.truncated | join(" and "))"' "${TEMP_DIR}/bugs.json")"
+  if [[ -n "${truncated}" ]]; then
+    printf '%s: GitHub cut these lists short, so a label or a fix past the cut is missing:\n%s\n' "${SCRIPT_NAME}" "${truncated}" >&2
+  fi
 
   if [[ "$(config_field "${config}" '.zenhub != null')" == true ]]; then
     repo_id="$(jq -r '.data.repository.databaseId' "${TEMP_DIR}/repository.json")"
@@ -920,13 +973,29 @@ function cmd_gather() {
   report_moved "${config}" "${output_file}"
 }
 
+# Succeeds when a cache file exists and passes the jq CHECK. A missing file
+# fails quietly; a file that exists but fails the check, because it is corrupt
+# or written by another version of this script, fails with a warning naming
+# it, so a lost cache never passes for a first sync.
+function cache_usable() {
+  local path="${1}"
+  local check="${2}"
+  [[ -f "${path}" ]] || return 1
+  if ! jq -e --argjson version "${CACHE_VERSION}" "${check}" "${path}" > /dev/null 2>&1; then
+    printf '%s: ignoring %s: it is unreadable or was written by another version of %s\n' "${SCRIPT_NAME}" "${path}" "${SCRIPT_NAME}" >&2
+    return 1
+  fi
+}
+
 # Prints what moved since the cached gather, or says the sync is a cold one.
 function report_moved() {
   local config="${1}"
   local gather_file="${2}"
   local cached
   cached="$(cache_dir "$(config_field "${config}" '.repo')")/gather.json"
-  if [[ ! -f "${cached}" ]] || ! jq -e --argjson version "${CACHE_VERSION}" '.version == $version and (.bugs | type == "array")' "${cached}" > /dev/null 2>&1; then
+  # The $version in the check is a jq binding, not a shell expansion.
+  # shellcheck disable=SC2016
+  if ! cache_usable "${cached}" '.version == $version and (.bugs | type == "array")'; then
     printf 'Cold sync: no usable cache at %s, so nothing can be compared yet.\n' "${cached}"
     return 0
   fi
@@ -965,7 +1034,7 @@ function cached_assessments() {
   local config="${1}"
   local cached
   cached="$(cache_dir "$(config_field "${config}" '.repo')")/assessments.json"
-  if [[ -f "${cached}" ]] && jq -e 'type == "array"' "${cached}" > /dev/null 2>&1; then
+  if cache_usable "${cached}" 'type == "array" and all(.[]; type == "object" and (.number | type == "number"))'; then
     cat -- "${cached}"
   else
     printf 'null'
@@ -1009,14 +1078,18 @@ function cmd_score() {
   [[ -d "$(dirname -- "${output_file}")" ]] || die "${E_INVALID}" "directory $(dirname -- "${output_file}") does not exist"
 
   make_temp_dir
+  # A configured note that cannot be read stops the score: scoring without it
+  # would drop every call the user made and say nothing.
   note_file="$(config_field "${config}" '.triageNote // empty')"
-  if [[ -n "${note_file}" && -f "${note_file}" ]]; then
+  if [[ -n "${note_file}" ]]; then
+    [[ -f "${note_file}" && -r "${note_file}" ]] || die "${E_INVALID}" "cannot read the triage note ${note_file}; fix triageNote in the config, or restore the note"
     cp -- "${note_file}" "${TEMP_DIR}/note"
   else
     : > "${TEMP_DIR}/note"
   fi
   cached="$(cache_dir "$(config_field "${config}" '.repo')")/scored.json"
-  if [[ -f "${cached}" ]] && jq -e --argjson version "${CACHE_VERSION}" '.version == $version' "${cached}" > /dev/null 2>&1; then
+  # shellcheck disable=SC2016
+  if cache_usable "${cached}" '.version == $version and (.tiers | type == "object")'; then
     cp -- "${cached}" "${TEMP_DIR}/previous"
   else
     printf 'null' > "${TEMP_DIR}/previous"
@@ -1070,10 +1143,14 @@ function cmd_save() {
   directory="$(cache_dir "$(config_field "${config}" '.repo')")"
   (umask 077 && mkdir -p -- "${directory}") || die "${E_INVALID}" "cannot create ${directory}"
   make_temp_dir
-  # Assessments of bugs that have closed stay, so the next sync can tell
-  # whether a recently fixed bug was on production.
-  jq --slurpfile gather "${gather_file}" '
+  # The assessments of bugs that have closed carry over from the cache, since
+  # reuse lists only open bugs, so later syncs can still tell whether a
+  # recently fixed bug was on production. Bugs that left the gather drop out.
+  cached_assessments "${config}" > "${TEMP_DIR}/cached.json"
+  jq --slurpfile gather "${gather_file}" --slurpfile cached "${TEMP_DIR}/cached.json" '
     ([$gather[0].bugs[] | .number]) as $known
+    | (map(.number)) as $given
+    | (. + [$cached[0] // [] | .[] | select(.number as $n | $given | index($n) | not)])
     | [.[] | select(.number as $n | $known | index($n))] | sort_by(.number)
   ' "${assessments_file}" > "${TEMP_DIR}/assessments.json"
   write_atomic "${directory}/gather.json" "${gather_file}"
