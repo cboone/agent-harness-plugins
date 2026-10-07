@@ -531,10 +531,16 @@ $ jq '.[0].body += "\n\n<details>\n<summary><strong>Other notes</strong></summar
 
 An indented bold label is normalized the same way, so a `**0 open findings**`
 line with up to three leading spaces still states the count, as the canary
-also reads it.
+also reads it. A line that is only bold text keeps single spaces, so a tab
+inside the count line is read the same way too.
 
 ```scrut
 $ jq '.[0].body |= (sub("Seven moderate[^\n]*"; "One or more issues must be addressed before approval.") | sub("\\*\\*0 open"; "  **0 open"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead}'
+{"hasFormatDrift":false,"needsRead":false}
+```
+
+```scrut
+$ jq '.[0].body |= (sub("Seven moderate[^\n]*"; "One or more issues must be addressed before approval.") | sub("\\*\\*0 open"; "**0\topen"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead}'
 {"hasFormatDrift":false,"needsRead":false}
 ```
 

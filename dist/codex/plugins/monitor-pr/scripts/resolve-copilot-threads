@@ -460,8 +460,10 @@ function do_parse_reviews() {
       # Up to three leading spaces before a tag, a heading or a bold label
       # such as "**0 open findings**" carry no meaning in Markdown, so they
       # are dropped; four or more make an indented code block and stay. A
-      # heading keeps one space after its marker, and a summary line loses
-      # the spaces between and just inside its tags and any doubled spaces.
+      # heading keeps one space after its marker, a line that is only bold
+      # text, such as a count line, keeps single spaces, and a summary line
+      # loses the spaces between and just inside its tags and any doubled
+      # spaces.
       # Without this, an indented summary or a space inside its bold text
       # would escape the section matchers while the census still read its
       # count, and content beside it would pass unread.
@@ -477,7 +479,8 @@ function do_parse_reviews() {
                   $line
                   | sub("^ {1,3}(?=[<#]|\\*\\*)"; "")
                   | sub("^(?<marks>#{1,6})[ \t]+"; "\(.marks) ")
-                  | if test("^<summary") then
+                  | if test("^\\*\\*[^*]+\\*\\*[[:space:]]*$") then gsub("[ \t]+"; " ")
+                    elif test("^<summary") then
                       sub("^<summary[ \t]+>"; "<summary>")
                       | gsub(">[ \t]+<"; "><")
                       | gsub("<(?<tag>summary|strong)>[ \t]+"; "<\(.tag)>")
