@@ -407,7 +407,7 @@ def closed_sets: {
 };
 def sections: ["critical", "high", "ready", "investigate", "lower", "parked", "fixed"];
 def ready_groups: ["ship", "review", "in-progress", "ready-to-fix"];
-def triage_verbs: ["escalate", "set", "snooze", "park", "context"];
+def triage_verbs: ["escalate", "demote", "set", "snooze", "park", "context"];
 # True when an assessment by itself earns Critical, by the same rule
 # bugs-gather applies.
 def earns_critical:
@@ -432,7 +432,7 @@ else
     def entry_by_id($id): first($entries[] | select(.id == $id)) // null;
     # The latest escalate, snooze, or park still in force for a bug decides
     # where it may go.
-    def placement($n): [$entries[] | select(.target == $n and (.verb | IN("escalate", "snooze", "park")) and (expired | not) and (.at | real_time))] | sort_by(.at | epoch) | last;
+    def placement($n): [$entries[] | select(.target == $n and (.verb | IN("escalate", "demote", "snooze", "park")) and (expired | not) and (.at | real_time))] | sort_by(.at | epoch) | last;
     # A triage signal must rest on an entry that says what the signal says,
     # about the same bug, so a signal labeled escalate cannot borrow a context
     # entry or the escalate of another bug to justify a Critical placement.
@@ -486,7 +486,7 @@ else
        ($d.triage | to_entries[]) as {key: $i, value: $e}
        | "triage[\($i)]" as $at
        | if ($e | type) != "object" then "\($at): expected an object"
-         elif ($e.verb | IN(triage_verbs[]) | not) then "\($at): verb must be escalate, set, snooze, park, or context"
+         elif ($e.verb | IN(triage_verbs[]) | not) then "\($at): verb must be escalate, demote, set, snooze, park, or context"
          else
            check($e.at | real_time; "\($at): at must be an ISO 8601 time with a zone"),
            check($e.text | is_text; "\($at): text is required"),
@@ -566,7 +566,8 @@ else
                     (placement($b.number) as $p
                      | (if $name == "critical" then
                           check(($p.verb == "escalate") or ($b.assessment | objects | earns_critical) or any($entry.signals | as_list | .[]; .source == "triage" and .kind == "escalate");
-                            "\($at) has neither an escalate entry nor an assessment that earns Critical")
+                            "\($at) has neither an escalate entry nor an assessment that earns Critical"),
+                          (if $p.verb == "demote" then "\($at) is demoted by \($p.id); only a later escalate brings it back" else empty end)
                         else empty end),
                        (if $p != null and ($p.verb | IN("snooze", "park")) then "\($at) is \(if $p.verb == "snooze" then "snoozed" else "parked" end) by \($p.id); only a later escalate brings it back" else empty end))
                   elif $name == "ready" then

@@ -124,7 +124,7 @@ $ problems '(.bugs[] | select(.number == 5) | .tier) = "lower" | (.bugs[] | sele
 $ problems '.triage += [{id: "wrong", at: "2026-10-14T09:00-04:00", verb: "snooze", target: 21, until: null, text: "x"}, {id: "2026-10-14T09:00-04:00 pin #21", at: "2026-10-14T09:00-04:00", verb: "pin", target: 21, text: "x"}, {id: "2026-10-14T09:00-04:00 set #21", at: "2026-10-14T09:00-04:00", verb: "set", target: 21, until: null, fields: {impact: "huge", severity: "high"}, text: "x"}]'
   - triage[5]: id must be "2026-10-14T09:00-04:00 snooze #21"
   - triage[5]: snooze needs an until date
-  - triage[6]: verb must be escalate, set, snooze, park, or context
+  - triage[6]: verb must be escalate, demote, set, snooze, park, or context
   - triage[7]: impact must be one of security, data-loss, money, access, core-flow, degraded, cosmetic, internal, unknown
   - triage[7]: severity is not an assessment field
 ```
@@ -249,4 +249,11 @@ status, so this one checks it directly.
 ```scrut
 $ "${REPORT_BOARD_BIN}" validate "$(board_with '.summary = null')" > /dev/null 2>&1
 [1]
+```
+
+## A demoted bug stays out of Critical
+
+```scrut
+$ problems '.triage += [{id: "2026-10-14T10:00-04:00 demote #10", at: "2026-10-14T10:00-04:00", verb: "demote", target: 10, until: null, text: "soon enough"}]'
+  - critical #10 is demoted by 2026-10-14T10:00-04:00 demote #10; only a later escalate brings it back
 ```

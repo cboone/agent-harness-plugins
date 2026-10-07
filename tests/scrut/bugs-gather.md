@@ -269,14 +269,14 @@ $ jq -r '.triage.entries[] | "\(.id)\(if .expired then " (expired)" else "" end)
 ```scrut
 $ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '%s\n' '- 2026-10-14T09:00-04:00 snooze #23: no date' '- 2026-10-14T09:00-04:00 pin #10: a focus verb' '- 2026-10-14T09:00-04:00 set #10 severity=high: not a field' '- 2026-10-14T09:00-04:00 set #10 impact=huge: not in the set' '- 2026-10-14T09:00-04:00 park #10 until 2026-11-01: park takes no date' '- 2026-10-20T09:00-04:00 escalate #10: later than the score' '- 2026-10-14T09:00-04:00 escalate #99: not on the board' '- 2026-10-14T09:00-04:00 set #10 mitigated=yes: hotfix deployed' '* 2026-10-14T09:00-04:00 escalte #12: a star marker' '  - 2026-10-14T09:00-04:00 escalte #13: an indented entry' '- 2026-10-14T09:00-04:00 escalate #12: written once' '- 2026-10-14T09:00-04:00 escalate #12: and again' '1. 2026-10-14T09:00-04:00 escalate #14: a numbered entry' > "${note}" && config_with ".triageNote = \"${note}\"" > "${work}/bad-note.json" && bugs score "${work}/bad-note.json" "${work}/gather.json" "${assessments}" "${work}/bad-note-scored.json" | grep -E '^    - problem: '
     - problem: line 1: snooze needs an until date
-    - problem: line 2: expected escalate, set, snooze, park, or context: - 2026-10-14T09:00-04:00 pin #10: a focus verb
+    - problem: line 2: expected escalate, demote, set, snooze, park, or context: - 2026-10-14T09:00-04:00 pin #10: a focus verb
     - problem: line 3: severity is not an assessment field
     - problem: line 4: impact must be one of security, data-loss, money, access, core-flow, degraded, cosmetic, internal, unknown
     - problem: line 5: park lasts until the note changes and takes no until date; use snooze
     - problem: line 6: 2026-10-20T09:00-04:00 is later than this score
     - problem: line 8: mitigated must be true or false
-    - problem: line 9: expected escalate, set, snooze, park, or context: * 2026-10-14T09:00-04:00 escalte #12: a star marker
-    - problem: line 10: expected escalate, set, snooze, park, or context:   - 2026-10-14T09:00-04:00 escalte #13: an indented entry
+    - problem: line 9: expected escalate, demote, set, snooze, park, or context: * 2026-10-14T09:00-04:00 escalte #12: a star marker
+    - problem: line 10: expected escalate, demote, set, snooze, park, or context:   - 2026-10-14T09:00-04:00 escalte #13: an indented entry
     - problem: line 13: start a triage entry with -, not a number: 1. 2026-10-14T09:00-04:00 escalate #14: a numbered entry
     - problem: entry 2026-10-14T09:00-04:00 escalate #12 appears more than once
     - problem: 2026-10-14T09:00-04:00 escalate #99 names a bug outside this board
@@ -442,6 +442,16 @@ stopped.
 ```scrut
 $ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '%s\n' '- 2026-10-14T09:00-04:00 set #10 mitigated=true: the hotfix stopped the crashes' > "${note}" && config_with ".triageNote = \"${note}\"" > "${work}/mitigated.json" && bugs score "${work}/mitigated.json" "${work}/gather.json" "${assessments}" "${work}/mitigated-scored.json" > /dev/null && jq -r '[.tiers | to_entries[] | .key as $t | .value[] | select(.number == 10) | "#10 \($t): \(.why)"] | first' "${work}/mitigated-scored.json"
 #10 ready: mitigated
+```
+
+## A demote entry moves a Critical bug to High priority
+
+`#10` earns Critical on its facts; the latest call, a demote, places it in
+High priority instead, and a later escalate would bring it back.
+
+```scrut
+$ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '%s\n' '- 2026-10-14T09:00-04:00 demote #10: letters go out in batches, so a fix this week is soon enough' > "${note}" && config_with ".triageNote = \"${note}\"" > "${work}/demoted.json" && bugs score "${work}/demoted.json" "${work}/gather.json" "${assessments}" "${work}/demoted-scored.json" > /dev/null && jq -r '[.tiers | to_entries[] | .key as $t | .value[] | select(.number == 10) | "#10 \($t): \(.why), \([.signals[] | select(.source == "triage") | .kind] | join(", "))"] | first' "${work}/demoted-scored.json"
+#10 high: demoted, demote
 ```
 
 ## A deadline counts from the day of the sync through the window
