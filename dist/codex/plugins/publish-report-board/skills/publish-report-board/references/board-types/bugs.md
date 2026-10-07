@@ -6,15 +6,15 @@ Trackers rarely say how bad a bug is. Severity labels go unused, and many bugs a
 
 It draws on three sources: GitHub, ZenHub when the repository has a workspace, and the user's triage note. Error trackers, logs, and deploy state are out of scope; a bug seen on production counts as seen when its issue or a comment says so.
 
-| Setting     | Value                                                                                       |
-| ----------- | ------------------------------------------------------------------------------------------- |
-| Board type  | `bugs`                                                                                      |
-| Template    | `${CLAUDE_PLUGIN_ROOT}/templates/bugs.html`                                                 |
-| Title       | `REPO bugs`, such as `votefwd bugs`                                                         |
-| Favicon     | 🐞                                                                                          |
-| Icon        | `bug`                                                                                       |
-| Description | `Bug board for OWNER/REPO: what to fix now, what to do today, and how the rest is triaged.` |
-| Script      | `bugs-gather`, beside `report-board`, invoked the same way and written `BUGS_GATHER`        |
+| Setting     | Value                                                                                                       |
+| ----------- | ----------------------------------------------------------------------------------------------------------- |
+| Board type  | `bugs`                                                                                                      |
+| Template    | `${CLAUDE_PLUGIN_ROOT}/templates/bugs.html`                                                                 |
+| Title       | `REPO bugs`, such as `votefwd bugs`                                                                         |
+| Favicon     | 🐞                                                                                                          |
+| Icon        | `bug`                                                                                                       |
+| Description | `Bug board for OWNER/REPO: which bugs are critical, which are high priority, and how the rest are triaged.` |
+| Script      | `bugs-gather`, beside `report-board`, invoked the same way and written `BUGS_GATHER`                        |
 
 ## Scope
 
@@ -22,7 +22,7 @@ Open issues in the repository that are bugs: those carrying a label in `bugLabel
 
 ## Repository Config
 
-Optional. Pass `bugs-gather` the repository as `OWNER/NAME`, and it reads a config, when one exists, from `${XDG_CONFIG_HOME:-$HOME/.config}/report-boards/bugs/github.com/OWNER/NAME.json`; or pass the path of a config file whose `repo` names the repository. Without a config, the defaults below apply and there is no triage note. Before the first check-in that records an entry, ask the user where the note should live, and write the config with the Write tool.
+Optional. Pass `bugs-gather` the repository as `OWNER/NAME`, and it reads a config, when one exists, from `${XDG_CONFIG_HOME:-$HOME/.config}/report-boards/bugs/github.com/OWNER/NAME.json`; or pass the path of a config file whose `repo` names the repository. Without a config, the defaults below apply and there is no triage note. A config field not in the table below is refused rather than ignored, so a typo cannot quietly drop a setting. Before the first check-in that records an entry, ask the user where the note should live, and write the config with the Write tool.
 
 | Field               | Default                                 | Contents                                                                                                                              |
 | ------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
@@ -61,13 +61,13 @@ The note is the user's input and a source of truth of its own; the board renders
 - 2026-10-13T08:00-04:00 context: the send window opens 2026-10-20
 ```
 
-| Verb       | Effect                                                                                                                                                        | `until`  |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| `escalate` | Places the bug in Critical                                                                                                                                    | Optional |
-| `set`      | Overrides assessment fields, written `key=value` before the colon; the keys are the assessment fields below, and `timeSensitive`, `mitigated`, and `deadline` | Never    |
-| `snooze`   | Parks the bug through its date                                                                                                                                | Required |
-| `park`     | Parks the bug until the note changes, such as a decision not to fix it                                                                                        | Never    |
-| `context`  | Free text the analysis reads when it writes actions and the summary; it names no bug                                                                          | Never    |
+| Verb       | Effect                                                                                                                                                                                                                                                              | `until`  |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `escalate` | Places the bug in Critical                                                                                                                                                                                                                                          | Optional |
+| `set`      | Overrides assessment fields, written `key=value` before the colon; the keys are `environment`, `evidence`, `surface`, `impact`, `reach`, `workaround`, `cause`, `timeSensitive` and `mitigated` (each exactly `true` or `false`), and `deadline` (a date or `null`) | Never    |
+| `snooze`   | Parks the bug through its date                                                                                                                                                                                                                                      | Required |
+| `park`     | Parks the bug until the note changes, such as a decision not to fix it                                                                                                                                                                                              | Never    |
+| `context`  | Free text the analysis reads when it writes actions and the summary; it names no bug                                                                                                                                                                                | Never    |
 
 Every timestamp carries an explicit offset. An `until` date is inclusive in the config's `timeZone`: the entry expires at the start of the following local day. Among a bug's `escalate`, `snooze`, and `park` entries still in force, the latest decides. A `set` entry wins over the assessment for the fields it names, and the page marks each one, so the user sees which calls are theirs. An entry's ID is its timestamp, verb, and target, such as `2026-10-14T09:00-04:00 escalate #4579`, or its timestamp and `context`.
 
@@ -79,7 +79,7 @@ Every timestamp carries an explicit offset. An `until` date is inclusive in the 
 bash BUGS_GATHER gather REPO GATHER_JSON
 ```
 
-It runs the open and recently closed searches, by label and by issue type, in parallel, reads the ZenHub state of every open bug and the workspace's active sprint in one aliased query, and writes one normalized file. Then it prints what moved since the cached gather, or says the sync is a cold one. An archived repository stops the gather.
+It runs the open and recently closed searches, by label and by issue type, in parallel, reads the ZenHub state of every open bug and the workspace's active sprint in aliased queries of up to 100 bugs each, and writes one normalized file. Then it prints what moved since the cached gather, or says the sync is a cold one. Problems stop the gather rather than shrink the board: an archived repository, a search GitHub cut short at its 1000-result limit, a ZenHub error on part of a lookup, or ZenHub returning no state for any bug. It lists on stderr, and goes on without, the bugs ZenHub does not track and the bugs whose labels or linked pull requests GitHub cut short.
 
 ### 2. Read What Changed
 
@@ -110,7 +110,7 @@ Judge from what the issue and its comments say, never from a bug's plausibility;
 | `reproduced`    | `true` or `false` when the issue reports an attempt to reproduce it, otherwise `null`                                                                                                                                                                                        |
 | `gist`          | One sentence on what is wrong                                                                                                                                                                                                                                                |
 | `nextStep`      | One sentence on the next concrete action, imperative                                                                                                                                                                                                                         |
-| `question`      | When any of `environment`, `surface`, `impact`, or `cause` is `unknown`, or `cause` is `suspected`, the most useful thing to learn first, as a question; otherwise `null`                                                                                                    |
+| `question`      | When any of `environment`, `surface`, `impact`, or `cause` is `unknown`, or `cause` is `suspected`, or `reproduced` is `false`, the most useful thing to learn first, as a question; otherwise `null`                                                                        |
 
 ### 3. Score
 
@@ -118,20 +118,20 @@ Judge from what the issue and its comments say, never from a bug's plausibility;
 bash BUGS_GATHER score REPO GATHER_JSON ASSESSMENTS_JSON SCORED_JSON
 ```
 
-It refuses assessments that miss an open bug, describe an older version of one, or fall outside the closed sets, and lists every problem at once. Otherwise it applies the triage note, places every open bug in one tier, ranks each tier by a weighted urgency score, and prints the report the check-in shows: the triage entries and any expired or malformed ones, Critical and High priority with why each is there, the top of Ready to go, the report counts, and on a warm cache what entered or left Critical and High priority.
+It refuses assessments that miss an open bug, describe an older version of one, assess one bug twice, or fall outside the closed sets, and lists every problem at once. A configured triage note that cannot be read stops it, since scoring without the note would drop every call in it. A triage line that does not parse, written with any list marker or indent, is reported as a problem rather than read as prose. Otherwise it applies the triage note, places every open bug in one tier, ranks each tier by a weighted urgency score, and prints the report the check-in shows: the triage entries and any expired or malformed ones, Critical and High priority with why each is there, the top of Ready to go, the report counts, and on a warm cache what entered or left Critical and High priority.
 
-| Tier                 | Rule, applied in this order                                                                                                                                                                                                                                                                                                                                                                               |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `critical`, `parked` | The latest `escalate`, `snooze`, or `park` entry in force decides first: `escalate` places Critical, and the other two place Parked. Then a `parkLabels` label or a container places Parked                                                                                                                                                                                                               |
-| `critical`           | Unless `mitigated`: confirmed on production (evidence of `user-report`, `production-observed`, or `reproduced`) for `public` or `signed-in` users, with a `security`, `data-loss`, `money`, `access`, or `core-flow` impact and no workaround; or a `security` impact on a `public` surface in production or an unknown environment, on evidence from reading code or stronger                            |
-| `high`               | Unless `mitigated`: confirmed on production for `public` or `signed-in` users reaching `some` or more, or with no workaround; a Critical-level impact on those surfaces known only from source or not yet placed in an environment, with evidence other than `unknown`, to confirm on production, unless its deadline lies beyond the window; undated `timeSensitive`; a `deadline` within `deadlineDays` |
-| `ready`              | In progress, through a fix pull request, a progress label, or a progress pipeline; `mitigated`; a `security` impact on an `internal` surface                                                                                                                                                                                                                                                              |
-| `lower`              | An `internal` surface, or a `cosmetic` impact                                                                                                                                                                                                                                                                                                                                                             |
-| `investigate`        | Any of `environment`, `surface`, `impact`, or `cause` is `unknown`; `cause` is `suspected`; or reproduction failed                                                                                                                                                                                                                                                                                        |
-| `ready`              | Everything else: the cause is known, so the bug is ready to fix                                                                                                                                                                                                                                                                                                                                           |
-| `fixed`              | Closed within `recentDays`; one that was on production carries a reminder to verify the fix there                                                                                                                                                                                                                                                                                                         |
+| Tier                 | Rule, applied in this order                                                                                                                                                                                                                                                                                                                                                                                                       |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `critical`, `parked` | The latest `escalate`, `snooze`, or `park` entry in force decides first: `escalate` places Critical, and the other two place Parked. Then a `parkLabels` label or a container places Parked                                                                                                                                                                                                                                       |
+| `critical`           | Unless `mitigated`: confirmed on production (evidence of `user-report`, `production-observed`, or `reproduced`) for `public` or `signed-in` users, with a `security`, `data-loss`, `money`, `access`, or `core-flow` impact and no workaround; or a `security` impact on a `public` surface in production or an unknown environment, on evidence from reading code or stronger                                                    |
+| `high`               | Unless `mitigated`: confirmed on production for `public` or `signed-in` users reaching `some` or more, or with no workaround; a Critical-level impact on those surfaces known only from source or not yet placed in an environment, with evidence other than `unknown`, to confirm on production, unless it has a deadline that has passed or lies beyond the window; undated `timeSensitive`; a `deadline` within `deadlineDays` |
+| `ready`              | In progress, through a fix pull request, a progress label, or a progress pipeline; `mitigated`; a `security` impact on an `internal` surface                                                                                                                                                                                                                                                                                      |
+| `lower`              | An `internal` surface, or a `cosmetic` impact                                                                                                                                                                                                                                                                                                                                                                                     |
+| `investigate`        | Any of `environment`, `surface`, `impact`, or `cause` is `unknown`; `cause` is `suspected`; or reproduction failed                                                                                                                                                                                                                                                                                                                |
+| `ready`              | Everything else: the cause is known, so the bug is ready to fix                                                                                                                                                                                                                                                                                                                                                                   |
+| `fixed`              | Closed within `recentDays`; one that was on production carries a reminder to verify the fix there                                                                                                                                                                                                                                                                                                                                 |
 
-Urgency labels, urgent pipelines, sprints, regressions, outside reporters, and reactions add rank weight but place nothing. A bug in Critical or High priority keeps its tier when it also has a fix pull request, and shows the pull request's state: urgency wins over readiness. Ready to go groups its bugs as `ship` (an open, ready, approved, and green fix), `review` (any other open, ready fix), `in-progress`, and `ready-to-fix`.
+Urgency labels, urgent pipelines, sprints, regressions, outside reporters, and reactions add rank weight but place nothing. A bug in Critical or High priority keeps its tier when it also has a fix pull request, and shows the pull request's state: urgency wins over readiness. Ready to go groups its bugs as `ship` (an open, ready fix whose checks pass and whose review is approved or not required), `review` (any other open, ready fix), `in-progress`, and `ready-to-fix`.
 
 ### 4. Check In
 
@@ -154,7 +154,7 @@ If the host blocks the edit or the commit, stop before scoring again and report 
 bash BUGS_GATHER draft REPO GATHER_JSON SCORED_JSON DATA_JSON
 ```
 
-It writes board data with every placement, signal, fact, and link already filled in from the score. Write the prose into it with the Write or Edit tool:
+It writes board data with every placement, signal, fact, and link already filled in from the score. Problems the score found in the triage note travel with it as `triageProblems`, which validation refuses, so fix the note and score again before publishing. Write the prose into it with the Write or Edit tool:
 
 - **`summary`**: one or two sentences naming what to do first and the one constraint that shapes today.
 - **`action`**, for each Critical and High priority entry: the next concrete step, imperative, such as "Roll back the 2026-10-05 deploy, or ship the `.first()` fix with a stubbed SES test." It starts as the assessment's next step; sharpen it with the triage `context` entries and what the other bugs say.
@@ -229,7 +229,7 @@ Write bug numbers in prose as `#123`; the page links them.
 | Triage note         | The note's entries, with expired ones struck through                                                                                                       |
 | Footer              | The sync line, the counts, and `sync.extra`                                                                                                                |
 
-The facts are the assessment in five lines: where the bug is, how it is known, who it reaches, how many, and whether there is a workaround. A fact nobody has confirmed, such as an unknown field or evidence from reading code, is italic with a dashed underline; a fact the triage note set carries a dot. The header age changes color after 4 hours and again after 12, because a bug board goes stale in hours. The light theme is graphite and orange, the dark theme near-black with light blue and amber, each following the viewer's setting.
+The facts are the assessment in five lines, where the bug is, how it is known, who it reaches, how many, and whether there is a workaround, plus Mitigated and Due when they apply. A fact nobody has confirmed, such as an unknown field or evidence from reading code, is italic with a dashed underline; a fact the triage note set carries a dot. The header age changes color after 4 hours and again after 12, because a bug board goes stale in hours. The light theme is graphite and orange, the dark theme near-black with light blue and amber, each following the viewer's setting.
 
 ## Validation
 
@@ -239,7 +239,8 @@ The facts are the assessment in five lines: where the bug is, how it is known, w
 - Critical and High priority entries carry an action, an impact, and at least one signal, and no signal is later than `sync.at`.
 - A Critical entry rests on an `escalate` entry or on an assessment that earns Critical by the rule above.
 - A snoozed or parked bug is not in Critical or High priority unless a later `escalate` brings it back.
-- A triage signal names an entry in `triage` that has not expired by `sync.at`, counted in local days of `sync.timeZone`.
+- A triage signal names an entry in `triage` with the same verb, about the same bug, that has not expired by `sync.at`, counted in local days of `sync.timeZone`.
 - Open bugs carry assessments in the closed sets; triage entries follow the note grammar, and each ID matches its entry.
-- Ready entries name a group, and `ship` and `review` entries a fix pull request; Investigate entries carry a question; Lower priority and Parked entries a reason.
+- Open bugs carry a `nextStep`; Ready entries name a group and a `why`, and `ship` and `review` entries a fix pull request; Investigate entries carry a question and a `why`; Lower priority and Parked entries a reason.
+- `triageProblems` is empty: the triage note parsed cleanly.
 - `sync.timeZone` is set and is a zone the time zone database has.
