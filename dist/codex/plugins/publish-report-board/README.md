@@ -1,10 +1,10 @@
 # Publish Report Board
 
-Publish a recurring analysis, starting with backlog triage, as a live report board with a stable URL, and re-sync it in place as the source data changes.
+Publish a recurring analysis, such as backlog triage or bug triage, as a live report board with a stable URL, and re-sync it in place as the source data changes.
 
 **Type:** Skill
 **Trigger:** `/publish-report-board`
-**Requires:** [`jq`](https://jqlang.org/), plus an authenticated [`gh`](https://cli.github.com/) for the backlog board
+**Requires:** [`jq`](https://jqlang.org/) and an authenticated [`gh`](https://cli.github.com/); the bugs board also uses `curl` and a ZenHub API token when its repository has a ZenHub workspace
 
 ## Installation
 
@@ -20,18 +20,21 @@ Each sync:
 
 1. Finds the previous board, whether it was published in this conversation or an earlier one, so the same URL updates instead of a second board appearing.
 2. Gathers the source data and writes the board's analysis as JSON.
-3. Validates it with the bundled `report-board` script, which rejects a board that leaves an open issue out of every lane, waits on an issue that has closed, or recommends starting work already in progress.
+3. Validates it with the bundled `report-board` script, which rejects a board that leaves an open issue out of every lane, waits on an issue that has closed, recommends starting work already in progress, or puts a bug in Now on a triage call that has expired.
 4. Renders it into the board type's page template.
 5. On a re-sync, compares it with the previous board and reports what changed.
 6. Publishes it, then reports the URL, the revision it was synced against, and the changes.
 
 ## Board Types
 
-| Board type       | Answers                                                           |
-| ---------------- | ----------------------------------------------------------------- |
-| `backlog-triage` | What to start next, what can run in parallel, and what is blocked |
+| Board type       | Answers                                                                                 |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| `backlog-triage` | What to start next, what can run in parallel, and what is blocked                       |
+| `bugs`           | Which of a repository's bugs need action now, which today, and how the rest are triaged |
 
 The backlog board opens with the sync time and six counts, then the issues to start now and why, the lanes of issues that can run in parallel with each lane's capacity and order, a contention matrix of components claimed by more than one issue, and the blocked issues with what frees each one. A blocker can be another issue, a pull request, a branch that has to merge, or an issue in another repository, and a softer "better after" relation keeps an issue out of the picks without blocking it. The board follows the viewer's light or dark theme and reflows to phone width.
+
+The bugs board is action first and report second. Above the fold, a card for each bug hurting people on production now, and each one to fix or confirm today, leads with the next action and says who is affected; the bugs ready to land or fix follow. Below it sit the bugs that need investigating, a table of what can wait and why, what was recently fixed, what is parked, and your triage note. Most of what makes a bug urgent, such as whether it is on production, who it reaches, and how it is known, lives in issue bodies rather than labels, so each sync reads the bugs that changed and caches what it learned; a bundled `bugs-gather` script gathers, scores, and caches deterministically. A committed triage note records your calls, such as escalating a bug or confirming it on production, and every sync applies them before its own rules.
 
 Other board types, such as CI health or release readiness, do not have templates yet. Asked for one, the skill says so and answers in the terminal.
 
@@ -59,15 +62,26 @@ The skill drives the bundled script; you can also run it directly.
 | `report-board extract PAGE`                    | Prints the data a rendered page was built from            |
 | `report-board compare PREVIOUS CURRENT`        | Reports what changed between two syncs                    |
 
+The bugs board adds `bugs-gather`, beside it:
+
+| Command                                            | What it does                                                                                       |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `bugs-gather gather REPO GATHER`                   | Gathers open and recently closed bugs, their fixes, and their ZenHub state, and reports what moved |
+| `bugs-gather reuse REPO GATHER ASSESSMENTS`        | Keeps the cached assessments that still match their bugs and lists the bugs to read                |
+| `bugs-gather score REPO GATHER ASSESSMENTS SCORED` | Applies the triage note and the tier rules and prints the check-in report                          |
+| `bugs-gather draft REPO GATHER SCORED DATA`        | Builds board data from a score, leaving the prose to write                                         |
+| `bugs-gather save REPO GATHER ASSESSMENTS SCORED`  | Stores the cache the next sync starts from                                                         |
+
 ## Recommended Permissions
 
-This skill runs GitHub CLI, git, and bundled-script commands that trigger permission prompts. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+This skill runs GitHub CLI, git, and bundled-script commands that trigger permission prompts. Committing a bugs board's triage note runs a signed `git commit` on the note alone, which these rules leave to a prompt on purpose. To allow them automatically, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
 
 ```json
 {
   "permissions": {
     "allow": [
       "Bash(bash \"*/report-board\" *)",
+      "Bash(bash \"*/bugs-gather\" *)",
       "Bash(test -x *)",
       "Bash(gh repo view *)",
       "Bash(gh issue list *)",
@@ -84,6 +98,7 @@ This skill runs GitHub CLI, git, and bundled-script commands that trigger permis
       "Bash(date -u *)",
       "Bash(readlink /etc/localtime)",
       "Bash(mkdir -p *report-boards/*)",
+      "Bash(gh issue view *)",
       "Bash(mktemp -d*)"
     ]
   }
