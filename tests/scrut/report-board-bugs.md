@@ -164,7 +164,8 @@ This sync: main at 01234567, 2026-10-15T16:00:00Z in America/New_York, ZenHub wo
 ## Compare reports what entered and left Critical and High priority, and what else moved
 
 The current board parks `#10`, escalates `#21`, opens `#30`, closes `#28`,
-confirms `#13` on production, and rewords the summary.
+confirms `#13` on production with a wider reach and a deadline, and rewords
+the summary.
 
 ```scrut
 $ current="$(board_with '
@@ -173,7 +174,7 @@ $ current="$(board_with '
 >   | .ready |= map(select(.item != 21 and .item != 28)) | .critical += [{item: 21, why: "escalated", action: "Fix it.", impact: "Admins.", signals: [{source: "triage", kind: "escalate", text: "x", at: "2026-10-15T10:00:00-04:00", entry: "2026-10-15T10:05-04:00 escalate #21"}]}] | (.bugs[] | select(.number == 21) | .tier) = "critical"
 >   | .bugs += [{number: 30, title: "A new bug", state: "open", tier: "investigate", assessment: {}}] | .investigate += [{item: 30, why: "x", question: "y?"}]
 >   | (.bugs[] | select(.number == 28)) |= (.state = "closed" | .tier = "fixed") | .fixed += [{item: 28, verify: false}]
->   | (.bugs[] | select(.number == 13) | .assessment) |= (.environment = "production" | .evidence = "user-report")
+>   | (.bugs[] | select(.number == 13) | .assessment) |= (.environment = "production" | .evidence = "user-report" | .reach = "many" | .deadline = "2026-11-03")
 >   | .summary = "A new summary."
 > ')" && "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/bugs.json" "${current}"
 Previous sync: main at 01234567, 2026-10-15T16:00:00Z in America/New_York, ZenHub workspace ws123, closed bugs from the last 7 days
@@ -183,7 +184,7 @@ This sync: main at 01234567, 2026-10-15T16:00:00Z in America/New_York, ZenHub wo
 - Left Critical: #10 Pledging crashes the app (now parked)
 - New bugs: #30 A new bug (investigate)
 - Closed: #28 Profile form sends a request per keystroke
-- Assessment changed: #13 Partner pages drop campaigns with null flags (environment unknown to production, evidence code-reading to user-report)
+- Assessment changed: #13 Partner pages drop campaigns with null flags (environment unknown to production, evidence code-reading to user-report, reach unknown to many, deadline none to 2026-11-03)
 - Triage added: 2026-10-15T10:00-04:00 park #10
 - Reworded: summary
 ```

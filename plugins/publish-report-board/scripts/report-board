@@ -826,7 +826,7 @@ $previous[0] as $old
       | "\(named($k)) (\($w.tier) to \(.value.tier))"]),
     entry("Assessment changed"; [$now | to_entries[] | .key as $k | ($was[$k].assessment // null) as $wa | .value.assessment as $na
       | select($wa != null and $na != null)
-      | [("environment", "evidence", "surface", "impact", "workaround", "mitigated") as $f | select($wa[$f] != $na[$f]) | "\($f) \($wa[$f] | shown) to \($na[$f] | shown)"]
+      | [("environment", "evidence", "surface", "impact", "reach", "workaround", "mitigated", "deadline") as $f | select($wa[$f] != $na[$f]) | "\($f) \($wa[$f] | shown) to \($na[$f] | shown)"]
       | select(length > 0) | "\(named($k)) (\(join(", ")))"]),
     entry("Retitled"; [$now | to_entries[] | .key as $k | select($was[$k] != null and $was[$k].title != .value.title) | "#\($k) (\($was[$k].title | tojson) to \(.value.title | tojson))"]),
     entry("Triage added"; [($new | entry_ids) - ($old | entry_ids) | .[]]),
