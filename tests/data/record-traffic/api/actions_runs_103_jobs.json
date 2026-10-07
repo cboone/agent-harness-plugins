@@ -1,0 +1,20 @@
+[
+  {
+    "total_count": 2,
+    "jobs": [
+      {
+        "name": "copilot-pull-request-reviewer",
+        "run_attempt": 1,
+        "steps": [
+          { "name": "Prepare Copilot (Linux)", "conclusion": "success" },
+          { "name": "Prepare Copilot (Windows)", "conclusion": "skipped" }
+        ]
+      },
+      {
+        "name": "copilot-pull-request-reviewer",
+        "run_attempt": 2,
+        "steps": [{ "name": "Prepare Copilot (Linux)", "conclusion": "skipped" }]
+      }
+    ]
+  }
+]

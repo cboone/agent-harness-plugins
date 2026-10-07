@@ -1,0 +1,89 @@
+name: Traffic history
+
+# GitHub keeps traffic data for 14 days. This workflow saves it daily to the
+# orphan traffic-data branch through bin/record-traffic, so the history outlives
+# that window without adding commits to main. The push uses GITHUB_TOKEN, so it
+# starts no other workflow.
+on:
+  schedule:
+    # Well after the previous UTC day ends, so its traffic and Actions runs have
+    # settled, and off the top of the hour, when scheduled runs queue.
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: traffic-history
+  cancel-in-progress: false
+
+jobs:
+  record:
+    name: Record traffic
+    # workflow_dispatch can run from another ref, whose copy of
+    # bin/record-traffic would then write the shared data branch.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATA_BRANCH: traffic-data
+    steps:
+      # The default credentials stay persisted in this checkout, which the
+      # commit step pushes from with GITHUB_TOKEN under the contents: write
+      # permission above.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # One date names both the snapshots and the commit.
+      - name: Check out the data branch
+        run: |
+          data_dir="${RUNNER_TEMP}/traffic-data"
+          {
+            echo "DATA_DIR=${data_dir}"
+            echo "TODAY=$(date -u +%Y-%m-%d)"
+          } >> "${GITHUB_ENV}"
+          status=0
+          git ls-remote --exit-code --heads origin "${DATA_BRANCH}" > /dev/null || status=$?
+          case "${status}" in
+            0)
+              git fetch --no-tags --depth=1 origin "${DATA_BRANCH}"
+              git worktree add -B "${DATA_BRANCH}" "${data_dir}" FETCH_HEAD
+              ;;
+            2)
+              echo "::warning::${DATA_BRANCH} does not exist; creating it empty"
+              git worktree add --orphan -b "${DATA_BRANCH}" "${data_dir}"
+              ;;
+            *)
+              echo "::error::git ls-remote failed with status ${status}"
+              exit 1
+              ;;
+          esac
+
+      # The traffic endpoints reject GITHUB_TOKEN. TRAFFIC_TOKEN must be a token
+      # with Administration read (traffic) and Actions read (runs and jobs)
+      # access; a fine-grained token limited to this repository is enough.
+      - name: Record traffic
+        env:
+          GH_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
+        run: |
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::error::The TRAFFIC_TOKEN repository secret is not set"
+            exit 1
+          fi
+          bin/record-traffic --repo "${GITHUB_REPOSITORY}" --today "${TODAY}" "${DATA_DIR}"
+
+      # The commit is made in the data worktree, and the push from the main
+      # checkout, which holds the persisted credentials. Both share the branch
+      # ref.
+      - name: Commit and push
+        run: |
+          git -C "${DATA_DIR}" add --all
+          if git -C "${DATA_DIR}" diff --cached --quiet; then
+            echo "No traffic changes to commit."
+            exit 0
+          fi
+          git -C "${DATA_DIR}" \
+            -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet --message "chore: record traffic for ${TODAY}"
+          git push origin "refs/heads/${DATA_BRANCH}:refs/heads/${DATA_BRANCH}"
