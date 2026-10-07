@@ -215,7 +215,7 @@ If `<remote>/<base>` does not exist, try the local `<base>` branch. A local bran
 Collect the changed files. Both commands print paths from the repository root, from any working directory; `--no-relative` keeps a `diff.relative` setting from limiting the first to the current directory:
 
 ```bash
-git --no-pager diff --no-ext-diff -z --name-only --no-relative --diff-filter=d <merge-base>
+git --no-pager diff --no-ext-diff --no-textconv -z --name-only --no-relative --diff-filter=d <merge-base>
 git ls-files -z --others --exclude-standard --full-name :/
 ```
 
@@ -233,7 +233,7 @@ Report the remaining file list before editing, listing untracked files separatel
 
 ### 2. Collect comments
 
-Read each file in scope, resolving its path from the repository root (`git rev-parse --show-toplevel`); step 1 makes every path root-relative. With paths, collect every comment in the file. With the default scope, collect comments inside a changed hunk or directly above one, using `git --no-pager diff --no-ext-diff -U0 <merge-base> -- ":(top,literal)<file>"` to find the changed lines without surrounding context (`top` keeps the root-relative path from step 1 correct in any working directory, and `literal` keeps a `*`, `?`, or `[` in a filename from matching other files); an untracked file counts as entirely changed.
+Read each file in scope, resolving its path from the repository root (`git rev-parse --show-toplevel`); step 1 makes every path root-relative. With paths, collect every comment in the file. With the default scope, collect comments inside a changed hunk or directly above one, using `git --no-pager diff --no-ext-diff --no-textconv -U0 <merge-base> -- ":(top,literal)<file>"` to find the changed lines without surrounding context (`top` keeps the root-relative path from step 1 correct in any working directory, and `literal` keeps a `*`, `?`, or `[` in a filename from matching other files); an untracked file counts as entirely changed.
 
 ### 3. Classify each comment
 
