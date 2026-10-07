@@ -146,8 +146,14 @@ readonly SKELETON_FILTER='
       elif test("^<!--") then .
       elif test("^#+ ") then gsub("\\([0-9]+\\)"; "(N)")
       elif test("^<summary>") then
-        if test("\\[badge\\]") then "<summary>[badge] TITLE</summary>"
-        else gsub("\\([0-9]+\\)"; "(N)")
+        # A badge summary names one finding by its plain title. Markup after
+        # the badge, such as a bold count, is a different shape and is kept
+        # apart from it.
+        if test("\\[badge\\][^<]*</summary>") then "<summary>[badge] TITLE</summary>"
+        elif test("\\[badge\\]") then "<summary>[badge] MARKUP</summary>"
+        # A count is written after the title, as in "Open (3)", or before
+        # it, as in "3 open findings". Either way the number is not layout.
+        else gsub("\\([0-9]+\\)"; "(N)") | sub("^(?<tags><summary>(<[^>]+>)*)[0-9]+ "; "\(.tags)N ")
         end
       elif test("^</?details") then .
       elif test("^[[:space:]]*\\|[[:space:]:-]+\\|[[:space:]:|-]*$") then "| --- |"
@@ -164,7 +170,10 @@ readonly SKELETON_FILTER='
             + (if test("\\(N votes\\)") then " with (N votes)" else "" end)
           end
       elif test("^- \\[badge\\]") then
-        "- [badge] [TITLE](#thread)" + ((capture(" · (?<tag>[A-Za-z]+)[[:space:]]*$") | " · " + .tag) // "")
+        # A badge bullet that links no thread is a finding of a different
+        # shape from the thread bullets the open and resolved sections list.
+        (if test("\\(#thread\\)") then "- [badge] [TITLE](#thread)" else "- [badge] TEXT" end)
+        + ((capture(" · (?<tag>[A-Za-z]+)[[:space:]]*$") | " · " + .tag) // "")
       elif test("^[[:space:]]*[-*] .*\\(N votes\\)") then
         (capture("^[[:space:]]*[-*] (?<lead>(`CODE`[[:space:]]*\\S+[[:space:]]*)?(\\*\\*)?)").lead) as $lead
         | "- " + $lead + "SEVERITY (N votes): TEXT"
@@ -172,7 +181,12 @@ readonly SKELETON_FILTER='
       # file and line without a vote tag is a finding no parser reads, and
       # the shape is what makes it visible here.
       elif test("^[[:space:]]*([-*+]|[0-9]+[.)]) (\\*\\*)?`CODE`") then "- `CODE` TEXT"
+      elif test("^\\*\\*[0-9]+ [^*:]+\\*\\*$") then sub("^\\*\\*[0-9]+ "; "**N ")
       elif test("^\\*\\*[^*]+:\\*\\*") then capture("^(?<label>\\*\\*[^*]+:\\*\\*)").label
+      # A label can carry a leading emoji, as "🧠 **Review effort:**" does, so
+      # any non-ASCII mark before it is kept with it.
+      elif test("^[^\\x{0}-\\x{7F}]+[[:space:]]+\\*\\*[^*]+:\\*\\*") then
+        capture("^(?<mark>[^\\x{0}-\\x{7F}]+)[[:space:]]+(?<label>\\*\\*[^*]+:\\*\\*)") | "\(.mark) \(.label)"
       elif test("^- \\*\\*[^*]+:\\*\\*") then "- " + capture("^- (?<label>\\*\\*[^*]+:\\*\\*)").label
       elif test("^[A-Z][A-Za-z ]+:$") then .
       elif test("^\\*\\*[^*]+:[0-9]+\\*\\*$") then "**PATH:LINE**"
@@ -182,14 +196,32 @@ readonly SKELETON_FILTER='
       else empty
       end;
 
+  # Fences pair the way resolve-copilot-threads pairs them: a run of three or
+  # more backticks or tildes opens one, and only a line holding a run of the
+  # same character, at least as long, closes it. Toggling on any backtick
+  # line instead would read quoted layout as real, or real layout as quoted,
+  # wherever the parser reads it the other way.
+  def fence_run:
+    (first(capture("^[[:space:]]*(?<run>`{3,}|~{3,})")) | .run) // null;
+
+  def next_fence($raw):
+    ($raw | fence_run) as $run
+    | if . == null then
+        (if $run == null then null else {char: $run[0:1], length: ($run | length)} end)
+      elif $run != null
+           and $run[0:1] == .char
+           and ($run | length) >= .length
+           and ($raw | test("^[[:space:]]*(`+|~+)[[:space:]]*$")) then null
+      else .
+      end;
+
   def skeletons:
     split("\n")
-    | reduce .[] as $line ({fence: false, out: []};
-        if ($line | test("^[[:space:]]*```"))
-        then .fence = (.fence | not)
-        elif .fence then .
-        else .out += [$line | skeleton_of_line]
-        end)
+    | reduce .[] as $line ({fence: null, out: []};
+        (.fence | next_fence($line)) as $next
+        | if .fence != null or $next != null then .fence = $next
+          else .out += [$line | skeleton_of_line]
+          end)
     | .out;
 
   def copilot_review:

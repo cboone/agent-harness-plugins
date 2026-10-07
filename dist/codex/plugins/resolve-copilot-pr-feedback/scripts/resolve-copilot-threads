@@ -394,18 +394,65 @@ function do_parse_reviews() {
 
       def normalize_path: gsub("\u200b"; "");
 
-      # A section title as a reader sees it: markup, a trailing "(N)" count
-      # and a heading marker removed.
-      def section_title:
+      # Copilot writes a section count in one of two places: trailing, as in
+      # "Open (3)", and leading, as in "3 open findings". A trailing count is
+      # read on any heading or summary. A leading count is read on a summary
+      # whose bold text opens with the number, the shape every leading-count
+      # section Copilot has shipped takes, so a new section written that way
+      # is reconciled the first time it appears. A title that merely opens
+      # with a number, such as "### 3 modules touched" or "<summary>2 files
+      # reviewed</summary>", is not in that shape and carries no count.
+      def leading_count_summary:
+        "^<summary><strong>[0-9]+[[:space:]]";
+
+      # A heading or summary as a reader sees it: markup and a heading marker
+      # removed.
+      def section_text:
         gsub("<[^>]*>"; "")
         | sub("^###[[:space:]]+"; "")
-        | sub("[[:space:]]*\\([0-9]+\\)[[:space:]]*$"; "")
         | trim;
 
-      # The "(N)" count a section heading or summary ends with, or null.
+      # A section title as a reader sees it, with any count removed.
+      def section_title:
+        test(leading_count_summary) as $leading
+        | section_text
+        | sub("[[:space:]]*\\([0-9]+\\)$"; "")
+        | if $leading then sub("^[0-9]+[[:space:]]+"; "") else . end;
+
+      # The count a section heading or summary carries, or null.
       def section_count:
-        (gsub("<[^>]*>"; "") | capture("\\((?<count>[0-9]+)\\)[[:space:]]*$").count | tonumber)
-        // null;
+        test(leading_count_summary) as $leading
+        | (
+            section_text
+            | capture("\\((?<count>[0-9]+)\\)$")
+              // (if $leading then capture("^(?<count>[0-9]+)") else empty end)
+            | .count
+            | tonumber
+          )
+          // null;
+
+      # The fence a line opens, as its run of three or more backticks or
+      # tildes, or null.
+      def fence_run:
+        (first(capture("^[[:space:]]*(?<run>`{3,}|~{3,})")) | .run) // null;
+
+      # The fence in effect after $raw, given the one in effect before it
+      # (null outside a fence). A fence closes only on a line holding a run
+      # of the same character at least as long as the one that opened it,
+      # and nothing else, not even the other fence character, so a "~~~"
+      # fence, a four-backtick fence quoting a three-backtick one, or a
+      # closing line such as "```~~~" cannot end a fence early and expose
+      # what it quotes.
+      def next_fence($raw):
+        ($raw | fence_run) as $run
+        | if . == null then
+            (if $run == null then null else {char: $run[0:1], length: ($run | length)} end)
+          elif $run != null
+               and $run[0:1] == .char
+               and ($run | length) >= .length
+               and ($raw | test("^[[:space:]]*(`+|~+)[[:space:]]*$")) then null
+          else .
+          end;
 
       # Splits a body into numbered lines, each tagged with the region it
       # sits in, its details depth, and whether it is inside a fenced block.
@@ -424,11 +471,12 @@ function do_parse_reviews() {
       def annotate:
         split("\n")
         | to_entries
-        | reduce .[] as $entry ({fence: false, depth: 0, region: "lead", out: []};
+        | reduce .[] as $entry ({fence: null, depth: 0, region: "lead", out: []};
             ($entry.value | sub("\r$"; "")) as $raw
             | ($entry.key + 1) as $n
-            | if ($raw | test("^[[:space:]]*```")) or .fence then
-                (if ($raw | test("^[[:space:]]*```")) then .fence = (.fence | not) else . end)
+            | (.fence | next_fence($raw)) as $next
+            | if .fence != null or $next != null then
+                .fence = $next
                 | .out += [{n: $n, raw: $raw, text: "", region: .region, depth: .depth, fence: true}]
               else
                 (
@@ -453,6 +501,22 @@ function do_parse_reviews() {
               end)
         | .out;
 
+      # A fenced block still open at the end of the body, as a census entry
+      # naming the line that opened it, or nothing. Every line after an
+      # opening fence is skipped by the parsers and the census alike, so a
+      # fence that never closes would hide the rest of the body: a stray
+      # "~~~" in prose, a closing fence with text after it, or a fence quoted
+      # inside a fence can each open one. Reporting it keeps that visible
+      # instead of reading the hidden sections as absent.
+      def unclosed_fence($lines):
+        reduce $lines[] as $l ({fence: null, opened: null};
+          (.fence | next_fence($l.raw)) as $next
+          | (if .fence == null and $next != null then .opened = $l else . end)
+          | .fence = $next)
+        | if .fence == null then []
+          else [{kind: "fence", region: .opened.region, line: .opened.n, text: (.opened.raw | .[0:200])}]
+          end;
+
       # The first level-3 heading. On ccr-overview-v2 bodies this is the
       # verdict the needsRead check compares. Older layouts can yield a
       # section heading such as "### Reviewed changes", or null, and there
@@ -468,12 +532,20 @@ function do_parse_reviews() {
       # Copilot announces every section as a <summary> inside a <details>
       # block, so the nesting is part of what identifies one. Matching the
       # summary text alone would let an unfamiliar wrapper carrying the same
-      # words stand in for a section Copilot emits. Both matchers below decide
-      # whether something goes unreported: a spoofed "Open" count can absorb
-      # a stated shortfall and hide drift, and a spoofed resolved section can
-      # clear the read that a non-clean verdict with a known lead would
-      # otherwise get. So a loose match is a way to suppress a signal rather
-      # than a cosmetic imprecision.
+      # words stand in for a section Copilot emits. Every matcher below
+      # decides whether something goes unreported: a spoofed "Open" count can
+      # absorb a stated shortfall and hide drift, a spoofed open-findings
+      # summary can supply a stated count that hides a renamed "**Findings:**"
+      # header, and a spoofed resolved section can clear the read that a
+      # non-clean verdict with a known lead would otherwise get. So a loose
+      # match is a way to suppress a signal rather than a cosmetic
+      # imprecision.
+      #
+      # For the same reason a summary counts only as a line of its own, the
+      # way annotate and the census read one, and never inside a fenced
+      # block. A finding or a "What changed in this PR" note that quotes
+      # "<summary>1 open finding</summary>" in a code span or a fence is
+      # prose, not a section.
       #
       # Depth one exactly, which is the summary of a details block opened at
       # the top of the body. Every section summary observed on a live review
@@ -486,51 +558,154 @@ function do_parse_reviews() {
       #
       # A closing tag at depth zero is ignored so unbalanced markup cannot
       # drive the count negative and shift every later line down a level.
-      def section_summary($name):
-        split("\n")
-        | reduce .[] as $line ({depth: 0, value: null};
-            if ($line | test("^<details"))
-            then .depth += 1
-            elif ($line | test("^</details>"))
-            then (if .depth > 0 then .depth -= 1 else . end)
-            elif .value == null
-                 and .depth == 1
-                 and ($line | test("<summary>(<[^>]+>)*" + $name + " \\([0-9]+\\)"))
-            then .value = (
-                $line
-                | capture("<summary>(?:<[^>]+>)*" + $name + " \\((?<count>[0-9]+)\\)").count
-                | tonumber
-              )
-            else .
-            end)
+      #
+      # $pattern is what follows the opening summary tag, markup included,
+      # with a named "count" group, so a caller can match the count on either
+      # side of the name and say which markup the summary may carry. A
+      # leading count is read only from a bold summary, the shape the census
+      # reads it from too (see leading_count_summary). The match runs to the
+      # closing summary tag, so a summary that goes on past the known words,
+      # such as "3 open findings</strong> outside the diff", is not the known
+      # section. The result is the first matching section, or null when none
+      # matches, as:
+      #
+      #   count    the number its summary states
+      #   links    list items at the depth of the block itself carrying a
+      #            "#discussion_r" thread link outside inline code spans
+      #   items    every other non-blank line in the block, fenced lines,
+      #            nested details blocks and anything between the opening
+      #            details tag and the summary included, which is content
+      #            that is not an inline thread
+      #   matches  how many depth-one summaries match, so a caller can tell
+      #            a second section of the same kind from the first
+      #
+      # Only the first summary of a block names it. A matching summary that
+      # follows another one in the same block is content rather than the
+      # section, so the prose between the two cannot pass unread, and any
+      # further summary inside a matched block counts as one of its items.
+      #
+      # The census counts the same links differently, by region, on any line
+      # and at any depth. Counting them here at the depth of the block
+      # itself means a block that is never closed cannot borrow the links of
+      # a section opened inside it, such as a resolved list, even where the
+      # census does.
+      def section_summary($pattern):
+        ("^<summary>" + $pattern + "(?:</[^>]+>)*</summary>[[:space:]]*$") as $summary
+        | split("\n")
+        | reduce (.[] | sub("\r$"; "")) as $line ({fence: null, depth: 0, inside: false, awaiting: false, pending: 0, summarized: false, value: null};
+            (.fence | next_fence($line)) as $next
+            | if .fence != null or $next != null then
+                .fence = $next
+                | if .inside then .value.items += 1
+                  elif .awaiting then .pending += 1
+                  else .
+                  end
+              elif ($line | test("^<details")) then
+                .depth += 1
+                | (if .depth == 1 then .awaiting = true | .pending = 0 | .summarized = false else . end)
+              elif ($line | test("^</details>")) then
+                (if .depth > 0 then .depth -= 1 else . end)
+                | (if .depth == 0 then .inside = false | .awaiting = false else . end)
+              elif .depth == 1 and ($line | test("^<summary>")) then
+                (if (.summarized | not) and ($line | test($summary)) then
+                  if .value == null then
+                    .value = {count: ($line | capture($summary).count | tonumber), links: 0, items: .pending, matches: 1}
+                    | .inside = true
+                  else .value.matches += 1
+                  end
+                elif .inside then .value.items += 1
+                else .
+                end)
+                | .summarized = true
+                | .awaiting = false
+              elif ($line | test("[^[:space:]]")) and (.inside or .awaiting) then
+                if .awaiting then .pending += 1
+                elif .depth == 1
+                   and ($line | test("^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]"))
+                   and ($line | gsub("`[^`]*`"; "``") | test("\\(#discussion_r[0-9]+\\)"))
+                then .value.links += 1
+                else .value.items += 1
+                end
+              else .
+              end)
         | .value;
 
-      # The number of inline threads the "Open (N)" summary announced, or 0
-      # when there is no such section. Reconciling it against the stated
+      # The "Open (N)" section, which states its count after the name.
+      def open_section:
+        section_summary("(?:<[^>]+>)*Open \\((?<count>[0-9]+)\\)");
+
+      # The open-findings section, which states its count before the name, as
+      # "3 open findings" or "1 open finding". Bodies in this layout carry no
+      # "**Findings:**" line, so the summary count is also the stated count.
+      # See the $stated_findings binding in the main filter.
+      def open_findings_section:
+        section_summary("<strong>(?<count>[0-9]+) open findings?</strong>");
+
+      # Content in an open section, in either layout, that links no inline
+      # thread. The open section lists threads and nothing else, so such
+      # content may be a finding nothing here reads. The census reconciles
+      # only the count of a section with its links, so it misses such content
+      # whenever the two match, and it never reconciles a zero count at all.
+      # So the content is checked here, whatever the count.
+      def open_section_items:
+        ((open_section // open_findings_section) | .items) // 0;
+
+      # More than one open section, of either kind. Every observed review
+      # lists its open threads in one section, and the counts and contents
+      # above are read from the first, so a second one would go unread.
+      def open_section_conflict:
+        ((open_section | .matches) // 0) + ((open_findings_section | .matches) // 0) > 1;
+
+      # The number of inline threads the body announces or lists as open, or
+      # 0 when there is no such section. Reconciling it against the stated
       # count is what makes a shortfall visible, so the count is parsed
       # rather than the section merely detected.
+      #
+      # "Open (N)" is compared as announced, against a separate
+      # "**Findings:**" line. The open-findings layout announces the same
+      # number it states, so comparing its summary against itself could never
+      # fall short. The thread links its block actually lists are counted
+      # instead.
       def open_thread_count:
-        section_summary("Open") // 0;
+        (open_section | .count)
+        // (open_findings_section | .links)
+        // 0;
 
       # ccr-overview-v2 lists the inline threads that were open when the
-      # review was written under an "Open (N)" summary. Those threads explain
-      # a non-clean verdict by themselves, and the thread fetch reports them,
-      # so a review whose only findings are inline threads is neither drift
-      # nor, on its verdict alone, a lead to read.
+      # review was written, under an "Open (N)" or open-findings summary.
+      # Those threads explain a non-clean verdict by themselves, and the
+      # thread fetch reports them, so a review whose only findings are inline
+      # threads is neither drift nor, on its verdict alone, a lead to read.
       def lists_open_threads:
         open_thread_count > 0;
 
+      # The resolved section, which states its count after the name, as
+      # "Resolved since last review (N)", or before it, as "N resolved since
+      # last review". The first form is read whenever it is present.
+      def resolved_section:
+        section_summary("(?:<[^>]+>)*Resolved since last review \\((?<count>[0-9]+)\\)")
+        // section_summary("<strong>(?<count>[0-9]+) resolved since last review</strong>");
+
       # ccr-overview-v2 also lists the findings closed since the previous
-      # round under a "Resolved since last review (N)" summary. Those links
-      # record work already done rather than feedback to act on, so they are
-      # a known layout rather than a finding the parser failed to read.
+      # round, under a resolved section. Those links record work already done
+      # rather than feedback to act on, so they are a known layout rather than
+      # a finding the parser failed to read.
       #
       # Presence alone is not enough to call a review clean. Copilot ships a
       # resolved section on most second and later rounds, including rounds
       # that state findings, so pairing it with the lead paragraph is what
       # separates the two. See lead_states_no_findings.
       def lists_resolved_threads:
-        (section_summary("Resolved since last review") // 0) > 0;
+        ((resolved_section | .count) // 0) > 0;
+
+      # A resolved section that announces threads and holds anything but its
+      # own thread links. It lists threads and nothing else, and a nonzero
+      # count is what lets it clear a read (see lists_resolved_threads), so
+      # prose placed in it would otherwise go unread on a round that reads as
+      # clean. A zero count clears nothing, so its contents are read with the
+      # rest of the review instead.
+      def resolved_section_mismatch:
+        resolved_section | . != null and .count > 0 and .items > 0;
 
       # Lines of a ccr-overview-v2 body that use an element outside the
       # vocabulary the layout is built from. Each is reported in unaccounted
@@ -569,27 +744,47 @@ function do_parse_reviews() {
             | {kind: "element", line: $l.n, region: $l.region, text: ($l.raw | .[0:200])}
           ];
 
-      # The lines before the first details block, which stated_finding_count
-      # and headline both read. The reasons the stop pattern omits the
-      # closing angle bracket are given beside each of them.
+      # The lines before the first details block, which headline reads. The
+      # reasons the stop pattern omits the closing angle bracket are given
+      # beside each reader. preamble_count_lines below reads the same region,
+      # skipping fenced lines.
       def preamble_lines:
         split("\n")
         | (map(test("^<details")) | index(true)) as $stop
         | if $stop then .[0:$stop] else . end;
 
-      # ccr-overview-v2 states a count on a "**Findings:**" line, as either
-      # "None" or a number. Across every observed body, in the fixtures and
-      # on live pull requests, that total is the "Open (N)" thread count and
-      # nothing else: a review stating 1 can carry "Open (1)" alongside a
-      # "Previously missed (1)" entry, and a review stating "None" can carry
-      # "Previously missed (3)". It also omits the line-less findings
-      # appended to file-summary cells.
+      # The preamble lines a count is read from: those before the first
+      # details block, skipping fenced lines, so a "**Findings:**" or
+      # "**0 open findings**" line quoted in a fence is prose rather than
+      # the count, as a quoted summary is for section_summary.
+      def preamble_count_lines:
+        split("\n")
+        | reduce .[] as $line ({fence: null, stop: false, out: []};
+            if .stop then .
+            else
+              (.fence | next_fence($line)) as $next
+              | if .fence != null or $next != null then .fence = $next
+                elif ($line | test("^<details")) then .stop = true
+                else .out += [$line]
+                end
+            end)
+        | .out;
+
+      # A ccr-overview-v2 body in the "Open (N)" layout states a count on a
+      # "**Findings:**" line, as either "None" or a number. Across every
+      # observed body, in the fixtures and on live pull requests, that total
+      # is the "Open (N)" thread count and nothing else: a review stating 1
+      # can carry "Open (1)" alongside a "Previously missed (1)" entry, and a
+      # review stating "None" can carry "Previously missed (3)". It also
+      # omits the line-less findings appended to file-summary cells.
       #
       # So the count says how many inline threads Copilot opened, and says
       # nothing about the rest of the body. Comparing it against
       # open_thread_count is therefore a real invariant, while reading "None"
-      # as "this review has no findings" is not. Layouts predating the line
-      # report null and are excluded from the comparison.
+      # as "this review has no findings" is not. This returns null for any
+      # body without the line. The caller excludes pre-v2 bodies from the
+      # comparison and, on a v2 body, reads the count from the open-findings
+      # summary instead; see the $stated_findings binding.
       #
       # Scanned line by line because jq anchors "^" to the whole string, the
       # same reason the verdict and marker definitions split the body first.
@@ -620,9 +815,10 @@ function do_parse_reviews() {
       # exists to prevent.
       #
       # "unparseable" is deliberately distinct from null, which means no
-      # "**Findings" line at all. The caller turns that null into
-      # "unparseable" on a v2 body, where the line is always present, and
-      # keeps it as null on the older layouts that never carried one.
+      # "**Findings" line at all. On a v2 body the caller then reads the
+      # count from an "N open findings" summary, the layout that has no such
+      # line, and turns a null with neither form into "unparseable". It keeps
+      # the null on the older layouts that never carried a count.
       #
       # Only the preamble is searched, the region before the first details
       # block, which is where Copilot states the count in every observed live
@@ -633,7 +829,7 @@ function do_parse_reviews() {
       # bracket so an opened section, "<details open>", ends the preamble too.
       def stated_finding_count:
         (
-          preamble_lines
+          preamble_count_lines
           | map(select(test("^\\*\\*Findings"; "i")))
           | first
         ) as $line
@@ -652,6 +848,36 @@ function do_parse_reviews() {
               end
           end;
 
+      # The open-findings layout states a count of zero on a bold line of its
+      # own, "**0 open findings**", in place of the summary of an open block,
+      # because a round with nothing open lists no block. The line sits in the
+      # preamble, where a "**Findings:**" line would, and is read from there
+      # alone for the same reason: a quoted copy inside a section is prose.
+      # Null when no such line exists.
+      def open_findings_line_count:
+        (
+          preamble_count_lines
+          | map(sub("\r$"; "") | capture("^\\*\\*(?<count>[0-9]+) open findings?\\*\\*[[:space:]]*$") | .count | tonumber)
+          | first
+        )
+        // null;
+
+      # An open section whose count and thread links disagree, in either
+      # direction, or an open-findings count stated beside any other count.
+      # The census reconciles a count with its links only above zero, so a
+      # "0 open findings" block holding a link would otherwise read as clean.
+      # The open-findings layout states its count once, as a block summary
+      # or, with nothing open, a "**0 open findings**" line, and never beside
+      # a "**Findings:**" line or an "Open (N)" section, so a body mixing the
+      # forms carries counts with no rule for which one holds: "**Findings:**
+      # None" over a block of three would otherwise read as zero.
+      def open_section_mismatch:
+        ((open_section // open_findings_section) | . != null and .links != .count)
+        or (
+          ([open_findings_line_count, open_findings_section] | any(. != null))
+          and ([stated_finding_count, open_findings_line_count, open_section, open_findings_section] | map(select(. != null)) | length) > 1
+        );
+
       # Copilot puts its verdict heading and lead paragraph before the first
       # details block. The stop pattern omits the closing angle bracket, as
       # stated_finding_count does, so an "Open" section opened with
@@ -666,10 +892,11 @@ function do_parse_reviews() {
 
       # The lines of the lead: everything in headline except the layout
       # around it, which is the marker comment, headings (the overview title
-      # and the verdict) and the "**Review effort:**" and "**Findings:**"
-      # labels. List items, bold text and anything else stay, because a lead
-      # that states its findings as bullets states them there and nowhere
-      # else.
+      # and the verdict), the "**Review effort:**" label, with or without the
+      # emoji the open-findings layout puts before it, the "**Findings:**"
+      # label and the "**0 open findings**" count line. List items, bold
+      # text and anything else stay, because a lead that states its findings
+      # as bullets states them there and nowhere else.
       def lead_lines:
         headline
         | split("\n")
@@ -677,7 +904,7 @@ function do_parse_reviews() {
         | map(
             select(
               . != ""
-              and (test("^<!--.*-->$|^#{1,6}([[:space:]]|$)|^\\*\\*Review effort:\\*\\*|^\\*\\*Findings:\\*\\*") | not)
+              and (test("^<!--.*-->$|^#{1,6}([[:space:]]|$)|^([^\\x{0}-\\x{7F}]+[[:space:]]+)?\\*\\*Review effort:\\*\\*|^\\*\\*Findings:\\*\\*|^\\*\\*[0-9]+ open findings?\\*\\*$") | not)
             )
           );
 
@@ -980,7 +1207,16 @@ function do_parse_reviews() {
       #   vote           a "(N votes)" or "(N vote each)" tag on any other line
       #   location       a line that is only "**path:line**", or that opens
       #                  with "`path:line`"
-      #   section-count  a section heading or summary ending in "(N)"
+      #   section-count  a section heading or summary carrying a count: one
+      #                  ending in "(N)", or a summary whose bold text opens
+      #                  with the count (see leading_count_summary)
+      #   badge          a severity badge on a line with no thread link, which
+      #                  marks a finding. Only a "Previously missed" entry,
+      #                  whose title carries the badge, accounts for one, so
+      #                  a finding of another shape in the same region cannot
+      #                  stand in for it
+      #   fence          a fenced block still open at the end of the body (see
+      #                  unclosed_fence)
       #
       # Fenced blocks are skipped, and vote tags inside inline code spans do
       # not count, so a finding that quotes the format cannot trip it.
@@ -1002,10 +1238,11 @@ function do_parse_reviews() {
       #
       # A section count is accounted for when it equals the parsed findings
       # plus the thread links in its region. That holds whatever the section is
-      # called, so a new section that lists threads, the way "Open" and
-      # "Resolved since last review" do, is read correctly the first time it
-      # appears, and a new section whose items nothing parses is not. Two
-      # counted sections list files rather than findings, and are exempt.
+      # called, and wherever it writes its count, so a new section that lists
+      # threads, the way "Open" and "3 resolved since last review" do, is read
+      # correctly the first time it appears, and a new section whose items
+      # nothing parses is not. Two counted sections list files rather than
+      # findings, and are exempt.
       def non_finding_sections: ["Files not reviewed", "New files"];
 
       def signals:
@@ -1040,6 +1277,18 @@ function do_parse_reviews() {
                 | ($l.raw | section_count) as $count
                 | select($count != null and $count > 0)
                 | {kind: "section-count", line: $l.n, region: $l.region, text: $l.raw, count: $count}
+              ),
+              # A severity badge marks a finding wherever Copilot draws one.
+              # On a line with no thread link it stands for a finding the
+              # thread fetch cannot report, so it must be one a parser read.
+              # The "**Findings:**" line draws badges as its count breakdown,
+              # not as findings, and is left out.
+              (
+                select(
+                  ($l.raw | test("alt=\"[^\"]*severity\""; "i"))
+                  and ($l.raw | test("^\\*\\*Findings"; "i") | not)
+                )
+                | {kind: "badge", line: $l.n, region: $l.region, text: $l.raw}
               )
             end
         ];
@@ -1054,6 +1303,8 @@ function do_parse_reviews() {
         | ($findings | map(select(.at == null)) | count_by(.region)) as $located
         | ($signals | map(select(.kind == "thread-link")) | count_by(.region)) as $links
         | ($signals | map(select(.kind == "location")) | count_by(.region)) as $locations
+        | ($signals | map(select(.kind == "badge")) | count_by(.region)) as $badges
+        | ($findings | map(select(.source == "previously-missed")) | count_by(.region)) as $badged
         | [
             (
               $signals
@@ -1068,6 +1319,10 @@ function do_parse_reviews() {
                   (
                     .kind == "location"
                     and (($located[.region] // 0) < ($locations[.region] // 0))
+                  )
+                  or (
+                    .kind == "badge"
+                    and (($badged[.region] // 0) < ($badges[.region] // 0))
                   )
                   or (
                     .kind == "section-count"
@@ -1111,6 +1366,7 @@ function do_parse_reviews() {
         | (
             ($lines | signals | unaccounted($findings))
             + (if $is_v2 then element_signals($lines) else [] end)
+            + unclosed_fence($lines)
             | sort_by(.line)
           ) as $census
         | (.body | has_suppressed_marker) as $has_suppressed_marker
@@ -1177,26 +1433,41 @@ function do_parse_reviews() {
             else $census
             end
           ) as $unaccounted
-        # Every ccr-overview-v2 body carries a "**Findings:**" line, in every
-        # fixture and every observed live review, so its absence on a v2 body
-        # is a renamed or removed header rather than an older layout.
-        # Reporting it as unparseable is what keeps a header rename from
-        # reading as "this layout never had a count", which would report no
-        # shortfall. Only a pre-v2 body reports null and is excluded from the
-        # comparison.
+        # Every ccr-overview-v2 body states its open count, in every fixture
+        # and every observed live review: on a "**Findings:**" line, or, in
+        # the open-findings layout, as an "N open findings" summary or, when
+        # nothing is open, a "**0 open findings**" line. A v2 body with none
+        # of these is a renamed or removed header rather than an older
+        # layout. Reporting it as unparseable is what keeps a header
+        # rename from reading as "this layout never had a count", which would
+        # report no shortfall. Only a pre-v2 body reports null and is excluded
+        # from the comparison.
         | (
             if $is_v2 | not then null
-            else ((.body | stated_finding_count) // "unparseable")
+            else (
+              (.body | stated_finding_count)
+              // (.body | open_findings_line_count)
+              // (.body | open_findings_section | .count)
+              // "unparseable"
+            )
             end
           ) as $stated_findings
         | (if $is_v2 then (.body | open_thread_count) else 0 end) as $open_thread_count
-        # A stated count above the inline threads Copilot listed, or a count
-        # line that no longer parses, leaves findings this command cannot
-        # account for. Both are independent of which sections the body has.
+        # A stated count above the inline threads Copilot listed, a v2 body
+        # whose count is missing or does not parse, an open section listing an
+        # item that is not a thread, open counts that disagree with each other
+        # or with their links, or a resolved section holding more than its
+        # thread links, leaves findings this command cannot account for. Each
+        # is independent of which other sections the body has.
         | (
             if $stated_findings == null then false
             elif $stated_findings == "unparseable" then true
-            else $stated_findings > $open_thread_count
+            else
+              $stated_findings > $open_thread_count
+              or (.body | open_section_items) > 0
+              or (.body | open_section_conflict)
+              or (.body | open_section_mismatch)
+              or (.body | resolved_section_mismatch)
             end
           ) as $stated_shortfall
         | {
@@ -1213,11 +1484,13 @@ function do_parse_reviews() {
             # Drift means the layout could not be read, which only a parser
             # change fixes, so it is reserved for structural causes:
             #
-            #   - A shortfall against the count Copilot stated. Both the
-            #     count and the "Open (N)" number it is compared against come
-            #     from Copilot itself, and a body can yield one finding and
-            #     still state more than its open threads account for, so this
-            #     does not wait for an empty parse.
+            #   - A shortfall against the count Copilot stated. The count is
+            #     compared against the "Open (N)" number or, in the
+            #     open-findings layout, the thread links that block lists. A
+            #     body can yield one finding and still state more than its
+            #     open threads account for, so this does not wait for an
+            #     empty parse. An open section listing an item that is not a
+            #     thread falls short the same way.
             #   - Any signal the census leaves unaccounted, including an
             #     element outside the v2 vocabulary.
             #   - A body that announces a suppressed-comments section and

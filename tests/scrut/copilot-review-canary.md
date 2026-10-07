@@ -305,6 +305,52 @@ $ printf '[{"repo":"o/r","number":1,"reviews":[{"id":1,"user":{"login":"copilot-
 | PATH | TEXT | with (N votes)
 ```
 
+A count is not layout wherever Copilot writes it: after a section title, as
+in `Open (3)`, before one, as in `3 open findings`, or on a bold line of its
+own, as in `**0 open findings**`. A label keeps the emoji Copilot puts before
+it, as in `🧠 **Review effort:**`.
+
+```scrut
+$ jq '[{repo: "o/r", number: 1, reviews: ., audit: null}]' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${COPILOT_REVIEW_CANARY_BIN}" skeletons | jq -r '.skeletons[]'
+### 🟡 Changes recommended
+- [badge] [TITLE](#thread)
+- [badge] [TITLE](#thread) · New
+<!-- ccr-overview-v2 -->
+</details>
+<details open>
+<details>
+<summary><strong>N open findings</strong></summary>
+<summary><strong>N resolved since last review</strong></summary>
+🧠 **Review effort:**
+```
+
+```scrut
+$ printf '[{"repo":"o/r","number":1,"reviews":[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"y","submitted_at":"2026-10-07T00:00:00Z","body":"### 🔵 Needs a closer look\\n\\n**0 open findings**\\n\\n🧠 **Review effort:** Lite"}],"audit":null}]' | "${COPILOT_REVIEW_CANARY_BIN}" skeletons | jq -r '.skeletons[]'
+### 🔵 Needs a closer look
+**N open findings**
+🧠 **Review effort:**
+```
+
+Fences pair the way the parser pairs them, so a label quoted in a `~~~` fence
+is not layout.
+
+```scrut
+$ printf '[{"repo":"o/r","number":1,"reviews":[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"y","submitted_at":"2026-10-07T00:00:00Z","body":"### 🔵 Needs a closer look\\n\\n~~~text\\n**Strange label:**\\n~~~\\n\\n**Other label:**"}],"audit":null}]' | "${COPILOT_REVIEW_CANARY_BIN}" skeletons | jq -r '.skeletons[]'
+### 🔵 Needs a closer look
+**Other label:**
+```
+
+A badge bullet that links no thread, and a badge summary carrying markup after
+the badge, are shapes apart from the thread bullets and per-finding titles the
+baseline knows, so neither is folded into them.
+
+```scrut
+$ jq '(.[0].body | capture("(?<b><picture>.*?</picture>)").b) as $b | .[0].body |= (sub("Seven moderate[^\n]*"; "One or more issues must be addressed before approval.") | sub("\n\n🧠"; "\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nAdds a reader.\n\n- " + $b + " Handle the rejected promise in `src/a.js` · New\n</details>\n\n<details>\n<summary>" + $b + " <strong>1 finding outside the diff</strong></summary>\n\n- The retry loop never stops.\n</details>\n\n🧠"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | jq '[{repo: "o/r", number: 1, reviews: ., audit: null}]' | "${COPILOT_REVIEW_CANARY_BIN}" skeletons | jq -r '.skeletons[] | select(test("badge"))'
+- [badge] TEXT · New
+- [badge] [TITLE](#thread)
+<summary>[badge] MARKUP</summary>
+```
+
 ## Usage errors
 
 ```scrut

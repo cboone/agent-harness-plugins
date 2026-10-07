@@ -1,0 +1,13 @@
+[
+  {
+    "id": 5446510102,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "submitted_at": "2026-10-07T18:19:39Z",
+    "html_url": "https://github.com/cboone/agent-harness-plugins/pull/559#pullrequestreview-5446510102",
+    "commit_id": "164797e9ef480c9ad96c329ad9bb15a9432bf750",
+    "body": "<!-- ccr-overview-v2 -->\n\n### 🔵 Needs a closer look\n\nSeven moderate findings remain unresolved across implementation and test validation.\n\n**0 open findings**\n\n<details>\n<summary><strong>1 resolved since last review</strong></summary>\n\n- <picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/high-v2-dark.svg\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/high-v2-light.svg\"><img src=\"https://github.githubassets.com/static/images/icons/copilot-code-review/high-v2-light.png\" alt=\"High severity\" width=\"62\" height=\"18\" align=\"texttop\"></picture> [Serialize cache updates to prevent mixed-generation snapshots](#discussion_r4210291616)\n</details>\n\n🧠 **Review effort:** Lite"
+  }
+]
