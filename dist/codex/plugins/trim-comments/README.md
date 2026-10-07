@@ -11,11 +11,15 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 ## What It Does
 
-The skill reviews the comments in a branch's changed code and keeps, rewrites, or deletes each one. Its standard is one line by default: what the code is doing, then the minimum reason. A comment earns its place when someone would otherwise "fix" the code and break it, when deliberate code looks wrong, when an external constraint drives it, or when the reader cannot follow the code without a pointer to another file.
+The skill reviews the comments in a branch's changed code and keeps, rewrites, or deletes each one, and flags ticketless `TODO` comments and comments whose meaning is unclear. Its standard is one line by default: what the code is doing, then the minimum reason. A comment earns its place when someone would otherwise "fix" the code and break it, when deliberate code looks wrong, when an external constraint drives it, or when the reader cannot follow the code without a pointer to another file.
 
 It cuts runtime trivia, consequence chains, arguments for decisions the code has already made, mock comments that narrate the author's thinking, CSS comments that restate the declaration, and jargon. It also favors wording that stays true: no line numbers, no counts or "currently", and comments anchored to the code beside them rather than to code elsewhere.
 
 The scope defaults to comments in or directly above code changed since the base branch, including uncommitted and untracked files. The skill edits only comments, leaves directive and pragma comments alone, checks the edited files with the project's formatter and linter in check mode, its type checker, and its tests, and reports a before-and-after table. It leaves the edits uncommitted for review.
+
+## Requirements
+
+- A Git repository. The [GitHub CLI](https://cli.github.com/) finds the base branch when it is available; otherwise the skill falls back to the `origin/HEAD` ref, and asks when neither is set.
 
 ## Usage
 
@@ -26,10 +30,6 @@ The scope defaults to comments in or directly above code changed since the base 
 ```
 
 `--dry-run` reports the proposed changes without editing. Paths put every comment in those files in scope, changed or not.
-
-## Requirements
-
-- A Git repository. The [GitHub CLI](https://cli.github.com/) finds the base branch when it is available; otherwise the skill falls back to the `origin/HEAD` ref, and asks when neither is set.
 
 ## Examples
 
