@@ -129,9 +129,9 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 
 ## Overview v2 an open-findings block states the count
 
-A later v2 layout drops the `**Findings:**` line and the `Open (N)` summary.
-It states the count as an `N open findings` summary over the thread links it
-lists, and closes with an `N resolved since last review` block.
+One v2 layout has no `**Findings:**` line and no `Open (N)` summary. It states
+the count as an `N open findings` summary over the thread links it lists, then
+lists resolved threads under an `N resolved since last review` block.
 `format-d-open-findings-block.json` is a live review in that layout. Its count
 matches its links, so it is not drift, and its prose lead is read.
 
@@ -140,20 +140,131 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🟡 Changes recommended","hasFormatDrift":false,"needsRead":true,"unaccounted":[],"findings":["lead"]}
 ```
 
-The summary count is compared with the thread links its block lists, the way
-a `**Findings:**` count is compared with `Open (N)`. A block that announces
-three findings and links two falls short.
+The `monitor-pr` copy of the helper reads it the same way.
 
 ```scrut
-$ jq '.[0].body |= sub("- <picture>[^\n]*Validate closed[^\n]*\n"; "")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
-{"hasFormatDrift":true,"unaccounted":["section-count line 8"]}
+$ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":false,"unaccounted":[]}
 ```
 
-A v2 body that states its count in neither form still reports drift.
+A round with one finding uses the singular, `1 open finding`.
+
+```scrut
+$ jq '.[0].body |= (sub("3 open findings"; "1 open finding") | sub("- <picture>[^\n]*Reject triage[^\n]*\n"; "") | sub("- <picture>[^\n]*Validate closed[^\n]*\n"; ""))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":false,"unaccounted":[]}
+```
+
+The summary count is a section count, so the census reconciles it with the
+thread links its block lists, in either direction. A block that announces
+three findings and links two falls short, and so does one that announces two
+and links three.
+
+```scrut
+$ jq '.[0].body |= sub("- <picture>[^\n]*Validate closed[^\n]*\n"; "")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | "\(.kind) \(.region) line \(.line)"]}'
+{"hasFormatDrift":true,"unaccounted":["section-count open findings line 8"]}
+```
+
+```scrut
+$ jq '.[0].body |= sub("3 open findings"; "2 open findings")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | "\(.kind) \(.region) line \(.line)"]}'
+{"hasFormatDrift":true,"unaccounted":["section-count open findings line 8"]}
+```
+
+The stated count is compared with those links on its own too, the way a
+`**Findings:**` count is compared with `Open (N)`. When a body carries both a
+`**Findings:**` line and an open-findings block, the line is the stated count,
+and a total above the links the block lists is a shortfall the census does not
+see.
+
+```scrut
+$ jq '.[0].body |= sub("\n\n<details open>"; "\n\n**Findings:** 5\n\n<details open>")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":true,"unaccounted":[]}
+```
+
+A link quoted in an inline code span is not a thread. With every link quoted,
+the block lists no open thread, so the shortfall is drift and the non-clean
+verdict, which nothing now explains, is read.
+
+```scrut
+$ jq '.[0].body |= (gsub("(?<l>\\[[^]]*\\]\\(#discussion_r[0-9]+\\))"; "`\(.l)`") | sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval.") | sub("(?s)\n\n<details>\n<summary><strong>3 resolved.*?</details>"; ""))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead}'
+{"hasFormatDrift":true,"needsRead":true}
+```
+
+Links are counted only at the depth of the block itself, until it closes. An
+open-findings block that is never closed cannot borrow the links of the
+resolved block opened inside it to cover its own shortfall. Here the block
+states three and links one, and the two resolved links nested inside it would
+otherwise make up the difference, for the census as well.
+
+```scrut
+$ jq '.[0].body |= (sub("- <picture>[^\n]*Reject triage[^\n]*\n"; "") | sub("- <picture>[^\n]*Validate closed[^\n]*\n</details>\n"; "") | sub("- <picture>[^\n]*Reject unknown keys[^\n]*\n"; "") | sub("3 resolved"; "2 resolved") | sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval."))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":true,"unaccounted":[]}
+```
+
+An open block lists threads and nothing else. A `0 open findings` block that
+lists an item anyway carries a finding nothing reads, and a zero count is
+never reconciled by the census, so the item itself is the shortfall. The
+resolved block and the known lead do not clear it.
+
+```scrut
+$ jq '.[0].body |= (sub("(?s)<strong>3 open findings</strong></summary>\n\n.*?</details>"; "<strong>0 open findings</strong></summary>\n\n- High: the token is sent in the query string.\n</details>") | sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval."))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":true,"unaccounted":[]}
+```
+
+A v2 body that states its count in neither form still reports drift. A
+renamed summary is one way to get there, and a summary that goes on past the
+known words is another: `3 open findings outside the diff` is not the open
+count.
 
 ```scrut
 $ jq '.[0].body |= sub("3 open findings"; "3 open items")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
 {"hasFormatDrift":true}
+```
+
+```scrut
+$ jq '.[0].body |= sub("3 open findings"; "3 open findings outside the diff")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+```
+
+The summary counts only at depth one, like every section summary. One nested
+inside another block supplies no count.
+
+```scrut
+$ jq '.[0].body |= sub("<details open>\n<summary><strong>3 open findings</strong></summary>\n"; "<details open>\n<summary><strong>Overview</strong></summary>\n<details>\n<summary><strong>3 open findings</strong></summary>\n</details>\n")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+```
+
+A summary counts only as a line of its own, outside fenced blocks, the way the
+census reads one. A review whose findings sit in a section nothing parses, and
+whose prose quotes `<summary>1 open finding</summary>` beside a link, would
+otherwise take the quote as its stated count and the link as its open thread,
+and read clean.
+
+```scrut
+$ jq '.[0].body |= (sub("3 open findings"; "Findings to address") + "\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nParses `<summary>1 open finding</summary>` blocks.\n- Fixture: [example](#discussion_r1)\n</details>")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+```
+
+````scrut
+$ jq '.[0].body |= (sub("3 open findings"; "Findings to address") + "\n\n```html\n<details>\n<summary><strong>1 open finding</strong></summary>\n- [x](#discussion_r1)\n</details>\n```")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+````
+
+A quoted resolved summary, in either form, does not clear the read that a
+non-clean verdict with nothing behind it gets.
+
+```scrut
+$ for s in '2 resolved since last review' 'Resolved since last review (2)'; do jq -n --arg s "${s}" '[{id: 1, user: {login: "copilot-pull-request-reviewer[bot]"}, state: "COMMENTED", submitted_at: "x", html_url: "y", body: ("<!-- ccr-overview-v2 -->\n\n### 🟡 Changes recommended\n\nOne or more issues must be addressed before approval.\n\n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nReads `<summary>" + $s + "</summary>` blocks.\n</details>")}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead}'; done
+{"hasFormatDrift":false,"needsRead":true}
+{"hasFormatDrift":false,"needsRead":true}
+```
+
+A leading count is read from these two summaries only. A title that merely
+opens with a number, such as `### 3 modules touched` or `2 files reviewed`,
+is not a section count.
+
+```scrut
+$ jq '.[0].body += "\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\n### 3 modules touched\n\nThe parser reads one more layout.\n</details>\n\n<details>\n<summary>2 files reviewed</summary>\n\nBoth files changed.\n</details>"' "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":false,"unaccounted":[]}
 ```
 
 The `N resolved since last review` block counts as a resolved section, so a
