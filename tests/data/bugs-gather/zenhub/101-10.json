@@ -1,0 +1,22 @@
+{
+  "estimate": null,
+  "pipelineIssue": {
+    "latestTransferTime": "2026-10-05T14:00:00Z",
+    "pipeline": {
+      "name": "New Issues"
+    }
+  },
+  "sprints": {
+    "nodes": []
+  },
+  "issueType": {
+    "name": "Bug",
+    "level": 4
+  },
+  "blockingIssues": {
+    "nodes": []
+  },
+  "blockedIssues": {
+    "nodes": []
+  }
+}

@@ -1,0 +1,86 @@
+# One page of a GitHub search for bug issues. gh api graphql --paginate
+# supplies $endCursor. Pages hold 25 issues because each carries its recent
+# comments and the pull requests that close it, with their check state.
+query ($q: String!, $endCursor: String) {
+  search(query: $q, type: ISSUE, first: 25, after: $endCursor) {
+    issueCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      __typename
+      ... on Issue {
+        number
+        title
+        url
+        state
+        stateReason
+        createdAt
+        updatedAt
+        closedAt
+        author {
+          __typename
+          login
+        }
+        authorAssociation
+        assignees(first: 10) {
+          nodes {
+            login
+          }
+        }
+        labels(first: 30) {
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            name
+          }
+        }
+        issueType {
+          name
+        }
+        reactions {
+          totalCount
+        }
+        comments(last: 30) {
+          totalCount
+          nodes {
+            author {
+              __typename
+              login
+            }
+            authorAssociation
+            createdAt
+          }
+        }
+        closedByPullRequestsReferences(first: 10, includeClosedPrs: true) {
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            number
+            title
+            url
+            state
+            isDraft
+            mergedAt
+            reviewDecision
+            author {
+              login
+            }
+            commits(last: 1) {
+              nodes {
+                commit {
+                  statusCheckRollup {
+                    state
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

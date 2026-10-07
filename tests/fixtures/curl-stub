@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# curl-stub -- Test stub for the ZenHub GraphQL requests bugs-gather makes.
+#
+# bugs-gather posts each query as --data-binary @PAYLOAD with its
+# authorization header in a file named by -H @FILE. The stub answers from JSON
+# files under STUB_CURL_DIR:
+#   workspace.json     the workspace object, holding activeSprint
+#   ID-NUMBER.json     the issueByInfo result for repositoryGhId ID and
+#                      issueNumber NUMBER, such as 101-2.json
+#
+# It builds the response from the aliased lookups in the query, so an alias
+# with no file comes back null with an error on its own path, the way ZenHub
+# answers for an issue it does not track.
+#
+# The header file must read "Authorization: Bearer STUB_CURL_TOKEN" and be
+# readable by its owner alone, or the request fails with HTTP 401.
+# STUB_CURL_FAIL=1 makes every request fail with HTTP 500. STUB_CURL_ERROR,
+# when set, adds a GraphQL error on a field inside the first alias, the way
+# ZenHub reports a permission or timeout problem on part of a lookup.
+# STUB_CURL_LOG, when set, receives each query and its variables, followed by
+# the header check.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-2}"
+}
+
+# Prints the permission bits of a file, with GNU stat first as report-board
+# does, because BSD stat has no -c.
+function file_mode() {
+  stat -c '%a' "${1}" 2> /dev/null || stat -f '%Lp' "${1}"
+}
+
+function main() {
+  local header_file="" payload_file="" arg
+  while [[ $# -gt 0 ]]; do
+    arg="${1}"
+    shift
+    case "${arg}" in
+      -sS | --fail-with-body) ;;
+      -X)
+        shift
+        ;;
+      -H)
+        [[ $# -gt 0 ]] || die "-H needs a value"
+        [[ "${1}" != @* ]] || header_file="${1#@}"
+        shift
+        ;;
+      --data-binary)
+        [[ $# -gt 0 ]] || die "--data-binary needs a value"
+        payload_file="${1#@}"
+        shift
+        ;;
+      https://*) ;;
+      *) die "unexpected curl argument ${arg}" ;;
+    esac
+  done
+  [[ -f "${payload_file}" ]] || die "no payload file"
+
+  local header_ok=false mode=""
+  if [[ -f "${header_file}" ]]; then
+    mode="$(file_mode "${header_file}")"
+    if [[ "$(< "${header_file}")" == "Authorization: Bearer ${STUB_CURL_TOKEN:?STUB_CURL_TOKEN must be set}" ]]; then
+      header_ok=true
+    fi
+  fi
+  if [[ -n "${STUB_CURL_LOG:-}" ]]; then
+    {
+      jq -r '.query' "${payload_file}"
+      jq -c '.variables' "${payload_file}"
+      printf 'header matches: %s, mode %s\n' "${header_ok}" "${mode}"
+    } >> "${STUB_CURL_LOG}"
+  fi
+
+  if [[ "${STUB_CURL_FAIL:-}" == "1" ]]; then
+    printf '{"errors":[{"message":"Internal server error"}]}'
+    echo "curl: (22) The requested URL returned error: 500" >&2
+    exit 22
+  fi
+  if [[ "${header_ok}" != true || "${mode}" != "600" ]]; then
+    printf '{"errors":[{"message":"Unauthorized"}]}'
+    echo "curl: (22) The requested URL returned error: 401" >&2
+    exit 22
+  fi
+
+  local dir="${STUB_CURL_DIR:?STUB_CURL_DIR must be set}"
+  local data='{}' errors='[]' alias repository_id number file
+  while IFS=' ' read -r alias repository_id number; do
+    file="${dir}/${repository_id}-${number}.json"
+    if [[ -f "${file}" ]]; then
+      data="$(jq -c --arg alias "${alias}" --slurpfile item "${file}" '. + {($alias): $item[0]}' <<< "${data}")"
+    else
+      data="$(jq -c --arg alias "${alias}" '. + {($alias): null}' <<< "${data}")"
+      errors="$(jq -c --arg alias "${alias}" '. + [{message: "Issue not found", path: [$alias]}]' <<< "${errors}")"
+    fi
+  done < <(jq -r '.query' "${payload_file}" \
+    | sed -nE 's/^ *(i[0-9]+): issueByInfo\(repositoryGhId: ([0-9]+), issueNumber: ([0-9]+)\).*/\1 \2 \3/p')
+
+  if [[ -n "${STUB_CURL_ERROR:-}" ]]; then
+    errors="$(jq -c --arg message "${STUB_CURL_ERROR}" '. + [{message: $message, path: ["i0", "blockingIssues"]}]' <<< "${errors}")"
+  fi
+
+  jq -c -n --argjson data "${data}" --argjson errors "${errors}" --slurpfile workspace "${dir}/workspace.json" \
+    '{data: ($data + {workspace: $workspace[0]})} + (if ($errors | length) > 0 then {errors: $errors} else {} end)'
+}
+
+main "$@"

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# gh-stub -- Test stub for the gh calls dependabot-prs fetch makes.
+# gh-stub -- Test stub for the gh calls dependabot-prs fetch and bugs-gather
+# make.
 #
 # Responses are JSON files under STUB_GH_DIR:
 #   repo.json          gh repo view
@@ -8,11 +9,20 @@
 #   api/KEY.json       gh api ENDPOINT, where KEY is the endpoint with the
 #                      repos/OWNER/REPO/ prefix and the query string removed and
 #                      each / replaced by _ (compare_main...SHA, pulls_12_files)
+#   graphql/search-KIND.json
+#                      gh api graphql with search.graphql, where KIND is
+#                      open-labels, closed-labels, open-type, or closed-type,
+#                      read from the qualifiers in q; a missing file answers
+#                      with no results
+#   graphql/repository-NAME.json
+#                      gh api graphql with repository.graphql
 #
 # An api call with no response file fails the way gh does for a missing
 # resource. STUB_GH_API_FAIL names one KEY that fails with a permission error
 # instead, STUB_GH_AUTH_FAIL=1 makes gh auth token fail, and STUB_GH_LOG, when
-# set, receives every invocation, one per line.
+# set, receives every invocation, one per line. A graphql call is logged as
+# its query file and variables, without the path of the query file.
+# STUB_GH_GRAPHQL_FAIL names one search KIND, or repository-NAME, that fails.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
@@ -80,12 +90,87 @@ function do_pr_list() {
   respond "open.json"
 }
 
-function main() {
+# Answers gh api graphql. bugs-gather passes the query as -F query=@FILE and
+# its variables as -f or -F NAME=VALUE. Its searches run with --paginate
+# --slurp, so a search file holds the array of pages --slurp returns; the
+# repository query runs without them, so its file holds one response.
+function do_graphql() {
+  local query_name="" search_text="" repo_name="" arg value
+  local -a variables=()
+  while [[ $# -gt 0 ]]; do
+    arg="${1}"
+    shift
+    case "${arg}" in
+      --paginate | --slurp) ;;
+      -f | -F)
+        [[ $# -gt 0 ]] || die "gh api graphql ${arg} needs a value"
+        value="${1}"
+        shift
+        case "${value}" in
+          query=@*)
+            query_name="${value#query=@}"
+            query_name="${query_name##*/}"
+            query_name="${query_name%.graphql}"
+            ;;
+          q=*)
+            search_text="${value#q=}"
+            variables+=("${value}")
+            ;;
+          name=*)
+            repo_name="${value#name=}"
+            variables+=("${value}")
+            ;;
+          *) variables+=("${value}") ;;
+        esac
+        ;;
+      *) die "unexpected gh api graphql argument ${arg}" ;;
+    esac
+  done
+  [[ -n "${query_name}" ]] || die "gh api graphql needs -F query=@FILE"
+
   if [[ -n "${STUB_GH_LOG:-}" ]]; then
+    printf 'gh api graphql %s %s\n' "${query_name}" "${variables[*]:-}" >> "${STUB_GH_LOG}"
+  fi
+
+  local key
+  if [[ "${query_name}" == "search" ]]; then
+    case " ${search_text} " in
+      *" is:open "*"label:"*) key="open-labels" ;;
+      *" is:closed "*"label:"*) key="closed-labels" ;;
+      *" is:open "*"type:"*) key="open-type" ;;
+      *" is:closed "*"type:"*) key="closed-type" ;;
+      *) die "unexpected search ${search_text}" ;;
+    esac
+  elif [[ "${query_name}" == "repository" ]]; then
+    key="repository-${repo_name}"
+  else
+    die "unexpected gh api graphql query ${query_name}"
+  fi
+
+  if [[ "${key}" == "${STUB_GH_GRAPHQL_FAIL:-}" ]]; then
+    echo "gh: HTTP 502: Bad Gateway (https://api.github.com/graphql)" >&2
+    exit 1
+  fi
+
+  local file="${STUB_GH_DIR:?STUB_GH_DIR must be set}/graphql/${key}.json"
+  [[ "${query_name}" != "search" ]] || file="${STUB_GH_DIR}/graphql/search-${key}.json"
+  if [[ -f "${file}" ]]; then
+    cat "${file}"
+  elif [[ "${query_name}" == "search" ]]; then
+    printf '[{"data":{"search":{"issueCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}]\n'
+  else
+    echo "gh: Could not resolve to a Repository with the name ${repo_name}." >&2
+    exit 1
+  fi
+}
+
+function main() {
+  if [[ -n "${STUB_GH_LOG:-}" && "${1:-} ${2:-}" != "api graphql" ]]; then
     printf 'gh %s\n' "${*}" >> "${STUB_GH_LOG}"
   fi
 
   case "${1:-} ${2:-}" in
+    "api graphql") do_graphql "${@:3}" ;;
     "auth token")
       if [[ "${STUB_GH_AUTH_FAIL:-}" == "1" ]]; then
         echo "no oauth token found for github.com" >&2

@@ -61,35 +61,56 @@ readonly STANDALONE_OPENING='<!DOCTYPE html>
 readonly ZONE_PATTERN='^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+)*$'
 readonly ZONEINFO_DIR="${TZDIR:-/usr/share/zoneinfo}"
 
-# True when no string and no field name carries a control character. validate
-# and render apply this through VALIDATE_FILTER, but compare reads a previous
-# board out of a published page, which never went through that check here, and
-# compare is the command that prints board text to a terminal.
+# The board types this script validates, each with its own rules.
+readonly BOARD_TYPES='backlog-triage bugs'
+
+# True when no string and no field name carries a control character. Each
+# validation filter runs the same test; compare runs this one on whatever it
+# reads, data file or published page, because compare prints board text to a
+# terminal and a page may have been edited since it was rendered.
 readonly NO_CONTROL_FILTER='([.. | strings] + [.. | objects | keys[]] | map(select(test("[[:cntrl:]]"))) | length) == 0'
 
-# Emits one line per problem and nothing when the data is valid. Messages avoid
-# apostrophes because the filter lives inside a single-quoted shell string.
-# Every field is type-checked before it is used, so malformed data produces a
-# message rather than a jq error. It takes $zone_pattern, and $zone_known from
-# zone_status.
-# The $names in the filter are jq bindings, not shell expansions.
+# Helpers every validation filter starts with. Messages avoid apostrophes
+# because each filter lives inside a single-quoted shell string, and every field
+# is type-checked before it is used, so malformed data produces a message
+# rather than a jq error. The sync checks take $zone_pattern, and $zone_known
+# from zone_status.
+# The $names in these filters are jq bindings, not shell expansions.
 # shellcheck disable=SC2016
-readonly VALIDATE_FILTER='
+readonly SHARED_DEFS='
 def is_int: type == "number" and . == floor;
 def is_text: type == "string" and test("\\S");
 def as_list: if type == "array" then . else [] end;
 def absent_or(f): . == null or f;
 def check(condition; message): if condition then empty else message end;
 def duplicates: group_by(.) | map(select(length > 1) | .[0]) | .[];
+# True when an ISO 8601 time falls on a day the calendar has. strptime takes
+# February 31 and mktime rolls it into March, so a real date survives the
+# round trip and an impossible one does not.
+def calendar_date: .[0:10] as $day | ($day | try (strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d")) catch null) == $day;
+def iso_time: is_text and test("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9](\\.[0-9]+)?)?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$");
+# The sync time and zone checks every board type makes.
+def sync_time_problems($sync):
+  (if ($sync.at | iso_time) | not then "sync.at: expected an ISO 8601 time with a zone, such as 2026-09-10T19:43:00-04:00"
+   elif ($sync.at | calendar_date | not) then "sync.at: \($sync.at[0:10]) is not a date on the calendar"
+   else empty end),
+  check($sync.timeZone | absent_or(is_text and test($zone_pattern)); "sync.timeZone: expected an IANA zone name, such as America/New_York"),
+  check($zone_known != false; "sync.timeZone: \($sync.timeZone) is not a zone in the time zone database");
+# The optional sync counts and markers every board type accepts.
+def sync_extra_problems($sync):
+  check($sync.openPullRequests | absent_or(is_int and . >= 0); "sync.openPullRequests: expected a count"),
+  check($sync.extra | absent_or(type == "array" and all(.[]; is_text)); "sync.extra: expected a list of text");
+'
+
+# Emits one line per problem with backlog-triage data, and nothing when it is
+# valid.
+# shellcheck disable=SC2016
+readonly BACKLOG_TRIAGE_VALIDATE_FILTER="${SHARED_DEFS}"'
 # The host and port of an https address, shared by every URL this file checks.
 # A port is 1 to 65535: an unbounded run of digits satisfies a pattern but names
 # no port, and the page would build a link no browser can open.
 def host_re: "[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*";
 def port_re: "(:(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3}))?";
-# True when an ISO 8601 time falls on a day the calendar has. strptime takes
-# February 31 and mktime rolls it into March, so a real date survives the
-# round trip and an impossible one does not.
-def calendar_date: .[0:10] as $day | ($day | try (strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d")) catch null) == $day;
 # Always text, whatever the reference holds. A previous board reaches compare
 # without being validated, and validate itself is meant to report a malformed
 # reference rather than die on one; both feed this to join, which adds its
@@ -185,15 +206,10 @@ else
 
     (if ($d.sync | type) != "object" then "sync: expected an object with at, branch, and commit"
      else
-       (if ($d.sync.at | is_text and test("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9](\\.[0-9]+)?)?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$")) | not then "sync.at: expected an ISO 8601 time with a zone, such as 2026-09-10T19:43:00-04:00"
-        elif ($d.sync.at | calendar_date | not) then "sync.at: \($d.sync.at[0:10]) is not a date on the calendar"
-        else empty end),
-       check($d.sync.timeZone | absent_or(is_text and test($zone_pattern)); "sync.timeZone: expected an IANA zone name, such as America/New_York"),
-       check($zone_known != false; "sync.timeZone: \($d.sync.timeZone) is not a zone in the time zone database"),
+       sync_time_problems($d.sync),
        check($d.sync.branch | is_text and test("^\\S+$") and (test("(^|/)\\.{1,2}(/|$)") | not); "sync.branch: expected the branch the board was synced against"),
        check($d.sync.commit | is_text and test("^([0-9a-f]{40}|[0-9a-f]{64})$"); "sync.commit: expected the full commit SHA"),
-       check($d.sync.openPullRequests | absent_or(is_int and . >= 0); "sync.openPullRequests: expected a count"),
-       check($d.sync.extra | absent_or(type == "array" and all(.[]; is_text)); "sync.extra: expected a list of text")
+       sync_extra_problems($d.sync)
      end),
 
     (if ($d.issues | type) != "array" or ($d.issues | length) == 0 then "issues: expected a non-empty list of open issues"
@@ -363,12 +379,242 @@ else
 end
 '
 
+# Emits one line per problem with bugs data, and nothing when it is valid. It
+# runs under TZ set to sync.timeZone, so strflocaltime gives the local day that
+# a triage until date counts in, the same day bugs-gather used.
+# shellcheck disable=SC2016
+readonly BUGS_VALIDATE_FILTER="${SHARED_DEFS}"'
+def has_control: ([.. | strings] + [.. | objects | keys[]]) | map(select(test("[[:cntrl:]]"))) | length > 0;
+def real_time: iso_time and calendar_date;
+# Seconds since the epoch, for a time real_time has already accepted. Adapted
+# from bugs-gather, without its error for a malformed time, which real_time
+# rules out first; a fix to one prompts a look at the other.
+def epoch:
+  capture("^(?<d>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2})(:(?<s>[0-9]{2}))?(\\.[0-9]+)?(?<z>Z|(?<sign>[+-])(?<h>[0-9]{2}):(?<m>[0-9]{2}))$")
+  | ((.d + ":" + (.s // "00") + "Z") | fromdateiso8601)
+    - (if .z == "Z" then 0 else ((.h | tonumber) * 3600 + (.m | tonumber) * 60) * (if .sign == "+" then 1 else -1 end) end);
+def is_day: type == "string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") and ((. + "T00:00:00Z") | calendar_date);
+def in_list($l): . as $v | $l | any(. == $v);
+# The closed sets an assessment draws from, as in bugs-gather.
+def closed_sets: {
+  environment: ["production", "staging", "development", "unknown"],
+  evidence: ["user-report", "production-observed", "reproduced", "code-reading", "unknown"],
+  surface: ["public", "signed-in", "admin", "internal", "unknown"],
+  impact: ["security", "data-loss", "money", "access", "core-flow", "degraded", "cosmetic", "internal", "unknown"],
+  reach: ["all", "many", "some", "few", "unknown"],
+  workaround: ["none", "exists", "unknown"],
+  cause: ["known", "suspected", "unknown"]
+};
+def sections: ["critical", "high", "ready", "investigate", "lower", "parked", "fixed"];
+def ready_groups: ["ship", "review", "in-progress", "ready-to-fix"];
+def triage_verbs: ["escalate", "demote", "set", "snooze", "park", "context"];
+# True when an assessment by itself earns Critical, by the same rule
+# bugs-gather applies.
+def earns_critical:
+  (.mitigated | not)
+  and ((.environment == "production" and (.evidence | in_list(["user-report", "production-observed", "reproduced"]))
+        and (.surface | in_list(["public", "signed-in"])) and (.impact | in_list(["security", "data-loss", "money", "access", "core-flow"]))
+        and .workaround == "none")
+       or (.impact == "security" and .surface == "public" and .evidence != "unknown" and (.environment | in_list(["production", "unknown"]))));
+
+if type != "object" then "the top level must be a JSON object"
+# A control character answers alone, because later messages quote the values
+# they reject.
+elif has_control then "board data must not hold control characters in its text or field names"
+else
+  . as $d
+  | [$d.bugs | as_list | .[] | objects] as $bugs
+  | ([$bugs[] | select(.number | is_int) | {key: (.number | tostring), value: .}] | from_entries) as $by_number
+  | ($d.sync | if type == "object" and (.at | real_time) then .at | epoch else null end) as $synced
+  | ($synced | if . == null then null else strflocaltime("%Y-%m-%d") end) as $today
+  | [$d.triage | as_list | .[] | objects] as $entries
+  | def expired: (.until | type) == "string" and $today != null and $today > .until;
+    def entry_by_id($id): first($entries[] | select(.id == $id)) // null;
+    # The latest escalate, demote, snooze, or park still in force for a bug
+    # decides where it may go.
+    def placement($n): [$entries[] | select(.target == $n and (.verb | IN("escalate", "demote", "snooze", "park")) and (expired | not) and (.at | real_time))] | sort_by(.at | epoch) | last;
+    # A triage signal must rest on an entry that says what the signal says,
+    # about the same bug, so a signal labeled escalate cannot borrow a context
+    # entry or the escalate of another bug to justify a Critical placement.
+    def signal_problems($at):
+      .item as $item
+      | (.signals | as_list | to_entries[]) as {key: $j, value: $s}
+      | "\($at) signals[\($j)]" as $where
+      | if ($s | type) != "object" then "\($where): expected an object"
+        else
+          check($s.source | IN("triage", "assessment", "github", "zenhub"); "\($where): source must be triage, assessment, github, or zenhub"),
+          check($s.kind | is_text; "\($where): kind is required"),
+          check($s.text | is_text; "\($where): text is required"),
+          (if ($s.at | real_time) | not then "\($where): at must be an ISO 8601 time with a zone"
+           elif $synced != null and ($s.at | epoch) > $synced then "\($where): at \($s.at) is later than sync.at"
+           else empty end),
+          (if $s.source == "triage" then
+             (entry_by_id($s.entry) as $e
+              | if ($s.entry | is_text) | not then "\($where): a triage signal names its entry"
+                elif $e == null then "\($where): entry \($s.entry) is not in triage"
+                elif ($e | expired) then "\($where): entry \($s.entry) expired on \($e.until)"
+                elif $e.verb != $s.kind then "\($where): entry \($s.entry) is a \($e.verb) entry, but the signal says \($s.kind)"
+                elif $e.target == null then "\($where): entry \($s.entry) names no bug"
+                elif $e.target != $item then "\($where): entry \($s.entry) is about #\($e.target), not #\($item)"
+                else empty end)
+           else empty end)
+        end;
+  (
+    check($d.board == "bugs"; "board: expected bugs"),
+    check($d.title | is_text; "title: expected text naming the board, such as \"widgets bugs\""),
+    check($d.repo | is_text and test("^(?!\\.{1,2}/)[A-Za-z0-9_.-]+/(?!\\.{1,2}$)[A-Za-z0-9_.-]+$"); "repo: expected owner/name"),
+    check($d.repoUrl | is_text and test("^https://[A-Za-z0-9.-]+(:[0-9]+)?(/(?!\\.{1,2}(/|$))[A-Za-z0-9_.~-]+)+/?$") and (($d.repo | type) != "string" or (sub("/$"; "") | endswith("/" + $d.repo))); "repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name"),
+    check($d.summary | is_text; "summary: expected text summarizing the board"),
+    check($d.criticalWarn | is_int and . > 0; "criticalWarn: expected a positive whole number"),
+    check($d.readyLimit | is_int and . > 0; "readyLimit: expected a positive whole number"),
+    # bugs-gather draft carries problems with the triage note here; a board
+    # published over them would drop the calls they belong to without a word.
+    (if $d.triageProblems == null then empty
+     elif ($d.triageProblems | type) != "array" then "triageProblems: expected a list"
+     else ($d.triageProblems[] | "triage note: \(.); fix the note and score again") end),
+    (if ($d.sync | type) != "object" then "sync: expected an object with at, branch, commit, and timeZone"
+     else
+       sync_time_problems($d.sync),
+       check($d.sync.timeZone != null; "sync.timeZone: required on a bugs board, because triage until dates count in its local days"),
+       check($d.sync.branch | is_text and test("^\\S+$") and (test("(^|/)\\.{1,2}(/|$)") | not); "sync.branch: expected the branch the board was synced against"),
+       check($d.sync.commit | is_text and test("^([0-9a-f]{40}|[0-9a-f]{64})$"); "sync.commit: expected the full commit SHA"),
+       sync_extra_problems($d.sync)
+     end),
+
+    # The triage note snapshot.
+    (if ($d.triage | type) != "array" then "triage: expected a list of the note entries, empty when there are none"
+     else
+       ($d.triage | to_entries[]) as {key: $i, value: $e}
+       | "triage[\($i)]" as $at
+       | if ($e | type) != "object" then "\($at): expected an object"
+         elif ($e.verb | IN(triage_verbs[]) | not) then "\($at): verb must be escalate, demote, set, snooze, park, or context"
+         else
+           (if ($e.at | real_time) | not then "\($at): at must be an ISO 8601 time with a zone"
+            elif $synced != null and ($e.at | epoch) > $synced then "\($at): at \($e.at) is later than sync.at"
+            else empty end),
+           check($e.text | is_text; "\($at): text is required"),
+           (if $e.verb == "context" then
+              check($e.target == null; "\($at): a context entry names no bug"),
+              check($e.id == "\($e.at) context"; "\($at): id must be \"\($e.at) context\"")
+            else
+              check($e.target | is_int and . > 0; "\($at): target must be a bug number"),
+              check($e.id == "\($e.at) \($e.verb) #\($e.target)"; "\($at): id must be \"\($e.at) \($e.verb) #\($e.target)\"")
+            end),
+           check($e.until | absent_or(is_day); "\($at): until must be a date such as 2026-11-10"),
+           (if $e.verb == "snooze" and $e.until == null then "\($at): snooze needs an until date" else empty end),
+           (if ($e.verb | IN("park", "set", "context")) and $e.until != null then "\($at): \($e.verb) takes no until date" else empty end),
+           (if $e.verb == "set" then
+              (if ($e.fields | type) != "object" or ($e.fields | length) == 0 then "\($at): set needs fields"
+               else ($e.fields | to_entries[] | . as $f
+                 | if (closed_sets | has($f.key)) then check(closed_sets[$f.key] | index($f.value); "\($at): \($f.key) must be one of \(closed_sets[$f.key] | join(", "))")
+                   elif $f.key | IN("timeSensitive", "mitigated") then check($f.value | type == "boolean"; "\($at): \($f.key) must be true or false")
+                   elif $f.key == "deadline" then check($f.value | absent_or(is_day); "\($at): deadline must be a date or null")
+                   else "\($at): \($f.key) is not an assessment field" end)
+               end)
+            else empty end)
+         end
+     end),
+    ([$entries[] | .id | select(is_text)] | duplicates | "triage: entry \(.) appears more than once"),
+
+    # Every bug, open and recently closed.
+    (if ($d.bugs | type) != "array" then "bugs: expected a list of every bug in the gather"
+     else
+       ($d.bugs | to_entries[]) as {key: $i, value: $b}
+       | if ($b | type) != "object" or (($b.number | is_int and . > 0) | not) then "bugs[\($i)]: expected an object with a bug number"
+         else
+           "#\($b.number)" as $at
+           | check($b.title | is_text; "\($at): title is required"),
+             check($b.state | IN("open", "closed"); "\($at): state must be open or closed"),
+             (if ($b.tier | IN(sections[]) | not) then "\($at): tier must be one of \(sections | join(", "))"
+              elif $b.state == "closed" and $b.tier != "fixed" then "\($at) is closed, so its tier is fixed"
+              elif $b.state == "open" and $b.tier == "fixed" then "\($at) is open, so it cannot be in fixed"
+              else empty end),
+             (if $b.state == "open" then
+                (if ($b.assessment | type) != "object" then "\($at): an open bug needs its assessment"
+                 else
+                   ($b.assessment as $a | closed_sets | to_entries[] | .key as $k | .value as $set
+                    | select(($a[$k] | type) != "string" or ($set | index($a[$k]) | not))
+                    | "\($at): assessment.\($k) must be one of \($set | join(", "))"),
+                   check($b.assessment.mitigated | type == "boolean"; "\($at): assessment.mitigated must be true or false"),
+                   check($b.assessment.deadline | absent_or(is_day); "\($at): assessment.deadline must be a date or null"),
+                   check($b.assessment.gist | is_text; "\($at): assessment.gist is required"),
+                   check($b.assessment.nextStep | is_text; "\($at): assessment.nextStep is required")
+                 end)
+              else empty end),
+             (if $b.fix == null then empty
+              elif ($b.fix | type) != "object" or (($b.fix.number | is_int and . > 0) | not) then "\($at): fix must name a pull request number"
+              else empty end),
+             # The template lists fixedBy and prints stateReason for a closed bug.
+             (if $b.state == "closed" then
+                check($b.fixedBy | absent_or(type == "array" and all(.[]; is_int and . > 0)); "\($at): fixedBy must be a list of pull request numbers"),
+                check($b.stateReason | absent_or(is_text); "\($at): stateReason must be text or null")
+              else empty end)
+         end
+     end),
+    ([$bugs[] | .number | select(is_int)] | duplicates | "bugs: #\(.) appears more than once"),
+
+    # Sections.
+    (sections[] as $name
+     | if ($d[$name] | type) != "array" then "\($name): expected a list, empty when nothing belongs there"
+       else
+         ($d[$name] | to_entries[]) as {key: $i, value: $entry}
+         | "\($name)[\($i)]" as $where
+         | if ($entry | type) != "object" or (($entry.item | is_int) | not) then "\($where): expected an object with an item number"
+           else
+             $by_number[$entry.item | tostring] as $b
+             | "\($name) #\($entry.item)" as $at
+             | if $b == null then "\($at) is not in bugs"
+               else
+                 check($b.tier == $name; "\($at): the bug is placed in \($b.tier)"),
+                 (if $name | IN("critical", "high") then
+                    check($entry.action | is_text; "\($at): action is required, the next concrete step"),
+                    check($entry.impact | is_text; "\($at): impact is required, who is affected and how"),
+                    check($entry.signals | type == "array" and length > 0; "\($at): needs at least one signal"),
+                    ($entry | signal_problems($at)),
+                    (placement($b.number) as $p
+                     | (if $name == "critical" then
+                          check(($p.verb == "escalate") or ($b.assessment | objects | earns_critical) or any($entry.signals | as_list | .[]; .source == "triage" and .kind == "escalate");
+                            "\($at) has neither an escalate entry nor an assessment that earns Critical")
+                        else empty end),
+                       # A snooze or park keeps a bug out of both tiers, and a
+                       # demote keeps it out of Critical.
+                       (if $p.verb == "snooze" then "snoozed"
+                        elif $p.verb == "park" then "parked"
+                        elif $p.verb == "demote" and $name == "critical" then "demoted"
+                        else empty end
+                        | "\($at) is \(.) by \($p.id); only a later escalate brings it back"))
+                  elif $name == "ready" then
+                    check($entry.why | is_text; "\($at): why is required"),
+                    (if ($entry.group | IN(ready_groups[]) | not) then "\($at): group must be one of \(ready_groups | join(", "))"
+                     elif ($entry.group | IN("ship", "review")) and $b.fix == null then "\($at) is grouped as \($entry.group) but names no fix pull request"
+                     else empty end),
+                    ($entry | signal_problems($at))
+                  elif $name == "investigate" then
+                    check($entry.question | is_text; "\($at): question is required, what to learn first"),
+                    check($entry.why | is_text; "\($at): why is required, what is not yet known"),
+                    ($entry | signal_problems($at))
+                  elif $name | IN("lower", "parked") then
+                    check($entry.reason | is_text; "\($at): reason is required")
+                  else
+                    check($entry.verify | absent_or(type == "boolean"); "\($at): verify must be true or false")
+                  end)
+               end
+           end
+       end),
+    ([sections[] as $name | $d[$name] | as_list | .[] | objects | .item | select(is_int)] | duplicates | "#\(.) appears in more than one section"),
+    ($bugs[] | select(.number | is_int) | . as $b
+     | select([sections[] as $name | $d[$name] | as_list | .[] | objects | select(.item == $b.number)] | length == 0)
+     | "#\($b.number) is not in any section; every bug in the gather belongs to exactly one")
+  )
+end
+'
+
 # Reads two boards bound as $previous and $current (each a one-element array
 # from --slurpfile) and emits a plain-text change report. Fields of the wrong
 # type count as empty, so an older or damaged board still compares.
 # As above, the $names are jq bindings.
 # shellcheck disable=SC2016
-readonly COMPARE_FILTER='
+readonly BACKLOG_TRIAGE_COMPARE_FILTER='
 def as_list: if type == "array" then . else [] end;
 # Always text, whatever the reference holds. A previous board reaches compare
 # without being validated, and validate itself is meant to report a malformed
@@ -540,6 +786,63 @@ $previous[0] as $old
   (if ($changes | length) > 0 then $changes[] else "- No changes beyond the sync metadata." end)
 '
 
+# Reads two bugs boards the same way and reports what entered or left
+# Critical and High priority, which bugs opened, closed, or changed tier, and
+# which assessments changed in a way the reader acts on.
+# shellcheck disable=SC2016
+readonly BUGS_COMPARE_FILTER='
+def as_list: if type == "array" then . else [] end;
+def by_number: [.bugs | as_list | .[] | objects | select(.number != null) | {key: (.number | tostring), value: .}] | from_entries;
+def in_section($name): [.[$name] | as_list | .[] | objects | .item | select(. != null) | tostring];
+def shown: if . == null then "none" else tostring end;
+def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($items | join("; "))" else empty end;
+def synced: (.sync | if type == "object" then . else {} end) as $s
+  | ($s.timeZone | if type == "string" then " in \(.)" else "" end) as $zone
+  | ($s.extra | if type == "array" then map(", \(.)") | join("") else "" end) as $extra
+  | "\($s.branch // "unknown branch") at \(($s.commit // "unknown") | tostring | .[0:8]), \($s.at // "unknown time")\($zone)\($extra)";
+def entry_ids: [.triage | as_list | .[] | objects | .id | select(. != null)];
+def prose($name; $field): [.[$name] | as_list | .[] | objects | select(.item != null) | {key: (.item | tostring), value: .[$field]}] | from_entries;
+
+$previous[0] as $old
+| $current[0] as $new
+| ($old | by_number) as $was
+| ($new | by_number) as $now
+| def named($k): "#\($k) \(($now[$k] // $was[$k] // {}).title // "")";
+  def tier_of($m; $k): ($m[$k] // {}).tier;
+  def entered($name): [($new | in_section($name)) - ($old | in_section($name)) | .[] | "\(named(.)) (\(tier_of($was; .) // "new") to \($name))"];
+  def left($name): [($old | in_section($name)) - ($new | in_section($name)) | .[] | "\(named(.)) (\(if $now[.] == null then "off the board" else "now \(tier_of($now; .))" end))"];
+  [
+    entry("Changed board identity"; [("board", "title", "repo", "repoUrl") as $field
+      | select(($old[$field] // null) != ($new[$field] // null))
+      | "\($field) (\($old[$field] // null | shown) to \($new[$field] // null | shown))"]),
+    entry("Entered Critical"; entered("critical")),
+    entry("Left Critical"; left("critical")),
+    entry("Entered High priority"; entered("high")),
+    entry("Left High priority"; left("high")),
+    entry("New bugs"; [$now | to_entries[] | select($was[.key] == null and .value.state == "open") | "\(named(.key)) (\(.value.tier))"]),
+    entry("Closed"; [$now | to_entries[] | select(.value.state == "closed" and ($was[.key] // {}).state == "open") | named(.key)]),
+    entry("Moved"; [$now | to_entries[] | .key as $k | $was[$k] as $w
+      | select($w != null and $w.tier != .value.tier and (.value.tier | IN("critical", "high", "fixed") | not) and ($w.tier | IN("critical", "high") | not))
+      | "\(named($k)) (\($w.tier) to \(.value.tier))"]),
+    entry("Assessment changed"; [$now | to_entries[] | .key as $k | ($was[$k].assessment // null) as $wa | .value.assessment as $na
+      | select($wa != null and $na != null)
+      | [("environment", "evidence", "surface", "impact", "reach", "workaround", "mitigated", "deadline") as $f | select($wa[$f] != $na[$f]) | "\($f) \($wa[$f] | shown) to \($na[$f] | shown)"]
+      | select(length > 0) | "\(named($k)) (\(join(", ")))"]),
+    entry("Retitled"; [$now | to_entries[] | .key as $k | select($was[$k] != null and $was[$k].title != .value.title) | "#\($k) (\($was[$k].title | tojson) to \(.value.title | tojson))"]),
+    entry("Triage added"; [($new | entry_ids) - ($old | entry_ids) | .[]]),
+    entry("Triage removed"; [($old | entry_ids) - ($new | entry_ids) | .[]]),
+    entry("Reworded"; [
+      (select(($old.summary // null) != ($new.summary // null)) | "summary"),
+      (("critical", "high") as $name | ($old | prose($name; "action")) as $wa | $new | prose($name; "action") | to_entries[] | select($wa[.key] != null and $wa[.key] != .value) | "the action for #\(.key)"),
+      (($old | prose("investigate"; "question")) as $wq | $new | prose("investigate"; "question") | to_entries[] | select($wq[.key] != null and $wq[.key] != .value) | "the question for #\(.key)")
+    ])
+  ] as $changes
+| "Previous sync: \($old | synced)",
+  "This sync: \($new | synced)",
+  "",
+  (if ($changes | length) > 0 then $changes[] else "- No changes beyond the sync metadata." end)
+'
+
 function usage() {
   cat << 'USAGE'
 Usage:
@@ -594,12 +897,23 @@ function require_single_document() {
   jq -e -s 'length == 1' "${data_file}" > /dev/null 2>&1 || die "${E_INVALID}" "${data_file} must hold exactly one JSON document"
 }
 
-# Prints "N issues in M lanes" for a data file already known to be valid.
+# Prints the board type a data file names, or nothing when it names none.
+function board_type() {
+  jq -r 'if type == "object" then .board | strings else empty end' "${1}"
+}
+
+# Prints a one-line summary of a data file already known to be valid: "N
+# issues in M lanes" for backlog triage, and the Critical, High priority, and
+# open counts for a bugs board.
 function board_summary() {
   local data_file="${1}"
   jq -r '
     def counted($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
-    "\(counted(.issues | length; "issue"; "issues")) in \(counted(.lanes | length; "lane"; "lanes"))"
+    if .board == "bugs" then
+      "\(.critical | length) critical, \(.high | length) high priority, \(counted([.bugs[] | select(.state == "open")] | length; "open bug"; "open bugs"))"
+    else
+      "\(counted(.issues | length; "issue"; "issues")) in \(counted(.lanes | length; "lane"; "lanes"))"
+    end
   ' "${data_file}"
 }
 
@@ -622,10 +936,26 @@ function zone_status() {
 # Exits with every problem listed when the data breaks a board rule.
 function validate_data() {
   local data_file="${1}"
-  local problems line
+  local problems line board zone_known time_zone="UTC"
 
   require_single_document "${data_file}"
-  problems="$(jq -r --arg zone_pattern "${ZONE_PATTERN}" --argjson zone_known "$(zone_status "${data_file}")" "${VALIDATE_FILTER}" "${data_file}")"
+  board="$(board_type "${data_file}")"
+  zone_known="$(zone_status "${data_file}")"
+  if [[ "${board}" == "bugs" ]]; then
+    # Triage until dates count in the local days of sync.timeZone. An unknown
+    # zone is reported, and the dates then count in UTC.
+    [[ "${zone_known}" != true ]] || time_zone="$(jq -r '.sync.timeZone' "${data_file}")"
+    problems="$(TZ="${time_zone}" jq -r --arg zone_pattern "${ZONE_PATTERN}" --argjson zone_known "${zone_known}" "${BUGS_VALIDATE_FILTER}" "${data_file}")"
+  elif [[ " ${BOARD_TYPES} " != *" ${board} "* && "${board}" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+    # A well-formed name of a type this script does not know is the whole
+    # problem.
+    problems="board: ${board} is not a board type this script knows; expected one of: ${BOARD_TYPES// /, }"
+  else
+    # Backlog triage data goes through the backlog rules, and so does a board
+    # value that is missing or malformed, which they report along with
+    # everything else.
+    problems="$(jq -r --arg zone_pattern "${ZONE_PATTERN}" --argjson zone_known "${zone_known}" "${BACKLOG_TRIAGE_VALIDATE_FILTER}" "${data_file}")"
+  fi
   [[ -z "${problems}" ]] && return 0
 
   printf '%s: %s is not valid board data:\n' "${SCRIPT_NAME}" "${data_file}" >&2
@@ -827,16 +1157,22 @@ function cmd_extract() {
 
 function cmd_compare() {
   [[ $# -eq 2 ]] || usage_error "compare takes the previous board and the current data"
-  local previous_file current_file previous current
+  local previous_file current_file previous current filter
   previous_file="$(operand "${1}")"
   current_file="$(operand "${2}")"
 
   previous="$(read_board_data "${previous_file}")"
   current="$(read_board_data "${current_file}")"
+  # The current board picks the report. A board whose type changed reports the
+  # change as an identity change either way.
+  filter="${BACKLOG_TRIAGE_COMPARE_FILTER}"
+  if [[ "$(jq -r '.board | strings' <<< "${current}")" == "bugs" ]]; then
+    filter="${BUGS_COMPARE_FILTER}"
+  fi
   jq -n -r \
     --slurpfile previous <(printf '%s\n' "${previous}") \
     --slurpfile current <(printf '%s\n' "${current}") \
-    "${COMPARE_FILTER}"
+    "${filter}"
 }
 
 function main() {

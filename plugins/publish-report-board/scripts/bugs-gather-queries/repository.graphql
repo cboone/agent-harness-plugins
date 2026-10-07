@@ -1,0 +1,19 @@
+# The repository a bug board covers: its address, its numeric ID for ZenHub
+# lookups, and the default branch and commit the board records as synced.
+query ($owner: String!, $name: String!) {
+  viewer {
+    login
+  }
+  repository(owner: $owner, name: $name) {
+    nameWithOwner
+    url
+    databaseId
+    isArchived
+    defaultBranchRef {
+      name
+      target {
+        oid
+      }
+    }
+  }
+}
