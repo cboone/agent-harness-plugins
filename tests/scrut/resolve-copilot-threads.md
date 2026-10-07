@@ -451,6 +451,15 @@ $ jq -n '[{id: 1, user: {login: "copilot-pull-request-reviewer[bot]"}, state: "C
 {"hasFormatDrift":false,"needsRead":true,"lead":["One or more issues must be addressed before approval."]}
 ```
 
+A resolved section lists threads and nothing else, and a nonzero count is
+what lets it clear the read. So a line of prose inside one is drift rather
+than a round that reads as clean.
+
+```scrut
+$ jq '.[0].body |= (sub("Seven moderate[^\n]*"; "One or more issues must be addressed before approval.") | sub("\n</details>"; "\nHigh: the cache key ignores the locale.\n</details>"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+```
+
 A bold line stating a nonzero count with no open block behind it falls short
 of its own count.
 

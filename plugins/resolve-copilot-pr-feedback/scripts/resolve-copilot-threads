@@ -690,6 +690,15 @@ function do_parse_reviews() {
       def lists_resolved_threads:
         ((resolved_section | .count) // 0) > 0;
 
+      # A resolved section that announces threads and holds anything but its
+      # own thread links. It lists threads and nothing else, and a nonzero
+      # count is what lets it clear a read (see lists_resolved_threads), so
+      # prose placed in it would otherwise go unread on a round that reads as
+      # clean. A zero count clears nothing, so its contents are read with the
+      # rest of the review instead.
+      def resolved_section_mismatch:
+        resolved_section | . != null and .count > 0 and .items > 0;
+
       # Lines of a ccr-overview-v2 body that use an element outside the
       # vocabulary the layout is built from. Each is reported in unaccounted
       # beside the census signals, as an "element" entry nothing accounts
@@ -1415,10 +1424,10 @@ function do_parse_reviews() {
         | (if $is_v2 then (.body | open_thread_count) else 0 end) as $open_thread_count
         # A stated count above the inline threads Copilot listed, a v2 body
         # whose count is missing or does not parse, an open section listing an
-        # item that is not a thread, or open counts that disagree with each
-        # other or with their links, leaves findings this command cannot
-        # account for. Each is independent of which other sections the body
-        # has.
+        # item that is not a thread, open counts that disagree with each other
+        # or with their links, or a resolved section holding more than its
+        # thread links, leaves findings this command cannot account for. Each
+        # is independent of which other sections the body has.
         | (
             if $stated_findings == null then false
             elif $stated_findings == "unparseable" then true
@@ -1427,6 +1436,7 @@ function do_parse_reviews() {
               or (.body | open_section_items) > 0
               or (.body | open_section_conflict)
               or (.body | open_section_mismatch)
+              or (.body | resolved_section_mismatch)
             end
           ) as $stated_shortfall
         | {
