@@ -424,10 +424,9 @@ function do_parse_reviews() {
         test(leading_count_summary) as $leading
         | (
             section_text
-            | (
-                capture("\\((?<count>[0-9]+)\\)$")
-                // (if $leading then capture("^(?<count>[0-9]+)") else empty end)
-              ).count
+            | capture("\\((?<count>[0-9]+)\\)$")
+              // (if $leading then capture("^(?<count>[0-9]+)") else empty end)
+            | .count
             | tonumber
           )
           // null;
@@ -625,9 +624,7 @@ function do_parse_reviews() {
       # whenever the two match, and it never reconciles a zero count at all.
       # So the content is checked here, whatever the count.
       def open_section_items:
-        (open_section | .items)
-        // (open_findings_section | .items)
-        // 0;
+        ((open_section // open_findings_section) | .items) // 0;
 
       # More than one open section, of either kind. Every observed review
       # lists its open threads in one section, and the counts and contents
@@ -658,22 +655,24 @@ function do_parse_reviews() {
       def lists_open_threads:
         open_thread_count > 0;
 
+      # The resolved section, which states its count after the name, as
+      # "Resolved since last review (N)", or before it, as "N resolved since
+      # last review". The first form is read whenever it is present.
+      def resolved_section:
+        section_summary("Resolved since last review \\((?<count>[0-9]+)\\)")
+        // section_summary("(?<count>[0-9]+) resolved since last review(?:<|$)");
+
       # ccr-overview-v2 also lists the findings closed since the previous
-      # round, under a "Resolved since last review (N)" or "N resolved since
-      # last review" summary. Those links record work already done rather
-      # than feedback to act on, so they are a known layout rather than a
-      # finding the parser failed to read.
+      # round, under a resolved section. Those links record work already done
+      # rather than feedback to act on, so they are a known layout rather than
+      # a finding the parser failed to read.
       #
       # Presence alone is not enough to call a review clean. Copilot ships a
       # resolved section on most second and later rounds, including rounds
       # that state findings, so pairing it with the lead paragraph is what
       # separates the two. See lead_states_no_findings.
       def lists_resolved_threads:
-        (
-          (section_summary("Resolved since last review \\((?<count>[0-9]+)\\)") | .count)
-          // (section_summary("(?<count>[0-9]+) resolved since last review(?:<|$)") | .count)
-          // 0
-        ) > 0;
+        ((resolved_section | .count) // 0) > 0;
 
       # Lines of a ccr-overview-v2 body that use an element outside the
       # vocabulary the layout is built from. Each is reported in unaccounted
