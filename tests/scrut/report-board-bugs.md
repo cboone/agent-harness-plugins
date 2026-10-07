@@ -15,7 +15,11 @@ $ function board_with() {
 >   printf '%s' "${out}"
 > }
 > function problems() {
->   "${REPORT_BOARD_BIN}" validate "$(board_with "${1}")" 2>&1 | grep '^  - '
+>   local result
+>   if result="$("${REPORT_BOARD_BIN}" validate "$(board_with "${1}")" 2>&1)"; then
+>     printf 'validate passed, but this case expects problems\n'
+>   fi
+>   grep '^  - ' <<< "${result}"
 > }
 ```
 
