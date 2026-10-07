@@ -39,7 +39,7 @@ This skill runs read-only Git and GitHub CLI commands to find its scope. To allo
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh repo view *)", "Bash(git symbolic-ref *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git ls-files *)", "Bash(git rev-parse *)", "Bash(git remote)", "Bash(git config --get *)", "Bash(realpath *)", "Bash(test -f *)"]
+    "allow": ["Bash(gh repo view *)", "Bash(git symbolic-ref *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git --no-pager diff *)", "Bash(git ls-files *)", "Bash(git rev-parse *)", "Bash(git remote)", "Bash(git config --get *)", "Bash(realpath *)", "Bash(test -f *)", "Bash(grep -Iq *)"]
   }
 }
 ```

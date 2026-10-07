@@ -215,7 +215,7 @@ If `<remote>/<base>` does not exist, try the local `<base>` branch. A local bran
 Collect the changed files. Both commands print paths from the repository root, from any working directory; `--no-relative` keeps a `diff.relative` setting from limiting the first to the current directory:
 
 ```bash
-git diff -z --name-only --no-relative --diff-filter=d <merge-base>
+git --no-pager diff --no-ext-diff -z --name-only --no-relative --diff-filter=d <merge-base>
 git ls-files -z --others --exclude-standard --full-name :/
 ```
 
@@ -227,12 +227,13 @@ Filter every path list, including the file of a single named comment, before rea
 - Drop secret-bearing paths, such as real environment files, private keys, and credential stores, and any path that may hold credentials but cannot be classified without reading it. Never read, search, edit, or print them; report only that secret-bearing files were skipped.
 - Drop symlinks and anything reached through one, without following them, since a link can point outside the repository or to a file this filter would otherwise drop. Keep a path only when the output of `realpath "$path"` equals the output of `realpath "$(git rev-parse --show-toplevel)"` followed by `/$path`; any symlink in any component, including a parent directory that points elsewhere inside the repository, makes them differ.
 - Drop anything that is not a regular file (`test -f "$path"` fails), such as a directory or a changed submodule, which Git lists as a single path. Never descend into a submodule.
+- Drop binary files, such as images, archives, and databases: anything where `grep -Iq . "$path"` fails, which also drops empty files, since they hold no comments.
 
 Report the remaining file list before editing, listing untracked files separately, since they count as entirely changed and may not belong to this branch's work.
 
 ### 2. Collect comments
 
-Read each file in scope, resolving its path from the repository root (`git rev-parse --show-toplevel`); step 1 makes every path root-relative. With paths, collect every comment in the file. With the default scope, collect comments inside a changed hunk or directly above one, using `git diff -U0 <merge-base> -- ":(top,literal)<file>"` to find the changed lines without surrounding context (`top` keeps the root-relative path from step 1 correct in any working directory, and `literal` keeps a `*`, `?`, or `[` in a filename from matching other files); an untracked file counts as entirely changed.
+Read each file in scope, resolving its path from the repository root (`git rev-parse --show-toplevel`); step 1 makes every path root-relative. With paths, collect every comment in the file. With the default scope, collect comments inside a changed hunk or directly above one, using `git --no-pager diff --no-ext-diff -U0 <merge-base> -- ":(top,literal)<file>"` to find the changed lines without surrounding context (`top` keeps the root-relative path from step 1 correct in any working directory, and `literal` keeps a `*`, `?`, or `[` in a filename from matching other files); an untracked file counts as entirely changed.
 
 ### 3. Classify each comment
 
