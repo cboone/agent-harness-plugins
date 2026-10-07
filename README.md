@@ -111,6 +111,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 | [Lint and Fix](./plugins/lint-and-fix/README.md)                            | `/lint-and-fix`              | Detect project linters and formatters, run them with auto-fix, resolve remaining issues, then commit and push the fixes.                                                         |
 | [Plant Defects](./plugins/plant-defects/README.md)                          | `/plant-defects`             | Deliberately break code to prove a test can see it: plant the defect an instrument claims to catch, confirm it goes red, and record it so it regresses.                          |
 | [Set-Up Linters](./plugins/set-up-linters/README.md)                        | `/set-up-linters`            | Detect project languages, recommend linters and formatters, install them, and generate config files, including Pandoc-academic Markdown presets.                                 |
+| [Trim Comments](./plugins/trim-comments/README.md)                          | `/trim-comments`             | Trim and rewrite code comments so each leads with what the code does and the minimum why, cutting trivia, jargon, restatement, and details that go stale.                        |
 | [Write Bash Scripts](./plugins/write-bash-scripts/README.md)                | `/write-bash-scripts`        | Applies Bash style conventions when creating or editing Bash scripts.                                                                                                            |
 | [Write Go Code](./plugins/write-go-code/README.md)                          | `/write-go-code`             | Go code style guide based on Google Go Style Guide, Effective Go, Code Review Comments, and Cobra CLI behavior.                                                                  |
 | [Write LaTeX](./plugins/write-latex/README.md)                              | `/write-latex`               | LaTeX mathematical typesetting style guide based on AMS, IEEE, ISO 80000-2, and Knuth conventions.                                                                               |
@@ -124,6 +125,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 - _Add Scrut CLI Tests, Write Scrut Tests:_ [`scrut`](https://github.com/facebookincubator/scrut) (Makefile checks for availability and provides install instructions)
 - _Check Zsh Scripts:_ [`shellcheck`](https://www.shellcheck.net/), [`shfmt`](https://github.com/mvdan/sh), [`shellharden`](https://github.com/anordal/shellharden), [`checkbashisms`](https://packages.debian.org/devscripts)
+- _Trim Comments:_ `realpath` (GNU coreutils, or macOS 13 and later)
 
 ### Writing
 
