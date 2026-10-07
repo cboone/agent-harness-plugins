@@ -1324,7 +1324,7 @@ function do_parse_reviews() {
               # not as findings, and is left out.
               (
                 select(
-                  ($l.raw | test("alt[[:space:]]*=[[:space:]]*\"[^\"]*severity[[:space:]]*\""; "i"))
+                  ($l.raw | test("alt[[:space:]]*=[[:space:]]*\"[^\"]*severity[^\"]*\""; "i"))
                   and ($l.raw | test("^\\*\\*Findings"; "i") | not)
                 )
                 | {kind: "badge", line: $l.n, region: $l.region, text: $l.raw}

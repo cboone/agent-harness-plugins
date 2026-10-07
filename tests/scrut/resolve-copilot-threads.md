@@ -544,6 +544,14 @@ $ jq '.[0].body |= (sub("Seven moderate[^\n]*"; "One or more issues must be addr
 {"hasFormatDrift":false,"needsRead":false}
 ```
 
+A badge is recognized by `severity` anywhere in its `alt` text, so a wording
+such as `alt="High severity icon"` still marks a finding.
+
+```scrut
+$ jq '.[0].body += "\n\n<details>\n<summary><strong>Other notes</strong></summary>\n\n- <picture><img alt=\"High severity icon\"></picture> Retry loop never terminates\n</details>"' "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | .kind]}'
+{"hasFormatDrift":true,"unaccounted":["badge"]}
+```
+
 The raw body is what a caller reads. Normalization changes only what the
 parsers see, and never a fenced block, where a finding quotes code.
 
