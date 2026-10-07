@@ -193,13 +193,13 @@ If the user pointed at a single comment, it is the whole scope: expand its file 
 
 Every path list in this step comes from a `-z` command: split it on NUL bytes only, never on newlines, so a filename containing a newline or quote arrives intact and unescaped. Never paste a path into command text. Keep the current path in a shell variable and pass it, with any pathspec prefix, as one double-quoted argument to every command, Git or not, including `realpath` and `test`. Every path is root-relative and these checks run from the repository root, so write it as `"./$path"` for commands other than Git; a filename beginning with `-` is then never read as an option. This applies to user-given paths here and to the changed filenames in step 2, since either can contain spaces, quotes, or shell metacharacters.
 
-Otherwise, choose the remote: `origin` when `git remote` lists it; otherwise the current branch's upstream remote (`git config --get branch.<branch>.remote`, ignoring `.`, which means the upstream is a local branch), or the only remote when there is one. With several remotes and no upstream, treat the base as not found. `<remote>` below means the chosen name.
+Otherwise, choose the remote: `origin` when `git remote` lists it; otherwise the current branch's upstream remote (`git config --get branch.<branch>.remote`, ignoring `.`, which means the upstream is a local branch), or the only remote when there is one. With several remotes and no upstream, treat the base as not found. Keep the chosen name in `$remote`, and the base name found next in `$base`, and quote both wherever they appear in a command, since a remote or branch name is repository data and can contain shell metacharacters.
 
 Then find the base branch name. Try these in order and use the first that prints a name:
 
 ```bash
 gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
-git symbolic-ref --quiet --short refs/remotes/<remote>/HEAD
+git symbolic-ref --quiet --short "refs/remotes/$remote/HEAD"
 ```
 
 The second prints `<remote>/<base>`; strip the `<remote>/` prefix. Treat empty output, a failed command, or a result of `HEAD` as not found.
@@ -207,7 +207,7 @@ The second prints `<remote>/<base>`; strip the `<remote>/` prefix. Treat empty o
 Then find the merge base:
 
 ```bash
-git merge-base <remote>/<base> HEAD
+git merge-base "$remote/$base" HEAD
 ```
 
 If `<remote>/<base>` does not exist, try the local `<base>` branch. A local branch can be behind its remote, which moves the merge base back and pulls other people's commits into scope, so say in the report when the local branch was used. If neither works, treat it as not found and see "Error Handling".
