@@ -486,7 +486,8 @@ $config as $c
   def signals_of($a; $b; $set):
     [
       {source: "assessment", kind: "impact", text: "\(shown_as($a.impact)) for \(shown_as($a.surface))\(if $a.reach != "unknown" then ", reach \($a.reach)" else "" end)", at: $b.updatedAt},
-      {source: "assessment", kind: "evidence", text: "\(shown_as($a.evidence))\(if $a.environment != "unknown" then " on \($a.environment)" else ", environment unknown" end)", at: $b.updatedAt},
+      # "seen on production" already names its environment.
+      {source: "assessment", kind: "evidence", text: (shown_as($a.evidence) as $how | if $a.environment == "unknown" then "\($how), environment unknown" elif ($how | endswith(" on \($a.environment)")) then $how else "\($how) on \($a.environment)" end), at: $b.updatedAt},
       (select($a.workaround == "none") | {source: "assessment", kind: "workaround", text: "no workaround", at: $b.updatedAt}),
       (select($a.mitigated) | {source: "assessment", kind: "mitigated", text: "mitigated", at: $b.updatedAt}),
       (select($a.deadline != null and $a.deadline >= $today) | {source: "assessment", kind: "deadline", text: "due \($a.deadline)", at: $b.updatedAt}),

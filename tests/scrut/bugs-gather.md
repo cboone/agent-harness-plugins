@@ -221,7 +221,7 @@ $ jq -r '.tiers.critical[] | "#\(.number) \(.score)"' "${work}/scored.json"
 ## Signals name their source and what each says
 
 ```scrut
-$ jq -r '.tiers.critical[] | select(.number == 11 or .number == 25) | "#\(.number)", (.signals[] | "  \(.source) \(.kind): \(.text)")' "${work}/scored.json"
+$ jq -r '.tiers.critical[] | select(.number == 10 or .number == 11 or .number == 25) | "#\(.number)", (.signals[] | "  \(.source) \(.kind): \(.text)")' "${work}/scored.json"
 #11
   assessment impact: security for the public, reach all
   assessment evidence: found in source on production
@@ -232,6 +232,10 @@ $ jq -r '.tiers.critical[] | select(.number == 11 or .number == 25) | "#\(.numbe
   assessment evidence: reported by users on production
   assessment workaround: no workaround
   triage set: two donors reported it
+#10
+  assessment impact: money for the public, reach all
+  assessment evidence: seen on production
+  assessment workaround: no workaround
 ```
 
 ## A public security bug needs some evidence to reach Critical

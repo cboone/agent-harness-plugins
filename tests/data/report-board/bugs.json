@@ -864,7 +864,7 @@
         {
           "source": "assessment",
           "kind": "evidence",
-          "text": "seen on production on production",
+          "text": "seen on production",
           "at": "2026-10-10T12:00:00Z"
         },
         {
@@ -969,7 +969,7 @@
         {
           "source": "assessment",
           "kind": "evidence",
-          "text": "seen on production on production",
+          "text": "seen on production",
           "at": "2026-10-10T12:00:00Z"
         },
         {
@@ -1123,7 +1123,7 @@
         {
           "source": "assessment",
           "kind": "evidence",
-          "text": "seen on production on production",
+          "text": "seen on production",
           "at": "2026-10-10T12:00:00Z"
         },
         {
@@ -1148,7 +1148,7 @@
         {
           "source": "assessment",
           "kind": "evidence",
-          "text": "seen on production on production",
+          "text": "seen on production",
           "at": "2026-10-10T12:00:00Z"
         }
       ]
