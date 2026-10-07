@@ -89,6 +89,13 @@ $ problems '(.critical[0].signals[0].at) = "2026-10-16T00:00:00Z"'
   - critical #11 signals[0]: at 2026-10-16T00:00:00Z is later than sync.at
 ```
 
+## No triage entry is later than the sync
+
+```scrut
+$ problems '.triage += [{id: "2026-10-16T09:00-04:00 context", at: "2026-10-16T09:00-04:00", verb: "context", target: null, until: null, text: "written after the sync"}]'
+  - triage[5]: at 2026-10-16T09:00-04:00 is later than sync.at
+```
+
 ## Assessments use the closed sets
 
 ```scrut
@@ -116,6 +123,14 @@ $ problems '(.bugs[] | select(.number == 5) | .tier) = "lower" | (.bugs[] | sele
   - #26 is open, so it cannot be in fixed
   - lower #26: the bug is placed in fixed
   - fixed #5: the bug is placed in lower
+```
+
+## A closed bug's fixes and reason have the shapes the page draws
+
+```scrut
+$ problems '(.bugs[] | select(.number == 5)) |= (.fixedBy = "41" | .stateReason = 3)'
+  - #5: fixedBy must be a list of pull request numbers
+  - #5: stateReason must be text or null
 ```
 
 ## Triage entries follow the note grammar

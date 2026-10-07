@@ -488,7 +488,9 @@ else
        | if ($e | type) != "object" then "\($at): expected an object"
          elif ($e.verb | IN(triage_verbs[]) | not) then "\($at): verb must be escalate, demote, set, snooze, park, or context"
          else
-           check($e.at | real_time; "\($at): at must be an ISO 8601 time with a zone"),
+           (if ($e.at | real_time) | not then "\($at): at must be an ISO 8601 time with a zone"
+            elif $synced != null and ($e.at | epoch) > $synced then "\($at): at \($e.at) is later than sync.at"
+            else empty end),
            check($e.text | is_text; "\($at): text is required"),
            (if $e.verb == "context" then
               check($e.target == null; "\($at): a context entry names no bug"),
@@ -540,6 +542,11 @@ else
               else empty end),
              (if $b.fix == null then empty
               elif ($b.fix | type) != "object" or (($b.fix.number | is_int and . > 0) | not) then "\($at): fix must name a pull request number"
+              else empty end),
+             # The template lists fixedBy and prints stateReason for a closed bug.
+             (if $b.state == "closed" then
+                check($b.fixedBy | absent_or(type == "array" and all(.[]; is_int and . > 0)); "\($at): fixedBy must be a list of pull request numbers"),
+                check($b.stateReason | absent_or(is_text); "\($at): stateReason must be text or null")
               else empty end)
          end
      end),

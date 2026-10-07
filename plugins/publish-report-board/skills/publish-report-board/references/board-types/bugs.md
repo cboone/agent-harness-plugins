@@ -236,8 +236,8 @@ The facts are the assessment in five lines, where the bug is, how it is known, w
 
 `report-board validate` rejects data that breaks any of these rules, and lists every problem at once:
 
-- Every bug sits in exactly one section, the one its `tier` names; closed bugs sit in `fixed`, and open ones never do.
-- Critical and High priority entries carry an action, an impact, and at least one signal, and no signal is later than `sync.at`.
+- Every bug sits in exactly one section, the one its `tier` names; closed bugs sit in `fixed`, and open ones never do. A closed bug's `fixedBy` is a list of pull request numbers and its `stateReason` is text or null.
+- Critical and High priority entries carry an action, an impact, and at least one signal, and no signal or triage entry is later than `sync.at`.
 - A Critical entry rests on an `escalate` entry or on an assessment that earns Critical by the rule above.
 - A snoozed or parked bug is not in Critical or High priority, and a demoted one is not in Critical, unless a later `escalate` brings it back.
 - A triage signal names an entry in `triage` with the same verb, about the same bug, that has not expired by `sync.at`, counted in local days of `sync.timeZone`.
