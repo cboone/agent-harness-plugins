@@ -65,6 +65,9 @@ readonly CACHE_VERSION=2
 # through GH_HOST, which this script does not support.
 readonly GITHUB_HOST='github.com'
 readonly REPO_PATTERN='^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
+# A . or .. segment would point the config and cache paths outside their
+# directories; GitHub never uses either as a name.
+readonly DOT_SEGMENT_PATTERN='(^|/)\.\.?(/|$)'
 
 # Set by the gather command: the scratch directory for API responses, removed
 # on exit. It is global because an EXIT trap runs after main's locals are gone.
@@ -111,7 +114,9 @@ if type != "object" then {problems: ["the config must be a JSON object"], config
 else
   (. + {repo: (.repo // $repo)}) as $c
   | [
-      check($c.repo | is_text and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"); "repo: expected owner/name"),
+      # The repository names cache and config paths, so a . or .. segment is
+      # refused; GitHub never uses either as a name.
+      check($c.repo | is_text and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$") and all(split("/")[]; IN(".", "..") | not); "repo: expected owner/name"),
       check($repo == null or $c.repo == $repo; "repo: the config names \($c.repo), not \($repo)"),
       check($c.timeZone | absent_or(is_text and test("^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+)*$")); "timeZone: expected an IANA zone name, such as America/New_York"),
       check($c.bugLabels | absent_or(text_list); "bugLabels: expected a non-empty list of label names"),
@@ -745,7 +750,7 @@ function load_config() {
   local path="" repo_arg="null" result
   if [[ -f "${reference}" ]]; then
     path="${reference}"
-  elif [[ "${reference}" =~ ${REPO_PATTERN} ]]; then
+  elif [[ "${reference}" =~ ${REPO_PATTERN} && ! "${reference}" =~ ${DOT_SEGMENT_PATTERN} ]]; then
     repo_arg="$(jq -n --arg repo "${reference}" '$repo')"
     path="${XDG_CONFIG_HOME:-${HOME}/.config}/report-boards/bugs/${GITHUB_HOST}/${reference}.json"
     [[ -f "${path}" ]] || path=""

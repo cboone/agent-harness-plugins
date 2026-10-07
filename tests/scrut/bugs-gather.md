@@ -430,6 +430,23 @@ bugs-gather: WORK/config/report-boards/bugs/github.com/acme/widgets.json is not 
 exit 1
 ```
 
+## A repository with a . or .. segment is refused
+
+Either would point the config and cache paths outside their directories.
+
+```scrut
+$ bugs gather ../widgets "${work}/dots.json" 2>&1; echo "exit $?"
+bugs-gather: expected OWNER/NAME or a config file, not ../widgets
+exit 1
+```
+
+```scrut
+$ jq '.repo = "acme/.."' "${work}/config.json" > "${work}/dots-config.json" && bugs gather "${work}/dots-config.json" "${work}/dots.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
+bugs-gather: WORK/dots-config.json is not a valid bugs config:
+  - repo: expected owner/name
+exit 1
+```
+
 ## A configured triage note that cannot be read stops the score
 
 Scoring without it would drop every call in it and say nothing.
