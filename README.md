@@ -125,6 +125,7 @@ Each skill links to its own README. The `Trigger` column shows the slash command
 
 - _Add Scrut CLI Tests, Write Scrut Tests:_ [`scrut`](https://github.com/facebookincubator/scrut) (Makefile checks for availability and provides install instructions)
 - _Check Zsh Scripts:_ [`shellcheck`](https://www.shellcheck.net/), [`shfmt`](https://github.com/mvdan/sh), [`shellharden`](https://github.com/anordal/shellharden), [`checkbashisms`](https://packages.debian.org/devscripts)
+- _Trim Comments:_ `realpath` (GNU coreutils, or macOS 13 and later)
 
 ### Writing
 
