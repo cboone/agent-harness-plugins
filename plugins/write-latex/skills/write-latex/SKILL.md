@@ -2,7 +2,8 @@
 name: write-latex
 description: >-
   Apply LaTeX typesetting conventions from AMS, IEEE, ISO 80000-2, and Knuth.
-  Use when writing or reviewing .tex files, preambles, macros, or BibTeX.
+  Use when writing or reviewing .tex files, preambles, macros, BibTeX, or raw
+  LaTeX in Pandoc Markdown.
 ---
 
 # Write LaTeX

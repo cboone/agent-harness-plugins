@@ -2,7 +2,8 @@
 name: write-markdown
 description: >-
   Apply Markdown style conventions when creating, editing, or reviewing .md
-  files. For Pandoc academic Markdown, use write-pandoc-markdown.
+  files, including READMEs, docs, plans, and agent instructions. For Pandoc
+  academic Markdown, use write-pandoc-markdown.
 ---
 
 # Markdown Style Guide
