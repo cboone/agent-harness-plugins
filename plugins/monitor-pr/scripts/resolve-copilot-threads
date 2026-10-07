@@ -1211,8 +1211,10 @@ function do_parse_reviews() {
       #                  ending in "(N)", or a summary whose bold text opens
       #                  with the count (see leading_count_summary)
       #   badge          a severity badge on a line with no thread link, which
-      #                  marks a finding a parser must account for in its
-      #                  region
+      #                  marks a finding. Only a "Previously missed" entry,
+      #                  whose title carries the badge, accounts for one, so
+      #                  a finding of another shape in the same region cannot
+      #                  stand in for it
       #   fence          a fenced block still open at the end of the body (see
       #                  unclosed_fence)
       #
@@ -1302,6 +1304,7 @@ function do_parse_reviews() {
         | ($signals | map(select(.kind == "thread-link")) | count_by(.region)) as $links
         | ($signals | map(select(.kind == "location")) | count_by(.region)) as $locations
         | ($signals | map(select(.kind == "badge")) | count_by(.region)) as $badges
+        | ($findings | map(select(.source == "previously-missed")) | count_by(.region)) as $badged
         | [
             (
               $signals
@@ -1319,7 +1322,7 @@ function do_parse_reviews() {
                   )
                   or (
                     .kind == "badge"
-                    and (($found[.region] // 0) < ($badges[.region] // 0))
+                    and (($badged[.region] // 0) < ($badges[.region] // 0))
                   )
                   or (
                     .kind == "section-count"

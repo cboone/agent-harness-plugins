@@ -497,6 +497,15 @@ $ jq '(.[0].body | capture("(?<b><picture>.*?</picture>)").b) as $b | .[0].body 
 {"hasFormatDrift":true,"unaccounted":["badge"]}
 ```
 
+Only a "Previously missed" entry, whose title carries the badge, accounts for a
+badge. A finding of another shape in the same section, such as a vote-tagged
+table row, cannot stand in for a badge bullet beside it.
+
+```scrut
+$ jq '(.[0].body | capture("(?<b><picture>.*?</picture>)").b) as $b | .[0].body |= (sub("Seven moderate[^\n]*"; "One or more issues must be addressed before approval.") | sub("\n\n🧠"; "\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\n| File | Description |\n| --- | --- |\n| `src/b.js` | Adds a reader. **Moderate (1 vote):** leaks a handle. |\n\n- " + $b + " Handle the rejected promise in `src/a.js` · New\n</details>\n\n🧠"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | .kind]}'
+{"hasFormatDrift":true,"unaccounted":["badge"]}
+```
+
 A bold line stating a nonzero count with no open block behind it falls short
 of its own count.
 
