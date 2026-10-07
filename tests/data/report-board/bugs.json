@@ -12,7 +12,7 @@
     "extra": ["ZenHub workspace ws123", "closed bugs from the last 7 days"]
   },
   "summary": "Stop the pledge crash first; #11 and #25 expose and lose data on public pages, and #15 is due before the send window opens on 2026-10-20.",
-  "nowWarn": 5,
+  "criticalWarn": 5,
   "readyLimit": 8,
   "triage": [
     {
@@ -86,7 +86,7 @@
       "title": "Pledging crashes the app",
       "url": "https://github.com/acme/widgets/issues/10",
       "state": "open",
-      "tier": "now",
+      "tier": "critical",
       "author": "alice",
       "createdAt": "2026-10-01T12:00:00Z",
       "updatedAt": "2026-10-10T12:00:00Z",
@@ -120,7 +120,7 @@
       "title": "API v2 accepts unauthenticated writes",
       "url": "https://github.com/acme/widgets/issues/11",
       "state": "open",
-      "tier": "now",
+      "tier": "critical",
       "author": "alice",
       "createdAt": "2026-10-01T12:00:00Z",
       "updatedAt": "2026-10-10T12:00:00Z",
@@ -154,7 +154,7 @@
       "title": "Token refresh bounces users to the dashboard",
       "url": "https://github.com/acme/widgets/issues/12",
       "state": "open",
-      "tier": "today",
+      "tier": "high",
       "author": "alice",
       "createdAt": "2026-10-01T12:00:00Z",
       "updatedAt": "2026-10-10T12:00:00Z",
@@ -188,7 +188,7 @@
       "title": "Partner pages drop campaigns with null flags",
       "url": "https://github.com/acme/widgets/issues/13",
       "state": "open",
-      "tier": "today",
+      "tier": "high",
       "author": "alice",
       "createdAt": "2026-10-01T12:00:00Z",
       "updatedAt": "2026-10-10T12:00:00Z",
@@ -222,7 +222,7 @@
       "title": "Relinquish erases bundle membership",
       "url": "https://github.com/acme/widgets/issues/14",
       "state": "open",
-      "tier": "today",
+      "tier": "high",
       "author": "alice",
       "createdAt": "2026-10-01T12:00:00Z",
       "updatedAt": "2026-10-10T12:00:00Z",
@@ -256,7 +256,7 @@
       "title": "Reminder batch sends twice before the send window",
       "url": "https://github.com/acme/widgets/issues/15",
       "state": "open",
-      "tier": "today",
+      "tier": "high",
       "author": "alice",
       "createdAt": "2026-10-01T12:00:00Z",
       "updatedAt": "2026-10-10T12:00:00Z",
@@ -398,7 +398,7 @@
       "title": "The CPU drift check fails on equivalent values",
       "url": "https://github.com/acme/widgets/issues/19",
       "state": "open",
-      "tier": "later",
+      "tier": "lower",
       "author": "alice",
       "createdAt": "2026-10-01T12:00:00Z",
       "updatedAt": "2026-10-10T12:00:00Z",
@@ -568,7 +568,7 @@
       "title": "Footer link color is off",
       "url": "https://github.com/acme/widgets/issues/24",
       "state": "open",
-      "tier": "now",
+      "tier": "critical",
       "author": "alice",
       "createdAt": "2026-10-01T12:00:00Z",
       "updatedAt": "2026-10-10T12:00:00Z",
@@ -602,7 +602,7 @@
       "title": "Opt-outs do not suppress adopted letters",
       "url": "https://github.com/acme/widgets/issues/25",
       "state": "open",
-      "tier": "now",
+      "tier": "critical",
       "author": "alice",
       "createdAt": "2026-10-01T12:00:00Z",
       "updatedAt": "2026-10-10T12:00:00Z",
@@ -636,7 +636,7 @@
       "title": "Tooltip flickers on hover",
       "url": "https://github.com/acme/widgets/issues/26",
       "state": "open",
-      "tier": "later",
+      "tier": "lower",
       "author": "alice",
       "createdAt": "2026-10-01T12:00:00Z",
       "updatedAt": "2026-10-10T12:00:00Z",
@@ -780,7 +780,7 @@
       "score": 19
     }
   ],
-  "now": [
+  "critical": [
     {
       "item": 11,
       "why": "public security exposure",
@@ -904,7 +904,7 @@
       ]
     }
   ],
-  "today": [
+  "high": [
     {
       "item": 14,
       "why": "worse with every event",
@@ -1187,7 +1187,7 @@
       ]
     }
   ],
-  "later": [
+  "lower": [
     {
       "item": 19,
       "reason": "internal"

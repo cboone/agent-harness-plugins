@@ -404,11 +404,11 @@ def closed_sets: {
   workaround: ["none", "exists", "unknown"],
   cause: ["known", "suspected", "unknown"]
 };
-def sections: ["now", "today", "ready", "investigate", "later", "parked", "fixed"];
+def sections: ["critical", "high", "ready", "investigate", "lower", "parked", "fixed"];
 def ready_groups: ["ship", "review", "in-progress", "ready-to-fix"];
 def triage_verbs: ["escalate", "set", "snooze", "park", "context"];
-# True when an assessment by itself earns Now, the rule bugs-gather applies.
-def earns_now:
+# True when an assessment by itself earns Critical, the rule bugs-gather applies.
+def earns_critical:
   (.mitigated | not)
   and ((.environment == "production" and (.evidence | in_list(["user-report", "production-observed", "reproduced"]))
         and (.surface | in_list(["public", "signed-in"])) and (.impact | in_list(["security", "data-loss", "money", "access", "core-flow"]))
@@ -456,7 +456,7 @@ else
     check($d.repo | is_text and test("^(?!\\.{1,2}/)[A-Za-z0-9_.-]+/(?!\\.{1,2}$)[A-Za-z0-9_.-]+$"); "repo: expected owner/name"),
     check($d.repoUrl | is_text and test("^https://[A-Za-z0-9.-]+(:[0-9]+)?(/(?!\\.{1,2}(/|$))[A-Za-z0-9_.~-]+)+/?$") and (($d.repo | type) != "string" or (sub("/$"; "") | endswith("/" + $d.repo))); "repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name"),
     check($d.summary | is_text; "summary: expected text summarizing the board"),
-    check($d.nowWarn | is_int and . > 0; "nowWarn: expected a positive whole number"),
+    check($d.criticalWarn | is_int and . > 0; "criticalWarn: expected a positive whole number"),
     check($d.readyLimit | is_int and . > 0; "readyLimit: expected a positive whole number"),
     (if ($d.sync | type) != "object" then "sync: expected an object with at, branch, commit, and timeZone"
      else
@@ -544,7 +544,7 @@ else
              | if $b == null then "\($at) is not in bugs"
                else
                  check($b.tier == $name; "\($at): the bug is placed in \($b.tier)"),
-                 (if $name | IN("now", "today") then
+                 (if $name | IN("critical", "high") then
                     check($entry.action | is_text; "\($at): action is required, the next concrete step"),
                     check($entry.impact | is_text; "\($at): impact is required, who is affected and how"),
                     check($entry.signals | type == "array" and length > 0; "\($at): needs at least one signal"),
@@ -557,17 +557,17 @@ else
                   elif $name == "investigate" then
                     check($entry.question | is_text; "\($at): question is required, what to learn first"),
                     ($entry | signal_problems($at))
-                  elif $name | IN("later", "parked") then
+                  elif $name | IN("lower", "parked") then
                     check($entry.reason | is_text; "\($at): reason is required")
                   else
                     check($entry.verify | absent_or(type == "boolean"); "\($at): verify must be true or false")
                   end),
-                 (if $name == "now" then
+                 (if $name == "critical" then
                     (placement($b.number) as $p
-                     | check(($p.verb == "escalate") or ($b.assessment | objects | earns_now) or any($entry.signals | as_list | .[]; .source == "triage" and .kind == "escalate");
-                         "\($at) has neither an escalate entry nor an assessment that earns Now"))
+                     | check(($p.verb == "escalate") or ($b.assessment | objects | earns_critical) or any($entry.signals | as_list | .[]; .source == "triage" and .kind == "escalate");
+                         "\($at) has neither an escalate entry nor an assessment that earns Critical"))
                   else empty end),
-                 (if $name | IN("now", "today") then
+                 (if $name | IN("critical", "high") then
                     (placement($b.number) as $p
                      | if $p != null and ($p.verb | IN("snooze", "park")) then "\($at) is \(if $p.verb == "snooze" then "snoozed" else "parked" end) by \($p.id); only a later escalate brings it back" else empty end)
                   else empty end)
@@ -759,8 +759,8 @@ $previous[0] as $old
   (if ($changes | length) > 0 then $changes[] else "- No changes beyond the sync metadata." end)
 '
 
-# Reads two bugs boards the same way and reports what entered or left Now and
-# Today, which bugs opened, closed, or changed tier, and which assessments
+# Reads two bugs boards the same way and reports what entered or left Critical
+# and High priority, which bugs opened, closed, or changed tier, and which assessments
 # changed in a way the reader acts on.
 # shellcheck disable=SC2016
 readonly BUGS_COMPARE_FILTER='
@@ -788,14 +788,14 @@ $previous[0] as $old
     entry("Changed board identity"; [("board", "title", "repo", "repoUrl") as $field
       | select(($old[$field] // null) != ($new[$field] // null))
       | "\($field) (\($old[$field] // null | shown) to \($new[$field] // null | shown))"]),
-    entry("Entered Now"; entered("now")),
-    entry("Left Now"; left("now")),
-    entry("Entered Today"; entered("today")),
-    entry("Left Today"; left("today")),
+    entry("Entered Critical"; entered("critical")),
+    entry("Left Critical"; left("critical")),
+    entry("Entered High priority"; entered("high")),
+    entry("Left High priority"; left("high")),
     entry("New bugs"; [$now | to_entries[] | select($was[.key] == null and .value.state == "open") | "\(named(.key)) (\(.value.tier))"]),
     entry("Closed"; [$now | to_entries[] | select(.value.state == "closed" and ($was[.key] // {}).state == "open") | named(.key)]),
     entry("Moved"; [$now | to_entries[] | .key as $k | $was[$k] as $w
-      | select($w != null and $w.tier != .value.tier and (.value.tier | IN("now", "today", "fixed") | not) and ($w.tier | IN("now", "today") | not))
+      | select($w != null and $w.tier != .value.tier and (.value.tier | IN("critical", "high", "fixed") | not) and ($w.tier | IN("critical", "high") | not))
       | "\(named($k)) (\($w.tier) to \(.value.tier))"]),
     entry("Assessment changed"; [$now | to_entries[] | .key as $k | ($was[$k].assessment // null) as $wa | .value.assessment as $na
       | select($wa != null and $na != null)
@@ -806,7 +806,7 @@ $previous[0] as $old
     entry("Triage removed"; [($old | entry_ids) - ($new | entry_ids) | .[]]),
     entry("Reworded"; [
       (select(($old.summary // null) != ($new.summary // null)) | "summary"),
-      (("now", "today") as $name | ($old | prose($name; "action")) as $wa | $new | prose($name; "action") | to_entries[] | select($wa[.key] != null and $wa[.key] != .value) | "the action for #\(.key)"),
+      (("critical", "high") as $name | ($old | prose($name; "action")) as $wa | $new | prose($name; "action") | to_entries[] | select($wa[.key] != null and $wa[.key] != .value) | "the action for #\(.key)"),
       (($old | prose("investigate"; "question")) as $wq | $new | prose("investigate"; "question") | to_entries[] | select($wq[.key] != null and $wq[.key] != .value) | "the question for #\(.key)")
     ])
   ] as $changes
@@ -876,14 +876,14 @@ function board_type() {
 }
 
 # Prints a one-line summary of a data file already known to be valid: "N
-# issues in M lanes" for backlog triage, and the Now, Today, and open counts
+# issues in M lanes" for backlog triage, and the Critical, High priority, and open counts
 # for a bugs board.
 function board_summary() {
   local data_file="${1}"
   jq -r '
     def counted($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
     if .board == "bugs" then
-      "\(.now | length) now, \(.today | length) today, \(counted([.bugs[] | select(.state == "open")] | length; "open bug"; "open bugs"))"
+      "\(.critical | length) critical, \(.high | length) high priority, \(counted([.bugs[] | select(.state == "open")] | length; "open bug"; "open bugs"))"
     else
       "\(counted(.issues | length; "issue"; "issues")) in \(counted(.lanes | length; "lane"; "lanes"))"
     end

@@ -156,7 +156,7 @@ bugs-gather: search-open-labels failed:
 
 ## Score places every open bug in one tier
 
-Each fixture bug is built for one rule. `#24` is cosmetic and reaches Now only
+Each fixture bug is built for one rule. `#24` is cosmetic and reaches Critical only
 through an `escalate` entry; `#25` reaches it because the triage note confirms
 it on production; `#19`'s escalate has expired, so it stays with the internal
 bugs. `#16` is due 2026-11-03, beyond the 14-day window, so it stays in Ready
@@ -164,11 +164,11 @@ with its approved, green fix.
 
 ```scrut
 $ tiers "${work}/scored.json"
-now: #11 #25 #10 #24
-today: #14 #13 #12 #15
+critical: #11 #25 #10 #24
+high: #14 #13 #12 #15
 ready: #16/ship #18/ready-to-fix #27/in-progress #17/ready-to-fix #21/ready-to-fix #28/review
 investigate: #20
-later: #19 #26
+lower: #19 #26
 parked: #23 #29 #22
 fixed: #5 #6
 ```
@@ -179,7 +179,7 @@ fixed: #5 #6
 $ bugs score "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/report.json"
 Triage note: 5 entries, 1 expired
     - expired: 2026-10-01T08:00-04:00 escalate #19
-- Now (4):
+- Critical (4):
     - #11 [87] API v2 accepts unauthenticated writes
         public security exposure: Bug 11 in one sentence.
     - #25 [80] Opt-outs do not suppress adopted letters (set by triage: environment, evidence)
@@ -188,7 +188,7 @@ Triage note: 5 entries, 1 expired
         hurting users on production: Bug 10 in one sentence.
     - #24 [29] Footer link color is off
         escalated: Bug 24 in one sentence.
-- Today (4):
+- High priority (4):
     - #14 [80] Relinquish erases bundle membership
         worse with every event: Bug 14 in one sentence.
     - #13 [51] Partner pages drop campaigns with null flags (unconfirmed)
@@ -204,14 +204,14 @@ Triage note: 5 entries, 1 expired
     - #17 [47] Auth0 forces near-daily sign-outs
     - #21 [39] Admin search returns 500 for long names
     - #28 [38] Profile form sends a request per keystroke (in progress: fix #43)
-- Report: 1 to investigate, 2 can wait, 3 parked, 2 recently fixed
+- Report: 1 to investigate, 2 lower priority, 3 parked, 2 fixed
 - Changes: none recorded; the cache held no earlier score
 ```
 
 ## Within a tier, bugs rank by urgency score
 
 ```scrut
-$ jq -r '.tiers.now[] | "#\(.number) \(.score)"' "${work}/scored.json"
+$ jq -r '.tiers.critical[] | "#\(.number) \(.score)"' "${work}/scored.json"
 #11 87
 #25 80
 #10 77
@@ -221,7 +221,7 @@ $ jq -r '.tiers.now[] | "#\(.number) \(.score)"' "${work}/scored.json"
 ## Signals name their source and what each says
 
 ```scrut
-$ jq -r '.tiers.now[] | select(.number == 11 or .number == 25) | "#\(.number)", (.signals[] | "  \(.source) \(.kind): \(.text)")' "${work}/scored.json"
+$ jq -r '.tiers.critical[] | select(.number == 11 or .number == 25) | "#\(.number)", (.signals[] | "  \(.source) \(.kind): \(.text)")' "${work}/scored.json"
 #11
   assessment impact: security for the public, reach all
   assessment evidence: found in source on production
@@ -234,9 +234,9 @@ $ jq -r '.tiers.now[] | select(.number == 11 or .number == 25) | "#\(.number)", 
   triage set: two donors reported it
 ```
 
-## A public security bug needs some evidence to reach Now
+## A public security bug needs some evidence to reach Critical
 
-`#11` is known from source, so it sits in Now. With its evidence and environment `unknown`, as
+`#11` is known from source, so it sits in Critical. With its evidence and environment `unknown`, as
 for an audit nobody has run, it needs investigating instead.
 
 ```scrut
@@ -244,12 +244,12 @@ $ jq 'map(if .number == 11 then .evidence = "unknown" | .environment = "unknown"
 investigate
 ```
 
-## A deadline inside the window places a bug in Today
+## A deadline inside the window places a bug in High priority
 
 `#15` is due 2026-10-20, five days after the gather.
 
 ```scrut
-$ jq -r '.tiers.today[] | select(.number == 15) | "#\(.number) \(.why)"' "${work}/scored.json"
+$ jq -r '.tiers.high[] | select(.number == 15) | "#\(.number) \(.why)"' "${work}/scored.json"
 #15 due 2026-10-20
 ```
 
@@ -286,7 +286,7 @@ expired.
 ```scrut
 $ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '%s\n' '- 2026-10-14T09:00-04:00 snooze #10 until 2026-10-14: wait for the release' > "${note}" && config_with ".triageNote = \"${note}\"" > "${work}/snooze.json" && for at in 2026-10-15T03:30:00Z 2026-10-15T04:30:00Z; do jq --arg at "${at}" '.gatheredAt = $at' "${work}/gather.json" > "${work}/snooze-gather.json" && bugs BUGS_GATHER_NOW="${at}" score "${work}/snooze.json" "${work}/snooze-gather.json" "${assessments}" "${work}/snooze-scored.json" > /dev/null && jq -r --arg at "${at}" '"\($at): #10 \([.tiers | to_entries[] | select(.value | any(.number == 10)) | .key] | first)"' "${work}/snooze-scored.json"; done
 2026-10-15T03:30:00Z: #10 parked
-2026-10-15T04:30:00Z: #10 now
+2026-10-15T04:30:00Z: #10 critical
 ```
 
 ## Score refuses assessments that do not cover the gather
@@ -306,11 +306,11 @@ bugs-gather: WORK/bad-assessments.json does not cover the gather:
 ## Draft builds board data that lacks only its prose
 
 Every placement, signal, and fact comes from the score, so `report-board`
-rejects the draft for the summary and the Now and Today impacts alone.
+rejects the draft for the summary and the Critical and High priority impacts alone.
 
 ```scrut
 $ bugs draft "${work}/config.json" "${work}/gather.json" "${work}/scored.json" "${work}/board.json" | sed "s|${work}|WORK|g" && "${REPORT_BOARD_BIN}" validate "${work}/board.json" 2>&1 | grep -c '^  - ' && "${REPORT_BOARD_BIN}" validate "${work}/board.json" 2>&1 | grep '^  - ' | grep -v 'impact is required\|^  - summary: ' | wc -l | tr -d ' '
-bugs-gather: drafted WORK/board.json; write summary, and impact for each Now and Today entry, before validating
+bugs-gather: drafted WORK/board.json; write summary, and impact for each Critical and High priority entry, before validating
 9
 0
 ```
@@ -364,12 +364,12 @@ This gather: 2026-10-15T16:00:00Z
     - #28 Profile form sends a request per keystroke (#43 success, no review)
 ```
 
-## A warm score reports what entered and left Now and Today
+## A warm score reports what entered and left Critical and High priority
 
 ```scrut
 $ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cat "${BUGS_GATHER_DATA_DIR}/triage.md" > "${note}" && printf '%s\n' '- 2026-10-15T10:00-04:00 park #10: fixed by the hotfix deploy' '- 2026-10-15T10:00-04:00 escalate #21: the admin team is blocked' >> "${note}" && config_with ".triageNote = \"${note}\"" > "${work}/warm.json" && bugs score "${work}/warm.json" "${work}/gather.json" "${assessments}" "${work}/warm-scored.json" | grep -E '^- (Entered|Left|Moved)'
-- Entered Now or Today: #21 ready to now
-- Left Now or Today: #10 now to parked
+- Entered Critical or High priority: #21 ready to critical
+- Left Critical or High priority: #10 critical to parked
 ```
 
 ## Save refuses a score from a different gather

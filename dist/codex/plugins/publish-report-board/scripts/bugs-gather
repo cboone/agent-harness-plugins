@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # bugs-gather -- Gather, score, and cache the data behind a bugs report board.
 #
-# A bugs board answers which of a repository's open bugs need action now,
-# which today, and how the rest are triaged. This script does the
+# A bugs board answers which of a repository's open bugs are critical, which
+# are high priority, and how the rest are triaged. This script does the
 # deterministic half of a sync: it searches GitHub for the repository's open
 # and recently closed bugs, with the pull requests that close them, looks up
 # their ZenHub state when the repository has a ZenHub workspace, and keeps a
@@ -60,7 +60,7 @@ readonly E_USAGE=2
 readonly ZENHUB_URL='https://api.zenhub.com/public/graphql'
 # A chunk this size keeps one aliased ZenHub request well inside its limits.
 readonly ZENHUB_CHUNK=100
-readonly CACHE_VERSION=1
+readonly CACHE_VERSION=2
 # The host every search and config path assumes. gh reaches other hosts
 # through GH_HOST, which this script does not support yet.
 readonly GITHUB_HOST='github.com'
@@ -107,7 +107,7 @@ else
       check($c.containerLevels | absent_or(type == "array" and all(.[]; is_int)); "containerLevels: expected a list of issue-type levels"),
       check($c.bots | absent_or(name_list); "bots: expected a list of logins"),
       check($c.recentDays | absent_or(is_int and . > 0); "recentDays: expected a positive whole number of days"),
-      check($c.nowWarn | absent_or(is_int and . > 0); "nowWarn: expected a positive whole number"),
+      check($c.criticalWarn | absent_or(is_int and . > 0); "criticalWarn: expected a positive whole number"),
       check($c.readyLimit | absent_or(is_int and . > 0); "readyLimit: expected a positive whole number"),
       check($c.deadlineDays | absent_or(is_int and . >= 0); "deadlineDays: expected a whole number of days"),
       check($c.progressLabels | absent_or(name_list); "progressLabels: expected a list of label names"),
@@ -134,7 +134,7 @@ else
       containerLevels: ($c.containerLevels // [1, 2, 3]),
       bots: ($c.bots // []),
       recentDays: ($c.recentDays // 7),
-      nowWarn: ($c.nowWarn // 5),
+      criticalWarn: ($c.criticalWarn // 5),
       readyLimit: ($c.readyLimit // 8),
       deadlineDays: ($c.deadlineDays // 14),
       progressLabels: ($c.progressLabels // ["in progress"]),
@@ -464,23 +464,23 @@ $config as $c
     placement($b.number) as $p
     | ((($a.evidence | confirmed_evidence) and $a.environment == "production")) as $confirmed
     | progress_of($b) as $wip
-    | if $p.verb == "escalate" then {tier: "now", why: "escalated", entry: $p.id}
+    | if $p.verb == "escalate" then {tier: "critical", why: "escalated", entry: $p.id}
       elif $p.verb == "snooze" then {tier: "parked", reason: "snoozed until \($p.until)", entry: $p.id}
       elif $p.verb == "park" then {tier: "parked", reason: "parked: \($p.text)", entry: $p.id}
       elif $b.parkLabel then {tier: "parked", reason: "labeled \([$b.labels[] | select(in_list($c.parkLabels))] | join(", "))"}
       elif $b.zenhub.level != null and ($b.zenhub.level | in_list($c.containerLevels)) then {tier: "parked", reason: "a container"}
-      elif ($a.mitigated | not) and $confirmed and ($a.surface | user_surface) and ($a.impact | high_impact) and $a.workaround == "none" then {tier: "now", why: "hurting users on production"}
-      elif ($a.mitigated | not) and $a.impact == "security" and $a.surface == "public" and $a.evidence != "unknown" and ($a.environment | in_list(["production", "unknown"])) then {tier: "now", why: "public security exposure"}
-      elif ($a.mitigated | not) and $confirmed and ($a.surface | user_surface) and (($a.reach | in_list(["some", "many", "all"])) or $a.workaround == "none") then {tier: "today", why: "affecting users on production"}
+      elif ($a.mitigated | not) and $confirmed and ($a.surface | user_surface) and ($a.impact | high_impact) and $a.workaround == "none" then {tier: "critical", why: "hurting users on production"}
+      elif ($a.mitigated | not) and $a.impact == "security" and $a.surface == "public" and $a.evidence != "unknown" and ($a.environment | in_list(["production", "unknown"])) then {tier: "critical", why: "public security exposure"}
+      elif ($a.mitigated | not) and $confirmed and ($a.surface | user_surface) and (($a.reach | in_list(["some", "many", "all"])) or $a.workaround == "none") then {tier: "high", why: "affecting users on production"}
       elif ($a.mitigated | not) and ($a.impact | high_impact) and ($a.surface | user_surface) and ($a.environment | in_list(["production", "unknown"])) and ($confirmed | not) and $a.evidence != "unknown" and ($a.deadline == null or due($a))
-        then {tier: "today", why: "confirm on production", confirm: true}
-      elif ($a.mitigated | not) and $a.timeSensitive and $a.deadline == null then {tier: "today", why: "worse with every event"}
-      elif ($a.mitigated | not) and due($a) then {tier: "today", why: "due \($a.deadline)"}
+        then {tier: "high", why: "confirm on production", confirm: true}
+      elif ($a.mitigated | not) and $a.timeSensitive and $a.deadline == null then {tier: "high", why: "worse with every event"}
+      elif ($a.mitigated | not) and due($a) then {tier: "high", why: "due \($a.deadline)"}
       elif $wip != null then {tier: "ready", why: "in progress"}
       elif $a.mitigated then {tier: "ready", why: "mitigated"}
       elif $a.impact == "security" and $a.surface == "internal" then {tier: "ready", why: "blocks a security fix"}
-      elif $a.surface == "internal" then {tier: "later", reason: "internal"}
-      elif $a.impact == "cosmetic" then {tier: "later", reason: "cosmetic"}
+      elif $a.surface == "internal" then {tier: "lower", reason: "internal"}
+      elif $a.impact == "cosmetic" then {tier: "lower", reason: "cosmetic"}
       elif ([$a.environment, $a.surface, $a.impact, $a.cause] | any(. == "unknown")) or $a.cause == "suspected" or $a.reproduced == false then
         {tier: "investigate", why: ([(["environment", "surface", "impact", "cause"][] as $k | select($a[$k] == "unknown") | "\($k) unknown"), (select($a.cause == "suspected") | "cause suspected"), (select($a.reproduced == false) | "not reproduced")] | join(", "))}
       else {tier: "ready", why: "ready to fix"} end
@@ -519,7 +519,7 @@ $config as $c
         gatheredAt: $gather.gatheredAt,
         scoredAt: ($scored | todateiso8601),
         timeZone: $c.timeZone,
-        nowWarn: $c.nowWarn,
+        criticalWarn: $c.criticalWarn,
         readyLimit: $c.readyLimit,
         triage: {
           entries: [$entries[] | del(.instant)],
@@ -527,7 +527,7 @@ $config as $c
           problems: ([$parsed[] | .problem // empty] + $duplicates
             + [$active[] | select(.target != null) | .target as $t | select(any($gather.bugs[]; .number == $t) | not) | "\(.id) names a bug outside this board"])
         },
-        tiers: {now: ranked("now"), today: ranked("today"), ready: ranked("ready"), investigate: ranked("investigate"), later: ranked("later"), parked: ranked("parked"), fixed: ($fixed | sort_by(.closedAt) | reverse)}
+        tiers: {critical: ranked("critical"), high: ranked("high"), ready: ranked("ready"), investigate: ranked("investigate"), lower: ranked("lower"), parked: ranked("parked"), fixed: ($fixed | sort_by(.closedAt) | reverse)}
       }
     | . as $s
     | . + {changes: (if $previous == null then null else
@@ -535,9 +535,9 @@ $config as $c
         ($previous | tier_map) as $was
         | ($s | tier_map) as $is
         | {
-            entered: [$is | to_entries[] | select(.value | IN("now", "today")) | select($was[.key] != .value) | "#\(.key) \($was[.key] // "new") to \(.value)"],
-            left: [$was | to_entries[] | select(.value | IN("now", "today")) | select($is[.key] != .value) | "#\(.key) \(.value) to \($is[.key] // "off the board")"],
-            moved: [$is | to_entries[] | select($was[.key] != null and $was[.key] != .value and (.value | IN("now", "today") | not) and ($was[.key] | IN("now", "today") | not)) | "#\(.key) \($was[.key]) to \(.value)"]
+            entered: [$is | to_entries[] | select(.value | IN("critical", "high")) | select($was[.key] != .value) | "#\(.key) \($was[.key] // "new") to \(.value)"],
+            left: [$was | to_entries[] | select(.value | IN("critical", "high")) | select($is[.key] != .value) | "#\(.key) \(.value) to \($is[.key] // "off the board")"],
+            moved: [$is | to_entries[] | select($was[.key] != null and $was[.key] != .value and (.value | IN("critical", "high") | not) and ($was[.key] | IN("critical", "high") | not)) | "#\(.key) \($was[.key]) to \(.value)"]
           }
       end)}
   end
@@ -553,15 +553,15 @@ def listed($heading; $items; f): "- \($heading) (\($items | length)):", ($items[
 "Triage note: \(.triage.entries | length) entries, \(.triage.expired | length) expired",
 (.triage.expired[] | "    - expired: \(.)"),
 (.triage.problems[] | "    - problem: \(.)"),
-listed("Now\(if (.tiers.now | length) > .nowWarn then ", more than the \(.nowWarn) the page flags" else "" end)"; .tiers.now; line),
-listed("Today"; .tiers.today; line),
+listed("Critical\(if (.tiers.critical | length) > .criticalWarn then ", more than the \(.criticalWarn) the page flags" else "" end)"; .tiers.critical; line),
+listed("High priority"; .tiers.high; line),
 listed("Ready to go, top \(.readyLimit) above the fold"; .tiers.ready[0:.readyLimit]; short),
 (.readyLimit as $limit | .tiers.ready | length | select(. > $limit) | "    - and \(. - $limit) more in the report"),
-"- Report: \(.tiers.investigate | length) to investigate, \(.tiers.later | length) can wait, \(.tiers.parked | length) parked, \(.tiers.fixed | length) recently fixed",
+"- Report: \(.tiers.investigate | length) to investigate, \(.tiers.lower | length) lower priority, \(.tiers.parked | length) parked, \(.tiers.fixed | length) fixed",
 (if .changes == null then "- Changes: none recorded; the cache held no earlier score"
  else
-   "- Entered Now or Today: \(.changes.entered | if length == 0 then "none" else join(", ") end)",
-   "- Left Now or Today: \(.changes.left | if length == 0 then "none" else join(", ") end)",
+   "- Entered Critical or High priority: \(.changes.entered | if length == 0 then "none" else join(", ") end)",
+   "- Left Critical or High priority: \(.changes.left | if length == 0 then "none" else join(", ") end)",
    (.changes.moved[] | "- Moved: \(.)")
  end)
 '
@@ -569,7 +569,7 @@ listed("Ready to go, top \(.readyLimit) above the fold"; .tiers.ready[0:.readyLi
 # Builds bugs board data from a gather, $gather, and its score, $scored, for
 # report-board to validate. Every placement, signal, and fact comes from the
 # score; the prose the model writes is left null, so validation names each
-# field still to write: summary, and impact for Now and Today. action starts
+# field still to write: summary, and impact for Critical and High priority. action starts
 # from the assessment next step, and question from the assessment question.
 # shellcheck disable=SC2016
 readonly DRAFT_FILTER='
@@ -577,7 +577,7 @@ def as_list: if type == "array" then . else [] end;
 def open_bug: {number, title, url, state: "open", tier, author, createdAt, updatedAt, labels, pipeline, sprint, outsidePeople, reactions,
   fix: (if .fix == null then null else .fix | {number, url, isDraft, checks, reviewDecision} end),
   inProgress, assessment, overridden, score};
-($scored.tiers | [.now, .today, .ready, .investigate, .later, .parked] | add) as $open
+($scored.tiers | [.critical, .high, .ready, .investigate, .lower, .parked] | add) as $open
 | {
     board: "bugs",
     title: "\($gather.repo | split("/") | .[1]) bugs",
@@ -592,15 +592,15 @@ def open_bug: {number, title, url, state: "open", tier, author, createdAt, updat
       extra: ([(select($gather.zenhub != null) | "ZenHub workspace \($gather.zenhub.workspace)"), "closed bugs from the last \($gather.recentDays) days"])
     },
     summary: null,
-    nowWarn: $scored.nowWarn,
+    criticalWarn: $scored.criticalWarn,
     readyLimit: $scored.readyLimit,
     triage: [$scored.triage.entries[] | del(.expired)],
     bugs: ([$open[] | open_bug] + [$scored.tiers.fixed[] | {number, title, url, state: "closed", tier, closedAt, stateReason, fixedBy}] | sort_by(.number)),
-    now: [$scored.tiers.now[] | {item: .number, why, confirm, action: .assessment.nextStep, impact: null, signals}],
-    today: [$scored.tiers.today[] | {item: .number, why, confirm, action: .assessment.nextStep, impact: null, signals}],
+    critical: [$scored.tiers.critical[] | {item: .number, why, confirm, action: .assessment.nextStep, impact: null, signals}],
+    high: [$scored.tiers.high[] | {item: .number, why, confirm, action: .assessment.nextStep, impact: null, signals}],
     ready: [$scored.tiers.ready[] | {item: .number, group, why, signals}],
     investigate: [$scored.tiers.investigate[] | {item: .number, why, question: .assessment.question, signals}],
-    later: [$scored.tiers.later[] | {item: .number, reason}],
+    lower: [$scored.tiers.lower[] | {item: .number, reason}],
     parked: [$scored.tiers.parked[] | {item: .number, reason}],
     fixed: [$scored.tiers.fixed[] | {item: .number, verify}]
   }
@@ -640,7 +640,7 @@ score checks ASSESSMENTS against the gather, applies the triage note and the
 tier rules, writes the tiers to OUTPUT, and prints the check-in report.
 
 draft turns a score into bugs board data for report-board, leaving the summary
-and each Now and Today impact for the analysis to write.
+and each Critical and High priority impact for the analysis to write.
 
 save stores a gather, its assessments, and its score as the cache the next
 sync starts from; run it only after the board publishes.
@@ -1053,7 +1053,7 @@ function cmd_draft() {
   jq -n --slurpfile gather "${gather_file}" --slurpfile scored "${scored_file}" \
     "\$gather[0] as \$gather | \$scored[0] as \$scored | ${DRAFT_FILTER}" > "${TEMP_DIR}/draft.json"
   write_atomic "${output_file}" "${TEMP_DIR}/draft.json"
-  printf '%s: drafted %s; write summary, and impact for each Now and Today entry, before validating\n' "${SCRIPT_NAME}" "${output_file}"
+  printf '%s: drafted %s; write summary, and impact for each Critical and High priority entry, before validating\n' "${SCRIPT_NAME}" "${output_file}"
 }
 
 function cmd_save() {

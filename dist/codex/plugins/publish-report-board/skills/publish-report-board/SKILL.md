@@ -15,10 +15,10 @@ A report board is an analysis with three properties that terminal output serves 
 
 ## Board Types
 
-| Board type       | Answers                                                                                 | Reference                                    |
-| ---------------- | --------------------------------------------------------------------------------------- | -------------------------------------------- |
-| `backlog-triage` | What to start next, what can run in parallel, and what is blocked                       | `./references/board-types/backlog-triage.md` |
-| `bugs`           | Which of a repository's bugs need action now, which today, and how the rest are triaged | `./references/board-types/bugs.md`           |
+| Board type       | Answers                                                                                          | Reference                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| `backlog-triage` | What to start next, what can run in parallel, and what is blocked                                | `./references/board-types/backlog-triage.md` |
+| `bugs`           | Which of a repository's bugs are critical, which are high priority, and how the rest are triaged | `./references/board-types/bugs.md`           |
 
 Only these two ship a template. When the user wants a board for another kind of analysis, such as CI health or release readiness, say that no template exists for it yet and deliver the analysis in the terminal. Do not improvise a page outside the templates: boards read as one system because they share one design, described in `./references/design-conventions.md`.
 
@@ -79,7 +79,7 @@ On a re-sync, the previous data is a draft, not a source. Its lanes, tiers, and 
 
 ### 5. Gather and Analyze
 
-Follow the board type's reference for the commands to run and the analysis to perform, including any check-in with the user it calls for. A `bugs` sync always checks in about its Now and Today calls before writing the board, and can end there when nothing has moved. Record the sync metadata as you gather: `./references/sync-metadata.md` lists what every board must state.
+Follow the board type's reference for the commands to run and the analysis to perform, including any check-in with the user it calls for. A `bugs` sync always checks in about its Critical and High priority calls before writing the board, and can end there when nothing has moved. Record the sync metadata as you gather: `./references/sync-metadata.md` lists what every board must state.
 
 ### 6. Write and Validate the Board Data
 
@@ -89,7 +89,7 @@ Write the data as JSON to the working `.json` path with the Write tool, then val
 bash REPORT_BOARD validate DATA_JSON
 ```
 
-Fix every problem it lists, then validate again. Each board type has its own rules, listed in its reference, and they catch a stale board: an open issue left out of every lane, a blocking issue that has since closed, a start pick that is already in progress, a bug in Now resting on a triage entry that has expired. They check pull request, branch, and cross-repository references only for their shape, so confirm those are still open while gathering. Resolve each by placing or correcting the item, never by deleting an open issue from the data.
+Fix every problem it lists, then validate again. Each board type has its own rules, listed in its reference, and they catch a stale board: an open issue left out of every lane, a blocking issue that has since closed, a start pick that is already in progress, a Critical bug resting on a triage entry that has expired. They check pull request, branch, and cross-repository references only for their shape, so confirm those are still open while gathering. Resolve each by placing or correcting the item, never by deleting an open issue from the data.
 
 ### 7. Render
 
