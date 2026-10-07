@@ -1,0 +1,77 @@
+name: Traffic history
+
+# GitHub keeps traffic data for 14 days. This workflow saves it daily to the
+# orphan traffic-data branch through bin/record-traffic, so the history outlives
+# that window without adding commits to main. Neither ci.yml nor release.yml
+# runs on pushes to that branch.
+on:
+  schedule:
+    - cron: "17 6 * * *" # Daily at 06:17 UTC, after the previous UTC day closes
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: traffic-history
+  cancel-in-progress: false
+
+jobs:
+  record:
+    name: Record traffic
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATA_BRANCH: traffic-data
+    steps:
+      # The default credentials stay persisted: the commit step pushes the data
+      # branch with GITHUB_TOKEN, which the contents: write permission above
+      # allows.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check out the data branch
+        run: |
+          data_dir="${RUNNER_TEMP}/traffic-data"
+          echo "DATA_DIR=${data_dir}" >> "${GITHUB_ENV}"
+          status=0
+          git ls-remote --exit-code --heads origin "${DATA_BRANCH}" > /dev/null || status=$?
+          case "${status}" in
+            0)
+              git fetch --no-tags --depth=1 origin "${DATA_BRANCH}"
+              git worktree add -B "${DATA_BRANCH}" "${data_dir}" FETCH_HEAD
+              ;;
+            2)
+              echo "Creating ${DATA_BRANCH}; it does not exist yet."
+              git worktree add --orphan -b "${DATA_BRANCH}" "${data_dir}"
+              ;;
+            *)
+              echo "::error::git ls-remote failed with status ${status}"
+              exit 1
+              ;;
+          esac
+
+      # The traffic endpoints reject GITHUB_TOKEN. TRAFFIC_TOKEN is a
+      # fine-grained token limited to this repository with Administration read
+      # (traffic) and Actions read (runs and jobs) access.
+      - name: Record traffic
+        env:
+          GH_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
+        run: |
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::error::The TRAFFIC_TOKEN repository secret is not set"
+            exit 1
+          fi
+          bin/record-traffic --repo "${GITHUB_REPOSITORY}" "${DATA_DIR}"
+
+      - name: Commit and push
+        run: |
+          cd "${DATA_DIR}"
+          git add --all
+          if git diff --cached --quiet; then
+            echo "No traffic changes to commit."
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet --message "chore: record traffic for $(date -u +%Y-%m-%d)"
+          git push origin "HEAD:refs/heads/${DATA_BRANCH}"
