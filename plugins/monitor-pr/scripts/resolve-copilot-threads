@@ -863,10 +863,11 @@ function do_parse_reviews() {
 
       # The lines of the lead: everything in headline except the layout
       # around it, which is the marker comment, headings (the overview title
-      # and the verdict), the "**Review effort:**" and "**Findings:**" labels
-      # and the "**0 open findings**" count line. List items, bold text and
-      # anything else stay, because a lead that states its findings as
-      # bullets states them there and nowhere else.
+      # and the verdict), the "**Review effort:**" label, with or without the
+      # emoji the open-findings layout puts before it, the "**Findings:**"
+      # label and the "**0 open findings**" count line. List items, bold
+      # text and anything else stay, because a lead that states its findings
+      # as bullets states them there and nowhere else.
       def lead_lines:
         headline
         | split("\n")
@@ -874,7 +875,7 @@ function do_parse_reviews() {
         | map(
             select(
               . != ""
-              and (test("^<!--.*-->$|^#{1,6}([[:space:]]|$)|^\\*\\*Review effort:\\*\\*|^\\*\\*Findings:\\*\\*|^\\*\\*[0-9]+ open findings?\\*\\*$") | not)
+              and (test("^<!--.*-->$|^#{1,6}([[:space:]]|$)|^([^\\x{0}-\\x{7F}]+[[:space:]]+)?\\*\\*Review effort:\\*\\*|^\\*\\*Findings:\\*\\*|^\\*\\*[0-9]+ open findings?\\*\\*$") | not)
             )
           );
 

@@ -424,6 +424,15 @@ $ jq '.[0].body |= sub("Seven moderate[^\n]*"; "One or more issues must be addre
 {"hasFormatDrift":false,"needsRead":false,"findings":[]}
 ```
 
+A round with nothing open and nothing resolved lists no details block at all,
+so the `🧠 **Review effort:**` line sits in the preamble. It is layout, not
+lead, so the lead read quotes the lead alone.
+
+```scrut
+$ jq -n '[{id: 1, user: {login: "copilot-pull-request-reviewer[bot]"}, state: "COMMENTED", submitted_at: "x", html_url: "y", body: "<!-- ccr-overview-v2 -->\n\n### 🔵 Needs a closer look\n\nOne or more issues must be addressed before approval.\n\n**0 open findings**\n\n🧠 **Review effort:** Lite"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead, lead: [.findings[] | .body]}'
+{"hasFormatDrift":false,"needsRead":true,"lead":["One or more issues must be addressed before approval."]}
+```
+
 A bold line stating a nonzero count with no open block behind it falls short
 of its own count.
 
