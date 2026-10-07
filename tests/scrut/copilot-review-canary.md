@@ -340,6 +340,17 @@ $ printf '[{"repo":"o/r","number":1,"reviews":[{"id":1,"user":{"login":"copilot-
 **Other label:**
 ```
 
+A badge bullet that links no thread, and a badge summary carrying markup after
+the badge, are shapes apart from the thread bullets and per-finding titles the
+baseline knows, so neither is folded into them.
+
+```scrut
+$ jq '(.[0].body | capture("(?<b><picture>.*?</picture>)").b) as $b | .[0].body |= (sub("Seven moderate[^\n]*"; "One or more issues must be addressed before approval.") | sub("\n\n🧠"; "\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nAdds a reader.\n\n- " + $b + " Handle the rejected promise in `src/a.js` · New\n</details>\n\n<details>\n<summary>" + $b + " <strong>1 finding outside the diff</strong></summary>\n\n- The retry loop never stops.\n</details>\n\n🧠"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | jq '[{repo: "o/r", number: 1, reviews: ., audit: null}]' | "${COPILOT_REVIEW_CANARY_BIN}" skeletons | jq -r '.skeletons[] | select(test("badge"))'
+- [badge] TEXT · New
+- [badge] [TITLE](#thread)
+<summary>[badge] MARKUP</summary>
+```
+
 ## Usage errors
 
 ```scrut

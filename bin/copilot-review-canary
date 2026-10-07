@@ -146,7 +146,11 @@ readonly SKELETON_FILTER='
       elif test("^<!--") then .
       elif test("^#+ ") then gsub("\\([0-9]+\\)"; "(N)")
       elif test("^<summary>") then
-        if test("\\[badge\\]") then "<summary>[badge] TITLE</summary>"
+        # A badge summary names one finding by its plain title. Markup after
+        # the badge, such as a bold count, is a different shape and is kept
+        # apart from it.
+        if test("\\[badge\\][^<]*</summary>") then "<summary>[badge] TITLE</summary>"
+        elif test("\\[badge\\]") then "<summary>[badge] MARKUP</summary>"
         # A count is written after the title, as in "Open (3)", or before
         # it, as in "3 open findings". Either way the number is not layout.
         else gsub("\\([0-9]+\\)"; "(N)") | sub("^(?<tags><summary>(<[^>]+>)*)[0-9]+ "; "\(.tags)N ")
@@ -166,7 +170,10 @@ readonly SKELETON_FILTER='
             + (if test("\\(N votes\\)") then " with (N votes)" else "" end)
           end
       elif test("^- \\[badge\\]") then
-        "- [badge] [TITLE](#thread)" + ((capture(" · (?<tag>[A-Za-z]+)[[:space:]]*$") | " · " + .tag) // "")
+        # A badge bullet that links no thread is a finding of a different
+        # shape from the thread bullets the open and resolved sections list.
+        (if test("\\(#thread\\)") then "- [badge] [TITLE](#thread)" else "- [badge] TEXT" end)
+        + ((capture(" · (?<tag>[A-Za-z]+)[[:space:]]*$") | " · " + .tag) // "")
       elif test("^[[:space:]]*[-*] .*\\(N votes\\)") then
         (capture("^[[:space:]]*[-*] (?<lead>(`CODE`[[:space:]]*\\S+[[:space:]]*)?(\\*\\*)?)").lead) as $lead
         | "- " + $lead + "SEVERITY (N votes): TEXT"
