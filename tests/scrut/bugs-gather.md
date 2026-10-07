@@ -406,7 +406,7 @@ null
 ## An invalid config lists every problem
 
 ```scrut
-$ printf '%s\n' '{"repo": "acme", "bugLabels": [], "recentDays": 0, "zenhub": {"workspace": "ws 1"}, "weights": {"impact": {"security": "high"}, "impcat": {}}, "triagenote": "triage.md"}' > "${work}/bad-config.json" && bugs gather "${work}/bad-config.json" "${work}/bad.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
+$ printf '%s\n' '{"repo": "acme", "bugLabels": [], "recentDays": 0, "zenhub": {"workspace": "ws 1", "tokenVarible": "ZH"}, "triageGit": {"gitDir": "a", "workTree": "b", "worktree": "c"}, "weights": {"impact": {"security": "high"}, "impcat": {}}, "triagenote": "triage.md"}' > "${work}/bad-config.json" && bugs gather "${work}/bad-config.json" "${work}/bad.json" 2>&1 | sed "s|${work}|WORK|g"; echo "exit ${PIPESTATUS[0]}"
 bugs-gather: WORK/bad-config.json is not a valid bugs config:
   - repo: expected owner/name
   - bugLabels: expected a non-empty list of label names
@@ -414,8 +414,10 @@ bugs-gather: WORK/bad-config.json is not a valid bugs config:
   - weights.impact.security: expected a number
   - weights.impcat: not a weight; expected one of evidence, impact, reach, surface, pipelines, timeSensitive, mitigated, urgent, sprint, regression, outsidePerson, outsideCap, reaction, reactionCap
   - triagenote: not a config field; expected one of repo, timeZone, bugLabels, bugTypes, urgentLabels, regressionLabels, parkLabels, urgentPipelines, containerLevels, bots, recentDays, criticalWarn, readyLimit, deadlineDays, progressLabels, progressPipelines, weights, zenhub, triageNote, triageGit
+  - triageGit.worktree: not a triageGit field; expected gitDir, workTree
   - zenhub.workspace: expected the workspace ID
   - zenhub.tokenVariable: expected the name of the environment variable holding the token
+  - zenhub.tokenVarible: not a zenhub field; expected workspace, tokenVariable
 exit 1
 ```
 

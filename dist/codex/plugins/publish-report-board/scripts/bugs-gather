@@ -132,11 +132,13 @@ else
       ($c | keys[] | select(. as $k | config_keys | index($k) | not) | "\(.): not a config field; expected one of \(config_keys | join(", "))"),
       check($c.triageNote | absent_or(is_text); "triageNote: expected the path to the triage note"),
       check($c.triageGit | absent_or(type == "object" and (.gitDir | is_text) and (.workTree | is_text)); "triageGit: expected {gitDir, workTree}"),
+      ($c.triageGit | objects | keys[] | select(IN("gitDir", "workTree") | not) | "triageGit.\(.): not a triageGit field; expected gitDir, workTree"),
       (if $c.zenhub == null then empty
        elif ($c.zenhub | type) != "object" then "zenhub: expected {workspace, tokenVariable}"
        else
          check($c.zenhub.workspace | is_text and test("^[A-Za-z0-9]+$"); "zenhub.workspace: expected the workspace ID"),
-         check($c.zenhub.tokenVariable | is_text and test("^[A-Za-z_][A-Za-z0-9_]*$"); "zenhub.tokenVariable: expected the name of the environment variable holding the token")
+         check($c.zenhub.tokenVariable | is_text and test("^[A-Za-z_][A-Za-z0-9_]*$"); "zenhub.tokenVariable: expected the name of the environment variable holding the token"),
+         ($c.zenhub | keys[] | select(IN("workspace", "tokenVariable") | not) | "zenhub.\(.): not a zenhub field; expected workspace, tokenVariable")
        end)
     ] as $problems
   | if ($problems | length) > 0 then {problems: $problems, config: null}
