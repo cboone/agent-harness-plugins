@@ -189,14 +189,32 @@ readonly SKELETON_FILTER='
       else empty
       end;
 
+  # Fences pair the way resolve-copilot-threads pairs them: a run of three or
+  # more backticks or tildes opens one, and only a line holding a run of the
+  # same character, at least as long, closes it. Toggling on any backtick
+  # line instead would read quoted layout as real, or real layout as quoted,
+  # wherever the parser reads it the other way.
+  def fence_run:
+    (first(capture("^[[:space:]]*(?<run>`{3,}|~{3,})")) | .run) // null;
+
+  def next_fence($raw):
+    ($raw | fence_run) as $run
+    | if . == null then
+        (if $run == null then null else {char: $run[0:1], length: ($run | length)} end)
+      elif $run != null
+           and $run[0:1] == .char
+           and ($run | length) >= .length
+           and ($raw | test("^[[:space:]]*(`+|~+)[[:space:]]*$")) then null
+      else .
+      end;
+
   def skeletons:
     split("\n")
-    | reduce .[] as $line ({fence: false, out: []};
-        if ($line | test("^[[:space:]]*```"))
-        then .fence = (.fence | not)
-        elif .fence then .
-        else .out += [$line | skeleton_of_line]
-        end)
+    | reduce .[] as $line ({fence: null, out: []};
+        (.fence | next_fence($line)) as $next
+        | if .fence != null or $next != null then .fence = $next
+          else .out += [$line | skeleton_of_line]
+          end)
     | .out;
 
   def copilot_review:

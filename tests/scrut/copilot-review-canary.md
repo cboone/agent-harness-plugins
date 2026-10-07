@@ -331,6 +331,15 @@ $ printf '[{"repo":"o/r","number":1,"reviews":[{"id":1,"user":{"login":"copilot-
 🧠 **Review effort:**
 ```
 
+Fences pair the way the parser pairs them, so a label quoted in a `~~~` fence
+is not layout.
+
+```scrut
+$ printf '[{"repo":"o/r","number":1,"reviews":[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"y","submitted_at":"2026-10-07T00:00:00Z","body":"### 🔵 Needs a closer look\\n\\n~~~text\\n**Strange label:**\\n~~~\\n\\n**Other label:**"}],"audit":null}]' | "${COPILOT_REVIEW_CANARY_BIN}" skeletons | jq -r '.skeletons[]'
+### 🔵 Needs a closer look
+**Other label:**
+```
+
 ## Usage errors
 
 ```scrut
