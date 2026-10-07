@@ -73,6 +73,40 @@ Confirmed by the user on 2026-10-06, after reviewing all 64:
 - Ready to go shows its top `readyLimit` (default 8) above the fold, and the full grouped list in the report.
 - The overall shape matches the user's sense of the repository; the rules go into `bugs-gather score`.
 
+## Building It
+
+Changes from the plan, made while building and testing:
+
+- `bugs-gather draft` builds the board data from a score, with every placement, signal, fact, and link filled in, so the analysis writes only the summary, actions, impacts, and questions, and validation names each piece still missing.
+- The cosmetic, not-production, and backlog branches of the drafted Later rule could never fire, because every non-internal bug has a `cause` of known, suspected, or unknown, and each is caught first. A cosmetic bug now goes to Later before the Investigate and Ready rules; `votefwd` has none, so its calibrated shape is unchanged.
+- `report-board`'s `bugs` cases live in their own scrut document, `report-board-bugs.md`, apart from the backlog cases the focus branch also extends.
+
+## First Real Publish
+
+Published on 2026-10-06 as a private Artifact, from this worktree's scripts, as a cold sync with no cache.
+
+| Phase                           | Time                  | Notes                                                                                 |
+| ------------------------------- | --------------------- | ------------------------------------------------------------------------------------- |
+| Gather                          | 4.4 s                 | 64 open bugs, 7 with an open fix, 5 closed in the last 7 days                         |
+| Read                            | 58 to 96 s wall-clock | All 64 bugs across six parallel subagents, each writing its own file                  |
+| Score                           | 0.1 s                 | Now 6, Today 5, Ready 32, Investigate 7, Later 14, Fixed 5                            |
+| Check-in                        | One question round    | One rule change; no triage entries; the note created empty in `sl-vf`                 |
+| Re-score                        | 0.1 s                 | Now 5, Investigate 8                                                                  |
+| Draft, prose, validate, publish | Seconds               | Validation caught one missing question, then passed                                   |
+| Warm gather and reuse           | 4.5 s                 | All 64 assessments reused, nothing to read; the moved report caught #4581 going green |
+
+The fresh read placed three bugs differently from the calibration read, because readers judge `workaround` and `evidence` with some variance: #4484 reached Now, #4518 moved to Today, and #3974, an unaudited GCP key surface with unknown evidence and environment, reached Now through the public security rule.
+
+Confirmed by the user on 2026-10-06, at the check-in:
+
+- A public security bug, and a high-impact bug to confirm on production, both need evidence other than `unknown`; a possibility nobody has verified goes to Needs investigation. #3974 moved there.
+- #4484 belongs in Now, and #4518 stays in Today.
+- The user had not yet seen the board, so triage calls wait for the next sync, made from the board.
+
+The run also found one gap: a bug whose cause is only suspected goes to Investigate, which requires a question, but the reading instructions asked for one only when a field was unknown. They now ask for one when the cause is suspected too.
+
+Still to do: the warm re-sync in a new conversation after a triage change, recording its timings here.
+
 ## Naming and Settings
 
 | Setting     | Value                                                                                                           |
