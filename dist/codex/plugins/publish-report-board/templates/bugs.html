@@ -1,0 +1,1346 @@
+<title>__BOARD_TITLE__</title>
+<meta name="color-scheme" content="light dark" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;800&display=swap" />
+<style>
+  /* Tokens, base styles, the header band, and section heads are copied from
+     backlog-triage.html; a fix to one prompts a look at the other. Danger marks
+     a bug in Now: a bar and a filled tag, never decoration. */
+  /* Catamount palette: the donkey ramp for ink, rails, and slate surfaces;
+     amber marks what is current; blue is reserved for interaction. The light
+     theme is the Catamount report; the dark theme follows Catamount Dark,
+     whose ground is the site's own donkey-600. */
+  :root {
+    color-scheme: light;
+    --face: "Schibsted Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --gutter: clamp(16px, 4.1vw, 44px);
+    --ground: #fcfdfd;
+    --panel: #ffffff;
+    --ink: #1e2123;
+    --muted: #5e686c;
+    --rail: #5e686c;
+    --eyebrow: #b45309;
+    --marker: #d97706;
+    --hairline: rgb(217 119 6 / 50%);
+    --link-hover: #2563eb;
+    --link-active: #1d4ed8;
+    --focus: #2563eb;
+    --zebra: #eff2f3;
+    --rule: rgb(30 33 35 / 20%);
+    --grid: rgb(30 33 35 / 25%);
+    --rule-strong: rgb(30 33 35 / 40%);
+    --slate: #485054;
+    --slate-fade: rgb(94 104 108 / 50%);
+    --slate-edge: #33393b;
+    --slate-ink: #ffffff;
+    --slate-figure: #fde68a;
+    --chip: #e0e5e7;
+    --chip-edge: #a7b2b6;
+    --chip-ink: #1e2123;
+    --chip-hover: #bfdbfe;
+    --chip-hover-edge: #60a5fa;
+    --chip-hover-ink: #1e3a8a;
+    --chip-active: #93c5fd;
+    --chip-active-edge: #3b82f6;
+    --chip-active-ink: #000000;
+    --bar-now: #f59e0b;
+    --bar-queued: #fde68a;
+    --bar-blocked: #c3ccce;
+    --bar-edge: rgb(180 83 9 / 45%);
+    --hatch: rgb(30 33 35 / 18%);
+    --hit: #fef3c7;
+    --selection: #fde68a;
+    --selection-ink: #000000;
+    --heading-shadow: none;
+    --warn: #b45309;
+    --alert: #b91c1c;
+    --danger-bar: #dc2626;
+    --danger-ink: #ffffff;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #5e686c;
+      --panel: #485054;
+      --ink: #ffffff;
+      --muted: #e6eaeb;
+      --rail: #e0e5e7;
+      --eyebrow: #fde68a;
+      --marker: #fde68a;
+      --hairline: rgb(253 230 138 / 50%);
+      --link-hover: #bfdbfe;
+      --link-active: #93c5fd;
+      --focus: #bfdbfe;
+      --zebra: #535c61;
+      --rule: rgb(255 255 255 / 22%);
+      --grid: rgb(255 255 255 / 28%);
+      --rule-strong: rgb(255 255 255 / 45%);
+      --slate: #3d4447;
+      --slate-fade: rgb(72 80 84 / 60%);
+      --slate-edge: #2b3032;
+      --chip: #485054;
+      --chip-edge: #8d999d;
+      --chip-ink: #ffffff;
+      --bar-now: #fde68a;
+      --bar-queued: #8d999d;
+      --bar-blocked: #485054;
+      --bar-edge: rgb(255 255 255 / 40%);
+      --hatch: rgb(255 255 255 / 16%);
+      --hit: #3d4447;
+      --selection: #8d999d;
+      --heading-shadow: 1px 1px 0 rgb(31 33 35);
+      --warn: #fde68a;
+      --alert: #fecaca;
+      --danger-bar: #fca5a5;
+      --danger-ink: #1e2123;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #5e686c;
+    --panel: #485054;
+    --ink: #ffffff;
+    --muted: #e6eaeb;
+    --rail: #e0e5e7;
+    --eyebrow: #fde68a;
+    --marker: #fde68a;
+    --hairline: rgb(253 230 138 / 50%);
+    --link-hover: #bfdbfe;
+    --link-active: #93c5fd;
+    --focus: #bfdbfe;
+    --zebra: #535c61;
+    --rule: rgb(255 255 255 / 22%);
+    --grid: rgb(255 255 255 / 28%);
+    --rule-strong: rgb(255 255 255 / 45%);
+    --slate: #3d4447;
+    --slate-fade: rgb(72 80 84 / 60%);
+    --slate-edge: #2b3032;
+    --chip: #485054;
+    --chip-edge: #8d999d;
+    --chip-ink: #ffffff;
+    --bar-now: #fde68a;
+    --bar-queued: #8d999d;
+    --bar-blocked: #485054;
+    --bar-edge: rgb(255 255 255 / 40%);
+    --hatch: rgb(255 255 255 / 16%);
+    --hit: #3d4447;
+    --selection: #8d999d;
+    --heading-shadow: 1px 1px 0 rgb(31 33 35);
+    --warn: #fde68a;
+    --alert: #fecaca;
+    --danger-bar: #fca5a5;
+    --danger-ink: #1e2123;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--face);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  ::selection {
+    background: var(--selection);
+    color: var(--selection-ink);
+  }
+
+  :where(.board) :where(p, h1, h2, h3, dl, dd, ol) {
+    margin: 0;
+  }
+
+  :where(.board) :where(ol) {
+    padding: 0;
+    list-style: none;
+  }
+
+  a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .board {
+    max-width: 1080px;
+    margin-inline: auto;
+  }
+
+  .board-message {
+    padding: 40px var(--gutter);
+    color: var(--muted);
+  }
+
+  /* Links rest at ink over an amber hairline and turn blue on hover and press. */
+  .ref {
+    border-bottom: 1px solid var(--hairline);
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  /* Issue numbers line up in columns. Other links stay proportional, because
+     in this face tabular figures also space out the period in lint-shell.yml. */
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ref:hover {
+    border-bottom-color: var(--link-hover);
+    color: var(--link-hover);
+  }
+
+  .ref:active {
+    border-bottom-color: var(--link-active);
+    color: var(--link-active);
+  }
+
+  /* A soft ordering link, "better after" or "eases", is dashed: the same mark
+     the page uses for a missing milestone. Hard links stay solid. */
+  .ref--soft {
+    border-bottom-style: dashed;
+  }
+
+  /* Slate surfaces: lane keys and capacity boxes share the Catamount button face. */
+  .badge,
+  .cap {
+    border: 1px solid var(--slate-edge);
+    border-radius: 6px;
+    background-color: var(--slate);
+    background-image: linear-gradient(to top left, var(--slate), var(--slate-fade));
+    color: var(--slate-ink);
+  }
+
+  .badge {
+    display: inline-block;
+    flex: none;
+    padding: 3px 7px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    line-height: 1.15;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .badge--small {
+    font-size: 10.5px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+    padding: 3px 8px;
+    border: 1px solid var(--chip-edge);
+    border-radius: 6px;
+    background: var(--chip);
+    color: var(--chip-ink);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-decoration: none;
+  }
+
+  .chip::before {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    background: var(--marker);
+  }
+
+  .chip--none {
+    border-style: dashed;
+    background: transparent;
+  }
+
+  .chip--none::before {
+    border: 1px solid currentColor;
+    background: transparent;
+  }
+
+  .chip:hover {
+    border-color: var(--chip-hover-edge);
+    background: var(--chip-hover);
+    color: var(--chip-hover-ink);
+  }
+
+  .chip:active {
+    border-color: var(--chip-active-edge);
+    background: var(--chip-active);
+    color: var(--chip-active-ink);
+  }
+
+  a.tag {
+    text-decoration: none;
+  }
+
+  a.tag:hover {
+    text-decoration: underline;
+  }
+
+  .tag {
+    display: inline-block;
+    margin-left: 7px;
+    padding: 1px 5px;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    color: var(--eyebrow);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    line-height: 1.3;
+    text-transform: uppercase;
+    vertical-align: 1px;
+    white-space: nowrap;
+  }
+
+  /* Header band */
+  .head {
+    padding: 34px var(--gutter) 0;
+    border-left: 6px solid var(--rail);
+    background: var(--panel);
+  }
+
+  .head-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 40px;
+    align-items: end;
+    padding-bottom: 26px;
+  }
+
+  .head-title {
+    min-width: 0;
+    container-type: inline-size;
+  }
+
+  .eyebrow {
+    margin-bottom: 12px;
+    color: var(--eyebrow);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .title {
+    font-size: 40px;
+    font-size: min(48px, 6.4cqw);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 0.98;
+    text-shadow: var(--heading-shadow);
+  }
+
+  .repo-link {
+    display: inline-block;
+    max-width: 100%;
+    border-bottom: 2px solid var(--rail);
+    color: var(--ink);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+
+  .repo-link:hover {
+    border-bottom-color: var(--link-hover);
+    color: var(--link-hover);
+  }
+
+  .repo-link:active {
+    border-bottom-color: var(--link-active);
+    color: var(--link-active);
+  }
+
+  .when {
+    text-align: right;
+  }
+
+  /* Tabular figures on the date only: in this face they also space out the
+     colon in the time. */
+  .when-date {
+    display: block;
+    font-variant-numeric: tabular-nums;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .when-time {
+    margin-top: 6px;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .when-age {
+    margin-top: 9px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .when-age.is-aging {
+    color: var(--warn);
+  }
+
+  .when-age.is-stale {
+    color: var(--alert);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    padding-bottom: 6px;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    padding: 0 16px 22px 0;
+  }
+
+  .stat-value {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-label {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  /* Body */
+  .body {
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+    padding: 34px var(--gutter);
+  }
+
+  .summary {
+    max-width: 74ch;
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.4;
+    text-wrap: pretty;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: var(--head-gap, 12px);
+  }
+
+  .section-title {
+    flex: none;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-shadow: var(--heading-shadow);
+    text-wrap: balance;
+  }
+
+  .section-note {
+    min-width: 0;
+    max-width: 88ch;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+
+  /* Act now and Today cards. Now carries the danger bar and a filled tag;
+     Today carries the amber bar and an outlined tag, so the two read apart
+     in grayscale as well as in color. */
+  .cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 236px;
+    gap: 10px 24px;
+    padding: 16px 18px 15px;
+    border-left: 6px solid var(--marker);
+    background: var(--panel);
+  }
+
+  .card--now {
+    border-left-color: var(--danger-bar);
+  }
+
+  .card-main {
+    min-width: 0;
+  }
+
+  .card-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    align-items: baseline;
+    margin-bottom: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  .card-line .tag {
+    margin-left: 0;
+  }
+
+  .card-action {
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+    text-wrap: pretty;
+  }
+
+  .card--today .card-action {
+    font-size: 16px;
+  }
+
+  .card-impact {
+    margin-top: 6px;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+
+  .card-side {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .tag--now {
+    border-color: var(--danger-bar);
+    background: var(--danger-bar);
+    color: var(--danger-ink);
+  }
+
+  .tag--today {
+    color: var(--eyebrow);
+  }
+
+  .tag--muted {
+    color: var(--muted);
+  }
+
+  .warn-tag {
+    display: inline-block;
+    margin-top: 6px;
+    color: var(--alert);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Facts: what the assessment says, one chip each. A fact nobody has
+     confirmed is dashed; one set by the triage note carries a mark. */
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .fact {
+    display: inline-block;
+    padding: 2px 7px;
+    border: 1px solid var(--chip-edge);
+    border-radius: 6px;
+    background: var(--chip);
+    color: var(--chip-ink);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .fact--unknown {
+    border-style: dashed;
+    background: transparent;
+    color: var(--muted);
+  }
+
+  .fact--set::after {
+    content: " \2022";
+    color: var(--marker);
+  }
+
+  /* Signals: copied from focus.html; a fix to one prompts a look at the
+     other. An aged signal has a dashed outline. */
+  .signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .signal {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    max-width: 100%;
+    padding: 2px 7px;
+    border: 1px solid var(--chip-edge);
+    border-radius: 6px;
+    background: var(--chip);
+    color: var(--chip-ink);
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .signal--aged {
+    border-style: dashed;
+    background: transparent;
+  }
+
+  .signal-source {
+    flex: none;
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .signal-text {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-wrap: anywhere;
+  }
+
+  .signal-age {
+    flex: none;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Dense rows for Ready to go, Needs investigation, and the report lists. */
+  .group-label {
+    margin: 14px 0 2px;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .rows {
+    border-top: 1px solid var(--rule);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 60px minmax(0, 1fr) minmax(0, 0.9fr);
+    gap: 4px 16px;
+    align-items: baseline;
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .row:nth-child(even) {
+    background: var(--zebra);
+  }
+
+  .row-title {
+    font-weight: 600;
+  }
+
+  .row-note {
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+
+  .row-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 12.5px;
+  }
+
+  .row-question {
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  .empty {
+    color: var(--muted);
+  }
+
+  .stats--five {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  /* The fold: everything below is the report. */
+  .fold {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .fold::before,
+  .fold::after {
+    content: "";
+    flex: 1 1 0;
+    border-top: 2px solid var(--rule-strong);
+  }
+
+  /* Can wait: a table that scrolls inside its own box at phone width. */
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  .wait-table {
+    width: 100%;
+    min-width: 640px;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+
+  .wait-table th {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--rule-strong);
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .wait-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: baseline;
+  }
+
+  .wait-table .wait-group td {
+    padding-top: 14px;
+    color: var(--eyebrow);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Triage note: an expired entry is struck through and tagged. */
+  .triage-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12.5px;
+  }
+
+  .triage-entry--expired .triage-text {
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+
+  .triage-meta {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sync {
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 800px) {
+    .card {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .row {
+      grid-template-columns: 52px minmax(0, 1fr);
+    }
+
+    .row > :nth-child(3) {
+      grid-column: 2;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .head-top {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .when {
+      text-align: left;
+    }
+
+    .when-date {
+      font-size: 22px;
+    }
+
+    .when-time {
+      font-size: 17px;
+    }
+
+    .stats {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .stats--five {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .section-head {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .summary {
+      font-size: 17px;
+    }
+
+    .card {
+      padding: 14px 14px 13px;
+    }
+
+    .card-action {
+      font-size: 17px;
+    }
+  }
+</style>
+<div class="board" id="board">
+  <noscript>
+    <p class="board-message">This board draws itself from data embedded in the page, so it needs JavaScript to display.</p>
+  </noscript>
+</div>
+<script type="application/json" id="board-data">
+  "__BOARD_DATA__"
+</script>
+<script>
+  // Draws a bugs board from the JSON in #board-data. The report-board script
+  // checks that JSON before writing it into this template, so the code below
+  // trusts its shape. Every string from the data reaches the page through text
+  // nodes and attributes, never through innerHTML, because bug titles and
+  // assessments come from GitHub.
+  (() => {
+    "use strict";
+
+    const EYEBROW = "Bug triage";
+    // A bugs board goes stale in hours: amber after AGING_AFTER_HOURS, red
+    // after STALE_AFTER_HOURS.
+    const AGING_AFTER_HOURS = 4;
+    const STALE_AFTER_HOURS = 12;
+    // A signal older than this is drawn with a dashed outline.
+    const SIGNAL_AGED_AFTER_DAYS = 7;
+
+    const root = document.getElementById("board");
+
+    // Copied from backlog-triage.html; a fix to one prompts a look at the other.
+    function h(tag, attributes, children) {
+      const element = document.createElement(tag);
+      for (const [name, value] of Object.entries(attributes ?? {})) {
+        if (value === null || value === undefined || value === false) continue;
+        if (name === "class") element.className = value;
+        else element.setAttribute(name, value === true ? "" : String(value));
+      }
+      for (const child of [children ?? []].flat(Infinity)) {
+        if (child === null || child === undefined || child === false || child === "") continue;
+        element.append(child instanceof Node ? child : String(child));
+      }
+      return element;
+    }
+
+    let data = null;
+    try {
+      data = JSON.parse(document.getElementById("board-data").textContent);
+    } catch {
+      data = null;
+    }
+    if (data === null || typeof data !== "object" || data.board !== "bugs" || !Array.isArray(data.bugs)) {
+      root.replaceChildren(
+        h("p", { class: "board-message" }, "This page holds no board data yet. Render it with the report-board script."),
+      );
+      return;
+    }
+
+    const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+    const repoUrl = (data.repoUrl || `https://github.com/${data.repo}`).replace(/\/+$/, "");
+    let origin = "https://github.com";
+    try {
+      origin = new URL(repoUrl).origin;
+    } catch {
+      origin = "https://github.com";
+    }
+    const repoBase = data.repo && repoUrl.endsWith(`/${data.repo}`) ? repoUrl.slice(0, -(data.repo.length + 1)) : origin;
+    const pathPart = (text) => String(text).split("/").map(encodeURIComponent).join("/");
+    const issueUrl = (n) => `${repoUrl}/issues/${n}`;
+    const pullUrl = (n) => `${repoUrl}/pull/${n}`;
+    const link = (href, text) => h("a", { class: "ref", href }, text);
+    const ref = (n) => h("a", { class: "ref num", href: issueUrl(n) }, `#${n}`);
+    // Links "#123", and "owner/repo#123" for another repository, in a prose
+    // field. Copied from backlog-triage.html; a fix to one prompts a look at
+    // the other.
+    const PROSE_REF = /([\w.-]+\/[\w.-]+)?#(\d+)(?![\w#])/g;
+    const prose = (text) => {
+      const source = String(text ?? "");
+      const out = [];
+      let last = 0;
+      for (const match of source.matchAll(PROSE_REF)) {
+        const before = source[match.index - 1];
+        if (!match[1] && before && /[\w&]/.test(before)) continue;
+        const head = source.slice(0, match.index);
+        if (/:\/\//.test(head.slice(head.search(/\S*$/)))) continue;
+        if (match[1] && match[1].split("/").some((part) => part === "." || part === "..")) continue;
+        out.push(source.slice(last, match.index));
+        out.push(match[1] ? link(`${repoBase}/${match[1]}/issues/${match[2]}`, match[0]) : ref(Number(match[2])));
+        last = match.index + match[0].length;
+      }
+      out.push(source.slice(last));
+      return out;
+    };
+
+    const byNumber = new Map(data.bugs.map((bug) => [bug.number, bug]));
+    const list = (name) => data[name] ?? [];
+    const openBugs = data.bugs.filter((bug) => bug.state === "open");
+
+    function section(id, title, note, body) {
+      return h("section", { class: "section", id, "aria-labelledby": `${id}-heading` }, [
+        h("div", { class: "section-head" }, [
+          h("h2", { class: "section-title", id: `${id}-heading` }, title),
+          note ? h("p", { class: "section-note" }, prose(note)) : null,
+        ]),
+        body,
+      ]);
+    }
+
+    // Header: repository, sync time, live age, and the five counts.
+    const syncedAt = new Date(data.sync.at);
+    const validTime = !Number.isNaN(syncedAt.getTime());
+    // Copied from backlog-triage.html; a fix to one prompts a look at the other.
+    function formatSync(locale, options) {
+      if (!validTime) return "";
+      try {
+        return new Intl.DateTimeFormat(locale, { ...options, timeZone: data.sync.timeZone || undefined }).format(syncedAt);
+      } catch {
+        return new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" }).format(syncedAt);
+      }
+    }
+    const dateText = validTime ? formatSync("en-GB", { day: "numeric", month: "long", year: "numeric" }) : data.sync.at;
+    const timeText = formatSync("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "short" });
+    // The local calendar day of the sync, which a triage until date counts
+    // against, the same way report-board validate counts it.
+    const syncDay = formatSync("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" });
+
+    // Ages shown as "3h" or "2d". Copied from focus.html.
+    const ageText = (then) => {
+      const minutes = Math.max(0, Math.floor((Date.now() - then) / 60000));
+      if (minutes < 60) return minutes < 1 ? "now" : `${minutes}m`;
+      const hours = Math.floor(minutes / 60);
+      return hours < 24 ? `${hours}h` : `${Math.floor(hours / 24)}d`;
+    };
+    const ageTargets = [];
+
+    const age = h("p", { class: "when-age" });
+    // Adapted from refreshAge() in backlog-triage.html, which counts in days;
+    // a fix to the wording belongs in both.
+    function refreshAges() {
+      for (const [element, then, chip] of ageTargets) {
+        element.textContent = ageText(then);
+        chip.classList.toggle("signal--aged", Date.now() - then >= SIGNAL_AGED_AFTER_DAYS * 86400000);
+      }
+      if (!validTime) return;
+      const minutes = Math.max(0, Math.floor((Date.now() - syncedAt.getTime()) / 60000));
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      let text = "Synced just now";
+      if (days >= 1) text = `Synced ${count(days, "day", "days")} ago`;
+      else if (hours >= 1) text = `Synced ${count(hours, "hour", "hours")} ago`;
+      else if (minutes >= 1) text = `Synced ${count(minutes, "minute", "minutes")} ago`;
+      age.textContent = text;
+      age.classList.toggle("is-aging", hours >= AGING_AFTER_HOURS && hours < STALE_AFTER_HOURS);
+      age.classList.toggle("is-stale", hours >= STALE_AFTER_HOURS);
+    }
+
+    const SOURCE_LABELS = { triage: "You", assessment: "Read", zenhub: "ZenHub", github: "GitHub" };
+    // Adapted from signalChip() in focus.html.
+    function signalChip(signal) {
+      const then = new Date(signal.at).getTime();
+      const ageElement = h("span", { class: "signal-age" });
+      const chip = h("span", { class: "signal", title: signal.entry ? `From the triage entry ${signal.entry}` : signal.at }, [
+        h("span", { class: "signal-source" }, SOURCE_LABELS[signal.source] ?? signal.source),
+        h("span", { class: "signal-text" }, prose(signal.text)),
+        Number.isNaN(then) ? null : ageElement,
+      ]);
+      if (!Number.isNaN(then)) ageTargets.push([ageElement, then, chip]);
+      return chip;
+    }
+    const signalList = (signals) => (signals?.length ? h("div", { class: "signals" }, signals.map(signalChip)) : null);
+
+    // The assessment as fact chips. A field the triage note set carries a
+    // mark; an unknown or unconfirmed one is dashed.
+    const FACT_WORDS = {
+      environment: { production: "on production", staging: "on staging", development: "in development", unknown: "environment unknown" },
+      evidence: {
+        "user-report": "reported by users",
+        "production-observed": "seen on production",
+        reproduced: "reproduced",
+        "code-reading": "found in source",
+        unknown: "evidence unknown",
+      },
+      surface: { public: "the public", "signed-in": "signed-in users", admin: "admins", internal: "maintainers", unknown: "surface unknown" },
+      reach: { all: "reaches all", many: "reaches many", some: "reaches some", few: "reaches few", unknown: "reach unknown" },
+      workaround: { none: "no workaround", exists: "workaround exists", unknown: "workaround unknown" },
+    };
+    function facts(bug) {
+      const a = bug.assessment ?? {};
+      const set = new Set(bug.overridden ?? []);
+      const chips = Object.entries(FACT_WORDS).map(([field, words]) => {
+        const value = a[field];
+        const unconfirmed = value === "unknown" || (field === "evidence" && value === "code-reading");
+        const classes = ["fact", unconfirmed ? "fact--unknown" : "", set.has(field) ? "fact--set" : ""].filter(Boolean).join(" ");
+        return h("span", { class: classes, title: set.has(field) ? "Set by the triage note" : null }, words[value] ?? value);
+      });
+      if (a.mitigated) chips.push(h("span", { class: "fact" }, "mitigated"));
+      if (a.deadline && a.deadline >= syncDay) chips.push(h("span", { class: "fact" }, `due ${a.deadline}`));
+      return h("div", { class: "facts" }, chips);
+    }
+
+    // The fix pull request, or what else carries work in progress.
+    function fixLine(bug) {
+      if (bug.fix) {
+        const state = bug.fix.isDraft
+          ? "draft"
+          : [bug.fix.checks ? `checks ${String(bug.fix.checks).toLowerCase()}` : "no checks", bug.fix.reviewDecision ? String(bug.fix.reviewDecision).toLowerCase().replace(/_/g, " ") : "no review"].join(", ");
+        return h("span", null, ["Fix ", link(pullUrl(bug.fix.number), `#${bug.fix.number}`), `: ${state}`]);
+      }
+      if (bug.inProgress) return h("span", null, `In progress: ${bug.inProgress}`);
+      return null;
+    }
+
+    function card(entry, kind) {
+      const bug = byNumber.get(entry.item);
+      const tagText = kind === "now" ? "Now" : "Today";
+      return h("li", { class: `card card--${kind}` }, [
+        h("div", { class: "card-main" }, [
+          h("p", { class: "card-line" }, [
+            h("span", { class: `tag tag--${kind}` }, tagText),
+            ref(bug.number),
+            h("a", { class: "ref", href: issueUrl(bug.number) }, bug.title),
+            entry.confirm ? h("span", { class: "tag tag--muted" }, "Unconfirmed") : null,
+          ]),
+          h("p", { class: "card-action" }, prose(entry.action)),
+          h("p", { class: "card-impact" }, prose(entry.impact)),
+        ]),
+        h("div", { class: "card-side" }, [
+          h("p", { class: "row-note" }, entry.why),
+          facts(bug),
+          fixLine(bug) ? h("p", { class: "row-note" }, fixLine(bug)) : null,
+          signalList((entry.signals ?? []).filter((signal) => signal.source !== "assessment")),
+        ]),
+      ]);
+    }
+
+    function row(n, middle, right) {
+      const bug = byNumber.get(n);
+      return h("li", { class: "row" }, [
+        ref(n),
+        h("div", null, [h("span", { class: "row-title" }, bug.title), middle ? h("div", { class: "row-note" }, middle) : null]),
+        h("div", { class: "row-detail" }, right),
+      ]);
+    }
+
+    const GROUP_LABELS = { ship: "Ready to ship", review: "Fix in review", "in-progress": "In progress", "ready-to-fix": "Ready to fix" };
+    function readyRows(entries) {
+      const groups = new Map();
+      for (const entry of entries) {
+        if (!groups.has(entry.group)) groups.set(entry.group, []);
+        groups.get(entry.group).push(entry);
+      }
+      return Object.keys(GROUP_LABELS)
+        .filter((group) => groups.has(group))
+        .map((group) => [
+          h("p", { class: "group-label" }, `${GROUP_LABELS[group]} (${groups.get(group).length})`),
+          h(
+            "ol",
+            { class: "rows", role: "list" },
+            groups.get(group).map((entry) => {
+              const bug = byNumber.get(entry.item);
+              return row(entry.item, prose(bug.assessment?.nextStep ?? entry.why), [fixLine(bug), facts(bug)]);
+            }),
+          ),
+        ]);
+    }
+
+    const now = list("now");
+    const today = list("today");
+    const ready = list("ready");
+    const readyLimit = data.readyLimit ?? 8;
+    const readyTop = ready.slice(0, readyLimit);
+    const readyRest = ready.slice(readyLimit);
+
+    // Header
+    const nowStat = h("div", { class: "stat" }, [
+      h("dt", { class: "stat-label" }, ["now", now.length > data.nowWarn ? h("span", { class: "warn-tag" }, ` over ${data.nowWarn}`) : null]),
+      h("dd", { class: "stat-value" }, String(now.length)),
+    ]);
+    const stats = [
+      [today.length, "today"],
+      [ready.length, "ready"],
+      [list("investigate").length, "to investigate"],
+      [openBugs.length, "open"],
+    ];
+    const header = h("header", { class: "head" }, [
+      h("div", { class: "head-top" }, [
+        h("div", { class: "head-title" }, [
+          h("p", { class: "eyebrow" }, EYEBROW),
+          h("h1", { class: "title" }, h("a", { class: "repo-link", href: repoUrl }, data.repo)),
+        ]),
+        h("div", { class: "when" }, [
+          h("time", { class: "when-date", datetime: data.sync.at }, dateText),
+          h("p", { class: "when-time" }, timeText),
+          age,
+        ]),
+      ]),
+      h("dl", { class: "stats stats--five" }, [
+        nowStat,
+        stats.map(([value, label]) =>
+          h("div", { class: "stat" }, [h("dt", { class: "stat-label" }, label), h("dd", { class: "stat-value" }, String(value))]),
+        ),
+      ]),
+    ]);
+
+    // Above the fold
+    const nowSection = now.length
+      ? section(
+          "now",
+          "Act now",
+          "Bugs hurting people on production now, or exposed to anyone, ranked by urgency.",
+          h("ol", { class: "cards", role: "list" }, now.map((entry) => card(entry, "now"))),
+        )
+      : section("now", "Act now", "Nothing is hurting people on production right now.", null);
+    const todaySection = today.length
+      ? section(
+          "today",
+          "Today",
+          "Bugs to fix or confirm today: affecting users, worse with every event, or due within the window.",
+          h("ol", { class: "cards", role: "list" }, today.map((entry) => card(entry, "today"))),
+        )
+      : section("today", "Today", "Nothing else needs doing today.", null);
+    const readySection = ready.length
+      ? section(
+          "ready",
+          "Ready to go",
+          readyRest.length
+            ? `The ${readyTop.length} highest-ranked of ${ready.length}: in progress, fixes to land, and bugs whose cause is known. The rest are in the report.`
+            : "In progress, fixes to land, and bugs whose cause is known.",
+          readyRows(readyTop),
+        )
+      : section("ready", "Ready to go", "Nothing is ready to land or fix.", null);
+
+    // The report
+    const investigate = list("investigate");
+    const investigateSection = investigate.length
+      ? section(
+          "investigate",
+          "Needs investigation",
+          "What is not yet known, ranked by the harm it would do if confirmed.",
+          h(
+            "ol",
+            { class: "rows", role: "list" },
+            investigate.map((entry) => {
+              const bug = byNumber.get(entry.item);
+              return row(entry.item, entry.why, [h("p", { class: "row-question" }, prose(entry.question)), facts(bug)]);
+            }),
+          ),
+        )
+      : section("investigate", "Needs investigation", "Every open bug is understood well enough to place.", null);
+
+    const moreReadySection = readyRest.length
+      ? section("ready-more", "More ready to go", "The rest of Ready to go, in the same order.", readyRows(readyRest))
+      : null;
+
+    const later = list("later");
+    const ageDays = (iso) => {
+      const then = new Date(iso).getTime();
+      return Number.isNaN(then) || !validTime ? "" : `${Math.max(0, Math.floor((syncedAt.getTime() - then) / 86400000))}d`;
+    };
+    function waitTable(entries) {
+      const groups = new Map();
+      for (const entry of entries) {
+        if (!groups.has(entry.reason)) groups.set(entry.reason, []);
+        groups.get(entry.reason).push(entry);
+      }
+      const rowsOut = [];
+      for (const [reason, members] of groups) {
+        rowsOut.push(h("tr", { class: "wait-group" }, h("td", { colspan: 7 }, `${reason} (${members.length})`)));
+        for (const entry of members) {
+          const bug = byNumber.get(entry.item);
+          const a = bug.assessment ?? {};
+          rowsOut.push(
+            h("tr", null, [
+              h("td", null, ref(bug.number)),
+              h("td", null, bug.title),
+              h("td", null, a.impact ?? ""),
+              h("td", null, FACT_WORDS.environment[a.environment] ?? ""),
+              h("td", null, FACT_WORDS.evidence[a.evidence] ?? ""),
+              h("td", null, ageDays(bug.createdAt)),
+              h("td", null, [bug.pipeline ?? "", bug.sprint ? " (sprint)" : ""]),
+            ]),
+          );
+        }
+      }
+      return h("div", { class: "table-wrap" }, [
+        h("table", { class: "wait-table" }, [
+          h(
+            "thead",
+            null,
+            h(
+              "tr",
+              null,
+              ["Bug", "Title", "Impact", "Environment", "Evidence", "Open", "Pipeline"].map((label) => h("th", { scope: "col" }, label)),
+            ),
+          ),
+          h("tbody", null, rowsOut),
+        ]),
+      ]);
+    }
+    const laterSection = later.length
+      ? section("later", "Can wait", "Internal tooling, tests, and cosmetic bugs, grouped by why they can wait.", waitTable(later))
+      : section("later", "Can wait", "Nothing is waiting by choice.", null);
+
+    const fixed = list("fixed");
+    const fixedSection = fixed.length
+      ? section(
+          "fixed",
+          "Recently fixed",
+          "Closed in the last days the sync covers. A production bug carries a reminder to check the fix where it shipped.",
+          h(
+            "ol",
+            { class: "rows", role: "list" },
+            fixed.map((entry) => {
+              const bug = byNumber.get(entry.item);
+              const reason = String(bug.stateReason ?? "closed").toLowerCase().replace(/_/g, " ");
+              return row(entry.item, [reason, bug.closedAt ? `, ${bug.closedAt.slice(0, 10)}` : ""], [
+                bug.fixedBy?.length
+                  ? h("span", null, ["Fixed by ", bug.fixedBy.map((n, i) => [i ? ", " : "", link(pullUrl(n), `#${n}`)])])
+                  : null,
+                entry.verify ? h("span", { class: "tag tag--today" }, "Verify on production") : null,
+              ]);
+            }),
+          ),
+        )
+      : section("fixed", "Recently fixed", "No bug closed in the window the sync covers.", null);
+
+    const parked = list("parked");
+    const parkedSection = parked.length
+      ? section(
+          "parked",
+          "Parked",
+          "Snoozed or parked by the triage note, labeled to skip, or a container.",
+          h("ol", { class: "rows", role: "list" }, parked.map((entry) => row(entry.item, prose(entry.reason), []))),
+        )
+      : null;
+
+    const triage = data.triage ?? [];
+    const expired = (entry) => typeof entry.until === "string" && syncDay && syncDay > entry.until;
+    const triageSection = section(
+      "triage",
+      "Triage note",
+      triage.length ? "Your calls, which every sync applies before the rules." : "The triage note holds no entries yet.",
+      triage.length
+        ? h(
+            "ol",
+            { class: "triage-list", role: "list" },
+            triage.map((entry) =>
+              h("li", { class: expired(entry) ? "triage-entry--expired" : null }, [
+                h("span", { class: "triage-meta" }, `${entry.at} `),
+                h("strong", null, entry.verb),
+                entry.target != null ? [" ", ref(entry.target)] : null,
+                entry.fields ? ` ${Object.entries(entry.fields).map(([k, v]) => `${k}=${v}`).join(" ")}` : null,
+                entry.until ? ` until ${entry.until}` : null,
+                ": ",
+                h("span", { class: "triage-text" }, prose(entry.text)),
+                expired(entry) ? h("span", { class: "tag tag--muted" }, "Expired") : null,
+              ]),
+            ),
+          )
+        : null,
+    );
+
+    const footer = h("footer", { class: "sync" }, [
+      "Synced ",
+      h("strong", null, [dateText, timeText].filter(Boolean).join(", ")),
+      " against ",
+      link(`${repoUrl}/tree/${pathPart(data.sync.branch)}`, data.sync.branch),
+      " at ",
+      link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8)),
+      ". ",
+      count(openBugs.length, "open bug", "open bugs"),
+      typeof data.sync.openPullRequests === "number" ? `, ${count(data.sync.openPullRequests, "open fix", "open fixes")}` : "",
+      (data.sync.extra ?? []).map((fact) => `, ${fact}`),
+      ". Re-run publish-report-board after triage changes or new reports. GitHub is the source of truth; this page is a snapshot.",
+    ]);
+
+    refreshAges();
+    window.setInterval(refreshAges, 60000);
+
+    root.replaceChildren(
+      header,
+      h("main", { class: "body" }, [
+        h("p", { class: "summary" }, prose(data.summary)),
+        nowSection,
+        todaySection,
+        readySection,
+        h("p", { class: "fold", role: "separator" }, "Report"),
+        investigateSection,
+        moreReadySection,
+        laterSection,
+        fixedSection,
+        parkedSection,
+        triageSection,
+        footer,
+      ]),
+    );
+  })();
+</script>

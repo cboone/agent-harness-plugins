@@ -179,3 +179,30 @@ This sync: main at 01234567, 2026-10-15T16:00:00Z in America/New_York, ZenHub wo
 $ "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/bugs.json" "$(board_with '.title = "gadgets bugs"')" | grep '^- Changed board identity'
 - Changed board identity: title (widgets bugs to gadgets bugs)
 ```
+
+## Render draws a bugs board from its own template
+
+```scrut
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/board.html" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/bugs.json" "${page}" 2>&1 | sed 's|to .*/board.html|to PAGE|' && head -n 1 "${page}" && grep -c 'EYEBROW = "Bug triage"' "${page}" && ! grep -q __BOARD_ "${page}" && echo "no placeholders left"
+report-board: rendered 4 now, 4 today, 20 open bugs to PAGE
+<title>widgets bugs</title>
+1
+no placeholders left
+```
+
+## The embedded bugs data survives a round trip
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/bugs.json" "${dir}/board.html" 2> /dev/null && jq -S . "${REPORT_BOARD_DATA_DIR}/bugs.json" > "${dir}/rendered.json" && "${REPORT_BOARD_BIN}" extract "${dir}/board.html" | jq -S . > "${dir}/extracted.json" && diff "${dir}/rendered.json" "${dir}/extracted.json" && echo identical
+identical
+```
+
+## A board with nothing in Now still validates and renders
+
+An empty section draws its heading and one line, so an empty Now reads as a
+finding.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && jq '.later += [.now[] | {item, reason: "cleared"}] | (.bugs[] | select(.tier == "now") | .tier) = "later" | .now = []' "${REPORT_BOARD_DATA_DIR}/bugs.json" > "${dir}/data.json" && "${REPORT_BOARD_BIN}" render "${dir}/data.json" "${dir}/board.html" 2>&1 | sed 's|to .*/board.html|to PAGE|'
+report-board: rendered 0 now, 4 today, 20 open bugs to PAGE
+```
