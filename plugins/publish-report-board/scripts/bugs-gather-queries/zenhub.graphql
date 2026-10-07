@@ -2,7 +2,8 @@
 # lookup per item after this file, such as
 #   i0: issueByInfo(repositoryGhId: 106750406, issueNumber: 4034) { ...BugIssue }
 # and closes the query. issueType is a union, so its name and level come
-# through inline fragments; selecting them directly fails.
+# through inline fragments; selecting them directly fails. Sprints and blocking
+# lists report whether they were cut short, which bugs-gather warns about.
 fragment BugIssue on Issue {
   estimate {
     value
@@ -14,6 +15,9 @@ fragment BugIssue on Issue {
     }
   }
   sprints(first: 10, workspaceId: $workspaceId) {
+    pageInfo {
+      hasNextPage
+    }
     nodes {
       id
     }
@@ -29,6 +33,9 @@ fragment BugIssue on Issue {
     }
   }
   blockingIssues(first: 20) {
+    pageInfo {
+      hasNextPage
+    }
     nodes {
       number
       state
@@ -38,6 +45,9 @@ fragment BugIssue on Issue {
     }
   }
   blockedIssues(first: 20) {
+    pageInfo {
+      hasNextPage
+    }
     nodes {
       number
       state

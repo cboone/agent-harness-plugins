@@ -14,11 +14,11 @@ Take the commit from the remote-tracking branch after a fetch, never from the lo
 
 ## Optional Fields
 
-| Field                   | Value                                                                                                                                                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sync.timeZone`         | The user's IANA zone, such as `America/New_York`; required on a `bugs` board, where `bugs-gather draft` fills it from the config's `timeZone`, `UTC` by default, because triage dates count in its local days |
-| `sync.openPullRequests` | The count of open pull requests                                                                                                                                                                               |
-| `sync.extra`            | Further revision markers the repository has, each a short phrase                                                                                                                                              |
+| Field                   | Value                                                                                                                                                                                                 |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sync.timeZone`         | The user's IANA zone, such as `America/New_York`; required on a `bugs` board, whose triage dates count in its local days; `bugs-gather draft` fills it from the config's `timeZone`, `UTC` by default |
+| `sync.openPullRequests` | The count of open pull requests                                                                                                                                                                       |
+| `sync.extra`            | Further revision markers the repository has, each a short phrase                                                                                                                                      |
 
 With `timeZone` set, every viewer sees the sync time the user sees. On macOS and most Linux systems, `readlink /etc/localtime` ends in the zone name. When the zone cannot be determined, omit the field and each viewer sees the time in their own zone. Validation rejects a name the time zone database does not have, and a page given one anyway shows the time in UTC, so its viewers still agree.
 

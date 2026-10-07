@@ -8,10 +8,10 @@ moved and which bugs need reading again.
 
 Every call goes through `tests/fixtures/gh-stub` and `tests/fixtures/curl-stub`,
 which answer from `tests/data/bugs-gather/`. The fixtures describe `acme/widgets`
-(ZenHub ID 101) with 20 open bugs, built so that between them they reach every tier, and 2
-closed in the last week. The config names a test-only token variable holding a
-sample value, and the Makefile unsets the real ZenHub token variable, so no
-test can reach ZenHub. `bugs` takes settings (`NAME=value`) first, then the
+(ZenHub ID 101) with 20 open bugs, built so that between them they reach every
+tier, and 2 closed in the last week. The config names a test-only token
+variable holding a sample value, and the Makefile unsets the real ZenHub token
+variable, so no test can reach ZenHub. `bugs` takes settings (`NAME=value`) first, then the
 command. The gather time is fixed at 2026-10-15T16:00:00Z.
 
 ```scrut
@@ -267,7 +267,7 @@ $ jq -r '.triage.entries[] | "\(.id)\(if .expired then " (expired)" else "" end)
 ## Malformed triage entries are reported, not applied
 
 ```scrut
-$ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '%s\n' '- 2026-10-14T09:00-04:00 snooze #23: no date' '- 2026-10-14T09:00-04:00 pin #10: a focus verb' '- 2026-10-14T09:00-04:00 set #10 severity=high: not a field' '- 2026-10-14T09:00-04:00 set #10 impact=huge: not in the set' '- 2026-10-14T09:00-04:00 park #10 until 2026-11-01: park takes no date' '- 2026-10-20T09:00-04:00 escalate #10: later than the score' '- 2026-10-14T09:00-04:00 escalate #99: not on the board' '- 2026-10-14T09:00-04:00 set #10 mitigated=yes: hotfix deployed' '* 2026-10-14T09:00-04:00 escalte #12: a star marker' '  - 2026-10-14T09:00-04:00 escalte #13: an indented entry' > "${note}" && config_with ".triageNote = \"${note}\"" > "${work}/bad-note.json" && bugs score "${work}/bad-note.json" "${work}/gather.json" "${assessments}" "${work}/bad-note-scored.json" | grep -E '^    - problem: '
+$ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '%s\n' '- 2026-10-14T09:00-04:00 snooze #23: no date' '- 2026-10-14T09:00-04:00 pin #10: a focus verb' '- 2026-10-14T09:00-04:00 set #10 severity=high: not a field' '- 2026-10-14T09:00-04:00 set #10 impact=huge: not in the set' '- 2026-10-14T09:00-04:00 park #10 until 2026-11-01: park takes no date' '- 2026-10-20T09:00-04:00 escalate #10: later than the score' '- 2026-10-14T09:00-04:00 escalate #99: not on the board' '- 2026-10-14T09:00-04:00 set #10 mitigated=yes: hotfix deployed' '* 2026-10-14T09:00-04:00 escalte #12: a star marker' '  - 2026-10-14T09:00-04:00 escalte #13: an indented entry' '- 2026-10-14T09:00-04:00 escalate #12: written once' '- 2026-10-14T09:00-04:00 escalate #12: and again' '1. 2026-10-14T09:00-04:00 escalate #14: a numbered entry' > "${note}" && config_with ".triageNote = \"${note}\"" > "${work}/bad-note.json" && bugs score "${work}/bad-note.json" "${work}/gather.json" "${assessments}" "${work}/bad-note-scored.json" | grep -E '^    - problem: '
     - problem: line 1: snooze needs an until date
     - problem: line 2: expected escalate, set, snooze, park, or context: - 2026-10-14T09:00-04:00 pin #10: a focus verb
     - problem: line 3: severity is not an assessment field
@@ -277,6 +277,8 @@ $ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '%s\n' '- 2026-10-14
     - problem: line 8: mitigated must be true or false
     - problem: line 9: expected escalate, set, snooze, park, or context: * 2026-10-14T09:00-04:00 escalte #12: a star marker
     - problem: line 10: expected escalate, set, snooze, park, or context:   - 2026-10-14T09:00-04:00 escalte #13: an indented entry
+    - problem: line 13: start a triage entry with -, not a number: 1. 2026-10-14T09:00-04:00 escalate #14: a numbered entry
+    - problem: entry 2026-10-14T09:00-04:00 escalate #12 appears more than once
     - problem: 2026-10-14T09:00-04:00 escalate #99 names a bug outside this board
 ```
 
@@ -524,8 +526,24 @@ gather compares what it collected with what the search counted.
 
 ```scrut
 $ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map(.data.search.issueCount = 1240)' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-labels.json" > "${capped}/graphql/search-open-labels.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/capped.json" 2>&1
-bugs-gather: the open-labels search returned 19 of 1240 issues; GitHub search stops at 1000, so narrow bugLabels or bugTypes
+bugs-gather: the open-labels search returned 19 of 1240 issues; GitHub search stops at 1000, so narrow bugLabels or bugTypes, or run gather again if the bugs changed while it read them
 [1]
+```
+
+## A search that comes back without a count stops the gather
+
+```scrut
+$ uncounted="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${uncounted}/" && jq 'map(del(.data.search.issueCount))' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-labels.json" > "${uncounted}/graphql/search-open-labels.json" && bugs STUB_GH_DIR="${uncounted}" gather "${work}/config.json" "${work}/uncounted.json" 2>&1
+bugs-gather: the open-labels search came back without a result count, so its results cannot be trusted
+[1]
+```
+
+## ZenHub lists cut short are listed, and the gather goes on
+
+```scrut
+$ cut="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${BUGS_GATHER_DATA_DIR}/zenhub/"*.json "${cut}/" && jq '.sprints.pageInfo = {hasNextPage: true}' "${BUGS_GATHER_DATA_DIR}/zenhub/101-12.json" > "${cut}/101-12.json" && bugs STUB_CURL_DIR="${cut}" gather "${work}/config.json" "${work}/cut.json" 2>&1 > /dev/null | grep -A1 'ZenHub cut'
+bugs-gather: ZenHub cut these lists short, so a sprint or a blocking issue past the cut is missing:
+  - #12: sprints
 ```
 
 ## An archived repository stops the gather

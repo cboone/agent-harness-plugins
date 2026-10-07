@@ -64,10 +64,10 @@ readonly ZONEINFO_DIR="${TZDIR:-/usr/share/zoneinfo}"
 # The board types this script validates, each with its own rules.
 readonly BOARD_TYPES='backlog-triage bugs'
 
-# True when no string and no field name carries a control character. validate
-# and render apply this through each validation filter, but compare reads a
-# previous board out of a published page, which never went through that check
-# here, and compare is the command that prints board text to a terminal.
+# True when no string and no field name carries a control character. Each
+# validation filter runs the same test; compare runs this one on whatever it
+# reads, data file or published page, because compare prints board text to a
+# terminal and a page may have been edited since it was rendered.
 readonly NO_CONTROL_FILTER='([.. | strings] + [.. | objects | keys[]] | map(select(test("[[:cntrl:]]"))) | length) == 0'
 
 # Helpers every validation filter starts with. Messages avoid apostrophes

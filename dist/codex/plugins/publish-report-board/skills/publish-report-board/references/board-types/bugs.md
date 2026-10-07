@@ -79,7 +79,7 @@ Every timestamp carries an explicit offset. An `until` date is inclusive in the 
 bash BUGS_GATHER gather REPO GATHER_JSON
 ```
 
-It runs the open and recently closed searches, by label and by issue type, in parallel, reads the ZenHub state of every open bug and the workspace's active sprint in aliased queries of up to 100 bugs each, and writes one normalized file. Then it prints what moved since the cached gather, or says the sync is a cold one. Problems stop the gather rather than shrink the board: an archived repository, a search GitHub cut short at its 1000-result limit, a ZenHub error on part of a lookup, or ZenHub returning no state for any bug. It lists on stderr, and goes on without, the bugs ZenHub does not track and the bugs whose labels or linked pull requests GitHub cut short.
+It runs the open and recently closed searches, by label and by issue type, in parallel, reads the ZenHub state of every open bug and the workspace's active sprint in aliased queries of up to 100 bugs each, and writes one normalized file. Then it prints what moved since the cached gather, or says the sync is a cold one. Problems stop the gather rather than shrink the board, including a failed GitHub or ZenHub request, an archived repository, a search GitHub cut short at its 1000-result limit, a ZenHub error on part of a lookup, or ZenHub returning no state for any bug. It warns on stderr, and goes on, about bugs ZenHub does not track, which carry no pipeline, sprint, or container level, bugs whose labels or linked pull requests GitHub cut short, and bugs whose sprints or blocking issues ZenHub cut short.
 
 ### 2. Read What Changed
 
@@ -87,7 +87,7 @@ It runs the open and recently closed searches, by label and by issue type, in pa
 bash BUGS_GATHER reuse REPO GATHER_JSON ASSESSMENTS_JSON
 ```
 
-It writes to `ASSESSMENTS_JSON` the cached assessments whose bug has not changed since it was read, and lists the open bugs that need reading. Read each one's body and every comment, read-only, and add its assessment to the list in `ASSESSMENTS_JSON` with the Write tool. When more than a handful need reading, read them in parallel with subagents, about ten bugs each, giving each the instructions below and the exact shape to return.
+It writes to `ASSESSMENTS_JSON` the cached assessments whose bug has not changed since it was read, and the last assessment of each recently closed bug, and lists the open bugs that need reading. Read each one's body and every comment, read-only, and add its assessment to the list in `ASSESSMENTS_JSON` with the Write tool. When more than a handful need reading, read them in parallel with subagents, about ten bugs each, giving each the instructions below and the exact shape to return.
 
 #### Assessment
 
@@ -118,7 +118,7 @@ Judge from what the issue and its comments say, never from a bug's plausibility;
 bash BUGS_GATHER score REPO GATHER_JSON ASSESSMENTS_JSON SCORED_JSON
 ```
 
-It refuses assessments that miss an open bug, describe an older version of one, assess one bug twice, or fall outside the closed sets, and lists every problem at once. A configured triage note that cannot be read stops it, since scoring without the note would drop every call in it. A triage line that does not parse, written with any list marker or indent, is reported as a problem rather than read as prose. Otherwise it applies the triage note, places every open bug in one tier, ranks each tier by a weighted urgency score, and prints the report the check-in shows: the triage entries and any expired or malformed ones, Critical and High priority with why each is there, the top of Ready to go, the report counts, and on a warm cache what entered or left Critical and High priority.
+It refuses assessments that miss an open bug, describe an older version of one, assess one bug twice, or fall outside the closed sets, and lists every problem at once. A configured triage note that cannot be read stops it, since scoring without the note would drop every call in it. A triage line that does not parse, written with any list marker or indent, or numbered, is reported as a problem rather than read as prose; entries take a `-`, `*`, or `+` marker. Otherwise it applies the triage note, places every open bug in one tier, ranks each tier by a weighted urgency score, and prints the report the check-in shows: the triage entries and any expired or malformed ones, Critical and High priority with why each is there, the top of Ready to go, the report counts, and on a warm cache what entered or left Critical and High priority.
 
 | Tier                 | Rule, applied in this order                                                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -242,5 +242,5 @@ The facts are the assessment in five lines, where the bug is, how it is known, w
 - A triage signal names an entry in `triage` with the same verb, about the same bug, that has not expired by `sync.at`, counted in local days of `sync.timeZone`.
 - Open bugs carry assessments in the closed sets; triage entries follow the note grammar, and each ID matches its entry.
 - Open bugs carry a `nextStep`; Ready entries name a group and a `why`, and `ship` and `review` entries a fix pull request; Investigate entries carry a question and a `why`; Lower priority and Parked entries a reason.
-- `triageProblems` is empty: the triage note parsed cleanly.
+- `triageProblems` is absent or empty: the triage note parsed cleanly.
 - `sync.timeZone` is set and is a zone the time zone database has.

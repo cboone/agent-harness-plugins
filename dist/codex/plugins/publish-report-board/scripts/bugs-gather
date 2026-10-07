@@ -270,7 +270,8 @@ $response.data.workspace.activeSprint as $sprint
       type: (.issueType.name // null),
       level: (.issueType.level // null),
       blockedBy: (.blockingIssues | open_keys),
-      blocks: (.blockedIssues | open_keys)
+      blocks: (.blockedIssues | open_keys),
+      truncated: [(select(.sprints.pageInfo.hasNextPage == true) | "sprints"), (select(.blockingIssues.pageInfo.hasNextPage == true) | "blocking issues"), (select(.blockedIssues.pageInfo.hasNextPage == true) | "blocked issues")]
     } end)}) | from_entries)
   }
 '
@@ -397,11 +398,13 @@ $config as $c
 | ($scored | strflocaltime("%Y-%m-%d")) as $today
 
 # The triage note: every list item, at any indent and with any marker, must be
-# an entry, so a malformed one is reported rather than read as prose.
-| ($note | split("\n") | to_entries | map(select(.value | test("^\\s*[-*+]\\s"))) | map(
+# an entry, so a malformed one is reported rather than read as prose. Entries
+# take a bullet marker; a numbered item is reported as needing one.
+| ($note | split("\n") | to_entries | map(select(.value | test("^\\s*([-*+]|[0-9]+[.)])\\s"))) | map(
     .key as $line | .value as $text
     | ($text | [capture(entry_pattern)] | first) as $head
-    | if $head == null then {problem: "line \($line + 1): not a triage entry: \($text)"}
+    | if $head == null and ($text | test("^\\s*[0-9]+[.)]")) then {problem: "line \($line + 1): start a triage entry with -, not a number: \($text)"}
+      elif $head == null then {problem: "line \($line + 1): not a triage entry: \($text)"}
       else
         (try ($head.at | epoch) catch null) as $instant
         | if $instant == null or ($head.at[0:10] | is_day | not) then {problem: "line \($line + 1): \($head.at) is not a real time"}
@@ -440,8 +443,8 @@ $config as $c
 | [$gather.bugs[] | select(.state == "open")] as $open
 
 | def triage_signal: {source: "triage", kind: .verb, text, at, entry: .id};
-  # Among the escalate, snooze, and park entries for a bug still in force,
-  # the latest decides.
+  # Of the escalate, snooze, and park entries in force for a bug, the latest
+  # decides.
   def placement($n): [$active[] | select(.target == $n and (.verb | IN("escalate", "snooze", "park")))] | sort_by(.instant) | last;
   def overrides($n): [$active[] | select(.target == $n and .verb == "set")] | sort_by(.instant);
   def due($a): $a.deadline != null and $a.deadline >= $today
@@ -511,11 +514,11 @@ $config as $c
   # Assessments must cover every open bug and must describe the bug as it is
   # now; a stale one means the bug changed after it was read.
   # The same bug assessed twice would let the last silently win.
-  ([$assessments[] | .number] | group_by(.) | map(select(length > 1) | "#\(.[0]): assessed \(length) times; keep one")) as $duplicates
+  ([$assessments[] | .number] | group_by(.) | map(select(length > 1) | "#\(.[0]): assessed \(length) times; keep one")) as $assessed_twice
   |   ([$open[] | ($assessed[.number | tostring]) as $a
     | if $a == null then "#\(.number): no assessment; read it"
       elif $a.updatedAt != .updatedAt then "#\(.number): assessed at updatedAt \($a.updatedAt), but the bug was updated at \(.updatedAt); read it again"
-      else ($a | assessment_problems("#\(.number)")) end] + $duplicates) as $assessment_problems
+      else ($a | assessment_problems("#\(.number)")) end] + $assessed_twice) as $assessment_problems
 | if ($assessment_problems | length) > 0 then {problems: $assessment_problems}
   else
     [$open[] | . as $b
@@ -862,13 +865,20 @@ function gather_zenhub() {
       exit "${E_INVALID}"
     fi
     jq 'map({key: .alias, value: .number}) | from_entries | {aliases: .}' "${chunk_file}.aliases" > "${chunk_file}.map"
-    jq --slurpfile map "${chunk_file}.map" '$map[0].aliases as $aliases | [.errors[]? | {number: $aliases[.path[0]], message: (.message // "no message")}]' "${chunk_file}.response" > "${chunk_file}.missing"
+    # Every lookup that came back without state, with the error ZenHub gave for
+    # it when there is one; a null lookup with no error counts too.
+    jq --slurpfile map "${chunk_file}.map" '. as $response | $map[0].aliases | to_entries | map(select($response.data[.key] == null) | .key as $alias | {number: .value, message: ([$response.errors[]? | select(.path[0]? == $alias) | .message] | first // "no state and no error")})' "${chunk_file}.response" > "${chunk_file}.missing"
     jq -n --arg repo_name "${repo_name}" --slurpfile response "${chunk_file}.response" --slurpfile map "${chunk_file}.map" \
       "\$response[0] as \$response | \$map[0].aliases as \$aliases | ${ZENHUB_FILTER}" > "${chunk_file}.state"
     start=$((start + ZENHUB_CHUNK))
     chunk=$((chunk + 1))
   done
   jq -s '{sprint: .[0].sprint, items: (map(.items) | add)}' "${TEMP_DIR}"/zenhub-*.state > "${TEMP_DIR}/zenhub.json"
+  local cut_short
+  cut_short="$(jq -r '.items | to_entries[] | select(.value != null and (.value.truncated | length) > 0) | "  - #\(.key): \(.value.truncated | join(" and "))"' "${TEMP_DIR}/zenhub.json")"
+  if [[ -n "${cut_short}" ]]; then
+    printf '%s: ZenHub cut these lists short, so a sprint or a blocking issue past the cut is missing:\n%s\n' "${SCRIPT_NAME}" "${cut_short}" >&2
+  fi
 
   # A bug ZenHub does not track loses its pipeline, sprint, and container
   # level, so say which; when every lookup failed, the workspace or the
@@ -877,7 +887,7 @@ function gather_zenhub() {
   local missing
   missing="$(jq -s -r 'add | .[] | "  - #\(.number): \(.message)"' "${TEMP_DIR}"/zenhub-*.missing)"
   if [[ -n "${missing}" ]]; then
-    if ((total > 0)) && [[ "$(jq -s 'add | length' "${TEMP_DIR}"/zenhub-*.missing)" -eq "${total}" ]]; then
+    if ((total > 0)) && [[ "$(jq -s 'add | map(.number) | unique | length' "${TEMP_DIR}"/zenhub-*.missing)" -ge "${total}" ]]; then
       printf '%s: ZenHub returned no state for any of the %s open bugs, so the workspace or the repository is wrong:\n%s\n' "${SCRIPT_NAME}" "${total}" "$(head -n 3 <<< "${missing}")" >&2
       exit "${E_INVALID}"
     fi
@@ -935,8 +945,10 @@ function cmd_gather() {
     # GitHub search stops at 1000 results and then reports no further page,
     # so a search that returned fewer issues than it counted was cut short,
     # and the bugs past the cap would vanish from the board unremarked.
-    jq -e '([.[] | .data.search.nodes | length] | add // 0) >= (.[0].data.search.issueCount // 0)' "${search_file}" > /dev/null \
-      || die "${E_INVALID}" "the $(basename -- "${search_file}" .json | sed 's/^search-//') search returned $(jq '[.[] | .data.search.nodes | length] | add // 0' "${search_file}") of $(jq '.[0].data.search.issueCount' "${search_file}") issues; GitHub search stops at 1000, so narrow bugLabels or bugTypes"
+    jq -e 'all(.[]; .data.search.issueCount | type == "number")' "${search_file}" > /dev/null \
+      || die "${E_INVALID}" "the $(basename -- "${search_file}" .json | sed 's/^search-//') search came back without a result count, so its results cannot be trusted"
+    jq -e '([.[] | .data.search.nodes | length] | add // 0) >= .[0].data.search.issueCount' "${search_file}" > /dev/null \
+      || die "${E_INVALID}" "the $(basename -- "${search_file}" .json | sed 's/^search-//') search returned $(jq '[.[] | .data.search.nodes | length] | add // 0' "${search_file}") of $(jq '.[0].data.search.issueCount' "${search_file}") issues; GitHub search stops at 1000, so narrow bugLabels or bugTypes, or run gather again if the bugs changed while it read them"
     jq --arg name "$(basename -- "${search_file}" .json)" --slurpfile pages "${search_file}" \
       '. + [{name: ($name | sub("^search-"; "") | sub("-[0-9]+$"; "")), pages: $pages[0]}]' \
       "${TEMP_DIR}/searches.json" > "${TEMP_DIR}/searches.next"
@@ -1143,9 +1155,9 @@ function cmd_save() {
   directory="$(cache_dir "$(config_field "${config}" '.repo')")"
   (umask 077 && mkdir -p -- "${directory}") || die "${E_INVALID}" "cannot create ${directory}"
   make_temp_dir
-  # The assessments of bugs that have closed carry over from the cache, since
-  # reuse lists only open bugs, so later syncs can still tell whether a
-  # recently fixed bug was on production. Bugs that left the gather drop out.
+  # Cached assessments missing from ASSESSMENTS carry over, so a closed bug
+  # keeps its last assessment and later syncs can still tell whether its fix
+  # went to production. Bugs that left the gather drop out.
   cached_assessments "${config}" > "${TEMP_DIR}/cached.json"
   jq --slurpfile gather "${gather_file}" --slurpfile cached "${TEMP_DIR}/cached.json" '
     ([$gather[0].bugs[] | .number]) as $known

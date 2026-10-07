@@ -10,7 +10,7 @@ Boards read as one system because they share one set of design rules. The `backl
 
 ## Color
 
-- **Semantic color stays separate from the accent.** Amber marks what is current or contended: the start picks, the lane segments that can run now, the contention cells. On a bugs board, the Critical count and tags are the one filled block, and High priority is the accent color in outline. Blue is reserved for interaction: hover, press, and focus, except in the bugs board's dark theme, where Critical takes the same light blue as its focus ring. Neither is decoration.
+- **Semantic color stays separate from the accent.** Amber marks what is current or contended: the start picks, the lane segments that can run now, the contention cells. On a bugs board, the Critical count and tags are the one filled block, and High priority is the accent color in outline. Blue is reserved for interaction: hover, press, and focus, except in the bugs board's dark theme, where Critical takes the same light blue as the board's focus ring. Neither is decoration.
 - **Both themes are defined as tokens.** Light values sit on `:root`; dark values sit under `prefers-color-scheme: dark` and again under `[data-theme="dark"]`, so an explicit choice wins in either direction. Components use tokens only, never a literal color that works in one theme.
 
 ## State in Form as Well as Color
