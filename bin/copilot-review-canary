@@ -147,7 +147,9 @@ readonly SKELETON_FILTER='
       elif test("^#+ ") then gsub("\\([0-9]+\\)"; "(N)")
       elif test("^<summary>") then
         if test("\\[badge\\]") then "<summary>[badge] TITLE</summary>"
-        else gsub("\\([0-9]+\\)"; "(N)")
+        # A count is written after the title, as in "Open (3)", or before
+        # it, as in "3 open findings". Either way the number is not layout.
+        else gsub("\\([0-9]+\\)"; "(N)") | sub("^(?<tags><summary>(<[^>]+>)*)[0-9]+ "; "\(.tags)N ")
         end
       elif test("^</?details") then .
       elif test("^[[:space:]]*\\|[[:space:]:-]+\\|[[:space:]:|-]*$") then "| --- |"
@@ -172,7 +174,12 @@ readonly SKELETON_FILTER='
       # file and line without a vote tag is a finding no parser reads, and
       # the shape is what makes it visible here.
       elif test("^[[:space:]]*([-*+]|[0-9]+[.)]) (\\*\\*)?`CODE`") then "- `CODE` TEXT"
+      elif test("^\\*\\*[0-9]+ [^*:]+\\*\\*$") then sub("^\\*\\*[0-9]+ "; "**N ")
       elif test("^\\*\\*[^*]+:\\*\\*") then capture("^(?<label>\\*\\*[^*]+:\\*\\*)").label
+      # A label can carry a leading emoji, as "🧠 **Review effort:**" does, so
+      # any non-ASCII mark before it is kept with it.
+      elif test("^[^\\x{0}-\\x{7F}]+[[:space:]]+\\*\\*[^*]+:\\*\\*") then
+        capture("^(?<mark>[^\\x{0}-\\x{7F}]+)[[:space:]]+(?<label>\\*\\*[^*]+:\\*\\*)") | "\(.mark) \(.label)"
       elif test("^- \\*\\*[^*]+:\\*\\*") then "- " + capture("^- (?<label>\\*\\*[^*]+:\\*\\*)").label
       elif test("^[A-Z][A-Za-z ]+:$") then .
       elif test("^\\*\\*[^*]+:[0-9]+\\*\\*$") then "**PATH:LINE**"

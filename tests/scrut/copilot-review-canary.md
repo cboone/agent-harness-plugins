@@ -305,6 +305,32 @@ $ printf '[{"repo":"o/r","number":1,"reviews":[{"id":1,"user":{"login":"copilot-
 | PATH | TEXT | with (N votes)
 ```
 
+A count is not layout wherever Copilot writes it: after a section title, as
+in `Open (3)`, before one, as in `3 open findings`, or on a bold line of its
+own, as in `**0 open findings**`. A label keeps the emoji Copilot puts before
+it, as in `🧠 **Review effort:**`.
+
+```scrut
+$ jq '[{repo: "o/r", number: 1, reviews: ., audit: null}]' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${COPILOT_REVIEW_CANARY_BIN}" skeletons | jq -r '.skeletons[]'
+### 🟡 Changes recommended
+- [badge] [TITLE](#thread)
+- [badge] [TITLE](#thread) · New
+<!-- ccr-overview-v2 -->
+</details>
+<details open>
+<details>
+<summary><strong>N open findings</strong></summary>
+<summary><strong>N resolved since last review</strong></summary>
+🧠 **Review effort:**
+```
+
+```scrut
+$ printf '[{"repo":"o/r","number":1,"reviews":[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"y","submitted_at":"2026-10-07T00:00:00Z","body":"### 🔵 Needs a closer look\\n\\n**0 open findings**\\n\\n🧠 **Review effort:** Lite"}],"audit":null}]' | "${COPILOT_REVIEW_CANARY_BIN}" skeletons | jq -r '.skeletons[]'
+### 🔵 Needs a closer look
+**N open findings**
+🧠 **Review effort:**
+```
+
 ## Usage errors
 
 ```scrut
