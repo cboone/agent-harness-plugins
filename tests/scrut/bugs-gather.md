@@ -554,6 +554,55 @@ bugs-gather: acme/widgets is archived; its bugs cannot change, so there is nothi
 [1]
 ```
 
+## Problems with the triage note travel into the draft, which validation refuses
+
+The malformed note above scores, but the board built from that score cannot
+validate until the note is fixed.
+
+```scrut
+$ bugs draft "${work}/bad-note.json" "${work}/gather.json" "${work}/bad-note-scored.json" "${work}/bad-note-board.json" > /dev/null && jq '.summary = "x" | (.critical[], .high[]) |= (.impact = "x")' "${work}/bad-note-board.json" > "${work}/bad-note-filled.json" && "${REPORT_BOARD_BIN}" validate "${work}/bad-note-filled.json" 2>&1 | grep -c '^  - triage note: '; echo "exit ${PIPESTATUS[0]}"
+12
+exit 1
+```
+
+## A suspected cause or a failed reproduction needs investigating
+
+`#21` has a known cause and sits in Ready to go; a suspected cause, or a
+report that it would not reproduce, moves it to Needs investigation.
+
+```scrut
+$ for change in '.cause = "suspected"' '.reproduced = false'; do jq "map(if .number == 21 then ${change} | .question = \"What fails?\" else . end)" "${assessments}" > "${work}/trigger.json" && bugs score "${work}/config.json" "${work}/gather.json" "${work}/trigger.json" "${work}/trigger-scored.json" > /dev/null && jq -r '[.tiers | to_entries[] | .key as $t | .value[] | select(.number == 21) | "#21 \($t): \(.why)"] | first' "${work}/trigger-scored.json"; done
+#21 investigate: cause suspected
+#21 investigate: not reproduced
+```
+
+## Save keeps a closed bug's cached assessment even when it is not given one
+
+```scrut
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${work}/with-closed.json" "${work}/scored.json" 2> /dev/null && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2> /dev/null && jq -r '[.[] | select(.number == 5) | "#5 kept: \(.environment)"] | first // "#5 lost"' "${cache}/report-boards/bugs/github.com/acme/widgets/assessments.json"
+#5 kept: production
+```
+
+## Cache files of the wrong shape are named and set aside
+
+A scored cache without tiers, or an assessments cache whose entries carry no
+bug number, would otherwise reach the filters.
+
+```scrut
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && dir="${cache}/report-boards/bugs/github.com/acme/widgets" && mkdir -p "${dir}" && printf '[{"foo": 1}]' > "${dir}/assessments.json" && printf '{"version": 2}' > "${dir}/scored.json" && { bugs XDG_CACHE_HOME="${cache}" reuse "${work}/config.json" "${work}/gather.json" "${work}/shape-reused.json" 2>&1 > /dev/null; bugs XDG_CACHE_HOME="${cache}" score "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/shape-scored.json" 2>&1 > /dev/null; } | sed "s|${cache}|CACHE|g"
+bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/assessments.json: it is unreadable or was written by another version of bugs-gather
+bugs-gather: ignoring CACHE/report-boards/bugs/github.com/acme/widgets/scored.json: it is unreadable or was written by another version of bugs-gather
+```
+
+## Labels or fixes GitHub cut short are listed, and the gather goes on
+
+```scrut
+$ capped="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BUGS_GATHER_DATA_DIR}/github/." "${capped}/" && jq 'map((.data.search.nodes[] | select(.number == 12) | .labels.pageInfo) = {hasNextPage: true})' "${BUGS_GATHER_DATA_DIR}/github/graphql/search-open-labels.json" > "${capped}/graphql/search-open-labels.json" && bugs STUB_GH_DIR="${capped}" gather "${work}/config.json" "${work}/labels-cut.json" 2>&1 > /dev/null | grep -A1 'GitHub cut'; echo "exit ${PIPESTATUS[0]}"
+bugs-gather: GitHub cut these lists short, so a label or a fix past the cut is missing:
+  - #12: labels
+exit 0
+```
+
 ## Usage errors
 
 ```scrut

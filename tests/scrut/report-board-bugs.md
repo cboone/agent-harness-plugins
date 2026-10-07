@@ -240,3 +240,13 @@ $ problems '(.bugs[] | select(.number == 21) | .assessment.nextStep) = null | (.
   - ready #16: why is required
   - investigate #20: why is required, what is not yet known
 ```
+
+## Invalid data exits with status 1
+
+The cases above read the problem lines through `grep`, which hides the exit
+status, so this one checks it directly.
+
+```scrut
+$ "${REPORT_BOARD_BIN}" validate "$(board_with '.summary = null')" > /dev/null 2>&1
+[1]
+```
