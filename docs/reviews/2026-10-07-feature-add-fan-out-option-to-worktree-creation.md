@@ -43,12 +43,12 @@ Fix: add the entries.
 
 ## Suggestions
 
-6. Launcher help text still says it waits briefly and reads stdin in every mode; it should describe `--await-completion` and `--resolve-issue-branch` accurately, name the `Worktree ready: PATH` line, and say `--issue` exits 1 when several branches match.
-7. After a timeout the detached process deletes its log, so nothing records whether the launch succeeded; the skills give no way to resolve an uncertain result.
-8. The fan-out report tables show no uncertain or not-launched rows.
-9. Phase 2 does not say what to do when `workmux list` shows the window is not open.
-10. The several-issues sections mention ambiguous text searches without saying whether a list may mix numbers and search text.
-11. Test gaps: cleanup on the failure path, the timeout message when a worktree exists, the timeout test's narrow timing margin, cleanup checks that glob the shared `TMPDIR`, and resolve-mode edge arguments (no value, `0`, `042`, unasserted exit codes).
-12. The `workmux-stub` worktree-recording comment and the `git-worktree-stub` porcelain-file comment are unclear or incomplete.
+- **S1.** Launcher help text still says it waits briefly and reads stdin in every mode; it should describe `--await-completion` and `--resolve-issue-branch` accurately, name the `Worktree ready: PATH` line, and say `--issue` exits 1 when several branches match.
+- **S2.** After a timeout the detached process deletes its log, so nothing records whether the launch succeeded; the skills give no way to resolve an uncertain result.
+- **S3.** The fan-out report tables show no uncertain or not-launched rows.
+- **S4.** Phase 2 does not say what to do when `workmux list` shows the window is not open.
+- **S5.** The several-issues sections mention ambiguous text searches without saying whether a list may mix numbers and search text.
+- **S6.** Test gaps: cleanup on the failure path, the timeout message when a worktree exists, the timeout test's narrow timing margin, cleanup checks that glob the shared `TMPDIR`, and resolve-mode edge arguments (no value, `0`, `042`, unasserted exit codes).
+- **S7.** The `workmux-stub` worktree-recording comment and the `git-worktree-stub` porcelain-file comment are unclear or incomplete.
 
 ## Resolution
