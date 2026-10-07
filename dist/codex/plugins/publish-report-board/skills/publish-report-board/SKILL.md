@@ -1,8 +1,8 @@
 ---
 name: publish-report-board
 description: >-
-  Publish a recurring analysis, such as backlog triage, as a report board with a
-  stable URL. Use for "publish a report board" or "refresh the board".
+  Publish recurring analyses, such as backlog or bug triage, as report boards
+  with stable URLs. Use for "publish a report board" or "refresh the board".
 ---
 
 # Publish Report Board
@@ -15,11 +15,12 @@ A report board is an analysis with three properties that terminal output serves 
 
 ## Board Types
 
-| Board type       | Answers                                                           | Reference                                    |
-| ---------------- | ----------------------------------------------------------------- | -------------------------------------------- |
-| `backlog-triage` | What to start next, what can run in parallel, and what is blocked | `./references/board-types/backlog-triage.md` |
+| Board type       | Answers                                                                                 | Reference                                    |
+| ---------------- | --------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `backlog-triage` | What to start next, what can run in parallel, and what is blocked                       | `./references/board-types/backlog-triage.md` |
+| `bugs`           | Which of a repository's bugs need action now, which today, and how the rest are triaged | `./references/board-types/bugs.md`           |
 
-Only `backlog-triage` ships a template. When the user wants a board for another kind of analysis, such as CI health or release readiness, say that no template exists for it yet and deliver the analysis in the terminal. Do not improvise a page outside the templates: boards read as one system because they share one design, described in `./references/design-conventions.md`.
+Only these two ship a template. When the user wants a board for another kind of analysis, such as CI health or release readiness, say that no template exists for it yet and deliver the analysis in the terminal. Do not improvise a page outside the templates: boards read as one system because they share one design, described in `./references/design-conventions.md`.
 
 ## Workflow
 
@@ -40,6 +41,14 @@ Claude Code replaces the plugin-root placeholder with the installed plugin's abs
 **If the path was not substituted**, it still begins with `$` rather than `/`. Codex CLI substitutes the placeholder only in hook commands, and OpenCode does not substitute it at all. In that case locate the script with `**/publish-report-board/**/scripts/report-board`, prefer a match inside the harness's own installed-plugin directory, ignore any match under a `.bak` or other backup directory, confirm it with `test -x`, and use that absolute path for the rest of the session. The script finds its templates relative to its own location, so run it from where it is installed rather than from a copy.
 
 In the commands below, `REPORT_BOARD` is shorthand for that full **quoted path**.
+
+A `bugs` board also uses `bugs-gather`, which ships beside it and is found the same way, with its own name in place of `report-board`:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/bugs-gather"
+```
+
+Its reference writes that quoted path as `BUGS_GATHER`. Its working files, the gather, the assessments, and the score, sit beside the board data in the same directory; its persistent cache has a directory of its own, which the reference names.
 
 ### 3. Choose Where the Board Lives
 
@@ -66,11 +75,11 @@ Establish whether this is a first publish or a re-sync before gathering anything
 
 Keep `PREVIOUS_JSON` apart from the working files, as `REPO-BOARD.previous.json`. Steps 6 and 7 overwrite the working files with this sync, so a comparison against them finds nothing to report.
 
-On a re-sync, the previous data is a draft, not a source. Its lanes and reasons are a starting point; GitHub decides what is true now.
+On a re-sync, the previous data is a draft, not a source. Its lanes, tiers, and reasons are a starting point; the sources decide what is true now.
 
 ### 5. Gather and Analyze
 
-Follow the board type's reference for the commands to run and the analysis to perform. Record the sync metadata as you gather: `./references/sync-metadata.md` lists what every board must state.
+Follow the board type's reference for the commands to run and the analysis to perform, including any check-in with the user it calls for. A `bugs` sync always checks in about its Now and Today calls before writing the board, and can end there when nothing has moved. Record the sync metadata as you gather: `./references/sync-metadata.md` lists what every board must state.
 
 ### 6. Write and Validate the Board Data
 
@@ -80,7 +89,7 @@ Write the data as JSON to the working `.json` path with the Write tool, then val
 bash REPORT_BOARD validate DATA_JSON
 ```
 
-Fix every problem it lists, then validate again. The rules catch a stale board: an open issue left out of every lane, a blocking issue that has since closed, a start pick that is already in progress. They check pull request, branch, and cross-repository references only for their shape, so confirm those are still open while gathering. Resolve each by placing or correcting the item, never by deleting an open issue from the data.
+Fix every problem it lists, then validate again. Each board type has its own rules, listed in its reference, and they catch a stale board: an open issue left out of every lane, a blocking issue that has since closed, a start pick that is already in progress, a bug in Now resting on a triage entry that has expired. They check pull request, branch, and cross-repository references only for their shape, so confirm those are still open while gathering. Resolve each by placing or correcting the item, never by deleting an open issue from the data.
 
 ### 7. Render
 
@@ -135,6 +144,8 @@ Then stop. Publishing a board does not start work on anything it recommends.
 ## Error Handling
 
 - If `gh` is not authenticated, tell the user to run `gh auth login` and stop; a board built from partial data is worse than none.
+- If `bugs-gather` reports that the ZenHub token variable is not set, tell the user which variable the config names and stop.
+- If `bugs-gather score` refuses the assessments, read the bugs it names again rather than editing their `updatedAt`; a stale assessment describes a bug that has since changed.
 - If `jq` is missing, `report-board` exits with status 2 and says so. Tell the user to install it.
 - If validation fails after an honest attempt to place every item, show the user the remaining problems rather than publishing a board that breaks its own rules.
 - If a publish is refused because the page changed since this conversation read it, read it again, rebuild from what comes back, and publish again.

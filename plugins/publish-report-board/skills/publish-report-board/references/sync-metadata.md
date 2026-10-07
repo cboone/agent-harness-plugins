@@ -14,11 +14,11 @@ Take the commit from the remote-tracking branch after a fetch, never from the lo
 
 ## Optional Fields
 
-| Field                   | Value                                                            |
-| ----------------------- | ---------------------------------------------------------------- |
-| `sync.timeZone`         | The user's IANA zone, such as `America/New_York`                 |
-| `sync.openPullRequests` | The count of open pull requests                                  |
-| `sync.extra`            | Further revision markers the repository has, each a short phrase |
+| Field                   | Value                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `sync.timeZone`         | The user's IANA zone, such as `America/New_York`; required on a `bugs` board, whose triage dates count in its local days |
+| `sync.openPullRequests` | The count of open pull requests                                                                                          |
+| `sync.extra`            | Further revision markers the repository has, each a short phrase                                                         |
 
 With `timeZone` set, every viewer sees the sync time the user sees. On macOS and most Linux systems, `readlink /etc/localtime` ends in the zone name. When the zone cannot be determined, omit the field and each viewer sees the time in their own zone. Validation rejects a name the time zone database does not have, and a page given one anyway shows the time in UTC, so its viewers still agree.
 
@@ -26,9 +26,9 @@ Use `extra` for anything else that pins what the board reflects, such as a catal
 
 ## What the Page Shows
 
-- The header shows the sync date and time, and a live age, such as "Synced 3 hours ago", that the page recomputes every minute from the viewer's clock. After a full day the age turns amber, and after three days it turns red.
+- The header shows the sync date and time, and a live age, such as "Synced 3 hours ago", that the page recomputes every minute from the viewer's clock. On a backlog board the age turns amber after a full day and red after three days; on a bugs board, which goes stale in hours, it turns amber after 4 hours and red after 12.
 - The footer repeats the time, links the branch and the short commit, lists the counts and every `extra` entry, and reminds the reader that the source, not the page, is authoritative.
 
 ## When to Re-sync
 
-Re-sync after anything that changes what the board claims: an issue opened, closed, or moved to another milestone, a pull request merged, or a branch or worktree started. When the user comes back to a board after a gap, check its age before relying on it, and re-sync first if it predates the work it would drive.
+Re-sync after anything that changes what the board claims: an issue opened, closed, or moved to another milestone, a pull request merged, a branch or worktree started, or, on a bugs board, a new report from users. When the user comes back to a board after a gap, check its age before relying on it, and re-sync first if it predates the work it would drive.
