@@ -9,13 +9,13 @@ argument-hint: "[paths...] [--dry-run]"
 
 # Trim Comments
 
-Rewrite comments in changed code to be as short as possible while still earning their place. The rules apply to comments in any language.
+Rewrite the comments in scope to be as short as possible while still earning their place. The rules apply to comments in any language.
 
 ## Options
 
 The user may provide these options inline:
 
-- **paths**: A path, glob, or file list to limit the scope. Default scope is the current branch's changed files: committed changes since the base branch, plus staged, unstaged, and untracked files.
+- **paths**: A path, glob, or file list. Every comment in those files is in scope, changed or not. Without paths, the scope is the comments in or directly above code the current branch changed: committed changes since the base branch, plus staged, unstaged, and untracked files. When the user points at a single comment, that comment is the whole scope.
 - **--dry-run**: Report proposed changes without editing.
 
 ## The standard
@@ -175,7 +175,9 @@ If a comment can be parsed two ways, rewrite it even if it is already short.
 
 - Generated files: codegen output, build output, vendored dependencies, lockfiles, and anything the repository marks as generated
 - Lint and type-checker suppressions (`eslint-disable`, `ts-expect-error`, `@ts-ignore`, `noqa`, `nolint`) and their justifications
-- `TODO` / `FIXME` carrying a ticket reference
+- Directive and pragma comments that a compiler, build tool, coverage tool, or formatter reads, such as `//go:build`, `//go:generate`, shebangs, encoding declarations, `/// <reference>`, `// @ts-check`, `# type: ignore`, `# pragma: no cover`, `/* istanbul ignore next */`, and `// prettier-ignore`
+- Docstrings that contain doctests
+- `TODO` and `FIXME` comments. Leave one with a ticket reference alone. Flag one without a ticket in the report instead of deleting it.
 - License and copyright headers
 - Public API doc comments that an IDE surfaces to consumers, unless they are redundant with the signature
 - Prose documents: `.md` files, including `.github/*.instructions.md`. Those have different length rules.
@@ -185,26 +187,35 @@ If a comment can be parsed two ways, rewrite it even if it is already short.
 
 ### 1. Resolve scope
 
-If the user gave paths, use them. Otherwise, find the base branch and the merge base:
+If the user pointed at a single comment, it is the whole scope: go to step 3. If the user gave paths, use them, drop anything under "Do not touch", and go to step 2.
+
+Otherwise, find the base branch name. Try these in order and use the first that succeeds:
 
 ```bash
 gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
 git rev-parse --abbrev-ref origin/HEAD | sed 's@^origin/@@'
+```
+
+Then find the merge base:
+
+```bash
 git merge-base origin/<base> HEAD
 ```
 
-Use the first command that succeeds for the base name. Then collect the changed files:
+These commands assume the remote is named `origin`; use the repository's remote name if it differs. If `origin/<base>` does not exist, try the local `<base>` branch. If neither works, see "Error Handling".
+
+Collect the changed files. Both commands print paths from the repository root, from any working directory:
 
 ```bash
-git diff --name-only <merge-base>
-git ls-files --others --exclude-standard
+git diff --name-only --diff-filter=d <merge-base>
+git ls-files --others --exclude-standard --full-name :/
 ```
 
-The first command covers committed, staged, and unstaged changes since the merge base; the second adds untracked files. Drop deleted files and anything under "Do not touch". Report the file list before editing.
+The first command covers committed, staged, and unstaged changes since the merge base, without deleted files; the second adds untracked files. Drop anything under "Do not touch". Report the file list before editing.
 
 ### 2. Collect comments
 
-Read each file in scope and collect every comment in or adjacent to changed code.
+Read each file in scope. With paths, collect every comment in the file. With the default scope, collect comments inside a changed hunk or directly above one, using `git diff <merge-base> -- <file>` to find the hunks; an untracked file counts as entirely changed.
 
 ### 3. Classify each comment
 
@@ -212,23 +223,23 @@ Keep as-is, rewrite, or delete. Apply the sections above.
 
 ### 4. Edit
 
-Skip this step with `--dry-run`. Make each change a separate, minimal edit, so each one is reviewable on its own. Touch only comments: no code, whitespace, or formatting changes beyond what removing a comment line requires.
+Skip this step with `--dry-run`. Make each change a separate, minimal edit, so each one maps to one row of the report. Touch only comments: no code, whitespace, or formatting changes beyond what removing a comment line requires. Never delete a docstring that is the only statement in a function or class body; trim it instead.
 
 ### 5. Verify
 
-Skip this step with `--dry-run`. Comments cannot change behavior, but formatting and lint can trip:
+Skip this step with `--dry-run`. Most comments cannot change behavior, but directives, doctests, and formatting can. Run these on the files this skill edited, not the rest of the branch:
 
-- the project's linter and formatter, scoped to the changed files
+- the project's linter and formatter, in check mode
 - the type checker, if the project has one
 - the project's test command, which confirms nothing structural broke
 
-Fix failures the edits caused. Report pre-existing failures without fixing them.
+If a check fails because of an edit made here, fix that edit by hand rather than letting a formatter rewrite the file, which would also reformat the user's own changes. Report pre-existing failures without fixing them.
 
 ### 6. Report
 
 Report a table: `file:line` (in the edited file), action, before, after. The report is read once, so line numbers are fine here. Keep before and after to one line each, truncating with `…`. With `--dry-run`, the table lists proposed changes.
 
-Leave the edits uncommitted for the user to review. Suggest a `refactor:` or `style:` commit naming what was trimmed, made with the `commit` skill when it is installed, and list any cut material worth moving into that commit message or the PR description.
+Leave the edits uncommitted for the user to review. Suggest a commit naming what was trimmed, following the repository's commit convention (for example, `refactor:` or `style:` where it uses Conventional Commits), made with the `commit` skill when it is installed, and list any cut material worth moving into that commit message or the PR description.
 
 ## Worked examples
 
@@ -270,7 +281,7 @@ Before finishing, confirm:
 ## Error Handling
 
 - **No changed files**: Report that the scope is empty and stop. Suggest passing paths.
-- **No base branch found**: Ask the user for the base branch or for paths, rather than guessing.
+- **No base branch or merge base found**: Ask the user for the base branch or for paths, rather than guessing. Use a structured question tool when the session offers one; otherwise ask in plain text and wait for the reply.
 - **A given path does not exist**: Report it and continue with the paths that do.
 - **A comment's meaning is unclear from the code**: Keep it and flag it in the report, rather than rewriting it into something possibly wrong.
 - **Linter, formatter, or tests fail for reasons unrelated to the edits**: Report the failure and leave it unfixed.
