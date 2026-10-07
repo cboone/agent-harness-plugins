@@ -4,7 +4,7 @@ description: >-
   Open a workmux worktree and tmux window where a new session plans a GitHub
   issue. Use for "start issue" or "work on #42 in a worktree"; for the current
   branch, use address-issue.
-argument-hint: "<issue-number|description> [--no-approval] [--resource <name>]"
+argument-hint: "<issue-number...|description> [--no-approval] [--resource <name>] [--fan-out|--each|--separate]"
 ---
 
 # Address Issue in Worktree
