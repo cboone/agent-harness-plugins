@@ -636,6 +636,19 @@
       "author": {
         "name": "Christopher Boone"
       },
+      "category": "code-quality",
+      "description": "Trim and rewrite code comments so each leads with what the code does and the minimum why, cutting trivia, jargon, restatement, and details that go stale.",
+      "homepage": "https://github.com/cboone/agent-harness-plugins",
+      "keywords": ["code-comments", "code-quality", "documentation", "refactoring", "style"],
+      "license": "MIT",
+      "name": "trim-comments",
+      "repository": "https://github.com/cboone/agent-harness-plugins",
+      "source": "./plugins/trim-comments"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
       "category": "ci-and-release",
       "description": "Assess every version reference in a repository, evaluate available upgrades with repo-specific risk and reward, and present selectable upgrade options.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
