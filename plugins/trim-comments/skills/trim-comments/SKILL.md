@@ -219,7 +219,7 @@ Filter every path list, including the file of a single named comment, before rea
 
 - Drop anything under "Do not touch".
 - Drop secret-bearing paths, such as real environment files, private keys, and credential stores, and any path that may hold credentials but cannot be classified without reading it. Never read, search, edit, or print them; report only that secret-bearing files were skipped.
-- Drop symlinks (`test -L <path>`) without following them, since a link can point outside the repository.
+- Drop symlinks and anything reached through one, without following them, since a link can point outside the repository. Drop a path when `test -L <path>` succeeds, or when the output of `realpath <path>` does not start with the output of `realpath "$(git rev-parse --show-toplevel)"` plus `/`. The second test catches a symlinked parent directory, which `test -L` cannot see.
 
 Report the remaining file list before editing.
 
