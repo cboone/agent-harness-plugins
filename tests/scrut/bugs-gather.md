@@ -369,6 +369,15 @@ This gather: 2026-10-15T16:00:00Z
 - Nothing moved.
 ```
 
+## Save waits for another sync's save, then refuses and names the lock
+
+```scrut
+$ cache="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir -p "${cache}/report-boards/bugs/github.com/acme/widgets/save.lock" && bugs XDG_CACHE_HOME="${cache}" save "${work}/config.json" "${work}/gather.json" "${assessments}" "${work}/scored.json" 2>&1 | sed "s|${cache}|CACHE|g"; echo "exit ${PIPESTATUS[0]}"; ls "${cache}/report-boards/bugs/github.com/acme/widgets"
+bugs-gather: another sync is saving the cache; if none is running, remove CACHE/report-boards/bugs/github.com/acme/widgets/save.lock
+exit 1
+save.lock
+```
+
 ## Reuse on a warm cache keeps every assessment that still matches its bug
 
 `#12` changed after it was read, so it alone needs reading.

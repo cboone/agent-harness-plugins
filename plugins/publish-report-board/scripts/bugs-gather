@@ -72,6 +72,8 @@ readonly DOT_SEGMENT_PATTERN='(^|/)\.\.?(/|$)'
 # Set by the gather command: the scratch directory for API responses, removed
 # on exit. It is global because an EXIT trap runs after main's locals are gone.
 TEMP_DIR=""
+# Set by save while it holds the cache lock, so the EXIT trap releases it.
+SAVE_LOCK=""
 # Set by load_config.
 CONFIG=""
 # Read from the variable the config names, once per gather.
@@ -729,6 +731,26 @@ function cleanup() {
   if [[ -n "${TEMP_DIR}" && -d "${TEMP_DIR}" ]]; then
     rm -rf -- "${TEMP_DIR}"
   fi
+  if [[ -n "${SAVE_LOCK}" ]]; then
+    rmdir -- "${SAVE_LOCK}" 2> /dev/null || true
+  fi
+}
+
+# Takes the cache lock for a repository: a directory, since mkdir either
+# creates it or fails and macOS has no flock. Two syncs saving at once would
+# otherwise interleave their writes and leave the three cache files from
+# different gathers. It waits about ten seconds for another save to finish.
+function acquire_save_lock() {
+  local lock="${1}/save.lock"
+  local -i tries=0
+  until mkdir -- "${lock}" 2> /dev/null; do
+    if ((tries >= 100)); then
+      die "${E_INVALID}" "another sync is saving the cache; if none is running, remove ${lock}"
+    fi
+    tries=$((tries + 1))
+    sleep 0.1
+  done
+  SAVE_LOCK="${lock}"
 }
 
 function make_temp_dir() {
@@ -1199,6 +1221,7 @@ function cmd_save() {
   directory="$(cache_dir "${config}")"
   (umask 077 && mkdir -p -- "${directory}") || die "${E_INVALID}" "cannot create ${directory}"
   make_temp_dir
+  acquire_save_lock "${directory}"
   # Cached assessments missing from ASSESSMENTS carry over, so a closed bug
   # keeps its last assessment and later syncs can still tell whether its fix
   # went to production. Bugs that left the gather drop out.
