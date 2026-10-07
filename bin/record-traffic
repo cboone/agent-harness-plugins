@@ -58,31 +58,22 @@ function die() {
   exit "${2:-1}"
 }
 
-function fetch_failed() {
-  die "could not fetch ${1}; the token needs Administration read access for traffic and Actions read access for runs"
-}
-
-# stdin comes from /dev/null so a gh call inside a `while read` loop can never
-# consume the loop's input.
+# Passes any arguments after the endpoint to `gh api` as flags. stdin comes
+# from /dev/null so a gh call inside a `while read` loop can never consume the
+# loop's input.
 function fetch() {
   local endpoint="${1}"
   local output
 
-  if ! output="$(gh api "${endpoint}" < /dev/null)"; then
-    fetch_failed "${endpoint}"
+  if ! output="$(gh api "${@:2}" "${endpoint}" < /dev/null)"; then
+    die "could not fetch ${endpoint}; the token needs Administration read access for traffic and Actions read access for runs"
   fi
   printf '%s\n' "${output}"
 }
 
 # Prints every page of a paginated endpoint as one JSON array of pages.
 function fetch_pages() {
-  local endpoint="${1}"
-  local output
-
-  if ! output="$(gh api --paginate --slurp "${endpoint}" < /dev/null)"; then
-    fetch_failed "${endpoint}"
-  fi
-  printf '%s\n' "${output}"
+  fetch "${1}" --paginate --slurp
 }
 
 # Fails with the endpoint's name unless the response passes the jq filter, so
@@ -125,24 +116,24 @@ function merge_daily() {
   write_file "${daily_file}" "${merged}"
 }
 
-# Prints, one per line, the completed days GitHub still reports whose automation
-# clones have not been counted yet. Older days are left alone: Actions history
-# may no longer cover them, and a count of zero would be wrong rather than
-# missing.
+# Prints, as a JSON array, the completed days GitHub still reports whose
+# automation clones have not been counted yet. Older days are left alone:
+# Actions history may no longer cover them, and a count of zero would be wrong
+# rather than missing.
 function uncounted_days() {
   local daily_file="${1}"
   local clones="${2}"
   local views="${3}"
   local today="${4}"
 
-  jq -r \
+  jq -c \
     --argjson clones "${clones}" \
     --argjson views "${views}" \
     --arg today "${today}" '
     . as $daily
     | [($clones.clones[], $views.views[]) | .timestamp[:10]]
-    | unique[]
-    | select(. < $today and ($daily[.] | has("ci_checkouts") | not))
+    | unique
+    | map(select(. < $today and ($daily[.] | has("ci_checkouts") | not)))
   ' "${daily_file}"
 }
 
@@ -238,10 +229,11 @@ function count_automation() {
     --argjson pending "${pending}" \
     --argjson counts "${counts}" '
     reduce ($days - $pending)[] as $day (.;
-      .[$day] += {
-        ci_checkouts: ([$counts[] | select(.day == $day) | .ci_checkouts] | add // 0),
-        dynamic_jobs: ([$counts[] | select(.day == $day) | .dynamic_jobs] | add // 0)
-      })
+      [$counts[] | select(.day == $day)] as $day_counts
+      | .[$day] += {
+          ci_checkouts: ([$day_counts[].ci_checkouts] | add // 0),
+          dynamic_jobs: ([$day_counts[].dynamic_jobs] | add // 0)
+        })
   ' "${daily_file}")"
   write_file "${daily_file}" "${merged}"
 }
@@ -383,7 +375,6 @@ function main() {
 
   local days_json
   days_json="$(uncounted_days "${daily_file}" "${clones}" "${views}" "${today}")"
-  days_json="$(jq -Rsc 'split("\n") | map(select(length > 0))' <<< "${days_json}")"
   if [[ "${days_json}" != "[]" ]]; then
     count_automation "${repo}" "${daily_file}" "${days_json}"
   fi
