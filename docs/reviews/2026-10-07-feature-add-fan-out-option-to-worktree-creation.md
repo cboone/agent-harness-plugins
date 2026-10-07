@@ -52,3 +52,24 @@ Fix: add the entries.
 - **S7.** The `workmux-stub` worktree-recording comment and the `git-worktree-stub` porcelain-file comment are unclear or incomplete.
 
 ## Resolution
+
+Every item is resolved. Targeted re-reviews of the first fix round confirmed each original item fixed and raised the follow-ups below, which the second round resolved.
+
+| Item | Resolution                                                                                                                                                                                                               | Commits                |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
+| 1    | Await default lowered to 90 seconds; skills request a 150-second tool timeout and treat any other result like 124; the detached launch runs in its own process group and ignores hangups.                                | `fac1778c`, `cb2dc2cc` |
+| 2    | Combined mode composes into a prompt file before marking.                                                                                                                                                                | `cb2dc2cc`             |
+| 3    | New case: the stub records a worktree, then exits 2; the launcher still reports failure.                                                                                                                                 | `fac1778c`             |
+| 4    | Branch and worktree lookups distinguish a git failure from "none"; resolve mode exits 1 and the skills stop on it.                                                                                                       | `fac1778c`, `cb2dc2cc` |
+| 5    | Both README allowlists cover `workmux list`, `mktemp` and the temporary file cleanup.                                                                                                                                    | `cb2dc2cc`             |
+| S1   | Help text rewritten for every mode.                                                                                                                                                                                      | `fac1778c`, `96e1ddac` |
+| S2   | After a timeout the state directory keeps `log` and `status`, and the launcher prints its path.                                                                                                                          | `fac1778c`             |
+| S3   | Report tables list every result, with uncertain and not-launched rows.                                                                                                                                                   | `cb2dc2cc`             |
+| S4   | Phase 2 records a launch without a window and continues.                                                                                                                                                                 | `cb2dc2cc`             |
+| S5   | Several issues are always numbers; search wording removed.                                                                                                                                                               | `cb2dc2cc`             |
+| S6   | Per-test temporary directory, bounded polling, cleanup on failure, existing-worktree and git-failure timeouts, resolve-mode edges, exit codes asserted.                                                                  | `fac1778c`, `96e1ddac` |
+| S7   | Stub comments rewritten.                                                                                                                                                                                                 | `fac1778c`             |
+| R1   | Re-review: combined mode now asks about closed issues before composing, and removes the prompt file on every stop, including a failed launch that is not retried.                                                        | `84e525f5`             |
+| R2   | Re-review: the launch-time worktree lookup warns on a git failure; log wording says the log fills while the launch runs; skills name the exact state directory pattern; hangup and timeout-with-git-failure tests added. | `96e1ddac`, `84e525f5` |
+
+Each new behavioral test was confirmed by planting its defect and watching it fail: the status check, the process group, the swallowed branch listing, the deleted timeout record, the hangup trap and the launch-time warning.
