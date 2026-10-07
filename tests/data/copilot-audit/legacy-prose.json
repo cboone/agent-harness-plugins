@@ -1,0 +1,77 @@
+{
+  "reviews": [
+    {
+      "id": 6100000003,
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]"
+      },
+      "state": "COMMENTED",
+      "submitted_at": "2026-10-06T12:00:00Z",
+      "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6100000003",
+      "body": "### 🔵 Needs a closer look\n\nProduction analytics activation remains outstanding.\n\n<details>\n<summary>Review details</summary>\n\n- **Files reviewed:** 3/3 changed files\n- **Comments generated:** 0 new\n</details>"
+    },
+    {
+      "id": 6100000004,
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]"
+      },
+      "state": "COMMENTED",
+      "submitted_at": "2026-10-06T12:00:00Z",
+      "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6100000004",
+      "body": "### 🟡 Changes recommended\n\nTwo moderate findings remain.\n\n<details>\n<summary>Review details</summary>\n\n- **Files reviewed:** 3/3 changed files\n- **Comments generated:** 0 new\n</details>"
+    },
+    {
+      "id": 6100000005,
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]"
+      },
+      "state": "COMMENTED",
+      "submitted_at": "2026-10-06T12:00:00Z",
+      "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6100000005",
+      "body": "### 🟢 Approval recommended\n\nNo issues.\n\n<details>\n<summary>Review details</summary>\n\n- **Files reviewed:** 3/3 changed files\n- **Comments generated:** 0 new\n</details>"
+    }
+  ],
+  "reviewComments": [
+    {
+      "id": 9107,
+      "pull_request_review_id": 6100000004,
+      "user": {
+        "login": "Copilot"
+      },
+      "path": "src/a.js",
+      "html_url": "https://github.com/o/r/pull/1#discussion_r9107",
+      "body": "Guard the empty case."
+    },
+    {
+      "id": 9108,
+      "pull_request_review_id": 6100000004,
+      "user": {
+        "login": "Copilot"
+      },
+      "path": "src/b.js",
+      "html_url": "https://github.com/o/r/pull/1#discussion_r9108",
+      "body": "Close the handle."
+    }
+  ],
+  "issueComments": [],
+  "threads": [
+    {
+      "isResolved": false,
+      "comments": [
+        {
+          "databaseId": 9107,
+          "login": "copilot-pull-request-reviewer"
+        }
+      ]
+    },
+    {
+      "isResolved": false,
+      "comments": [
+        {
+          "databaseId": 9108,
+          "login": "copilot-pull-request-reviewer"
+        }
+      ]
+    }
+  ]
+}

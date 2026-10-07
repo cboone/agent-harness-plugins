@@ -1,0 +1,12 @@
+[
+  {
+    "id": 7001,
+    "pull_request_review_id": 7100,
+    "user": {
+      "login": "github-actions[bot]"
+    },
+    "path": "src/a.js",
+    "html_url": "https://github.com/o/r/pull/7#discussion_r7001",
+    "body": "[nitpick] Rename the helper."
+  }
+]

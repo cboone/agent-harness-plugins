@@ -38,7 +38,7 @@ make test-all      # lint, validate and scrut
 
 `make format` fixes Markdown and shell formatting. `yarn lint:fix` and `yarn format` cover Markdown/Prettier. Run relevant checks after edits; plugin additions require `make test-all` before a PR. Observe the final test result before reporting a pass.
 
-`bin/check-cross-references` runs independently or through validation rule 19. `bin/list-shell-scripts` defines shell lint coverage for local checks and CI. `bin/version-audit` checks upstream drift on the weekly workflow; it is not a merge gate. `make validate-corpus` checks the [review case corpus](docs/review-case-corpus.md), which lives in a separate repository; it needs `REVIEW_CASE_CORPUS_DIR`, `jq` and mikefarah `yq` v4, and is not a merge gate either.
+`bin/check-cross-references` runs independently or through validation rule 19. `bin/list-shell-scripts` defines shell lint coverage for local checks and CI. `bin/version-audit` checks upstream drift on the weekly workflow; it is not a merge gate. `bin/copilot-review-canary` is a local audit of recent Copilot review layouts, neither scheduled nor a merge gate. `make validate-corpus` checks the [review case corpus](docs/review-case-corpus.md), which lives in a separate repository; it needs `REVIEW_CASE_CORPUS_DIR`, `jq` and mikefarah `yq` v4, and is not a merge gate either.
 
 ## Writing conventions
 
