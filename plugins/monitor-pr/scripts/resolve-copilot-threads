@@ -1210,6 +1210,9 @@ function do_parse_reviews() {
       #   section-count  a section heading or summary carrying a count: one
       #                  ending in "(N)", or a summary whose bold text opens
       #                  with the count (see leading_count_summary)
+      #   badge          a severity badge on a line with no thread link, which
+      #                  marks a finding a parser must account for in its
+      #                  region
       #   fence          a fenced block still open at the end of the body (see
       #                  unclosed_fence)
       #
@@ -1272,6 +1275,18 @@ function do_parse_reviews() {
                 | ($l.raw | section_count) as $count
                 | select($count != null and $count > 0)
                 | {kind: "section-count", line: $l.n, region: $l.region, text: $l.raw, count: $count}
+              ),
+              # A severity badge marks a finding wherever Copilot draws one.
+              # On a line with no thread link it stands for a finding the
+              # thread fetch cannot report, so it must be one a parser read.
+              # The "**Findings:**" line draws badges as its count breakdown,
+              # not as findings, and is left out.
+              (
+                select(
+                  ($l.raw | test("alt=\"[^\"]*severity\""; "i"))
+                  and ($l.raw | test("^\\*\\*Findings"; "i") | not)
+                )
+                | {kind: "badge", line: $l.n, region: $l.region, text: $l.raw}
               )
             end
         ];
@@ -1286,6 +1301,7 @@ function do_parse_reviews() {
         | ($findings | map(select(.at == null)) | count_by(.region)) as $located
         | ($signals | map(select(.kind == "thread-link")) | count_by(.region)) as $links
         | ($signals | map(select(.kind == "location")) | count_by(.region)) as $locations
+        | ($signals | map(select(.kind == "badge")) | count_by(.region)) as $badges
         | [
             (
               $signals
@@ -1300,6 +1316,10 @@ function do_parse_reviews() {
                   (
                     .kind == "location"
                     and (($located[.region] // 0) < ($locations[.region] // 0))
+                  )
+                  or (
+                    .kind == "badge"
+                    and (($found[.region] // 0) < ($badges[.region] // 0))
                   )
                   or (
                     .kind == "section-count"

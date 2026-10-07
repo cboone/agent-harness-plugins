@@ -475,6 +475,28 @@ $ jq '.[0].body |= (sub("Seven moderate[^\n]*"; "One or more issues must be addr
 {"hasFormatDrift":true}
 ```
 
+A severity badge marks a finding wherever Copilot draws one. On a line with
+no thread link it stands for a finding the thread fetch cannot report, so a
+parser must account for it in its section. A badge bullet with no link, a
+badge block standing outside "Previously missed" with no line in its
+location, and a count summary behind a badge each fall short of that, and the
+badge is unaccounted. The badge here is the live one from the fixture.
+
+```scrut
+$ jq '(.[0].body | capture("(?<b><picture>.*?</picture>)").b) as $b | .[0].body |= (sub("Seven moderate[^\n]*"; "One or more issues must be addressed before approval.") | sub("\n\n🧠"; "\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nAdds a reader.\n\n- " + $b + " Handle the rejected promise in `src/a.js` · New\n</details>\n\n🧠"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | .kind]}'
+{"hasFormatDrift":true,"unaccounted":["badge"]}
+```
+
+```scrut
+$ jq '(.[0].body | capture("(?<b><picture>.*?</picture>)").b) as $b | .[0].body |= (sub("Seven moderate[^\n]*"; "One or more issues must be addressed before approval.") | sub("\n\n🧠"; "\n\n<details>\n<summary>" + $b + " Handle the rejected promise</summary>\n\n`src/a.js`\n\nThe retry loop never stops when the server returns 500.\n</details>\n\n🧠"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | .kind]}'
+{"hasFormatDrift":true,"unaccounted":["badge"]}
+```
+
+```scrut
+$ jq '(.[0].body | capture("(?<b><picture>.*?</picture>)").b) as $b | .[0].body |= (sub("Seven moderate[^\n]*"; "One or more issues must be addressed before approval.") | sub("\n\n🧠"; "\n\n<details>\n<summary>" + $b + " <strong>1 finding outside the diff</strong></summary>\n\n- The retry loop in `src/a.js` never stops.\n</details>\n\n🧠"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | .kind]}'
+{"hasFormatDrift":true,"unaccounted":["badge"]}
+```
+
 A bold line stating a nonzero count with no open block behind it falls short
 of its own count.
 
