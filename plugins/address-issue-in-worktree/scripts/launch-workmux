@@ -37,9 +37,10 @@ Options:
                    no worktree appears, and 124 when
                    WORKMUX_LAUNCH_TIMEOUT_SECONDS (default 90) passes while
                    workmux is still running. The launch runs in its own
-                   process group. After a timeout it keeps running, then
-                   writes its exit status and output to the state directory
-                   the launcher names, for the caller to read and remove.
+                   process group. After a timeout it keeps running: its
+                   output keeps going to `log` in the state directory the
+                   launcher names, and its exit status goes to `status` when
+                   it exits, for the caller to read and remove.
   --resolve-issue-branch <n>
                    Print the local branch the launcher would reuse for issue
                    <n>, or nothing when none matches. Reads no stdin and
@@ -485,9 +486,9 @@ function normalize_branch_name() {
 }
 
 # The detached half of --await-completion. It records workmux's exit status,
-# then tries to create the handoff directory. Exactly one side creates it: when
-# this side does, the caller is still waiting, and it reads and removes the
-# state directory. When the caller already has, it stopped waiting and printed
+# then tries to create the handoff directory. Exactly one side creates it. When
+# this side does, the caller is still waiting, and the caller reads and removes
+# the state directory. When the caller already has, it stopped waiting and printed
 # this directory's path, so the status and log stay behind as the only record
 # of how the launch ended. The prompt file is removed either way.
 #
@@ -533,7 +534,7 @@ function await_launch() {
       1) printf '%s: no worktree for %s exists yet\n' "${SCRIPT_NAME}" "${branch}" >&2 ;;
       *) printf '%s: git cannot list worktrees, so the worktree state for %s is unknown\n' "${SCRIPT_NAME}" "${branch}" >&2 ;;
     esac
-    printf '%s: when the launch exits, it writes its exit status to %s/status and its output to %s/log; remove %s after reading them\n' "${SCRIPT_NAME}" "${state_dir}" "${state_dir}" "${state_dir}" >&2
+    printf '%s: its output continues in %s/log, and it writes its exit status to %s/status when it exits; remove %s after reading them\n' "${SCRIPT_NAME}" "${state_dir}" "${state_dir}" "${state_dir}" >&2
     return 124
   fi
 
@@ -610,7 +611,13 @@ function do_launch() {
   fi
 
   safe_name="${branch//\//-}"
-  existing_worktree_path="$(worktree_path_for_branch "${branch}" || true)"
+  # An unreadable worktree list is not fatal here: `workmux add` reports its
+  # own failure, and only the prompt resend to an existing pane depends on it.
+  local lookup_status=0
+  existing_worktree_path="$(worktree_path_for_branch "${branch}")" || lookup_status=$?
+  if ((lookup_status == 2)); then
+    printf '%s: git cannot list worktrees; launching %s without checking for an existing one\n' "${SCRIPT_NAME}" "${branch}" >&2
+  fi
 
   local -a cmd=(
     run_workmux_with_existing_prompt_fallback

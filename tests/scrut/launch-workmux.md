@@ -837,12 +837,14 @@ exit: 1
 
 `--await-completion` waits for `workmux add` to exit rather than for a fixed
 interval, then reads the new worktree from `git worktree list`. Its state
-directory and the prompt file are gone when it returns.
+directory and the prompt file are gone when it returns. The prompt lives in
+the per-test temporary directory, so the empty-directory check covers it.
 
 ```scrut
 $ for launcher in "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}"; do prepare_stubs \
 >   && printf '%s\n' 'Body' \
 >     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_WORKTREE_PORCELAIN_FILE="${state}/porcelain" STUB_WORKMUX_SLEEP=1 bash "${launcher}" --generated-name "feature/await-success" --issue 42 --await-completion \
+>   && if [[ "$(cat "${state}/prompt_path")" == "${launch_tmp}/"* ]]; then echo "prompt in launch temp: yes"; else echo "prompt in launch temp: no"; fi \
 >   && launch_tmp_contents \
 >   || exit 1; done
 Generated branch name: feature/42-await-success
@@ -853,6 +855,7 @@ prompt:
 Body
 prompt-file-exists: yes
 Worktree ready: /worktrees/feature-42-await-success
+prompt in launch temp: yes
 launch temp files: none
 Generated branch name: feature/42-await-success
 workmux add
@@ -862,6 +865,7 @@ prompt:
 Body
 prompt-file-exists: yes
 Worktree ready: /worktrees/feature-42-await-success
+prompt in launch temp: yes
 launch temp files: none
 ```
 
@@ -874,6 +878,7 @@ stop `workmux add` with it.
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
 >     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_WORKTREE_PORCELAIN_FILE="${state}/porcelain" bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/await-group" --await-completion > /dev/null \
+>   && [[ "$(cat "${state}/pgid")" =~ ^[0-9]+$ ]] \
 >   && if [[ "$(cat "${state}/pgid")" == "$(ps -o pgid= -p "$$" | tr -d ' ')" ]]; then echo "own process group: no"; else echo "own process group: yes"; fi
 own process group: yes
 ```
@@ -904,13 +909,14 @@ launch temp files: none
 ## Await completion reports a failure even when a worktree appeared
 
 `workmux add` can create the worktree and still fail afterwards. The exit
-status decides the result, not the worktree.
+status decides the result, not the worktree. The count confirms the stub did
+record the worktree, so this case stays distinct from the plain failure.
 
 ```scrut
 $ prepare_stubs \
 >   && exit_code=0 \
 >   && { printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_WORKTREE_PORCELAIN_FILE="${state}/porcelain" STUB_WORKMUX_EXIT=2 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/await-partial" --await-completion 2>&1; } || exit_code=$?; launch_tmp_contents; exit "${exit_code}"
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_WORKTREE_PORCELAIN_FILE="${state}/porcelain" STUB_WORKMUX_EXIT=2 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/await-partial" --await-completion 2>&1; } || exit_code=$?; launch_tmp_contents; grep -c '^branch refs/heads/feature/await-partial$' "${state}/porcelain"; exit "${exit_code}"
 workmux add
 branch: feature/await-partial
 open-if-exists: true
@@ -920,6 +926,7 @@ prompt-file-exists: yes
 workmux-stub: failing with status 2
 launch-workmux: workmux add for feature/await-partial failed with status 2
 launch temp files: none
+1
 [1]
 ```
 
@@ -946,14 +953,15 @@ launch-workmux: workmux add exited 0, but git cannot list worktrees to confirm f
 ## Await completion stops waiting at the bound and keeps a record
 
 After the bound passes, the launcher exits 124 while `workmux add` keeps
-running, and names the state directory. When the launch exits, it removes its
-prompt and writes its status and log there for the caller to read.
+running, and names the state directory. The launch's output keeps going to
+the log there, and when it exits, it removes its prompt and writes its status
+beside the log for the caller to read.
 
 ```scrut
 $ prepare_stubs \
 >   && exit_code=0 \
 >   && { printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_WORKTREE_PORCELAIN_FILE="${state}/porcelain" STUB_WORKMUX_SLEEP=2 WORKMUX_LAUNCH_TIMEOUT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/await-timeout" --await-completion 2>&1 > /dev/null; } || exit_code=$?; printf 'exit: %s\n' "${exit_code}" \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_WORKTREE_PORCELAIN_FILE="${state}/porcelain" STUB_WORKMUX_SLEEP=3 WORKMUX_LAUNCH_TIMEOUT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/await-timeout" --await-completion 2>&1 > /dev/null; } || exit_code=$?; printf 'exit: %s\n' "${exit_code}" \
 >   && state_dir="$(compgen -G "${launch_tmp}/workmux-launch-feature-await-timeout.*")" \
 >   && wait_for_path "${state_dir}/status" \
 >   && printf 'status: %s\n' "$(cat "${state_dir}/status")" \
@@ -961,7 +969,7 @@ $ prepare_stubs \
 >   && if [[ -e "$(cat "${state}/prompt_path")" ]]; then echo "prompt cleanup: no"; else echo "prompt cleanup: yes"; fi
 launch-workmux: workmux add for feature/await-timeout is still running after 1s; stopped waiting
 launch-workmux: no worktree for feature/await-timeout exists yet
-launch-workmux: when the launch exits, it writes its exit status to */workmux-launch-feature-await-timeout.*/status and its output to */workmux-launch-feature-await-timeout.*/log; remove */workmux-launch-feature-await-timeout.* after reading them (glob)
+launch-workmux: its output continues in */workmux-launch-feature-await-timeout.*/log, and it writes its exit status to */workmux-launch-feature-await-timeout.*/status when it exits; remove */workmux-launch-feature-await-timeout.* after reading them (glob)
 exit: 124
 status: 0
 1
@@ -978,10 +986,45 @@ $ prepare_stubs \
 >   && printf 'worktree /worktrees/feature-await-slow\nHEAD abc123\nbranch refs/heads/feature/await-slow\n\n' > "${state}/porcelain" \
 >   && exit_code=0 \
 >   && { printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_WORKTREE_PORCELAIN_FILE="${state}/porcelain" STUB_WORKMUX_SKIP_WORKTREE=1 STUB_WORKMUX_SLEEP=2 WORKMUX_LAUNCH_TIMEOUT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/await-slow" --await-completion 2> "${state}/stderr" > /dev/null; } || exit_code=$?; sed -n 2p "${state}/stderr"; printf 'exit: %s\n' "${exit_code}" \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_WORKTREE_PORCELAIN_FILE="${state}/porcelain" STUB_WORKMUX_SKIP_WORKTREE=1 STUB_WORKMUX_SLEEP=3 WORKMUX_LAUNCH_TIMEOUT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/await-slow" --await-completion 2> "${state}/stderr" > /dev/null; } || exit_code=$?; sed -n 2p "${state}/stderr"; printf 'exit: %s\n' "${exit_code}" \
 >   && wait_for_path "$(compgen -G "${launch_tmp}/workmux-launch-feature-await-slow.*")/status"
 launch-workmux: a worktree for feature/await-slow exists at /worktrees/feature-await-slow, but the launch has not finished
 exit: 124
+```
+
+## Await completion reports an unknown worktree state when git fails
+
+When git cannot list worktrees, the launcher says so before launching and
+again when it stops waiting, rather than reporting that no worktree exists.
+
+```scrut
+$ prepare_stubs \
+>   && exit_code=0 \
+>   && { printf '%s\n' 'Body' \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_FAIL=worktree-list STUB_WORKMUX_SLEEP=3 WORKMUX_LAUNCH_TIMEOUT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/await-unknown" --await-completion 2> "${state}/stderr" > /dev/null; } || exit_code=$?; grep 'git cannot list worktrees' "${state}/stderr"; printf 'exit: %s\n' "${exit_code}" \
+>   && wait_for_path "$(compgen -G "${launch_tmp}/workmux-launch-feature-await-unknown.*")/status"
+launch-workmux: git cannot list worktrees; launching feature/await-unknown without checking for an existing one
+launch-workmux: git cannot list worktrees, so the worktree state for feature/await-unknown is unknown
+exit: 124
+```
+
+## Await completion survives a hangup after the launcher stops waiting
+
+The launch ignores hangups, so a harness or terminal that sends one to the
+launch's process group does not stop `workmux add` partway through.
+
+```scrut
+$ prepare_stubs \
+>   && exit_code=0 \
+>   && { printf '%s\n' 'Body' \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" TMPDIR="${launch_tmp}" STUB_STATE="${state}" STUB_GIT_WORKTREE_PORCELAIN_FILE="${state}/porcelain" STUB_WORKMUX_SLEEP=3 WORKMUX_LAUNCH_TIMEOUT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/await-hangup" --await-completion > /dev/null 2>&1; } || exit_code=$?; printf 'exit: %s\n' "${exit_code}" \
+>   && wait_for_path "${state}/pgid" \
+>   && kill -HUP -- -"$(cat "${state}/pgid")" \
+>   && state_dir="$(compgen -G "${launch_tmp}/workmux-launch-feature-await-hangup.*")" \
+>   && wait_for_path "${state_dir}/status" \
+>   && printf 'status: %s\n' "$(cat "${state_dir}/status")"
+exit: 124
+status: 0
 ```
 
 ## Await completion rejects a timeout that is not a positive integer
