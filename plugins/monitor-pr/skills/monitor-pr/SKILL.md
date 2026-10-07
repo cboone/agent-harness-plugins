@@ -2,7 +2,8 @@
 name: monitor-pr
 description: >-
   Watch a PR until checks pass, Copilot feedback is resolved, and it is
-  mergeable, fixing failures. Use for "monitor the pr" or "wait for ci".
+  mergeable, fixing failures; on a Dependabot PR, ask for a rebase instead of
+  pushing. Use for "monitor the pr", "watch the pr", or "wait for ci".
 argument-hint: "[pr-number] [--interval <duration>] [--ticks <n|unlimited>] [--rounds <n|unlimited>] [--confirm-clean] [--no-fix]"
 ---
 

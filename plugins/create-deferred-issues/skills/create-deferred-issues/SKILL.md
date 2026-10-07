@@ -1,8 +1,9 @@
 ---
 name: create-deferred-issues
 description: >-
-  File GitHub issues for concerns the current work set aside. Use for "create
-  deferred issues" or "file the follow-ups".
+  File GitHub issues for concerns the current work set aside, from a batch the
+  user approves. Use for "create deferred issues", "file the follow-ups", or
+  "what did we defer", often before opening a PR.
 argument-hint: "[--dry-run] [--no-comment]"
 ---
 

@@ -2,7 +2,9 @@
 name: clean-up-agent-config
 description: >-
   Review and reorganize agent instructions and config for Claude Code, Codex,
-  Copilot, and OpenCode. Use for "clean up agent config".
+  Copilot, and OpenCode, such as CLAUDE.md, AGENTS.md, settings, and
+  copilot-instructions.md. Use for "clean up agent config" or deduplicating
+  them.
 ---
 
 # Agent Config Cleanup

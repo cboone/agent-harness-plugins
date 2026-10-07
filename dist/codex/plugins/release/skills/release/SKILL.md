@@ -2,7 +2,8 @@
 name: release
 description: >-
   Prepare a versioned release from conventional commits: bump versions, update
-  release files, commit, and tag. Use for "cut a release".
+  release files, commit, and tag. Use for "cut a release", "bump the version",
+  or "tag a release".
 argument-hint: "[--major|--minor|--patch] [--dry-run]"
 ---
 

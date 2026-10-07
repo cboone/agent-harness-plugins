@@ -2,7 +2,8 @@
 name: set-up-installers
 description: >-
   Set up Homebrew tap formulas and go or cargo install support for Go, Swift,
-  Rust, and Zig projects. Use for "set up installers".
+  Rust, and Zig projects. Use for "set up installers" or "support brew install";
+  for GoReleaser, use add-goreleaser-homebrew.
 ---
 
 # Set-Up Installers
