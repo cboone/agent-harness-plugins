@@ -26,7 +26,7 @@ The user may provide these options inline:
 
 Several issue numbers, as in `/address-issue 42 57`, are one combined piece of work: one plan, one approval gate, and one set of changes on the current branch. `address-issue-in-worktree` chains into this form when it opens one worktree for several issues. Every step below applies to each issue, as follows:
 
-- **Step 1:** fetch every issue. A text search that is ambiguous is settled before continuing.
+- **Step 1:** fetch every issue by number. Several issues are always given as numbers; descriptive text names one issue and follows the single-issue workflow.
 - **Step 2:** check each issue's state. Ask about every closed issue at once, and drop any the user declines.
 - **Step 3:** self-assign and label each open issue, recording the result for each one.
 - **Step 4:** show every issue's context, one block per issue.

@@ -353,7 +353,7 @@ Run every phase 1 check before launching anything, so a problem with the third i
    bash "SCRIPTS_DIR/launch-workmux" --resolve-issue-branch NUMBER
    ```
 
-   Exit 0 with a name means the launch will reuse that branch; exit 0 with no output means it will generate one from the candidate. Exit 3 lists several matching branches on stderr, and the user must choose one.
+   Exit 0 with a name means the launch will reuse that branch; exit 0 with no output means it will generate one from the candidate. Exit 3 lists several matching branches on stderr, and the user must choose one. Exit 1 means git could not list local branches: stop, report the error, and remove every JSON file, since no branch choice can be trusted.
 
 1. **Ask every outstanding question in one batch:** whether to proceed with each closed issue, and which branch to use for each ambiguous issue. Drop any issue the user declines, and remove its JSON file.
 
@@ -372,26 +372,31 @@ For each issue in the order given:
 
    When the user chose a branch in phase 1, pass that name positionally instead of `--generated-name` and `--issue`.
 
+   The launcher waits up to `WORKMUX_LAUNCH_TIMEOUT_SECONDS`, 90 by default. Run the command with a shell tool timeout above that, such as 150 seconds (`timeout: 150000` for Claude Code's Bash tool), so the launcher's bound, not the tool's, ends the wait.
+
 1. **Read the result from the exit status:**
-   - **0:** the launcher printed `Worktree ready: PATH`. Confirm the tmux window with `workmux list --json BRANCH_NAME`, which reports the window's `handle` and whether it `is_open`.
+   - **0:** the launcher printed `Worktree ready: PATH`. Confirm the tmux window with `workmux list --json BRANCH_NAME`, which reports the window's `handle` and whether it `is_open`. If the branch has no entry or `is_open` is false, the worktree still exists: record the result as launched without a window, include the `workmux list` output, and continue.
    - **1:** the launch finished and failed, or the launcher rejected its input. Nothing is still running. Record the error for this issue and continue with the next one. A `Generated branch name:` line printed before the failure is not a success.
-   - **124:** `workmux add` was still running when the wait ran out (`WORKMUX_LAUNCH_TIMEOUT_SECONDS`, 120 by default). Stop the loop: starting another `workmux add` while this one runs can race in Git and tmux. Report this launch as uncertain, with its branch and the worktree state the launcher printed, and report every later issue as not launched.
+   - **124:** `workmux add` was still running when the wait ran out. Stop the loop: starting another `workmux add` while this one runs can race in Git and tmux. Report this launch as uncertain, with its branch, the worktree state the launcher printed, and the state directory it named. When the launch exits, it writes its exit status to `status` and its output to `log` in that directory; tell the user that reading them, or `git worktree list` and `workmux list --json BRANCH_NAME`, settles the result, and that the directory can be removed afterwards. Report every later issue as not launched.
+   - **Any other result**, such as the shell tool timing out or the launcher being stopped: treat it like 124. The launch runs in its own process group and may still be running, so do not start another one. Check `git worktree list` for the branch, and report the state directory as the launcher's `workmux-launch-*` directory under the temporary directory when the output was lost.
 1. **Recheck the branch.** Compare the branch the launcher reports with the phase 1 result. Another process can create a matching branch after preflight; if the launcher now reuses a branch preflight did not see, say so in the report. If the new branch makes the issue ambiguous, the launcher fails with exit 1 and lists the candidates: record that for the issue rather than choosing one.
-1. **Remove the issue's JSON file.** The launcher owns its prompt and log: it removes them after a completed launch, and after a timeout the detached launch removes them itself when it exits.
+1. **Remove the issue's JSON file.** The launcher owns its prompt and state directory: it removes both after a completed launch. After a timeout the launch removes its prompt when it exits and leaves the state directory for the user to read, as the 124 case describes.
 
 Remove the JSON file of every issue that was never launched, too.
 
 ### Fan-Out Report
 
-End with one table, one row per issue:
+End with one table, one row per issue. The result is one of: launched, launched without a window, error, uncertain, or not launched.
 
-| Issue | Title             | Branch                                 | Window             | Result   |
-| ----- | ----------------- | -------------------------------------- | ------------------ | -------- |
-| #42   | Add dark mode     | `feature/42-add-dark-mode` (generated) | `42-add-dark-mode` | Launched |
-| #57   | Fix login timeout | `fix/57-login-timeout` (reused)        | `57-login-timeout` | Launched |
-| #61   | Update README     | -                                      | -                  | Error    |
+| Issue | Title             | Branch                                  | Window             | Result       |
+| ----- | ----------------- | --------------------------------------- | ------------------ | ------------ |
+| #42   | Add dark mode     | `feature/42-add-dark-mode` (generated)  | `42-add-dark-mode` | Launched     |
+| #57   | Fix login timeout | `fix/57-login-timeout` (reused)         | `57-login-timeout` | Launched     |
+| #61   | Update README     | -                                       | -                  | Error        |
+| #64   | Add export        | `feature/64-add-export` (generated)     | -                  | Uncertain    |
+| #70   | Fix import        | `fix/70-handle-import-errors` (planned) | -                  | Not launched |
 
-Give the error text for any issue that failed, timed out or was not launched. The per-issue items from step 7 still apply to each row. Nothing was marked in progress; say so once rather than adding a column for it.
+Give the error text for any issue that failed, and the state directory for an uncertain launch. The per-issue items from step 7 still apply to each row. Nothing was marked in progress; say so once rather than adding a column for it.
 
 ## Error Handling
 
@@ -408,4 +413,4 @@ Give the error text for any issue that failed, timed out or was not launched. Th
 - If `--resource` is given outside a git repository, `manage-resource-claims` cannot resolve the shared claim file; report that and stop
 - If `--fan-out`, `--each` or `--separate` is combined with `--resource` or `--branch`, reject the request before fetching anything only when several distinct issues remain. With one issue, follow the ordinary resource or explicit-branch path. Reject `--no-issue` with any fan-out flag because it forces description handling
 - If a fan-out launch fails after `workmux add` has exited, record the failure for that issue and continue with the next one
-- If a fan-out launch exceeds the completion wait, stop the loop, report that launch as uncertain, and report the remaining issues as not launched
+- If a fan-out launch exceeds the completion wait, or the shell tool stops it first, stop the loop, report that launch as uncertain with its state directory, and report the remaining issues as not launched

@@ -34,6 +34,8 @@ Several issue numbers, as in `/address-issue-in-worktree 42 57`, have two readin
 
 The user knows which reading they mean when they type the command, so the flag decides; do not ask which mode to use. Count distinct issues before checking option interactions. If only one remains, any of the three flags is a no-op: follow the single-issue workflow, including `--resource`.
 
+Several issues are always given as numbers. Descriptive text names one issue and follows the single-issue workflow, so a list never mixes numbers with search text.
+
 ### Option interactions
 
 Check these after removing duplicate issue numbers but before fetching or marking anything, so a rejected combination leaves nothing behind. The fan-out column applies only when several distinct issues remain.
@@ -48,23 +50,28 @@ Check these after removing duplicate issue numbers but before fetching or markin
 
 The single-issue workflow applies, with these changes:
 
-- **Step 1:** fetch every issue into its own `mktemp` file, and remove every one of them at each point the workflow removes `ISSUE_JSON`. A text search that is ambiguous for any one issue is settled before continuing.
+- **Step 1:** fetch every issue into its own `mktemp` file, and remove every one of them at each point the workflow removes `ISSUE_JSON`.
 - **Primary issue:** the first issue given is the primary one. It supplies `--issue` to the launcher, so it owns the branch number and the lookup that reuses an existing branch.
-- **Step 3:** mark every open issue in progress, since the new session starts work on all of them. A closed issue is warned about and asked about as usual.
+- **Step 3:** compose the prompt first, as step 5 below describes, so a failed composition stops the run before any issue is assigned or labeled. Then mark every open issue in progress, since the new session starts work on all of them. A closed issue is warned about and asked about as usual.
 - **Step 4:** name the candidate for the combined work, not only the primary issue.
-- **Step 5:** run `compose-issue-prompt` once per issue, in the order given, and join the outputs with a blank line. Check every composition before invoking the launcher: if any helper fails, stop and remove every issue JSON file instead of launching with a partial prompt. Pass `--chain-command` on the last call only; the helper emits the footer only when that option is present. The chained command lists every number: `/address-issue 42 57`, plus `--no-approval` when the user passed it.
+- **Step 5:** before step 3's marking, run `compose-issue-prompt` once per issue, in the order given, join the outputs with a blank line, and write the result to a prompt file from `mktemp "${TMPDIR:-/tmp}/issue-prompt-XXXXXX"`. If any composition fails, stop and remove the prompt file and every issue JSON file; nothing has been marked yet. Pass `--chain-command` on the last call only; the helper emits the footer only when that option is present. The chained command lists every number: `/address-issue 42 57`, plus `--no-approval` when the user passed it.
 
 ```bash
 (
   set -o pipefail
   prompt_42="$(bash "SCRIPTS_DIR/compose-issue-prompt" < ISSUE_JSON_42)" || exit
   prompt_57="$(bash "SCRIPTS_DIR/compose-issue-prompt" --chain-command "/address-issue 42 57" < ISSUE_JSON_57)" || exit
-  printf '%s\n\n%s\n' "${prompt_42}" "${prompt_57}" |
-    bash "SCRIPTS_DIR/launch-workmux" --generated-name "CANDIDATE" --issue 42 --base "BASE_BRANCH"
+  printf '%s\n\n%s\n' "${prompt_42}" "${prompt_57}" > PROMPT_FILE
 )
 ```
 
-Run the parenthesized block as one command, so its variables stay in the same shell. `ISSUE_JSON_42` and `ISSUE_JSON_57` stand for the literal paths `mktemp` printed for each issue. `SCRIPTS_DIR` is the shorthand step 6 defines.
+Run the parenthesized block as one command, so its variables stay in the same shell. `ISSUE_JSON_42`, `ISSUE_JSON_57` and `PROMPT_FILE` stand for the literal paths `mktemp` printed. `SCRIPTS_DIR` is the shorthand step 6 defines.
+
+- **Step 6:** launch from the prompt file instead of piping a composition, then remove it with the issue JSON files once the worktree exists:
+
+```bash
+bash "SCRIPTS_DIR/launch-workmux" --generated-name "CANDIDATE" --issue 42 --base "BASE_BRANCH" < PROMPT_FILE
+```
 
 - **Step 7:** report every issue number and title, and whether each was marked in progress.
 
@@ -330,7 +337,7 @@ Run every phase 1 check before launching anything, so a problem with the third i
 
 1. **Drop duplicates first.** The same issue number given twice launches once; say so. If one distinct issue remains, leave fan-out mode and follow the single-issue workflow.
 1. **Check options.** With several distinct issues, reject `--resource` as described under "Option interactions", before any fetch.
-1. **Fetch every issue** into its own `mktemp` file, exactly as step 1 does for one. Collect every ambiguous text search and every closed issue.
+1. **Fetch every issue** into its own `mktemp` file, exactly as step 1 does for one. Collect every closed issue.
 1. **Resolve the base branch once**, as step 6 describes, and use it for every launch.
 1. **Generate every candidate** in this session, using step 4's rules for each issue on its own.
 1. **Resolve existing branches** for every issue with the launcher's read-only mode, so preflight applies the same matching rules the launch will:
@@ -339,9 +346,9 @@ Run every phase 1 check before launching anything, so a problem with the third i
    bash "SCRIPTS_DIR/launch-workmux" --resolve-issue-branch NUMBER
    ```
 
-   Exit 0 with a name means the launch will reuse that branch; exit 0 with no output means it will generate one from the candidate. Exit 3 lists several matching branches on stderr, and the user must choose one.
+   Exit 0 with a name means the launch will reuse that branch; exit 0 with no output means it will generate one from the candidate. Exit 3 lists several matching branches on stderr, and the user must choose one. Exit 1 means git could not list local branches: stop, report the error, and remove every JSON file, since no branch choice can be trusted.
 
-1. **Ask every outstanding question in one batch:** which issue a search meant, whether to proceed with each closed issue, and which branch to use for each ambiguous issue. Drop any issue the user declines, and remove its JSON file.
+1. **Ask every outstanding question in one batch:** whether to proceed with each closed issue, and which branch to use for each ambiguous issue. Drop any issue the user declines, and remove its JSON file.
 
 Nothing has been assigned, labeled or launched yet, so stopping anywhere in this phase leaves nothing behind but the JSON files, which are removed on the way out.
 
@@ -358,27 +365,32 @@ For each issue in the order given:
 
    Add `--no-approval` to the chained command when the user passed it. When the user chose a branch in phase 1, pass that name positionally instead of `--generated-name` and `--issue`.
 
+   The launcher waits up to `WORKMUX_LAUNCH_TIMEOUT_SECONDS`, 90 by default. Run the command with a shell tool timeout above that, such as 150 seconds (`timeout: 150000` for Claude Code's Bash tool), so the launcher's bound, not the tool's, ends the wait.
+
 1. **Read the result from the exit status:**
-   - **0:** the launcher printed `Worktree ready: PATH`. Confirm the tmux window with `workmux list --json BRANCH_NAME`, which reports the window's `handle` and whether it `is_open`.
+   - **0:** the launcher printed `Worktree ready: PATH`. Confirm the tmux window with `workmux list --json BRANCH_NAME`, which reports the window's `handle` and whether it `is_open`. If the branch has no entry or `is_open` is false, the worktree still exists: record the result as launched without a window, include the `workmux list` output, and continue.
    - **1:** the launch finished and failed, or the launcher rejected its input. Nothing is still running. Record the error for this issue and continue with the next one. A `Generated branch name:` line printed before the failure is not a success.
-   - **124:** `workmux add` was still running when the wait ran out (`WORKMUX_LAUNCH_TIMEOUT_SECONDS`, 120 by default). Stop the loop: starting another `workmux add` while this one runs can race in Git and tmux. Report this launch as uncertain, with its branch and the worktree state the launcher printed, and report every later issue as not launched.
+   - **124:** `workmux add` was still running when the wait ran out. Stop the loop: starting another `workmux add` while this one runs can race in Git and tmux. Report this launch as uncertain, with its branch, the worktree state the launcher printed, and the state directory it named. When the launch exits, it writes its exit status to `status` and its output to `log` in that directory; tell the user that reading them, or `git worktree list` and `workmux list --json BRANCH_NAME`, settles the result, and that the directory can be removed afterwards. Do not mark the issue in progress; report the marking as pending. Report every later issue as not launched.
+   - **Any other result**, such as the shell tool timing out or the launcher being stopped: treat it like 124. The launch runs in its own process group and may still be running, so do not start another one. Check `git worktree list` for the branch, and report the state directory as the launcher's `workmux-launch-*` directory under the temporary directory when the output was lost.
 1. **Recheck the branch.** Compare the branch the launcher reports with the phase 1 result. Another process can create a matching branch after preflight; if the launcher now reuses a branch preflight did not see, say so in the report. If the new branch makes the issue ambiguous, the launcher fails with exit 1 and lists the candidates: record that for the issue rather than choosing one.
 1. **Mark the issue in progress** only after a successful launch, following step 3. Marking after success avoids leaving an issue assigned and labeled when its worktree was not created. If marking fails, report the worktree as created and the marking failure separately.
-1. **Remove the issue's JSON file.** The launcher owns its prompt and log: it removes them after a completed launch, and after a timeout the detached launch removes them itself when it exits.
+1. **Remove the issue's JSON file.** The launcher owns its prompt and state directory: it removes both after a completed launch. After a timeout the launch removes its prompt when it exits and leaves the state directory for the user to read, as the 124 case describes.
 
 Remove the JSON file of every issue that was never launched, too.
 
 ### Fan-Out Report
 
-End with one table, one row per issue:
+End with one table, one row per issue. The result is one of: launched, launched without a window, error, uncertain, or not launched.
 
-| Issue | Title             | Branch                                 | Window             | In progress | Result   |
-| ----- | ----------------- | -------------------------------------- | ------------------ | ----------- | -------- |
-| #42   | Add dark mode     | `feature/42-add-dark-mode` (generated) | `42-add-dark-mode` | Yes         | Launched |
-| #57   | Fix login timeout | `fix/57-login-timeout` (reused)        | `57-login-timeout` | Failed      | Launched |
-| #61   | Update README     | -                                      | -                  | No          | Error    |
+| Issue | Title             | Branch                                  | Window             | In progress | Result       |
+| ----- | ----------------- | --------------------------------------- | ------------------ | ----------- | ------------ |
+| #42   | Add dark mode     | `feature/42-add-dark-mode` (generated)  | `42-add-dark-mode` | Yes         | Launched     |
+| #57   | Fix login timeout | `fix/57-login-timeout` (reused)         | `57-login-timeout` | Failed      | Launched     |
+| #61   | Update README     | -                                       | -                  | No          | Error        |
+| #64   | Add export        | `feature/64-add-export` (generated)     | -                  | Pending     | Uncertain    |
+| #70   | Fix import        | `fix/70-handle-import-errors` (planned) | -                  | No          | Not launched |
 
-Give the error text for any issue that failed, timed out or was not launched. The per-issue items from step 7 still apply to each row, including the note that each new session runs `/address-issue NUMBER` and stops for approval there.
+Give the error text for any issue that failed, and the state directory for an uncertain launch. The per-issue items from step 7 still apply to each row, including the note that each new session runs `/address-issue NUMBER` and stops for approval there.
 
 ## Error Handling
 
@@ -393,4 +405,5 @@ Give the error text for any issue that failed, timed out or was not launched. Th
 - If the claim cannot be written after the worktree exists, report it and continue. The claim is advisory, so a failure to record one does not undo the worktree
 - If `--fan-out`, `--each` or `--separate` is combined with `--resource` and several distinct issues remain, reject the request before fetching anything and say why: one exclusive resource cannot be held by several worktrees. With one issue, follow the ordinary resource path
 - If a fan-out launch fails after `workmux add` has exited, record the failure for that issue and continue with the next one
-- If a fan-out launch exceeds the completion wait, stop the loop, report that launch as uncertain, and report the remaining issues as not launched
+- If a fan-out launch exceeds the completion wait, or the shell tool stops it first, stop the loop, report that launch as uncertain with its state directory, and report the remaining issues as not launched
+- If a combined-mode composition fails, stop before marking anything and remove the prompt file and every issue JSON file
