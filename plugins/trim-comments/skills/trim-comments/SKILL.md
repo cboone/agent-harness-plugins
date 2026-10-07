@@ -173,6 +173,8 @@ If a comment can be parsed two ways, rewrite or delete it, even if it is already
 
 ## Do not touch
 
+Two entries apply to whole files, generated files and prose documents, and step 1 takes those out of scope. The rest name comments inside in-scope files: step 3 keeps them, or flags a ticketless `TODO`.
+
 - Generated files: codegen output, build output, vendored dependencies, lockfiles, and anything the repository marks as generated
 - Lint and type-checker suppressions (`eslint-disable`, `ts-expect-error`, `@ts-ignore`, `noqa`, `nolint`) and their justifications
 - Directive and pragma comments that a compiler, build tool, coverage tool, or formatter reads, such as `//go:build`, `//go:generate`, shebangs, encoding declarations, `/// <reference>`, `// @ts-check`, `# type: ignore`, `# pragma: no cover`, `/* istanbul ignore next */`, and `// prettier-ignore`
@@ -204,7 +206,7 @@ Then find the merge base:
 git merge-base origin/<base> HEAD
 ```
 
-These commands assume the remote is named `origin`. If `git remote` lists no `origin`, use the current branch's upstream remote (`git config branch.<branch>.remote`), or the only remote when there is one, in place of `origin` throughout; with several remotes and no upstream, treat the base as not found. If `origin/<base>` does not exist, try the local `<base>` branch. A local branch can be behind its remote, which moves the merge base back and pulls other people's commits into scope, so say in the report when the local branch was used. If neither works, treat it as not found and see "Error Handling".
+These commands assume the remote is named `origin`. If `git remote` lists no `origin`, use the current branch's upstream remote (`git config --get branch.<branch>.remote`), or the only remote when there is one, in place of `origin` throughout; with several remotes and no upstream, treat the base as not found. If `origin/<base>` does not exist, try the local `<base>` branch. A local branch can be behind its remote, which moves the merge base back and pulls other people's commits into scope, so say in the report when the local branch was used. If neither works, treat it as not found and see "Error Handling".
 
 Collect the changed files. Both commands print paths from the repository root, from any working directory; `--no-relative` keeps a `diff.relative` setting from limiting the first to the current directory:
 
@@ -217,7 +219,7 @@ The first command covers committed, staged, and unstaged changes since the merge
 
 Filter every path list, including the file of a single named comment, before reading any file. Every path is root-relative, so run these checks from the repository root (`git rev-parse --show-toplevel`), not the current directory:
 
-- Drop anything under "Do not touch".
+- Drop generated files and prose documents, the file-level entries under "Do not touch". Its other entries are individual comments, which step 3 handles, so a file that contains one stays in scope.
 - Drop secret-bearing paths, such as real environment files, private keys, and credential stores, and any path that may hold credentials but cannot be classified without reading it. Never read, search, edit, or print them; report only that secret-bearing files were skipped.
 - Drop symlinks and anything reached through one, without following them, since a link can point outside the repository or to a file this filter would otherwise drop. Keep a path only when the output of `realpath <path>` equals the output of `realpath "$(git rev-parse --show-toplevel)"` followed by `/<path>`; any symlink in any component, including a parent directory that points elsewhere inside the repository, makes them differ.
 
@@ -229,7 +231,7 @@ Read each file in scope, resolving its path from the repository root (`git rev-p
 
 ### 3. Classify each comment
 
-Apply the sections above and give each comment one action:
+Apply the sections above and give each comment one action. A comment listed under "Do not touch" is always keep, except a ticketless `TODO` or `FIXME`, which is flag:
 
 - **keep**: leave it unchanged
 - **rewrite**: replace it with a shorter or clearer version
