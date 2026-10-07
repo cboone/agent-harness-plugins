@@ -31,6 +31,20 @@ The scope defaults to comments in or directly above code changed since the base 
 
 `--dry-run` reports the proposed changes without editing. Paths put every comment in those files in scope, changed or not.
 
+## Recommended Permissions
+
+This skill runs read-only Git and GitHub CLI commands to find its scope. To allow them without prompts, add these rules to your `.claude/settings.json` (project-wide) or `~/.claude/settings.json` (global):
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(gh repo view *)", "Bash(git symbolic-ref *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git ls-files *)", "Bash(git rev-parse *)", "Bash(test -L *)"]
+  }
+}
+```
+
+If you already have a `permissions.allow` array, merge these entries into it. The skill also runs the project's own linter, formatter, type checker, and tests, which depend on the project.
+
 ## Examples
 
 - "trim the comments on this branch": reviews every changed file
