@@ -15,7 +15,10 @@ SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u STUB_STATE -u STUB_TMUX_FAIL_COMMAND -u STUB_TMUX_LOG -u STUB_TMUX_PANES \
 	-u TZDIR -u WORKTREE_RESOURCES_FILE -u REVIEW_CHECKLISTS_DIR \
 	-u REVIEW_CASE_CORPUS_DIR \
-	-u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_SYSTEM_SKILL_RESERVE_BYTES
+	-u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_SYSTEM_SKILL_RESERVE_BYTES \
+	-u STUB_CURL_DIR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_TOKEN \
+	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_TEST_ZENHUB_TOKEN \
+	-u ZENHUB_GRAPHQL_TOKEN -u XDG_CACHE_HOME -u XDG_CONFIG_HOME
 
 # Every scrut test resolves the script or fixture it exercises through one of
 # these variables. Defining them once keeps the test and update targets from
@@ -50,6 +53,9 @@ SCRUT_ENV := \
 	CREATE_WORKTREE_MANAGE_RESOURCE_CLAIMS_BIN="$(CURDIR)/plugins/create-worktree/scripts/manage-resource-claims" \
 	REPORT_BOARD_BIN="$(CURDIR)/plugins/publish-report-board/scripts/report-board" \
 	REPORT_BOARD_DATA_DIR="$(CURDIR)/tests/data/report-board" \
+	BUGS_GATHER_BIN="$(CURDIR)/plugins/publish-report-board/scripts/bugs-gather" \
+	BUGS_GATHER_DATA_DIR="$(CURDIR)/tests/data/bugs-gather" \
+	CURL_STUB_BIN="$(CURDIR)/tests/fixtures/curl-stub" \
 	RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads" \
 	MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/monitor-pr/scripts/resolve-copilot-threads" \
 	REVIEW_SCOPE_BIN="$(CURDIR)/plugins/review-until-clean/scripts/review-scope" \

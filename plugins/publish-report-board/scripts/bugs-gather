@@ -389,7 +389,7 @@ $config as $c
             ($head.rest | [capture(set_pattern)] | first) as $body
             | if $body == null then {problem: "line \($line + 1): expected set #N key=value: text: \($text)"}
               else
-                ($body.pairs | split(" ") | map(split("=") | {key: .[0], value: (.[1] | typed(.[0]))})) as $pairs
+                ($body.pairs | split(" ") | map(split("=") as $p | {key: $p[0], value: ($p[1] | typed($p[0]))})) as $pairs
                 | ([$pairs[] | .key as $k | .value as $v
                     | if (closed_sets | has($k)) then (select(closed_sets[$k] | index($v) | not) | "\($k) must be one of \(closed_sets[$k] | join(", "))")
                       elif $k == "timeSensitive" or $k == "mitigated" then empty
@@ -479,12 +479,10 @@ $config as $c
       elif $a.mitigated then {tier: "ready", why: "mitigated"}
       elif $a.impact == "security" and $a.surface == "internal" then {tier: "ready", why: "blocks a security fix"}
       elif $a.surface == "internal" then {tier: "later", reason: "internal"}
+      elif $a.impact == "cosmetic" then {tier: "later", reason: "cosmetic"}
       elif ([$a.environment, $a.surface, $a.impact, $a.cause] | any(. == "unknown")) or $a.cause == "suspected" or $a.reproduced == false then
         {tier: "investigate", why: ([(["environment", "surface", "impact", "cause"][] as $k | select($a[$k] == "unknown") | "\($k) unknown"), (select($a.cause == "suspected") | "cause suspected"), (select($a.reproduced == false) | "not reproduced")] | join(", "))}
-      elif $a.cause == "known" then {tier: "ready", why: "ready to fix"}
-      elif $a.impact == "cosmetic" then {tier: "later", reason: "cosmetic"}
-      elif $a.environment != "production" then {tier: "later", reason: "not production"}
-      else {tier: "later", reason: "backlog"} end
+      else {tier: "ready", why: "ready to fix"} end
     | . + {inProgress: $wip};
 
   # Assessments must cover every open bug and must describe the bug as it is

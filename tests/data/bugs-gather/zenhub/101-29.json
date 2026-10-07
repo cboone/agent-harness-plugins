@@ -1,0 +1,22 @@
+{
+  "estimate": null,
+  "pipelineIssue": {
+    "latestTransferTime": "2026-10-05T14:00:00Z",
+    "pipeline": {
+      "name": "Product Backlog"
+    }
+  },
+  "sprints": {
+    "nodes": []
+  },
+  "issueType": {
+    "name": "Epic",
+    "level": 3
+  },
+  "blockingIssues": {
+    "nodes": []
+  },
+  "blockedIssues": {
+    "nodes": []
+  }
+}

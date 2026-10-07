@@ -1,0 +1,113 @@
+[
+  {
+    "data": {
+      "search": {
+        "issueCount": 2,
+        "pageInfo": {
+          "hasNextPage": false,
+          "endCursor": null
+        },
+        "nodes": [
+          {
+            "__typename": "Issue",
+            "number": 5,
+            "title": "Verify email returns 500",
+            "url": "https://github.com/acme/widgets/issues/5",
+            "state": "CLOSED",
+            "stateReason": "COMPLETED",
+            "createdAt": "2026-10-01T12:00:00Z",
+            "updatedAt": "2026-10-10T12:00:00Z",
+            "closedAt": "2026-10-12T10:00:00Z",
+            "author": {
+              "__typename": "User",
+              "login": "alice"
+            },
+            "authorAssociation": "MEMBER",
+            "assignees": {
+              "nodes": []
+            },
+            "labels": {
+              "nodes": [
+                {
+                  "name": "bug"
+                }
+              ]
+            },
+            "issueType": null,
+            "reactions": {
+              "totalCount": 0
+            },
+            "comments": {
+              "totalCount": 0,
+              "nodes": []
+            },
+            "closedByPullRequestsReferences": {
+              "nodes": [
+                {
+                  "number": 41,
+                  "title": "Fix for the bug",
+                  "url": "https://github.com/acme/widgets/pull/41",
+                  "state": "MERGED",
+                  "isDraft": false,
+                  "mergedAt": "2026-10-12T10:00:00Z",
+                  "reviewDecision": "APPROVED",
+                  "author": {
+                    "login": "alice"
+                  },
+                  "commits": {
+                    "nodes": [
+                      {
+                        "commit": {
+                          "statusCheckRollup": {
+                            "state": "SUCCESS"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "__typename": "Issue",
+            "number": 6,
+            "title": "Duplicate of the API v2 bug",
+            "url": "https://github.com/acme/widgets/issues/6",
+            "state": "CLOSED",
+            "stateReason": "DUPLICATE",
+            "createdAt": "2026-10-01T12:00:00Z",
+            "updatedAt": "2026-10-10T12:00:00Z",
+            "closedAt": "2026-10-11T10:00:00Z",
+            "author": {
+              "__typename": "User",
+              "login": "alice"
+            },
+            "authorAssociation": "MEMBER",
+            "assignees": {
+              "nodes": []
+            },
+            "labels": {
+              "nodes": [
+                {
+                  "name": "bug"
+                }
+              ]
+            },
+            "issueType": null,
+            "reactions": {
+              "totalCount": 0
+            },
+            "comments": {
+              "totalCount": 0,
+              "nodes": []
+            },
+            "closedByPullRequestsReferences": {
+              "nodes": []
+            }
+          }
+        ]
+      }
+    }
+  }
+]
