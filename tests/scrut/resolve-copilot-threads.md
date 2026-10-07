@@ -169,7 +169,7 @@ $ jq '.[0].body |= sub("3 open findings"; "2 open findings")' "${COPILOT_REVIEW_
 {"hasFormatDrift":true,"unaccounted":["section-count open findings line 8"]}
 ```
 
-The stated count is compared with those links on its own too, the way a
+The stated count is also checked outside the census, the way a
 `**Findings:**` count is compared with `Open (N)`. When a body carries both a
 `**Findings:**` line and an open-findings block, the line is the stated count,
 and a total above the links the block lists is a shortfall the census does not
@@ -182,7 +182,7 @@ $ jq '.[0].body |= sub("\n\n<details open>"; "\n\n**Findings:** 5\n\n<details op
 
 A link quoted in an inline code span is not a thread. With every link quoted,
 the block lists no open thread, so the shortfall is drift and the non-clean
-verdict, which nothing now explains, is read.
+verdict, which nothing else explains, is read.
 
 ```scrut
 $ jq '.[0].body |= (gsub("(?<l>\\[[^]]*\\]\\(#discussion_r[0-9]+\\))"; "`\(.l)`") | sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval.") | sub("(?s)\n\n<details>\n<summary><strong>3 resolved.*?</details>"; ""))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead}'
@@ -193,10 +193,21 @@ Links are counted only at the depth of the block itself, until it closes. An
 open-findings block that is never closed cannot borrow the links of the
 resolved block opened inside it to cover its own shortfall. Here the block
 states three and links one, and the two resolved links nested inside it would
-otherwise make up the difference, for the census as well.
+otherwise make up the difference. The census, which counts links by region,
+does count them and reports nothing, so the drift comes from the open-section
+checks alone.
 
 ```scrut
 $ jq '.[0].body |= (sub("- <picture>[^\n]*Reject triage[^\n]*\n"; "") | sub("- <picture>[^\n]*Validate closed[^\n]*\n</details>\n"; "") | sub("- <picture>[^\n]*Reject unknown keys[^\n]*\n"; "") | sub("3 resolved"; "2 resolved") | sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval."))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":true,"unaccounted":[]}
+```
+
+A link nested deeper inside the block is not one of its threads either, even
+where the census, which reads links by region, finds the count and links in
+agreement.
+
+```scrut
+$ jq '.[0].body |= (sub("(?s)<strong>3 open findings</strong></summary>\n\n.*?</details>"; "<strong>1 open finding</strong></summary>\n\n<details>\n- [Retry on 4xx](#discussion_r5) · New\n</details>\n</details>") | sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval."))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
 {"hasFormatDrift":true,"unaccounted":[]}
 ```
 
@@ -207,6 +218,35 @@ resolved block and the known lead do not clear it.
 
 ```scrut
 $ jq '.[0].body |= (sub("(?s)<strong>3 open findings</strong></summary>\n\n.*?</details>"; "<strong>0 open findings</strong></summary>\n\n- High: the token is sent in the query string.\n</details>") | sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval."))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":true,"unaccounted":[]}
+```
+
+The same holds for anything else the block holds besides its thread links: a
+line of prose, a fenced block, or a nested details block with a list of its
+own.
+
+```scrut
+$ jq '.[0].body |= (sub("(?s)<strong>3 open findings</strong></summary>\n\n.*?</details>"; "<strong>0 open findings</strong></summary>\n\nHigh: the token is sent in the query string.\n</details>") | sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval."))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead}'
+{"hasFormatDrift":true,"needsRead":false}
+```
+
+```scrut
+$ jq '.[0].body |= (sub("(?s)<strong>3 open findings</strong></summary>\n\n.*?</details>"; "<strong>0 open findings</strong></summary>\n\n<details>\n<summary>Note</summary>\n\n- High: the token is sent in the query string.\n</details>\n</details>") | sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval."))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead}'
+{"hasFormatDrift":true,"needsRead":false}
+```
+
+````scrut
+$ jq '.[0].body |= (sub("(?s)<strong>3 open findings</strong></summary>\n\n.*?</details>"; "<strong>0 open findings</strong></summary>\n\n```text\nHigh: the token is sent in the query string.\n```\n</details>") | sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval."))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead}'
+{"hasFormatDrift":true,"needsRead":false}
+````
+
+Every observed review lists its open threads in one section, and the counts
+and contents are read from the first. A second open section is drift rather
+than a list nothing reads, even where its own count matches its links and the
+census sees nothing amiss.
+
+```scrut
+$ jq '.[0].body |= sub("\n\n<details>\n<summary><strong>3 resolved"; "\n\n<details open>\n<summary><strong>1 open finding</strong></summary>\n\n- [Retry on 4xx](#discussion_r5) · New\n\nHigh: the token is sent in the query string.\n</details>\n\n<details>\n<summary><strong>3 resolved")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
 {"hasFormatDrift":true,"unaccounted":[]}
 ```
 
@@ -249,6 +289,22 @@ $ jq '.[0].body |= (sub("3 open findings"; "Findings to address") + "\n\n```html
 {"hasFormatDrift":true}
 ````
 
+A fence is any run of three or more backticks or tildes, and closes only on a
+run of the same character at least as long. A summary quoted in a `~~~`
+fence, or in a four-backtick fence that quotes a three-backtick line, stays
+quoted, and does not clear the read that a non-clean verdict with nothing
+behind it gets.
+
+```scrut
+$ jq -n '[{id: 1, user: {login: "copilot-pull-request-reviewer[bot]"}, state: "COMMENTED", submitted_at: "x", html_url: "y", body: "<!-- ccr-overview-v2 -->\n\n### 🟡 Changes recommended\n\nOne or more issues must be addressed before approval.\n\n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\n~~~markdown\n<summary><strong>1 resolved since last review</strong></summary>\n~~~\n</details>"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead}'
+{"hasFormatDrift":false,"needsRead":true}
+```
+
+`````scrut
+$ jq -n '[{id: 1, user: {login: "copilot-pull-request-reviewer[bot]"}, state: "COMMENTED", submitted_at: "x", html_url: "y", body: "<!-- ccr-overview-v2 -->\n\n### 🟡 Changes recommended\n\nOne or more issues must be addressed before approval.\n\n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\n````markdown\n```\n<summary><strong>1 resolved since last review</strong></summary>\n````\n</details>"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead}'
+{"hasFormatDrift":false,"needsRead":true}
+`````
+
 A quoted resolved summary, in either form, does not clear the read that a
 non-clean verdict with nothing behind it gets.
 
@@ -258,17 +314,27 @@ $ for s in '2 resolved since last review' 'Resolved since last review (2)'; do j
 {"hasFormatDrift":false,"needsRead":true}
 ```
 
-A leading count is read from these two summaries only. A title that merely
-opens with a number, such as `### 3 modules touched` or `2 files reviewed`,
-is not a section count.
+A leading count is read from a summary whose bold text opens with it, the
+shape of `N open findings` and `N resolved since last review`. A title that
+merely opens with a number, such as `### 3 modules touched` or a plain
+`<summary>2 files reviewed</summary>`, is not a section count.
 
 ```scrut
 $ jq '.[0].body += "\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\n### 3 modules touched\n\nThe parser reads one more layout.\n</details>\n\n<details>\n<summary>2 files reviewed</summary>\n\nBoth files changed.\n</details>"' "${COPILOT_REVIEW_DATA_DIR}/format-d-clean.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
 {"hasFormatDrift":false,"unaccounted":[]}
 ```
 
+A new section written in that shape is reconciled the first time it appears.
+Two items under `2 previously missed`, which nothing parses, leave its count
+unaccounted.
+
+```scrut
+$ jq '.[0].body |= sub("\n\n🧠"; "\n\n<details>\n<summary><strong>2 previously missed</strong></summary>\n\n- The retry loop never stops on a 4xx response.\n- The cache key ignores the locale.\n</details>\n\n🧠")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | "\(.kind) \(.region)"]}'
+{"hasFormatDrift":true,"unaccounted":["section-count previously missed"]}
+```
+
 The `N resolved since last review` block counts as a resolved section, so a
-round with no open findings, that block and a known lead needs nothing, like
+round with `0 open findings`, that block and a known lead needs nothing, like
 the `Resolved since last review (N)` round below.
 
 ```scrut
