@@ -322,6 +322,21 @@ $ jq '.[0].body |= (sub("Unresolved critical[^\n]*"; "One or more issues must be
 {"hasFormatDrift":true}
 ```
 
+Only the first summary of a block names it. A count summary that follows
+another summary in the same block is not the section, so the prose between
+them cannot pass unread, and a further summary inside a matched block is
+content of that block.
+
+```scrut
+$ jq '.[0].body |= (sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval.") | sub("(?s)<details open>\n<summary><strong>3 open findings</strong></summary>\n\n.*?</details>"; "<details open>\n<summary><strong>Notes</strong></summary>\n\nHigh: the token is sent in the query string.\n<summary><strong>0 open findings</strong></summary>\n\n</details>"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+```
+
+```scrut
+$ jq '.[0].body |= (sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval.") | sub("(?s)<details open>\n<summary><strong>3 open findings</strong></summary>\n\n.*?</details>"; "<details open>\n<summary><strong>0 open findings</strong></summary>\n\n<summary><strong>Notes</strong></summary>\n</details>"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+```
+
 The summary counts only at depth one, like every section summary. One nested
 inside another block supplies no count.
 

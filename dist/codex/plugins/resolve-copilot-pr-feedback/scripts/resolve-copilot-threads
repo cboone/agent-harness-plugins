@@ -579,6 +579,11 @@ function do_parse_reviews() {
       #   matches  how many depth-one summaries match, so a caller can tell
       #            a second section of the same kind from the first
       #
+      # Only the first summary of a block names it. A matching summary that
+      # follows another one in the same block is content rather than the
+      # section, so the prose between the two cannot pass unread, and any
+      # further summary inside a matched block counts as one of its items.
+      #
       # The census counts the same links differently, by region, on any line
       # and at any depth. Counting them here at the depth of the block
       # itself means a block that is never closed cannot borrow the links of
@@ -587,7 +592,7 @@ function do_parse_reviews() {
       def section_summary($pattern):
         ("^<summary>" + $pattern + "(?:</[^>]+>)*</summary>[[:space:]]*$") as $summary
         | split("\n")
-        | reduce (.[] | sub("\r$"; "")) as $line ({fence: null, depth: 0, inside: false, awaiting: false, pending: 0, value: null};
+        | reduce (.[] | sub("\r$"; "")) as $line ({fence: null, depth: 0, inside: false, awaiting: false, pending: 0, summarized: false, value: null};
             (.fence | next_fence($line)) as $next
             | if .fence != null or $next != null then
                 .fence = $next
@@ -597,19 +602,22 @@ function do_parse_reviews() {
                   end
               elif ($line | test("^<details")) then
                 .depth += 1
-                | (if .depth == 1 then .awaiting = true | .pending = 0 else . end)
+                | (if .depth == 1 then .awaiting = true | .pending = 0 | .summarized = false else . end)
               elif ($line | test("^</details>")) then
                 (if .depth > 0 then .depth -= 1 else . end)
                 | (if .depth == 0 then .inside = false | .awaiting = false else . end)
-              elif .depth == 1 and ($line | test($summary)) then
-                (if .value == null then
-                  .value = {count: ($line | capture($summary).count | tonumber), links: 0, items: .pending, matches: 1}
-                  | .inside = true
-                else .value.matches += 1
-                end)
-                | .awaiting = false
               elif .depth == 1 and ($line | test("^<summary>")) then
-                .awaiting = false
+                (if (.summarized | not) and ($line | test($summary)) then
+                  if .value == null then
+                    .value = {count: ($line | capture($summary).count | tonumber), links: 0, items: .pending, matches: 1}
+                    | .inside = true
+                  else .value.matches += 1
+                  end
+                elif .inside then .value.items += 1
+                else .
+                end)
+                | .summarized = true
+                | .awaiting = false
               elif ($line | test("[^[:space:]]")) and (.inside or .awaiting) then
                 if .awaiting then .pending += 1
                 elif .depth == 1
