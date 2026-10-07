@@ -559,19 +559,23 @@ function do_parse_reviews() {
       # A closing tag at depth zero is ignored so unbalanced markup cannot
       # drive the count negative and shift every later line down a level.
       #
-      # $pattern is the summary text after any markup tags, with a named
-      # "count" group, so a caller can match the count on either side of the
-      # name. The match runs to the closing summary tag, so a summary that
-      # goes on past the known words, such as "3 open findings</strong>
-      # outside the diff", is not the known section. The result is the first matching section, or null when none
+      # $pattern is what follows the opening summary tag, markup included,
+      # with a named "count" group, so a caller can match the count on either
+      # side of the name and say which markup the summary may carry. A
+      # leading count is read only from a bold summary, the shape the census
+      # reads it from too (see leading_count_summary). The match runs to the
+      # closing summary tag, so a summary that goes on past the known words,
+      # such as "3 open findings</strong> outside the diff", is not the known
+      # section. The result is the first matching section, or null when none
       # matches, as:
       #
       #   count    the number its summary states
       #   links    list items at the depth of the block itself carrying a
       #            "#discussion_r" thread link outside inline code spans
-      #   items    every other non-blank line in the block, fenced lines and
-      #            nested details blocks included, which is content that is
-      #            not an inline thread
+      #   items    every other non-blank line in the block, fenced lines,
+      #            nested details blocks and anything between the opening
+      #            details tag and the summary included, which is content
+      #            that is not an inline thread
       #   matches  how many depth-one summaries match, so a caller can tell
       #            a second section of the same kind from the first
       #
@@ -581,26 +585,34 @@ function do_parse_reviews() {
       # a section opened inside it, such as a resolved list, even where the
       # census does.
       def section_summary($pattern):
-        ("^<summary>(?:<[^>]+>)*" + $pattern + "(?:</[^>]+>)*</summary>[[:space:]]*$") as $summary
+        ("^<summary>" + $pattern + "(?:</[^>]+>)*</summary>[[:space:]]*$") as $summary
         | split("\n")
-        | reduce (.[] | sub("\r$"; "")) as $line ({fence: null, depth: 0, inside: false, value: null};
+        | reduce (.[] | sub("\r$"; "")) as $line ({fence: null, depth: 0, inside: false, awaiting: false, pending: 0, value: null};
             (.fence | next_fence($line)) as $next
             | if .fence != null or $next != null then
                 .fence = $next
-                | (if .inside then .value.items += 1 else . end)
+                | if .inside then .value.items += 1
+                  elif .awaiting then .pending += 1
+                  else .
+                  end
               elif ($line | test("^<details")) then
                 .depth += 1
+                | (if .depth == 1 then .awaiting = true | .pending = 0 else . end)
               elif ($line | test("^</details>")) then
                 (if .depth > 0 then .depth -= 1 else . end)
-                | (if .depth == 0 then .inside = false else . end)
+                | (if .depth == 0 then .inside = false | .awaiting = false else . end)
               elif .depth == 1 and ($line | test($summary)) then
-                if .value == null then
-                  .value = {count: ($line | capture($summary).count | tonumber), links: 0, items: 0, matches: 1}
+                (if .value == null then
+                  .value = {count: ($line | capture($summary).count | tonumber), links: 0, items: .pending, matches: 1}
                   | .inside = true
                 else .value.matches += 1
-                end
-              elif .inside and ($line | test("[^[:space:]]")) then
-                if .depth == 1
+                end)
+                | .awaiting = false
+              elif .depth == 1 and ($line | test("^<summary>")) then
+                .awaiting = false
+              elif ($line | test("[^[:space:]]")) and (.inside or .awaiting) then
+                if .awaiting then .pending += 1
+                elif .depth == 1
                    and ($line | test("^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]"))
                    and ($line | gsub("`[^`]*`"; "``") | test("\\(#discussion_r[0-9]+\\)"))
                 then .value.links += 1
@@ -612,14 +624,14 @@ function do_parse_reviews() {
 
       # The "Open (N)" section, which states its count after the name.
       def open_section:
-        section_summary("Open \\((?<count>[0-9]+)\\)");
+        section_summary("(?:<[^>]+>)*Open \\((?<count>[0-9]+)\\)");
 
       # The open-findings section, which states its count before the name, as
       # "3 open findings" or "1 open finding". Bodies in this layout carry no
       # "**Findings:**" line, so the summary count is also the stated count.
       # See the $stated_findings binding in the main filter.
       def open_findings_section:
-        section_summary("(?<count>[0-9]+) open findings?");
+        section_summary("<strong>(?<count>[0-9]+) open findings?</strong>");
 
       # Content in an open section, in either layout, that links no inline
       # thread. The open section lists threads and nothing else, so such
@@ -663,8 +675,8 @@ function do_parse_reviews() {
       # "Resolved since last review (N)", or before it, as "N resolved since
       # last review". The first form is read whenever it is present.
       def resolved_section:
-        section_summary("Resolved since last review \\((?<count>[0-9]+)\\)")
-        // section_summary("(?<count>[0-9]+) resolved since last review");
+        section_summary("(?:<[^>]+>)*Resolved since last review \\((?<count>[0-9]+)\\)")
+        // section_summary("<strong>(?<count>[0-9]+) resolved since last review</strong>");
 
       # ccr-overview-v2 also lists the findings closed since the previous
       # round, under a resolved section. Those links record work already done

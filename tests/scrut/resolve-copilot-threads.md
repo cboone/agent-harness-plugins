@@ -304,6 +304,24 @@ $ jq '.[0].body |= sub("3 open findings</strong>"; "3 open findings</strong> out
 {"hasFormatDrift":true}
 ```
 
+A leading count is read only from a bold summary, the shape Copilot writes
+and the census reads. A plain `<summary>3 open findings</summary>` states no
+count.
+
+```scrut
+$ jq '.[0].body |= (sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval.") | sub("<summary><strong>3 open findings</strong></summary>"; "<summary>3 open findings</summary>"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+```
+
+Content between the opening details tag and the summary belongs to the
+block, so a line of prose placed there is content nothing reads, even under a
+count of zero.
+
+```scrut
+$ jq '.[0].body |= (sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval.") | sub("(?s)<details open>\n<summary><strong>3 open findings</strong></summary>\n\n.*?</details>"; "<details open>\nHigh: the token is sent in the query string.\n<summary><strong>0 open findings</strong></summary>\n\n</details>"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+```
+
 The summary counts only at depth one, like every section summary. One nested
 inside another block supplies no count.
 
