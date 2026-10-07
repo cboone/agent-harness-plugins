@@ -500,6 +500,22 @@ function do_parse_reviews() {
               end)
         | .out;
 
+      # A fenced block still open at the end of the body, as a census entry
+      # naming the line that opened it, or nothing. Every line after an
+      # opening fence is skipped by the parsers and the census alike, so a
+      # fence that never closes would hide the rest of the body: a stray
+      # "~~~" in prose, a closing fence with text after it, or a fence quoted
+      # inside a fence can each open one. Reporting it keeps that visible
+      # instead of reading the hidden sections as absent.
+      def unclosed_fence($lines):
+        reduce $lines[] as $l ({fence: null, opened: null};
+          (.fence | next_fence($l.raw)) as $next
+          | (if .fence == null and $next != null then .opened = $l else . end)
+          | .fence = $next)
+        | if .fence == null then []
+          else [{kind: "fence", region: .opened.region, line: .opened.n, text: (.opened.raw | .[0:200])}]
+          end;
+
       # The first level-3 heading. On ccr-overview-v2 bodies this is the
       # verdict the needsRead check compares. Older layouts can yield a
       # section heading such as "### Reviewed changes", or null, and there
@@ -1113,6 +1129,8 @@ function do_parse_reviews() {
       #   section-count  a section heading or summary carrying a count: one
       #                  ending in "(N)", or a summary whose bold text opens
       #                  with the count (see leading_count_summary)
+      #   fence          a fenced block still open at the end of the body (see
+      #                  unclosed_fence)
       #
       # Fenced blocks are skipped, and vote tags inside inline code spans do
       # not count, so a finding that quotes the format cannot trip it.
@@ -1244,6 +1262,7 @@ function do_parse_reviews() {
         | (
             ($lines | signals | unaccounted($findings))
             + (if $is_v2 then element_signals($lines) else [] end)
+            + unclosed_fence($lines)
             | sort_by(.line)
           ) as $census
         | (.body | has_suppressed_marker) as $has_suppressed_marker

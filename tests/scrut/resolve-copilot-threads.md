@@ -305,6 +305,19 @@ $ jq -n '[{id: 1, user: {login: "copilot-pull-request-reviewer[bot]"}, state: "C
 {"hasFormatDrift":false,"needsRead":true}
 `````
 
+A fence that never closes would hide everything after it from the parsers
+and the census alike. A stray `~~~~` line in prose, a fence quoted inside a
+fence, and a closing fence with text after it each leave one open, and here
+each would hide a `2 previously missed` block nothing parses. The open fence
+is reported as a census entry instead, on the line that opened it.
+
+````scrut
+$ for q in '~~~~ old output ~~~~' '```|Run it:|```bash|tool --new-flag|```|```' '```|tool --new-flag|``` (end of example)'; do jq --arg q "${q}" '.[0].body |= (sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval.") | sub("\n\n🧠"; "\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\n" + ($q | gsub("[|]"; "\n")) + "\n</details>\n\n<details>\n<summary><strong>2 previously missed</strong></summary>\n\n- The retry loop never stops on a 4xx response.\n- The cache key ignores the locale.\n</details>\n\n🧠"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'; done
+{"hasFormatDrift":true,"unaccounted":["fence line 26"]}
+{"hasFormatDrift":true,"unaccounted":["fence line 31"]}
+{"hasFormatDrift":true,"unaccounted":["fence line 26"]}
+````
+
 A quoted resolved summary, in either form, does not clear the read that a
 non-clean verdict with nothing behind it gets.
 
