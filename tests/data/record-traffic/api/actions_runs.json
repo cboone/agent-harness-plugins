@@ -1,0 +1,17 @@
+[
+  {
+    "total_count": 3,
+    "workflow_runs": [
+      { "id": 104, "event": "push", "created_at": "2026-10-01T09:00:00Z" },
+      { "id": 103, "event": "dynamic", "created_at": "2026-09-30T23:59:59Z" },
+      { "id": 102, "event": "pull_request", "created_at": "2026-09-29T08:00:00Z" }
+    ]
+  },
+  {
+    "total_count": 2,
+    "workflow_runs": [
+      { "id": 101, "event": "schedule", "created_at": "2026-09-29T00:00:00Z" },
+      { "id": 100, "event": "push", "created_at": "2026-09-27T23:00:00Z" }
+    ]
+  }
+]

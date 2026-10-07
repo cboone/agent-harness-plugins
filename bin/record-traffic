@@ -1,0 +1,311 @@
+#!/usr/bin/env bash
+# record-traffic -- Save a repository's GitHub traffic beyond GitHub's 14-day
+# window and estimate how many clones came from outside its own automation.
+#
+# Usage: record-traffic [--repo OWNER/REPO] [--today YYYY-MM-DD] DATA_DIR
+#
+# DATA_DIR receives:
+#   daily.json                  clones and views per UTC day, keyed by date
+#   snapshots/referrers/D.json  traffic/popular/referrers as fetched on day D
+#   snapshots/paths/D.json      traffic/popular/paths as fetched on day D
+#   README.md                   daily and weekly summary tables, regenerated
+#
+# Each run overwrites the days GitHub still reports, because its latest figures
+# for a day are the most complete, and keeps every older day untouched.
+#
+# Automation clones are counted once per completed UTC day inside the current
+# traffic window, from the Actions runs created that day: every `actions/checkout`
+# step that ran, across all jobs and attempts, plus every job of a `dynamic`
+# Copilot agent run, which clones the repository without a checkout step. A
+# checkout step given its own `name:` is not recognized, because the jobs API
+# reports the step name rather than the action it uses.
+#
+# Requires authenticated `gh` and `jq`. The traffic endpoints need a token with
+# Administration read access; the default GITHUB_TOKEN cannot read them. The
+# Actions endpoints need Actions read access.
+set -euo pipefail
+
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+
+# Steps that ran far enough to fetch the repository. A cancelled or skipped
+# step did not.
+readonly RAN_CONCLUSIONS='["success", "failure"]'
+
+function usage() {
+  cat << EOF
+Usage: ${SCRIPT_NAME} [--repo OWNER/REPO] [--today YYYY-MM-DD] DATA_DIR
+
+Fetch GitHub traffic for OWNER/REPO, merge it into DATA_DIR, count clones made
+by the repository's own Actions runs, and regenerate DATA_DIR/README.md.
+
+Options:
+  --repo OWNER/REPO   Repository to read (default: \$GITHUB_REPOSITORY)
+  --today YYYY-MM-DD  UTC date of this run (default: the current UTC date)
+  -h, --help          Show this help
+EOF
+}
+
+function die() {
+  echo "${SCRIPT_NAME}: ${1}" >&2
+  exit "${2:-1}"
+}
+
+function fetch() {
+  local endpoint="${1}"
+  local output
+
+  if ! output="$(gh api "${endpoint}")"; then
+    die "could not fetch ${endpoint}"
+  fi
+  printf '%s\n' "${output}"
+}
+
+# Prints every page of a paginated endpoint as one JSON array of pages.
+function fetch_pages() {
+  local endpoint="${1}"
+  local output
+
+  if ! output="$(gh api --paginate --slurp "${endpoint}")"; then
+    die "could not fetch ${endpoint}"
+  fi
+  printf '%s\n' "${output}"
+}
+
+function merge_daily() {
+  local daily_file="${1}"
+  local clones="${2}"
+  local views="${3}"
+  local merged
+
+  merged="$(jq \
+    --argjson clones "${clones}" \
+    --argjson views "${views}" '
+    reduce $clones.clones[] as $day (.;
+      .[$day.timestamp[:10]] += {clones: $day.count, clone_uniques: $day.uniques})
+    | reduce $views.views[] as $day (.;
+      .[$day.timestamp[:10]] += {views: $day.count, view_uniques: $day.uniques})
+    | to_entries | sort_by(.key) | from_entries
+  ' "${daily_file}")"
+  printf '%s\n' "${merged}" > "${daily_file}"
+}
+
+# Prints, one per line, the completed days GitHub still reports whose automation
+# clones have not been counted yet. Older days are left alone: Actions history
+# may no longer cover them, and a count of zero would be wrong rather than
+# missing.
+function uncounted_days() {
+  local daily_file="${1}"
+  local clones="${2}"
+  local views="${3}"
+  local today="${4}"
+
+  jq -r \
+    --argjson clones "${clones}" \
+    --argjson views "${views}" \
+    --arg today "${today}" '
+    . as $daily
+    | [($clones.clones[], $views.views[]) | .timestamp[:10]]
+    | unique[]
+    | select(. < $today and ($daily[.] | has("ci_checkouts") | not))
+  ' "${daily_file}"
+}
+
+function count_automation() {
+  local repo="${1}"
+  local daily_file="${2}"
+  local work_dir="${3}"
+  shift 3
+  local days_json
+  days_json="$(printf '%s\n' "${@}" | jq -R . | jq -sc .)"
+
+  # The created filter is widened by a day on each side and the runs filtered
+  # by their UTC timestamps here, so the result does not depend on how the
+  # search qualifier treats time zones.
+  local range
+  range="$(jq -rn --argjson days "${days_json}" '
+    def shift_day($n): strptime("%Y-%m-%d") | mktime + $n * 86400 | strftime("%Y-%m-%d");
+    "\($days | min | shift_day(-1))..\($days | max | shift_day(1))"
+  ')"
+
+  local runs_pages
+  runs_pages="$(fetch_pages "repos/${repo}/actions/runs?created=${range}&per_page=100")"
+
+  local counts_file="${work_dir}/counts.jsonl"
+  : > "${counts_file}"
+
+  local id day event jobs_pages
+  while IFS=$'\t' read -r id day event; do
+    jobs_pages="$(fetch_pages "repos/${repo}/actions/runs/${id}/jobs?filter=all&per_page=100")"
+    jq -c \
+      --arg day "${day}" \
+      --arg event "${event}" \
+      --argjson ran "${RAN_CONCLUSIONS}" '
+      [.[].jobs[]] as $jobs
+      | if $event == "dynamic" then
+          {day: $day, ci_checkouts: 0,
+           copilot_jobs: ([$jobs[] | select(any(.steps[]?; .conclusion as $c | $ran | index($c)))] | length)}
+        else
+          {day: $day, copilot_jobs: 0,
+           ci_checkouts: ([$jobs[].steps[]?
+             | select((.name | startswith("Run actions/checkout@")) and (.conclusion as $c | $ran | index($c)))]
+             | length)}
+        end
+    ' <<< "${jobs_pages}" >> "${counts_file}"
+  done < <(jq -r --argjson days "${days_json}" '
+    .[].workflow_runs[]
+    | select(.created_at[:10] as $day | $days | index($day))
+    | [.id, .created_at[:10], .event]
+    | @tsv
+  ' <<< "${runs_pages}")
+
+  local merged
+  merged="$(jq \
+    --argjson days "${days_json}" \
+    --slurpfile counts "${counts_file}" '
+    reduce $days[] as $day (.;
+      .[$day] += {
+        ci_checkouts: ([$counts[] | select(.day == $day) | .ci_checkouts] | add // 0),
+        copilot_jobs: ([$counts[] | select(.day == $day) | .copilot_jobs] | add // 0)
+      })
+  ' "${daily_file}")"
+  printf '%s\n' "${merged}" > "${daily_file}"
+}
+
+function write_readme() {
+  local repo="${1}"
+  local daily_file="${2}"
+  local readme_file="${3}"
+
+  {
+    cat << EOF
+# Traffic history for ${repo}
+
+Generated by \`bin/record-traffic\` on the default branch. Do not edit this file by hand.
+
+GitHub keeps traffic data for 14 days. This branch keeps it indefinitely: \`daily.json\` holds clones and views per UTC day, and \`snapshots/\` holds the popular referrers and paths as they stood on each run.
+
+## Reading the clone counts
+
+- **CI checkouts** are the \`actions/checkout\` steps that ran in this repository's Actions runs created that day, across every job and attempt.
+- **Copilot jobs** are the jobs of Copilot's agent runs, such as pull request reviews, which clone the repository without a checkout step.
+- **Est. external clones** are clones minus both, floored at zero. They still include marketplace update fetches from existing installs and the maintainer's own machines.
+- Unique cloner counts cannot be adjusted the same way, so they are shown as GitHub reports them.
+- \`n/a\` marks a day not yet counted: the current day, or a day recorded before counting began.
+
+EOF
+    jq -r '
+      def cell: if . == null then "n/a" else tostring end;
+      def external:
+        if .clones == null or .ci_checkouts == null then null
+        else [.clones - .ci_checkouts - .copilot_jobs, 0] | max end;
+      def monday:
+        strptime("%Y-%m-%d") | mktime
+        | . - (((. / 86400 | floor) + 3) % 7) * 86400
+        | strftime("%Y-%m-%d");
+
+      to_entries | sort_by(.key) | reverse
+      | (
+          "## Last 14 days",
+          "",
+          "| Date | Clones | Unique cloners | CI checkouts | Copilot jobs | Est. external clones | Views | Unique visitors |",
+          "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+          (.[:14][]
+            | .key as $day | .value
+            | "| \($day) | \(.clones | cell) | \(.clone_uniques | cell) | \(.ci_checkouts | cell) | \(.copilot_jobs | cell) | \(external | cell) | \(.views | cell) | \(.view_uniques | cell) |"),
+          "",
+          "## Weekly totals",
+          "",
+          "Weeks start on Monday. An asterisk marks an external estimate that leaves out days not yet counted.",
+          "",
+          "| Week of | Clones | Automation clones | Est. external clones | Views |",
+          "| --- | ---: | ---: | ---: | ---: |",
+          (group_by(.key | monday) | reverse[]
+            | (.[0].key | monday) as $week
+            | [.[].value] as $days
+            | [$days[] | select(.ci_checkouts != null)] as $counted
+            | (if ($counted | length) < ([$days[] | select(.clones != null)] | length) then "*" else "" end) as $mark
+            | "| \($week) | \([$days[].clones // 0] | add) | \([$counted[] | .ci_checkouts + .copilot_jobs] | add // 0) | \([$counted[] | external // 0] | add // 0)\($mark) | \([$days[].views // 0] | add) |")
+        )
+    ' "${daily_file}"
+  } > "${readme_file}"
+}
+
+function main() {
+  local repo="${GITHUB_REPOSITORY:-}"
+  local today=""
+  local data_dir=""
+
+  while [[ "${#}" -gt 0 ]]; do
+    case "${1}" in
+      -h | --help)
+        usage
+        return 0
+        ;;
+      --repo)
+        [[ "${#}" -ge 2 ]] || die "--repo needs a value"
+        repo="${2}"
+        shift 2
+        ;;
+      --today)
+        [[ "${#}" -ge 2 ]] || die "--today needs a value"
+        today="${2}"
+        shift 2
+        ;;
+      -*) die "unknown option: ${1}" ;;
+      *)
+        [[ -z "${data_dir}" ]] || die "unexpected argument: ${1}"
+        data_dir="${1}"
+        shift
+        ;;
+    esac
+  done
+
+  [[ -n "${data_dir}" ]] || {
+    usage >&2
+    exit 2
+  }
+  [[ "${repo}" =~ ^[^/]+/[^/]+$ ]] || die "--repo or GITHUB_REPOSITORY must name OWNER/REPO"
+  if [[ -z "${today}" ]]; then
+    today="$(date -u +%Y-%m-%d)"
+  fi
+  [[ "${today}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die "--today must be YYYY-MM-DD"
+
+  command -v gh > /dev/null || die "gh is required"
+  command -v jq > /dev/null || die "jq is required"
+
+  mkdir -p "${data_dir}/snapshots/referrers" "${data_dir}/snapshots/paths"
+  local daily_file="${data_dir}/daily.json"
+  if [[ ! -f "${daily_file}" ]]; then
+    echo '{}' > "${daily_file}"
+  fi
+
+  local clones views referrers paths
+  clones="$(fetch "repos/${repo}/traffic/clones")"
+  views="$(fetch "repos/${repo}/traffic/views")"
+  referrers="$(fetch "repos/${repo}/traffic/popular/referrers")"
+  paths="$(fetch "repos/${repo}/traffic/popular/paths")"
+
+  jq . <<< "${referrers}" > "${data_dir}/snapshots/referrers/${today}.json"
+  jq . <<< "${paths}" > "${data_dir}/snapshots/paths/${today}.json"
+
+  merge_daily "${daily_file}" "${clones}" "${views}"
+
+  local days=()
+  local day
+  while IFS= read -r day; do
+    days+=("${day}")
+  done < <(uncounted_days "${daily_file}" "${clones}" "${views}" "${today}")
+
+  if [[ "${#days[@]}" -gt 0 ]]; then
+    local work_dir
+    work_dir="$(mktemp -d "${TMPDIR:-/tmp}/record-traffic.XXXXXX")"
+    # shellcheck disable=SC2064 # expand now: work_dir is local to main
+    trap "rm -rf '${work_dir}'" EXIT
+    count_automation "${repo}" "${daily_file}" "${work_dir}" "${days[@]}"
+  fi
+
+  write_readme "${repo}" "${daily_file}" "${data_dir}/README.md"
+}
+
+main "$@"
