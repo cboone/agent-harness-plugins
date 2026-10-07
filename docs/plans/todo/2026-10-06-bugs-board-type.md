@@ -105,7 +105,16 @@ Confirmed by the user on 2026-10-06, at the check-in:
 
 The run also found one gap: a bug whose cause is only suspected goes to Investigate, which requires a question, but the reading instructions asked for one only when a field was unknown. They now ask for one when the cause is suspected too.
 
-Still to do: the warm re-sync in a new conversation after a triage change, recording its timings here.
+## Warm Re-Syncs After Triage Calls
+
+Two warm re-syncs on 2026-10-06 and 2026-10-07 each followed a triage call made from the board, and each republished it at the same URL.
+
+| Sync               | Triage call                     | Gather               | Read                                 | Compare                                                                     |
+| ------------------ | ------------------------------- | -------------------- | ------------------------------------ | --------------------------------------------------------------------------- |
+| Same conversation  | `demote #4410`, the new verb    | 4.0 s, nothing moved | All 66 assessments reused            | #4410 left Critical for High priority; the triage entry; a reworded summary |
+| A new conversation | `snooze #4518 until 2026-11-03` | Nothing moved        | All 66 assessments reused, unchanged | #4518 left High priority for Parked; the triage entry                       |
+
+The new conversation found the published board, extracted its data, and compared against it, so its change report held only its own call, and the earlier `demote` carried over. Its triage entry came after the gather, so the board's `sync.at` is the score time, 2026-10-07T04:06:42Z, as the reference describes. Both note entries are signed commits in `sl-vf`, `e805566` and `bc2b33e`, not pushed. The board validates with Critical 4, High priority 6, and 66 open bugs. That conversation's per-phase timings were not recorded.
 
 ## Redesign
 
@@ -279,7 +288,7 @@ Chips for unconfirmed fields are dashed, confirmed ones solid; a field set by th
 5. `bugs` validation and compare, with scrut tests.
 6. Template and render; check by hand in headless Chrome at desktop and 390-pixel widths, in both themes, with a full Now list, an empty Now list, and an expired triage entry.
 7. Skill, references, README, version, `make build`.
-8. First real publish for `votefwd`, then a warm re-sync in a new conversation after a triage change, recording per-phase timings here as focus did.
+8. First real publish for `votefwd`, then a warm re-sync in a new conversation after a triage change, recording per-phase timings here as focus did. Done: see Warm Re-Syncs After Triage Calls.
 
 Small signed Conventional Commits at each boundary; the plan is committed as it changes.
 
