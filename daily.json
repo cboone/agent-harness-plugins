@@ -1,0 +1,114 @@
+{
+  "2026-09-23": {
+    "clones": 37,
+    "clone_uniques": 10,
+    "views": 6,
+    "view_uniques": 3,
+    "ci_checkouts": 2,
+    "copilot_jobs": 2
+  },
+  "2026-09-24": {
+    "clones": 67,
+    "clone_uniques": 28,
+    "views": 18,
+    "view_uniques": 2,
+    "ci_checkouts": 17,
+    "copilot_jobs": 5
+  },
+  "2026-09-25": {
+    "clones": 42,
+    "clone_uniques": 13,
+    "views": 5,
+    "view_uniques": 2,
+    "ci_checkouts": 8,
+    "copilot_jobs": 4
+  },
+  "2026-09-26": {
+    "clones": 26,
+    "clone_uniques": 13,
+    "views": 1,
+    "view_uniques": 1,
+    "ci_checkouts": 0,
+    "copilot_jobs": 0
+  },
+  "2026-09-27": {
+    "clones": 132,
+    "clone_uniques": 52,
+    "views": 10,
+    "view_uniques": 1,
+    "ci_checkouts": 18,
+    "copilot_jobs": 5
+  },
+  "2026-09-28": {
+    "clones": 23,
+    "clone_uniques": 11,
+    "views": 11,
+    "view_uniques": 3,
+    "ci_checkouts": 4,
+    "copilot_jobs": 0
+  },
+  "2026-09-29": {
+    "clones": 7,
+    "clone_uniques": 4,
+    "views": 6,
+    "view_uniques": 3,
+    "ci_checkouts": 0,
+    "copilot_jobs": 0
+  },
+  "2026-09-30": {
+    "clones": 61,
+    "clone_uniques": 27,
+    "views": 3,
+    "view_uniques": 2,
+    "ci_checkouts": 14,
+    "copilot_jobs": 4
+  },
+  "2026-10-01": {
+    "clones": 125,
+    "clone_uniques": 32,
+    "views": 13,
+    "view_uniques": 1,
+    "ci_checkouts": 31,
+    "copilot_jobs": 15
+  },
+  "2026-10-02": {
+    "clones": 231,
+    "clone_uniques": 60,
+    "views": 29,
+    "view_uniques": 4,
+    "ci_checkouts": 74,
+    "copilot_jobs": 9
+  },
+  "2026-10-03": {
+    "clones": 85,
+    "clone_uniques": 46,
+    "views": 0,
+    "view_uniques": 0,
+    "ci_checkouts": 0,
+    "copilot_jobs": 0
+  },
+  "2026-10-04": {
+    "clones": 62,
+    "clone_uniques": 13,
+    "views": 2,
+    "view_uniques": 2,
+    "ci_checkouts": 0,
+    "copilot_jobs": 0
+  },
+  "2026-10-05": {
+    "clones": 16,
+    "clone_uniques": 9,
+    "views": 3,
+    "view_uniques": 1,
+    "ci_checkouts": 1,
+    "copilot_jobs": 0
+  },
+  "2026-10-06": {
+    "clones": 236,
+    "clone_uniques": 21,
+    "views": 10,
+    "view_uniques": 2,
+    "ci_checkouts": 180,
+    "copilot_jobs": 8
+  }
+}
