@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bugs-gather -- Gather and cache the data behind a bugs report board.
+# bugs-gather -- Gather, score, and cache the data behind a bugs report board.
 #
 # A bugs board answers which of a repository's open bugs need action now,
 # which today, and how the rest are triaged. This script does the
@@ -7,11 +7,16 @@
 # and recently closed bugs, with the pull requests that close them, looks up
 # their ZenHub state when the repository has a ZenHub workspace, and keeps a
 # per-repository cache so a later sync, in any conversation, can say what
-# moved. The GraphQL queries live beside it in bugs-gather-queries/.
+# moved, and which bugs need reading again. It then applies the triage note
+# and the calibrated tier rules to the gather and the model's assessments.
+# The GraphQL queries live beside it in bugs-gather-queries/.
 #
 # Usage:
 #   bugs-gather gather REPO OUTPUT
 #   bugs-gather moved REPO GATHER
+#   bugs-gather reuse REPO GATHER OUTPUT
+#   bugs-gather score REPO GATHER ASSESSMENTS OUTPUT
+#   bugs-gather save REPO GATHER ASSESSMENTS SCORED
 #
 # REPO is OWNER/NAME, or the path of a config file that names one in its repo
 # field. For OWNER/NAME, an optional config is read from
@@ -102,7 +107,11 @@ else
       check($c.bots | absent_or(name_list); "bots: expected a list of logins"),
       check($c.recentDays | absent_or(is_int and . > 0); "recentDays: expected a positive whole number of days"),
       check($c.nowWarn | absent_or(is_int and . > 0); "nowWarn: expected a positive whole number"),
-      check($c.weights | absent_or(type == "object" and all(.[]; type == "number")); "weights: expected a number per signal kind"),
+      check($c.readyLimit | absent_or(is_int and . > 0); "readyLimit: expected a positive whole number"),
+      check($c.deadlineDays | absent_or(is_int and . >= 0); "deadlineDays: expected a whole number of days"),
+      check($c.progressLabels | absent_or(name_list); "progressLabels: expected a list of label names"),
+      check($c.progressPipelines | absent_or(name_list); "progressPipelines: expected a list of pipeline names"),
+      check($c.weights | absent_or(type == "object" and ([.. | scalars] | all(type == "number"))); "weights: expected numbers, grouped as the defaults are"),
       check($c.triageNote | absent_or(is_text); "triageNote: expected the path to the triage note"),
       check($c.triageGit | absent_or(type == "object" and (.gitDir | is_text) and (.workTree | is_text)); "triageGit: expected {gitDir, workTree}"),
       (if $c.zenhub == null then empty
@@ -125,7 +134,21 @@ else
       bots: ($c.bots // []),
       recentDays: ($c.recentDays // 7),
       nowWarn: ($c.nowWarn // 5),
-      weights: ($c.weights // {}),
+      readyLimit: ($c.readyLimit // 8),
+      deadlineDays: ($c.deadlineDays // 14),
+      progressLabels: ($c.progressLabels // ["in progress"]),
+      progressPipelines: ($c.progressPipelines // ["In Progress", "Review/QA"]),
+      # Calibrated against swing-left/votefwd on 2026-10-06. A config overrides
+      # any of them, one key at a time.
+      weights: ({
+        impact: {security: 40, "data-loss": 35, money: 35, access: 30, "core-flow": 30, degraded: 10, cosmetic: 3, internal: 2, unknown: 10},
+        surface: {public: 15, "signed-in": 12, admin: 5, internal: 0, unknown: 5},
+        reach: {all: 15, many: 10, some: 5, few: 2, unknown: 4},
+        evidence: {"user-report": 15, "production-observed": 12, reproduced: 6, "code-reading": 2, unknown: 0},
+        pipelines: {},
+        timeSensitive: 20, mitigated: -20, urgent: 15, sprint: 5, regression: 10,
+        outsidePerson: 5, outsideCap: 15, reaction: 1, reactionCap: 10
+      } * ($c.weights // {})),
       zenhub: ($c.zenhub // null),
       triageNote: ($c.triageNote | expand),
       triageGit: ($c.triageGit | if . == null then null else {gitDir: (.gitDir | expand), workTree: (.workTree | expand)} end)
@@ -292,11 +315,274 @@ def fix_state: [.fixes | as_list | .[] | "#\(.number) \(if .isDraft then "draft"
   ] | if length == 0 then ["- Nothing moved."] else . end | .[])
 '
 
+# The closed sets an assessment draws from. score checks every assessment and
+# every set entry in the triage note against them.
+# shellcheck disable=SC2016
+readonly ASSESSMENT_DEFS='
+def closed_sets: {
+  environment: ["production", "staging", "development", "unknown"],
+  evidence: ["user-report", "production-observed", "reproduced", "code-reading", "unknown"],
+  surface: ["public", "signed-in", "admin", "internal", "unknown"],
+  impact: ["security", "data-loss", "money", "access", "core-flow", "degraded", "cosmetic", "internal", "unknown"],
+  reach: ["all", "many", "some", "few", "unknown"],
+  workaround: ["none", "exists", "unknown"],
+  cause: ["known", "suspected", "unknown"]
+};
+def is_day: type == "string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") and (. as $d | (try (strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d")) catch null) == $d);
+# Problems with one assessment, each prefixed with $at.
+def assessment_problems($at):
+  . as $a
+  | (closed_sets | to_entries[] | .key as $k | .value as $set
+     | select(($a[$k] | type) != "string" or ($set | index($a[$k]) | not))
+     | "\($at): \($k) must be one of \($set | join(", "))"),
+    (select(($a.timeSensitive | type) != "boolean") | "\($at): timeSensitive must be true or false"),
+    (select(($a.mitigated | type) != "boolean") | "\($at): mitigated must be true or false"),
+    (select($a.deadline != null and ($a.deadline | is_day | not)) | "\($at): deadline must be a date such as 2026-11-03, or null"),
+    (select(($a.gist | type) != "string" or ($a.gist | test("\\S") | not)) | "\($at): gist is required"),
+    (select(($a.nextStep | type) != "string" or ($a.nextStep | test("\\S") | not)) | "\($at): nextStep is required"),
+    (select($a.question != null and ($a.question | type) != "string") | "\($at): question must be text or null");
+'
+
+# Applies the triage note and the calibrated tier rules to a gather and its
+# assessments. Takes $config, $gather, $assessments (a list), the note as $note,
+# the cached score as $previous (null on a cold sync), $scored_at, and
+# $version. It runs under TZ set to the repository time zone, so strflocaltime
+# gives the local calendar date that until and deadline dates count in.
+# shellcheck disable=SC2016
+readonly SCORE_FILTER="${COMMON_DEFS}${ASSESSMENT_DEFS}"'
+def in_list($l): . as $v | $l | any(. == $v);
+def entry_pattern: "^- (?<at>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2})?(Z|[+-][0-9]{2}:[0-9]{2})) (?<rest>.*)$";
+def target_pattern: "^(?<verb>escalate|snooze|park) #(?<target>[1-9][0-9]*)( until (?<until>[0-9]{4}-[0-9]{2}-[0-9]{2}))?: (?<text>\\S.*)$";
+def set_pattern: "^set #(?<target>[1-9][0-9]*) (?<pairs>[A-Za-z]+=[A-Za-z0-9-]+( [A-Za-z]+=[A-Za-z0-9-]+)*): (?<text>\\S.*)$";
+def context_pattern: "^context: (?<text>\\S.*)$";
+def high_impact: in_list(["security", "data-loss", "money", "access", "core-flow"]);
+def user_surface: in_list(["public", "signed-in"]);
+def confirmed_evidence: in_list(["user-report", "production-observed", "reproduced"]);
+def shown_as($k): {
+  "data-loss": "data loss", "core-flow": "core flow broken", "signed-in": "signed-in users",
+  "user-report": "reported by users", "production-observed": "seen on production",
+  "code-reading": "found in source", reproduced: "reproduced", public: "the public", admin: "admins", internal: "maintainers"
+}[$k] // $k;
+# A set entry value as the type its field takes.
+def typed($k): if $k == "timeSensitive" or $k == "mitigated" then . == "true" elif $k == "deadline" and . == "null" then null else . end;
+
+$config as $c
+| $c.weights as $w
+| ($gather.gatheredAt | epoch) as $gathered
+# The check-in writes triage entries after the gather, so the note counts
+# against the later of the gather and the score.
+| ([$gathered, ($scored_at | epoch)] | max) as $scored
+| ($scored | strflocaltime("%Y-%m-%d")) as $today
+
+# The triage note: every list item must be an entry; other lines are prose.
+| ($note | split("\n") | to_entries | map(select(.value | test("^- "))) | map(
+    .key as $line | .value as $text
+    | ($text | [capture(entry_pattern)] | first) as $head
+    | if $head == null then {problem: "line \($line + 1): not a triage entry: \($text)"}
+      else
+        (try ($head.at | epoch) catch null) as $instant
+        | if $instant == null or ($head.at[0:10] | is_day | not) then {problem: "line \($line + 1): \($head.at) is not a real time"}
+          elif $instant > $scored then {problem: "line \($line + 1): \($head.at) is later than this score"}
+          elif ($head.rest | test(context_pattern)) then
+            {entry: {id: "\($head.at) context", at: $head.at, instant: $instant, verb: "context", target: null, until: null, text: ($head.rest | capture(context_pattern) | .text)}}
+          elif ($head.rest | test("^set ")) then
+            ($head.rest | [capture(set_pattern)] | first) as $body
+            | if $body == null then {problem: "line \($line + 1): expected set #N key=value: text: \($text)"}
+              else
+                ($body.pairs | split(" ") | map(split("=") | {key: .[0], value: (.[1] | typed(.[0]))})) as $pairs
+                | ([$pairs[] | .key as $k | .value as $v
+                    | if (closed_sets | has($k)) then (select(closed_sets[$k] | index($v) | not) | "\($k) must be one of \(closed_sets[$k] | join(", "))")
+                      elif $k == "timeSensitive" or $k == "mitigated" then empty
+                      elif $k == "deadline" then (select($v != null and ($v | is_day | not)) | "deadline must be a date or null")
+                      else "\($k) is not an assessment field" end]) as $bad
+                | if ($bad | length) > 0 then {problem: "line \($line + 1): \($bad | join("; "))"}
+                  else {entry: {id: "\($head.at) set #\($body.target)", at: $head.at, instant: $instant, verb: "set", target: ($body.target | tonumber), until: null, fields: ($pairs | from_entries), text: $body.text}}
+                  end
+              end
+          else
+            ($head.rest | [capture(target_pattern)] | first) as $body
+            | if $body == null then {problem: "line \($line + 1): expected escalate, set, snooze, park, or context: \($text)"}
+              elif $body.until != null and ($body.until | is_day | not) then {problem: "line \($line + 1): until \($body.until) is not a date on the calendar"}
+              elif $body.verb == "snooze" and $body.until == null then {problem: "line \($line + 1): snooze needs an until date"}
+              elif $body.verb == "park" and $body.until != null then {problem: "line \($line + 1): park lasts until the note changes and takes no until date; use snooze"}
+              else {entry: {id: "\($head.at) \($body.verb) #\($body.target)", at: $head.at, instant: $instant, verb: $body.verb, target: ($body.target | tonumber), until: $body.until, text: $body.text}}
+              end
+          end
+      end
+  )) as $parsed
+| [$parsed[] | .entry // empty | . + {expired: (.until != null and $today > .until)}] as $entries
+| ([$entries[] | .id] | group_by(.) | map(select(length > 1) | "entry \(.[0]) appears more than once")) as $duplicates
+| [$entries[] | select(.expired | not)] as $active
+| ($assessments | map({key: (.number | tostring), value: .}) | from_entries) as $assessed
+| [$gather.bugs[] | select(.state == "open")] as $open
+
+| def triage_signal: {source: "triage", kind: .verb, text, at, entry: .id};
+  # Among a bug s escalate, snooze, and park entries still in force, the
+  # latest decides.
+  def placement($n): [$active[] | select(.target == $n and (.verb | IN("escalate", "snooze", "park")))] | sort_by(.instant) | last;
+  def overrides($n): [$active[] | select(.target == $n and .verb == "set")] | sort_by(.instant);
+  def due($a): $a.deadline != null and $a.deadline >= $today
+    and (($a.deadline + "T00:00:00Z" | fromdateiso8601) - ($today + "T00:00:00Z" | fromdateiso8601)) <= $c.deadlineDays * 86400;
+  def progress_of($b):
+    ([$b.fixes[] | select(.isDraft | not)] | first | if . != null then "fix #\(.number)" else null end)
+    // ([$b.fixes[] | select(.isDraft)] | first | if . != null then "draft fix #\(.number)" else null end)
+    // ($b.zenhub.pipeline | if . != null and in_list($c.progressPipelines) then "in \(.)" else null end)
+    // ([$b.labels[] | select(in_list($c.progressLabels))] | first | if . != null then "the \(.) label" else null end);
+  def ready_group($b):
+    ([$b.fixes[] | select(.isDraft | not)] | first) as $fix
+    | if $fix == null then (if progress_of($b) != null then "in-progress" else "ready-to-fix" end)
+      elif $fix.checks == "SUCCESS" and ($fix.reviewDecision == "APPROVED" or $fix.reviewDecision == null) then "ship"
+      else "review" end;
+  def score_of($a; $b):
+    ($w.impact[$a.impact] // 0) + ($w.surface[$a.surface] // 0) + ($w.reach[$a.reach] // 0) + ($w.evidence[$a.evidence] // 0)
+    + (if $a.timeSensitive then $w.timeSensitive else 0 end)
+    + (if $a.mitigated then $w.mitigated else 0 end)
+    + (if $b.urgentLabel or ($b.zenhub.pipeline // "" | in_list($c.urgentPipelines)) then $w.urgent else 0 end)
+    + ($w.pipelines[$b.zenhub.pipeline // ""] // 0)
+    + (if $b.zenhub.sprint == true then $w.sprint else 0 end)
+    + (if $b.regression then $w.regression else 0 end)
+    + ([$b.outsidePeople * $w.outsidePerson, $w.outsideCap] | min)
+    + ([$b.reactions * $w.reaction, $w.reactionCap] | min);
+  def signals_of($a; $b; $set):
+    [
+      {source: "assessment", kind: "impact", text: "\(shown_as($a.impact)) for \(shown_as($a.surface))\(if $a.reach != "unknown" then ", reach \($a.reach)" else "" end)", at: $b.updatedAt},
+      {source: "assessment", kind: "evidence", text: "\(shown_as($a.evidence))\(if $a.environment != "unknown" then " on \($a.environment)" else ", environment unknown" end)", at: $b.updatedAt},
+      (select($a.workaround == "none") | {source: "assessment", kind: "workaround", text: "no workaround", at: $b.updatedAt}),
+      (select($a.mitigated) | {source: "assessment", kind: "mitigated", text: "mitigated", at: $b.updatedAt}),
+      (select($a.deadline != null and $a.deadline >= $today) | {source: "assessment", kind: "deadline", text: "due \($a.deadline)", at: $b.updatedAt}),
+      (select($a.timeSensitive and $a.deadline == null) | {source: "assessment", kind: "time", text: "worse with every event", at: $b.updatedAt}),
+      ($set[] | triage_signal),
+      (select($b.urgentLabel) | {source: "github", kind: "label", text: "labeled \([$b.labels[] | select(in_list($c.urgentLabels))] | join(", "))", at: $b.updatedAt}),
+      (select($b.regression) | {source: "github", kind: "regression", text: "regression", at: $b.updatedAt}),
+      (select($b.outsidePeople > 0) | {source: "github", kind: "users", text: "\($b.outsidePeople) outside \(if $b.outsidePeople == 1 then "person" else "people" end)", at: ($b.lastComment.at // $b.createdAt)}),
+      (select($b.reactions > 0) | {source: "github", kind: "reactions", text: "\($b.reactions) reactions", at: $b.updatedAt}),
+      ($b.zenhub | select(. != null and .pipeline != null and ((.pipeline | in_list($c.urgentPipelines)) or ($w.pipelines[.pipeline] // 0) != 0)) | {source: "zenhub", kind: "pipeline", text: "in \(.pipeline)", at: (.pipelineSince // $gather.gatheredAt)}),
+      ($b.zenhub | select(. != null and .sprint == true) | {source: "zenhub", kind: "sprint", text: "in \($gather.zenhub.activeSprint.name)", at: $gather.zenhub.activeSprint.startAt})
+    ];
+  def place($a; $b):
+    placement($b.number) as $p
+    | ((($a.evidence | confirmed_evidence) and $a.environment == "production")) as $confirmed
+    | progress_of($b) as $wip
+    | if $p.verb == "escalate" then {tier: "now", why: "escalated", entry: $p.id}
+      elif $p.verb == "snooze" then {tier: "parked", reason: "snoozed until \($p.until)", entry: $p.id}
+      elif $p.verb == "park" then {tier: "parked", reason: "parked: \($p.text)", entry: $p.id}
+      elif $b.parkLabel then {tier: "parked", reason: "labeled \([$b.labels[] | select(in_list($c.parkLabels))] | join(", "))"}
+      elif $b.zenhub.level != null and ($b.zenhub.level | in_list($c.containerLevels)) then {tier: "parked", reason: "a container"}
+      elif ($a.mitigated | not) and $confirmed and ($a.surface | user_surface) and ($a.impact | high_impact) and $a.workaround == "none" then {tier: "now", why: "hurting users on production"}
+      elif ($a.mitigated | not) and $a.impact == "security" and $a.surface == "public" and ($a.environment | in_list(["production", "unknown"])) then {tier: "now", why: "public security exposure"}
+      elif ($a.mitigated | not) and $confirmed and ($a.surface | user_surface) and (($a.reach | in_list(["some", "many", "all"])) or $a.workaround == "none") then {tier: "today", why: "affecting users on production"}
+      elif ($a.mitigated | not) and ($a.impact | high_impact) and ($a.surface | user_surface) and ($a.environment | in_list(["production", "unknown"])) and ($confirmed | not) and ($a.deadline == null or due($a))
+        then {tier: "today", why: "confirm on production", confirm: true}
+      elif ($a.mitigated | not) and $a.timeSensitive and $a.deadline == null then {tier: "today", why: "worse with every event"}
+      elif ($a.mitigated | not) and due($a) then {tier: "today", why: "due \($a.deadline)"}
+      elif $wip != null then {tier: "ready", why: "in progress"}
+      elif $a.mitigated then {tier: "ready", why: "mitigated"}
+      elif $a.impact == "security" and $a.surface == "internal" then {tier: "ready", why: "blocks a security fix"}
+      elif $a.surface == "internal" then {tier: "later", reason: "internal"}
+      elif ([$a.environment, $a.surface, $a.impact, $a.cause] | any(. == "unknown")) or $a.cause == "suspected" or $a.reproduced == false then
+        {tier: "investigate", why: ([(["environment", "surface", "impact", "cause"][] as $k | select($a[$k] == "unknown") | "\($k) unknown"), (select($a.cause == "suspected") | "cause suspected"), (select($a.reproduced == false) | "not reproduced")] | join(", "))}
+      elif $a.cause == "known" then {tier: "ready", why: "ready to fix"}
+      elif $a.impact == "cosmetic" then {tier: "later", reason: "cosmetic"}
+      elif $a.environment != "production" then {tier: "later", reason: "not production"}
+      else {tier: "later", reason: "backlog"} end
+    | . + {inProgress: $wip};
+
+  # Assessments must cover every open bug and must describe the bug as it is
+  # now; a stale one means the bug changed after it was read.
+  ([$open[] | ($assessed[.number | tostring]) as $a
+    | if $a == null then "#\(.number): no assessment; read it"
+      elif $a.updatedAt != .updatedAt then "#\(.number): assessed at updatedAt \($a.updatedAt), but the bug was updated at \(.updatedAt); read it again"
+      else ($a | assessment_problems("#\(.number)")) end]) as $assessment_problems
+| if ($assessment_problems | length) > 0 then {problems: $assessment_problems}
+  else
+    [$open[] | . as $b
+     | overrides($b.number) as $set
+     | ($assessed[$b.number | tostring] + ([$set[] | .fields] | add // {})) as $a
+     | place($a; $b) as $t
+     | {number, title, url, author, assignees, labels, createdAt, updatedAt, outsidePeople, reactions,
+        pipeline: ($b.zenhub.pipeline // null), sprint: ($b.zenhub.sprint // false),
+        fix: ([$b.fixes[] | select(.isDraft | not)] | first) // ($b.fixes | first),
+        assessment: ($a | {environment, evidence, surface, impact, reach, workaround, cause, timeSensitive, deadline, mitigated, gist, nextStep, question}),
+        overridden: ([$set[] | .fields | keys[]] | unique),
+        score: score_of($a; $b),
+        signals: (signals_of($a; $b; $set) + (if $t.entry != null then [$active[] | select(.id == $t.entry) | triage_signal] else [] end)),
+        tier: $t.tier, why: ($t.why // null), reason: ($t.reason // null), confirm: ($t.confirm // false),
+        inProgress: $t.inProgress,
+        group: (if $t.tier == "ready" then ready_group($b) else null end)}] as $placed
+    | [$gather.bugs[] | select(.state == "closed") | . as $b
+       | ($assessed[$b.number | tostring] // ([$previous.tiers // {} | .[] | .[] | select(.number == $b.number)] | first | .assessment?)) as $was
+       | {number, title, url, closedAt, stateReason, fixedBy: [$b.fixedBy[] | .number], tier: "fixed",
+          verify: ($was != null and $was.environment == "production" and $b.stateReason == "COMPLETED")}] as $fixed
+    | def ranked($tier): [$placed[] | select(.tier == $tier)] | sort_by(-.score, -(.updatedAt | epoch), .number);
+      {
+        version: $version,
+        repo: $gather.repo,
+        gatheredAt: $gather.gatheredAt,
+        scoredAt: ($scored | todateiso8601),
+        timeZone: $c.timeZone,
+        nowWarn: $c.nowWarn,
+        readyLimit: $c.readyLimit,
+        triage: {
+          entries: [$entries[] | del(.instant)],
+          expired: [$entries[] | select(.expired) | .id],
+          problems: ([$parsed[] | .problem // empty] + $duplicates
+            + [$active[] | select(.target != null) | .target as $t | select(any($gather.bugs[]; .number == $t) | not) | "\(.id) names a bug outside this board"])
+        },
+        tiers: {now: ranked("now"), today: ranked("today"), ready: ranked("ready"), investigate: ranked("investigate"), later: ranked("later"), parked: ranked("parked"), fixed: ($fixed | sort_by(.closedAt) | reverse)}
+      }
+    | . as $s
+    | . + {changes: (if $previous == null then null else
+        def tier_map: [.tiers | to_entries[] | .key as $t | .value[] | {key: (.number | tostring), value: $t}] | from_entries;
+        ($previous | tier_map) as $was
+        | ($s | tier_map) as $is
+        | {
+            entered: [$is | to_entries[] | select(.value | IN("now", "today")) | select($was[.key] != .value) | "#\(.key) \($was[.key] // "new") to \(.value)"],
+            left: [$was | to_entries[] | select(.value | IN("now", "today")) | select($is[.key] != .value) | "#\(.key) \(.value) to \($is[.key] // "off the board")"],
+            moved: [$is | to_entries[] | select($was[.key] != null and $was[.key] != .value and (.value | IN("now", "today") | not) and ($was[.key] | IN("now", "today") | not)) | "#\(.key) \($was[.key]) to \(.value)"]
+          }
+      end)}
+  end
+'
+
+# Prints a score as the text the check-in shows.
+# shellcheck disable=SC2016
+readonly REPORT_FILTER='
+def flags: [(select(.inProgress != null) | "in progress: \(.inProgress)"), (select(.confirm) | "unconfirmed"), (select(.overridden | length > 0) | "set by triage: \(.overridden | join(", "))")] | if length == 0 then "" else " (\(join("; ")))" end;
+def line: "    - #\(.number) [\(.score)] \(.title)\(flags)\n        \(.why // .reason // ""): \(.assessment.gist)";
+def short: "    - #\(.number) [\(.score)] \(.title)\(flags)";
+def listed($heading; $items; f): "- \($heading) (\($items | length)):", ($items[] | f);
+"Triage note: \(.triage.entries | length) entries, \(.triage.expired | length) expired",
+(.triage.expired[] | "    - expired: \(.)"),
+(.triage.problems[] | "    - problem: \(.)"),
+listed("Now\(if (.tiers.now | length) > .nowWarn then ", more than the \(.nowWarn) the page flags" else "" end)"; .tiers.now; line),
+listed("Today"; .tiers.today; line),
+listed("Ready to go, top \(.readyLimit) above the fold"; .tiers.ready[0:.readyLimit]; short),
+(.readyLimit as $limit | .tiers.ready | length | select(. > $limit) | "    - and \(. - $limit) more in the report"),
+"- Report: \(.tiers.investigate | length) to investigate, \(.tiers.later | length) can wait, \(.tiers.parked | length) parked, \(.tiers.fixed | length) recently fixed",
+(if .changes == null then "- Changes: none recorded; the cache held no earlier score"
+ else
+   "- Entered Now or Today: \(.changes.entered | if length == 0 then "none" else join(", ") end)",
+   "- Left Now or Today: \(.changes.left | if length == 0 then "none" else join(", ") end)",
+   (.changes.moved[] | "- Moved: \(.)")
+ end)
+'
+
+# Prints the cached assessments that still describe their bugs, as a list, for
+# the gather $gather and the cache $cached (null on a cold sync).
+# shellcheck disable=SC2016
+readonly REUSE_FILTER='
+($cached // [] | map({key: (.number | tostring), value: .}) | from_entries) as $by
+| [$gather.bugs[] | select(.state == "open") | $by[.number | tostring] as $a | select($a != null and $a.updatedAt == .updatedAt) | $a]
+'
+
 function usage() {
   cat << 'USAGE'
 Usage:
   bugs-gather gather REPO OUTPUT
   bugs-gather moved REPO GATHER
+  bugs-gather reuse REPO GATHER OUTPUT
+  bugs-gather score REPO GATHER ASSESSMENTS OUTPUT
+  bugs-gather save REPO GATHER ASSESSMENTS SCORED
 
 REPO is OWNER/NAME, or a config file naming one in its repo field. For
 OWNER/NAME, a config is read, when one exists, from
@@ -305,6 +591,16 @@ ${XDG_CONFIG_HOME:-$HOME/.config}/report-boards/bugs/github.com/OWNER/NAME.json.
 gather searches GitHub, and ZenHub when the config names a workspace, and
 writes the normalized result to OUTPUT, then reports what moved since the
 cached gather. moved repeats that report.
+
+reuse writes to OUTPUT the cached assessments that still describe their bugs,
+and lists the open bugs that need reading. Add an assessment for each of those
+to OUTPUT before scoring.
+
+score checks ASSESSMENTS against the gather, applies the triage note and the
+tier rules, writes the tiers to OUTPUT, and prints the check-in report.
+
+save stores a gather, its assessments, and its score as the cache the next
+sync starts from; run it only after the board publishes.
 USAGE
 }
 
@@ -614,6 +910,116 @@ function cmd_moved() {
   report_moved "${config}" "${2}"
 }
 
+function require_assessments() {
+  local path="${1}"
+  [[ -f "${path}" && -r "${path}" ]] || die "${E_INVALID}" "cannot read ${path}"
+  jq -e -s 'length == 1 and (.[0] | type == "array" and all(.[]; type == "object" and (.number | type == "number")))' "${path}" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "${path} must hold one JSON list of assessments, each with a number"
+}
+
+# Prints the cached assessments, or null when the cache holds none.
+function cached_assessments() {
+  local config="${1}"
+  local cached
+  cached="$(cache_dir "$(config_field "${config}" '.repo')")/assessments.json"
+  if [[ -f "${cached}" ]] && jq -e 'type == "array"' "${cached}" > /dev/null 2>&1; then
+    cat -- "${cached}"
+  else
+    printf 'null'
+  fi
+}
+
+function cmd_reuse() {
+  [[ $# -eq 3 ]] || usage_error "reuse takes a repository, a gather file, and an output path"
+  local config gather_file="${2}" output_file="${3}" stale
+  require_tools jq
+  load_config "${1}"
+  config="${CONFIG}"
+  require_gather "${config}" "${gather_file}"
+  [[ -d "$(dirname -- "${output_file}")" ]] || die "${E_INVALID}" "directory $(dirname -- "${output_file}") does not exist"
+
+  make_temp_dir
+  cached_assessments "${config}" > "${TEMP_DIR}/cached.json"
+  jq -n --slurpfile gather "${gather_file}" --slurpfile cached "${TEMP_DIR}/cached.json" \
+    "\$gather[0] as \$gather | \$cached[0] as \$cached | ${REUSE_FILTER}" > "${TEMP_DIR}/reused.json"
+  write_atomic "${output_file}" "${TEMP_DIR}/reused.json"
+  stale="$(jq -r --slurpfile reused "${output_file}" '
+    ($reused[0] | map(.number)) as $have
+    | [.bugs[] | select(.state == "open" and (.number as $n | $have | index($n) | not)) | "#\(.number)"] | join(" ")
+  ' "${gather_file}")"
+  printf '%s: reused %s cached assessments in %s\n' "${SCRIPT_NAME}" "$(jq 'length' "${output_file}")" "${output_file}"
+  if [[ -n "${stale}" ]]; then
+    printf 'Read these bugs and add their assessments: %s\n' "${stale}"
+  else
+    printf 'Every open bug has a current assessment; nothing needs reading.\n'
+  fi
+}
+
+function cmd_score() {
+  [[ $# -eq 4 ]] || usage_error "score takes a repository, a gather file, an assessments file, and an output path"
+  local config gather_file="${2}" assessments_file="${3}" output_file="${4}" note_file cached line
+  require_tools jq
+  load_config "${1}"
+  config="${CONFIG}"
+  require_gather "${config}" "${gather_file}"
+  require_assessments "${assessments_file}"
+  [[ -d "$(dirname -- "${output_file}")" ]] || die "${E_INVALID}" "directory $(dirname -- "${output_file}") does not exist"
+
+  make_temp_dir
+  note_file="$(config_field "${config}" '.triageNote // empty')"
+  if [[ -n "${note_file}" && -f "${note_file}" ]]; then
+    cp -- "${note_file}" "${TEMP_DIR}/note"
+  else
+    : > "${TEMP_DIR}/note"
+  fi
+  cached="$(cache_dir "$(config_field "${config}" '.repo')")/scored.json"
+  if [[ -f "${cached}" ]] && jq -e --argjson version "${CACHE_VERSION}" '.version == $version' "${cached}" > /dev/null 2>&1; then
+    cp -- "${cached}" "${TEMP_DIR}/previous"
+  else
+    printf 'null' > "${TEMP_DIR}/previous"
+  fi
+  TZ="$(config_field "${config}" '.timeZone')" jq -n --argjson config "${config}" --argjson version "${CACHE_VERSION}" \
+    --arg scored_at "${BUGS_GATHER_NOW:-$(date -u '+%Y-%m-%dT%H:%M:%SZ')}" \
+    --slurpfile gather "${gather_file}" --slurpfile assessments "${assessments_file}" \
+    --rawfile note "${TEMP_DIR}/note" --slurpfile previous "${TEMP_DIR}/previous" \
+    "\$gather[0] as \$gather | \$assessments[0] as \$assessments | \$previous[0] as \$previous | ${SCORE_FILTER}" > "${TEMP_DIR}/scored.json"
+  if jq -e 'has("problems")' "${TEMP_DIR}/scored.json" > /dev/null; then
+    printf '%s: %s does not cover the gather:\n' "${SCRIPT_NAME}" "${assessments_file}" >&2
+    while IFS= read -r line; do
+      printf '  - %s\n' "${line}" >&2
+    done < <(jq -r '.problems[]' "${TEMP_DIR}/scored.json")
+    exit "${E_INVALID}"
+  fi
+  write_atomic "${output_file}" "${TEMP_DIR}/scored.json"
+  jq -r "${REPORT_FILTER}" "${output_file}"
+}
+
+function cmd_save() {
+  [[ $# -eq 4 ]] || usage_error "save takes a repository, a gather file, an assessments file, and a score file"
+  local config gather_file="${2}" assessments_file="${3}" scored_file="${4}" directory
+  require_tools jq
+  load_config "${1}"
+  config="${CONFIG}"
+  require_gather "${config}" "${gather_file}"
+  require_assessments "${assessments_file}"
+  require_json_file "${scored_file}"
+  jq -e --slurpfile gather "${gather_file}" '.repo == $gather[0].repo and .gatheredAt == $gather[0].gatheredAt' "${scored_file}" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "${scored_file} was not scored from ${gather_file}"
+  directory="$(cache_dir "$(config_field "${config}" '.repo')")"
+  (umask 077 && mkdir -p -- "${directory}") || die "${E_INVALID}" "cannot create ${directory}"
+  make_temp_dir
+  # Assessments of bugs that have closed stay, so the next sync can tell
+  # whether a recently fixed bug was on production.
+  jq --slurpfile gather "${gather_file}" '
+    ([$gather[0].bugs[] | .number]) as $known
+    | [.[] | select(.number as $n | $known | index($n))] | sort_by(.number)
+  ' "${assessments_file}" > "${TEMP_DIR}/assessments.json"
+  write_atomic "${directory}/gather.json" "${gather_file}"
+  write_atomic "${directory}/assessments.json" "${TEMP_DIR}/assessments.json"
+  write_atomic "${directory}/scored.json" "${scored_file}"
+  printf '%s: saved the cache in %s\n' "${SCRIPT_NAME}" "${directory}" >&2
+}
+
 function main() {
   local command="${1:-}"
   [[ $# -gt 0 ]] && shift
@@ -626,6 +1032,9 @@ function main() {
     "") usage_error "a command is required" ;;
     gather) cmd_gather "$@" ;;
     moved) cmd_moved "$@" ;;
+    reuse) cmd_reuse "$@" ;;
+    score) cmd_score "$@" ;;
+    save) cmd_save "$@" ;;
     *) usage_error "unknown command: ${command}" ;;
   esac
 }
