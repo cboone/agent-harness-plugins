@@ -127,6 +127,44 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/f
 {"verdict":"### 🟡 Changes recommended","hasFormatDrift":false,"findings":[]}
 ```
 
+## Overview v2 an open-findings block states the count
+
+A later v2 layout drops the `**Findings:**` line and the `Open (N)` summary.
+It states the count as an `N open findings` summary over the thread links it
+lists, and closes with an `N resolved since last review` block.
+`format-d-open-findings-block.json` is a live review in that layout. Its count
+matches its links, so it is not drift, and its prose lead is read.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | jq -c '.[0] | {verdict, hasFormatDrift, needsRead, unaccounted, findings: [.findings[] | .source]}'
+{"verdict":"### 🟡 Changes recommended","hasFormatDrift":false,"needsRead":true,"unaccounted":[],"findings":["lead"]}
+```
+
+The summary count is compared with the thread links its block lists, the way
+a `**Findings:**` count is compared with `Open (N)`. A block that announces
+three findings and links two falls short.
+
+```scrut
+$ jq '.[0].body |= sub("- <picture>[^\n]*Validate closed[^\n]*\n"; "")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted: [.unaccounted[] | "\(.kind) line \(.line)"]}'
+{"hasFormatDrift":true,"unaccounted":["section-count line 8"]}
+```
+
+A v2 body that states its count in neither form still reports drift.
+
+```scrut
+$ jq '.[0].body |= sub("3 open findings"; "3 open items")' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+```
+
+The `N resolved since last review` block counts as a resolved section, so a
+round with no open findings, that block and a known lead needs nothing, like
+the `Resolved since last review (N)` round below.
+
+```scrut
+$ jq '.[0].body |= (sub("(?s)<strong>3 open findings</strong></summary>\n\n.*?</details>"; "<strong>0 open findings</strong></summary>\n\n</details>") | sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval."))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead, findings}'
+{"hasFormatDrift":false,"needsRead":false,"findings":[]}
+```
+
 ## Overview v2 a resolved-only round with a boilerplate lead needs nothing
 
 Copilot pairs a non-clean verdict with `**Findings:** None` and a `Resolved
