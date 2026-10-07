@@ -2,8 +2,8 @@
 name: use-git
 description: >-
   Apply git and gh CLI conventions: tmpfile bodies, signed commits, and safe
-  pushes. Use when running git or gh, passing them PR, issue, or review bodies,
-  or reviewing code that calls them.
+  pushes. Use when running git or gh, or passing them PR, issue, or review
+  bodies.
 ---
 
 # Use Git

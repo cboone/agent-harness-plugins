@@ -3,7 +3,7 @@ name: write-math
 description: >-
   Apply mathematical exposition conventions from Tao, Knuth, and Halmos whenever
   writing or discussing mathematics in any venue, chat and docstrings included:
-  proofs, sketches, notation, explanations, and progress reports.
+  proofs, sketches, notation, and explanations.
 ---
 
 # Write Math

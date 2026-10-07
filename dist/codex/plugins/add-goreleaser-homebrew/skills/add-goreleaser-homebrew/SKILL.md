@@ -1,9 +1,9 @@
 ---
 name: add-goreleaser-homebrew
 description: >-
-  Add GoReleaser, a release workflow, and Homebrew tap publishing to an existing
-  Go CLI. Use for "add goreleaser" or "publish a Go CLI to Homebrew"; to edit a
-  tap formula, use write-homebrew-formula.
+  Add GoReleaser, a release workflow, and Homebrew tap cask publishing to an
+  existing Go CLI. Use for "add goreleaser" or "publish a Go CLI to Homebrew";
+  for a hand-written tap formula, use write-homebrew-formula.
 ---
 
 # Add GoReleaser Homebrew
