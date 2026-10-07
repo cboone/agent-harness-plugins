@@ -240,6 +240,25 @@ $ jq '.[0].body |= (sub("(?s)<strong>3 open findings</strong></summary>\n\n.*?</
 {"hasFormatDrift":true,"needsRead":false}
 ````
 
+An open section links exactly as many threads as it states. The census
+reconciles a count with its links only above zero, so a `0 open findings`
+block holding a thread link is checked here, and falls short of its own count
+as surely as a block that links too few.
+
+```scrut
+$ jq '.[0].body |= (sub("(?s)<strong>3 open findings</strong></summary>\n\n.*?</details>"; "<strong>0 open findings</strong></summary>\n\n- [Retry on 4xx](#discussion_r5) · New\n</details>") | sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval."))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":true,"unaccounted":[]}
+```
+
+A `**N open findings**` line stands in for an open block that is absent. Beside
+a block, it is a second count with no rule for which one holds, so a body
+stating `**0 open findings**` over a block of three is drift rather than zero.
+
+```scrut
+$ jq '.[0].body |= (sub("Unresolved critical[^\n]*"; "One or more issues must be addressed before approval.") | sub("\n\n<details open>"; "\n\n**0 open findings**\n\n<details open>"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-open-findings-block.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, unaccounted}'
+{"hasFormatDrift":true,"unaccounted":[]}
+```
+
 Every observed review lists its open threads in one section, and the counts
 and contents are read from the first. A second open section is drift rather
 than a list nothing reads, even where its own count matches its links and the

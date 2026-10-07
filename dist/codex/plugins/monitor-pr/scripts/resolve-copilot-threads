@@ -833,6 +833,16 @@ function do_parse_reviews() {
         )
         // null;
 
+      # An open section whose count and thread links disagree, in either
+      # direction, or a "**N open findings**" line beside an open-findings
+      # block. The census reconciles a count with its links only above zero,
+      # so a "0 open findings" block holding a link would otherwise read as
+      # clean, and the count line stands in for a block that is absent, so
+      # the two together are two counts with no rule for which one holds.
+      def open_section_mismatch:
+        ((open_section // open_findings_section) | . != null and .links != .count)
+        or (open_findings_line_count != null and open_findings_section != null);
+
       # Copilot puts its verdict heading and lead paragraph before the first
       # details block. The stop pattern omits the closing angle bracket, as
       # stated_finding_count does, so an "Open" section opened with
@@ -1385,8 +1395,9 @@ function do_parse_reviews() {
           ) as $stated_findings
         | (if $is_v2 then (.body | open_thread_count) else 0 end) as $open_thread_count
         # A stated count above the inline threads Copilot listed, a v2 body
-        # whose count is missing or does not parse, or an open section listing
-        # an item that is not a thread, leaves findings this command cannot
+        # whose count is missing or does not parse, an open section listing an
+        # item that is not a thread, or open counts that disagree with each
+        # other or with their links, leaves findings this command cannot
         # account for. Each is independent of which other sections the body
         # has.
         | (
@@ -1396,6 +1407,7 @@ function do_parse_reviews() {
               $stated_findings > $open_thread_count
               or (.body | open_section_items) > 0
               or (.body | open_section_conflict)
+              or (.body | open_section_mismatch)
             end
           ) as $stated_shortfall
         | {
