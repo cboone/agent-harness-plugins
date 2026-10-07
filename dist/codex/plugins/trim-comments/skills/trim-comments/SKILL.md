@@ -1,9 +1,9 @@
 ---
 name: trim-comments
 description: >-
-  Trim and rewrite code comments in changed files: what the code does, then the
-  minimum why. Use for "trim comments" or a comment that is too long or jargony;
-  not for PR review comments or code cleanup (use simplify).
+  Trim and rewrite code comments in changed files or given paths: what the code
+  does, then the minimum why. Use for "trim comments" or a comment that is too
+  long or jargony; not for PR review comments or general code cleanup.
 argument-hint: "[paths...] [--dry-run]"
 ---
 
@@ -63,11 +63,11 @@ A stale comment is worse than none: the reader trusts it, and nothing fails when
 | Anything the type signature, function name, or assertion already says                  | a docstring that repeats the parameter names                                                                                                                         |
 | Anything a language or framework construct already says                                | "A ref, not state: nothing renders from it and it needn't survive a refresh" above a `useRef`: "ref, not state" is the API name, and the rest is what every ref does |
 
-When cut material is genuinely worth recording, it goes in the commit message, the PR description, the plan doc, or the repository's review instructions (such as `.github/*.instructions.md`) if its job is to stop a reviewer or Copilot re-raising it. Not inline.
+When cut material is genuinely worth recording, it goes in the commit message, the PR description, the plan doc, or the repository's review instructions (such as `.github/copilot-instructions.md` or `.github/instructions/*.instructions.md`) if its job is to stop a reviewer or Copilot re-raising it. Not inline.
 
 ## Keep these
 
-Deleting is the default, not the goal. A comment earns its place when one of the criteria below applies. Such a comment stays even if it also matches a row in "Cut these" or a rule in "Write comments that stay true"; trim it to the reason it is kept.
+Deleting is the default, not the goal. A comment earns its place when one of the criteria below applies. Such a comment stays even if it matches any other rule in this skill, including "Final checks"; only "Do not touch" outranks it. Trim it to the reason it is kept.
 
 - **Someone would otherwise "fix" the code and break it.** `// split/join rather than replaceAll: tsconfig targets es2017, which predates it.`
 - **The code looks wrong or arbitrary but is deliberate.** `// Deliberately one recipient per call: bulk sending is not supported here and would need its own function.`
@@ -77,7 +77,7 @@ Deleting is the default, not the goal. A comment earns its place when one of the
 
 ## Test scaffolding
 
-Comments above mocks, fixtures, and other test setup (`vi.mock`, `jest.mock`, `unittest.mock.patch`, fixture factories) are the most frequent offenders, because the author is mid-decision and narrates the decision instead of the line. State **what is faked and what that buys this file**, in one clause. Nothing else.
+Comments above mocks, fixtures, and other test setup (`vi.mock`, `jest.mock`, `unittest.mock.patch`, fixture factories) are the most frequent offenders, because the author is mid-decision and narrates the decision instead of the line. State **what is faked and what that buys this file**, in one sentence. Nothing else.
 
 ```typescript
 // Bad: two vantage points, and a second sentence restating a beforeEach further down
@@ -100,7 +100,7 @@ A sentence that carries two separate behaviors, joined by "and" or "so", makes t
 // later forward move while no capture has landed, which is the retry.
 
 // Good: one behavior per sentence, the retry named where it happens
-// Re-sends on every forward exit from welcome, so an edited phone or ZIP is captured.
+// Sends on every forward exit from welcome, so an edited phone or ZIP is captured.
 // Later forward moves retry, until one capture lands.
 ```
 
@@ -167,7 +167,7 @@ The worst comments in practice were not too long, they were ambiguous. Reread ea
 | `Optional override, defaults to …/v3. For the EU region.` | the default is the EU region       | the override is for the EU |
 | `read per call rather than at module load`                | this costs a network read per call | where the declaration sits |
 
-If a comment can be parsed two ways, rewrite it even if it is already short.
+If a comment can be parsed two ways, rewrite or delete it, even if it is already short.
 
 **The tell.** Reread the comment and ask what it is _about_. If the answer is a decision the author made (why this is shared, why it is stubbed, why this file covers only part of it), it is narrating the author's thinking, not the code, unless it meets a "Keep these" criterion. Say what the line does instead, and let the decision live in the commit message or PR.
 
@@ -180,7 +180,7 @@ If a comment can be parsed two ways, rewrite it even if it is already short.
 - `TODO` and `FIXME` comments. Leave one with a ticket reference alone. Flag one without a ticket in the report instead of deleting it.
 - License and copyright headers
 - Public API doc comments that an IDE surfaces to consumers, unless they are redundant with the signature
-- Prose documents: `.md` files, including `.github/*.instructions.md`. Those have different length rules.
+- Prose documents: `.md` files, including Copilot instruction files. Those have different length rules.
 - Comments outside the scope. Do not sweep the whole repository.
 
 ## Workflow
@@ -189,12 +189,14 @@ If a comment can be parsed two ways, rewrite it even if it is already short.
 
 If the user pointed at a single comment, it is the whole scope: go to step 3. If the user gave paths, use them, drop anything under "Do not touch", and go to step 2.
 
-Otherwise, find the base branch name. Try these in order and use the first that succeeds:
+Otherwise, find the base branch name. Try these in order and use the first that prints a name:
 
 ```bash
 gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
-git rev-parse --abbrev-ref origin/HEAD | sed 's@^origin/@@'
+git symbolic-ref --quiet --short refs/remotes/origin/HEAD
 ```
+
+The second prints `origin/<base>`; strip the `origin/` prefix. Treat empty output, a failed command, or a result of `HEAD` as not found.
 
 Then find the merge base:
 
@@ -202,7 +204,7 @@ Then find the merge base:
 git merge-base origin/<base> HEAD
 ```
 
-These commands assume the remote is named `origin`; use the repository's remote name if it differs. If `origin/<base>` does not exist, try the local `<base>` branch. If neither works, see "Error Handling".
+These commands assume the remote is named `origin`; use the repository's remote name if it differs. If `origin/<base>` does not exist, try the local `<base>` branch. If neither works, or the merge base equals `HEAD` while the current branch is not the base branch, treat it as not found and see "Error Handling".
 
 Collect the changed files. Both commands print paths from the repository root, from any working directory:
 
@@ -215,11 +217,16 @@ The first command covers committed, staged, and unstaged changes since the merge
 
 ### 2. Collect comments
 
-Read each file in scope. With paths, collect every comment in the file. With the default scope, collect comments inside a changed hunk or directly above one, using `git diff <merge-base> -- <file>` to find the hunks; an untracked file counts as entirely changed.
+Read each file in scope. With paths, collect every comment in the file. With the default scope, collect comments inside a changed hunk or directly above one, using `git diff -U0 <merge-base> -- <file>` to find the changed lines without surrounding context; an untracked file counts as entirely changed.
 
 ### 3. Classify each comment
 
-Keep as-is, rewrite, or delete. Apply the sections above.
+Apply the sections above and give each comment one action:
+
+- **keep**: leave it unchanged
+- **rewrite**: replace it with a shorter or clearer version
+- **delete**: remove it
+- **flag**: leave it unchanged and call it out in the report, for a `TODO` without a ticket or a comment whose meaning is unclear from the code
 
 ### 4. Edit
 
@@ -227,17 +234,17 @@ Skip this step with `--dry-run`. Make each change a separate, minimal edit, so e
 
 ### 5. Verify
 
-Skip this step with `--dry-run`. Most comments cannot change behavior, but directives, doctests, and formatting can. Run these on the files this skill edited, not the rest of the branch:
+Skip this step with `--dry-run`. Most comments cannot change behavior, but directives, doctests, and formatting can. Check the files this skill edited, not the rest of the branch:
 
-- the project's linter and formatter, in check mode
+- the project's linter and formatter, in check mode, on the edited files where the tool allows it
 - the type checker, if the project has one
-- the project's test command, which confirms nothing structural broke
+- the tests that cover the edited files, or the full test command when they cannot be selected, which confirms nothing structural broke
 
 If a check fails because of an edit made here, fix that edit by hand rather than letting a formatter rewrite the file, which would also reformat the user's own changes. Report pre-existing failures without fixing them.
 
 ### 6. Report
 
-Report a table: `file:line` (in the edited file), action, before, after. The report is read once, so line numbers are fine here. Keep before and after to one line each, truncating with `…`. With `--dry-run`, the table lists proposed changes.
+Report a table: `file:line` (in the edited file), action (`rewrite`, `delete`, or `flag`), before, after. Leave out comments kept unchanged. The report is read once, so line numbers are fine here. Keep before and after to one line each, truncating with `…`. With `--dry-run`, the table lists proposed changes.
 
 Leave the edits uncommitted for the user to review. Suggest a commit naming what was trimmed, following the repository's commit convention (for example, `refactor:` or `style:` where it uses Conventional Commits), made with the `commit` skill when it is installed, and list any cut material worth moving into that commit message or the PR description.
 
@@ -255,7 +262,7 @@ One per failure class, all from review feedback. `…` marks a truncated origina
 | Consequence chain                      | `Timeouts and network failures are both ambiguous… deliberately unlike sms.ts… the worst case is one duplicate email…`                 | `Ambiguous: the request may have reached the mail API. Retryable anyway: a retry re-sends identical content, and a duplicate email beats a lost message.` |
 | Two vantage points                     | `Token checks talk to the auth SDK; stub it… Enforcement is gated on NODE_ENV=production, which the tests below set…`                  | `Stub the auth SDK so the token-check tests run without a real auth service.`                                                                             |
 | Coverage cross-reference               | `…the upsert is stubbed…, and covered against real Postgres in its own DB test.`                                                       | `Stub the DB write so these tests exercise only the handler's branches.`                                                                                  |
-| Run-on with a trailing "which"         | `Fires on every forward exit from welcome, so a corrected phone or ZIP is resent, and on any later forward move…, which is the retry.` | `Re-sends on every forward exit from welcome, so an edited phone or ZIP is captured. Later forward moves retry, until one capture lands.`                 |
+| Run-on with a trailing "which"         | `Fires on every forward exit from welcome, so a corrected phone or ZIP is resent, and on any later forward move…, which is the retry.` | `Sends on every forward exit from welcome, so an edited phone or ZIP is captured. Later forward moves retry, until one capture lands.`                    |
 
 The consequence-chain rewrite keeps its reason because it meets a "Keep these" criterion: without it, someone would make timeouts non-retryable.
 
@@ -265,7 +272,7 @@ Before finishing, confirm:
 
 - No comment restates its own next line, or code within a few lines of it
 - Every comment kept under "Keep these" is trimmed to the reason it is kept
-- No file, spec, or version reference unless someone would otherwise "fix" the code and break it, or the reader cannot understand this code without it
+- No file, spec, or version reference unless it meets a "Keep these" criterion
 - No line numbers, and no counts, dates, or "currently" that will drift, unless the fact explains why the code looks the way it does
 - Where two rewrites say the same thing, the one that will stay true longer won
 - No jargon-table term used as prose; identifiers and API names are exempt
