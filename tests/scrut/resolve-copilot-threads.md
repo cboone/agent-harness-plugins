@@ -355,6 +355,43 @@ $ jq '.[0].body |= (sub("(?s)<strong>3 open findings</strong></summary>\n\n.*?</
 {"hasFormatDrift":false,"needsRead":false,"findings":[]}
 ```
 
+## Overview v2 a zero count stands on a bold line of its own
+
+When nothing is open, the open-findings layout lists no open block. It states
+the count as `**0 open findings**` in the preamble instead, where a
+`**Findings:**` line would sit. `format-d-zero-open-line.json` is a live
+review in that shape. The count is read, so it is not drift, and its prose
+lead, which names findings no thread carries, is read.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | jq -c '.[0] | {verdict, hasFormatDrift, needsRead, unaccounted, findings: [.findings[] | .source]}'
+{"verdict":"### 🔵 Needs a closer look","hasFormatDrift":false,"needsRead":true,"unaccounted":[],"findings":["lead"]}
+```
+
+The count line is layout, not lead. With a known lead and the resolved block,
+the round needs nothing.
+
+```scrut
+$ jq '.[0].body |= sub("Seven moderate[^\n]*"; "One or more issues must be addressed before approval.")' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead, findings}'
+{"hasFormatDrift":false,"needsRead":false,"findings":[]}
+```
+
+A bold line stating a nonzero count with no open block behind it falls short
+of its own count.
+
+```scrut
+$ jq '.[0].body |= sub("\\*\\*0 open findings\\*\\*"; "**2 open findings**")' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+```
+
+The line is read from the preamble only. Moved into a section, it is prose,
+and the body states no count.
+
+```scrut
+$ jq '.[0].body |= (sub("\\*\\*0 open findings\\*\\*\n\n"; "") | sub("\n</details>"; "\n\n**0 open findings**\n</details>"))' "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift}'
+{"hasFormatDrift":true}
+```
+
 ## Overview v2 a resolved-only round with a boilerplate lead needs nothing
 
 Copilot pairs a non-clean verdict with `**Findings:** None` and a `Resolved

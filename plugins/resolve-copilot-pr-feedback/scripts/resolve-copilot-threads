@@ -797,6 +797,20 @@ function do_parse_reviews() {
               end
           end;
 
+      # The open-findings layout states a count of zero on a bold line of its
+      # own, "**0 open findings**", in place of the summary of an open block,
+      # because a round with nothing open lists no block. The line sits in the
+      # preamble, where a "**Findings:**" line would, and is read from there
+      # alone for the same reason: a quoted copy inside a section is prose.
+      # Null when no such line exists.
+      def open_findings_line_count:
+        (
+          preamble_lines
+          | map(sub("\r$"; "") | capture("^\\*\\*(?<count>[0-9]+) open findings?\\*\\*[[:space:]]*$") | .count | tonumber)
+          | first
+        )
+        // null;
+
       # Copilot puts its verdict heading and lead paragraph before the first
       # details block. The stop pattern omits the closing angle bracket, as
       # stated_finding_count does, so an "Open" section opened with
@@ -811,10 +825,10 @@ function do_parse_reviews() {
 
       # The lines of the lead: everything in headline except the layout
       # around it, which is the marker comment, headings (the overview title
-      # and the verdict) and the "**Review effort:**" and "**Findings:**"
-      # labels. List items, bold text and anything else stay, because a lead
-      # that states its findings as bullets states them there and nowhere
-      # else.
+      # and the verdict), the "**Review effort:**" and "**Findings:**" labels
+      # and the "**0 open findings**" count line. List items, bold text and
+      # anything else stay, because a lead that states its findings as
+      # bullets states them there and nowhere else.
       def lead_lines:
         headline
         | split("\n")
@@ -822,7 +836,7 @@ function do_parse_reviews() {
         | map(
             select(
               . != ""
-              and (test("^<!--.*-->$|^#{1,6}([[:space:]]|$)|^\\*\\*Review effort:\\*\\*|^\\*\\*Findings:\\*\\*") | not)
+              and (test("^<!--.*-->$|^#{1,6}([[:space:]]|$)|^\\*\\*Review effort:\\*\\*|^\\*\\*Findings:\\*\\*|^\\*\\*[0-9]+ open findings?\\*\\*$") | not)
             )
           );
 
@@ -1330,9 +1344,10 @@ function do_parse_reviews() {
           ) as $unaccounted
         # Every ccr-overview-v2 body states its open count, in every fixture
         # and every observed live review: on a "**Findings:**" line, or, in
-        # the open-findings layout, as an "N open findings" summary. A v2
-        # body with neither is a renamed or removed header rather than an
-        # older layout. Reporting it as unparseable is what keeps a header
+        # the open-findings layout, as an "N open findings" summary or, when
+        # nothing is open, a "**0 open findings**" line. A v2 body with none
+        # of these is a renamed or removed header rather than an older
+        # layout. Reporting it as unparseable is what keeps a header
         # rename from reading as "this layout never had a count", which would
         # report no shortfall. Only a pre-v2 body reports null and is excluded
         # from the comparison.
@@ -1340,6 +1355,7 @@ function do_parse_reviews() {
             if $is_v2 | not then null
             else (
               (.body | stated_finding_count)
+              // (.body | open_findings_line_count)
               // (.body | open_findings_section | .count)
               // "unparseable"
             )
