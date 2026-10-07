@@ -160,7 +160,7 @@ Good: lowercases the address before the lookup
 
 ## Check for misreadings
 
-The worst comments in practice were not too long, they were ambiguous. Reread each as someone who has never seen the code:
+The worst comments in practice were ambiguous, not too long. Reread each as someone who has never seen the code:
 
 | Comment                                                   | Misread as                         | Actually meant             |
 | --------------------------------------------------------- | ---------------------------------- | -------------------------- |
