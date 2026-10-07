@@ -1,9 +1,9 @@
 ---
 name: plant-defects
 description: >-
-  Plant the defect a test or check claims to catch and confirm it goes red. Use
-  when asking whether a check can fail: claims of absence (no leak, no race),
-  trusted sanitizers, weakenings rather than breaks, or "would I know if this
+  Plant the defect a check claims to catch and confirm it goes red. Use when
+  asking whether a test can fail: absence claims (no leak, no race), trusted
+  sanitizers or linters, weakenings rather than breaks, or "would I know if this
   broke".
 ---
 
