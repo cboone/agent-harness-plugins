@@ -351,6 +351,21 @@ $ jq '(.[0].body | capture("(?<b><picture>.*?</picture>)").b) as $b | .[0].body 
 <summary>[badge] MARKUP</summary>
 ```
 
+Layout whitespace is made regular first, as the parser does, so an indented
+or oddly spaced summary, count line, badge bullet or heading is reported as
+the element it is rather than dropped as prose.
+
+```scrut
+$ printf '[{"repo":"o/r","number":1,"reviews":[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"y","submitted_at":"2026-10-07T00:00:00Z","body":"### 🔵 Needs a closer look\\n\\n  **0\\topen findings**\\n\\n<details>\\n  <summary> <strong>2 low-confidence findings</strong> </summary>\\n\\n  - <picture><img alt=\\"High severity\\"></picture> Retry loop\\n</details>\\n\\n  ###\\tExtra (2)"}],"audit":null}]' | "${COPILOT_REVIEW_CANARY_BIN}" skeletons | jq -r '.skeletons[]'
+### Extra (N)
+### 🔵 Needs a closer look
+**N open findings**
+- [badge] TEXT
+</details>
+<details>
+<summary><strong>N low-confidence findings</strong></summary>
+```
+
 ## Usage errors
 
 ```scrut
