@@ -107,6 +107,17 @@ The run also found one gap: a bug whose cause is only suspected goes to Investig
 
 Still to do: the warm re-sync in a new conversation after a triage change, recording its timings here.
 
+## Redesign
+
+After the first publish the user disliked the page's design. A Claude Design canvas, laid out with the live `votefwd` content, explored a new direction, which the user approved on 2026-10-06:
+
+- An editorial look in IBM Plex Sans and Mono, with numbered rows separated by rules instead of cards, the next action as each row's headline, and the assessment beside it as five facts.
+- Ready to go in columns by group, and the report below a double rule.
+- Graphite and orange as the light theme and Night as the dark theme, chosen from eight palettes tried on the canvas.
+- Section names without time words. The tiers are renamed throughout, in the data, the scripts, the check-in report, validation, tests, and docs: `now` becomes `critical`, `today` becomes `high`, and `later` becomes `lower`, shown as Critical, High priority, and Lower priority; Recently fixed becomes Fixed, and `nowWarn` becomes `criticalWarn`. The cache version moves to 2, so the first sync after the rename compares against no earlier score.
+
+The bugs board now departs from the shared Schibsted Grotesk look of `backlog-triage` in type, palette, and column width, while keeping its layout and state-in-form rules; `design-conventions.md` says so. Every table, plan section, and rule below that predates the redesign uses the old tier names for the same tiers.
+
 ## Naming and Settings
 
 | Setting     | Value                                                                                                           |
