@@ -164,7 +164,7 @@
       "outsidePeople": 0,
       "reactions": 0,
       "fix": null,
-      "inProgress": "in In Progress",
+      "inProgress": "the In Progress pipeline",
       "assessment": {
         "environment": "production",
         "evidence": "production-observed",

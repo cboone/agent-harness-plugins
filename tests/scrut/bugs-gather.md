@@ -193,7 +193,7 @@ Triage note: 5 entries, 1 expired
         worse with every event: Bug 14 in one sentence.
     - #13 [51] Partner pages drop campaigns with null flags (unconfirmed)
         confirm on production: Bug 13 in one sentence.
-    - #12 [49] Token refresh bounces users to the dashboard (in progress: in In Progress)
+    - #12 [49] Token refresh bounces users to the dashboard (in progress: the In Progress pipeline)
         affecting users on production: Bug 12 in one sentence.
     - #15 [49] Reminder batch sends twice before the send window
         due 2026-10-20: Bug 15 in one sentence.

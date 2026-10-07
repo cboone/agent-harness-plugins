@@ -427,7 +427,7 @@ $config as $c
   def progress_of($b):
     ([$b.fixes[] | select(.isDraft | not)] | first | if . != null then "fix #\(.number)" else null end)
     // ([$b.fixes[] | select(.isDraft)] | first | if . != null then "draft fix #\(.number)" else null end)
-    // ($b.zenhub.pipeline | if . != null and in_list($c.progressPipelines) then "in \(.)" else null end)
+    // ($b.zenhub.pipeline | if . != null and in_list($c.progressPipelines) then "the \(.) pipeline" else null end)
     // ([$b.labels[] | select(in_list($c.progressLabels))] | first | if . != null then "the \(.) label" else null end);
   def ready_group($b):
     ([$b.fixes[] | select(.isDraft | not)] | first) as $fix
