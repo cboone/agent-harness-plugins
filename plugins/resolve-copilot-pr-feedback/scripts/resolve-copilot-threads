@@ -439,8 +439,10 @@ function do_parse_reviews() {
       # The fence in effect after $raw, given the one in effect before it
       # (null outside a fence). A fence closes only on a line holding a run
       # of the same character at least as long as the one that opened it,
-      # and nothing else, so a "~~~" fence or a four-backtick fence quoting
-      # a three-backtick one cannot end early and expose what it quotes.
+      # and nothing else, not even the other fence character, so a "~~~"
+      # fence, a four-backtick fence quoting a three-backtick one, or a
+      # closing line such as "```~~~" cannot end a fence early and expose
+      # what it quotes.
       def next_fence($raw):
         ($raw | fence_run) as $run
         | if . == null then
@@ -448,7 +450,7 @@ function do_parse_reviews() {
           elif $run != null
                and $run[0:1] == .char
                and ($run | length) >= .length
-               and ($raw | test("^[[:space:]]*[`~]+[[:space:]]*$")) then null
+               and ($raw | test("^[[:space:]]*(`+|~+)[[:space:]]*$")) then null
           else .
           end;
 

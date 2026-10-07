@@ -305,6 +305,15 @@ $ jq -n '[{id: 1, user: {login: "copilot-pull-request-reviewer[bot]"}, state: "C
 {"hasFormatDrift":false,"needsRead":true}
 `````
 
+A closing line holds one fence character and nothing else. A mixed run such
+as ` ```~~~ ` does not close a backtick fence, so a summary quoted after
+it stays quoted.
+
+````scrut
+$ jq -n '[{id: 1, user: {login: "copilot-pull-request-reviewer[bot]"}, state: "COMMENTED", submitted_at: "x", html_url: "y", body: "<!-- ccr-overview-v2 -->\n\n### 🟡 Changes recommended\n\nOne or more issues must be addressed before approval.\n\n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\n```markdown\nExample:\n```~~~\n<summary><strong>1 resolved since last review</strong></summary>\n```\n</details>"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '.[0] | {hasFormatDrift, needsRead}'
+{"hasFormatDrift":false,"needsRead":true}
+````
+
 A fence that never closes would hide everything after it from the parsers
 and the census alike. A stray `~~~~` line in prose, a fence quoted inside a
 fence, and a closing fence with text after it each leave one open, and here
