@@ -290,7 +290,7 @@ $ jq -r '.triage.entries[] | "\(.id)\(if .expired then " (expired)" else "" end)
 ## Malformed triage entries are reported, not applied
 
 ```scrut
-$ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '%s\n' '- 2026-10-14T09:00-04:00 snooze #23: no date' '- 2026-10-14T09:00-04:00 pin #10: a focus verb' '- 2026-10-14T09:00-04:00 set #10 severity=high: not a field' '- 2026-10-14T09:00-04:00 set #10 impact=huge: not in the set' '- 2026-10-14T09:00-04:00 park #10 until 2026-11-01: park takes no date' '- 2026-10-20T09:00-04:00 escalate #10: later than the score' '- 2026-10-14T09:00-04:00 escalate #99: not on the board' '- 2026-10-14T09:00-04:00 set #10 mitigated=yes: hotfix deployed' '* 2026-10-14T09:00-04:00 escalte #12: a star marker' '  - 2026-10-14T09:00-04:00 escalte #13: an indented entry' '- 2026-10-14T09:00-04:00 escalate #12: written once' '- 2026-10-14T09:00-04:00 escalate #12: and again' '1. 2026-10-14T09:00-04:00 escalate #14: a numbered entry' > "${note}" && config_with ".triageNote = \"${note}\"" > "${work}/bad-note.json" && bugs score "${work}/bad-note.json" "${work}/gather.json" "${assessments}" "${work}/bad-note-scored.json" | grep -E '^    - problem: '
+$ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '%s\n' '- 2026-10-14T09:00-04:00 snooze #23: no date' '- 2026-10-14T09:00-04:00 pin #10: a focus verb' '- 2026-10-14T09:00-04:00 set #10 severity=high: not a field' '- 2026-10-14T09:00-04:00 set #10 impact=huge: not in the set' '- 2026-10-14T09:00-04:00 park #10 until 2026-11-01: park takes no date' '- 2026-10-20T09:00-04:00 escalate #10: later than the score' '- 2026-10-14T09:00-04:00 escalate #99: not on the board' '- 2026-10-14T09:00-04:00 set #10 mitigated=yes: hotfix deployed' '* 2026-10-14T09:00-04:00 escalte #12: a star marker' '  - 2026-10-14T09:00-04:00 escalte #13: an indented entry' '- 2026-10-14T09:00-04:00 escalate #12: written once' '- 2026-10-14T09:00-04:00 escalate #12: and again' '1. 2026-10-14T09:00-04:00 escalate #14: a numbered entry' '- 2026-10-14T09:00+99:99 escalate #15: an offset past any zone' > "${note}" && config_with ".triageNote = \"${note}\"" > "${work}/bad-note.json" && bugs score "${work}/bad-note.json" "${work}/gather.json" "${assessments}" "${work}/bad-note-scored.json" | grep -E '^    - problem: '
     - problem: line 1: snooze needs an until date
     - problem: line 2: expected escalate, demote, set, snooze, park, or context: - 2026-10-14T09:00-04:00 pin #10: a focus verb
     - problem: line 3: severity is not an assessment field
@@ -301,6 +301,7 @@ $ note="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && printf '%s\n' '- 2026-10-14
     - problem: line 9: expected escalate, demote, set, snooze, park, or context: * 2026-10-14T09:00-04:00 escalte #12: a star marker
     - problem: line 10: expected escalate, demote, set, snooze, park, or context:   - 2026-10-14T09:00-04:00 escalte #13: an indented entry
     - problem: line 13: start a triage entry with -, not a number: 1. 2026-10-14T09:00-04:00 escalate #14: a numbered entry
+    - problem: line 14: 2026-10-14T09:00+99:99 is not a real time
     - problem: entry 2026-10-14T09:00-04:00 escalate #12 appears more than once
     - problem: 2026-10-14T09:00-04:00 escalate #99 names a bug outside this board
 ```
@@ -613,7 +614,7 @@ validate until the note is fixed.
 
 ```scrut
 $ bugs draft "${work}/bad-note.json" "${work}/gather.json" "${work}/bad-note-scored.json" "${work}/bad-note-board.json" > /dev/null && jq '.summary = "x" | (.critical[], .high[]) |= (.impact = "x")' "${work}/bad-note-board.json" > "${work}/bad-note-filled.json" && "${REPORT_BOARD_BIN}" validate "${work}/bad-note-filled.json" 2>&1 | grep -c '^  - triage note: '; echo "exit ${PIPESTATUS[0]}"
-12
+13
 exit 1
 ```
 
