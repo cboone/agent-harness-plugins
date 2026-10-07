@@ -187,7 +187,7 @@ If a comment can be parsed two ways, rewrite or delete it, even if it is already
 
 ### 1. Resolve scope
 
-If the user pointed at a single comment, it is the whole scope: go to step 3. If the user gave paths, expand any glob with `git ls-files --cached --others --exclude-standard -- ':(glob)<glob>'`. The quotes keep the shell from expanding it first, `:(glob)` makes `**` match any depth as in a shell, and ignored files stay out. Then filter the paths as described at the end of this step, and go to step 2.
+If the user pointed at a single comment, it is the whole scope: apply the filter at the end of this step to its file. If the file survives, go to step 3; otherwise report that it was skipped and why, and stop. If the user gave paths, expand any glob with `git ls-files --cached --others --exclude-standard -- ':(glob)<glob>'`. The quotes keep the shell from expanding it first, `:(glob)` makes `**` match any depth as in a shell, and ignored files stay out. Then filter the paths as described at the end of this step, and go to step 2.
 
 Otherwise, find the base branch name. Try these in order and use the first that prints a name:
 
@@ -215,10 +215,10 @@ git ls-files --others --exclude-standard --full-name :/
 
 The first command covers committed, staged, and unstaged changes since the merge base, without deleted files; the second adds untracked files.
 
-Filter every path list, from either source, before reading any file:
+Filter every path list, including the file of a single named comment, before reading any file:
 
 - Drop anything under "Do not touch".
-- Drop secret-bearing paths, such as real environment files, private keys, and credential stores, and any path that may hold credentials but cannot be classified without reading it. Never read, search, or print them; report only that secret-bearing files were skipped.
+- Drop secret-bearing paths, such as real environment files, private keys, and credential stores, and any path that may hold credentials but cannot be classified without reading it. Never read, search, edit, or print them; report only that secret-bearing files were skipped.
 - Drop symlinks (`test -L <path>`) without following them, since a link can point outside the repository.
 
 Report the remaining file list before editing.
