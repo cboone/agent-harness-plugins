@@ -8,7 +8,7 @@ The fixture window runs from 2026-09-28 to 2026-10-01, and each case that fetche
 
 `record` runs the script against an API directory, and `api_variant` copies the fixture API directory so a case can change one response. The stub ignores the query string and the `--paginate` and `--slurp` flags, so the cases that depend on them assert the logged calls.
 
-```scrut
+```scrut {fail_fast: true}
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && mkdir "${work}/bin" && ln -s "${GH_STUB_BIN}" "${work}/bin/gh" \
 >   && function record() { local api="${1}"; shift; PATH="${work}/bin:${PATH}" STUB_GH_DIR="${api}" "${RECORD_TRAFFIC_BIN}" --repo cboone/agent-harness-plugins --today 2026-10-01 "$@"; } \
@@ -194,8 +194,9 @@ A `daily.json` that is not one JSON object stops the run before anything is fetc
 
 ```scrut
 $ mkdir "${work}/corrupt" && printf '{}\n{}\n' > "${work}/corrupt/daily.json" \
->   && record "${RECORD_TRAFFIC_DATA_DIR}" "${work}/corrupt" 2>&1 | sed "s#${work}#WORK#"
+>   && record "${RECORD_TRAFFIC_DATA_DIR}" "${work}/corrupt" 2>&1 | sed "s#${work}#WORK#"; (exit "${PIPESTATUS[0]}")
 record-traffic: WORK/corrupt/daily.json is not a single JSON object
+[1]
 ```
 
 A traffic endpoint the token cannot read names the endpoint and stops before any traffic data or snapshot is saved.
