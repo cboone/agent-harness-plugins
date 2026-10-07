@@ -2,7 +2,8 @@
 name: upgrade-everything
 description: >-
   Audit version references for upgrades, weigh risk, and apply the selected
-  ones. Use for "upgrade everything" or "what can I upgrade".
+  ones. Use for "upgrade everything", "update dependencies", or "what can I
+  upgrade"; to pin versions, use pin-everything.
 ---
 
 # Upgrade Everything

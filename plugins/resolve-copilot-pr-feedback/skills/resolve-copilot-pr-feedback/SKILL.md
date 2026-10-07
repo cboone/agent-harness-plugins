@@ -2,7 +2,8 @@
 name: resolve-copilot-pr-feedback
 description: >-
   Process GitHub Copilot PR review comments: fix, reply to, and resolve each
-  thread. Use for "resolve copilot feedback" or "handle copilot comments".
+  thread. Use for "resolve copilot feedback" or "handle copilot comments", or
+  after opening a PR once Copilot has reviewed it.
 ---
 
 # Copilot Feedback Resolver

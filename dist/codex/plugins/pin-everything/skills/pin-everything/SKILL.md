@@ -2,7 +2,8 @@
 name: pin-everything
 description: >-
   Pin every version surface in a repository, from action SHAs to exact
-  dependency versions. Use for "pin everything" or "SHA-pin actions".
+  dependency versions. Use for "pin everything" or "SHA-pin actions"; to upgrade
+  versions, use upgrade-everything.
 argument-hint: "[--scope <list>] [--no-audit] [--no-dependabot] [--dry-run]"
 ---
 

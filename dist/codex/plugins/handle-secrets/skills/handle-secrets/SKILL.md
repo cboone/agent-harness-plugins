@@ -2,7 +2,8 @@
 name: handle-secrets
 description: >-
   Handle user-provided secrets in CLI tools: input methods, credential storage,
-  and masking. Use when a CLI accepts API keys, tokens, or passwords.
+  and masking. Use when a CLI accepts API keys, tokens, or passwords, or when
+  reviewing its secret handling. For CI scanning, use set-up-secret-scanning.
 ---
 
 # Handle Secrets

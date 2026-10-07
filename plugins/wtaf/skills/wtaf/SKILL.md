@@ -1,8 +1,9 @@
 ---
 name: wtaf
 description: >-
-  Say where the work stands and what's next. Use for "wtaf" or "where are we";
-  for code review, use review-branch.
+  Say where the work stands and what's next. Use for "wtaf", "where are we",
+  "recap", "catch me up", or a status summary; for code review, use
+  review-branch.
 argument-hint: "[--fast|--thorough] [scope]"
 ---
 

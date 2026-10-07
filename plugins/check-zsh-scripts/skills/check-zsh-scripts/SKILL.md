@@ -2,7 +2,8 @@
 name: check-zsh-scripts
 description: >-
   Lint and check zsh scripts with shellcheck, shfmt, zsh -n, zcompile, and
-  scoping options. Use for "check zsh", "lint zsh", or "validate zsh".
+  scoping options, including .zshrc and other startup files. Use for "check
+  zsh", "lint zsh", or "validate zsh".
 ---
 
 # Check Zsh Scripts

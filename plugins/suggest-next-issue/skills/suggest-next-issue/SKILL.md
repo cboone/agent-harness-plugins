@@ -1,8 +1,9 @@
 ---
 name: suggest-next-issue
 description: >-
-  Recommend which open GitHub issue to work on next. Use for "suggest next
-  issue" or "what should I work on next".
+  Recommend which open GitHub issue to work on next, with reasoning. Use for
+  "suggest next issue", "what should I work on next", or "prioritize issues", or
+  to find work that can run in parallel or avoids a claimed resource.
 argument-hint: "[--label <name>] [--parallel-only] [filters...]"
 ---
 

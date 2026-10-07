@@ -1,8 +1,9 @@
 ---
 name: triage-dependabot-prs
 description: >-
-  Sort open Dependabot PRs by merge safety, then merge, rebase, or close them
-  as approved. Use for "triage dependabot PRs".
+  Sort open Dependabot PRs by merge safety, then merge, rebase, or close them as
+  approved. Use for "triage dependabot PRs" or "are these Dependabot PRs safe to
+  merge"; for config, use review-dependabot-config.
 argument-hint: "[pr-number...] [--repo OWNER/REPO] [--verify] [--report-only]"
 ---
 

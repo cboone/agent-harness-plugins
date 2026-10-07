@@ -2,7 +2,8 @@
 name: write-pandoc-markdown
 description: >-
   Apply Pandoc Markdown conventions for academic papers with LaTeX output: math,
-  citations, and raw LaTeX. For plain GFM, use write-markdown.
+  citations, raw LaTeX, and YAML frontmatter for the Pandoc build. For plain
+  GFM, use write-markdown.
 ---
 
 # Write Pandoc Markdown
