@@ -189,24 +189,28 @@ Two entries apply to whole files, generated files and prose documents, and step 
 
 ### 1. Resolve scope
 
-If the user pointed at a single comment, it is the whole scope: expand its file like a user-given path below, then apply the filter at the end of this step. If the file survives, go to step 3; otherwise report that it was skipped and why, and stop. If the user gave paths, expand every one of them, whether a file, a directory, or a glob, with `git ls-files --cached --others --exclude-standard --full-name -- ':(glob)<path>'`. The quotes keep the shell from expanding a glob first, `:(glob)` makes `**` match any depth as in a shell, and ignored files and paths outside the repository stay out, including the contents of a named directory. Then filter the paths as described at the end of this step, and go to step 2.
+If the user pointed at a single comment, it is the whole scope: expand its file like a user-given path below, then apply the filter at the end of this step. If the file survives, go to step 3 with that one comment as the only item to classify, reading the rest of the file only for context; otherwise report that it was skipped and why, and stop. If the user gave paths, expand every one of them, whether a file, a directory, or a glob, with `git ls-files --cached --others --exclude-standard --full-name -- ':(glob)<path>'`. Quoting keeps the shell from expanding a glob first, `:(glob)` makes `**` match any depth as in a shell, and ignored files and paths outside the repository stay out, including the contents of a named directory. Then filter the paths as described at the end of this step, and go to step 2.
 
-Otherwise, find the base branch name. Try these in order and use the first that prints a name:
+Never paste a path into command text. Pass each path, with any pathspec prefix, to Git as one shell argument quoted so that no character in it can end the argument, for example with `printf '%q'`. This applies to user-given paths here and to the changed filenames in step 2, since either can contain a quote.
+
+Otherwise, choose the remote: `origin` when `git remote` lists it; otherwise the current branch's upstream remote (`git config --get branch.<branch>.remote`, ignoring `.`, which means the upstream is a local branch), or the only remote when there is one. With several remotes and no upstream, treat the base as not found. `<remote>` below means the chosen name.
+
+Then find the base branch name. Try these in order and use the first that prints a name:
 
 ```bash
 gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
-git symbolic-ref --quiet --short refs/remotes/origin/HEAD
+git symbolic-ref --quiet --short refs/remotes/<remote>/HEAD
 ```
 
-The second prints `origin/<base>`; strip the `origin/` prefix. Treat empty output, a failed command, or a result of `HEAD` as not found.
+The second prints `<remote>/<base>`; strip the `<remote>/` prefix. Treat empty output, a failed command, or a result of `HEAD` as not found.
 
 Then find the merge base:
 
 ```bash
-git merge-base origin/<base> HEAD
+git merge-base <remote>/<base> HEAD
 ```
 
-These commands assume the remote is named `origin`. If `git remote` lists no `origin`, use the current branch's upstream remote (`git config --get branch.<branch>.remote`, ignoring `.`, which means the upstream is a local branch), or the only remote when there is one, in place of `origin` throughout; with several remotes and no upstream, treat the base as not found. If `origin/<base>` does not exist, try the local `<base>` branch. A local branch can be behind its remote, which moves the merge base back and pulls other people's commits into scope, so say in the report when the local branch was used. If neither works, treat it as not found and see "Error Handling".
+If `<remote>/<base>` does not exist, try the local `<base>` branch. A local branch can be behind its remote, which moves the merge base back and pulls other people's commits into scope, so say in the report when the local branch was used. If neither works, treat it as not found and see "Error Handling".
 
 Collect the changed files. Both commands print paths from the repository root, from any working directory; `--no-relative` keeps a `diff.relative` setting from limiting the first to the current directory:
 
@@ -222,6 +226,7 @@ Filter every path list, including the file of a single named comment, before rea
 - Drop generated files and prose documents, the file-level entries under "Do not touch". Its other entries are individual comments, which step 3 handles, so a file that contains one stays in scope.
 - Drop secret-bearing paths, such as real environment files, private keys, and credential stores, and any path that may hold credentials but cannot be classified without reading it. Never read, search, edit, or print them; report only that secret-bearing files were skipped.
 - Drop symlinks and anything reached through one, without following them, since a link can point outside the repository or to a file this filter would otherwise drop. Keep a path only when the output of `realpath <path>` equals the output of `realpath "$(git rev-parse --show-toplevel)"` followed by `/<path>`; any symlink in any component, including a parent directory that points elsewhere inside the repository, makes them differ.
+- Drop anything that is not a regular file (`test -f <path>` fails), such as a directory or a changed submodule, which Git lists as a single path. Never descend into a submodule.
 
 Report the remaining file list before editing, listing untracked files separately, since they count as entirely changed and may not belong to this branch's work.
 
@@ -231,7 +236,7 @@ Read each file in scope, resolving its path from the repository root (`git rev-p
 
 ### 3. Classify each comment
 
-Apply the sections above and give each comment one action. A comment listed under "Do not touch" is always keep, except a ticketless `TODO` or `FIXME`, which is flag:
+Apply the sections above and give each collected comment one action; for a single named comment, that is the only comment classified. A comment listed under "Do not touch" is always keep, except a ticketless `TODO` or `FIXME`, which is flag:
 
 - **keep**: leave it unchanged
 - **rewrite**: replace it with a shorter or clearer version
