@@ -69,6 +69,9 @@ function main() {
     fi
     touch "${STUB_STATE}/workmux_called"
     printf '%s' "${prompt_file}" > "${STUB_STATE}/prompt_path"
+    # Records the process group, so a test can confirm an awaited launch runs
+    # in its own.
+    ps -o pgid= -p "$$" | tr -d ' ' > "${STUB_STATE}/pgid"
   fi
 
   printf 'workmux add\n'
@@ -90,6 +93,24 @@ function main() {
     printf 'yes\n'
   else
     printf 'no\n'
+  fi
+
+  # STUB_WORKMUX_SLEEP holds the stub open, so a caller can be observed waiting
+  # for it or giving up on it.
+  if [[ -n "${STUB_WORKMUX_SLEEP:-}" ]]; then
+    sleep "${STUB_WORKMUX_SLEEP}"
+  fi
+
+  # Records the worktree for the git stub's `git worktree list`, unless
+  # STUB_WORKMUX_SKIP_WORKTREE=1. Runs before any STUB_WORKMUX_EXIT failure,
+  # so a failed launch can still leave a worktree.
+  if [[ -n "${STUB_GIT_WORKTREE_PORCELAIN_FILE:-}" && "${STUB_WORKMUX_SKIP_WORKTREE:-}" != "1" ]]; then
+    printf 'worktree /worktrees/%s\nHEAD abc123\nbranch refs/heads/%s\n\n' "${branch//\//-}" "${branch}" >> "${STUB_GIT_WORKTREE_PORCELAIN_FILE}"
+  fi
+
+  if [[ -n "${STUB_WORKMUX_EXIT:-}" ]]; then
+    printf 'workmux-stub: failing with status %s\n' "${STUB_WORKMUX_EXIT}" >&2
+    exit "${STUB_WORKMUX_EXIT}"
   fi
 }
 

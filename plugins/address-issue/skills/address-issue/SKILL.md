@@ -4,7 +4,7 @@ description: >-
   Plan and implement a GitHub issue on the current branch, stopping for approval
   first. Use for "address issue #42" or "fix issue #42"; for a new worktree, use
   address-issue-in-worktree.
-argument-hint: "<issue-number|description> [--dry-run|--no-approval] [--no-commit] [--commit-per-change]"
+argument-hint: "<issue-number...|description> [--dry-run|--no-approval] [--no-commit] [--commit-per-change]"
 ---
 
 # Address Issue
@@ -22,11 +22,26 @@ The user may provide these options inline:
 
 `--dry-run` and `--no-approval` are opposite ends of the same gate: `--dry-run` stops permanently after the plan, the default stops and resumes once the user approves, and `--no-approval` never stops.
 
+## Several Issues
+
+Several issue numbers, as in `/address-issue 42 57`, are one combined piece of work: one plan, one approval gate, and one set of changes on the current branch. `address-issue-in-worktree` chains into this form when it opens one worktree for several issues. Every step below applies to each issue, as follows:
+
+- **Step 1:** fetch every issue by number. Several issues are always given as numbers; descriptive text names one issue and follows the single-issue workflow.
+- **Step 2:** check each issue's state. Ask about every closed issue at once, and drop any the user declines.
+- **Step 3:** self-assign and label each open issue, recording the result for each one.
+- **Step 4:** show every issue's context, one block per issue.
+- **Step 5:** classify each issue and extract its sub-tasks, keeping track of which issue each sub-task came from.
+- **Step 6:** collect every issue's requirements into one plan, headed `## Plan for Issues #42, #57`, that says which change serves which issue. There is one approval gate for the whole plan, not one per issue.
+- **Step 8:** each commit references every issue its change addresses, as in `feat: add dark mode toggle (#42, #57)`, and together the commits reference every issue in the combined work. The commit prefix follows the classification of the issue or issues the commit addresses.
+- **Steps 9 to 11:** report the status of every issue, including which are marked in progress and which sub-tasks remain for each.
+
+`--dry-run`, `--no-approval`, `--no-commit` and `--commit-per-change` apply to the one combined plan, exactly as they do for one issue.
+
 ## Workflow
 
 ### 1. Find the Issue
 
-The user provides either an issue number or descriptive text.
+The user provides either an issue number or descriptive text. For several issue numbers, see "Several Issues" above.
 
 **By number:**
 

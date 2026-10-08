@@ -31,6 +31,12 @@ Rerunning for the same issue reuses a local branch that already carries that num
 
 Either way, it creates the worktree via `workmux add` and stops. It does not start the work. To have the new session also plan the issue, use [Address Issue in Worktree](../address-issue-in-worktree/README.md).
 
+### Several issues
+
+Two or more issue numbers, such as `42 57` or `#42, #57`, are read as a list of issues rather than a task description; `--no-issue` still forces the description path. By default they produce **one** worktree for the combined work. Closed issues you decline are dropped first; the first remaining issue supplies the branch number, and the prompt carries every remaining issue.
+
+With `--fan-out` (or its aliases `--each` and `--separate`), each issue gets its own worktree, branch and tmux window. Every issue is fetched and checked, and every question about closed issues or ambiguous branches is asked, before the first worktree is created. Worktrees are then created one at a time, and the run ends with one table covering every issue. Nothing is marked in progress in either mode. With one distinct issue, the flag has no effect and `--resource` and `--branch` work as usual. With several distinct issues, those two options are rejected. `--no-issue` cannot accompany a fan-out flag because it forces the description path.
+
 ### Exclusive resources
 
 Some work cannot run in parallel across worktrees because it needs a resource only one worktree can hold: a DAW, a simulator, a device, a database, a port, a shared install location. `--resource <name>` records which worktree holds one, so the constraint is written down instead of remembered.
@@ -57,17 +63,21 @@ Where a project declares its resources under an "exclusive resources" heading in
 /create-worktree 42 --resource logic
 /create-worktree --list-resources
 /create-worktree --release-resource logic
+/create-worktree 42 57
+/create-worktree 42 57 --fan-out
+/create-worktree 42 --separate --branch feature/my-branch-name
 ```
 
-| Option                      | Description                                                                          |
-| --------------------------- | ------------------------------------------------------------------------------------ |
-| `--issue <number>`          | Force issue lookup, for when a task description is itself a number                   |
-| `--no-issue`                | Force description handling, even if the argument looks like an issue number          |
-| `--base <branch>`           | Base the worktree on a specific branch instead of the repository's default           |
-| `--resource <name>`         | Claim a named exclusive resource, reporting the holder first if one holds it already |
-| `--release-resource <name>` | Release a claim and stop, creating nothing                                           |
-| `--branch <name>`           | Use this exact branch name and skip generation                                       |
-| `--list-resources`          | Report every claim and stop, creating nothing                                        |
+| Option                      | Description                                                                               |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| `--issue <number>`          | Force issue lookup, for when a task description is itself a number; repeatable            |
+| `--fan-out`                 | With several issues, create one worktree per issue; `--each` and `--separate` are aliases |
+| `--no-issue`                | Force description handling, even if the argument looks like an issue number               |
+| `--base <branch>`           | Base the worktree on a specific branch instead of the repository's default                |
+| `--resource <name>`         | Claim a named exclusive resource, reporting the holder first if one holds it already      |
+| `--release-resource <name>` | Release a claim and stop, creating nothing                                                |
+| `--branch <name>`           | Use this exact branch name and skip generation                                            |
+| `--list-resources`          | Report every claim and stop, creating nothing                                             |
 
 ## Recommended Permissions
 
@@ -76,7 +86,7 @@ This skill runs workmux, git, and (for the issue path) GitHub CLI commands that 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh issue view *)", "Bash(gh repo view *)", "Bash(bash \"*/compose-issue-prompt\")", "Bash(bash \"*/compose-issue-prompt\" *)", "Bash(bash \"*/launch-workmux\" *)", "Bash(bash \"*/manage-resource-claims\" *)", "Bash(git remote show origin*)", "Bash(git worktree list*)"]
+    "allow": ["Bash(gh issue view *)", "Bash(gh repo view *)", "Bash(bash \"*/compose-issue-prompt\")", "Bash(bash \"*/compose-issue-prompt\" *)", "Bash(bash \"*/launch-workmux\" *)", "Bash(bash \"*/manage-resource-claims\" *)", "Bash(git remote show origin*)", "Bash(git worktree list*)", "Bash(workmux list *)", "Bash(mktemp *)", "Bash(rm -f *issue-json-*)"]
   }
 }
 ```
@@ -92,6 +102,8 @@ If you already have a `permissions.allow` array, merge these entries into it. Re
 - "create worktree for issue 42, it needs the DAW": claims `logic` for the new worktree, or reports which branch already holds it and asks
 - "what's holding the simulator": lists every claim, flagging any whose worktree is gone
 - "release the DAW": clears the `logic` claim without creating anything
+- "create a worktree for issues 42 and 57": creates one worktree for the combined work, numbered for issue 42
+- "create worktrees for 42 and 57, one each": creates two worktrees with `--fan-out`
 
 ## See Also
 

@@ -45,7 +45,12 @@ function main() {
 
   # `git for-each-ref --format=... refs/heads/`, used to find an existing
   # branch for an issue number. One branch name per line in STUB_GIT_BRANCHES.
+  # STUB_GIT_FAIL=for-each-ref fails the listing the way an unreadable
+  # repository would.
   if [[ $# -eq 3 && "${1}" == "for-each-ref" && "${2}" == --format=* && "${3}" == "refs/heads/" ]]; then
+    if [[ "${STUB_GIT_FAIL:-}" == "for-each-ref" ]]; then
+      die "fatal: not a git repository" 128
+    fi
     if [[ -n "${STUB_GIT_BRANCHES:-}" ]]; then
       printf '%s\n' "${STUB_GIT_BRANCHES}"
     fi
@@ -65,6 +70,19 @@ function main() {
 
   if [[ $# -lt 3 || "${1}" != "worktree" || "${2}" != "list" || "${3}" != "--porcelain" ]]; then
     die "expected git worktree list --porcelain, for-each-ref, or check-ref-format invocation"
+  fi
+
+  # STUB_GIT_FAIL=worktree-list fails the listing the way an unreadable
+  # repository would.
+  if [[ "${STUB_GIT_FAIL:-}" == "worktree-list" ]]; then
+    die "fatal: not a git repository" 128
+  fi
+
+  # A present STUB_GIT_WORKTREE_PORCELAIN_FILE replaces the variable for
+  # `worktree list` only, so the workmux stub can add a worktree mid-test.
+  # rev_parse still reads the variable.
+  if [[ -n "${STUB_GIT_WORKTREE_PORCELAIN_FILE:-}" && -f "${STUB_GIT_WORKTREE_PORCELAIN_FILE}" ]]; then
+    STUB_GIT_WORKTREE_PORCELAIN="$(cat "${STUB_GIT_WORKTREE_PORCELAIN_FILE}")"$'\n\n'
   fi
 
   # STUB_GIT_WORKTREE_PORCELAIN is written in the readable newline form. Under
