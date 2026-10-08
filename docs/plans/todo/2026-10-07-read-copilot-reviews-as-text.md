@@ -52,7 +52,7 @@ Rewrite `skills/resolve-copilot-pr-feedback/SKILL.md` step 1 around reading, and
 
 - **Step 1b: which reviews to read.** Find the newest prior `## Copilot Feedback Summary` comment. Read every Copilot review submitted after it, using `--since`, and always the newest review against the current head. With no prior summary, read every Copilot review on the PR. Each earlier run read everything before its summary, so nothing falls through.
 - **Step 1d becomes the core step.** For each review read:
-  1. Decide whether it is a review or a notice. A notice says Copilot did not review: it hit an error, or every changed file was excluded. A notice in place of the current-head review is a workflow-level failure that quotes it.
+  1. Decide whether it is a review or a notice. A notice says Copilot did not review: it hit an error, or every changed file was excluded. Read the whole body before deciding. A notice in place of the current-head review is a workflow-level failure that quotes it, and its failure row names it as a Copilot notice with the review `id`, so `monitor-pr` can reclassify it. A body that is plainly neither a review nor a notice is also a workflow-level failure, quoted the same way.
   1. List every concern it states, anywhere in the body: lead paragraph, open-findings lists, previously missed entries, file-table cells, suppressed sections, or any shape Copilot adopts later. Skip text that states no finding, such as file summaries reading "no final comments".
   1. Settle each one as **Matched** (restates a thread from `fetch`, using `threadLinks` as a hint, or a prior summary row), **New** (handle as a review-body finding with the most specific location the text supports; never invent a line), **Advisory**, or **No concern**.
 - **Keep** step 1c's identity rules (`path:line`, or path or location plus a verbatim excerpt). The agent now writes the `Finding` cell from the concern it extracted, so the identities stay readable on the next run.
@@ -66,12 +66,16 @@ Rewrite `skills/resolve-copilot-pr-feedback/SKILL.md` step 1 around reading, and
 
 Edit `plugins/monitor-pr/skills/monitor-pr/SKILL.md`, `references/checkpoint.md` and `README.md`.
 
-- **Probe.** Keep the `fetch` thread count and the `audit` projection, minus `legacyNeedsRead`. Change the `fetch-reviews` projection to `{id, url, commitId, excerpt: .body[0:600]}` for the selected review id. The excerpt is enough to tell a notice from a review by reading.
-- **Notices.** The monitor reads the excerpt once per new current-head review `id` and records whether it is a notice. Notice retry and escalation logic is unchanged apart from where the classification comes from.
+- **Probe.** Keep the `fetch` thread count and the `audit` projection, minus `legacyNeedsRead`. On every tick, change the `fetch-reviews` projection to `{id, url, commitId}` for the selected review id. The per-tick probe carries no body text, so it stays small.
+- **Classification reads the whole body.** The first time a current-head review `id` appears, the monitor fetches that review's complete raw body (`fetch-reviews` filtered to that `id`, projecting `.body` alone, never truncated) and reads all of it before recording a classification. Truncating would discard exactly the text that tells a notice apart, wherever Copilot happens to place it. The body is immutable, so one full read per review `id` is enough. Record one of three readings in the watch state:
+  - **review**: Copilot reviewed the head. Dispatch per below.
+  - **notice**: the body says Copilot did not review the head, for example an error, or every changed file being excluded. The existing notice retry and escalation logic applies unchanged, apart from where the classification comes from.
+  - **unclear**: the body neither plainly reports a review nor plainly says no review happened. Never treat it as a review, never let it satisfy the Copilot axis, and never count it toward `--confirm-clean`. Escalate per step 9 with the review link and a short quote of what made it ambiguous, so a person decides.
+- **Second check from the resolver.** The resolver reads the same body in full during its step 1d. If it concludes that a review the monitor classified as **review** is actually a notice, it says so in its local final output and in a failure row of its summary. The monitor then reclassifies that `id` as a notice and takes the notice path. A misreading in either skill therefore cannot turn a notice into a clean axis.
 - **Dispatch.** Every current-head Copilot review that is not a notice goes to step 7b once per `id`. That matches current behavior, because `needsRead` is already true for every current review. Remove the findings-count and drift clauses.
 - **Copilot axis clean** when step 7b processed the current-head review with `Completed` or `No unresolved Copilot feedback`, `fetch` reports no open threads, and every audit item is recorded at the current head. Remove "no format drift" everywhere, including step 7d and the escalation rules.
 - **Dependabot path.** With no resolver to dispatch to, the monitor reads the current-head review's full body itself and escalates if it states any concern, or if threads or audit items exist.
-- Update the checkpoint fields: the review kind becomes the recorded notice-or-review reading, and the drift field goes.
+- Update the checkpoint fields: the review kind becomes the recorded `review`, `notice` or `unclear` reading per review `id`, so a resumed watch neither reclassifies nor redispatches, and the drift field goes.
 
 ### 4. Canary removal
 
@@ -112,7 +116,14 @@ Rewrite `tests/scrut/resolve-copilot-threads.md`:
 1. `make test-all` passes. Observe the final result.
 1. Replay the 87 recent reviews collected during investigation through `parse-reviews` and confirm each `body` matches the API body exactly and no output field depends on layout.
 1. Run the updated resolver skill against one recent PR whose earlier summary was `Partial` only for drift, such as cboone/sl-health-monitor#104. Read-only: run steps 1 and 2 and stop before any reply, push or summary post. Confirm every concern from review 5449428489's file table is listed and settled, and that no workflow failure is recorded.
-1. Desk-check `monitor-pr` dispatch against three cases: a notice, a clean approval and a review with findings. Each should reach the expected step 4 branch with no reference to drift.
+1. Desk-check `monitor-pr` dispatch against these cases. Each should reach the expected step 4 branch with no reference to drift:
+   - a notice whose explanation is the whole body
+   - a notice whose explanation appears only after more than 600 characters of introductory text, which must still classify as a notice
+   - an ambiguous body, which must escalate and never satisfy the Copilot axis
+   - a body the monitor reads as a review but the resolver reports as a notice, which must move to the notice path
+   - a clean approval
+   - a review with findings
+1. Confirm the step 3 probe instructions never truncate the body used for classification. Add a scrut case pinning that the documented classification command returns the complete body of a long review.
 
 ## Out of scope
 
