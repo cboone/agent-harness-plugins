@@ -194,13 +194,13 @@ identical
 
 `resolve-copilot-pr-feedback` and `monitor-pr` ship the same
 `resolve-copilot-threads`, for the same rule 18 reason as the worktree scripts
-above. `monitor-pr` calls only its read-only `fetch` and `fetch-reviews`
-commands, to observe Copilot's findings and format drift before it decides
-whether to dispatch to the resolver.
+above. `monitor-pr` calls only its read-only `fetch`, `fetch-reviews` and
+`audit` commands, to see whether Copilot reviewed the current head and what is
+left open before it decides whether to dispatch to the resolver.
 
 Drift here would be worse than a missing feature: the watch and the resolver
-would disagree about what counts as a clean review, and the watch would report a
-PR ready while the resolver still saw findings in it.
+would read different review data, and the watch could report a PR ready while
+the resolver still saw feedback in it.
 
 ```scrut
 $ cd "${REPO_ROOT}" && cmp plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads plugins/monitor-pr/scripts/resolve-copilot-threads && echo identical
