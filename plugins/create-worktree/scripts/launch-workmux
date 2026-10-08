@@ -549,17 +549,13 @@ function await_launch() {
 
   lookup_status=0
   worktree_path="$(worktree_path_for_branch "${branch}")" || lookup_status=$?
-  case "${lookup_status}" in
-    0) ;;
-    1)
-      printf '%s: workmux add exited 0, but git lists no worktree for %s\n' "${SCRIPT_NAME}" "${branch}" >&2
-      return 1
-      ;;
-    *)
-      printf '%s: workmux add exited 0, but git cannot list worktrees to confirm %s\n' "${SCRIPT_NAME}" "${branch}" >&2
-      return 1
-      ;;
-  esac
+  if ((lookup_status == 1)); then
+    printf '%s: workmux add exited 0, but git lists no worktree for %s\n' "${SCRIPT_NAME}" "${branch}" >&2
+    return 1
+  elif ((lookup_status != 0)); then
+    printf '%s: workmux add exited 0, but git cannot list worktrees to confirm %s\n' "${SCRIPT_NAME}" "${branch}" >&2
+    return 1
+  fi
 
   printf 'Worktree ready: %s\n' "${worktree_path}"
 }
@@ -737,11 +733,8 @@ function main() {
       die "--resolve-issue-branch requires a positive integer, got: ${resolve_issue}"
     fi
 
-    local reused status=0
-    reused="$(existing_branch_for_issue "${resolve_issue}")" || status=$?
-    if ((status != 0)); then
-      exit "${status}"
-    fi
+    local reused
+    reused="$(existing_branch_for_issue "${resolve_issue}")" || exit $?
     if [[ -n "${reused}" ]]; then
       printf '%s\n' "${reused}"
     fi
