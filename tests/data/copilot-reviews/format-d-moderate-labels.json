@@ -1,0 +1,13 @@
+[
+  {
+    "id": 6000000050,
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "state": "COMMENTED",
+    "html_url": "https://github.com/o/r/pull/1#pullrequestreview-6000000050",
+    "submitted_at": "2026-10-07T16:00:00Z",
+    "commit_id": "0123456789abcdef0123456789abcdef01234567",
+    "body": "<!-- ccr-overview-v2 -->\n\n### 🟡 Changes recommended\n\nUnresolved correctness issues remain in state handling and notification ordering.\n\n<details open>\n<summary><strong>1 open finding</strong></summary>\n\n- <picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-dark.svg\"><img alt=\"Medium severity\" src=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-light.svg\"></picture> [Error responses are treated as empty results](#discussion_r6100) · New\n</details>\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nAdds staged state handling and notifications.\n\n| File | Summary | Review notes |\n|---|---|---|\n| `src/​app/​state.py` | Adds state validation and persistence. | **Moderate (1):** Validation permits an impossible reopened timeline. |\n| `src/​app/​notify.py` | Adds notifications. | **Moderate (1):** Same-second observations can be mislabeled as recurring.<br>**Moderate (1):** Concurrent new items can both notify before persistence. |\n| `src/​app/​routines.md` | Defines the guarded routine. | **Nit (1):** Credential bootstrap writes outside the stated read-only path. |\n| `README.md` | Documents new commands. | — |\n</details>\n\n🧠 **Review effort:** Lite\n"
+  }
+]

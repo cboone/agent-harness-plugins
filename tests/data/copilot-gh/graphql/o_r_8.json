@@ -1,0 +1,121 @@
+[
+  {
+    "data": {
+      "repository": {
+        "pullRequest": {
+          "reviewThreads": {
+            "pageInfo": { "hasNextPage": false, "endCursor": null },
+            "nodes": [
+              {
+                "id": "PRRT_open",
+                "isResolved": false,
+                "isOutdated": false,
+                "path": "src/cache.js",
+                "line": 42,
+                "originalLine": 40,
+                "startLine": null,
+                "originalStartLine": null,
+                "comments": {
+                  "nodes": [
+                    {
+                      "databaseId": 8001,
+                      "url": "https://github.com/o/r/pull/8#discussion_r8001",
+                      "author": { "login": "copilot-pull-request-reviewer" },
+                      "body": "Entries written before a restart never expire."
+                    },
+                    {
+                      "databaseId": 8002,
+                      "url": "https://github.com/o/r/pull/8#discussion_r8002",
+                      "author": { "login": "cboone" },
+                      "body": "Looking into it."
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "PRRT_resolved",
+                "isResolved": true,
+                "isOutdated": false,
+                "path": "src/cache.js",
+                "line": 7,
+                "originalLine": 7,
+                "startLine": null,
+                "originalStartLine": null,
+                "comments": {
+                  "nodes": [
+                    {
+                      "databaseId": 8003,
+                      "url": "https://github.com/o/r/pull/8#discussion_r8003",
+                      "author": { "login": "copilot-pull-request-reviewer" },
+                      "body": "Already settled."
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "PRRT_noline",
+                "isResolved": false,
+                "isOutdated": true,
+                "path": "docs/usage.md",
+                "line": null,
+                "originalLine": null,
+                "startLine": null,
+                "originalStartLine": null,
+                "comments": {
+                  "nodes": [
+                    {
+                      "databaseId": 8004,
+                      "url": "https://github.com/o/r/pull/8#discussion_r8004",
+                      "author": { "login": "Copilot" },
+                      "body": "The example no longer matches the flag name."
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "PRRT_human",
+                "isResolved": false,
+                "isOutdated": false,
+                "path": "src/cache.js",
+                "line": 12,
+                "originalLine": 12,
+                "startLine": null,
+                "originalStartLine": null,
+                "comments": {
+                  "nodes": [
+                    {
+                      "databaseId": 8005,
+                      "url": "https://github.com/o/r/pull/8#discussion_r8005",
+                      "author": { "login": "cboone" },
+                      "body": "Should this be configurable?"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "PRRT_actions",
+                "isResolved": false,
+                "isOutdated": false,
+                "path": "src/util.js",
+                "line": 3,
+                "originalLine": 3,
+                "startLine": null,
+                "originalStartLine": null,
+                "comments": {
+                  "nodes": [
+                    {
+                      "databaseId": 8006,
+                      "url": "https://github.com/o/r/pull/8#discussion_r8006",
+                      "author": { "login": "github-actions[bot]" },
+                      "body": "[nitpick] Rename the helper."
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+]

@@ -9,7 +9,7 @@ Copilot files some findings in a review body instead of an inline thread. Those 
 Whatever the layout, the body a caller reads is exactly the body Copilot wrote. This is the property that keeps a new layout from changing what the command reports.
 
 ```scrut
-$ for f in format-a format-b format-c format-d format-d-bold-votes format-d-open-findings-block format-d-zero-open-line format-d-previously-missed format-d-missed-badges notice-error notice-no-files; do printf '%s ' "${f}"; "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/${f}.json" | jq -c --slurpfile raw "${COPILOT_REVIEW_DATA_DIR}/${f}.json" '[.[] as $o | $raw[0][] | select(.id == $o.id) | .body == $o.body] | (length > 0 and all)'; done
+$ for f in format-a format-b format-c format-d format-d-bold-votes format-d-open-findings-block format-d-zero-open-line format-d-previously-missed format-d-missed-badges format-d-moderate-labels notice-error notice-no-files; do printf '%s ' "${f}"; "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/${f}.json" | jq -c --slurpfile raw "${COPILOT_REVIEW_DATA_DIR}/${f}.json" '[.[] as $o | $raw[0][] | select(.id == $o.id) | .body == $o.body] | (length > 0 and all)'; done
 format-a true
 format-b true
 format-c true
@@ -19,6 +19,7 @@ format-d-open-findings-block true
 format-d-zero-open-line true
 format-d-previously-missed true
 format-d-missed-badges true
+format-d-moderate-labels true
 notice-error true
 notice-no-files true
 ```
@@ -55,32 +56,67 @@ $ echo '[{"id":2,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url
 {"ids":[1,2]}
 ```
 
-## `--since` keeps reviews submitted at or after a time
+## `--skip` leaves out reviews already read
 
-The resolver passes the time of its newest earlier summary, so a run reads only the reviews no earlier run covered. A review submitted at exactly that time is kept.
+The resolver passes the review ids its earlier clearing summaries record as read, so a run reads every review no earlier run settled, whenever it arrived.
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --since 2026-09-18T13:00:00Z < "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | jq -c '{ids: [.[].id]}'
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip 6000000002 < "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | jq -c '{ids: [.[].id]}'
 {"ids":[6000000003]}
 ```
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --since 2026-09-18T13:00:01Z < "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | jq -c '{ids: [.[].id]}'
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip 6000000002,6000000003 < "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | jq -c '{ids: [.[].id]}'
 {"ids":[]}
 ```
 
-Only the form GitHub writes is accepted, because comparing the strings orders the times only when both share that form.
+## `--head` always keeps the newest review of the head
+
+The newest review against the named commit comes back even when it was skipped, so every run reads what Copilot currently says about the head. An older review of the same commit stays skipped.
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --since 2026-09-18 < /dev/null 2>&1
-Error: Invalid --since timestamp '2026-09-18'. Expected UTC in the form YYYY-MM-DDTHH:MM:SSZ, as GitHub reports it.
+$ jq '.[].commit_id = "abc1234"' "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip 6000000002,6000000003 --head abc1234 | jq -c '{ids: [.[].id]}'
+{"ids":[6000000003]}
+```
+
+```scrut
+$ jq '.[].commit_id = "abc1234"' "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip 6000000002,6000000003 --head def5678 | jq -c '{ids: [.[].id]}'
+{"ids":[]}
+```
+
+Malformed values and unknown options fail before anything is read.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip 6000000002,x < /dev/null 2>&1
+Error: Invalid --skip value '6000000002,x'. Expected review ids separated by commas, such as 5449428489,5449507605.
 [1]
 ```
 
 ```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --after 2026-09-18T13:00:00Z < /dev/null 2>&1
-Error: Invalid argument '--after'. Expected '--since <timestamp>' or no arguments.
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --head main < /dev/null 2>&1
+Error: Invalid --head value 'main'. Expected a commit SHA.
 [1]
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip < /dev/null 2>&1
+Error: Missing value after --skip
+[1]
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews extra < /dev/null 2>&1
+Error: Invalid argument 'extra'. Expected '--skip <id,id,...>' or '--head <sha>'.
+[1]
+```
+
+## Copilot's logins match in any case
+
+Every direct login matches whatever its case, including `Copilot`, the form REST uses for inline comments. A `github-actions[bot]` review never matches, even with a severity tag, because that rule is for thread comments.
+
+```scrut
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"submitted_at":"2026-10-07T00:00:01Z","body":"a"},{"id":2,"user":{"login":"copilot-pull-request-reviewer"},"submitted_at":"2026-10-07T00:00:02Z","body":"b"},{"id":3,"user":{"login":"Copilot"},"submitted_at":"2026-10-07T00:00:03Z","body":"c"},{"id":4,"user":{"login":"github-copilot[bot]"},"submitted_at":"2026-10-07T00:00:04Z","body":"d"},{"id":5,"user":{"login":"github-actions[bot]"},"submitted_at":"2026-10-07T00:00:05Z","body":"[nitpick] e"},{"id":6,"user":{"login":"copilot-helper"},"submitted_at":"2026-10-07T00:00:06Z","body":"f"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c '{ids: [.[].id]}'
+{"ids":[1,2,3,4]}
 ```
 
 ## Non-Copilot reviews are filtered out
@@ -109,9 +145,14 @@ $ echo '[{"id":1,"user":"ghost","state":"COMMENTED","submitted_at":"x","html_url
 []
 ```
 
+```scrut
+$ echo '[{"id":1,"user":{"login":7},"state":"COMMENTED","submitted_at":"x","html_url":"y","body":"### hi"}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews
+[]
+```
+
 ## A review body that is not a string is skipped, not fatal
 
-The skip is named on stderr, and the well-formed review beside it still comes through.
+The skip is named on stderr, and the well-formed review beside it still comes through. `audit` reports the skipped review as uncovered.
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/malformed-body.json" 2>&1 >/dev/null
@@ -123,13 +164,13 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/m
 {"ids":[6000000042]}
 ```
 
-## An empty body is skipped without a warning
+## A null or empty body comes back empty
 
-Its inline comments, if any, are threads that `fetch` reports.
+Every Copilot review is returned, so a caller and `monitor-pr`'s metadata probe agree on which review is newest. An empty body states nothing; any findings the review has are threads that `fetch` reports.
 
 ```scrut
-$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"u","submitted_at":"2026-10-07T00:00:00Z","body":""}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews 2>&1
-[]
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"u","submitted_at":"2026-10-07T00:00:00Z","body":""},{"id":2,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"u","submitted_at":"2026-10-07T00:00:01Z","body":null}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews 2>&1 | jq -c '[.[] | {id, body}]'
+[{"id":1,"body":""},{"id":2,"body":""}]
 ```
 
 ## Empty review list
@@ -161,17 +202,9 @@ Error: Invalid review JSON: every element must be a review object.
 [1]
 ```
 
-## parse-reviews takes only `--since`
+## fetch-reviews reads through `gh` and passes its options through
 
-```scrut
-$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews extra < /dev/null 2>&1
-Error: Usage: resolve-copilot-threads parse-reviews [--since <timestamp>] (reads review JSON on stdin)
-[1]
-```
-
-## fetch-reviews passes `--since` through
-
-`fetch-reviews` is exercised against `copilot-gh-stub`, installed as `gh` first on `PATH`, which answers from `tests/data/copilot-gh/`.
+`fetch-reviews` and `fetch` are exercised against `copilot-gh-stub`, installed as `gh` first on `PATH`, which answers from `tests/data/copilot-gh/`.
 
 ```scrut
 $ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${RESOLVE_COPILOT_THREADS_BIN}" fetch-reviews o r 7 | jq -c '{ids: [.[].id]}'; rm -rf "${stub}"
@@ -179,22 +212,42 @@ $ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BI
 ```
 
 ```scrut
-$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${RESOLVE_COPILOT_THREADS_BIN}" fetch-reviews o r 7 --since 2026-09-18T14:00:01Z | jq -c '{ids: [.[].id]}'; rm -rf "${stub}"
+$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${RESOLVE_COPILOT_THREADS_BIN}" fetch-reviews o r 7 --skip 7100 | jq -c '{ids: [.[].id]}'; rm -rf "${stub}"
 {"ids":[]}
 ```
 
+A failed read exits nonzero and names the request, so a caller never reads empty output as no reviews.
+
 ```scrut
-$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${RESOLVE_COPILOT_THREADS_BIN}" fetch-reviews o r 7 extra 2>&1; echo "exit=$?"; rm -rf "${stub}"
-Error: Usage: resolve-copilot-threads fetch-reviews <owner> <repo> <pr_number> [--since <timestamp>]
+$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${RESOLVE_COPILOT_THREADS_BIN}" fetch-reviews o r 8 2>&1; echo "exit=$?"; rm -rf "${stub}"
+gh: Not Found (HTTP 404)
+Error: Failed to fetch reviews for o/r#8. See the gh error above for the cause.
 exit=1
+```
+
+```scrut
+$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${RESOLVE_COPILOT_THREADS_BIN}" fetch-reviews o r 2>&1; echo "exit=$?"; rm -rf "${stub}"
+Error: Usage: resolve-copilot-threads fetch-reviews <owner> <repo> <pr_number> [--skip <ids>] [--head <sha>]
+exit=1
+```
+
+## fetch returns unresolved Copilot threads with their comment ids
+
+Each comment carries its `databaseId` and `url`, which is how a review body's `threadLinks` are matched to a thread. A resolved thread and a thread a person opened are left out; a `github-actions[bot]` thread with a severity tag is Copilot's; a login matches in any case; and a thread with no line reports `(no-line)`.
+
+```scrut
+$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${RESOLVE_COPILOT_THREADS_BIN}" fetch o r 8 | jq -c '.[] | {id, location, isOutdated, comments: [.comments[] | {author, databaseId, url}]}'; rm -rf "${stub}"
+{"id":"PRRT_open","location":"src/cache.js:42","isOutdated":false,"comments":[{"author":"copilot-pull-request-reviewer","databaseId":8001,"url":"https://github.com/o/r/pull/8#discussion_r8001"},{"author":"cboone","databaseId":8002,"url":"https://github.com/o/r/pull/8#discussion_r8002"}]}
+{"id":"PRRT_noline","location":"docs/usage.md:(no-line)","isOutdated":true,"comments":[{"author":"Copilot","databaseId":8004,"url":"https://github.com/o/r/pull/8#discussion_r8004"}]}
+{"id":"PRRT_actions","location":"src/util.js:3","isOutdated":false,"comments":[{"author":"github-actions[bot]","databaseId":8006,"url":"https://github.com/o/r/pull/8#discussion_r8006"}]}
 ```
 
 ## Help lists the review-body and audit commands
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" --help | grep -E '^  (fetch-reviews|parse-reviews|audit|parse-audit)'
-  fetch-reviews <owner> <repo> <pr_number> [--since <timestamp>]
-  parse-reviews [--since <timestamp>]                 Select Copilot reviews from JSON on stdin
+  fetch-reviews <owner> <repo> <pr_number> [--skip <ids>] [--head <sha>]
+  parse-reviews [--skip <ids>] [--head <sha>]         Select Copilot reviews from JSON on stdin
   audit <owner> <repo> <pr_number>                    List Copilot items the fetches cannot reach
   parse-audit                                          Audit pull request JSON read from stdin
 ```
@@ -202,8 +255,8 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" --help | grep -E '^  (fetch-reviews|parse-rev
 ## The surface audit
 
 `fetch` reads unresolved threads Copilot opened and `fetch-reviews` reads its
-review bodies. `audit` lists every Copilot item on a pull request by where it
-appears and reports any the two do not reach, so feedback that arrives
+review bodies. `audit` counts every Copilot item on a pull request by where it
+appears and lists any the two do not reach, so feedback that arrives
 somewhere new is an entry rather than silence. `parse-audit` is the same join
 over saved JSON.
 
@@ -243,6 +296,14 @@ same way, body included, and does not report it a second time.
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit < "${COPILOT_AUDIT_DATA_DIR}/actions-opener.json" | jq -c '{surfaces, uncovered}'
 {"surfaces":{"reviews":0,"reviewComments":1,"issueComments":0},"uncovered":[]}
+```
+
+A Copilot review whose body is not a string is one `fetch-reviews` cannot
+return, so the audit lists it for a read by hand.
+
+```scrut
+$ echo '{"reviews":[{"id":61,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"u61","body":{"text":"x"}},{"id":62,"user":{"login":"copilot-pull-request-reviewer[bot]"},"html_url":"u62","body":"fine"}],"reviewComments":[],"issueComments":[],"threads":[]}' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-audit | jq -c .
+{"surfaces":{"reviews":2,"reviewComments":0,"issueComments":0},"uncovered":[{"surface":"review","reason":"body is not a string","id":61,"url":"u61","path":null,"excerpt":""}]}
 ```
 
 The input must carry all four arrays, and every element the join indexes into
@@ -342,8 +403,8 @@ $ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_
 {"id":5446510102,"url":"https://github.com/cboone/agent-harness-plugins/pull/559#pullrequestreview-5446510102","commitId":"164797e9ef480c9ad96c329ad9bb15a9432bf750"}
 ```
 
-A review id the result does not carry, which is what an empty review body
-produces, yields an all-null object rather than nothing. The skill documents
+A review id the result does not carry, which is what a review whose body is
+not a string or a wrong id produces, yields an all-null object rather than nothing. The skill documents
 this shape so a null `id` is read as an absent answer, never as a review.
 
 ```scrut
@@ -357,9 +418,22 @@ sentence follows more than 600 characters of other text, and comes through
 whole at the end.
 
 ```scrut
-$ jq -n '[{id: 1, user: {login: "copilot-pull-request-reviewer[bot]"}, html_url: "u", submitted_at: "2026-10-07T00:00:00Z", body: (("Preamble. " * 70) + "\n\nCopilot encountered an error and was unable to review this pull request.")}]' | "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -r --argjson review_id 1 '.[] | select(.id == $review_id) | .body' | awk '{ n += length($0) + 1 } END { print n; print $0 }'
-775
+$ jq -n '[{id: 1, user: {login: "copilot-pull-request-reviewer[bot]"}, html_url: "u", submitted_at: "2026-10-07T00:00:00Z", body: (("Preamble. " * 70) + "\n\nCopilot encountered an error and was unable to review this pull request.")}]' | "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c --argjson review_id 1 '[.[] | select(.id == $review_id)] | last | {id, body}' | jq -r '.id, (.body | length), (.body | split("\n") | last)'
+1
+774
 Copilot encountered an error and was unable to review this pull request.
+```
+
+A review the result does not carry yields a null `id` and `body`, and a failed
+read yields no output at all. Neither is a body to classify.
+
+```scrut
+$ echo '[]' | "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews | jq -c --argjson review_id 1 '[.[] | select(.id == $review_id)] | last | {id, body}'
+{"id":null,"body":null}
+```
+
+```scrut
+$ printf '' | jq -c --argjson review_id 1 '[.[] | select(.id == $review_id)] | last | {id, body}'
 ```
 
 The audit filter reduces `audit` to the items step 7b records as processed,
@@ -386,12 +460,10 @@ $ echo '{"surfaces":{}}' | jq -c '{audited: true, items: [(.uncovered // error("
 ```
 
 The thread-side filter reduces `fetch` the same way, to a count plus locations.
-`fetch` needs GraphQL credentials, so this runs the filter over the shape that
-command returns.
 
 ```scrut
-$ echo '[{"id":"PRRT_a","location":"src/foo.ts:42"},{"id":"PRRT_b","location":"lib/bar.js:(no-line)"}]' | jq -c '{openThreads: length, locations: [.[].location]}'
-{"openThreads":2,"locations":["src/foo.ts:42","lib/bar.js:(no-line)"]}
+$ stub="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp "${COPILOT_GH_STUB_BIN}" "${stub}/gh" && STUB_COPILOT_GH_DIR="${COPILOT_GH_DATA_DIR}" PATH="${stub}:${PATH}" "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" fetch o r 8 | jq -c '{openThreads: length, locations: [.[].location]}'; rm -rf "${stub}"
+{"openThreads":3,"locations":["src/cache.js:42","docs/usage.md:(no-line)","src/util.js:3"]}
 ```
 
 ```scrut
