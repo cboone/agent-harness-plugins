@@ -84,6 +84,14 @@ $ jq '.[].commit_id = "0123456789abcdef0123456789abcdef01234567"' "${COPILOT_REV
 {"ids":[]}
 ```
 
+When the newest review of the head has a body that is not a string, no older review stands in for it: nothing comes back for the head, and the warning names it even though it was skipped.
+
+```scrut
+$ echo '[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"commit_id":"0123456789abcdef0123456789abcdef01234567","submitted_at":"2026-01-01T00:00:01Z","body":"older"},{"id":2,"user":{"login":"copilot-pull-request-reviewer[bot]"},"commit_id":"0123456789abcdef0123456789abcdef01234567","submitted_at":"2026-01-01T00:00:02Z","body":{"text":"x"}}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip 1,2 --head 0123456789abcdef0123456789abcdef01234567 2>&1
+Warning: skipping review 2: its body is not a string.
+[]
+```
+
 Malformed values and unknown options fail before anything is read.
 
 ```scrut
@@ -423,6 +431,13 @@ Its per-tick filter selects the one review the metadata probe named and
 projects three fields, with no body text. These testcases run the filters
 exactly as the skill documents them, over `parse-reviews` so no authenticated
 `gh` is needed.
+
+The metadata probe matches Copilot's logins in any case, as `fetch-reviews` does, so the two agree on which review is newest.
+
+```scrut
+$ echo '[[{"id":1,"user":{"login":"copilot-pull-request-reviewer[bot]"},"commit_id":"a","submitted_at":"x","state":"COMMENTED"},{"id":2,"user":{"login":"Copilot"},"commit_id":"b","submitted_at":"y","state":"COMMENTED"},{"id":3,"user":{"login":"a-human-reviewer"},"commit_id":"c","submitted_at":"z","state":"COMMENTED"}]]' | jq -c '[.[][] | select((.user.login? // "") as $login | ($login | type) == "string" and (["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"] | any(. == ($login | ascii_downcase))))] | last | {id, commit_id, submitted_at, state}'
+{"id":2,"commit_id":"b","submitted_at":"y","state":"COMMENTED"}
+```
 
 ```scrut
 $ "${MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/format-d-zero-open-line.json" | jq -c --argjson review_id 5446510102 '[.[] | select(.id == $review_id)] | last | {id, url, commitId}'
