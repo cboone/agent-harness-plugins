@@ -10,7 +10,8 @@
      priority an outlined tag; fixes a muted green. In the light theme blue is
      reserved for focus; in the dark theme Critical takes the light blue the
      focus ring also uses, and High priority amber. Components use tokens
-     only. */
+     only. The shared tokens match backlog-triage.html; a change to one
+     prompts a look at the other. */
   :root {
     color-scheme: light;
     --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -125,6 +126,13 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 40px var(--gutter) 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+  }
+
+  /* The main landmark keeps the board's spacing between its sections. */
+  .board-main {
     display: flex;
     flex-direction: column;
     gap: 56px;
@@ -751,8 +759,9 @@
     const ref = (n) => link(issueUrl(n), `#${n}`, "num");
     const pullRef = (n) => link(pullUrl(n), `#${n}`, "num");
     // Links "#123", and "owner/repo#123" for another repository, in a prose
-    // field. Copied from backlog-triage.html; a fix to one prompts a look at
-    // the other.
+    // field. Matches the linker in backlog-triage.html except that a local
+    // reference here stays in the text face; a fix to the matching rules
+    // belongs in both.
     const PROSE_REF = /([\w.-]+\/[\w.-]+)?#(\d+)(?![\w#])/g;
     const prose = (text) => {
       const source = String(text ?? "");
@@ -810,8 +819,8 @@
     const commitLink = () => link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8));
 
     const age = h("p", { class: "when-age" });
-    // Adapted from refreshAge() in backlog-triage.html, which counts in days;
-    // a fix to the wording belongs in both.
+    // Adapted from refreshAge() in backlog-triage.html, whose thresholds are
+    // whole days; a fix to the wording belongs in both.
     function refreshAge() {
       if (!validTime) return;
       const minutes = Math.max(0, Math.floor((Date.now() - syncedAt.getTime()) / 60000));
@@ -1210,22 +1219,22 @@
     refreshAge();
     window.setInterval(refreshAge, 60000);
 
-    // An absent section is null, which replaceChildren would draw as text.
+    // h() skips an absent section, which is null.
     root.replaceChildren(
-      ...[
-        header,
+      header,
+      h("main", { class: "board-main" }, [
         criticalSection,
         highSection,
         readySection,
-        h("p", { class: "fold label", role: "separator" }, "Report"),
+        h("p", { class: "fold label", role: "separator", "aria-label": "Report" }, "Report"),
         investigateSection,
         moreReadySection,
         lowerSection,
         fixedSection,
         parkedSection,
         triageSection,
-        footer,
-      ].filter(Boolean),
+      ]),
+      footer,
     );
   })();
 </script>

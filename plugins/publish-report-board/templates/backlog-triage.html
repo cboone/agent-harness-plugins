@@ -152,6 +152,13 @@
     gap: 56px;
   }
 
+  /* The main landmark keeps the board's spacing between its sections. */
+  .board-main {
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+  }
+
   .board-message {
     padding: 40px var(--gutter);
     color: var(--muted);
@@ -197,7 +204,7 @@
     flex: none;
     width: 6px;
     height: 6px;
-    background: var(--accent);
+    background: var(--muted);
   }
 
   .chip--none {
@@ -604,7 +611,7 @@
 
   .cap-then {
     margin-top: 6px;
-    color: var(--accent);
+    color: var(--body);
     font-family: var(--mono);
     font-size: 12px;
   }
@@ -796,6 +803,7 @@
   .waiting-item {
     font-size: 14px;
     line-height: 1.35;
+    overflow-wrap: anywhere;
   }
 
   .waiting-title {
@@ -813,8 +821,9 @@
     font-size: 12px;
   }
 
-  /* Each blocked cell names its column: always to a screen reader, and on
-     screen once the header row is hidden at narrow widths. */
+  /* The Waiting on, Why, and Freed from cells name their column: always to a
+     screen reader, and on screen once the header row is hidden at narrow
+     widths. The issue cell needs no label. */
   .cell-label {
     position: absolute;
     width: 1px;
@@ -831,7 +840,9 @@
     font-size: 13px;
   }
 
-  @media (max-width: 960px) {
+  /* Lanes and blocked rows stack below 1080px, where their fixed columns
+     leave the flexible ones too narrow for titles and blocker names. */
+  @media (max-width: 1080px) {
     .lane {
       grid-template-columns: minmax(0, 1fr);
       gap: 14px;
@@ -1064,8 +1075,9 @@
     const link = (href, text) => h("a", { class: "ref", href }, text);
     const ref = (n) => h("a", { class: "ref num", href: issueUrl(n) }, `#${n}`);
     // Links "#123", and "owner/repo#123" for another repository, in a prose
-    // field. A "#" inside a word, such as "C#1", stays text. Copied from
-    // bugs.html; a fix to one prompts a look at the other.
+    // field. A "#" inside a word, such as "C#1", stays text. Matches the linker
+    // in bugs.html except that a local reference here is drawn as an issue
+    // number; a fix to the matching rules belongs in both.
     const PROSE_REF = /([\w.-]+\/[\w.-]+)?#(\d+)(?![\w#])/g;
     const prose = (text) => {
       const source = String(text ?? "");
@@ -1288,7 +1300,8 @@
       ]);
     }
 
-    // Header: repository, sync time, live age, and the six counts.
+    // Header: eyebrow, repository, sync time, branch and commit, live age, the
+    // six counts, and the summary.
     const syncedAt = new Date(data.sync.at);
     // A time no calendar has, such as 24:30, shows as written and gets no age,
     // rather than stopping the page.
@@ -1313,8 +1326,8 @@
     const age = h("p", { class: "when-age" });
     // The aging color once a full day has passed, the stale color after three.
     // The wording counts whole units, so it never says "1 day ago" before the
-    // color changes. bugs.html adapts this to count in hours; a fix to the
-    // wording belongs in both.
+    // color changes. bugs.html keeps this wording but sets its thresholds in
+    // hours; a fix to the wording belongs in both.
     function refreshAge() {
       if (!validTime) return;
       const minutes = Math.max(0, Math.floor((Date.now() - syncedAt.getTime()) / 60000));
@@ -1333,10 +1346,10 @@
 
     const blockedCount = issues.filter((issue) => isBlocked(issue.number)).length;
     const runningCapacity = lanes.reduce((sum, model) => sum + model.cap, 0);
-    // Each label sits in its own element beside its value, so it carries the
-    // noun alone and has to agree with the number itself. open, ready, and
-    // blocked are adjectives and read the same at any count. The start picks
-    // lead as the one filled block, because they are what a reader acts on.
+    // Each label sits in its own element below its value, so it carries the
+    // noun alone and has to agree with the number itself. Start now, Ready,
+    // Blocked, and Open read the same at any count. The start picks lead as
+    // the one filled block, because they are what a reader acts on.
     const counts = [
       [startNow.length, "Start now", "count--primary"],
       [issues.length - blockedCount, "Ready"],
@@ -1453,8 +1466,8 @@
       // The column headings are drawn for sighted readers only, so each field
       // carries a visually hidden label; the title reads as part of "Issue #N".
       const hidden = (text) => h("span", { class: "visually-hidden" }, text);
-      // The bar above the list carries each issue's state as a colour alone, so
-      // the row states it in words for a reader who cannot see the bar.
+      // A bar segment cannot be matched to its issue, and the bar's label gives
+      // only tallies, so the row states each issue's state in words.
       const stateWord = { now: "can run now", queued: "queued", blocked: "blocked" }[model.state(n)] ?? "";
       return h("li", { class: "item" }, [
         h("span", { class: "item-rank", "aria-hidden": rank === "·" ? "true" : null }, [hidden("Step "), rank]),
@@ -1669,17 +1682,17 @@
     ]);
 
     root.classList.toggle("no-milestones", !anyMilestone);
-    // An absent section is null, which replaceChildren would draw as text.
+    // h() skips an absent section, which is null.
     root.replaceChildren(
-      ...[
-        header,
+      header,
+      h("main", { class: "board-main" }, [
         startSection,
         lanesSection,
-        h("p", { class: "fold label", role: "separator" }, "Report"),
+        h("p", { class: "fold label", role: "separator", "aria-label": "Report" }, "Report"),
         matrixSection,
         blockedSection,
-        footer,
-      ].filter(Boolean),
+      ]),
+      footer,
     );
   })();
 </script>
