@@ -15,7 +15,7 @@ The skill reviews the comments in a branch's changed code and keeps, rewrites, o
 
 It cuts runtime trivia, consequence chains, arguments for decisions the code has already made, mock comments that narrate the author's thinking, CSS comments that restate the declaration, and jargon. It also favors wording that stays true: no line numbers, no counts or "currently", and comments anchored to the code beside them rather than to code elsewhere.
 
-The scope defaults to comments in or directly above code changed since the base branch, including uncommitted and untracked files. The skill edits only comments, leaves directive and pragma comments alone, checks the edited files with the project's formatter and linter in check mode, its type checker, and its tests, and reports a before-and-after table. It then commits its edits locally and never pushes. A file that already held uncommitted work before the run is left uncommitted, so the commit never carries your own changes.
+The scope defaults to comments in or directly above code changed since the base branch, including uncommitted and untracked files. The skill edits only comments, leaves directive and pragma comments alone, checks the edited files with the project's formatter and linter in check mode, its type checker, and its tests, and reports a before-and-after table. It then commits its edits locally and never pushes. A file that already held uncommitted work before the run is left uncommitted, so the commit never carries your own changes. It does not commit on a detached HEAD or on the default branch, and it reports which checks ran, the commit's branch, and any change a commit hook made.
 
 ## Requirements
 
@@ -45,7 +45,7 @@ This skill runs read-only Git and GitHub CLI commands to find its scope. To allo
 }
 ```
 
-If you already have a `permissions.allow` array, merge these entries into it. The skill also runs the project's own linter, formatter, type checker, and tests, which depend on the project. Its commit runs through the [Commit](../commit/README.md) skill when that is installed, or `git add` and `git commit` otherwise; those write to the repository, so leave them to prompt unless you want the commit to run unattended.
+If you already have a `permissions.allow` array, merge these entries into it. The skill also runs the project's own linter, formatter, type checker, and tests, which depend on the project. Its commit is a `git commit` limited to the edited files; leave it to prompt unless you want the commit to run unattended.
 
 ## Examples
 
@@ -59,6 +59,5 @@ Originally written by Erica Oh ([@acire](https://github.com/acire)) and used wit
 
 ## See Also
 
-- [Commit](../commit/README.md): makes the trimmed-comments commit when it is installed
 - [Review Branch](../review-branch/README.md): a broader review of the branch's changes
 - [All plugins](../../../../README.md)

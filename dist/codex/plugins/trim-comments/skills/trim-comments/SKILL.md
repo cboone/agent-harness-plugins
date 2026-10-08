@@ -186,11 +186,6 @@ Two entries apply to whole files, generated files and prose documents, and step 
 - Prose documents: `.md` files, including Copilot instruction files. Those have different length rules.
 - Comments outside the scope. Do not sweep the whole repository.
 
-## Skill dependencies
-
-- **Required:** None
-- **Optional:** `commit`
-
 ## Workflow
 
 ### 1. Resolve scope
@@ -254,7 +249,12 @@ Apply the sections above and give each collected comment one action; for a singl
 
 Skip this step with `--dry-run`.
 
-Unless `--no-commit` was given, first record which in-scope files already hold uncommitted work, so step 6 never commits the user's changes along with the trimmed comments. A file is clean when `git status --porcelain=v1 -z --untracked-files=all -- ":(top,literal)$path"` prints nothing: it is tracked and matches `HEAD` in both the index and the working tree. Untracked files and files with staged or unstaged changes are not clean. Also record whether anything is staged at all: `git diff --cached --quiet` exits non-zero when it is.
+Unless `--no-commit` was given, first record which in-scope files already hold uncommitted work, so step 6 never commits the user's changes along with the trimmed comments. A file is clean only when both of these hold:
+
+- `git status --porcelain=v1 -z --untracked-files=all -- ":(top,literal)$path"` exits 0 and prints nothing: the file is tracked and matches `HEAD` in both the index and the working tree.
+- `git ls-files -v -- ":(top,literal)$path"` prints the tag `H`. A lowercase tag marks the file `assume-unchanged` and `S` marks it `skip-worktree`; `git status` hides local edits to either, so they could carry the user's changes into the commit.
+
+Untracked files, files with staged or unstaged changes, and files whose check fails or prints an error are not clean.
 
 Make each change a separate, minimal edit, so each one maps to one row of the report. Touch only comments: no code, whitespace, or formatting changes beyond what removing a comment line requires. Never delete a docstring; trim it instead. A docstring is runtime-visible (as `__doc__` in Python), and when it is the only statement in a function or class body, deleting it is a syntax error.
 
@@ -268,24 +268,38 @@ Skip this step with `--dry-run`. Most comments cannot change behavior, but direc
 
 If a check fails because of an edit made here, fix that edit by hand rather than letting a formatter rewrite the file, which would also reformat the user's own changes. Report pre-existing failures without fixing them.
 
+Record each check's outcome for step 7: passed, failed, or not run, with the reason it could not run, such as no type checker in the project or no test command found. A check that did not run is never reported as passed.
+
 ### 6. Commit
 
-Skip this step with `--dry-run` or `--no-commit`, when no comment was edited, or when a check in step 5 still fails because of an edit made here, since a commit would record the break. Never push.
+Skip this step with `--dry-run` or `--no-commit`, when no comment was edited, or when a check in step 5 still fails because of an edit made here, even in a file that will not be committed, since the commit would then record a tree that fails. Never push.
 
-Commit only the edited files that step 4 recorded as clean. An edited file that already held uncommitted work stays uncommitted, because its trimmed comments and the user's changes cannot be separated by staging the whole file; step 7 lists it. When no edited file was clean, commit nothing. A single named comment follows the same rule.
+Commit only the edited files that step 4 recorded as clean. An edited file that already held uncommitted work stays uncommitted, because its trimmed comments and the user's changes cannot be separated by committing the whole file; step 7 lists it. When no edited file was clean, commit nothing. A single named comment follows the same rule.
 
-Make one commit naming what was trimmed, following the repository's commit convention (for example, `refactor:` or `style:` where it uses Conventional Commits), and put any cut material worth keeping in its body:
+Check where the commit would land before making it:
 
-- When the `commit` skill is installed and step 4 found nothing staged, stage each committable file with `git add -- ":(top,literal)$path"` and invoke the `commit` skill with `--staged`.
-- Otherwise, commit directly with `git commit` followed by `--` and the committable files as `":(top,literal)$path"` pathspecs. Naming the paths commits only those files and leaves anything the user staged in the index. Follow the repository's signing requirements, and never amend.
+- `git symbolic-ref --quiet --short HEAD` prints the current branch. If it fails, HEAD is detached and a commit would belong to no branch: skip the commit.
+- If the current branch is the base branch, skip the commit: trims belong on a working branch, not straight on the default branch. Step 1 found `$base` for the default scope; with paths or a single named comment, find it the same way, choosing the remote and trying the same two commands. If the base cannot be found, commit anyway and say in the report that this check could not run.
 
-If a pre-commit hook fails because of an edit made here, fix the edit, re-stage, and make a new commit. If it fails for another reason, leave the edits uncommitted and report the failure.
+Before committing, save the committable files' diff against `HEAD` with `git --no-pager diff --no-ext-diff --no-textconv HEAD -- <pathspecs>`, so a hook's changes can be told apart from these edits afterward.
+
+Commit with `git commit`, the message, then `--` and each committable file as a `":(top,literal)$path"` pathspec. Naming the paths commits only those files from the working tree, leaves anything the user staged in the index, and stages nothing if the commit fails. Write one message naming what was trimmed, following the repository's commit convention (for example, `refactor:` or `style:` where it uses Conventional Commits), with any cut material worth keeping in its body. Leave out issue references: closing keywords such as `fixes #N` would close an issue that a comment trim did not resolve. Sign the commit when the user's or the repository's instructions require signed commits. Never amend, and never pass `--no-verify`, `--no-gpg-sign`, or any other flag that bypasses hooks or signing.
+
+If the commit fails because of an edit made here, or because a hook rejected the message written here, fix the edit or the message and run the commit again. Any other failure ends this step without a commit, whether a hook fails for another reason, signing fails, a lock file exists, or a merge or rebase is in progress: leave the edits uncommitted in the working tree and report the exact error.
+
+After a commit, compare `git --no-pager show --no-ext-diff --no-textconv --format= HEAD` with the saved diff. A hook can rewrite files, for example by running a formatter in write mode, so any difference is a change this skill did not make. Never amend or revert it; report which files it touched. Run `git status --porcelain=v1 -z` on the committed paths as well, and report any file a hook left modified after the commit.
 
 ### 7. Report
 
 Report a table: `file:line` (in the edited file), action (`rewrite`, `delete`, or `flag`), before, after. Leave out comments kept unchanged. The report is read once, so line numbers are fine here. Keep before and after to one line each, truncating with `…`. With `--dry-run`, the table lists proposed changes.
 
-Then report the commit: its short SHA and subject, and whether it was made without the `commit` skill, or why step 6 made none. List any edited files left uncommitted because they already held the user's work, and any cut material worth moving into a commit message or the PR description that is not already in the commit body.
+Then report:
+
+- each step 5 check: passed, failed, or not run, with the reason
+- the commit: its short SHA, subject, and branch; or no commit, with the skip condition or the exact error from step 6
+- any change a hook made beyond these edits, in the commit or left in the working tree
+- edited files left uncommitted because they already held the user's work
+- cut material worth moving into the PR description, or into a commit message when no commit was made
 
 ## Worked examples
 
