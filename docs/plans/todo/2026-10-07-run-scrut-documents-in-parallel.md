@@ -67,3 +67,19 @@ No plugin files change, so no version bumps and no `make build` output changes.
 - `time make test-scrut SCRUT_JOBS=1` and `time make test-scrut`, both passing; record the times.
 - Plant a failure in a scratch copy (or a temporary edit, reverted) to see the per-document failure summary and nonzero exit.
 - `make test-all` passes, observing the final result.
+
+## Outcome
+
+### Measurements (2026-10-07, Apple M5 Max, 18 CPUs, on AC, full `make test-scrut`)
+
+| Run                        | Wall clock | Result                                      |
+| -------------------------- | ---------- | ------------------------------------------- |
+| Sequential, `SCRUT_JOBS=1` | 714s       | 19 of 19 passed                             |
+| Parallel, 18 jobs          | 317s       | 18 of 19 passed; `launch-workmux.md` failed |
+| Parallel, 18 jobs          | 271s       | 19 of 19 passed                             |
+
+Two further parallel runs passed but are excluded from timing because the machine slept during them. In parallel the two validator documents remain the critical path, at 226s and 260s alone versus 280s and 313s side by side, so contention costs them about a fifth. The default job count stays at the CPU count: with fewer slots, the validator documents, which sort last, would start late and lengthen the run.
+
+### Interference
+
+No document shares state with another. The one failure was a timing assumption in `launch-workmux.md`: without `--await-completion`, the launcher prints the workmux log after a fixed `WORKMUX_LAUNCH_WAIT_SECONDS` sleep, which the cases set to 1 second, and on a fully loaded machine the stub finished writing after that. The cases now wait 3 seconds, which takes that document from 62s to 121s alone, below both the local critical path and CI's 5-minute half-budget. A deterministic wait in the launcher itself would remove the race entirely; that is a change to two plugins and was left out of scope.
