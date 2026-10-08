@@ -392,6 +392,7 @@ function do_parse_reviews() {
     '
       def trim: sub("^[[:space:]]+"; "") | sub("[[:space:]]+$"; "");
 
+
       def normalize_path: gsub("\u200b"; "");
 
       # Copilot writes a section count in one of two places: trailing, as in
@@ -453,6 +454,44 @@ function do_parse_reviews() {
                and ($raw | test("^[[:space:]]*(`+|~+)[[:space:]]*$")) then null
           else .
           end;
+
+      # A body with its layout whitespace made regular, so the matchers below
+      # read a summary, heading or details tag however Copilot spaces it.
+      # Up to three leading spaces before a tag, a heading or a bold label
+      # such as "**0 open findings**" carry no meaning in Markdown, so they
+      # are dropped; four or more make an indented code block and stay. A
+      # heading keeps one space after its marker, a line that is only bold
+      # text, such as a count line, keeps single spaces, and a summary line
+      # loses the spaces between and just inside its tags and any doubled
+      # spaces.
+      # Without this, an indented summary or a space inside its bold text
+      # would escape the section matchers while the census still read its
+      # count, and content beside it would pass unread.
+      # Fenced lines are left as written, since a finding quotes code there.
+      def normalize_layout:
+        split("\n")
+        | reduce .[] as $line ({fence: null, out: []};
+            (.fence | next_fence($line)) as $next
+            | if .fence != null or $next != null then
+                .fence = $next | .out += [$line]
+              else
+                .out += [
+                  $line
+                  | sub("^ {1,3}(?=[<#]|\\*\\*)"; "")
+                  | sub("^(?<marks>#{1,6})[ \t]+"; "\(.marks) ")
+                  | if test("^\\*\\*[^*]+\\*\\*[[:space:]]*$") then gsub("[ \t]+"; " ")
+                    elif test("^<summary") then
+                      sub("^<summary[ \t]+>"; "<summary>")
+                      | gsub(">[ \t]+<"; "><")
+                      | gsub("<(?<tag>summary|strong)>[ \t]+"; "<\(.tag)>")
+                      | gsub("[ \t]+</"; "</")
+                      | gsub("(?<=[^ \t])[ \t]{2,}"; " ")
+                    else .
+                    end
+                ]
+              end)
+        | .out
+        | join("\n");
 
       # Splits a body into numbered lines, each tagged with the region it
       # sits in, its details depth, and whether it is inside a fenced block.
@@ -1285,7 +1324,7 @@ function do_parse_reviews() {
               # not as findings, and is left out.
               (
                 select(
-                  ($l.raw | test("alt=\"[^\"]*severity\""; "i"))
+                  ($l.raw | test("alt[[:space:]]*=[[:space:]]*\"[^\"]*severity[^\"]*\""; "i"))
                   and ($l.raw | test("^\\*\\*Findings"; "i") | not)
                 )
                 | {kind: "badge", line: $l.n, region: $l.region, text: $l.raw}
@@ -1348,6 +1387,10 @@ function do_parse_reviews() {
         | select((.user.login? // "") as $login | $direct_logins | any(. == $login))
         # The shell names any skipped non-string body before this runs.
         | select((.body | type) == "string" and .body != "")
+        # The raw body is what a caller reads; everything below parses the
+        # normalized one.
+        | .body as $raw_body
+        | .body |= normalize_layout
         | (.body | annotate) as $lines
         | (.body | suppressed_slice) as $slice
         | (.body | verdict) as $verdict
@@ -1509,7 +1552,7 @@ function do_parse_reviews() {
             needsRead: $needs_read,
             unaccounted: $unaccounted,
             suppressed: $slice,
-            reviewBody: .body,
+            reviewBody: $raw_body,
             # "at" is the census bookkeeping described above, not part of
             # a finding a caller reads.
             findings: ($findings | map(del(.at)) + $lead_findings)
