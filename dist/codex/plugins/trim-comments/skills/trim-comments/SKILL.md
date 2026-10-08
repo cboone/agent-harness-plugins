@@ -288,7 +288,7 @@ Run `git commit` with the message, then `--` and each committable file as a `":(
 
 If the commit fails because of an edit made here, or a hook rejects the message written here, fix the edit or the message and retry once. Before retrying, report any working-tree change the failed attempt left behind (compare a fresh status snapshot with the recorded one), rerun the step 5 checks on any file the fix touched, confirm again that each committable file holds only this run's comment edits, and record the hashes and snapshot again. A second failure, or any other failure (a hook failing for another reason, a signing failure, a lock file, or a merge or rebase in progress), ends this step without a commit: leave the edits uncommitted and report the exact error.
 
-After a commit, check what a hook changed, for example by running a formatter in write mode. A committed file whose recorded hash differs from `git rev-parse "HEAD:$path"` holds content this skill did not write. A new or changed entry in a fresh status snapshot, compared with the recorded one, is a file a hook left modified. Never amend or revert either kind of change; report the files.
+After a commit, check whether a hook changed anything; a hook can rewrite files, for example by running its own formatter. A committed file whose recorded hash differs from `git rev-parse "HEAD:$path"` holds content this skill did not write. A new or changed entry in a fresh status snapshot, compared with the recorded one, is a file a hook left modified. Never amend or revert either kind of change; report the files.
 
 ### 7. Report
 
