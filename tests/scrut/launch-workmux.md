@@ -2,6 +2,8 @@
 
 Tests for launcher stdin prompt handling, tmux recovery, and workmux argument construction.
 
+Without `--await-completion`, the launcher starts workmux in the background, sleeps `WORKMUX_LAUNCH_WAIT_SECONDS`, and prints whatever workmux has logged by then. Cases set that wait to 3 seconds rather than 1 because `make test-scrut` runs documents in parallel, and on a fully loaded machine the workmux stub has been seen to finish writing after 1 second, cutting the expected output short.
+
 ## Missing generated candidate
 
 ```scrut
@@ -108,7 +110,7 @@ The stub rejects naming invocations and duplicate workmux calls. Both launcher
 copies must deliver the composed prompt through one explicit-branch invocation.
 
 ```scrut
-$ for launcher in "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}"; do prepare_stubs && "${COMPOSE_ISSUE_PROMPT_BIN}" --chain-command '/address-issue 413' < "${REPO_ROOT}/tests/data/worktree-naming-issue.json" | env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${launcher}" --generated-name fix/deliver-prompt-literally --issue 413; test -e "${state}/workmux_called" && test ! -e naming-executed || exit 1; done
+$ for launcher in "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}"; do prepare_stubs && "${COMPOSE_ISSUE_PROMPT_BIN}" --chain-command '/address-issue 413' < "${REPO_ROOT}/tests/data/worktree-naming-issue.json" | env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${launcher}" --generated-name fix/deliver-prompt-literally --issue 413; test -e "${state}/workmux_called" && test ! -e naming-executed || exit 1; done
 Generated branch name: fix/413-deliver-prompt-literally
 workmux add
 branch: fix/413-deliver-prompt-literally
@@ -160,7 +162,7 @@ prompt-file-exists: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Prompt with {{ user }} and {% if ok %} and {# note #}' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/stdin-prompt" --base "main" \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/stdin-prompt" --base "main" \
 >   && sleep 0.1 \
 >   && prompt_file="$(cat "${state}/prompt_path")" \
 >   && if [[ -e "${prompt_file}" ]]; then echo "prompt cleanup: no"; else echo "prompt cleanup: yes"; fi
@@ -179,7 +181,7 @@ prompt cleanup: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Prompt body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_TMUX="/tmp/tmux-501/projects,123,%4" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/workmux-tmux"
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_TMUX="/tmp/tmux-501/projects,123,%4" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/workmux-tmux"
 workmux add
 branch: feature/workmux-tmux
 open-if-exists: true
@@ -199,7 +201,7 @@ the branch name.
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Prompt with {{ user }} and {% if ok %} and {# note #}' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/42-stdin-prompt" --base "main" \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/42-stdin-prompt" --base "main" \
 >   && sleep 0.1 \
 >   && prompt_file="$(cat "${state}/prompt_path")" \
 >   && if [[ -e "${prompt_file}" ]]; then echo "prompt cleanup: no"; else echo "prompt cleanup: yes"; fi
@@ -218,7 +220,7 @@ prompt cleanup: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Issue body with {{ value }}' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_TMUX="/tmp/tmux-501/projects,123,%4" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/issue-265"
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_TMUX="/tmp/tmux-501/projects,123,%4" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/issue-265"
 workmux add
 branch: feature/issue-265
 open-if-exists: true
@@ -234,7 +236,7 @@ prompt-file-exists: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Prompt body' \
->     | env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb TMUX="/tmp/tmux-501/existing,111,%1" WORKMUX_TMUX="/tmp/tmux-501/workmux,222,%2" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/existing-tmux"
+>     | env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb TMUX="/tmp/tmux-501/existing,111,%1" WORKMUX_TMUX="/tmp/tmux-501/workmux,222,%2" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/existing-tmux"
 workmux add
 branch: feature/existing-tmux
 open-if-exists: true
@@ -250,7 +252,7 @@ prompt-file-exists: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Issue body' \
->     | env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb TMUX="/tmp/tmux-501/existing,111,%1" WORKMUX_TMUX="/tmp/tmux-501/workmux,222,%2" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/existing-tmux-issue"
+>     | env PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb TMUX="/tmp/tmux-501/existing,111,%1" WORKMUX_TMUX="/tmp/tmux-501/workmux,222,%2" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/existing-tmux-issue"
 workmux add
 branch: feature/existing-tmux-issue
 open-if-exists: true
@@ -273,7 +275,7 @@ $ prepare_stubs \
 >   && panes="${socket}|%9|cx|${existing_worktree}|4242" \
 >   && porcelain="$(printf 'worktree %s\nHEAD abc123\nbranch refs/heads/feature/existing-worktree\n\n' "${existing_worktree}")" \
 >   && printf '%s\n' 'Issue body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${porcelain}" STUB_TMUX_LOG="${tmux_log}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" WORKMUX_TMUX="${socket},4242,%1" WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS=0 WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/existing-worktree" \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${porcelain}" STUB_TMUX_LOG="${tmux_log}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" WORKMUX_TMUX="${socket},4242,%1" WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS=0 WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/existing-worktree" \
 >   && sed "s|${existing_worktree}|<worktree>|g" "${tmux_log}"
 workmux add
 branch: feature/existing-worktree
@@ -299,7 +301,7 @@ $ prepare_stubs \
 >   && panes="${socket}|%9|cx|${existing_worktree}|4242" \
 >   && porcelain="$(printf 'worktree %s\nHEAD abc123\nbranch refs/heads/feature/existing-worktree-paste-fail\n\n' "${existing_worktree}")" \
 >   && printf '%s\n' 'Issue body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${porcelain}" STUB_TMUX_FAIL_COMMAND=paste-buffer STUB_TMUX_LOG="${tmux_log}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" WORKMUX_TMUX="${socket},4242,%1" WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS=0 WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/existing-worktree-paste-fail" \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_GIT_WORKTREE_PORCELAIN="${porcelain}" STUB_TMUX_FAIL_COMMAND=paste-buffer STUB_TMUX_LOG="${tmux_log}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" WORKMUX_TMUX="${socket},4242,%1" WORKMUX_CODEX_PROMPT_SUBMIT_DELAY_SECONDS=0 WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/existing-worktree-paste-fail" \
 >   && sed "s|${existing_worktree}|<worktree>|g" "${tmux_log}"
 workmux add
 branch: feature/existing-worktree-paste-fail
@@ -321,7 +323,7 @@ $ prepare_stubs \
 >   && cwd="$(pwd -P)" \
 >   && panes="${socket_real_path}|%7|cx|${cwd}|4242" \
 >   && printf '%s\n' 'Prompt body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" TMUX_TMPDIR="${tmux_tmpdir}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/discovered-tmux" \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" TMUX_TMPDIR="${tmux_tmpdir}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/discovered-tmux" \
 >   && cleanup_socket_fixture \
 >   && trap - EXIT
 workmux add
@@ -343,7 +345,7 @@ $ prepare_stubs \
 >   && cwd="$(pwd -P)" \
 >   && panes="${socket_real_path}|%7|codex-aarch64-a|${cwd}|4242" \
 >   && printf '%s\n' 'Issue body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" TMUX_TMPDIR="${tmux_tmpdir}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/discovered-tmux-issue" \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" TMUX_TMPDIR="${tmux_tmpdir}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/discovered-tmux-issue" \
 >   && cleanup_socket_fixture \
 >   && trap - EXIT
 workmux add
@@ -365,7 +367,7 @@ $ prepare_stubs \
 >   && cwd="$(pwd -P)" \
 >   && panes="${socket_real_path}|%7|cx|${cwd}|4242"$'\n'"${socket_real_path}|%8|codex|${cwd}|4242" \
 >   && printf '%s\n' 'Prompt body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" TMUX_TMPDIR="${tmux_tmpdir}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/ambiguous-tmux" \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" TMUX_TMPDIR="${tmux_tmpdir}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/ambiguous-tmux" \
 >   && cleanup_socket_fixture \
 >   && trap - EXIT
 workmux add
@@ -387,7 +389,7 @@ $ prepare_stubs \
 >   && cwd="$(pwd -P)" \
 >   && panes="${socket_real_path}|%7|cx|${cwd}|4242"$'\n'"${socket_real_path}|%8|codex|${cwd}|4242" \
 >   && printf '%s\n' 'Issue body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" TMUX_TMPDIR="${tmux_tmpdir}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/ambiguous-tmux-issue" \
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" TMUX_TMPDIR="${tmux_tmpdir}" STUB_TMUX_PANES="${panes}" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/ambiguous-tmux-issue" \
 >   && cleanup_socket_fixture \
 >   && trap - EXIT
 workmux add
@@ -408,7 +410,7 @@ $ state="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux" \
 >   && chmod +x "${stub_dir}/workmux" \
 >   && printf '%s\n' 'Prompt body' \
->     | env -u TMUX PATH="${stub_dir}:/usr/bin:/bin:/usr/sbin:/sbin" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/no-tmux-command"
+>     | env -u TMUX PATH="${stub_dir}:/usr/bin:/bin:/usr/sbin:/sbin" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/no-tmux-command"
 workmux add
 branch: feature/no-tmux-command
 open-if-exists: true
@@ -427,7 +429,7 @@ $ state="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
 >   && cp "${WORKMUX_STUB_BIN}" "${stub_dir}/workmux" \
 >   && chmod +x "${stub_dir}/workmux" \
 >   && printf '%s\n' 'Issue body' \
->     | env -u TMUX PATH="${stub_dir}:/usr/bin:/bin:/usr/sbin:/sbin" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/no-tmux-command-issue"
+>     | env -u TMUX PATH="${stub_dir}:/usr/bin:/bin:/usr/sbin:/sbin" STUB_STATE="${state}" STUB_CAPTURE_TERM=1 STUB_CAPTURE_TMUX=1 TERM=dumb WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" "feature/no-tmux-command-issue"
 workmux add
 branch: feature/no-tmux-command-issue
 open-if-exists: true
@@ -446,7 +448,7 @@ inserts the number after the type prefix.
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Make things better' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/make-things-better" --issue 387 --base "main"
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/make-things-better" --issue 387 --base "main"
 Generated branch name: feature/387-make-things-better
 workmux add
 branch: feature/387-make-things-better
@@ -466,7 +468,7 @@ the front rather than a type prefix being invented; the `pr` skill matches
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Make things better' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "make-things-better" --issue 387
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "make-things-better" --issue 387
 Generated branch name: 387-make-things-better
 workmux add
 branch: 387-make-things-better
@@ -481,7 +483,7 @@ prompt-file-exists: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Fix the login page' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "fix/the-login-page"
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "fix/the-login-page"
 Generated branch name: fix/the-login-page
 workmux add
 branch: fix/the-login-page
@@ -496,7 +498,7 @@ prompt-file-exists: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/issue-42-already-numbered" --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/issue-42-already-numbered" --issue 42
 Generated branch name: feature/42-already-numbered
 workmux add
 branch: feature/42-already-numbered
@@ -515,7 +517,7 @@ wins over the supplied candidate.
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-earlier-name\nmain' WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/should-not-be-used" --issue 387
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-earlier-name\nmain' WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${ADDRESS_ISSUE_IN_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/should-not-be-used" --issue 387
 Reusing branch feature/387-earlier-name for issue 387
 workmux add
 branch: feature/387-earlier-name
@@ -531,7 +533,7 @@ prompt-file-exists: yes
 $ prepare_stubs \
 >   && exit_code=0 \
 >   && { printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-one\nfix/387-two' WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/generated-name" --issue 387 2>&1; } || exit_code=$?; if compgen -G "${TMPDIR:-/tmp}/workmux-prompt-issue-387.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/387-one\nfix/387-two' WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/generated-name" --issue 387 2>&1; } || exit_code=$?; if compgen -G "${TMPDIR:-/tmp}/workmux-prompt-issue-387.md.*" > /dev/null; then echo "temp cleanup: no"; else echo "temp cleanup: yes"; fi; exit "${exit_code}"
 launch-workmux: issue 387 matches more than one local branch:
   feature/387-one
   fix/387-two
@@ -549,7 +551,7 @@ keeps an unusable name out of `workmux add`.
 $ prepare_stubs \
 >   && exit_code=0 \
 >   && { printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/make things better" --issue 387 2>&1; } || exit_code=$?; exit "${exit_code}"
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/make things better" --issue 387 2>&1; } || exit_code=$?; exit "${exit_code}"
 launch-workmux: git rejects branch name: feature/make things better
 [1]
 ```
@@ -563,7 +565,7 @@ Without `--issue` there is no number to prepend, so a leading hyphen would reach
 $ prepare_stubs \
 >   && exit_code=0 \
 >   && { printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "--base" 2>&1; } || exit_code=$?; exit "${exit_code}"
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "--base" 2>&1; } || exit_code=$?; exit "${exit_code}"
 launch-workmux: branch name starting with a hyphen: --base
 [1]
 ```
@@ -576,7 +578,7 @@ the middle of the name. An explicit `issue-N` marker there is unambiguous.
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "fix/login-issue-42-timeout" --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "fix/login-issue-42-timeout" --issue 42
 Generated branch name: fix/42-login-timeout
 workmux add
 branch: fix/42-login-timeout
@@ -595,7 +597,7 @@ though the number then appears twice.
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/python-3-support" --issue 3
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/python-3-support" --issue 3
 Generated branch name: feature/3-python-3-support
 workmux add
 branch: feature/3-python-3-support
@@ -614,7 +616,7 @@ the generator chose.
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feat/search/ui" --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feat/search/ui" --issue 42
 Generated branch name: feat/42-search/ui
 workmux add
 branch: feat/42-search/ui
@@ -632,7 +634,7 @@ the generated name is not lowercased on its way through.
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "Feature/Add-Dark-Mode" --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "Feature/Add-Dark-Mode" --issue 42
 Generated branch name: Feature/42-Add-Dark-Mode
 workmux add
 branch: Feature/42-Add-Dark-Mode
@@ -647,7 +649,7 @@ prompt-file-exists: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/migrate-to-python-3" --issue 3
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/migrate-to-python-3" --issue 3
 Generated branch name: feature/3-migrate-to-python-3
 workmux add
 branch: feature/3-migrate-to-python-3
@@ -662,7 +664,7 @@ prompt-file-exists: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'user/feature/42-earlier\nmain' WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/should-not-be-used" --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'user/feature/42-earlier\nmain' WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/should-not-be-used" --issue 42
 Reusing branch user/feature/42-earlier for issue 42
 workmux add
 branch: user/feature/42-earlier
@@ -681,7 +683,7 @@ branch it had itself created and would generate a second one.
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/42/ui\nmain' WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/should-not-be-used" --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/42/ui\nmain' WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/should-not-be-used" --issue 42
 Reusing branch feature/42/ui for issue 42
 workmux add
 branch: feature/42/ui
@@ -696,7 +698,7 @@ prompt-file-exists: yes
 ```scrut
 $ prepare_stubs \
 >   && printf '%s\n' 'Body' \
->     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/420-other\nmain' WORKMUX_LAUNCH_WAIT_SECONDS=1 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/new-work" --issue 42
+>     | env -u TMUX PATH="${stub_dir}:${PATH}" STUB_STATE="${state}" STUB_GIT_BRANCHES=$'feature/420-other\nmain' WORKMUX_LAUNCH_WAIT_SECONDS=3 bash "${CREATE_WORKTREE_LAUNCH_WORKMUX_BIN}" --generated-name "feature/new-work" --issue 42
 Generated branch name: feature/42-new-work
 workmux add
 branch: feature/42-new-work
