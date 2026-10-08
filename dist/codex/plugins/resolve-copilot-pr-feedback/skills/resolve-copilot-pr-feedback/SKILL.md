@@ -24,7 +24,7 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 **Permitted operations:**
 
 - Fetch unresolved Copilot threads using the script's `fetch` command
-- Fetch Copilot review-body findings using the script's `fetch-reviews` command
+- Fetch Copilot review bodies using the script's `fetch-reviews` command
 - Audit every Copilot item on the PR using the script's read-only `audit` command
 - Read existing PR comments (never write them) to check for prior summaries
 - Reply to EXISTING Copilot threads using the script's `reply` command
@@ -164,11 +164,11 @@ Copilot leaves feedback in threads and in review bodies, and occasionally somewh
 
 ```bash
 bash resolve-copilot-threads fetch OWNER REPO PR_NUMBER
-bash resolve-copilot-threads fetch-reviews OWNER REPO PR_NUMBER
+bash resolve-copilot-threads fetch-reviews OWNER REPO PR_NUMBER [--since TIMESTAMP]
 bash resolve-copilot-threads audit OWNER REPO PR_NUMBER
 ```
 
-The script automatically handles pagination and filters for Copilot-authored content. Step 1d covers what `audit` reports.
+The script automatically handles pagination and filters for Copilot-authored content. Step 1b says which `--since` value to pass, and step 1d covers what `audit` reports.
 
 Record the `OWNER`, `REPO`, and `PR_NUMBER` values used for the fetch. This establishes PR context for the required final workflow summary in step 7. If PR context or GitHub authentication cannot be established, report that the required final summary could not be posted and do not mark the workflow complete.
 
@@ -183,26 +183,29 @@ Record the `OWNER`, `REPO`, and `PR_NUMBER` values used for the fetch. This esta
     "path": "src/foo.ts",
     "location": "src/foo.ts:42",
     "isOutdated": false,
-    "comments": [{ "author": "copilot", "body": "[nitpick] Consider..." }]
+    "comments": [{ "author": "copilot", "body": "[nitpick] Consider...", "databaseId": 4212881859, "url": "https://github.com/OWNER/REPO/pull/54#discussion_r4212881859" }]
   }
 ]
 ```
 
 - **`location`**: Uses the first non-null of `line`, `originalLine`, `startLine`, `originalStartLine`. If all line fields are null, reports `path:(no-line)`.
-- **Copilot detection**: Matches author logins `copilot-pull-request-reviewer`, `copilot-pull-request-reviewer[bot]`, `copilot`, and `github-copilot[bot]`, plus `github-actions[bot]` when the comment body opens with a severity tag. Both `[bot]`-suffixed and unsuffixed forms are listed because GraphQL and REST report the same Copilot account differently, so one list serves both commands. The `github-actions[bot]` rule is the exception: it applies to `fetch` only. It keys on a comment body opening with a severity tag, and review bodies open with a verdict heading, so `fetch-reviews` has nothing to match on and uses the direct logins alone.
+- **`databaseId`**: the review comment id, the number in the comment's `#discussion_r` link. Step 1d uses it to match a review body's `threadLinks` to a thread.
+- **Copilot detection**: Matches author logins `copilot-pull-request-reviewer`, `copilot-pull-request-reviewer[bot]`, `copilot`, and `github-copilot[bot]`, plus `github-actions[bot]` when the comment body opens with a severity tag. Both `[bot]`-suffixed and unsuffixed forms are listed because GraphQL and REST report the same Copilot account differently, so one list serves both commands. The `github-actions[bot]` rule is the exception: it applies to `fetch` only, because the severity tag is a thread-comment convention.
 
 An empty array `[]` means no unresolved Copilot threads remain.
 
 **`[]` from `fetch` is a statement about threads only. It is never proof that Copilot left no feedback.** Two separate things can hide behind it:
 
-- Copilot may have filed findings in a review body instead of a thread. That is what `fetch-reviews` in step 1b is for, and you must run it before concluding anything.
+- Copilot may have filed findings in a review body instead of a thread. That is what step 1b is for, and you must run it before concluding anything.
 - A previous attempt may have already done the work. Before using the no-op summary form, check whether this invocation is recovering from a prior failed summary-post step. If a previous run resolved threads or made code changes but failed to post the required final summary, reuse the preserved summary body from that run or reconstruct it from the prior local output, resolved review threads, branch commits, and branch diff. Do not downgrade that recovery summary to the no-op form just because a later fetch returns `[]`.
 
-#### 1b. Review-body findings (`fetch-reviews`)
+#### 1b. Review bodies (`fetch-reviews`)
 
-Copilot does not always open a thread. When it declines to comment on a line the latest push did not touch, it files the finding in the **review body** under a "suppressed comments" section and reports `Comments generated: 0 new`. Those findings are real and actionable, they have no thread id, and `fetch` cannot see them.
+Copilot does not always open a thread. It also states findings in the review body itself: in its lead paragraph, in lists of open or previously missed findings, in file-summary tables, and in whatever shape it adopts next. Those findings are real and actionable, they have no thread id, and `fetch` cannot see them.
 
-**Output format** (JSON array, one entry per Copilot review that has a body):
+**The script does not parse review bodies, and neither should you look for a particular layout.** Copilot reshapes its review-body layout often. The text always says what Copilot found, so read it as a person would.
+
+**Output format** (JSON array, oldest first, one entry per Copilot review with a non-empty body):
 
 ```json
 [
@@ -211,52 +214,24 @@ Copilot does not always open a thread. When it declines to comment on a line the
     "url": "https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762218",
     "submittedAt": "2026-08-21T18:02:11Z",
     "commitId": "abc1234def5678",
-    "headline": "### 🔵 Needs a closer look\n\nThe Phase 2 plan section is internally inconsistent...",
-    "verdict": "### 🔵 Needs a closer look",
-    "hasSuppressedMarker": true,
-    "reviewKind": "review",
-    "hasFormatDrift": false,
-    "needsRead": false,
-    "unaccounted": [],
-    "suppressed": "### Suppressed comments (1)\n\n**docs/plans/todo/phased-build-plan.md:243**\n* This section now states...",
-    "reviewBody": "### 🔵 Needs a closer look\n\n...",
-    "findings": [{ "location": "docs/plans/todo/phased-build-plan.md:243", "path": "docs/plans/todo/phased-build-plan.md", "line": 243, "severity": null, "body": "* This section now states...", "source": "suppressed", "region": "Suppressed comments" }]
+    "threadLinks": [4212881859, 4212881910],
+    "body": "<!-- ccr-overview-v2 -->\n\n### 🟡 Changes recommended\n\n..."
   }
 ]
 ```
 
-- **`findings`**: the structured parse. Treat each entry exactly like a thread comment, except that it cannot be replied to or resolved.
-  - **`source`** says which layout it came from: `suppressed`, `previously-missed`, `table` (a vote-tagged item in a file-summary cell), `bullets` (a vote-tagged bullet under a findings label), or `lead`. **`region`** names the body section it sits in.
-  - A `lead` finding is the review's lead paragraph, emitted when `needsRead` is true, after any parsed findings. It has `location: "(review overview)"`, no path, no line and no severity. Its body keeps every line of the lead, bullets and bold text included. When a non-clean verdict needs a read but has no lead at all, the body is the verdict heading itself, so the finding always has text to quote and match. It may hold several concerns: handle it as step 1d describes.
-  - A `bullets` finding that names no file has `path: null` and `location: "(review body)"`.
+- **`body`**: the complete raw review body, exactly as Copilot wrote it, HTML included.
 - **`commitId`**: the commit the review ran against. Compare it with the pull request's `headRefOid` (`gh pr view PR_NUMBER --repo OWNER/REPO --json headRefOid`) to tell a review of the current head from one of an older push.
-- **`verdict`**: the first `###` heading in the body. On `ccr-overview-v2` reviews it is the verdict heading, exposed separately from the lead paragraph in `headline`. Older layouts can report a section heading such as `### Reviewed changes`, or `null`, so read `headline` rather than `verdict` there.
-- **`reviewKind`**: `review`, or one of two notices Copilot posts through the review API that are **not reviews**: `error` ("Copilot encountered an error and was unable to review this pull request") and `no-files` (every changed file was excluded). A notice has no verdict and no findings, which is exactly what a clean review looks like, so never read one as clean. `unknown` is a body that is neither, and it also sets drift.
-- **`hasFormatDrift`**: the layout could not be read, which only a parser change fixes. It is true for:
-  - **A shortfall**: the `**Findings:**` line states how many inline threads Copilot opened, as a severity breakdown whose counts are summed (`2 <medium> · 1 <low>` is three). A total above the number announced under `Open (N)` leaves findings this command cannot explain. In the open-findings layout there is neither the line nor `Open (N)`: the count is stated as an `N open findings` summary and compared with the thread links its block lists, or, when nothing is open, as a `**0 open findings**` line in the preamble. An open section, in either layout, that holds anything but thread links is a shortfall too, even under a count of zero, and so is a second open section, a section whose links outnumber its count, or an open-findings count stated beside any other count form. So is a value reading as neither `None` nor a breakdown, and so is a `ccr-overview-v2` body that states its count in neither form: every observed v2 body states it in one of the two, so its absence means the header was renamed. A section summary counts only as a line of its own, outside fenced blocks: one quoted in a finding or a note is prose. A count written first, as in `3 open findings`, is read from a summary whose bold text opens with it.
-  - **Any `unaccounted` entry**, below.
-  - **A body that announces a suppressed-comments section and yields no parsed findings at all.**
-  - **`reviewKind: unknown`.**
-- **`unaccounted`**: what the census found that nothing explains. The census checks every finding-shaped signal in the body against what the parsers returned: each vote tag such as `(2 votes)` against the findings parsed from its line, each `path:line` heading or list item against the located findings in its section, each section count such as `Open (3)` or `3 open findings` against the findings and thread links that section holds, and, on `ccr-overview-v2` bodies, each HTML element against the small set that layout is built from. A severity badge on a line with no thread link is checked against the findings parsed in its section, and a fenced block still open at the end of the body is reported too, since everything after its opening line goes unread. Every entry is `{kind, region, line, text}`, where `kind` is `vote`, `location`, `section-count`, `element`, `badge` or `fence`, `line` is the body line and `text` quotes it. A non-empty list means a parser read the layout only partly, or not at all.
-- **`needsRead`**: the lead paragraph has to be read, because it is the place a concern may be stated that nothing else records. That is a reading task, not a format change: the lead may state a new finding, restate a thread or a parsed finding, ask for human review without naming a defect, or say nothing of concern. It is true on a `ccr-overview-v2` review when either:
-  - the lead is not empty and is anything but a known no-finding sentence, whatever the verdict and whatever else parsed, so an approval that names a nit is read; or
-  - a verdict other than `Approval recommended`, or no verdict at all, has no open thread and no parsed finding behind it, unless the round lists `Resolved since last review (N)` or `N resolved since last review` and its lead is a known no-finding sentence.
+- **`threadLinks`**: the review comment ids the body links to through `#discussion_r` links. A hint for matching a concern to a thread from `fetch` by its `databaseId`, nothing more: an empty list never means the body names no threads.
 
-  The known sentences, such as "One or more issues must be addressed before approval." and "No unresolved review issues were identified.", must be the whole lead: one followed by anything else is read. The lead arrives as one `lead` finding.
+**Choose which reviews to read**, using the summary comments step 1c reads:
 
-- **`suppressed`**: the raw legacy section, verbatim, beginning with the line that announced it.
-- **`reviewBody`**: the complete immutable review body, for reading what the parsers could not.
-- **`headline`**: everything before the first details block: the marker, the title, the verdict, the lead and, where present, the `**Review effort:**`, `**Findings:**` and `**0 open findings**` lines, without the calls to action.
+1. Find the newest existing `## Copilot Feedback Summary` comment on the PR and its `created_at` time.
+1. Run `fetch-reviews` with `--since` set to that time, in the `YYYY-MM-DDTHH:MM:SSZ` form GitHub reports. Every review before it was read by the run that posted that summary.
+1. Also read the newest review against the current head, even if it predates that summary, so every run checks what Copilot currently says about the head.
+1. With no prior summary, omit `--since` and read every Copilot review on the PR.
 
-`**Findings:** None` and `0 open findings` never mean "this review has no findings". The count covers inline threads only: a review stating `None` can carry `Previously missed (3)` and findings in file-summary cells.
-
-Review-body findings may have `line: null`. The `location` is then the normalized path alone, and `severity` preserves the textual severity that Copilot displayed. Never invent a line number.
-
-**Format-drift rule (CRITICAL):** if `hasFormatDrift` is `true`, Copilot has changed its review-body layout. Read each `unaccounted` entry's line, then `reviewBody`, and extract the findings yourself. Open the review at `url` when the raw fields still do not make the concern clear. **Never treat a drift result as "no findings."** Report the drift in the step 7 summary so it gets fixed.
-
-`hasSuppressedMarker` is computed from the review body itself, not from what the slice captured, so an announced-but-empty section still reports drift rather than looking like a clean review.
-
-An entry with `reviewKind: review`, `hasFormatDrift: false`, `needsRead: false` and an empty `findings` array carries no review-body findings. If every entry looks like that, `fetch` returned `[]`, and `audit` reported nothing, only then is there genuinely nothing to process.
+A review that is skipped because its body is not a string is named on stderr (`Warning: skipping review ID: its body is not a string.`). Open it at its id and read it by hand.
 
 #### 1c. Check for findings handled in a previous run
 
@@ -265,40 +240,39 @@ Copilot re-emits the same review-body finding in **every** later review until th
 Before acting on any review-body finding, read the PR's existing summary comments:
 
 ```bash
-gh api --paginate repos/OWNER/REPO/issues/PR_NUMBER/comments --jq '.[] | select(.body | startswith("## Copilot Feedback Summary")) | .body'
+gh api --paginate repos/OWNER/REPO/issues/PR_NUMBER/comments --jq '.[] | select(.body | startswith("## Copilot Feedback Summary")) | {created_at, body}'
 ```
 
-`--paginate` is required. Without it only the first page of comments is inspected, so on a PR with a long comment history the prior summaries fall out of view and every review-body finding looks new again, which is exactly the re-processing this step exists to prevent.
+`--paginate` is required. Without it only the first page of comments is inspected, so on a PR with a long comment history the prior summaries fall out of view and every review-body finding looks new again, which is exactly the re-processing this step exists to prevent. The newest `created_at` is also the `--since` value for step 1b.
 
 This reads comments; it never writes one, so it does not violate the PR Comments Prohibition. Then, for each finding:
 
-1. **Recorded before, and its disposition still holds.** A prior summary has a review-body row for the same finding: the same `path:line`, or for a line-less finding the same normalized path with a `Finding` excerpt that appears in this finding's `body`. That row usually links an earlier review, because Copilot repeats the finding in later reviews; the link records where the finding came from and is not part of its identity. Reading the current code confirms the recorded disposition still holds: for a `Fixed` row the fix is still in place, and for a `Noted` row (Incorrect, Outdated, or Nitpick) the code and evidence its rationale relied on are unchanged, so the same no-change decision applies. Record it as `Previously handled`, carry the prior disposition forward, and change nothing. A no-change finding never stops matching the code, so without this rule Copilot's repeats would be re-processed on every review.
+1. **Recorded before, and its disposition still holds.** A prior summary has a review-body row for the same finding: the same `path:line`, or for a line-less finding the same normalized path with a `Finding` excerpt that matches this finding's wording. That row usually links an earlier review, because Copilot repeats the finding in later reviews; the link records where the finding came from and is not part of its identity. Reading the current code confirms the recorded disposition still holds: for a `Fixed` row the fix is still in place, and for a `Noted` row (Incorrect, Outdated, or Nitpick) the code and evidence its rationale relied on are unchanged, so the same no-change decision applies. Record it as `Previously handled`, carry the prior disposition forward, and change nothing. A no-change finding never stops matching the code, so without this rule Copilot's repeats would be re-processed on every review.
 1. **Recorded before, but no longer settled.** The earlier run deferred it, a fix regressed, or the code a no-change rationale relied on has changed since. Process it normally.
 1. **Path matches, line does not.** Line numbers drift as files change. Treat it as a candidate and let the code check decide, rather than assuming it is new.
-1. **Line-less path matches, excerpt does not.** No prior row for that path has an excerpt that appears in this finding's `body`. Treat it as a different finding. A file-summary review can carry several findings for one path, so the path alone is not an identity.
-1. **No path at all.** A `lead` finding, or a `bullets` finding that names no file, has only its text. A prior row for the same `location` whose `Finding` excerpt appears in this finding's `body` is the same finding. Without one, it is new.
+1. **Line-less path matches, excerpt does not.** No prior row for that path has an excerpt matching this finding. Treat it as a different finding. A review can carry several findings for one path, so the path alone is not an identity.
+1. **No path at all.** A concern from a lead paragraph or another part of the body that names no file has only its text. A prior row with the same `location`, such as `(review overview)`, whose `Finding` excerpt matches this concern is the same finding. Without one, it is new.
 1. **No match.** Process it normally.
 
 Always verify against the current code before deciding. Verification is what keeps this correct when someone edits or deletes a summary comment: the cost is a re-check, not a wrong answer.
 
-#### 1d. Reconcile what the parsers could not
+#### 1d. Read each review and settle every concern
 
-Parsed findings and threads are not the whole picture. This step covers the rest, and it is what keeps feedback that arrives in a new place or a new shape from being missed.
+This step is the core of the review-body work. Do it for every review step 1b chose.
 
-1. **Read the `audit` result.** It reports `surfaces` (counts of Copilot reviews, review comments and PR comments), `uncovered` and `legacyNeedsRead`.
-   - Each `uncovered` entry is Copilot feedback that neither `fetch` nor `fetch-reviews` reaches: a reply inside an unresolved thread a person opened, a review comment no thread holds, or a comment on the PR itself. Read it at its `url`, then categorize and handle it like a review-body finding. It has no Copilot thread to resolve. Never reply on a person's thread or on the PR: the PR Comments Prohibition still applies.
-   - Each id in `legacyNeedsRead` is an older-layout review whose first heading is not the approval verdict, or that has no heading at all, with nothing parsed and no inline comments attached. Its prose is the only record of what it found: read it in the next item.
-1. **Choose the reviews to read in full.** Read every review with `hasFormatDrift` or `needsRead`, every id in `legacyNeedsRead`, and always the newest Copilot review against the current head, because that is where a new layout first appears. Reviews already recorded in a prior summary for this head are settled by step 1c.
-1. **List every concern each of those reviews states**, from `headline` and `reviewBody`, skipping file-summary rows that state no finding. A lead finding can hold several concerns: "A moderate cleanup-trap defect and two unresolved sandbox-path documentation gaps remain" is three.
+1. **Read the whole body before deciding anything.** Never stop at the first heading or paragraph: findings appear anywhere, including in table cells and collapsed `<details>` blocks.
+1. **Decide whether it is a review or a notice.** A notice says Copilot did not review the head: for example, it hit an error, or every changed file was excluded. A notice has no findings, which is exactly what a clean review looks like, so never read one as clean. If the newest Copilot review against the current head is a notice, record a workflow-level failure whose failure row names it as a **Copilot notice** with its review `id` and quotes it. A body that is plainly neither a review nor a notice is also a workflow-level failure, quoted the same way. `monitor-pr` reads that row to take its notice path.
+1. **List every concern the review states, wherever it states it.** Typical places are the lead paragraph, lists of open, new or previously missed findings, file-summary table cells (often with a severity and a vote count), suppressed or low-confidence sections, and any section Copilot introduces later. Skip text that states no finding, such as "no final comments" in a file summary, descriptions of what the change does, and calls to action. One sentence can hold several concerns: "A moderate cleanup-trap defect and two unresolved sandbox-path documentation gaps remain" is three.
 1. **Settle each concern**, in the first of these that applies:
-   1. **Matched**: it restates a thread from `fetch`, open or already resolved, a parsed finding, or a `Previously handled` row. Record it against that item; nothing new is processed.
-   1. **New**: it names a defect nothing else records. Handle it as a review-body finding with the most specific location the text supports. Never invent a line.
+   1. **Matched**: it restates a thread from `fetch`, open or already resolved, or a `Previously handled` row from step 1c. A concern beside a `#discussion_r` link usually belongs to the thread whose comment `databaseId` matches; confirm by reading. Record it against that item; nothing new is processed.
+   1. **New**: it names a defect nothing else records. Handle it as a review-body finding with the most specific location the text supports: `path:line` when the text gives a line, otherwise the normalized path, otherwise `(review overview)` or `(review body)`. Never invent a line. Strip zero-width spaces Copilot inserts into paths.
    1. **Advisory**: it names no defect and asks for human judgment, such as "Authentication and logout changes warrant final human review". See step 2.
-   1. **No concern**: it states nothing to act on, such as a summary of what the change does or "All reviewed changes are covered by passing tests". Record it as `Noted` with that rationale. This is common on approvals, whose leads are read because some of them do name a nit.
-1. **Record the drift.** Every `unaccounted` entry and every `reviewKind: unknown` review goes into the step 7 failure details, with its review link, so the parser gets updated.
-1. **Check for notices.** If the newest Copilot review against the current head has `reviewKind` `error` or `no-files`, Copilot did not review that head. Record a workflow-level failure that quotes the notice. A notice is never a clean review.
+   1. **No concern**: it states nothing to act on, such as a summary of what the change does or "All reviewed changes are covered by passing tests". Record it as `Noted` with that rationale.
+1. **Read the `audit` result.** It reports `surfaces` (counts of Copilot reviews, review comments and PR comments) and `uncovered`. Each `uncovered` entry is Copilot feedback that neither `fetch` nor `fetch-reviews` reaches: a reply inside an unresolved thread a person opened, a review comment no thread holds, or a comment on the PR itself. Read it at its `url`, then categorize and handle it like a review-body finding. It has no Copilot thread to resolve. Never reply on a person's thread or on the PR: the PR Comments Prohibition still applies.
 
 A vague concern, such as one naming a defect class without a location, still gets settled: search for it, and if nothing matches after a real search, record it as `Noted` with what was checked, so the next run does not repeat the search.
+
+Nothing about a review's layout can fail the workflow. If a body is hard to read, read it more carefully, and open the review at its `url` if the raw text still leaves a concern unclear.
 
 ### 2. Categorize Each Comment
 
@@ -315,7 +289,7 @@ For each unresolved Copilot comment **and each review-body finding**:
 
 The same categories apply to review-body findings, but the Action column does not: they have no thread to reply to or resolve. See [Review-Body Findings](#review-body-findings-no-thread) for what to do instead. Note also that review-body findings carry **no `[nitpick]` prefix**, so judge Nitpick from the prose rather than looking for a tag.
 
-Advisory arises from a review's lead paragraph, not from a thread. It needs no code change and never holds the workflow short of `Completed`, but it must reach a person: list each one under the summary's `Requests for human review` heading in step 7, quoted with its review link.
+Advisory arises from a review body, usually its lead paragraph, not from a thread. It needs no code change and never holds the workflow short of `Completed`, but it must reach a person: list each one under the summary's `Requests for human review` heading in step 7, quoted with its review link.
 
 ### 3. Resolve Threads
 
@@ -415,8 +389,6 @@ Apply the same categories, minus the thread operations:
 
 Every review-body finding gets a row in the step 7 summary and in the local audit table, whatever its category. Link its source to the exact review URL. A fixed finding names the fixing commit; an Incorrect, Outdated, or Nitpick disposition states the evidence or rationale for making no code change. Since Copilot will keep re-emitting the finding and there is no thread to resolve, that linked row **is** the record that it was handled, and step 1c reads it back on the next run.
 
-If step 1b reported format drift (`hasFormatDrift: true`), extract what you can from the `unaccounted` lines, `suppressed` or `reviewBody`, process those findings normally, and add a workflow-level failure noting that the review-body format changed and the parser needs updating. `needsRead` is not drift: once step 1d settles each lead concern, it adds no failure.
-
 ### 5. Lint and Fix
 
 **After all code changes are made (from Valid or Incorrect categories), run the `lint-and-fix` skill to catch lint errors before pushing.**
@@ -457,11 +429,11 @@ Do not run this step if step 5 recorded a lint failure or skipped required lint 
    **Do not re-run `fetch-reviews` as a completion check.** Review bodies are immutable, so a review-body finding you just fixed still appears in the old body and always will. It will never go empty, and treating it as a verification signal produces a false Partial forever. Only the thread `fetch` is expected to reach `[]`.
 
 1. Determine terminal workflow status and counts:
-   - **No unresolved Copilot feedback**: the initial `fetch` returned `[]`, `fetch-reviews` returned at least one entry with `reviewKind: review` whose `commitId` is the current `headRefOid`, every entry had `hasFormatDrift: false` and `needsRead: false` and every finding was absent or `Previously handled`, and `audit` reported nothing `uncovered` and nothing in `legacyNeedsRead`. Never use this status without having run `fetch-reviews` and `audit`. An empty `fetch-reviews` is not "nothing to process": every entry being clean is trivially true of no entries. If Copilot has not reviewed the current head, record a workflow-level failure that says so instead.
-   - **Completed**: Every fetched thread, review-body finding, lead concern and uncovered item was handled according to its category, `audit` ran successfully, no failed or pending items remain, and any required code changes were pushed. Advisory items do not prevent this status. A failed `audit` is a workflow-level failure, because the items it would have reported went unread.
+   - **No unresolved Copilot feedback**: the initial `fetch` returned `[]`, `fetch-reviews` returned a Copilot review whose `commitId` is the current `headRefOid` and which step 1d read as a review rather than a notice, every review step 1d read stated no concern other than `Previously handled` ones and no-concern text, and `audit` reported nothing `uncovered`. Never use this status without having run `fetch-reviews` and `audit` and read the reviews they returned. An empty `fetch-reviews` is not "nothing to process": if Copilot has not reviewed the current head, record a workflow-level failure that says so instead.
+   - **Completed**: Every fetched thread, review-body concern and uncovered item was handled according to its category, `audit` ran successfully, no failed or pending items remain, and any required code changes were pushed. Advisory items do not prevent this status. A failed `audit` is a workflow-level failure, because the items it would have reported went unread.
    - **Partial**: At least one item was handled, but one or more items, replies, resolutions, tracking items, instruction updates, lint runs, pushes, or verification checks failed or remain pending, or a workflow-level failure was recorded
-   - **Failed**: The workflow could not fetch or process feedback, or no required processing step succeeded. This includes a run whose only Copilot review for the current head is an `error` or `no-files` notice: nothing was reviewed.
-1. Track feedback metrics separately from workflow-level failures. Feedback metrics cover fetched, resolved, pending, failed, deferred, code-change, review-body, uncovered, advisory and previously handled items. Workflow-level failures cover non-thread steps such as instruction updates, follow-up tracking, lint runs, pushes, verification checks, review-body format drift, and a Copilot notice in place of a review.
+   - **Failed**: The workflow could not fetch or process feedback, or no required processing step succeeded. This includes a run whose only Copilot review for the current head is a notice: nothing was reviewed.
+1. Track feedback metrics separately from workflow-level failures. Feedback metrics cover fetched, resolved, pending, failed, deferred, code-change, review-body, uncovered, advisory and previously handled items. Workflow-level failures cover non-thread steps such as instruction updates, follow-up tracking, lint runs, pushes, verification checks, and a Copilot notice or unreadable body in place of a review.
 1. Proceed to step 7 before claiming completion
 
 ### 7. Post PR Summary Comment
@@ -498,18 +470,18 @@ When any item is Advisory, add this section between `Head SHA` and the table, on
 - "Authentication and logout changes warrant final human review." ([Review body 5035762221](https://github.com/OWNER/REPO/pull/54#pullrequestreview-5035762221))
 ```
 
-When any review produced a `lead` finding, add one line directly under the table, counting each lead concern once by how step 1d settled it, and omitting zero counts:
+Whenever step 1d read a review, add one line directly under the table, counting each concern it listed once by how it was settled, and omitting zero counts:
 
 ```markdown
-Lead findings: 3 matched, 1 handled as new, 1 advisory, 2 no concern.
+Review concerns: 3 matched, 1 handled as new, 1 advisory, 2 no concern.
 ```
 
-`matched` covers a concern restating a thread, a parsed finding, or a `Previously handled` row. That line is what makes it measurable, across a PR's summaries, how often a lead only restates feedback the fetches already report.
+`matched` covers a concern restating a thread or a `Previously handled` row. That line is what makes it measurable, across a PR's summaries, how much of a review body only restates feedback the threads already carry.
 
 - Status must be one of `Completed`, `No unresolved Copilot feedback`, `Partial`, or `Failed`
 - **`Source`** is `Thread`, a `Review body REVIEW_ID` link using the exact `url` returned by `fetch-reviews`, or for an `audit` item an `Uncovered review comment ID` or `Uncovered PR comment ID` link using its `url`. Those items have no Copilot thread, so the link visibly connects the disposition to its source.
-- **`Finding`** is `path:line` when a line exists. For `line: null`, use the normalized path plus a concise excerpt copied verbatim from `body`, so step 1c can find it in the `body` of a repeated finding; a path alone is ambiguous when one table row carries several findings. For a finding with no path, use its `location`, such as `(review overview)` or `(review body)`, plus the excerpt; give each concern of a lead finding its own row with its own excerpt. Choose an excerpt that contains no `|` character: a pipe would end the table cell, and escaping it as `\|` would stop the cell text from appearing verbatim in `body`. Any distinctive run of words from `body` works, so pick one that sits between pipes.
-- **`Outcome`** for `Thread` rows is `Resolved`, `Failed`, or `Pending`. `Resolved` means a thread was actually resolved, so it is never correct for any other row. Those use `Fixed`, `Tracked`, `Noted`, `Previously handled`, or `Failed`. A lead concern matched to a thread or a prior row is `Noted`, and its disposition names what it restates.
+- **`Finding`** is `path:line` when a line exists. For a finding with no line, use the normalized path plus a concise excerpt copied verbatim from the review body, so step 1c can find it in a repeated finding; a path alone is ambiguous when one table row carries several findings. For a finding with no path, use its `location`, such as `(review overview)` or `(review body)`, plus the excerpt; give each concern its own row with its own excerpt. Choose an excerpt that contains no `|` character: a pipe would end the table cell, and escaping it as `\|` would stop the cell text from appearing verbatim in the body. Any distinctive run of words from the body works, so pick one that sits between pipes.
+- **`Outcome`** for `Thread` rows is `Resolved`, `Failed`, or `Pending`. `Resolved` means a thread was actually resolved, so it is never correct for any other row. Those use `Fixed`, `Tracked`, `Noted`, `Previously handled`, or `Failed`. A review-body concern matched to a thread or a prior row is `Noted`, and its disposition names what it restates.
 - **`Disposition`** names the fixing commit for `Fixed` and fixed `Previously handled` rows. For `Incorrect`, `Outdated`, `Nitpick`, `Advisory` and no-concern rows, state the evidence or rationale for making no code change. Do not leave a category-only disposition that forces readers to reconstruct the decision.
 - The trailing `Counts:` line is one short sentence at the end of the comment. Include only non-zero counts from this set: fetched, resolved, pending, failed, deferred, code-change threads, review-body findings, uncovered items, advisory requests, previously handled, workflow failures. Omit zero-valued metrics; do not render an empty table or "0" entries. If every count is zero, omit the `Counts:` line entirely.
 - Pluralize naturally (`1 fetched`, `2 fetched`; `1 code-change thread`, `2 code-change threads`; `1 review-body finding`, `2 review-body findings`; `1 workflow failure`, `2 workflow failures`).
@@ -517,7 +489,7 @@ Lead findings: 3 matched, 1 handled as new, 1 advisory, 2 no concern.
 - If the table would make the PR comment too large, replace thread details with aggregate category/outcome rows first and state how many detail rows were omitted. Keep the full row-by-row table in the local final output for the agent/user audit trail. **Never aggregate away a review-body source link or finding identity**, since step 1c reads those back to avoid re-processing on the next run.
 - Incorrect category notes Copilot instruction additions in the Disposition column
 - Thread IDs omitted (meaningless to human reviewers)
-- Non-thread failures, including review-body format drift and a Copilot notice in place of a review, must be described in a failure details section, not forced into the feedback table. A drift row names each `unaccounted` kind and line, so the parser gap can be found without rerunning the fetch.
+- Non-thread failures, including a Copilot notice or an unreadable body in place of a review, must be described in a failure details section, not forced into the feedback table. A notice row says `Copilot notice`, links the review and names its `id`, so `monitor-pr` can find it.
 
 If neither the fetches nor the audit surfaced anything needing attention, use this no-op form:
 
@@ -611,7 +583,7 @@ This suggestion conflicts with our {convention name} convention. {Brief explanat
 1. All code changes pushed to the PR branch
 1. **`fetch`, `fetch-reviews` and `audit` were all run** (a thread fetch alone cannot see review-body findings, and neither fetch sees a Copilot comment outside a Copilot thread)
 1. **EVERY addressed thread resolved via the script** (not just code fixed!)
-1. **EVERY review-body finding, lead concern and uncovered item handled and recorded** in the step 7 summary, since there is no thread to resolve and the summary row is the only record
+1. **EVERY review step 1b chose read in full, and every concern it states and every uncovered item handled and recorded** in the step 7 summary, since there is no thread to resolve and the summary row is the only record
 1. **EVERY Advisory request quoted** under `Requests for human review`
 1. **For INCORRECT feedback: Copilot instructions updated** (path-specific `.github/instructions/**/*.instructions.md` preferred, or `.github/copilot-instructions.md` for repo-wide conventions)
 1. **For DEFERRED feedback: Task tracked** (GitHub issue, PROJECT.md, or similar)
@@ -641,7 +613,7 @@ If PR context or GitHub authentication is unavailable, or if `gh pr comment` fai
 - **Source**: `Thread` or an exact originating review link
 - **Thread ID**: GraphQL thread ID (truncated for readability); `--` for review-body findings, which have none
 - **Finding**: `path:line`, or normalized path plus identifying text when the finding has no line
-- **Category**: Nitpick, Valid, Outdated, Incorrect, Deferred, Advisory, or No concern (a lead concern that states nothing to act on)
+- **Category**: Nitpick, Valid, Outdated, Incorrect, Deferred, Advisory, or No concern (review-body text that states nothing to act on)
 - **Action taken**: Brief description of resolution (10 words max)
 - **Status**: `Resolved`, `Failed`, or `Pending` for threads; `Fixed`, `Tracked`, `Noted`, `Previously handled`, or `Failed` for review-body findings
 
@@ -649,16 +621,16 @@ If PR context or GitHub authentication is unavailable, or if `gh pr comment` fai
 
 - Fixing code but forgetting to resolve the threads. This leaves the PR with unresolved conversations even though the issues are fixed. ALWAYS run the resolution command after pushing code.
 - Reporting `No unresolved Copilot feedback` on the strength of an empty `fetch` alone. Copilot regularly files findings in review bodies where a thread query cannot see them, and this reads as success while real feedback goes unread. ALWAYS run `fetch-reviews` and `audit` too.
-- Reading a Copilot `error` or `no-files` notice as a clean review. It has no verdict and no findings because no review happened. Check `reviewKind`.
-- Treating a `lead` finding as one item. A lead often names several concerns, and each needs settling in step 1d.
+- Reading a Copilot notice as a clean review. It has no verdict and no findings because no review happened. Read the body and decide in step 1d.
+- Skimming a review body. Reading the verdict and lead and skipping the tables and collapsed blocks misses findings Copilot states only there.
+- Treating one sentence as one item. A sentence often names several concerns, and each needs settling in step 1d.
 
 ## Error Handling
 
 - API failures: Retry with proper auth
 - Thread ID issues: Use alternative queries
-- Review-body format drift (`hasFormatDrift: true`): inspect the `unaccounted` lines, `suppressed` and `reviewBody`, process the findings you can recover, and record a workflow failure so the parser gets updated. Never report this as "no findings."
-- A Copilot notice in place of a review (`reviewKind` `error` or `no-files`): record a workflow failure quoting the notice. Do not request a new review from this skill; `monitor-pr` owns review requests.
-- A skipped review on stderr (`Warning: skipping review ID: its body is not a string.`): the rest of the reviews still parsed. Open that review at its id and read it by hand.
+- A Copilot notice in place of a review: record a workflow failure that names it as a Copilot notice with its review `id` and quotes it. Do not request a new review from this skill; `monitor-pr` owns review requests.
+- A skipped review on stderr (`Warning: skipping review ID: its body is not a string.`): the other reviews still came through. Open that review at its id and read it by hand.
 - Fix failures: Retry with alternative approach or defer if out of scope
 - Summary comment failures: Log the error, preserve the intended summary Markdown in the local final output, and treat the workflow as incomplete until the required final summary posts successfully
 - Partial resolution is better than none, but a partial or failed terminal state still requires the final PR summary once PR context exists
