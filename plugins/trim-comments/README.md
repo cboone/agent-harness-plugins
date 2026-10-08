@@ -15,7 +15,7 @@ The skill reviews the comments in a branch's changed code and keeps, rewrites, o
 
 It cuts runtime trivia, consequence chains, arguments for decisions the code has already made, mock comments that narrate the author's thinking, CSS comments that restate the declaration, and jargon. It also favors wording that stays true: no line numbers, no counts or "currently", and comments anchored to the code beside them rather than to code elsewhere.
 
-The scope defaults to comments in or directly above code changed since the base branch, including uncommitted and untracked files. The skill edits only comments, leaves directive and pragma comments alone, checks the edited files with the project's formatter and linter in check mode, its type checker, and its tests, and reports a before-and-after table. It then commits its edits locally and never pushes. A file that already held uncommitted work before the run is left uncommitted, so the commit never carries your own changes. It does not commit on a detached HEAD or on the default branch, and it reports which checks ran, the commit's branch, and any change a commit hook made.
+The scope defaults to comments in or directly above code changed since the base branch, including uncommitted and untracked files. The skill edits only comments, leaves directive and pragma comments alone, checks the edited files with the project's formatter and linter in check mode, its type checker, and its tests, and reports a before-and-after table. It then commits its edits locally and never pushes. A file that already held uncommitted work before the run is left uncommitted, so the commit never carries your own changes. It does not commit on a detached HEAD, on the default branch, or when it cannot tell which branch is the default, and it reports which checks ran, the commit's branch, and any change a commit hook made.
 
 ## Requirements
 
@@ -40,7 +40,7 @@ This skill runs read-only Git and GitHub CLI commands to find its scope. To allo
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh repo view *)", "Bash(git symbolic-ref *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git --no-pager diff *)", "Bash(git ls-files *)", "Bash(git status *)", "Bash(git rev-parse *)", "Bash(git remote)", "Bash(git config --get *)", "Bash(realpath *)", "Bash(test -f *)", "Bash(grep -Iq *)"]
+    "allow": ["Bash(gh repo view *)", "Bash(git symbolic-ref *)", "Bash(git merge-base *)", "Bash(git diff *)", "Bash(git --no-pager diff *)", "Bash(git ls-files *)", "Bash(git status *)", "Bash(git hash-object *)", "Bash(git log -1 *)", "Bash(git rev-parse *)", "Bash(git remote)", "Bash(git config --get *)", "Bash(realpath *)", "Bash(test -f *)", "Bash(grep -Iq *)"]
   }
 }
 ```

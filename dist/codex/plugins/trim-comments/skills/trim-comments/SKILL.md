@@ -266,7 +266,7 @@ Skip this step with `--dry-run`. Most comments cannot change behavior, but direc
 - the type checker, if the project has one
 - the tests that cover the edited files, or the full test command when they cannot be selected, which confirms nothing structural broke
 
-If a check fails because of an edit made here, fix that edit by hand rather than letting a formatter rewrite the file, which would also reformat the user's own changes. Report pre-existing failures without fixing them.
+If a check fails because of an edit made here, fix that edit by hand rather than letting a formatter rewrite the file, which would also reformat the user's own changes. A failure is pre-existing only when it plainly does not involve these edits, such as an error in a file or test this skill did not touch; report it without fixing it. Treat any other failure as caused here.
 
 Record each check's outcome for step 7: passed, failed, or not run, with the reason it could not run, such as no type checker in the project or no test command found. A check that did not run is never reported as passed.
 
@@ -279,15 +279,15 @@ Commit only the edited files that step 4 recorded as clean. An edited file that 
 Check where the commit would land before making it:
 
 - `git symbolic-ref --quiet --short HEAD` prints the current branch. If it fails, HEAD is detached and a commit would belong to no branch: skip the commit.
-- If the current branch is the base branch, skip the commit: trims belong on a working branch, not straight on the default branch. Step 1 found `$base` for the default scope; with paths or a single named comment, find it the same way, choosing the remote and trying the same two commands. If the base cannot be found, commit anyway and say in the report that this check could not run.
+- If the current branch is the base branch, skip the commit: trims belong on a working branch, not straight on the default branch. Step 1 found `$base` for the default scope; with paths or a single named comment, find it the same way, choosing the remote and trying the same two commands. If the base cannot be found, skip the commit too, since the branch might be the default one.
 
-Before committing, save the committable files' diff against `HEAD` with `git --no-pager diff --no-ext-diff --no-textconv HEAD -- <pathspecs>`, so a hook's changes can be told apart from these edits afterward.
+Before committing, confirm that each committable file holds only this run's edits: `git --no-pager diff --no-ext-diff --no-textconv --no-relative HEAD -- ":(top,literal)$path"` must show only the comment changes in the step 7 table. A step 5 check that wrote files, a formatter that ignored check mode, or the user editing the file during the run can each add other changes; leave such a file uncommitted and list it in the report. Then record each committable file's content hash, `git hash-object -- "./$path"`, and a snapshot of the whole working tree, `git status --porcelain=v1 -z --untracked-files=all :/`.
 
 Commit with `git commit`, the message, then `--` and each committable file as a `":(top,literal)$path"` pathspec. Naming the paths commits only those files from the working tree, leaves anything the user staged in the index, and stages nothing if the commit fails. Write one message naming what was trimmed, following the repository's commit convention (for example, `refactor:` or `style:` where it uses Conventional Commits), with any cut material worth keeping in its body. Leave out issue references: closing keywords such as `fixes #N` would close an issue that a comment trim did not resolve. Sign the commit when the user's or the repository's instructions require signed commits. Never amend, and never pass `--no-verify`, `--no-gpg-sign`, or any other flag that bypasses hooks or signing.
 
-If the commit fails because of an edit made here, or because a hook rejected the message written here, fix the edit or the message and run the commit again. Any other failure ends this step without a commit, whether a hook fails for another reason, signing fails, a lock file exists, or a merge or rebase is in progress: leave the edits uncommitted in the working tree and report the exact error.
+If the commit fails because of an edit made here, or because a hook rejected the message written here, fix the edit or the message and try once more. Before that retry, report any working-tree change the failed attempt left behind (compare a fresh status snapshot with the recorded one), rerun the step 5 checks on any file the fix touched, and record the hashes and snapshot again. Any other failure, or a second failure, ends this step without a commit, whether a hook fails for another reason, signing fails, a lock file exists, or a merge or rebase is in progress: leave the edits uncommitted in the working tree and report the exact error.
 
-After a commit, compare `git --no-pager show --no-ext-diff --no-textconv --format= HEAD` with the saved diff. A hook can rewrite files, for example by running a formatter in write mode, so any difference is a change this skill did not make. Never amend or revert it; report which files it touched. Run `git status --porcelain=v1 -z` on the committed paths as well, and report any file a hook left modified after the commit.
+After a commit, find what a hook changed. A hook can rewrite files, for example by running a formatter in write mode. Compare each committed file's recorded hash with `git rev-parse "HEAD:$path"`; a mismatch means the commit holds content this skill did not write. Compare a fresh status snapshot with the recorded one; a new or changed entry is a file a hook left modified. Never amend or revert either kind of change; report the files.
 
 ### 7. Report
 
@@ -296,9 +296,9 @@ Report a table: `file:line` (in the edited file), action (`rewrite`, `delete`, o
 Then report:
 
 - each step 5 check: passed, failed, or not run, with the reason
-- the commit: its short SHA, subject, and branch; or no commit, with the skip condition or the exact error from step 6
+- the commit: `git log -1 --format='%h %s'`, which shows the subject as committed, after any hook rewrote it, and the branch; or no commit, with the skip condition or the exact error from step 6
 - any change a hook made beyond these edits, in the commit or left in the working tree
-- edited files left uncommitted because they already held the user's work
+- edited files left uncommitted because they already held the user's work or picked up changes beyond these edits
 - cut material worth moving into the PR description, or into a commit message when no commit was made
 
 ## Worked examples
@@ -341,7 +341,7 @@ Before finishing, confirm:
 ## Error Handling
 
 - **No changed files**: Report that the scope is empty and stop. Suggest passing paths.
-- **No base branch or merge base found**: Ask the user for the base branch or for paths, rather than guessing. Use a structured question tool when the session offers one; otherwise ask in plain text and wait for the reply.
+- **No base branch or merge base found for the default scope**: Ask the user for the base branch or for paths, rather than guessing. Use a structured question tool when the session offers one; otherwise ask in plain text and wait for the reply.
 - **A given path does not exist, matches no files, or is outside the repository**: Report it and continue with the paths that do. A path that matches nothing is never skipped silently, since a root-relative path given from a subdirectory looks valid but matches nothing.
 - **A comment's meaning is unclear from the code**: Keep it and flag it in the report, rather than rewriting it into something possibly wrong.
 - **Linter, formatter, or tests fail for reasons unrelated to the edits**: Report the failure and leave it unfixed.
