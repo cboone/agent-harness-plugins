@@ -34,13 +34,14 @@ function usage() {
   cat << USAGE_TEXT
 Usage: ${SCRIPT_NAME} <command> [arguments]
 
-Manage GitHub Copilot PR review feedback: threads via GraphQL, review-body
-findings via REST.
+Manage GitHub Copilot PR review feedback: threads via GraphQL, review bodies
+via REST.
 
 Commands:
   fetch <owner> <repo> <pr_number>                    Fetch unresolved Copilot threads
-  fetch-reviews <owner> <repo> <pr_number>            Fetch Copilot review-body findings
-  parse-reviews                                        Normalize review JSON read from stdin
+  fetch-reviews <owner> <repo> <pr_number> [--since <timestamp>]
+                                                      Fetch Copilot review bodies
+  parse-reviews [--since <timestamp>]                 Select Copilot reviews from JSON on stdin
   audit <owner> <repo> <pr_number>                    List Copilot items the fetches cannot reach
   parse-audit                                          Audit pull request JSON read from stdin
   resolve <thread_id>                                  Resolve a review thread
@@ -55,17 +56,20 @@ or stdin if --body-file is not specified.
 
 Copilot files some findings in a review body instead of an inline thread, where
 they have no thread id and cannot be replied to or resolved. fetch-reviews
-surfaces those. parse-reviews is the same normalization over review JSON on
-stdin, for testing and for reprocessing a saved response.
+returns each Copilot review's complete raw body for the caller to read, with
+the review comment ids it links to. --since keeps only reviews submitted at or
+after a UTC time written YYYY-MM-DDTHH:MM:SSZ. parse-reviews is the same
+selection over review JSON on stdin, for testing and for reprocessing a saved
+response.
 
 audit lists every Copilot review, review comment and pull request comment,
-and reports any the two fetch commands do not reach, along with older-layout
-reviews that only a read can settle. parse-audit is the same join over
-{reviews, reviewComments, issueComments, threads} JSON on stdin.
+and reports any the two fetch commands do not reach. parse-audit is the same
+join over {reviews, reviewComments, issueComments, threads} JSON on stdin.
 
 Examples:
   ${SCRIPT_NAME} fetch octocat hello-world 42
   ${SCRIPT_NAME} fetch-reviews octocat hello-world 42
+  ${SCRIPT_NAME} fetch-reviews octocat hello-world 42 --since 2026-10-07T21:00:00Z
   gh api repos/octocat/hello-world/pulls/42/reviews | ${SCRIPT_NAME} parse-reviews
   ${SCRIPT_NAME} audit octocat hello-world 42
   ${SCRIPT_NAME} resolve PRRT_kwDONZ...
@@ -83,22 +87,6 @@ function die() {
 function require_jq() {
   if ! command -v jq > /dev/null 2>&1; then
     die "jq is required but not found. Install it: https://jqlang.github.io/jq/download/"
-  fi
-
-  # The review-body filter calls scan with a flags argument, which jq 1.7
-  # introduced. An older jq fails it as a compile error that names neither
-  # the version nor the cause, so the version is checked here instead. A
-  # version string that does not read as "jq-MAJOR.MINOR" (another
-  # implementation, or a development build) is let through rather than
-  # refused, since this check cannot tell what it supports.
-  local version
-  version="$(jq --version 2> /dev/null || true)"
-  if [[ "${version}" =~ ^jq-([0-9]+)\.([0-9]+) ]]; then
-    local major="${BASH_REMATCH[1]}"
-    local minor="${BASH_REMATCH[2]}"
-    if ((major < 1 || (major == 1 && minor < 7))); then
-      die "jq 1.7 or later is required, found ${version}. Install it: https://jqlang.github.io/jq/download/"
-    fi
   fi
 }
 
@@ -248,6 +236,8 @@ function do_fetch() {
                   originalStartLine
                   comments(first: 20) {
                     nodes {
+                      databaseId
+                      url
                       author { login }
                       body
                     }
@@ -307,56 +297,56 @@ function do_fetch() {
               path: .path,
               location: (.path + ":" + (if $ln then ($ln | tostring) else "(no-line)" end)),
               isOutdated: .isOutdated,
-              comments: [.comments.nodes[] | {author: (.author.login? // ""), body: .body}]
+              comments: [.comments.nodes[] | {author: (.author.login? // ""), body: .body, databaseId: .databaseId, url: .url}]
             }
         ]
       '
 }
 
 # =============================================================================
-# Review-body findings
+# Review bodies
 # =============================================================================
-# Copilot does not always open an inline thread. When it declines to comment on
-# a line the latest push did not touch, it files the finding in the review body
-# under a "suppressed comments" section instead. Those findings have no thread
-# id, so they cannot be replied to or resolved, and a reviewThreads query cannot
-# see them at all.
+# Copilot files some feedback in a review body rather than an inline thread,
+# where it has no thread id and cannot be replied to or resolved. The body is
+# returned raw and complete, for the caller to read: Copilot reshapes its
+# review-body layout often, and any parse of that layout breaks on the next
+# reshape, while the text itself always says what Copilot found.
 #
-# Three body layouts have shipped so far. They differ only in how the section is
-# announced:
-#
-#   <summary>Comments suppressed due to low confidence (N)</summary>
-#   <summary>Suppressed comments (N)</summary>
-#   ### Suppressed comments (N)
-#
-# The legacy interior is stable across all three: a bold-only
-# "**path:line**" heading, then the finding prose, then an optional fenced
-# context block. The section ends at a details tag or at the
-# "- **Files reviewed:" trailer. ccr-overview-v2 adds nested
-# "Previously missed" details and line-less findings in file-summary tables;
-# those layouts are parsed separately below.
-#
-# The raw legacy slice, complete review body, and structured parse are emitted.
-# hasFormatDrift covers an announced suppressed section that yields nothing, a
-# v2 review that states more findings than the inline threads it lists, a body
-# that is neither a review nor a known notice, and any signal the census
-# leaves unaccounted, keeping a format change visible instead of silently
-# reporting no feedback. The census, which checks every vote tag, location
-# line, section count and element against what the parsers returned, is what
-# catches a layout that a parser reads only partly.
-#
-# On a ccr-overview-v2 body, a lead paragraph that is not a known no-finding
-# sentence is not drift: the layout was read, and what remains is prose. It
-# sets needsRead and arrives as a finding of its own. So does a non-clean
-# verdict with nothing behind it, even when its lead is empty or known.
+# Every field here comes from the REST review object, never from the body's
+# layout, except threadLinks. Those are the review comment ids the body links
+# to through GitHub's "#discussion_r<id>" URL fragment, extracted anywhere in
+# the text as a hint for matching a concern to its thread. A body that links
+# differently yields an empty list and nothing else changes.
 # =============================================================================
 
-# Normalizes an array of GitHub review objects into Copilot review-body findings.
+# Selects Copilot reviews with a body from an array of GitHub review objects.
 # Arguments:
-#   None; reads REST review JSON on stdin
+#   [--since <timestamp>] - Keep only reviews submitted at or after this
+#                           UTC time, written YYYY-MM-DDTHH:MM:SSZ
 # Outputs:
-#   JSON array of Copilot reviews with parsed findings to stdout
+#   JSON array of {id, url, submittedAt, commitId, threadLinks, body} to
+#   stdout, oldest first
 function do_parse_reviews() {
+  local since=""
+  case "$#" in
+    0) ;;
+    2)
+      if [[ "$1" != "--since" ]]; then
+        die "Invalid argument '$1'. Expected '--since <timestamp>' or no arguments."
+      fi
+      since="$2"
+      ;;
+    *)
+      die "Invalid arguments. Expected no arguments or '--since <timestamp>'."
+      ;;
+  esac
+
+  # GitHub writes every timestamp in this one form, so ordering the strings
+  # orders the times. Any other form would compare wrongly without an error.
+  if [[ -n "${since}" && ! "${since}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+    die "Invalid --since timestamp '${since}'. Expected UTC in the form YYYY-MM-DDTHH:MM:SSZ, as GitHub reports it."
+  fi
+
   local input
   input="$(cat)"
 
@@ -375,11 +365,10 @@ function do_parse_reviews() {
     die "Invalid review JSON: every element must be a review object."
   fi
 
-  # A body that is present but not a string would reach the first split in
-  # the filter and abort the whole run, taking every well-formed review with
-  # it. Those reviews are skipped by the filter below; this names each one so
-  # the skip is visible rather than silent. A null or absent body is an
-  # ordinary review with nothing to read and is skipped without a warning.
+  # A body that is present but not a string cannot be read, so the review is
+  # skipped. This names each one so the skip is visible rather than silent. A
+  # null or empty body is an ordinary review with nothing to read and is
+  # skipped without a warning: any inline comments it carries are threads.
   local skipped_id
   while IFS= read -r skipped_id; do
     echo "Warning: skipping review ${skipped_id}: its body is not a string." >&2
@@ -389,991 +378,8 @@ function do_parse_reviews() {
   # $variables in the filter are jq bindings, not shell variables
   jq \
     --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" \
+    --arg since "${since}" \
     '
-      def trim: sub("^[[:space:]]+"; "") | sub("[[:space:]]+$"; "");
-
-
-      def normalize_path: gsub("\u200b"; "");
-
-      # Copilot writes a section count in one of two places: trailing, as in
-      # "Open (3)", and leading, as in "3 open findings". A trailing count is
-      # read on any heading or summary. A leading count is read on a summary
-      # whose bold text opens with the number, the shape every leading-count
-      # section Copilot has shipped takes, so a new section written that way
-      # is reconciled the first time it appears. A title that merely opens
-      # with a number, such as "### 3 modules touched" or "<summary>2 files
-      # reviewed</summary>", is not in that shape and carries no count.
-      def leading_count_summary:
-        "^<summary><strong>[0-9]+[[:space:]]";
-
-      # A heading or summary as a reader sees it: markup and a heading marker
-      # removed.
-      def section_text:
-        gsub("<[^>]*>"; "")
-        | sub("^###[[:space:]]+"; "")
-        | trim;
-
-      # A section title as a reader sees it, with any count removed.
-      def section_title:
-        test(leading_count_summary) as $leading
-        | section_text
-        | sub("[[:space:]]*\\([0-9]+\\)$"; "")
-        | if $leading then sub("^[0-9]+[[:space:]]+"; "") else . end;
-
-      # The count a section heading or summary carries, or null.
-      def section_count:
-        test(leading_count_summary) as $leading
-        | (
-            section_text
-            | capture("\\((?<count>[0-9]+)\\)$")
-              // (if $leading then capture("^(?<count>[0-9]+)") else empty end)
-            | .count
-            | tonumber
-          )
-          // null;
-
-      # The fence a line opens, as its run of three or more backticks or
-      # tildes, or null.
-      def fence_run:
-        (first(capture("^[[:space:]]*(?<run>`{3,}|~{3,})")) | .run) // null;
-
-      # The fence in effect after $raw, given the one in effect before it
-      # (null outside a fence). A fence closes only on a line holding a run
-      # of the same character at least as long as the one that opened it,
-      # and nothing else, not even the other fence character, so a "~~~"
-      # fence, a four-backtick fence quoting a three-backtick one, or a
-      # closing line such as "```~~~" cannot end a fence early and expose
-      # what it quotes.
-      def next_fence($raw):
-        ($raw | fence_run) as $run
-        | if . == null then
-            (if $run == null then null else {char: $run[0:1], length: ($run | length)} end)
-          elif $run != null
-               and $run[0:1] == .char
-               and ($run | length) >= .length
-               and ($raw | test("^[[:space:]]*(`+|~+)[[:space:]]*$")) then null
-          else .
-          end;
-
-      # A body with its layout whitespace made regular, so the matchers below
-      # read a summary, heading or details tag however Copilot spaces it.
-      # Up to three leading spaces before a tag, a heading or a bold label
-      # such as "**0 open findings**" carry no meaning in Markdown, so they
-      # are dropped; four or more make an indented code block and stay. A
-      # heading keeps one space after its marker, a line that is only bold
-      # text, such as a count line, keeps single spaces, and a summary line
-      # loses the spaces between and just inside its tags and any doubled
-      # spaces.
-      # Without this, an indented summary or a space inside its bold text
-      # would escape the section matchers while the census still read its
-      # count, and content beside it would pass unread.
-      # Fenced lines are left as written, since a finding quotes code there.
-      def normalize_layout:
-        split("\n")
-        | reduce .[] as $line ({fence: null, out: []};
-            (.fence | next_fence($line)) as $next
-            | if .fence != null or $next != null then
-                .fence = $next | .out += [$line]
-              else
-                .out += [
-                  $line
-                  | sub("^ {1,3}(?=[<#]|\\*\\*)"; "")
-                  | sub("^(?<marks>#{1,6})[ \t]+"; "\(.marks) ")
-                  | if test("^\\*\\*[^*]+\\*\\*[[:space:]]*$") then gsub("[ \t]+"; " ")
-                    elif test("^<summary") then
-                      sub("^<summary[ \t]+>"; "<summary>")
-                      | gsub(">[ \t]+<"; "><")
-                      | gsub("<(?<tag>summary|strong)>[ \t]+"; "<\(.tag)>")
-                      | gsub("[ \t]+</"; "</")
-                      | gsub("(?<=[^ \t])[ \t]{2,}"; " ")
-                    else .
-                    end
-                ]
-              end)
-        | .out
-        | join("\n");
-
-      # Splits a body into numbered lines, each tagged with the region it
-      # sits in, its details depth, and whether it is inside a fenced block.
-      # "text" is the line with inline code spans emptied, for scans that
-      # must not match quoted text; "raw" keeps them for parsers that read
-      # paths out of code spans.
-      #
-      # A region is the depth-one section around a line: the summary of a
-      # details block opened at the top of the body, or a "###" heading
-      # inside one, which is how the older layout nests "### Suppressed
-      # comments (N)" inside "Review details". Text before the first block
-      # is "lead", and text after a top-level block closes is "trailer".
-      # Deeper summaries, such as the one "Previously missed" opens for each
-      # finding, stay in their section, matching the depth rule that
-      # section_summary applies.
-      def annotate:
-        split("\n")
-        | to_entries
-        | reduce .[] as $entry ({fence: null, depth: 0, region: "lead", out: []};
-            ($entry.value | sub("\r$"; "")) as $raw
-            | ($entry.key + 1) as $n
-            | (.fence | next_fence($raw)) as $next
-            | if .fence != null or $next != null then
-                .fence = $next
-                | .out += [{n: $n, raw: $raw, text: "", region: .region, depth: .depth, fence: true}]
-              else
-                (
-                  if ($raw | test("^<details")) then .depth += 1
-                  elif ($raw | test("^</details>")) then
-                    (if .depth > 0 then .depth -= 1 else . end)
-                    | (if .depth == 0 then .region = "trailer" else . end)
-                  elif (.depth == 1 and ($raw | test("^<summary>")))
-                       or (.depth >= 1 and ($raw | test("^### "))) then
-                    .region = ($raw | section_title)
-                  else .
-                  end
-                )
-                | .out += [{
-                    n: $n,
-                    raw: $raw,
-                    text: ($raw | gsub("`[^`]*`"; "``")),
-                    region: .region,
-                    depth: .depth,
-                    fence: false
-                  }]
-              end)
-        | .out;
-
-      # A fenced block still open at the end of the body, as a census entry
-      # naming the line that opened it, or nothing. Every line after an
-      # opening fence is skipped by the parsers and the census alike, so a
-      # fence that never closes would hide the rest of the body: a stray
-      # "~~~" in prose, a closing fence with text after it, or a fence quoted
-      # inside a fence can each open one. Reporting it keeps that visible
-      # instead of reading the hidden sections as absent.
-      def unclosed_fence($lines):
-        reduce $lines[] as $l ({fence: null, opened: null};
-          (.fence | next_fence($l.raw)) as $next
-          | (if .fence == null and $next != null then .opened = $l else . end)
-          | .fence = $next)
-        | if .fence == null then []
-          else [{kind: "fence", region: .opened.region, line: .opened.n, text: (.opened.raw | .[0:200])}]
-          end;
-
-      # The first level-3 heading. On ccr-overview-v2 bodies this is the
-      # verdict the needsRead check compares. Older layouts can yield a
-      # section heading such as "### Reviewed changes", or null, and there
-      # review_kind and legacyNeedsRead in the audit read it. Trimming drops a
-      # trailing carriage return so a CRLF body still compares equal.
-      def verdict:
-        split("\n")
-        | map(select(test("^### ")) | trim)
-        | first // null;
-
-      def is_overview_v2: contains("<!-- ccr-overview-v2 -->");
-
-      # Copilot announces every section as a <summary> inside a <details>
-      # block, so the nesting is part of what identifies one. Matching the
-      # summary text alone would let an unfamiliar wrapper carrying the same
-      # words stand in for a section Copilot emits. Every matcher below
-      # decides whether something goes unreported: a spoofed "Open" count can
-      # absorb a stated shortfall and hide drift, a spoofed open-findings
-      # summary can supply a stated count that hides a renamed "**Findings:**"
-      # header, and a spoofed resolved section can clear the read that a
-      # non-clean verdict with a known lead would otherwise get. So a loose
-      # match is a way to suppress a signal rather than a cosmetic
-      # imprecision.
-      #
-      # For the same reason a summary counts only as a line of its own, the
-      # way annotate and the census read one, and never inside a fenced
-      # block. A finding or a "What changed in this PR" note that quotes
-      # "<summary>1 open finding</summary>" in a code span or a fence is
-      # prose, not a section.
-      #
-      # Depth one exactly, which is the summary of a details block opened at
-      # the top of the body. Every section summary observed on a live review
-      # sits there, and the only deeper ones are the per-finding summaries
-      # that "Previously missed" nests, at depth two. Accepting any positive
-      # depth would let one of those nested blocks carry a section name and
-      # impersonate the real thing, so a "Resolved since last review (1)"
-      # tucked inside "What changed in this PR" would clear that read
-      # although the review lists no resolved section at all.
-      #
-      # A closing tag at depth zero is ignored so unbalanced markup cannot
-      # drive the count negative and shift every later line down a level.
-      #
-      # $pattern is what follows the opening summary tag, markup included,
-      # with a named "count" group, so a caller can match the count on either
-      # side of the name and say which markup the summary may carry. A
-      # leading count is read only from a bold summary, the shape the census
-      # reads it from too (see leading_count_summary). The match runs to the
-      # closing summary tag, so a summary that goes on past the known words,
-      # such as "3 open findings</strong> outside the diff", is not the known
-      # section. The result is the first matching section, or null when none
-      # matches, as:
-      #
-      #   count    the number its summary states
-      #   links    list items at the depth of the block itself carrying a
-      #            "#discussion_r" thread link outside inline code spans
-      #   items    every other non-blank line in the block, fenced lines,
-      #            nested details blocks and anything between the opening
-      #            details tag and the summary included, which is content
-      #            that is not an inline thread
-      #   matches  how many depth-one summaries match, so a caller can tell
-      #            a second section of the same kind from the first
-      #
-      # Only the first summary of a block names it. A matching summary that
-      # follows another one in the same block is content rather than the
-      # section, so the prose between the two cannot pass unread, and any
-      # further summary inside a matched block counts as one of its items.
-      #
-      # The census counts the same links differently, by region, on any line
-      # and at any depth. Counting them here at the depth of the block
-      # itself means a block that is never closed cannot borrow the links of
-      # a section opened inside it, such as a resolved list, even where the
-      # census does.
-      def section_summary($pattern):
-        ("^<summary>" + $pattern + "(?:</[^>]+>)*</summary>[[:space:]]*$") as $summary
-        | split("\n")
-        | reduce (.[] | sub("\r$"; "")) as $line ({fence: null, depth: 0, inside: false, awaiting: false, pending: 0, summarized: false, value: null};
-            (.fence | next_fence($line)) as $next
-            | if .fence != null or $next != null then
-                .fence = $next
-                | if .inside then .value.items += 1
-                  elif .awaiting then .pending += 1
-                  else .
-                  end
-              elif ($line | test("^<details")) then
-                .depth += 1
-                | (if .depth == 1 then .awaiting = true | .pending = 0 | .summarized = false else . end)
-              elif ($line | test("^</details>")) then
-                (if .depth > 0 then .depth -= 1 else . end)
-                | (if .depth == 0 then .inside = false | .awaiting = false else . end)
-              elif .depth == 1 and ($line | test("^<summary>")) then
-                (if (.summarized | not) and ($line | test($summary)) then
-                  if .value == null then
-                    .value = {count: ($line | capture($summary).count | tonumber), links: 0, items: .pending, matches: 1}
-                    | .inside = true
-                  else .value.matches += 1
-                  end
-                elif .inside then .value.items += 1
-                else .
-                end)
-                | .summarized = true
-                | .awaiting = false
-              elif ($line | test("[^[:space:]]")) and (.inside or .awaiting) then
-                if .awaiting then .pending += 1
-                elif .depth == 1
-                   and ($line | test("^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]"))
-                   and ($line | gsub("`[^`]*`"; "``") | test("\\(#discussion_r[0-9]+\\)"))
-                then .value.links += 1
-                else .value.items += 1
-                end
-              else .
-              end)
-        | .value;
-
-      # The "Open (N)" section, which states its count after the name.
-      def open_section:
-        section_summary("(?:<[^>]+>)*Open \\((?<count>[0-9]+)\\)");
-
-      # The open-findings section, which states its count before the name, as
-      # "3 open findings" or "1 open finding". Bodies in this layout carry no
-      # "**Findings:**" line, so the summary count is also the stated count.
-      # See the $stated_findings binding in the main filter.
-      def open_findings_section:
-        section_summary("<strong>(?<count>[0-9]+) open findings?</strong>");
-
-      # Content in an open section, in either layout, that links no inline
-      # thread. The open section lists threads and nothing else, so such
-      # content may be a finding nothing here reads. The census reconciles
-      # only the count of a section with its links, so it misses such content
-      # whenever the two match, and it never reconciles a zero count at all.
-      # So the content is checked here, whatever the count.
-      def open_section_items:
-        ((open_section // open_findings_section) | .items) // 0;
-
-      # More than one open section, of either kind. Every observed review
-      # lists its open threads in one section, and the counts and contents
-      # above are read from the first, so a second one would go unread.
-      def open_section_conflict:
-        ((open_section | .matches) // 0) + ((open_findings_section | .matches) // 0) > 1;
-
-      # The number of inline threads the body announces or lists as open, or
-      # 0 when there is no such section. Reconciling it against the stated
-      # count is what makes a shortfall visible, so the count is parsed
-      # rather than the section merely detected.
-      #
-      # "Open (N)" is compared as announced, against a separate
-      # "**Findings:**" line. The open-findings layout announces the same
-      # number it states, so comparing its summary against itself could never
-      # fall short. The thread links its block actually lists are counted
-      # instead.
-      def open_thread_count:
-        (open_section | .count)
-        // (open_findings_section | .links)
-        // 0;
-
-      # ccr-overview-v2 lists the inline threads that were open when the
-      # review was written, under an "Open (N)" or open-findings summary.
-      # Those threads explain a non-clean verdict by themselves, and the
-      # thread fetch reports them, so a review whose only findings are inline
-      # threads is neither drift nor, on its verdict alone, a lead to read.
-      def lists_open_threads:
-        open_thread_count > 0;
-
-      # The resolved section, which states its count after the name, as
-      # "Resolved since last review (N)", or before it, as "N resolved since
-      # last review". The first form is read whenever it is present.
-      def resolved_section:
-        section_summary("(?:<[^>]+>)*Resolved since last review \\((?<count>[0-9]+)\\)")
-        // section_summary("<strong>(?<count>[0-9]+) resolved since last review</strong>");
-
-      # ccr-overview-v2 also lists the findings closed since the previous
-      # round, under a resolved section. Those links record work already done
-      # rather than feedback to act on, so they are a known layout rather than
-      # a finding the parser failed to read.
-      #
-      # Presence alone is not enough to call a review clean. Copilot ships a
-      # resolved section on most second and later rounds, including rounds
-      # that state findings, so pairing it with the lead paragraph is what
-      # separates the two. See lead_states_no_findings.
-      def lists_resolved_threads:
-        ((resolved_section | .count) // 0) > 0;
-
-      # A resolved section that announces threads and holds anything but its
-      # own thread links. It lists threads and nothing else, and a nonzero
-      # count is what lets it clear a read (see lists_resolved_threads), so
-      # prose placed in it would otherwise go unread on a round that reads as
-      # clean. A zero count clears nothing, so its contents are read with the
-      # rest of the review instead.
-      def resolved_section_mismatch:
-        resolved_section | . != null and .count > 0 and .items > 0;
-
-      # Lines of a ccr-overview-v2 body that use an element outside the
-      # vocabulary the layout is built from. Each is reported in unaccounted
-      # beside the census signals, as an "element" entry nothing accounts
-      # for. Only v2 bodies are checked. In every observed live review that
-      # vocabulary is seven elements and nothing else: details, summary,
-      # strong, picture, source, img and a.
-      #
-      # Elements rather than section names, deliberately. Copilot adds
-      # sections over time, and this repository has already seen "Open",
-      # "Resolved since last review", "Previously missed" and "What changed
-      # in this PR" arrive, so a list of known section names would report
-      # drift the first time it ships another one. The element vocabulary is
-      # what has held still, so an element outside it is a layout change
-      # nothing here has read, wherever in the body it sits.
-      #
-      # Depth is not tracked, and that is the point. An unfamiliar section
-      # rendered as a details block hides its contents from any check that
-      # stops at the top level, so the contents are what gets inspected.
-      #
-      # Only markup counts. Inline code spans and fenced blocks are skipped,
-      # because a finding that quotes a placeholder such as `<out-file>` is
-      # prose: in observed live reviews, every element outside the vocabulary
-      # sat inside a code span. The marker comment does not match, because
-      # "<!" is not the start of an element name.
-      def element_signals($lines):
-        ["details", "summary", "strong", "picture", "source", "img", "a"] as $known
-        | [
-            $lines[]
-            | select(.fence | not)
-            | . as $l
-            | select(
-                [$l.text | scan("</?([a-zA-Z][a-zA-Z0-9-]*)")[0] | ascii_downcase]
-                | any(. as $tag | $known | any(. == $tag) | not)
-              )
-            | {kind: "element", line: $l.n, region: $l.region, text: ($l.raw | .[0:200])}
-          ];
-
-      # The lines before the first details block, which headline reads. The
-      # reasons the stop pattern omits the closing angle bracket are given
-      # beside each reader. preamble_count_lines below reads the same region,
-      # skipping fenced lines.
-      def preamble_lines:
-        split("\n")
-        | (map(test("^<details")) | index(true)) as $stop
-        | if $stop then .[0:$stop] else . end;
-
-      # The preamble lines a count is read from: those before the first
-      # details block, skipping fenced lines, so a "**Findings:**" or
-      # "**0 open findings**" line quoted in a fence is prose rather than
-      # the count, as a quoted summary is for section_summary.
-      def preamble_count_lines:
-        split("\n")
-        | reduce .[] as $line ({fence: null, stop: false, out: []};
-            if .stop then .
-            else
-              (.fence | next_fence($line)) as $next
-              | if .fence != null or $next != null then .fence = $next
-                elif ($line | test("^<details")) then .stop = true
-                else .out += [$line]
-                end
-            end)
-        | .out;
-
-      # A ccr-overview-v2 body in the "Open (N)" layout states a count on a
-      # "**Findings:**" line, as either "None" or a number. Across every
-      # observed body, in the fixtures and on live pull requests, that total
-      # is the "Open (N)" thread count and nothing else: a review stating 1
-      # can carry "Open (1)" alongside a "Previously missed (1)" entry, and a
-      # review stating "None" can carry "Previously missed (3)". It also
-      # omits the line-less findings appended to file-summary cells.
-      #
-      # So the count says how many inline threads Copilot opened, and says
-      # nothing about the rest of the body. Comparing it against
-      # open_thread_count is therefore a real invariant, while reading "None"
-      # as "this review has no findings" is not. This returns null for any
-      # body without the line. The caller excludes pre-v2 bodies from the
-      # comparison and, on a v2 body, reads the count from the open-findings
-      # summary instead; see the $stated_findings binding.
-      #
-      # Scanned line by line because jq anchors "^" to the whole string, the
-      # same reason the verdict and marker definitions split the body first.
-      # The anchor drops a header quoted mid-line in the prose of a finding,
-      # and first keeps the real header, which always precedes the sections,
-      # ahead of one quoted at the start of a line inside them.
-      #
-      # The value is a severity breakdown, not one number. Copilot renders
-      # each severity as a count followed by a badge, joined by a middle dot:
-      # "**Findings:** 2 <picture>...Medium...</picture> · 1 <picture>...Low
-      # ...</picture>" is three findings, and its Open section reads
-      # "Open (3)". Every count token therefore has to be summed. Reading
-      # only the first would report 2 there and understate every review that
-      # spans severities.
-      #
-      # The value is validated whole rather than scanned for tokens. Removing
-      # the markup tags and then all whitespace leaves the counts and their
-      # separators alone, so a well-formed value reduces to "None" or to
-      # digits joined by the dot, and anything else is reported as
-      # "unparseable". Tag removal is also what keeps the width and height
-      # numbers inside the badge markup out of the sum.
-      #
-      # Validating the whole value is load-bearing. Matching a leading token
-      # instead would read "None plus hidden text" as zero and "0 plus hidden
-      # text" as a count of zero. Either one reads as no shortfall, and a
-      # resolved-only round with a known lead then needs no read either, so an
-      # unparsed finding goes unreported, which is the failure this command
-      # exists to prevent.
-      #
-      # "unparseable" is deliberately distinct from null, which means no
-      # "**Findings" line at all. On a v2 body the caller then reads the
-      # count from an "N open findings" summary, the layout that has no such
-      # line, and turns a null with neither form into "unparseable". It keeps
-      # the null on the older layouts that never carried a count.
-      #
-      # Only the preamble is searched, the region before the first details
-      # block, which is where Copilot states the count in every observed live
-      # review body. Searching the whole body would let a renamed
-      # header fall through to a "**Findings" line quoted at the start of a
-      # line inside a section, reading a quoted value as the count instead of
-      # reporting the rename. The stop pattern omits the closing angle
-      # bracket so an opened section, "<details open>", ends the preamble too.
-      def stated_finding_count:
-        (
-          preamble_count_lines
-          | map(select(test("^\\*\\*Findings"; "i")))
-          | first
-        ) as $line
-        | if $line == null then null
-          else
-            (
-              $line
-              | sub("^\\*\\*Findings:\\*\\*"; ""; "i")
-              | gsub("<[^>]*>"; "")
-              | gsub("[[:space:]]"; "")
-            ) as $counts
-            | if ($counts | test("^None$"; "i")) then 0
-              elif ($counts | test("^[0-9]+(·[0-9]+)*$")) then
-                ([$counts | scan("[0-9]+") | tonumber] | add)
-              else "unparseable"
-              end
-          end;
-
-      # The open-findings layout states a count of zero on a bold line of its
-      # own, "**0 open findings**", in place of the summary of an open block,
-      # because a round with nothing open lists no block. The line sits in the
-      # preamble, where a "**Findings:**" line would, and is read from there
-      # alone for the same reason: a quoted copy inside a section is prose.
-      # Null when no such line exists.
-      def open_findings_line_count:
-        (
-          preamble_count_lines
-          | map(sub("\r$"; "") | capture("^\\*\\*(?<count>[0-9]+) open findings?\\*\\*[[:space:]]*$") | .count | tonumber)
-          | first
-        )
-        // null;
-
-      # An open section whose count and thread links disagree, in either
-      # direction, or an open-findings count stated beside any other count.
-      # The census reconciles a count with its links only above zero, so a
-      # "0 open findings" block holding a link would otherwise read as clean.
-      # The open-findings layout states its count once, as a block summary
-      # or, with nothing open, a "**0 open findings**" line, and never beside
-      # a "**Findings:**" line or an "Open (N)" section, so a body mixing the
-      # forms carries counts with no rule for which one holds: "**Findings:**
-      # None" over a block of three would otherwise read as zero.
-      def open_section_mismatch:
-        ((open_section // open_findings_section) | . != null and .links != .count)
-        or (
-          ([open_findings_line_count, open_findings_section] | any(. != null))
-          and ([stated_finding_count, open_findings_line_count, open_section, open_findings_section] | map(select(. != null)) | length) > 1
-        );
-
-      # Copilot puts its verdict heading and lead paragraph before the first
-      # details block. The stop pattern omits the closing angle bracket, as
-      # stated_finding_count does, so an "Open" section opened with
-      # "<details open>" ends the headline too rather than leaking its thread
-      # list into it. The calls to action ("Once you have addressed...",
-      # "Get a fresh assessment...") are boilerplate and carry no finding.
-      def headline:
-        preamble_lines
-        | map(select(test("^\\*(Once you|Get a fresh assessment)") | not))
-        | join("\n")
-        | trim;
-
-      # The lines of the lead: everything in headline except the layout
-      # around it, which is the marker comment, headings (the overview title
-      # and the verdict), the "**Review effort:**" label, with or without the
-      # emoji the open-findings layout puts before it, the "**Findings:**"
-      # label and the "**0 open findings**" count line. List items, bold
-      # text and anything else stay, because a lead that states its findings
-      # as bullets states them there and nowhere else.
-      def lead_lines:
-        headline
-        | split("\n")
-        | map(trim)
-        | map(
-            select(
-              . != ""
-              and (test("^<!--.*-->$|^#{1,6}([[:space:]]|$)|^([^\\x{0}-\\x{7F}]+[[:space:]]+)?\\*\\*Review effort:\\*\\*|^\\*\\*Findings:\\*\\*|^\\*\\*[0-9]+ open findings?\\*\\*$") | not)
-            )
-          );
-
-      # The lead as a reader sees it, one line per line of the body. Empty
-      # when the lead says nothing.
-      def lead_paragraph: lead_lines | join("\n");
-
-      # Lead sentences Copilot writes when a round names no finding, seeded
-      # from live reviews, as patterns. Each must match the whole lead, so a
-      # lead that opens with the same words and goes on to name something,
-      # in prose or in bullets, is not on the list.
-      def no_finding_leads: [
-        "^One or more issues must be addressed before approval\\.$",
-        "^No unresolved( [a-z]+)? issues (were identified|remain)\\.$"
-      ];
-
-      # A ccr-overview-v2 review opens with either a lead paragraph naming
-      # what it found, or a fixed sentence that names nothing. Other leads
-      # read like "Unresolved moderate findings affect detection, reviewer
-      # exclusions, and checklist accuracy", which may state a finding that
-      # appears nowhere else in the body, or like "No blocking issues were
-      # identified; only a minor documentation nit remains", which does so on
-      # an approval.
-      #
-      # So the lead is what separates a review with nothing to read from one
-      # whose concerns live only in prose. A lead that is not on the list
-      # costs a read (see needsRead), never drift, so a reworded sentence
-      # surfaces as one lead finding the agent recognizes rather than as an
-      # escalation nothing can clear.
-      def lead_states_no_findings:
-        (lead_lines | join(" ")) as $lead
-        | no_finding_leads | any(. as $pattern | $lead | test($pattern));
-
-      # What kind of Copilot output a body is. A ccr-overview-v2 body is a
-      # review. So is an older body with a heading, an overview section, a
-      # suppressed-comments section or a review-details block. Copilot also
-      # posts two notices through the review API that are not reviews at
-      # all: an error, and a report that every changed file was excluded.
-      # Both have no verdict and no findings, which is exactly what a clean
-      # review looks like, so a caller has to tell them apart by kind.
-      #
-      # Review structure is checked before the notice text, because a real
-      # review can quote that text: a review of a change to this very
-      # command, for one. Taking it for a notice would leave its findings
-      # unprocessed. A notice is a bare sentence with none of that structure.
-      #
-      # Anything else is "unknown": a body that is neither a review nor a
-      # known notice is a layout nothing here reads, and it reports drift.
-      def review_kind($is_v2; $has_suppressed_marker):
-        if $is_v2 then "review"
-        elif (verdict != null)
-             or test("Pull request overview|<summary>Review details</summary>"; "i")
-             or $has_suppressed_marker
-        then "review"
-        elif test("encountered an error and was unable to review"; "i") then "error"
-        elif test("(was not|wasn.t) able to review any files"; "i") then "no-files"
-        else "unknown"
-        end;
-
-      # The section match is deliberately loose: almost any line mentioning the
-      # phrase opens the slice, rather than requiring a <summary> tag or a
-      # heading. Anchoring on the exact wrapper would be more precise, but a
-      # fourth layout would then slip through as an empty result, which is the
-      # silent miss this whole command exists to prevent. Loose matching can
-      # instead over-capture when a review quotes the phrase in prose, and that
-      # surfaces as a visible drift report. Failing loud beats failing quiet.
-      #
-      # Table rows are the one exception. Copilot opens most reviews with a
-      # "File summaries" table describing every changed file, so any PR that
-      # touches code about suppressed comments gets a row quoting the phrase.
-      # That fires on every such review, and a section is never announced from
-      # inside a table, so excluding rows costs no real coverage.
-      def announces_section($line):
-        ($line | test("^[[:space:]]*\\|") | not)
-        and ($line | ascii_downcase | test("suppressed comments|comments suppressed"));
-
-      # Derived from the body rather than from the slice. Deriving it from the
-      # slice would report false whenever a section is announced but captures
-      # no interior lines (an empty section, or a marker sitting directly above
-      # the trailer), which silently disarms the drift detector in exactly the
-      # case it exists to catch.
-      def has_suppressed_marker:
-        split("\n") | any(announces_section(.));
-
-      def suppressed_slice:
-        split("\n")
-        | reduce .[] as $line ({inside: false, out: []};
-            if (.inside | not) and announces_section($line)
-            # The announcing line is kept so the slice is never empty when a
-            # section exists, and so a caller reading it can see what opened it.
-            then .inside = true | .out += [$line]
-            elif .inside and ($line | test("^</?details>|^- \\*\\*Files reviewed:"))
-            then .inside = false
-            elif .inside
-            then .out += [$line]
-            else .
-            end)
-        | .out
-        | join("\n")
-        | trim;
-
-      # The trailing $ anchor is load-bearing: it keeps the
-      # "**Previously missed (1)** - in code that..." subheading from parsing
-      # as a finding, since that line continues past the closing asterisks.
-      def suppressed_findings($region):
-        split("\n")
-        | reduce .[] as $line ({current: null, out: []};
-            if $line | test("^\\*\\*[^*]+:[0-9]+\\*\\*$")
-            then (if .current then .out += [.current] else . end)
-              | .current = {heading: ($line | ltrimstr("**") | rtrimstr("**")), lines: []}
-            elif .current != null
-            then .current.lines += [$line]
-            else .
-            end)
-        | (if .current then .out + [.current] else .out end)
-        | map(
-            (.heading | split(":")) as $parts
-            | {
-                location: .heading,
-                path: ($parts[0:-1] | join(":")),
-                line: ($parts[-1] | tonumber),
-                severity: null,
-                body: (.lines | join("\n") | trim),
-                source: "suppressed",
-                region: $region
-              }
-          );
-
-      # ccr-overview-v2 nests each "Previously missed" finding in its own
-      # details block. The location is inline code rather than a bold heading,
-      # and GitHub inserts U+200B after path separators for display wrapping.
-      # Scanning the complete body also avoids truncating the outer details at
-      # the first nested closing tag. Open and resolved entries do not have
-      # this nested summary-plus-location shape, so they cannot match.
-      def previously_missed_findings:
-        [
-          scan(
-            "<summary><picture>.*?<img [^>]*alt=\"(?<severity>[^\"]+) severity\"[^>]*>.*?</picture> (?<title>.*?)</summary>[[:space:]]+`(?<location>[^`]+):(?<line>[0-9]+)`[[:space:]]+(?<body>.*?)</details>";
-            "gms"
-          )
-          | {
-              location: ((.[2] | normalize_path) + ":" + .[3]),
-              path: (.[2] | normalize_path),
-              line: (.[3] | tonumber),
-              severity: .[0],
-              body: ((.[1] + "\n\n" + .[4]) | trim),
-              source: "previously-missed",
-              region: "Previously missed"
-            }
-        ];
-
-      # A severity word as Copilot displays it in a title, whatever case the
-      # body used: "moderate" and "Moderate" are the same severity.
-      def severity_name: (.[0:1] | ascii_upcase) + .[1:];
-
-      # The severity token that opens a vote-tagged item, in every form seen
-      # on live reviews: "Moderate (2 votes): ", "**Critical (1 vote):** ",
-      # "moderate (1 vote): " and "Moderate (1 vote each): ". Any word works,
-      # so a severity name not seen before still parses.
-      def vote_token_pattern:
-        "(?:\\*\\*)?\\b(?<severity>[A-Za-z]+) \\([0-9]+ votes?(?: each)?\\):(?:\\*\\*)?[[:space:]]+";
-
-      # ccr-overview-v2 appends line-less findings to a file summary cell as
-      # vote-tagged items. Each item runs from its own severity token to the
-      # next one, so text that contains a separator or lacks the final period
-      # is kept rather than dropped.
-      #
-      # The first token opens the first item wherever the file description
-      # ends, including after a description sentence, which is where the bold
-      # form puts it. Every later token must follow an item separator, a
-      # semicolon or a period and then a space, so a token quoted mid-sentence
-      # in a finding stays in its text. Both separators ship: earlier reviews
-      # joined items with "; ", later ones write each item as a sentence. A
-      # token quoted right after a period is indistinguishable from the next
-      # item and splits, which is the safe direction: an extra finding is
-      # read, where the opposite rule would merge two.
-      #
-      # A "( each)" item names several defects under one tag. They are joined
-      # by commas and "and" in prose, so the item is kept whole as one
-      # finding rather than split on a guess.
-      #
-      # Joining every cell after the path keeps escaped pipes inside the
-      # summary, and they are unescaped to the text GitHub renders. The vote
-      # tag is what makes a cell a finding, so this runs on every layout: a
-      # file-summary table without one yields nothing.
-      def table_findings($lines):
-        [
-          $lines[]
-          | select((.fence | not) and (.raw | test("^[[:space:]]*\\|[[:space:]]*`[^`]+`[[:space:]]*\\|")))
-          | .region as $region
-          | .n as $at
-          | .raw
-          | split("|") as $cells
-          | ($cells[1] | trim | ltrimstr("`") | rtrimstr("`") | normalize_path) as $path
-          | ($cells[2:-1] | join("|") | gsub("\\\\\\|"; "|") | trim) as $summary
-          | [
-              [$summary | match(vote_token_pattern; "g")]
-              | to_entries[]
-              | select(
-                  .key == 0
-                  or ($summary[(.value.offset - 2):.value.offset] | IN("; ", ". "))
-                )
-              | .value
-            ] as $items
-          | range(0; $items | length) as $i
-          | $items[$i] as $item
-          | ($items[$i + 1].offset // ($summary | length)) as $end
-          | {
-              location: $path,
-              path: $path,
-              line: null,
-              severity: ($item.captures[0].string | severity_name),
-              body: (
-                $summary[($item.offset + $item.length):$end]
-                | trim
-                | sub(";$"; "")
-                | sub("\\.$"; "")
-                | trim
-              ),
-              source: "table",
-              region: $region,
-              at: $at
-            }
-        ];
-
-      # Copilot also lists findings as vote-tagged bullets under a label such
-      # as "Review findings:" or "Outstanding findings:", in ccr-overview-v2
-      # bodies and in the older "Pull request overview". The label varies, so
-      # the vote tag is what identifies a bullet as a finding, not the label
-      # above it.
-      #
-      # Two bullet shapes ship. One opens with the token and may name its
-      # file in the text: "- **Critical (2 votes):** `ci.yml` uses ...". The
-      # other names its location first: "- `path:122` - Moderate (1 vote):
-      # ...", with a dash of any width. A backticked leading path counts only
-      # when it looks like one, with a slash or a dot and no leading dash, so
-      # an option such as `--repeat` stays text. A bullet with no path is a
-      # finding about the change as a whole and reports a null path.
-      def bullet_findings($lines):
-        [
-          $lines[]
-          | select(.fence | not)
-          | .region as $region
-          | .n as $at
-          | .raw
-          | capture(
-              "^[[:space:]]*[-*][[:space:]]+(?:`(?<location>[^`]+)`[[:space:]]*[-\u2013\u2014]+[[:space:]]*)?"
-              + vote_token_pattern
-              + "(?<text>.*)$"
-            )
-          | (.text | trim) as $text
-          | (
-              .location
-              // ($text | capture("^`(?<path>[^`[:space:]]+)`[[:space:]]").path)
-              // null
-            ) as $named
-          | (
-              if $named != null
-                 and ($named | test("[./]"))
-                 and ($named | test("^-") | not)
-              then ($named | normalize_path)
-              else null
-              end
-            ) as $location
-          | (
-              if $location != null and ($location | test(":[0-9]+$"))
-              then {
-                  path: ($location | sub(":[0-9]+$"; "")),
-                  line: ($location | capture(":(?<line>[0-9]+)$").line | tonumber)
-                }
-              else {path: $location, line: null}
-              end
-            ) as $where
-          | {
-              location: ($location // "(review body)"),
-              path: $where.path,
-              line: $where.line,
-              severity: (.severity | severity_name),
-              body: $text,
-              source: "bullets",
-              region: $region,
-              at: $at
-            }
-        ];
-
-      # The census. Every parser above recognizes a layout it was written
-      # for and returns nothing for one it was not, so on its own a gap in a
-      # parser looks exactly like a review with nothing to say. The census is
-      # how that gap becomes visible: it scans the body for finding-shaped
-      # signals with patterns that do not depend on the layout, and reports
-      # any signal that no parsed finding or inline thread accounts for.
-      #
-      # It is a counting check, not a second parser. It never extracts a
-      # finding, so it stays simple enough to be right while the parsers
-      # around it keep changing.
-      #
-      # Signals:
-      #   thread-link    a list item linking "#discussion_r<id>", which is an
-      #                  inline thread the thread fetch reports
-      #   vote           a "(N votes)" or "(N vote each)" tag on any other line
-      #   location       a line that is only "**path:line**", or that opens
-      #                  with "`path:line`"
-      #   section-count  a section heading or summary carrying a count: one
-      #                  ending in "(N)", or a summary whose bold text opens
-      #                  with the count (see leading_count_summary)
-      #   badge          a severity badge on a line with no thread link, which
-      #                  marks a finding. Only a "Previously missed" entry,
-      #                  whose title carries the badge, accounts for one, so
-      #                  a finding of another shape in the same region cannot
-      #                  stand in for it
-      #   fence          a fenced block still open at the end of the body (see
-      #                  unclosed_fence)
-      #
-      # Fenced blocks are skipped, and vote tags inside inline code spans do
-      # not count, so a finding that quotes the format cannot trip it.
-      #
-      # Vote tags are reconciled line by line. A finding that carries a vote
-      # tag comes from one body line, and its parser records that line in
-      # "at", so a line holding more tags than it yielded findings is a gap,
-      # reported once with the line it sits on. Reconciling a whole region
-      # instead would report every tag in it when one item was missed.
-      #
-      # Location lines are reconciled by region, because the parsers that
-      # read them take a finding from several lines. Each signal belongs to
-      # the region it sits in (see annotate), and every parser tags its
-      # findings with a region the same way, so a region whose parsers
-      # returned fewer located findings than it has location lines is a gap.
-      #
-      # Either way a "( each)" tag stands for at least one finding, so the
-      # comparison is "fewer than", never "not equal".
-      #
-      # A section count is accounted for when it equals the parsed findings
-      # plus the thread links in its region. That holds whatever the section is
-      # called, and wherever it writes its count, so a new section that lists
-      # threads, the way "Open" and "3 resolved since last review" do, is read
-      # correctly the first time it appears, and a new section whose items
-      # nothing parses is not. Two counted sections list files rather than
-      # findings, and are exempt.
-      def non_finding_sections: ["Files not reviewed", "New files"];
-
-      def signals:
-        [
-          .[]
-          | select(.fence | not)
-          | . as $l
-          | if ($l.text | test("\\(#discussion_r[0-9]+\\)")) then
-              {kind: "thread-link", line: $l.n, region: $l.region, text: $l.raw}
-            else
-              (
-                $l.text
-                | scan("\\([0-9]+ votes?(?: each)?\\)"; "i")
-                | {kind: "vote", line: $l.n, region: $l.region, text: $l.raw}
-              ),
-              # A list item that opens with a location counts too, so a
-              # bullet naming a file and line without a vote tag cannot slip
-              # past every parser. A line that carries a vote tag is left to
-              # the vote check, which already reconciles it.
-              (
-                select(
-                  ($l.raw | test("^[[:space:]]*(\\*\\*[^*`]+:[0-9]+\\*\\*[[:space:]]*$|(([-*+]|[0-9]+[.)])[[:space:]]+)?(\\*\\*)?`[^`]+:[0-9]+`)"))
-                  and ($l.text | test("\\([0-9]+ votes?(?: each)?\\)"; "i") | not)
-                )
-                | {kind: "location", line: $l.n, region: $l.region, text: $l.raw}
-              ),
-              (
-                select(
-                  ($l.depth == 1 and ($l.raw | test("^<summary>")))
-                  or ($l.depth >= 1 and ($l.raw | test("^### ")))
-                )
-                | ($l.raw | section_count) as $count
-                | select($count != null and $count > 0)
-                | {kind: "section-count", line: $l.n, region: $l.region, text: $l.raw, count: $count}
-              ),
-              # A severity badge marks a finding wherever Copilot draws one.
-              # On a line with no thread link it stands for a finding the
-              # thread fetch cannot report, so it must be one a parser read.
-              # The "**Findings:**" line draws badges as its count breakdown,
-              # not as findings, and is left out.
-              (
-                select(
-                  ($l.raw | test("alt[[:space:]]*=[[:space:]]*\"[^\"]*severity[^\"]*\""; "i"))
-                  and ($l.raw | test("^\\*\\*Findings"; "i") | not)
-                )
-                | {kind: "badge", line: $l.n, region: $l.region, text: $l.raw}
-              )
-            end
-        ];
-
-      def count_by(f):
-        group_by(f) | map({key: (.[0] | f | tostring), value: length}) | from_entries;
-
-      def unaccounted($findings):
-        . as $signals
-        | ($findings | count_by(.region)) as $found
-        | ($findings | map(select(.at != null)) | count_by(.at)) as $found_at
-        | ($findings | map(select(.at == null)) | count_by(.region)) as $located
-        | ($signals | map(select(.kind == "thread-link")) | count_by(.region)) as $links
-        | ($signals | map(select(.kind == "location")) | count_by(.region)) as $locations
-        | ($signals | map(select(.kind == "badge")) | count_by(.region)) as $badges
-        | ($findings | map(select(.source == "previously-missed")) | count_by(.region)) as $badged
-        | [
-            (
-              $signals
-              | map(select(.kind == "vote"))
-              | group_by(.line)[]
-              | select(length > ($found_at[.[0].line | tostring] // 0))
-              | .[0]
-            ),
-            (
-              $signals[]
-              | select(
-                  (
-                    .kind == "location"
-                    and (($located[.region] // 0) < ($locations[.region] // 0))
-                  )
-                  or (
-                    .kind == "badge"
-                    and (($badged[.region] // 0) < ($badges[.region] // 0))
-                  )
-                  or (
-                    .kind == "section-count"
-                    and (.region as $region | non_finding_sections | any(. == $region) | not)
-                    and .count != (($found[.region] // 0) + ($links[.region] // 0))
-                  )
-                )
-            )
-          ]
-          | sort_by(.line)
-          | map({kind, region, line, text: (.text | .[0:200])});
-
       [
         .[]
         # Safe access, matching the thread path. A null or absent user already
@@ -1382,137 +388,10 @@ function do_parse_reviews() {
         #
         # Only the direct logins apply here. The github-actions[bot] heuristic
         # the thread fetch uses keys on a comment body opening with a severity
-        # tag, and review bodies open with a verdict heading instead, so it has
-        # nothing to match on.
+        # tag, which is a thread-comment convention, not a review-body one.
         | select((.user.login? // "") as $login | $direct_logins | any(. == $login))
-        # The shell names any skipped non-string body before this runs.
         | select((.body | type) == "string" and .body != "")
-        # The raw body is what a caller reads; everything below parses the
-        # normalized one.
-        | .body as $raw_body
-        | .body |= normalize_layout
-        | (.body | annotate) as $lines
-        | (.body | suppressed_slice) as $slice
-        | (.body | verdict) as $verdict
-        | (.body | is_overview_v2) as $is_v2
-        # A legacy section is announced by its first matching line, and its
-        # findings belong to the region that line opened.
-        | (
-            first($lines[] | select((.fence | not) and announces_section(.raw)) | .region)
-            // "lead"
-          ) as $suppressed_region
-        | ($slice | suppressed_findings($suppressed_region)) as $suppressed_findings
-        | (if $is_v2 then (.body | previously_missed_findings) else [] end) as $missed_findings
-        | table_findings($lines) as $table_findings
-        | bullet_findings($lines) as $bullet_findings
-        | ($suppressed_findings + $missed_findings + $table_findings + $bullet_findings) as $findings
-        | (
-            ($lines | signals | unaccounted($findings))
-            + (if $is_v2 then element_signals($lines) else [] end)
-            + unclosed_fence($lines)
-            | sort_by(.line)
-          ) as $census
-        | (.body | has_suppressed_marker) as $has_suppressed_marker
-        | (.body | review_kind($is_v2; $has_suppressed_marker)) as $review_kind
-        | ($is_v2 and (.body | lists_open_threads)) as $lists_open_threads
-        | ($is_v2 and (.body | lists_resolved_threads)) as $lists_resolved_threads
-        | ($is_v2 and (.body | lead_states_no_findings)) as $lead_states_no_findings
-        | (.body | lead_paragraph) as $lead_paragraph
-        # The lead is a reading task, not a format change: the layout was
-        # read, and what remains is prose. It may state a new finding,
-        # restate a thread or a parsed finding, ask for human review without
-        # naming a defect, or say nothing of concern, and only a reader can
-        # tell which. Two shapes need that read:
-        #
-        #   - Any lead that is not a known no-finding sentence, whatever the
-        #     verdict and whatever else parsed. An approval can still name a
-        #     nit, and a lead beside one parsed finding can name a second
-        #     that appears nowhere else.
-        #   - A non-clean verdict that no open thread and no parsed finding
-        #     accounts for, even when its lead is empty or known, unless the
-        #     round lists a resolved section and its lead is known. "One or
-        #     more issues must be addressed" with nothing behind it is read,
-        #     not trusted.
-        | (
-            $is_v2
-            and (
-              ($lead_paragraph != "" and ($lead_states_no_findings | not))
-              or (
-                $verdict != "### 🟢 Approval recommended"
-                and ($lists_open_threads | not)
-                and ($findings | length) == 0
-                and (($lists_resolved_threads and $lead_states_no_findings) | not)
-              )
-            )
-          ) as $needs_read
-        # The lead as one finding, so it flows through categorization and
-        # the summary like any other review-body finding instead of
-        # depending on a caller noticing a flag. Copilot gives it no
-        # location and no severity, and none is invented. A non-clean
-        # verdict can need a read with no lead at all; the verdict then
-        # stands in as the body, so the finding always has text a summary
-        # can quote and a later run can match.
-        | (
-            if $needs_read then
-              [{
-                location: "(review overview)",
-                path: null,
-                line: null,
-                severity: null,
-                body: (if $lead_paragraph != "" then $lead_paragraph else ($verdict // "(no verdict)") end),
-                source: "lead",
-                region: "lead"
-              }]
-            else []
-            end
-          ) as $lead_findings
-        # A vote tag or location written in the lead is part of the lead
-        # finding, which carries that line verbatim, so it is accounted for
-        # whenever the lead is read. Reporting it as well would turn a lead
-        # that lists its findings as bullets into drift that never clears.
-        | (
-            if $needs_read then
-              $census | map(select((.region == "lead" and (.kind == "vote" or .kind == "location")) | not))
-            else $census
-            end
-          ) as $unaccounted
-        # Every ccr-overview-v2 body states its open count, in every fixture
-        # and every observed live review: on a "**Findings:**" line, or, in
-        # the open-findings layout, as an "N open findings" summary or, when
-        # nothing is open, a "**0 open findings**" line. A v2 body with none
-        # of these is a renamed or removed header rather than an older
-        # layout. Reporting it as unparseable is what keeps a header
-        # rename from reading as "this layout never had a count", which would
-        # report no shortfall. Only a pre-v2 body reports null and is excluded
-        # from the comparison.
-        | (
-            if $is_v2 | not then null
-            else (
-              (.body | stated_finding_count)
-              // (.body | open_findings_line_count)
-              // (.body | open_findings_section | .count)
-              // "unparseable"
-            )
-            end
-          ) as $stated_findings
-        | (if $is_v2 then (.body | open_thread_count) else 0 end) as $open_thread_count
-        # A stated count above the inline threads Copilot listed, a v2 body
-        # whose count is missing or does not parse, an open section listing an
-        # item that is not a thread, open counts that disagree with each other
-        # or with their links, or a resolved section holding more than its
-        # thread links, leaves findings this command cannot account for. Each
-        # is independent of which other sections the body has.
-        | (
-            if $stated_findings == null then false
-            elif $stated_findings == "unparseable" then true
-            else
-              $stated_findings > $open_thread_count
-              or (.body | open_section_items) > 0
-              or (.body | open_section_conflict)
-              or (.body | open_section_mismatch)
-              or (.body | resolved_section_mismatch)
-            end
-          ) as $stated_shortfall
+        | select($since == "" or ((.submitted_at // "") >= $since))
         | {
             id: .id,
             url: .html_url,
@@ -1520,61 +399,33 @@ function do_parse_reviews() {
             # The commit the review ran against, which is how a caller tells
             # a review of the current head from one of an older push.
             commitId: .commit_id,
-            headline: (.body | headline),
-            verdict: $verdict,
-            hasSuppressedMarker: $has_suppressed_marker,
-            reviewKind: $review_kind,
-            # Drift means the layout could not be read, which only a parser
-            # change fixes, so it is reserved for structural causes:
-            #
-            #   - A shortfall against the count Copilot stated. The count is
-            #     compared against the "Open (N)" number or, in the
-            #     open-findings layout, the thread links that block lists. A
-            #     body can yield one finding and still state more than its
-            #     open threads account for, so this does not wait for an
-            #     empty parse. An open section listing an item that is not a
-            #     thread falls short the same way.
-            #   - Any signal the census leaves unaccounted, including an
-            #     element outside the v2 vocabulary.
-            #   - A body that announces a suppressed-comments section and
-            #     yields no parsed findings at all.
-            #   - A body that is neither a review nor a known notice.
-            #
-            # The lead paragraph is not on this list. It sets needsRead below,
-            # which costs a read rather than an escalation, because a review
-            # body never changes and drift on one can never clear.
-            hasFormatDrift: (
-              ($is_v2 and $stated_shortfall)
-              or (($unaccounted | length) > 0)
-              or (($findings | length) == 0 and $has_suppressed_marker)
-              or $review_kind == "unknown"
+            threadLinks: (
+              [.body | match("#discussion_r([0-9]+)"; "g") | .captures[0].string | tonumber]
+              | unique
             ),
-            needsRead: $needs_read,
-            unaccounted: $unaccounted,
-            suppressed: $slice,
-            reviewBody: $raw_body,
-            # "at" is the census bookkeeping described above, not part of
-            # a finding a caller reads.
-            findings: ($findings | map(del(.at)) + $lead_findings)
+            body: .body
           }
       ]
+      | sort_by(.submittedAt // "")
     ' <<< "${input}"
 }
 
-# Fetches Copilot review bodies for a PR and extracts their findings.
+# Fetches Copilot review bodies for a PR.
 # Arguments:
 #   $1 - Repository owner
 #   $2 - Repository name
 #   $3 - Pull request number
+#   [--since <timestamp>] - Passed through to do_parse_reviews
 # Outputs:
-#   JSON array of Copilot reviews with parsed findings to stdout
+#   JSON array of Copilot reviews to stdout
 function do_fetch_reviews() {
   local owner="${1}"
   local repo="${2}"
   local pr_number="${3}"
+  shift 3
 
   # gh merges paginated REST array responses into a single array, so the
-  # normalizer receives one flat list of reviews.
+  # filter receives one flat list of reviews.
   # gh writes its own diagnostic to stderr, which passes through untouched, so
   # this message adds the request context rather than guessing at the cause.
   # A wrong owner, repo, or PR number is only one possibility; missing token
@@ -1584,7 +435,7 @@ function do_fetch_reviews() {
     die "Failed to fetch reviews for ${owner}/${repo}#${pr_number}. See the gh error above for the cause."
   fi
 
-  do_parse_reviews <<< "${response}"
+  do_parse_reviews ${1+"$@"} <<< "${response}"
 }
 
 # =============================================================================
@@ -1597,12 +448,6 @@ function do_fetch_reviews() {
 # item on the pull request by where it appears and reports any item the two
 # typed commands do not reach, so feedback that arrives somewhere new shows
 # up as an entry rather than as silence.
-#
-# It also reports the older-layout reviews that only a read can settle. An
-# older body cannot say whether its findings are inline, so a review whose
-# first heading is not the approval verdict, with nothing parsed, is
-# accounted for only when inline comments are attached to it. Only the join
-# with the review comments can tell.
 #
 # REST reports Copilot's inline comments as "Copilot", GraphQL as
 # "copilot-pull-request-reviewer", and REST reviews as
@@ -1630,7 +475,8 @@ function do_parse_audit() {
   # otherwise abort with a raw jq error that names no field.
   local malformed
   malformed="$(jq -r '
-    if (.reviewComments | all(type == "object")) | not then "reviewComments: every element must be an object"
+    if (.reviews | all(type == "object")) | not then "reviews: every element must be an object"
+    elif (.reviewComments | all(type == "object")) | not then "reviewComments: every element must be an object"
     elif (.issueComments | all(type == "object")) | not then "issueComments: every element must be an object"
     elif (.threads | all(type == "object" and (.comments | type) == "array" and (.comments | all(type == "object")))) | not
     then "threads: every element must be an object with a comments array of objects"
@@ -1641,24 +487,18 @@ function do_parse_audit() {
     die "Invalid audit JSON: ${malformed}."
   fi
 
-  local parsed
-  parsed="$(jq '.reviews' <<< "${input}" | do_parse_reviews)"
-
-  # The input and its parsed reviews reach jq on stdin as two documents
-  # rather than as arguments, because review bodies can be long enough
-  # together to exceed the argument size limit.
+  # The input reaches jq on stdin rather than as an argument, because review
+  # bodies can be long enough together to exceed the argument size limit.
   # shellcheck disable=SC2016
   # $variables in the filter are jq bindings, not shell variables
-  printf '%s\n%s\n' "${input}" "${parsed}" | jq -s \
+  jq \
     --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" \
     --arg actions_login "${COPILOT_ACTIONS_LOGIN}" \
     --arg severity_pattern "${COPILOT_SEVERITY_PATTERN}" \
     '
-      .[1] as $parsed
-      | .[0]
       # A login or body that is not a string reads as empty, so one
       # malformed comment cannot abort the join with a raw jq error.
-      | def text: if type == "string" then . else "" end;
+      def text: if type == "string" then . else "" end;
 
       def is_copilot($login; $body):
         ($login | text | ascii_downcase) as $lower
@@ -1707,21 +547,9 @@ function do_parse_audit() {
               $issue_comments[]
               | {surface: "issue-comment", reason: "pull request comment", id: .id, url: .html_url, path: null, excerpt: (.body | excerpt)}
             ]
-          ),
-          legacyNeedsRead: [
-            $parsed[]
-            | select(.reviewKind == "review")
-            | select(.reviewBody | contains("<!-- ccr-overview-v2 -->") | not)
-            # A body with no heading at all cannot say it was clean, so it is
-            # read rather than trusted. Only the approval verdict is skipped.
-            | select(.verdict != "### 🟢 Approval recommended")
-            | select((.findings | length) == 0)
-            | .id as $id
-            | select(($review_comments | map(select(.pull_request_review_id == $id)) | length) == 0)
-            | .id
-          ]
+          )
         }
-    '
+    ' <<< "${input}"
 }
 
 # Fetches every review thread on a PR, resolved or not, with the database id
@@ -1972,12 +800,12 @@ function main() {
       do_fetch "$1" "$2" "$3"
       ;;
     fetch-reviews)
-      [[ $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} fetch-reviews <owner> <repo> <pr_number>"
-      do_fetch_reviews "$1" "$2" "$3"
+      [[ $# -ne 3 && $# -ne 5 ]] && die "Usage: ${SCRIPT_NAME} fetch-reviews <owner> <repo> <pr_number> [--since <timestamp>]"
+      do_fetch_reviews "$@"
       ;;
     parse-reviews)
-      [[ $# -ne 0 ]] && die "Usage: ${SCRIPT_NAME} parse-reviews (reads review JSON on stdin)"
-      do_parse_reviews
+      [[ $# -ne 0 && $# -ne 2 ]] && die "Usage: ${SCRIPT_NAME} parse-reviews [--since <timestamp>] (reads review JSON on stdin)"
+      do_parse_reviews ${1+"$@"}
       ;;
     audit)
       [[ $# -ne 3 ]] && die "Usage: ${SCRIPT_NAME} audit <owner> <repo> <pr_number>"
