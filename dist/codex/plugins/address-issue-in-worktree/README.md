@@ -44,7 +44,7 @@ Provide an issue number, several issue numbers, or descriptive text to search fo
 
 ### Several issues
 
-By default, several issue numbers open **one** worktree for the combined work. The first issue supplies the branch number, the prompt carries every issue, every open issue is marked in progress, and the new session runs `/address-issue 42 57` to plan them together under one approval.
+By default, several issue numbers open **one** worktree for the combined work. Closed issues you decline are dropped first. The first remaining issue supplies the branch number, the prompt carries every remaining issue, every open one is marked in progress, and the new session runs `/address-issue 42 57` to plan them together under one approval.
 
 With `--fan-out` (or its aliases `--each` and `--separate`), each issue gets its own worktree, branch, tmux window and session, running `/address-issue N` for that issue. Every issue is fetched and checked, and every question about closed issues or ambiguous branches is asked, before the first worktree is created. Worktrees are then created one at a time, and each issue is marked in progress only after its worktree exists. The run ends with one table covering every issue. With one distinct issue, the flag has no effect and `--resource` works as usual. With several distinct issues, `--resource` is rejected because one exclusive resource cannot be held by several worktrees.
 

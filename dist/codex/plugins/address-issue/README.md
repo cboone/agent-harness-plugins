@@ -26,7 +26,7 @@ Fetches a GitHub issue by number or search text, classifies it (bug fix, feature
 /address-issue 42 57
 ```
 
-Several issue numbers are addressed as one combined piece of work: every issue is fetched, checked and marked in progress, their requirements go into one plan with one approval stop, and commits reference every issue they address. The options apply to that one plan.
+Several issue numbers are addressed as one combined piece of work. Every issue is fetched and checked, you choose whether to keep each closed one, and every open issue that remains is marked in progress. Their requirements go into one plan with one approval stop, and commits reference every issue they address. The options apply to that one plan.
 
 | Option                | Description                                          |
 | --------------------- | ---------------------------------------------------- |

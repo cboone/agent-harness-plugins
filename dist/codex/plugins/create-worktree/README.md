@@ -33,7 +33,7 @@ Either way, it creates the worktree via `workmux add` and stops. It does not sta
 
 ### Several issues
 
-Two or more issue numbers, such as `42 57` or `#42, #57`, are read as a list of issues rather than a task description; `--no-issue` still forces the description path. By default they produce **one** worktree for the combined work: the first issue supplies the branch number, and the prompt carries every issue.
+Two or more issue numbers, such as `42 57` or `#42, #57`, are read as a list of issues rather than a task description; `--no-issue` still forces the description path. By default they produce **one** worktree for the combined work. Closed issues you decline are dropped first; the first remaining issue supplies the branch number, and the prompt carries every remaining issue.
 
 With `--fan-out` (or its aliases `--each` and `--separate`), each issue gets its own worktree, branch and tmux window. Every issue is fetched and checked, and every question about closed issues or ambiguous branches is asked, before the first worktree is created. Worktrees are then created one at a time, and the run ends with one table covering every issue. Nothing is marked in progress in either mode. With one distinct issue, the flag has no effect and `--resource` and `--branch` work as usual. With several distinct issues, those two options are rejected. `--no-issue` cannot accompany a fan-out flag because it forces the description path.
 

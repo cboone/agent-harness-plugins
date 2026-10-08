@@ -53,7 +53,7 @@ Reject `--no-issue` with any fan-out flag before classifying the argument, since
 
 The single-issue workflow applies, with these changes:
 
-- **Step 3:** fetch every issue into its own `mktemp` file, and remove every one once the worktree exists or the run stops. Warn about and ask about each closed issue. The first issue given is the primary one: it supplies `--issue` to the launcher, so it owns the branch number and the lookup that reuses an existing branch. Name the candidate for the combined work, not only the primary issue.
+- **Step 3:** fetch every issue into its own `mktemp` file, and remove every one once the worktree exists or the run stops. Warn about every closed issue and ask about them in one question, before anything is composed. Drop each issue the user declines and remove its JSON file; stop if none remain. Every later step works with the remaining issues only. The first remaining issue is the primary one: it supplies `--issue` to the launcher, so it owns the branch number and the lookup that reuses an existing branch. Name the candidate for the combined work, not only the primary issue.
 - **Step 5:** run `compose-issue-prompt` once per issue, in the order given, and join the outputs with a blank line. Check every composition before invoking the launcher: if any helper fails, stop and remove every issue JSON file instead of launching with a partial prompt. Pass no `--chain-command`, as for one issue.
 
 ```bash
