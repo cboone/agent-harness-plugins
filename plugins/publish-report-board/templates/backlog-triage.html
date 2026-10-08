@@ -2,128 +2,86 @@
 <meta name="color-scheme" content="light dark" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;800&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" />
 <style>
-  /* Catamount palette: the donkey ramp for ink, rails, and slate surfaces;
-     amber marks what is current; blue is reserved for interaction. The light
-     theme is the Catamount report; the dark theme follows Catamount Dark,
-     whose ground is the site's own donkey-600. */
+  /* An editorial backlog desk, in the bugs board's look: IBM Plex Sans for
+     text and Plex Mono for numbers and labels. The light theme is Graphite and
+     orange, the dark theme Night. The Start now count is the one filled block,
+     and its ranks take the same color. The accent marks what is current or
+     contended: segments that can run now, contention cells, and work in
+     progress. In the light theme blue is reserved for focus; in the dark theme
+     the filled block takes the light blue the focus ring also uses. Components
+     use tokens only. The shared tokens match bugs.html; a change to one
+     prompts a look at the other. */
   :root {
     color-scheme: light;
-    --face: "Schibsted Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    --gutter: clamp(16px, 4.1vw, 44px);
-    --ground: #fcfdfd;
-    --panel: #ffffff;
-    --ink: #1e2123;
-    --muted: #5e686c;
-    --rail: #5e686c;
-    --eyebrow: #b45309;
-    --marker: #d97706;
-    --hairline: rgb(217 119 6 / 50%);
-    --link-hover: #2563eb;
-    --link-active: #1d4ed8;
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --gutter: clamp(16px, 4vw, 48px);
+    --ground: #f1f1ef;
+    --ink: #1b1c1e;
+    --body: #36383c;
+    --muted: #5d6066;
+    --rule: #d6d6d2;
+    --rule-soft: #e4e4e0;
+    --primary: #26292e;
+    --on-primary: #ffb37a;
+    --accent: #a8430b;
+    --aging: #a8430b;
+    --stale: #b42318;
+    --link-rule: rgb(93 96 102 / 45%);
     --focus: #2563eb;
-    --zebra: #eff2f3;
-    --rule: rgb(30 33 35 / 20%);
-    --grid: rgb(30 33 35 / 25%);
-    --rule-strong: rgb(30 33 35 / 40%);
-    --slate: #485054;
-    --slate-fade: rgb(94 104 108 / 50%);
-    --slate-edge: #33393b;
-    --slate-ink: #ffffff;
-    --slate-figure: #fde68a;
-    --chip: #e0e5e7;
-    --chip-edge: #a7b2b6;
-    --chip-ink: #1e2123;
-    --chip-hover: #bfdbfe;
-    --chip-hover-edge: #60a5fa;
-    --chip-hover-ink: #1e3a8a;
-    --chip-active: #93c5fd;
-    --chip-active-edge: #3b82f6;
-    --chip-active-ink: #000000;
-    --bar-now: #f59e0b;
-    --bar-queued: #fde68a;
-    --bar-blocked: #c3ccce;
-    --bar-edge: rgb(180 83 9 / 45%);
-    --hatch: rgb(30 33 35 / 18%);
-    --hit: #fef3c7;
-    --selection: #fde68a;
-    --selection-ink: #000000;
-    --heading-shadow: none;
-    --warn: #b45309;
-    --alert: #b91c1c;
+    --bar-now: #a8430b;
+    --bar-edge: #5d6066;
+    --bar-blocked: #e4e4e0;
+    --hatch: rgb(27 28 30 / 28%);
+    --hit: #f6e2d3;
   }
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --ground: #5e686c;
-      --panel: #485054;
-      --ink: #ffffff;
-      --muted: #e6eaeb;
-      --rail: #e0e5e7;
-      --eyebrow: #fde68a;
-      --marker: #fde68a;
-      --hairline: rgb(253 230 138 / 50%);
-      --link-hover: #bfdbfe;
-      --link-active: #93c5fd;
-      --focus: #bfdbfe;
-      --zebra: #535c61;
-      --rule: rgb(255 255 255 / 22%);
-      --grid: rgb(255 255 255 / 28%);
-      --rule-strong: rgb(255 255 255 / 45%);
-      --slate: #3d4447;
-      --slate-fade: rgb(72 80 84 / 60%);
-      --slate-edge: #2b3032;
-      --chip: #485054;
-      --chip-edge: #8d999d;
-      --chip-ink: #ffffff;
-      --bar-now: #fde68a;
-      --bar-queued: #8d999d;
-      --bar-blocked: #485054;
-      --bar-edge: rgb(255 255 255 / 40%);
-      --hatch: rgb(255 255 255 / 16%);
-      --hit: #3d4447;
-      --selection: #8d999d;
-      --heading-shadow: 1px 1px 0 rgb(31 33 35);
-      --warn: #fde68a;
-      --alert: #fecaca;
+      --ground: #121417;
+      --ink: #e9ecf0;
+      --body: #c6cbd3;
+      --muted: #9aa1ad;
+      --rule: #2c3138;
+      --rule-soft: #22262c;
+      --primary: #8fb0ff;
+      --on-primary: #0b1220;
+      --accent: #f2b45a;
+      --aging: #f2b45a;
+      --stale: #ff8a80;
+      --link-rule: rgb(154 161 173 / 45%);
+      --focus: #8fb0ff;
+      --bar-now: #f2b45a;
+      --bar-edge: #9aa1ad;
+      --bar-blocked: #22262c;
+      --hatch: rgb(233 236 240 / 26%);
+      --hit: #2b2418;
     }
   }
 
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --ground: #5e686c;
-    --panel: #485054;
-    --ink: #ffffff;
-    --muted: #e6eaeb;
-    --rail: #e0e5e7;
-    --eyebrow: #fde68a;
-    --marker: #fde68a;
-    --hairline: rgb(253 230 138 / 50%);
-    --link-hover: #bfdbfe;
-    --link-active: #93c5fd;
-    --focus: #bfdbfe;
-    --zebra: #535c61;
-    --rule: rgb(255 255 255 / 22%);
-    --grid: rgb(255 255 255 / 28%);
-    --rule-strong: rgb(255 255 255 / 45%);
-    --slate: #3d4447;
-    --slate-fade: rgb(72 80 84 / 60%);
-    --slate-edge: #2b3032;
-    --chip: #485054;
-    --chip-edge: #8d999d;
-    --chip-ink: #ffffff;
-    --bar-now: #fde68a;
-    --bar-queued: #8d999d;
-    --bar-blocked: #485054;
-    --bar-edge: rgb(255 255 255 / 40%);
-    --hatch: rgb(255 255 255 / 16%);
-    --hit: #3d4447;
-    --selection: #8d999d;
-    --heading-shadow: 1px 1px 0 rgb(31 33 35);
-    --warn: #fde68a;
-    --alert: #fecaca;
+    --ground: #121417;
+    --ink: #e9ecf0;
+    --body: #c6cbd3;
+    --muted: #9aa1ad;
+    --rule: #2c3138;
+    --rule-soft: #22262c;
+    --primary: #8fb0ff;
+    --on-primary: #0b1220;
+    --accent: #f2b45a;
+    --aging: #f2b45a;
+    --stale: #ff8a80;
+    --link-rule: rgb(154 161 173 / 45%);
+    --focus: #8fb0ff;
+    --bar-now: #f2b45a;
+    --bar-edge: #9aa1ad;
+    --bar-blocked: #22262c;
+    --hatch: rgb(233 236 240 / 26%);
+    --hit: #2b2418;
   }
 
   *,
@@ -136,28 +94,39 @@
     margin: 0;
     background: var(--ground);
     color: var(--ink);
-    font-family: var(--face);
-    font-size: 14px;
-    line-height: 1.4;
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
   }
 
-  ::selection {
-    background: var(--selection);
-    color: var(--selection-ink);
-  }
-
-  :where(.board) :where(p, h1, h2, h3, dl, dd, ol) {
+  :where(.board) :where(p, h1, h2, h3, dl, dd, ol, ul) {
     margin: 0;
   }
 
-  :where(.board) :where(ol) {
+  :where(.board) :where(ol, ul) {
     padding: 0;
     list-style: none;
+  }
+
+  a {
+    border-bottom: 1px solid var(--link-rule);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  a:hover {
+    border-bottom-color: currentColor;
   }
 
   a:focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
+  }
+
+  /* A soft ordering link, "better after" or "eases", is dashed: the same mark
+     the page uses for a missing milestone. Hard links stay solid. */
+  .ref--soft {
+    border-bottom-style: dashed;
   }
 
   .visually-hidden {
@@ -169,9 +138,18 @@
     white-space: nowrap;
   }
 
+  .num {
+    font-family: var(--mono);
+    font-weight: 500;
+  }
+
   .board {
-    max-width: 1080px;
-    margin-inline: auto;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px var(--gutter) 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
   }
 
   .board-message {
@@ -179,76 +157,39 @@
     color: var(--muted);
   }
 
-  /* Links rest at ink over an amber hairline and turn blue on hover and press. */
-  .ref {
-    border-bottom: 1px solid var(--hairline);
-    color: var(--ink);
-    text-decoration: none;
+  .label {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
 
-  /* Issue numbers line up in columns. Other links stay proportional, because
-     in this face tabular figures also space out the period in lint-shell.yml. */
-  .num {
-    font-variant-numeric: tabular-nums;
-  }
-
-  .ref:hover {
-    border-bottom-color: var(--link-hover);
-    color: var(--link-hover);
-  }
-
-  .ref:active {
-    border-bottom-color: var(--link-active);
-    color: var(--link-active);
-  }
-
-  /* A soft ordering link, "better after" or "eases", is dashed: the same mark
-     the page uses for a missing milestone. Hard links stay solid. */
-  .ref--soft {
-    border-bottom-style: dashed;
-  }
-
-  /* Slate surfaces: lane keys and capacity boxes share the Catamount button face. */
-  .badge,
-  .cap {
-    border: 1px solid var(--slate-edge);
-    border-radius: 6px;
-    background-color: var(--slate);
-    background-image: linear-gradient(to top left, var(--slate), var(--slate-fade));
-    color: var(--slate-ink);
-  }
-
+  /* Lane keys are outlined mono tags; the Start now count keeps the only
+     filled block. */
   .badge {
     display: inline-block;
     flex: none;
-    padding: 3px 7px;
+    padding: 1px 5px;
+    border: 1.5px solid currentColor;
+    font-family: var(--mono);
     font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.05em;
-    line-height: 1.15;
-    text-transform: uppercase;
-    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
     white-space: nowrap;
-  }
-
-  .badge--small {
-    font-size: 10.5px;
   }
 
   .chip {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     max-width: 100%;
-    padding: 3px 8px;
-    border: 1px solid var(--chip-edge);
-    border-radius: 6px;
-    background: var(--chip);
-    color: var(--chip-ink);
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1.25;
-    text-decoration: none;
+    padding: 1px 7px;
+    border: 1px solid var(--muted);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.5;
   }
 
   .chip::before {
@@ -256,12 +197,12 @@
     flex: none;
     width: 6px;
     height: 6px;
-    background: var(--marker);
+    background: var(--accent);
   }
 
   .chip--none {
     border-style: dashed;
-    background: transparent;
+    color: var(--muted);
   }
 
   .chip--none::before {
@@ -270,316 +211,311 @@
   }
 
   .chip:hover {
-    border-color: var(--chip-hover-edge);
-    background: var(--chip-hover);
-    color: var(--chip-hover-ink);
+    border-color: var(--ink);
+    border-style: solid;
+    color: var(--ink);
   }
 
-  .chip:active {
-    border-color: var(--chip-active-edge);
-    background: var(--chip-active);
-    color: var(--chip-active-ink);
+  .tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1.5px solid currentColor;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
 
   a.tag {
-    text-decoration: none;
+    border-bottom: 1.5px solid currentColor;
   }
 
   a.tag:hover {
     text-decoration: underline;
   }
 
-  .tag {
-    display: inline-block;
-    margin-left: 7px;
-    padding: 1px 5px;
-    border: 1px solid currentColor;
-    border-radius: 4px;
-    color: var(--eyebrow);
-    font-size: 9.5px;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    line-height: 1.3;
-    text-transform: uppercase;
-    vertical-align: 1px;
-    white-space: nowrap;
-  }
-
-  /* Header band */
+  /* Header */
   .head {
-    padding: 34px var(--gutter) 0;
-    border-left: 6px solid var(--rail);
-    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
   }
 
-  .head-top {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 40px;
-    align-items: end;
-    padding-bottom: 26px;
+  .masthead {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px 40px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--ink);
   }
 
-  .head-title {
+  .masthead-title {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     min-width: 0;
-    container-type: inline-size;
   }
 
-  .eyebrow {
-    margin-bottom: 12px;
-    color: var(--eyebrow);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-
-  .title {
-    font-size: 40px;
-    font-size: min(48px, 6.4cqw);
-    font-weight: 800;
+  .repo {
+    font-size: clamp(40px, 6vw, 64px);
+    font-weight: 700;
     letter-spacing: -0.03em;
-    line-height: 0.98;
-    text-shadow: var(--heading-shadow);
-  }
-
-  .repo-link {
-    display: inline-block;
-    max-width: 100%;
-    border-bottom: 2px solid var(--rail);
-    color: var(--ink);
-    text-decoration: none;
+    line-height: 1;
     overflow-wrap: anywhere;
   }
 
-  .repo-link:hover {
-    border-bottom-color: var(--link-hover);
-    color: var(--link-hover);
-  }
-
-  .repo-link:active {
-    border-bottom-color: var(--link-active);
-    color: var(--link-active);
+  .repo a {
+    border-bottom: none;
   }
 
   .when {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
     text-align: right;
   }
 
-  /* Tabular figures on the date only: in this face they also space out the
-     colon in the time. */
-  .when-date {
-    display: block;
-    font-variant-numeric: tabular-nums;
-    font-size: 26px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    line-height: 1;
-  }
-
   .when-time {
-    margin-top: 6px;
-    font-size: 20px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-
-  .when-age {
-    margin-top: 9px;
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 500;
   }
 
   .when-age.is-aging {
-    color: var(--warn);
+    color: var(--aging);
   }
 
   .when-age.is-stale {
-    color: var(--alert);
+    color: var(--stale);
   }
 
-  .stats {
+  .counts {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    padding-bottom: 6px;
   }
 
-  .stat {
+  .count {
     display: flex;
     flex-direction: column-reverse;
     justify-content: flex-end;
-    padding: 0 16px 22px 0;
+    gap: 6px;
+    padding: 14px 16px;
+    border-right: 1px solid var(--rule);
   }
 
-  .stat-value {
-    font-size: 30px;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
+  .count:last-child {
+    border-right: none;
   }
 
-  .stat-label {
-    margin-top: 7px;
+  .count dt {
     color: var(--muted);
-    font-size: 11.5px;
-    font-weight: 800;
-    letter-spacing: 0.09em;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
-  /* Body */
-  .body {
-    display: flex;
-    flex-direction: column;
-    gap: 36px;
-    padding: 34px var(--gutter);
+  .count dd {
+    font-family: var(--mono);
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .count--primary {
+    border-right: none;
+    background: var(--primary);
+    color: var(--on-primary);
+  }
+
+  .count--primary dt {
+    color: var(--on-primary);
+  }
+
+  .count--open dd {
+    color: var(--muted);
   }
 
   .summary {
-    max-width: 74ch;
-    font-size: 19px;
-    font-weight: 600;
-    letter-spacing: -0.015em;
-    line-height: 1.4;
+    max-width: 62ch;
+    font-size: clamp(19px, 2.2vw, 23px);
+    font-weight: 500;
+    line-height: 1.45;
+    letter-spacing: -0.01em;
     text-wrap: pretty;
+  }
+
+  /* Sections */
+  .section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
   .section-head {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: 12px;
-    margin-bottom: var(--head-gap, 12px);
+    gap: 4px 16px;
   }
 
   .section-title {
-    flex: none;
-    font-size: 18px;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    text-shadow: var(--heading-shadow);
-    text-wrap: balance;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .section--lead .section-title {
+    font-size: 28px;
+    letter-spacing: -0.02em;
+    color: var(--primary);
+  }
+
+  .section--lanes .section-title {
+    font-size: 24px;
+    letter-spacing: -0.02em;
   }
 
   .section-note {
-    min-width: 0;
     max-width: 88ch;
     color: var(--muted);
-    font-size: 12.5px;
   }
 
-  /* Start now */
+  .ruled {
+    border-top: 1px solid var(--ink);
+  }
+
+  /* Start now rows: the pick's reasons are the headline, and its lane,
+     footprint, and milestone sit beside it. */
   .start-row {
     display: grid;
-    grid-template-columns: 44px 268px minmax(0, 1fr) 222px;
-    gap: 20px;
-    align-items: start;
-    padding: 17px 0 15px;
+    grid-template-columns: 64px minmax(0, 1fr) 300px;
+    column-gap: 28px;
+    row-gap: 12px;
+    padding: 24px 0 26px;
+    border-bottom: 1px solid var(--rule);
   }
 
   .start-rank {
-    color: var(--marker);
-    font-size: 24px;
-    font-weight: 800;
+    font-family: var(--mono);
+    font-size: 30px;
+    font-weight: 600;
     line-height: 1;
-    font-variant-numeric: tabular-nums;
+    color: var(--primary);
   }
 
-  .start-title {
-    font-size: 16px;
-    font-weight: 800;
-    letter-spacing: -0.01em;
-    line-height: 1.15;
+  .start-main {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
   }
 
-  .start-with {
-    margin-top: 5px;
+  .start-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    font-size: 14px;
     color: var(--muted);
-    font-size: 12px;
   }
 
   .start-why {
-    font-size: 13px;
-    line-height: 1.5;
-  }
-
-  .start-lane {
-    display: flex;
-    gap: 9px;
-    align-items: flex-start;
-  }
-
-  .start-lane-name {
-    font-size: 11.5px;
+    font-size: 21px;
     font-weight: 600;
-    line-height: 1.25;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    text-wrap: pretty;
   }
 
-  .start-touches {
-    margin-top: 3px;
+  .start-with {
+    font-size: 14px;
+    color: var(--body);
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    row-gap: 6px;
+    font-size: 13px;
+    align-content: start;
+  }
+
+  .facts dt {
+    padding-top: 2px;
     color: var(--muted);
+    font-family: var(--mono);
     font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
   }
 
-  .mini-label {
-    margin: 9px 0 4px;
-    color: var(--muted);
-    font-size: 9.5px;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+  .facts dd {
+    min-width: 0;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .fact-lane {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 8px;
   }
 
   /* Lane bars */
   .bars {
     display: flex;
     flex-direction: column;
-    gap: 26px;
+    gap: 22px;
+    padding-top: 20px;
   }
 
   .bar-row {
     display: grid;
-    grid-template-columns: 132px minmax(0, 1fr) 108px;
-    gap: 26px;
+    grid-template-columns: 180px minmax(0, 1fr) 120px;
+    gap: 28px;
     align-items: center;
   }
 
   .bar-name {
     display: flex;
     align-items: baseline;
-    gap: 7px;
+    gap: 8px;
     min-width: 0;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
-    letter-spacing: -0.005em;
   }
 
   .bar {
     display: flex;
-    gap: 2px;
+    gap: 3px;
     height: 18px;
   }
 
   .seg {
     flex: 1 1 0;
-    background-color: var(--bar-queued);
   }
 
   .seg--now {
     background-color: var(--bar-now);
   }
 
-  /* Queued segments keep an outline, so the three states read as solid,
-     outlined, and hatched rather than by fill alone. */
+  /* Queued segments are outlined and blocked ones hatched, so the three
+     states read as solid, outlined, and hatched rather than by color alone. */
   .seg--queued {
-    box-shadow: inset 0 0 0 1px var(--bar-edge);
+    box-shadow: inset 0 0 0 1.5px var(--bar-edge);
   }
 
-  /* Blocked segments carry a hatch so the state reads without color. */
   .seg--blocked {
     background-color: var(--bar-blocked);
     background-image: repeating-linear-gradient(135deg, transparent 0 3px, var(--hatch) 3px 5px);
@@ -587,9 +523,9 @@
 
   .bar-legend {
     color: var(--muted);
-    font-size: 11.5px;
+    font-family: var(--mono);
+    font-size: 12px;
     text-align: right;
-    font-variant-numeric: tabular-nums;
   }
 
   .key {
@@ -597,12 +533,7 @@
     flex-wrap: wrap;
     gap: 8px 20px;
     align-items: center;
-    padding: 20px 0 6px 158px;
-    color: var(--muted);
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    padding: 4px 0 8px 208px;
   }
 
   .key-item {
@@ -620,84 +551,89 @@
   /* Lanes */
   .lane {
     display: grid;
-    grid-template-columns: 132px minmax(0, 1fr);
-    gap: 26px;
-    padding: 22px 0 20px;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 28px;
+    padding: 24px 0 22px;
     border-top: 1px solid var(--rule);
+  }
+
+  .lanes {
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .lane:first-child {
+    border-top: none;
   }
 
   .lane-title {
     display: flex;
     align-items: baseline;
-    gap: 7px;
-    font-size: 13.5px;
-    font-weight: 800;
+    gap: 8px;
+    font-size: 17px;
+    font-weight: 700;
     letter-spacing: -0.01em;
   }
 
   .cap {
-    display: inline-block;
-    min-width: 112px;
-    margin-top: 15px;
-    padding: 9px 11px 10px;
+    margin-top: 16px;
   }
 
   .cap-line {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
 
   .cap-figure {
-    color: var(--slate-figure);
-    font-size: 34px;
-    font-weight: 800;
-    letter-spacing: -0.04em;
+    font-family: var(--mono);
+    font-size: 40px;
+    font-weight: 600;
     line-height: 1;
-    font-variant-numeric: tabular-nums;
   }
 
   .cap-unit {
     width: min-content;
-    font-size: 10.5px;
-    font-weight: 800;
-    letter-spacing: 0.05em;
-    line-height: 1.2;
+    min-width: 9ch;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    line-height: 1.25;
     text-transform: uppercase;
   }
 
   .cap-then {
     margin-top: 6px;
-    font-size: 11px;
-    font-weight: 600;
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 12px;
   }
 
   .lane-count {
-    margin-top: 13px;
+    margin-top: 14px;
     color: var(--muted);
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
+    font-family: var(--mono);
+    font-size: 12px;
   }
 
   .lane-owns {
-    margin-top: 7px;
+    margin-top: 6px;
     color: var(--muted);
-    font-size: 11px;
+    font-size: 13px;
     line-height: 1.4;
     overflow-wrap: anywhere;
   }
 
   .lane-note {
     max-width: 88ch;
-    margin-bottom: 12px;
-    font-size: 13px;
-    line-height: 1.5;
+    margin-bottom: 14px;
+    color: var(--body);
   }
 
   .cols,
   .item {
     display: grid;
-    grid-template-columns: 28px 58px minmax(0, 1fr) 200px 190px;
+    grid-template-columns: 32px 64px minmax(0, 1fr) 210px 220px;
     gap: 14px;
   }
 
@@ -705,58 +641,68 @@
   @media (min-width: 801px) {
     .no-milestones .cols,
     .no-milestones .item {
-      grid-template-columns: 28px 58px minmax(0, 1fr) 240px;
+      grid-template-columns: 32px 64px minmax(0, 1fr) 260px;
     }
   }
 
   .cols {
-    padding: 0 10px 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
     color: var(--muted);
-    font-size: 9.5px;
-    font-weight: 800;
-    letter-spacing: 0.1em;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
   .item {
     align-items: baseline;
-    padding: 7px 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--rule-soft);
   }
 
-  .item:nth-child(even) {
-    background: var(--zebra);
+  .item:last-child {
+    border-bottom: none;
   }
 
   .item-rank {
     color: var(--muted);
+    font-family: var(--mono);
     font-size: 13px;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .item-num {
-    font-size: 13.5px;
-    font-weight: 800;
+    font-weight: 500;
   }
 
   .item-title {
-    font-size: 13.5px;
-    line-height: 1.3;
+    line-height: 1.35;
     overflow-wrap: anywhere;
   }
 
-  .item-deps {
-    color: var(--muted);
-    font-size: 11.5px;
+  .item-title .tag {
+    margin-left: 8px;
+    vertical-align: 1px;
   }
 
-  .item-deps .ref,
-  .start-with .ref {
-    font-weight: 600;
+  .item-deps {
+    color: var(--body);
+    font-size: 13px;
+  }
+
+  /* The fold: everything below is the report. */
+  .fold {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .fold::before,
+  .fold::after {
+    content: "";
+    flex: 1 1 0;
+    border-top: 4px double var(--ink);
   }
 
   /* Contention matrix */
-  .matrix-scroll {
+  .table-wrap {
     overflow-x: auto;
   }
 
@@ -764,6 +710,7 @@
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
+    font-size: 14px;
   }
 
   .matrix-first {
@@ -772,75 +719,72 @@
 
   .matrix th,
   .matrix td {
-    padding: 9px 10px;
-    border: 1px solid var(--grid);
-    background: var(--ground);
+    padding: 9px 12px;
+    border: 1px solid var(--rule);
     text-align: left;
     vertical-align: top;
   }
 
   .matrix thead th {
-    padding: 8px 10px;
+    border-top: none;
     color: var(--muted);
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.09em;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
   .matrix tbody th {
-    font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
+  }
+
+  .matrix tr > :first-child {
+    border-left: none;
+  }
+
+  .matrix tr > :last-child {
+    border-right: none;
   }
 
   .matrix .hit {
     background: var(--hit);
+    box-shadow: inset 3px 0 0 var(--accent);
   }
 
   .hit-refs {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .hit-refs .ref {
-    font-size: 12.5px;
-    font-weight: 600;
+    gap: 6px 10px;
   }
 
   /* Blocked */
   .blocked-cols,
   .blocked-row {
     display: grid;
-    grid-template-columns: 250px minmax(0, 1fr) 330px 150px;
-    gap: 16px;
+    grid-template-columns: 260px minmax(0, 1fr) 360px 160px;
+    gap: 20px;
   }
 
   .blocked-cols {
-    padding: 12px 10px 8px;
+    padding: 10px 0 8px;
+    border-bottom: 1px solid var(--rule);
     color: var(--muted);
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.1em;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
   .blocked-row {
     align-items: baseline;
-    padding: 11px 10px;
-  }
-
-  .blocked-row:nth-child(even) {
-    background: var(--zebra);
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
   }
 
   .blocked-issue {
-    font-size: 13.5px;
-    line-height: 1.3;
-  }
-
-  .blocked-issue .ref {
-    font-weight: 800;
+    font-weight: 500;
+    line-height: 1.35;
   }
 
   .waiting {
@@ -850,12 +794,8 @@
   }
 
   .waiting-item {
-    font-size: 12.5px;
-    line-height: 1.3;
-  }
-
-  .waiting-item .ref {
-    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.35;
   }
 
   .waiting-title {
@@ -863,14 +803,14 @@
   }
 
   .blocked-why {
-    color: var(--muted);
-    font-size: 12.5px;
-    line-height: 1.45;
+    color: var(--body);
+    font-size: 14px;
   }
 
   .blocked-lane {
     color: var(--muted);
-    font-size: 11px;
+    font-family: var(--mono);
+    font-size: 12px;
   }
 
   /* Each blocked cell names its column: always to a screen reader, and on
@@ -884,32 +824,14 @@
     white-space: nowrap;
   }
 
-  /* Sync footer */
-  .sync {
-    margin-top: -6px;
-    padding-top: 14px;
-    border-top: 2px solid var(--rule-strong);
+  .footer {
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
     color: var(--muted);
-    font-size: 12.5px;
-    line-height: 1.6;
-  }
-
-  .sync strong {
-    color: var(--ink);
-    font-weight: 600;
+    font-size: 13px;
   }
 
   @media (max-width: 960px) {
-    .start-row {
-      grid-template-columns: 44px minmax(0, 1fr);
-      row-gap: 10px;
-    }
-
-    .start-why,
-    .start-lane {
-      grid-column: 2;
-    }
-
     .lane {
       grid-template-columns: minmax(0, 1fr);
       gap: 14px;
@@ -919,7 +841,7 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 12px 20px;
+      gap: 12px 24px;
     }
 
     .lane-title {
@@ -956,11 +878,35 @@
       overflow: visible;
       clip-path: none;
       color: var(--muted);
-      font-size: 9.5px;
-      font-weight: 800;
-      letter-spacing: 0.1em;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       white-space: normal;
+    }
+  }
+
+  @media (max-width: 860px) {
+    .start-row {
+      grid-template-columns: 44px minmax(0, 1fr);
+    }
+
+    .start-side {
+      grid-column: 2;
+    }
+
+    .counts {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      row-gap: 16px;
+    }
+
+    .count:nth-child(3) {
+      border-right: none;
+    }
+
+    .when {
+      align-items: flex-start;
+      text-align: left;
     }
   }
 
@@ -971,7 +917,7 @@
     }
 
     .item {
-      grid-template-columns: 22px 48px minmax(0, 1fr);
+      grid-template-columns: 24px 52px minmax(0, 1fr);
       gap: 5px 10px;
     }
 
@@ -986,33 +932,6 @@
   }
 
   @media (max-width: 720px) {
-    .head-top {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 18px;
-    }
-
-    .when {
-      text-align: left;
-    }
-
-    .when-date {
-      font-size: 22px;
-    }
-
-    .when-time {
-      font-size: 17px;
-    }
-
-    .stats {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .section-head {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 4px;
-    }
-
     .bars {
       gap: 14px;
     }
@@ -1033,17 +952,30 @@
   }
 
   @media (max-width: 480px) {
-    .summary {
-      font-size: 17px;
-    }
-
     .start-row {
-      grid-template-columns: 30px minmax(0, 1fr);
+      grid-template-columns: 32px minmax(0, 1fr);
       column-gap: 12px;
     }
 
     .start-rank {
-      font-size: 20px;
+      font-size: 22px;
+    }
+
+    .start-why {
+      font-size: 18px;
+    }
+
+    .count {
+      padding: 12px 10px;
+    }
+
+    .count dd {
+      font-size: 32px;
+    }
+
+    .count dt {
+      font-size: 11px;
+      letter-spacing: 0.05em;
     }
   }
 </style>
@@ -1064,7 +996,6 @@
   (() => {
     "use strict";
 
-    const EYEBROW = "Backlog review";
     const AGING_AFTER_DAYS = 1;
     const STALE_AFTER_DAYS = 3;
     const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
@@ -1072,6 +1003,7 @@
 
     const root = document.getElementById("board");
 
+    // Copied from bugs.html; a fix to one prompts a look at the other.
     function h(tag, attributes, children) {
       const element = document.createElement(tag);
       for (const [name, value] of Object.entries(attributes ?? {})) {
@@ -1132,7 +1064,8 @@
     const link = (href, text) => h("a", { class: "ref", href }, text);
     const ref = (n) => h("a", { class: "ref num", href: issueUrl(n) }, `#${n}`);
     // Links "#123", and "owner/repo#123" for another repository, in a prose
-    // field. A "#" inside a word, such as "C#1", stays text.
+    // field. A "#" inside a word, such as "C#1", stays text. Copied from
+    // bugs.html; a fix to one prompts a look at the other.
     const PROSE_REF = /([\w.-]+\/[\w.-]+)?#(\d+)(?![\w#])/g;
     const prose = (text) => {
       const source = String(text ?? "");
@@ -1345,9 +1278,9 @@
       ]);
     }
 
-    function section(id, title, note, gap, body) {
-      return h("section", { class: "section", id, "aria-labelledby": `${id}-heading` }, [
-        h("div", { class: "section-head", style: `--head-gap: ${gap}px` }, [
+    function section(id, kind, title, note, body) {
+      return h("section", { class: `section section--${kind}`, id, "aria-labelledby": `${id}-heading` }, [
+        h("div", { class: "section-head" }, [
           h("h2", { class: "section-title", id: `${id}-heading` }, title),
           note ? h("p", { class: "section-note" }, prose(note)) : null,
         ]),
@@ -1361,7 +1294,8 @@
     // rather than stopping the page.
     const validTime = !Number.isNaN(syncedAt.getTime());
     // A zone the browser does not know falls back to UTC, which the time line
-    // then names, so every viewer still sees the same time.
+    // then names, so every viewer still sees the same time. Copied from
+    // bugs.html; a fix to one prompts a look at the other.
     function formatSync(locale, options) {
       if (!validTime) return "";
       try {
@@ -1370,12 +1304,17 @@
         return new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" }).format(syncedAt);
       }
     }
-    const dateText = validTime ? formatSync("en-GB", { day: "numeric", month: "long", year: "numeric" }) : data.sync.at;
+    const dateText = validTime ? formatSync("en-GB", { day: "numeric", month: "short", year: "numeric" }) : data.sync.at;
     const timeText = formatSync("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "short" });
+    const syncText = [dateText, timeText].filter(Boolean).join(", ");
+    const branchLink = () => link(`${repoUrl}/tree/${pathPart(data.sync.branch)}`, data.sync.branch);
+    const commitLink = () => link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8));
 
     const age = h("p", { class: "when-age" });
-    // Amber once a full day has passed, red after three. The wording counts
-    // whole units, so it never says "1 day ago" before the color changes.
+    // The aging color once a full day has passed, the stale color after three.
+    // The wording counts whole units, so it never says "1 day ago" before the
+    // color changes. bugs.html adapts this to count in hours; a fix to the
+    // wording belongs in both.
     function refreshAge() {
       if (!validTime) return;
       const minutes = Math.max(0, Math.floor((Date.now() - syncedAt.getTime()) / 60000));
@@ -1396,38 +1335,39 @@
     const runningCapacity = lanes.reduce((sum, model) => sum + model.cap, 0);
     // Each label sits in its own element beside its value, so it carries the
     // noun alone and has to agree with the number itself. open, ready, and
-    // blocked are adjectives and read the same at any count.
-    const stats = [
-      [issues.length, "open"],
-      [issues.length - blockedCount, "ready"],
-      [blockedCount, "blocked"],
-      [data.lanes.length, data.lanes.length === 1 ? "lane open" : "lanes open"],
-      [runningCapacity, runningCapacity === 1 ? "branch at once" : "branches at once"],
-      [startNow.length, "start now"],
+    // blocked are adjectives and read the same at any count. The start picks
+    // lead as the one filled block, because they are what a reader acts on.
+    const counts = [
+      [startNow.length, "Start now", "count--primary"],
+      [issues.length - blockedCount, "Ready"],
+      [blockedCount, "Blocked"],
+      [data.lanes.length, data.lanes.length === 1 ? "Lane open" : "Lanes open"],
+      [runningCapacity, runningCapacity === 1 ? "Branch at once" : "Branches at once"],
+      [issues.length, "Open", "count--open"],
     ];
 
+    const owner = String(data.repo ?? "").split("/")[0];
+    const name = String(data.repo ?? "").split("/")[1] ?? data.repo;
     const header = h("header", { class: "head" }, [
-      h("div", { class: "head-top" }, [
-        h("div", { class: "head-title" }, [
-          h("p", { class: "eyebrow" }, EYEBROW),
-          h("h1", { class: "title" }, h("a", { class: "repo-link", href: repoUrl }, data.repo)),
+      h("div", { class: "masthead" }, [
+        h("div", { class: "masthead-title" }, [
+          h("p", { class: "label" }, owner ? `Backlog triage · ${owner}` : "Backlog triage"),
+          h("h1", { class: "repo" }, link(repoUrl, name)),
         ]),
         h("div", { class: "when" }, [
-          h("time", { class: "when-date", datetime: data.sync.at }, dateText),
-          h("p", { class: "when-time" }, timeText),
+          h("time", { class: "when-time", datetime: data.sync.at }, syncText),
+          h("p", null, [branchLink(), " @ ", commitLink()]),
           age,
         ]),
       ]),
       h(
         "dl",
-        { class: "stats" },
-        stats.map(([value, label]) =>
-          h("div", { class: "stat" }, [
-            h("dt", { class: "stat-label" }, label),
-            h("dd", { class: "stat-value" }, String(value)),
-          ]),
+        { class: "counts" },
+        counts.map(([value, label, modifier]) =>
+          h("div", { class: modifier ? `count ${modifier}` : "count" }, [h("dt", null, label), h("dd", null, String(value))]),
         ),
       ),
+      h("p", { class: "summary" }, prose(data.summary)),
     ]);
 
     // Start now
@@ -1436,19 +1376,17 @@
       const lane = laneOf.get(n);
       const companions = riders.get(n) ?? [];
       return h("li", { class: "start-row" }, [
-        h("span", { class: "start-rank", "aria-hidden": "true" }, String(index + 1)),
-        h("div", null, [
-          h("p", { class: "start-title" }, [ref(n), " ", shortTitle(n)]),
-          companions.length ? h("p", { class: "start-with" }, tokens([["share a branch with", companions]])) : null,
+        h("p", { class: "start-rank", "aria-hidden": "true" }, String(index + 1).padStart(2, "0")),
+        h("div", { class: "start-main" }, [
+          h("p", { class: "start-line" }, [ref(n), h("span", null, shortTitle(n))]),
+          h("p", { class: "start-why" }, prose(pick.why)),
+          companions.length ? h("p", { class: "start-with" }, tokens([["Shares a branch with", companions]])) : null,
         ]),
-        h("p", { class: "start-why" }, prose(pick.why)),
-        h("div", { class: "start-lane" }, [
-          h("span", { class: "badge" }, lane.key),
-          h("div", null, [
-            h("p", { class: "start-lane-name" }, lane.name),
-            pick.touches ? h("p", { class: "start-touches" }, pick.touches) : null,
-            anyMilestone ? [h("p", { class: "mini-label" }, "Milestone"), chip(byNumber.get(n).milestone)] : null,
-          ]),
+        h("dl", { class: "start-side facts" }, [
+          h("dt", null, "Lane"),
+          h("dd", { class: "fact-lane" }, [h("span", { class: "badge" }, lane.key), h("span", null, lane.name)]),
+          pick.touches ? [h("dt", null, "Touches"), h("dd", null, pick.touches)] : null,
+          anyMilestone ? [h("dt", null, "Milestone"), h("dd", null, chip(byNumber.get(n).milestone))] : null,
         ]),
       ]);
     }
@@ -1466,19 +1404,19 @@
       model.lane.issues.some((n) => model.state(n) === "now" && progressOf(rides(n) ? partnerOf(n) : n) === undefined),
     );
     const emptyStartNote = idle
-      ? "No branches picked today."
-      : "Nothing can start today: every issue is blocked, queued behind another, or already in progress.";
+      ? "No branches picked."
+      : "Nothing can start: every issue is blocked, queued behind another, or already in progress.";
     const startNote =
       notes.startNow ||
       (startNow.length
-        ? `${capitalize(word(startNow.length))} ${startNow.length === 1 ? "branch" : "branches"} to open today.`
+        ? `${capitalize(word(startNow.length))} ${startNow.length === 1 ? "branch" : "branches"} to open, most valuable first.`
         : emptyStartNote);
     const startSection = section(
       "start-now",
+      "lead",
       "Start now",
       startNote,
-      startNow.length ? 2 : 0,
-      startNow.length ? h("ol", { class: "start", role: "list" }, startNow.map(startRow)) : null,
+      startNow.length ? h("ol", { class: "start ruled", role: "list" }, startNow.map(startRow)) : null,
     );
 
     // Lanes
@@ -1487,7 +1425,7 @@
       const states = lane.issues.map(model.state);
       const tally = (state) => states.filter((value) => value === state).length;
       return h("div", { class: "bar-row" }, [
-        h("p", { class: "bar-name" }, [h("span", { class: "badge badge--small" }, lane.key), h("span", null, lane.name)]),
+        h("p", { class: "bar-name" }, [h("span", { class: "badge" }, lane.key), h("span", null, lane.name)]),
         h(
           "div",
           {
@@ -1580,17 +1518,17 @@
       h("span", { class: "key-item" }, [h("span", { class: `seg seg--${state}` }), label]);
     const lanesSection = section(
       "lanes",
+      "lanes",
       "Lanes",
-      "Each lane's order is the order to work in, and anything that waits across lanes is linked in its row. One segment per issue: how many can run at once today, against what is queued behind them.",
-      14,
+      "Each lane's order is the order to work in, and anything that waits across lanes is linked in its row. One segment per issue: how many can run at once, against what is queued behind them.",
       [
         h("div", { class: "bars" }, lanes.map(barRow)),
-        h("div", { class: "key", "aria-hidden": "true" }, [
+        h("div", { class: "key label", "aria-hidden": "true" }, [
           keyItem("now", "can run now"),
           keyItem("queued", "queued behind it"),
           keyItem("blocked", "blocked"),
         ]),
-        h("ol", { class: "lanes", role: "list" }, lanes.map(laneBlock)),
+        h("ol", { class: "lanes ruled", role: "list" }, lanes.map(laneBlock)),
       ],
     );
 
@@ -1626,12 +1564,12 @@
     const matrixSection = claims.length
       ? section(
           "contention",
+          "report",
           "Contention matrix",
           contentionNote(),
-          16,
           h(
             "div",
-            { class: "matrix-scroll" },
+            { class: "table-wrap ruled" },
             h("table", { class: "matrix", style: `min-width: ${230 + columns.length * 92}px` }, [
               h("colgroup", null, [h("col", { class: "matrix-first" }), columns.map(() => h("col"))]),
               h(
@@ -1693,28 +1631,28 @@
       notes.blocked ||
       `${capitalize(word(blockedIssues.length))} ${blockedIssues.length === 1 ? "issue waits" : "issues wait"} on other open work.`;
     const blockedSection = blockedIssues.length
-      ? section("blocked", "Blocked", blockedNote, 4, [
+      ? section("blocked", "report", "Blocked", blockedNote, [
           h(
             "div",
-            { class: "blocked-cols", "aria-hidden": "true" },
+            { class: "blocked-cols ruled", "aria-hidden": "true" },
             ["Issue", "Waiting on", "Why it cannot start", "Freed from"].map((label) => h("span", null, label)),
           ),
           h("ol", { class: "blocked-list", role: "list" }, blockedIssues.map(blockedRow)),
         ])
       : // With nothing blocked the section keeps one line, so an empty result
         // reads as a finding rather than as a missing section.
-        section("blocked", "Blocked", notes.blocked || "Nothing is blocked.", 0, null);
+        section("blocked", "report", "Blocked", notes.blocked || "Nothing is blocked.", null);
 
     // Sync footer: when, against what, and how much.
     const milestoneCount = new Set(issues.map((issue) => issue.milestone).filter(Boolean)).size;
     const withoutMilestone = issues.filter((issue) => !issue.milestone).length;
-    const footer = h("footer", { class: "sync" }, [
+    const footer = h("footer", { class: "footer" }, [
       "Synced ",
-      h("strong", null, [dateText, timeText].filter(Boolean).join(", ")),
+      syncText,
       " against ",
-      link(`${repoUrl}/tree/${pathPart(data.sync.branch)}`, data.sync.branch),
+      branchLink(),
       " at ",
-      link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8)),
+      commitLink(),
       ". ",
       milestoneCount
         ? [
@@ -1731,16 +1669,17 @@
     ]);
 
     root.classList.toggle("no-milestones", !anyMilestone);
+    // An absent section is null, which replaceChildren would draw as text.
     root.replaceChildren(
-      header,
-      h("main", { class: "body" }, [
-        h("p", { class: "summary" }, prose(data.summary)),
+      ...[
+        header,
         startSection,
         lanesSection,
+        h("p", { class: "fold label", role: "separator" }, "Report"),
         matrixSection,
         blockedSection,
         footer,
-      ]),
+      ].filter(Boolean),
     );
   })();
 </script>
