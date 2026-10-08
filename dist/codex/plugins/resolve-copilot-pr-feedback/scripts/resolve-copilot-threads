@@ -288,7 +288,8 @@ function do_fetch() {
           | select(.isResolved == false)
           | select(.comments.nodes | length > 0)
           | .comments.nodes[0] as $first
-          | ($first.author.login? // "" | ascii_downcase) as $login
+          | ($first.author.login? // "") as $raw_login
+          | (if ($raw_login | type) == "string" then $raw_login | ascii_downcase else "" end) as $login
           | select(
               ($direct_logins | any(. == $login))
               or (
@@ -346,7 +347,10 @@ function do_parse_reviews() {
           die "Missing value after $1"
         fi
         if [[ "$1" == "--skip" ]]; then
-          skip="$2"
+          # Repeated --skip values add up rather than replace each other.
+          skip="${skip:+${skip},}$2"
+        elif [[ -n "${head}" ]]; then
+          die "--head given more than once"
         else
           head="$2"
         fi
@@ -361,8 +365,10 @@ function do_parse_reviews() {
   if [[ -n "${skip}" && ! "${skip}" =~ ^[0-9]+(,[0-9]+)*$ ]]; then
     die "Invalid --skip value '${skip}'. Expected review ids separated by commas, such as 5449428489,5449507605."
   fi
-  if [[ -n "${head}" && ! "${head}" =~ ^[0-9a-f]{7,40}$ ]]; then
-    die "Invalid --head value '${head}'. Expected a commit SHA."
+  # GitHub reports commit_id in full, and an abbreviated SHA would never
+  # equal it, silently dropping the head review.
+  if [[ -n "${head}" && ! "${head}" =~ ^[0-9a-f]{40}$ ]]; then
+    die "Invalid --head value '${head}'. Expected the full 40-character commit SHA."
   fi
 
   local input
@@ -383,13 +389,25 @@ function do_parse_reviews() {
     die "Invalid review JSON: every element must be a review object."
   fi
 
-  # A body that is present but not a string cannot be read, so the review is
-  # left out. This names each one so it is visible rather than silent, and
-  # audit reports the same reviews as uncovered.
+  # A Copilot review whose body is present but not a string cannot be read,
+  # so it is left out. This names each one not already skipped by id, so it
+  # is visible rather than silent, and audit reports the same reviews as
+  # uncovered.
   local skipped_id
   while IFS= read -r skipped_id; do
     echo "Warning: skipping review ${skipped_id}: its body is not a string." >&2
-  done < <(jq -r '.[] | select(.body != null and (.body | type) != "string") | .id // "with no id"' <<< "${input}")
+  done < <(
+    # shellcheck disable=SC2016
+    # $variables in the filter are jq bindings, not shell variables
+    jq -r --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" --arg skip "${skip}" '
+      ($skip | if . == "" then [] else split(",") | map(tonumber) end) as $skip_ids
+      | .[]
+      | select((.user.login? // "") as $login | ($login | type) == "string" and ($direct_logins | any(. == ($login | ascii_downcase))))
+      | select(.body != null and (.body | type) != "string")
+      | select(.id as $id | $skip_ids | any(. == $id) | not)
+      | .id // "with no id"
+    ' <<< "${input}"
+  )
 
   # shellcheck disable=SC2016
   # $variables in the filter are jq bindings, not shell variables
