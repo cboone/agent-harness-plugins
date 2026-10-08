@@ -69,8 +69,8 @@ function main() {
     fi
     touch "${STUB_STATE}/workmux_called"
     printf '%s' "${prompt_file}" > "${STUB_STATE}/prompt_path"
-    # The process group lets a test confirm that an awaited launch runs apart
-    # from the group of the shell that started the launcher.
+    # Records the process group, so a test can confirm an awaited launch runs
+    # in its own.
     ps -o pgid= -p "$$" | tr -d ' ' > "${STUB_STATE}/pgid"
   fi
 
@@ -101,11 +101,9 @@ function main() {
     sleep "${STUB_WORKMUX_SLEEP}"
   fi
 
-  # Appends this branch's worktree to STUB_GIT_WORKTREE_PORCELAIN_FILE, which
-  # the git stub reads, so `git worktree list` sees what this invocation
-  # created. STUB_WORKMUX_SKIP_WORKTREE=1 skips the record, to act as workmux
-  # exiting without a worktree. The record comes before any STUB_WORKMUX_EXIT
-  # failure, so a failed launch can still leave a worktree behind.
+  # Records the worktree for the git stub's `git worktree list`, unless
+  # STUB_WORKMUX_SKIP_WORKTREE=1. Runs before any STUB_WORKMUX_EXIT failure,
+  # so a failed launch can still leave a worktree.
   if [[ -n "${STUB_GIT_WORKTREE_PORCELAIN_FILE:-}" && "${STUB_WORKMUX_SKIP_WORKTREE:-}" != "1" ]]; then
     printf 'worktree /worktrees/%s\nHEAD abc123\nbranch refs/heads/%s\n\n' "${branch//\//-}" "${branch}" >> "${STUB_GIT_WORKTREE_PORCELAIN_FILE}"
   fi

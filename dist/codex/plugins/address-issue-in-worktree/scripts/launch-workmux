@@ -116,9 +116,8 @@ function run_workmux_and_cleanup_prompt() {
   return "${status}"
 }
 
-# Prints the worktree path for a branch. Returns 1 when git lists no worktree
-# for it, and 2 when git cannot list worktrees at all, so a caller can tell a
-# missing worktree from an unreadable repository.
+# Prints the branch's worktree path. Returns 1 when it has none, and 2 when git
+# cannot list worktrees.
 function worktree_path_for_branch() {
   local branch="${1}"
   local porcelain line path="" branch_ref=""
@@ -343,10 +342,8 @@ function run_workmux_with_existing_prompt_fallback() {
   return "${status}"
 }
 
-# Prints the one local branch for an issue, or nothing when none matches.
-# Returns 3 when several match, and 1 when git cannot list branches: an empty
-# answer from a failed listing would read as "no branch" and approve a launch
-# that should have reused one.
+# Prints the one local branch for an issue, or nothing. Returns 3 when several
+# match, and 1 when git cannot list branches, so a failure never reads as none.
 function existing_branch_for_issue() {
   local issue="${1}"
   local refs line match=""
@@ -485,15 +482,13 @@ function normalize_branch_name() {
   printf '%s' "${name}"
 }
 
-# The detached half of --await-completion. It records workmux's exit status,
-# then tries to create the handoff directory. Exactly one side creates it. When
-# this side does, the caller is still waiting, and the caller reads and removes
-# the state directory. When the caller already has, it stopped waiting and printed
-# this directory's path, so the status and log stay behind as the only record
-# of how the launch ended. The prompt file is removed either way.
+# The detached half of --await-completion. Records workmux's exit status, then
+# tries to create the handoff directory. If it does, the caller is still waiting
+# and removes the state directory. If not, the caller timed out, and the status
+# and log stay behind as the record of the launch.
 #
-# A hangup is ignored so that the caller's terminal or harness going away does
-# not stop `workmux add` partway through creating a worktree.
+# Ignores hangups so a departing terminal or harness cannot stop `workmux add`
+# partway through creating a worktree.
 function run_detached_launch() {
   local state_dir="${1}" prompt_file="${2}"
   local status=0
@@ -501,8 +496,7 @@ function run_detached_launch() {
 
   trap '' HUP
 
-  # The helper restores errexit before returning workmux's status, so the
-  # status is captured in a list rather than under a local `set +e`.
+  # Captured with `||`, not `set +e`: the helper re-enables errexit on return.
   run_workmux_and_cleanup_prompt "${prompt_file}" "${@}" > "${state_dir}/log" 2>&1 || status=$?
   {
     printf '%s\n' "${status}" > "${state_dir}/status.tmp" \
@@ -511,9 +505,8 @@ function run_detached_launch() {
   mkdir "${state_dir}/handoff" 2> /dev/null || true
 }
 
-# The waiting half of --await-completion. Polls for the handoff directory
-# rather than the status file, because the handoff is what settles which side
-# owns the state directory.
+# The waiting half of --await-completion. Polls for the handoff directory, not
+# the status file, because the handoff decides who owns the state directory.
 function await_launch() {
   local state_dir="${1}" branch="${2}" timeout="${3}"
   local attempts=$((timeout * 5))
@@ -607,8 +600,7 @@ function do_launch() {
   fi
 
   safe_name="${branch//\//-}"
-  # An unreadable worktree list is not fatal here: `workmux add` reports its
-  # own failure, and only the prompt resend to an existing pane depends on it.
+  # Not fatal: only the prompt resend to an existing pane needs this path.
   local lookup_status=0
   existing_worktree_path="$(worktree_path_for_branch "${branch}")" || lookup_status=$?
   if ((lookup_status == 2)); then
@@ -628,9 +620,8 @@ function do_launch() {
     state_dir="$(mktemp -d "${TMPDIR:-/tmp}/workmux-launch-${safe_name}.XXXXXX")"
     # Job control gives the launch its own process group, so a harness that
     # stops this launcher's group on a tool timeout does not stop `workmux add`.
-    # The group's stderr is discarded because the parent and child both set
-    # the new group, and when the parent wins, bash reports the child's
-    # redundant attempt as an error although the group is already in place.
+    # stderr is discarded to hide a spurious bash "child setpgid" error, printed
+    # when the parent sets the group first.
     set -m
     { run_detached_launch "${state_dir}" "${prompt_file}" "${cmd[@]}" < /dev/null > /dev/null 2>&1 & } 2> /dev/null
     set +m
@@ -742,8 +733,8 @@ function main() {
   fi
 
   if [[ "${await_completion}" == "true" ]]; then
-    # The default stays below Claude Code's 120-second default Bash tool
-    # timeout, so this bound, not the tool's, decides when waiting stops.
+    # Below Claude Code's 120-second Bash tool timeout, so this bound ends the
+    # wait first.
     timeout="${WORKMUX_LAUNCH_TIMEOUT_SECONDS:-90}"
     if [[ ! "${timeout}" =~ ^[1-9][0-9]*$ ]]; then
       die "WORKMUX_LAUNCH_TIMEOUT_SECONDS must be a positive integer, got: ${timeout}"

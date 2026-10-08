@@ -78,10 +78,9 @@ function main() {
     die "fatal: not a git repository" 128
   fi
 
-  # STUB_GIT_WORKTREE_PORCELAIN_FILE lets the workmux stub add a worktree while
-  # a test runs; an environment variable is fixed once the launcher starts.
-  # When the file exists, it replaces STUB_GIT_WORKTREE_PORCELAIN for
-  # `worktree list` only: rev_parse still reads the variable.
+  # A present STUB_GIT_WORKTREE_PORCELAIN_FILE replaces the variable for
+  # `worktree list` only, so the workmux stub can add a worktree mid-test.
+  # rev_parse still reads the variable.
   if [[ -n "${STUB_GIT_WORKTREE_PORCELAIN_FILE:-}" && -f "${STUB_GIT_WORKTREE_PORCELAIN_FILE}" ]]; then
     STUB_GIT_WORKTREE_PORCELAIN="$(cat "${STUB_GIT_WORKTREE_PORCELAIN_FILE}")"$'\n\n'
   fi
