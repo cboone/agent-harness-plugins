@@ -70,7 +70,7 @@ the same join over {reviews, reviewComments, issueComments, threads} JSON on std
 Examples:
   ${SCRIPT_NAME} fetch octocat hello-world 42
   ${SCRIPT_NAME} fetch-reviews octocat hello-world 42
-  ${SCRIPT_NAME} fetch-reviews octocat hello-world 42 --skip 5449428489,5449507605 --head 1a2b3c4
+  ${SCRIPT_NAME} fetch-reviews octocat hello-world 42 --skip 5449428489,5449507605 --head 0123456789abcdef0123456789abcdef01234567
   gh api repos/octocat/hello-world/pulls/42/reviews | ${SCRIPT_NAME} parse-reviews
   ${SCRIPT_NAME} audit octocat hello-world 42
   ${SCRIPT_NAME} resolve PRRT_kwDONZ...
@@ -392,19 +392,26 @@ function do_parse_reviews() {
       .id as $id
       | $skip | if . == "" then [] else split(",") | map(tonumber) end
       | any(. == $id);
+    # The newest Copilot review of --head, readable or not, so a malformed
+    # newest review is never replaced by an older one.
+    def head_review_id:
+      [.[] | select(by_copilot) | select($head != "" and .commit_id == $head)]
+      | sort_by(.submitted_at // "") | last | .id;
   '
 
   # Names each Copilot review left out for a non-string body, unless --skip
-  # already settled it. audit lists the same reviews as uncovered.
+  # already settled it and it is not the head review. audit lists the same
+  # reviews as uncovered.
   local skipped_id
   while IFS= read -r skipped_id; do
     echo "Warning: skipping review ${skipped_id}: its body is not a string." >&2
   done < <(
-    jq -r --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" --arg skip "${skip}" "${review_defs}"'
-      .[]
+    jq -r --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" --arg skip "${skip}" --arg head "${head}" "${review_defs}"'
+      head_review_id as $head_review
+      | .[]
       | select(by_copilot)
       | select(.body != null and (.body | type) != "string")
-      | select(skipped | not)
+      | select(.id == $head_review or (skipped | not))
       | .id // "with no id"
     ' <<< "${input}"
   )
@@ -416,16 +423,16 @@ function do_parse_reviews() {
     --arg skip "${skip}" \
     --arg head "${head}" \
     "${review_defs}"'
-      [
-        .[]
-        | select(by_copilot)
-        # A null body becomes "": any findings that review has are threads.
-        | select(.body == null or (.body | type) == "string")
-        | .body //= ""
-      ]
+      head_review_id as $head_review
+      | [
+          .[]
+          | select(by_copilot)
+          # A null body becomes "": any findings that review has are threads.
+          | select(.body == null or (.body | type) == "string")
+          | .body //= ""
+        ]
       | sort_by(.submitted_at // "")
       # The newest review of the head is kept even when skipped.
-      | ([.[] | select($head != "" and .commit_id == $head)] | last | .id) as $head_review
       | map(select(.id == $head_review or (skipped | not)))
       | map({
           id: .id,
