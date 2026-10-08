@@ -4,7 +4,7 @@ description: >-
   Trim and rewrite code comments in changed files or given paths: what the code
   does, then the minimum why. Use for "trim comments" or a comment that is too
   long or jargony; not for PR review comments or general code cleanup.
-argument-hint: "[paths...] [--dry-run]"
+argument-hint: "[paths...] [--dry-run] [--no-commit]"
 ---
 
 # Trim Comments
@@ -16,7 +16,8 @@ Rewrite the comments in scope to be as short as possible while still earning the
 The user may provide these options inline:
 
 - **paths**: A path, glob, or file list. Every comment in those files is in scope, changed or not. Without paths, the scope is the comments in or directly above code the current branch changed: committed changes since the base branch, plus staged, unstaged, and untracked files. When the user points at a single comment, that comment is the whole scope.
-- **--dry-run**: Report proposed changes without editing.
+- **--dry-run**: Report proposed changes without editing or committing.
+- **--no-commit**: Edit and verify, but leave the edits uncommitted. By default the skill commits its edits, and it never pushes.
 
 ## The standard
 
@@ -185,6 +186,11 @@ Two entries apply to whole files, generated files and prose documents, and step 
 - Prose documents: `.md` files, including Copilot instruction files. Those have different length rules.
 - Comments outside the scope. Do not sweep the whole repository.
 
+## Skill dependencies
+
+- **Required:** None
+- **Optional:** `commit`
+
 ## Workflow
 
 ### 1. Resolve scope
@@ -246,7 +252,11 @@ Apply the sections above and give each collected comment one action; for a singl
 
 ### 4. Edit
 
-Skip this step with `--dry-run`. Make each change a separate, minimal edit, so each one maps to one row of the report. Touch only comments: no code, whitespace, or formatting changes beyond what removing a comment line requires. Never delete a docstring; trim it instead. A docstring is runtime-visible (as `__doc__` in Python), and when it is the only statement in a function or class body, deleting it is a syntax error.
+Skip this step with `--dry-run`.
+
+Unless `--no-commit` was given, first record which in-scope files already hold uncommitted work, so step 6 never commits the user's changes along with the trimmed comments. A file is clean when `git status --porcelain=v1 -z --untracked-files=all -- ":(top,literal)$path"` prints nothing: it is tracked and matches `HEAD` in both the index and the working tree. Untracked files and files with staged or unstaged changes are not clean. Also record whether anything is staged at all: `git diff --cached --quiet` exits non-zero when it is.
+
+Make each change a separate, minimal edit, so each one maps to one row of the report. Touch only comments: no code, whitespace, or formatting changes beyond what removing a comment line requires. Never delete a docstring; trim it instead. A docstring is runtime-visible (as `__doc__` in Python), and when it is the only statement in a function or class body, deleting it is a syntax error.
 
 ### 5. Verify
 
@@ -258,11 +268,24 @@ Skip this step with `--dry-run`. Most comments cannot change behavior, but direc
 
 If a check fails because of an edit made here, fix that edit by hand rather than letting a formatter rewrite the file, which would also reformat the user's own changes. Report pre-existing failures without fixing them.
 
-### 6. Report
+### 6. Commit
+
+Skip this step with `--dry-run` or `--no-commit`, when no comment was edited, or when a check in step 5 still fails because of an edit made here, since a commit would record the break. Never push.
+
+Commit only the edited files that step 4 recorded as clean. An edited file that already held uncommitted work stays uncommitted, because its trimmed comments and the user's changes cannot be separated by staging the whole file; step 7 lists it. When no edited file was clean, commit nothing. A single named comment follows the same rule.
+
+Make one commit naming what was trimmed, following the repository's commit convention (for example, `refactor:` or `style:` where it uses Conventional Commits), and put any cut material worth keeping in its body:
+
+- When the `commit` skill is installed and step 4 found nothing staged, stage each committable file with `git add -- ":(top,literal)$path"` and invoke the `commit` skill with `--staged`.
+- Otherwise, commit directly with `git commit` followed by `--` and the committable files as `":(top,literal)$path"` pathspecs. Naming the paths commits only those files and leaves anything the user staged in the index. Follow the repository's signing requirements, and never amend.
+
+If a pre-commit hook fails because of an edit made here, fix the edit, re-stage, and make a new commit. If it fails for another reason, leave the edits uncommitted and report the failure.
+
+### 7. Report
 
 Report a table: `file:line` (in the edited file), action (`rewrite`, `delete`, or `flag`), before, after. Leave out comments kept unchanged. The report is read once, so line numbers are fine here. Keep before and after to one line each, truncating with `…`. With `--dry-run`, the table lists proposed changes.
 
-Leave the edits uncommitted for the user to review. Suggest a commit naming what was trimmed, following the repository's commit convention (for example, `refactor:` or `style:` where it uses Conventional Commits), made with the `commit` skill when it is installed, and list any cut material worth moving into that commit message or the PR description.
+Then report the commit: its short SHA and subject, and whether it was made without the `commit` skill, or why step 6 made none. List any edited files left uncommitted because they already held the user's work, and any cut material worth moving into a commit message or the PR description that is not already in the commit body.
 
 ## Worked examples
 
