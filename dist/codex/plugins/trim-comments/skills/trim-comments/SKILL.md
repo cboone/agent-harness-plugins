@@ -249,12 +249,12 @@ Apply the sections above and give each collected comment one action; for a singl
 
 Skip this step with `--dry-run`.
 
-Unless `--no-commit` was given, first record which in-scope files already hold uncommitted work, so step 6 never commits the user's changes along with the trimmed comments. A file is clean only when both of these hold:
+Unless `--no-commit` was given, first record which in-scope files are clean, so step 6 never commits the user's own changes. A file is clean only when both checks pass:
 
 - `git status --porcelain=v1 -z --untracked-files=all -- ":(top,literal)$path"` exits 0 and prints nothing: the file is tracked and matches `HEAD` in both the index and the working tree.
-- `git ls-files -v -- ":(top,literal)$path"` prints the tag `H`. A lowercase tag marks the file `assume-unchanged` and `S` marks it `skip-worktree`; `git status` hides local edits to either, so they could carry the user's changes into the commit.
+- `git ls-files -v -- ":(top,literal)$path"` prints the tag `H`. `git status` hides local edits to a file marked `assume-unchanged` (a lowercase tag) or `skip-worktree` (`S`), so either could carry the user's changes into the commit.
 
-Untracked files, files with staged or unstaged changes, and files whose check fails or prints an error are not clean.
+Any other result means the file is not clean, including an untracked file, staged or unstaged changes, or a check that fails or prints an error.
 
 Make each change a separate, minimal edit, so each one maps to one row of the report. Touch only comments: no code, whitespace, or formatting changes beyond what removing a comment line requires. Never delete a docstring; trim it instead. A docstring is runtime-visible (as `__doc__` in Python), and when it is the only statement in a function or class body, deleting it is a syntax error.
 
@@ -266,28 +266,29 @@ Skip this step with `--dry-run`. Most comments cannot change behavior, but direc
 - the type checker, if the project has one
 - the tests that cover the edited files, or the full test command when they cannot be selected, which confirms nothing structural broke
 
-If a check fails because of an edit made here, fix that edit by hand rather than letting a formatter rewrite the file, which would also reformat the user's own changes. A failure is pre-existing only when it plainly does not involve these edits, such as an error in a file or test this skill did not touch; report it without fixing it. Treat any other failure as caused here.
+If a check fails because of an edit made here, fix that edit by hand rather than letting a formatter rewrite the file, which would also reformat the user's own changes. A failure is pre-existing only when it plainly does not involve these edits, such as an error in a file or test this skill did not touch; report it without fixing it. Treat every other failure as caused here.
 
-Record each check's outcome for step 7: passed, failed, or not run, with the reason it could not run, such as no type checker in the project or no test command found. A check that did not run is never reported as passed.
+Record each check's outcome for step 7: passed, failed, or not run with the reason, such as no type checker in the project or no test command found. Never report a check that did not run as passed.
 
 ### 6. Commit
 
-Skip this step with `--dry-run` or `--no-commit`, when no comment was edited, or when a check in step 5 still fails because of an edit made here, even in a file that will not be committed, since the commit would then record a tree that fails. Never push.
+Skip this step with `--dry-run` or `--no-commit`, when no comment was edited, or when a step 5 check still fails because of an edit made here, even in a file that will not be committed, since the commit would record a failing tree. Never push.
 
-Commit only the edited files that step 4 recorded as clean. An edited file that already held uncommitted work stays uncommitted, because its trimmed comments and the user's changes cannot be separated by committing the whole file; step 7 lists it. When no edited file was clean, commit nothing. A single named comment follows the same rule.
+Commit only the edited files that step 4 recorded as clean; a single named comment follows the same rule. A file that already held uncommitted work stays uncommitted, because committing the whole file would mix the trims with the user's changes; step 7 lists it. When no edited file was clean, commit nothing.
 
-Check where the commit would land before making it:
+Skip the commit when it would not land on a working branch:
 
-- `git symbolic-ref --quiet --short HEAD` prints the current branch. If it fails, HEAD is detached and a commit would belong to no branch: skip the commit.
-- If the current branch is the base branch, skip the commit: trims belong on a working branch, not straight on the default branch. Step 1 found `$base` for the default scope; with paths or a single named comment, find it the same way, choosing the remote and trying the same two commands. If the base cannot be found, skip the commit too, since the branch might be the default one.
+- `git symbolic-ref --quiet --short HEAD` fails: HEAD is detached, and a commit would belong to no branch.
+- The current branch is the base branch. Step 1 found `$base` for the default scope; with paths or a single named comment, find it the same way, choosing the remote and trying the same two commands.
+- The base cannot be found, since the current branch might be the default one.
 
-Before committing, confirm that each committable file holds only this run's edits: `git --no-pager diff --no-ext-diff --no-textconv --no-relative HEAD -- ":(top,literal)$path"` must show only the comment changes in the step 7 table. A step 5 check that wrote files, a formatter that ignored check mode, or the user editing the file during the run can each add other changes; leave such a file uncommitted and list it in the report. Then record each committable file's content hash, `git hash-object -- "./$path"`, and a snapshot of the whole working tree, `git status --porcelain=v1 -z --untracked-files=all :/`.
+Next, confirm that each committable file holds only this run's edits: `git --no-pager diff --no-ext-diff --no-textconv --no-relative HEAD -- ":(top,literal)$path"` must show only the comment changes in the step 7 table. A step 5 check that wrote files, a formatter that ignored check mode, or a user edit during the run can add other changes; leave such a file uncommitted and list it in the report. Then record each committable file's content hash, `git hash-object -- "./$path"`, and a snapshot of the whole working tree, `git status --porcelain=v1 -z --untracked-files=all :/`.
 
-Commit with `git commit`, the message, then `--` and each committable file as a `":(top,literal)$path"` pathspec. Naming the paths commits only those files from the working tree, leaves anything the user staged in the index, and stages nothing if the commit fails. Write one message naming what was trimmed, following the repository's commit convention (for example, `refactor:` or `style:` where it uses Conventional Commits), with any cut material worth keeping in its body. Leave out issue references: closing keywords such as `fixes #N` would close an issue that a comment trim did not resolve. Sign the commit when the user's or the repository's instructions require signed commits. Never amend, and never pass `--no-verify`, `--no-gpg-sign`, or any other flag that bypasses hooks or signing.
+Run `git commit` with the message, then `--` and each committable file as a `":(top,literal)$path"` pathspec. Naming the paths commits only those files from the working tree, leaves anything the user staged in the index, and stages nothing if the commit fails. Write one message naming what was trimmed, following the repository's commit convention (for example, `refactor:` or `style:` where it uses Conventional Commits), with any cut material worth keeping in its body. Leave out issue references: a closing keyword such as `fixes #N` would close an issue that a comment trim did not resolve. Sign the commit when the user's or the repository's instructions require signed commits. Never amend, and never pass `--no-verify`, `--no-gpg-sign`, or any other flag that bypasses hooks or signing.
 
-If the commit fails because of an edit made here, or because a hook rejected the message written here, fix the edit or the message and try once more. Before that retry, report any working-tree change the failed attempt left behind (compare a fresh status snapshot with the recorded one), rerun the step 5 checks on any file the fix touched, and record the hashes and snapshot again. Any other failure, or a second failure, ends this step without a commit, whether a hook fails for another reason, signing fails, a lock file exists, or a merge or rebase is in progress: leave the edits uncommitted in the working tree and report the exact error.
+If the commit fails because of an edit made here, or a hook rejects the message written here, fix the edit or the message and retry once. Before retrying, report any working-tree change the failed attempt left behind (compare a fresh status snapshot with the recorded one), rerun the step 5 checks on any file the fix touched, and record the hashes and snapshot again. A second failure, or any other failure (a hook failing for another reason, a signing failure, a lock file, or a merge or rebase in progress), ends this step without a commit: leave the edits uncommitted and report the exact error.
 
-After a commit, find what a hook changed. A hook can rewrite files, for example by running a formatter in write mode. Compare each committed file's recorded hash with `git rev-parse "HEAD:$path"`; a mismatch means the commit holds content this skill did not write. Compare a fresh status snapshot with the recorded one; a new or changed entry is a file a hook left modified. Never amend or revert either kind of change; report the files.
+After a commit, check what a hook changed, for example by running a formatter in write mode. A committed file whose recorded hash differs from `git rev-parse "HEAD:$path"` holds content this skill did not write. A new or changed entry in a fresh status snapshot, compared with the recorded one, is a file a hook left modified. Never amend or revert either kind of change; report the files.
 
 ### 7. Report
 
@@ -296,7 +297,7 @@ Report a table: `file:line` (in the edited file), action (`rewrite`, `delete`, o
 Then report:
 
 - each step 5 check: passed, failed, or not run, with the reason
-- the commit: `git log -1 --format='%h %s'`, which shows the subject as committed, after any hook rewrote it, and the branch; or no commit, with the skip condition or the exact error from step 6
+- the commit and its branch, shown with `git log -1 --format='%h %s'` so the subject reflects any hook rewrite; or no commit, with the skip condition or the exact error from step 6
 - any change a hook made beyond these edits, in the commit or left in the working tree
 - edited files left uncommitted because they already held the user's work or picked up changes beyond these edits
 - cut material worth moving into the PR description, or into a commit message when no commit was made
