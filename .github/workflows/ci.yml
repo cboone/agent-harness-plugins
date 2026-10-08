@@ -122,8 +122,6 @@ jobs:
         CREATE_WORKTREE_COMPOSE_ISSUE_PROMPT_BIN=./plugins/create-worktree/scripts/compose-issue-prompt
         COPILOT_REVIEW_DATA_DIR=./tests/data/copilot-reviews
         COPILOT_AUDIT_DATA_DIR=./tests/data/copilot-audit
-        COPILOT_CANARY_DATA_DIR=./tests/data/copilot-canary
-        COPILOT_REVIEW_CANARY_BIN=./bin/copilot-review-canary
         COPILOT_GH_STUB_BIN=./tests/fixtures/copilot-gh-stub
         COPILOT_GH_DATA_DIR=./tests/data/copilot-gh
         CROSS_REFERENCE_FIXTURE_BIN=./tests/fixtures/cross-reference-fixture
