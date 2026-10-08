@@ -4,7 +4,7 @@ description: >-
   Trim and rewrite code comments in changed files or given paths: what the code
   does, then the minimum why. Use for "trim comments" or a comment that is too
   long or jargony; not for PR review comments or general code cleanup.
-argument-hint: "[paths...] [--dry-run]"
+argument-hint: "[paths...] [--dry-run] [--no-commit]"
 ---
 
 # Trim Comments
@@ -16,7 +16,8 @@ Rewrite the comments in scope to be as short as possible while still earning the
 The user may provide these options inline:
 
 - **paths**: A path, glob, or file list. Every comment in those files is in scope, changed or not. Without paths, the scope is the comments in or directly above code the current branch changed: committed changes since the base branch, plus staged, unstaged, and untracked files. When the user points at a single comment, that comment is the whole scope.
-- **--dry-run**: Report proposed changes without editing.
+- **--dry-run**: Report proposed changes without editing or committing.
+- **--no-commit**: Edit and verify, but leave the edits uncommitted. By default the skill commits its edits, and it never pushes.
 
 ## The standard
 
@@ -246,23 +247,60 @@ Apply the sections above and give each collected comment one action; for a singl
 
 ### 4. Edit
 
-Skip this step with `--dry-run`. Make each change a separate, minimal edit, so each one maps to one row of the report. Touch only comments: no code, whitespace, or formatting changes beyond what removing a comment line requires. Never delete a docstring; trim it instead. A docstring is runtime-visible (as `__doc__` in Python), and when it is the only statement in a function or class body, deleting it is a syntax error.
+Skip this step with `--dry-run`.
+
+Unless `--no-commit` was given, first record which in-scope files are clean, so step 6 never commits the user's own changes. A file is clean only when both checks pass:
+
+- `git status --porcelain=v1 -z --untracked-files=all -- ":(top,literal)$path"` exits 0 and prints nothing: the file is tracked and matches `HEAD` in both the index and the working tree.
+- `git ls-files -v -- ":(top,literal)$path"` prints the tag `H`. `git status` hides local edits to a file marked `assume-unchanged` (a lowercase tag) or `skip-worktree` (`S`), so either could carry the user's changes into the commit.
+
+Any other result means the file is not clean, including an untracked file, staged or unstaged changes, or a check that fails or prints an error.
+
+Make each change a separate, minimal edit, so each one maps to one row of the report. Touch only comments: no code, whitespace, or formatting changes beyond what removing a comment line requires. Never delete a docstring; trim it instead. A docstring is runtime-visible (as `__doc__` in Python), and when it is the only statement in a function or class body, deleting it is a syntax error.
 
 ### 5. Verify
 
 Skip this step with `--dry-run`. Most comments cannot change behavior, but directives, doctests, and formatting can. Check the files this skill edited, not the rest of the branch:
 
-- the project's linter and formatter, in check mode, on the edited files where the tool allows it
+- the project's linter and formatter, in check mode, on the edited files where the tool allows it. Never run a formatter that has no check mode, since it would rewrite the user's own changes too; record it as not run.
 - the type checker, if the project has one
 - the tests that cover the edited files, or the full test command when they cannot be selected, which confirms nothing structural broke
 
-If a check fails because of an edit made here, fix that edit by hand rather than letting a formatter rewrite the file, which would also reformat the user's own changes. Report pre-existing failures without fixing them.
+If a check fails because of an edit made here, fix that edit by hand rather than letting a formatter rewrite the file, which would also reformat the user's own changes. A failure is pre-existing only when it plainly does not involve these edits, such as an error in a file or test this skill did not touch; report it without fixing it. Treat every other failure as caused here.
 
-### 6. Report
+Record each check's outcome for step 7: passed, failed, or not run with the reason, such as no type checker in the project or no test command found. Never report a check that did not run as passed.
+
+### 6. Commit
+
+Skip this step with `--dry-run` or `--no-commit`, when no comment was edited, or when a step 5 check still fails because of an edit made here, even in a file that will not be committed, since the commit would record a failing tree. Never push.
+
+Commit only the edited files that step 4 recorded as clean; a single named comment follows the same rule. A file that already held uncommitted work stays uncommitted, because committing the whole file would mix the trims with the user's changes; step 7 lists it. When no edited file was clean, commit nothing.
+
+Run every command in this step from the repository root (`git rev-parse --show-toplevel`), since `"./$path"` is root-relative. Skip the commit when it would not land on a working branch:
+
+- `git symbolic-ref --quiet --short HEAD` fails: HEAD is detached, and a commit would belong to no branch.
+- The current branch is the base branch. Step 1 found `$base` for the default scope; with paths or a single named comment, find it the same way, choosing the remote and trying the same two commands.
+- The base cannot be found, since the current branch might be the default one.
+
+Next, confirm that each committable file holds only this run's edits: `git --no-pager diff --no-ext-diff --no-textconv --no-relative HEAD -- ":(top,literal)$path"` must show only the comment changes in the step 7 table. A step 5 check that wrote files, a formatter that ignored check mode, or a user edit during the run can add other changes; leave such a file uncommitted and list it in the report. Then record each committable file's content hash, `git hash-object -- "./$path"`, and a snapshot of the whole working tree: `git status --porcelain=v1 -z --untracked-files=all :/`, plus `git hash-object` of each listed path that still exists as a file; record a deleted or renamed-away path as absent.
+
+Run `git commit` with the message, then `--` and each committable file as a `":(top,literal)$path"` pathspec. Naming the paths commits only those files from the working tree, leaves anything the user staged in the index, and stages nothing if the commit fails. Write one message naming what was trimmed, following the repository's commit convention (for example, `refactor:` or `style:` where it uses Conventional Commits), with any cut material worth keeping in its body. Leave out issue references: a closing keyword such as `fixes #N` would close an issue that a comment trim did not resolve. Sign the commit when the user's or the repository's instructions require signed commits. Never amend, and never pass `--no-verify`, `--no-gpg-sign`, or any other flag that bypasses hooks or signing.
+
+If the commit fails because of an edit made here, or a hook rejects the message written here, fix the edit or the message and retry once. Before retrying, report any working-tree change the failed attempt left behind (compare a fresh status snapshot with the recorded one), rerun the step 5 checks on any file the fix touched, confirm again that each committable file holds only this run's comment edits, and record the hashes and snapshot again. A second failure, or any other failure (a hook failing for another reason, a signing failure, a lock file, or a merge or rebase in progress), ends this step without a commit: leave the edits uncommitted and report the exact error.
+
+After a commit, check whether a hook changed anything; a hook can rewrite files, for example by running its own formatter. A committed file whose recorded hash differs from `git rev-parse "HEAD:$path"` holds content this skill did not write. A committed file whose working-tree hash differs from `git rev-parse "HEAD:$path"` is one a hook rewrote without staging. A new or changed entry in a fresh snapshot, or a changed hash for a file the recorded one listed, is a file a hook left modified. Never amend or revert either kind of change; report the files.
+
+### 7. Report
 
 Report a table: `file:line` (in the edited file), action (`rewrite`, `delete`, or `flag`), before, after. Leave out comments kept unchanged. The report is read once, so line numbers are fine here. Keep before and after to one line each, truncating with `…`. With `--dry-run`, the table lists proposed changes.
 
-Leave the edits uncommitted for the user to review. Suggest a commit naming what was trimmed, following the repository's commit convention (for example, `refactor:` or `style:` where it uses Conventional Commits), made with the `commit` skill when it is installed, and list any cut material worth moving into that commit message or the PR description.
+Then report:
+
+- each step 5 check: passed, failed, or not run, with the reason
+- the commit and its branch, shown with `git log -1 --format='%h %s'` so the subject reflects any hook rewrite; or no commit, with the skip condition or the exact error from step 6
+- any change a hook made beyond these edits, in the commit or left in the working tree
+- edited files left uncommitted because they already held the user's work or picked up changes beyond these edits
+- cut material worth moving into the PR description, or into a commit message when no commit was made
 
 ## Worked examples
 
@@ -304,7 +342,7 @@ Before finishing, confirm:
 ## Error Handling
 
 - **No changed files**: Report that the scope is empty and stop. Suggest passing paths.
-- **No base branch or merge base found**: Ask the user for the base branch or for paths, rather than guessing. Use a structured question tool when the session offers one; otherwise ask in plain text and wait for the reply.
+- **No base branch or merge base found for the default scope**: Ask the user for the base branch or for paths, rather than guessing. Use a structured question tool when the session offers one; otherwise ask in plain text and wait for the reply.
 - **A given path does not exist, matches no files, or is outside the repository**: Report it and continue with the paths that do. A path that matches nothing is never skipped silently, since a root-relative path given from a subdirectory looks valid but matches nothing.
 - **A comment's meaning is unclear from the code**: Keep it and flag it in the report, rather than rewriting it into something possibly wrong.
 - **Linter, formatter, or tests fail for reasons unrelated to the edits**: Report the failure and leave it unfixed.
