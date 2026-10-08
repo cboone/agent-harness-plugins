@@ -75,12 +75,12 @@ $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip 6000000002,6000000003 < 
 The newest review against the named commit comes back even when it was skipped, so every run reads what Copilot currently says about the head. An older review of the same commit stays skipped.
 
 ```scrut
-$ jq '.[].commit_id = "abc1234"' "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip 6000000002,6000000003 --head abc1234 | jq -c '{ids: [.[].id]}'
+$ jq '.[].commit_id = "0123456789abcdef0123456789abcdef01234567"' "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip 6000000002,6000000003 --head 0123456789abcdef0123456789abcdef01234567 | jq -c '{ids: [.[].id]}'
 {"ids":[6000000003]}
 ```
 
 ```scrut
-$ jq '.[].commit_id = "abc1234"' "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip 6000000002,6000000003 --head def5678 | jq -c '{ids: [.[].id]}'
+$ jq '.[].commit_id = "0123456789abcdef0123456789abcdef01234567"' "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip 6000000002,6000000003 --head fedcba9876543210fedcba9876543210fedcba98 | jq -c '{ids: [.[].id]}'
 {"ids":[]}
 ```
 
@@ -94,7 +94,7 @@ Error: Invalid --skip value '6000000002,x'. Expected review ids separated by com
 
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --head main < /dev/null 2>&1
-Error: Invalid --head value 'main'. Expected a commit SHA.
+Error: Invalid --head value 'main'. Expected the full 40-character commit SHA.
 [1]
 ```
 
@@ -102,6 +102,25 @@ Error: Invalid --head value 'main'. Expected a commit SHA.
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip < /dev/null 2>&1
 Error: Missing value after --skip
 [1]
+```
+
+An abbreviated SHA would never equal the full `commit_id` GitHub reports, so it is refused rather than silently dropping the head review. `--head` may be given once; repeated `--skip` values add up.
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --head abc1234 < /dev/null 2>&1
+Error: Invalid --head value 'abc1234'. Expected the full 40-character commit SHA.
+[1]
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --head 0123456789abcdef0123456789abcdef01234567 --head 0123456789abcdef0123456789abcdef01234567 < /dev/null 2>&1
+Error: --head given more than once
+[1]
+```
+
+```scrut
+$ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip 6000000002 --skip 6000000003 < "${COPILOT_REVIEW_DATA_DIR}/format-d-previously-missed.json" | jq -c '{ids: [.[].id]}'
+{"ids":[]}
 ```
 
 ```scrut
@@ -162,6 +181,13 @@ Warning: skipping review 6000000043: its body is not a string.
 ```scrut
 $ "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews < "${COPILOT_REVIEW_DATA_DIR}/malformed-body.json" 2>/dev/null | jq -c '{ids: [.[].id]}'
 {"ids":[6000000042]}
+```
+
+Only a Copilot review is named, and only when it is not already skipped by id: a person's review is never read, and a skipped one was settled.
+
+```scrut
+$ echo '[{"id":71,"user":{"login":"a-human-reviewer"},"body":{"text":"x"}},{"id":72,"user":{"login":"copilot-pull-request-reviewer[bot]"},"body":{"text":"y"}},{"id":73,"user":{"login":"copilot-pull-request-reviewer[bot]"},"body":{"text":"z"}}]' | "${RESOLVE_COPILOT_THREADS_BIN}" parse-reviews --skip 73 2>&1 >/dev/null
+Warning: skipping review 72: its body is not a string.
 ```
 
 ## A null or empty body comes back empty
