@@ -288,8 +288,7 @@ function do_fetch() {
           | select(.isResolved == false)
           | select(.comments.nodes | length > 0)
           | .comments.nodes[0] as $first
-          | ($first.author.login? // "") as $raw_login
-          | (if ($raw_login | type) == "string" then $raw_login | ascii_downcase else "" end) as $login
+          | (($first.author.login? // "") | if type == "string" then ascii_downcase else "" end) as $login
           | select(
               ($direct_logins | any(. == $login))
               or (
@@ -342,18 +341,22 @@ function do_parse_reviews() {
   local head=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --skip | --head)
+      --skip)
         if [[ $# -lt 2 ]]; then
           die "Missing value after $1"
         fi
-        if [[ "$1" == "--skip" ]]; then
-          # Repeated --skip values add up rather than replace each other.
-          skip="${skip:+${skip},}$2"
-        elif [[ -n "${head}" ]]; then
-          die "--head given more than once"
-        else
-          head="$2"
+        # Repeated --skip values add up rather than replace each other.
+        skip="${skip:+${skip},}$2"
+        shift 2
+        ;;
+      --head)
+        if [[ $# -lt 2 ]]; then
+          die "Missing value after $1"
         fi
+        if [[ -n "${head}" ]]; then
+          die "--head given more than once"
+        fi
+        head="$2"
         shift 2
         ;;
       *)
@@ -389,6 +392,22 @@ function do_parse_reviews() {
     die "Invalid review JSON: every element must be a review object."
   fi
 
+  # Definitions shared by the warning pass and the selection below. Login
+  # access is safe, matching the thread path: a null, absent or malformed
+  # user yields no match rather than aborting the run.
+  # shellcheck disable=SC2016
+  # $variables in the filter are jq bindings, not shell variables
+  local review_defs='
+    def by_copilot:
+      (.user.login? // "") as $login
+      | ($login | type) == "string"
+        and ($direct_logins | any(. == ($login | ascii_downcase)));
+    def skipped:
+      .id as $id
+      | $skip | if . == "" then [] else split(",") | map(tonumber) end
+      | any(. == $id);
+  '
+
   # A Copilot review whose body is present but not a string cannot be read,
   # so it is left out. This names each one not already skipped by id, so it
   # is visible rather than silent, and audit reports the same reviews as
@@ -397,14 +416,11 @@ function do_parse_reviews() {
   while IFS= read -r skipped_id; do
     echo "Warning: skipping review ${skipped_id}: its body is not a string." >&2
   done < <(
-    # shellcheck disable=SC2016
-    # $variables in the filter are jq bindings, not shell variables
-    jq -r --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" --arg skip "${skip}" '
-      ($skip | if . == "" then [] else split(",") | map(tonumber) end) as $skip_ids
-      | .[]
-      | select((.user.login? // "") as $login | ($login | type) == "string" and ($direct_logins | any(. == ($login | ascii_downcase))))
+    jq -r --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" --arg skip "${skip}" "${review_defs}"'
+      .[]
+      | select(by_copilot)
       | select(.body != null and (.body | type) != "string")
-      | select(.id as $id | $skip_ids | any(. == $id) | not)
+      | select(skipped | not)
       | .id // "with no id"
     ' <<< "${input}"
   )
@@ -415,26 +431,19 @@ function do_parse_reviews() {
     --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" \
     --arg skip "${skip}" \
     --arg head "${head}" \
-    '
-      ($skip | if . == "" then [] else split(",") | map(tonumber) end) as $skip_ids
-      | [
-          .[]
-          # Safe access, matching the thread path. A null, absent or
-          # malformed user yields no match rather than aborting the run.
-          | select(
-              (.user.login? // "") as $login
-              | ($login | type) == "string"
-                and ($direct_logins | any(. == ($login | ascii_downcase)))
-            )
-          # A null body is an empty one: the review states nothing in its
-          # body, and any findings it has are inline threads.
-          | select(.body == null or (.body | type) == "string")
-          | .body //= ""
-        ]
+    "${review_defs}"'
+      [
+        .[]
+        | select(by_copilot)
+        # A null body is an empty one: the review states nothing in its
+        # body, and any findings it has are inline threads.
+        | select(.body == null or (.body | type) == "string")
+        | .body //= ""
+      ]
       | sort_by(.submitted_at // "")
       # The newest review of the head is kept even when skipped.
       | ([.[] | select($head != "" and .commit_id == $head)] | last | .id) as $head_review
-      | map(select(.id as $id | $id == $head_review or ($skip_ids | any(. == $id) | not)))
+      | map(select(.id == $head_review or (skipped | not)))
       | map({
           id: .id,
           url: .html_url,
@@ -487,8 +496,9 @@ function do_fetch_reviews() {
 # comment on the pull request itself, a reply inside a thread someone else
 # opened, or a review comment no thread holds. The audit counts every Copilot
 # item on the pull request by where it appears and lists any item the two
-# typed commands do not reach, including a review whose body is not a string, so feedback that arrives somewhere new shows
-# up as an entry rather than as silence.
+# typed commands do not reach, including a review whose body is not a string,
+# so feedback that arrives somewhere new shows up as an entry rather than as
+# silence.
 #
 # REST reports Copilot's inline comments as "Copilot", GraphQL as
 # "copilot-pull-request-reviewer", and REST reviews as
