@@ -21,15 +21,11 @@ readonly SCRIPT_NAME
 #     matched only when the comment body starts with a severity tag
 #     (e.g., [nitpick], [suggestion], [important], [critical], [note])
 #
-# GraphQL and REST disagree on the suffix for the same account: GraphQL
-# author.login reports "copilot-pull-request-reviewer" while REST user.login
-# reports "copilot-pull-request-reviewer[bot]", and REST reports inline review
-# comments as "Copilot". Every command compares logins case-insensitively
-# against this one list: fetch, fetch-reviews and audit.
+# GraphQL, REST reviews and REST inline comments spell the same account
+# differently, so every command compares logins against this list ignoring case.
 #
-# The github-actions[bot] rule applies to thread comments only, in fetch and
-# audit. Its severity tag is a thread-comment convention, so fetch-reviews
-# never matches it.
+# The github-actions[bot] rule is for thread comments only, so fetch-reviews
+# never applies it.
 # =============================================================================
 readonly COPILOT_DIRECT_LOGINS='["copilot-pull-request-reviewer", "copilot-pull-request-reviewer[bot]", "copilot", "github-copilot[bot]"]'
 readonly COPILOT_ACTIONS_LOGIN="github-actions[bot]"
@@ -95,9 +91,9 @@ function require_jq() {
   fi
 }
 
-# Checks the GitHub CLI is installed and authenticated. Kept separate from
-# require_jq so parse-reviews and parse-audit, which only transform JSON on
-# stdin, run in environments with no GitHub credentials (the test suite, for example).
+# Checks the GitHub CLI is installed and authenticated. Separate from
+# require_jq so parse-reviews and parse-audit, which only read stdin, run
+# without GitHub credentials.
 function require_gh() {
   if ! command -v gh > /dev/null 2>&1; then
     die "gh (GitHub CLI) is required but not found. Install it: https://cli.github.com"
@@ -288,8 +284,7 @@ function do_fetch() {
           | select(.isResolved == false)
           | select(.comments.nodes | length > 0)
           | .comments.nodes[0] as $first
-          | ($first.author.login? // "") as $raw_login
-          | (if ($raw_login | type) == "string" then $raw_login | ascii_downcase else "" end) as $login
+          | (($first.author.login? // "") | if type == "string" then ascii_downcase else "" end) as $login
           | select(
               ($direct_logins | any(. == $login))
               or (
@@ -312,22 +307,14 @@ function do_fetch() {
 # =============================================================================
 # Review bodies
 # =============================================================================
-# Copilot files some feedback in a review body rather than an inline thread,
-# where it has no thread id and cannot be replied to or resolved. The body is
-# returned raw and complete, for the caller to read: Copilot reshapes its
-# review-body layout often, and any parse of that layout breaks on the next
-# reshape, while the text itself always says what Copilot found.
+# Returns each Copilot review body raw, for the caller to read: Copilot
+# reshapes the layout often, and only the text reliably says what it found.
 #
-# Every field here comes from the REST review object, never from the body's
-# layout, except threadLinks. Those are the review comment ids the body links
-# to through GitHub's "#discussion_r<id>" URL fragment, extracted anywhere in
-# the text as a hint for matching a concern to its thread. A body that links
-# differently yields an empty list and nothing else changes.
+# threadLinks is the one field taken from the body: comment ids from GitHub's
+# "#discussion_r<id>" links, a hint for matching a concern to its thread.
 #
-# Selection is by review id, not by time. --skip names reviews a caller has
-# already read, and --head names the current head commit, whose newest review
-# is always returned, skipped or not, so every caller reads what Copilot
-# currently says about the head.
+# --skip leaves out reviews already read, and --head keeps the newest review
+# of that commit even when skipped.
 # =============================================================================
 
 # Selects Copilot reviews from an array of GitHub review objects.
@@ -342,18 +329,22 @@ function do_parse_reviews() {
   local head=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --skip | --head)
+      --skip)
         if [[ $# -lt 2 ]]; then
           die "Missing value after $1"
         fi
-        if [[ "$1" == "--skip" ]]; then
-          # Repeated --skip values add up rather than replace each other.
-          skip="${skip:+${skip},}$2"
-        elif [[ -n "${head}" ]]; then
-          die "--head given more than once"
-        else
-          head="$2"
+        # Repeated --skip values accumulate.
+        skip="${skip:+${skip},}$2"
+        shift 2
+        ;;
+      --head)
+        if [[ $# -lt 2 ]]; then
+          die "Missing value after $1"
         fi
+        if [[ -n "${head}" ]]; then
+          die "--head given more than once"
+        fi
+        head="$2"
         shift 2
         ;;
       *)
@@ -365,8 +356,7 @@ function do_parse_reviews() {
   if [[ -n "${skip}" && ! "${skip}" =~ ^[0-9]+(,[0-9]+)*$ ]]; then
     die "Invalid --skip value '${skip}'. Expected review ids separated by commas, such as 5449428489,5449507605."
   fi
-  # GitHub reports commit_id in full, and an abbreviated SHA would never
-  # equal it, silently dropping the head review.
+  # commit_id is always the full SHA, so an abbreviated --head would never match.
   if [[ -n "${head}" && ! "${head}" =~ ^[0-9a-f]{40}$ ]]; then
     die "Invalid --head value '${head}'. Expected the full 40-character commit SHA."
   fi
@@ -389,22 +379,32 @@ function do_parse_reviews() {
     die "Invalid review JSON: every element must be a review object."
   fi
 
-  # A Copilot review whose body is present but not a string cannot be read,
-  # so it is left out. This names each one not already skipped by id, so it
-  # is visible rather than silent, and audit reports the same reviews as
-  # uncovered.
+  # Shared by the warning pass and the selection. A null, absent or malformed
+  # user matches no login instead of aborting the run.
+  # shellcheck disable=SC2016
+  # $variables in the filter are jq bindings, not shell variables
+  local review_defs='
+    def by_copilot:
+      (.user.login? // "") as $login
+      | ($login | type) == "string"
+        and ($direct_logins | any(. == ($login | ascii_downcase)));
+    def skipped:
+      .id as $id
+      | $skip | if . == "" then [] else split(",") | map(tonumber) end
+      | any(. == $id);
+  '
+
+  # Names each Copilot review left out for a non-string body, unless --skip
+  # already settled it. audit lists the same reviews as uncovered.
   local skipped_id
   while IFS= read -r skipped_id; do
     echo "Warning: skipping review ${skipped_id}: its body is not a string." >&2
   done < <(
-    # shellcheck disable=SC2016
-    # $variables in the filter are jq bindings, not shell variables
-    jq -r --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" --arg skip "${skip}" '
-      ($skip | if . == "" then [] else split(",") | map(tonumber) end) as $skip_ids
-      | .[]
-      | select((.user.login? // "") as $login | ($login | type) == "string" and ($direct_logins | any(. == ($login | ascii_downcase))))
+    jq -r --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" --arg skip "${skip}" "${review_defs}"'
+      .[]
+      | select(by_copilot)
       | select(.body != null and (.body | type) != "string")
-      | select(.id as $id | $skip_ids | any(. == $id) | not)
+      | select(skipped | not)
       | .id // "with no id"
     ' <<< "${input}"
   )
@@ -415,32 +415,23 @@ function do_parse_reviews() {
     --argjson direct_logins "${COPILOT_DIRECT_LOGINS}" \
     --arg skip "${skip}" \
     --arg head "${head}" \
-    '
-      ($skip | if . == "" then [] else split(",") | map(tonumber) end) as $skip_ids
-      | [
-          .[]
-          # Safe access, matching the thread path. A null, absent or
-          # malformed user yields no match rather than aborting the run.
-          | select(
-              (.user.login? // "") as $login
-              | ($login | type) == "string"
-                and ($direct_logins | any(. == ($login | ascii_downcase)))
-            )
-          # A null body is an empty one: the review states nothing in its
-          # body, and any findings it has are inline threads.
-          | select(.body == null or (.body | type) == "string")
-          | .body //= ""
-        ]
+    "${review_defs}"'
+      [
+        .[]
+        | select(by_copilot)
+        # A null body becomes "": any findings that review has are threads.
+        | select(.body == null or (.body | type) == "string")
+        | .body //= ""
+      ]
       | sort_by(.submitted_at // "")
       # The newest review of the head is kept even when skipped.
       | ([.[] | select($head != "" and .commit_id == $head)] | last | .id) as $head_review
-      | map(select(.id as $id | $id == $head_review or ($skip_ids | any(. == $id) | not)))
+      | map(select(.id == $head_review or (skipped | not)))
       | map({
           id: .id,
           url: .html_url,
           submittedAt: .submitted_at,
-          # The commit the review ran against, which is how a caller tells
-          # a review of the current head from one of an older push.
+          # Tells a review of the current head from one of an older push.
           commitId: .commit_id,
           threadLinks: (
             [.body | match("#discussion_r([0-9]+)"; "g") | .captures[0].string | tonumber]
@@ -474,21 +465,17 @@ function do_fetch_reviews() {
     die "Failed to fetch reviews for ${owner}/${repo}#${pr_number}. See the gh error above for the cause."
   fi
 
-  # Flattened to one array, as audit does, so a gh that prints one array per
-  # page cannot split the reviews into several documents.
+  # Merges pages into one array, as audit does, in case gh prints one per page.
   jq -sc 'add // []' <<< "${response}" | do_parse_reviews ${1+"$@"}
 }
 
 # =============================================================================
 # Surface audit
 # =============================================================================
-# fetch reads unresolved threads that Copilot opened, and fetch-reviews reads
-# Copilot review bodies. Copilot can also write somewhere neither looks: a
-# comment on the pull request itself, a reply inside a thread someone else
-# opened, or a review comment no thread holds. The audit counts every Copilot
-# item on the pull request by where it appears and lists any item the two
-# typed commands do not reach, including a review whose body is not a string, so feedback that arrives somewhere new shows
-# up as an entry rather than as silence.
+# Counts every Copilot item on the pull request by surface, and lists those
+# fetch and fetch-reviews do not reach: a pull request comment, a reply in a
+# thread someone else opened, a review comment in no thread, or a review whose
+# body is not a string. Feedback in a new place is then reported, not missed.
 #
 # REST reports Copilot's inline comments as "Copilot", GraphQL as
 # "copilot-pull-request-reviewer", and REST reviews as
@@ -546,8 +533,7 @@ function do_parse_audit() {
         | ($direct_logins | map(ascii_downcase) | any(. == $lower))
           or ($lower == $actions_login and ($body | text | test($severity_pattern; "i")));
 
-      # Reviews match the direct logins only, as fetch-reviews does: the
-      # severity-tag rule is for thread comments.
+      # Reviews match the direct logins only, as in fetch-reviews.
       def is_copilot_reviewer($login): is_copilot($login; "");
 
       def excerpt: text | gsub("[[:space:]]+"; " ") | .[0:200];
