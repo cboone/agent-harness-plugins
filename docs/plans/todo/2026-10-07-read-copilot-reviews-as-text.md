@@ -28,6 +28,7 @@ The agent reads every relevant Copilot review body as text and settles each conc
 - Delete `bin/copilot-review-canary` and everything that exists only for it. Keep the review case corpus (`bin/validate-corpus`, `bin/materialize-case`, `docs/review-case-corpus.md`, `make validate-corpus`): it is the reviewer-comparison benchmark that issues #506, #507 and #508 build on, not part of Copilot parsing.
 - Major version bumps: `resolve-copilot-pr-feedback` 1.8.2 to 2.0.0 and `monitor-pr` 1.7.2 to 2.0.0, because the `fetch-reviews` and `audit` output contracts and the `monitor-pr` probe change shape.
 - Close #567 and #568 as superseded, with a comment linking this PR.
+- Select reviews by id, never by time. Every summary records the reviews it read on a `Reviews read:` line, and a run reads every Copilot review that no `Completed` or `No unresolved Copilot feedback` summary lists, plus the newest review of the current head. A first draft selected by the newest summary's timestamp; review showed that misses reviews arriving mid-run, reviews after a `Partial` or `Failed` run, and the current-head review itself, so the timestamp filter is not part of the design.
 
 ## Approach
 
@@ -40,7 +41,8 @@ Edit `plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads`, then
   - `body`: the raw body, verbatim
   - `threadLinks`: the `discussion_r<N>` comment ids the body links to, extracted by matching GitHub's comment URL fragment anywhere in the text. This is a matching hint only. It is derived from GitHub's URL scheme rather than Copilot's layout, and an empty or wrong list breaks nothing, because the agent reads the body regardless.
 - **Remove** `findings`, `unaccounted`, `hasFormatDrift`, `needsRead`, `reviewKind`, `verdict`, `headline`, `suppressed`, `hasSuppressedMarker` and `reviewBody`. Notices are recognized by reading, below.
-- **`--since <ISO-8601 timestamp>`** on `fetch-reviews` and `parse-reviews` limits output to reviews submitted at or after that time, so a later run reads only reviews no earlier summary covered. The filter compares `submitted_at`, a structured API field.
+- **`--skip <id,id,...>`** on `fetch-reviews` and `parse-reviews` leaves out review ids already read, and **`--head <sha>`** always keeps the newest review of that commit, skipped or not. Both act on structured API fields, `id` and `commit_id`.
+- Match Copilot logins case-insensitively in every command, return a review with a null or empty body with an empty body rather than dropping it, flatten paginated pages in `fetch-reviews`, and have `audit` list a Copilot review whose body is not a string as uncovered.
 - **`fetch`.** Add each comment's `databaseId` (or URL) to the thread output, so `threadLinks` can be matched to a thread without a second query.
 - **`audit` / `parse-audit`.** Drop `legacyNeedsRead`, which depends on reading headings. Keep `surfaces` and `uncovered`. Confirm no remaining audit logic inspects body layout.
 - **Keep unchanged:** author detection, the non-string-body skip warning, pagination, `resolve`, `reply` and `reply-and-resolve`.
@@ -50,7 +52,7 @@ Edit `plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads`, then
 
 Rewrite `skills/resolve-copilot-pr-feedback/SKILL.md` step 1 around reading, and remove every reference to parser fields.
 
-- **Step 1b: which reviews to read.** Find the newest prior `## Copilot Feedback Summary` comment. Read every Copilot review submitted after it, using `--since`, and always the newest review against the current head. With no prior summary, read every Copilot review on the PR. Each earlier run read everything before its summary, so nothing falls through.
+- **Step 1b: which reviews to read.** Collect the `Reviews read:` ids from prior summaries the authenticated account posted with status `Completed` or `No unresolved Copilot feedback`, pass them as `--skip`, and pass the current head as `--head`. Carry forward every row a prior summary left `Pending` or `Failed`. A caller's `REVIEW_ID` must be among the reviews read.
 - **Step 1d becomes the core step.** For each review read:
   1. Decide whether it is a review or a notice. A notice says Copilot did not review: it hit an error, or every changed file was excluded. Read the whole body before deciding. A notice in place of the current-head review is a workflow-level failure that quotes it, and its failure row names it as a Copilot notice with the review `id`, so `monitor-pr` can reclassify it. A body that is plainly neither a review nor a notice is also a workflow-level failure, quoted the same way.
   1. List every concern it states, anywhere in the body: lead paragraph, open-findings lists, previously missed entries, file-table cells, suppressed sections, or any shape Copilot adopts later. Skip text that states no finding, such as file summaries reading "no final comments".
@@ -101,7 +103,7 @@ Rewrite `tests/scrut/resolve-copilot-threads.md`:
 - **Remove** every layout-parsing, census, drift, lead and needs-read case.
 - **Keep, adjusted to the new shape:** non-Copilot filtering, unusable-author skip, empty list, malformed input, non-string-body skip, the jq-version check if the new filter still needs it, help text, the surface audit without `legacyNeedsRead`, the `monitor-pr` copy-identity case and the step 3 selection-filter case.
 - **Add verbatim passthrough:** a fixture set of real bodies covering the layouts named in Context, plus the oldest suppressed-comments layout. For each, `body` equals the input byte for byte. This pins the property that matters: no layout can change the output.
-- **Add** `threadLinks` extraction (present, absent, duplicated) and `--since` filtering, including the boundary timestamp.
+- **Add** `threadLinks` extraction (present, absent, duplicated), `--skip` and `--head` selection, the login set, `fetch` output with comment ids, and the `fetch-reviews` failure path.
 - Prune `tests/data/copilot-reviews/` and `tests/data/copilot-gh/api/*_reviews.json` to what the remaining cases use.
 
 ### 7. Versions, build and issues
