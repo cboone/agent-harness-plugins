@@ -1,6 +1,6 @@
 # Bugs Board
 
-A bugs board answers what to do about one repository's open bugs: which are critical, hurting people on production or open to anyone; which are high priority, getting worse or still to confirm; which are ready to land or fix; and how the rest are triaged. It puts action first and report second: above the fold, a card per urgent bug with its next action; below it, what needs investigating, what can wait, what was recently fixed, and what is parked.
+A bugs board answers what to do about one repository's open bugs: which are critical, hurting people on production or open to anyone; which are high priority, getting worse or still to confirm; which are ready to land or fix; and how the rest are triaged. It puts action first and report second: above the fold, a numbered row per urgent bug with its next action; below it, what needs investigating, what can wait, what was recently fixed, and what is parked.
 
 Trackers rarely say how bad a bug is. Severity labels go unused, and many bugs are found by reading code rather than reported by users, so whether a bug is on production, who it reaches, and how it is known must be read from its body and comments. That reading is the core of the analysis, and the persistent cache keeps it from being repeated: a later sync, in any conversation, reads only the bugs that changed.
 

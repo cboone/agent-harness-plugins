@@ -4,22 +4,22 @@ Boards read as one system because they share one set of design rules. The `backl
 
 ## Type and Palette
 
-- **IBM Plex Sans for text and IBM Plex Mono for numbers and labels.** Counts, ranks, issue numbers, dates, column heads, and section labels are mono; headings, prose, and titles are sans.
+- **IBM Plex Sans for text and IBM Plex Mono for numbers and labels.** Count values, ranks, issue numbers in rows and tables, the sync line, column heads, and the eyebrow and divider labels are mono; headings, count labels, prose, and titles are sans.
 - **Two themes.** The light theme is graphite and orange: a `#f1f1ef` ground, `#1b1c1e` ink, a `#26292e` filled block with `#ffb37a` text, and a `#a8430b` accent. The dark theme is near-black, `#121417`, with light blue `#8fb0ff` for the filled block and amber `#f2b45a` for the accent.
 
 ## Layout
 
 - **Summary before detail.** A masthead carries an eyebrow label naming the board type and owner, the repository as a large heading, and the sync time, branch, commit, and live age on the right, over a heavy rule. A count strip follows, then one or two sentences of summary, then the sections, most actionable first. A reader who stops after the summary still knows what to do.
-- **One filled block in the count strip**, for the count that matters most: Critical on a bugs board, Start now on a backlog board. The other counts stay plain beside it.
-- **Every section opens with a heading and a one-line note** that says what the section claims, not what it contains. Section names are neutral, without time words such as "today" or "this week".
-- **Rows, not cards.** What to act on is a list of numbered rows separated by rules, with the next action as each row's headline and its supporting facts in a narrow column beside it. Grouped lists sit in columns.
-- **A double rule labeled Report** divides what to act on from the reference material below it.
+- **One filled block in the count strip**, for the count that matters most: Critical on a bugs board, Start now on a backlog board. The other counts stay plain beside it, except that a bugs board colors its High priority label with the accent.
+- **Every section opens with a heading and a one-line note** that says what the section claims, not what it contains. Section names and notes are neutral, without dated time words such as "today" or "this week", which go stale between syncs; "Start now" names an action, not a date.
+- **Rows, not cards.** What to act on is a list of numbered rows separated by rules, with the row's main claim as its headline and its supporting facts in a narrow column beside it: the next action on a bugs board, the reasons for the pick on a backlog board. On a bugs board, grouped lists such as Ready to go sit in columns.
+- **A double rule labeled Report** divides what to act on from the reference material below it. Everything between the masthead and the footer sits in a `main` landmark, and the divider carries its label for screen readers, since a separator's own text is not read.
 - **One column of content**, at most 1200 pixels wide, that reflows into a single stack at phone width. Wide tables scroll inside their own container, so the page never scrolls sideways.
 
 ## Color
 
-- **Semantic color stays separate from the accent.** The filled block and the ranks of the rows it counts share one color. The accent marks what is current or contended: on a backlog board, the lane segments that can run now, the contention cells, and work in progress; on a bugs board, High priority, in outline. Blue is reserved for focus, except in the dark theme, where the filled block takes the same light blue as the focus ring. Neither is decoration.
-- **Both themes are defined as tokens.** Light values sit on `:root`; dark values sit under `prefers-color-scheme: dark` and again under `[data-theme="dark"]`, so an explicit choice wins in either direction. Components use tokens only, never a literal color that works in one theme. Tokens both templates use carry the same names and values.
+- **Semantic color stays separate from the accent.** The filled block and the ranks of the rows it counts share one color. The accent marks the second tier of attention: on a backlog board, what is current or contended, meaning the lane segments that can run now, the contention cells, and work in progress; on a bugs board, High priority, in outline. Milestone chip markers and other secondary marks stay neutral. Blue is reserved for focus, except in the dark theme, where the filled block takes the same light blue as the focus ring. Neither is decoration.
+- **Both themes are defined as tokens.** Light values sit on `:root`; dark values sit under `prefers-color-scheme: dark` and again under `[data-theme="dark"]`, so an explicit choice wins in either direction. Components use tokens only, never a literal color that works in one theme. Tokens both templates use carry the same names and values. The filled block and the accent carry role names with the same values: `--primary` and `--accent` on a backlog board, `--critical` and `--high` on a bugs board.
 
 ## State in Form as Well as Color
 
