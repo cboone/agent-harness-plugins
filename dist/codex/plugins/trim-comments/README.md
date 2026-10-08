@@ -45,7 +45,7 @@ This skill runs read-only Git and GitHub CLI commands to find its scope. To allo
 }
 ```
 
-If you already have a `permissions.allow` array, merge these entries into it. The skill also runs the project's own linter, formatter, type checker, and tests, which depend on the project. Its commit is a `git commit` limited to the edited files; leave it to prompt unless you want the commit to run unattended.
+If you already have a `permissions.allow` array, merge these entries into it. The skill also runs the project's own linter, formatter, type checker, and tests, which depend on the project. Its commit is a `git commit` limited to the edited files. It prompts by default; to let it run unattended, also allow `Bash(git commit *)`.
 
 ## Examples
 

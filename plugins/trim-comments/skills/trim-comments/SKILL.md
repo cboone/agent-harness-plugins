@@ -262,7 +262,7 @@ Make each change a separate, minimal edit, so each one maps to one row of the re
 
 Skip this step with `--dry-run`. Most comments cannot change behavior, but directives, doctests, and formatting can. Check the files this skill edited, not the rest of the branch:
 
-- the project's linter and formatter, in check mode, on the edited files where the tool allows it
+- the project's linter and formatter, in check mode, on the edited files where the tool allows it. Never run a formatter that has no check mode, since it would rewrite the user's own changes too; record it as not run.
 - the type checker, if the project has one
 - the tests that cover the edited files, or the full test command when they cannot be selected, which confirms nothing structural broke
 
@@ -276,7 +276,7 @@ Skip this step with `--dry-run` or `--no-commit`, when no comment was edited, or
 
 Commit only the edited files that step 4 recorded as clean; a single named comment follows the same rule. A file that already held uncommitted work stays uncommitted, because committing the whole file would mix the trims with the user's changes; step 7 lists it. When no edited file was clean, commit nothing.
 
-Skip the commit when it would not land on a working branch:
+Run every command in this step from the repository root (`git rev-parse --show-toplevel`), since `"./$path"` is root-relative. Skip the commit when it would not land on a working branch:
 
 - `git symbolic-ref --quiet --short HEAD` fails: HEAD is detached, and a commit would belong to no branch.
 - The current branch is the base branch. Step 1 found `$base` for the default scope; with paths or a single named comment, find it the same way, choosing the remote and trying the same two commands.
@@ -286,7 +286,7 @@ Next, confirm that each committable file holds only this run's edits: `git --no-
 
 Run `git commit` with the message, then `--` and each committable file as a `":(top,literal)$path"` pathspec. Naming the paths commits only those files from the working tree, leaves anything the user staged in the index, and stages nothing if the commit fails. Write one message naming what was trimmed, following the repository's commit convention (for example, `refactor:` or `style:` where it uses Conventional Commits), with any cut material worth keeping in its body. Leave out issue references: a closing keyword such as `fixes #N` would close an issue that a comment trim did not resolve. Sign the commit when the user's or the repository's instructions require signed commits. Never amend, and never pass `--no-verify`, `--no-gpg-sign`, or any other flag that bypasses hooks or signing.
 
-If the commit fails because of an edit made here, or a hook rejects the message written here, fix the edit or the message and retry once. Before retrying, report any working-tree change the failed attempt left behind (compare a fresh status snapshot with the recorded one), rerun the step 5 checks on any file the fix touched, and record the hashes and snapshot again. A second failure, or any other failure (a hook failing for another reason, a signing failure, a lock file, or a merge or rebase in progress), ends this step without a commit: leave the edits uncommitted and report the exact error.
+If the commit fails because of an edit made here, or a hook rejects the message written here, fix the edit or the message and retry once. Before retrying, report any working-tree change the failed attempt left behind (compare a fresh status snapshot with the recorded one), rerun the step 5 checks on any file the fix touched, confirm again that each committable file holds only this run's comment edits, and record the hashes and snapshot again. A second failure, or any other failure (a hook failing for another reason, a signing failure, a lock file, or a merge or rebase in progress), ends this step without a commit: leave the edits uncommitted and report the exact error.
 
 After a commit, check what a hook changed, for example by running a formatter in write mode. A committed file whose recorded hash differs from `git rev-parse "HEAD:$path"` holds content this skill did not write. A new or changed entry in a fresh status snapshot, compared with the recorded one, is a file a hook left modified. Never amend or revert either kind of change; report the files.
 
