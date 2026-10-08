@@ -13,7 +13,7 @@ Boards read as one system because they share one set of design rules. The `backl
 - **One filled block in the count strip**, for the count that matters most: Critical on a bugs board, Start now on a backlog board. The other counts stay plain beside it, except that a bugs board colors its High priority label with the accent.
 - **Every section opens with a heading and a one-line note** that says what the section claims, not what it contains. Section names and notes are neutral, without dated time words such as "today" or "this week", which go stale between syncs; "Start now" names an action, not a date.
 - **Rows, not cards.** What to act on is a list of numbered rows separated by rules, with the row's main claim as its headline and its supporting facts in a narrow column beside it: the next action on a bugs board, the reasons for the pick on a backlog board. On a bugs board, grouped lists such as Ready to go sit in columns.
-- **A double rule labeled Report** divides what to act on from the reference material below it. Everything between the masthead and the footer sits in a `main` landmark, and the divider carries its label for screen readers, since a separator's own text is not read.
+- **A double rule labeled Report** divides what to act on from the reference material below it. The sections sit in a `main` landmark between the header, which holds the masthead, count strip, and summary, and the footer, and the divider carries its label for screen readers, since a separator's own text is not read.
 - **One column of content**, at most 1200 pixels wide, that reflows into a single stack at phone width. Wide tables scroll inside their own container, so the page never scrolls sideways.
 
 ## Color
