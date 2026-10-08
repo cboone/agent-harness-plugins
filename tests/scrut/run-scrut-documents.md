@@ -6,8 +6,8 @@ scrut process per document and CI uses to list the documents for its matrix.
 Each case builds its documents in a temporary directory, outside
 `tests/scrut/`, so the runner's own discovery never picks them up. The fixture
 documents are written with `printf` and a `fence` variable holding three
-backticks, because a literal fence line inside this document would end the
-enclosing test block. Cases `cd` into the directory so reported paths are
+backticks, spelled as `\x60` escapes so this document's own fences stay three
+backticks long. Cases `cd` into the directory so reported paths are
 relative and stable. Documents finish in no fixed order, so the per-document
 `finished` progress lines are filtered out; the ordered section that follows
 them is what the cases pin.
@@ -50,7 +50,7 @@ docs/sub/c.scrut
 ## Run passing documents and print each one's output in document order
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir docs && fence='```' \
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir docs && fence=$'\x60\x60\x60' \
 >   && printf '# A\n\n%sscrut\n$ sleep 1 && echo a\na\n%s\n' "${fence}" "${fence}" > docs/a.md \
 >   && printf '# B\n\n%sscrut\n$ echo b\nb\n%s\n' "${fence}" "${fence}" > docs/b.md \
 >   && SCRUT_JOBS=2 "${RUN_SCRUT_DOCUMENTS_BIN}" docs | grep -v '^finished '
@@ -68,7 +68,7 @@ All 2 scrut documents passed.
 ## Name every failing document and exit 1
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir docs && fence='```' \
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir docs && fence=$'\x60\x60\x60' \
 >   && printf '# A\n\n%sscrut\n$ echo a\nnot a\n%s\n' "${fence}" "${fence}" > docs/a.md \
 >   && printf '# B\n\n%sscrut\n$ echo b\nb\n%s\n' "${fence}" "${fence}" > docs/b.md \
 >   && printf '# C\n\n%sscrut\n$ echo c\nnot c\n%s\n' "${fence}" "${fence}" > docs/c.md \
@@ -85,7 +85,7 @@ $ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir docs
 ## Run a single document directly, with scrut's own output and status
 
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && fence='```' \
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && fence=$'\x60\x60\x60' \
 >   && printf '# A\n\n%sscrut\n$ echo a\nnot a\n%s\n' "${fence}" "${fence}" > a.md \
 >   && "${RUN_SCRUT_DOCUMENTS_BIN}" a.md 2>&1 | tail -1; exit "${PIPESTATUS[0]}"
 Result: 1 document(s) with 1 testcase(s): 0 succeeded, 1 failed and 0 skipped
