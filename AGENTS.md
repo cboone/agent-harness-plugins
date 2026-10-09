@@ -32,7 +32,7 @@ make help
 make lint          # markdownlint, prettier, shellcheck, shfmt, actionlint
 make validate      # JSON, manifests, catalog, mirrors and cross-references
 make build         # regenerate bundled review checklists and the Codex and OpenCode mirrors
-make test-scrut
+make test-scrut    # documents in parallel; SCRUT_JOBS=1 runs them in sequence
 make test-all      # lint, validate and scrut
 ```
 
