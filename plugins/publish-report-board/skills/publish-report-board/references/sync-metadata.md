@@ -26,7 +26,7 @@ Use `extra` for anything else that pins what the board reflects, such as a catal
 
 ## What the Page Shows
 
-- The header shows the sync date and time, and a live age, such as "Synced 3 hours ago", that the page recomputes every minute from the viewer's clock. On a backlog board the age turns amber after a full day and red after three days; on a bugs board, which goes stale in hours, it changes color after 4 hours and again after 12.
+- The header shows the sync date and time, and a live age, such as "Synced 3 hours ago", that the page recomputes every minute from the viewer's clock. On a backlog board the age changes color after a full day and again after three days; on a bugs board, which goes stale in hours, it changes color after 4 hours and again after 12.
 - The footer repeats the time, links the branch and the short commit, lists the counts and every `extra` entry, and reminds the reader that the source, not the page, is authoritative.
 
 ## When to Re-sync
