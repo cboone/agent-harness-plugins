@@ -14,7 +14,7 @@ The outcome: both boards share one progress model derived in code from gathered 
 
 ## Decisions
 
-- **Scope:** both boards, one shared vocabulary. The focus board (#558, `feature/focus-board`) adopts it when it lands; it is out of scope here.
+- **Scope:** both boards and `suggest-next-issue`, one shared vocabulary. `suggest-next-issue` stops treating assignment as in progress, counts only the progress signals defined here, and weighs affinity the same way, which resolves #548. The focus board (#558, `feature/focus-board`) adopts it when it lands; it is out of scope here.
 - **Progress stages**, ordered, each backed by a named gathered signal:
 
   | Stage             | Signal                                                                              | Next move               |
@@ -36,6 +36,7 @@ The outcome: both boards share one progress model derived in code from gathered 
   - `behind` when the branch is behind the default branch, and `conflict` when GitHub reports it unmergeable.
   - `multiple` when an issue has more than one branch or pull request.
   - Local-only work carries the host that saw it, so a sync from another machine explains a difference.
+- **A merged pull request outranks a leftover label:** an open issue whose closing pull request merged is `close-out` even when a progress label is still present, and the label is noted as a cleanup.
 - **Provenance (#551):** every stage names the signal that produced it, and is re-derived on each sync from that sync's gather. Previous board data never supplies a stage. Inferred statuses, such as a long-running routine, are recorded as blockers or left off.
 - **Scheduling:** display plus flags. Every stage from `started` to `ready-to-merge` holds its lane slot as today; `quiet`, `stale`, and `ready-to-merge` are flagged in the lane so a held slot explains itself. `close-out` does not hold a slot.
 - **Affinity** replaces assignment as a progress signal. It is a separate dimension saying how much an issue is already someone's:
@@ -86,18 +87,23 @@ The outcome: both boards share one progress model derived in code from gathered 
 - `design-conventions.md`: stage colors and the In flight section.
 - `SKILL.md` and the plugin README: mention the gather script and the new sections.
 
-### 7. Tests
+### 7. `plugins/suggest-next-issue/skills/suggest-next-issue/SKILL.md`
+
+- Replace step 2's signal list with the progress signals from `progress-model.md`: a branch or worktree naming the issue, a progress label, or an open pull request that closes it. Drop assignment as a signal.
+- Add affinity as a ranking signal with the same weights in prose: a small boost for the current user, a large penalty for someone else, and the uniformity rule.
+- List in-progress issues with their stage and next move, and `close-out` issues separately as cleanups.
+- Bump `suggest-next-issue` as a minor change, since it changes what the skill recommends.
+
+### 8. Tests
 
 - New `tests/scrut/backlog-gather.md` with fixture stubs for each stage, each flag, uniformity, and implicit affinity.
 - Extend `bugs-gather.md`, `report-board.md`, and `report-board-bugs.md` for the new fields, the regrouped Ready to go, and `compare` output.
 
 ## Open Questions
 
-- Should `suggest-next-issue` adopt affinity and the same stage rules in this change, or in a follow-up that resolves #548 there?
 - Does `uniformityShare` default to 0.9, and should it count only open issues, or include issues closed recently?
 - Which recent-activity window should implicit affinity use by default: the same 30 days as `stale`, or longer?
 - Should the In flight section replace the existing stage information in lanes and tiers, or sit beside it?
-- Is a merged pull request with the progress label still present `close-out` or `started`? This plan proposes `close-out`, with the label noted as a cleanup.
 
 ## Verification
 
