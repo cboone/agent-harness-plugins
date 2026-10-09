@@ -87,9 +87,8 @@ jobs:
       - id: list
         shell: bash
         run: |
-          documents="$(bin/run-scrut-documents --list | jq -Rcs 'split("\n") | map(select(length > 0))')"
-          if [[ "${documents}" == "[]" ]]; then
-            echo "::error::No scrut documents found under tests/scrut/"
+          if ! documents="$(bin/run-scrut-documents --list | jq -Rcs 'split("\n") | map(select(length > 0))')"; then
+            echo "::error::Could not list scrut documents under tests/scrut/"
             exit 1
           fi
           echo "documents=${documents}" >> "${GITHUB_OUTPUT}"
@@ -151,6 +150,7 @@ jobs:
         MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN=./plugins/monitor-pr/scripts/resolve-copilot-threads
         REVIEW_SCOPE_BIN=./plugins/review-until-clean/scripts/review-scope
         RUN_SCRUT_DOCUMENTS_BIN=./bin/run-scrut-documents
+        SCRUT_STUB_BIN=./tests/fixtures/scrut-stub
         GIT_CONFIG_GLOBAL=/dev/null
         GIT_CONFIG_SYSTEM=/dev/null
         TMUX_STUB_BIN=./tests/fixtures/tmux-stub

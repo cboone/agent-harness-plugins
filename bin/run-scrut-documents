@@ -16,13 +16,18 @@
 # registration. CI's scrut-documents job builds its matrix from `--list`, so
 # local runs and the CI matrix cover the same documents.
 #
-# The scrut environment is inherited from the caller: the Makefile wraps this
-# in `env $(SCRUT_UNSET) $(SCRUT_ENV)`, exactly as it wrapped scrut itself.
+# The scrut environment is inherited from the caller; the Makefile wraps this
+# script in `env $(SCRUT_UNSET) $(SCRUT_ENV)`, so the script needs no knowledge
+# of it.
 #
 # Exit codes:
 #   0 - Every document passed, or --list printed the documents
-#   1 - At least one document failed
-#   2 - Usage error, an unreadable path, or no documents found
+#   1 - At least one document failed, or the run was cut short
+#   2 - Usage error, a missing path, a listing error, no documents found, or
+#       scrut not installed
+# With exactly one document, scrut runs in this script's place and its own
+# exit status is returned unchanged. A run stopped by SIGINT, SIGTERM or SIGHUP
+# exits 128 plus the signal number.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
@@ -33,8 +38,10 @@ readonly DEFAULT_PATH='tests/scrut/'
 readonly E_FAILED=1
 readonly E_USAGE=2
 
-# Removed by the EXIT trap. Global so the trap can reach it after main returns.
+# Globals so the traps can reach them. LOG_DIR is removed on exit; WORKER_PGID
+# is the process group of xargs and every scrut it starts.
 LOG_DIR=""
+WORKER_PGID=""
 
 function usage() {
   printf '%s\n' \
@@ -44,7 +51,8 @@ function usage() {
     "Run every scrut document under PATH, one scrut process per document and up" \
     "to SCRUT_JOBS at a time, then print each document's output in order and" \
     "name every failing document. PATH may be a directory or a single document," \
-    "which runs in the foreground with live output. PATH defaults to ${DEFAULT_PATH}" \
+    "and defaults to ${DEFAULT_PATH}. When PATH holds only one document, it runs in" \
+    "the foreground with live output." \
     "" \
     "Options:" \
     "  --list      Print the documents that would run, one per line, and exit" \
@@ -67,8 +75,20 @@ function cleanup() {
   fi
 }
 
-# Prints the documents under $1, sorted, one per line. Symlinks count, as they
-# do for scrut and for CI.
+# The workers run in their own process group, so a signal sent only to this
+# script would otherwise leave every scrut, and the testcases under it,
+# running. Stops the whole group, then exits with the signal's status.
+function stop_workers() {
+  local exit_status="$1"
+  if [[ -n "${WORKER_PGID}" ]]; then
+    kill -TERM -- "-${WORKER_PGID}" 2> /dev/null || true
+  fi
+  exit "${exit_status}"
+}
+
+# Prints the documents under $1, sorted, one per line. Symlinked documents are
+# listed; directories reached through a symlink below PATH are not searched.
+# -H follows PATH itself when it is a symlink.
 function list_documents() {
   local path="$1"
 
@@ -77,7 +97,7 @@ function list_documents() {
     return
   fi
 
-  find "${path}" \( -type f -o -type l \) \
+  find -H "${path}" \( -type f -o -type l \) \
     \( -name '*.md' -o -name '*.markdown' -o -name '*.scrut' -o -name '*.t' -o -name '*.cram' \) \
     | LC_ALL=C sort
 }
@@ -92,10 +112,10 @@ function default_jobs() {
   fi
 }
 
-# Runs one document, called by xargs through `bash -c`. It always exits 0 and
-# records scrut's status in a file instead, because xargs stops launching new
-# commands after one exits 255 and folds every other failure into 123, and the
-# summary needs each document's own result.
+# Runs one document, called by xargs through `bash -c`. It records scrut's
+# status in a file and returns 0, because xargs reports only one status for
+# the whole run (123 with GNU xargs, 1 with BSD) and stops starting documents
+# after one exits 255, and the summary needs each document's own result.
 function run_document() {
   local index="$1"
   local document="$2"
@@ -109,10 +129,11 @@ function run_document() {
   printf '%s\n' "${status}" > "${RUN_SCRUT_LOG_DIR}/${index}.status"
   printf '%s\n' "${elapsed}" > "${RUN_SCRUT_LOG_DIR}/${index}.seconds"
   if ((status == 0)); then
-    printf 'finished %s: passed (%ss)\n' "${document}" "${elapsed}"
+    printf 'finished %s: passed (%ss)\n' "${document}" "${elapsed}" || true
   else
-    printf 'finished %s: FAILED, exit %s (%ss)\n' "${document}" "${status}" "${elapsed}"
+    printf 'finished %s: FAILED, exit %s (%ss)\n' "${document}" "${status}" "${elapsed}" || true
   fi
+  return 0
 }
 
 function run_parallel() {
@@ -125,13 +146,35 @@ function run_parallel() {
   export RUN_SCRUT_LOG_DIR="${LOG_DIR}"
   export -f run_document
 
-  printf 'Running %s scrut documents, %s at a time\n' "${count}" "${jobs}"
-
   local i
-  # shellcheck disable=SC2016 # $1 and $2 expand in the child bash, not here.
   for ((i = 0; i < count; i++)); do
     printf '%s\0%s\0' "${i}" "${documents[i]}"
-  done | xargs -0 -n 2 -P "${jobs}" bash -c 'run_document "$1" "$2"' run_document
+  done > "${LOG_DIR}/queue"
+
+  printf 'Running %s scrut documents, %s at a time\n' "${count}" "${jobs}"
+
+  # Job control puts xargs in a new process group, led by xargs, which
+  # stop_workers can signal as a whole. The outer stderr redirect hides a
+  # spurious bash "child setpgid" error, printed when the parent sets the group
+  # first; fd 3 carries xargs's own stderr past it.
+  exec 3>&2
+  set -m
+  # shellcheck disable=SC2016 # $1 and $2 expand in the child bash, not here.
+  {
+    xargs -0 -n 2 -P "${jobs}" bash -c 'run_document "$1" "$2"' run_document \
+      < "${LOG_DIR}/queue" 2>&3 &
+  } 2> /dev/null
+  WORKER_PGID=$!
+  set +m
+  exec 3>&-
+
+  local xargs_status=0
+  wait "${WORKER_PGID}" || xargs_status=$?
+  WORKER_PGID=""
+  if ((xargs_status != 0)); then
+    printf '%s: xargs exited %s, so the run was cut short; documents without a result are reported as failed\n' \
+      "${SCRIPT_NAME}" "${xargs_status}" >&2
+  fi
 
   local -a failed=()
   local status elapsed
@@ -145,17 +188,23 @@ function run_parallel() {
       printf '==> %s: FAILED, exit %s (%ss)\n' "${documents[i]}" "${status}" "${elapsed}"
       failed+=("${documents[i]}")
     fi
-    cat "${LOG_DIR}/${i}.log" 2> /dev/null || printf '(no output recorded)\n'
+    if [[ -e "${LOG_DIR}/${i}.log" ]]; then
+      cat "${LOG_DIR}/${i}.log"
+    else
+      printf '(not run)\n'
+    fi
   done
 
   printf '\n'
-  if ((${#failed[@]} == 0)); then
+  if ((${#failed[@]} == 0 && xargs_status == 0)); then
     printf 'All %s scrut documents passed.\n' "${count}"
     return 0
   fi
 
   printf '%s of %s scrut documents failed:\n' "${#failed[@]}" "${count}"
-  printf '  %s\n' "${failed[@]}"
+  if ((${#failed[@]} > 0)); then
+    printf '  %s\n' "${failed[@]}"
+  fi
   return "${E_FAILED}"
 }
 
@@ -193,11 +242,21 @@ function main() {
     usage_error "SCRUT_JOBS must be a positive integer, got: ${jobs}"
   fi
 
+  # A command substitution, not `< <(...)`, so a find error such as an
+  # unreadable directory stops the run instead of leaving a partial list.
+  local listing
+  if ! listing="$(list_documents "${path}")"; then
+    printf '%s: could not list scrut documents under %s\n' "${SCRIPT_NAME}" "${path}" >&2
+    exit "${E_USAGE}"
+  fi
+
   local -a documents=()
   local document
   while IFS= read -r document; do
-    documents+=("${document}")
-  done < <(list_documents "${path}")
+    if [[ -n "${document}" ]]; then
+      documents+=("${document}")
+    fi
+  done <<< "${listing}"
 
   if ((${#documents[@]} == 0)); then
     printf '%s: no scrut documents found under %s\n' "${SCRIPT_NAME}" "${path}" >&2
@@ -214,13 +273,16 @@ function main() {
     exit "${E_USAGE}"
   fi
 
-  # One document gains nothing from a log, and running it in the foreground
-  # keeps scrut's live output, as `make test-scrut SCRUT_TEST_DIR=...` always had.
+  # With one document, a log adds nothing: scrut runs in the foreground so its
+  # output stays live and its exit status is returned as is.
   if ((${#documents[@]} == 1)); then
     exec scrut --shell bash test "${documents[0]}"
   fi
 
   trap cleanup EXIT
+  trap 'stop_workers 129' HUP
+  trap 'stop_workers 130' INT
+  trap 'stop_workers 143' TERM
   run_parallel "${jobs}" "${documents[@]}"
 }
 
