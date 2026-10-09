@@ -10,8 +10,8 @@
      priority an outlined tag; fixes a muted green. In the light theme blue is
      reserved for focus; in the dark theme Critical takes the light blue the
      focus ring also uses, and High priority amber. Components use tokens
-     only. The shared tokens match backlog-triage.html; a change to one
-     prompts a look at the other. */
+     only. Tokens shared with backlog-triage.html keep the same values; change
+     both together. */
   :root {
     color-scheme: light;
     --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -131,7 +131,7 @@
     gap: 56px;
   }
 
-  /* The main landmark keeps the board's spacing between its sections. */
+  /* The same spacing as .board, for the sections inside main. */
   .board-main {
     display: flex;
     flex-direction: column;
@@ -760,8 +760,7 @@
     const pullRef = (n) => link(pullUrl(n), `#${n}`, "num");
     // Links "#123", and "owner/repo#123" for another repository, in a prose
     // field. Matches the linker in backlog-triage.html except that a local
-    // reference here stays in the text face; a fix to the matching rules
-    // belongs in both.
+    // reference stays in the text face; fix the matching rules in both.
     const PROSE_REF = /([\w.-]+\/[\w.-]+)?#(\d+)(?![\w#])/g;
     const prose = (text) => {
       const source = String(text ?? "");
@@ -819,8 +818,8 @@
     const commitLink = () => link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8));
 
     const age = h("p", { class: "when-age" });
-    // Adapted from refreshAge() in backlog-triage.html, whose thresholds are
-    // whole days; a fix to the wording belongs in both.
+    // Shares its wording with refreshAge() in backlog-triage.html; fix both
+    // together.
     function refreshAge() {
       if (!validTime) return;
       const minutes = Math.max(0, Math.floor((Date.now() - syncedAt.getTime()) / 60000));
@@ -1219,7 +1218,7 @@
     refreshAge();
     window.setInterval(refreshAge, 60000);
 
-    // h() skips an absent section, which is null.
+    // h() skips absent (null) sections.
     root.replaceChildren(
       header,
       h("main", { class: "board-main" }, [

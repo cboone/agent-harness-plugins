@@ -4,15 +4,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" />
 <style>
-  /* An editorial backlog desk, in the bugs board's look: IBM Plex Sans for
-     text and Plex Mono for numbers and labels. The light theme is Graphite and
-     orange, the dark theme Night. The Start now count is the one filled block,
-     and its ranks take the same color. The accent marks what is current or
-     contended: segments that can run now, contention cells, and work in
-     progress. In the light theme blue is reserved for focus; in the dark theme
-     the filled block takes the light blue the focus ring also uses. Components
-     use tokens only. The shared tokens match bugs.html; a change to one
-     prompts a look at the other. */
+  /* The accent marks what is current or contended: segments that can run now,
+     contention cells, and work in progress. Tokens shared with bugs.html keep
+     the same values; change both together. */
   :root {
     color-scheme: light;
     --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -123,8 +117,7 @@
     outline-offset: 2px;
   }
 
-  /* A soft ordering link, "better after" or "eases", is dashed: the same mark
-     the page uses for a missing milestone. Hard links stay solid. */
+  /* "better after" and "eases" links. */
   .ref--soft {
     border-bottom-style: dashed;
   }
@@ -152,7 +145,7 @@
     gap: 56px;
   }
 
-  /* The main landmark keeps the board's spacing between its sections. */
+  /* The same spacing as .board, for the sections inside main. */
   .board-main {
     display: flex;
     flex-direction: column;
@@ -172,8 +165,7 @@
     color: var(--muted);
   }
 
-  /* Lane keys are outlined mono tags; the Start now count keeps the only
-     filled block. */
+  /* Outlined, so the Start now count stays the only filled block. */
   .badge {
     display: inline-block;
     flex: none;
@@ -397,8 +389,7 @@
     border-top: 1px solid var(--ink);
   }
 
-  /* Start now rows: the pick's reasons are the headline, and its lane,
-     footprint, and milestone sit beside it. */
+  /* Start now rows */
   .start-row {
     display: grid;
     grid-template-columns: 64px minmax(0, 1fr) 300px;
@@ -513,8 +504,7 @@
     background-color: var(--bar-now);
   }
 
-  /* Queued segments are outlined and blocked ones hatched, so the three
-     states read as solid, outlined, and hatched rather than by color alone. */
+  /* Outlined and hatched, so the three states read without color. */
   .seg--queued {
     box-shadow: inset 0 0 0 1.5px var(--bar-edge);
   }
@@ -817,9 +807,8 @@
     font-size: 12px;
   }
 
-  /* The Waiting on, Why, and Freed from cells name their column: always to a
-     screen reader, and on screen once the header row is hidden at narrow
-     widths. The issue cell needs no label. */
+  /* Names a blocked cell's column for screen readers, and on screen once
+     narrow widths hide the header row. */
   .cell-label {
     position: absolute;
     width: 1px;
@@ -836,8 +825,7 @@
     font-size: 13px;
   }
 
-  /* Lanes and blocked rows stack below 1080px, where their fixed columns
-     leave the flexible ones too narrow for titles and blocker names. */
+  /* Below 1080px the fixed columns leave titles and blocker names too narrow. */
   @media (max-width: 1080px) {
     .lane {
       grid-template-columns: minmax(0, 1fr);
@@ -1072,8 +1060,8 @@
     const ref = (n) => h("a", { class: "ref num", href: issueUrl(n) }, `#${n}`);
     // Links "#123", and "owner/repo#123" for another repository, in a prose
     // field. A "#" inside a word, such as "C#1", stays text. Matches the linker
-    // in bugs.html except that a local reference here is drawn as an issue
-    // number; a fix to the matching rules belongs in both.
+    // in bugs.html except that a local reference is drawn as an issue number;
+    // fix the matching rules in both.
     const PROSE_REF = /([\w.-]+\/[\w.-]+)?#(\d+)(?![\w#])/g;
     const prose = (text) => {
       const source = String(text ?? "");
@@ -1297,15 +1285,14 @@
       ]);
     }
 
-    // Header: eyebrow, repository, sync time, branch and commit, live age, the
-    // six counts, and the summary.
+    // Header
     const syncedAt = new Date(data.sync.at);
     // A time no calendar has, such as 24:30, shows as written and gets no age,
     // rather than stopping the page.
     const validTime = !Number.isNaN(syncedAt.getTime());
     // A zone the browser does not know falls back to UTC, which the time line
-    // then names, so every viewer still sees the same time. Copied from
-    // bugs.html; a fix to one prompts a look at the other.
+    // then names, so every viewer still sees the same time. The same in
+    // bugs.html; fix both together.
     function formatSync(locale, options) {
       if (!validTime) return "";
       try {
@@ -1321,10 +1308,8 @@
     const commitLink = () => link(`${repoUrl}/commit/${data.sync.commit}`, data.sync.commit.slice(0, 8));
 
     const age = h("p", { class: "when-age" });
-    // The aging color once a full day has passed, the stale color after three.
-    // The wording counts whole units, so it never says "1 day ago" before the
-    // color changes. bugs.html keeps this wording but sets its thresholds in
-    // hours; a fix to the wording belongs in both.
+    // Counts whole units, so it never says "1 day ago" before the color
+    // changes. bugs.html shares this wording; fix both together.
     function refreshAge() {
       if (!validTime) return;
       const minutes = Math.max(0, Math.floor((Date.now() - syncedAt.getTime()) / 60000));
@@ -1343,10 +1328,7 @@
 
     const blockedCount = issues.filter((issue) => isBlocked(issue.number)).length;
     const runningCapacity = lanes.reduce((sum, model) => sum + model.cap, 0);
-    // Each label sits in its own element below its value, so it carries the
-    // noun alone and has to agree with the number itself. Start now, Ready,
-    // Blocked, and Open read the same at any count. The start picks lead as
-    // the one filled block, because they are what a reader acts on.
+    // Each label is its own element, so a noun label must agree with its count.
     const counts = [
       [startNow.length, "Start now", "count--primary"],
       [issues.length - blockedCount, "Ready"],
@@ -1462,8 +1444,7 @@
       // The column headings are drawn for sighted readers only, so each field
       // carries a visually hidden label; the title reads as part of "Issue #N".
       const hidden = (text) => h("span", { class: "visually-hidden" }, text);
-      // A bar segment cannot be matched to its issue, and the bar's label gives
-      // only tallies, so the row states each issue's state in words.
+      // The bar's label gives only tallies, so each row states its own state.
       const stateWord = { now: "can run now", queued: "queued", blocked: "blocked" }[model.state(n)] ?? "";
       return h("li", { class: "item" }, [
         h("span", { class: "item-rank", "aria-hidden": rank === "·" ? "true" : null }, [hidden("Step "), rank]),
@@ -1678,7 +1659,7 @@
     ]);
 
     root.classList.toggle("no-milestones", !anyMilestone);
-    // h() skips an absent section, which is null.
+    // h() skips absent (null) sections.
     root.replaceChildren(
       header,
       h("main", { class: "board-main" }, [
