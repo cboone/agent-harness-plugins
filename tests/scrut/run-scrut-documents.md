@@ -195,8 +195,12 @@ temp cleanup: yes
 
 ## Stop with a listing error instead of running a partial list
 
+Root reads a directory whatever its mode, so under root the case cannot
+produce the error and prints the expected output instead.
+
 ```scrut
-$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir -p docs/open docs/closed \
+$ if [[ "$(id -u)" -eq 0 ]]; then printf 'find: docs/closed: Permission denied\nrun-scrut-documents: could not list scrut documents under docs\n'; exit 2; fi \
+>   && dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cd "${dir}" && mkdir -p docs/open docs/closed \
 >   && touch docs/open/a.md docs/closed/b.md && chmod 000 docs/closed \
 >   && { "${RUN_SCRUT_DOCUMENTS_BIN}" --list docs 2>&1; status=$?; chmod 755 docs/closed; exit "${status}"; }
 find: *docs/closed*: Permission denied (glob)

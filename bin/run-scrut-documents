@@ -39,9 +39,11 @@ readonly E_FAILED=1
 readonly E_USAGE=2
 
 # Globals so the traps can reach them. LOG_DIR is removed on exit; WORKER_PGID
-# is the process group of xargs and every scrut it starts.
+# is the process group of xargs and every scrut it starts; PROGRESS_PID relays
+# their progress lines to this script's output.
 LOG_DIR=""
 WORKER_PGID=""
+PROGRESS_PID=""
 
 function usage() {
   printf '%s\n' \
@@ -77,11 +79,19 @@ function cleanup() {
 
 # The workers run in their own process group, so a signal sent only to this
 # script would otherwise leave every scrut, and the testcases under it,
-# running. Stops the whole group, then exits with the signal's status.
+# running. Stops the whole group, then exits with the signal's status. A
+# signal that lands between the launch and the WORKER_PGID assignment falls back
+# to $!, which no other background job sets. CONT lets a stopped group act on
+# the TERM at once.
 function stop_workers() {
   local exit_status="$1"
-  if [[ -n "${WORKER_PGID}" ]]; then
-    kill -TERM -- "-${WORKER_PGID}" 2> /dev/null || true
+  local pgid="${WORKER_PGID:-${!:-}}"
+  if [[ -n "${pgid}" ]]; then
+    kill -TERM -- "-${pgid}" 2> /dev/null || true
+    kill -CONT -- "-${pgid}" 2> /dev/null || true
+  fi
+  if [[ -n "${PROGRESS_PID}" ]]; then
+    kill -TERM "${PROGRESS_PID}" 2> /dev/null || true
   fi
   exit "${exit_status}"
 }
@@ -156,21 +166,27 @@ function run_parallel() {
   # Job control puts xargs in a new process group, led by xargs, which
   # stop_workers can signal as a whole. The outer stderr redirect hides a
   # spurious bash "child setpgid" error, printed when the parent sets the group
-  # first; fd 3 carries xargs's own stderr past it.
-  exec 3>&2
+  # first. A background group that writes to a terminal with `stty tostop` set
+  # is stopped, so the workers write their progress lines and xargs its errors
+  # to a FIFO, and a `cat` in this script's own group copies them out.
+  local progress="${LOG_DIR}/progress"
+  mkfifo "${progress}"
   set -m
   # shellcheck disable=SC2016 # $1 and $2 expand in the child bash, not here.
   {
     xargs -0 -n 2 -P "${jobs}" bash -c 'run_document "$1" "$2"' run_document \
-      < "${LOG_DIR}/queue" 2>&3 &
+      < "${LOG_DIR}/queue" > "${progress}" 2>&1 &
   } 2> /dev/null
   WORKER_PGID=$!
   set +m
-  exec 3>&-
+  cat "${progress}" &
+  PROGRESS_PID=$!
 
   local xargs_status=0
   wait "${WORKER_PGID}" || xargs_status=$?
   WORKER_PGID=""
+  wait "${PROGRESS_PID}" || true
+  PROGRESS_PID=""
   if ((xargs_status != 0)); then
     printf '%s: xargs exited %s, so the run was cut short; documents without a result are reported as failed\n' \
       "${SCRIPT_NAME}" "${xargs_status}" >&2
