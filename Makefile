@@ -137,8 +137,8 @@ test-scrut:
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }
 	env $(SCRUT_UNSET) $(SCRUT_ENV) bin/run-scrut-documents "$(SCRUT_TEST_DIR)"
 
-# One plain scrut call: re-recording is occasional, and a single sequential run
-# keeps its output in one stream for reviewing the rewritten expectations.
+# One sequential scrut call, so the rewritten expectations come back in one
+# stream to review.
 test-scrut-update:
 	@command -v scrut > /dev/null || { echo "scrut is required: https://github.com/facebookincubator/scrut" >&2; exit 1; }
 	env $(SCRUT_UNSET) $(SCRUT_ENV) scrut --shell bash update --replace --assume-yes "$(SCRUT_TEST_DIR)"

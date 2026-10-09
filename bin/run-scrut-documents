@@ -1,24 +1,16 @@
 #!/usr/bin/env bash
 # run-scrut-documents -- Run scrut documents in parallel, one scrut per document.
 #
-# CI runs each document under tests/scrut/ as its own matrix job, so the suite
-# takes as long as its slowest document. A single `scrut test tests/scrut/`
-# runs documents one after another instead, which locally costs the sum of
-# them all. This runs one `scrut --shell bash test DOCUMENT` per document, up
-# to SCRUT_JOBS at a time, and so brings a local run close to CI's shape.
+# Runs one `scrut --shell bash test DOCUMENT` per document, up to SCRUT_JOBS at
+# a time, so a local run takes about as long as its slowest document, like
+# CI's per-document matrix.
 #
-# Each document writes to its own log, and the logs are printed in document
-# order once every document has finished, so one document's output is never
-# interleaved with another's. A one-line notice is printed as each document
-# finishes, so a long run still shows progress.
+# Logs print in document order once every document finishes, so outputs never
+# interleave. A one-line notice marks each document as it finishes.
 #
-# Documents are found by name under PATH, so a new document joins without
-# registration. CI's scrut-documents job builds its matrix from `--list`, so
-# local runs and the CI matrix cover the same documents.
-#
-# The scrut environment is inherited from the caller; the Makefile wraps this
-# script in `env $(SCRUT_UNSET) $(SCRUT_ENV)`, so the script needs no knowledge
-# of it.
+# CI builds its matrix from `--list`, so local runs and CI cover the same
+# documents. The scrut environment comes from the caller, the Makefile's
+# `env $(SCRUT_UNSET) $(SCRUT_ENV)`.
 #
 # Exit codes:
 #   0 - Every document passed, or --list printed the documents
@@ -39,9 +31,8 @@ readonly POSITIVE_INTEGER='^[1-9][0-9]*$'
 readonly E_FAILED=1
 readonly E_USAGE=2
 
-# Globals so the traps can reach them. LOG_DIR is removed on exit; WORKER_PGID
-# is the process group of xargs and every scrut it starts; PROGRESS_PID relays
-# their progress lines to this script's output.
+# Globals so the traps can reach them: the log directory, the process group of
+# xargs and its workers, and the progress relay's PID.
 LOG_DIR=""
 WORKER_PGID=""
 PROGRESS_PID=""
@@ -78,12 +69,9 @@ function cleanup() {
   fi
 }
 
-# The workers run in their own process group, so a signal sent only to this
-# script would otherwise leave every scrut, and the testcases under it,
-# running. Stops the whole group, then exits with the signal's status. A
-# signal that lands between the launch and the WORKER_PGID assignment falls back
-# to $!, which no other background job sets. CONT lets a stopped group act on
-# the TERM at once.
+# Stops the worker process group, which a signal to this script alone misses.
+# Falls back to $! when the signal lands before WORKER_PGID is set.
+# CONT wakes a stopped group so it acts on the TERM.
 function stop_workers() {
   local exit_status="$1"
   local pgid="${WORKER_PGID:-${!:-}}"
@@ -97,9 +85,7 @@ function stop_workers() {
   exit "${exit_status}"
 }
 
-# Prints the documents under $1, sorted, one per line. Symlinked documents are
-# listed; directories reached through a symlink below PATH are not searched.
-# -H follows PATH itself when it is a symlink.
+# -H follows a symlinked PATH. Symlinks below it are listed, not searched.
 function list_documents() {
   local path="$1"
 
@@ -123,10 +109,8 @@ function default_jobs() {
   fi
 }
 
-# Runs one document, called by xargs through `bash -c`. It records scrut's
-# status in a file and returns 0, because xargs reports only one status for
-# the whole run (123 with GNU xargs, 1 with BSD) and stops starting documents
-# after one exits 255, and the summary needs each document's own result.
+# Records scrut's status in a file and returns 0: xargs keeps only one status
+# for the whole run, and stops starting documents after an exit of 255.
 function run_document() {
   local index="$1"
   local document="$2"
@@ -164,12 +148,10 @@ function run_parallel() {
 
   printf 'Running %s scrut documents, %s at a time\n' "${count}" "${jobs}"
 
-  # Job control puts xargs in a new process group, led by xargs, which
-  # stop_workers can signal as a whole. The outer stderr redirect hides a
-  # spurious bash "child setpgid" error, printed when the parent sets the group
-  # first. A background group that writes to a terminal with `stty tostop` set
-  # is stopped, so the workers write their progress lines and xargs its errors
-  # to a FIFO, and a `cat` in this script's own group copies them out.
+  # Job control gives xargs its own process group, for stop_workers to signal.
+  # The outer redirect hides a spurious bash "child setpgid" error.
+  # Output goes through a FIFO to a `cat` in this script's group, because
+  # `stty tostop` stops a background group that writes to the terminal.
   local progress="${LOG_DIR}/progress"
   mkfifo "${progress}"
   set -m
@@ -259,8 +241,7 @@ function main() {
     usage_error "SCRUT_JOBS must be a positive integer, got: ${jobs}"
   fi
 
-  # A command substitution, not `< <(...)`, so a find error such as an
-  # unreadable directory stops the run instead of leaving a partial list.
+  # Command substitution, not `< <(...)`, so a find error stops the run.
   local listing
   if ! listing="$(list_documents "${path}")"; then
     printf '%s: could not list scrut documents under %s\n' "${SCRIPT_NAME}" "${path}" >&2
@@ -290,8 +271,7 @@ function main() {
     exit "${E_USAGE}"
   fi
 
-  # With one document, a log adds nothing: scrut runs in the foreground so its
-  # output stays live and its exit status is returned as is.
+  # One document runs in the foreground, keeping scrut's live output and status.
   if ((${#documents[@]} == 1)); then
     exec scrut --shell bash test "${documents[0]}"
   fi

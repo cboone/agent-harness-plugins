@@ -3,8 +3,7 @@
 #
 # Tests copy it into a directory named `scrut` on PATH. It takes the document
 # from its last argument and acts on the document's name:
-#   *kill*  sends SIGKILL to its parent, the worker bash xargs started, which
-#           makes xargs stop starting documents
+#   *kill*  SIGKILLs its parent worker, so xargs stops starting documents
 #   *slow*  appends its own PID to STUB_SCRUT_PIDS, then sleeps for 30 seconds,
 #           so a test can signal the runner while documents are in flight
 #   other   prints "ran DOCUMENT" and exits 0
