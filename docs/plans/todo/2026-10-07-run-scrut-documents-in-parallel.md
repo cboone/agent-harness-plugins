@@ -20,7 +20,7 @@ Follows the `write-bash-scripts` skill, with bash 3.2 compatibility (no `wait -n
 - **Output:** once every document finishes, print each log in document order under a header line naming the document and its result. Then a summary: documents passed, and every failing document by name. Exit 1 when any document failed, 2 for usage errors, a missing path, a listing error, no documents or a missing scrut.
 - **Single document:** with one document, run scrut directly in the foreground, so `make test-scrut SCRUT_TEST_DIR=tests/scrut/NAME.md` behaves exactly as today, live output included.
 - **xargs stopping early:** a worker stopped by a signal, or one exiting 255, makes xargs stop starting documents. The runner records xargs's status, warns, and still prints the summary, where every document without a result counts as failed, and exits 1.
-- **Signals:** xargs runs in its own process group under job control. SIGINT, SIGTERM and SIGHUP traps send SIGTERM to that group, so no scrut or testcase keeps running after the runner stops, and exit with 128 plus the signal number.
+- **Signals:** xargs runs in its own process group under job control. SIGINT, SIGTERM and SIGHUP traps send SIGTERM to that group, so no scrut or testcase keeps running after the runner stops, and exit with 128 plus the signal number. The workers write progress lines through a FIFO that a `cat` in the runner's own group copies out, so a terminal with `stty tostop` set cannot stop the background group, and a signal that lands before the group is recorded falls back to `$!`.
 
 ### 2. Wire the Makefile
 
