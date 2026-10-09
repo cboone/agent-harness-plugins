@@ -2,7 +2,7 @@
 
 Tests for launcher stdin prompt handling, tmux recovery, and workmux argument construction.
 
-Without `--await-completion`, the launcher starts workmux in the background, sleeps `WORKMUX_LAUNCH_WAIT_SECONDS`, and prints whatever workmux has logged by then. Cases set that wait to 3 seconds rather than 1 because `make test-scrut` runs documents in parallel, and on a fully loaded machine the workmux stub has been seen to finish writing after 1 second, cutting the expected output short.
+Without `--await-completion`, the launcher starts workmux in the background, sleeps `WORKMUX_LAUNCH_WAIT_SECONDS`, and prints whatever workmux has logged by then. Cases set that wait to 3 seconds rather than 1 because `make test-scrut` runs documents in parallel, and on a fully loaded machine the workmux stub can still be writing its log after 1 second, which truncates the expected output. The wait narrows that window but does not close it.
 
 ## Missing generated candidate
 

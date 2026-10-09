@@ -13,33 +13,40 @@ Put the runner in a new Bash script, `bin/run-scrut-documents`, instead of inlin
 Follows the `write-bash-scripts` skill, with bash 3.2 compatibility (no `wait -n`, no `mapfile`).
 
 - **Usage:** `run-scrut-documents [--list] [PATH]`. `PATH` defaults to `tests/scrut/` and may be a directory or a single document.
-- **Discovery:** for a directory, the same `find` expression as CI (`-type f -o -type l`; `*.md`, `*.markdown`, `*.scrut`, `*.t`, `*.cram`), sorted. A file path is used as is. An empty list is an error, as in CI.
+- **Discovery:** for a directory, the `find` expression CI used (`-type f -o -type l`; `*.md`, `*.markdown`, `*.scrut`, `*.t`, `*.cram`) with `-H`, so a symlinked PATH is followed, sorted under `LC_ALL=C`. A file path is used as is. The list is captured by command substitution, so a `find` error, such as an unreadable directory, stops the run with exit 2 instead of leaving a partial list. An empty list is also exit 2.
 - **`--list`:** print the sorted documents, one per line, and exit. CI's `scrut-documents` job uses this, so local and CI discovery cannot drift.
-- **Parallel run:** one `scrut --shell bash test DOCUMENT` per document through `xargs -0 -P "${SCRUT_JOBS}"`, each writing stdout and stderr to its own log and its exit status to a status file in a `mktemp -d` directory removed by an `EXIT` trap. The environment (`SCRUT_UNSET`, `SCRUT_ENV`) is inherited from the Makefile's `env` call, so the script needs no knowledge of it.
-- **Job count:** `SCRUT_JOBS` overrides; the default is the CPU count (`getconf _NPROCESSORS_ONLN`, falling back to 1), adjusted after measuring in step 5. `SCRUT_JOBS=1` gives a sequential run for debugging, so no separate target is needed.
-- **Output:** once every document finishes, print each log in document order under a header line naming the document and its result. Then a summary: documents passed, and every failing document by name. Exit 1 when any document failed, 2 for usage errors.
+- **Parallel run:** one `scrut --shell bash test DOCUMENT` per document through `xargs -0 -n 2 -P "${SCRUT_JOBS}"`, each writing stdout and stderr to its own log and its exit status to a status file in a `mktemp -d` directory removed by an `EXIT` trap. A one-line `finished` notice is printed as each document completes. The environment (`SCRUT_UNSET`, `SCRUT_ENV`) is inherited from the Makefile's `env` call, so the script needs no knowledge of it.
+- **Job count:** `SCRUT_JOBS` overrides; the default is the CPU count (`getconf _NPROCESSORS_ONLN`, then `sysctl -n hw.ncpu`, then 1), confirmed by the measurements in step 5. `SCRUT_JOBS=1` gives a sequential run for debugging, so no separate target is needed.
+- **Output:** once every document finishes, print each log in document order under a header line naming the document and its result. Then a summary: documents passed, and every failing document by name. Exit 1 when any document failed, 2 for usage errors, a missing path, a listing error, no documents or a missing scrut.
 - **Single document:** with one document, run scrut directly in the foreground, so `make test-scrut SCRUT_TEST_DIR=tests/scrut/NAME.md` behaves exactly as today, live output included.
+- **xargs stopping early:** a worker stopped by a signal, or one exiting 255, makes xargs stop starting documents. The runner records xargs's status, warns, and still prints the summary, where every document without a result counts as failed, and exits 1.
+- **Signals:** xargs runs in its own process group under job control. SIGINT, SIGTERM and SIGHUP traps send SIGTERM to that group, so no scrut or testcase keeps running after the runner stops, and exit with 128 plus the signal number.
 
 ### 2. Wire the Makefile
 
-- `test-scrut`: `env $(SCRUT_UNSET) $(SCRUT_ENV) bin/run-scrut-documents "$(SCRUT_TEST_DIR)"`, keeping the `command -v scrut` check. Pass `SCRUT_JOBS` through when set.
-- `test-scrut-update` stays a single sequential `scrut update --replace` call, since it rewrites files.
+- `test-scrut`: `env $(SCRUT_UNSET) $(SCRUT_ENV) bin/run-scrut-documents "$(SCRUT_TEST_DIR)"`, keeping the `command -v scrut` check. `SCRUT_JOBS` needs no wiring: make exports a command-line variable to recipes, and `SCRUT_UNSET` leaves it alone.
+- `test-scrut-update` stays one sequential `scrut update --replace` call, so the rewritten expectations come back in a single stream to review.
 - `test-all` keeps depending on `test-scrut`, so it runs in parallel by default.
 - Update `help` text to mention `SCRUT_JOBS`.
 
 ### 3. Use the script in CI's listing
 
-In `.github/workflows/ci.yml`'s `scrut-documents` job, replace the inline `find` with `bin/run-scrut-documents --list | jq -Rcs ...`, keeping the empty-list error. The matrix jobs are unchanged.
+In `.github/workflows/ci.yml`'s `scrut-documents` job, replace the inline `find` with `bin/run-scrut-documents --list | jq -Rcs ...`. A failed listing, including an empty one, fails the step with an `::error::` annotation. The matrix jobs are unchanged.
 
 ### 4. Cover the script with scrut
 
-Add `tests/scrut/run-scrut-documents.md`, with `RUN_SCRUT_DOCUMENTS_BIN` registered in both `SCRUT_ENV` and CI's `scrut-env`. Cases build small passing and failing documents in a `mktemp -d` directory (not under `tests/scrut/`, so discovery never picks them up), covering:
+Add `tests/scrut/run-scrut-documents.md` and a `tests/fixtures/scrut-stub`, with `RUN_SCRUT_DOCUMENTS_BIN` and `SCRUT_STUB_BIN` registered in both `SCRUT_ENV` and CI's `scrut-env`. Cases build small passing and failing documents in a `mktemp -d` directory (not under `tests/scrut/`, so discovery never picks them up), covering:
 
-- `--list` ordering and the extension and symlink filter;
+- help text;
+- `--list` ordering, the extension and symlink filter, the default PATH and a symlinked PATH;
 - an all-pass run: output in document order and exit 0;
-- a mixed run: both failing documents named in the summary, exit 1;
-- an empty directory and a missing path: error and exit 2;
-- `SCRUT_JOBS` validation (non-numeric or zero rejected).
+- one progress line per document;
+- a mixed run: each failing document's scrut diff printed and every failing document named, exit 1;
+- removal of the temporary directory;
+- a single document run directly, returning scrut's own status;
+- xargs stopping early: documents without a result reported as failed;
+- SIGTERM: every running document stopped and the temporary directory removed;
+- a listing error, an empty directory, a missing path, more than one PATH, an invalid `SCRUT_JOBS` and an unknown option: error and exit 2.
 
 ### 5. Measure and check for interference
 
@@ -49,16 +56,20 @@ Add `tests/scrut/run-scrut-documents.md`, with `RUN_SCRUT_DOCUMENTS_BIN` registe
 ### 6. Documentation
 
 - `tests/AGENTS.md` runtime budget: describe the local parallel run beside the CI matrix, `SCRUT_JOBS`, that each document still gets scrut's 15-minute timeout, and that `test-scrut-update` stays sequential.
-- `bin/AGENTS.md`: one line saying `run-scrut-documents` owns scrut document discovery for local runs and CI.
+- `bin/AGENTS.md`: one line saying `make test-scrut` runs through `run-scrut-documents`, whose `--list` also builds the CI matrix.
 - Root `AGENTS.md` test command list: note `SCRUT_JOBS=1` for a sequential run, only if it stays within the size budget.
 
 No plugin files change, so no version bumps and no `make build` output changes.
 
 ## Commits
 
-1. `feat: run scrut documents in parallel locally (#573)`: script, Makefile, scrut document, env registration.
-2. `ci: list scrut documents with bin/run-scrut-documents (#573)`.
-3. `docs: describe the local parallel scrut run (#573)`, plus this plan.
+1. `docs: plan parallel local scrut runs (#573)`: this plan.
+2. `feat: run scrut documents in parallel locally (#573)`: script, Makefile, scrut document, env registration.
+3. `ci: list scrut documents with bin/run-scrut-documents (#573)`.
+4. `test: spell scrut fixture fences as escapes for Prettier (#573)`.
+5. `test: give launch-workmux cases a 3-second launch wait (#573)`.
+6. `docs: describe the local parallel scrut run (#573)`, with the measurements.
+7. Review fixes: listing errors, a run xargs stops early, signal handling, the scrut stub and its cases, and comment and documentation corrections.
 
 ## Verification
 
@@ -78,7 +89,7 @@ No plugin files change, so no version bumps and no `make build` output changes.
 | Parallel, 18 jobs          | 317s       | 18 of 19 passed; `launch-workmux.md` failed |
 | Parallel, 18 jobs          | 271s       | 19 of 19 passed                             |
 
-Two further parallel runs passed but are excluded from timing because the machine slept during them. In parallel the two validator documents remain the critical path, at 226s and 260s alone versus 280s and 313s side by side, so contention costs them about a fifth. The default job count stays at the CPU count: with fewer slots, the validator documents, which sort last, would start late and lengthen the run.
+Two further parallel runs passed but are excluded from timing because the machine slept during them. The two validator documents remain the critical path. `validate-plugins-catalog.md` and `validate-plugins-skills.md` took 226s and 260s in the sequential run, 237s and 267s in the passing 271s parallel run, and 280s and 313s in the 317s run that failed, so contention varies from run to run. A later `make test-all` on the same machine passed in 285s, lint and validation included. The default job count stays at the CPU count: with fewer slots, the validator documents, which sort last, would start late and lengthen the run. With 19 documents and 18 slots, the last one already waits for the first slot to free, which happens within seconds; if documents keep being added, starting the slowest ones first would keep that wait short.
 
 ### Interference
 
