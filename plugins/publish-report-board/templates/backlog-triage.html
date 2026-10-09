@@ -99,11 +99,11 @@
     line-height: 1.5;
   }
 
-  :where(.board) :where(p, h1, h2, h3, dl, dd, ol, ul) {
+  :where(.board) :where(p, h1, h2, h3, dl, dd, ol) {
     margin: 0;
   }
 
-  :where(.board) :where(ol, ul) {
+  :where(.board) :where(ol) {
     padding: 0;
     list-style: none;
   }
@@ -234,10 +234,6 @@
     line-height: 1.4;
     text-transform: uppercase;
     white-space: nowrap;
-  }
-
-  a.tag {
-    border-bottom: 1.5px solid currentColor;
   }
 
   a.tag:hover {
@@ -1133,6 +1129,7 @@
     const laneOf = new Map();
     for (const lane of data.lanes) for (const n of lane.issues) laneOf.set(n, lane);
     const laneLabel = (lane) => `${lane.key} ${lane.name}`;
+    const laneName = (lane) => [h("span", { class: "badge" }, lane.key), h("span", null, lane.name)];
 
     // A blocker is an open issue on this board or a reference to something else
     // that has to land first: a pull request, a branch, an issue in another
@@ -1359,8 +1356,7 @@
       [issues.length, "Open", "count--open"],
     ];
 
-    const owner = String(data.repo ?? "").split("/")[0];
-    const name = String(data.repo ?? "").split("/")[1] ?? data.repo;
+    const [owner, name = data.repo] = String(data.repo ?? "").split("/");
     const header = h("header", { class: "head" }, [
       h("div", { class: "masthead" }, [
         h("div", { class: "masthead-title" }, [
@@ -1397,7 +1393,7 @@
         ]),
         h("dl", { class: "start-side facts" }, [
           h("dt", null, "Lane"),
-          h("dd", { class: "fact-lane" }, [h("span", { class: "badge" }, lane.key), h("span", null, lane.name)]),
+          h("dd", { class: "fact-lane" }, laneName(lane)),
           pick.touches ? [h("dt", null, "Touches"), h("dd", null, pick.touches)] : null,
           anyMilestone ? [h("dt", null, "Milestone"), h("dd", null, chip(byNumber.get(n).milestone))] : null,
         ]),
@@ -1438,7 +1434,7 @@
       const states = lane.issues.map(model.state);
       const tally = (state) => states.filter((value) => value === state).length;
       return h("div", { class: "bar-row" }, [
-        h("p", { class: "bar-name" }, [h("span", { class: "badge" }, lane.key), h("span", null, lane.name)]),
+        h("p", { class: "bar-name" }, laneName(lane)),
         h(
           "div",
           {
@@ -1496,7 +1492,7 @@
           : "";
       return h("li", { class: "lane" }, [
         h("div", { class: "lane-meta" }, [
-          h("h3", { class: "lane-title" }, [h("span", { class: "badge" }, lane.key), h("span", null, lane.name)]),
+          h("h3", { class: "lane-title" }, laneName(lane)),
           h("div", { class: "cap" }, [
             h("p", { class: "cap-line" }, [
               h("span", { class: "cap-figure" }, String(model.cap)),
