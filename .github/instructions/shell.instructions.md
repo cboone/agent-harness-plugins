@@ -17,6 +17,8 @@ Bundled scripts here run on macOS and Linux alike, so portability findings are w
 
 - **`fetch_thread_index` in `resolve-copilot-threads` caps each thread at `comments(first: 100)` on purpose.** The index is a lookup table, not the audit's source of comments: `audit` reads every review comment through the paginated REST endpoint and looks each one up in it. A comment beyond the first 100 in a thread is missing from the index and is reported as `in no thread`, so the cap can mislabel a reason but cannot make the audit report a clean surface. Do not ask for the nested connection to be paginated.
 
+- **A fixture may `cd` after reading a `*_BIN` variable.** Those variables are absolute wherever scrut runs: the Makefile builds them from `$(CURDIR)`, and in CI the reusable `run-scrut-tests.yml` rewrites every `./`-prefixed `scrut-env` value in `.github/workflows/ci.yml` into an absolute path before exporting it. A `./plugins/...` value there never reaches a fixture as a relative path.
+
 Two checks are disabled in `.shellcheckrc` by design and should not be raised in review: `check-extra-masked-returns` (SC2312) and `check-set-e-suppressed` (SC2310).
 
 ## Conventions worth enforcing
