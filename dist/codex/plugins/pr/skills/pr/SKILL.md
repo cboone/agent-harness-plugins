@@ -352,7 +352,7 @@ Use the returned `Trimmed text` as the body when `Status` is `success`, and the 
 - `## Summary` still has 1-4 bullets.
 - The `## Closes`, `## Related issues`, and `## Follow-ups` sections are unchanged.
 - The body as a whole has the same set of issue references and closing keywords, so no `Fixes #N` appears or disappears outside those sections.
-- Every remaining checklist item keeps its checked or unchecked state, and no unchecked item is removed.
+- Each section has the same number of unchecked checklist items as in the draft, and no item changes between checked and unchecked.
 
 If the `trim-text` skill is not installed, use the draft. Record the outcome for step 9.
 
