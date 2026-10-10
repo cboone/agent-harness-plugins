@@ -379,9 +379,10 @@ interface ToolInfo {
 // `permission.updated` properties match the SDK's `Permission` type:
 //   { id, type, pattern?, sessionID, messageID, callID?, title, metadata, time }
 // `type` is the lowercase permission name ("bash", "edit", ...). File tools show
-// their path relative to the repository (or under ~), truncated from the left so
-// the file name stays. Bash and shell previews drop a leading cd into the
-// session directory or repository root.
+// their path, from metadata, the legacy input or `pattern`, relative to the
+// repository (or under ~) and truncated from the left so the file name stays.
+// Bash and shell previews drop a leading cd into the session directory or
+// repository root.
 // Otherwise the preview is the first non-empty of `title` (a pre-computed UI
 // summary), `pattern`, `patterns`, per-tool `metadata`, then the older
 // `tool`/`tool_name`/`tool_input`/`input` shapes some OpenCode versions emit.
@@ -393,7 +394,7 @@ function extractToolFromPermission(event: { properties: Record<string, unknown> 
   const type = rawType.toLowerCase();
 
   if (FILE_TOOLS.has(type)) {
-    const path = metadataPreview(props.metadata, rawType) || legacyInputPreview(props, rawType);
+    const path = metadataPreview(props.metadata, rawType) || legacyInputPreview(props, rawType) || patternToString(props.pattern) || patternToString(props.patterns);
     if (path.trim()) return { name, preview: displayPath(path.trim(), [root, directory], BODY_LIMIT) };
   }
 

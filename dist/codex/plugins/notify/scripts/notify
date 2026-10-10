@@ -592,7 +592,12 @@ function do_cc_permission() {
 function do_stop() {
   local icon="${1}"
   local reply
-  reply="$(printf '%s' "${HOOK_INPUT}" | jq -r '.last_assistant_message // empty | strings | .[0:20000] | gsub("\u0000"; "")' 2> /dev/null)" || reply=""
+  # A JSON reply's summary is taken before the cap, which would cut the object.
+  reply="$(printf '%s' "${HOOK_INPUT}" | jq -r '
+    .last_assistant_message // empty | strings
+    | (try fromjson catch null) as $j
+    | (if ($j | type) == "object" and ($j.summary | type) == "string" then $j.summary else . end)
+    | .[0:20000] | gsub("\u0000"; "")' 2> /dev/null)" || reply=""
   # Only a payload without the field falls back to the transcript; an empty
   # reply stays empty rather than borrowing an earlier message.
   if [[ "${HARNESS}" == claude ]] \
