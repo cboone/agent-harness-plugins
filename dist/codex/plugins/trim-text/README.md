@@ -19,11 +19,11 @@ A profile adapts the standard to each kind of text:
 - **Agent instructions:** `AGENTS.md`, `CLAUDE.md`, skills, Copilot instructions, and global instructions. This profile leans toward keeping and flagging, because a rule that looks redundant is often the fix for a past failure.
 - **None:** pasted text and commit message bodies get the shared standard alone.
 
-Every rewrite must preserve meaning: no claim added or dropped, no "must" turned into "should", and every condition and exception kept. The skill leaves quotations, legal text, generated files, code blocks, and text that must match another file verbatim alone.
+Every rewrite must preserve meaning: no claim added, no "must" turned into "should", and every condition and exception kept. Deleted text is limited to what the standard cuts, and the only statement of a requirement is never deleted. A claim that is no longer true is corrected when you run the skill directly, and flagged when another skill calls it. The skill leaves quotations, legal text, generated files, code blocks, and text that must match another file verbatim alone.
 
 How it applies the result depends on the input:
 
-- **Files:** edits them in place, checks them with the project's linters in check mode, and commits locally, never pushing. Files that already held your uncommitted work stay uncommitted.
+- **Files:** edits them in place, checks them with the project's linters in check mode, and commits the edits locally when on a working branch, never pushing. It does not commit on the base branch or a detached HEAD, and files that already held your uncommitted work stay uncommitted.
 - **A PR or issue:** shows a before-and-after diff and asks before updating the body on GitHub.
 - **Pasted text or a draft from another skill:** returns the rewrite and edits nothing.
 

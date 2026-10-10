@@ -46,7 +46,7 @@ Options: paths or a PR or issue reference, `--profile <name>` to override detect
 
 ## Worked examples
 
-Sourced from real work, as `trim-comments`' were: GitHub edit history of PR bodies, review feedback on PR descriptions, git history of instruction files in this and other `cboone` repositories, the global instructions history, and session transcripts. Client (`swing-left`) material is anonymized before it is used. Classes without a real example are discussed with Chris before inventing one.
+Sourced from real work, as `trim-comments`' were: GitHub edit history of PR bodies, review feedback on PR descriptions, git history of instruction files in this and other `cboone` repositories, the global instructions history, and session transcripts. Client material is anonymized before it is used. Classes without a real example are discussed with Chris before inventing one.
 
 ## Changes
 
