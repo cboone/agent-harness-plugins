@@ -20,7 +20,7 @@ A report board is an analysis with three properties that terminal output serves 
 | `backlog-triage` | What to start next, what can run in parallel, and what is blocked                                | `./references/board-types/backlog-triage.md` |
 | `bugs`           | Which of a repository's bugs are critical, which are high priority, and how the rest are triaged | `./references/board-types/bugs.md`           |
 
-Only these two ship a template. When the user wants a board for another kind of analysis, such as CI health or release readiness, say that no template exists for it yet and deliver the analysis in the terminal. Do not improvise a page outside the templates: boards read as one system because they share one design, described in `./references/design-conventions.md`.
+Only these two ship a template. When the user wants a board for another kind of analysis, such as CI health or release readiness, say that no template exists for it yet and deliver the analysis in the terminal. When the user asks for a page all the same, lay it out by hand from the starter page, as [Hand-Laid Reports](#hand-laid-reports) describes. Never improvise a page from scratch or from a copy of a published one: boards read as one system because they share one design, described in `./references/design-conventions.md`.
 
 ## Workflow
 
@@ -140,6 +140,18 @@ Tell the user:
 5. When the board is shared by link, that link viewers keep seeing the pinned version until the user moves the pin, as `./references/artifact-mechanics.md` describes.
 
 Then stop. Publishing a board does not start work on anything it recommends.
+
+## Hand-Laid Reports
+
+Some reports fit no board type but are still wanted as a page: a cross-repository audit, a migration plan, an incident brief. Lay such a report out by hand, starting from the page the script writes:
+
+```bash
+bash REPORT_BOARD starter PAGE_HTML
+```
+
+- **The starter is the system's anatomy with sample text**: masthead, count strip, summary, ranked sections, an aside, the Report divider, report rows, a reference table, and the footer, with the shared stylesheet already inlined. Replace the text, drop the parts the report does not need, and repeat the ones it does, following `./references/design-conventions.md`. Draw on the stylesheet's classes; a rule the page needs that the sheet lacks goes in a second style element after the shared one.
+- **A hand-laid report is a snapshot, not a board.** It carries no board data, so `validate`, `extract`, and `compare` do not apply and nothing re-syncs it. Its masthead and footer say when it was laid out, against which branch and commit where one applies, and that it was laid out by hand.
+- **Name and place it as step 3 does**, with a short slug for the subject in place of the board type, and publish it as step 9 does; add `--standalone` without the Artifact tool. To revise it, edit the page and publish it to the same URL. `starter` refuses a path that already exists, so it never writes over a page laid out by hand.
 
 ## Error Handling
 
