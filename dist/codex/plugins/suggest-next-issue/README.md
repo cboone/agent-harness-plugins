@@ -12,7 +12,7 @@ See the [marketplace install instructions](../../../../README.md#install).
 
 ## What It Does
 
-Analyzes open issues in context (current branches, issue labels, assignments, recent work, project goals, and dependencies), excludes issues already marked in progress, then categorizes the remaining candidates as safe to parallelize, narrow scope, high impact, unblocks others, or overdue. Provides specific reasoning for each recommendation so you can make an informed decision.
+Analyzes open issues in context (current branches, pull requests, issue labels, assignments, recent work, project goals, and dependencies), excludes issues already in progress, reports how far along each one is and whose move comes next, weighs assignments and recent work in an area as a weak ownership signal, then categorizes the remaining candidates as safe to parallelize, narrow scope, high impact, unblocks others, or overdue. Provides specific reasoning for each recommendation so you can make an informed decision.
 
 It also reads the exclusive-resource claims recorded by [Create Worktree](../create-worktree/README.md) and [Address Issue in Worktree](../address-issue-in-worktree/README.md), so an issue whose verification needs a resource another worktree is holding is flagged rather than recommended blind. The summary ends with who holds what, which is the half of the picture the issue list cannot show.
 
