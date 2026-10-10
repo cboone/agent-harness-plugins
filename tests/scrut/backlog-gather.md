@@ -123,7 +123,7 @@ $ jq -r '.issues[] | select(.progress != null) | "#\(.number) \(.progress.signal
 #2 branch feature/2-local, 1 commit ahead, local
 #3 branch feature/3-pushed, 1 commit ahead
 #4 pull request #40, draft
-#5 pull request #50, review required, 0 reviews requested, checks passing
+#5 pull request #50, review required, no review requested, checks passing
 #6 pull request #60, review required, 1 review requested, checks running
 #7 pull request #70, no review required, checks running
 #8 pull request #80, approved, merge conflict, checks passing

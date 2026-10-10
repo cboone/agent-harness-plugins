@@ -62,6 +62,14 @@ readonly QUERY_DIR="${SCRIPT_DIR}/bugs-gather-queries"
 readonly E_INVALID=1
 readonly E_USAGE=2
 
+# The progress model and affinity rules, shared with backlog-gather.
+if [[ ! -r "${SCRIPT_DIR}/progress.jq" ]]; then
+  printf '%s: %s is missing; reinstall publish-report-board\n' "${SCRIPT_NAME}" "${SCRIPT_DIR}/progress.jq" >&2
+  exit "${E_USAGE}"
+fi
+PROGRESS_DEFS="$(< "${SCRIPT_DIR}/progress.jq")"
+readonly PROGRESS_DEFS
+
 readonly ZENHUB_URL='https://api.zenhub.com/public/graphql'
 # A chunk this size keeps one aliased ZenHub request well inside its limits.
 readonly ZENHUB_CHUNK=100
@@ -222,19 +230,10 @@ else
 end
 '
 
-# Shared by the filters that read GitHub and ZenHub responses.
+# Shared by the filters that read GitHub and ZenHub responses, after the
+# progress model.
 # shellcheck disable=SC2016
-readonly COMMON_DEFS='
-def as_list: if type == "array" then . else [] end;
-# An ISO 8601 time as seconds since the epoch, accepting a fraction and either
-# Z or a numeric offset. Anything else is an error, never an empty result,
-# because capture emits nothing on a mismatch and would drop the value silently.
-def epoch:
-  ([capture("^(?<d>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2})(:(?<s>[0-9]{2}))?(\\.[0-9]+)?(?<z>Z|(?<sign>[+-])(?<h>[0-9]{2}):(?<m>[0-9]{2}))$")] | first)
-  | if . == null then error("not an ISO 8601 time") else . end
-  | ((.d + ":" + (.s // "00") + "Z") | fromdateiso8601)
-    - (if .z == "Z" then 0 else ((.h | tonumber) * 3600 + (.m | tonumber) * 60) * (if .sign == "+" then 1 else -1 end) end);
-def utc: if type == "string" then epoch | todateiso8601 else null end;
+readonly COMMON_DEFS="${PROGRESS_DEFS}"'
 def is_bot($bots): . != null and (.__typename == "Bot" or (.login | endswith("[bot]")) or (.login as $l | $bots | any(. == $l)));
 def checks_of: (.commits.nodes | as_list | first | .commit.statusCheckRollup.state) // null;
 def pr_of: {
@@ -245,7 +244,8 @@ def pr_of: {
   createdAt: (.createdAt // null), updatedAt: (.updatedAt // null), mergedAt: (.mergedAt // null),
   mergeable: (.mergeable // null), mergeStateStatus: (.mergeStateStatus // null), headRefName: (.headRefName // null),
   reviewRequests: (.reviewRequests.totalCount // 0),
-  lastReviewAt: (.latestReviews.nodes | as_list | last | .submittedAt? // null)
+  lastReview: (.latestReviews.nodes | as_list | last | .submittedAt? // null),
+  repo: (.repository.nameWithOwner // null)
 };
 '
 
@@ -258,14 +258,6 @@ def any_in($a; $b): any($a[]; in_list($b));
 # Members, owners, and collaborators are the people who maintain the
 # repository. Anyone else who files or comments on a bug is a user of it.
 def outside: . != null and (in_list(["OWNER", "MEMBER", "COLLABORATOR"]) | not);
-# The pull requests in this repository that merged and are linked to the bug
-# in its timeline. A connected one closes it, as a closing reference does; a
-# cross-referenced one only mentions it. Either can merge while the bug stays
-# open, which is how a bug reaches close-out.
-def linked_merges: [.timelineItems.nodes | as_list | .[]
-  | (if .__typename == "ConnectedEvent" then {pr: .subject, closes: true} else {pr: .source, closes: false} end)
-  | select(.pr != null and .pr.__typename == "PullRequest" and .pr.mergedAt != null and ((.pr.repository.nameWithOwner // "") | ascii_downcase) == ($repo | ascii_downcase))
-  | .pr + {closes} | {number, url, mergedAt, closes}];
 
 $config.bots as $bots
 | [$searches[] | .name as $name | .pages[] | .data.search.nodes[] | select(. != null and .number != null) | {name: $name, node: .}]
@@ -305,17 +297,18 @@ $config.bots as $bots
         lastComment: ($people | last | if . == null then null else {author: (.author.login // "ghost"), at: .createdAt, outside: (.authorAssociation | outside)} end),
         fixes: [$prs[] | select(.state == "OPEN")],
         fixedBy: [$prs[] | select(.state == "MERGED")],
-        # Every merged pull request linked to the bug, closing it or only
-        # mentioning it.
-        # closes is false for one that only mentions the bug.
-        merged: ([$prs[] | select(.state == "MERGED") | {number, url, mergedAt, closes: true}] + ($n | linked_merges)
-          | group_by(.number) | map(.[0] + {closes: any(.[]; .closes)})),
+        # Every merged pull request in the repository linked to the bug, with
+        # closes false for one that only mentions it.
+        merged: ($n | merged_links($repo)),
         # Who commented, and when, among the most recent 30 comments, for the
         # discussion tier of affinity.
         commenters: [$people[] | {login: (.author.login // "ghost"), at: .createdAt}],
-        # Lists GitHub cut short, which gather warns about: a label or a fix
-        # past the cut is missing from this bug.
-        truncated: [(select($n.labels.pageInfo.hasNextPage == true) | "labels"), (select($n.closedByPullRequestsReferences.pageInfo.hasNextPage == true) | "linked pull requests")]
+        # Lists GitHub cut short, which gather warns about: an item past the
+        # cut is missing from this bug.
+        truncated: [(select($n.labels.pageInfo.hasNextPage == true) | "labels"),
+                    (select($n.assignees.pageInfo.hasNextPage == true) | "assignees"),
+                    (select($n.closedByPullRequestsReferences.pageInfo.hasNextPage == true) | "linked pull requests"),
+                    (select($n.timelineItems.pageInfo.hasPreviousPage == true) | "cross-references")]
       }
   )
 '
@@ -354,102 +347,6 @@ def lookup_error: (.path // []) | length == 1 and (.[0] | type == "string" and t
 def unexpected_errors: [.errors[]? | select(lookup_error | not)];
 '
 
-# The stages, flags, and next moves of the progress model in
-# references/progress-model.md, derived from one gather. backlog-gather
-# derives the same model, so a change to either prompts a look at the other.
-# Takes COMMON_DEFS first.
-# shellcheck disable=SC2016
-readonly PROGRESS_DEFS='
-def stage_order: ["started", "branch", "draft", "awaiting-review", "needs-author", "ready-to-merge", "close-out"];
-def stage_rank: . as $s | stage_order | index($s);
-# True when a branch name holds the number $n as a whole number, so a branch
-# for #412 names #412 but not #41.
-def names_number($n): test("(^|[^0-9])\($n)([^0-9]|$)");
-def same_text($list): ascii_downcase as $v | any($list[]; ascii_downcase == $v);
-def latest: map(select(type == "string")) | sort_by(epoch) | last;
-def plural($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
-# The stage of an open pull request, checked in the order the model gives.
-def pr_stage:
-  if .isDraft then "draft"
-  elif .mergeable == "CONFLICTING" or .reviewDecision == "CHANGES_REQUESTED" or (.checks | IN("FAILURE", "ERROR")) then "needs-author"
-  elif .reviewDecision == "REVIEW_REQUIRED" or (.checks | IN("PENDING", "EXPECTED")) then "awaiting-review"
-  else "ready-to-merge" end;
-def pr_move:
-  if pr_stage != "awaiting-review" then "author"
-  elif .reviewDecision == "REVIEW_REQUIRED" then (if .reviewRequests > 0 then "reviewer" else "nobody" end)
-  else "ci" end;
-def pr_action:
-  pr_stage as $s
-  | if $s == "draft" then "mark it ready for review"
-    elif $s == "needs-author" then (if .mergeable == "CONFLICTING" then "resolve the conflict" elif .reviewDecision == "CHANGES_REQUESTED" then "answer the review" else "fix the checks" end)
-    elif $s == "awaiting-review" then {reviewer: "wait for review", nobody: "request a review", ci: "wait for checks"}[pr_move]
-    else "merge it" end;
-# A mergeable value GitHub has not computed yet, or one this gather did not
-# read, counts as no conflict, and the signal says so.
-def pr_signal:
-  "pull request #\(.number)"
-  + (if .isDraft then ", draft"
-     else
-       [(select(.mergeable == "CONFLICTING") | "conflicting"),
-        (select(.mergeable != "CONFLICTING" and .mergeable != "MERGEABLE") | "mergeability unknown"),
-        ({APPROVED: "approved", CHANGES_REQUESTED: "changes requested", REVIEW_REQUIRED: "review required, \(if .reviewRequests == 0 then "no review" else plural(.reviewRequests; "review"; "reviews") end) requested"}[.reviewDecision // ""] // "no review required"),
-        ({SUCCESS: "checks passing", FAILURE: "checks failing", ERROR: "checks failing", PENDING: "checks running", EXPECTED: "checks running"}[.checks // ""] // "no checks")]
-       | map(", " + .) | join("")
-     end);
-# Every carrier of one open issue. $item has number, labels, updatedAt,
-# pipeline and pipelineSince, its open pull requests as prs, and its merged
-# pull requests as merged, each saying whether it closes the issue; $branches
-# are the repository branches other than the default, each {name, local,
-# remote, lastCommit, ahead, behind}. A pull request and its own head branch
-# count once. A merged pull request that only mentions the issue counts while
-# a progress label or pipeline is still on it, the mark of work left behind;
-# without one, the mention is often of a follow-up, not of this work.
-def carriers($item; $branches; $c):
-  $item.number as $n
-  | [$item.prs[] | .headRefName | select(. != null)] as $heads
-  | (any($item.labels[]; same_text($c.progressLabels)) or ($item.pipeline != null and ($c.progressPipelines | index($item.pipeline)) != null)) as $marked
-  | [($item.merged | map(select(.closes or $marked)) | sort_by(.mergedAt | epoch) | reverse | .[]
-      | {carrier: {pr: .number}, stage: "close-out", signal: "pull request #\(.number) merged \(.mergedAt | utc | .[0:10])",
-         lastActivity: (.mergedAt | utc), since: (.mergedAt | utc), move: "author", action: "close or split"}),
-     ($item.prs[]
-      | {carrier: {pr: .number}, stage: pr_stage, signal: pr_signal,
-         lastActivity: ([.updatedAt, .lastReviewAt] | latest // $item.updatedAt | utc), since: (.createdAt | utc), move: pr_move, action: pr_action,
-         behind: (.mergeStateStatus == "BEHIND"), conflict: (.mergeable == "CONFLICTING"), work: true}),
-     ($branches[] | select((.name | names_number($n)) and (.name as $b | $heads | index($b) | not))
-      | (.local == true and .remote != true) as $only_local
-      | {carrier: {branch: .name}, stage: "branch",
-         signal: "branch \(.name)\(if .ahead != null then ", \(plural(.ahead; "commit"; "commits")) ahead" else "" end)\(if $only_local then ", local" else "" end)",
-         lastActivity: (.lastCommit | utc), since: null, move: "author", action: (if $only_local then "push it" else "open a pull request" end),
-         behind: ((.behind // 0) > 0), local: $only_local, work: true}),
-     ($item.labels[] | select(same_text($c.progressLabels))
-      | {carrier: {label: .}, stage: "started", signal: "the \(.) label", lastActivity: ($item.updatedAt | utc), since: null, move: "author", action: "open a branch"}),
-     ($item.pipeline | select(. != null) | select(. as $p | $c.progressPipelines | index($p))
-      | {carrier: {pipeline: .}, stage: "started", signal: "the \(.) pipeline", lastActivity: (($item.pipelineSince // $item.updatedAt) | utc), since: null, move: "author", action: "open a branch"})];
-# The progress of one open issue as the model shapes it, or null when no
-# signal marks work on it. $at is the gather time in epoch seconds, and $host
-# names the machine that saw a local branch.
-def progress_of($item; $branches; $c; $at; $host):
-  carriers($item; $branches; $c) as $all
-  | if ($all | length) == 0 then null
-    else
-      # The furthest stage carries the issue; among equals, the latest
-      # activity, then the first listed.
-      ($all | to_entries | sort_by([(.value.stage | stage_rank), (.value.lastActivity | if . == null then 0 else epoch end), -.key]) | last | .value) as $top
-      | ($at - ($top.lastActivity | if . == null then $at else epoch end)) as $age
-      | [(select($age > $c.staleDays * 86400) | "stale"),
-         (select($age > $c.quietDays * 86400 and $age <= $c.staleDays * 86400) | "quiet"),
-         (select($top.behind == true) | "behind"),
-         (select($top.conflict == true) | "conflict"),
-         (select(([$all[] | select(.work == true)] | length) > 1) | "multiple"),
-         (select($top.local == true) | "local"),
-         (select($top.stage == "close-out" and any($all[]; .carrier.label != null)) | "leftover-label")] as $flags
-      | {stage: $top.stage, carrier: $top.carrier, signal: $top.signal, lastActivity: $top.lastActivity, since: $top.since,
-         nextMove: $top.move, nextAction: (if ($flags | index("stale")) != null then "resume or drop" else $top.action end),
-         flags: $flags, host: (if $top.local == true then $host else null end),
-         extraCarriers: [$all[] | select(. != $top) | .carrier]}
-    end;
-'
-
 # Reduces the slurped pages of a pull request search to a list, each pull
 # request with its changed files. Takes $pages.
 # shellcheck disable=SC2016
@@ -460,41 +357,39 @@ readonly PULLS_FILTER="${COMMON_DEFS}"'
 '
 
 # Assembles the gather document. Takes $config, $repository, $bugs, $zenhub
-# (null without a workspace), $pulls ({open, merged}, the current user's pull
-# requests), $local (null outside a checkout of the repository), $now, $host,
-# and $version.
+# (null without a workspace), $pulls ({open, merged}: every open pull request
+# in the repository, and the current user's merged ones), $local (null outside
+# a checkout of the repository), $now, $host, and $version.
 # shellcheck disable=SC2016
-readonly ASSEMBLE_FILTER="${COMMON_DEFS}${PROGRESS_DEFS}"'
+readonly ASSEMBLE_FILTER="${COMMON_DEFS}"'
 ($zenhub.sprint // null) as $sprint
 | ($now | epoch) as $at
+| $repository.repository.nameWithOwner as $repo
 | $repository.repository.defaultBranchRef.name as $default
+| $repository.viewer.login as $viewer
 | ($config.affinityWorkDays * 86400) as $work_window
 # The branches GitHub holds, which are pushed, joined by name with the
-# checkout when there is one, which knows the local ones and how far each
-# runs ahead of the default branch.
-| ([$repository.repository.refs.nodes | as_list | .[] | {name, local: false, remote: true, lastCommit: (.target.committedDate // null | utc), ahead: null, behind: null}]
+# checkout when there is one, which knows the local ones, the worktrees, and
+# how far each runs ahead of the default branch.
+| ([$repository.repository.refs.nodes | as_list | .[] | {name, local: false, remote: true, worktree: false, at: (.target.committedDate // null), ahead: null, behind: null}]
    + ($local.branches // [])
-   | group_by(.name)
-   | map(reduce .[] as $r ({name: .[0].name, local: false, remote: false, lastCommit: null, ahead: null, behind: null};
-       .local = (.local or $r.local) | .remote = (.remote or $r.remote)
-       | .lastCommit = ([.lastCommit, $r.lastCommit] | latest)
-       | .ahead = (.ahead // $r.ahead) | .behind = (.behind // $r.behind)))
-   | map(select(.name != $default))) as $branches
+   | join_branches($default)) as $branches
 | [$bugs[] | . + {zenhub: (if $zenhub == null then null else ($zenhub.items[.number | tostring] // null) | if . == null then null else
     . + {sprint: ($sprint != null and (.sprintIds | any(. == $sprint.id)))} | del(.sprintIds) end end)}]
 | map(. as $b
     | . + {progress: (if $b.state != "open" then null else
         progress_of({number: $b.number, labels: $b.labels, updatedAt: $b.updatedAt, pipeline: ($b.zenhub.pipeline // null), pipelineSince: ($b.zenhub.pipelineSince // null),
-                     prs: ($b.fixes + [$pulls.open[] | select(.headRefName != null and (.headRefName | names_number($b.number)))] | unique_by(.number)),
+                     prs: ([$b.fixes[] | select((.repo // "") | same_repo($repo))]
+                           + [$pulls.open[] | select(.headRefName != null and (.headRefName | names_issue($b.number)))] | unique_by(.number)),
                      merged: $b.merged}; $branches; $config; $at; $host) end)})
 | sort_by(.number) as $all
 | {
     version: $version,
-    repo: $repository.repository.nameWithOwner,
+    repo: $repo,
     repoUrl: $repository.repository.url,
     defaultBranch: $default,
     commit: $repository.repository.defaultBranchRef.target.oid,
-    viewer: $repository.viewer.login,
+    viewer: $viewer,
     gatheredAt: $now,
     recentDays: $config.recentDays,
     host: $host,
@@ -511,10 +406,10 @@ readonly ASSEMBLE_FILTER="${COMMON_DEFS}${PROGRESS_DEFS}"'
     # the affinity window, for the implicit tiers of affinity. score matches
     # them against the areas the assessments name.
     viewerFiles: {
-      active: ([$pulls.open[] | .number as $n | .files[] | {path: ., via: "pull request #\($n)"}]
+      active: ([$pulls.open[] | select(.author == $viewer) | .number as $n | .files[] | {path: ., via: "pull request #\($n)"}]
         + [$local.branchFiles // [] | .[] | {path, via: "branch \(.branch)"}] | unique),
-      recent: ([$pulls.merged[] | select(.mergedAt != null and (.mergedAt | epoch) >= $at - $work_window) | .number as $n | .mergedAt as $m | .files[] | {path: ., via: "merged pull request #\($n)", at: ($m | utc)}]
-        + [$local.commits // [] | .[] | select((.at | epoch) >= $at - $work_window) | .at as $t | .files[] | {path: ., via: "commits", at: ($t | utc)}]
+      recent: ([$pulls.merged[] | select(.mergedAt != null and (.mergedAt | epoch) >= $at - $work_window) | .number as $n | .mergedAt as $m | .files[] | {path: ., via: "pull request #\($n)", at: ($m | utc)}]
+        + [$local.commits // [] | .[] | select((.at | epoch) >= $at - $work_window) | .at as $t | .commit as $h | .files[] | {path: ., via: "commit \($h)", at: ($t | utc)}]
         | group_by([.path, .via]) | map(sort_by(.at | epoch) | last))
     },
     bugs: $all
@@ -589,16 +484,6 @@ def assessment_problems($at):
        type != "object" or ((.name | type) != "string") or (.name | test("\\S") | not)
        or ((.paths | type) != "array") or (.paths | length) == 0 or any(.paths[]; type != "string" or (test("\\S") | not)))))
      | "\($at): areas must be a list of {name, paths}, each with a name and at least one path pattern");
-# Path patterns as the progress model reads them: ** crosses directories, *
-# and ? stay within one, and a pattern ending in / covers everything below it.
-# backlog-gather matches areas the same way, so a change to either prompts a
-# look at the other.
-def glob_regex:
-  (if endswith("/") then . + "**" else . end)
-  | gsub("(?<c>[.+^$(){}|\\[\\]\\\\])"; "\\\(.c)")
-  | gsub("\\*\\*"; "\u0001") | gsub("\\*"; "[^/]*") | gsub("\\?"; "[^/]") | gsub("\u0001"; ".*")
-  | "^\(.)$";
-def covered_by($pattern): test($pattern | glob_regex);
 '
 
 # Applies the triage note and the calibrated tier rules to a gather and its
@@ -768,47 +653,17 @@ $config as $c
     # areas its assessment names against the files the current user is
     # working on now and has worked on within the window.
     ($c.affinityCommentDays * 86400) as $comment_window
-    | def same_text($list): ascii_downcase as $v | any($list[]; ascii_downcase == $v);
-      [$open[] | . as $b | ($assessed[$b.number | tostring].areas // []) as $areas
+    | [$open[] | . as $b | ($assessed[$b.number | tostring].areas // []) as $areas
        | {number: $b.number,
-          assigned: $b.assignees,
-          claim: [($b.labels[] | select(same_text($c.claimLabels)) | "the \(.) label"), ($b.zenhub.pipeline // null | select(. != null) | select(. as $p | $c.claimPipelines | index($p)) | "the \(.) pipeline")],
-          filed: ($b.author == $gather.viewer),
+          assignees: $b.assignees,
+          claims: [($b.labels[] | select(same_text($c.claimLabels)) | "claimed with the \(.) label"),
+                   ($b.zenhub.pipeline // null | select(. != null) | select(. as $p | $c.claimPipelines | index($p)) | "claimed in the \(.) pipeline")],
+          author: $b.author,
           commented: any($b.commenters[]?; .login == $gather.viewer and (.at | epoch) >= $gathered - $comment_window),
-          active: ([$areas[] | .paths[] as $p | $gather.viewerFiles.active[] | select(.path | covered_by($p)) | "files in \($p) changed on \(.via)"] | unique),
-          recent: ([$areas[] | .paths[] as $p | $gather.viewerFiles.recent[] | select(.path | covered_by($p))
-                    | if .via == "commits" then "commits in \($p) within \($c.affinityWorkDays) days" else "files in \($p) in \(.via)" end] | unique)}] as $held
-    # A signal one owner holds on nearly every open bug tells none apart, so
-    # it is ignored for the whole repository.
-    | ($open | length) as $count
-    | def uniform($holders): $count >= $c.uniformityMinimum and ($holders | length) > 0 and (($holders | group_by(.) | map(length) | max) / $count) >= $c.uniformityShare;
-      [(select(uniform([$held[] | .assigned[]])) | "assigned"),
-       (select(uniform([$held[] | select(.claim | length > 0) | if (.assigned | length) > 0 then .assigned[] else "unknown" end])) | "claimed"),
-       (select(uniform([$held[] | select(.filed) | "you"])) | "filed"),
-       (select(uniform([$held[] | select(.commented) | "you"])) | "commented"),
-       (select(uniform([$held[] | select(.active | length > 0) | "you"])) | "active"),
-       (select(uniform([$held[] | select(.recent | length > 0) | "you"])) | "recent")] as $ignored
-    | def kept($kind): $ignored | index($kind) | not;
-      # The owner, in the order the progress model gives: assigned to the
-      # current user, assigned to someone else, an implicit tier, then a
-      # claim, owned by the assignees or by no one known.
-      def affinity_of($s):
-        (if kept("assigned") then $s.assigned else [] end) as $assignees
-        | [(select(kept("active")) | $s.active | select(length > 0) | {tier: 1, reasons: .}),
-           (select(kept("recent")) | $s.recent | select(length > 0) | {tier: 2, reasons: .}),
-           (select(kept("filed") and $s.filed) | {tier: 3, reasons: ["filed it"]}),
-           (select(kept("commented") and $s.commented) | {tier: 3, reasons: ["commented within \($c.affinityCommentDays) days"]})] as $implicit
-        | [$implicit[] | .reasons[]] as $implicit_reasons
-        | (if kept("claimed") then $s.claim else [] end) as $claims
-        | if ($assignees | index($gather.viewer)) != null then {owner: "you", kind: "explicit", tier: null, reasons: (["assigned"] + $implicit_reasons)}
-          elif ($assignees | length) > 0 then {owner: $assignees[0], kind: "explicit", tier: null, reasons: ["assigned"]}
-          elif ($implicit | length) > 0 then {owner: "you", kind: "implicit", tier: ($implicit | map(.tier) | min), reasons: $implicit_reasons}
-          elif ($claims | length) > 0 then
-            (if ($s.assigned | index($gather.viewer)) != null then {owner: "you", kind: "explicit", tier: null, reasons: $claims}
-             elif ($s.assigned | length) > 0 then {owner: $s.assigned[0], kind: "explicit", tier: null, reasons: $claims}
-             else {owner: "unknown", kind: "explicit", tier: null, reasons: $claims} end)
-          else {owner: null, kind: null, tier: null, reasons: []} end;
-      ([$held[] | {key: (.number | tostring), value: affinity_of(.)}] | from_entries) as $affinity
+          active: active_reasons($areas; $gather.viewerFiles.active),
+          recent: recent_reasons($areas; $gather.viewerFiles.recent; $c.affinityWorkDays)}] as $held
+    | uniformity_ignored($held; $c) as $ignored
+    | ([$held[] | {key: (.number | tostring), value: affinity_of(.; $ignored; $gather.viewer; $c)}] | from_entries) as $affinity
     | [$open[] | . as $b
      | overrides($b.number) as $set
      | ($assessed[$b.number | tostring] + ([$set[] | .fields] | add // {})) as $a
@@ -1136,9 +991,9 @@ function github_search() {
   gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/search.graphql" -f "q=${query}"
 }
 
-# Searches the current user's pull requests in a repository. The query names
-# the user as @me, so the search needs no login first and runs beside the
-# others.
+# Searches a repository's pull requests: every open one, and the current
+# user's merged ones. The merged search names the user as @me, so neither
+# needs a login first, and both run beside the others.
 function github_pulls() {
   local query="${1}"
   gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/pulls.graphql" -f "q=${query}"
@@ -1173,25 +1028,44 @@ function remote_matches() {
 }
 
 # Writes TEMP_DIR/local.json from the checkout in the current directory: its
-# local and origin branches with their last commit and how far each runs ahead
-# of and behind the default branch, the files changed on the branches whose
-# last commit is the current user's, and the user's commits since SINCE with
-# their files. Outside a checkout of REPO it writes null, and the gather
-# relies on the branches GitHub holds.
+# local and origin branches with their last commit, whether a worktree has
+# each checked out, and how far each runs ahead of and behind the default
+# branch; the files changed on the branches whose last commit is the current
+# user's; and the user's commits since SINCE with their files. Outside a
+# checkout of REPO, or without the default branch from origin, it writes null
+# and says why, and the gather relies on the branches GitHub holds. Inside one,
+# a failed git command stops the gather rather than reading as no branches.
 function gather_local() {
   local repo="${1}" default_branch="${2}" since="${3}"
   local output="${TEMP_DIR}/local.json"
-  local url email base refname committed author name kind counts behind ahead path
+  local url email base refname committed author name kind counts behind ahead path worktree
+  if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+    printf 'null' > "${output}"
+    return 0
+  fi
   if ! url="$(git remote get-url origin 2> /dev/null)" || ! remote_matches "${repo}" "${url}"; then
+    printf '%s: this checkout'"'"'s origin is %s, not %s, so the gather reads only the branches GitHub holds\n' \
+      "${SCRIPT_NAME}" "${url:-missing}" "${repo}" >&2
+    printf 'null' > "${output}"
+    return 0
+  fi
+  base="refs/remotes/origin/${default_branch}"
+  if ! git rev-parse --verify --quiet "${base}" > /dev/null; then
+    printf '%s: origin/%s is missing from this checkout, so the gather reads only the branches GitHub holds; run git fetch --prune origin to read local branches too\n' \
+      "${SCRIPT_NAME}" "${default_branch}" >&2
     printf 'null' > "${output}"
     return 0
   fi
   email="$(git config user.email 2> /dev/null || true)"
-  email="$(printf '%s' "${email}" | tr '[:upper:]' '[:lower:]')"
-  base="refs/remotes/origin/${default_branch}"
-  git rev-parse --verify --quiet "${base}" > /dev/null || base=""
+  if [[ -z "${email}" ]]; then
+    printf '%s: git user.email is not set here, so no branch or commit in this checkout counts as yours for affinity\n' "${SCRIPT_NAME}" >&2
+  fi
   : > "${TEMP_DIR}/local-branches.tsv"
   : > "${TEMP_DIR}/local-files.tsv"
+  git worktree list --porcelain > "${TEMP_DIR}/worktree-list.txt" || die "${E_INVALID}" "cannot list the worktrees of this checkout"
+  sed -n 's/^branch refs\/heads\///p' "${TEMP_DIR}/worktree-list.txt" > "${TEMP_DIR}/worktrees.txt"
+  git for-each-ref --format='%(refname)%09%(committerdate:iso-strict)%09%(authoremail)' refs/heads refs/remotes/origin > "${TEMP_DIR}/local-refs.tsv" \
+    || die "${E_INVALID}" "cannot list the branches of this checkout"
   while IFS=$'\t' read -r refname committed author; do
     case "${refname}" in
       refs/heads/*)
@@ -1206,23 +1080,27 @@ function gather_local() {
       *) continue ;;
     esac
     [[ "${name}" != "${default_branch}" ]] || continue
-    behind=""
-    ahead=""
-    if [[ -n "${base}" ]]; then
-      counts="$(git rev-list --left-right --count "${base}...${refname}" 2> /dev/null || true)"
-      behind="${counts%%[[:space:]]*}"
-      ahead="${counts##*[[:space:]]}"
-      if [[ -n "${email}" && "$(printf '%s' "${author}" | tr '[:upper:]' '[:lower:]')" == "<${email}>" ]]; then
-        while IFS= read -r path; do
-          printf '%s\t%s\n' "${name}" "${path}" >> "${TEMP_DIR}/local-files.tsv"
-        done < <(git diff --name-only "${base}...${refname}" 2> /dev/null || true)
-      fi
+    counts="$(git rev-list --left-right --count "${base}...${refname}")" || die "${E_INVALID}" "cannot compare ${refname} with ${base}"
+    behind="${counts%%[[:space:]]*}"
+    ahead="${counts##*[[:space:]]}"
+    worktree=false
+    if [[ "${kind}" == local ]] && grep -qxF -- "${name}" "${TEMP_DIR}/worktrees.txt"; then
+      worktree=true
     fi
-    printf '%s\t%s\t%s\t%s\t%s\n' "${kind}" "${name}" "${committed}" "${behind}" "${ahead}" >> "${TEMP_DIR}/local-branches.tsv"
-  done < <(git for-each-ref --format='%(refname)%09%(committerdate:iso-strict)%09%(authoremail)' refs/heads refs/remotes/origin)
+    if [[ -n "${email}" && "$(printf '%s' "${author}" | tr '[:upper:]' '[:lower:]')" == "<$(printf '%s' "${email}" | tr '[:upper:]' '[:lower:]')>" ]]; then
+      git diff --name-only "${base}...${refname}" > "${TEMP_DIR}/local-changed.txt" || die "${E_INVALID}" "cannot list the files changed on ${refname}"
+      while IFS= read -r path; do
+        [[ -n "${path}" ]] && printf '%s\t%s\n' "${name}" "${path}" >> "${TEMP_DIR}/local-files.tsv"
+      done < "${TEMP_DIR}/local-changed.txt"
+    fi
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "${kind}" "${name}" "${committed}" "${behind}" "${ahead}" "${worktree}" >> "${TEMP_DIR}/local-branches.tsv"
+  done < "${TEMP_DIR}/local-refs.tsv"
   if [[ -n "${email}" ]]; then
-    # Each commit starts with a record separator, which no file name holds.
-    git log --all --since="${since}" --author="${email}" --name-only --format=$'\x1e%cI' > "${TEMP_DIR}/local-commits.txt" 2> /dev/null || : > "${TEMP_DIR}/local-commits.txt"
+    # Each commit starts with a record separator, which no file name holds. An
+    # email address ignores case, and git matches --author with case unless
+    # told otherwise.
+    git log --all --since="${since}" --fixed-strings --regexp-ignore-case --author="${email}" --name-only --format=$'\x1e%h\t%cI' > "${TEMP_DIR}/local-commits.txt" \
+      || die "${E_INVALID}" "cannot read your recent commits in this checkout"
   else
     : > "${TEMP_DIR}/local-commits.txt"
   fi
@@ -1230,13 +1108,13 @@ function gather_local() {
     --rawfile branches "${TEMP_DIR}/local-branches.tsv" \
     --rawfile files "${TEMP_DIR}/local-files.tsv" \
     --rawfile commits "${TEMP_DIR}/local-commits.txt" '
-    def number_or_null: if . == "" then null else tonumber end;
     {
       host: $host,
       branches: [$branches | split("\n")[] | select(. != "") | split("\t")
-        | {name: .[1], local: (.[0] == "local"), remote: (.[0] == "remote"), lastCommit: .[2], behind: (.[3] | number_or_null), ahead: (.[4] | number_or_null)}],
+        | {name: .[1], local: (.[0] == "local"), remote: (.[0] == "remote"), worktree: (.[5] == "true"), at: .[2], behind: (.[3] | tonumber), ahead: (.[4] | tonumber)}],
       branchFiles: [$files | split("\n")[] | select(. != "") | split("\t") | {branch: .[0], path: (.[1:] | join("\t"))}] | unique,
-      commits: [$commits | split("\u001e")[] | split("\n") | map(select(. != "")) | select(length > 0) | {at: .[0], files: .[1:]}]
+      commits: [$commits | split("\u001e")[] | split("\n") | map(select(. != "")) | select(length > 0)
+        | (.[0] | split("\t")) as $head | {commit: $head[0], at: $head[1], files: .[1:]}]
     }' > "${output}"
 }
 
@@ -1345,7 +1223,7 @@ function cmd_gather() {
   make_temp_dir
 
   start_job repository github_repository "${repo}"
-  start_job pulls-open github_pulls "repo:${repo} is:pr author:@me is:open"
+  start_job pulls-open github_pulls "repo:${repo} is:pr is:open"
   start_job pulls-merged github_pulls "repo:${repo} is:pr author:@me is:merged merged:>=${work_since}"
   # A comma between labels matches any of them. An issue type takes one name
   # per search, so each configured type runs as its own pair of searches.
@@ -1371,7 +1249,7 @@ function cmd_gather() {
   printf '[]' > "${TEMP_DIR}/searches.json"
   for kind in open merged; do
     jq -e '([.[] | .data.search.nodes | length] | add // 0) >= (.[0].data.search.issueCount // 0)' "${TEMP_DIR}/pulls-${kind}.json" > /dev/null \
-      || die "${E_INVALID}" "the search for your ${kind} pull requests was cut short, so the areas you work in would be missing some files"
+      || die "${E_INVALID}" "the search for ${kind} pull requests was cut short, so a bug or an area you work in would miss some of them"
     jq -n --slurpfile pages "${TEMP_DIR}/pulls-${kind}.json" "\$pages[0] as \$pages | ${PULLS_FILTER}" > "${TEMP_DIR}/pulls-${kind}.list"
   done
   jq -n --slurpfile open "${TEMP_DIR}/pulls-open.list" --slurpfile merged "${TEMP_DIR}/pulls-merged.list" \

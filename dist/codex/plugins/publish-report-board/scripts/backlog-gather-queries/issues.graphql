@@ -1,7 +1,8 @@
 # One page of a repository's open issues. gh api graphql --paginate supplies
 # $endCursor. Each issue carries what decides its progress and affinity: its
 # labels and assignees, its recent comments, and the pull requests that link
-# it, through a closing reference or a mention.
+# it, through a closing reference, which includes a manual link, or a
+# cross-reference.
 query ($owner: String!, $name: String!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
     issues(states: OPEN, first: 50, after: $endCursor, orderBy: { field: CREATED_AT, direction: ASC }) {
@@ -39,6 +40,9 @@ query ($owner: String!, $name: String!, $endCursor: String) {
           }
         }
         comments(last: 100) {
+          pageInfo {
+            hasPreviousPage
+          }
           nodes {
             author {
               login
@@ -47,6 +51,9 @@ query ($owner: String!, $name: String!, $endCursor: String) {
           }
         }
         closedByPullRequestsReferences(first: 20, includeClosedPrs: true) {
+          pageInfo {
+            hasNextPage
+          }
           nodes {
             number
             mergedAt
@@ -55,24 +62,15 @@ query ($owner: String!, $name: String!, $endCursor: String) {
             }
           }
         }
-        timelineItems(itemTypes: [CROSS_REFERENCED_EVENT, CONNECTED_EVENT], last: 50) {
+        timelineItems(itemTypes: [CROSS_REFERENCED_EVENT], last: 50) {
+          pageInfo {
+            hasPreviousPage
+          }
           nodes {
             __typename
             ... on CrossReferencedEvent {
               willCloseTarget
               source {
-                __typename
-                ... on PullRequest {
-                  number
-                  mergedAt
-                  repository {
-                    nameWithOwner
-                  }
-                }
-              }
-            }
-            ... on ConnectedEvent {
-              subject {
                 __typename
                 ... on PullRequest {
                   number

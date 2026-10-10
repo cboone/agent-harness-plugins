@@ -118,19 +118,6 @@
                   "source": {
                     "__typename": "Issue"
                   }
-                },
-                {
-                  "__typename": "ConnectedEvent",
-                  "subject": {
-                    "__typename": "PullRequest",
-                    "number": 37,
-                    "url": "https://github.com/acme/widgets/pull/37",
-                    "state": "OPEN",
-                    "mergedAt": null,
-                    "repository": {
-                      "nameWithOwner": "acme/widgets"
-                    }
-                  }
                 }
               ]
             }

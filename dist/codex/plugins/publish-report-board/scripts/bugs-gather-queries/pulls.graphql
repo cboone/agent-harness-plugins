@@ -1,7 +1,8 @@
-# One page of a GitHub search for the current user's pull requests in one
-# repository: the open ones, which can carry a bug their branch names and whose
-# changed files are the areas the user is working in now, or the ones merged
-# within the affinity window. gh api graphql --paginate supplies $endCursor.
+# One page of a GitHub search for pull requests in one repository: every open
+# one, which can carry a bug its branch names, and whose changed files, for
+# the ones the current user wrote, are the areas the user is working in now;
+# or the current user's merged within the affinity window. gh api graphql
+# --paginate supplies $endCursor.
 query ($q: String!, $endCursor: String) {
   search(query: $q, type: ISSUE, first: 25, after: $endCursor) {
     issueCount

@@ -78,7 +78,7 @@ labels matches any of them, and each issue type runs as its own search.
 ```scrut
 $ log="$(mktemp "${TMPDIR:-/tmp}/scrut.XXXXXX")" && bugs STUB_GH_LOG="${log}" gather "${work}/config.json" "${work}/logged.json" > /dev/null && sort "${log}"
 gh api graphql pulls q=repo:acme/widgets is:pr author:@me is:merged merged:>=2026-09-15
-gh api graphql pulls q=repo:acme/widgets is:pr author:@me is:open
+gh api graphql pulls q=repo:acme/widgets is:pr is:open
 gh api graphql repository owner=acme name=widgets
 gh api graphql search q=repo:acme/widgets is:issue is:closed closed:>=2026-10-08 label:"bug"
 gh api graphql search q=repo:acme/widgets is:issue is:closed closed:>=2026-10-08 type:"Bug"
@@ -99,15 +99,15 @@ $ jq -r '.bugs[] | select(.number == 10 or .number == 26) | "#\(.number) \(.foun
 ## Every open bug with a signal gets a stage of the progress model
 
 `#12` sits in a progress pipeline and has a pushed branch, which goes further.
-`#17` has no fix that closes it, but the viewer's open pull request names it by
-branch, needs a review, and has none requested. `#26` carries the progress label
+`#17` has no fix that closes it, but an open pull request names it by branch,
+needs a review, and has none requested. `#26` carries the progress label
 beside a merged pull request that only mentions it.
 
 ```scrut
 $ jq -r '.bugs[] | select(.progress != null) | "#\(.number) \(.progress.stage), \(.progress.nextMove): \(.progress.nextAction) (\(.progress.signal))\(if (.progress.flags | length) > 0 then " [\(.progress.flags | join(", "))]" else "" end)\(if (.progress.extraCarriers | length) > 0 then " also \(.progress.extraCarriers | map(to_entries[0] | "\(.key) \(.value)") | join(", "))" else "" end)"' "${work}/gather.json"
-#12 branch, author: open a pull request (branch 12-token-refresh) also pipeline In Progress
+#12 branch, author: open a pull request (branch 12-token-refresh, commits ahead unknown) also pipeline In Progress
 #16 ready-to-merge, author: merge it (pull request #40, approved, checks passing)
-#17 awaiting-review, nobody: request a review (pull request #44, mergeability unknown, review required, no review requested, checks passing)
+#17 awaiting-review, nobody: request a review (pull request #44, review required, no review requested, mergeability unknown, checks passing)
 #26 close-out, author: close or split (pull request #38 merged 2026-10-13) [leftover-label] also label in progress
 #27 draft, author: mark it ready for review (pull request #42, draft) also label in progress
 #28 needs-author, author: fix the checks (pull request #43, no review required, checks failing)
@@ -121,19 +121,21 @@ mentions `#26`.
 
 ```scrut
 $ jq -c '.bugs[] | select(.number == 26) | .merged' "${work}/gather.json"
-[{"number":38,"url":"https://github.com/acme/widgets/pull/38","mergedAt":"2026-10-13T11:00:00Z","closes":false}]
+[{"number":38,"mergedAt":"2026-10-13T11:00:00Z","closes":false}]
 ```
 
 ## A merged pull request that only mentions a bug counts while work is still marked
 
 Without the progress label, the mention is likely of a follow-up, so `#26` is
-not in progress at all. A merged pull request connected to the bug closes it,
-and counts with no label.
+not in progress at all. A cross-reference with a closing keyword closes the
+bug, and counts with no label. A closing reference from another repository
+does not count.
 
 ```scrut
-$ for change in '(.labels.nodes |= map(select(.name != "in progress")))' '(.labels.nodes |= map(select(.name != "in progress"))) | (.timelineItems.nodes[0] |= {__typename: "ConnectedEvent", subject: .source})'; do dir="$(variant "if .number == 26 then ${change} else . end")" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/mention.json" > /dev/null 2>&1 && progress "${work}/mention.json" 26; done
+$ unlabeled='(.labels.nodes |= map(select(.name != "in progress")))' && for change in "${unlabeled}" "${unlabeled} | .timelineItems.nodes[0].willCloseTarget = true" "${unlabeled} | .closedByPullRequestsReferences.nodes += [.timelineItems.nodes[1].source]"; do dir="$(variant "if .number == 26 then ${change} else . end")" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/mention.json" > /dev/null 2>&1 && progress "${work}/mention.json" 26; done
 none
 close-out, author: close or split
+none
 ```
 
 ## A pull request's review, checks, and mergeability decide its stage
@@ -155,7 +157,7 @@ $ for change in '.reviewDecision = "REVIEW_REQUIRED" | .reviewRequests.totalCoun
 
 ```scrut
 $ dir="$(variant '(.closedByPullRequestsReferences.nodes |= map(if .number == 40 then .mergeable = "UNKNOWN" else . end))')" && bugs STUB_GH_DIR="${dir}" gather "${work}/config.json" "${work}/unknown.json" > /dev/null 2>&1 && jq -r '.bugs[] | select(.number == 16) | .progress.signal' "${work}/unknown.json"
-pull request #40, mergeability unknown, approved, checks passing
+pull request #40, approved, mergeability unknown, checks passing
 ```
 
 ## Work with no recent activity is quiet, then stale
@@ -192,9 +194,9 @@ CHANGELOG.md via pull request #40
 src/auth/session.js via pull request #44
 src/deps/axios.js via branch 18-axios-test
 src/elections/dates.js via pull request #40
-README.md via commits
-src/api/v2/writes.js via merged pull request #39
-src/deps/axios.js via commits
+README.md via commit * (glob)
+src/api/v2/writes.js via pull request #39
+src/deps/axios.js via commit * (glob)
 ```
 
 ## Outside a checkout, the gather reads no local state
@@ -338,7 +340,7 @@ Triage note: 5 entries, 1 expired
 - High priority (4):
     - #14 [80] Relinquish erases bundle membership
         worse with every event: Bug 14 in one sentence.
-    - #12 [49] Token refresh bounces users to the dashboard (branch: branch 12-token-refresh)
+    - #12 [49] Token refresh bounces users to the dashboard (branch: branch 12-token-refresh, commits ahead unknown)
         affecting users on production: Bug 12 in one sentence.
     - #15 [49] Reminder batch sends twice before the send window
         due 2026-10-20: Bug 15 in one sentence.
@@ -348,7 +350,7 @@ Triage note: 5 entries, 1 expired
     - #16 [99] Election day counts as past (ready-to-merge: pull request #40, approved, checks passing; affinity: you)
     - #18 [66] A test break blocks the axios security update (affinity: you)
     - #27 [59] Callback returns 500 for invalid logins (draft: pull request #42, draft)
-    - #17 [47] Auth0 forces near-daily sign-outs (awaiting-review: pull request #44, mergeability unknown, review required, no review requested, checks passing)
+    - #17 [47] Auth0 forces near-daily sign-outs (awaiting-review: pull request #44, review required, no review requested, mergeability unknown, checks passing)
     - #21 [39] Admin search returns 500 for long names
     - #28 [38] Profile form sends a request per keystroke (needs-author: pull request #43, no review required, checks failing)
     - #26 [26] Tooltip flickers on hover (close-out: pull request #38 merged 2026-10-13, leftover-label)
@@ -368,10 +370,10 @@ apart and is ignored.
 ```scrut
 $ jq -r '.affinityIgnored | "ignored: \(join(", "))"' "${work}/scored.json" && jq -r '[.tiers[][]] | sort_by(.number)[] | select(.affinity.owner != null) | "#\(.number) \(.affinity.owner) \(.affinity.kind)\(if .affinity.tier then " tier \(.affinity.tier)" else "" end): \(.affinity.reasons | join("; "))"' "${work}/scored.json"
 ignored: filed
-#10 you implicit tier 2: files in src/api/ in merged pull request #39
-#11 you implicit tier 2: files in src/api/ in merged pull request #39
-#13 bob explicit: assigned
-#16 you implicit tier 1: files in src/elections/** changed on pull request #40
+#10 you implicit tier 2: api changed in pull request #39 within 30 days
+#11 you implicit tier 2: api changed in pull request #39 within 30 days
+#13 bob explicit: assigned to @bob
+#16 you implicit tier 1: elections changed on pull request #40
 #18 you explicit: assigned
 #20 you implicit tier 3: commented within 90 days
 ```
@@ -399,7 +401,7 @@ ignored: 0
 
 ```scrut
 $ dir="$(variant 'if .number == 19 then .labels.nodes += [{name: "claimed"}] else . end')" && config_with '.claimLabels = ["Claimed"]' > "${work}/claims.json" && bugs STUB_GH_DIR="${dir}" gather "${work}/claims.json" "${work}/claims-gather.json" > /dev/null 2>&1 && bugs score "${work}/claims.json" "${work}/claims-gather.json" "${assessments}" "${work}/claims-scored.json" > /dev/null && jq -c '[.tiers[][]] | .[] | select(.number == 19) | .affinity' "${work}/claims-scored.json"
-{"owner":"unknown","kind":"explicit","tier":null,"reasons":["the claimed label"]}
+{"owner":"unknown","kind":"explicit","tier":null,"reasons":["claimed with the claimed label"]}
 ```
 
 ## An area named twice with different paths is refused

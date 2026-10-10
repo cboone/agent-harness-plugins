@@ -40,9 +40,15 @@
                 ]
               },
               "closingIssuesReferences": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
-                    "number": 4
+                    "number": 4,
+                    "repository": {
+                      "nameWithOwner": "acme/widgets"
+                    }
                   }
                 ]
               },
@@ -89,9 +95,15 @@
                 ]
               },
               "closingIssuesReferences": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
-                    "number": 5
+                    "number": 5,
+                    "repository": {
+                      "nameWithOwner": "acme/widgets"
+                    }
                   }
                 ]
               },
@@ -138,9 +150,15 @@
                 ]
               },
               "closingIssuesReferences": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
-                    "number": 6
+                    "number": 6,
+                    "repository": {
+                      "nameWithOwner": "acme/widgets"
+                    }
                   }
                 ]
               },
@@ -187,9 +205,15 @@
                 ]
               },
               "closingIssuesReferences": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
-                    "number": 7
+                    "number": 7,
+                    "repository": {
+                      "nameWithOwner": "acme/widgets"
+                    }
                   }
                 ]
               },
@@ -240,9 +264,15 @@
                 ]
               },
               "closingIssuesReferences": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
-                    "number": 8
+                    "number": 8,
+                    "repository": {
+                      "nameWithOwner": "acme/widgets"
+                    }
                   }
                 ]
               },
@@ -289,9 +319,15 @@
                 ]
               },
               "closingIssuesReferences": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
-                    "number": 9
+                    "number": 9,
+                    "repository": {
+                      "nameWithOwner": "acme/widgets"
+                    }
                   }
                 ]
               },
@@ -338,7 +374,17 @@
                 ]
               },
               "closingIssuesReferences": {
-                "nodes": []
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 13,
+                    "repository": {
+                      "nameWithOwner": "acme/other"
+                    }
+                  }
+                ]
               },
               "files": {
                 "pageInfo": {

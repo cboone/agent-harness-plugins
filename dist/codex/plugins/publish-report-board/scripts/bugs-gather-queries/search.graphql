@@ -1,8 +1,8 @@
 # One page of a GitHub search for bug issues. gh api graphql --paginate
 # supplies $endCursor. Pages hold 25 issues because each carries its recent
-# comments, the pull requests that close it, with their check, review, and
-# merge state, and the pull requests that mention it, which can merge without
-# closing it.
+# comments, the pull requests that close it, including through a manual link,
+# with their check, review, and merge state, and the pull requests that
+# cross-reference it, which can merge without closing it.
 query ($q: String!, $endCursor: String) {
   search(query: $q, type: ISSUE, first: 25, after: $endCursor) {
     issueCount
@@ -27,6 +27,9 @@ query ($q: String!, $endCursor: String) {
         }
         authorAssociation
         assignees(first: 10) {
+          pageInfo {
+            hasNextPage
+          }
           nodes {
             login
           }
@@ -84,6 +87,9 @@ query ($q: String!, $endCursor: String) {
             author {
               login
             }
+            repository {
+              nameWithOwner
+            }
             commits(last: 1) {
               nodes {
                 commit {
@@ -95,16 +101,15 @@ query ($q: String!, $endCursor: String) {
             }
           }
         }
-        timelineItems(itemTypes: [CROSS_REFERENCED_EVENT, CONNECTED_EVENT], last: 20) {
+        timelineItems(itemTypes: [CROSS_REFERENCED_EVENT], last: 20) {
+          pageInfo {
+            hasPreviousPage
+          }
           nodes {
             __typename
             ... on CrossReferencedEvent {
+              willCloseTarget
               source {
-                ...LinkedPullRequest
-              }
-            }
-            ... on ConnectedEvent {
-              subject {
                 ...LinkedPullRequest
               }
             }

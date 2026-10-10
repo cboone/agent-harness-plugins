@@ -313,6 +313,9 @@
                         "submittedAt": "2026-10-14T16:00:00Z"
                       }
                     ]
+                  },
+                  "repository": {
+                    "nameWithOwner": "acme/widgets"
                   }
                 }
               ]
@@ -764,6 +767,9 @@
                   },
                   "latestReviews": {
                     "nodes": []
+                  },
+                  "repository": {
+                    "nameWithOwner": "acme/widgets"
                   }
                 }
               ]
@@ -836,6 +842,9 @@
                   },
                   "latestReviews": {
                     "nodes": []
+                  },
+                  "repository": {
+                    "nameWithOwner": "acme/widgets"
                   }
                 }
               ]
