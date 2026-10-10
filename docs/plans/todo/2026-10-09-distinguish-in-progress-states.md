@@ -41,14 +41,18 @@ The outcome: both boards share one progress model derived in code from gathered 
 - **Affinity** replaces assignment as a progress signal. It is a separate dimension saying how much an issue is already someone's:
   - Explicit: assigned, or claimed through a label or pipeline.
   - Implicit, for the current user, in three tiers, strongest first:
-    1. Active work overlap: the issue's component overlaps components touched by the user's open branches or pull requests. No window, since an open branch is current by definition.
-    2. Recent work in the area: the user committed to those files or components, or merged pull requests touching them, within 30 days (`affinityWorkDays`). The point is an area the user is in now; a longer window would mark most areas in a repository the user works in heavily.
+    1. Active work overlap: the paths of the issue's areas overlap files changed on the user's open branches or pull requests. No window, since an open branch is current by definition.
+    2. Recent work in the area: the user committed to those paths, or merged pull requests touching them, within 30 days (`affinityWorkDays`). The point is an area the user is in now; a longer window would mark most areas in a repository the user works in heavily.
     3. Discussion: the user filed the issue at any time, or commented on it within 90 days (`affinityCommentDays`).
   - Uniformity, applied to each signal separately: when one owner holds a signal on at least 90% of open issues (`uniformityShare`), and the repository has at least five open issues (`uniformityMinimum`), that signal is ignored for the repository. Only open issues count, since closed ones say nothing about the current backlog. This drops assignment, claims, and "filed it" in Chris's non-client repositories without a per-repository switch, keeps them in `swing-left` repositories, where they vary, and leaves whichever signals still tell issues apart.
   - Effect: a small boost to picks and ranks for the current user, none for unowned issues, and a large penalty, never exclusion, for issues owned by someone else. Shown as context on every row: "affinity: you (recent commits in `bin/`)", "affinity: @someone (assigned)".
   - Affinity is a weak factor because issue state is not reliable. It never holds a slot and never marks progress.
 - **Bugs board groups** map to the shared stages: Ready to go groups become `ready-to-merge`, `needs-author`, `awaiting-review`, `draft`, `branch`, `started`, and `ready-to-fix`. Critical and High rows keep their tier, since urgency wins over readiness, and show the same stage tag and flags in place of the current one-line fix state.
-- **Gathering:** a new deterministic `backlog-gather` script, modeled on `bugs-gather`, derives stages, flags, and affinity in code. Shared jq definitions for stages and flags are copied between the two gather scripts with comments naming each other, matching the template convention, until a shared layer is justified.
+- **Areas, tagged by the analysis and matched in code:** the user's side of tiers 1 and 2 (changed files, commits, merged pull requests) is gathered in code, but only reading an issue says what part of the code it concerns. So the analysis tags each open issue or bug with one or more areas, and a deterministic step matches paths afterward:
+  - An area is `{ "name", "paths" }`, with `paths` as glob patterns relative to the repository root, such as `{ "name": "parser", "paths": ["src/parser/**"] }`. Board data carries the area list, and each issue or bug lists area names. An issue whose area cannot be told from reading it gets none, and gets no tier 1 or 2 affinity.
+  - Backlog triage: the analysis writes areas in the same pass that reads issues for lanes, and `contention.claims` is derived from them, as the areas two or more issues share, rather than written separately. A new `backlog-gather affinity` step reads the gather and the analysis data and writes each issue's `affinity`, so every tier names the commit, branch, or pull request behind it.
+  - Bugs: each assessment carries area names, and the area list is saved in the cache beside the assessments, so names stay stable across syncs and an unchanged bug is not read again. `bugs-gather score` matches paths and computes affinity alongside the rank.
+- **Gathering:** a new deterministic `backlog-gather` script, modeled on `bugs-gather`, derives stages and flags in code, and gathers the user's side of affinity; tiers 1 and 2 are computed after the analysis tags areas. Shared jq definitions for stages and flags are copied between the two gather scripts with comments naming each other, matching the template convention, until a shared layer is justified.
 - **Page:** a header strip of per-stage counts, across every section, linking to the rows; stage-specific inline tags with a legend; and a short next action on each in-progress row ("merge it", "answer review", "fix checks", "resolve conflict", "push it", "resume or drop", "close or split").
 - **In flight view, per board:**
   - Backlog triage gets an In flight section above Start now, listing all active work grouped by stage. Lanes keep each in-progress issue in place with a compact stage tag, because lane order and capacity depend on it, so the issue appears in both.
@@ -66,12 +70,14 @@ The outcome: both boards share one progress model derived in code from gathered 
 ### 2. `scripts/backlog-gather` (new)
 
 - Gather open issues, open pull requests with `isDraft`, `reviewDecision`, `statusCheckRollup`, `mergeable`, `updatedAt`, and latest review times, remote and local branches with committer dates and ahead/behind counts against the default branch, worktrees, and the current user's recent commits and merged pull requests within a configurable window.
-- Derive `progress` and `affinity` per issue; detect uniformity; write one normalized file the analysis reads. Fail rather than shrink the board on truncated lists, as `bugs-gather` does.
+- Derive `progress` and the explicit and tier 3 affinity signals per issue; detect uniformity; gather the user's changed files on open branches and pull requests, and the paths of the user's commits and merged pull requests within `affinityWorkDays`; write one normalized file the analysis reads.
+- Add an `affinity` subcommand that reads the gather and the analysis data, matches area paths against the gathered files, and writes the final `affinity` per issue, refusing an area with no paths or an issue naming an undefined area. Fail rather than shrink the board on truncated lists, as `bugs-gather` does.
 - Config keys: `progressLabels`, `progressPipelines`, `quietDays`, `staleDays`, `affinityWorkDays`, `affinityCommentDays`, `uniformityShare`, `uniformityMinimum`.
 
 ### 3. `scripts/bugs-gather`
 
-- Replace `progress_of` and `ready_group` with the shared stage derivation; add `mergeable`, branch, and activity data; add the flags and affinity.
+- Replace `progress_of` and `ready_group` with the shared stage derivation; add `mergeable`, branch, and activity data; add the flags; gather the user's changed and recently committed paths.
+- Assessments gain an `areas` list; the area list is cached with them. `score` refuses an undefined area, matches paths, and computes affinity.
 - Map rank weights: an `affinity` weight group with small positive and large negative values, documented with the existing weights.
 
 ### 4. `scripts/report-board`
@@ -88,8 +94,8 @@ The outcome: both boards share one progress model derived in code from gathered 
 
 ### 6. References and skill prose
 
-- `board-types/backlog-triage.md`: replace Analyze step 1 with a pointer to `backlog-gather` and `progress-model.md`; remove assignment as a progress signal; describe affinity in picks.
-- `board-types/bugs.md`: new Ready to go groups, flags, and the affinity weight.
+- `board-types/backlog-triage.md`: replace Analyze step 1 with a pointer to `backlog-gather` and `progress-model.md`; remove assignment as a progress signal; add area tagging, derive the contention claims from areas, run `backlog-gather affinity` after the analysis, and describe affinity in picks.
+- `board-types/bugs.md`: new Ready to go groups, flags, the `areas` field in the assessment shape the subagents return, and the affinity weight.
 - `design-conventions.md`: stage colors, and the In flight section on the backlog board.
 - `SKILL.md` and the plugin README: mention the gather script and the new sections.
 
@@ -102,8 +108,8 @@ The outcome: both boards share one progress model derived in code from gathered 
 
 ### 8. Tests
 
-- New `tests/scrut/backlog-gather.md` with fixture stubs for each stage, each flag including `local`, uniformity per signal and below `uniformityMinimum`, and each implicit affinity tier.
-- Extend `bugs-gather.md`, `report-board.md`, and `report-board-bugs.md` for the new fields, the regrouped Ready to go, and `compare` output.
+- New `tests/scrut/backlog-gather.md` with fixture stubs for each stage, each flag including `local`, uniformity per signal and below `uniformityMinimum`, each implicit affinity tier, an issue with no areas, and the `affinity` step refusing an undefined area.
+- Extend `bugs-gather.md`, `report-board.md`, and `report-board-bugs.md` for the new fields, assessments with areas and the cached area list, claims derived from areas, the regrouped Ready to go, and `compare` output.
 
 ## Verification
 
