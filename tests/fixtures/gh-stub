@@ -19,8 +19,9 @@
 #   graphql/repository-NAME.json
 #                      gh api graphql with repository.graphql
 #   graphql/NAME.json  gh api graphql with any other NAME.graphql, such as
-#                      copilot-rounds-report's copilot-rounds.graphql, whose
-#                      file holds the array of pages --slurp returns
+#                      copilot-rounds-report's copilot-rounds.graphql; it holds
+#                      the full response, the array of pages for a --slurp
+#                      call, and a missing file is a stub error
 #
 # An api call with no response file fails the way gh does for a missing
 # resource. STUB_GH_API_FAIL names one KEY that fails with a permission error
