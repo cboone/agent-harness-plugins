@@ -35,7 +35,8 @@ readonly FIRE_TIMEOUT=86400
 #   An unclosed fence is read as prose.
 # - Whole sentences are kept in order within $limit. A sentence that no longer
 #   fits is cut at a word boundary with "…" when it is the first sentence or at
-#   least 40 characters remain.
+#   least 40 characters remain; otherwise it and every later sentence are
+#   dropped.
 # Read with `read -d ''` because bash 3.2 cannot parse this heredoc inside $().
 IFS= read -r -d '' SUMMARY_JQ << 'JQ' || true
 def cut($n):
@@ -435,8 +436,6 @@ function fire_alerter_detached() {
     sound_args=(--sound "${sound}")
   fi
 
-  # Detached subshell: alerter blocks waiting for user interaction inside,
-  # parent function returns immediately so the harness is not blocked.
   (
     local result
     result="$(alerter \
@@ -640,7 +639,8 @@ function main() {
   fi
 
   HOOK_INPUT="$(cat)"
-  # Root session alerts must not change state or notify for subagents.
+  # Subagent payloads carry agent_id; ignore them so they neither post a banner
+  # nor reset the completion marker.
   if [[ -n "$(printf '%s' "${HOOK_INPUT}" | jq -r '.agent_id // empty' 2> /dev/null)" ]]; then
     return 0
   fi
@@ -653,7 +653,7 @@ function main() {
   mkdir -p "${STATE_DIR}"
 
   case "${1:-}" in
-    turn-start | cc-turn-start | codex-turn-start) rmdir "${STATE_DIR}/completed" 2> /dev/null || true ;;
+    cc-turn-start | codex-turn-start) rmdir "${STATE_DIR}/completed" 2> /dev/null || true ;;
     cc-question) do_question "claude-code" ;;
     codex-question) do_question "codex" ;;
     cc-elicit) do_cc_elicit ;;

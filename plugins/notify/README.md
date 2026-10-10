@@ -47,13 +47,13 @@ OpenCode loads the plugin automatically when [`OPENCODE_CONFIG_DIR`](../../READM
 
 OpenCode's event model differs from Claude Code's, so the parity is approximate:
 
-| OpenCode event       | Notification      | Claude Code equivalent                                     |
-| -------------------- | ----------------- | ---------------------------------------------------------- |
-| `session.idle`       | `Done`            | `Stop`                                                     |
-| `permission.updated` | `Approve <Tool>?` | `Notification` (`permission_prompt`, `elicitation_dialog`) |
-| `session.error`      | `Error`           | None                                                       |
+| OpenCode event       | Notification      | Claude Code equivalent               |
+| -------------------- | ----------------- | ------------------------------------ |
+| `session.idle`       | `Done`            | `Stop`                               |
+| `permission.updated` | `Approve <Tool>?` | `Notification` (`permission_prompt`) |
+| `session.error`      | `Error`           | None                                 |
 
-OpenCode has no separate idle reminder; `session.idle` maps to `Stop`. OpenCode banners have no completion deduplication, visibility check or per-session grouping.
+OpenCode banners have no completion deduplication, visibility check or per-session grouping.
 
 ### Granting notification permission
 
@@ -67,8 +67,15 @@ Delivers native macOS notifications so you can work in other apps while an agent
 - **A title that names the action**: `Done`, `Approve <Tool>?` (or `Needs approval` when no tool can be identified), `Question` or `<N> questions`, `Plan ready for review`, or, on OpenCode, `Error`.
 - **A subtitle that identifies the task**: `<repo> · <task>`. The repository name comes from git's shared repository directory, so a worktree reports its repository rather than its folder; outside git, the folder name is used. The task is the tmux pane title (set by `workmux`, Claude Code or similar) with leading status glyphs such as `✳` removed. When the pane title names no task (a shell or harness name, a shell's `user@host:path` default, or the repository or folder name), the task is the branch suffix, everything after the first `/` (so `feature/improve-notifier` becomes `improve-notifier`).
 - **A short body**: per-event content (see matrix below), kept within 140 characters.
-  - Completion bodies summarize the agent's final reply. Markdown is removed, and headings, list items and paragraphs read as separate sentences. Fenced code and table rows are dropped, as are status lines (a leading `▸`, or two or more `·` separators) when the reply has prose; a reply with only status lines uses them, and one with only code or a table uses its first line. An unclosed fence is read as prose. Whole sentences are kept in order. A sentence that no longer fits is cut at a word boundary with `…` when it is the first sentence or at least 40 characters remain; otherwise it is dropped. A reply that is a JSON object with a string `summary` field is summarized from that field.
-  - Claude Code permission bodies show a per-tool preview of the call the prompt is about. The Notification payload names the tool ("Claude needs your permission to use Bash") but omits its input, so the plugin reads the current turn's tool calls without a result yet from the transcript and picks the one with that name. File paths are shown relative to the repository root (or under `~`) and truncated from the left so the file name stays visible. Bash commands drop a leading `cd` into the working directory or repository root. When no call matches, the body is the payload message. OpenCode permission bodies use the same path display and `cd` removal, and otherwise use OpenCode's pre-computed `title`, falling back to `pattern` or per-tool `metadata`.
+  - Completion bodies summarize the agent's final reply. Markdown is removed, and headings, list items and paragraphs read as separate sentences. Fenced code and table rows are dropped, as are status lines (a leading `▸`, or two or more `·` separators) when the reply has prose; a reply without prose uses its status lines, and one with neither uses its first code or table line. An unclosed fence is read as prose. Whole sentences are kept in order. A sentence that no longer fits is cut at a word boundary with `…` when it is the first sentence or at least 40 characters remain; otherwise it and every later sentence are dropped. A reply that is a JSON object with a string `summary` field is summarized from that field.
+  - Claude Code permission bodies show a per-tool preview of the call the prompt is about. The Notification payload omits the call's input, so the plugin reads the current turn's tool calls without a result yet from the transcript and chooses one by the payload's message:
+    - Interactive sessions send a fixed "Claude needs your permission", which names no tool. The plugin picks the oldest pending call that is not a question or a plan, since Claude Code asks about parallel calls in order. A call that is still running after automatic approval can be older than the one being asked about, so the preview can occasionally name it instead.
+    - "Claude Code needs your approval for the plan" posts the plan banner.
+    - Sessions driven through the SDK name the tool ("Claude needs your permission to use Bash"), and the plugin picks the oldest pending call with that name, matching MCP display names against the tool part of `mcp__<server>__<tool>`.
+    - Other messages, such as a sandboxed command's network request, are shown as they are.
+
+    File paths are shown relative to the repository root (or under `~`) and truncated from the left so the file name stays visible. Bash commands drop a leading `cd` into the working directory or repository root. When no call matches, the body is the payload message. OpenCode permission bodies use the same path display and `cd` removal, and otherwise use OpenCode's pre-computed `title`, falling back to `pattern` or per-tool `metadata`.
+
   - Question bodies show the first question, followed by `(+N more)` when there are several.
 - **Shared event sounds**: Tink for questions and plans, Funk for permission, and Glass for completion. Claude's idle reminders are disabled.
 - **Session-specific groups** (Claude Code and Codex): banners from unrelated sessions do not replace one another. Completion alerts fire once until the next user prompt resets the completion marker. Subagent payloads are ignored. OpenCode groups banners by event only.
@@ -81,13 +88,13 @@ Delivers native macOS notifications so you can work in other apps while an agent
 
 `UserPromptSubmit` resets completion deduplication without posting a banner. The idle reminder hook is not registered. Claude Code also raises a permission prompt for `AskUserQuestion`; that prompt posts nothing, because the question banner already covers it.
 
-| Event                                               | Title                         | Body                                     | Sound   |
-| --------------------------------------------------- | ----------------------------- | ---------------------------------------- | ------- |
-| `PreToolUse:AskUserQuestion`                        | `Question` or `<N> questions` | The first question, then `(+N more)`     | `Tink`  |
-| `Notification:elicitation_dialog`                   | `Question`                    | The question text from the payload       | `Tink`  |
-| `Notification:permission_prompt`                    | `Approve <Tool>?`             | The tool preview, or the payload message | `Funk`  |
-| `Notification:permission_prompt` for `ExitPlanMode` | `Plan ready for review`       | The plan's first heading                 | `Tink`  |
-| `Stop`                                              | `Done`                        | Summary of `last_assistant_message`      | `Glass` |
+| Event                                         | Title                                 | Body                                     | Sound   |
+| --------------------------------------------- | ------------------------------------- | ---------------------------------------- | ------- |
+| `PreToolUse:AskUserQuestion`                  | `Question` or `<N> questions`         | The first question, then `(+N more)`     | `Tink`  |
+| `Notification:elicitation_dialog`             | `Question`                            | The question text from the payload       | `Tink`  |
+| `Notification:permission_prompt`              | `Approve <Tool>?` or `Needs approval` | The tool preview, or the payload message | `Funk`  |
+| `Notification:permission_prompt` for the plan | `Plan ready for review`               | The plan's first heading                 | `Tink`  |
+| `Stop`                                        | `Done`                                | Summary of `last_assistant_message`      | `Glass` |
 
 MCP tools appear by their tool name, as in `Approve batch?`, with the server named in the body.
 
@@ -131,8 +138,8 @@ Failures (closed pane, no client attached, missing terminal app) are silent: cli
 ## Notes and caveats
 
 - `alerter` blocks waiting for user interaction, so every event launches it in a detached subshell. The harness is never held up. Each invocation has a 24-hour timeout to bound background notification processes. Completion markers are stored under `${XDG_CACHE_HOME:-$HOME/.cache}/agent-harness-notify/`; deleting this cache resets deduplication.
-- `scripts/notify` parses under macOS `/bin/bash` 3.2, which `#!/usr/bin/env bash` finds when Homebrew is not on `PATH`. A parse failure exits 2, which Claude Code treats as blocking the hook's event, so the test suite parses it with `/bin/bash`.
-- The transcript-based extractors (pending tool use, and the last assistant message when a Stop payload lacks the field) walk the current turn of the transcript JSONL. Performance is fine for typical sessions; very long transcripts may add a small delay before the notification appears.
+- `scripts/notify` parses under macOS `/bin/bash` 3.2, which `#!/usr/bin/env bash` finds when Homebrew is not on `PATH`. A parse failure exits 2, which Claude Code treats as blocking the hook's event, so the test suite parses it with `/bin/bash`. CI runs on Linux, where `/bin/bash` is bash 5, so only local macOS runs check bash 3.2.
+- The transcript-based extractors (pending tool use, and the last assistant message when a Stop payload lacks the field) read the transcript JSONL in one `jq` pass and scan back to the current turn's prompt. A 460 MB transcript takes under a second.
 - The `--app-icon` flag uses a private macOS API that `alerter` keeps working release to release. If a future macOS update breaks it, notifications will still fire but with the default Terminal icon.
 
 ## See Also

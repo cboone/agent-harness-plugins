@@ -253,7 +253,8 @@ const BLOCK_START = /^\s*(#{1,6}|[-*+>•]|[0-9]+\.)\s/u;
 //   An unclosed fence is read as prose.
 // - Whole sentences are kept in order within `limit`. A sentence that no longer
 //   fits is cut at a word boundary with "…" when it is the first sentence or at
-//   least 40 characters remain.
+//   least 40 characters remain; otherwise it and every later sentence are
+//   dropped.
 function summarizeReply(reply: string, limit: number): string {
   let text = reply;
   try {
@@ -369,7 +370,9 @@ interface ToolInfo {
 // `permission.updated` properties match the SDK's `Permission` type:
 //   { id, type, pattern?, sessionID, messageID, callID?, title, metadata, time }
 // `type` is the lowercase permission name ("bash", "edit", ...). File tools show
-// their metadata path, relative to the repository so the file name stays.
+// their path relative to the repository (or under ~), truncated from the left so
+// the file name stays. Bash and shell previews drop a leading cd into the
+// session directory or repository root.
 // Otherwise the preview is the first non-empty of `title` (a pre-computed UI
 // summary), `pattern`, `patterns`, per-tool `metadata`, then the older
 // `tool`/`tool_name`/`tool_input`/`input` shapes some OpenCode versions emit.
