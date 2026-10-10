@@ -571,7 +571,7 @@ function do_cc_permission() {
     local server="${name#mcp__}"
     server="${server%__*}"
     title="Approve ${name##*__}?"
-    body="${server:+${server} }MCP tool"
+    body="$(truncate_with_ellipsis "${server:+${server} }MCP tool" "${BODY_LIMIT}")"
   elif [[ -n "${name}" ]]; then
     title="Approve ${name}?"
     body="$(tool_preview "${pending}" "${BODY_LIMIT}")"
