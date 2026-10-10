@@ -38,6 +38,8 @@ Lean means no padding, not no reasoning. Keep what makes the change reviewable:
 | Citation chains: "reference [39] cited therein, which is…"         | The citation that matters                                                        |
 | Counts that change with every commit: test counts, file counts     | A description: "adds scrut coverage for the bundled script"                      |
 
+Under a parent continuation, keep every unchecked checklist item, including a reviewer to-do, and flag it instead of deleting it: the calling skill rejects a body that loses one.
+
 Bold used for emphasis or as bullet lead-ins goes too, unless the repository's own template uses it.
 
 ## Stays true
@@ -54,7 +56,7 @@ A body is written once, but merges and review fixes keep changing what it should
 
 ## Verify
 
-Compare the final body with the original under "Preserve meaning", and confirm every issue reference and closing keyword is unchanged. For a published body, read it back after the write to confirm it is non-empty.
+Compare the final body with the original under "Preserve meaning", and confirm every issue reference and closing keyword is unchanged. For a published body, read it back after the write and confirm it matches the body written, as step 4 of the skill describes.
 
 ## Worked examples
 
