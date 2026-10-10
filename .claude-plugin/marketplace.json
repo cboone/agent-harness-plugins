@@ -649,6 +649,19 @@
       "author": {
         "name": "Christopher Boone"
       },
+      "category": "writing",
+      "description": "Trim and rewrite prose, such as PR and issue bodies and agent instructions, so it leads with what the reader needs and the minimum why, without changing what it says.",
+      "homepage": "https://github.com/cboone/agent-harness-plugins",
+      "keywords": ["agent-instructions", "editing", "pull-requests", "style", "writing"],
+      "license": "MIT",
+      "name": "trim-text",
+      "repository": "https://github.com/cboone/agent-harness-plugins",
+      "source": "./plugins/trim-text"
+    },
+    {
+      "author": {
+        "name": "Christopher Boone"
+      },
       "category": "ci-and-release",
       "description": "Assess every version reference in a repository, evaluate available upgrades with repo-specific risk and reward, and present selectable upgrade options.",
       "homepage": "https://github.com/cboone/agent-harness-plugins",
