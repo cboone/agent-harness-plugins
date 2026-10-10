@@ -28,7 +28,7 @@ Refresh the installed plugin after repository updates:
 codex plugin marketplace upgrade agent-harness-plugins
 ```
 
-The current stable Codex CLI supports all four events the plugin wires: `Stop`, `UserPromptSubmit`, `PreToolUse` matching the `request_user_input` question tool, and `PreCompact` matching `auto`. Questions and automatic compaction use the same banner sounds and click routing as Claude Code. See [Codex CLI known limitations](../../README.md#codex-cli-known-limitations) for what the plugin does not cover.
+The current stable Codex CLI supports all three events the plugin wires: `Stop`, `UserPromptSubmit`, and `PreToolUse` matching the `request_user_input` question tool. Questions use the same banner format, sound and click routing as Claude Code. See [Codex CLI known limitations](../../README.md#codex-cli-known-limitations) for what the plugin does not cover.
 
 `PermissionRequest` is intentionally not wired: it runs before automatic approval review decides whether a human prompt is needed. Keep native terminal attention as a fallback, without duplicating plugin completion alerts:
 
@@ -47,13 +47,13 @@ OpenCode loads the plugin automatically when [`OPENCODE_CONFIG_DIR`](../../READM
 
 OpenCode's event model differs from Claude Code's, so the parity is approximate:
 
-| OpenCode event                    | Notification        | Claude Code equivalent                                     |
-| --------------------------------- | ------------------- | ---------------------------------------------------------- |
-| `session.idle`                    | Task completed      | `Stop` (with project + branch + last user/assistant turn)  |
-| `permission.updated`              | "Needs permission…" | `Notification` (`permission_prompt`, `elicitation_dialog`) |
-| `experimental.session.compacting` | "Auto-compacting…"  | `PreCompact` (`auto`)                                      |
+| OpenCode event       | Notification      | Claude Code equivalent               |
+| -------------------- | ----------------- | ------------------------------------ |
+| `session.idle`       | `Done`            | `Stop`                               |
+| `permission.updated` | `Approve <Tool>?` | `Notification` (`permission_prompt`) |
+| `session.error`      | `Error`           | None                                 |
 
-The standalone "Waiting for input…" notification (Claude Code's `Notification:idle_prompt`) is not separately representable: OpenCode's `session.idle` already carries the Stop semantics. The compacting hook depends on an experimental OpenCode API and may break on upgrades.
+OpenCode banners have no completion deduplication, visibility check or per-session grouping.
 
 ### Granting notification permission
 
@@ -63,45 +63,57 @@ The standalone "Waiting for input…" notification (Claude Code's `Notification:
 
 Delivers native macOS notifications so you can work in other apps while an agent runs. Each notification carries:
 
-- **A per-harness icon**: Claude Code, OpenCode, or Codex's app icon.
-- **A subtitle that identifies the task**: when running inside tmux with a custom pane title (set by `workmux` or similar), the subtitle is `<project> · <pane title>`. Otherwise, `<project> · <branch suffix>`, where the branch suffix is everything after the first `/` (so `feature/improve-notifier` becomes `improve-notifier`).
-- **An informative body**: per-event content (see matrix below). Claude Code permission events show a per-tool preview (the Bash command, the file path being edited, etc.) reconstructed from the most recent `tool_use` block in the transcript, since the Notification payload itself omits tool details. OpenCode permission events use OpenCode's pre-computed `title`, falling back to `pattern` or per-tool `metadata`. Claude Code and OpenCode Stop events show `<last user message> → <last assistant message tail>`; the Claude Code assistant tail comes from the Stop payload's `last_assistant_message` rather than from a transcript walk. Codex Stop is the last assistant message alone, also taken from the payload.
-- **Shared event sounds**: Tink for questions, Funk for permission, Pop for automatic compaction, and Glass for completion. Claude's idle reminders are disabled.
-- **Session-specific groups**: banners from unrelated sessions do not replace one another. Claude and Codex completion alerts fire once until the next user prompt resets the completion marker. Subagent payloads are ignored.
-- **Visibility-aware completion**: completion alerts are suppressed when the host terminal application is active and a tmux client displays the originating pane. If focus cannot be determined, delivery is preserved. Questions, permissions, and compaction remain visible regardless of focus.
+- **A per-harness icon**: Claude Code, OpenCode, or Codex's app icon. The icon identifies the agent, so titles leave the harness name out.
+- **A title that names the action**: `Done`, `Approve <Tool>?` (or `Needs approval` when no tool can be identified), `Question` or `<N> questions`, `Plan ready for review`, or, on OpenCode, `Error`.
+- **A subtitle that identifies the task**: `<repo> · <task>`. The repository name comes from git's shared repository directory, so a worktree reports its repository rather than its folder; outside git, the folder name is used. The task is the tmux pane title (set by `workmux`, Claude Code or similar) with leading status glyphs such as `✳` removed. When the pane title names no task (a shell, editor, `tmux`, `ssh` or harness name, a shell's `user@host:path` default, or the repository or folder name), the task is the branch suffix, everything after the first `/` (so `feature/improve-notifier` becomes `improve-notifier`).
+- **A short body**: per-event content (see matrix below), kept within 140 characters.
+  - Completion bodies summarize the agent's final reply. Markdown is removed, and headings, list items and paragraphs read as separate sentences. Fenced code and tables, with or without leading pipes, are dropped, as are status lines (a leading `▸`, or two or more `·` separators) when the reply has prose; a reply without prose uses its status lines, and one with neither uses its first code or table line. An unclosed fence is read as prose. Whole sentences are kept in order. A sentence that no longer fits is cut at a word boundary with `…` when it is the first sentence or at least 40 characters remain; otherwise it and every later sentence are dropped. A reply that is a JSON object with a string `summary` field is summarized from that field.
+  - Claude Code permission bodies show a per-tool preview of the call the prompt is about. The Notification payload omits the call's input, so the plugin reads the current turn's tool calls without a result yet from the transcript and chooses one by the payload's message:
+    - Interactive sessions send a fixed "Claude needs your permission", which names no tool. The plugin picks the oldest pending call that is not a question or a plan, since Claude Code asks about parallel calls in order. A call that is still running after automatic approval can be older than the one being asked about, so the preview can occasionally name it instead.
+    - "Claude Code needs your approval for the plan" posts the plan banner.
+    - Sessions driven through the SDK name the tool ("Claude needs your permission to use Bash"), and the plugin picks the oldest pending call with that name, matching MCP display names against `mcp__<server>__<tool>` by server and tool, then by tool.
+    - Other messages, such as a sandboxed command's network request, are shown as they are.
+
+    File paths are shown relative to the repository root (or under `~`) and truncated from the left so the file name stays visible. Bash commands drop a leading `cd` into the working directory or repository root. When no call matches, the body is the payload message. OpenCode permission bodies use the same path display and `cd` removal, and otherwise use OpenCode's pre-computed `title`, falling back to `pattern` or per-tool `metadata`.
+
+  - Question bodies show the first question, followed by `(+N more)` when there are several.
+- **Shared event sounds**: Tink for questions and plans, Funk for permission, and Glass for completion. Claude's idle reminders are disabled.
+- **Session-specific groups** (Claude Code and Codex): banners from unrelated sessions do not replace one another. Completion alerts fire once until the next user prompt resets the completion marker. Subagent payloads are ignored. OpenCode groups banners by event only.
+- **Visibility-aware completion** (Claude Code and Codex): completion alerts are suppressed when the host terminal application (one of those listed under click-to-focus) is frontmost and a focused tmux client displays the originating pane. If focus cannot be determined, delivery is preserved. Questions and permissions remain visible regardless of focus.
 - **Click-to-focus**: clicking the body of any notification activates the originating terminal app (auto-detected from `$TERM_PROGRAM`, supports Apple Terminal, iTerm2, Ghostty, WezTerm, VSCode, Alacritty) and, if you were inside tmux when the hook fired, switches the tmux client to the originating session, window, and pane.
 
 ## When it fires
 
 ### Claude Code
 
-`UserPromptSubmit` resets completion deduplication without posting a banner. `PreToolUse:AskUserQuestion` posts a question banner using the actual question text and Tink sound. The idle reminder hook is not registered.
+`UserPromptSubmit` resets completion deduplication without posting a banner. The idle reminder hook is not registered. Claude Code also raises a permission prompt for `AskUserQuestion`; that prompt posts nothing, because the question banner already covers it.
 
-| Event                             | Title                      | Body                                                     | Sound   |
-| --------------------------------- | -------------------------- | -------------------------------------------------------- | ------- |
-| `Notification:elicitation_dialog` | `Claude Code · Question`   | The actual question text from the payload                | `Tink`  |
-| `Notification:permission_prompt`  | `Claude Code · Permission` | `<Tool>: <preview>` (subtitle is suffixed with the tool) | `Funk`  |
-| `PreCompact:auto`                 | `Claude Code · Compacting` | `Auto-compacting context`                                | `Pop`   |
-| `Stop`                            | `Claude Code · Done`       | `<last user message> → <last assistant message tail>`    | `Glass` |
+| Event                                         | Title                                 | Body                                                     | Sound   |
+| --------------------------------------------- | ------------------------------------- | -------------------------------------------------------- | ------- |
+| `PreToolUse:AskUserQuestion`                  | `Question` or `<N> questions`         | The first question, then `(+N more)`                     | `Tink`  |
+| `Notification:elicitation_dialog`             | `Question`                            | The question text from the payload                       | `Tink`  |
+| `Notification:permission_prompt`              | `Approve <Tool>?` or `Needs approval` | The tool preview, or the payload message                 | `Funk`  |
+| `Notification:permission_prompt` for the plan | `Plan ready for review`               | The plan's first heading outside code, or its first line | `Tink`  |
+| `Stop`                                        | `Done`                                | Summary of `last_assistant_message`                      | `Glass` |
+
+MCP tools appear by their tool name, as in `Approve batch?`, with the server named in the body.
 
 ### Codex
 
-| Event                           | Title                | Body                                      | Sound   |
-| ------------------------------- | -------------------- | ----------------------------------------- | ------- |
-| `PreToolUse:request_user_input` | `Codex · Question`   | Question text from tool input             | `Tink`  |
-| `PreCompact:auto`               | `Codex · Compacting` | `Auto-compacting context`                 | `Pop`   |
-| `Stop`                          | `Codex · Done`       | `last_assistant_message` from the payload | `Glass` |
+| Event                           | Title                         | Body                                 | Sound   |
+| ------------------------------- | ----------------------------- | ------------------------------------ | ------- |
+| `PreToolUse:request_user_input` | `Question` or `<N> questions` | The first question, then `(+N more)` | `Tink`  |
+| `Stop`                          | `Done`                        | Summary of `last_assistant_message`  | `Glass` |
 
 `UserPromptSubmit` resets completion deduplication without posting a banner. Repeated Stop events in the same user turn are suppressed, including their sounds. A Stop hook that requests continuation can still cause the first completion banner before that continuation finishes; the notification plugin does not decide whether other Stop hooks will continue the turn.
 
 ### OpenCode
 
-| Event                             | Title                   | Body                                                                              | Sound   |
-| --------------------------------- | ----------------------- | --------------------------------------------------------------------------------- | ------- |
-| `permission.updated`              | `OpenCode · Permission` | OpenCode's pre-computed `title`, falling back to `pattern` or per-tool `metadata` | `Funk`  |
-| `session.error`                   | `OpenCode · Error`      | `error.data.message` (or the error name)                                          | `Funk`  |
-| `experimental.session.compacting` | `OpenCode · Compacting` | `Auto-compacting context`                                                         | `Pop`   |
-| `session.idle`                    | `OpenCode · Done`       | `<last user message> → <last assistant message tail>`                             | `Glass` |
+| Event                | Title             | Body                                                                                | Sound   |
+| -------------------- | ----------------- | ----------------------------------------------------------------------------------- | ------- |
+| `permission.updated` | `Approve <Tool>?` | The file path, or OpenCode's pre-computed `title`, `pattern` or per-tool `metadata` | `Funk`  |
+| `session.error`      | `Error`           | `error.data.message` (or the error name)                                            | `Funk`  |
+| `session.idle`       | `Done`            | Summary of the last assistant message                                               | `Glass` |
 
 ## Click-to-focus details
 
@@ -119,14 +131,15 @@ When you click the body of a notification, the plugin runs [`scripts/focus-pane`
 | `alacritty`      | Alacritty    |
 | (anything else)  | Terminal.app |
 
-**Switch the tmux client** if the hook fired inside tmux. Claude and Codex capture immutable session, window, and pane IDs using an explicit `TMUX_PANE` target. The detached process retains the originating tmux socket environment. Existing OpenCode callers using names and indexes remain supported.
+**Switch the tmux client** if the hook fired inside tmux. Claude and Codex capture immutable session, window, and pane IDs using an explicit `TMUX_PANE` target. The detached process retains the originating tmux socket environment. OpenCode captures the session name and the window and pane indexes instead.
 
 Failures (closed pane, no client attached, missing terminal app) are silent: clicking a notification should never produce a visible error.
 
 ## Notes and caveats
 
 - `alerter` blocks waiting for user interaction, so every event launches it in a detached subshell. The harness is never held up. Each invocation has a 24-hour timeout to bound background notification processes. Completion markers are stored under `${XDG_CACHE_HOME:-$HOME/.cache}/agent-harness-notify/`; deleting this cache resets deduplication.
-- The transcript-based extractors (last user message, last assistant message tail, pending tool use) iterate the transcript JSONL. Performance is fine for typical sessions; very long transcripts may add a small delay before the notification appears.
+- `scripts/notify` parses under macOS `/bin/bash` 3.2, which `#!/usr/bin/env bash` finds when Homebrew is not on `PATH`. A parse failure exits 2, which Claude Code treats as blocking the hook's event, so the test suite parses it with `/bin/bash`. CI runs on Linux, where `/bin/bash` is bash 5, so only local macOS runs check bash 3.2.
+- The transcript-based extractors (pending tool use, and the last assistant message when a Stop payload lacks the field) stream the transcript JSONL newest line first (`tac`, or `tail -r` on stock macOS) into one `jq` pass that stops at the current turn's prompt; a slash-command invocation starts a turn like a typed prompt. Time and memory follow the current turn rather than the file: a 20,000-line turn takes under a tenth of a second. A pending call is reduced to the fields its preview reads, so a 50 MB `Write` takes under half a second.
 - The `--app-icon` flag uses a private macOS API that `alerter` keeps working release to release. If a future macOS update breaks it, notifications will still fire but with the default Terminal icon.
 
 ## See Also

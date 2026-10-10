@@ -4,6 +4,43 @@
 # shellcheck disable=SC2016
 set -euo pipefail
 
+# Transcript helpers append one Claude Code record to the file in $1.
+function transcript_prompt() {
+  jq -nc '{type: "user", message: {content: "Sample prompt"}}' >> "${1}"
+}
+
+# Appends a tool_use with id $2, name $3 and JSON input $4.
+function transcript_tool_use() {
+  jq -nc --arg id "${2}" --arg name "${3}" --argjson input "${4}" \
+    '{type: "assistant", message: {content: [{type: "tool_use", id: $id, name: $name, input: $input}]}}' >> "${1}"
+}
+
+# Appends the tool_result answering tool_use id $2.
+function transcript_result() {
+  jq -nc --arg id "${2}" \
+    '{type: "user", message: {content: [{type: "tool_result", tool_use_id: $id, content: "ok"}]}}' >> "${1}"
+}
+
+# Appends assistant text $2.
+function transcript_text() {
+  jq -nc --arg text "${2}" '{type: "assistant", message: {content: [{type: "text", text: $text}]}}' >> "${1}"
+}
+
+# Writes to $1 a turn whose pending tool use is $2 with input $3.
+function write_transcript() {
+  transcript_prompt "${1}"
+  transcript_tool_use "${1}" tool-1 "${2}" "${3}"
+}
+
+# Polls for up to 3 seconds until the alerter stub has logged $1 calls.
+function wait_for_alerts() {
+  local count=0
+  while [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" != "${1}" && "${count}" -lt 150 ]]; do
+    sleep 0.02
+    count=$((count + 1))
+  done
+}
+
 function main() {
   local scenario="${1}" test_dir quoted_test_dir
   test_dir="$(mktemp -d "${TMPDIR:-/tmp}/fixture.XXXXXX")"
@@ -12,7 +49,7 @@ function main() {
   # metacharacters cannot break out of the trap command.
   printf -v quoted_test_dir '%q' "${test_dir}"
   # shellcheck disable=SC2064
-  trap "rm -r ${quoted_test_dir}" EXIT
+  trap "rm -rf ${quoted_test_dir}" EXIT
   : "${NOTIFY_BIN:?Set NOTIFY_BIN to the notification script}"
   mkdir "${test_dir}/bin"
   export NOTIFY_TEST_LOG="${test_dir}/alerts"
@@ -20,6 +57,7 @@ function main() {
   export NOTIFY_TEST_FRONT="com.example.background"
   export NOTIFY_TEST_VISIBLE="%99|attached,focused,UTF-8"
   export NOTIFY_TEST_CLICK=""
+  export NOTIFY_TEST_TITLE="✳ Sample task"
   export PATH="${test_dir}/bin:${PATH}"
   export XDG_CACHE_HOME="${test_dir}/cache"
   export TMUX="/tmp/notify-test-server,123,0" TMUX_PANE="%7" TERM_PROGRAM="Apple_Terminal"
@@ -30,21 +68,29 @@ function main() {
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "$*" >> "${NOTIFY_TEST_TMUX_LOG}"' \
     'case "$1" in' \
-    'display-message) if [[ "$*" == *pane_id* ]]; then printf '\''$3|@12|%%7\\n'\''; else printf "sample-title\\n"; fi ;;' \
+    'display-message) if [[ "$*" == *pane_id* ]]; then printf '\''$3|@12|%%7\\n'\''; else printf "%s\\n" "${NOTIFY_TEST_TITLE}"; fi ;;' \
     'list-clients) printf "%s\\n" "${NOTIFY_TEST_VISIBLE}" ;;' \
     'esac' > "${test_dir}/bin/tmux"
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "${NOTIFY_TEST_FRONT}"' > "${test_dir}/bin/osascript"
   chmod +x "${test_dir}/bin/alerter" "${test_dir}/bin/tmux" "${test_dir}/bin/osascript"
+
+  # Subtitles name the repository and fall back to the branch suffix. An empty
+  # template keeps a personal init.templateDir out of the sample repository.
+  local repo="${test_dir}/sample-repo"
+  git init -q --template= -b feature/sample-branch "${repo}"
+  cd "${repo}"
+  # The logical path; mktemp leaves a doubled slash when TMPDIR ends in /.
+  repo="${PWD}"
+
   local payload='{"session_id":"session-one","last_assistant_message":"Completed sample"}'
-  local action="codex-stop"
+  local action="codex-stop" transcript="${test_dir}/transcript.jsonl" message=""
   case "${scenario}" in
-    claude-completion) action="cc-stop" ;;
+    claude-completion | claude-reset) action="cc-stop" ;;
     claude-question)
       action="cc-question"
       payload='{"session_id":"session-one","tool_input":{"questions":[{"question":"Choose a branch?"}]}}'
       ;;
-    claude-compact) action="cc-compact" ;;
     question)
       action="codex-question"
       payload='{"session_id":"session-one","tool_input":{"questions":[{"question":"Choose a branch?"}]}}'
@@ -53,7 +99,223 @@ function main() {
       action="codex-question"
       payload='{"session_id":"session-one","tool_input":"{\"questions\":[{\"question\":\"Choose a branch?\"}]}"}'
       ;;
-    compact) action="codex-compact" ;;
+    questions)
+      action="cc-question"
+      payload='{"session_id":"session-one","tool_input":{"questions":[{"question":"Choose a branch?"},{"question":"Push now?"},{"question":"Open a PR?"}]}}'
+      ;;
+    summary)
+      action="cc-stop"
+      payload="$(jq -nc --arg reply $'▸ 572 · checks 20/20 · mergeable CLEAN\n\n## PR #12: ready\n\n| a | b |\n| - | - |\n\n```text\nlog output\n```\n\n- **Checks** pass on `abc123`, see [the run](https://example.com/run).\n- Copilot left *one* note' \
+        '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    status-only)
+      payload="$(jq -nc --arg reply $'▸ 572 · checks 20/20\n▸ waiting on review' \
+        '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    code-only)
+      payload="$(jq -nc --arg reply $'```bash\nmake test\n```' '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    pipeless-table)
+      payload="$(jq -nc --arg reply $'Results:\n\nCheck | State\n:--- | ---:\nLint | pass\n\nAll good.' '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    short-room)
+      payload="$(jq -nc --arg reply "$(printf 'word %.0s' {1..22})ends here. A second sentence that cannot fit in the room left." \
+        '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    stop-empty)
+      action="cc-stop"
+      transcript_text "${transcript}" "Earlier turn reply."
+      transcript_prompt "${transcript}"
+      transcript_text "${transcript}" "Running the build now."
+      payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path, last_assistant_message: ""}')"
+      ;;
+    stop-tool-only)
+      action="cc-stop"
+      transcript_text "${transcript}" "Earlier turn reply."
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 Bash '{"command":"make"}'
+      transcript_result "${transcript}" tool-1
+      payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path}')"
+      ;;
+    stop-slash-command)
+      action="cc-stop"
+      transcript_text "${transcript}" "Earlier turn reply."
+      jq -nc '{type: "user", message: {content: "<command-message>sample</command-message>\n<command-name>/sample</command-name>"}}' >> "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 Bash '{"command":"make"}'
+      transcript_result "${transcript}" tool-1
+      payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path}')"
+      ;;
+    status-dots)
+      payload="$(jq -nc --arg reply $'PR 572 · checks 20/20 · mergeable CLEAN\n\nReady to merge.' \
+        '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    unclosed-fence)
+      payload="$(jq -nc --arg reply $'Here is the fix:\n```bash\nmake test' '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    elicit)
+      action="cc-elicit"
+      payload='{"session_id":"session-one","message":"Sign in to\nthe sample server"}'
+      ;;
+    manifests)
+      # Every subcommand the hook manifests register must dispatch.
+      local hooks sub
+      hooks="$(dirname "${NOTIFY_BIN}")/../hooks"
+      while IFS= read -r sub; do
+        printf '%s' '{"session_id":"manifest"}' | "${NOTIFY_BIN}" "${sub}" > /dev/null 2>&1 || echo "Not dispatched: ${sub}"
+      done < <(jq -r '.. | .command? // empty | split(" ") | last' "${hooks}"/*.json | sort -u)
+      echo "Every manifest subcommand dispatches"
+      return 0
+      ;;
+    stop-transcript)
+      action="cc-stop"
+      transcript_text "${transcript}" "Earlier turn reply."
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 Bash '{"command":"make"}'
+      transcript_result "${transcript}" tool-1
+      transcript_text "${transcript}" "Current turn reply."
+      payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path}')"
+      ;;
+    long-question)
+      action="cc-question"
+      payload="$(jq -nc --arg first "Which $(printf 'very %.0s' {1..40})long question?" \
+        '{session_id: "session-one", tool_input: {questions: [{question: $first}, {question: "Two?"}, {question: "Three?"}]}}')"
+      ;;
+    question-shape)
+      action="cc-question"
+      payload='{"session_id":"session-one","tool_input":{"questions":["plain text"]}}'
+      ;;
+    long-summary)
+      payload="$(jq -nc --arg reply 'The overnight throttle is on. I stopped the previous watcher and started a new one that checks the pull request hourly until the morning, then every two minutes.' \
+        '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    json-summary)
+      payload='{"session_id":"session-one","last_assistant_message":"{\"verdict\":\"needs-attention\",\"summary\":\"Do not implement this plan unchanged.\"}"}'
+      ;;
+    long-json-summary)
+      payload="$(jq -nc '{session_id: "session-one", last_assistant_message: ({summary: "Short JSON summary.", details: ("x" * 25000)} | tojson)}')"
+      ;;
+    generic-title) export NOTIFY_TEST_TITLE="user@host:~/sample-repo" ;;
+    worktree)
+      git -c user.name=Sample -c user.email=sample@example.com -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q --allow-empty -m sample
+      git worktree add -q -b feature/worktree-branch "${test_dir}/worktree-folder"
+      cd "${test_dir}/worktree-folder"
+      export NOTIFY_TEST_TITLE="zsh"
+      ;;
+    permission-write)
+      action="cc-permission"
+      write_transcript "${transcript}" Write "$(jq -nc --arg path "${repo}/docs/plans/todo/$(printf 'long-name-%.0s' {1..14}).md" '{file_path: $path}')"
+      ;;
+    permission-bash)
+      action="cc-permission"
+      write_transcript "${transcript}" Bash "$(jq -nc --arg command "cd ${repo} && make test" '{command: $command}')"
+      ;;
+    permission-question)
+      action="cc-permission"
+      write_transcript "${transcript}" AskUserQuestion '{"questions":[{"question":"Choose a branch?"}]}'
+      ;;
+    permission-symlink)
+      action="cc-permission"
+      ln -s "${repo}" "${test_dir}/linked-repo"
+      cd "${test_dir}/linked-repo"
+      write_transcript "${transcript}" Write "$(jq -nc --arg path "${PWD}/docs/a.md" '{file_path: $path}')"
+      ;;
+    permission-mcp)
+      action="cc-permission"
+      message="Claude needs your permission to use github - create_issue (MCP)"
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 mcp__srv__issue '{"title":"Older"}'
+      transcript_tool_use "${transcript}" tool-2 mcp__github__create_issue '{"title":"Sample"}'
+      ;;
+    permission-stale-question)
+      action="cc-permission"
+      message="Claude needs your permission to use Bash"
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 AskUserQuestion '{"questions":[{"question":"Choose a branch?"}]}'
+      transcript_result "${transcript}" tool-1
+      transcript_text "${transcript}" "Running the build now."
+      ;;
+    permission-parallel)
+      action="cc-permission"
+      message="Claude needs your permission to use Bash"
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 Bash '{"command":"ls -la"}'
+      transcript_tool_use "${transcript}" tool-2 ExitPlanMode '{"plan":"# Sample plan"}'
+      ;;
+    permission-fallback)
+      action="cc-permission"
+      message="Claude needs your permission to use TodoWrite"
+      transcript_prompt "${transcript}"
+      ;;
+    permission-answered)
+      action="cc-permission"
+      message="Claude needs your permission"
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 Bash '{"command":"ls"}'
+      transcript_result "${transcript}" tool-1
+      transcript_tool_use "${transcript}" tool-2 Bash '{"command":"make deploy"}'
+      ;;
+    permission-skip-interactive)
+      action="cc-permission"
+      message="Claude needs your permission"
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 AskUserQuestion '{"questions":[{"question":"Choose a branch?"}]}'
+      transcript_tool_use "${transcript}" tool-2 ExitPlanMode '{"plan":"# Sample plan"}'
+      transcript_tool_use "${transcript}" tool-3 Bash '{"command":"make test"}'
+      ;;
+    permission-meta)
+      action="cc-permission"
+      message="Claude needs your permission"
+      write_transcript "${transcript}" Bash '{"command":"make test"}'
+      jq -nc '{type: "user", isMeta: true, message: {content: "<system-reminder>Sample</system-reminder>"}}' >> "${transcript}"
+      ;;
+    permission-mcp-display)
+      action="cc-permission"
+      message="Claude needs your permission to use Create Issue"
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 mcp__srv__issue '{"title":"Older"}'
+      transcript_tool_use "${transcript}" tool-2 mcp__github__create_issue '{"title":"Sample"}'
+      ;;
+    plan-pending)
+      action="cc-permission"
+      message="Claude Code needs your approval for the plan"
+      transcript_prompt "${transcript}"
+      ;;
+    permission-interactive)
+      action="cc-permission"
+      message="Claude needs your permission"
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 Bash '{"command":"echo first"}'
+      transcript_tool_use "${transcript}" tool-2 Bash '{"command":"echo second"}'
+      transcript_tool_use "${transcript}" tool-3 ExitPlanMode '{"plan":"# Sample plan"}'
+      ;;
+    permission-sandbox)
+      action="cc-permission"
+      message="A sandboxed command needs network access"
+      write_transcript "${transcript}" Bash '{"command":"curl example.com"}'
+      ;;
+    plan-message)
+      action="cc-permission"
+      message="Claude Code needs your approval for the plan"
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 Bash '{"command":"ls"}'
+      transcript_tool_use "${transcript}" tool-2 ExitPlanMode '{"plan":"# Sample plan"}'
+      ;;
+    plan)
+      action="cc-permission"
+      write_transcript "${transcript}" ExitPlanMode '{"plan":"Intro\n\n# Add a `sample` skill\n\n## Steps"}'
+      ;;
+    plan-no-heading)
+      action="cc-permission"
+      write_transcript "${transcript}" ExitPlanMode '{"plan":"\nRename the **sample** helper.\n\nMore detail."}'
+      ;;
+    plan-fenced)
+      action="cc-permission"
+      write_transcript "${transcript}" ExitPlanMode '{"plan":"```bash\n# not a heading\n```\n\n## Real heading"}'
+      ;;
+    plan-empty)
+      action="cc-permission"
+      write_transcript "${transcript}" ExitPlanMode '{"plan":""}'
+      ;;
     visible) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,focused,UTF-8" ;;
     other-window) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,UTF-8" ;;
     other-pane) export NOTIFY_TEST_FRONT="com.apple.Terminal" ;;
@@ -61,44 +323,47 @@ function main() {
     click) export NOTIFY_TEST_CLICK="@CONTENTCLICKED" ;;
     *) ;;
   esac
-  printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
-  # Detached dispatch is bounded by a polling validity check.
-  local count=0
-  if [[ "${scenario}" != visible && "${scenario}" != subagent ]]; then
-    while [[ ! -s "${NOTIFY_TEST_LOG}" && "${count}" -lt 150 ]]; do
-      sleep 0.02
-      count=$((count + 1))
-    done
-    [[ -s "${NOTIFY_TEST_LOG}" ]]
+  if [[ "${action}" == cc-permission ]]; then
+    payload="$(jq -nc --arg path "${transcript}" --arg message "${message}" \
+      '{session_id: "session-one", transcript_path: $path} + (if $message == "" then {} else {message: $message} end)')"
   fi
+  printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
+  # Polls for up to 3 seconds for the detached alerter stub to log its call.
+  local count=0
   case "${scenario}" in
-    duplicate)
-      printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
-      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 1 ]]
-      echo "One completion alert per turn"
-      ;;
-    reset)
-      printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-turn-start
-      printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
-      count=0
-      while [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" != 2 && "${count}" -lt 150 ]]; do
+    visible | subagent | permission-question) ;;
+    *)
+      while [[ ! -s "${NOTIFY_TEST_LOG}" && "${count}" -lt 150 ]]; do
         sleep 0.02
         count=$((count + 1))
       done
+      [[ -s "${NOTIFY_TEST_LOG}" ]]
+      ;;
+  esac
+  case "${scenario}" in
+    duplicate)
+      printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
+      # Polls for up to 3 seconds for a detached duplicate before asserting none came.
+      wait_for_alerts 2
+      [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 1 ]]
+      echo "One completion alert per turn"
+      ;;
+    reset | claude-reset)
+      printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action%-stop}-turn-start"
+      printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
+      wait_for_alerts 2
       [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 2 ]]
       echo "Next user prompt allows another completion"
       ;;
     groups)
       printf '%s' '{"session_id":"session-two"}' | "${NOTIFY_BIN}" codex-stop
-      count=0
-      while [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" != 2 && "${count}" -lt 150 ]]; do
-        sleep 0.02
-        count=$((count + 1))
-      done
+      wait_for_alerts 2
       [[ "$(jq -sr 'map(.[index("--group") + 1]) | unique | length' "${NOTIFY_TEST_LOG}")" == 2 ]]
       echo "Separate sessions retain separate banners"
       ;;
-    visible | subagent)
+    visible | subagent | permission-question)
+      # Gives a detached alerter time to appear before asserting none did.
+      sleep 0.2
       [[ ! -e "${NOTIFY_TEST_LOG}" ]]
       echo "No alert"
       ;;
@@ -112,7 +377,7 @@ function main() {
       grep -qF 'display-message -t %7 -p' "${NOTIFY_TEST_TMUX_LOG}"
       echo "Click targets captured session, window and pane on originating server"
       ;;
-    *) jq -r '.[index("--title") + 1], .[index("--message") + 1], .[index("--sound") + 1]' "${NOTIFY_TEST_LOG}" ;;
+    *) jq -r '.[index("--title") + 1], .[index("--subtitle") + 1], .[index("--message") + 1], .[index("--sound") + 1], (.[index("--app-icon") + 1] | split("/") | last)' "${NOTIFY_TEST_LOG}" ;;
   esac
 }
 

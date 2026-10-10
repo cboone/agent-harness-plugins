@@ -20,17 +20,6 @@
         "matcher": "permission_prompt"
       }
     ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify cc-compact",
-            "type": "command"
-          }
-        ],
-        "matcher": "auto"
-      }
-    ],
     "Stop": [
       {
         "hooks": [
