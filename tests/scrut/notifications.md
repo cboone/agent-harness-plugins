@@ -1,5 +1,14 @@
 # Notification delivery
 
+## Parses under the system bash
+
+On macOS, `/bin/bash` is bash 3.2, which `env bash` finds without Homebrew on `PATH`. A parse failure exits 2, which Claude Code treats as blocking.
+
+```scrut
+$ /bin/bash -n "${NOTIFY_BIN}" && echo "Parses"
+Parses
+```
+
 ## Completion sound
 
 ```scrut
@@ -8,6 +17,7 @@ Done
 sample-repo · Sample task
 Completed sample
 Glass
+codex.png
 ```
 
 ## Duplicate completion
@@ -18,6 +28,7 @@ Done
 sample-repo · Sample task
 Completed sample
 Glass
+claude-code.png
 ```
 
 ## Reply summary without Markdown or status lines
@@ -26,8 +37,31 @@ Glass
 $ "${CHECK_NOTIFICATIONS_BIN}" summary
 Done
 sample-repo · Sample task
-PR #12: ready. Checks pass on abc123, see the run. Copilot left one note.
+PR #12: ready. Checks pass on abc123, see the run. Copilot left one note
 Glass
+claude-code.png
+```
+
+## Status lines when nothing else remains
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" status-only
+Done
+sample-repo · Sample task
+572 · checks 20/20. waiting on review
+Glass
+codex.png
+```
+
+## First code line when nothing else remains
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" code-only
+Done
+sample-repo · Sample task
+make test
+Glass
+codex.png
 ```
 
 ## Long reply cut at a word boundary
@@ -38,6 +72,18 @@ Done
 sample-repo · Sample task
 The overnight throttle is on. I stopped the previous watcher and started a new one that checks the pull request hourly until the morning,…
 Glass
+codex.png
+```
+
+## Sentence dropped when little room remains
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" short-room
+Done
+sample-repo · Sample task
+word word word word word word word word word word word word word word word word word word word word word word ends here.
+Glass
+codex.png
 ```
 
 ## JSON reply summary
@@ -48,6 +94,29 @@ Done
 sample-repo · Sample task
 Do not implement this plan unchanged.
 Glass
+codex.png
+```
+
+## Empty reply does not borrow an earlier turn
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" stop-empty
+Done
+sample-repo · Sample task
+Task completed
+Glass
+claude-code.png
+```
+
+## Missing reply read from the current turn
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" stop-transcript
+Done
+sample-repo · Sample task
+Current turn reply.
+Glass
+claude-code.png
 ```
 
 ## Shell default pane title
@@ -58,6 +127,7 @@ Done
 sample-repo · sample-branch
 Completed sample
 Glass
+codex.png
 ```
 
 ## Worktree names its repository
@@ -68,6 +138,7 @@ Done
 sample-repo · worktree-branch
 Completed sample
 Glass
+codex.png
 ```
 
 ## Claude question
@@ -78,6 +149,7 @@ Question
 sample-repo · Sample task
 Choose a branch?
 Tink
+claude-code.png
 ```
 
 ## Several questions
@@ -88,6 +160,29 @@ $ "${CHECK_NOTIFICATIONS_BIN}" questions
 sample-repo · Sample task
 Choose a branch? (+2 more)
 Tink
+claude-code.png
+```
+
+## Long first question keeps its count
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" long-question
+3 questions
+sample-repo · Sample task
+Which very very very very very very very very very very very very very very very very very very very very very very very very ver… (+2 more)
+Tink
+claude-code.png
+```
+
+## Unexpected question input
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" question-shape
+Question
+sample-repo · Sample task
+Needs input
+Tink
+claude-code.png
 ```
 
 ## Permission path keeps its file name
@@ -98,6 +193,18 @@ Approve Write?
 sample-repo · Sample task
 …-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-.md
 Funk
+claude-code.png
+```
+
+## Permission path under a symlinked working directory
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-symlink
+Approve Write?
+sample-repo · Sample task
+docs/a.md
+Funk
+claude-code.png
 ```
 
 ## Permission command without its working-directory cd
@@ -108,6 +215,51 @@ Approve Bash?
 sample-repo · Sample task
 make test
 Funk
+claude-code.png
+```
+
+## MCP permission prompt
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-mcp
+Approve create_issue?
+sample-repo · Sample task
+github MCP tool
+Funk
+claude-code.png
+```
+
+## Answered question does not hide a permission prompt
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-stale-question
+Approve Bash?
+sample-repo · Sample task
+Claude needs your permission to use Bash
+Funk
+claude-code.png
+```
+
+## Parallel tool calls pick the prompted tool
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-parallel
+Approve Bash?
+sample-repo · Sample task
+ls -la
+Funk
+claude-code.png
+```
+
+## Permission prompt without a matching tool call
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-fallback
+Approve TodoWrite?
+sample-repo · Sample task
+Claude needs your permission to use TodoWrite
+Funk
+claude-code.png
 ```
 
 ## Question permission prompt
@@ -125,6 +277,18 @@ Plan ready for review
 sample-repo · Sample task
 Add a sample skill
 Tink
+claude-code.png
+```
+
+## Plan without a heading
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" plan-no-heading
+Plan ready for review
+sample-repo · Sample task
+Review the proposed plan
+Tink
+claude-code.png
 ```
 
 ## Repeated completion
@@ -163,6 +327,7 @@ Done
 sample-repo · Sample task
 Completed sample
 Glass
+codex.png
 ```
 
 ## Subagent completion
@@ -180,6 +345,7 @@ Done
 sample-repo · Sample task
 Completed sample
 Glass
+codex.png
 ```
 
 ## Question content
@@ -190,6 +356,7 @@ Question
 sample-repo · Sample task
 Choose a branch?
 Tink
+codex.png
 ```
 
 ## Serialized question input
@@ -200,6 +367,7 @@ Question
 sample-repo · Sample task
 Choose a branch?
 Tink
+codex.png
 ```
 
 ## Click routing

@@ -4,10 +4,32 @@
 # shellcheck disable=SC2016
 set -euo pipefail
 
-# Writes a one-line Claude Code transcript whose pending tool use is $2 with input $3.
+# Transcript helpers append one Claude Code record to the file in $1.
+function transcript_prompt() {
+  jq -nc '{type: "user", message: {content: "Sample prompt"}}' >> "${1}"
+}
+
+# Appends a tool_use with id $2, name $3 and JSON input $4.
+function transcript_tool_use() {
+  jq -nc --arg id "${2}" --arg name "${3}" --argjson input "${4}" \
+    '{type: "assistant", message: {content: [{type: "tool_use", id: $id, name: $name, input: $input}]}}' >> "${1}"
+}
+
+# Appends the tool_result answering tool_use id $2.
+function transcript_result() {
+  jq -nc --arg id "${2}" \
+    '{type: "user", message: {content: [{type: "tool_result", tool_use_id: $id, content: "ok"}]}}' >> "${1}"
+}
+
+# Appends assistant text $2.
+function transcript_text() {
+  jq -nc --arg text "${2}" '{type: "assistant", message: {content: [{type: "text", text: $text}]}}' >> "${1}"
+}
+
+# Writes to $1 a turn whose pending tool use is $2 with input $3.
 function write_transcript() {
-  jq -nc --arg name "${2}" --argjson input "${3}" \
-    '{type: "assistant", message: {content: [{type: "tool_use", name: $name, input: $input}]}}' > "${1}"
+  transcript_prompt "${1}"
+  transcript_tool_use "${1}" tool-1 "${2}" "${3}"
 }
 
 function main() {
@@ -53,7 +75,7 @@ function main() {
   repo="${PWD}"
 
   local payload='{"session_id":"session-one","last_assistant_message":"Completed sample"}'
-  local action="codex-stop" transcript="${test_dir}/transcript.jsonl"
+  local action="codex-stop" transcript="${test_dir}/transcript.jsonl" message=""
   case "${scenario}" in
     claude-completion) action="cc-stop" ;;
     claude-question)
@@ -74,8 +96,43 @@ function main() {
       ;;
     summary)
       action="cc-stop"
-      payload="$(jq -nc --arg reply $'▸ 572 · checks 20/20 · mergeable CLEAN\n\n## PR #12: ready\n\n| a | b |\n| - | - |\n\n```text\nlog output\n```\n\n- **Checks** pass on `abc123`, see [the run](https://example.com/run).\n- Copilot left *one* note.' \
+      payload="$(jq -nc --arg reply $'▸ 572 · checks 20/20 · mergeable CLEAN\n\n## PR #12: ready\n\n| a | b |\n| - | - |\n\n```text\nlog output\n```\n\n- **Checks** pass on `abc123`, see [the run](https://example.com/run).\n- Copilot left *one* note' \
         '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    status-only)
+      payload="$(jq -nc --arg reply $'▸ 572 · checks 20/20\n▸ waiting on review' \
+        '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    code-only)
+      payload="$(jq -nc --arg reply $'```bash\nmake test\n```' '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    short-room)
+      payload="$(jq -nc --arg reply "$(printf 'word %.0s' {1..22})ends here. A second sentence that cannot fit in the room left." \
+        '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    stop-empty)
+      action="cc-stop"
+      transcript_text "${transcript}" "Earlier turn reply."
+      transcript_prompt "${transcript}"
+      payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path, last_assistant_message: ""}')"
+      ;;
+    stop-transcript)
+      action="cc-stop"
+      transcript_text "${transcript}" "Earlier turn reply."
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 Bash '{"command":"make"}'
+      transcript_result "${transcript}" tool-1
+      transcript_text "${transcript}" "Current turn reply."
+      payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path}')"
+      ;;
+    long-question)
+      action="cc-question"
+      payload="$(jq -nc --arg first "Which $(printf 'very %.0s' {1..40})long question?" \
+        '{session_id: "session-one", tool_input: {questions: [{question: $first}, {question: "Two?"}, {question: "Three?"}]}}')"
+      ;;
+    question-shape)
+      action="cc-question"
+      payload='{"session_id":"session-one","tool_input":{"questions":["plain text"]}}'
       ;;
     long-summary)
       payload="$(jq -nc --arg reply 'The overnight throttle is on. I stopped the previous watcher and started a new one that checks the pull request hourly until the morning, then every two minutes.' \
@@ -103,9 +160,44 @@ function main() {
       action="cc-permission"
       write_transcript "${transcript}" AskUserQuestion '{"questions":[{"question":"Choose a branch?"}]}'
       ;;
+    permission-symlink)
+      action="cc-permission"
+      ln -s "${repo}" "${test_dir}/linked-repo"
+      cd "${test_dir}/linked-repo"
+      write_transcript "${transcript}" Write "$(jq -nc --arg path "${PWD}/docs/a.md" '{file_path: $path}')"
+      ;;
+    permission-mcp)
+      action="cc-permission"
+      message="Claude needs your permission to use github - create_issue (MCP)"
+      write_transcript "${transcript}" mcp__github__create_issue '{"title":"Sample"}'
+      ;;
+    permission-stale-question)
+      action="cc-permission"
+      message="Claude needs your permission to use Bash"
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 AskUserQuestion '{"questions":[{"question":"Choose a branch?"}]}'
+      transcript_result "${transcript}" tool-1
+      transcript_text "${transcript}" "Running the build now."
+      ;;
+    permission-parallel)
+      action="cc-permission"
+      message="Claude needs your permission to use Bash"
+      transcript_prompt "${transcript}"
+      transcript_tool_use "${transcript}" tool-1 Bash '{"command":"ls -la"}'
+      transcript_tool_use "${transcript}" tool-2 ExitPlanMode '{"plan":"# Sample plan"}'
+      ;;
+    permission-fallback)
+      action="cc-permission"
+      message="Claude needs your permission to use TodoWrite"
+      transcript_prompt "${transcript}"
+      ;;
     plan)
       action="cc-permission"
       write_transcript "${transcript}" ExitPlanMode '{"plan":"Intro\n\n# Add a `sample` skill\n\n## Steps"}'
+      ;;
+    plan-no-heading)
+      action="cc-permission"
+      write_transcript "${transcript}" ExitPlanMode '{"plan":"Just prose."}'
       ;;
     visible) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,focused,UTF-8" ;;
     other-window) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,UTF-8" ;;
@@ -115,7 +207,8 @@ function main() {
     *) ;;
   esac
   if [[ "${action}" == cc-permission ]]; then
-    payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path}')"
+    payload="$(jq -nc --arg path "${transcript}" --arg message "${message}" \
+      '{session_id: "session-one", transcript_path: $path} + (if $message == "" then {} else {message: $message} end)')"
   fi
   printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
   # Detached dispatch is bounded by a polling validity check.
@@ -158,6 +251,7 @@ function main() {
       echo "Separate sessions retain separate banners"
       ;;
     visible | subagent | permission-question)
+      # Gives a detached alerter time to appear before asserting none did.
       sleep 0.2
       [[ ! -e "${NOTIFY_TEST_LOG}" ]]
       echo "No alert"
@@ -172,7 +266,7 @@ function main() {
       grep -qF 'display-message -t %7 -p' "${NOTIFY_TEST_TMUX_LOG}"
       echo "Click targets captured session, window and pane on originating server"
       ;;
-    *) jq -r '.[index("--title") + 1], .[index("--subtitle") + 1], .[index("--message") + 1], .[index("--sound") + 1]' "${NOTIFY_TEST_LOG}" ;;
+    *) jq -r '.[index("--title") + 1], .[index("--subtitle") + 1], .[index("--message") + 1], .[index("--sound") + 1], (.[index("--app-icon") + 1] | split("/") | last)' "${NOTIFY_TEST_LOG}" ;;
   esac
 }
 
