@@ -157,9 +157,9 @@ function main() {
       # Every subcommand the hook manifests register must dispatch.
       local hooks sub
       hooks="$(dirname "${NOTIFY_BIN}")/../hooks"
-      for sub in $(jq -r '.. | .command? // empty | split(" ") | last' "${hooks}"/*.json | sort -u); do
+      while IFS= read -r sub; do
         printf '%s' '{"session_id":"manifest"}' | "${NOTIFY_BIN}" "${sub}" > /dev/null 2>&1 || echo "Not dispatched: ${sub}"
-      done
+      done < <(jq -r '.. | .command? // empty | split(" ") | last' "${hooks}"/*.json | sort -u)
       echo "Every manifest subcommand dispatches"
       return 0
       ;;
