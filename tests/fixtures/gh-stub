@@ -26,12 +26,10 @@
 # its query file and variables, without the path of the query file.
 # STUB_GH_GRAPHQL_FAIL names one search KIND, or repository-NAME, that fails.
 #
-# gh pr view answers, whatever its arguments, from the file STUB_GH_PR_VIEW
-# names under STUB_GH_DIR,
-# one response per line, in order: each call reads the next line, and the last
-# line repeats once the file runs out. A line reading FAIL fails the call the
-# way a network error does. STUB_GH_PR_VIEW_STATE names the file that counts
-# the calls.
+# gh pr view, whatever its arguments, answers with the next line of the file
+# STUB_GH_PR_VIEW names under STUB_GH_DIR, repeating the last line once the
+# file runs out. A FAIL line fails the call like a network error.
+# STUB_GH_PR_VIEW_STATE names the file that counts the calls.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"

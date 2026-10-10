@@ -7,12 +7,11 @@ set -euo pipefail
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
-# Separates the watch's parsed fields. Unlike a space or a tab, it is not IFS
-# whitespace, so an empty field stays in place instead of collapsing.
+# Separates the watch's parsed fields. Not IFS whitespace, unlike a space or
+# tab, so an empty field keeps its place.
 readonly FIELD_SEPARATOR=$'\x1f'
 
-# How many consecutive reads may report MERGED without a merge commit before
-# the watch reports the merge anyway.
+# Reads of MERGED with no merge commit before the merge is reported anyway.
 readonly MERGED_WITHOUT_COMMIT_READS=5
 
 ERR_FILE="$(mktemp)" || {
@@ -94,10 +93,9 @@ function usage_error() {
   exit 2
 }
 
-# Runs a command, storing its stdout in CAPTURED_OUT and, when it fails, its
-# stderr squeezed to one line in CAPTURED_ERR. Returns the command's exit
-# status. Call it as an if condition, so that errexit does not stop the script
-# on a failure.
+# Runs a command into CAPTURED_OUT, and on failure puts its stderr, as one
+# line, in CAPTURED_ERR. Call it as an if condition so errexit does not stop
+# the script.
 function capture() {
   local status=0
   CAPTURED_ERR=""
@@ -125,8 +123,8 @@ function cmd_policy() {
     settings_note="the repository merge settings are not visible to this account, which usually means it lacks admin access"
   fi
 
-  # GitHub answers a branch that does not exist with the repository-wide rules,
-  # so the branch is read first to tell a wrong name from a branch's own rules.
+  # GitHub returns the repository-wide rules for a branch that does not exist,
+  # so read the branch first.
   if ! capture gh api "repos/${owner}/${repo}/branches/${base}"; then
     rules_note="reading base branch ${base} failed, so its rules were not read: ${CAPTURED_ERR}"
   elif ! capture gh api --paginate --slurp "repos/${owner}/${repo}/rules/branches/${base}"; then
@@ -160,12 +158,11 @@ function cmd_policy() {
       }'
 }
 
-# The watch helpers share cmd_watch's locals through bash's dynamic scoping:
-# state, decision, head and merge from the latest read, the failures and
-# merged_reads counters, and the event and error a poll produced.
+# The watch helpers read and set cmd_watch's locals through bash's dynamic
+# scoping.
 
-# Reads the PR once into state, decision, head and merge. Returns 1, with the
-# reason in CAPTURED_ERR, when the read fails or its output cannot be used.
+# Reads the PR into state, decision, head and merge. On failure, returns 1
+# with the reason in CAPTURED_ERR.
 function read_pr() {
   local line
   state="" decision="" head="" merge=""
@@ -183,8 +180,8 @@ function read_pr() {
   fi
 }
 
-# Makes one read and sets event, and error where one applies, or leaves event
-# empty when nothing has changed yet.
+# Reads once and sets event and error, leaving event empty when nothing
+# changed.
 function poll_once() {
   event="" error=""
   if ! read_pr; then
@@ -321,7 +318,6 @@ function find_remote() {
   return 1
 }
 
-# Prints the path of the worktree that has refs/heads/BASE checked out.
 function worktree_for_branch() {
   local base="${1}" line path=""
   while IFS= read -r line; do
