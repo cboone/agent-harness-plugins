@@ -269,7 +269,7 @@ function summarizeReply(reply: string, limit: number): string {
   const units = replyUnits(Array.from(text).slice(0, 20000).join("").split("\n"))
     .map((u) => ({ ...u, text: u.text.replace(/\s+/gu, " ").trim() }))
     .filter((u) => u.text !== "");
-  const kept = units.some((u) => u.kind === "prose") ? units.filter((u) => u.kind === "prose") : units.some((u) => u.kind === "status") ? units.filter((u) => u.kind === "status") : units.slice(0, 1);
+  const kept = preferredUnits(units);
   const sentences = kept.flatMap((u, i) => {
     const unit = i < kept.length - 1 && !/[.!?:]$/u.test(u.text) ? `${u.text}.` : u.text;
     return (unit.match(/(?:[^.!?]|[.!?]+(?!\s|$))+(?:[.!?]+(?=\s|$))?/gu) ?? []).map((s) => s.trimStart()).filter((s) => s !== "");
@@ -334,6 +334,15 @@ function replyUnits(lines: string[]): ReplyUnit[] {
   if (fence >= 0) return [...units.slice(0, mark), ...replyUnits(lines.slice(fence + 1))];
   flush();
   return units;
+}
+
+// Keeps the prose units, else the status units, else the first unit.
+function preferredUnits(units: ReplyUnit[]): ReplyUnit[] {
+  for (const kind of ["prose", "status"] as const) {
+    const matching = units.filter((u) => u.kind === kind);
+    if (matching.length > 0) return matching;
+  }
+  return units.slice(0, 1);
 }
 
 function stripInline(line: string): string {
