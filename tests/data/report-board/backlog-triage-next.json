@@ -10,28 +10,89 @@
     "openPullRequests": 0
   },
   "summary": "The tokenizer landed, so streaming and the tutorial are both free. Start them in their own lanes.",
-  "milestones": [{ "title": "Parser rewrite", "short": "Parser" }, { "title": "Documentation" }],
+  "schemaVersion": 2,
+  "affinityIgnored": [],
+  "milestones": [
+    {
+      "title": "Parser rewrite",
+      "short": "Parser"
+    },
+    {
+      "title": "Documentation"
+    }
+  ],
   "issues": [
-    { "number": 102, "title": "parser: stream large inputs", "milestone": "Parser rewrite" },
+    {
+      "number": 102,
+      "title": "parser: stream large inputs",
+      "milestone": "Parser rewrite",
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
+    },
     {
       "number": 104,
       "title": "docs: tutorial for the new parser",
       "short": "parser tutorial",
-      "milestone": "Documentation"
+      "milestone": "Documentation",
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     },
     {
       "number": 106,
       "title": "ci: cache dependencies",
       "milestone": null,
-      "inProgress": "feature/106-cache"
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      },
+      "progress": {
+        "stage": "branch",
+        "carrier": {
+          "branch": "feature/106-cache"
+        },
+        "signal": "branch feature/106-cache",
+        "lastActivity": "2026-08-30T12:00:00Z",
+        "since": null,
+        "nextMove": "author",
+        "nextAction": "open a pull request",
+        "flags": [],
+        "host": null,
+        "extraCarriers": []
+      }
     },
-    { "number": 107, "title": "cli: color output", "milestone": "Parser rewrite" },
+    {
+      "number": 107,
+      "title": "cli: color output",
+      "milestone": "Parser rewrite",
+      "affinity": {
+        "owner": "you",
+        "kind": "implicit",
+        "tier": 1,
+        "reasons": ["changes on feature/palette touch src/cli/**"]
+      }
+    },
     {
       "number": 108,
       "title": "parser: benchmark suite",
       "milestone": "Parser rewrite",
       "waitingOn": [102],
-      "blockedBecause": "Benchmarks measure the streaming path that #102 adds."
+      "blockedBecause": "Benchmarks measure the streaming path that #102 adds.",
+      "affinity": {
+        "owner": null,
+        "kind": null,
+        "tier": null,
+        "reasons": []
+      }
     }
   ],
   "startNow": [
@@ -47,8 +108,25 @@
     }
   ],
   "lanes": [
-    { "key": "L1", "name": "Parser core", "owns": "parser", "mode": "serial", "issues": [102, 108] },
-    { "key": "L2", "name": "Docs", "owns": "docs", "mode": "any", "issues": [104] },
-    { "key": "L3", "name": "Standalone", "mode": "any", "issues": [106, 107] }
+    {
+      "key": "L1",
+      "name": "Parser core",
+      "owns": "parser",
+      "mode": "serial",
+      "issues": [102, 108]
+    },
+    {
+      "key": "L2",
+      "name": "Docs",
+      "owns": "docs",
+      "mode": "any",
+      "issues": [104]
+    },
+    {
+      "key": "L3",
+      "name": "Standalone",
+      "mode": "any",
+      "issues": [106, 107]
+    }
   ]
 }

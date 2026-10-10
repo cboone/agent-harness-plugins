@@ -111,10 +111,14 @@ $ problems '(.bugs[] | select(.number == 20) | .assessment) |= (.impact = "sever
 
 ## Ready groups, questions, and reasons are checked
 
+A bug in Ready to go sits in the group its progress stage names, and in
+ready-to-fix when it has no progress.
+
 ```scrut
-$ problems '(.ready[] | select(.item == 21) | .group) = "ship" | (.ready[] | select(.item == 18) | .group) = "soon" | (.investigate[0].question) = null | (.lower[0].reason) = ""'
-  - ready #18: group must be one of ship, review, in-progress, ready-to-fix
-  - ready #21 is grouped as ship but names no fix pull request
+$ problems '(.ready[] | select(.item == 21) | .group) = "draft" | (.ready[] | select(.item == 16) | .group) = "needs-author" | (.ready[] | select(.item == 18) | .group) = "soon" | (.investigate[0].question) = null | (.lower[0].reason) = ""'
+  - ready #16 is grouped as needs-author, but its progress stage is ready-to-merge
+  - ready #18: group must be one of ready-to-merge, needs-author, awaiting-review, draft, branch, started, close-out, ready-to-fix
+  - ready #21 is grouped as draft, but it has no progress, so its group is ready-to-fix
   - investigate #20: question is required, what to learn first
   - lower #19: reason is required
 ```
@@ -277,4 +281,49 @@ $ "${REPORT_BOARD_BIN}" validate "$(board_with '.summary = null')" > /dev/null 2
 ```scrut
 $ problems '.triage += [{id: "2026-10-14T10:00-04:00 demote #10", at: "2026-10-14T10:00-04:00", verb: "demote", target: 10, until: null, text: "soon enough"}]'
   - critical #10 is demoted by 2026-10-14T10:00-04:00 demote #10; only a later escalate brings it back
+```
+
+## Open bugs carry progress, affinity, and defined areas
+
+```scrut
+$ problems '(.bugs[] | select(.number == 13)) |= del(.progress) | (.bugs[] | select(.number == 14)) |= del(.affinity) | (.bugs[] | select(.number == 15)).areas = ["billing"] | (.bugs[] | select(.number == 16)).progress.stage = "shipped" | (.bugs[] | select(.number == 12)).affinity = {owner: "you", kind: "implicit", tier: null, reasons: []}'
+  - #12: implicit affinity needs a tier of 1, 2, or 3
+  - #12: affinity.reasons must say what gives the owner
+  - #13: an open bug needs progress, null when it has no stage
+  - #14: affinity is required, with owner, kind, tier, and reasons
+  - #15: area billing is not defined in areas
+  - #16: progress.stage must be one of started, branch, draft, awaiting-review, needs-author, ready-to-merge, close-out
+  - ready #16 is grouped as ready-to-merge, but its progress stage is shipped
+```
+
+## A bugs board names its schema and what uniformity dropped
+
+```scrut
+$ problems 'del(.schemaVersion) | .affinityIgnored = ["assigned", "everything"] | .areas += [{name: "auth", paths: []}]'
+  - schemaVersion: expected 2; build the data with bugs-gather draft
+  - affinityIgnored: expected a list drawn from assigned, claimed, filed, commented, active, recent, empty when uniformity dropped nothing
+  - area auth: paths must be a non-empty list of path patterns
+  - areas: auth is defined more than once
+```
+
+## Compare reports stage moves, flags, and affinity
+
+```scrut
+$ "${REPORT_BOARD_BIN}" compare "${REPORT_BOARD_DATA_DIR}/bugs.json" "$(board_with '(.bugs[] | select(.number == 27)).progress.stage = "awaiting-review" | (.bugs[] | select(.number == 28)).progress.flags = ["stale"] | (.bugs[] | select(.number == 12)).progress = null | (.bugs[] | select(.number == 13)).progress = {stage: "branch", carrier: {branch: "fix/13-retry"}, signal: "branch fix/13-retry", lastActivity: "2026-10-12T12:00:00Z", since: null, nextMove: "author", nextAction: "push it", flags: ["local"], host: "studio", extraCarriers: []} | (.bugs[] | select(.number == 18)).affinity = {owner: null, kind: null, tier: null, reasons: []}')" | tail -n +4
+- Started: #13 Partner pages drop campaigns with null flags (branch on fix/13-retry)
+- Stage moved: #27 Callback returns 500 for invalid logins (draft to awaiting-review)
+- No longer in progress: #12 Token refresh bounces users to the dashboard (was started)
+- Flags raised: #13 Partner pages drop campaigns with null flags (local); #28 Profile form sends a request per keystroke (stale)
+- Affinity changed: #18 A test break blocks the axios security update (@mallory to none)
+```
+
+## Compare against a board from before the progress model
+
+A previous board without a schemaVersion carried its work as inProgress text and
+old Ready groups that map onto no single stage, so the report says once that
+the model changed rather than calling every bug started.
+
+```scrut
+$ "${REPORT_BOARD_BIN}" compare "$(board_with 'del(.schemaVersion, .affinityIgnored) | .bugs |= map(del(.progress, .affinity))')" "${REPORT_BOARD_DATA_DIR}/bugs.json" | tail -n +4
+- Progress model changed: stage moves are reported from the next sync.
 ```
