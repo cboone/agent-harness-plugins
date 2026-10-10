@@ -303,7 +303,15 @@ function main() {
       ;;
     plan-no-heading)
       action="cc-permission"
-      write_transcript "${transcript}" ExitPlanMode '{"plan":"Just prose."}'
+      write_transcript "${transcript}" ExitPlanMode '{"plan":"\nRename the **sample** helper.\n\nMore detail."}'
+      ;;
+    plan-fenced)
+      action="cc-permission"
+      write_transcript "${transcript}" ExitPlanMode '{"plan":"```bash\n# not a heading\n```\n\n## Real heading"}'
+      ;;
+    plan-empty)
+      action="cc-permission"
+      write_transcript "${transcript}" ExitPlanMode '{"plan":""}'
       ;;
     visible) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,focused,UTF-8" ;;
     other-window) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,UTF-8" ;;

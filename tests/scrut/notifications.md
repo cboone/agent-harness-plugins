@@ -381,7 +381,7 @@ claude-code.png
 $ "${CHECK_NOTIFICATIONS_BIN}" plan-no-heading
 Plan ready for review
 sample-repo · Sample task
-Review the proposed plan
+Rename the sample helper.
 Tink
 claude-code.png
 ```
@@ -457,6 +457,28 @@ claude-code.png
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" claude-reset
 Next user prompt allows another completion
+```
+
+## Plan heading inside a code fence is skipped
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" plan-fenced
+Plan ready for review
+sample-repo · Sample task
+Real heading
+Tink
+claude-code.png
+```
+
+## Empty plan
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" plan-empty
+Plan ready for review
+sample-repo · Sample task
+Review the proposed plan
+Tink
+claude-code.png
 ```
 
 ## Repeated completion
