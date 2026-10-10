@@ -1,0 +1,14 @@
+# The repository a backlog board describes, and who is reading it.
+query ($owner: String!, $name: String!) {
+  viewer {
+    login
+  }
+  repository(owner: $owner, name: $name) {
+    nameWithOwner
+    url
+    isArchived
+    defaultBranchRef {
+      name
+    }
+  }
+}

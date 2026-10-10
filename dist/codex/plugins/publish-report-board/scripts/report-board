@@ -100,6 +100,98 @@ def sync_time_problems($sync):
 def sync_extra_problems($sync):
   check($sync.openPullRequests | absent_or(is_int and . >= 0); "sync.openPullRequests: expected a count"),
   check($sync.extra | absent_or(type == "array" and all(.[]; is_text)); "sync.extra: expected a list of text");
+def has_item($v): any(.[]; . == $v);
+# The closed sets of the progress model in references/progress-model.md.
+def stages: ["started", "branch", "draft", "awaiting-review", "needs-author", "ready-to-merge", "close-out"];
+def progress_flags: ["quiet", "stale", "behind", "conflict", "multiple", "local", "leftover-label"];
+def next_moves: ["author", "reviewer", "ci", "nobody"];
+def uniformity_kinds: ["assigned", "claimed", "filed", "commented", "active", "recent"];
+# A branch carrier becomes a compare link on the page, so it must not carry a
+# dot path segment, as a branch blocker must not.
+def carrier_ok:
+  type == "object" and length == 1
+  and ((.pr | is_int and . > 0)
+       or (.branch | is_text and test("^\\S+$") and (test("(^|/)\\.{1,2}(/|$)") | not))
+       or (.label | is_text)
+       or (.pipeline | is_text));
+# Always text, whatever the carrier holds, since messages and compare join it.
+def carrier_text:
+  (if type != "object" then tostring
+   elif .pr != null then "PR #\(.pr)"
+   elif .branch != null then .branch
+   elif .label != null then "the \(.label) label"
+   elif .pipeline != null then "the \(.pipeline) pipeline"
+   else tojson end)
+  | if type == "string" then . else tojson end;
+# True for an issue or bug whose work is in progress: a progress whose stage
+# is anything but close-out, which is a cleanup rather than work.
+def working: (.progress | type) == "object" and .progress.stage != "close-out";
+# Problems with the progress object of the issue or bug at $at. Null or absent
+# progress means no stage.
+def progress_problems($at):
+  if . == null then empty
+  elif type != "object" then "\($at): progress must be an object, or null when the issue has no stage"
+  else
+    check(.stage | IN(stages[]); "\($at): progress.stage must be one of \(stages | join(", "))"),
+    check(.carrier | carrier_ok; "\($at): progress.carrier must name exactly one of pr, branch, label, or pipeline"),
+    check(.signal | is_text; "\($at): progress.signal is required, the gathered signal in words"),
+    check(.lastActivity | iso_time and calendar_date; "\($at): progress.lastActivity must be an ISO 8601 time with a zone"),
+    check(.since | absent_or(iso_time and calendar_date); "\($at): progress.since must be an ISO 8601 time with a zone, or null"),
+    check(.nextMove | IN(next_moves[]); "\($at): progress.nextMove must be one of \(next_moves | join(", "))"),
+    check(.nextAction | is_text; "\($at): progress.nextAction is required"),
+    (if (.flags | type == "array" and all(.[]; IN(progress_flags[]))) | not then "\($at): progress.flags must be a list drawn from \(progress_flags | join(", "))"
+     else
+       (.flags | duplicates | "\($at): progress.flags lists \(.) more than once"),
+       (if (.flags | has_item("quiet")) and (.flags | has_item("stale")) then "\($at): progress is quiet or stale, never both" else empty end),
+       (if (.flags | has_item("leftover-label")) and .stage != "close-out" then "\($at): progress.flags has leftover-label, which only a close-out stage carries" else empty end),
+       (if .flags | has_item("local") then check(.host | is_text; "\($at): progress.host must name the machine that saw the local branch")
+        else check(.host == null; "\($at): progress.host is set only with the local flag") end)
+     end),
+    check(.extraCarriers | type == "array" and all(.[]; carrier_ok); "\($at): progress.extraCarriers must be a list of carriers, empty when there are none"),
+    (keys - ["stage", "carrier", "signal", "lastActivity", "since", "nextMove", "nextAction", "flags", "host", "extraCarriers"] | .[] | "\($at): progress.\(.) is not a progress field")
+  end;
+# Problems with the affinity object every open issue or bug carries.
+def affinity_problems($at):
+  if type != "object" then "\($at): affinity is required, with owner, kind, tier, and reasons"
+  else
+    check(.owner | absent_or(is_text and test("^\\S+$")); "\($at): affinity.owner must be you, a login, unknown, or null"),
+    check(.kind | absent_or(IN("explicit", "implicit")); "\($at): affinity.kind must be explicit, implicit, or null"),
+    check((.owner == null) == (.kind == null); "\($at): affinity.owner and affinity.kind are both set or both null"),
+    (if .kind == "implicit" then
+       check(.tier | IN(1, 2, 3); "\($at): implicit affinity needs a tier of 1, 2, or 3"),
+       check(.owner == "you"; "\($at): implicit affinity belongs to you")
+     else check(.tier == null; "\($at): affinity.tier is set only for implicit affinity") end),
+    (if (.reasons | type == "array" and all(.[]; is_text)) | not then "\($at): affinity.reasons must be a list of text"
+     elif .owner != null and (.reasons | length) == 0 then "\($at): affinity.reasons must say what gives the owner"
+     else empty end),
+    (keys - ["owner", "kind", "tier", "reasons"] | .[] | "\($at): affinity.\(.) is not an affinity field")
+  end;
+# Problems with a top-level areas list, absent when the board tags no areas.
+def areas_problems($areas):
+  if $areas == null then empty
+  elif ($areas | type) != "array" then "areas: expected a list of areas, each with a name and paths"
+  else
+    (($areas | to_entries[]) as {key: $i, value: $a}
+     | if ($a | type) != "object" or (($a.name | is_text) | not) then "areas[\($i)]: expected an object with a name"
+       else
+         check($a.paths | type == "array" and length > 0 and all(.[]; is_text); "area \($a.name): paths must be a non-empty list of path patterns"),
+         check($a.query | absent_or(is_text); "area \($a.name): query must be text"),
+         ($a | keys - ["name", "paths", "query"] | .[] | "area \($a.name): \(.) is not an area field")
+       end),
+    ([$areas[] | objects | .name | select(is_text)] | duplicates | "areas: \(.) is defined more than once")
+  end;
+# Problems with the area names an issue or bug lists, against the names the
+# top-level areas define.
+def item_areas_problems($at; $names):
+  if . == null then empty
+  elif (type == "array" and all(.[]; is_text)) | not then "\($at): areas must be a list of area names"
+  else
+    (.[] | select(. as $n | $names | has_item($n) | not) | "\($at): area \(.) is not defined in areas"),
+    (duplicates | "\($at): areas lists \(.) more than once")
+  end;
+def affinity_ignored_problems($ignored):
+  if ($ignored | type == "array" and all(.[]; IN(uniformity_kinds[]))) | not then "affinityIgnored: expected a list drawn from \(uniformity_kinds | join(", ")), empty when uniformity dropped nothing"
+  else ($ignored | duplicates | "affinityIgnored: \(.) is listed more than once") end;
 '
 
 # Emits one line per problem with backlog-triage data, and nothing when it is
@@ -144,6 +236,7 @@ else
   | ($d.issues | if type == "array" then [.[] | objects] else [] end) as $issue_list
   | [$issue_list[] | .number | select(is_int)] as $numbers
   | [$d.lanes | as_list | .[] | objects | .issues | as_list | unique[]] as $placed
+  | [$d.areas | as_list | .[] | objects | .name | select(is_text)] as $area_names
   | def known: . as $n | any($numbers[]; . == $n);
     def issue($n): first($issue_list[] | select(.number == $n)) // null;
     def root($n): (issue($n) | .sameBranchAs | select(is_int)) // $n;
@@ -161,8 +254,10 @@ else
     # The lane model the page draws, so start picks can be held to it.
     def riders($n): [$issue_list[] | select(.sameBranchAs == $n) | .number | select(is_int)];
     # The issue carrying work in progress on the branch of $n, as {number,
-    # inProgress}, or null. Work on an issue riding the branch counts.
-    def progress_of($n): [($n, riders($n)[]) as $m | issue($m) | select(.inProgress | is_text) | {number, inProgress}] | first;
+    # progress}, or null. Work on an issue riding the branch counts, and a
+    # close-out stage is a cleanup rather than work.
+    def progress_of($n): [($n, riders($n)[]) as $m | issue($m) | select(working) | {number, progress}] | first;
+    def work_text: "\(.progress.stage) on \(.progress.carrier | carrier_text)";
     def rides($n): issue($n) | .sameBranchAs | is_int;
     # A branch is queued while any issue on it is better after another open
     # issue or reference.
@@ -199,6 +294,9 @@ else
     # slip through either, and no segment may be . or .. anywhere along it.
     check($d.repoUrl | absent_or(is_text and test("^https://" + host_re + port_re + "(/(?!\\.{1,2}(/|$))[A-Za-z0-9_.~-]+)+/?$") and (($d.repo | type) != "string" or (sub("/$"; "") | endswith("/" + $d.repo)))); "repoUrl: expected an https:// URL for the repository, such as https://github.com/owner/name"),
     check($d.summary | is_text; "summary: expected text summarizing the board"),
+    check($d.schemaVersion == 2; "schemaVersion: expected 2; build the data with backlog-gather finish"),
+    affinity_ignored_problems($d.affinityIgnored),
+    areas_problems($d.areas),
     # Every string on a board comes from GitHub, and compare prints them to a
     # terminal. A control character in one could rewrite the change report as it
     # is read, so no string on a board may carry one.
@@ -224,9 +322,10 @@ else
              (if ($issue | has("milestone")) | not then "\($at): milestone is required; use null for an issue without one"
               else check($issue.milestone | absent_or(is_text); "\($at): milestone must be text or null") end),
              check($issue.short | absent_or(is_text); "\($at): short must be text"),
-             # A single unspaced value becomes a branch comparison on the page,
-             # so it must not carry a dot path segment. A phrase stays text.
-             check($issue.inProgress | absent_or(is_text and ((test("^\\S+$") and test("(^|/)\\.{1,2}(/|$)")) | not)); "\($at): inProgress must name the branch or pull request"),
+             check($issue | has("inProgress") | not; "\($at): inProgress is replaced by progress, which backlog-gather finish writes"),
+             ($issue.progress | progress_problems($at)),
+             ($issue.affinity | affinity_problems($at)),
+             ($issue.areas | item_areas_problems($at; $area_names)),
              (if ($issue.waitingOn | absent_or(type == "array")) | not then "\($at): waitingOn must be a list"
               else
                 ($waits[] | select(type == "number") | select(is_int | not) | "\($at): waitingOn issue numbers must be whole numbers"),
@@ -305,8 +404,12 @@ else
                (if ($target.waitingOn | type == "array" and length > 0) then "\($at) waits on \($target.waitingOn | map(ref_text) | join(", ")) and cannot start" else empty end),
                (progress_of($pick.issue) as $work
                 | if $work == null then empty
-                  elif $work.number == $pick.issue then "\($at) is already in progress on \($work.inProgress)"
-                  else "\($at) is already in progress on \($work.inProgress), through #\($work.number) on the same branch" end),
+                  elif $work.number == $pick.issue then "\($at) is already in progress (\($work | work_text))"
+                  else "\($at) is already in progress (\($work | work_text)), through #\($work.number) on the same branch" end),
+               check($pick.despiteOwner | absent_or(is_text); "\($at): despiteOwner must be text"),
+               ($target.affinity | objects | .owner | select(is_text and (IN("you", "unknown") | not))
+                | . as $owner | select(($pick.despiteOwner | is_text) | not)
+                | "\($at) is owned by @\($owner); give despiteOwner, the reason to start it anyway"),
                (if $target.sameBranchAs != null then "\($at) shares a branch with #\($target.sameBranchAs); list #\($target.sameBranchAs) instead" else empty end),
                (if ($target.after | type == "array" and length > 0) then "\($at) is better after \($target.after | map(ref_text) | join(", ")) and should not start before it lands" else empty end),
                ([$issue_list[] | select(.sameBranchAs == $pick.issue) | select(.after | type == "array" and any(.[]; . != $pick.issue)) | "#\(.number)"] as $held
@@ -320,7 +423,7 @@ else
                     | if $holder == $pick.issue then empty
                       elif $holder != null then
                         progress_of($holder) as $work
-                        | "\($at): lane \($lane.key) already has #\($work.number) in progress on \($work.inProgress), and a \($lane.mode) lane runs one branch at a time"
+                        | "\($at): lane \($lane.key) already has #\($work.number) in progress (\($work | work_text)), and a \($lane.mode) lane runs one branch at a time"
                       elif $lane.mode == "head" then
                         head_of($lane) as $head
                         | check($head == $pick.issue; "\($at): lane \($lane.key) is a head lane, and nothing in it starts before its head, #\($head)")
@@ -367,6 +470,19 @@ else
         end)
      end),
 
+    # With areas tagged, the claims are the areas two or more issues list, in
+    # area order, each with its issues in issue order, as backlog-gather finish
+    # writes them, so a claim cannot drift from the areas it comes from.
+    (if ($d.areas | type) != "array" then empty
+     else
+       [$d.areas[] | objects | select(.name | is_text) | .name as $n | .query as $q
+        | {name: $n, issues: [$issue_list[] | select(.areas | as_list | has_item($n)) | .number]}
+        | select((.issues | length) >= 2)
+        | if $q == null then . else .query = $q end] as $derived
+       | [$d.contention | objects | .claims | as_list | .[]] as $given
+       | check($given == $derived; "contention.claims must be the areas that two or more issues list, in area order; backlog-gather finish derives them")
+     end),
+
     (if $d.notes == null then empty
      elif ($d.notes | type) != "object" then "notes: expected an object"
      else ($d.notes | to_entries[] | select((.value | is_text) | not) | "notes.\(.key): expected text"),
@@ -406,7 +522,9 @@ def closed_sets: {
   cause: ["known", "suspected", "unknown"]
 };
 def sections: ["critical", "high", "ready", "investigate", "lower", "parked", "fixed"];
-def ready_groups: ["ship", "review", "in-progress", "ready-to-fix"];
+# The Ready to go groups in page order: the progress stage of a bug with
+# progress, and ready-to-fix for one without.
+def ready_groups: ["ready-to-merge", "needs-author", "awaiting-review", "draft", "branch", "started", "close-out", "ready-to-fix"];
 def triage_verbs: ["escalate", "demote", "set", "snooze", "park", "context"];
 # True when an assessment by itself earns Critical, by the same rule
 # bugs-gather applies.
@@ -428,6 +546,7 @@ else
   | ($d.sync | if type == "object" and (.at | real_time) then .at | epoch else null end) as $synced
   | ($synced | if . == null then null else strflocaltime("%Y-%m-%d") end) as $today
   | [$d.triage | as_list | .[] | objects] as $entries
+  | [$d.areas | as_list | .[] | objects | .name | select(is_text)] as $area_names
   | def expired: (.until | type) == "string" and $today != null and $today > .until;
     def entry_by_id($id): first($entries[] | select(.id == $id)) // null;
     # The latest escalate, demote, snooze, or park still in force for a bug
@@ -467,6 +586,9 @@ else
     check($d.summary | is_text; "summary: expected text summarizing the board"),
     check($d.criticalWarn | is_int and . > 0; "criticalWarn: expected a positive whole number"),
     check($d.readyLimit | is_int and . > 0; "readyLimit: expected a positive whole number"),
+    check($d.schemaVersion == 2; "schemaVersion: expected 2; build the data with bugs-gather draft"),
+    affinity_ignored_problems($d.affinityIgnored),
+    areas_problems($d.areas),
     # bugs-gather draft carries problems with the triage note here; a board
     # published over them would drop the calls they belong to without a word.
     (if $d.triageProblems == null then empty
@@ -539,7 +661,11 @@ else
                    check($b.assessment.deadline | absent_or(is_day); "\($at): assessment.deadline must be a date or null"),
                    check($b.assessment.gist | is_text; "\($at): assessment.gist is required"),
                    check($b.assessment.nextStep | is_text; "\($at): assessment.nextStep is required")
-                 end)
+                 end),
+                check($b | has("progress"); "\($at): an open bug needs progress, null when it has no stage"),
+                ($b.progress | progress_problems($at)),
+                ($b.affinity | affinity_problems($at)),
+                ($b.areas | item_areas_problems($at; $area_names))
               else empty end),
              (if $b.fix == null then empty
               elif ($b.fix | type) != "object" or (($b.fix.number | is_int and . > 0) | not) then "\($at): fix must name a pull request number"
@@ -585,9 +711,11 @@ else
                         | "\($at) is \(.) by \($p.id); only a later escalate brings it back"))
                   elif $name == "ready" then
                     check($entry.why | is_text; "\($at): why is required"),
-                    (if ($entry.group | IN(ready_groups[]) | not) then "\($at): group must be one of \(ready_groups | join(", "))"
-                     elif ($entry.group | IN("ship", "review")) and $b.fix == null then "\($at) is grouped as \($entry.group) but names no fix pull request"
-                     else empty end),
+                    ($b.progress | if type == "object" then .stage else null end) as $stage
+                    | (if ($entry.group | IN(ready_groups[]) | not) then "\($at): group must be one of \(ready_groups | join(", "))"
+                       elif $stage == null and $entry.group != "ready-to-fix" then "\($at) is grouped as \($entry.group), but it has no progress, so its group is ready-to-fix"
+                       elif $stage != null and $entry.group != $stage then "\($at) is grouped as \($entry.group), but its progress stage is \($stage)"
+                       else empty end),
                     ($entry | signal_problems($at))
                   elif $name == "investigate" then
                     check($entry.question | is_text; "\($at): question is required, what to learn first"),
@@ -609,12 +737,50 @@ else
 end
 '
 
+# Progress entries both change reports share. Each pair is a {now, was} of
+# one item kept from the previous sync, and describe is the report line naming
+# the item. A previous board without a schemaVersion predates the progress
+# model: its work in progress is an inProgress text or a Ready group that maps
+# onto no single stage, so the reports print one notice in place of an entry
+# for every item rather than report moves that did not happen.
+# shellcheck disable=SC2016
+readonly COMPARE_PROGRESS_DEFS='
+def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($items | join("; "))" else empty end;
+def stage_of: (.progress | if type == "object" then .stage else null end);
+# The stage and what carries it, as validation messages name them. Adapted
+# from carrier_text in the validation filters, for a progress that may never
+# have been validated.
+def work_text:
+  (.progress.carrier
+   | if type != "object" then "an unknown carrier"
+     elif .pr != null then "PR #\(.pr)"
+     elif .branch != null then "\(.branch)"
+     elif .label != null then "the \(.label) label"
+     elif .pipeline != null then "the \(.pipeline) pipeline"
+     else tojson end) as $carrier
+  | "\(stage_of) on \($carrier)";
+def flags_of: (.progress | if type == "object" then (.flags | if type == "array" then map(tostring) else [] end) else [] end);
+def owner_of: (.affinity | if type == "object" then .owner else null end);
+def owner_text: if . == null then "none" elif . == "you" or . == "unknown" then tostring else "@\(.)" end;
+def legacy_board: (.schemaVersion // null) == null;
+def progress_entries($pairs; describe):
+  entry("Started"; [$pairs[] | select((.now | stage_of) != null and (.was | stage_of) == null) | "\(.now | describe) (\(.now | work_text))"]),
+  entry("Stage moved"; [$pairs[] | (.now | stage_of) as $n | (.was | stage_of) as $w | select($n != null and $w != null and $n != $w) | "\(.now | describe) (\($w) to \($n))"]),
+  entry("No longer in progress"; [$pairs[] | select((.now | stage_of) == null and (.was | stage_of) != null) | "\(.now | describe) (was \(.was | stage_of))"]),
+  entry("Flags raised"; [$pairs[] | ((.now | flags_of) - (.was | flags_of)) as $f | select(($f | length) > 0) | "\(.now | describe) (\($f | join(", ")))"]),
+  entry("Flags cleared"; [$pairs[] | ((.was | flags_of) - (.now | flags_of)) as $f | select(($f | length) > 0) | "\(.now | describe) (\($f | join(", ")))"]),
+  entry("Affinity changed"; [$pairs[] | (.now | owner_of) as $n | (.was | owner_of) as $w | select($n != $w) | "\(.now | describe) (\($w | owner_text) to \($n | owner_text))"]);
+def progress_report($old; $pairs; describe):
+  if $old | legacy_board then "- Progress model changed: stage moves are reported from the next sync."
+  else progress_entries($pairs; describe) end;
+'
+
 # Reads two boards bound as $previous and $current (each a one-element array
 # from --slurpfile) and emits a plain-text change report. Fields of the wrong
 # type count as empty, so an older or damaged board still compares.
 # As above, the $names are jq bindings.
 # shellcheck disable=SC2016
-readonly BACKLOG_TRIAGE_COMPARE_FILTER='
+readonly BACKLOG_TRIAGE_COMPARE_FILTER="${COMPARE_PROGRESS_DEFS}"'
 def as_list: if type == "array" then . else [] end;
 # Always text, whatever the reference holds. A previous board reaches compare
 # without being validated, and validate itself is meant to report a malformed
@@ -659,7 +825,6 @@ def synced: (.sync | if type == "object" then . else {} end) as $s
   | ($s.openPullRequests | if type == "number" then ", \(.) open pull \(if . == 1 then "request" else "requests" end)" else "" end) as $prs
   | ($s.extra | if type == "array" then map(", \(.)") | join("") else "" end) as $extra
   | "\($s.branch // "unknown branch") at \(($s.commit // "unknown") | tostring | .[0:8]), \($s.at // "unknown time")\($zone)\($prs)\($extra)";
-def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($items | join("; "))" else empty end;
 def lanes_of: [.lanes | as_list | .[] | objects | select(.key != null)];
 def lane_map: lanes_of | map({key: (.key | tostring), value: .}) | from_entries;
 def claim_map: [.contention | objects | .claims | as_list | .[] | objects | select(.name != null) | {key: (.name | tostring), value: .}] | from_entries;
@@ -724,7 +889,7 @@ $previous[0] as $old
     # A new issue reaches none of the transition entries below, which compare
     # against a previous state it does not have, so its placement and its state
     # are reported here or nowhere.
-    entry("Opened"; [$new | issues_of | .[] | select($was[.number | tostring] == null) | . as $i | (.number | tostring) as $k | ([(select($new_lane[$k] != null) | "\($new_lane[$k])"), (select(($i.milestone // null) != null) | "\($i.milestone)"), (select(($i.sameBranchAs // null) != null) | "same branch as #\($i.sameBranchAs)"), (select($i | is_blocked) | "waits on \(titled($i | waits))\(if ($i.blockedBecause // null) != null then ": \($i.blockedBecause)" else "" end)"), (select(($i | afters | length) > 0) | "after \(titled($i | afters))"), (select($i.inProgress != null) | "\($i.inProgress)")] | join("; ")) as $state | "\(describe)\(if $state == "" then "" else " (\($state))" end)"]),
+    entry("Opened"; [$new | issues_of | .[] | select($was[.number | tostring] == null) | . as $i | (.number | tostring) as $k | ([(select($new_lane[$k] != null) | "\($new_lane[$k])"), (select(($i.milestone // null) != null) | "\($i.milestone)"), (select(($i.sameBranchAs // null) != null) | "same branch as #\($i.sameBranchAs)"), (select($i | is_blocked) | "waits on \(titled($i | waits))\(if ($i.blockedBecause // null) != null then ": \($i.blockedBecause)" else "" end)"), (select(($i | afters | length) > 0) | "after \(titled($i | afters))"), (select(($i | stage_of) != null) | "\($i | stage_of)")] | join("; ")) as $state | "\(describe)\(if $state == "" then "" else " (\($state))" end)"]),
     entry("Newly blocked"; [$kept[] | select(is_blocked and ($was[.number | tostring] | is_blocked | not)) | "\(describe) (waits on \(titled(waits))\(if (.blockedBecause // null) != null then ": \(.blockedBecause)" else "" end))"]),
     entry("Unblocked"; [$kept[] | select((is_blocked | not) and ($was[.number | tostring] | is_blocked)) | describe]),
     entry("Blockers changed"; [$kept[] | $was[.number | tostring] as $w | select(is_blocked and ($w | is_blocked) and (same_list(waits; $w | waits) | not)) | "\(describe) (was waiting on \(titled($w | waits)), now \(titled(waits)))"]),
@@ -736,9 +901,7 @@ $previous[0] as $old
       def linked: map(if type == "object" then del(.title) else . end);
       $kept[] | $was[.number | tostring] as $w | select((afters | length) > 0 and (($w | afters | length) > 0) and (same_list(afters | linked; $w | afters | linked) | not)) | "\(describe) (was after \(names($w | afters)), now \(names(afters)))"
     ]),
-    entry("Started"; [$kept[] | select(.inProgress != null and $was[.number | tostring].inProgress == null) | "\(describe) (\(.inProgress))"]),
-    entry("Progress moved"; [$kept[] | $was[.number | tostring] as $w | select(.inProgress != null and $w.inProgress != null and .inProgress != $w.inProgress) | "\(describe) (\($w.inProgress) to \(.inProgress))"]),
-    entry("No longer in progress"; [$kept[] | select(.inProgress == null and $was[.number | tostring].inProgress != null) | describe]),
+    progress_report($old; [$kept[] | {now: ., was: $was[.number | tostring]}]; describe),
     entry("Added to start now"; [($new | picks) - ($old | picks) | .[] | ($now[tostring] // {number: ., title: "not on the board"}) | describe]),
     entry("Dropped from start now"; [($old | picks) - ($new | picks) | .[] | ($now[tostring] // $was[tostring] // {number: ., title: "not on the board"}) | describe]),
     entry("Changed lanes"; [$kept[] | (.number | tostring) as $k | select($old_lane[$k] != null and $new_lane[$k] != null and $old_lane[$k] != $new_lane[$k]) | "\(describe) (\($old_lane[$k]) to \($new_lane[$k]))"]),
@@ -790,12 +953,11 @@ $previous[0] as $old
 # Critical and High priority, which bugs opened, closed, or changed tier, and
 # which assessments changed in a way the reader acts on.
 # shellcheck disable=SC2016
-readonly BUGS_COMPARE_FILTER='
+readonly BUGS_COMPARE_FILTER="${COMPARE_PROGRESS_DEFS}"'
 def as_list: if type == "array" then . else [] end;
 def by_number: [.bugs | as_list | .[] | objects | select(.number != null) | {key: (.number | tostring), value: .}] | from_entries;
 def in_section($name): [.[$name] | as_list | .[] | objects | .item | select(. != null) | tostring];
 def shown: if . == null then "none" else tostring end;
-def entry($heading; $items): if ($items | length) > 0 then "- \($heading): \($items | join("; "))" else empty end;
 def synced: (.sync | if type == "object" then . else {} end) as $s
   | ($s.timeZone | if type == "string" then " in \(.)" else "" end) as $zone
   | ($s.extra | if type == "array" then map(", \(.)") | join("") else "" end) as $extra
@@ -828,6 +990,9 @@ $previous[0] as $old
       | select($wa != null and $na != null)
       | [("environment", "evidence", "surface", "impact", "reach", "workaround", "mitigated", "deadline") as $f | select($wa[$f] != $na[$f]) | "\($f) \($wa[$f] | shown) to \($na[$f] | shown)"]
       | select(length > 0) | "\(named($k)) (\(join(", ")))"]),
+    # Only bugs open on both syncs: a bug that closed is reported as closed,
+    # and its work with it.
+    progress_report($old; [$now | to_entries[] | $was[.key] as $w | select($w != null and .value.state == "open" and $w.state == "open") | {now: .value, was: $w}]; "#\(.number) \(.title // "")"),
     entry("Retitled"; [$now | to_entries[] | .key as $k | select($was[$k] != null and $was[$k].title != .value.title) | "#\($k) (\($was[$k].title | tojson) to \(.value.title | tojson))"]),
     entry("Triage added"; [($new | entry_ids) - ($old | entry_ids) | .[]]),
     entry("Triage removed"; [($old | entry_ids) - ($new | entry_ids) | .[]]),

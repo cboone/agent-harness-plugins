@@ -1,0 +1,833 @@
+#!/usr/bin/env bash
+# backlog-gather -- Gather the progress and affinity behind a backlog board.
+#
+# A backlog triage board says what to start, what can run in parallel, and what
+# is blocked. This script does its deterministic half: it reads a repository's
+# open issues and pull requests from GitHub and its branches and recent commits
+# from the local checkout, and works out each issue's progress stage, flags,
+# and affinity signals as the progress model defines them. After the analysis
+# writes the board, finish adds the derived fields, so no stage or affinity is
+# ever written by hand. The GraphQL queries live beside it in
+# backlog-gather-queries/.
+#
+# Usage:
+#   backlog-gather gather REPO OUTPUT
+#   backlog-gather finish GATHER DATA OUTPUT
+#
+# REPO is OWNER/NAME. gather runs inside a checkout whose origin is REPO, after
+# the board's own git fetch, and reads an optional config from
+# ${XDG_CONFIG_HOME:-$HOME/.config}/report-boards/backlog-triage/HOST/OWNER/NAME.json,
+# where HOST is github.com.
+#
+# Exit codes:
+#   0 - Success
+#   1 - Invalid config or data, a failed GitHub or git call, or a file that
+#       could not be read or written
+#   2 - Usage error, or a required tool is missing
+#
+# BACKLOG_GATHER_NOW, an ISO 8601 UTC time, replaces the current time, and
+# BACKLOG_GATHER_HOST the host name a local branch is reported on; tests use
+# both to keep the output fixed.
+set -euo pipefail
+
+# Prints the directory holding this script, following symlinks so the queries
+# are found beside the real script rather than beside a link to it.
+function resolve_script_dir() {
+  local path="${BASH_SOURCE[0]}"
+  local link_dir
+  while [[ -L "${path}" ]]; do
+    link_dir="$(cd -P -- "$(dirname -- "${path}")" && pwd)"
+    path="$(readlink "${path}")"
+    [[ "${path}" == /* ]] || path="${link_dir}/${path}"
+  done
+  cd -P -- "$(dirname -- "${path}")" && pwd
+}
+
+SCRIPT_NAME="${0##*/}"
+readonly SCRIPT_NAME
+SCRIPT_DIR="$(resolve_script_dir)"
+readonly SCRIPT_DIR
+readonly QUERY_DIR="${SCRIPT_DIR}/backlog-gather-queries"
+
+readonly E_INVALID=1
+readonly E_USAGE=2
+
+readonly GATHER_VERSION=1
+# The host every config path assumes. gh reaches other hosts through GH_HOST,
+# which this script does not support.
+readonly GITHUB_HOST='github.com'
+readonly REPO_PATTERN='^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
+# A . or .. segment would point the config path outside its directory; GitHub
+# never uses either as a name.
+readonly DOT_SEGMENT_PATTERN='(^|/)\.\.?(/|$)'
+# Separates fields in the git output this script reads; no ref name, date,
+# email, or path holds one.
+readonly FIELD_SEPARATOR=$'\t'
+
+# Set by the gather and finish commands: the scratch directory, removed on
+# exit. It is global because an EXIT trap runs after main's locals are gone.
+TEMP_DIR=""
+# Set by load_config.
+CONFIG=""
+JOB_PIDS=()
+JOB_NAMES=()
+
+# Checks a backlog config and fills in its defaults. Emits {problems, config};
+# the config is null when there are problems. It takes $repo.
+# The $names in these filters are jq bindings, not shell expansions.
+# shellcheck disable=SC2016
+readonly CONFIG_FILTER='
+def is_text: type == "string" and test("\\S");
+def is_int: type == "number" and . == floor;
+def absent_or(f): . == null or f;
+def check(condition; message): if condition then empty else message end;
+def name_list: type == "array" and all(.[]; is_text);
+# The keys a config may carry; any other is a typo that would otherwise be
+# ignored without a word.
+def config_keys: ["progressLabels", "claimLabels", "quietDays", "staleDays", "affinityWorkDays", "affinityCommentDays", "uniformityShare", "uniformityMinimum"];
+
+if type != "object" then {problems: ["the config must be a JSON object"], config: null}
+else
+  . as $c
+  | [
+      ($c | keys[] | select(. as $k | config_keys | index($k) | not) | "\(.): not a config key; expected one of \(config_keys | join(", "))"),
+      check($c.progressLabels | absent_or(name_list); "progressLabels: expected a list of label names"),
+      check($c.claimLabels | absent_or(name_list); "claimLabels: expected a list of label names"),
+      (("quietDays", "staleDays", "affinityWorkDays", "affinityCommentDays", "uniformityMinimum") as $k
+       | check($c[$k] | absent_or(is_int and . > 0); "\($k): expected a positive whole number")),
+      check($c.uniformityShare | absent_or(type == "number" and . > 0 and . <= 1); "uniformityShare: expected a number above 0 and at most 1")
+    ] as $shape
+  | if ($shape | length) > 0 then {problems: $shape, config: null}
+    else
+      {
+        repo: $repo,
+        progressLabels: ($c.progressLabels // ["in progress"]),
+        claimLabels: ($c.claimLabels // []),
+        quietDays: ($c.quietDays // 7),
+        staleDays: ($c.staleDays // 30),
+        affinityWorkDays: ($c.affinityWorkDays // 30),
+        affinityCommentDays: ($c.affinityCommentDays // 90),
+        uniformityShare: ($c.uniformityShare // 0.9),
+        uniformityMinimum: ($c.uniformityMinimum // 5)
+      } as $config
+      | [
+          ($config.progressLabels | map(ascii_downcase)) as $progress
+          | ($config.claimLabels[] | select(ascii_downcase as $l | $progress | index($l)) | "claimLabels: \(.) is also a progress label; a label marks work started or claims an issue, not both"),
+          check($config.quietDays < $config.staleDays; "quietDays: expected fewer days than staleDays, \($config.staleDays)")
+        ] as $problems
+      | if ($problems | length) > 0 then {problems: $problems, config: null} else {problems: [], config: $config} end
+    end
+end
+'
+
+# Shared by the filters below.
+# shellcheck disable=SC2016
+readonly COMMON_DEFS='
+def as_list: if type == "array" then . else [] end;
+# An ISO 8601 time as seconds since the epoch, accepting a fraction and either
+# Z or a numeric offset. Copied from bugs-gather; a fix to one prompts a look
+# at the other.
+def epoch:
+  ([capture("^(?<d>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2})(:(?<s>[0-9]{2}))?(\\.[0-9]+)?(?<z>Z|(?<sign>[+-])(?<h>[0-9]{2}):(?<m>[0-9]{2}))$")] | first)
+  | if . == null then error("not an ISO 8601 time") else . end
+  | ((.d + ":" + (.s // "00") + "Z") | fromdateiso8601)
+    - (if .z == "Z" then 0 else ((.h | tonumber) * 3600 + (.m | tonumber) * 60) * (if .sign == "+" then 1 else -1 end) end);
+def utc: if type == "string" then epoch | todateiso8601 else null end;
+# The latest of a list of times, or null when it holds none.
+def latest: map(select(type == "string")) | if length == 0 then null else max_by(epoch) | utc end;
+def plural($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
+'
+
+# Works out each open issue's progress and affinity inputs from the gathered
+# responses. Takes $config, $now, $host, $viewer, $repository, $issues,
+# $pulls, $merged, $branches, $files, $commit, and $version.
+# shellcheck disable=SC2016
+readonly DERIVE_FILTER="${COMMON_DEFS}"'
+# A branch names issue $n when the number stands alone in it, so
+# feature/412-tags names #412 and not #41.
+def names_issue($n): test("(^|[^0-9])\($n)([^0-9]|$)");
+def stage_rank: {"started": 1, "branch": 2, "draft": 3, "awaiting-review": 4, "needs-author": 5, "ready-to-merge": 6, "close-out": 7}[.];
+def flag_order: ["quiet", "stale", "behind", "conflict", "multiple", "local", "leftover-label"];
+def ordered_flags: unique as $set | [flag_order[] | select(. as $f | $set | index($f))];
+# The stage an open pull request reaches, checked in the order the progress
+# model gives.
+def pr_stage:
+  if .isDraft then "draft"
+  elif .mergeable == "CONFLICTING" or .reviewDecision == "CHANGES_REQUESTED" or (.checks | IN("FAILURE", "ERROR")) then "needs-author"
+  elif .reviewDecision == "REVIEW_REQUIRED" or (.checks | IN("PENDING", "EXPECTED")) then "awaiting-review"
+  else "ready-to-merge" end;
+def pr_next:
+  pr_stage as $stage
+  | if $stage == "draft" then {nextMove: "author", nextAction: "mark it ready for review"}
+    elif $stage == "needs-author" then
+      {nextMove: "author", nextAction: (if .mergeable == "CONFLICTING" then "resolve the conflict" elif .reviewDecision == "CHANGES_REQUESTED" then "answer the review" else "fix the checks" end)}
+    elif $stage == "awaiting-review" then
+      (if .reviewDecision == "REVIEW_REQUIRED" then
+         (if .reviewRequests > 0 then {nextMove: "reviewer", nextAction: "wait for review"} else {nextMove: "nobody", nextAction: "request a review"} end)
+       else {nextMove: "ci", nextAction: "wait for checks"} end)
+    else {nextMove: "author", nextAction: "merge it"} end;
+def pr_signal:
+  "pull request #\(.number), "
+  + (if .isDraft then "draft"
+     else
+       [(if .reviewDecision == "APPROVED" then "approved"
+         elif .reviewDecision == "CHANGES_REQUESTED" then "changes requested"
+         elif .reviewDecision == "REVIEW_REQUIRED" then "review required, \(plural(.reviewRequests; "review"; "reviews")) requested"
+         else "no review required" end),
+        (if .mergeable == "CONFLICTING" then "merge conflict" elif .mergeable == "UNKNOWN" then "mergeability unknown" else empty end),
+        (if .checks == "SUCCESS" then "checks passing"
+         elif .checks | IN("FAILURE", "ERROR") then "checks failing"
+         elif .checks | IN("PENDING", "EXPECTED") then "checks running"
+         else "no checks" end)]
+       | join(", ")
+     end);
+def branch_signal:
+  "branch \(.name), \(plural(.ahead; "commit"; "commits")) ahead"
+  + (if .behind > 0 then ", \(.behind) behind" else "" end)
+  + (if .local and (.remote | not) then ", local" else "" end);
+def in_any($list): ascii_downcase as $l | $list | map(ascii_downcase) | index($l) != null;
+# The pull requests in this repository that link an issue and have merged,
+# through a closing reference, a mention, or a connection. closes says whether
+# the link was a closing one, which a mention is not.
+def merged_links($repo):
+  [(.closedByPullRequestsReferences.nodes | as_list | .[] | . + {closes: true}),
+   (.timelineItems.nodes | as_list | .[]
+    | (if .__typename == "ConnectedEvent" then .subject + {closes: true} else (.source // {}) + {closes: (.willCloseTarget == true)} end)
+    | select(.__typename == "PullRequest"))]
+  | map(select(.mergedAt != null and .repository.nameWithOwner == $repo) | {number, mergedAt: (.mergedAt | utc), closes})
+  | group_by(.number) | map(.[0] + {closes: any(.[]; .closes)});
+
+($now | epoch) as $now_at
+| $repository.nameWithOwner as $repo
+| $repository.defaultBranchRef.name as $default
+# One entry per branch name, joining a local branch and its remote twin.
+| [$branches | group_by(.name)[]
+   | {name: .[0].name,
+      local: any(.[]; .local),
+      remote: any(.[]; .local | not),
+      worktree: any(.[]; .worktree),
+      at: (map(.at) | latest),
+      ahead: ((map(select(.local)) + map(select(.local | not))) | first | .ahead),
+      behind: ((map(select(.local)) + map(select(.local | not))) | first | .behind)}
+   | select(.name != $default)] as $all_branches
+| [$pulls[]
+   | {number, url, headRefName, isDraft, reviewDecision, mergeable, mergeStateStatus,
+      createdAt: (.createdAt | utc), updatedAt: (.updatedAt | utc), author: (.author.login // null),
+      reviewRequests: (.reviewRequests.totalCount // 0),
+      lastReview: (.latestReviews.nodes | as_list | first | .submittedAt // null | utc),
+      checks: ((.commits.nodes | as_list | first | .commit.statusCheckRollup.state) // null),
+      closes: [.closingIssuesReferences.nodes | as_list | .[] | .number]}] as $open_pulls
+| ($config.staleDays * 86400) as $stale_after
+| ($config.quietDays * 86400) as $quiet_after
+| ($config.affinityCommentDays * 86400) as $comment_window
+| [$issues[]
+   | . as $issue
+   | .number as $n
+   | [.labels.nodes | as_list | .[] | .name] as $labels
+   | (first($labels[] | select(in_any($config.progressLabels))) // null) as $progress_label
+   | (first($labels[] | select(in_any($config.claimLabels))) // null) as $claim_label
+   | [$all_branches[] | select(.name | names_issue($n)) | select(.ahead > 0 or .worktree)] as $branches_here
+   | [$open_pulls[] | select((.closes | index($n)) or (.headRefName | names_issue($n)))] as $prs
+   | merged_links($repo) as $merged_links
+   # A merged pull request that only mentions an issue counts while a progress
+   # label says work on it was under way. Without one, a mention is usually a
+   # follow-up the pull request left open, not finished work.
+   | [$merged_links[] | select(.closes or $progress_label != null)] as $merged_here
+   # A pull request and its own head branch carry the issue once.
+   | [$branches_here[] | select(.name as $b | $prs | any(.headRefName == $b) | not)] as $free_branches
+   | (if $progress_label != null then [{label: $progress_label}] else [] end) as $label_carrier
+   | (if ($merged_here | length) > 0 then
+        ($merged_here | max_by(.mergedAt | epoch)) as $m
+        | {stage: "close-out", carrier: {pr: $m.number},
+           signal: "pull request #\($m.number) merged \($m.mergedAt[0:10])",
+           lastActivity: $m.mergedAt, since: $m.mergedAt,
+           nextMove: "author", nextAction: "close or split",
+           flags: (if $progress_label != null then ["leftover-label"] else [] end),
+           host: null,
+           extraCarriers: ([$merged_here[] | select(.number != $m.number) | {pr: .number}]
+                           + [$prs[] | {pr: .number}] + [$free_branches[] | {branch: .name}] + $label_carrier)}
+      elif ($prs | length) > 0 then
+        ($prs | sort_by([(pr_stage | stage_rank), (.updatedAt | epoch)]) | last) as $p
+        | (first($branches_here[] | select(.name == $p.headRefName)) // null) as $head
+        | {stage: ($p | pr_stage), carrier: {pr: $p.number},
+           signal: ($p | pr_signal),
+           lastActivity: ([$p.updatedAt, $p.lastReview, ($head | if . == null then null else .at end)] | latest),
+           since: $p.createdAt}
+          + ($p | pr_next)
+          + {flags: ([(select($p.mergeable == "CONFLICTING") | "conflict"),
+                      (select($p.mergeStateStatus == "BEHIND" or (($head // {}).behind // 0) > 0) | "behind"),
+                      (select((($prs | length) + ($free_branches | length)) > 1) | "multiple")]),
+             host: null,
+             extraCarriers: ([$prs[] | select(.number != $p.number) | {pr: .number}] + [$free_branches[] | {branch: .name}] + $label_carrier)}
+      elif ($branches_here | length) > 0 then
+        ($branches_here | max_by(.at | epoch)) as $b
+        | ($b.local and ($b.remote | not)) as $local_only
+        | {stage: "branch", carrier: {branch: $b.name},
+           signal: ($b | branch_signal),
+           lastActivity: $b.at, since: null,
+           nextMove: "author", nextAction: (if $local_only then "push it" else "open a pull request" end),
+           flags: ([(select($b.behind > 0) | "behind"), (select(($branches_here | length) > 1) | "multiple"), (select($local_only) | "local")]),
+           host: (if $local_only then $host else null end),
+           extraCarriers: ([$branches_here[] | select(.name != $b.name) | {branch: .name}] + $label_carrier)}
+      elif $progress_label != null then
+        {stage: "started", carrier: {label: $progress_label},
+         signal: "the \($progress_label) label",
+         lastActivity: ($issue.updatedAt | utc), since: null,
+         nextMove: "author", nextAction: "open a branch",
+         flags: [], host: null, extraCarriers: []}
+      else null end) as $progress
+   | ($progress
+      | if . == null then null
+        else
+          ($now_at - (.lastActivity | epoch)) as $age
+          | if $age > $stale_after then .flags += ["stale"] | .nextAction = "resume or drop"
+            elif $age > $quiet_after then .flags += ["quiet"]
+            else . end
+          | .flags |= ordered_flags
+          | {stage, carrier, signal, lastActivity, since, nextMove, nextAction, flags, host, extraCarriers}
+        end) as $progress
+   | [.assignees.nodes | as_list | .[] | .login] as $assignees
+   | {number: $n,
+      title: .title,
+      url: .url,
+      body: (.body // ""),
+      milestone: (.milestone.title // null),
+      labels: $labels,
+      assignees: $assignees,
+      author: (.author.login // "ghost"),
+      createdAt: (.createdAt | utc),
+      updatedAt: (.updatedAt | utc),
+      progress: $progress,
+      mergedLinks: $merged_links,
+      affinityInputs: {
+        assignees: $assignees,
+        claimLabel: $claim_label,
+        filed: ((.author.login // null) == $viewer),
+        author: (.author.login // "ghost"),
+        commented: any(.comments.nodes | as_list | .[]; (.author.login // null) == $viewer and ($now_at - (.createdAt | epoch)) <= $comment_window)
+      },
+      truncated: [(select(.labels.pageInfo.hasNextPage == true) | "labels"), (select(.assignees.pageInfo.hasNextPage == true) | "assignees")]}
+  ] as $derived
+# Uniformity: a signal kind one owner holds on most open issues tells none of
+# them apart, so it is dropped for the whole repository.
+| ($derived | length) as $total
+| def dominant($owners): [$owners | group_by(.)[] | length] | max // 0;
+  def uniform($count): $total >= $config.uniformityMinimum and $count >= $config.uniformityShare * $total;
+  [(select(uniform(dominant([$derived[] | .affinityInputs.assignees | unique[]]))) | "assigned"),
+   (select(uniform(dominant([$derived[] | .affinityInputs | select(.claimLabel != null) | if (.assignees | length) > 0 then (.assignees | unique[]) else "unknown" end]))) | "claimed"),
+   (select(uniform(dominant([$derived[] | .affinityInputs.author]))) | "filed"),
+   (select(uniform([$derived[] | select(.affinityInputs.commented)] | length)) | "commented")] as $ignored
+| {
+    version: $version,
+    gatheredAt: $now,
+    repo: $repo,
+    repoUrl: $repository.url,
+    defaultBranch: $default,
+    commit: $commit,
+    viewer: $viewer,
+    host: $host,
+    config: $config,
+    issues: [$derived[] | del(.truncated)],
+    viewerFiles: $files,
+    affinityIgnored: $ignored,
+    warnings: [$derived[] | select(.truncated | length > 0) | "#\(.number): GitHub cut its \(.truncated | join(" and ")) short"]
+  }
+'
+
+# Checks analysis data against a gather. Takes $gather and the data as input;
+# emits one line per problem.
+# shellcheck disable=SC2016
+readonly FINISH_CHECK_FILTER='
+def is_text: type == "string" and test("\\S");
+def is_int: type == "number" and . == floor;
+def as_list: if type == "array" then . else [] end;
+def duplicates: group_by(.) | map(select(length > 1) | .[0]) | .[];
+
+if type != "object" then "the board data must be a JSON object"
+elif (.issues | type) != "array" then "issues: expected the list of open issues"
+else
+  . as $d
+  | [$d.issues[] | objects | .number | select(is_int)] as $numbers
+  | [$gather.issues[] | .number] as $open
+  | [$d.areas | as_list | .[] | objects | .name | select(is_text)] as $area_names
+  # These are derived from the gather, so analysis data that carries one would
+  # be overwritten without a word.
+  | ((("schemaVersion", "affinityIgnored") | . as $k | select($d | has($k)) | "\(.): derived by backlog-gather finish; leave it out of the analysis data"),
+     (select(($d.contention | type) == "object" and ($d.contention | has("claims"))) | "contention.claims: derived from the areas the issues list; leave it out of the analysis data"),
+     ($d.issues | to_entries[] | .key as $i | .value
+      | if (type != "object") or ((.number | is_int) | not) then "issues[\($i)]: expected an object with an issue number"
+        else
+          "#\(.number)" as $at
+          | ((("progress", "affinity", "inProgress") as $field | select(has($field)) | "\($at): \($field) is derived by backlog-gather finish; leave it out of the analysis data"),
+             (if .areas == null then empty
+              elif (.areas | type == "array" and all(.[]; is_text)) | not then "\($at): areas must be a list of area names"
+              else (.areas[] | select(. as $a | $area_names | index($a) | not) | "\($at) lists the area \(.), which is not in areas"),
+                   (.areas | duplicates | "\($at) lists the area \(.) more than once")
+              end))
+        end),
+     (if ($d.areas | type) != "array" then "areas: expected a list of areas, empty when no issue names one"
+      else
+        ($d.areas | to_entries[] | .key as $i | .value
+         | if type != "object" or ((.name | is_text) | not) then "areas[\($i)]: expected an object with a name"
+           else
+             "area \(.name)" as $at
+             | (if (.paths | type == "array" and length > 0 and all(.[]; is_text)) | not then "\($at): paths must be a non-empty list of path patterns" else empty end),
+               (if .query == null or (.query | is_text) then empty else "\($at): query must be text" end)
+           end),
+        ($area_names | duplicates | "areas: \(.) is listed more than once")
+      end),
+     ($numbers | duplicates | "issues: #\(.) appears more than once"),
+     ($open - $numbers | .[] | "#\(.) is open but missing from the board data"),
+     ($numbers - $open | .[] | "#\(.) is in the board data but is not an open issue in the gather"))
+end
+'
+
+# Adds the derived fields to analysis data that passed the check. Takes
+# $gather and the data as input.
+# shellcheck disable=SC2016
+readonly FINISH_FILTER="${COMMON_DEFS}"'
+# A path pattern as an anchored regular expression. ** crosses path segments,
+# **/ also matches no segment at all, * and ? stay within one, a trailing /
+# covers everything below it, and every other character is literal.
+def glob_regex:
+  (if endswith("/") then . + "**" else . end)
+  | [scan("\\*\\*/|\\*\\*|\\*|\\?|[^*?]")]
+  | map(if . == "**/" then "(.*/)?"
+        elif . == "**" then ".*"
+        elif . == "*" then "[^/]*"
+        elif . == "?" then "[^/]"
+        else gsub("(?<c>[.+()\\[\\]{}^$|\\\\])"; "\\\(.c)") end)
+  | "^" + join("") + "$";
+
+. as $d
+| $gather.viewer as $viewer
+| $gather.config as $config
+| ($d.areas | map({key: .name, value: (.paths | map(glob_regex))}) | from_entries) as $regexes
+| ($gather.issues | map({key: (.number | tostring), value: .}) | from_entries) as $gathered
+| def hits($area; $files): $regexes[$area] as $res | [$files[] | select(.path as $p | any($res[]; . as $re | $p | test($re)))];
+  # The first file each area of an issue covers, as one reason per area.
+  # template reads [area, file] and writes the reason.
+  def area_reasons($issue; $files; template):
+    [$issue.areas | as_list | .[] | . as $area | hits($area; $files) | first | select(. != null) | [$area, .] | template];
+  [$d.issues[]
+   | . as $issue
+   | {number,
+      active: area_reasons($issue; $gather.viewerFiles.active; "\(.[0]) changed on \(.[1].via)"),
+      recent: area_reasons($issue; $gather.viewerFiles.recent; "\(.[0]) changed in \(.[1].via) within \($config.affinityWorkDays) days")}] as $implicit
+| ($d.issues | length) as $total
+| def uniform($count): $total >= $config.uniformityMinimum and $count >= $config.uniformityShare * $total;
+  ($gather.affinityIgnored
+   + [(select(uniform([$implicit[] | select(.active | length > 0)] | length)) | "active"),
+      (select(uniform([$implicit[] | select(.recent | length > 0)] | length)) | "recent")]) as $ignored
+| def on($kind): $ignored | index($kind) | not;
+  ($implicit | map({key: (.number | tostring), value: .}) | from_entries) as $implicit_by
+| def affinity_of($n):
+    $gathered[$n | tostring].affinityInputs as $in
+    | $implicit_by[$n | tostring] as $imp
+    | ($in.assignees | index($viewer) != null) as $assigned_you
+    | ($in.assignees | map(select(. != $viewer)) | first) as $other
+    | (if $in.claimLabel != null and on("claimed") then "claimed with the \($in.claimLabel) label" else null end) as $claim
+    | [(select(on("active") and ($imp.active | length) > 0) | {tier: 1, reasons: $imp.active}),
+       (select(on("recent") and ($imp.recent | length) > 0) | {tier: 2, reasons: $imp.recent}),
+       (select(on("filed") and $in.filed) | {tier: 3, reasons: ["filed it"]}),
+       (select(on("commented") and $in.commented) | {tier: 3, reasons: ["commented within \($config.affinityCommentDays) days"]})] as $tiers
+    | if on("assigned") and $assigned_you then {owner: "you", kind: "explicit", tier: null, reasons: (["assigned"] + [$claim | select(. != null)])}
+      elif on("assigned") and $other != null then {owner: $other, kind: "explicit", tier: null, reasons: ["assigned to @\($other)"]}
+      elif $claim != null and $assigned_you then {owner: "you", kind: "explicit", tier: null, reasons: [$claim]}
+      elif $claim != null and $other != null then {owner: $other, kind: "explicit", tier: null, reasons: ["\($claim), assigned to @\($other)"]}
+      elif ($tiers | length) > 0 then {owner: "you", kind: "implicit", tier: ($tiers | map(.tier) | min), reasons: [$tiers[] | .reasons[]]}
+      elif $claim != null then {owner: "unknown", kind: "explicit", tier: null, reasons: [$claim]}
+      else {owner: null, kind: null, tier: null, reasons: []} end;
+  # Every area two or more issues list is a claim on it, in the order of the
+  # areas, with its issues in the order of the board.
+  [$d.areas[] | . as $area
+   | [$d.issues[] | select(.areas | as_list | index($area.name)) | .number] as $claimed
+   | select(($claimed | length) >= 2)
+   | {name: $area.name, issues: $claimed} + (if $area.query != null then {query: $area.query} else {} end)] as $claims
+| {schemaVersion: 2}
+  + $d
+  + {issues: [$d.issues[] | . + {progress: $gathered[.number | tostring].progress, affinity: affinity_of(.number)}],
+     affinityIgnored: [("assigned", "claimed", "filed", "commented", "active", "recent") | select(. as $k | $ignored | index($k))]}
+  + (if ($claims | length) > 0 or $d.contention != null then {contention: (($d.contention // {}) + {claims: $claims})} else {} end)
+'
+
+function usage() {
+  cat << 'USAGE'
+Usage:
+  backlog-gather gather REPO OUTPUT
+  backlog-gather finish GATHER DATA OUTPUT
+
+REPO is OWNER/NAME. gather runs inside a checkout whose origin is REPO, after
+the board fetches, and reads a config, when one exists, from
+${XDG_CONFIG_HOME:-$HOME/.config}/report-boards/backlog-triage/github.com/OWNER/NAME.json.
+
+gather reads the open issues and pull requests from GitHub, and the branches
+and recent commits from the checkout, and writes each issue's progress stage
+and affinity signals to OUTPUT.
+
+finish adds progress, affinity, the ignored affinity signals, and the
+contention claims derived from areas to the analysis data in DATA, and writes
+the board data to OUTPUT for report-board.
+USAGE
+}
+
+function die() {
+  local exit_code="${1}"
+  shift
+  printf '%s: %s\n' "${SCRIPT_NAME}" "$*" >&2
+  exit "${exit_code}"
+}
+
+function usage_error() {
+  printf '%s: %s\n\n' "${SCRIPT_NAME}" "${1}" >&2
+  usage >&2
+  exit "${E_USAGE}"
+}
+
+function require_tools() {
+  local tool
+  for tool in "$@"; do
+    command -v "${tool}" > /dev/null 2>&1 || die "${E_USAGE}" "${tool} is required but not found"
+  done
+}
+
+function cleanup() {
+  if [[ -n "${TEMP_DIR}" && -d "${TEMP_DIR}" ]]; then
+    rm -rf -- "${TEMP_DIR}"
+  fi
+}
+
+function make_temp_dir() {
+  trap cleanup EXIT
+  TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/backlog-gather.XXXXXX")" || die "${E_INVALID}" "cannot create a temporary directory"
+}
+
+function require_json_file() {
+  local path="${1}"
+  [[ -f "${path}" && -r "${path}" ]] || die "${E_INVALID}" "cannot read ${path}"
+  jq -e -s 'length == 1 and (.[0] | type == "object")' "${path}" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "${path} must hold exactly one JSON object"
+}
+
+function require_output_dir() {
+  local directory
+  directory="$(dirname -- "${1}")"
+  [[ -d "${directory}" ]] || die "${E_INVALID}" "directory ${directory} does not exist"
+}
+
+# Sets CONFIG to the normalized config for OWNER/NAME, or exits listing its
+# problems. A repository with no config file gets the defaults. It sets a
+# global rather than printing, because a command substitution would run it
+# with errexit off and carry on past a failed check.
+function load_config() {
+  local repo="${1}"
+  local path result
+  [[ "${repo}" =~ ${REPO_PATTERN} && ! "${repo}" =~ ${DOT_SEGMENT_PATTERN} ]] \
+    || die "${E_INVALID}" "expected OWNER/NAME, not ${repo}"
+  path="${XDG_CONFIG_HOME:-${HOME}/.config}/report-boards/backlog-triage/${GITHUB_HOST}/${repo}.json"
+  if [[ -f "${path}" ]]; then
+    require_json_file "${path}"
+    result="$(jq -c --arg repo "${repo}" "${CONFIG_FILTER}" "${path}")"
+  else
+    path="the default config"
+    result="$(jq -n -c --arg repo "${repo}" "{} | ${CONFIG_FILTER}")"
+  fi
+  if [[ "$(jq '.problems | length' <<< "${result}")" -gt 0 ]]; then
+    printf '%s: %s is not a valid backlog config:\n' "${SCRIPT_NAME}" "${path}" >&2
+    jq -r '.problems[]' <<< "${result}" | sed 's/^/  - /' >&2
+    exit "${E_INVALID}"
+  fi
+  CONFIG="$(jq -c '.config' <<< "${result}")"
+}
+
+function config_field() {
+  jq -r "${2}" <<< "${1}"
+}
+
+# Prints the current time as ISO 8601 UTC, or BACKLOG_GATHER_NOW when it is
+# set.
+function utc_now() {
+  printf '%s' "${BACKLOG_GATHER_NOW:-$(date -u '+%Y-%m-%dT%H:%M:%SZ')}"
+}
+
+# Replaces a file in one step, so an interrupted write leaves the previous
+# version in place.
+function write_atomic() {
+  local target="${1}"
+  local source_file="${2}"
+  local target_dir temp_file
+  target_dir="$(dirname -- "${target}")"
+  [[ -d "${target_dir}" ]] || die "${E_INVALID}" "directory ${target_dir} does not exist"
+  temp_file="$(mktemp "${target_dir}/.backlog-gather.XXXXXX")" || die "${E_INVALID}" "cannot write to ${target_dir}"
+  if ! { cat -- "${source_file}" > "${temp_file}" && mv -- "${temp_file}" "${target}"; }; then
+    rm -f -- "${temp_file}"
+    die "${E_INVALID}" "cannot write ${target}"
+  fi
+}
+
+# Starts a command in the background with its output in TEMP_DIR/NAME.json
+# and its errors in TEMP_DIR/NAME.err.
+function start_job() {
+  local name="${1}"
+  shift
+  "$@" > "${TEMP_DIR}/${name}.json" 2> "${TEMP_DIR}/${name}.err" &
+  JOB_PIDS+=("$!")
+  JOB_NAMES+=("${name}")
+}
+
+# Waits for every started job and exits, showing each failure, if any failed.
+function wait_jobs() {
+  local index failed=0
+  for ((index = 0; index < ${#JOB_PIDS[@]}; index++)); do
+    if ! wait "${JOB_PIDS[${index}]}"; then
+      printf '%s: %s failed:\n' "${SCRIPT_NAME}" "${JOB_NAMES[${index}]}" >&2
+      sed 's/^/  /' "${TEMP_DIR}/${JOB_NAMES[${index}]}.err" >&2
+      failed=1
+    fi
+  done
+  JOB_PIDS=()
+  JOB_NAMES=()
+  ((failed == 0)) || exit "${E_INVALID}"
+}
+
+function github_query() {
+  local query="${1}"
+  local repo="${2}"
+  gh api graphql -F "query=@${QUERY_DIR}/${query}.graphql" -f "owner=${repo%%/*}" -f "name=${repo#*/}"
+}
+
+function github_pages() {
+  local query="${1}"
+  local repo="${2}"
+  gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/${query}.graphql" -f "owner=${repo%%/*}" -f "name=${repo#*/}"
+}
+
+function github_search() {
+  local search="${1}"
+  gh api graphql --paginate --slurp -F "query=@${QUERY_DIR}/merged.graphql" -f "q=${search}"
+}
+
+# Succeeds when the checkout's origin is the repository, over https or ssh,
+# with or without .git, compared without regard to case as GitHub does.
+function origin_is() {
+  local repo="${1}"
+  local url
+  url="$(git remote get-url origin 2> /dev/null)" || return 1
+  url="${url%.git}"
+  url="${url%/}"
+  [[ "$(printf '%s' "${url}" | tr '[:upper:]' '[:lower:]')" == *[:/]"$(printf '%s' "${repo}" | tr '[:upper:]' '[:lower:]')" ]]
+}
+
+# Writes TEMP_DIR/branches.json, one entry per local branch and origin branch,
+# and TEMP_DIR/active.tsv, the files the viewer changed on open branches. A
+# branch with no commits beyond the default branch carries no unmerged work,
+# so it counts only while a worktree has it checked out.
+function gather_branches() {
+  local default="${1}"
+  local email="${2}"
+  local ref at author name is_local counts behind ahead worktree path
+  local base="refs/remotes/origin/${default}"
+  : > "${TEMP_DIR}/branches.tsv"
+  : > "${TEMP_DIR}/active.tsv"
+  git worktree list --porcelain | sed -n 's/^branch refs\/heads\///p' > "${TEMP_DIR}/worktrees.txt"
+  while IFS="${FIELD_SEPARATOR}" read -r ref at author; do
+    case "${ref}" in
+      refs/heads/*)
+        name="${ref#refs/heads/}"
+        is_local=true
+        ;;
+      refs/remotes/origin/*)
+        name="${ref#refs/remotes/origin/}"
+        is_local=false
+        ;;
+      *) continue ;;
+    esac
+    [[ "${name}" != "HEAD" && "${name}" != "${default}" ]] || continue
+    counts="$(git rev-list --left-right --count "${base}...${ref}")" || die "${E_INVALID}" "cannot compare ${ref} with ${base}"
+    behind="${counts%%[[:space:]]*}"
+    ahead="${counts##*[[:space:]]}"
+    worktree=false
+    if [[ "${is_local}" == true ]] && grep -qxF -- "${name}" "${TEMP_DIR}/worktrees.txt"; then
+      worktree=true
+    fi
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "${name}" "${is_local}" "${worktree}" "${at}" "${ahead}" "${behind}" >> "${TEMP_DIR}/branches.tsv"
+    # Every local branch is the viewer's own work; an origin branch is when
+    # its last commit is.
+    if [[ "${ahead}" -gt 0 ]] && [[ "${is_local}" == true || (-n "${email}" && "$(printf '%s' "${author}" | tr '[:upper:]' '[:lower:]')" == "<$(printf '%s' "${email}" | tr '[:upper:]' '[:lower:]')>") ]]; then
+      while IFS= read -r path; do
+        [[ -n "${path}" ]] && printf '%s\tbranch %s\n' "${path}" "${name}" >> "${TEMP_DIR}/active.tsv"
+      done < <(git diff --name-only "${base}...${ref}")
+    fi
+  done < <(git for-each-ref --format="%(refname)${FIELD_SEPARATOR}%(committerdate:iso-strict)${FIELD_SEPARATOR}%(authoremail)" refs/heads refs/remotes/origin)
+  jq -R -s 'split("\n") | map(select(length > 0) | split("\t") | {name: .[0], local: (.[1] == "true"), worktree: (.[2] == "true"), at: .[3], ahead: (.[4] | tonumber), behind: (.[5] | tonumber)})' \
+    "${TEMP_DIR}/branches.tsv" > "${TEMP_DIR}/branches.json"
+}
+
+# Writes TEMP_DIR/recent.tsv, the files in the viewer's commits on any local
+# or origin branch since SINCE, as path, commit, and time.
+function gather_commits() {
+  local email="${1}"
+  local since="${2}"
+  local line commit="" at=""
+  : > "${TEMP_DIR}/recent.tsv"
+  [[ -n "${email}" ]] || return 0
+  while IFS= read -r line; do
+    if [[ "${line}" == $'\x01'* ]]; then
+      line="${line#$'\x01'}"
+      commit="${line%%"${FIELD_SEPARATOR}"*}"
+      at="${line#*"${FIELD_SEPARATOR}"}"
+    elif [[ -n "${line}" ]]; then
+      printf '%s\tcommit %s\t%s\n' "${line}" "${commit}" "${at}" >> "${TEMP_DIR}/recent.tsv"
+    fi
+  done < <(git log --branches --remotes=origin --no-merges --fixed-strings --author="${email}" --since="${since}" \
+    --format="%x01%h${FIELD_SEPARATOR}%cI" --name-only)
+}
+
+function cmd_gather() {
+  [[ $# -eq 2 ]] || usage_error "gather takes a repository and an output path"
+  local repo="${1}"
+  local output_file="${2}"
+  local config now host since viewer default commit email
+  require_tools jq gh git
+  load_config "${repo}"
+  config="${CONFIG}"
+  require_output_dir "${output_file}"
+  git rev-parse --is-inside-work-tree > /dev/null 2>&1 || die "${E_INVALID}" "run gather inside a checkout of ${repo}"
+  origin_is "${repo}" || die "${E_INVALID}" "the origin of this checkout is not ${repo}"
+
+  now="$(utc_now)"
+  since="$(jq -n -r --arg now "${now}" --argjson days "$(config_field "${config}" '.affinityWorkDays')" \
+    '$now | fromdateiso8601 - $days * 86400 | todateiso8601')" \
+    || die "${E_INVALID}" "BACKLOG_GATHER_NOW must be an ISO 8601 UTC time, such as 2026-10-06T12:00:00Z"
+  host="${BACKLOG_GATHER_HOST:-$(hostname -s)}"
+  make_temp_dir
+
+  github_query repository "${repo}" > "${TEMP_DIR}/repository.json" 2> "${TEMP_DIR}/repository.err" || {
+    printf '%s: cannot read the repository %s:\n' "${SCRIPT_NAME}" "${repo}" >&2
+    sed 's/^/  /' "${TEMP_DIR}/repository.err" >&2
+    exit "${E_INVALID}"
+  }
+  jq -e '.data.repository != null and .data.viewer.login != null' "${TEMP_DIR}/repository.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "cannot read the repository ${repo}"
+  [[ "$(jq -r '.data.repository.isArchived' "${TEMP_DIR}/repository.json")" != true ]] \
+    || die "${E_INVALID}" "${repo} is archived; its backlog cannot change, so there is nothing to sync"
+  viewer="$(jq -r '.data.viewer.login' "${TEMP_DIR}/repository.json")"
+  default="$(jq -r '.data.repository.defaultBranchRef.name // empty' "${TEMP_DIR}/repository.json")"
+  [[ -n "${default}" ]] || die "${E_INVALID}" "${repo} has no default branch"
+  commit="$(git rev-parse --verify --quiet "refs/remotes/origin/${default}^{commit}")" \
+    || die "${E_INVALID}" "origin/${default} is missing; run git fetch --prune origin first"
+
+  start_job issues github_pages issues "${repo}"
+  start_job pulls github_pages pulls "${repo}"
+  start_job merged github_search "repo:${repo} is:pr is:merged author:${viewer} merged:>=${since:0:10}"
+
+  email="$(git config user.email || true)"
+  gather_branches "${default}" "${email}"
+  gather_commits "${email}" "${since}"
+  wait_jobs
+
+  # Every open issue and pull request must arrive, or one would vanish from
+  # the board without a word.
+  jq -e 'all(.[]; .data.repository.issues.nodes | type == "array")' "${TEMP_DIR}/issues.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "the open issues came back without a list, so the board cannot be trusted"
+  jq -e 'all(.[]; .data.repository.pullRequests.nodes | type == "array")' "${TEMP_DIR}/pulls.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "the open pull requests came back without a list, so the board cannot be trusted"
+  jq -e 'all(.[]; .data.search.issueCount | type == "number")' "${TEMP_DIR}/merged.json" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "the search for your merged pull requests came back without a result count"
+
+  # The viewer's files: changed on open branches and open pull requests, and
+  # in recent commits and merged pull requests.
+  jq -n -R --arg viewer "${viewer}" --slurpfile pulls "${TEMP_DIR}/pulls.json" --slurpfile merged "${TEMP_DIR}/merged.json" \
+    --rawfile active "${TEMP_DIR}/active.tsv" --rawfile recent "${TEMP_DIR}/recent.tsv" "${COMMON_DEFS}"'
+    def rows($text): $text | split("\n") | map(select(length > 0) | split("\t"));
+    {
+      active: ([rows($active)[] | {path: .[0], via: .[1]}]
+               + [$pulls[0][] | .data.repository.pullRequests.nodes[] | select(.author.login == $viewer) | .number as $n | .files.nodes | as_list | .[] | {path, via: "pull request #\($n)"}])
+              | unique_by([.path, .via]),
+      recent: ([rows($recent)[] | {path: .[0], via: .[1], at: (.[2] | utc)}]
+               + [$merged[0][] | .data.search.nodes[] | select(.__typename == "PullRequest") | .number as $n | .mergedAt as $at | .files.nodes | as_list | .[] | {path, via: "pull request #\($n)", at: ($at | utc)}])
+              | unique_by([.path, .via, .at])
+    }' > "${TEMP_DIR}/files.json"
+
+  jq -n --argjson config "${config}" --arg now "${now}" --arg host "${host}" --arg viewer "${viewer}" \
+    --arg commit "${commit}" --argjson version "${GATHER_VERSION}" \
+    --slurpfile repository "${TEMP_DIR}/repository.json" \
+    --slurpfile issues "${TEMP_DIR}/issues.json" \
+    --slurpfile pulls "${TEMP_DIR}/pulls.json" \
+    --slurpfile merged "${TEMP_DIR}/merged.json" \
+    --slurpfile branches "${TEMP_DIR}/branches.json" \
+    --slurpfile files "${TEMP_DIR}/files.json" \
+    "\$repository[0].data.repository as \$repository
+     | [\$issues[0][] | .data.repository.issues.nodes[]] as \$issues
+     | [\$pulls[0][] | .data.repository.pullRequests.nodes[]] as \$pulls
+     | [\$merged[0][] | .data.search.nodes[]] as \$merged
+     | \$branches[0] as \$branches
+     | \$files[0] as \$files
+     | ${DERIVE_FILTER}" > "${TEMP_DIR}/gather.json"
+  write_atomic "${output_file}" "${TEMP_DIR}/gather.json"
+
+  local cut_short
+  cut_short="$(jq -r '.warnings[] | "  - \(.)"' "${output_file}")"
+  if [[ -n "${cut_short}" ]]; then
+    printf '%s: GitHub cut these lists short, so a label or an assignee past the cut is missing:\n%s\n' "${SCRIPT_NAME}" "${cut_short}" >&2
+  fi
+  cut_short="$(jq -r '.[] | .data.repository.pullRequests.nodes[] | select(.files.pageInfo.hasNextPage == true) | "  - pull request #\(.number)"' "${TEMP_DIR}/pulls.json")"
+  if [[ -n "${cut_short}" ]]; then
+    printf '%s: these pull requests change more than 100 files, so affinity reads only the first 100:\n%s\n' "${SCRIPT_NAME}" "${cut_short}" >&2
+  fi
+
+  jq -r '
+    def counted($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
+    def stages: ["started", "branch", "draft", "awaiting-review", "needs-author", "ready-to-merge", "close-out"];
+    [.issues[] | .progress | select(. != null)] as $all
+    | [stages[] as $s | ([$all[] | select(.stage == $s)] | length) as $n | select($n > 0) | "\($n) \($s)"] as $by_stage
+    | ([$all[] | .flags[]] | group_by(.) | map("\(length) \(.[0])")) as $flags
+    | "\(.repo) at \(.defaultBranch) \(.commit[0:8]): \(counted(.issues | length; "open issue"; "open issues")); \(if ($by_stage | length) > 0 then $by_stage | join(", ") else "nothing in progress" end)",
+      "Flags: \(if ($flags | length) > 0 then $flags | join(", ") else "none" end)",
+      "Affinity signals ignored for uniformity: \(if (.affinityIgnored | length) > 0 then .affinityIgnored | join(", ") else "none" end)"
+  ' "${output_file}"
+}
+
+function cmd_finish() {
+  [[ $# -eq 3 ]] || usage_error "finish takes a gather file, the analysis data, and an output path"
+  local gather_file="${1}" data_file="${2}" output_file="${3}" problems
+  require_tools jq
+  require_json_file "${gather_file}"
+  require_json_file "${data_file}"
+  jq -e --argjson version "${GATHER_VERSION}" '.version == $version and (.issues | type == "array") and (.viewerFiles | type == "object")' "${gather_file}" > /dev/null 2>&1 \
+    || die "${E_INVALID}" "${gather_file} is not a backlog-gather gather"
+  require_output_dir "${output_file}"
+  make_temp_dir
+
+  problems="$(jq -r --slurpfile gather "${gather_file}" "\$gather[0] as \$gather | ${FINISH_CHECK_FILTER}" "${data_file}")"
+  if [[ -n "${problems}" ]]; then
+    printf '%s: %s does not fit the gather:\n' "${SCRIPT_NAME}" "${data_file}" >&2
+    printf '%s\n' "${problems}" | sed 's/^/  - /' >&2
+    exit "${E_INVALID}"
+  fi
+  jq --slurpfile gather "${gather_file}" "\$gather[0] as \$gather | ${FINISH_FILTER}" "${data_file}" > "${TEMP_DIR}/board.json"
+  write_atomic "${output_file}" "${TEMP_DIR}/board.json"
+  jq -r '
+    def counted($n; $one; $many): "\($n) \(if $n == 1 then $one else $many end)";
+    [.issues[] | .affinity.owner] as $owners
+    | "\(counted(.issues | length; "issue"; "issues")): \([$owners[] | select(. == "you")] | length) yours, \([$owners[] | select(. != null and . != "you" and . != "unknown")] | length) owned by others, \([$owners[] | select(. == "unknown")] | length) claimed by no one known; \(counted(.contention.claims // [] | length; "claim"; "claims")) derived from areas"
+  ' "${output_file}"
+}
+
+function main() {
+  local command="${1:-}"
+  [[ $# -gt 0 ]] && shift
+
+  case "${command}" in
+    -h | --help | help)
+      usage
+      return 0
+      ;;
+    "") usage_error "a command is required" ;;
+    gather) cmd_gather "$@" ;;
+    finish) cmd_finish "$@" ;;
+    *) usage_error "unknown command: ${command}" ;;
+  esac
+}
+
+main "$@"

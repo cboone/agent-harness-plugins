@@ -42,13 +42,14 @@ Claude Code replaces the plugin-root placeholder with the installed plugin's abs
 
 In the commands below, `REPORT_BOARD` is shorthand for that full **quoted path**.
 
-A `bugs` board also uses `bugs-gather`, which ships beside it and is found the same way, with its own name in place of `report-board`:
+Each board type also has a gather script, which ships beside it and is found the same way, with its own name in place of `report-board`: `backlog-gather` for a `backlog-triage` board and `bugs-gather` for a `bugs` board.
 
 ```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/backlog-gather"
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/bugs-gather"
 ```
 
-Its reference writes that quoted path as `BUGS_GATHER`. Its working files, the gather, the assessments, and the score, sit beside the board data in the same directory; its persistent cache has a directory of its own, which the reference names.
+The board-type references write those quoted paths as `BACKLOG_GATHER` and `BUGS_GATHER`. Both derive each issue's progress and affinity from gathered signals, as `./references/progress-model.md` describes, so the analysis never writes either. Their working files, such as the gather, the analysis, and a bugs board's assessments and score, sit beside the board data in the same directory; the bugs board's persistent cache has a directory of its own, which its reference names.
 
 ### 3. Choose Where the Board Lives
 

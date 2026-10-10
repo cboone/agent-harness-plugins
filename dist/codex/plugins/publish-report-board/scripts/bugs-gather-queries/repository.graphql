@@ -1,5 +1,7 @@
 # The repository a bug board covers: its address, its numeric ID for ZenHub
-# lookups, and the default branch and commit the board records as synced.
+# lookups, the default branch and commit the board records as synced, and its
+# branches, the most recently committed first, for the branch stage of the
+# progress model.
 query ($owner: String!, $name: String!) {
   viewer {
     login
@@ -13,6 +15,19 @@ query ($owner: String!, $name: String!) {
       name
       target {
         oid
+      }
+    }
+    refs(refPrefix: "refs/heads/", first: 100, orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
+      pageInfo {
+        hasNextPage
+      }
+      nodes {
+        name
+        target {
+          ... on Commit {
+            committedDate
+          }
+        }
       }
     }
   }
