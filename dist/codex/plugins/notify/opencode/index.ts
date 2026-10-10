@@ -263,7 +263,7 @@ function summarizeReply(reply: string, limit: number): string {
       text = (parsed as { summary: string }).summary;
     }
   } catch {
-    // Plain-text replies are the common case.
+    // Not JSON: summarize the reply as is.
   }
 
   const units = replyUnits(Array.from(text).slice(0, 20000).join("").split("\n"))
@@ -429,8 +429,7 @@ function displayPath(path: string, bases: string[], limit: number): string {
   return "…" + chars.slice(chars.length - limit + 1).join("");
 }
 
-// Drops a leading cd into the working directory or repository root, which
-// says nothing.
+// Drops a leading cd into the working directory or repository root.
 function stripWorkingCd(command: string, dirs: string[]): string {
   for (const dir of dirs) {
     for (const quoted of [dir, `"${dir}"`, `'${dir}'`]) {

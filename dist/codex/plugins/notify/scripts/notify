@@ -7,9 +7,8 @@
 # and per-harness icon. Titles name the action; the icon names the harness.
 # Events fire detached so the harness is not blocked on user interaction.
 #
-# The script must parse under macOS /bin/bash 3.2, which `env bash` finds when
-# Homebrew is not on PATH. A syntax error exits 2, which Claude Code treats as
-# blocking the hook's event.
+# Must parse under macOS /bin/bash 3.2, what `env bash` finds without Homebrew.
+# A syntax error exits 2, and Claude Code treats exit 2 as blocking the event.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "${0}")"
@@ -364,8 +363,7 @@ function display_path() {
   truncate_from_left "${path}" "${limit}"
 }
 
-# Drops a leading cd into the working directory or repository root, which
-# says nothing.
+# Drops a leading cd into the working directory or repository root.
 function strip_working_cd() {
   local command="${1}"
   local dir prefix
@@ -519,9 +517,8 @@ function do_cc_permission() {
   local first_line="${message%%$'\n'*}"
   message="${message//$'\n'/ }"
 
-  # Interactive sessions send fixed messages; the SDK path names the tool. A
-  # message naming no tool call, such as a sandbox network request, is shown
-  # as is rather than matched against the transcript.
+  # Interactive sessions send fixed messages; the SDK names the tool. Other
+  # messages, such as sandbox network requests, are shown as is.
   local pending="" lookup=true
   case "${first_line}" in
     *"approval for the plan"*) plan=true ;;
