@@ -286,8 +286,8 @@ function summarizeReply(reply: string, limit: number): string {
 
   const cleaned = units.map((u) => ({ ...u, text: u.text.replace(/\s+/g, " ").trim() })).filter((u) => u.text !== "");
   const kept = cleaned.some((u) => !u.status) ? cleaned.filter((u) => !u.status) : cleaned;
-  const sentences = kept.flatMap((u) => {
-    const unit = /[.!?:]$/.test(u.text) ? u.text : `${u.text}.`;
+  const sentences = kept.flatMap((u, i) => {
+    const unit = i < kept.length - 1 && !/[.!?:]$/.test(u.text) ? `${u.text}.` : u.text;
     return (unit.match(/(?:[^.!?]|[.!?]+(?!\s|$))+(?:[.!?]+(?=\s|$))?/g) ?? []).map((s) => s.trimStart()).filter((s) => s !== "");
   });
 
@@ -344,7 +344,7 @@ function extractToolFromPermission(event: { properties: Record<string, unknown> 
 
   if (FILE_TOOLS.has(type)) {
     const path = metadataPreview(props.metadata, rawType) || legacyInputPreview(props, rawType);
-    if (path.trim()) return { name, preview: displayPath(path.trim(), root, BODY_LIMIT) };
+    if (path.trim()) return { name, preview: displayPath(path.trim(), [root, directory], BODY_LIMIT) };
   }
 
   const candidates: string[] = [typeof props.title === "string" ? props.title : "", patternToString(props.pattern), patternToString(props.patterns), metadataPreview(props.metadata, rawType), legacyInputPreview(props, rawType)];
@@ -366,10 +366,12 @@ function extractToolFromPermission(event: { properties: Record<string, unknown> 
 const FILE_TOOLS = new Set(["edit", "write", "read", "notebookedit"]);
 
 // Shows a path relative to the repository root, or under ~, keeping its end.
-function displayPath(path: string, root: string, limit: number): string {
+// git resolves symlinks in the root, so the session directory is tried too.
+function displayPath(path: string, bases: string[], limit: number): string {
   const home = process.env.HOME ?? "";
+  const base = bases.find((b) => b && path.startsWith(`${b}/`));
   let shown = path;
-  if (path.startsWith(`${root}/`)) shown = path.slice(root.length + 1);
+  if (base) shown = path.slice(base.length + 1);
   else if (home && path.startsWith(`${home}/`)) shown = `~/${path.slice(home.length + 1)}`;
   if (shown.length <= limit) return shown;
   if (limit < 1) return "";

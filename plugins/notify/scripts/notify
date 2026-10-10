@@ -53,7 +53,10 @@ def units:
 def sentences:
   units
   | (if any(.[]; .s | not) then map(select(.s | not)) else . end)
-  | map(.t | (if test("[.!?:]$") then . else . + "." end)
+  | length as $n
+  | to_entries
+  | map(.key as $i | .value.t
+      | (if $i < $n - 1 and (test("[.!?:]$") | not) then . + "." else . end)
       | [scan("(?:[^.!?]|[.!?]+(?!\\s|$))+(?:[.!?]+(?=\\s|$))?") | ltrimstr(" ") | select(length > 0)])
   | add // [];
 def summary($limit):
@@ -312,14 +315,19 @@ function tool_name() {
 }
 
 # Shows a path relative to the repository root, or under ~, keeping its end.
+# git resolves symlinks in the root, so the logical working directory is
+# tried too.
 function display_path() {
   local path="${1}"
   local limit="${2}"
-  local root
-  root="$(repo_root)"
-  if [[ "${path}" == "${root}/"* ]]; then
-    path="${path#"${root}/"}"
-  elif [[ "${path}" == "${HOME}/"* ]]; then
+  local base
+  for base in "$(repo_root)" "${PWD}"; do
+    if [[ "${path}" == "${base}/"* ]]; then
+      truncate_from_left "${path#"${base}/"}" "${limit}"
+      return
+    fi
+  done
+  if [[ "${path}" == "${HOME}/"* ]]; then
     path='~'"/${path#"${HOME}/"}"
   fi
   truncate_from_left "${path}" "${limit}"
