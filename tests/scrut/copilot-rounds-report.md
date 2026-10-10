@@ -2,11 +2,11 @@
 
 Tests for `bin/copilot-rounds-report`. Every `gh api graphql` call goes to `tests/fixtures/gh-stub`, which answers with `tests/data/copilot-rounds-report/graphql/copilot-rounds.json`.
 
-The fixture holds two search pages for a search that matched four pull requests. `cboone/tool#1` appears on page one with only its first review and again on page two with all of them, as happens when results shift during pagination, so the report must count it once, from the fuller listing. That listing has four Copilot rounds: one with two new findings (High and Low), a findings-free one, one with a previously missed Medium finding and no inline comments, and an approval, with a human review in between. `client-org/app#7` is approved in one round, in the layout that puts a `## Copilot review overview` heading between the marker and the verdict. `cboone/tool#2` has only a human review and is left out. `client-org/app#8`, whose owner login differs in case from `--client-owner`, has a Medium finding, a review from a deleted account, a findings-free advisory round and a Copilot error notice, which is not a round.
+The fixture holds two search pages for a search that matched four pull requests. `cboone/tool#1` appears on page one with only its first review and again on page two with all of them, as happens when results shift during pagination, so the report must count it once, from the fuller listing. That listing has four Copilot rounds: one with two new findings (High and Low), a findings-free one, one with a previously missed Medium finding and no inline comments, and an approval, with a human review between the first and second rounds. `client-org/app#7` is approved in one round, in the layout that puts a `## Copilot review overview` heading between the marker and the verdict. `cboone/tool#2` has only a human review and is left out. `client-org/app#8`, whose owner login differs in case from `--client-owner`, has a Medium finding, a review from a deleted account, a findings-free advisory round and a Copilot error notice, which is not a round.
 
 ## Setup
 
-`stubbed` runs the script with `gh` answered by the stub, and `report` adds the owners, range and author of the baseline analysis. `variant` writes a copy of the fixture changed by a jq filter, for the cases that `replay` reads with `--input`.
+`stubbed` runs the script with `gh` answered by the stub, and `report` adds the owners, range and author of the baseline analysis. `variant` writes a copy of the fixture changed by a jq filter to `${work}/variant.json`, and `replay` reruns the script with `--input` on that file, whichever case wrote it.
 
 ```scrut {fail_fast: true}
 $ work="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" \
@@ -36,7 +36,7 @@ $ report --client-owner client-org
 
 Pull requests by cboone in cboone, client-org, created from 2026-09-29 to 2026-10-09.
 
-Pull requests matched: 4. With a Copilot review: 3. Copilot notices in place of a review, not counted as rounds: 1.
+Pull requests matched: 4. With a Copilot round: 3. Copilot notices in place of a review, not counted as rounds: 1.
 
 ## Rounds per pull request
 
@@ -71,39 +71,49 @@ $ report | grep -E '^\| (Client|Non-client|All) '
 | All | 3 | 7 | 2 | 2.3 | 4 | 0 | 3 | 1 | 2 | 2 |
 ```
 
-## p90 is the nearest rank
+## Client owners match in any case
 
-With ten pull requests of one to ten rounds, p90 is the ninth value, not the maximum.
+```scrut
+$ report --client-owner CLIENT-ORG | grep '^| Client '
+| Client | 2 | 3 | 1.5 | 1.5 | 2 | 0 | 1 | 0 | 1 | 1 |
+```
+
+## p90 is the nearest rank, and rounds 8 on share a row
+
+With ten pull requests of one to ten rounds, p90 is the ninth value, not the maximum, and the `8+` row holds the six rounds from the eighth on.
 
 ```scrut
 $ variant '.[1].data.search.nodes[0] as $pr
 >   | [range(1; 11) as $n | $pr | .number = 100 + $n | .reviews.nodes = [range($n) as $_ | $pr.reviews.nodes[0]] | .reviews.totalCount = $n] as $prs
 >   | [.[1] | .data.search.nodes = $prs | .data.search.issueCount = 10]' \
->   && replay | grep '^| All '
+>   && replay | grep -E '^\| (All|7|8\+) '
 | All | 10 | 55 | 5.5 | 5.5 | 9 | 6 | 20 | 90 | 0 | 0 |
+| 7 | 4 | 8 | 2.0 | 50% of 8 | 0 |
+| 8+ | 6 | 12 | 2.0 | 50% of 12 | 0 |
 ```
 
 ## Pinned real review bodies
 
-Every Copilot body pinned in `tests/data/copilot-reviews/`, one pull request per file, classifies without a warning: the older "Pull request overview" layouts have no verdict, each later layout yields its verdict, and both notices are left out.
+Every Copilot review pinned in `tests/data/copilot-reviews/format-*.json` and `notice-*.json`, one pull request per file and with as many inline comments as findings it marks new, classifies without a warning: the older "Pull request overview" layouts have no verdict, each later layout yields its verdict, and both notices are left out. The round 1 row pins the severity count on real bodies, which leaves out badges on findings carried over from an earlier round.
 
 ```scrut
 $ jq -n '[inputs as $reviews | {number: 1,
 >     repository: {nameWithOwner: "pinned/\(input_filename | split("/")[-1] | rtrimstr(".json"))", owner: {login: "pinned"}},
->     reviews: {totalCount: ($reviews | length), nodes: [$reviews[] | {author: {login: .user.login}, body, comments: {totalCount: 0}}]}}]
+>     reviews: {totalCount: ($reviews | length), nodes: [$reviews[] | {author: {login: .user.login}, body, comments: {totalCount: ([.body | scan("· New")] | length)}}]}}]
 >   | [{data: {search: {issueCount: length, pageInfo: {hasNextPage: false}, nodes: .}}}]' \
 >   "${COPILOT_REVIEW_DATA_DIR}"/format-*.json "${COPILOT_REVIEW_DATA_DIR}"/notice-*.json > "${work}/variant.json" \
->   && replay 2>&1 | grep -E '^(copilot-rounds-report|Pull requests matched|\| pinned/)' | sort
-Pull requests matched: 12. With a Copilot review: 10. Copilot notices in place of a review, not counted as rounds: 2.
+>   && replay 2>&1 | grep -E '^(copilot-rounds-report|Pull requests matched|\| (1 |pinned/))' | sort
+Pull requests matched: 12. With a Copilot round: 10. Copilot notices in place of a review, not counted as rounds: 2.
+| 1 | 10 | 11 | 1.1 | 40% of 10 | 4 |
 | pinned/format-a#1 | 1 | 0 | none (older layout) |
 | pinned/format-b#1 | 1 | 0 | none (older layout) |
 | pinned/format-c#1 | 1 | 1 | Approval recommended |
 | pinned/format-d#1 | 1 | 0 | Needs a closer look |
-| pinned/format-d-bold-votes#1 | 1 | 0 | Changes recommended |
+| pinned/format-d-bold-votes#1 | 1 | 2 | Changes recommended |
 | pinned/format-d-missed-badges#1 | 1 | 2 | Needs a closer look |
-| pinned/format-d-moderate-labels#1 | 1 | 0 | Changes recommended |
-| pinned/format-d-open-findings-block#1 | 1 | 0 | Changes recommended |
-| pinned/format-d-previously-missed#1 | 2 | 2 | Needs a closer look |
+| pinned/format-d-moderate-labels#1 | 1 | 1 | Changes recommended |
+| pinned/format-d-open-findings-block#1 | 1 | 3 | Changes recommended |
+| pinned/format-d-previously-missed#1 | 2 | 3 | Needs a closer look |
 | pinned/format-d-zero-open-line#1 | 1 | 0 | Needs a closer look |
 ```
 
@@ -146,15 +156,29 @@ copilot-rounds-report: warning: the search matched 5 pull requests but returned 
 ```scrut
 $ variant '.[].data.search.nodes[].reviews |= (.nodes |= map(select(.author.login != "copilot-pull-request-reviewer")) | .totalCount = (.nodes | length))' \
 >   && replay 2>&1 > /dev/null
-copilot-rounds-report: warning: none of the 4 pull requests had a Copilot review
+copilot-rounds-report: warning: none of the 4 pull requests had a Copilot round
 ```
 
-A review whose verdict line cannot be found still counts as a round, with a warning, because it means Copilot changed its layout.
+A review whose verdict line cannot be found still counts as a round, with a warning, since that usually means Copilot changed its layout.
 
 ```scrut
 $ variant '.[0].data.search.nodes[1].reviews.nodes[0].body |= sub("### [^\n]*"; "Approved.")' \
 >   && replay 2>&1 > /dev/null
 copilot-rounds-report: warning: 1 Copilot reviews had no recognizable verdict; check whether the review layout changed
+```
+
+Findings the report cannot count also warn: a previously missed list under another heading, or inline findings with no badge marked new.
+
+```scrut
+$ variant '.[1].data.search.nodes[0].reviews.nodes |= map(.body |= sub("Previously missed"; "Earlier missed"))' \
+>   && replay 2>&1 > /dev/null
+copilot-rounds-report: warning: 1 Copilot rounds list findings or badges the report could not count; check whether the review layout changed
+```
+
+```scrut
+$ variant '.[].data.search.nodes[].reviews.nodes |= map(.body |= gsub("· New"; "(new)"))' \
+>   && replay 2>&1 > /dev/null
+copilot-rounds-report: warning: 2 Copilot rounds list findings or badges the report could not count; check whether the review layout changed
 ```
 
 ## Partial or missing data stops the report
@@ -234,6 +258,41 @@ $ printf '[{"data":' > "${work}/variant.json" && replay > /dev/null 2>&1
 [1]
 ```
 
+```scrut
+$ : > "${work}/variant.json" && replay 2>&1
+copilot-rounds-report: the search response is empty
+[1]
+```
+
+```scrut
+$ cat "${pages}" "${pages}" > "${work}/variant.json" && replay 2>&1
+copilot-rounds-report: expected one JSON document, got 2
+[1]
+```
+
+```scrut
+$ printf '[{"data":"x"}]\n' > "${work}/variant.json" && replay 2>&1
+copilot-rounds-report: expected an array of search pages
+[1]
+```
+
+```scrut
+$ variant '.[1].data.search.nodes[1].reviews = null' && replay 2>&1
+copilot-rounds-report: a search result is missing its repository or reviews
+[1]
+```
+
+A fetched response is saved before it is checked, so a failed search can be inspected.
+
+```scrut
+$ mkdir -p "${work}/errors/graphql" \
+>   && jq '.[1].errors = [{"message": "Something went wrong"}]' "${pages}" > "${work}/errors/graphql/copilot-rounds.json" \
+>   && PATH="${work}/bin:${PATH}" STUB_GH_DIR="${work}/errors" "${COPILOT_ROUNDS_REPORT_BIN}" "${args[@]}" --save "${work}/failed.json" 2>&1; \
+>   jq -r '.[1].errors[0].message' "${work}/failed.json"
+copilot-rounds-report: a search page holds GraphQL errors: Something went wrong
+Something went wrong
+```
+
 ## Argument errors
 
 ```scrut
@@ -275,6 +334,24 @@ copilot-rounds-report: --save and --input cannot be combined
 ```scrut
 $ "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --since 2026-09-29 --input "${work}/missing.json" 2>&1
 copilot-rounds-report: no such input file /*/missing.json (glob)
+[1]
+```
+
+```scrut
+$ "${COPILOT_ROUNDS_REPORT_BIN}" --owner 'cboone client-org' --since 2026-09-29 2>&1
+copilot-rounds-report: an owner must be a single login, got 'cboone client-org'
+[1]
+```
+
+```scrut
+$ "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --author 'cboone is:merged' --since 2026-09-29 2>&1
+copilot-rounds-report: --author must be a single login or @me, got 'cboone is:merged'
+[1]
+```
+
+```scrut
+$ "${COPILOT_ROUNDS_REPORT_BIN}" --owner cboone --since 2026-09-29 --save "${work}/missing/pages.json" 2>&1
+copilot-rounds-report: cannot write the --save file /*/missing/pages.json (glob)
 [1]
 ```
 
