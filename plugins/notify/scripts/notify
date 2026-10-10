@@ -4,8 +4,8 @@
 #
 # Each hook event is a subcommand; reads the hook's JSON payload from stdin
 # and shells out to alerter with per-event title, subtitle, body, sound, group,
-# and per-harness icon. Events fire detached so the harness is not blocked on
-# user interaction.
+# and per-harness icon. Titles name the action; the icon names the harness.
+# Events fire detached so the harness is not blocked on user interaction.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "${0}")"
@@ -14,15 +14,66 @@ ASSETS_DIR="${SCRIPT_DIR}/../assets"
 FOCUS_SCRIPT="${SCRIPT_DIR}/focus-pane"
 readonly SCRIPT_NAME SCRIPT_DIR ASSETS_DIR FOCUS_SCRIPT
 
-# Default content-body length budgets (alerter wraps; macOS truncates around 4 lines).
-readonly BODY_LIMIT_DEFAULT=140
-readonly BODY_LIMIT_ASSISTANT_TAIL=120
-readonly BODY_LIMIT_USER_HEAD=55
-readonly BODY_LIMIT_ASSISTANT_TAIL_PAIRED=60
-readonly BODY_LIMIT_USER_FALLBACK=120
+# Body length budget: a banner shows about two lines, an expanded alert about four.
+readonly BODY_LIMIT=140
 
 # Detached fire-and-forget timeout (24h).
 readonly FIRE_TIMEOUT=86400
+
+# Reduces a reply to plain prose for a banner body. Fenced code, table rows and
+# status lines (a leading ▸, or two or more " · " fields) are dropped unless
+# nothing else remains. Headings, list items and paragraphs become separate
+# sentences. Whole sentences are kept in order within $limit; a sentence that
+# no longer fits is cut at a word boundary when at least 40 characters remain.
+# A JSON object reply with a string `summary` is summarized from that field.
+SUMMARY_JQ="$(
+  cat << 'JQ'
+def cut($n):
+  if length <= $n then . elif $n < 1 then ""
+  else (.[0:$n - 1] | sub("\\s+\\S*$"; "")) + "…" end;
+def inline:
+  gsub("\\[(?<t>[^\\]]*)\\]\\([^)]*\\)"; "\(.t)")
+  | gsub("\\*\\*|__|`"; "")
+  | gsub("(?<![\\w*])\\*(?<t>[^*\\s][^*]*)\\*"; "\(.t)")
+  | sub("^\\s*(#{1,6}|[-*+>▸•]|\\d+\\.)\\s+"; "");
+def is_status: test("^\\s*▸") or ([scan(" · ")] | length) >= 2;
+def flush:
+  if .cur != "" then .out += [{t: .cur, s: false}] | .cur = "" else . end;
+def units:
+  split("\n")
+  | reduce .[] as $l ({fence: false, cur: "", out: []};
+      if ($l | test("^\\s*(```|~~~)")) then flush | .fence = (.fence | not)
+      elif .fence or ($l | test("^\\s*\\|")) then .
+      elif ($l | test("^\\s*$")) then flush
+      elif ($l | is_status) then flush | .out += [{t: ($l | inline), s: true}]
+      elif ($l | test("^\\s*(#{1,6}|[-*+>•]|\\d+\\.)\\s")) then flush | .cur = ($l | inline)
+      else .cur = ((.cur + " " + ($l | inline)) | ltrimstr(" ")) end)
+  | flush | .out
+  | map(.t |= (gsub("\\s+"; " ") | ltrimstr(" ") | rtrimstr(" ")) | select(.t != ""));
+def sentences:
+  units
+  | (if any(.[]; .s | not) then map(select(.s | not)) else . end)
+  | map(.t | (if test("[.!?:]$") then . else . + "." end)
+      | [scan("(?:[^.!?]|[.!?]+(?!\\s|$))+(?:[.!?]+(?=\\s|$))?") | ltrimstr(" ") | select(length > 0)])
+  | add // [];
+def summary($limit):
+  sentences
+  | reduce .[] as $x ({t: "", done: false};
+      if .done then .
+      else (if .t == "" then 0 else 1 end) as $sep
+        | ($limit - (.t | length) - $sep) as $room
+        | (if $sep == 1 then " " else "" end) as $gap
+        | if ($x | length) <= $room then .t += $gap + $x
+          elif .t == "" or $room >= 40 then .t += $gap + ($x | cut($room)) | .done = true
+          else .done = true end
+      end)
+  | .t;
+(try fromjson catch null) as $j
+| (if ($j | type) == "object" and ($j.summary | type) == "string" then $j.summary else . end)
+| summary($limit)
+JQ
+)"
+readonly SUMMARY_JQ
 
 function usage() {
   cat << 'USAGE_TEXT'
@@ -31,11 +82,9 @@ Usage: notify <subcommand>
 Subcommands:
   cc-elicit     Claude Code Notification:elicitation_dialog
   cc-permission Claude Code Notification:permission_prompt
-  cc-compact    Claude Code PreCompact:auto
   cc-stop       Claude Code Stop
   cc-question   Claude Code PreToolUse:AskUserQuestion
   codex-question Codex PreToolUse:request_user_input
-  codex-compact Codex PreCompact:auto
   turn-start    Reset completion deduplication on UserPromptSubmit
   codex-stop    Codex Stop
 
@@ -60,8 +109,46 @@ function truncate_with_ellipsis() {
   printf '%s…' "${text:0:$((limit - 1))}"
 }
 
-function project_name() {
-  basename "${PWD}"
+# Keeps the end of the text, so a long path still shows its file name.
+function truncate_from_left() {
+  local text="${1}"
+  local limit="${2}"
+  if [[ "${#text}" -le "${limit}" ]]; then
+    printf '%s' "${text}"
+    return
+  fi
+  if [[ "${limit}" -lt 1 ]]; then
+    return
+  fi
+  printf '…%s' "${text:$((${#text} - limit + 1))}"
+}
+
+function summarize_reply() {
+  printf '%s' "${1}" | jq -Rrs --argjson limit "${2:-${BODY_LIMIT}}" "${SUMMARY_JQ}" 2> /dev/null || true
+}
+
+function repo_root() {
+  local root
+  root="$(git rev-parse --show-toplevel 2> /dev/null)" || root=""
+  printf '%s' "${root:-${PWD}}"
+}
+
+# Names the repository rather than the worktree folder: worktrees share the
+# primary checkout's git directory, so its parent names the repository.
+function repo_name() {
+  local common name
+  common="$(git rev-parse --path-format=absolute --git-common-dir 2> /dev/null)" || common=""
+  if [[ -z "${common}" ]]; then
+    basename "${PWD}"
+    return
+  fi
+  name="$(basename "${common}")"
+  case "${name}" in
+    .git | .bare) name="$(basename "$(dirname "${common}")")" ;;
+    *.git) name="${name%.git}" ;;
+    *) ;;
+  esac
+  printf '%s' "${name}"
 }
 
 function compute_branch_suffix() {
@@ -74,35 +161,38 @@ function compute_branch_suffix() {
   printf '%s' "${branch}"
 }
 
+# Prints the tmux pane title without leading status glyphs such as Claude
+# Code's ✳ or spinner frames, or nothing when the title names no task.
 function compute_pane_title() {
+  local repo="${1}"
   if [[ -z "${TMUX_PANE:-}" ]]; then
     return 0
   fi
   local title
   title="$(tmux display-message -t "${TMUX_PANE}" -p '#T' 2> /dev/null)" || return 0
-  if [[ -z "${title}" ]]; then
-    return 0
-  fi
+  title="$(printf '%s' "${title}" | jq -Rr 'sub("^[^\\p{L}\\p{N}#(\\[]+"; "") | rtrimstr(" ")' 2> /dev/null)" || return 0
   local cwd_basename
   cwd_basename="$(basename "${PWD}")"
   case "${title}" in
-    "${cwd_basename}" | zsh | bash | fish | sh | tmux | ssh | nvim | vim | "-zsh" | "-bash") return 0 ;;
-    *) printf '%s' "${title}" ;;
+    "" | "${cwd_basename}" | "${repo}" | zsh | bash | fish | sh | tmux | ssh | nvim | vim | "-zsh" | "-bash") return 0 ;;
+    "Claude Code" | Codex | OpenCode) return 0 ;;
+    *) ;;
   esac
+  # A shell's default user@host:path title names no task.
+  if [[ "${title}" =~ ^[^[:space:]@]+@[^[:space:]:]+: ]]; then
+    return 0
+  fi
+  printf '%s' "${title}"
 }
 
 function compute_subtitle() {
-  local project
-  project="$(project_name)"
-  local pane_title
-  pane_title="$(compute_pane_title)"
-  if [[ -n "${pane_title}" ]]; then
-    printf '%s · %s' "${project}" "${pane_title}"
-    return
+  local repo task
+  repo="$(repo_name)"
+  task="$(compute_pane_title "${repo}")"
+  if [[ -z "${task}" ]]; then
+    task="$(compute_branch_suffix)"
   fi
-  local branch_suffix
-  branch_suffix="$(compute_branch_suffix)"
-  printf '%s · %s' "${project}" "${branch_suffix}"
+  printf '%s · %s' "${repo}" "${task}"
 }
 
 function compute_tmux_state() {
@@ -123,7 +213,6 @@ function compute_tmux_state() {
 function extract_last_message_text() {
   local transcript_path="${1}"
   local role="${2}"
-  local limit="${3:-${BODY_LIMIT_DEFAULT}}"
 
   if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
     return 0
@@ -152,7 +241,7 @@ function extract_last_message_text() {
       (.message.content // empty) as $c
       | if ($c | type) == "string" then $c
         elif ($c | type) == "array" then
-          ($c | map(select(.type == "text") | .text) | join(" "))
+          ($c | map(select(.type == "text") | .text) | join("\n"))
         else "" end
     ' 2> /dev/null)" || continue
 
@@ -167,17 +256,7 @@ function extract_last_message_text() {
     fi
   done < <(tac "${transcript_path}" 2> /dev/null || true)
 
-  if [[ -n "${found}" ]]; then
-    truncate_with_ellipsis "${found}" "${limit}"
-  fi
-}
-
-function extract_last_user_message() {
-  extract_last_message_text "${1}" "user" "${2:-${BODY_LIMIT_DEFAULT}}"
-}
-
-function extract_last_assistant_message() {
-  extract_last_message_text "${1}" "assistant" "${2:-${BODY_LIMIT_DEFAULT}}"
+  printf '%s' "${found}"
 }
 
 # Returns JSON {name, input} for the most recent tool_use in any assistant
@@ -232,9 +311,38 @@ function tool_name() {
   printf '%s' "${tool_json}" | jq -r '.name // empty' 2> /dev/null || true
 }
 
+# Shows a path relative to the repository root, or under ~, keeping its end.
+function display_path() {
+  local path="${1}"
+  local limit="${2}"
+  local root
+  root="$(repo_root)"
+  if [[ "${path}" == "${root}/"* ]]; then
+    path="${path#"${root}/"}"
+  elif [[ "${path}" == "${HOME}/"* ]]; then
+    path='~'"/${path#"${HOME}/"}"
+  fi
+  truncate_from_left "${path}" "${limit}"
+}
+
+# Drops a leading cd into the session's own directory, which says nothing.
+function strip_working_cd() {
+  local command="${1}"
+  local dir prefix
+  for dir in "${PWD}" "$(repo_root)"; do
+    for prefix in "cd ${dir} && " "cd ${dir}; " "cd \"${dir}\" && " "cd \"${dir}\"; " "cd '${dir}' && " "cd '${dir}'; "; do
+      if [[ "${command}" == "${prefix}"* ]]; then
+        printf '%s' "${command#"${prefix}"}"
+        return
+      fi
+    done
+  done
+  printf '%s' "${command}"
+}
+
 function tool_preview() {
   local tool_json="${1}"
-  local limit="${2:-${BODY_LIMIT_DEFAULT}}"
+  local limit="${2:-${BODY_LIMIT}}"
   if [[ -z "${tool_json}" ]]; then
     return 0
   fi
@@ -243,12 +351,20 @@ function tool_preview() {
   name="$(tool_name "${tool_json}")"
   local preview=""
   case "${name}" in
-    Bash) preview="$(printf '%s' "${tool_json}" | jq -r '.input.command // empty')" ;;
-    Edit | Write | Read) preview="$(printf '%s' "${tool_json}" | jq -r '.input.file_path // empty')" ;;
+    Bash)
+      preview="$(printf '%s' "${tool_json}" | jq -r '.input.command // empty')"
+      preview="$(strip_working_cd "${preview}")"
+      ;;
+    Edit | Write | Read | NotebookEdit)
+      preview="$(printf '%s' "${tool_json}" | jq -r '.input.file_path // .input.notebook_path // empty')"
+      if [[ -n "${preview}" ]]; then
+        display_path "${preview}" "${limit}"
+      fi
+      return 0
+      ;;
     WebFetch) preview="$(printf '%s' "${tool_json}" | jq -r '.input.url // empty')" ;;
     Grep | Glob) preview="$(printf '%s' "${tool_json}" | jq -r '.input.pattern // empty')" ;;
-    Task) preview="$(printf '%s' "${tool_json}" | jq -r '.input.description // empty')" ;;
-    NotebookEdit) preview="$(printf '%s' "${tool_json}" | jq -r '.input.notebook_path // empty')" ;;
+    Task | Agent) preview="$(printf '%s' "${tool_json}" | jq -r '.input.description // empty')" ;;
     *) preview="" ;;
   esac
 
@@ -257,6 +373,15 @@ function tool_preview() {
     preview="${preview//$'\n'/ }"
     truncate_with_ellipsis "${preview}" "${limit}"
   fi
+}
+
+# Prints the plan's first heading without Markdown, for ExitPlanMode prompts.
+function plan_heading() {
+  printf '%s' "${1}" | jq -r '
+    (.input.plan // "") | split("\n")
+    | map(select(test("^#{1,6}\\s"))) | first // ""
+    | sub("^#{1,6}\\s+"; "") | gsub("\\*\\*|`"; "")
+  ' 2> /dev/null || true
 }
 
 # -----------------------------------------------------------------------------
@@ -334,17 +459,13 @@ function do_cc_idle() {
   input="${HOOK_INPUT}"
   transcript_path="$(printf '%s' "${input}" | jq -r '.transcript_path // empty')"
 
-  local subtitle body
-  subtitle="$(compute_subtitle)"
-  body="$(extract_last_assistant_message "${transcript_path}" "${BODY_LIMIT_ASSISTANT_TAIL}")"
-  if [[ -z "${body}" ]]; then
-    body="Waiting for input"
-  fi
+  local body
+  body="$(summarize_reply "$(extract_last_message_text "${transcript_path}" "assistant")")"
 
   fire_alerter_detached \
-    "Claude Code · Idle" \
-    "${subtitle}" \
-    "${body}" \
+    "Waiting for input" \
+    "$(compute_subtitle)" \
+    "${body:-Waiting for input}" \
     "Tink" \
     "claude-idle" \
     "${ASSETS_DIR}/claude-code.png"
@@ -357,13 +478,13 @@ function do_cc_elicit() {
   subtitle="$(compute_subtitle)"
 
   if [[ -n "${message}" ]]; then
-    body="$(truncate_with_ellipsis "${message//$'\n'/ }" "${BODY_LIMIT_DEFAULT}")"
+    body="$(truncate_with_ellipsis "${message//$'\n'/ }" "${BODY_LIMIT}")"
   else
     body="Needs input"
   fi
 
   fire_alerter_detached \
-    "Claude Code · Question" \
+    "Question" \
     "${subtitle}" \
     "${body}" \
     "Tink" \
@@ -376,31 +497,47 @@ function do_cc_permission() {
   input="${HOOK_INPUT}"
   transcript_path="$(printf '%s' "${input}" | jq -r '.transcript_path // empty')"
 
-  local subtitle base
-  base="$(compute_subtitle)"
-
-  local pending name preview
+  local pending name
   pending="$(get_pending_tool_use "${transcript_path}")"
   name="$(tool_name "${pending}")"
-  preview="$(tool_preview "${pending}" "${BODY_LIMIT_DEFAULT}")"
 
-  if [[ -n "${name}" ]]; then
-    subtitle="${base} · ${name}"
-  else
-    subtitle="${base}"
-  fi
+  local subtitle body
+  case "${name}" in
+    # The PreToolUse question banner already covers this prompt.
+    AskUserQuestion) return 0 ;;
+    ExitPlanMode)
+      body="$(plan_heading "${pending}")"
+      fire_alerter_detached \
+        "Plan ready for review" \
+        "$(compute_subtitle)" \
+        "$(truncate_with_ellipsis "${body:-Review the proposed plan}" "${BODY_LIMIT}")" \
+        "Tink" \
+        "claude-plan" \
+        "${ASSETS_DIR}/claude-code.png"
+      return 0
+      ;;
+    *) ;;
+  esac
+  subtitle="$(compute_subtitle)"
 
-  local body
-  if [[ -n "${preview}" ]]; then
-    body="${preview}"
+  local title="Needs approval"
+  if [[ "${name}" == mcp__*__* ]]; then
+    # mcp__<server>__<tool>: the tool names the action; the server goes below.
+    title="Approve ${name##*__}?"
+    body="$(tool_preview "${pending}" "${BODY_LIMIT}")"
+    local server="${name#mcp__}"
+    body="${body:-${server%__*} MCP tool}"
   elif [[ -n "${name}" ]]; then
-    body="${name}"
-  else
+    title="Approve ${name}?"
+    body="$(tool_preview "${pending}" "${BODY_LIMIT}")"
+  fi
+  if [[ -z "${body:-}" ]]; then
     body="$(printf '%s' "${input}" | jq -r '.message // "Needs permission"')"
+    body="$(truncate_with_ellipsis "${body//$'\n'/ }" "${BODY_LIMIT}")"
   fi
 
   fire_alerter_detached \
-    "Claude Code · Permission" \
+    "${title}" \
     "${subtitle}" \
     "${body}" \
     "Funk" \
@@ -408,88 +545,31 @@ function do_cc_permission() {
     "${ASSETS_DIR}/claude-code.png"
 }
 
-function do_cc_compact() {
-  local subtitle
-  subtitle="$(compute_subtitle)"
-
-  fire_alerter_detached \
-    "Claude Code · Compacting" \
-    "${subtitle}" \
-    "Auto-compacting context" \
-    "Pop" \
-    "claude-compact" \
-    "${ASSETS_DIR}/claude-code.png"
-}
-
-function do_cc_stop() {
-  local input transcript_path
-  input="${HOOK_INPUT}"
-  transcript_path="$(printf '%s' "${input}" | jq -r '.transcript_path // empty')"
-
-  local subtitle
-  subtitle="$(compute_subtitle)"
-
-  local user_msg assistant_tail
-  user_msg="$(extract_last_user_message "${transcript_path}" "${BODY_LIMIT_USER_HEAD}")"
-  # Stop payloads expose the final assistant text directly; only the matching
-  # user message still requires walking the transcript.
-  assistant_tail="$(printf '%s' "${input}" | jq -r '.last_assistant_message // empty')"
-  if [[ -n "${assistant_tail}" ]]; then
-    assistant_tail="${assistant_tail//$'\n'/ }"
-    assistant_tail="$(truncate_with_ellipsis "${assistant_tail}" "${BODY_LIMIT_ASSISTANT_TAIL_PAIRED}")"
+function do_stop() {
+  local icon="${1}"
+  local reply
+  reply="$(printf '%s' "${HOOK_INPUT}" | jq -r '.last_assistant_message // empty')"
+  if [[ -z "${reply}" && "${HARNESS}" == claude ]]; then
+    local transcript_path
+    transcript_path="$(printf '%s' "${HOOK_INPUT}" | jq -r '.transcript_path // empty')"
+    reply="$(extract_last_message_text "${transcript_path}" "assistant")"
   fi
 
   local body
-  if [[ -n "${user_msg}" && -n "${assistant_tail}" ]]; then
-    body="${user_msg} → ${assistant_tail}"
-  elif [[ -n "${user_msg}" ]]; then
-    body="$(extract_last_user_message "${transcript_path}" "${BODY_LIMIT_USER_FALLBACK}")"
-  elif [[ -n "${assistant_tail}" ]]; then
-    body="${assistant_tail}"
-  else
-    body="Task completed"
-  fi
+  body="$(summarize_reply "${reply}")"
 
   fire_alerter_detached \
-    "Claude Code · Done" \
-    "${subtitle}" \
-    "${body}" \
+    "Done" \
+    "$(compute_subtitle)" \
+    "${body:-Task completed}" \
     "Glass" \
-    "claude-stop" \
-    "${ASSETS_DIR}/claude-code.png"
+    "${HARNESS}-stop" \
+    "${ASSETS_DIR}/${icon}.png"
 }
 
 # -----------------------------------------------------------------------------
-# Codex event handlers
+# Shared handlers
 # -----------------------------------------------------------------------------
-
-# Completion is deduplicated until the next user prompt.
-function do_codex_stop() {
-  local input
-  input="${HOOK_INPUT}"
-
-  local subtitle
-  subtitle="$(compute_subtitle)"
-
-  local assistant_tail
-  assistant_tail="$(printf '%s' "${input}" | jq -r '.last_assistant_message // empty')"
-
-  local body
-  if [[ -n "${assistant_tail}" ]]; then
-    assistant_tail="${assistant_tail//$'\n'/ }"
-    body="$(truncate_with_ellipsis "${assistant_tail}" "${BODY_LIMIT_DEFAULT}")"
-  else
-    body="Task completed"
-  fi
-
-  fire_alerter_detached \
-    "Codex · Done" \
-    "${subtitle}" \
-    "${body}" \
-    "Glass" \
-    "codex-stop" \
-    "${ASSETS_DIR}/codex.png"
-}
 
 # Only suppress completion when both the host application and exact pane
 # are visible. Unknown application or tmux state preserves notification delivery.
@@ -511,21 +591,25 @@ function originating_pane_visible() {
   return 1
 }
 
+# Shows the first question; the title counts them when there are several.
 function do_question() {
-  local harness="${1}" icon="${2}" body
-  body="$(printf '%s' "${HOOK_INPUT}" | jq -r '
+  local icon="${1}" questions count first
+  questions="$(printf '%s' "${HOOK_INPUT}" | jq -c '
     (.tool_input // {}) as $input
     | (if ($input | type) == "string" then ($input | fromjson? // {}) else $input end)
-    | [.questions[]?.question] | join(" ")')"
-  body="${body:-Needs input}"
-  fire_alerter_detached "${harness} · Question" "$(compute_subtitle)" \
-    "$(truncate_with_ellipsis "${body//$'\n'/ }" "${BODY_LIMIT_DEFAULT}")" \
-    "Tink" "${HARNESS}-question" "${ASSETS_DIR}/${icon}.png"
-}
+    | [.questions[]?.question | strings | gsub("\n"; " ")]')"
+  count="$(printf '%s' "${questions}" | jq -r 'length')"
+  first="$(printf '%s' "${questions}" | jq -r '.[0] // empty')"
 
-function do_codex_compact() {
-  fire_alerter_detached "Codex · Compacting" "$(compute_subtitle)" \
-    "Auto-compacting context" "Pop" "codex-compact" "${ASSETS_DIR}/codex.png"
+  local title="Question" suffix="" body
+  if [[ "${count}" -gt 1 ]]; then
+    title="${count} questions"
+    suffix=" (+$((count - 1)) more)"
+  fi
+  body="$(truncate_with_ellipsis "${first:-Needs input}" "$((BODY_LIMIT - ${#suffix}))")${suffix}"
+
+  fire_alerter_detached "${title}" "$(compute_subtitle)" "${body}" \
+    "Tink" "${HARNESS}-question" "${ASSETS_DIR}/${icon}.png"
 }
 
 # -----------------------------------------------------------------------------
@@ -553,15 +637,13 @@ function main() {
 
   case "${1:-}" in
     turn-start | cc-turn-start | codex-turn-start) rmdir "${STATE_DIR}/completed" 2> /dev/null || true ;;
-    cc-question) do_question "Claude Code" "claude-code" ;;
-    codex-question) do_question "Codex" "codex" ;;
-    codex-compact) do_codex_compact ;;
+    cc-question) do_question "claude-code" ;;
+    codex-question) do_question "codex" ;;
     cc-idle) do_cc_idle ;;
     cc-elicit) do_cc_elicit ;;
     cc-permission) do_cc_permission ;;
-    cc-compact) do_cc_compact ;;
-    cc-stop) do_cc_stop ;;
-    codex-stop) do_codex_stop ;;
+    cc-stop) do_stop "claude-code" ;;
+    codex-stop) do_stop "codex" ;;
     "")
       echo "Error: subcommand required" >&2
       usage >&2
