@@ -229,8 +229,9 @@ function compute_tmux_state() {
 # - "assistant", and "other" for everything else.
 # Read with `read -d ''` because bash 3.2 cannot parse these heredocs inside $().
 IFS= read -r -d '' TURN_JQ << 'JQ' || true
+def content: (.message | objects | .content) // "";
 def kind:
-  (.message.content // "") as $c
+  content as $c
   | if .type == "assistant" then "assistant"
     elif .type == "user" and .isMeta != true then
       (if ($c | type) == "array" and any($c[]?; type == "object" and .type == "tool_result") then "result"
@@ -242,14 +243,15 @@ def turn:
   | [label $out | range(($lines | length) - 1; -1; -1) as $i
       | ($lines[$i] | fromjson? // null) | objects
       | if kind == "prompt" then break $out else . end];
-def blocks: (.message.content // []) | if type == "array" then .[] | objects else empty end;
+def blocks: content | if type == "array" then .[] | objects else empty end;
 JQ
 readonly TURN_JQ
 
 # Prints the text of the current turn's last assistant message, or nothing.
 IFS= read -r -d '' LAST_TEXT_JQ << 'JQ' || true
 first(turn[] | select(kind == "assistant")
-  | (.message.content | if type == "string" then . else [blocks | select(.type == "text") | .text] | join("\n") end)
+  | (if (content | type) == "string" then content
+     else [blocks | select(.type == "text") | .text | strings] | join("\n") end)
   | select(. != "")) // empty
 JQ
 readonly LAST_TEXT_JQ
@@ -262,23 +264,31 @@ readonly LAST_TEXT_JQ
 #   ExitPlanMode when the call is not in the transcript yet;
 # - $wanted (a tool named in the message): the oldest call with that name, or
 #   for an MCP display name such as "github - create_issue (MCP)" or
-#   "Create Issue", the oldest MCP call whose tool part matches it;
+#   "Create Issue", the oldest MCP call matching it by server and tool, then by
+#   tool, then by a tool name the display name ends with;
 # - neither (the generic message): the oldest call that is not a question or a
 #   plan, then a plan, then a question.
 IFS= read -r -d '' PENDING_JQ << 'JQ' || true
 def norm: ascii_downcase | gsub("[^a-z0-9]"; "");
+def mcp_full: ltrimstr("mcp__") | norm;
+def mcp_tool: split("__") | last | norm;
 turn
-| [.[] | select(kind == "result") | blocks | select(.type == "tool_result") | .tool_use_id] as $answered
+| ([.[] | select(kind == "result") | blocks | select(.type == "tool_result")
+    | .tool_use_id | strings | {(.): true}] | add // {}) as $answered
 | [reverse[] | select(kind == "assistant") | blocks | select(.type == "tool_use")
-    | select((.id // "") as $id | $answered | any(.[]; . == $id) | not)
-    | {name, input}] as $calls
+    | select($answered[.id // "" | tostring] != true)
+    | {name: (.name // "" | tostring), input}] as $calls
+| [$calls[] | select(.name | startswith("mcp__"))] as $mcp
 | ($wanted | sub("\\s*\\(MCP\\)\\s*$"; "") | norm) as $short
 | if $plan then
     ([$calls[] | select(.name == "ExitPlanMode")] | last) // {name: "ExitPlanMode", input: {}}
   elif $wanted != "" then
     first($calls[] | select(.name == $wanted))
-    // first($calls[] | select((.name | startswith("mcp__"))
-         and ((.name | split("__") | last | norm) as $tool | $tool != "" and ($short | endswith($tool)))))
+    // (if $short == "" then empty
+        else first($mcp[] | select((.name | mcp_full) == $short))
+          // first($mcp[] | select((.name | mcp_tool) == $short))
+          // first($mcp[] | select((.name | mcp_tool) as $tool | $tool != "" and ($short | endswith($tool))))
+        end)
     // empty
   else
     first($calls[] | select(.name != "AskUserQuestion" and .name != "ExitPlanMode"))
