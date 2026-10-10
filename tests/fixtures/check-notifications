@@ -80,7 +80,7 @@ function main() {
   local repo="${test_dir}/sample-repo"
   git init -q --template= -b feature/sample-branch "${repo}"
   cd "${repo}"
-  # The logical working directory, without the doubled slash a trailing / in TMPDIR leaves.
+  # The logical path; mktemp leaves a doubled slash when TMPDIR ends in /.
   repo="${PWD}"
 
   local payload='{"session_id":"session-one","last_assistant_message":"Completed sample"}'
