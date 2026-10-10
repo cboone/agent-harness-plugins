@@ -1229,6 +1229,87 @@ scripts
 templates
 ```
 
+## Starter reports what it wrote
+
+```scrut
+$ "${REPORT_BOARD_BIN}" starter "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" 2>&1
+report-board: wrote a starter page to */report.html (glob)
+```
+
+## Starter inlines the shared stylesheet
+
+The page carries the same styles as the boards, and no placeholder is left for
+a hand edit to trip over.
+
+```scrut
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && "${REPORT_BOARD_BIN}" starter "${page}" 2> /dev/null && grep -c -e '--primary: #26292e;' -e '^\.rank-row {' -e '^\.aside {' -e '__BOARD_' "${page}"
+3
+```
+
+## Starter writes a page with no board data
+
+A hand-laid page is a snapshot, so there is nothing for extract to read.
+
+```scrut
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && "${REPORT_BOARD_BIN}" starter "${page}" 2> /dev/null && "${REPORT_BOARD_BIN}" extract "${page}" 2>&1
+report-board: */report.html is neither board data nor a rendered board (glob)
+[1]
+```
+
+## Standalone starter is a complete document
+
+```scrut
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && "${REPORT_BOARD_BIN}" starter --standalone "${page}" 2> /dev/null && head -n 3 "${page}" && tail -n 1 "${page}"
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+</html>
+```
+
+## Starter never replaces a file
+
+A starter page is laid out by hand once written, so a second starter would
+discard that work.
+
+```scrut
+$ page="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")/report.html" && printf 'laid out by hand\n' > "${page}" && "${REPORT_BOARD_BIN}" starter "${page}" 2>&1; cat "${page}"
+report-board: */report.html already exists; name a new page file (glob)
+laid out by hand
+```
+
+## Starter refuses a dangling symlink
+
+Writing through it would create the file it points at.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && ln -s "${dir}/elsewhere.html" "${dir}/report.html" && "${REPORT_BOARD_BIN}" starter "${dir}/report.html" 2>&1; ls "${dir}"
+report-board: */report.html already exists; name a new page file (glob)
+report.html
+```
+
+## Starter refuses a stylesheet that would break the page
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && cp -R "$(dirname "${REPORT_BOARD_BIN}")/../templates/starter" "${dir}/templates/" && printf '</style><p>\n' > "${dir}/templates/board.css" && "${dir}/scripts/report-board" starter "${dir}/report.html" 2>&1 | sed 's/.*: //'; ls "${dir}"
+*/board.css holds __BOARD_TITLE__, "__BOARD_DATA__", or </style (glob)
+scripts
+templates
+```
+
+## Starter usage error
+
+```scrut
+$ "${REPORT_BOARD_BIN}" starter 2>&1 | head -n 1
+report-board: starter takes an output path
+```
+
+## Starter usage error exit code
+
+```scrut
+$ "${REPORT_BOARD_BIN}" starter one.html two.html > /dev/null 2>&1
+[2]
+```
+
 ## Extract from a page inside a host skeleton
 
 An Artifact read returns the page wrapped in the host's own document.
