@@ -4,686 +4,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" />
 <style>
-  /* An editorial bug desk: IBM Plex Sans for text and Plex Mono for numbers
-     and labels. The light theme is Graphite and orange, the dark theme Night.
-     Critical carries the strongest form, a filled block and tag; High
-     priority an outlined tag; fixes a muted green. In the light theme blue is
-     reserved for focus; in the dark theme Critical takes the light blue the
-     focus ring also uses, and High priority amber. Components use tokens
-     only. Tokens shared with backlog-triage.html keep the same values; change
-     both together. */
-  :root {
-    color-scheme: light;
-    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-    --gutter: clamp(16px, 4vw, 48px);
-    --ground: #f1f1ef;
-    --ink: #1b1c1e;
-    --body: #36383c;
-    --muted: #5d6066;
-    --rule: #d6d6d2;
-    --rule-soft: #e4e4e0;
-    --critical: #26292e;
-    --on-critical: #ffb37a;
-    --high: #a8430b;
-    --fix: #2f5f28;
-    --fix-ground: #e3ebdf;
-    --aging: #a8430b;
-    --stale: #b42318;
-    --link-rule: rgb(93 96 102 / 45%);
-    --focus: #2563eb;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      color-scheme: dark;
-      --ground: #121417;
-      --ink: #e9ecf0;
-      --body: #c6cbd3;
-      --muted: #9aa1ad;
-      --rule: #2c3138;
-      --rule-soft: #22262c;
-      --critical: #8fb0ff;
-      --on-critical: #0b1220;
-      --high: #f2b45a;
-      --fix: #a6d492;
-      --fix-ground: #1c2819;
-      --aging: #f2b45a;
-      --stale: #ff8a80;
-      --link-rule: rgb(154 161 173 / 45%);
-      --focus: #8fb0ff;
-    }
-  }
-
-  :root[data-theme="dark"] {
-    color-scheme: dark;
-    --ground: #121417;
-    --ink: #e9ecf0;
-    --body: #c6cbd3;
-    --muted: #9aa1ad;
-    --rule: #2c3138;
-    --rule-soft: #22262c;
-    --critical: #8fb0ff;
-    --on-critical: #0b1220;
-    --high: #f2b45a;
-    --fix: #a6d492;
-    --fix-ground: #1c2819;
-    --aging: #f2b45a;
-    --stale: #ff8a80;
-    --link-rule: rgb(154 161 173 / 45%);
-    --focus: #8fb0ff;
-  }
-
-  *,
-  *::before,
-  *::after {
-    box-sizing: border-box;
-  }
-
-  body {
-    margin: 0;
-    background: var(--ground);
-    color: var(--ink);
-    font-family: var(--sans);
-    font-size: 15px;
-    line-height: 1.5;
-  }
-
-  :where(.board) :where(p, h1, h2, dl, dd, ol, ul) {
-    margin: 0;
-  }
-
-  :where(.board) :where(ol, ul) {
-    padding: 0;
-    list-style: none;
-  }
-
-  a {
-    border-bottom: 1px solid var(--link-rule);
-    color: inherit;
-    text-decoration: none;
-  }
-
-  a:hover {
-    border-bottom-color: currentColor;
-  }
-
-  a:focus-visible {
-    outline: 2px solid var(--focus);
-    outline-offset: 2px;
-  }
-
-  .mono {
-    font-family: var(--mono);
-  }
-
-  .num {
-    font-family: var(--mono);
-    font-weight: 500;
-  }
-
-  .board {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 40px var(--gutter) 72px;
-    display: flex;
-    flex-direction: column;
-    gap: 56px;
-  }
-
-  /* The same spacing as .board, for the sections inside main. */
-  .board-main {
-    display: flex;
-    flex-direction: column;
-    gap: 56px;
-  }
-
-  .board-message {
-    padding: 40px var(--gutter);
-    color: var(--muted);
-  }
-
-  .label {
-    font-family: var(--mono);
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  /* Header */
-  .head {
-    display: flex;
-    flex-direction: column;
-    gap: 28px;
-  }
-
-  .masthead {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 16px 40px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid var(--ink);
-  }
-
-  .masthead-title {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .repo {
-    font-size: clamp(40px, 6vw, 64px);
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1;
-  }
-
-  .repo a {
-    border-bottom: none;
-  }
-
-  .when {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--muted);
-    text-align: right;
-  }
-
-  .when-time {
-    color: var(--ink);
-    font-size: 15px;
-    font-weight: 500;
-  }
-
-  .when-age.is-aging {
-    color: var(--aging);
-  }
-
-  .when-age.is-stale {
-    color: var(--stale);
-  }
-
-  .counts {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-
-  .count {
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 6px;
-    padding: 14px 16px;
-    border-right: 1px solid var(--rule);
-  }
-
-  .count:last-child {
-    border-right: none;
-  }
-
-  .count dt {
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .count dd {
-    font-family: var(--mono);
-    font-size: 40px;
-    font-weight: 600;
-    line-height: 1;
-  }
-
-  .count--critical {
-    border-right: none;
-    background: var(--critical);
-    color: var(--on-critical);
-  }
-
-  .count--critical dt {
-    color: var(--on-critical);
-  }
-
-  .count--high dt {
-    color: var(--high);
-  }
-
-  .count--open dd {
-    color: var(--muted);
-  }
-
-  .count-warn {
-    display: block;
-    margin-top: 4px;
-    font-size: 10.5px;
-  }
-
-  .summary {
-    max-width: 62ch;
-    font-size: clamp(19px, 2.2vw, 23px);
-    font-weight: 500;
-    line-height: 1.45;
-    letter-spacing: -0.01em;
-    text-wrap: pretty;
-  }
-
-  /* Sections */
-  .section {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .section-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 4px 16px;
-  }
-
-  .section-title {
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-  }
-
-  .section-note {
-    color: var(--muted);
-  }
-
-  .section--critical .section-title {
-    font-size: 28px;
-    letter-spacing: -0.02em;
-    color: var(--critical);
-  }
-
-  .section--high .section-title,
-  .section--ready .section-title {
-    font-size: 24px;
-    letter-spacing: -0.02em;
-  }
-
-  .section--high .section-title {
-    color: var(--high);
-  }
-
-  .ruled {
-    border-top: 1px solid var(--ink);
-  }
-
-  /* Critical and High priority rows */
-  .urgent {
-    display: grid;
-    grid-template-columns: 64px minmax(0, 1fr) 300px;
-    column-gap: 28px;
-    row-gap: 12px;
-    padding: 24px 0 26px;
-    border-bottom: 1px solid var(--rule);
-  }
-
-  .urgent-rank {
-    font-family: var(--mono);
-    font-size: 30px;
-    font-weight: 600;
-    line-height: 1;
-    color: var(--critical);
-  }
-
-  .urgent-main {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    min-width: 0;
-  }
-
-  .urgent-line {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 4px 10px;
-    font-size: 14px;
-    color: var(--muted);
-  }
-
-  .urgent-action {
-    font-size: 21px;
-    font-weight: 600;
-    line-height: 1.35;
-    letter-spacing: -0.01em;
-    text-wrap: pretty;
-  }
-
-  .urgent-impact {
-    font-size: 16px;
-    color: var(--body);
-  }
-
-  .urgent-side {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .section--high .urgent {
-    padding: 18px 0 20px;
-  }
-
-  .section--high .urgent-rank {
-    font-size: 22px;
-    color: var(--high);
-  }
-
-  .section--high .urgent-action {
-    font-size: 17px;
-  }
-
-  .section--high .urgent-impact {
-    font-size: 15px;
-  }
-
-  .tag {
-    display: inline-block;
-    padding: 1px 6px;
-    border: 1.5px solid currentColor;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    line-height: 1.4;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  .tag--critical {
-    border-color: var(--critical);
-    background: var(--critical);
-    color: var(--on-critical);
-  }
-
-  .tag--high {
-    color: var(--high);
-  }
-
-  .tag--confirm {
-    border-style: dashed;
-    color: var(--muted);
-  }
-
-  .tag--verify {
-    color: var(--high);
-  }
-
-  /* Facts: what the reading found. An unconfirmed one is italic with a
-     dashed underline; one the triage note set carries a dot. */
-  .facts {
-    display: grid;
-    grid-template-columns: 92px minmax(0, 1fr);
-    row-gap: 5px;
-    font-size: 13px;
-    align-content: start;
-  }
-
-  .facts dt {
-    padding-top: 2px;
-    color: var(--muted);
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
-
-  .fact {
-    font-weight: 500;
-  }
-
-  .fact--unsure {
-    border-bottom: 1px dashed var(--muted);
-    color: var(--muted);
-    font-style: italic;
-    font-weight: 400;
-  }
-
-  .fact--set::after {
-    content: " \2022";
-    color: var(--high);
-  }
-
-  .fix-line {
-    padding: 8px 10px;
-    background: var(--fix-ground);
-    color: var(--fix);
-    font-size: 13px;
-  }
-
-  .calls {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  /* Ready to go */
-  .ready-cols {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 24px 32px;
-    padding-top: 16px;
-  }
-
-  .ready-col {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-
-  .ready-col-head {
-    display: flex;
-    justify-content: space-between;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--rule);
-  }
-
-  .ready-item {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .ready-title {
-    font-weight: 600;
-    line-height: 1.35;
-  }
-
-  .ready-title .num {
-    margin-right: 6px;
-  }
-
-  .ready-next {
-    font-size: 13.5px;
-    color: var(--body);
-  }
-
-  .carrier {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--fix);
-  }
-
-  .more {
-    font-size: 14px;
-    color: var(--muted);
-  }
-
-  /* The fold: everything below is the report. */
-  .fold {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .fold::before,
-  .fold::after {
-    content: "";
-    flex: 1 1 0;
-    border-top: 4px double var(--ink);
-  }
-
-  /* Report rows */
-  .report-row {
-    display: grid;
-    grid-template-columns: 72px minmax(0, 1fr) minmax(0, 1.1fr);
-    column-gap: 24px;
-    row-gap: 6px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--rule);
-  }
-
-  .report-row .num {
-    justify-self: start;
-  }
-
-  .report-title {
-    font-weight: 500;
-  }
-
-  .report-why {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  .report-question {
-    font-style: italic;
-    color: var(--body);
-  }
-
-  .report-detail {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    color: var(--body);
-    font-size: 14px;
-  }
-
-  .table-wrap {
-    overflow-x: auto;
-  }
-
-  .lower-table {
-    width: 100%;
-    min-width: 560px;
-    border-collapse: collapse;
-    font-size: 14px;
-  }
-
-  .lower-table th {
-    padding: 8px 12px 8px 0;
-    border-bottom: 1px solid var(--rule);
-    color: var(--muted);
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-align: left;
-    text-transform: uppercase;
-  }
-
-  .lower-table td {
-    padding: 7px 12px 7px 0;
-    border-bottom: 1px solid var(--rule-soft);
-    vertical-align: baseline;
-  }
-
-  .lower-group td {
-    padding-top: 16px;
-    color: var(--muted);
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .fixed-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 4px 12px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--rule);
-  }
-
-  .fixed-row svg {
-    flex: none;
-    align-self: center;
-    color: var(--fix);
-  }
-
-  .fixed-title {
-    flex: 1 1 320px;
-    min-width: 0;
-  }
-
-  .triage-list {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .triage-entry {
-    padding: 8px 0;
-    border-bottom: 1px solid var(--rule-soft);
-  }
-
-  .triage-entry--expired .triage-text {
-    color: var(--muted);
-    text-decoration: line-through;
-  }
-
-  .triage-empty {
-    padding: 16px;
-    border: 1px dashed var(--muted);
-    color: var(--body);
-  }
-
-  .footer {
-    padding-top: 20px;
-    border-top: 1px solid var(--rule);
-    color: var(--muted);
-    font-size: 13px;
-  }
-
-  @media (max-width: 860px) {
-    .urgent {
-      grid-template-columns: 44px minmax(0, 1fr);
-    }
-
-    .urgent-side {
-      grid-column: 2;
-    }
-
-    .counts {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      row-gap: 16px;
-    }
-
-    .report-row {
-      grid-template-columns: 56px minmax(0, 1fr);
-    }
-
-    .report-row > :nth-child(3) {
-      grid-column: 2;
-    }
-
-    .when {
-      align-items: flex-start;
-      text-align: left;
-    }
-  }
+  /* __BOARD_STYLES__ */
 </style>
 <div class="board" id="board">
   <noscript>
@@ -899,22 +220,22 @@
       );
     }
 
-    function urgentRow(entry, index, kind) {
+    function rankRow(entry, index, kind) {
       const bug = byNumber.get(entry.item);
       const fix = carrier(bug);
-      return h("li", { class: "urgent" }, [
-        h("p", { class: "urgent-rank", "aria-hidden": "true" }, String(index + 1).padStart(2, "0")),
-        h("div", { class: "urgent-main" }, [
-          h("p", { class: "urgent-line" }, [
-            h("span", { class: `tag tag--${kind}` }, kind === "critical" ? "Critical" : "High"),
+      return h("li", { class: kind === "high" ? "rank-row rank-row--tier" : "rank-row" }, [
+        h("p", { class: "rank", "aria-hidden": "true" }, String(index + 1).padStart(2, "0")),
+        h("div", { class: "rank-main" }, [
+          h("p", { class: "rank-line" }, [
+            h("span", { class: kind === "critical" ? "tag tag--primary" : "tag tag--accent" }, kind === "critical" ? "Critical" : "High"),
             entry.confirm ? h("span", { class: "tag tag--confirm" }, "Confirm first") : null,
             ref(bug.number),
             h("span", null, bug.title),
           ]),
-          h("p", { class: "urgent-action" }, prose(entry.action)),
-          h("p", { class: "urgent-impact" }, prose(entry.impact)),
+          h("p", { class: "rank-headline" }, prose(entry.action)),
+          h("p", { class: "rank-detail" }, prose(entry.impact)),
         ]),
-        h("div", { class: "urgent-side" }, [facts(bug), fix ? h("p", { class: "fix-line" }, fix) : null, calls(entry)]),
+        h("div", { class: "rank-side" }, [facts(bug), fix ? h("p", { class: "fix-line" }, fix) : null, calls(entry)]),
       ]);
     }
 
@@ -972,14 +293,14 @@
         ]),
       ]),
       h("dl", { class: "counts" }, [
-        h("div", { class: "count count--critical" }, [
+        h("div", { class: "count count--primary" }, [
           h("dt", null, [
             "Critical",
             critical.length > data.criticalWarn ? h("span", { class: "count-warn" }, `More than ${data.criticalWarn}`) : null,
           ]),
           h("dd", null, String(critical.length)),
         ]),
-        h("div", { class: "count count--high" }, [h("dt", null, "High priority"), h("dd", null, String(high.length))]),
+        h("div", { class: "count count--accent" }, [h("dt", null, "High priority"), h("dd", null, String(high.length))]),
         h("div", { class: "count" }, [h("dt", null, "Ready"), h("dd", null, String(ready.length))]),
         h("div", { class: "count" }, [h("dt", null, "Investigate"), h("dd", null, String(investigate.length))]),
         h("div", { class: "count count--open" }, [h("dt", null, "Open bugs"), h("dd", null, String(openBugs.length))]),
@@ -990,21 +311,21 @@
     // Above the fold
     const criticalSection = section(
       "critical",
-      "critical",
+      "lead",
       "Critical",
       critical.length
         ? "Hurting people on production, or open to anyone. Most urgent first."
         : "Nothing is hurting people on production or open to anyone.",
-      critical.length ? h("ol", { class: "ruled" }, critical.map((entry, i) => urgentRow(entry, i, "critical"))) : null,
+      critical.length ? h("ol", { class: "ruled" }, critical.map((entry, i) => rankRow(entry, i, "critical"))) : null,
     );
     const highSection = section(
       "high",
-      "high",
+      "accent",
       "High priority",
       high.length
         ? "Getting worse with every event, due within the window, or high stakes still to confirm on production."
         : "Nothing else is pressing.",
-      high.length ? h("ol", { class: "ruled" }, high.map((entry, i) => urgentRow(entry, i, "high"))) : null,
+      high.length ? h("ol", { class: "ruled" }, high.map((entry, i) => rankRow(entry, i, "high"))) : null,
     );
     function readyNote() {
       if (!ready.length) return "Nothing is ready to land or fix.";
@@ -1015,7 +336,7 @@
     }
     const readySection = section(
       "ready",
-      "ready",
+      "tier",
       "Ready to go",
       readyNote(),
       ready.length
@@ -1064,7 +385,7 @@
       }
       const rows = [];
       for (const [reason, members] of groups) {
-        if (groups.size > 1) rows.push(h("tr", { class: "lower-group" }, h("td", { colspan: 3 }, `${reason} (${members.length})`)));
+        if (groups.size > 1) rows.push(h("tr", { class: "ref-group" }, h("td", { colspan: 3 }, `${reason} (${members.length})`)));
         for (const entry of members) {
           const bug = byNumber.get(entry.item);
           rows.push(
@@ -1077,7 +398,7 @@
         }
       }
       return h("div", { class: "table-wrap ruled" }, [
-        h("table", { class: "lower-table" }, [
+        h("table", { class: "ref-table" }, [
           h("thead", null, h("tr", null, ["Bug", "Title", "Impact"].map((label) => h("th", { scope: "col" }, label)))),
           h("tbody", null, rows),
         ]),
@@ -1133,7 +454,7 @@
                 checkIcon(),
                 ref(bug.number),
                 h("span", { class: "fixed-title" }, bug.title),
-                entry.verify ? h("span", { class: "tag tag--verify" }, "Verify on production") : null,
+                entry.verify ? h("span", { class: "tag tag--accent" }, "Verify on production") : null,
                 h("span", { class: "label" }, closedBy(bug)),
               ]);
             }),
@@ -1172,9 +493,9 @@
       triage.length
         ? h(
             "ol",
-            { class: "triage-list ruled" },
+            { class: "note-log ruled" },
             triage.map((entry) =>
-              h("li", { class: expired(entry) ? "triage-entry triage-entry--expired" : "triage-entry" }, [
+              h("li", { class: expired(entry) ? "note-entry note-entry--expired" : "note-entry" }, [
                 h("span", { class: "label" }, `${entry.at} `),
                 h("strong", null, entry.verb),
                 entry.target != null ? [" ", ref(entry.target)] : null,
@@ -1189,14 +510,14 @@
                   : null,
                 entry.until ? ` until ${entry.until}` : null,
                 ": ",
-                h("span", { class: "triage-text" }, prose(entry.text)),
+                h("span", { class: "note-text" }, prose(entry.text)),
                 expired(entry) ? [" ", h("span", { class: "tag tag--confirm" }, "Expired")] : null,
               ]),
             ),
           )
         : h(
             "p",
-            { class: "triage-empty" },
+            { class: "note-empty" },
             "No calls recorded yet. Escalate a bug, set what the reading got wrong, or snooze or park one at the next sync, and every sync after applies it.",
           ),
     );

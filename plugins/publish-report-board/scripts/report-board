@@ -2,7 +2,8 @@
 # report-board -- Validate, render, extract, and compare report board data.
 #
 # A report board is a self-contained HTML page drawn from one JSON document.
-# The page templates ship beside this script in ../templates/<board>.html.
+# The page templates ship beside this script in ../templates/<board>.html,
+# with the stylesheet every board shares in ../templates/board.css.
 # This script checks the data against the rules every board relies on, writes
 # it into the template, and reads it back out of a rendered page so a re-sync
 # can report what changed since the last one.
@@ -37,6 +38,7 @@ readonly SCRIPT_NAME
 SCRIPT_DIR="$(resolve_script_dir)"
 readonly SCRIPT_DIR
 readonly TEMPLATE_DIR="${SCRIPT_DIR}/../templates"
+readonly STYLESHEET="${TEMPLATE_DIR}/board.css"
 
 readonly E_INVALID=1
 readonly E_USAGE=2
@@ -47,6 +49,11 @@ readonly E_USAGE=2
 readonly TITLE_PLACEHOLDER='__BOARD_TITLE__'
 readonly DATA_PLACEHOLDER='"__BOARD_DATA__"'
 readonly DATA_MARKER='id="board-data"'
+
+# Each template's style element holds this comment, and render puts the shared
+# stylesheet in its place, so a published board stays one file.
+readonly STYLES_PLACEHOLDER='/* __BOARD_STYLES__ */'
+readonly STYLE_CLOSE='</style'
 readonly SCRIPT_CLOSE='</script>'
 
 # Prepended by --standalone. The Artifact tool supplies its own document
@@ -973,18 +980,43 @@ function available_boards() {
   printf '%s' "${names[*]:-none}"
 }
 
-# Writes the page to stdout: the template with the escaped title and the
-# compact JSON payload in place of the two placeholders.
+# Prints the shared stylesheet. It goes into the template before the title and
+# data are, so it must not carry either placeholder, and it must not close the
+# style element it is written into.
+function read_stylesheet() {
+  local styles
+
+  require_file "${STYLESHEET}"
+  styles="$(< "${STYLESHEET}")"
+  if [[ "${styles}" == *"${TITLE_PLACEHOLDER}"* || "${styles}" == *"${DATA_PLACEHOLDER}"* || "${styles}" == *"${STYLE_CLOSE}"* ]]; then
+    die "${E_INVALID}" "${STYLESHEET} holds ${TITLE_PLACEHOLDER}, ${DATA_PLACEHOLDER}, or ${STYLE_CLOSE}"
+  fi
+  printf '%s' "${styles}"
+}
+
+# Writes the page to stdout: the template with the shared stylesheet, the
+# escaped title, and the compact JSON payload in place of the three
+# placeholders.
 function fill_template() {
   local template_file="${1}"
   local title_html="${2}"
   local payload="${3}"
-  local template
+  local template styles
 
   template="$(< "${template_file}")"
   if [[ "${template}" != *"${TITLE_PLACEHOLDER}"* || "${template}" != *"${DATA_PLACEHOLDER}"* ]]; then
     die "${E_INVALID}" "${template_file} is missing the ${TITLE_PLACEHOLDER} or ${DATA_PLACEHOLDER} placeholder"
   fi
+  if [[ "${template}" != *"${STYLES_PLACEHOLDER}"* ]]; then
+    die "${E_INVALID}" "${template_file} is missing the ${STYLES_PLACEHOLDER} placeholder"
+  fi
+
+  # This function runs in a command substitution, which does not inherit
+  # errexit, so a refused stylesheet has to stop it explicitly. Split rather
+  # than substitute, so nothing in the stylesheet is read as a replacement
+  # pattern.
+  styles="$(read_stylesheet)" || exit "${E_INVALID}"
+  template="${template%%"${STYLES_PLACEHOLDER}"*}${styles}${template#*"${STYLES_PLACEHOLDER}"}"
 
   # Both values are board data, so either can hold the other's placeholder.
   # Splitting the original template on both markers first keeps a title that

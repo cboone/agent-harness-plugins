@@ -1186,6 +1186,49 @@ scripts
 templates
 ```
 
+## Render inlines the shared stylesheet
+
+Both boards carry the same styles, written into the page so a published board
+stays one file.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/backlog.html" 2> /dev/null && "${REPORT_BOARD_BIN}" render "${REPORT_BOARD_DATA_DIR}/bugs.json" "${dir}/bugs.html" 2> /dev/null && grep -c -e '--primary: #26292e;' -e '^\.rank-row {' "${dir}/backlog.html" "${dir}/bugs.html"
+*/backlog.html:2 (glob)
+*/bugs.html:2 (glob)
+```
+
+## A template missing the styles placeholder
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && templates="$(dirname "${REPORT_BOARD_BIN}")/../templates" && cp "${templates}/board.css" "${dir}/templates/" && grep -v -F '__BOARD_STYLES__' "${templates}/backlog-triage.html" > "${dir}/templates/backlog-triage.html" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; ls "${dir}"
+report-board: */backlog-triage.html is missing the /* __BOARD_STYLES__ */ placeholder (glob)
+scripts
+templates
+```
+
+## A missing stylesheet
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && cp "$(dirname "${REPORT_BOARD_BIN}")/../templates/backlog-triage.html" "${dir}/templates/" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1; ls "${dir}"
+report-board: cannot read */templates/board.css (glob)
+scripts
+templates
+```
+
+## A stylesheet that would break the page
+
+The stylesheet goes in before the title and data, so a placeholder inside it
+would capture one of them, and a closing style tag would end the element early.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && mkdir "${dir}/scripts" "${dir}/templates" && cp "${REPORT_BOARD_BIN}" "${dir}/scripts/" && cp "$(dirname "${REPORT_BOARD_BIN}")/../templates/backlog-triage.html" "${dir}/templates/" && for css in '/* __BOARD_TITLE__ */' 'a { content: "__BOARD_DATA__"; }' '</style><p>'; do printf '%s\n' "${css}" > "${dir}/templates/board.css" && "${dir}/scripts/report-board" render "${REPORT_BOARD_DATA_DIR}/backlog-triage.json" "${dir}/board.html" 2>&1 | sed 's/.*: //'; done; ls "${dir}"
+*/board.css holds __BOARD_TITLE__, "__BOARD_DATA__", or </style (glob)
+*/board.css holds __BOARD_TITLE__, "__BOARD_DATA__", or </style (glob)
+*/board.css holds __BOARD_TITLE__, "__BOARD_DATA__", or </style (glob)
+scripts
+templates
+```
+
 ## Extract from a page inside a host skeleton
 
 An Artifact read returns the page wrapped in the host's own document.
