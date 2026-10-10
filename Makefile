@@ -21,7 +21,8 @@ SCRUT_UNSET := -u TMUX -u TMUX_TMPDIR -u WORKMUX_TMUX -u WORKMUX_TERM \
 	-u CODEX_REFERENCE_CONTEXT_WINDOW -u CODEX_ENABLED_SKILL_PERCENT -u CODEX_OTHER_SKILL_RESERVE_TOKENS \
 	-u STUB_CURL_DIR -u STUB_CURL_ERROR -u STUB_CURL_FAIL -u STUB_CURL_LOG -u STUB_CURL_TOKEN \
 	-u STUB_SCRUT_PIDS \
-	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_TEST_ZENHUB_TOKEN \
+	-u STUB_GH_GRAPHQL_FAIL -u BUGS_GATHER_NOW -u BUGS_GATHER_HOST -u BUGS_TEST_ZENHUB_TOKEN \
+	-u BACKLOG_GATHER_NOW -u BACKLOG_GATHER_HOST \
 	-u ZENHUB_GRAPHQL_TOKEN -u XDG_CACHE_HOME -u XDG_CONFIG_HOME
 
 # Every scrut test resolves the script or fixture it exercises through one of
@@ -33,6 +34,7 @@ SCRUT_ENV := \
 	CHECK_NOTIFICATIONS_BIN="$(CURDIR)/tests/fixtures/check-notifications" \
 	CHECK_CROSS_REFERENCES_BIN="$(CURDIR)/bin/check-cross-references" \
 	BUILD_REVIEW_CHECKLISTS_BIN="$(CURDIR)/bin/build-review-checklists" \
+	BUILD_SHARED_REFERENCES_BIN="$(CURDIR)/bin/build-shared-references" \
 	REVIEW_CHECKLIST_FIXTURE_BIN="$(CURDIR)/tests/fixtures/review-checklist-fixture" \
 	BUILD_CODEX_MARKETPLACE_BIN="$(CURDIR)/bin/build-codex-marketplace" \
 	CODEX_TRANSLATION_FIXTURE_BIN="$(CURDIR)/tests/fixtures/codex-translation-fixture" \
@@ -64,6 +66,9 @@ SCRUT_ENV := \
 	RECORD_TRAFFIC_DATA_DIR="$(CURDIR)/tests/data/record-traffic" \
 	BUGS_GATHER_BIN="$(CURDIR)/plugins/publish-report-board/scripts/bugs-gather" \
 	BUGS_GATHER_DATA_DIR="$(CURDIR)/tests/data/bugs-gather" \
+	BACKLOG_GATHER_BIN="$(CURDIR)/plugins/publish-report-board/scripts/backlog-gather" \
+	BACKLOG_GATHER_DATA_DIR="$(CURDIR)/tests/data/backlog-gather" \
+	BACKLOG_GATHER_GH_STUB_BIN="$(CURDIR)/tests/fixtures/backlog-gather-gh-stub" \
 	CURL_STUB_BIN="$(CURDIR)/tests/fixtures/curl-stub" \
 	RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/resolve-copilot-pr-feedback/scripts/resolve-copilot-threads" \
 	MONITOR_PR_RESOLVE_COPILOT_THREADS_BIN="$(CURDIR)/plugins/monitor-pr/scripts/resolve-copilot-threads" \
@@ -127,9 +132,11 @@ validate:
 validate-corpus:
 	bin/validate-corpus
 
-# The checklists come first: the Codex mirror copies plugins/, copies included.
+# The checklists and shared references come first: the Codex mirror copies
+# plugins/, copies included.
 build:
 	bin/build-review-checklists
+	bin/build-shared-references
 	bin/build-codex-marketplace
 	bin/build-opencode-mirror
 

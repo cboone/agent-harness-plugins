@@ -1,0 +1,30 @@
+[
+  {
+    "data": {
+      "search": {
+        "issueCount": 1,
+        "pageInfo": {
+          "hasNextPage": false,
+          "endCursor": "m1"
+        },
+        "nodes": [
+          {
+            "__typename": "PullRequest",
+            "number": 110,
+            "mergedAt": "2026-10-05T10:00:00Z",
+            "files": {
+              "pageInfo": {
+                "hasNextPage": false
+              },
+              "nodes": [
+                {
+                  "path": "src/net/http.c"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+]
