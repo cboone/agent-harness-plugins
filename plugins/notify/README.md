@@ -51,8 +51,9 @@ OpenCode's event model differs from Claude Code's, so the parity is approximate:
 | -------------------- | ----------------- | ---------------------------------------------------------- |
 | `session.idle`       | `Done`            | `Stop`                                                     |
 | `permission.updated` | `Approve <Tool>?` | `Notification` (`permission_prompt`, `elicitation_dialog`) |
+| `session.error`      | `Error`           | None                                                       |
 
-The standalone "Waiting for input…" notification (Claude Code's `Notification:idle_prompt`) is not separately representable: OpenCode's `session.idle` already carries the Stop semantics.
+OpenCode has no separate idle reminder; `session.idle` maps to `Stop`. OpenCode banners have no completion deduplication, visibility check or per-session grouping.
 
 ### Granting notification permission
 
@@ -63,15 +64,15 @@ The standalone "Waiting for input…" notification (Claude Code's `Notification:
 Delivers native macOS notifications so you can work in other apps while an agent runs. Each notification carries:
 
 - **A per-harness icon**: Claude Code, OpenCode, or Codex's app icon. The icon identifies the agent, so titles leave the harness name out.
-- **A title that names the action**: `Done`, `Approve <Tool>?`, `Question` or `<N> questions`, `Plan ready for review`, or, on OpenCode, `Error`.
+- **A title that names the action**: `Done`, `Approve <Tool>?` (or `Needs approval` when no tool can be identified), `Question` or `<N> questions`, `Plan ready for review`, or, on OpenCode, `Error`.
 - **A subtitle that identifies the task**: `<repo> · <task>`. The repository name comes from git's shared repository directory, so a worktree reports its repository rather than its folder; outside git, the folder name is used. The task is the tmux pane title (set by `workmux`, Claude Code or similar) with leading status glyphs such as `✳` removed. When the pane title names no task (a shell or harness name, a shell's `user@host:path` default, or the repository or folder name), the task is the branch suffix, everything after the first `/` (so `feature/improve-notifier` becomes `improve-notifier`).
 - **A short body**: per-event content (see matrix below), kept within 140 characters.
-  - Completion bodies summarize the agent's final reply. Markdown, fenced code, table rows and status lines (a leading `▸`, or two or more `·`-separated fields) are removed, and headings, list items and paragraphs read as separate sentences. Whole sentences are kept in order; when the next sentence no longer fits and at least 40 characters remain, it is cut at a word boundary with `…`. A reply that is a JSON object with a string `summary` field is summarized from that field.
-  - Claude Code permission bodies show a per-tool preview reconstructed from the most recent `tool_use` block in the transcript, since the Notification payload omits tool details. File paths are shown relative to the repository root (or under `~`) and truncated from the left so the file name stays visible. Bash commands drop a leading `cd` into the working directory. OpenCode permission bodies use the same path display for file tools and otherwise use OpenCode's pre-computed `title`, falling back to `pattern` or per-tool `metadata`.
+  - Completion bodies summarize the agent's final reply. Markdown is removed, and headings, list items and paragraphs read as separate sentences. Fenced code and table rows are dropped, as are status lines (a leading `▸`, or two or more `·` separators) when the reply has prose; a reply with only status lines uses them, and one with only code or a table uses its first line. An unclosed fence is read as prose. Whole sentences are kept in order. A sentence that no longer fits is cut at a word boundary with `…` when it is the first sentence or at least 40 characters remain; otherwise it is dropped. A reply that is a JSON object with a string `summary` field is summarized from that field.
+  - Claude Code permission bodies show a per-tool preview of the call the prompt is about. The Notification payload names the tool ("Claude needs your permission to use Bash") but omits its input, so the plugin reads the current turn's tool calls without a result yet from the transcript and picks the one with that name. File paths are shown relative to the repository root (or under `~`) and truncated from the left so the file name stays visible. Bash commands drop a leading `cd` into the working directory or repository root. When no call matches, the body is the payload message. OpenCode permission bodies use the same path display and `cd` removal, and otherwise use OpenCode's pre-computed `title`, falling back to `pattern` or per-tool `metadata`.
   - Question bodies show the first question, followed by `(+N more)` when there are several.
-- **Shared event sounds**: Tink for questions and plans, Funk for permission, and Glass for completion. Claude's idle reminders are disabled. Automatic compaction posts no banner.
-- **Session-specific groups**: banners from unrelated sessions do not replace one another. Claude and Codex completion alerts fire once until the next user prompt resets the completion marker. Subagent payloads are ignored.
-- **Visibility-aware completion**: completion alerts are suppressed when the host terminal application is active and a tmux client displays the originating pane. If focus cannot be determined, delivery is preserved. Questions and permissions remain visible regardless of focus.
+- **Shared event sounds**: Tink for questions and plans, Funk for permission, and Glass for completion. Claude's idle reminders are disabled.
+- **Session-specific groups** (Claude Code and Codex): banners from unrelated sessions do not replace one another. Completion alerts fire once until the next user prompt resets the completion marker. Subagent payloads are ignored. OpenCode groups banners by event only.
+- **Visibility-aware completion** (Claude Code and Codex): completion alerts are suppressed when the host terminal application (one of those listed under click-to-focus) is frontmost and a focused tmux client displays the originating pane. If focus cannot be determined, delivery is preserved. Questions and permissions remain visible regardless of focus.
 - **Click-to-focus**: clicking the body of any notification activates the originating terminal app (auto-detected from `$TERM_PROGRAM`, supports Apple Terminal, iTerm2, Ghostty, WezTerm, VSCode, Alacritty) and, if you were inside tmux when the hook fired, switches the tmux client to the originating session, window, and pane.
 
 ## When it fires
@@ -88,7 +89,7 @@ Delivers native macOS notifications so you can work in other apps while an agent
 | `Notification:permission_prompt` for `ExitPlanMode` | `Plan ready for review`       | The plan's first heading                 | `Tink`  |
 | `Stop`                                              | `Done`                        | Summary of `last_assistant_message`      | `Glass` |
 
-MCP tools appear by their tool name, as in `Approve batch?`, with the server named in the body when there is no other preview.
+MCP tools appear by their tool name, as in `Approve batch?`, with the server named in the body.
 
 ### Codex
 
@@ -123,14 +124,15 @@ When you click the body of a notification, the plugin runs [`scripts/focus-pane`
 | `alacritty`      | Alacritty    |
 | (anything else)  | Terminal.app |
 
-**Switch the tmux client** if the hook fired inside tmux. Claude and Codex capture immutable session, window, and pane IDs using an explicit `TMUX_PANE` target. The detached process retains the originating tmux socket environment. Existing OpenCode callers using names and indexes remain supported.
+**Switch the tmux client** if the hook fired inside tmux. Claude and Codex capture immutable session, window, and pane IDs using an explicit `TMUX_PANE` target. The detached process retains the originating tmux socket environment. OpenCode captures the session name and the window and pane indexes instead.
 
 Failures (closed pane, no client attached, missing terminal app) are silent: clicking a notification should never produce a visible error.
 
 ## Notes and caveats
 
 - `alerter` blocks waiting for user interaction, so every event launches it in a detached subshell. The harness is never held up. Each invocation has a 24-hour timeout to bound background notification processes. Completion markers are stored under `${XDG_CACHE_HOME:-$HOME/.cache}/agent-harness-notify/`; deleting this cache resets deduplication.
-- The transcript-based extractors (pending tool use, and the last assistant message when a Stop payload lacks one) iterate the transcript JSONL. Performance is fine for typical sessions; very long transcripts may add a small delay before the notification appears.
+- `scripts/notify` parses under macOS `/bin/bash` 3.2, which `#!/usr/bin/env bash` finds when Homebrew is not on `PATH`. A parse failure exits 2, which Claude Code treats as blocking the hook's event, so the test suite parses it with `/bin/bash`.
+- The transcript-based extractors (pending tool use, and the last assistant message when a Stop payload lacks the field) walk the current turn of the transcript JSONL. Performance is fine for typical sessions; very long transcripts may add a small delay before the notification appears.
 - The `--app-icon` flag uses a private macOS API that `alerter` keeps working release to release. If a future macOS update breaks it, notifications will still fire but with the default Terminal icon.
 
 ## See Also

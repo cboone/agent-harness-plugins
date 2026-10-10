@@ -365,11 +365,11 @@ interface ToolInfo {
 
 // `permission.updated` properties match the SDK's `Permission` type:
 //   { id, type, pattern?, sessionID, messageID, callID?, title, metadata, time }
-// `type` is the lowercase permission name ("bash", "edit", ...). `title` is a
-// pre-computed UI summary; `pattern` and `metadata` are the per-tool fall-backs
-// when no title is set. Older shapes (`tool`, `tool_name`, `tool_input`) are
-// still accepted defensively in case an older OpenCode emits them. File tools
-// prefer their path, shown relative to the repository so the file name stays.
+// `type` is the lowercase permission name ("bash", "edit", ...). File tools show
+// their metadata path, relative to the repository so the file name stays.
+// Otherwise the preview is the first non-empty of `title` (a pre-computed UI
+// summary), `pattern`, `patterns`, per-tool `metadata`, then the older
+// `tool`/`tool_name`/`tool_input`/`input` shapes some OpenCode versions emit.
 function extractToolFromPermission(event: { properties: Record<string, unknown> }, root: string, directory: string): ToolInfo {
   const props = event.properties;
 
@@ -414,7 +414,8 @@ function displayPath(path: string, bases: string[], limit: number): string {
   return "…" + chars.slice(chars.length - limit + 1).join("");
 }
 
-// Drops a leading cd into the session's own directory, which says nothing.
+// Drops a leading cd into the working directory or repository root, which
+// says nothing.
 function stripWorkingCd(command: string, dirs: string[]): string {
   for (const dir of dirs) {
     for (const quoted of [dir, `"${dir}"`, `'${dir}'`]) {
