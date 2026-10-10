@@ -1,6 +1,6 @@
 # Design Conventions
 
-Boards read as one system because they share one set of design rules. The `backlog-triage` and `bugs` templates both embody these conventions, a new board type follows them, and the prose in the board data follows the writing rules at the end. Where a rule below names something neither template draws yet, such as a chart or a fact cell, it fixes how a new board type draws it, so the system stays one system as it grows.
+Boards read as one system because they share one set of design rules. The `backlog-triage` and `bugs` templates both embody these conventions and share one stylesheet, `templates/board.css`, which `report-board render` writes into every page. A new board type follows these conventions and draws from that stylesheet rather than carrying styles of its own, and the prose in the board data follows the writing rules at the end. Where a rule below names something neither template draws yet, such as a chart or a fact cell, it fixes how a new board type draws it, so the system stays one system as it grows.
 
 ## Principles
 
@@ -12,7 +12,7 @@ Boards read as one system because they share one set of design rules. The `backl
 
 ## Tokens
 
-Both themes are defined as tokens. Light values sit on `:root`; dark values sit under `prefers-color-scheme: dark` on `:root:not([data-theme="light"])`, and again on `:root[data-theme="dark"]`, so an explicit choice wins in either direction. Components use tokens only, never a literal color that works in one theme. Tokens both templates use carry the same names and values.
+Both themes are defined as tokens. Light values sit on `:root`; dark values sit under `prefers-color-scheme: dark` on `:root:not([data-theme="light"])`, and again on `:root[data-theme="dark"]`, so an explicit choice wins in either direction. Components use tokens only, never a literal color that works in one theme. The tokens are defined once, in the shared stylesheet.
 
 | Token                   | Light                | Dark                 | Role                                                             |
 | ----------------------- | -------------------- | -------------------- | ---------------------------------------------------------------- |
@@ -31,7 +31,7 @@ Both themes are defined as tokens. Light values sit on `:root`; dark values sit 
 | `--hatch`               | 28% ink              | 26% ink              | The 135-degree stripe of a waiting or unfinished shape           |
 | `--hit`                 | `#f6e2d3`            | `#2b2418`            | Ground of a contended matrix cell                                |
 
-The filled block and the accent carry role names with the same values: `--primary` and `--accent` on a backlog board, `--critical`, `--on-critical`, and `--high` on a bugs board. A new board type uses `--primary` and `--accent`. Blue is reserved for focus, except in the dark theme, where the filled block takes the same light blue as the focus ring.
+Every board names the filled block `--primary` and the accent `--accent`, whatever the lead tier is called on the page, such as Critical or Start now. Blue is reserved for focus, except in the dark theme, where the filled block takes the same light blue as the focus ring.
 
 Every text pair a board sets passes 4.5:1 in both themes. The tightest are `--focus` on `--ground` and `--accent` on `--hit`, both in the light theme. Check a new pairing before using it.
 
