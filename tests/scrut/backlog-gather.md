@@ -154,6 +154,16 @@ $ jq -c '.issues[] | select(.number == 11) | {carrier: .progress.carrier, merged
 {"carrier":{"pr":110},"mergedLinks":[{"number":110,"mergedAt":"2026-10-05T10:00:00Z","closes":false}]}
 ```
 
+## A mention alone is not progress
+
+Without its progress label, `#11`'s merged pull request is likely a follow-up
+that left it open, so the issue has no stage.
+
+```scrut
+$ dir="$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && cp -R "${BACKLOG_GATHER_DATA_DIR}/github/." "${dir}/" && jq '(.. | objects | select(.number? == 11 and has("labels")) | .labels.nodes) |= map(select(.name != "in progress"))' "${BACKLOG_GATHER_DATA_DIR}/github/graphql/issues.json" > "${dir}/graphql/issues.json" && backlog STUB_GH_DIR="${dir}" gather acme/widgets "${work}/mention.json" > /dev/null && jq -c '.issues[] | select(.number == 11) | .progress' "${work}/mention.json"
+null
+```
+
 ## The most recent of several branches carries the issue
 
 ```scrut
@@ -247,15 +257,16 @@ $ owners "${work}/board.json"
 
 With the share lowered to 40%, `ana` holds assignment on 10 of the 22 issues
 and `ben` filed 12, so both kinds drop and the assigned issues lose their
-explicit owner.
+explicit owner, `ben`'s `#14` among them.
 
 ```scrut
-$ config_with '.uniformityShare = 0.4' && backlog gather acme/widgets "${work}/uniform.json" | tail -1 && backlog finish "${work}/uniform.json" "${BACKLOG_GATHER_DATA_DIR}/analysis.json" "${work}/uniform-board.json" > /dev/null && jq -c '.affinityIgnored' "${work}/uniform-board.json" && owners "${work}/uniform-board.json" | head -3
+$ config_with '.uniformityShare = 0.4' && backlog gather acme/widgets "${work}/uniform.json" | tail -1 && backlog finish "${work}/uniform.json" "${BACKLOG_GATHER_DATA_DIR}/analysis.json" "${work}/uniform-board.json" > /dev/null && jq -c '.affinityIgnored' "${work}/uniform-board.json" && owners "${work}/uniform-board.json" | grep -E '^#(1|2|3|5|14|15) '; jq -r '.issues[] | select(.number == 14) | "#14 owner \(.affinity.owner)"' "${work}/uniform-board.json"
 Affinity signals ignored for uniformity: assigned, filed
 ["assigned","filed"]
 #2 you implicit 1: parser changed on branch feature/2-local; parser changed in commit * within 30 days (glob)
 #3 you implicit 1: ui changed on branch feature/3-pushed; ui changed in commit * within 30 days (glob)
 #5 you implicit 1: docs changed on pull request #50
+#14 owner null
 ```
 
 ## Uniformity needs enough issues to judge
