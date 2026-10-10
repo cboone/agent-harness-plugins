@@ -224,9 +224,10 @@ function compute_tmux_state() {
 # Transcript extractors (Claude Code JSONL)
 # -----------------------------------------------------------------------------
 
-# Each extractor reads a transcript in one jq pass, scanning lines backward from
-# the end until the current turn's user prompt, so an earlier turn is never
-# consulted. Records are classified as:
+# Each extractor streams a transcript newest line first and stops at the current
+# turn's user prompt, so time and memory follow the current turn and an earlier
+# turn is never consulted. Records (type "human" in older transcripts) are
+# classified as:
 # - "prompt": a user message that is not a tool result, a meta record (such as
 #   a skill expansion or system reminder) or local-command output. A
 #   slash-command invocation (`<command-message>…`) starts a turn, so it is a
@@ -239,16 +240,14 @@ def content: (.message | objects | .content) // "";
 def kind:
   content as $c
   | if .type == "assistant" then "assistant"
-    elif .type == "user" and .isMeta != true then
+    elif (.type == "user" or .type == "human") and .isMeta != true then
       (if ($c | type) == "array" and any($c[]?; type == "object" and .type == "tool_result") then "result"
        elif ($c | type) == "string" and ($c | test("^<local-")) then "other"
        else "prompt" end)
     else "other" end;
 def turn:
-  [inputs] as $lines
-  | [label $out | range(($lines | length) - 1; -1; -1) as $i
-      | ($lines[$i] | fromjson? // null) | objects
-      | if kind == "prompt" then break $out else . end];
+  [label $out | inputs | (fromjson? // null) | objects
+    | if kind == "prompt" then break $out else . end];
 def blocks: content | if type == "array" then .[] | objects else empty end;
 JQ
 readonly TURN_JQ
@@ -314,12 +313,22 @@ turn
 JQ
 readonly PENDING_JQ
 
+# Prints file $1 newest line first. Stock macOS has tail -r but no tac. Its
+# stderr is silenced because jq stops reading at the turn's prompt.
+function reverse_lines() {
+  if command -v tac > /dev/null 2>&1; then
+    tac "${1}" 2> /dev/null
+  else
+    tail -r "${1}" 2> /dev/null
+  fi
+}
+
 function extract_last_assistant_text() {
   local transcript_path="${1}"
   if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
     return 0
   fi
-  jq -Rnr "${TURN_JQ} ${LAST_TEXT_JQ}" 2> /dev/null < "${transcript_path}" || true
+  reverse_lines "${transcript_path}" | jq -Rnr "${TURN_JQ} ${LAST_TEXT_JQ}" 2> /dev/null || true
 }
 
 # $2 is the tool named by the prompt's message; $3 is "true" for the plan
@@ -329,7 +338,7 @@ function get_pending_tool_use() {
   if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
     return 0
   fi
-  jq -Rnc --arg wanted "${2:-}" --argjson plan "${3:-false}" "${TURN_JQ} ${PENDING_JQ}" 2> /dev/null < "${transcript_path}" || true
+  reverse_lines "${transcript_path}" | jq -Rnc --arg wanted "${2:-}" --argjson plan "${3:-false}" "${TURN_JQ} ${PENDING_JQ}" 2> /dev/null || true
 }
 
 # -----------------------------------------------------------------------------
