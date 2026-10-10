@@ -88,13 +88,13 @@ Delivers native macOS notifications so you can work in other apps while an agent
 
 `UserPromptSubmit` resets completion deduplication without posting a banner. The idle reminder hook is not registered. Claude Code also raises a permission prompt for `AskUserQuestion`; that prompt posts nothing, because the question banner already covers it.
 
-| Event                                         | Title                                 | Body                                     | Sound   |
-| --------------------------------------------- | ------------------------------------- | ---------------------------------------- | ------- |
-| `PreToolUse:AskUserQuestion`                  | `Question` or `<N> questions`         | The first question, then `(+N more)`     | `Tink`  |
-| `Notification:elicitation_dialog`             | `Question`                            | The question text from the payload       | `Tink`  |
-| `Notification:permission_prompt`              | `Approve <Tool>?` or `Needs approval` | The tool preview, or the payload message | `Funk`  |
-| `Notification:permission_prompt` for the plan | `Plan ready for review`               | The plan's first heading                 | `Tink`  |
-| `Stop`                                        | `Done`                                | Summary of `last_assistant_message`      | `Glass` |
+| Event                                         | Title                                 | Body                                                     | Sound   |
+| --------------------------------------------- | ------------------------------------- | -------------------------------------------------------- | ------- |
+| `PreToolUse:AskUserQuestion`                  | `Question` or `<N> questions`         | The first question, then `(+N more)`                     | `Tink`  |
+| `Notification:elicitation_dialog`             | `Question`                            | The question text from the payload                       | `Tink`  |
+| `Notification:permission_prompt`              | `Approve <Tool>?` or `Needs approval` | The tool preview, or the payload message                 | `Funk`  |
+| `Notification:permission_prompt` for the plan | `Plan ready for review`               | The plan's first heading outside code, or its first line | `Tink`  |
+| `Stop`                                        | `Done`                                | Summary of `last_assistant_message`                      | `Glass` |
 
 MCP tools appear by their tool name, as in `Approve batch?`, with the server named in the body.
 

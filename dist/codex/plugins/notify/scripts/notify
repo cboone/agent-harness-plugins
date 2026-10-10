@@ -278,12 +278,17 @@ IFS= read -r -d '' PENDING_JQ << 'JQ' || true
 def norm: ascii_downcase | gsub("[^a-z0-9]"; "");
 def mcp_full: ltrimstr("mcp__") | norm;
 def mcp_tool: split("__") | last | norm;
-# Keeps only the string fields previews read, capped, and a plan's first
-# heading, so a large Write never passes through the shell.
+# Keeps only the string fields previews read, capped, so a large Write never
+# passes through the shell. A plan keeps its first heading outside fenced code,
+# or else its first non-blank line.
 def preview_input:
   .input | if type == "object" then
     {command, file_path, notebook_path, url, pattern, description,
-     plan: ((.plan | strings | split("\n") | map(select(test("^#{1,6}\\s"))) | first) // null)}
+     plan: ((.plan | strings | split("\n")
+       | [foreach .[] as $l ({fence: false};
+           if ($l | test("^\\s*(```|~~~)")) then .fence = (.fence | not) | .skip = true else .skip = .fence end;
+           if .skip then empty else $l end)]
+       | (map(select(test("^#{1,6}\\s"))) | first) // (map(select(test("\\S"))) | first)) // null)}
     | with_entries(select(.value | type == "string") | .value |= .[0:4096])
   else {} end;
 turn
@@ -425,12 +430,12 @@ function tool_preview() {
   truncate_with_ellipsis "${preview//$'\n'/ }" "${limit}"
 }
 
-# Prints the plan's first heading without Markdown, for ExitPlanMode prompts.
+# Prints the plan line preview_input kept, without Markdown, for ExitPlanMode
+# prompts.
 function plan_heading() {
   printf '%s' "${1}" | jq -r '
-    (.input.plan // "") | strings | split("\n")
-    | map(select(test("^#{1,6}\\s"))) | first // ""
-    | sub("^#{1,6}\\s+"; "") | gsub("\\*\\*|`"; "")
+    (.input.plan // "") | strings
+    | sub("^\\s*(#{1,6}|[-*+>]|[0-9]+\\.)\\s+"; "") | gsub("\\*\\*|`"; "")
   ' 2> /dev/null || true
 }
 
