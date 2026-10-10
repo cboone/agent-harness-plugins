@@ -346,7 +346,15 @@ Parent continuation:
 - Profile: pr-and-issue-bodies
 ```
 
-Use the returned `Trimmed text` as the body when `Status` is `success`, and the draft otherwise. Then confirm that the `## Closes`, `## Related issues`, and `## Follow-ups` sections and every issue reference in them are unchanged from the draft; if any differ, use the draft. If the `trim-text` skill is not installed, use the draft and record the trim as skipped for step 9.
+Use the returned `Trimmed text` as the body when `Status` is `success`, and the draft otherwise. Before using a trimmed body, confirm all of these against the draft, and use the draft if any fails:
+
+- The body is non-empty, and every second-level heading in the draft is still present, in the same order.
+- `## Summary` still has 1-4 bullets.
+- The `## Closes`, `## Related issues`, and `## Follow-ups` sections are unchanged.
+- The body as a whole has the same set of issue references and closing keywords, so no `Fixes #N` appears or disappears outside those sections.
+- Every checklist item keeps its checked or unchecked state.
+
+If the `trim-text` skill is not installed, use the draft. Record the outcome for step 9.
 
 #### Create the PR
 
@@ -434,7 +442,7 @@ After the PR is created, report:
 1. A brief summary of what was committed and pushed.
 1. Connected issues (if any) and the closing keywords used.
 1. Follow-up issues listed in the PR body (if any).
-1. Whether `trim-text` trimmed the body, found nothing to trim, or was skipped, and why.
+1. The body trim: trimmed, nothing to trim, failed with the returned `Reason`, discarded with the check that failed, or skipped because `trim-text` is not installed. Relay any `Flagged` and `Cut material` lines it returned.
 
 ## Plan-Aware Commits
 

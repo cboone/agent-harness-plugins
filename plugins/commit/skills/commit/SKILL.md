@@ -146,7 +146,7 @@ Analyze the diff to generate a commit message:
 
 #### Trim the body
 
-When the message has a body, invoke the `trim-text` skill on the body alone, passing this continuation block after it:
+When the message has a body, split off its trailing lines first: trailers such as `Signed-off-by:` or `Claude-Session:`, and lines carrying issue references or closing keywords such as `fixes #42`. Invoke the `trim-text` skill on the remaining prose alone, passing this continuation block after it:
 
 ```text
 Parent continuation:
@@ -155,7 +155,7 @@ Parent continuation:
 - Profile: none
 ```
 
-Use the returned `Trimmed text` as the body when `Status` is `success`, and the draft otherwise. The subject keeps the rules above, and trailers and issue references stay exactly as drafted. If the `trim-text` skill is not installed, use the draft and say so when reporting the commit.
+When `Status` is `success`, use the returned `Trimmed text` as the prose, then append the split-off lines exactly as drafted. Use the drafted prose instead when the status is anything else, when the trimmed prose is empty, or when it adds or drops an issue reference. The subject keeps the rules above. Record the outcome for step 7, along with any `Flagged` and `Cut material` lines; if the `trim-text` skill is not installed, record the trim as skipped.
 
 ### 6. Create the Commit
 
@@ -177,6 +177,7 @@ After a successful commit:
 
 1. Run `git status` to verify success.
 1. Report the commit hash and message.
+1. Report the body trim recorded in step 5: trimmed, nothing to trim, failed or discarded with the reason, or skipped. Relay any flagged or cut material.
 1. **If `--push` was specified**: Push to the remote.
 
 ```bash
