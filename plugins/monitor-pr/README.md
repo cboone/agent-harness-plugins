@@ -51,8 +51,6 @@ Some repositories need an approving review first. The skill treats a PR that way
 
 Once the PR merges, the skill fetches the base branch from the remote that names the PR's repository, which in a fork is not `origin`, and fast-forwards the worktree that has it checked out, usually the main worktree, or the branch ref when none does. It confirms the merge commit arrived before calling the branch synced, and it reports git's refusal rather than stashing, resetting, or forcing when local changes or a diverged branch are in the way. It then messages the other agent sessions working in the repository's worktrees with the PR, the merge commit, and the sync result. On Claude Code it finds those sessions by matching each `ListAgents` session's tmux pane against the panes inside the repository's worktrees, and sends with `SendMessage`. The message is informational; each session decides whether to merge the base branch. A PR closed without merging gets neither step.
 
-The bundled `merge-flow` script does the reads and the sync, and reports a failed read in its output rather than in a pipeline's exit status.
-
 ### Dependabot PRs
 
 Dependabot owns its branches. Once anyone else pushes to one, Dependabot stops rebasing it, and a later `@dependabot recreate` throws the push away. So on a PR authored by Dependabot the skill never pushes:
