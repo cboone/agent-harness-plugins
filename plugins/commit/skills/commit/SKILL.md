@@ -146,7 +146,7 @@ Analyze the diff to generate a commit message:
 
 #### Trim the body
 
-When the message has a body, split off its trailing lines first: trailers such as `Signed-off-by:` or `Claude-Session:`, and lines carrying issue references or closing keywords such as `fixes #42`. Invoke the `trim-text` skill on the remaining prose alone, passing this continuation block after it:
+When the message has a body, split off its final block first: the lines after the last blank line, when every one of them is a trailer such as `Signed-off-by:` or `Claude-Session:` or a closing line such as `fixes #42`. Issue references inside the prose stay in it. When prose remains, invoke the `trim-text` skill on it alone, passing this continuation block after it:
 
 ```text
 Parent continuation:
@@ -155,7 +155,7 @@ Parent continuation:
 - Profile: none
 ```
 
-When `Status` is `success`, use the returned `Trimmed text` as the prose, then append the split-off lines exactly as drafted. Use the drafted prose instead when the status is anything else, when the trimmed prose is empty, or when it adds or drops an issue reference. The subject keeps the rules above. Record the outcome for step 7, along with any `Flagged` and `Cut material` lines; if the `trim-text` skill is not installed, record the trim as skipped.
+When `Status` is `success`, use the returned `Trimmed text` as the prose, then append one blank line and the split-off block exactly as drafted. Use the drafted prose instead when the status is anything else, when the trimmed prose is empty, or when it adds or drops an issue reference. The subject keeps the rules above. Record the outcome, along with any `Flagged` and `Cut material` lines, and report it in step 7, or with the error if the commit fails. If the `trim-text` skill is not installed, record the trim as skipped.
 
 ### 6. Create the Commit
 
@@ -177,7 +177,7 @@ After a successful commit:
 
 1. Run `git status` to verify success.
 1. Report the commit hash and message.
-1. Report the body trim recorded in step 5: trimmed, nothing to trim, failed or discarded with the reason, or skipped. Relay any flagged or cut material.
+1. Report the body trim recorded in step 5: trimmed, nothing to trim, failed, unavailable, or discarded with the reason, or skipped. Relay any flagged or cut material.
 1. **If `--push` was specified**: Push to the remote.
 
 ```bash
