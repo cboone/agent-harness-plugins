@@ -30,13 +30,13 @@ Every state a reader acts on has a shape as well as a hue, so it survives a colo
 - Lane segments that can run now are solid, queued ones are outlined, and blocked ones carry a hatch.
 - An issue with no milestone gets a dashed chip.
 - A soft ordering link, "better after" or "eases", gets a dashed underline; a hard one, "waits on" or "unblocks", keeps a solid one.
-- Each stage has a border form of its own: dashed for started, dotted for a branch, double for a draft, solid for awaiting review, hatched for needs author, filled for ready to merge, and struck through for close-out. A flag is a small dashed mark, solid when it reports a stale branch or a conflict.
+- Each stage has a border form of its own: dashed for started, dotted for a branch, double for a draft, solid for awaiting review, hatched for needs author, filled for ready to merge, and struck through for close-out. A flag is a small dashed mark, solid when it reports stale work or a conflict.
 - Order is numbered only where it is real. Serial lanes number their steps; lanes with no order show a dot.
 - On a bugs board, a Critical row has a filled tag and a High priority row an outlined one; a bug to confirm first carries a dashed tag; a fact nobody has confirmed is italic with a dashed underline, a fact the triage note set carries a dot, and an expired triage entry is struck through and tagged.
 
 ## Links
 
-Every issue number, milestone, branch, pull request, and commit links to its source, including the carrier of work in progress, including issue numbers written into prose, and the contention matrix links every component it lists. The footprint beside a lane or a pick stays prose, naming components the matrix links. The board summarizes; the reader acts in the source, so every row is one click away from it.
+Every issue number, milestone, branch, pull request, and commit links to its source, including the carrier of work in progress when it is a branch or a pull request, and issue numbers written into prose, and the contention matrix links every component it lists. The footprint beside a lane or a pick stays prose, naming components the matrix links. The board summarizes; the reader acts in the source, so every row is one click away from it.
 
 ## Writing the Board Data
 

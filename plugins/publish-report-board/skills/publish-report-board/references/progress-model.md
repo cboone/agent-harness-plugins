@@ -2,19 +2,19 @@
 
 This model says how far along each open issue's work is, whose move comes next, and how much the issue is already someone's. The report boards and the `suggest-next-issue` skill share it, so an issue reads the same wherever it appears. The boards derive every value in code from the signals their gather scripts collect; a skill that applies the model by hand uses the same signals and rules.
 
-`publish-report-board` holds the source of this file, and `make build` copies it into `suggest-next-issue`. Edit the source.
+`publish-report-board` holds the source of this file, and `make build` copies it into `suggest-next-issue`. Edit the source. The gather scripts apply these rules from one shared file, `scripts/progress.jq`, so changing a rule means changing both this file and that one.
 
 ## Signals
 
 Only these signals mark work, each gathered on the current sync. Nothing is carried over from an earlier sync, and nothing is inferred: a long-running routine, a time-gated task, or a plan to start soon is not progress. When something outside the repository gates an issue, record it as a blocker with its reason, or leave it out.
 
-| Signal   | What counts                                                                                                                                                                                                                                                                                              |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Label    | A label in the progress labels, matched without regard to case. The default is `in progress`.                                                                                                                                                                                                            |
-| Pipeline | A ZenHub pipeline in the progress pipelines, on a board that reads ZenHub. The default is `In Progress` and `Review/QA`.                                                                                                                                                                                 |
-| Branch   | A local branch, a remote branch, or a worktree whose name contains the issue number as a whole number, such as `feature/412-tags` for #412 but not for #41. The default branch never counts.                                                                                                             |
-| Open PR  | An open pull request that closes the issue, or whose head branch names it as a branch does.                                                                                                                                                                                                              |
-| Merged   | A merged pull request in the same repository that closes the open issue, through a closing keyword or a manual link; or one that only mentions it, while a progress label or pipeline is still on the issue. A mention alone is not a signal: pull requests often name follow-up issues they leave open. |
+| Signal   | What counts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Label    | A label in the progress labels, matched without regard to case. The default is `in progress`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Pipeline | A ZenHub pipeline in the progress pipelines, on a board that reads ZenHub. The default is `In Progress` and `Review/QA`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Branch   | A local branch, a remote branch, or a worktree that names the issue and carries work. A branch names an issue when one segment of its name, between slashes, starts with the issue number, bare or after a word and a `-` or `_`, `issue`, `gh`, or `#`, and the number ends the segment or a `-` or `_` follows it: `feature/412-tags`, `fix-412`, and `issue412` name #412, while `chore/4120`, `release/412.1`, and `update-to-v412` do not. Branches under `dependabot/` and `renovate/` name no issue. A branch carries work while it has commits beyond the default branch or a worktree has it checked out; one whose commits the gather cannot count still does, and its signal says so. The default branch never counts. |
+| Open PR  | An open pull request in the same repository that closes the issue, or whose head branch names it as a branch does.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Merged   | A merged pull request in the same repository that closes the open issue, through a closing reference, which includes a manual link, or a cross-reference with a closing keyword; or one that only mentions it, while a progress label or pipeline is still on the issue. A mention alone is not a signal: pull requests often name follow-up issues they leave open. A manual link that was removed no longer counts.                                                                                                                                                                                                                                                                                                             |
 
 Assignment is not a progress signal. It says who owns an issue, not that work has started; ownership is [affinity](#affinity).
 
@@ -55,17 +55,17 @@ The author moves next in every stage but `awaiting-review`. There the reviewer m
 
 Flags describe the condition of the work, beside its stage.
 
-| Flag             | Raised when                                                                                                                         |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `quiet`          | The last activity is more than the quiet days old, 7 by default                                                                     |
-| `stale`          | The last activity is more than the stale days old, 30 by default. It replaces `quiet`, and the next action becomes "resume or drop" |
-| `behind`         | The carrying branch is behind the default branch                                                                                    |
-| `conflict`       | GitHub reports the carrying pull request as conflicting                                                                             |
-| `multiple`       | More than one branch or open pull request carries the issue. A pull request and its own head branch count once.                     |
-| `local`          | The carrying branch exists only on the machine that ran the gather, which the progress names as its host                            |
-| `leftover-label` | A `close-out` issue still carries a progress label                                                                                  |
+| Flag             | Raised when                                                                                                                                        |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `quiet`          | The last activity is more than the quiet days old, 7 by default                                                                                    |
+| `stale`          | The last activity is more than the stale days old, 30 by default. It replaces `quiet`, and the next action becomes "resume or drop"                |
+| `behind`         | The carrying branch is behind the default branch                                                                                                   |
+| `conflict`       | GitHub reports the carrying pull request as conflicting                                                                                            |
+| `multiple`       | More than one branch or open pull request carries the issue, on a stage other than `close-out`. A pull request and its own head branch count once. |
+| `local`          | The carrying branch exists only on the machine that ran the gather, which the progress names as its host                                           |
+| `leftover-label` | A `close-out` issue still carries a progress label                                                                                                 |
 
-Last activity is the latest of the carrying branch's last commit, the carrying pull request's last update and last review, the merge time for `close-out`, and, for `started`, the issue's last update.
+Last activity is the latest of the carrying branch's last commit; the carrying pull request's last update, last review, and its head branch's last commit; the merge time for `close-out`; and, for `started`, the issue's last update, or when it entered a progress pipeline.
 
 A local branch shares the `branch` stage with a pushed one because both answer how far along the work is, and whose move it is, the same way. Being unpushed is a condition of the branch: work that exists on one machine, and that a sync from another machine cannot see.
 
@@ -77,12 +77,12 @@ Affinity says how much an issue is already someone's. It is a weak ranking facto
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Explicit | An assignee. Or a claim label or claim pipeline, owned by the issue's assignees, or by no one known when it has none. Claim settings default to empty, and a label or pipeline cannot be both a claim and a progress signal. |
 | Tier 1   | One of the issue's areas covers a file changed on the current user's open branches or pull requests                                                                                                                          |
-| Tier 2   | One of the issue's areas covers a file in the current user's commits, or in pull requests the current user merged, within the work days, 30 by default                                                                       |
+| Tier 2   | One of the issue's areas covers a file in the current user's commits, or in the current user's merged pull requests, within the work days, 30 by default                                                                     |
 | Tier 3   | The current user filed the issue, or commented on it within the comment days, 90 by default                                                                                                                                  |
 
 The tiers are implicit affinity, for the current user only, strongest first. An area is a named set of path patterns, such as `parser` covering `src/parser/**`, tagged on an issue by the analysis that reads it; an issue whose area cannot be told from reading it has no tier 1 or 2 affinity.
 
-The owner is decided in this order, from the signals uniformity leaves: the current user when assigned; another person when assigned; the current user when an implicit tier says so; `unknown` when a claim with no assignee says so; and no one otherwise. An issue assigned to someone else stays theirs even when the current user has implicit affinity for it.
+The owner is decided in this order, from the signals uniformity leaves: the current user when assigned; another person when assigned; the assignees of a claim, the current user first, which matters when uniformity ignores assignment but not claims; the current user when an implicit tier says so; `unknown` when a claim with no assignee says so; and no one otherwise. An issue assigned to someone else stays theirs even when the current user has implicit affinity for it.
 
 ### Uniformity
 
@@ -90,7 +90,7 @@ Some repositories set a signal on almost every issue. In a repository with a sin
 
 ### Effect
 
-The current user's issues get a small boost, issues owned by someone else a large penalty, and unowned issues nothing. On a backlog board, a start pick owned by someone else needs a stated reason. On a bugs board, the weights add to the rank, 5 for the current user and -30 for someone else by default.
+The current user's issues get a small boost, issues owned by someone else a large penalty, and issues with no owner, or an `unknown` one, nothing. Each board-type reference says how its board applies this.
 
 ## Data Shapes
 
@@ -104,7 +104,7 @@ The boards carry these objects. A gather script writes them; the analysis never 
 | `carrier`       | What carries it, exactly one of `{ "pr": 412 }`, `{ "branch": "feature/412-tags" }`, `{ "label": "in progress" }`, or `{ "pipeline": "In Progress" }` |
 | `signal`        | The gathered signal in words, such as `pull request #412, approved, checks passing`                                                                   |
 | `lastActivity`  | An ISO 8601 time                                                                                                                                      |
-| `since`         | An ISO 8601 time the stage is known to have begun, or null                                                                                            |
+| `since`         | An ISO 8601 time the carrier began, such as when its pull request opened or its pull request merged, or null                                          |
 | `nextMove`      | `author`, `reviewer`, `ci`, or `nobody`                                                                                                               |
 | `nextAction`    | The next action in words                                                                                                                              |
 | `flags`         | A list of flags, empty when there are none                                                                                                            |
@@ -113,13 +113,13 @@ The boards carry these objects. A gather script writes them; the analysis never 
 
 `affinity`, on every open issue or bug:
 
-| Field     | Value                                                                                           |
-| --------- | ----------------------------------------------------------------------------------------------- |
-| `owner`   | `you`, another person's login, `unknown` for a claim with no known owner, or null               |
-| `kind`    | `explicit`, `implicit`, or null when `owner` is null                                            |
-| `tier`    | 1, 2, or 3 for implicit affinity, otherwise null                                                |
-| `reasons` | The signals behind it in words, such as `assigned` or `commits in src/parser/** within 30 days` |
+| Field     | Value                                                                                                   |
+| --------- | ------------------------------------------------------------------------------------------------------- |
+| `owner`   | `you`, another person's login, `unknown` for a claim with no known owner, or null                       |
+| `kind`    | `explicit`, `implicit`, or null when `owner` is null                                                    |
+| `tier`    | 1, 2, or 3 for implicit affinity, otherwise null                                                        |
+| `reasons` | The signals behind it in words, such as `assigned` or `parser changed in commit 1a2b3c4 within 30 days` |
 
-`areas`, at the top level of a board: a list of `{ "name", "paths" }`, where `paths` are glob patterns relative to the repository root. `*` matches within one path segment, `**` across segments, and a pattern ending in `/` covers everything below it. Each issue or bug lists the names of its areas in its own `areas` field.
+`areas`, at the top level of a board: a list of `{ "name", "paths" }`, where `paths` are glob patterns relative to the repository root. `*` and `?` match within one path segment, `**` across segments, `**/` also matches no segment at all, and a pattern ending in `/` covers everything below it. Each issue or bug lists the names of its areas in its own `areas` field.
 
 `affinityIgnored`, at the top level of a board: the signal kinds uniformity dropped, empty when none were.

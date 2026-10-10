@@ -18,6 +18,7 @@ Run these from a checkout of the repository:
 ```bash
 git fetch --quiet --prune origin
 bash BACKLOG_GATHER gather OWNER/REPO GATHER_JSON
+git branch --remotes --no-merged origin/DEFAULT_BRANCH
 gh api --paginate --slurp 'repos/OWNER/REPO/milestones?state=open&per_page=100' | jq 'add'
 date -u +%Y-%m-%dT%H:%M:%SZ
 ```
@@ -31,7 +32,7 @@ date -u +%Y-%m-%dT%H:%M:%SZ
 
 It stops rather than shrink the board when GitHub cuts a list short, and prints a summary of the stages and flags it found. The milestones call is paginated because GitHub caps a page at 100 and returns only the first one otherwise, so `--slurp` gathers the pages and `add` flattens them into a single list.
 
-Unmerged branches are also what a branch blocker points at: a branch holding unmerged work with no pull request is often the reason an issue cannot finish. The gather reports remote branches carrying their remote, as `origin/feature`. Record a branch blocker as the branch alone, `feature`, because the page builds a compare link from it and `origin/feature` names no branch on GitHub.
+Unmerged branches are also what a branch blocker points at: a branch holding unmerged work with no pull request is often the reason an issue cannot finish. The gather reports only the branches that name an open issue, as carriers in its progress, so `git branch --remotes --no-merged` lists the rest; `DEFAULT_BRANCH` is the default branch the gather reports. That listing names each branch with its remote, as `origin/feature`. Record a branch blocker as the branch alone, `feature`, because the page builds a compare link from it and `origin/feature` names no branch on GitHub.
 
 Optional settings live in `${XDG_CONFIG_HOME:-$HOME/.config}/report-boards/backlog-triage/github.com/OWNER/NAME.json`:
 
@@ -110,23 +111,23 @@ It adds each issue's `progress` and `affinity`, the claims derived from the area
 
 ### Top Level
 
-| Field             | Required | Contents                                                                                                                   |
-| ----------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `board`           | Yes      | `backlog-triage`                                                                                                           |
-| `schemaVersion`   | Finish   | `2`                                                                                                                        |
-| `title`           | Yes      | The board's name, identical across syncs                                                                                   |
-| `repo`            | Yes      | `OWNER/NAME`                                                                                                               |
-| `repoUrl`         | No       | The repository URL, when it is not on github.com, with no query or fragment                                                |
-| `sync`            | Yes      | Sync metadata, as `./references/sync-metadata.md` describes                                                                |
-| `summary`         | Yes      | One or two sentences                                                                                                       |
-| `milestones`      | No       | `{ "title", "short" }` per milestone, in the order the contention matrix lists them; `short` labels the matrix column      |
-| `issues`          | Yes      | Every open issue                                                                                                           |
-| `lanes`           | Yes      | Every lane                                                                                                                 |
-| `startNow`        | Yes      | The picks, as a list that may be empty                                                                                     |
-| `areas`           | No       | `{ "name", "paths", "query" }` per area, as [Areas and Contention](#3-areas-and-contention) describes; `query` is optional |
-| `contention`      | No       | `{ "rowLabel", "claims" }`; finish derives each claim, `{ "name", "issues", "query" }`, from the areas                     |
-| `affinityIgnored` | Finish   | The signal kinds uniformity dropped, as `./references/progress-model.md` describes                                         |
-| `notes`           | No       | Text for `startNow`, `blocked`, or `contention`, replacing the note the page would otherwise derive                        |
+| Field             | Required | Contents                                                                                                                                                  |
+| ----------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `board`           | Yes      | `backlog-triage`                                                                                                                                          |
+| `schemaVersion`   | Finish   | `2`                                                                                                                                                       |
+| `title`           | Yes      | The board's name, identical across syncs                                                                                                                  |
+| `repo`            | Yes      | `OWNER/NAME`                                                                                                                                              |
+| `repoUrl`         | No       | The repository URL, when it is not on github.com, with no query or fragment                                                                               |
+| `sync`            | Yes      | Sync metadata, as `./references/sync-metadata.md` describes                                                                                               |
+| `summary`         | Yes      | One or two sentences                                                                                                                                      |
+| `milestones`      | No       | `{ "title", "short" }` per milestone, in the order the contention matrix lists them; `short` labels the matrix column                                     |
+| `issues`          | Yes      | Every open issue                                                                                                                                          |
+| `lanes`           | Yes      | Every lane                                                                                                                                                |
+| `startNow`        | Yes      | The picks, as a list that may be empty                                                                                                                    |
+| `areas`           | Yes      | `{ "name", "paths", "query" }` per area, as [Areas and Contention](#3-areas-and-contention) describes, empty when no issue names one; `query` is optional |
+| `contention`      | No       | `{ "rowLabel", "claims" }`; finish derives each claim, `{ "name", "issues", "query" }`, from the areas                                                    |
+| `affinityIgnored` | Finish   | The signal kinds uniformity dropped, as `./references/progress-model.md` describes                                                                        |
+| `notes`           | No       | Text for `startNow`, `blocked`, or `contention`, replacing the note the page would otherwise derive                                                       |
 
 Rows marked Finish are written by `backlog-gather finish`, never by the analysis; the progress and affinity shapes are in `./references/progress-model.md`.
 
@@ -202,8 +203,8 @@ When nothing is blocked, the Blocked section shrinks to its heading and the word
 - `waitingOn` lists open issues on the board, never the issue itself, or well-formed references, and always comes with `blockedBecause`.
 - `after` lists open issues on the board or well-formed references, never the issue itself, never an issue it already waits on or shares a branch with, and never forms a loop.
 - `sameBranchAs` names an issue in the same lane that does not itself ship on another branch.
-- A start pick is on the board, and is not blocked, not in progress (counting work on an issue riding its branch), not better after another open issue, and not riding on another issue's branch; nothing riding on its own branch is better after another open issue either. A pick owned by someone else carries `despiteOwner`.
-- `schemaVersion` is 2. Each issue's `progress` and `affinity` take the shapes in `./references/progress-model.md`, every area an issue names is defined, and the claims are the ones the areas derive.
+- A start pick is on the board, and is not blocked, not in progress or in `close-out` (counting work on an issue riding its branch), not better after another open issue, and not riding on another issue's branch; nothing riding on its own branch is better after another open issue either. A pick owned by someone else carries `despiteOwner`.
+- `schemaVersion` is 2. Each issue carries `progress`, null when it has no stage, and `progress` and `affinity` take the shapes in `./references/progress-model.md`, every area an issue names is defined, and the claims are the ones the areas derive.
 - A serial or head lane gets at most one pick, none while work in progress holds its slot, and only the issue the page runs there: a head lane's head, or a serial lane's first issue that can start.
 - `sync.at` falls on a real calendar date, `sync.commit` is a full SHA, and `sync.timeZone`, when set, is a zone the time zone database has, wherever one is installed.
 - Required fields are present and well formed, including each issue's `milestone`, which is `null` when it has none. Issue numbers, lane keys, and claim names are unique, and every `mode` is `serial`, `head`, or `any`.

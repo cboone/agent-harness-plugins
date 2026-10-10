@@ -1205,9 +1205,9 @@
       );
       return;
     }
-    // The progress model arrived with schema version 2. An earlier board has
-    // none of the fields this page reads for it, so it asks for a sync rather
-    // than drawing work in progress as absent.
+    // A board before schema version 2 lacks the progress fields this page
+    // reads, so it asks for a sync rather than drawing work in progress as
+    // absent.
     if (data.schemaVersion !== 2) {
       root.replaceChildren(
         h(
@@ -1467,8 +1467,8 @@
     ];
     const STAGE_LABEL = new Map(STAGES);
     const FLAG_TEXT = {
-      quiet: ["quiet", "No activity for a week or more"],
-      stale: ["stale", "No activity for a month or more"],
+      quiet: ["quiet", "No activity for longer than the quiet period, 7 days by default"],
+      stale: ["stale", "No activity for longer than the stale period, 30 days by default; resume or drop it"],
       behind: ["behind", "The branch is behind the default branch"],
       conflict: ["conflict", "The pull request conflicts with its base"],
       multiple: ["several", "More than one branch or pull request carries this issue"],

@@ -31,7 +31,7 @@ Run these commands to build a complete picture:
 
 ```bash
 # Open issues (with details for analysis)
-gh issue list --state open --json number,title,labels,assignees,createdAt,updatedAt,comments,milestone,body --limit 100
+gh issue list --state open --json number,title,labels,assignees,createdAt,updatedAt,comments,milestone,body,author --limit 100
 
 # Recently closed issues (understand momentum)
 gh issue list --state closed --json number,title,labels,closedAt --limit 10 --sort updated
@@ -50,7 +50,7 @@ gh pr list --state merged --limit 100 --json number,title,body,mergedAt,closingI
 # Current authenticated user and git identity (for affinity)
 gh api user --jq '.login'
 git config user.email
-git log --all --since='30 days ago' --author="$(git config user.email)" --name-only --format='commit %h %cI'
+git log --all --since='30 days ago' --fixed-strings --regexp-ignore-case --author="$(git config user.email)" --name-only --format='commit %h %cI'
 
 # Project context
 gh repo view --json description,defaultBranchRef
@@ -105,7 +105,7 @@ Treat a stale claim as free, and mention it so the user can clear it. Nothing th
 
 ### 2. Identify In-Progress Work
 
-Read [the progress model](./references/progress-model.md) and apply it to every open issue, using only the signals gathered in step 1: a branch or worktree whose name contains the issue number as a whole number, an "in progress" label (matched without regard to case), an open pull request that closes the issue or whose head branch names it, and a merged pull request that closes an issue still open, or only mentions it while the issue still has an "in progress" label. A mention alone is not a signal, since pull requests often name follow-up issues they leave open. Nothing else marks work: not an assignment, not a recurring routine, not a plan to start soon. Give each issue with a signal its stage, next move and flags as the model defines them.
+Read [the progress model](./references/progress-model.md) and apply it to every open issue, using only the signals gathered in step 1: a branch or worktree that names the issue as the model's Branch row describes (a segment of its name starting with the number, never a `dependabot/` or `renovate/` branch) and carries commits beyond the default branch or is checked out in a worktree; an "in progress" label (matched without regard to case); an open pull request that closes the issue, through `closingIssuesReferences`, which includes a manual link, or whose head branch names it; and a merged pull request that closes an issue still open, or only mentions it while the issue still has an "in progress" label. A mention alone is not a signal, since pull requests often name follow-up issues they leave open. Nothing else marks work: not an assignment, not a recurring routine, not a plan to start soon. Give each issue with a signal its stage, next move and flags as the model defines them.
 
 Exclude issues in the stages from `started` to `ready-to-merge` from recommendations, and note each one in the output with its stage, what carries it and whose move comes next. A `started` issue, one marked only by its label, may mean local work is complete but the related pull request is still waiting to merge. Keep excluding it. Do not recommend it again only because no matching branch or worktree is visible.
 
@@ -117,17 +117,17 @@ Assignment is ownership, not progress. It feeds affinity in step 3.
 
 Evaluate each open issue (that is not already in progress) on these signals:
 
-| Signal                    | Source                                                                 | Weight        |
-| ------------------------- | ---------------------------------------------------------------------- | ------------- |
-| **Priority labels**       | Labels containing "bug", "critical", "urgent", "security"              | High          |
-| **Dependencies**          | Issue body references to other issues (#N, "depends on", "blocked by") | High          |
-| **Resource conflict**     | Issue work or verification needs an exclusive resource already held    | High          |
-| **Owned by someone else** | Assigned to another person                                             | High, against |
-| **Age**                   | `createdAt` field                                                      | Medium        |
-| **Activity**              | Number of comments, `updatedAt` recency                                | Medium        |
-| **Affinity**              | Assigned to the current user, or in an area of their recent work       | Low           |
-| **Effort**                | Issue body length/complexity, scope described                          | Low           |
-| **Momentum fit**          | Similarity to recently closed issues                                   | Low           |
+| Signal                    | Source                                                                  | Weight        |
+| ------------------------- | ----------------------------------------------------------------------- | ------------- |
+| **Priority labels**       | Labels containing "bug", "critical", "urgent", "security"               | High          |
+| **Dependencies**          | Issue body references to other issues (#N, "depends on", "blocked by")  | High          |
+| **Resource conflict**     | Issue work or verification needs an exclusive resource already held     | High          |
+| **Owned by someone else** | Assigned to another person, or claimed while another person is assigned | High, against |
+| **Age**                   | `createdAt` field                                                       | Medium        |
+| **Activity**              | Number of comments, `updatedAt` recency                                 | Medium        |
+| **Affinity**              | Assigned to the current user, or in an area of their recent work        | Low           |
+| **Effort**                | Issue body length/complexity, scope described                           | Low           |
+| **Momentum fit**          | Similarity to recently closed issues                                    | Low           |
 
 Dependency analysis: scan each issue body for references to other issues (`#N`, "depends on #N", "blocked by #N", "after #N"). Build a dependency graph to identify:
 
@@ -138,7 +138,7 @@ Resource analysis: match each issue against the project's declared resources fro
 
 This is advisory. An issue is never hidden outright unless `--parallel-only` was passed, because the user may well intend to finish the holding work first and start this next.
 
-Affinity analysis: apply the model's affinity rules. An issue assigned to the current user, or in an area their open branches, recent commits or recently merged pull requests touch, or one they filed or recently commented on, gets a small boost; an issue assigned to someone else gets a large penalty but stays eligible, with the owner named. Judge an issue's area from the paths and components its body names, and say which branch, commit or pull request made the match. Apply the uniformity rule before any of it: in a repository where one person is assigned to, files, or comments on nearly every open issue, that signal tells no issue apart, so ignore it and say so. Issue state is often out of date, so affinity only breaks ties between otherwise comparable issues; it never outweighs priority, dependencies or resources.
+Affinity analysis: apply the model's affinity rules. An issue assigned to the current user, or in an area their open branches, recent commits or recently merged pull requests touch, or one they filed or recently commented on, gets a small boost; an issue assigned to someone else gets a large penalty but stays eligible, with the owner named. Judge an issue's area from the paths and components its body names, and say which branch, commit or pull request made the match. Apply the uniformity rule before any of it: in a repository where one person holds a signal on nearly every open issue, whether assignment, a claim, filing, commenting, or the current user's active or recent work in its area, that signal tells no issue apart, so ignore it and say so. Issue state is often out of date, so affinity only breaks ties between otherwise comparable issues; it never outweighs priority, dependencies or resources.
 
 ### 4. Generate Recommendations
 
@@ -165,7 +165,7 @@ For each recommendation, include:
 
 ### 5. Summarize In-Progress Work
 
-After recommendations, briefly list issues detected as in progress, furthest stage first. For each, give its stage, what carries it (a branch, a pull request or a label), whose move comes next and the next action, plus any flags, such as `stale` or `local`. This gives the user a complete picture of active work, including issues that may be waiting on a pull request after local implementation is done. Then list `close-out` issues as cleanups.
+After recommendations, briefly list issues detected as in progress, furthest stage first. For each, give its stage, what carries it (a branch, a pull request or a label), whose move comes next and the next action, plus any flags, such as `stale` or `local`. Say "your move" only when the current user wrote the pull request or holds the branch; otherwise name the author's move. This gives the user a complete picture of active work, including issues that may be waiting on a pull request after local implementation is done. Then list `close-out` issues as cleanups.
 
 Then, when any resource is claimed, list who holds what: the resource, the branch, and whether the claim is stale. This is the half of the picture the issue list cannot show, and it is what answers "what can I work on in parallel" without the user having to remember the constraint. Skip the section entirely when nothing is claimed.
 
@@ -221,10 +221,10 @@ Ready to start on one of these? Just say "start issue #N" or pick a number from 
 
 **Already in progress:**
 
-- #16 -- ready to merge: PR #40, approved, checks passing (your move: merge it)
+- #16 -- ready to merge: PR #40, approved, checks passing (author's move: merge it)
 - #25 -- awaiting review: PR #42, review required, none requested (nobody's move: request a review)
 - #14 -- branch: feature/14-improve-notifications, local (your move: push it)
-- #21 -- started: the "in progress" label (your move: open a branch; stale, last activity 34 days ago)
+- #21 -- started: the "in progress" label (your move: resume or drop; stale, last activity 34 days ago)
 
 **Ready to close out:**
 
