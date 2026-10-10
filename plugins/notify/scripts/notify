@@ -223,8 +223,10 @@ function compute_tmux_state() {
 # Each extractor reads a transcript in one jq pass, scanning lines backward from
 # the end until the current turn's user prompt, so an earlier turn is never
 # consulted. Records are classified as:
-# - "prompt": a user message that is not a tool result, meta record (such as a
-#   skill expansion or system reminder) or slash-command output;
+# - "prompt": a user message that is not a tool result, a meta record (such as
+#   a skill expansion or system reminder) or local-command output. A
+#   slash-command invocation (`<command-message>…`) starts a turn, so it is a
+#   prompt;
 # - "result": a user record carrying tool results;
 # - "assistant", and "other" for everything else.
 # Read with `read -d ''` because bash 3.2 cannot parse these heredocs inside $().
@@ -235,7 +237,7 @@ def kind:
   | if .type == "assistant" then "assistant"
     elif .type == "user" and .isMeta != true then
       (if ($c | type) == "array" and any($c[]?; type == "object" and .type == "tool_result") then "result"
-       elif ($c | type) == "string" and ($c | test("^<(command-|local-)")) then "other"
+       elif ($c | type) == "string" and ($c | test("^<local-")) then "other"
        else "prompt" end)
     else "other" end;
 def turn:
@@ -253,6 +255,7 @@ first(turn[] | select(kind == "assistant")
   | (if (content | type) == "string" then content
      else [blocks | select(.type == "text") | .text | strings] | join("\n") end)
   | select(. != "")) // empty
+| gsub("\u0000"; "")
 JQ
 readonly LAST_TEXT_JQ
 
@@ -272,12 +275,20 @@ IFS= read -r -d '' PENDING_JQ << 'JQ' || true
 def norm: ascii_downcase | gsub("[^a-z0-9]"; "");
 def mcp_full: ltrimstr("mcp__") | norm;
 def mcp_tool: split("__") | last | norm;
+# Keeps only the string fields previews read, capped, and a plan's first
+# heading, so a large Write never passes through the shell.
+def preview_input:
+  .input | if type == "object" then
+    {command, file_path, notebook_path, url, pattern, description,
+     plan: ((.plan | strings | split("\n") | map(select(test("^#{1,6}\\s"))) | first) // null)}
+    | with_entries(select(.value | type == "string") | .value |= .[0:4096])
+  else {} end;
 turn
 | ([.[] | select(kind == "result") | blocks | select(.type == "tool_result")
     | .tool_use_id | strings | {(.): true}] | add // {}) as $answered
 | [reverse[] | select(kind == "assistant") | blocks | select(.type == "tool_use")
     | select($answered[.id // "" | tostring] != true)
-    | {name: (.name // "" | tostring), input}] as $calls
+    | {name: (.name // "" | tostring), input: preview_input}] as $calls
 | [$calls[] | select(.name | startswith("mcp__"))] as $mcp
 | ($wanted | sub("\\s*\\(MCP\\)\\s*$"; "") | norm) as $short
 | if $plan then
@@ -304,7 +315,7 @@ function extract_last_assistant_text() {
   if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
     return 0
   fi
-  jq -Rnr "${TURN_JQ} ${LAST_TEXT_JQ}" < "${transcript_path}" 2> /dev/null || true
+  jq -Rnr "${TURN_JQ} ${LAST_TEXT_JQ}" 2> /dev/null < "${transcript_path}" || true
 }
 
 # $2 is the tool named by the prompt's message; $3 is "true" for the plan
@@ -314,7 +325,7 @@ function get_pending_tool_use() {
   if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
     return 0
   fi
-  jq -Rnc --arg wanted "${2:-}" --argjson plan "${3:-false}" "${TURN_JQ} ${PENDING_JQ}" < "${transcript_path}" 2> /dev/null || true
+  jq -Rnc --arg wanted "${2:-}" --argjson plan "${3:-false}" "${TURN_JQ} ${PENDING_JQ}" 2> /dev/null < "${transcript_path}" || true
 }
 
 # -----------------------------------------------------------------------------
@@ -482,7 +493,7 @@ function fire_alerter_detached() {
 
 function do_cc_elicit() {
   local message body
-  message="$(printf '%s' "${HOOK_INPUT}" | jq -r '.message // empty | strings' 2> /dev/null)" || message=""
+  message="$(printf '%s' "${HOOK_INPUT}" | jq -r '.message // empty | strings | gsub("\u0000"; "")' 2> /dev/null)" || message=""
 
   if [[ -n "${message}" ]]; then
     body="$(truncate_with_ellipsis "${message//$'\n'/ }" "${BODY_LIMIT}")"
@@ -500,8 +511,9 @@ function do_cc_elicit() {
 function do_cc_permission() {
   local transcript_path message wanted="" plan=false
   transcript_path="$(printf '%s' "${HOOK_INPUT}" | jq -r '.transcript_path // empty | strings' 2> /dev/null)" || transcript_path=""
-  message="$(printf '%s' "${HOOK_INPUT}" | jq -r '.message // empty | strings' 2> /dev/null)" || message=""
-  # Only the first line names the prompt; later lines are shown in the body.
+  message="$(printf '%s' "${HOOK_INPUT}" | jq -r '.message // empty | strings | gsub("\u0000"; "")' 2> /dev/null)" || message=""
+  # Only the first line names the prompt; the full message is the body only
+  # when no tool preview replaces it.
   local first_line="${message%%$'\n'*}"
   message="${message//$'\n'/ }"
 
@@ -512,7 +524,10 @@ function do_cc_permission() {
   case "${first_line}" in
     *"approval for the plan"*) plan=true ;;
     *"wants to enter plan mode"*) wanted="EnterPlanMode" ;;
-    *"permission to use "*) wanted="${first_line##*permission to use }" ;;
+    *"permission to use "*)
+      wanted="${first_line##*permission to use }"
+      wanted="${wanted%.}"
+      ;;
     "" | "Claude needs your permission" | "Claude needs your permission.") ;;
     *) lookup=false ;;
   esac
@@ -547,7 +562,8 @@ function do_cc_permission() {
     # mcp__<server>__<tool>: the tool names the action; the server goes below.
     local server="${name#mcp__}"
     title="Approve ${name##*__}?"
-    body="${server%__*} MCP tool"
+    server="${server%__*}"
+    body="${server:+${server} }MCP tool"
   elif [[ -n "${name}" ]]; then
     title="Approve ${name}?"
     body="$(tool_preview "${pending}" "${BODY_LIMIT}")"
@@ -568,7 +584,7 @@ function do_cc_permission() {
 function do_stop() {
   local icon="${1}"
   local reply
-  reply="$(printf '%s' "${HOOK_INPUT}" | jq -r '.last_assistant_message // empty | strings' 2> /dev/null)" || reply=""
+  reply="$(printf '%s' "${HOOK_INPUT}" | jq -r '.last_assistant_message // empty | strings | .[0:20000] | gsub("\u0000"; "")' 2> /dev/null)" || reply=""
   # Only a payload without the field falls back to the transcript; an empty
   # reply stays empty rather than borrowing an earlier message.
   if [[ "${HARNESS}" == claude ]] \
@@ -625,6 +641,7 @@ function do_question() {
     | [($q | if type == "array" then .[] else empty end) | objects | .question | strings | gsub("\n"; " ")]
   ' 2> /dev/null)" || questions='[]'
   count="$(printf '%s' "${questions}" | jq -r 'length' 2> /dev/null)" || count=0
+  [[ "${count}" =~ ^[0-9]+$ ]] || count=0
   first="$(printf '%s' "${questions}" | jq -r '.[0] // empty' 2> /dev/null)" || first=""
 
   local title="Question" suffix="" body
