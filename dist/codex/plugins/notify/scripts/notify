@@ -51,18 +51,27 @@ def inline:
   | gsub("(?<![\\p{L}\\p{N}_*])\\*(?<t>[^*\\s][^*]*)\\*"; "\(.t)")
   | sub("^\\s*(#{1,6}|[-*+>▸•]|[0-9]+\\.)\\s+"; "");
 def is_status: test("^\\s*▸") or ([scan(" · ")] | length) >= 2;
-def is_table_rule: test("^[\\s|:-]+$");
+def is_table_rule: test("^[\\s|:-]+$") and test("\\|") and test("-");
+# Indexes of table lines, found by a separator row under a header containing a pipe,
+# with or without leading pipes; the table runs until a line without a pipe.
+def table_rows($lines):
+  reduce range(1; $lines | length) as $i ({};
+    if ($lines[$i] | is_table_rule) and ($lines[$i - 1] | test("\\|")) then
+      (first(range($i + 1; $lines | length) | select(($lines[.] | test("\\|")) | not)) // ($lines | length)) as $end
+      | reduce range($i - 1; $end) as $j (.; .["\($j)"] = true)
+    else . end);
+def table_cells: gsub("^\\s*\\||\\|\\s*$"; "") | gsub("\\s*\\|\\s*"; " · ");
 def flush:
   if .cur != "" then .out += [{t: .cur, k: "prose"}] | .cur = "" else . end;
 def units_of($lines):
-  (reduce range(0; $lines | length) as $i ({fence: -1, mark: 0, cur: "", out: []};
+  table_rows($lines) as $table
+  | (reduce range(0; $lines | length) as $i ({fence: -1, mark: 0, cur: "", out: []};
     $lines[$i] as $l
     | if ($l | test("^\\s*(```|~~~)")) then
         flush | (if .fence < 0 then .fence = $i | .mark = (.out | length) else .fence = -1 end)
       elif .fence >= 0 then .out += [{t: $l, k: "code"}]
-      elif ($l | test("^\\s*\\|")) then
-        (if ($l | is_table_rule) then .
-         else flush | .out += [{t: ($l | gsub("^\\s*\\||\\|\\s*$"; "") | gsub("\\s*\\|\\s*"; " · ")), k: "code"}] end)
+      elif $table["\($i)"] or ($l | test("^\\s*\\|")) then
+        (if ($l | is_table_rule) then . else flush | .out += [{t: ($l | table_cells), k: "code"}] end)
       elif ($l | test("^\\s*$")) then flush
       elif ($l | is_status) then flush | .out += [{t: ($l | inline), k: "status"}]
       elif ($l | test("^\\s*(#{1,6}|[-*+>•]|[0-9]+\\.)\\s")) then flush | .cur = ($l | inline)
