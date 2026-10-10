@@ -372,6 +372,12 @@ a.tag:hover {
   color: var(--muted);
 }
 
+/* A fact, not a count: a date, a ratio, or a state word. Never filled. */
+.count--fact dd {
+  font-size: 24px;
+  line-height: 40px;
+}
+
 .count-warn {
   display: block;
   margin-top: 4px;
@@ -835,6 +841,38 @@ a.tag:hover {
   font-size: 13px;
 }
 
+/* Aside: a method, source, or caveat as one more ruled row, never a
+   callout. A warning turns its rule and label stale and says so in words. */
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 88ch;
+  padding: 10px 0 12px;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+}
+
+.aside--warn {
+  border-top-color: var(--stale);
+}
+
+.aside-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.aside--warn .aside-label {
+  color: var(--stale);
+}
+
+.aside-text {
+  color: var(--body);
+}
+
 /* The fold: everything below is the report. */
 .fold {
   display: flex;
@@ -859,8 +897,11 @@ a.tag:hover {
   border-bottom: 1px solid var(--rule);
 }
 
+/* Sized to its text, so its underline sits under the number rather than at
+   the foot of a row that wraps to two lines. */
 .report-row .num {
   justify-self: start;
+  align-self: start;
 }
 
 .report-title {

@@ -1,6 +1,6 @@
 # Design Conventions
 
-Boards read as one system because they share one set of design rules. The `backlog-triage` and `bugs` templates both embody these conventions and share one stylesheet, `templates/board.css`, which `report-board render` writes into every page. A new board type follows these conventions and draws from that stylesheet rather than carrying styles of its own, and the prose in the board data follows the writing rules at the end. Where a rule below names something neither template draws yet, such as a chart or a fact cell, it fixes how a new board type draws it, so the system stays one system as it grows.
+Boards read as one system because they share one set of design rules. The `backlog-triage` and `bugs` templates both embody these conventions and share one stylesheet, `templates/board.css`, which `report-board render` writes into every page. A new board type follows these conventions and draws from that stylesheet rather than carrying styles of its own, and the prose in the board data follows the writing rules at the end. A report laid out by hand starts from `templates/starter/report.html`, which `report-board starter` writes with the stylesheet inlined, and follows the same rules. Where a rule below names something neither template draws yet, such as a chart or a fact cell, it fixes how a new board type draws it, so the system stays one system as it grows.
 
 ## Principles
 
