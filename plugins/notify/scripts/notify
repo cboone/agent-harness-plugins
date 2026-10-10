@@ -141,6 +141,11 @@ function summarize_reply() {
   printf '%s' "${1}" | jq -Rrs --argjson limit "${2:-${BODY_LIMIT}}" "${SUMMARY_JQ}" 2> /dev/null || true
 }
 
+# Prints the hook payload's string field $1 without NUL bytes, or nothing.
+function hook_string() {
+  printf '%s' "${HOOK_INPUT}" | jq -r --arg key "${1}" '.[$key] // empty | strings | gsub("\u0000"; "")' 2> /dev/null || true
+}
+
 function repo_root() {
   local root
   root="$(git rev-parse --show-toplevel 2> /dev/null)" || root=""
@@ -493,11 +498,8 @@ function fire_alerter_detached() {
 
 function do_cc_elicit() {
   local message body
-  message="$(printf '%s' "${HOOK_INPUT}" | jq -r '.message // empty | strings | gsub("\u0000"; "")' 2> /dev/null)" || message=""
-
-  if [[ -n "${message}" ]]; then
-    body="$(truncate_with_ellipsis "${message//$'\n'/ }" "${BODY_LIMIT}")"
-  fi
+  message="$(hook_string message)"
+  body="$(truncate_with_ellipsis "${message//$'\n'/ }" "${BODY_LIMIT}")"
 
   fire_alerter_detached \
     "Question" \
@@ -510,8 +512,8 @@ function do_cc_elicit() {
 
 function do_cc_permission() {
   local transcript_path message wanted="" plan=false
-  transcript_path="$(printf '%s' "${HOOK_INPUT}" | jq -r '.transcript_path // empty | strings' 2> /dev/null)" || transcript_path=""
-  message="$(printf '%s' "${HOOK_INPUT}" | jq -r '.message // empty | strings | gsub("\u0000"; "")' 2> /dev/null)" || message=""
+  transcript_path="$(hook_string transcript_path)"
+  message="$(hook_string message)"
   # Only the first line names the prompt; the full message is the body only
   # when no tool preview replaces it.
   local first_line="${message%%$'\n'*}"
@@ -561,15 +563,15 @@ function do_cc_permission() {
   if [[ "${name}" == mcp__*__* ]]; then
     # mcp__<server>__<tool>: the tool names the action; the server goes below.
     local server="${name#mcp__}"
-    title="Approve ${name##*__}?"
     server="${server%__*}"
+    title="Approve ${name##*__}?"
     body="${server:+${server} }MCP tool"
   elif [[ -n "${name}" ]]; then
     title="Approve ${name}?"
     body="$(tool_preview "${pending}" "${BODY_LIMIT}")"
   fi
   if [[ -z "${body}" ]]; then
-    body="$(truncate_with_ellipsis "${message//$'\n'/ }" "${BODY_LIMIT}")"
+    body="$(truncate_with_ellipsis "${message}" "${BODY_LIMIT}")"
   fi
 
   fire_alerter_detached \
@@ -590,7 +592,7 @@ function do_stop() {
   if [[ "${HARNESS}" == claude ]] \
     && [[ "$(printf '%s' "${HOOK_INPUT}" | jq -r 'has("last_assistant_message")' 2> /dev/null)" == false ]]; then
     local transcript_path
-    transcript_path="$(printf '%s' "${HOOK_INPUT}" | jq -r '.transcript_path // empty | strings' 2> /dev/null)" || transcript_path=""
+    transcript_path="$(hook_string transcript_path)"
     reply="$(extract_last_assistant_text "${transcript_path}")"
   fi
 

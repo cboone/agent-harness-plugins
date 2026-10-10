@@ -32,6 +32,15 @@ function write_transcript() {
   transcript_tool_use "${1}" tool-1 "${2}" "${3}"
 }
 
+# Polls for up to 3 seconds until the alerter stub has logged $1 calls.
+function wait_for_alerts() {
+  local count=0
+  while [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" != "${1}" && "${count}" -lt 150 ]]; do
+    sleep 0.02
+    count=$((count + 1))
+  done
+}
+
 function main() {
   local scenario="${1}" test_dir quoted_test_dir
   test_dir="$(mktemp -d "${TMPDIR:-/tmp}/fixture.XXXXXX")"
@@ -328,21 +337,13 @@ function main() {
     reset | claude-reset)
       printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action%-stop}-turn-start"
       printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
-      count=0
-      while [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" != 2 && "${count}" -lt 150 ]]; do
-        sleep 0.02
-        count=$((count + 1))
-      done
+      wait_for_alerts 2
       [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" == 2 ]]
       echo "Next user prompt allows another completion"
       ;;
     groups)
       printf '%s' '{"session_id":"session-two"}' | "${NOTIFY_BIN}" codex-stop
-      count=0
-      while [[ "$(wc -l < "${NOTIFY_TEST_LOG}" | tr -d ' ')" != 2 && "${count}" -lt 150 ]]; do
-        sleep 0.02
-        count=$((count + 1))
-      done
+      wait_for_alerts 2
       [[ "$(jq -sr 'map(.[index("--group") + 1]) | unique | length' "${NOTIFY_TEST_LOG}")" == 2 ]]
       echo "Separate sessions retain separate banners"
       ;;
