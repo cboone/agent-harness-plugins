@@ -4,6 +4,12 @@
 # shellcheck disable=SC2016
 set -euo pipefail
 
+# Writes a one-line Claude Code transcript whose pending tool use is $2 with input $3.
+function write_transcript() {
+  jq -nc --arg name "${2}" --argjson input "${3}" \
+    '{type: "assistant", message: {content: [{type: "tool_use", name: $name, input: $input}]}}' > "${1}"
+}
+
 function main() {
   local scenario="${1}" test_dir quoted_test_dir
   test_dir="$(mktemp -d "${TMPDIR:-/tmp}/fixture.XXXXXX")"
@@ -12,7 +18,7 @@ function main() {
   # metacharacters cannot break out of the trap command.
   printf -v quoted_test_dir '%q' "${test_dir}"
   # shellcheck disable=SC2064
-  trap "rm -r ${quoted_test_dir}" EXIT
+  trap "rm -rf ${quoted_test_dir}" EXIT
   : "${NOTIFY_BIN:?Set NOTIFY_BIN to the notification script}"
   mkdir "${test_dir}/bin"
   export NOTIFY_TEST_LOG="${test_dir}/alerts"
@@ -20,6 +26,7 @@ function main() {
   export NOTIFY_TEST_FRONT="com.example.background"
   export NOTIFY_TEST_VISIBLE="%99|attached,focused,UTF-8"
   export NOTIFY_TEST_CLICK=""
+  export NOTIFY_TEST_TITLE="✳ Sample task"
   export PATH="${test_dir}/bin:${PATH}"
   export XDG_CACHE_HOME="${test_dir}/cache"
   export TMUX="/tmp/notify-test-server,123,0" TMUX_PANE="%7" TERM_PROGRAM="Apple_Terminal"
@@ -30,21 +37,29 @@ function main() {
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "$*" >> "${NOTIFY_TEST_TMUX_LOG}"' \
     'case "$1" in' \
-    'display-message) if [[ "$*" == *pane_id* ]]; then printf '\''$3|@12|%%7\\n'\''; else printf "sample-title\\n"; fi ;;' \
+    'display-message) if [[ "$*" == *pane_id* ]]; then printf '\''$3|@12|%%7\\n'\''; else printf "%s\\n" "${NOTIFY_TEST_TITLE}"; fi ;;' \
     'list-clients) printf "%s\\n" "${NOTIFY_TEST_VISIBLE}" ;;' \
     'esac' > "${test_dir}/bin/tmux"
   printf '%s\n' '#!/usr/bin/env bash' \
     'printf "%s\\n" "${NOTIFY_TEST_FRONT}"' > "${test_dir}/bin/osascript"
   chmod +x "${test_dir}/bin/alerter" "${test_dir}/bin/tmux" "${test_dir}/bin/osascript"
+
+  # Subtitles name the repository and fall back to the branch suffix. An empty
+  # template keeps a personal init.templateDir out of the sample repository.
+  local repo="${test_dir}/sample-repo"
+  git init -q --template= -b feature/sample-branch "${repo}"
+  cd "${repo}"
+  # The logical working directory, without the doubled slash a trailing / in TMPDIR leaves.
+  repo="${PWD}"
+
   local payload='{"session_id":"session-one","last_assistant_message":"Completed sample"}'
-  local action="codex-stop"
+  local action="codex-stop" transcript="${test_dir}/transcript.jsonl"
   case "${scenario}" in
     claude-completion) action="cc-stop" ;;
     claude-question)
       action="cc-question"
       payload='{"session_id":"session-one","tool_input":{"questions":[{"question":"Choose a branch?"}]}}'
       ;;
-    claude-compact) action="cc-compact" ;;
     question)
       action="codex-question"
       payload='{"session_id":"session-one","tool_input":{"questions":[{"question":"Choose a branch?"}]}}'
@@ -53,7 +68,45 @@ function main() {
       action="codex-question"
       payload='{"session_id":"session-one","tool_input":"{\"questions\":[{\"question\":\"Choose a branch?\"}]}"}'
       ;;
-    compact) action="codex-compact" ;;
+    questions)
+      action="cc-question"
+      payload='{"session_id":"session-one","tool_input":{"questions":[{"question":"Choose a branch?"},{"question":"Push now?"},{"question":"Open a PR?"}]}}'
+      ;;
+    summary)
+      action="cc-stop"
+      payload="$(jq -nc --arg reply $'▸ 572 · checks 20/20 · mergeable CLEAN\n\n## PR #12: ready\n\n| a | b |\n| - | - |\n\n```text\nlog output\n```\n\n- **Checks** pass on `abc123`, see [the run](https://example.com/run).\n- Copilot left *one* note.' \
+        '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    long-summary)
+      payload="$(jq -nc --arg reply 'The overnight throttle is on. I stopped the previous watcher and started a new one that checks the pull request hourly until the morning, then every two minutes.' \
+        '{session_id: "session-one", last_assistant_message: $reply}')"
+      ;;
+    json-summary)
+      payload='{"session_id":"session-one","last_assistant_message":"{\"verdict\":\"needs-attention\",\"summary\":\"Do not implement this plan unchanged.\"}"}'
+      ;;
+    generic-title) export NOTIFY_TEST_TITLE="user@host:~/sample-repo" ;;
+    worktree)
+      git -c user.name=Sample -c user.email=sample@example.com -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q --allow-empty -m sample
+      git worktree add -q -b feature/worktree-branch "${test_dir}/worktree-folder"
+      cd "${test_dir}/worktree-folder"
+      export NOTIFY_TEST_TITLE="zsh"
+      ;;
+    permission-write)
+      action="cc-permission"
+      write_transcript "${transcript}" Write "$(jq -nc --arg path "${repo}/docs/plans/todo/$(printf 'long-name-%.0s' {1..14}).md" '{file_path: $path}')"
+      ;;
+    permission-bash)
+      action="cc-permission"
+      write_transcript "${transcript}" Bash "$(jq -nc --arg command "cd ${repo} && make test" '{command: $command}')"
+      ;;
+    permission-question)
+      action="cc-permission"
+      write_transcript "${transcript}" AskUserQuestion '{"questions":[{"question":"Choose a branch?"}]}'
+      ;;
+    plan)
+      action="cc-permission"
+      write_transcript "${transcript}" ExitPlanMode '{"plan":"Intro\n\n# Add a `sample` skill\n\n## Steps"}'
+      ;;
     visible) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,focused,UTF-8" ;;
     other-window) export NOTIFY_TEST_FRONT="com.apple.Terminal" NOTIFY_TEST_VISIBLE="%7|attached,UTF-8" ;;
     other-pane) export NOTIFY_TEST_FRONT="com.apple.Terminal" ;;
@@ -61,16 +114,22 @@ function main() {
     click) export NOTIFY_TEST_CLICK="@CONTENTCLICKED" ;;
     *) ;;
   esac
+  if [[ "${action}" == cc-permission ]]; then
+    payload="$(jq -nc --arg path "${transcript}" '{session_id: "session-one", transcript_path: $path}')"
+  fi
   printf '%s' "${payload}" | "${NOTIFY_BIN}" "${action}"
   # Detached dispatch is bounded by a polling validity check.
   local count=0
-  if [[ "${scenario}" != visible && "${scenario}" != subagent ]]; then
-    while [[ ! -s "${NOTIFY_TEST_LOG}" && "${count}" -lt 150 ]]; do
-      sleep 0.02
-      count=$((count + 1))
-    done
-    [[ -s "${NOTIFY_TEST_LOG}" ]]
-  fi
+  case "${scenario}" in
+    visible | subagent | permission-question) ;;
+    *)
+      while [[ ! -s "${NOTIFY_TEST_LOG}" && "${count}" -lt 150 ]]; do
+        sleep 0.02
+        count=$((count + 1))
+      done
+      [[ -s "${NOTIFY_TEST_LOG}" ]]
+      ;;
+  esac
   case "${scenario}" in
     duplicate)
       printf '%s' "${payload}" | "${NOTIFY_BIN}" codex-stop
@@ -98,7 +157,8 @@ function main() {
       [[ "$(jq -sr 'map(.[index("--group") + 1]) | unique | length' "${NOTIFY_TEST_LOG}")" == 2 ]]
       echo "Separate sessions retain separate banners"
       ;;
-    visible | subagent)
+    visible | subagent | permission-question)
+      sleep 0.2
       [[ ! -e "${NOTIFY_TEST_LOG}" ]]
       echo "No alert"
       ;;
@@ -112,7 +172,7 @@ function main() {
       grep -qF 'display-message -t %7 -p' "${NOTIFY_TEST_TMUX_LOG}"
       echo "Click targets captured session, window and pane on originating server"
       ;;
-    *) jq -r '.[index("--title") + 1], .[index("--message") + 1], .[index("--sound") + 1]' "${NOTIFY_TEST_LOG}" ;;
+    *) jq -r '.[index("--title") + 1], .[index("--subtitle") + 1], .[index("--message") + 1], .[index("--sound") + 1]' "${NOTIFY_TEST_LOG}" ;;
   esac
 }
 

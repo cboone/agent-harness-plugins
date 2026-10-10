@@ -4,7 +4,8 @@
 
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" completion
-Codex · Done
+Done
+sample-repo · Sample task
 Completed sample
 Glass
 ```
@@ -13,7 +14,58 @@ Glass
 
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" claude-completion
-Claude Code · Done
+Done
+sample-repo · Sample task
+Completed sample
+Glass
+```
+
+## Reply summary without Markdown or status lines
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" summary
+Done
+sample-repo · Sample task
+PR #12: ready. Checks pass on abc123, see the run. Copilot left one note.
+Glass
+```
+
+## Long reply cut at a word boundary
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" long-summary
+Done
+sample-repo · Sample task
+The overnight throttle is on. I stopped the previous watcher and started a new one that checks the pull request hourly until the morning,…
+Glass
+```
+
+## JSON reply summary
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" json-summary
+Done
+sample-repo · Sample task
+Do not implement this plan unchanged.
+Glass
+```
+
+## Shell default pane title
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" generic-title
+Done
+sample-repo · sample-branch
+Completed sample
+Glass
+```
+
+## Worktree names its repository
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" worktree
+Done
+sample-repo · worktree-branch
 Completed sample
 Glass
 ```
@@ -22,18 +74,57 @@ Glass
 
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" claude-question
-Claude Code · Question
+Question
+sample-repo · Sample task
 Choose a branch?
 Tink
 ```
 
-## Claude compaction
+## Several questions
 
 ```scrut
-$ "${CHECK_NOTIFICATIONS_BIN}" claude-compact
-Claude Code · Compacting
-Auto-compacting context
-Pop
+$ "${CHECK_NOTIFICATIONS_BIN}" questions
+3 questions
+sample-repo · Sample task
+Choose a branch? (+2 more)
+Tink
+```
+
+## Permission path keeps its file name
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-write
+Approve Write?
+sample-repo · Sample task
+…-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-long-name-.md
+Funk
+```
+
+## Permission command without its working-directory cd
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-bash
+Approve Bash?
+sample-repo · Sample task
+make test
+Funk
+```
+
+## Question permission prompt
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" permission-question
+No alert
+```
+
+## Plan permission prompt
+
+```scrut
+$ "${CHECK_NOTIFICATIONS_BIN}" plan
+Plan ready for review
+sample-repo · Sample task
+Add a sample skill
+Tink
 ```
 
 ## Repeated completion
@@ -68,7 +159,8 @@ No alert
 
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" other-pane
-Codex · Done
+Done
+sample-repo · Sample task
 Completed sample
 Glass
 ```
@@ -84,7 +176,8 @@ No alert
 
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" other-window
-Codex · Done
+Done
+sample-repo · Sample task
 Completed sample
 Glass
 ```
@@ -93,7 +186,8 @@ Glass
 
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" question
-Codex · Question
+Question
+sample-repo · Sample task
 Choose a branch?
 Tink
 ```
@@ -102,18 +196,10 @@ Tink
 
 ```scrut
 $ "${CHECK_NOTIFICATIONS_BIN}" question-string
-Codex · Question
+Question
+sample-repo · Sample task
 Choose a branch?
 Tink
-```
-
-## Automatic compaction
-
-```scrut
-$ "${CHECK_NOTIFICATIONS_BIN}" compact
-Codex · Compacting
-Auto-compacting context
-Pop
 ```
 
 ## Click routing
