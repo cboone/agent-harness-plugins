@@ -6,6 +6,10 @@
 # and shells out to alerter with per-event title, subtitle, body, sound, group,
 # and per-harness icon. Titles name the action; the icon names the harness.
 # Events fire detached so the harness is not blocked on user interaction.
+#
+# The script must parse under macOS /bin/bash 3.2, which `env bash` finds when
+# Homebrew is not on PATH. A syntax error exits 2, which Claude Code treats as
+# blocking the hook's event.
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "${0}")"
@@ -20,39 +24,60 @@ readonly BODY_LIMIT=140
 # Detached fire-and-forget timeout (24h).
 readonly FIRE_TIMEOUT=86400
 
-# Reduces a reply to plain prose for a banner body. Fenced code, table rows and
-# status lines (a leading ▸, or two or more " · " fields) are dropped unless
-# nothing else remains. Headings, list items and paragraphs become separate
-# sentences. Whole sentences are kept in order within $limit; a sentence that
-# no longer fits is cut at a word boundary when at least 40 characters remain.
-# A JSON object reply with a string `summary` is summarized from that field.
-SUMMARY_JQ="$(
-  cat << 'JQ'
+# Reduces a reply to plain prose for a banner body; ../opencode/index.ts
+# mirrors it in summarizeReply. Lengths count Unicode code points.
+# - Input past 20,000 characters is ignored.
+# - A JSON object reply with a string `summary` is summarized from that field.
+# - Headings, list items and paragraphs become separate sentences, joined by a
+#   period when one lacks closing punctuation.
+# - Prose wins. Without prose, status lines (a leading ▸, or two or more " · "
+#   separators) are used; without either, the first code or table line is.
+#   An unclosed fence is read as prose.
+# - Whole sentences are kept in order within $limit. A sentence that no longer
+#   fits is cut at a word boundary with "…" when it is the first sentence or at
+#   least 40 characters remain.
+# Read with `read -d ''` because bash 3.2 cannot parse this heredoc inside $().
+IFS= read -r -d '' SUMMARY_JQ << 'JQ' || true
 def cut($n):
-  if length <= $n then . elif $n < 1 then ""
-  else (.[0:$n - 1] | sub("\\s+\\S*$"; "")) + "…" end;
+  if length <= $n then .
+  elif $n < 1 then ""
+  else .[0:$n - 1] as $head
+    | (if (.[$n - 1:$n] | test("^\\s")) or ($head | test("\\s") | not) then $head
+       else $head | sub("\\s+\\S*$"; "") end)
+    | sub("\\s+$"; "") + "…" end;
 def inline:
   gsub("\\[(?<t>[^\\]]*)\\]\\([^)]*\\)"; "\(.t)")
   | gsub("\\*\\*|__|`"; "")
-  | gsub("(?<![\\w*])\\*(?<t>[^*\\s][^*]*)\\*"; "\(.t)")
-  | sub("^\\s*(#{1,6}|[-*+>▸•]|\\d+\\.)\\s+"; "");
+  | gsub("(?<![\\p{L}\\p{N}_*])\\*(?<t>[^*\\s][^*]*)\\*"; "\(.t)")
+  | sub("^\\s*(#{1,6}|[-*+>▸•]|[0-9]+\\.)\\s+"; "");
 def is_status: test("^\\s*▸") or ([scan(" · ")] | length) >= 2;
+def is_table_rule: test("^[\\s|:-]+$");
 def flush:
-  if .cur != "" then .out += [{t: .cur, s: false}] | .cur = "" else . end;
-def units:
-  split("\n")
-  | reduce .[] as $l ({fence: false, cur: "", out: []};
-      if ($l | test("^\\s*(```|~~~)")) then flush | .fence = (.fence | not)
-      elif .fence or ($l | test("^\\s*\\|")) then .
+  if .cur != "" then .out += [{t: .cur, k: "prose"}] | .cur = "" else . end;
+def units_of($lines):
+  (reduce range(0; $lines | length) as $i ({fence: -1, mark: 0, cur: "", out: []};
+    $lines[$i] as $l
+    | if ($l | test("^\\s*(```|~~~)")) then
+        flush | (if .fence < 0 then .fence = $i | .mark = (.out | length) else .fence = -1 end)
+      elif .fence >= 0 then .out += [{t: $l, k: "code"}]
+      elif ($l | test("^\\s*\\|")) then
+        (if ($l | is_table_rule) then .
+         else flush | .out += [{t: ($l | gsub("^\\s*\\||\\|\\s*$"; "") | gsub("\\s*\\|\\s*"; " · ")), k: "code"}] end)
       elif ($l | test("^\\s*$")) then flush
-      elif ($l | is_status) then flush | .out += [{t: ($l | inline), s: true}]
-      elif ($l | test("^\\s*(#{1,6}|[-*+>•]|\\d+\\.)\\s")) then flush | .cur = ($l | inline)
-      else .cur = ((.cur + " " + ($l | inline)) | ltrimstr(" ")) end)
-  | flush | .out
+      elif ($l | is_status) then flush | .out += [{t: ($l | inline), k: "status"}]
+      elif ($l | test("^\\s*(#{1,6}|[-*+>•]|[0-9]+\\.)\\s")) then flush | .cur = ($l | inline)
+      else .cur = ((.cur + " " + ($l | inline)) | ltrimstr(" ")) end)) as $r
+  | if $r.fence >= 0 then $r.out[0:$r.mark] + units_of($lines[$r.fence + 1:])
+    else ($r | flush | .out) end;
+def units:
+  .[0:20000] | split("\n") as $lines
+  | units_of($lines)
   | map(.t |= (gsub("\\s+"; " ") | ltrimstr(" ") | rtrimstr(" ")) | select(.t != ""));
 def sentences:
   units
-  | (if any(.[]; .s | not) then map(select(.s | not)) else . end)
+  | (if any(.[]; .k == "prose") then map(select(.k == "prose"))
+     elif any(.[]; .k == "status") then map(select(.k == "status"))
+     else .[0:1] end)
   | length as $n
   | to_entries
   | map(.key as $i | .value.t
@@ -75,7 +100,6 @@ def summary($limit):
 | (if ($j | type) == "object" and ($j.summary | type) == "string" then $j.summary else . end)
 | summary($limit)
 JQ
-)"
 readonly SUMMARY_JQ
 
 function usage() {
@@ -83,13 +107,14 @@ function usage() {
 Usage: notify <subcommand>
 
 Subcommands:
-  cc-elicit     Claude Code Notification:elicitation_dialog
-  cc-permission Claude Code Notification:permission_prompt
-  cc-stop       Claude Code Stop
-  cc-question   Claude Code PreToolUse:AskUserQuestion
-  codex-question Codex PreToolUse:request_user_input
-  turn-start    Reset completion deduplication on UserPromptSubmit
-  codex-stop    Codex Stop
+  cc-elicit         Claude Code Notification:elicitation_dialog
+  cc-permission     Claude Code Notification:permission_prompt
+  cc-question       Claude Code PreToolUse:AskUserQuestion
+  cc-stop           Claude Code Stop
+  cc-turn-start     Claude Code UserPromptSubmit (resets completion deduplication)
+  codex-question    Codex PreToolUse:request_user_input
+  codex-stop        Codex Stop
+  codex-turn-start  Codex UserPromptSubmit (resets completion deduplication)
 
 Each subcommand reads its hook payload as JSON on stdin.
 USAGE_TEXT
@@ -99,31 +124,16 @@ USAGE_TEXT
 # Generic helpers
 # -----------------------------------------------------------------------------
 
+# Truncation runs in jq so lengths count characters whatever the hook's locale.
 function truncate_with_ellipsis() {
-  local text="${1}"
-  local limit="${2:-80}"
-  if [[ "${#text}" -le "${limit}" ]]; then
-    printf '%s' "${text}"
-    return
-  fi
-  if [[ "${limit}" -lt 1 ]]; then
-    return
-  fi
-  printf '%s…' "${text:0:$((limit - 1))}"
+  printf '%s' "${1}" | jq -Rrs --argjson n "${2:-80}" \
+    'if length <= $n then . elif $n < 1 then "" else .[0:$n - 1] + "…" end' 2> /dev/null || true
 }
 
 # Keeps the end of the text, so a long path still shows its file name.
 function truncate_from_left() {
-  local text="${1}"
-  local limit="${2}"
-  if [[ "${#text}" -le "${limit}" ]]; then
-    printf '%s' "${text}"
-    return
-  fi
-  if [[ "${limit}" -lt 1 ]]; then
-    return
-  fi
-  printf '…%s' "${text:$((${#text} - limit + 1))}"
+  printf '%s' "${1}" | jq -Rrs --argjson n "${2}" \
+    'if length <= $n then . elif $n < 1 then "" else "…" + .[length - $n + 1:] end' 2> /dev/null || true
 }
 
 function summarize_reply() {
@@ -173,7 +183,7 @@ function compute_pane_title() {
   fi
   local title
   title="$(tmux display-message -t "${TMUX_PANE}" -p '#T' 2> /dev/null)" || return 0
-  title="$(printf '%s' "${title}" | jq -Rr 'sub("^[^\\p{L}\\p{N}#(\\[]+"; "") | rtrimstr(" ")' 2> /dev/null)" || return 0
+  title="$(printf '%s' "${title}" | jq -Rr 'sub("^[^\\p{L}\\p{N}#(\\[]+"; "") | sub("\\s+$"; "")' 2> /dev/null)" || return 0
   local cwd_basename
   cwd_basename="$(basename "${PWD}")"
   case "${title}" in
@@ -209,97 +219,83 @@ function compute_tmux_state() {
 # Transcript extractors (Claude Code JSONL)
 # -----------------------------------------------------------------------------
 
-# Walk transcript backward, find the most recent message of the given role,
-# extract its concatenated text content. Handles both string content (legacy)
-# and array-of-blocks content (current). Uses process substitution rather than
-# a pipe so an early break does not SIGPIPE the producer.
-function extract_last_message_text() {
-  local transcript_path="${1}"
-  local role="${2}"
+# Classifies one transcript line as {k, t}: k is "prompt" for a user turn,
+# "result" for tool results (t holds their tool_use ids), "assistant" (t holds
+# its text), or "other". Slash-command records count as "other".
+# shellcheck disable=SC2016 # $c is a jq variable.
+readonly LINE_KIND_JQ='
+  (.message.content // "") as $c
+  | if .type == "assistant" then
+      {k: "assistant", t: (if ($c | type) == "array" then [$c[]? | objects | select(.type == "text") | .text] | join("\n") else "" end)}
+    elif .type == "user" then
+      (if ($c | type) == "array" and any($c[]?; type == "object" and .type == "tool_result") then
+         {k: "result", t: ([$c[] | objects | select(.type == "tool_result") | .tool_use_id] | join(" "))}
+       elif ($c | type) == "string" and ($c | test("^<(command-|local-)")) then {k: "other", t: ""}
+       else {k: "prompt", t: ""} end)
+    else {k: "other", t: ""} end'
 
+# Prints the text of the current turn's last assistant message, or nothing.
+# The backward walk stops at the turn's user prompt, so an earlier turn's reply
+# is never reported. Process substitution lets the loop break without
+# SIGPIPE-ing the producer.
+function extract_last_assistant_text() {
+  local transcript_path="${1}"
   if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
     return 0
   fi
 
-  local found=""
+  local line kind
   while IFS= read -r line; do
-    if [[ -n "${found}" ]]; then
-      continue
-    fi
-
-    local msg_type
-    msg_type="$(printf '%s' "${line}" | jq -r '.type // empty' 2> /dev/null)" || continue
-    # Accept both "user" and "human" — Claude Code's older transcript format
-    # used "human"; current versions use "user".
-    if [[ "${role}" == "user" ]]; then
-      if [[ "${msg_type}" != "user" && "${msg_type}" != "human" ]]; then
-        continue
-      fi
-    elif [[ "${msg_type}" != "${role}" ]]; then
-      continue
-    fi
-
-    local text
-    text="$(printf '%s' "${line}" | jq -r '
-      (.message.content // empty) as $c
-      | if ($c | type) == "string" then $c
-        elif ($c | type) == "array" then
-          ($c | map(select(.type == "text") | .text) | join("\n"))
-        else "" end
-    ' 2> /dev/null)" || continue
-
-    # Skip Claude Code slash-command synthetic messages.
-    case "${text}" in
-      "<command-"* | "<local-"*) continue ;;
+    kind="$(printf '%s' "${line}" | jq -c "${LINE_KIND_JQ}" 2> /dev/null)" || continue
+    case "$(printf '%s' "${kind}" | jq -r '.k')" in
+      prompt) return 0 ;;
+      assistant)
+        local text
+        text="$(printf '%s' "${kind}" | jq -r '.t')"
+        if [[ -n "${text}" ]]; then
+          printf '%s' "${text}"
+          return 0
+        fi
+        ;;
       *) ;;
     esac
-
-    if [[ -n "${text}" ]]; then
-      found="${text}"
-    fi
   done < <(tac "${transcript_path}" 2> /dev/null || true)
-
-  printf '%s' "${found}"
 }
 
-# Returns JSON {name, input} for the most recent tool_use in any assistant
-# message, or empty if there is none. Used to identify which tool a Claude
-# Code permission_prompt is about.
+# Prints {name, input} for the tool_use a Claude Code permission prompt is
+# about, or nothing. Candidates are the current turn's tool_use blocks that
+# have no tool_result yet. One named $2 wins; when $2 names none of them (MCP
+# tools are announced by display name), the newest MCP candidate is used; with
+# no $2, the newest candidate is.
 function get_pending_tool_use() {
   local transcript_path="${1}"
+  local wanted="${2:-}"
   if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
     return 0
   fi
 
-  local found=""
+  local line kind answered=" " candidates=""
   while IFS= read -r line; do
-    if [[ -n "${found}" ]]; then
-      continue
-    fi
-
-    local msg_type
-    msg_type="$(printf '%s' "${line}" | jq -r '.type // empty' 2> /dev/null)" || continue
-    if [[ "${msg_type}" != "assistant" ]]; then
-      continue
-    fi
-
-    local tool_use
-    tool_use="$(printf '%s' "${line}" | jq -c '
-      (.message.content // [])
-      | map(select(.type == "tool_use"))
-      | last
-      | select(. != null)
-      | {name: .name, input: .input}
-    ' 2> /dev/null)" || continue
-
-    if [[ -n "${tool_use}" && "${tool_use}" != "null" ]]; then
-      found="${tool_use}"
-    fi
+    kind="$(printf '%s' "${line}" | jq -c "${LINE_KIND_JQ}" 2> /dev/null)" || continue
+    case "$(printf '%s' "${kind}" | jq -r '.k')" in
+      prompt) break ;;
+      result) answered="${answered}$(printf '%s' "${kind}" | jq -r '.t') " ;;
+      assistant)
+        candidates="${candidates}$(printf '%s' "${line}" | jq -c --arg answered "${answered}" '
+          [(.message.content // [])[]? | objects | select(.type == "tool_use")
+            | select(.id as $id | $answered | contains(" \($id // "") ") | not)
+            | {name, input}]
+          | reverse[]' 2> /dev/null || true)"$'\n'
+        ;;
+      *) ;;
+    esac
   done < <(tac "${transcript_path}" 2> /dev/null || true)
 
-  if [[ -n "${found}" ]]; then
-    printf '%s' "${found}"
-  fi
+  printf '%s' "${candidates}" | jq -sc --arg wanted "${wanted}" '
+    first(.[] | select(.name == $wanted))
+    // first(.[] | select($wanted != "" and (.name | startswith("mcp__"))))
+    // (if $wanted == "" then .[0] else empty end)
+    // empty' 2> /dev/null || true
 }
 
 # -----------------------------------------------------------------------------
@@ -333,7 +329,8 @@ function display_path() {
   truncate_from_left "${path}" "${limit}"
 }
 
-# Drops a leading cd into the session's own directory, which says nothing.
+# Drops a leading cd into the working directory or repository root, which
+# says nothing.
 function strip_working_cd() {
   local command="${1}"
   local dir prefix
@@ -348,6 +345,8 @@ function strip_working_cd() {
   printf '%s' "${command}"
 }
 
+# Prints a one-line preview of a tool's input. MCP tools and tools without a
+# known preview field print nothing.
 function tool_preview() {
   local tool_json="${1}"
   local limit="${2:-${BODY_LIMIT}}"
@@ -357,36 +356,37 @@ function tool_preview() {
 
   local name
   name="$(tool_name "${tool_json}")"
-  local preview=""
+  local field=""
   case "${name}" in
-    Bash)
-      preview="$(printf '%s' "${tool_json}" | jq -r '.input.command // empty')"
-      preview="$(strip_working_cd "${preview}")"
-      ;;
+    Bash) field='.input.command' ;;
+    Edit | Write | Read | NotebookEdit) field='.input.file_path // .input.notebook_path' ;;
+    WebFetch) field='.input.url' ;;
+    Grep | Glob) field='.input.pattern' ;;
+    Task | Agent) field='.input.description' ;;
+    *) return 0 ;;
+  esac
+  local preview
+  preview="$(printf '%s' "${tool_json}" | jq -r "(${field}) // empty | strings" 2> /dev/null)" || preview=""
+  if [[ -z "${preview}" ]]; then
+    return 0
+  fi
+
+  case "${name}" in
     Edit | Write | Read | NotebookEdit)
-      preview="$(printf '%s' "${tool_json}" | jq -r '.input.file_path // .input.notebook_path // empty')"
-      if [[ -n "${preview}" ]]; then
-        display_path "${preview}" "${limit}"
-      fi
+      display_path "${preview}" "${limit}"
       return 0
       ;;
-    WebFetch) preview="$(printf '%s' "${tool_json}" | jq -r '.input.url // empty')" ;;
-    Grep | Glob) preview="$(printf '%s' "${tool_json}" | jq -r '.input.pattern // empty')" ;;
-    Task | Agent) preview="$(printf '%s' "${tool_json}" | jq -r '.input.description // empty')" ;;
-    *) preview="" ;;
+    Bash) preview="$(strip_working_cd "${preview}")" ;;
+    *) ;;
   esac
-
-  if [[ -n "${preview}" ]]; then
-    # Collapse newlines so the body stays single-line in the alert.
-    preview="${preview//$'\n'/ }"
-    truncate_with_ellipsis "${preview}" "${limit}"
-  fi
+  # Collapse newlines so the body stays single-line in the alert.
+  truncate_with_ellipsis "${preview//$'\n'/ }" "${limit}"
 }
 
 # Prints the plan's first heading without Markdown, for ExitPlanMode prompts.
 function plan_heading() {
   printf '%s' "${1}" | jq -r '
-    (.input.plan // "") | split("\n")
+    (.input.plan // "") | strings | split("\n")
     | map(select(test("^#{1,6}\\s"))) | first // ""
     | sub("^#{1,6}\\s+"; "") | gsub("\\*\\*|`"; "")
   ' 2> /dev/null || true
@@ -396,10 +396,11 @@ function plan_heading() {
 # alerter dispatch
 # -----------------------------------------------------------------------------
 
-# Fires alerter detached. The wrapper script captures alerter's stdout and
-# dispatches click actions to focus-pane, then exits. The harness is not
-# blocked on user interaction. An empty sound argument suppresses the
-# `--sound` flag so the notification is silent.
+# Fires alerter in a detached subshell that routes a body click to focus-pane,
+# so the harness is not blocked on user interaction. Groups are suffixed with
+# the session key. Stop groups fire once per turn (an atomic mkdir marker) and
+# are skipped while the originating pane is visible. An empty sound omits
+# --sound, so the notification is silent.
 function fire_alerter_detached() {
   local title="${1}" subtitle="${2}" message="${3}"
   local sound="${4}" group="${5}" icon="${6}"
@@ -462,54 +463,38 @@ function fire_alerter_detached() {
 # Claude Code event handlers
 # -----------------------------------------------------------------------------
 
-function do_cc_idle() {
-  local input transcript_path
-  input="${HOOK_INPUT}"
-  transcript_path="$(printf '%s' "${input}" | jq -r '.transcript_path // empty')"
-
-  local body
-  body="$(summarize_reply "$(extract_last_message_text "${transcript_path}" "assistant")")"
-
-  fire_alerter_detached \
-    "Waiting for input" \
-    "$(compute_subtitle)" \
-    "${body:-Waiting for input}" \
-    "Tink" \
-    "claude-idle" \
-    "${ASSETS_DIR}/claude-code.png"
-}
-
 function do_cc_elicit() {
-  local input message subtitle body
-  input="${HOOK_INPUT}"
-  message="$(printf '%s' "${input}" | jq -r '.message // empty')"
-  subtitle="$(compute_subtitle)"
+  local message body
+  message="$(printf '%s' "${HOOK_INPUT}" | jq -r '.message // empty | strings' 2> /dev/null)" || message=""
 
   if [[ -n "${message}" ]]; then
     body="$(truncate_with_ellipsis "${message//$'\n'/ }" "${BODY_LIMIT}")"
-  else
-    body="Needs input"
   fi
 
   fire_alerter_detached \
     "Question" \
-    "${subtitle}" \
-    "${body}" \
+    "$(compute_subtitle)" \
+    "${body:-Needs input}" \
     "Tink" \
     "claude-elicit" \
     "${ASSETS_DIR}/claude-code.png"
 }
 
 function do_cc_permission() {
-  local input transcript_path
-  input="${HOOK_INPUT}"
-  transcript_path="$(printf '%s' "${input}" | jq -r '.transcript_path // empty')"
+  local transcript_path message wanted=""
+  transcript_path="$(printf '%s' "${HOOK_INPUT}" | jq -r '.transcript_path // empty | strings' 2> /dev/null)" || transcript_path=""
+  message="$(printf '%s' "${HOOK_INPUT}" | jq -r '.message // empty | strings' 2> /dev/null)" || message=""
+  # Claude Code announces "Claude needs your permission to use <tool>".
+  if [[ "${message}" =~ permission\ to\ use\ (.+)$ ]]; then
+    wanted="${BASH_REMATCH[1]}"
+  fi
 
   local pending name
-  pending="$(get_pending_tool_use "${transcript_path}")"
+  pending="$(get_pending_tool_use "${transcript_path}" "${wanted}")"
   name="$(tool_name "${pending}")"
+  name="${name:-${wanted}}"
 
-  local subtitle body
+  local body=""
   case "${name}" in
     # The PreToolUse question banner already covers this prompt.
     AskUserQuestion) return 0 ;;
@@ -526,28 +511,25 @@ function do_cc_permission() {
       ;;
     *) ;;
   esac
-  subtitle="$(compute_subtitle)"
 
   local title="Needs approval"
   if [[ "${name}" == mcp__*__* ]]; then
     # mcp__<server>__<tool>: the tool names the action; the server goes below.
-    title="Approve ${name##*__}?"
-    body="$(tool_preview "${pending}" "${BODY_LIMIT}")"
     local server="${name#mcp__}"
-    body="${body:-${server%__*} MCP tool}"
+    title="Approve ${name##*__}?"
+    body="${server%__*} MCP tool"
   elif [[ -n "${name}" ]]; then
     title="Approve ${name}?"
     body="$(tool_preview "${pending}" "${BODY_LIMIT}")"
   fi
-  if [[ -z "${body:-}" ]]; then
-    body="$(printf '%s' "${input}" | jq -r '.message // "Needs permission"')"
-    body="$(truncate_with_ellipsis "${body//$'\n'/ }" "${BODY_LIMIT}")"
+  if [[ -z "${body}" ]]; then
+    body="$(truncate_with_ellipsis "${message//$'\n'/ }" "${BODY_LIMIT}")"
   fi
 
   fire_alerter_detached \
     "${title}" \
-    "${subtitle}" \
-    "${body}" \
+    "$(compute_subtitle)" \
+    "${body:-Needs permission}" \
     "Funk" \
     "claude-permission" \
     "${ASSETS_DIR}/claude-code.png"
@@ -556,11 +538,14 @@ function do_cc_permission() {
 function do_stop() {
   local icon="${1}"
   local reply
-  reply="$(printf '%s' "${HOOK_INPUT}" | jq -r '.last_assistant_message // empty')"
-  if [[ -z "${reply}" && "${HARNESS}" == claude ]]; then
+  reply="$(printf '%s' "${HOOK_INPUT}" | jq -r '.last_assistant_message // empty | strings' 2> /dev/null)" || reply=""
+  # Only a payload without the field falls back to the transcript; an empty
+  # reply stays empty rather than borrowing an earlier message.
+  if [[ "${HARNESS}" == claude ]] \
+    && [[ "$(printf '%s' "${HOOK_INPUT}" | jq -r 'has("last_assistant_message")' 2> /dev/null)" == false ]]; then
     local transcript_path
-    transcript_path="$(printf '%s' "${HOOK_INPUT}" | jq -r '.transcript_path // empty')"
-    reply="$(extract_last_message_text "${transcript_path}" "assistant")"
+    transcript_path="$(printf '%s' "${HOOK_INPUT}" | jq -r '.transcript_path // empty | strings' 2> /dev/null)" || transcript_path=""
+    reply="$(extract_last_assistant_text "${transcript_path}")"
   fi
 
   local body
@@ -600,14 +585,17 @@ function originating_pane_visible() {
 }
 
 # Shows the first question; the title counts them when there are several.
+# Unexpected tool_input shapes fall back to "Needs input".
 function do_question() {
   local icon="${1}" questions count first
   questions="$(printf '%s' "${HOOK_INPUT}" | jq -c '
     (.tool_input // {}) as $input
     | (if ($input | type) == "string" then ($input | fromjson? // {}) else $input end)
-    | [.questions[]?.question | strings | gsub("\n"; " ")]')"
-  count="$(printf '%s' "${questions}" | jq -r 'length')"
-  first="$(printf '%s' "${questions}" | jq -r '.[0] // empty')"
+    | (if type == "object" then .questions else null end) as $q
+    | [($q | if type == "array" then .[] else empty end) | objects | .question | strings | gsub("\n"; " ")]
+  ' 2> /dev/null)" || questions='[]'
+  count="$(printf '%s' "${questions}" | jq -r 'length' 2> /dev/null)" || count=0
+  first="$(printf '%s' "${questions}" | jq -r '.[0] // empty' 2> /dev/null)" || first=""
 
   local title="Question" suffix="" body
   if [[ "${count}" -gt 1 ]]; then
@@ -632,13 +620,13 @@ function main() {
 
   HOOK_INPUT="$(cat)"
   # Root session alerts must not change state or notify for subagents.
-  if [[ -n "$(printf '%s' "${HOOK_INPUT}" | jq -r '.agent_id // empty')" ]]; then
+  if [[ -n "$(printf '%s' "${HOOK_INPUT}" | jq -r '.agent_id // empty' 2> /dev/null)" ]]; then
     return 0
   fi
   HARNESS="claude"
   [[ "${1:-}" == codex-* ]] && HARNESS="codex"
   local session_id
-  session_id="$(printf '%s' "${HOOK_INPUT}" | jq -r '.session_id // .sessionId // empty')"
+  session_id="$(printf '%s' "${HOOK_INPUT}" | jq -r '.session_id // .sessionId // empty' 2> /dev/null)" || session_id=""
   SESSION_KEY="$(printf '%s' "${HARNESS}|${session_id}|${TMUX:-}|${TMUX_PANE:-}|${PWD}" | shasum -a 256 | cut -d ' ' -f 1)"
   STATE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}/agent-harness-notify/${SESSION_KEY}"
   mkdir -p "${STATE_DIR}"
@@ -647,7 +635,6 @@ function main() {
     turn-start | cc-turn-start | codex-turn-start) rmdir "${STATE_DIR}/completed" 2> /dev/null || true ;;
     cc-question) do_question "claude-code" ;;
     codex-question) do_question "codex" ;;
-    cc-idle) do_cc_idle ;;
     cc-elicit) do_cc_elicit ;;
     cc-permission) do_cc_permission ;;
     cc-stop) do_stop "claude-code" ;;

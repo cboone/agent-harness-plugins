@@ -234,18 +234,23 @@ async function lastAssistantText(client: Client, sessionID: string): Promise<str
 
 interface ReplyUnit {
   text: string;
-  status: boolean;
+  kind: "prose" | "status" | "code";
 }
 
-const BLOCK_START = /^\s*(#{1,6}|[-*+>•]|\d+\.)\s/;
+const BLOCK_START = /^\s*(#{1,6}|[-*+>•]|[0-9]+\.)\s/u;
 
-// Mirrors SUMMARY_JQ in ../scripts/notify; keep the two in step.
-// Reduces a reply to plain prose for a banner body. Fenced code, table rows and
-// status lines (a leading ▸, or two or more " · " fields) are dropped unless
-// nothing else remains. Headings, list items and paragraphs become separate
-// sentences. Whole sentences are kept in order within `limit`; a sentence that
-// no longer fits is cut at a word boundary when at least 40 characters remain.
-// A JSON object reply with a string `summary` is summarized from that field.
+// Mirrors SUMMARY_JQ in ../scripts/notify; keep the two in step. Lengths count
+// Unicode code points, as jq does.
+// - Input past 20,000 characters is ignored.
+// - A JSON object reply with a string `summary` is summarized from that field.
+// - Headings, list items and paragraphs become separate sentences, joined by a
+//   period when one lacks closing punctuation.
+// - Prose wins. Without prose, status lines (a leading ▸, or two or more " · "
+//   separators) are used; without either, the first code or table line is.
+//   An unclosed fence is read as prose.
+// - Whole sentences are kept in order within `limit`. A sentence that no longer
+//   fits is cut at a word boundary with "…" when it is the first sentence or at
+//   least 40 characters remain.
 function summarizeReply(reply: string, limit: number): string {
   let text = reply;
   try {
@@ -257,45 +262,20 @@ function summarizeReply(reply: string, limit: number): string {
     // Plain-text replies are the common case.
   }
 
-  const units: ReplyUnit[] = [];
-  let fence = false;
-  let current = "";
-  const flush = () => {
-    if (current !== "") units.push({ text: current, status: false });
-    current = "";
-  };
-  for (const line of text.split("\n")) {
-    if (/^\s*(```|~~~)/.test(line)) {
-      flush();
-      fence = !fence;
-    } else if (fence || /^\s*\|/.test(line)) {
-      continue;
-    } else if (/^\s*$/.test(line)) {
-      flush();
-    } else if (isStatusLine(line)) {
-      flush();
-      units.push({ text: stripInline(line), status: true });
-    } else if (BLOCK_START.test(line)) {
-      flush();
-      current = stripInline(line);
-    } else {
-      current = `${current} ${stripInline(line)}`.trimStart();
-    }
-  }
-  flush();
-
-  const cleaned = units.map((u) => ({ ...u, text: u.text.replace(/\s+/g, " ").trim() })).filter((u) => u.text !== "");
-  const kept = cleaned.some((u) => !u.status) ? cleaned.filter((u) => !u.status) : cleaned;
+  const units = replyUnits(Array.from(text).slice(0, 20000).join("").split("\n"))
+    .map((u) => ({ ...u, text: u.text.replace(/\s+/gu, " ").trim() }))
+    .filter((u) => u.text !== "");
+  const kept = units.some((u) => u.kind === "prose") ? units.filter((u) => u.kind === "prose") : units.some((u) => u.kind === "status") ? units.filter((u) => u.kind === "status") : units.slice(0, 1);
   const sentences = kept.flatMap((u, i) => {
-    const unit = i < kept.length - 1 && !/[.!?:]$/.test(u.text) ? `${u.text}.` : u.text;
-    return (unit.match(/(?:[^.!?]|[.!?]+(?!\s|$))+(?:[.!?]+(?=\s|$))?/g) ?? []).map((s) => s.trimStart()).filter((s) => s !== "");
+    const unit = i < kept.length - 1 && !/[.!?:]$/u.test(u.text) ? `${u.text}.` : u.text;
+    return (unit.match(/(?:[^.!?]|[.!?]+(?!\s|$))+(?:[.!?]+(?=\s|$))?/gu) ?? []).map((s) => s.trimStart()).filter((s) => s !== "");
   });
 
   let out = "";
   for (const sentence of sentences) {
     const gap = out === "" ? "" : " ";
-    const room = limit - out.length - gap.length;
-    if (sentence.length <= room) {
+    const room = limit - codePoints(out) - gap.length;
+    if (codePoints(sentence) <= room) {
       out += gap + sentence;
     } else {
       if (out === "" || room >= 40) out += gap + cutAtWord(sentence, room);
@@ -305,22 +285,77 @@ function summarizeReply(reply: string, limit: number): string {
   return out;
 }
 
+// Splits reply lines into prose, status and code units. Fenced lines and table
+// rows are code; a fence left open at the end is read again as prose.
+function replyUnits(lines: string[]): ReplyUnit[] {
+  const units: ReplyUnit[] = [];
+  let fence = -1;
+  let mark = 0;
+  let current = "";
+  const flush = () => {
+    if (current !== "") units.push({ text: current, kind: "prose" });
+    current = "";
+  };
+  lines.forEach((line, i) => {
+    if (/^\s*(```|~~~)/u.test(line)) {
+      flush();
+      if (fence < 0) {
+        fence = i;
+        mark = units.length;
+      } else {
+        fence = -1;
+      }
+    } else if (fence >= 0) {
+      units.push({ text: line, kind: "code" });
+    } else if (/^\s*\|/u.test(line)) {
+      if (!/^[\s|:-]+$/u.test(line)) {
+        flush();
+        units.push({
+          text: line.replace(/^\s*\||\|\s*$/gu, "").replace(/\s*\|\s*/gu, " · "),
+          kind: "code",
+        });
+      }
+    } else if (/^\s*$/u.test(line)) {
+      flush();
+    } else if (isStatusLine(line)) {
+      flush();
+      units.push({ text: stripInline(line), kind: "status" });
+    } else if (BLOCK_START.test(line)) {
+      flush();
+      current = stripInline(line);
+    } else {
+      current = `${current} ${stripInline(line)}`.trimStart();
+    }
+  });
+  if (fence >= 0) return [...units.slice(0, mark), ...replyUnits(lines.slice(fence + 1))];
+  flush();
+  return units;
+}
+
 function stripInline(line: string): string {
   return line
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/\*\*|__|`/g, "")
-    .replace(/(?<![\w*])\*([^*\s][^*]*)\*/g, "$1")
-    .replace(/^\s*(#{1,6}|[-*+>▸•]|\d+\.)\s+/, "");
+    .replace(/\[([^\]]*)\]\([^)]*\)/gu, "$1")
+    .replace(/\*\*|__|`/gu, "")
+    .replace(/(?<![\p{L}\p{N}_*])\*([^*\s][^*]*)\*/gu, "$1")
+    .replace(/^\s*(#{1,6}|[-*+>▸•]|[0-9]+\.)\s+/u, "");
 }
 
 function isStatusLine(line: string): boolean {
-  return /^\s*▸/.test(line) || line.split(" · ").length > 2;
+  return /^\s*▸/u.test(line) || line.split(" · ").length > 2;
 }
 
+function codePoints(text: string): number {
+  return Array.from(text).length;
+}
+
+// Cuts to `limit` code points with "…", dropping a partial last word.
 function cutAtWord(text: string, limit: number): string {
-  if (text.length <= limit) return text;
+  const chars = Array.from(text);
+  if (chars.length <= limit) return text;
   if (limit < 1) return "";
-  return text.slice(0, limit - 1).replace(/\s+\S*$/, "") + "…";
+  const head = chars.slice(0, limit - 1).join("");
+  const complete = /^\s/u.test(chars[limit - 1] ?? "") || !/\s/u.test(head);
+  return (complete ? head : head.replace(/\s+\S*$/u, "")).replace(/\s+$/u, "") + "…";
 }
 
 interface ToolInfo {
@@ -373,9 +408,10 @@ function displayPath(path: string, bases: string[], limit: number): string {
   let shown = path;
   if (base) shown = path.slice(base.length + 1);
   else if (home && path.startsWith(`${home}/`)) shown = `~/${path.slice(home.length + 1)}`;
-  if (shown.length <= limit) return shown;
+  const chars = Array.from(shown);
+  if (chars.length <= limit) return shown;
   if (limit < 1) return "";
-  return "…" + shown.slice(shown.length - limit + 1);
+  return "…" + chars.slice(chars.length - limit + 1).join("");
 }
 
 // Drops a leading cd into the session's own directory, which says nothing.
@@ -463,8 +499,10 @@ function capitalize(s: string): string {
   return s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
+// Cuts to `limit` code points, so a cut never splits a surrogate pair.
 function truncate(text: string, limit: number): string {
-  if (text.length <= limit) return text;
+  const chars = Array.from(text);
+  if (chars.length <= limit) return text;
   if (limit < 1) return "";
-  return text.slice(0, limit - 1) + "…";
+  return chars.slice(0, limit - 1).join("") + "…";
 }
