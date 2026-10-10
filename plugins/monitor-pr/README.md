@@ -1,6 +1,6 @@
 # Monitor PR
 
-Monitor a pull request until its checks pass, Copilot signs off on the current head, and it is mergeable, fixing failures along the way.
+Monitor a pull request until its checks pass, Copilot signs off on the current head, and it is mergeable, fixing failures along the way, then offer the merge and sync the main worktree once it lands.
 
 **Type:** Skill
 **Trigger:** `/monitor-pr [<pr-number>]`
@@ -12,7 +12,7 @@ See the [marketplace install instructions](../../README.md#install).
 
 ## What It Does
 
-Picks up where `pr` stops. The `pr` skill creates the pull request, prints the URL, and terminates; everything after that has traditionally been hand-driven. This skill takes over and tends the PR until it is ready to merge.
+Picks up where `pr` stops. The `pr` skill creates the pull request, prints the URL, and terminates; everything after that has traditionally been hand-driven. This skill takes over and tends the PR until it is ready to merge, and then through the merge.
 
 On each tick it takes one snapshot of the PR and reduces it to four axes: checks, Copilot, mergeability, and PR state. It then acts on the first problem it finds, in priority order. On a PR Dependabot authored, the skill never pushes, so each of these follows [Dependabot PRs](#dependabot-prs) instead:
 
@@ -21,11 +21,11 @@ On each tick it takes one snapshot of the PR and reduces it to four axes: checks
 1. **Copilot reviewed the current head**: invokes `resolve-copilot-pr-feedback` once for that review. The first time a current-head review appears, the watch reads its complete body and classifies it as a review, one of Copilot's error or excluded-files notices, or unclear. It reads the whole body rather than a prefix, because the text saying Copilot did not review can sit anywhere in it. A notice is never a clean review: the watch requests one retry for it and escalates if Copilot answers with another notice. An unclear body escalates. A review goes to the resolver, which reads every concern the body states, whatever its layout, so a new Copilot layout cannot stop the watch. If the resolver finds the review was actually a notice, the watch takes the notice path. Every tick also runs a read-only probe, using the same bundled script the resolver reads with, for open Copilot threads and for Copilot feedback anywhere neither threads nor review bodies reach, such as a comment on the PR itself. This one does not wait for in-flight checks. The fixes land whatever the checks go on to do, so there is no reason to serialize the Copilot cycle behind a check run the skill cannot influence.
 1. **Copilot has not reviewed the current head**: waits, once the checks are passing. Copilot re-reviews automatically on push in most repository configurations. If no review arrives after two quiet ticks, it requests one with `gh pr edit --add-reviewer "@copilot"`. Asking for a review is the one Copilot action that waits on checks, because any push throws the result away.
 
-Every push it makes invalidates Copilot's previous review, so the loop naturally goes back around after a fix. It stops when all four axes are clean at once, prints a full status table, and asks whether to merge, enable auto-merge, or leave it. When Copilot asked for human review of a change without naming a defect, the report says "Ready, with N advisory requests for human review" and quotes each one, since those requests never block the watch.
+Every push it makes invalidates Copilot's previous review, so the loop naturally goes back around after a fix. It stops repairing when all four axes are clean at once, prints a full status table, and moves on to [the merge](#the-merge). When Copilot asked for human review of a change without naming a defect, the report says "Ready, with N advisory requests for human review" and quotes each one, since those requests never block the watch.
 
 ### It stops and asks
 
-This is not a continue-at-all-costs skill. It halts the watch and puts the question to you when the fix is a judgment call about intended behavior, when the same check fails again after a fix attempt for it, when the fix would reach outside what the branch already changes, when the logs do not identify a cause, when `merge-main` or `resolve-copilot-pr-feedback` reports something it could not finish, or when Copilot feedback comes back reportedly resolved while the same review still reads as unresolved. That last one covers both forms Copilot's feedback takes. An inline thread clears when it is resolved, but a finding filed in a review body has no thread and the body is immutable, so it stays visible in that review permanently. The resolver records it as handled in a summary row that links back to the exact review and includes the fixing commit or no-change rationale; monitor reports that summary link instead of implying that the original review body changed.
+This is not a continue-at-all-costs skill. It halts the watch and puts the question to you when the fix is a judgment call about intended behavior, when the same check fails again after a fix attempt for it, when the fix would reach outside what the branch already changes, when the logs do not identify a cause, when `merge-main` or `resolve-copilot-pr-feedback` reports something it could not finish, when GitHub refuses the merge for a reason other than a new push or no merge method is left, when a change is requested while an approval is awaited, when the merge watch can no longer read the PR, or when Copilot feedback comes back reportedly resolved while the same review still reads as unresolved. That last one covers both forms Copilot's feedback takes. An inline thread clears when it is resolved, but a finding filed in a review body has no thread and the body is immutable, so it stays visible in that review permanently. The resolver records it as handled in a summary row that links back to the exact review and includes the fixing commit or no-change rationale; monitor reports that summary link instead of implying that the original review body changed.
 
 ### What counts as a Copilot sign-off
 
@@ -41,6 +41,16 @@ The Copilot round budget defaults to 10. On reaching it the skill stops and asks
 
 The budget bounds an unattended watch. It is not a judgment about whether the work is going well, and the skill does not read the finding counts as a trend. Copilot swings between busy and quiet rounds over the same code, so a rising count does not mean divergence, and four rounds is often not enough to finish. A watch still turning up real defects at round 8 is working, not thrashing. What ends a watch early is a finding that needs your judgment, not an unflattering shape in the numbers.
 
+### The merge
+
+At readiness the skill offers one merge, not a menu. It reads the merge methods the repository settings allow and narrows them by the base branch's rulesets, since a ruleset can allow only squash, or require a linear history, on a repository whose settings also allow merge commits. Where a merge queue applies, the offer names the queue. If one method is left, it offers that one. Otherwise it uses an allowed method the repository's agent config or the harness's memory names, and failing both it proposes a merge commit, or the first allowed method when merge commits are not allowed, asks once, and saves the answer as a per-repository memory note where the harness has durable memory. A read it cannot make, such as merge settings hidden from an account without admin access, is reported as unknown rather than taken as permission.
+
+Before offering, it starts a background watch on the PR, so the offer and the watch never wait on each other: whoever merges the PR, from wherever, the session finds out. The question is asked in plain text rather than through a blocking prompt so that the watch can wake the session while the question is open. The merge is pinned to the head that was declared ready, and a push after readiness sends the PR back through the repair loop rather than letting an unchecked head merge. Merging leaves the head branch in place, since a worktree usually has it checked out, and a merge GitHub queues or turns into auto-merge keeps the watch running until it lands. On a foreground path, where no watch can run beside an open question, it makes the offer and ends with a checkpoint; the next `/monitor-pr` picks up a merge made in the meantime.
+
+Some repositories need an approving review first. The skill treats a PR that way when a base-branch ruleset requires approvals, when `reviewDecision` is `REVIEW_REQUIRED`, or when your own or the project's agent instructions say the repository's PRs need approval before merge. That last source covers repositories GitHub does not protect, and it keeps any organization-specific policy in your configuration rather than in the skill. The watch then reports "Ready, awaiting approval", offers the merge once approval arrives and a fresh snapshot is still clean, and escalates on a change request.
+
+Once the PR merges, the skill fetches the base branch from the remote that names the PR's repository, which in a fork is not `origin`, and fast-forwards the worktree that has it checked out, usually the main worktree, or the branch ref when none does. It confirms the merge commit arrived before calling the branch synced, and it reports git's refusal rather than stashing, resetting, or forcing when local changes or a diverged branch are in the way. It then messages the other agent sessions working in the repository's worktrees with the PR, the merge commit, and the sync result. On Claude Code it finds those sessions by matching each `ListAgents` session's tmux pane against the panes inside the repository's worktrees, and sends with `SendMessage`. The message is informational; each session decides whether to merge the base branch. A PR closed without merging gets neither step.
+
 ### Dependabot PRs
 
 Dependabot owns its branches. Once anyone else pushes to one, Dependabot stops rebasing it, and a later `@dependabot recreate` throws the push away. So on a PR authored by Dependabot the skill never pushes:
@@ -51,15 +61,15 @@ Dependabot owns its branches. Once anyone else pushes to one, Dependabot stops r
 
 ### What does not gate
 
-`reviewDecision` is reported in every status line but never blocks. A human `CHANGES_REQUESTED` will not stop this skill from declaring the PR ready, so that an outstanding human objection stays visible without stalling a watch on solo repositories that have no required reviewers.
+`reviewDecision` is reported in every status line but never blocks readiness. A human `CHANGES_REQUESTED` will not stop this skill from declaring the PR ready, so that an outstanding human objection stays visible without stalling a watch on solo repositories that have no required reviewers. When the repository or your instructions require an approval, it does hold back the merge offer; see [the merge](#the-merge).
 
 ### Pacing and harness support
 
-Intervals adapt to the phase: shorter while checks are actively running, longer while waiting on Copilot, longest when nothing is moving. The only budget on a scheduler-backed watch is Copilot rounds. The watch ends on a terminal state, an escalation, or an exhausted round budget, and you can interrupt it at any point.
+Intervals adapt to the phase: shorter while checks are actively running, longer while waiting on Copilot, longest when nothing is moving. The only budget on the repair loop is Copilot rounds. The repair loop ends at readiness, an escalation, or an exhausted round budget; after readiness, the merge watch ends at the merge, a close, an escalation, or after 24 hours with the PR still open. You can interrupt either at any point.
 
 On Claude Code the skill paces itself with the harness scheduler, which returns control between ticks and keeps the transcript small. `/loop /monitor-pr` is the recommended invocation there. If scheduling is unavailable or rejected, it uses the bounded foreground loop.
 
-On Codex surfaces that offer scheduled tasks, the skill schedules the next tick in the current conversation and cancels that task once the watch reaches a terminal state or needs a decision. This is the preferred Codex path because every scheduled run is an actual continuation, not a request for the agent to remember to continue after replying.
+On Codex surfaces that offer scheduled tasks, the skill schedules the next tick in the current conversation, cancels that task once the watch reaches a terminal state or needs a decision, and at readiness replaces it with a task that watches for the merge. This is the preferred Codex path because every scheduled run is an actual continuation, not a request for the agent to remember to continue after replying.
 
 Codex CLI and OpenCode do not expose that scheduler. They run a foreground poll loop instead: after each wait, the same active turn takes a new snapshot and dispatches it. This loop also applies when task creation fails on a scheduled surface. The default `--ticks 3` ends each foreground invocation with a resumable checkpoint, never a readiness claim. Run the reported command in the same conversation to restore options, counters, and action guards; to resume elsewhere, paste the complete checkpoint before the command and verify the repository and branch. Only the per-invocation tick count resets. See [Checkpoint and Resume](skills/monitor-pr/references/checkpoint.md). Use `--ticks unlimited` only when keeping the foreground session active is appropriate.
 
@@ -84,7 +94,7 @@ Quiet ticks print a single line and are collapsed by the harness where it suppor
 | `--ticks <n\|unlimited>`  | Bound all foreground paths, including scheduler fallbacks; the default is 3                        |
 | `--rounds <n\|unlimited>` | Change the Copilot round budget from its default of 10; `unlimited` commits to running until clean |
 | `--confirm-clean`         | Require two consecutive clean Copilot reviews rather than one                                      |
-| `--no-fix`                | Observe and report only: never push, invoke a fixing skill, or request a review                    |
+| `--no-fix`                | Observe and report only: never push, invoke a fixing skill, request a review, or merge             |
 
 ## Recommended Permissions
 
@@ -93,18 +103,18 @@ This skill runs git and GitHub CLI commands that trigger permission prompts. To 
 ```json
 {
   "permissions": {
-    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr comment *)", "Bash(gh pr merge *)", "Bash(gh api --paginate --slurp repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(bash \"*/resolve-copilot-threads\" *)", "Bash(jq *)", "Bash(sleep *)", "Bash(git status*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(bin/build-codex-marketplace)", "Bash(bin/build-opencode-mirror)"]
+    "allow": ["Bash(gh pr view *)", "Bash(gh pr checks *)", "Bash(gh pr edit *)", "Bash(gh pr comment *)", "Bash(gh pr merge *)", "Bash(gh api --paginate --slurp repos/*/pulls/*/reviews*)", "Bash(gh run view *)", "Bash(gh run list *)", "Bash(bash \"*/resolve-copilot-threads\" *)", "Bash(bash \"*/merge-flow\" *)", "Bash(gh pr ready *)", "Bash(jq *)", "Bash(sleep *)", "Bash(git status*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git push*)", "Bash(bin/build-codex-marketplace)", "Bash(bin/build-opencode-mirror)"]
   }
 }
 ```
 
 If you already have a `permissions.allow` array, merge these entries into it. Review and adjust the rules to match your security preferences.
 
-Four notes on these rules. **The script rule is deliberately path-agnostic**: the installed plugin directory carries a version in its path, so matching on the trailing script name keeps the rule working across upgrades, and the one entry covers this plugin's copy and `resolve-copilot-pr-feedback`'s alike. **Flag position matters**: `Bash(gh api repos/*)` does not match `gh api --paginate --slurp repos/*`, because the flags come first, so the rule has to spell them out in order. **The repair paths need write rules**: step 6 stages, commits, and pushes fixes, and rebuilds generated trees, so `git add`, `git commit`, and the build scripts belong in the list alongside `git push`. The two `bin/build-*` entries are specific to this repository; substitute whatever build or codegen commands your own project's checks enforce. **`sleep` is only needed on a foreground path**: it pauses an active Codex CLI or OpenCode tick. It cannot revive a watch after the agent has returned a response.
+Four notes on these rules. **The script rules are deliberately path-agnostic**: the installed plugin directory carries a version in its path, so matching on the trailing script name keeps the rules working across upgrades, and the `resolve-copilot-threads` entry covers this plugin's copy and `resolve-copilot-pr-feedback`'s alike. The `merge-flow` entry covers every GitHub read, git fetch, fast-forward, and tmux listing the script makes; the skill's own `gh pr view` and `gh pr merge` calls fall under their rules. **Flag position matters**: `Bash(gh api repos/*)` does not match `gh api --paginate --slurp repos/*`, because the flags come first, so the rule has to spell them out in order. **The repair paths need write rules**: step 6 stages, commits, and pushes fixes, and rebuilds generated trees, so `git add`, `git commit`, and the build scripts belong in the list alongside `git push`. The two `bin/build-*` entries are specific to this repository; substitute whatever build or codegen commands your own project's checks enforce. **`sleep` is only needed on a foreground path**: it pauses an active Codex CLI or OpenCode tick. It cannot revive a watch after the agent has returned a response.
 
 ## Examples
 
-- "monitor the pr": resolves the current branch's PR and watches it until it is ready to merge
+- "monitor the pr": resolves the current branch's PR, watches it until it is ready to merge, and then through the merge
 - "monitor pr 361": same behavior, against an explicit PR number
 - "watch the pr": same behavior
 - "keep an eye on the pr": same behavior

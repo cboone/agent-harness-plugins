@@ -1,0 +1,4 @@
+FAIL
+{"state":"OPEN","reviewDecision":"","headRefOid":"1111111111111111111111111111111111111111","mergeCommit":null}
+FAIL
+{"state":"MERGED","reviewDecision":"","headRefOid":"1111111111111111111111111111111111111111","mergeCommit":{"oid":"2222222222222222222222222222222222222222"}}

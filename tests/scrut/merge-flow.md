@@ -1,0 +1,378 @@
+# Merge flow
+
+Tests for the `merge-flow` script that `monitor-pr` bundles for its merge step. `policy` and `watch` run against `tests/fixtures/gh-stub`, answering from `tests/data/merge-flow/`. `sync` runs against real repositories built in a temporary directory, and `panes` against `tests/fixtures/tmux-stub`.
+
+## Setup
+
+`flow` runs the script with the stub `gh` first on `PATH`, answering from `stub_dir` when a case sets it. `watch` takes a response sequence name and polls with no delay. `clone` builds a fresh local clone of a bare `acme/widgets` remote, set back one commit so that the remote's newest commit stands for a merge the clone has not fetched yet, and prints its path. `shared` is one such clone for the cases that stop before changing anything.
+
+```scrut {fail_fast: true}
+$ work="$(cd -P "$(mktemp -d "${TMPDIR:-/tmp}/scrut.XXXXXX")" && pwd)" \
+>   && mkdir "${work}/bin" && ln -s "${GH_STUB_BIN}" "${work}/bin/gh" \
+>   && function flow() { PATH="${work}/bin:${PATH}" STUB_GH_DIR="${stub_dir:-${MERGE_FLOW_DATA_DIR}}" "${MERGE_FLOW_BIN}" "$@"; } \
+>   && function watch() { local sequence="${1}"; shift; STUB_GH_PR_VIEW="pr-view/${sequence}.txt" STUB_GH_PR_VIEW_STATE="$(mktemp "${work}/state.XXXXXX")" MERGE_FLOW_INTERVAL=0 flow watch acme widgets 7 1111111111111111111111111111111111111111 "$@"; } \
+>   && function git_quiet() { git -c init.defaultBranch=main -c user.name=Test -c user.email=test@example.com "$@" > /dev/null 2>&1; } \
+>   && mkdir -p "${work}/remote/acme" && git_quiet init --bare "${work}/remote/acme/widgets.git" \
+>   && git_quiet clone "${work}/remote/acme/widgets.git" "${work}/seed" \
+>   && git_quiet -C "${work}/seed" commit --allow-empty -m base && git_quiet -C "${work}/seed" push origin main \
+>   && function clone() { local dir; dir="$(mktemp -d "${work}/clone.XXXXXX")"; git_quiet clone "${work}/remote/acme/widgets.git" "${dir}" && git_quiet -C "${dir}" reset --hard HEAD~1 && git -C "${dir}" update-ref refs/remotes/origin/main HEAD && printf '%s\n' "${dir}"; } \
+>   && echo merged > "${work}/seed/merged.txt" && git_quiet -C "${work}/seed" add merged.txt && git_quiet -C "${work}/seed" commit -m merged && git_quiet -C "${work}/seed" push origin main \
+>   && merge_sha="$(git -C "${work}/seed" rev-parse HEAD)" \
+>   && shared="$(clone)" \
+>   && function sync() { local dir="${1}"; shift; (cd "${dir}" && "${MERGE_FLOW_BIN}" sync "$@"); } \
+>   && echo ready
+ready
+```
+
+## Help
+
+```scrut
+$ "${MERGE_FLOW_BIN}" --help | head -n 1
+Usage: merge-flow <command> [arguments]
+```
+
+An unknown command is a usage error.
+
+```scrut
+$ "${MERGE_FLOW_BIN}" unmerge 2>&1
+merge-flow: unknown command unmerge
+Run 'merge-flow --help' for usage.
+[2]
+```
+
+## Policy: a ruleset narrows the repository settings
+
+The settings allow merge commits and squash, but the base branch's ruleset allows only squash and requires an approval.
+
+```scrut
+$ flow policy acme widgets main | jq -c '{allowed, approvals, settings, rules}'
+{"allowed":["squash"],"approvals":1,"settings":["merge","squash"],"rules":[["squash"]]}
+```
+
+With no rules on the base branch, the settings decide alone.
+
+```scrut
+$ flow policy acme widgets dev | jq -c '{allowed, approvals}'
+{"allowed":["merge","squash"],"approvals":0}
+```
+
+## Policy: hidden settings are unknown, not empty
+
+Without admin access, GitHub omits the merge settings, which read as null. Unknown settings leave `allowed` unknown, and the rules alone supply the candidates.
+
+```scrut
+$ flow policy acme hidden main | jq -c '{allowed, candidates, settings, settingsNote}'
+{"allowed":null,"candidates":["squash"],"settings":null,"settingsNote":"the repository merge settings are not visible to this account, which usually means it lacks admin access"}
+```
+
+With no rules either, nothing is known about the methods.
+
+```scrut
+$ flow policy acme hidden dev | jq -c '{allowed, candidates, approvals}'
+{"allowed":null,"candidates":null,"approvals":0}
+```
+
+## Policy: every limiting rule narrows the methods
+
+Two `pull_request` rules both limit the methods, so only the method both allow is left, and the higher approval count applies.
+
+```scrut
+$ flow policy acme open multi | jq -c '{allowed, approvals, rules}'
+{"allowed":["squash"],"approvals":2,"rules":[["merge","squash"],["squash","rebase"]]}
+```
+
+A linear-history rule rules out merge commits.
+
+```scrut
+$ flow policy acme open linear | jq -c '{allowed, approvals}'
+{"allowed":["squash","rebase"],"approvals":0}
+```
+
+A merge queue is reported, since the queue then merges the PR.
+
+```scrut
+$ flow policy acme open queue | jq -c '{allowed, mergeQueue}'
+{"allowed":["merge","squash","rebase"],"mergeQueue":true}
+```
+
+## Policy: failed reads are reported, not read as empty
+
+A failed rules read leaves the rules, the approval requirement, and so `allowed` unknown, while the settings still supply the candidates.
+
+```scrut
+$ STUB_GH_API_FAIL=rules_branches_main flow policy acme widgets main | jq -c '{allowed, candidates, approvals, mergeQueue, rulesNote}'
+{"allowed":null,"candidates":["merge","squash"],"approvals":null,"mergeQueue":null,"rulesNote":"reading the base branch rules failed: gh: Resource not accessible by integration (HTTP 403)"}
+```
+
+A base branch that does not exist is not a branch without rules.
+
+```scrut
+$ flow policy acme widgets gone | jq -c '{approvals, rulesNote}'
+{"approvals":null,"rulesNote":"reading base branch gone failed, so its rules were not read: gh: Not Found (HTTP 404)"}
+```
+
+A response that cannot be parsed is a failed read too, not a reason to print nothing.
+
+```scrut
+$ stub_dir="$(mktemp -d "${work}/api.XXXXXX")" && cp -R "${MERGE_FLOW_DATA_DIR}/." "${stub_dir}/" && printf '<html>Unicorn!</html>\n' > "${stub_dir}/api/repos_acme_widgets.json" \
+>   && flow policy acme widgets main | jq -c '{allowed, candidates, settings, settingsNote}'; stub_dir=""
+{"allowed":null,"candidates":["squash"],"settings":null,"settingsNote":"the repository settings response could not be parsed"}
+```
+
+```scrut
+$ flow policy acme widgets mangled | jq -c '{approvals, rules, rulesNote}'
+{"approvals":null,"rules":null,"rulesNote":"the base branch rules response could not be parsed"}
+```
+
+A failed settings read is reported beside the rules that were read.
+
+```scrut
+$ STUB_GH_API_FAIL=repos_acme_widgets flow policy acme widgets main | jq -c '{allowed, candidates, settingsNote}'
+{"allowed":null,"candidates":["squash"],"settingsNote":"reading the repository settings failed: gh: Resource not accessible by integration (HTTP 403)"}
+```
+
+## Watch: a merge ends the watch only once it has a merge commit
+
+The third response reports `MERGED` with no merge commit yet, so the watch keeps polling until the fourth names one.
+
+```scrut
+$ watch merged
+{"event":"merged","state":"MERGED","reviewDecision":"NONE","headRefOid":"1111111111111111111111111111111111111111","mergeCommit":"2222222222222222222222222222222222222222"}
+```
+
+A merge GitHub reports with no merge commit is reported after five such reads, rather than waited on until the watch expires.
+
+```scrut
+$ watch merged-no-commit | jq -c '{event, mergeCommit, error}'
+{"event":"merged","mergeCommit":null,"error":"GitHub reports the PR merged but names no merge commit after 5 reads"}
+```
+
+A merge at a head other than the ready one is still a merge, so it is reported, with the mismatch named.
+
+```scrut
+$ STUB_GH_PR_VIEW="pr-view/merged-now.txt" STUB_GH_PR_VIEW_STATE="$(mktemp "${work}/state.XXXXXX")" MERGE_FLOW_INTERVAL=0 flow watch acme widgets 7 3333333333333333333333333333333333333333 | jq -c '{event, error}'
+{"event":"merged","error":"the PR merged at head 1111111111111111111111111111111111111111, not at the ready head 3333333333333333333333333333333333333333"}
+```
+
+## Watch: a close ends the watch
+
+```scrut
+$ watch closed | jq -c '{event, mergeCommit}'
+{"event":"closed","mergeCommit":null}
+```
+
+## Watch: a push ends the watch
+
+A head that differs from the one readiness was declared on ends the watch, so the new head goes back through the repair loop.
+
+```scrut
+$ watch pushed | jq -c '{event, headRefOid}'
+{"event":"head","headRefOid":"3333333333333333333333333333333333333333"}
+```
+
+## Watch: a changed review decision ends an approval wait
+
+```scrut
+$ watch approved --awaited REVIEW_REQUIRED | jq -c '{event, reviewDecision}'
+{"event":"decision","reviewDecision":"APPROVED"}
+```
+
+An empty decision reads as `NONE`, so an approval wait from no decision does not end on it.
+
+```scrut
+$ watch closed --awaited NONE | jq -c '{event, reviewDecision}'
+{"event":"closed","reviewDecision":"NONE"}
+```
+
+## Watch: read failures
+
+A successful read resets the failure count, so isolated failures do not end the watch.
+
+```scrut
+$ MERGE_FLOW_MAX_FAILURES=2 watch flaky | jq -c '{event, mergeCommit}'
+{"event":"merged","mergeCommit":"2222222222222222222222222222222222222222"}
+```
+
+Consecutive failures end it with the last error.
+
+```scrut
+$ MERGE_FLOW_MAX_FAILURES=2 watch offline
+{"event":"failed","error":"2 consecutive reads failed; last error: error connecting to api.github.com"}
+```
+
+Output that is not JSON, or that names no state or head, counts as a failed read.
+
+```scrut
+$ MERGE_FLOW_MAX_FAILURES=1 watch garbled
+{"event":"failed","error":"1 consecutive reads failed; last error: gh pr view returned output that is not JSON"}
+```
+
+```scrut
+$ MERGE_FLOW_MAX_FAILURES=1 watch empty
+{"event":"failed","error":"1 consecutive reads failed; last error: gh pr view returned no state or head"}
+```
+
+A watch that outlives its lifetime ends too.
+
+```scrut
+$ MERGE_FLOW_LIFETIME=0 watch merged
+{"event":"expired","error":"no merge within 0 seconds"}
+```
+
+## Watch: one read at a time
+
+`--once` makes a single read for a caller that schedules its own. With nothing changed it reports `pending` with the counts to pass back.
+
+```scrut
+$ watch closed --once | jq -c '{event, failures, mergedReads}'
+{"event":"pending","failures":0,"mergedReads":0}
+```
+
+A failed read is counted, and the count passed back ends the watch once it reaches the limit.
+
+```scrut
+$ watch offline --once --failures 2 | jq -c '{event, failures}'
+{"event":"pending","failures":3}
+```
+
+```scrut
+$ watch offline --once --failures 7 | jq -c '{event, error}'
+{"event":"failed","error":"8 consecutive reads failed; last error: error connecting to api.github.com"}
+```
+
+Reads of a merge with no merge commit carry over the same way.
+
+```scrut
+$ watch merged-no-commit --once --merged-reads 4 | jq -c '{event, mergeCommit}'
+{"event":"merged","mergeCommit":null}
+```
+
+A first read a lifetime ago ends the watch without reading.
+
+```scrut
+$ watch merged --once --started 0
+{"event":"expired","error":"no merge within 86400 seconds"}
+```
+
+Counts must be whole numbers.
+
+```scrut
+$ watch merged --once --failures many 2>&1
+merge-flow: --failures and --merged-reads need whole numbers
+Run 'merge-flow --help' for usage.
+[2]
+```
+
+## Sync: the base branch checked out in the main worktree
+
+```scrut
+$ dir="$(clone)" && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg dir "${dir}" '{synced, remote, here: (.worktree == $dir), reason}' && test "$(git -C "${dir}" rev-parse main)" = "${merge_sha}" && echo moved
+{"synced":true,"remote":"origin","here":true,"reason":null}
+moved
+```
+
+## Sync: the base branch checked out in another worktree
+
+The fast-forward runs where the branch is checked out, since a branch checked out elsewhere cannot be updated by ref.
+
+```scrut
+$ dir="$(clone)" && git_quiet -C "${dir}" switch -c feature && git_quiet -C "${dir}" worktree add "${dir}.main" main \
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg wt "${dir}.main" '{synced, there: (.worktree == $wt)}'
+{"synced":true,"there":true}
+```
+
+A worktree path containing a newline stays intact, including one that ends in a newline.
+
+```scrut
+$ dir="$(clone)" && git_quiet -C "${dir}" switch -c feature && wt="${dir}.odd"$'\n'"name" && git_quiet -C "${dir}" worktree add "${wt}" main \
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg wt "${wt}" '{synced, there: (.worktree == $wt)}'
+{"synced":true,"there":true}
+```
+
+```scrut
+$ dir="$(clone)" && git_quiet -C "${dir}" switch -c feature && wt="${dir}.tail"$'\n' && git_quiet -C "${dir}" worktree add "${wt}" main \
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c --arg wt "${wt}" '{synced, there: (.worktree == $wt)}'
+{"synced":true,"there":true}
+```
+
+## Sync: the base branch not checked out anywhere
+
+```scrut
+$ dir="$(clone)" && git_quiet -C "${dir}" switch -c feature && sync "${dir}" acme widgets main "${merge_sha}" | jq -c '{synced, worktree}'
+{"synced":true,"worktree":null}
+```
+
+## Sync: the remote is found by URL, not by name
+
+A fork layout names the upstream something other than `origin`.
+
+```scrut
+$ dir="$(clone)" && git_quiet -C "${dir}" remote rename origin upstream && git_quiet -C "${dir}" remote add origin "${work}/remote/someone/widgets.git" \
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c '{synced, remote}'
+{"synced":true,"remote":"upstream"}
+```
+
+An scp-like URL with a different case and a `.git` suffix names the repository too. That remote cannot be reached here, so the fetch failure is reported.
+
+```scrut
+$ dir="$(clone)" && git_quiet -C "${dir}" remote remove origin && git_quiet -C "${dir}" remote add up git@github.com:Acme/Widgets.git \
+>   && GIT_SSH_COMMAND=false sync "${dir}" acme widgets main "${merge_sha}" | jq -c '{synced, remote, reason: (.reason | startswith("fetching main from up failed: "))}'
+{"synced":false,"remote":"up","reason":true}
+```
+
+No remote naming the repository is reported.
+
+```scrut
+$ sync "${shared}" acme gadgets main "${merge_sha}" | jq -c '{synced, reason}'
+{"synced":false,"reason":"no remote points at acme/gadgets"}
+```
+
+## Sync: a fetched base without the merge is not synced
+
+```scrut
+$ sync "${shared}" acme widgets main 4444444444444444444444444444444444444444 | jq -c '{synced, reason}'
+{"synced":false,"reason":"origin/main does not contain 4444444444444444444444444444444444444444"}
+```
+
+## Sync: a diverged base branch is reported, not forced
+
+A local commit on the base branch makes it diverge, so it cannot be fast-forwarded, and nothing changes.
+
+```scrut
+$ dir="$(clone)" && git_quiet -C "${dir}" commit --allow-empty -m local && before="$(git -C "${dir}" rev-parse HEAD)" \
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c '{synced, reason}' && test "$(git -C "${dir}" rev-parse main)" = "${before}" && echo kept
+{"synced":false,"reason":"local main has commits that origin/main does not, so it cannot be fast-forwarded"}
+kept
+```
+
+The same holds when no worktree has the branch checked out.
+
+```scrut
+$ dir="$(clone)" && git_quiet -C "${dir}" commit --allow-empty -m local && git_quiet -C "${dir}" switch -c feature \
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c '{synced, worktree, reason}'
+{"synced":false,"worktree":null,"reason":"local main has commits that origin/main does not, so it cannot be fast-forwarded"}
+```
+
+## Sync: a refused fast-forward leaves the worktree alone
+
+An untracked file the merge would overwrite makes git refuse, and its message is reported.
+
+```scrut
+$ dir="$(clone)" && echo local > "${dir}/merged.txt" && before="$(git -C "${dir}" rev-parse HEAD)" \
+>   && sync "${dir}" acme widgets main "${merge_sha}" | jq -c '{synced, reason: (.reason | test("^fast-forwarding main in .* failed: .*merged.txt"))}' && test "$(git -C "${dir}" rev-parse main)" = "${before}" && echo kept
+{"synced":false,"reason":true}
+kept
+```
+
+## Panes: matched by whole path component
+
+Panes in a worktree or below one match, and the deepest worktree wins. A sibling directory whose name only starts with the repository's name does not match, nor does a directory above the repository.
+
+```scrut
+$ repo="${work}/panes/repo" && mkdir -p "${repo}" && git_quiet -C "${repo}" init && git_quiet -C "${repo}" commit --allow-empty -m base \
+>   && git_quiet -C "${repo}" worktree add "${work}/panes/repo__worktrees/topic" -b topic \
+>   && ln -s "${TMUX_STUB_BIN}" "${work}/bin/tmux" \
+>   && panes="$(printf 's|%s|claude|%s|1\n' %1 "${repo}" %2 "${repo}/src" %3 "${work}/panes/repo__worktrees/topic" %4 "${work}/panes/repo-old" %5 "${work}")" \
+>   && (cd "${repo}" && PATH="${work}/bin:${PATH}" STUB_TMUX_PANES="${panes}" "${MERGE_FLOW_BIN}" panes) | jq -c --arg root "${work}/panes/" '[.[] | [.pane, (.worktree | ltrimstr($root))]]'
+[["%1","repo"],["%2","repo"],["%3","repo__worktrees/topic"]]
+```
