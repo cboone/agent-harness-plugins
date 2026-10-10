@@ -219,83 +219,91 @@ function compute_tmux_state() {
 # Transcript extractors (Claude Code JSONL)
 # -----------------------------------------------------------------------------
 
-# Classifies one transcript line as {k, t}: k is "prompt" for a user turn,
-# "result" for tool results (t holds their tool_use ids), "assistant" (t holds
-# its text), or "other". Slash-command records count as "other".
-# shellcheck disable=SC2016 # $c is a jq variable.
-readonly LINE_KIND_JQ='
+# Each extractor reads a transcript in one jq pass, scanning lines backward from
+# the end until the current turn's user prompt, so an earlier turn is never
+# consulted. Records are classified as:
+# - "prompt": a user message that is not a tool result, meta record (such as a
+#   skill expansion or system reminder) or slash-command output;
+# - "result": a user record carrying tool results;
+# - "assistant", and "other" for everything else.
+# Read with `read -d ''` because bash 3.2 cannot parse these heredocs inside $().
+IFS= read -r -d '' TURN_JQ << 'JQ' || true
+def kind:
   (.message.content // "") as $c
-  | if .type == "assistant" then
-      {k: "assistant", t: (if ($c | type) == "array" then [$c[]? | objects | select(.type == "text") | .text] | join("\n") else "" end)}
-    elif .type == "user" then
-      (if ($c | type) == "array" and any($c[]?; type == "object" and .type == "tool_result") then
-         {k: "result", t: ([$c[] | objects | select(.type == "tool_result") | .tool_use_id] | join(" "))}
-       elif ($c | type) == "string" and ($c | test("^<(command-|local-)")) then {k: "other", t: ""}
-       else {k: "prompt", t: ""} end)
-    else {k: "other", t: ""} end'
+  | if .type == "assistant" then "assistant"
+    elif .type == "user" and .isMeta != true then
+      (if ($c | type) == "array" and any($c[]?; type == "object" and .type == "tool_result") then "result"
+       elif ($c | type) == "string" and ($c | test("^<(command-|local-)")) then "other"
+       else "prompt" end)
+    else "other" end;
+def turn:
+  [inputs] as $lines
+  | [label $out | range(($lines | length) - 1; -1; -1) as $i
+      | ($lines[$i] | fromjson? // null) | objects
+      | if kind == "prompt" then break $out else . end];
+def blocks: (.message.content // []) | if type == "array" then .[] | objects else empty end;
+JQ
+readonly TURN_JQ
 
 # Prints the text of the current turn's last assistant message, or nothing.
-# The backward walk stops at the turn's user prompt, so an earlier turn's reply
-# is never reported. Process substitution lets the loop break without
-# SIGPIPE-ing the producer.
+IFS= read -r -d '' LAST_TEXT_JQ << 'JQ' || true
+first(turn[] | select(kind == "assistant")
+  | (.message.content | if type == "string" then . else [blocks | select(.type == "text") | .text] | join("\n") end)
+  | select(. != "")) // empty
+JQ
+readonly LAST_TEXT_JQ
+
+# Prints {name, input} for the tool call a permission prompt is about, or
+# nothing. Candidates are the current turn's tool_use blocks without a
+# tool_result yet, oldest first, since Claude Code asks about parallel calls in
+# order. The selection depends on what the prompt's message says:
+# - $plan (the plan-approval message): the newest ExitPlanMode call, or a bare
+#   ExitPlanMode when the call is not in the transcript yet;
+# - $wanted (a tool named in the message): the oldest call with that name, or
+#   for an MCP display name such as "github - create_issue (MCP)" or
+#   "Create Issue", the oldest MCP call whose tool part matches it;
+# - neither (the generic message): the oldest call that is not a question or a
+#   plan, then a plan, then a question.
+IFS= read -r -d '' PENDING_JQ << 'JQ' || true
+def norm: ascii_downcase | gsub("[^a-z0-9]"; "");
+turn
+| [.[] | select(kind == "result") | blocks | select(.type == "tool_result") | .tool_use_id] as $answered
+| [reverse[] | select(kind == "assistant") | blocks | select(.type == "tool_use")
+    | select((.id // "") as $id | $answered | any(.[]; . == $id) | not)
+    | {name, input}] as $calls
+| ($wanted | sub("\\s*\\(MCP\\)\\s*$"; "") | norm) as $short
+| if $plan then
+    ([$calls[] | select(.name == "ExitPlanMode")] | last) // {name: "ExitPlanMode", input: {}}
+  elif $wanted != "" then
+    first($calls[] | select(.name == $wanted))
+    // first($calls[] | select((.name | startswith("mcp__"))
+         and ((.name | split("__") | last | norm) as $tool | $tool != "" and ($short | endswith($tool)))))
+    // empty
+  else
+    first($calls[] | select(.name != "AskUserQuestion" and .name != "ExitPlanMode"))
+    // first($calls[] | select(.name == "ExitPlanMode"))
+    // first($calls[] | select(.name == "AskUserQuestion"))
+    // empty
+  end
+JQ
+readonly PENDING_JQ
+
 function extract_last_assistant_text() {
   local transcript_path="${1}"
   if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
     return 0
   fi
-
-  local line kind
-  while IFS= read -r line; do
-    kind="$(printf '%s' "${line}" | jq -c "${LINE_KIND_JQ}" 2> /dev/null)" || continue
-    case "$(printf '%s' "${kind}" | jq -r '.k')" in
-      prompt) return 0 ;;
-      assistant)
-        local text
-        text="$(printf '%s' "${kind}" | jq -r '.t')"
-        if [[ -n "${text}" ]]; then
-          printf '%s' "${text}"
-          return 0
-        fi
-        ;;
-      *) ;;
-    esac
-  done < <(tac "${transcript_path}" 2> /dev/null || true)
+  jq -Rnr "${TURN_JQ} ${LAST_TEXT_JQ}" < "${transcript_path}" 2> /dev/null || true
 }
 
-# Prints {name, input} for the tool_use a Claude Code permission prompt is
-# about, or nothing. Candidates are the current turn's tool_use blocks that
-# have no tool_result yet. One named $2 wins; when $2 names none of them (MCP
-# tools are announced by display name), the newest MCP candidate is used; with
-# no $2, the newest candidate is.
+# $2 is the tool named by the prompt's message; $3 is "true" for the plan
+# approval message. See PENDING_JQ.
 function get_pending_tool_use() {
   local transcript_path="${1}"
-  local wanted="${2:-}"
   if [[ -z "${transcript_path}" || ! -f "${transcript_path}" ]]; then
     return 0
   fi
-
-  local line kind answered=" " candidates=""
-  while IFS= read -r line; do
-    kind="$(printf '%s' "${line}" | jq -c "${LINE_KIND_JQ}" 2> /dev/null)" || continue
-    case "$(printf '%s' "${kind}" | jq -r '.k')" in
-      prompt) break ;;
-      result) answered="${answered}$(printf '%s' "${kind}" | jq -r '.t') " ;;
-      assistant)
-        candidates="${candidates}$(printf '%s' "${line}" | jq -c --arg answered "${answered}" '
-          [(.message.content // [])[]? | objects | select(.type == "tool_use")
-            | select(.id as $id | $answered | contains(" \($id // "") ") | not)
-            | {name, input}]
-          | reverse[]' 2> /dev/null || true)"$'\n'
-        ;;
-      *) ;;
-    esac
-  done < <(tac "${transcript_path}" 2> /dev/null || true)
-
-  printf '%s' "${candidates}" | jq -sc --arg wanted "${wanted}" '
-    first(.[] | select(.name == $wanted))
-    // first(.[] | select($wanted != "" and (.name | startswith("mcp__"))))
-    // (if $wanted == "" then .[0] else empty end)
-    // empty' 2> /dev/null || true
+  jq -Rnc --arg wanted "${2:-}" --argjson plan "${3:-false}" "${TURN_JQ} ${PENDING_JQ}" < "${transcript_path}" 2> /dev/null || true
 }
 
 # -----------------------------------------------------------------------------
@@ -481,16 +489,29 @@ function do_cc_elicit() {
 }
 
 function do_cc_permission() {
-  local transcript_path message wanted=""
+  local transcript_path message wanted="" plan=false
   transcript_path="$(printf '%s' "${HOOK_INPUT}" | jq -r '.transcript_path // empty | strings' 2> /dev/null)" || transcript_path=""
   message="$(printf '%s' "${HOOK_INPUT}" | jq -r '.message // empty | strings' 2> /dev/null)" || message=""
-  # Claude Code announces "Claude needs your permission to use <tool>".
-  if [[ "${message}" =~ permission\ to\ use\ (.+)$ ]]; then
-    wanted="${BASH_REMATCH[1]}"
+  # Only the first line names the prompt; later lines are shown in the body.
+  local first_line="${message%%$'\n'*}"
+  message="${message//$'\n'/ }"
+
+  # Interactive sessions send fixed messages; the SDK path names the tool. A
+  # message naming no tool call, such as a sandbox network request, is shown
+  # as is rather than matched against the transcript.
+  local pending="" lookup=true
+  case "${first_line}" in
+    *"approval for the plan"*) plan=true ;;
+    *"wants to enter plan mode"*) wanted="EnterPlanMode" ;;
+    *"permission to use "*) wanted="${first_line##*permission to use }" ;;
+    "" | "Claude needs your permission" | "Claude needs your permission.") ;;
+    *) lookup=false ;;
+  esac
+  if [[ "${lookup}" == true ]]; then
+    pending="$(get_pending_tool_use "${transcript_path}" "${wanted}" "${plan}")"
   fi
 
-  local pending name
-  pending="$(get_pending_tool_use "${transcript_path}" "${wanted}")"
+  local name
   name="$(tool_name "${pending}")"
   name="${name:-${wanted}}"
 

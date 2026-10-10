@@ -212,12 +212,15 @@ async function computeTmuxState($: BunShell): Promise<TmuxState | null> {
   return { session: parts[0]!, window: parts[1]!, pane: parts[2]! };
 }
 
+// Returns the text of the current turn's last assistant message. The walk stops at
+// the turn's user message, so a turn without text never shows an earlier reply.
 async function lastAssistantText(client: Client, sessionID: string): Promise<string | null> {
   try {
     const result = await client.session.messages({ path: { id: sessionID } });
     const messages = result?.data ?? [];
     for (let i = messages.length - 1; i >= 0; i--) {
       const m = messages[i];
+      if (m?.info?.role === "user") return null;
       if (m?.info?.role !== "assistant") continue;
       const text = (m.parts ?? [])
         .filter((p): p is TextPart => p?.type === "text")
