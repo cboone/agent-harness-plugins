@@ -2,9 +2,9 @@
 name: monitor-pr
 description: >-
   Watch a PR until checks pass, Copilot feedback is resolved, and it is
-  mergeable, fixing failures; on a Dependabot PR, never push: request a rebase
-  and escalate failures. Use for "monitor the pr", "watch the pr", or "wait for
-  ci".
+  mergeable, fixing failures, then offer the merge; on a Dependabot PR, never
+  push: request a rebase. Use for "monitor the pr", "watch the pr", or "wait
+  for ci".
 argument-hint: "[pr-number] [--interval <duration>] [--ticks <n|unlimited>] [--rounds <n|unlimited>] [--confirm-clean] [--no-fix]"
 ---
 
@@ -13,7 +13,7 @@ argument-hint: "[pr-number] [--interval <duration>] [--ticks <n|unlimited>] [--r
 <!-- The bin/ and docs/ paths below name files in this repository, not in a project a skill runs against. -->
 <!-- validate-plugins: repository-paths -->
 
-Watch a pull request until it is ready to merge, fixing what can be fixed and pausing for what cannot.
+Watch a pull request until it is ready to merge, fixing what can be fixed and pausing for what cannot, then offer the merge and bring the base branch and the repository's other sessions up to date once it lands.
 
 This skill starts where `pr` stops. It is not a passive observer: it repairs failing checks, syncs a stale branch, and drives Copilot feedback to resolution. It is also not a continue-at-all-costs skill. When a decision is genuinely the user's, it stops and asks.
 
@@ -30,7 +30,7 @@ The user may provide these options inline:
 
 ## Ready Criteria
 
-The watch ends when all four axes are clean at the same time. Partial greenness is not readiness.
+The repair loop ends when all four axes are clean at the same time, and step 8 takes over. Partial greenness is not readiness.
 
 | Axis         | Clean when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -45,7 +45,7 @@ Six rules that follow from this and are easy to get wrong:
 - **A review processed with any other outcome never becomes clean, and never waits.** Only `Completed` and `No unresolved Copilot feedback` clear a review's findings. A `Partial` or `Failed` outcome leaves the axis dirty, while the once-per-review `id` guard in step 4 stops the review from being sent to step 7b again, so no later tick can change anything. Escalate per step 9 instead of falling through to the wait branch. This matters on a resumed watch: the original outcome already escalated and ended the watch, and the checkpoint restores the guard, so the wait branch is exactly where such a review would otherwise land.
 - **A Copilot review against an older SHA does not count.** Copilot reviews are pinned to the commit they ran against, so every push this skill makes invalidates the previous review by construction. A fix always sends the loop back around.
 - **A Copilot notice is not a review.** Copilot posts "encountered an error and was unable to review this pull request", and a report that every changed file was excluded, through the review API. Each is pinned to the head like a review and carries no verdict and no findings, which is exactly what a clean review looks like. Reading the whole body, once per review `id`, tells them apart, as [classifying a review](#classifying-a-copilot-review) describes. A review classified `notice` or `unclear` never satisfies the Copilot axis, and never counts toward `--confirm-clean`.
-- **`reviewDecision` does not gate.** A human `CHANGES_REQUESTED` will not stop this skill from declaring the PR ready. Report `reviewDecision` in every status line and in the terminal report so an outstanding human objection stays visible, but never wait on it.
+- **`reviewDecision` does not gate readiness.** A human `CHANGES_REQUESTED` will not stop this skill from declaring the PR ready. Report `reviewDecision` in every status line and in the terminal report so an outstanding human objection stays visible. It matters only after readiness: step 8b uses it, with the rulesets and agent instructions, to decide whether the merge offer waits for an approval.
 - **`BLOCKED` does not gate either, but it must be reported.** Requiring `mergeStateStatus` to be `CLEAN` would be the stricter reading of "ready to merge", and it is deliberately not what this skill does: on a repository whose branch protection requires an approving review, nothing the skill can do will ever satisfy it, so the watch would run until its round budget expired and then report failure on a PR that is finished. Treat `BLOCKED` as ready-with-a-caveat instead. **A terminal report that omits an active `BLOCKED` state is wrong**, because it tells the user the PR is ready to merge when GitHub will refuse the merge. Name the state and say what is unsatisfied.
 
 ## Dependabot PRs
@@ -94,10 +94,10 @@ Also record whether `author.login` is `app/dependabot`, which switches on the ru
 Choose exactly one mechanism and name it on the first tick:
 
 1. **Claude Code**: Prefer `ScheduleWakeup`, which returns control between ticks and keeps the transcript small. Select this mechanism only when the tool is available and accepts the wakeup.
-1. **Codex with scheduled tasks**: Create a task that resumes this conversation after the selected interval. Select this mechanism only after successful task creation, and retain its task ID for updates and cancellation. Its prompt must say to resume this `monitor-pr` watch at step 3, retain the recorded PR identity, options, counters, and action guards, and stop the task on a terminal report or escalation. Use the watch-state fields in [Checkpoint and Resume](./references/checkpoint.md). On each nonterminal tick, schedule or update the next wakeup using the selected interval. A scheduled task is a new tick, not a delayed final response.
+1. **Codex with scheduled tasks**: Create a task that resumes this conversation after the selected interval. Select this mechanism only after successful task creation, and retain its task ID for updates and cancellation. Its prompt must say to resume this `monitor-pr` watch at step 3, retain the recorded PR identity, options, counters, and action guards, and stop the task on escalation, on a terminal report, or at readiness, where step 8c replaces it. Use the watch-state fields in [Checkpoint and Resume](./references/checkpoint.md). On each nonterminal tick, schedule or update the next wakeup using the selected interval. A scheduled task is a new tick, not a delayed final response.
 1. **Foreground, including Codex CLI, OpenCode, and scheduler fallbacks**: When no scheduler is available, or scheduling is rejected or fails, announce the fallback and run a foreground polling loop. If replacing an existing scheduled watch, cancel its pending task or wakeup first; if cancellation fails, escalate rather than start a second loop. A blocking `sleep` by itself is not a continuation mechanism: after every sleep, take the step 3 snapshot and dispatch it in the same active turn. Do not print a terminal response merely because a tick is waiting. Stop only on a terminal condition, an escalation, or the `--ticks` foreground limit.
 
-The default `--ticks 3` bounds every foreground loop, including scheduler fallbacks. Count one tick for each step 3 snapshot and its step 4 dispatch, including the opening snapshot. Finish the dispatch before applying the limit; readiness and escalation take precedence over a checkpoint. At the limit, checkpoint before the next wait, following [Checkpoint and Resume](./references/checkpoint.md): include the PR URL, current head SHA, all four axes, complete watch state, selected interval, and the exact `/monitor-pr` invocation with the original options. Report a **resumable checkpoint**, not a readiness verdict. `--ticks unlimited` removes this foreground limit, but the user may still interrupt the active session. Never claim that a blocking wait will resume after the agent has returned a final response.
+The default `--ticks 3` bounds every foreground loop, including scheduler fallbacks. Count one tick for each step 3 snapshot and its step 4 dispatch, including the opening snapshot. Finish the dispatch before applying the limit; escalation and the step 8 transition at readiness take precedence over a checkpoint. At the limit, checkpoint before the next wait, following [Checkpoint and Resume](./references/checkpoint.md): include the PR URL, current head SHA, all four axes, complete watch state, selected interval, and the exact `/monitor-pr` invocation with the original options. Report a **resumable checkpoint**, not a readiness verdict. `--ticks unlimited` removes this foreground limit, but the user may still interrupt the active session. Never claim that a blocking wait will resume after the agent has returned a final response.
 
 Adaptive intervals by phase, unless `--interval` overrides them:
 
@@ -199,7 +199,8 @@ Two orderings are deliberate:
 - **Sync the branch before diagnosing check failures**, because a stale branch is a common cause of them.
 - **Act on Copilot findings without waiting for in-flight checks**, because that work is durable: the fixes land whatever the checks go on to do. Requesting a review is perishable by comparison, so both request paths keep a passing-checks precondition. Every push invalidates a review rendered against the old head, which makes a review requested mid-check one that a check fix would throw away, and it spends a round against the step 7c budget either way.
 
-1. **PR is `MERGED` or `CLOSED`**: terminal. Report and stop.
+1. **PR is `MERGED`**: go to step 8f with its merge commit, whoever merged it and whether or not the watch reached step 8; the step 8f guard makes a merge already handled a no-op. A merge seen before readiness is reported as such.
+1. **PR is `CLOSED`**: terminal. Report that it was closed without merging, and stop.
 1. **`mergeStateStatus` is `DIRTY`**: conflicts with the base branch. Go to step 5.
 1. **`mergeStateStatus` is `BEHIND`**: go to step 5.
 1. **`mergeStateStatus` is `BLOCKED`**: do not treat this as a blocker and do not wait on it, but record it. It means a branch protection rule is unsatisfied, most often a required approving review. Continue evaluating the remaining conditions, and carry the `BLOCKED` state into every status line and into the terminal report per step 8.
@@ -394,127 +395,129 @@ Each review in a confirmation pair counts as its own round against the step 7c b
 
 Readiness ends the repair loop, not the watch. From here the skill reports, settles the merge policy, waits for any required approval, offers the merge, and handles the merge whoever performs it.
 
+The merge steps call a second script this plugin ships, the same way as the probe:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" policy OWNER REPO BASE
+```
+
+If the plugin-root path was not substituted, locate `**/monitor-pr/**/scripts/merge-flow` exactly as the probe section describes for its script. Every `merge-flow` command prints one JSON value and reports a failed GitHub or git read inside it, so read the output, not the exit status; only `panes` exits nonzero, when tmux cannot be read.
+
 #### 8a. Report
 
 1. Stop the wait loop. On the `ScheduleWakeup` path, that means `ScheduleWakeup({stop: true})`; on the scheduled-task path, stop the task that resumes this conversation. Step 8c replaces it with a merge watch.
+1. Record `READY_HEAD`, the `headRefOid` readiness was declared on. Every later step compares against it.
 1. Print the full status table: every check with its state, the Copilot verdict with the SHA it was rendered against, `mergeable`, `mergeStateStatus`, and `reviewDecision` labelled as informational.
 1. If review-body findings were processed or previously handled during this watch, include the resolver's final summary comment URL and each originating Copilot review URL. State whether each finding was actionable, previously handled, or required no code change; do not make the user search unrelated PR comments for the disposition.
 1. **If the resolver's summary for the current head lists `Requests for human review`, lead with them.** Write "Ready, with N advisory requests for human review" in place of a bare "Ready", and quote each request with its review link. Copilot raises these on changes it judges sensitive, and they never block the watch, so this report is the place they reach the user before a merge.
 1. **If `mergeStateStatus` is `BLOCKED`, say so before offering to merge.** State that GitHub will refuse the merge until the branch protection requirement is met, and name it if `reviewDecision` identifies it (a required approving review being the usual case). Offering a merge without that caveat presents a PR as ready when it is not yet mergeable.
-1. If the PR is a draft, say so before offering to merge.
+1. If the PR is a draft, say so; step 8e offers to mark it ready, since GitHub refuses to merge a draft.
 
 #### 8b. Settle the Merge Policy
 
-Do this once per watch and record the result in the watch state. It decides which merge method to offer and whether the PR needs an approval first.
+Do this once per watch, record the result in the watch state, and reuse it on resume. It decides which merge method to offer and whether the PR needs an approval first. Run `merge-flow policy OWNER REPO BASE` as shown above. Its fields:
 
-Read the merge methods the repository allows, and those its rulesets allow for the base branch:
-
-```bash
-gh api repos/OWNER/REPO --jq '[if .allow_merge_commit then "merge" else empty end, if .allow_squash_merge then "squash" else empty end, if .allow_rebase_merge then "rebase" else empty end]'
-gh api --paginate --slurp repos/OWNER/REPO/rules/branches/BASE |
-  jq -c '[.[][] | select(.type == "pull_request") | .parameters] | {allowed: map(.allowed_merge_methods // empty), approvals: (map(.required_approving_review_count // 0) | max // 0)}'
-```
-
-**The rulesets can narrow what the repository settings allow, so read both.** A repository can allow merge commits and squash in its settings while its base-branch ruleset allows only squash; offering a merge commit there produces a merge GitHub refuses. The allowed set is the settings list intersected with every `allowed` list. A failed rules read is not an empty one, and it shows as no output at all: report it, and treat every method the settings allow as possible.
+- **`allowed`**: the merge methods the repository settings allow, intersected with every `pull_request` rule on the base branch, in the names `gh pr merge` takes (`merge`, `squash`, `rebase`). **The rulesets can narrow what the settings allow**: a repository can allow merge commits and squash while its base-branch ruleset allows only squash, and offering a merge commit there produces a merge GitHub refuses. `null` means neither source could be read, which is unknown, not empty.
+- **`approvals`**: the highest approving-review count a base-branch rule requires, or `null` when the rules could not be read.
+- **`settingsNote`** and **`rulesNote`**: why a source is missing, for example that the settings are hidden from an account without admin access, or that the base branch was not found. Quote a note in the report whenever its source is `null`.
 
 Choose the method in this order, and name the source in the report:
 
-1. Exactly one method allowed: use it.
-1. The repository's agent config names a merge method: use it.
-1. The harness's durable memory holds a merge-method note for `OWNER/REPO`: use it.
-1. Otherwise default to `merge` if it is allowed, else the first allowed method, and ask the user to confirm it once as part of the merge offer. Record the answer in the harness's durable memory as a per-repository note, such as a Claude Code project memory, so the next watch does not ask again. On a harness without durable memory, say that the choice was not recorded.
+1. `allowed` holds exactly one method: use it.
+1. The repository's agent config names a method in `allowed`: use it.
+1. The harness's durable memory holds a merge-method note for `OWNER/REPO` that names a method in `allowed`: use it.
+1. Otherwise propose `merge` if `allowed` includes it, else the first method in `allowed`, and ask the user to confirm it once as part of the merge offer. Record the answer in the harness's durable memory as a per-repository note, such as a Claude Code project memory, so the next watch does not ask again. On a harness without durable memory, say that the choice was not recorded.
 
-Never list every method by default. The offer names one.
+A method named by the agent config or a memory note that `allowed` excludes is reported as excluded, not used. When `allowed` is `null`, the named methods cannot be checked: use them in the same order, say that GitHub may refuse them, and with neither available propose `merge`. When `allowed` is an empty list, no method is left: escalate per step 9 with the `settings` and `rules` lists. Never list every method by default. The offer names one.
 
 The PR **requires approval** before merge when any of these holds, and the report names which:
 
-- A base-branch ruleset requires approving reviews (`approvals` above 0).
+- A base-branch rule requires approving reviews (`approvals` above 0).
 - `reviewDecision` is `REVIEW_REQUIRED`, which is how classic branch protection reports a required review.
 - The user's or the project's loaded agent instructions say that this repository's PRs need approval before merge. Such a policy may cover repositories GitHub does not protect, so honor it even when both readings above say no approval is required.
+
+When `approvals` is `null` and neither of the other sources applies, the requirement is unknown: say so in the merge offer, quoting `rulesNote`, rather than presenting the PR as needing no approval.
 
 Then, when the PR requires approval and `reviewDecision` is not `APPROVED`, go to step 8d. Otherwise start the merge watch per step 8c and go to step 8e.
 
 #### 8c. Start the Merge Watch
 
-Start a background watch on the PR **before** making the merge offer, so that it does not wait on the user's answer and the offer does not wait on it. The PR can be merged by anyone, from anywhere; the watch is how the skill learns of it.
+Start a background watch on the PR **before** making the merge offer, so that it does not wait on the user's answer and the offer does not wait on it. The PR can be merged by anyone, from anywhere; the watch is how the skill learns of it. Run one watch at a time: stop the previous one before starting another.
 
-On Claude Code, run this loop with the `Bash` tool's `run_in_background` option, substituting the recorded values. The harness re-invokes the session when the loop exits:
+On Claude Code, run the watch with the `Bash` tool's `run_in_background` option. The harness re-invokes the session when it exits:
 
 ```bash
-awaited="AWAITED_DECISION"
-fails=0
-while :; do
-  if s=$(gh pr view PR_NUMBER --repo OWNER/REPO --json state,reviewDecision,mergeCommit --jq '"\(.state) \(if (.reviewDecision // "") == "" then "NONE" else .reviewDecision end) \(.mergeCommit.oid // "")"'); then
-    fails=0
-    case "$s" in MERGED* | CLOSED*) echo "$s"; exit 0 ;; esac
-    if [ -n "$awaited" ] && [ "$(echo "$s" | cut -d' ' -f2)" != "$awaited" ]; then echo "$s"; exit 0; fi
-  else
-    fails=$((fails + 1))
-    if [ "$fails" -ge 5 ]; then echo "watch failed: five consecutive reads"; exit 1; fi
-  fi
-  sleep 60
-done
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" watch OWNER REPO PR_NUMBER READY_HEAD
 ```
 
-`AWAITED_DECISION` is the `reviewDecision` at the start of an approval wait (step 8d), with `NONE` standing for an empty decision, so a change to it ends the loop; outside an approval wait, replace it with an empty string and only `MERGED` or `CLOSED` ends it. Record the background task's ID in the watch state.
+During an approval wait, step 8d adds `--awaited DECISION`, the `reviewDecision` it is waiting to change, with `NONE` standing for an empty decision. The watch polls every 60 seconds, backs off to as much as 15 minutes apart while reads fail, and prints one JSON line when it exits. Record its task ID in the watch state.
 
-On Codex with scheduled tasks, create a task that resumes this watch at step 8c on the same exit conditions, polling at the 2-to-5-minute interval. On the foreground path no watch can run alongside a question, so say that, make the offer first, and then poll under the existing `--ticks` rules.
+On Codex with scheduled tasks, create a task that resumes this conversation at the 2-to-5-minute interval. On each tick it runs one read, `gh pr view PR_NUMBER --repo OWNER/REPO --json state,reviewDecision,headRefOid,mergeCommit`, and applies the same events the script reports: `merged` only once `mergeCommit` is set, `closed`, `head` when `headRefOid` differs from `READY_HEAD`, and `decision` when an awaited `reviewDecision` changed. On any event, stop the task and handle the event below.
 
-When the watch exits:
+On the foreground path no watch can run alongside an open question. Make the offer per step 8e, then end the turn with a resumable checkpoint carrying the step 8 fields, per [Checkpoint and Resume](./references/checkpoint.md). Say that a merge made elsewhere is picked up when `/monitor-pr` next runs, since step 4 sends a merged PR to step 8f.
 
-- **`MERGED`**: go to step 8f.
-- **`CLOSED`**: report that the PR was closed without merging, and stop. Do not sync or notify.
-- **`reviewDecision` changed**: return to step 8d.
-- **The watch failed**: escalate per step 9 with its output.
+Handle the watch's `event`:
+
+- **`merged`**: go to step 8f with its `mergeCommit`.
+- **`closed`**: report that the PR was closed without merging, and stop. Do not sync or notify.
+- **`head`**: a push arrived after readiness, so the readiness verdict no longer holds. Keep the merge policy, clear the offer and the approval wait, re-establish the step 2 wait mechanism, and resume at step 3. A push resets an approval as far as this skill is concerned, whatever GitHub's dismissal rules do.
+- **`decision`**: go to step 8d's change rules.
+- **`failed`**: escalate per step 9, quoting its `error`.
+- **`expired`**: the watch outlived its 24-hour lifetime with the PR still open. Report that, and that `/monitor-pr` starts a new watch, and stop.
 
 #### 8d. Wait for Approval
 
-When the PR requires approval and `reviewDecision` is not `APPROVED`, report "Ready, awaiting approval", start the step 8c watch with `AWAITED_DECISION` set to the current `reviewDecision`, and do not offer the merge yet. Request reviewers only if the user asks.
+If `reviewDecision` is already `CHANGES_REQUESTED`, escalate per step 9 now, quoting the review. Otherwise report "Ready, awaiting approval" with the source step 8b named, and start the step 8c watch with `--awaited` set to the current `reviewDecision`. Do not offer the merge yet, and request reviewers only if the user asks.
 
-When the watch reports a change:
+When the watch reports a `decision` event:
 
-- **`APPROVED`**: restart the watch without `AWAITED_DECISION`, and go to step 8e.
+- **`APPROVED`**: take a fresh step 3 snapshot. If all four axes are still clean at `READY_HEAD`, restart the watch without `--awaited` and go to step 8e; otherwise dispatch the snapshot per step 4.
 - **`CHANGES_REQUESTED`**: escalate per step 9, quoting the review.
-- **Anything else**, such as an approval dismissed by a push: take a fresh step 3 snapshot and dispatch it. A push sends the PR back through the repair loop, and the approval wait starts over once it is ready again.
+- **Anything else**, such as a decision cleared back to `NONE`: restart the watch with `--awaited` set to the new decision.
 
 #### 8e. Offer the Merge
 
-Ask one question naming the chosen method, for example "Merge #361 with a merge commit?", and add the method confirmation when step 8b defaulted it. Do not offer auto-merge unless checks are pending at that moment.
+Ask one question naming the chosen method, for example "Merge #361 with a merge commit?". Add the one-time method confirmation when step 8b proposed the method, the unknown-approval caveat when step 8b reported one, and, on a draft, the offer to mark it ready with `gh pr ready PR_NUMBER --repo OWNER/REPO` first. Record that the offer was made at `READY_HEAD`, and do not ask again for that head.
 
 **Ask in plain text and end the turn**, rather than through a blocking question tool. The merge watch can re-invoke the session only while the session is idle, so a blocking question would hold back a merge someone else made.
 
-On a yes, merge with the chosen method, without `--delete-branch`, since the head branch is usually checked out in a worktree that deleting it would strand:
+On a yes, merge with the chosen method, pinned to the head readiness was declared on, and without `--delete-branch`, since the head branch is usually checked out in a worktree that deleting it would strand:
 
 ```bash
-gh pr merge PR_NUMBER --repo OWNER/REPO --merge
+gh pr merge PR_NUMBER --repo OWNER/REPO --merge --match-head-commit READY_HEAD
 ```
 
-Replace `--merge` with `--squash` or `--rebase` as chosen. Confirm the merge with `gh pr view PR_NUMBER --repo OWNER/REPO --json state,mergeCommit`, stop the background watch, and go to step 8f. If the watch reports the same merge later, the step 8f guard makes that report a no-op. A refused merge escalates per step 9 with GitHub's message.
+Replace `--merge` with `--squash` or `--rebase` as chosen. Then read the result with `gh pr view PR_NUMBER --repo OWNER/REPO --json state,mergeCommit`:
+
+- **`MERGED` with a `mergeCommit`**: stop the background watch, and go to step 8f. If the watch reports the same merge later, the step 8f guard makes that report a no-op.
+- **Still `OPEN`**: GitHub queued the merge, or enabled auto-merge because a requirement is still pending; `gh pr merge` says which. Report it and leave the watch running: its `merged` event drives step 8f.
+- **The merge was refused**: when the refusal is that the head no longer matches `READY_HEAD`, handle it as a `head` event. Otherwise escalate per step 9 with GitHub's message.
 
 On a no, leave the watch running and say so: a merge made later still triggers step 8f.
 
 #### 8f. After the Merge
 
-Run this once per merge commit SHA, whichever path observed the merge, and record the SHA in the watch state.
+Run this once per merge commit SHA, whichever path observed the merge, and record the SHA in the watch state. Never run it with an empty SHA: a `MERGED` state without a merge commit is re-read, never recorded.
 
-1. **Fast-forward the base branch in the main worktree.** The main worktree is the first `worktree` entry of `git worktree list --porcelain`. When it has `BASE` checked out, update it in place; otherwise update the branch ref without touching its working tree:
-
-   ```bash
-   git -C MAIN_WORKTREE pull --ff-only origin BASE
-   git -C MAIN_WORKTREE fetch origin BASE:BASE
-   ```
-
-   Run the first when `BASE` is checked out there, the second when it is not. Both refuse rather than lose work. Never stash, reset, or force to get past a refusal: report it, with its cause (local changes in the way, or a base branch that has diverged), and leave the main worktree as it was.
-
-1. **Notify the other sessions working in this repository.** On Claude Code, list peer sessions with `ListAgents`, and map each one's tmux pane to its working directory:
+1. **Fast-forward the base branch.** From this repository's worktree, run:
 
    ```bash
-   tmux list-panes -a -F '#{pane_id} #{pane_current_path}'
+   bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" sync OWNER REPO BASE MERGE_SHA
    ```
 
-   Keep the sessions whose directory is one of the `git worktree list` paths or inside one, and exclude this session. Send each one a message with `SendMessage`: the PR number and URL, the merge commit SHA, the base branch, and whether the main worktree's base branch was fast-forwarded. Keep it informational: each recipient decides whether to merge the base branch into its own work. On a harness without session messaging, or outside tmux, report that no sessions were notified.
+   It fetches `BASE` from the remote whose URL names `OWNER/REPO`, which in a fork is not `origin`, checks that the fetched branch contains the merge, and fast-forwards whichever worktree has `BASE` checked out, usually the main worktree, or the branch ref when none does. It never stashes, resets, or forces. `synced` is `true` only when the local `BASE` contains the merge. When it is `false`, report its `reason` as written and leave the worktrees as they are.
 
-1. **Print the final line**, with the merge SHA, the fast-forward result, and the sessions notified, then end the watch.
+1. **Notify the other sessions working in this repository.** On Claude Code, list the tmux panes inside this repository's worktrees:
+
+   ```bash
+   bash "${CLAUDE_PLUGIN_ROOT}/scripts/merge-flow" panes
+   ```
+
+   It prints a JSON array of `{pane, path, worktree}`, matching each pane's directory to a worktree by whole path component, so a sibling directory such as `repo-old` never matches `repo`. Then list sessions with `ListAgents`: each row ends with its tmux location, such as `tmux plugins:@89.%206`, whose last part is the pane ID. Keep the sessions whose pane ID is in the array, and leave out this session. Send each one a message with `SendMessage`: the PR number and URL, the merge commit SHA, the base branch, and the `sync` result. Keep it informational: each recipient decides whether to merge the base branch into its own work.
+
+   Report three outcomes apart: sessions notified, by name; no peer sessions found; and peers that could not be enumerated, because `panes` failed, the harness has no session listing or messaging, or a session shows no tmux pane. Name any session whose message failed, and continue with the rest.
+
+1. **Print the final line**, with the merge SHA, the sync result, and the sessions notified, then end the watch, stopping any background watch still running.
 
 Under `--no-fix`, steps 8b to 8f report what they would do, the method and the approval requirement included, and do none of it: no merge watch, no merge, no sync, and no messages.
 
@@ -573,7 +576,8 @@ The terminal report uses the same table plus the readiness verdict for all four 
 - **Copilot never reviews despite an explicit request**: Escalate. Copilot review may be disabled for the repository, in which case the user must decide whether to proceed without it.
 - **Copilot answers a retry with another notice**: Escalate with the notice text. An `error` notice that repeats points at Copilot itself; a `no-files` notice means every changed file is excluded from review, which only the user can decide to accept.
 - **Push rejected because the remote moved**: Someone else pushed to the branch. Re-poll, sync per step 5, and retry once. If it is rejected again, escalate.
-- **The rules read in step 8b fails**: Report it, and treat every method the repository settings allow as possible. Do not read the failure as "no rules", which would also hide a required approval.
-- **The fast-forward in step 8f is refused**: Report the cause and leave the main worktree untouched. Never stash, reset, or force past it; the merge itself stands, and the peer messages say the base branch was not fast-forwarded.
-- **A peer session cannot be messaged**: Report which one, and continue with the rest. The merge and the fast-forward do not depend on it.
+- **A `merge-flow policy` source is `null`**: Report its note. Never read an unknown source as permissive: unknown methods are not an empty list, and an unread ruleset is not a ruleset that requires no approval.
+- **`merge-flow sync` reports `synced: false`**: Report its `reason` as written and leave the worktrees untouched. Never stash, reset, or force past it; the merge itself stands, and the peer messages say the base branch was not synced.
+- **`gh pr merge` exits 0 but the PR is still open**: The merge was queued or auto-merge was enabled. Keep the merge watch running and let its `merged` event drive step 8f.
+- **A peer session cannot be messaged**: Name it, and continue with the rest. The merge and the sync do not depend on it.
 - **Dependabot does not act on a rebase request**: After two quiet ticks with the head SHA unchanged and no reply from Dependabot on the PR, escalate. Do not post the request again for the same head.

@@ -52,6 +52,10 @@ Replace step 8's merge question and add new steps. Keep step numbering stable fo
 1. **Dependabot section**: unchanged behavior except that 8e also applies after a Dependabot merge.
 1. **`--no-fix`**: report what 8c to 8e would do and perform none of them, consistent with "observe and report only".
 
+### `plugins/monitor-pr/scripts/merge-flow` (added after the first review)
+
+The first review found that the inline pipelines hid failures: a `jq` exit status masking `gh`'s, null settings read as an empty list, a hard-coded `origin` in forks, and string-prefix path matching. The reads, the watch loop, the sync, and the pane matching therefore live in a bundled script with `policy`, `watch`, `sync`, and `panes` commands, each printing one JSON value that carries any failure. The watch also exits on a head change, and the merge is pinned with `--match-head-commit`. Coverage is `tests/scrut/merge-flow.md`, with `gh pr view` sequences added to `tests/fixtures/gh-stub`.
+
 ### `plugins/monitor-pr/skills/monitor-pr/references/checkpoint.md`
 
 Add fields: merge policy (allowed methods, chosen method and its source, approval requirement and its source), merge-watch mode and watcher ID, and the post-merge guard (merge SHA processed).
